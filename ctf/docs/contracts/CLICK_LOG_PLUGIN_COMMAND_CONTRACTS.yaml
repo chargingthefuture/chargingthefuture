@@ -157,8 +157,8 @@ commands:
       # A tagged incident is ALWAYS shared (3.0.0, owner decision 2026-08-18): saving with a
       # non-empty tag list sets shared_with_owner to true in the same UPDATE — the editor states
       # this before save. Saving with both lists empty leaves the share flag as it stands.
-      # An edit whose resulting metadata duplicates another of the member's incidents violates
-      # the UNIQUE (user_id, metadata_hash) dedupe and returns a readable 409.
+      # Two of a member's incidents may carry identical metadata (no dedupe since 2026-10-05), so
+      # an edit never conflicts with another incident.
     outputSchema:
       type: object
       properties:

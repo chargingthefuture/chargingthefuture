@@ -74,10 +74,12 @@ async function postTransfer({
   recipient,
   amount,
   rail,
+  sendKey,
 }: {
   recipient: string;
   amount: number;
   rail: Rail;
+  sendKey: string;
 }): Promise<string | null> {
   const res = await fetch("/api/service-credits/transfers", {
     method: "POST",
@@ -85,7 +87,7 @@ async function postTransfer({
     body: JSON.stringify({
       recipientUserId: recipient,
       amount,
-      idempotencyKey: idempotencyKey(),
+      idempotencyKey: sendKey,
       ...(rail === "mutual_credit" ? { rail } : {}),
     }),
   });
@@ -112,6 +114,14 @@ function SendForm({ wallet, onSent }: { wallet: WalletData | null; onSent: () =>
   // name them. A standing arrangement settled in credits is exactly the case the Recurring Activity
   // plugin exists for, and the moment right after a send is when the member knows it.
   const [sentToUserId, setSentToUserId] = useState<string | null>(null);
+  // One idempotency key per filled-in send, not per press. A second press after an error, or after a
+  // response that never arrived, carries the same key, so the server returns the first transfer
+  // instead of sending again. Changing the recipient, amount or rail makes it a different send and
+  // gets a new key, and so does a completed send.
+  const [sendKey, setSendKey] = useState(() => idempotencyKey());
+  // The send went through but the wallet could not be re-read afterwards. Shown apart from the error
+  // line so a completed send never reads as a failed one.
+  const [refreshFailed, setRefreshFailed] = useState(false);
 
   const numeric = Number(amount);
   const canSend = isSendable({ submitting, recipient, amount, numeric });
@@ -120,35 +130,60 @@ function SendForm({ wallet, onSent }: { wallet: WalletData | null; onSent: () =>
     setSubmitting(true);
     setError(null);
     setSuccess(false);
+    setRefreshFailed(false);
+    let recipientUserId: string | null;
     try {
       // The balance rail keeps the client-side guard. The mutual-credit rail is allowed to go
       // negative up to the member's limit, so we do not block here — the server decides.
       if (rail === "balance" && numeric > (wallet?.availableBalance ?? 0)) throw new Error("Insufficient balance");
-      const recipientUserId = await postTransfer({ recipient: recipient.trim(), amount: numeric, rail });
-      await onSent();
-      setSuccess(true);
-      // The server resolves a username to a real member id, so read it back rather than reusing what
-      // was typed in the box.
-      setSentToUserId(recipientUserId);
-      setRecipient("");
-      setAmount("");
-      setRail("balance");
+      recipientUserId = await postTransfer({ recipient: recipient.trim(), amount: numeric, rail, sendKey });
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to create transfer.");
+      setSubmitting(false);
+      return;
+    }
+
+    // The transfer is done from here on, whatever the balance refresh below does.
+    setSuccess(true);
+    // The server resolves a username to a real member id, so read it back rather than reusing what
+    // was typed in the box.
+    setSentToUserId(recipientUserId);
+    setRecipient("");
+    setAmount("");
+    setRail("balance");
+    setSendKey(idempotencyKey());
+    try {
+      await onSent();
+    } catch {
+      // no-trace: the send itself succeeded; the note below tells the member the balance shown is out of date
+      setRefreshFailed(true);
     } finally {
       setSubmitting(false);
     }
   }
 
+  // A changed recipient, amount or rail is a different send, so it gets its own key.
+  function edit<T>(setter: (value: T) => void): (value: T) => void {
+    return (value: T) => {
+      setter(value);
+      setSendKey(idempotencyKey());
+    };
+  }
+
   return (
     <div style={{ padding: "16px", borderRadius: 14, marginBottom: 16, background: `${t.ACCENT}08`, border: `1px solid ${t.ACCENT}20` }}>
       <label htmlFor="sc-recipient" style={inputLabel}>Recipient</label>
-      <input id="sc-recipient" value={recipient} onChange={(e) => setRecipient(e.target.value)} aria-label="Recipient username or ID" placeholder="Survivor username or ID…" style={inputField} />
-      <RailSelector rail={rail} onChange={setRail} wallet={wallet} />
+      <input id="sc-recipient" value={recipient} onChange={(e) => edit(setRecipient)(e.target.value)} aria-label="Recipient username or ID" placeholder="Survivor username or ID…" style={inputField} />
+      <RailSelector rail={rail} onChange={edit(setRail)} wallet={wallet} />
       <label htmlFor="sc-amount" style={inputLabel}>Amount</label>
-      <input id="sc-amount" value={amount} onChange={(e) => setAmount(e.target.value)} type="number" min="1" aria-label="Amount in credits" placeholder="Amount (e.g. 50)" style={inputField} />
+      <input id="sc-amount" value={amount} onChange={(e) => edit(setAmount)(e.target.value)} type="number" min="1" aria-label="Amount in credits" placeholder="Amount (e.g. 50)" style={inputField} />
       {error && <div style={{ fontSize: 12, color: "#EF4444", marginBottom: 8 }}>{error}</div>}
       {success && <div style={{ fontSize: 12, color: "#22C55E", marginBottom: 8 }}>Credits sent successfully!</div>}
+      {success && refreshFailed && (
+        <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 8 }}>
+          Your balance could not be refreshed, so the figure shown may be out of date. Reload the page to see it.
+        </div>
+      )}
       {success && sentToUserId ? (
         <div style={{ marginBottom: 10 }}>
           <MarkRecurringControl

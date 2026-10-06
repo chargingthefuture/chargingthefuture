@@ -180,12 +180,7 @@ export async function PUT(request: NextRequest, context: { params: Promise<{ id:
       result: 'failure',
       target: { incidentId: id },
     });
-    return outcome === 'conflict'
-      ? NextResponse.json(
-          { error: 'Another of your incidents already has this exact note and location — change the note slightly' },
-          { status: 409 },
-        )
-      : NextResponse.json({ error: 'Update failed' }, { status: 500 });
+    return NextResponse.json({ error: 'Update failed' }, { status: 500 });
   }
   logClickLogAudit({
     actorId: gate.auth.userId,
