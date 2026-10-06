@@ -99,7 +99,7 @@ trains**. Every Skills Taxonomy skill belongs to exactly one job title and each 
 2. Dispute resolution endpoint with optional adjustment transfer.
 3. Admin panel with operational KPIs plus a read-only cohort overview (title, track, status, seats open, required deposit, trainer split, completion bonus) from `GET /api/skill-up/cohorts`.
 4. Cohort proposal queue (issue #904, proposal-queue model — owner decision 2026-07-23): a ranked, sector-diverse list of proposed cohorts derived from the Workforce talent gaps. Each row shows the occupation, sector, and gap, with a 1/3/5-month **term** selector and **Approve & open** / **Dismiss** actions; a **Refresh proposals** button re-reads the current gaps. Approving opens a real cohort (the admin picks the term); dismissing removes the proposal. The admin cohort overview shows `auto` and `needs trainer` badges on cohorts opened from proposals that have no human trainer yet.
-5. Review queues on the admin panel — **actionable since 2026-08-05** (`su-review-actions.tsx`): **Open disputes** (`skill_up_disputes` `status='open'`, newest first, with title, description, opener name, and time) each carry a **Resolve…** control (a written resolution posted to `POST /api/skill-up/disputes/:id/resolve`; credit adjustments deliberately stay out of the form — an adjustment case goes through the ServiceCredits admin). **Pending milestone validations** (`skill_up_milestone_validations` `status='pending'`, newest first) each carry **Validate** and **Release credits** buttons calling the live milestone routes (the server stays the referee on ordering; a row missing its cohort id shows a handle-via-API note instead of a broken button). Cohorts flagged `needs trainer` carry a **Claim as trainer** button (`POST /api/skill-up/cohorts/:id/claim-trainer`). Both queue lists are server-rendered from `getAdminPanelData()` and drive the admin-landing "new to review" dot; a completed action re-pulls them via `router.refresh()`.
+5. Review queues on the admin panel — **actionable since 2026-08-05** (`su-review-actions.tsx`): **Open disputes** (`skill_up_disputes` `status='open'`, newest first, with title, description, opener name, and time) each carry a **Resolve…** control (a written resolution posted to `POST /api/skill-up/disputes/:id/resolve`; credit adjustments deliberately stay out of the form — an adjustment case goes through the ServiceCredits admin). **Pending milestone validations** (`skill_up_milestone_validations` `status='pending'`, newest first) each carry **Validate** and **Release credits** buttons calling the live milestone routes (the server stays the referee on ordering and reads the cohort from the enrollment, so every row carries working buttons). Cohorts flagged `needs trainer` carry a **Claim as trainer** button (`POST /api/skill-up/cohorts/:id/claim-trainer`). Both queue lists are server-rendered from `getAdminPanelData()` and drive the admin-landing "new to review" dot; a completed action re-pulls them via `router.refresh()`.
 6. **Who enrolled** roster on the admin panel (2026-08-29). Every enrollment, newest first (capped at 100), showing the member's Clerk handle (`@name`), the cohort they joined, their enrollment status, and the date. Handles are resolved in one batched Clerk lookup (`resolveUsernames`); an id Clerk cannot resolve falls back to `member <short id>` rather than an empty cell. Finished and left enrollments are included, so this list can be longer than the live "Members in a cohort now" KPI — the copy above the list says so. Server-rendered from `getAdminPanelData()`; no new route.
 7. KPI cards that each say which question they answer (2026-08-15). The panel shows **Members in a cohort now** (distinct people holding a live enrollment), **Active enrollments** (the live enrollment rows themselves — one member in three cohorts is three of these), **Enrollments, all time** (every enrollment row ever written, including left and finished ones), **Completions**, and **Avg days to first trainer credit grant**. All the enrollment numbers come from one pass over `skill_up_enrollments` in `getAdminPanelData()`, so they cannot disagree with each other. Before this there was a single card labeled "Enrollments" carrying the all-time row count, which was read as a headcount of people.
 
@@ -274,6 +274,17 @@ External value movement dependencies:
    milestone validations, the trainer skill audit, cohorts, proposals and the auto-cohort settings
    are retained as the record of why credits moved. `skill_up_command_idempotency` (actor id,
    command name, key; no content) is not in the registry.
+9. Milestone sign-off scope (since 2026-10-05): `validate` and `release` read the cohort from the
+   enrollment (`loadMilestoneSignOffScope`) and never from the request body, which no longer
+   carries a `cohortId`. `milestoneSignOffDenial` allows only an admin or the trainer of that
+   cohort, requires the milestone to belong to it, and refuses anybody, admins included, signing
+   off their own enrollment.
+10. Trainer of record (since 2026-10-05): `POST /enroll` no longer accepts `assignedTrainerId`.
+    The trainer is derived from the cohort (the claiming trainer of an auto cohort, otherwise
+    none), and is never the learner, at enrollment or in the claim-trainer backfill.
+11. Dispute adjustments (since 2026-10-05): `POST /disputes/:id/resolve` refuses an `adjustment`
+    from anybody but an admin, and `resolveDispute` refuses one whose source and destination are
+    not two different parties to the disputed enrollment (its learner and assigned trainer).
 
 ## Seed Coverage Status
 
@@ -349,7 +360,7 @@ that exist today.
 2. No admin KPI read endpoint exists; the web admin page renders KPIs from server-side `getAdminPanelData()` and the Android admin screen has no KPI cards (no GET route to call). Add a `GET /api/skill-up/admin/kpis` route to give the mobile screen the same KPI cards as web.
 3. No admin-gated GET route exists for the SkillUp admin screens, so the mobile admin screen cannot pre-gate by role before render; it relies on the server-side admin gate on `POST /adjust-credits` to deny non-admins. The cohort list (`GET /api/skill-up/cohorts`) is read-access for any approved user. A dedicated admin-gated read route would let the mobile screen show the admin-only notice without attempting a mutation.
 4. The design mockup `MobileSkillUpAdmin.tsx` (track/badge management) has no backing endpoints; tracks are a free-text field on cohorts and there is no badge model. Building that surface would require new schema, routes, and contracts.
-5. ~~Auto cohorts' trainer payout did not fire because enrollments had no `assigned_trainer_id`.~~ **Resolved (2026-06-29):** enrolling in a claimed auto cohort now sets `assigned_trainer_id` to the claiming trainer (the cohort's `created_by_user_id` once it is no longer the scheduler placeholder), and `claim-trainer` backfills that trainer onto any enrollments made before the claim. So a milestone release now settles the trainer split for auto cohorts. (Admin/human-built cohorts are unchanged — they only get an assigned trainer when one is passed in, since their `created_by_user_id` may be an admin, not the trainer.)
+5. ~~Auto cohorts' trainer payout did not fire because enrollments had no `assigned_trainer_id`.~~ **Resolved (2026-06-29):** enrolling in a claimed auto cohort now sets `assigned_trainer_id` to the claiming trainer (the cohort's `created_by_user_id` once it is no longer the scheduler placeholder), and `claim-trainer` backfills that trainer onto any enrollments made before the claim. So a milestone release now settles the trainer split for auto cohorts. (Admin/human-built cohorts get no assigned trainer at enrollment, since their `created_by_user_id` may be an admin, not the trainer. Since 2026-10-05 the request can no longer name one.)
 
 ## Change Log
 
@@ -360,6 +371,8 @@ that exist today.
   `transfer` response is now the canonical camelCase shape (`recipientUserId`, `amount` as a number)
   instead of the raw table row; nothing in the app reads it. A refused sender gets 403
   `skill_up_account_restricted`.
+
+- 2026-10-05: **Three ways to sign off or move credits outside one's own cohort were closed** (code-review findings #2925, #2927, #2929). **Sign-off scope:** the validate and release routes checked that the caller trained the cohort named in the request body, then acted on whichever enrollment the body named, so a trainer of one cohort could validate and release an enrollment in another. Both routes now read the cohort from the enrollment, require the milestone to belong to it, and refuse anybody signing off their own enrollment; the body's `cohortId` is gone, and with it the admin queue's note for a row with no cohort id, which only existed because the routes needed one. **Trainer of record:** `POST /enroll` accepted `assignedTrainerId` from the learner and preferred it over the cohort's trainer, so a crafted request chose who received the minted trainer credits. The field is removed and the trainer always comes from the cohort; a trainer who enrolls in their own cohort, before or after claiming it, is not made their own trainer of record. **Dispute adjustments:** a cohort's trainer could resolve a dispute with an adjustment naming any source and destination member. Adjustments are now admin-only and limited to the learner and assigned trainer of the disputed enrollment. Tests in `lib/skill-up/sign-off-scope.test.ts`. No schema change.
 
 - 2026-10-04: **Profile-and-deletion contract written.** A contract coverage audit found this plugin
   had three of the four contract files. `SKILL_UP_PROFILE_AND_DELETION_CONTRACT.md` now states the
@@ -571,7 +584,7 @@ that exist today.
   **Resolve…** control (written resolution → `POST /disputes/:id/resolve`; credit adjustments
   deliberately stay out of the form — an adjustment case goes through the ServiceCredits admin),
   each pending validation carries **Validate** and **Release credits** (the milestone routes; the
-  server referees ordering; a row missing its cohort id shows a handle-via-API note), and a
+  server referees ordering), and a
   `needs trainer` cohort carries **Claim as trainer**. Completed actions re-pull the
   server-rendered queues via `router.refresh()`; the claim re-pulls the client-fetched cohort list.
   Still open (new Gaps #0): the member-side dispute form (blocked on an own-enrollments read

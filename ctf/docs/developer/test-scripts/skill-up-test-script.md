@@ -771,12 +771,14 @@ Result: web ☐
 **Precondition:** Trainee 1 is enrolled in the seed cohort (LU-3 done). Signed in as seed admin.
 
 **Steps:**
-1. As admin, open `/admin/skill-up` and find the pending row in **Pending milestone validations**; press **Validate** (added 2026-08-05). (API variant: `POST /api/skill-up/milestones/[milestoneId]/validate` with enrollment ID, cohort ID, and a unique idempotency key — the only path for a non-admin trainer.)
+1. As admin, open `/admin/skill-up` and find the pending row in **Pending milestone validations**; press **Validate** (added 2026-08-05). (API variant: `POST /api/skill-up/milestones/[milestoneId]/validate` with enrollment ID and a unique idempotency key — the only path for a non-admin trainer; the cohort is read from the enrollment.)
+2. (API variant, as the trainer of a different cohort) Send the same request for this enrollment. Then, as trainee 1, send it for their own enrollment.
 
 **Expected:**
 - The validation succeeds and the queue re-pulls via refresh.
 - A second identical API request with the same idempotency key returns the same validation ID without creating a duplicate record.
-- Note: the member SkillUp shell still has **no** inline approve panel (see inventory Gaps #0). The route is server-scoped to the cohort's trainer or an admin — a trainer must not see or act on another trainer's cohort validations.
+- Step 2: both requests are refused with 403 — a trainer of another cohort cannot sign off this enrollment, and nobody signs off their own.
+- Note: the member SkillUp shell still has **no** inline approve panel (see inventory Gaps #0). The route is server-scoped to the trainer of the enrollment's own cohort or an admin — a trainer must not see or act on another trainer's cohort validations.
 
 Result: web ☐
 
@@ -814,10 +816,13 @@ Result: web ☐
    `POST /api/skill-up/disputes/[disputeId]/resolve` directly — the form is deliberately
    comment-only (moving credits from free-typed ids is an error magnet; adjustment cases go
    through the ServiceCredits admin). If used, replay the same request (same idempotency key) once.
+4. (API-only variant) As the cohort's trainer, send a resolve with an `adjustment`. As admin, send
+   one whose source or destination is a member who is not the enrollment's learner or trainer.
 
 **Expected:**
 - Step 2: the dispute leaves the Open disputes list after the refresh; an empty comment keeps the button disabled.
 - The API replay with the same idempotency key returns the same stored response and does **not** apply the credit adjustment a second time (the recipient's balance moves once, not twice).
+- Step 4: the trainer's request is refused with 403, and the admin's is refused with 400; no credits move in either case.
 - Attempting to resolve the same dispute a second time returns an error indicating the dispute is no longer open (not a second resolution).
 
 Result: web ☐
