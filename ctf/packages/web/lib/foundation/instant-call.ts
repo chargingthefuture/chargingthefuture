@@ -5,6 +5,7 @@ import { isBlockedBetweenTx } from 'lib/blocks/repository';
 import { resolveUsernames } from 'lib/identity/resolve-usernames';
 import { sendWebPushToUser } from 'lib/notifications/push';
 import { sendExpoPushToUser } from 'lib/notifications/expo-push';
+import { getNotificationPreferences } from 'lib/notifications/repository';
 import { reportError } from 'lib/observability/report';
 import { createTransfer, getOrCreateWallet } from 'lib/shared/credits-interface';
 import {
@@ -14,6 +15,7 @@ import {
   FOUNDATION_INSTANT_CALL_RING_TIMEOUT_SECONDS,
   FOUNDATION_INSTANT_CALL_RING_WINDOW_SECONDS,
 } from './constants';
+import { buildRingPushPayload } from './ring-push';
 import { createFoundationCallToken } from './stream';
 import type { FoundationInstantCall, FoundationCallRingStatus } from './types';
 
@@ -263,6 +265,8 @@ async function expireStaleRings(client: PoolClient, userId: string): Promise<voi
 //      callee has no Expo devices; it never throws). Tapping it opens the app at the incoming-call surface.
 // Each push runs in its own try/catch so a failure of one delivery never affects the others or the ring.
 // The caller's display name is resolved best-effort; it falls back to "Someone" when unresolved.
+// Both pushes honor the callee's discreet-ping setting (see ring-push.ts); the in-app row behind sign-in
+// always names the caller.
 async function dispatchRingDelivery(call: FoundationInstantCall): Promise<void> {
   let callerName = 'Someone';
   try {
@@ -289,15 +293,21 @@ async function dispatchRingDelivery(call: FoundationInstantCall): Promise<void> 
     reportError(error, { area: 'foundation', op: 'instant_call_ring_notification_event' });
   }
 
-  const ringPayload = {
-    title: 'Incoming call',
-    body: `${callerName} is calling you on Foundation`,
-    data: {
-      type: 'foundation.instant_call.ring',
-      callId: call.id,
-      url: FOUNDATION_INCOMING_CALL_PATH,
-    },
-  } as const;
+  // Discreet unless the callee turned discreet pings off. A failed read stays discreet, since naming
+  // the caller on a monitored lock screen is the outcome this setting exists to prevent.
+  let discreet = true;
+  try {
+    discreet = (await getNotificationPreferences(call.calleeUserId)).discreetPush;
+  } catch (error) {
+    reportError(error, { area: 'foundation', op: 'instant_call_ring_preferences' });
+  }
+
+  const ringPayload = buildRingPushPayload({
+    callerName,
+    callId: call.id,
+    url: FOUNDATION_INCOMING_CALL_PATH,
+    discreet,
+  });
 
   try {
     await sendWebPushToUser(call.calleeUserId, ringPayload);

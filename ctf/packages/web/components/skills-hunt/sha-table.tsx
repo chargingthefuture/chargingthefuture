@@ -46,8 +46,8 @@ function MetaItem({ label, children }: { label: string; children: React.ReactNod
 }
 
 // Action buttons sit on their own full-width rows with generous tap targets so a moderator can't
-// accidentally accept/reject on a paid surface (the old inline table crammed four tiny buttons into
-// a scrolling cell).
+// accidentally accept/reject on a surface where each decision changes a scout's points (the old
+// inline table crammed four tiny buttons into a scrolling cell).
 //
 // This is the admin page, so every row offers every action, whatever state it is in (owner
 // directive 2026-08-28). There is no terminal state and nothing is withheld: an accepted row can be
@@ -143,7 +143,7 @@ function SubmissionCard(props: RowProps) {
         <MetaItem label="URL check"><span style={{ color: urlColor }}>{s.urlValidationResult ?? "—"}</span></MetaItem>
         <MetaItem label="Pts"><span style={{ color: t.ACCENT, fontWeight: 700 }}>{s.pointsAwarded}</span></MetaItem>
         <MetaItem label="Reward">
-          <span style={{ color: s.creditGranted ? "#22C55E" : t.FAINT, fontWeight: s.creditGranted ? 700 : 400 }} title={s.creditGranted ? "ServiceCredits paid to this scout" : "No ServiceCredits paid"}>
+          <span style={{ color: s.creditGranted ? "#22C55E" : t.FAINT, fontWeight: s.creditGranted ? 700 : 400 }} title={s.creditGranted ? "ServiceCredits sent to this scout" : "No ServiceCredits sent"}>
             {s.creditGranted ? `+${s.creditAmount}` : "—"}
           </span>
         </MetaItem>
