@@ -148,7 +148,8 @@ feed; when the event ends, Beacon auto-posts the recording to the Commons as a r
   publishing media to the call (called by the in-browser screen-share when sharing begins). Admin-only,
   idempotent.
 - `POST /api/beacon/[id]/end` — end the call; flips status to `ended`.
-- `GET /api/beacon/admin` — list events.
+- `GET /api/beacon/admin` — list events. For up to five ended events with no recording address, asks
+  Stream for the recording, stores it and posts the replay, as the recording-ready webhook would.
 - `POST /api/beacon/[id]/moderate` — mute / ban / slow-mode actions on the event chat.
 - `DELETE /api/beacon/[id]` — delete a **draft** event. Refuses a `live` or `ended` event with a 409
   (`beacon_conflict`); the draft-only rule is enforced in the route and again in the SQL predicate of
@@ -303,6 +304,15 @@ stops. HLS is used for public viewers so scale does not multiply WebRTC cost.
 
 ## Change Log
 
+- 2026-10-06: **Missed recordings are recovered, and the admin history shows Eastern Time (owner
+  report).** Two ended events showed no recording. An event only got its recording address from
+  Stream's recording-ready webhook, so a missed delivery left it with none: no replay post and nothing
+  for the archive workflow to copy. Loading the admin history now asks Stream for the recording of up
+  to five such events, stores it and posts the replay; both writes happen only while still empty. Each
+  history row shows when the event went live (when it was created, for a draft) in Eastern Time, an
+  ended event with nothing found reads "no recording found", and Replay opens
+  `/api/beacon/replays/[id]/recording`, which serves the archived copy or a current address rather
+  than the stored signed one.
 - 2026-10-05: **A failed start-broadcast is shown to the admin (#2668).** The host stage sent
   `POST /api/beacon/[id]/start-broadcast` with only a network `.catch`, so a refusal (Stream, CSRF or
   origin) was dropped and the admin read "Your screen is live to the broadcast." while no public feed
