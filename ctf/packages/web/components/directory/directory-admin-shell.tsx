@@ -1164,13 +1164,13 @@ function SuppressionPanel() {
     try {
       const res = await fetch("/api/directory/admin/suppressed-urls");
       if (!res.ok) {
-        setErr("Could not load the takedown list.");
+        setErr(await responseFailureText(res, "Could not load the takedown list."));
         return;
       }
       const data = (await res.json()) as { items?: SuppressedUrlItem[] };
       setItems(data.items ?? []);
-    } catch {
-      setErr("Could not load the takedown list.");
+    } catch (caught) {
+      setErr(failureText(caught, { area: "directory", op: "admin_load_suppressed_urls", fallback: "Could not load the takedown list." }));
     } finally {
       setLoading(false);
     }
