@@ -114,6 +114,23 @@ async function handleRecordingReady(payload: Record<string, unknown>): Promise<N
   return NextResponse.json({ ok: true, handled: true }, { status: 200 });
 }
 
+// A deny row for a refused delivery. Nothing from the body or the signature is stored, and a failed
+// write is reported without changing the 401.
+async function auditRefusedDelivery(signature: string | null): Promise<void> {
+  try {
+    await insertBeaconAudit({
+      actorId: 'system',
+      command: 'beacon.event.stream-webhook.ingest',
+      policyStatus: 'deny',
+      reason: signature ? 'invalid_signature' : 'missing_signature',
+      targetType: 'webhook',
+      targetId: 'stream',
+    });
+  } catch (auditError) {
+    reportError(auditError, { area: 'beacon', op: 'stream_webhook_deny_audit' });
+  }
+}
+
 // Stream Video webhook. Verifies the signature, then acts on three events:
 //
 //   - `call.session_participant_joined` — a publisher is now on the call, so start the public HLS
@@ -144,20 +161,7 @@ export async function POST(request: Request) {
 
   const verified = await verifyBeaconWebhookSignature(rawBody, signature);
   if (!verified) {
-    // A deny row for the refused delivery. Nothing from the body or the signature is stored, and a
-    // failed write is reported without changing the 401.
-    try {
-      await insertBeaconAudit({
-        actorId: 'system',
-        command: 'beacon.event.stream-webhook.ingest',
-        policyStatus: 'deny',
-        reason: signature ? 'invalid_signature' : 'missing_signature',
-        targetType: 'webhook',
-        targetId: 'stream',
-      });
-    } catch (auditError) {
-      reportError(auditError, { area: 'beacon', op: 'stream_webhook_deny_audit' });
-    }
+    await auditRefusedDelivery(signature);
     return NextResponse.json(
       { ok: false, code: BEACON_ERROR_CODE.webhookSignatureInvalid, message: 'Invalid webhook signature.' },
       { status: 401 },
