@@ -24,6 +24,10 @@ const STEP_LABELS: Record<string, string> = {
   'beacon.stream.recording-ready': 'Recording file ready',
   'beacon.event.end': 'Ended',
   'beacon.event.moderate': 'Chat moderation',
+  'beacon.stream.ingress-started': 'Phone feed connected; feed and recording asked to start',
+  'beacon.stream.ingress-stopped': 'Phone feed disconnected',
+  'beacon.stream.ingress-error': 'Phone feed error',
+  'beacon.stream.delivery-refused': 'Stream message refused',
 };
 
 const TIME_ET = new Intl.DateTimeFormat('en-US', {

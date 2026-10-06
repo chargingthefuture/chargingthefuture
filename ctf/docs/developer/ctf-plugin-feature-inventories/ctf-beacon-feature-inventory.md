@@ -177,8 +177,13 @@ feed; when the event ends, Beacon auto-posts the recording to the Commons as a r
   limit), uploads it to the `beacon-recordings` release, and reports back.
 
 ### Webhook
-- `POST /api/beacon/stream-webhook` — Stream call lifecycle events; verifies the Stream signature and
-  acts on these. On `call.session_participant_joined` it starts the public HLS feed and the
+- `POST /api/beacon/stream-webhook` — Stream call lifecycle events from **both** Stream apps
+  (production and the demo app send to this one address). The signature is checked against each
+  app's secret and the matching app is the one acted on; a delivery matching neither is refused with
+  a 401, and when it names an existing Beacon call it is written once to that event's log as
+  `beacon.stream.delivery-refused`. `ingress.started` (the phone's RTMP feed connected) starts the
+  feed and recording exactly as a participant join does; `ingress.stopped` and `ingress.error` are
+  logged. Acts on these. On `call.session_participant_joined` it starts the public HLS feed and the
   recording for the matching `live` event, which is what carries a phone-only RTMP broadcast. On
   `call.recording_ready` it stores `recording_url` and posts the replay to the Commons. On
   `call.recording_started`, `call.recording_stopped` and `call.recording_failed` it only writes a
@@ -318,6 +323,14 @@ stops. HLS is used for public viewers so scale does not multiply WebRTC cost.
 
 ## Change Log
 
+- 2026-10-06: **The Stream webhook accepts both Stream apps (owner report).** Both Stream apps send
+  webhooks to `/api/beacon/stream-webhook`, but a delivery has no signed-in user, so the route always
+  checked the production secret. An admin in demo mode broadcasts on the demo app, and every delivery
+  from it was refused, so a phone broadcast's feed and recording were never started. The route now
+  checks each app's secret and starts the feed and recording on the app that signed. It also starts
+  them on `ingress.started`, logs `ingress.stopped` and `ingress.error`, and writes a refused delivery
+  for an existing Beacon call to the event's log. Web only; Android: out of scope (web-only per rule
+  105).
 - 2026-10-06: **A log for each broadcast (owner report).** Every ended event read "no recording
   found", the same words whether Stream had no recording or the lookup itself failed, and a failed
   recording start was only in the hosting logs. The history row now opens a Log: what Stream said

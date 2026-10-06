@@ -1,6 +1,6 @@
 import { createHmac } from 'crypto';
 import { StreamChat } from 'stream-chat';
-import { resolveStreamCredentials } from 'lib/integrations/stream-credentials';
+import { resolveStreamCredentials, streamCredentialsFor, type StreamAppName } from 'lib/integrations/stream-credentials';
 import { reportError } from 'lib/observability/report';
 import { BEACON_CHAT_CHANNEL_TYPE, BEACON_STREAM_CALL_TYPE } from './constants';
 
@@ -73,8 +73,9 @@ type StreamRestContext = {
   serverToken: string;
 };
 
-async function resolveStreamRest(): Promise<StreamRestContext | null> {
-  const credentials = await resolveStreamCredentials();
+// `app` names the Stream app outright; without it the request's demo mode picks one.
+async function resolveStreamRest(app?: StreamAppName): Promise<StreamRestContext | null> {
+  const credentials = app ? streamCredentialsFor(app) : await resolveStreamCredentials();
   if (!credentials) {
     return null;
   }
@@ -306,8 +307,11 @@ export async function goLiveBeaconCall(eventId: string): Promise<boolean> {
 // its recording started. Stream answers a start for something already running with an error naming
 // it as already running; that is the state this function exists to reach, so it counts as success.
 // Any other refusal is thrown after both attempts, naming each one that failed.
-export async function startBeaconBroadcastEgress(eventId: string): Promise<boolean> {
-  const ctx = await resolveStreamRest();
+//
+// `app` is passed by the webhook, which knows which Stream app sent the delivery; every other caller
+// leaves it to the request's demo mode.
+export async function startBeaconBroadcastEgress(eventId: string, app?: StreamAppName): Promise<boolean> {
+  const ctx = await resolveStreamRest(app);
   if (!ctx) {
     return false;
   }
@@ -479,17 +483,28 @@ export async function moderateBeaconChat(input: {
   }
 }
 
-// Verify the Stream webhook signature. Stream signs the raw body with the app secret (HMAC-SHA256)
-// and sends it in the `x-signature` header. A request whose signature does not match is rejected.
-export async function verifyBeaconWebhookSignature(rawBody: string, signature: string | null): Promise<boolean> {
+// Verify the Stream webhook signature and say which Stream app signed it. Stream signs the raw body
+// with the app secret (HMAC-SHA256) and sends it in the `x-signature` header.
+//
+// Both apps send their webhooks to this one address, and a delivery carries no signed-in user, so
+// the request's demo mode cannot say which secret to check. Checking only the production secret
+// refused every delivery from the demo app, which is where an admin in demo mode broadcasts. Each
+// app's secret is tried; null when neither matches.
+export function verifyBeaconWebhookSignature(rawBody: string, signature: string | null): StreamAppName | null {
   if (!signature) {
-    return false;
+    return null;
   }
-  const credentials = await resolveStreamCredentials();
-  if (!credentials) {
-    return false;
+  for (const app of ['production', 'staging'] as const) {
+    const credentials = streamCredentialsFor(app);
+    if (credentials && signatureMatches(credentials.apiSecret, rawBody, signature)) {
+      return app;
+    }
   }
-  const expected = createHmac('sha256', credentials.apiSecret).update(rawBody).digest('hex');
+  return null;
+}
+
+function signatureMatches(apiSecret: string, rawBody: string, signature: string): boolean {
+  const expected = createHmac('sha256', apiSecret).update(rawBody).digest('hex');
   // Length-guard before compare so a malformed signature can't throw.
   if (expected.length !== signature.length) {
     return false;

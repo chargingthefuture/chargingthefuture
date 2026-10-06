@@ -252,6 +252,18 @@ is the setting this case is really testing. Before 2026-08-10 this case failed b
 in-browser screen-share started egress.
 **Result:** web ☐ mobile ☐ — notes:
 
+### BCN-A2c2 · A phone broadcast in demo mode still records
+**Role:** admin with demo mode on · **Surfaces:** web (admin surface)
+**Steps:**
+1. With demo mode on for your account, repeat BCN-A2c steps 1, 2 and 4.
+2. Wait a minute, reload `/admin/beacon`, and open the event's Log in Event history.
+**Expected:** The Log shows `Phone feed connected; feed and recording asked to start` or
+`Broadcaster joined; …` with `ok (staging Stream app)`, then `Stream started recording`, and after the
+end `Recording file ready`; the row reads `recording ready`. A `Stream message refused` line means a
+delivery's signature matched neither app's secret: the secret saved for that app differs from the
+one in the Stream dashboard.
+**Result:** web ☐ mobile ☐ — notes:
+
 ### BCN-A2d · A refused start-broadcast is shown on the host stage
 **Role:** admin · **Surfaces:** web (admin surface, desktop)
 **Precondition:** a live event, opened in the admin screen, with Stream set up so the refusal can be
