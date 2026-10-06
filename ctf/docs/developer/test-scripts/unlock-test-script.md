@@ -441,6 +441,9 @@ completes, including on a failed request. Step 4: the failed pull keeps the "Pen
 view on screen (it does not switch to "Submit your Quora profile URL") and shows a red line under the
 header starting "Your verification status could not be read:" with the reason; the next successful
 pull removes the line.
+Since 2026-10-05, if the access-tier read behind `commonsAccess` fails, the status answer still says
+`commonsAccess: false` (the Android app shows the Unlock screen, as before), and the failure is
+reported to error tracking under `unlock` / `status_access_tier` instead of being dropped.
 **Result:** android ☐ — notes:
 
 ---

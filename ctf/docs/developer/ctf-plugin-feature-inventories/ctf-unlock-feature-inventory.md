@@ -502,6 +502,14 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
   A first load that fails falls back to the submission form as before, now with that line. No route,
   schema or contract change. Test script UNLOCK-A7 step 4 added.
 
+- 2026-10-05: **The status route reports a failed access-tier read (code-review #2786).**
+  `GET /api/unlock/status` resolves `commonsAccess` through `getUnlockAccessTier`, and a throw there
+  was dropped by a bare `.catch(() => null)`, so the route answered `commonsAccess: false` with no
+  record of why. The Android gate reads that field to choose between the Unlock wall and the app
+  shell. The fallback is unchanged (a failed read still answers `false`), but the error now goes to
+  `reportError` under `unlock` / `status_access_tier` first. No change to the response, the gate's
+  decision, schema or contracts.
+
 - 2026-09-26: **Help for members stuck on the Quora profile URL.** The Unlock screen's help box and the Commons banner's help note were two versions of the same ask; they are now one component with the hint box in both places, plus a picture (`public/help/quora-profile-url.svg`, an illustration rather than a capture of Quora) and steps for the four ways members get stuck. A member not yet approved who asks @comic about Unlock gets a scripted answer built from the same steps, sent without review (owner decision; switchable from the log page), and `/admin/comic/unlock-help` lists each such conversation against whether the member was approved afterward. No change to who is approved or how: the assistant has no way to approve anybody. See the comic and commons inventories for those halves.
 
 - 2026-09-24: **A database update removed one spam denylist entry and did not put it back.** `post/0028` (the Quora URL re-keying) deleted the denylist rows and re-inserted them from a TEMP table; on the 2026-09-24 "Neon — Update DB" run the connection pooler ran the re-insert on a different session, the TEMP table was not there, and the deleted row stayed deleted. `post/0028` now runs in one transaction, so a failure undoes the delete. `post/0040` rebuilds missing entries from submissions marked `spam`, except a URL an admin removed from the denylist after that decision. An entry whose submission was deleted with its account cannot be rebuilt from the database.
