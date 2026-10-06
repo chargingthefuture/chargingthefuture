@@ -188,27 +188,26 @@ export async function sendChymeStreamMessage(input: {
   }
 
   const streamClient = new StreamChat(streamConfig.apiKey, streamConfig.apiSecret);
+  const streamChannelId = input.channelId ?? CHYME_STREAM_CHANNEL_ID;
   try {
+    // The entire Stream step (user upsert, channel setup, send) sits inside the catch: the message
+    // is already stored in Postgres and the Stream copy is a fan-out, so a failure at any point is
+    // recorded with the channel it was meant for, then swallowed so the member's send still succeeds.
     const streamUserId = await ensureMember(streamClient, input.userId, input.name);
-    const channel = await ensureChannel(streamClient, streamUserId, input.channelId ?? CHYME_STREAM_CHANNEL_ID);
+    const channel = await ensureChannel(streamClient, streamUserId, streamChannelId);
+    const result = await channel.sendMessage({
+      text: input.text,
+      user_id: streamUserId,
+    });
 
-    try {
-      const result = await channel.sendMessage({
-        text: input.text,
-        user_id: streamUserId,
-      });
-
-      return result.message?.id ?? null;
-    } catch (error) {
-      // The message is already stored in Postgres; the Stream copy is a fan-out. A failed fan-out is
-      // recorded with the channel it was meant for, then swallowed so the member's send still succeeds.
-      reportError(error, {
-        area: 'chyme',
-        op: 'stream_fanout_send',
-        extra: { streamChannelId: input.channelId ?? CHYME_STREAM_CHANNEL_ID, streamUserId },
-      });
-      return null;
-    }
+    return result.message?.id ?? null;
+  } catch (error) {
+    reportError(error, {
+      area: 'chyme',
+      op: 'stream_fanout_send',
+      extra: { streamChannelId, userId: input.userId },
+    });
+    return null;
   } finally {
     await disconnectQuietly(streamClient, 'fanout_send_disconnect');
   }
