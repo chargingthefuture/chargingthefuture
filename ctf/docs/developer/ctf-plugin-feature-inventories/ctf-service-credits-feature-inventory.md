@@ -341,6 +341,16 @@ ServiceCredits seeds wallets, transfers, escrow holds, and dispute fixtures via 
   `service-credits.constants.ts`, no schema, route, contract, transfer, or ledger change. The
   2026-06-19 entry below still quotes the old wording and is left as written, being a dated record.
 
+- 2026-10-05: **A second press of Send no longer sends twice (code review #2905).** The Send
+  panel made a new idempotency key on every press, so the server's replay protection never
+  covered a retry, and a balance refresh that failed after a completed send showed its error in
+  red with the form still filled in, which read as a failed send. The panel now keeps one key for
+  a filled-in send and reuses it on a retry, so a second press after an error or a lost response
+  returns the first transfer. Changing the recipient, amount or rail, or completing the send, makes
+  a new key. A completed send now always shows "Credits sent successfully!" and clears the form;
+  if the balance cannot be re-read afterwards, a separate gray note says the figure shown may be
+  out of date. Web only (`sc-send-panel.tsx`); no route, contract or ledger change.
+
 - 2026-08-27: **Saving the treasury policy did nothing on a database with no policy row yet.**
   `updateTreasuryConfig` ran a bare `UPDATE service_credits_treasury_config ... WHERE id = TRUE`, and
   nothing in `schema.sql`, a migration, or any seed ever inserts that singleton row. So on a database
