@@ -107,7 +107,9 @@ When user requests full account deletion:
   - no recoverable user-scoped Directory profile data except policy-required audit artifacts
 - Profiles the member nominated for other people (`directory_profiles.nominated_by_user_id`) are
   not theirs, so they stay: the id is overwritten with the departed-member placeholder and
-  `invited_by_username` is cleared, so the Directory stops naming them as nominator.
+  `invited_by_username` is cleared, so the Directory stops naming them as nominator. For the same
+  reason these profiles are not in the nominator's data export: the row is the nominee's profile,
+  and once claimed it holds their bio, payment addresses and location.
 
 ## 7) Rejoin/Re-enable Behavior
 
@@ -164,6 +166,7 @@ If user returns after service-scoped deletion:
 ## Change Log
 
 - 2026-02-25: Created initial draft.
+- 2026-10-05: Profiles a member nominated are left out of that member's data export (#2643).
 - 2026-10-05: Member and account deletion remove every claimed listing the account owns, not just one (#2833). An account should own one, and the admin assign now refuses a second, but an account given two before that check had the second left live and claimed, its Quora address unblocked and its skill rows behind.
 - 2026-09-30: Added `directory_profiles.nominated_by_user_id` (who brought the person in). On full-account deletion of the nominator it is pseudonymized and `invited_by_username` cleared; the profile itself stays with its person.
 - 2026-06-25: Added `directory_profile_proposed_skills` (member-authored "skill not listed" free-text labels on their own profile, pending admin promotion). Profile_id-keyed; cleared with the profile in service-scoped deletion.
