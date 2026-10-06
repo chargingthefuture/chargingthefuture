@@ -431,8 +431,11 @@ of these, it is already tracked, not a new bug:
   own script covers the consumers (SH-A17 and the rare-skill scoring cases).
 - The member-facing service-scoped delete lives on the Account & Data screen (`/account/data`), not
   inside the Workforce shell — that is by design, not a missing control (reclassified 2026-08-04).
-  The in-plugin `DELETE /api/workforce/profile` route stays because the deletion contract §9
-  mandates it.
+  The in-plugin `GET`/`DELETE /api/workforce/profile` route was retired 2026-10-05 (nothing
+  rendered the read and nothing called the delete); the deletion contract §9 now names
+  `DELETE /api/account/services/workforce`. Opening the Overview makes no request to
+  `/api/workforce/profile`, and a failed load never lists "your profile" among the sections that
+  could not be loaded.
 - The profile has no `region` field (dropped 2026-08-04 — it was always null with no upstream
   source). Seeing no region row anywhere is correct.
 - (2026-07-03 sweep) The unused summary report endpoint, an in-process sync cron that failed on

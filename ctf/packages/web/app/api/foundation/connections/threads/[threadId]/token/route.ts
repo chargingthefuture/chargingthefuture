@@ -51,6 +51,14 @@ export async function GET(_request: Request, context: { params: Promise<{ thread
   } catch (error) {
     const code = error instanceof Error ? error.message : '';
 
+    // Neutral copy on purpose: a block made after this thread opened must not reveal itself.
+    if (code === 'blocked_pair') {
+      return NextResponse.json(
+        { ok: false, code: FOUNDATION_ERROR_CODE.policyDenied, message: 'This conversation is not available right now.' },
+        { status: 403 },
+      );
+    }
+
     // The caller is not a participant of this thread (or it does not exist). Return 404 so a
     // non-participant cannot tell an existing thread apart from a missing one.
     if (code === 'thread_not_found') {
