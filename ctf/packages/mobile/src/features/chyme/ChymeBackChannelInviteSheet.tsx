@@ -21,9 +21,11 @@ export const ChymeBackChannelInviteSheet: React.FC<{
   visible: boolean;
   fromName: string;
   busy: boolean;
+  // Why the last accept or decline failed, in the route's words.
+  error?: string | null;
   onAccept: () => void;
   onDecline: () => void;
-}> = ({ visible, fromName, busy, onAccept, onDecline }) => {
+}> = ({ visible, fromName, busy, error, onAccept, onDecline }) => {
   const { theme, tokens } = useTheme();
   const accent = getAppAccent('chyme', theme);
   const styles = makeStyles(tokens, accent);
@@ -64,6 +66,9 @@ export const ChymeBackChannelInviteSheet: React.FC<{
             <Text style={styles.declineText}>Decline</Text>
           </Pressable>
 
+          {error ? (
+            <Text style={styles.errorText} accessibilityRole="alert">{error}</Text>
+          ) : null}
           <Text style={styles.privacyNote}>Declining sends no message. Back Channels are private.</Text>
         </View>
       </View>
@@ -126,6 +131,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     },
     declineText: { fontSize: 16, fontWeight: '600', fontFamily: interFamily('600'), color: t.textSecondary },
     btnDisabled: { opacity: 0.7 },
+    errorText: { fontSize: 13, color: '#F87171', fontFamily: interFamily('400'), textAlign: 'center', marginTop: 14 },
     privacyNote: { fontSize: 11, color: '#4b5563', fontFamily: interFamily('400'), textAlign: 'center', marginTop: 14 },
   });
 }

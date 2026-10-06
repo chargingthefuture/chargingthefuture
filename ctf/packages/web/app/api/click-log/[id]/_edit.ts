@@ -119,21 +119,12 @@ export function validateEditRules(
   return null;
 }
 
-// Runs the update and maps the outcomes the route cares about. 'conflict' is the generated
-// metadata_hash dedupe: the edited note made this row's metadata identical to another of the
-// member's incidents, violating UNIQUE (user_id, metadata_hash).
+// Runs the update. 'failed' means no row matched the incident id and owner.
 export async function applyIncidentEdit(
   id: string,
   userId: string,
   fields: IncidentEditFields,
-): Promise<'ok' | 'conflict' | 'failed'> {
-  try {
-    const updated = await updateIncident({ id, userId, ...fields });
-    return updated ? 'ok' : 'failed';
-  } catch (caught) {
-    if ((caught as { code?: string })?.code === '23505') {
-      return 'conflict';
-    }
-    throw caught;
-  }
+): Promise<'ok' | 'failed'> {
+  const updated = await updateIncident({ id, userId, ...fields });
+  return updated ? 'ok' : 'failed';
 }
