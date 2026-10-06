@@ -245,7 +245,9 @@ reveals the explanation and the list. Step 2: the panel lists every denylisted U
 `unlock.admin.spam_denylist.remove`) and it disappears from the panel. Step 4: because the URL is no
 longer denylisted, the submission is now accepted as `pending` (not auto-spam) — removal affects future
 submissions only; a member already blocked for that URL stays blocked until their submission is
-re-reviewed. A non-admin cannot reach the route.
+re-reviewed. A non-admin cannot reach the route. If a remove is refused, the panel shows the route's
+own sentence (for example "Spam denylist update unavailable."), not only "Remove failed (503)."
+(added 2026-10-05).
 **Result:** web ☐ — notes:
 
 ### UNLOCK-A2e · Duplicate account — blocked, but their real account is untouched
