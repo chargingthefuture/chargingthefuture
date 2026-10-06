@@ -435,6 +435,9 @@ Index `idx_unlock_verification_submissions_url_normalized` on `quora_profile_url
    to the Commons. Android: `Unlock.tsx` `QuoraHelp` calls `requestUnlockHelp()` and re-runs the host
    gate in `App.tsx`, which now passes on `status.commonsAccess`. Both Commons verify banners point a
    stuck member at the chat below rather than off to Quora. No React Native screen was added.
+10. Sign-out from the Unlock wall (2026-10-05) is **Android-only** by nature: the Android Unlock
+    screen covers the app, so it carries the shared `SignOutButton` at the bottom of each view. Web
+    members held at Unlock already have the account menu.
 
 ## 7) Seed Coverage Status
 
@@ -478,6 +481,26 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
   remove route and the CSRF guard answer with `message`, so an admin saw "Remove failed (503)." in
   place of the route's sentence. It now reads `message` first, like the other admin actions in this
   plugin. No schema, route shape or contract change.
+
+- 2026-10-05: **Sign out from the Android Unlock screen (owner directive).** The Unlock wall covers
+  the entire Android app, so a signed-in member held there had no way to sign out: the Sign out button
+  on Account & Data sits behind the wall. The Android Unlock screen now ends with the same **Sign out**
+  control as Account & Data (`SignOutButton` from `packages/mobile/src/components/shared/SessionControls.tsx`,
+  with its "Signed in as …" line and a confirm), on the submission form, the status view and the
+  signed-out view. It is shown only while signed in. Signing out clears the stored session and returns
+  the member to the app shell with its sign-in card. Nothing else on the screen changed. Web-only by
+  nature: web members sign out from the account menu. No route, schema or contract change. Test script
+  UNLOCK-M5 added.
+- 2026-10-05: **The Android Unlock screen says when the status read fails (code-review #2807).**
+  `fetchUnlockStatus` threw the fixed text "Unlock status unavailable." on any non-OK answer, so the
+  screen's check for 401/403 in that text never matched and every failure moved the member to the
+  submission form with nothing on screen. A member with a pending submission whose pull-to-refresh
+  failed was shown "Submit your Quora profile URL" as if the submission were gone. The client now
+  throws `UnlockStatusError` with the route's `message` and the HTTP status. A 401 or 403 still shows
+  the signed-out view. Any other failure goes to the mobile `reportError`, keeps the view the member
+  was on, and shows "Your verification status could not be read:" with the reason under the header.
+  A first load that fails falls back to the submission form as before, now with that line. No route,
+  schema or contract change. Test script UNLOCK-A7 step 4 added.
 
 - 2026-10-05: **The status route reports a failed access-tier read (code-review #2786).**
   `GET /api/unlock/status` resolves `commonsAccess` through `getUnlockAccessTier`, and a throw there

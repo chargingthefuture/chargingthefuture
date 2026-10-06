@@ -129,6 +129,7 @@ Cross-plugin read dependencies (read-only):
 8. Rate limiting and command-level throttling for high-frequency actions.
 9. Quota-aware degradation: preserve core send/receive/active thread reliability under red quota threshold.
 10. **Provider-only price on a quote (2026-07-21).** Only the quote's provider may attach `quoted_amount` + `quoted_currency`, and only on the `provider_responded` transition. The repository (`updateQuoteRequestState`) enforces this: a non-provider attempting `provider_responded` is denied (`policy_denied` → 403), and a missing/invalid amount or currency on that transition is rejected (`invalid_payload` → 400). The survivor may still move the quote through its lifecycle but can never set the price. The price is persisted only on `provider_responded` (a later `closed` transition leaves the amount/currency untouched and only stamps `settled_at`). The provider-only price form is hidden from the survivor in the UI as well, but the server check is authoritative. The `closed` transition is open to either party and is sent by the "Mark the work done" control on a priced quote row (2026-09-23); it is what stamps `settled_at` and therefore what puts the engagement into GDP recognition.
+11. **The ring push follows discreet pings (2026-10-05).** `dispatchRingDelivery` reads the callee's `notification_preferences` and, while `discreet_push` is on (the default), sends both the Web Push and the Expo push as "Charging The Future" / "You have a new update.", the same text the shared notifications path sends, so a shared or monitored lock screen shows neither the caller nor Foundation. With discreet pings off the push names the caller as before. A failed settings read stays discreet. The payload is built in `lib/foundation/ring-push.ts`. The in-app `instant_call.ring` row behind sign-in still names the caller. Whether a ring should also need the member's category opt-in is not decided; today the Foundation call-alerts switch alone controls whether a device rings.
 
 ## Web and Android Delivery Status
 
@@ -184,6 +185,7 @@ The instant 1:1 call ring/answer lifecycle (issue #808 task 3) and per-block bil
 
 ## Change Log
 
+- 2026-10-05: **The instant-call ring no longer names the caller and Foundation on a discreet lock screen (#2953).** The ring push was built with the caller's name and the plugin name and never read the callee's notification settings, so a member who left discreet pings on (the default) still got a lock-screen alert saying who was calling and through which service. Both pushes now send the generic text while discreet pings are on (Security item 11). No schema, route or contract change. Test script step FDN-37b added.
 - 2026-10-05: **Foundation member screens say what failed instead of hiding it (#2968).** No schema,
   route or contract change. Test script step FDN-42 added.
   - Quote forms: `useQuoteTransitions` (`foundation-quote-actions.ts`) now resolves to `true` or to
