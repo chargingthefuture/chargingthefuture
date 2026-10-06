@@ -315,9 +315,13 @@ CSRF guard; an unknown status is refused with a readable error rather than silen
 ### LH-A3 · Property moderation
 **Role:** admin · **Surfaces:** web (admin surface)
 **Steps:**
-1. Hide a listing from the admin Properties tab, then restore it.
-**Expected:** Hide/restore flips the listing's active state and preserves both currency fields. The
-write is CSRF-guarded and the change is reflected in the list.
+1. Pick a listing whose rent is in ServiceCredits (or any non-USD currency) and that accepts
+   ServiceCredits.
+2. Hide it from the admin Properties tab, then restore it.
+3. Open the listing as a member.
+**Expected:** Hide/restore flips the listing's active state and preserves both currency fields: the
+rent still reads in its own currency (never a "$" figure for ServiceCredits) and the listing still
+shows "Accepts ServiceCredits". The write is CSRF-guarded and the change is reflected in the list.
 **Result:** web ☐ mobile ☐ — notes:
 
 ### LH-A4 · Audit trail

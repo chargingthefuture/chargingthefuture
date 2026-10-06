@@ -149,6 +149,8 @@ Result: web ☐
 
 **Expected:** The offer is accepted and a trip is created. The request moves to an accepted state. Per model B, the pickup/drop-off is now available to the accepted provider through the trip. The trip ID is visible (the sidebar/detail shows it, not "— → —"). A "Chat" control opens the trip's Direct Line on both web and android.
 
+Since 2026-10-05: with Stream Chat unreachable or refusing the channel setup, the accept still succeeds and answers with the trip; the failure is reported, and opening Direct Line afterwards sets the channel up.
+
 Result: web ☐
 
 ---
@@ -187,6 +189,8 @@ Result: web ☐
 - Step 5: A text chat input is available. Sending a message works. There is no video call button or video room.
 - If the chat cannot be set up, the message reads "Could not set up the chat channel: <Stream's reason>"
   (since 2026-09-18; scrubbed and capped, never the raw exception text).
+- Since 2026-10-05 the chat request carries the `x-ctf-csrf: 1` header (check in devtools), and a
+  `POST /api/trust-transport/trips/:tripId/chat` sent without it is refused with 403.
 
 Result: web ☐
 
@@ -564,6 +568,8 @@ Result: web ☐
 2. Look for audit entries for `trust-transport.request.create`, `trust-transport.offer.accept`, `trust-transport.trip.status.update`, and `trust-transport.payout.request`.
 
 **Expected:** All four member-facing command types appear as audit rows. Each row has a timestamp, actor ID, command name, and result status.
+
+Since 2026-10-05: an emergency stop (TT-10) and an order cancel (TT-11) also appear, as `trust-transport.trip.status.update` rows with `nextStatus` `emergency_frozen` or `canceled`.
 
 Result: web ☐
 
