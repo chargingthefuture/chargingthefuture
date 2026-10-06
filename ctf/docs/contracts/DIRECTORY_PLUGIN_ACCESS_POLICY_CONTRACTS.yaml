@@ -196,6 +196,8 @@ policies:
       - actor_not_admin
       - csrf_validation_failed
       - cross_workspace_access
+      - invalid_claimed_unclaimed_transition
+      - account_already_owns_profile
 
   - pluginId: directory
     command: directory.admin.profile.delete
@@ -272,7 +274,7 @@ policies:
     denyConditions:
       - insufficient_role
       - csrf_denied
-      - profile_already_claimed
+      - invalid_claimed_unclaimed_transition
       - profile_not_community_generated
       - profile_has_no_quora_url
       - not_found

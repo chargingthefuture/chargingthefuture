@@ -1,4 +1,4 @@
--- post/0050: Let a member log a second ClickLog incident with the same note and location.
+-- post/0051: Let a member log a second ClickLog incident with the same note and location.
 --
 -- Why: click_log_incidents carried metadata_hash, a generated md5 of the metadata JSON, and
 -- UNIQUE (user_id, metadata_hash). The date, tags and share flag sit outside the metadata, so two
