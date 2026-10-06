@@ -13,7 +13,7 @@
 | **Surfaces** | Web (`/apps/skills-hunt`, `/admin/skills-hunt`) · Android (`SkillsHunt.tsx`, `AdminSkillsHunt.tsx`) |
 | **Seed first** | `pnpm --dir ctf seed:skills-hunt` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-skills-hunt-feature-inventory.md` |
-| **Generated** | 2026-08-27 (hand-updated: team leaderboard removed — SH-8; report flow removed — SH-13, SH-A13; flag reversal + re-add after remove — SH-A6, SH-A6b; taken-down URL refused — SH-A6c; unflag — SH-A6; admin list hides nothing — SH-A6d; restore a removed row — SH-A6e) · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-09-17 manual update: SH-2 now checks that the nomination is really written, not only acknowledged on screen — the submission INSERT listed 18 columns against 19 values and Postgres refused every nomination · 2026-09-17 manual update: SH-A10b and SH-A10c cover the named-skill mission goal, the mission Edit control and Recompute progress; SH-9 now says how to read a count against its title · 2026-09-18 manual update: SH-9 expects a count capped at its target, and points the mis-pointed-mission check at the admin Missions tab · 2026-09-20 manual update: SH-9b covers the missions picture control, which moved to the admin Missions tab the same day and now shows the picture on that screen rather than handing the file off · 2026-09-20 manual update: SH-A4c covers the paged moderation queue (25 a page, Previous/Next, filter change returns to page 1) · 2026-09-22 manual update: SH-1c covers the round as a field the scout marks (nothing pre-marked with two rounds open, submit waits for a mark, the mark survives a refresh) and the round named on the confirmation; SH-1d covers a closed round leaving the field reachable; SH-A4d covers the round's purpose above the moderation controls and the second confirmation on accept · 2026-10-01 manual update: one open round and the end-of-round award — SH-1c, SH-1d, SH-10c, SH-A1, SH-A3, SH-A4d, SH-A8, SH-A9b rewritten; SH-A-award and SH-A10d added · 2026-10-02 manual update: CS-4, SH-A3, SH-A4c and SH-A4d — Moderation opens on the open round with no round chips |
+| **Generated** | 2026-08-27 (hand-updated: team leaderboard removed — SH-8; report flow removed — SH-13, SH-A13; flag reversal + re-add after remove — SH-A6, SH-A6b; taken-down URL refused — SH-A6c; unflag — SH-A6; admin list hides nothing — SH-A6d; restore a removed row — SH-A6e) · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-09-17 manual update: SH-2 now checks that the nomination is really written, not only acknowledged on screen — the submission INSERT listed 18 columns against 19 values and Postgres refused every nomination · 2026-09-17 manual update: SH-A10b and SH-A10c cover the named-skill mission goal, the mission Edit control and Recompute progress; SH-9 now says how to read a count against its title · 2026-09-18 manual update: SH-9 expects a count capped at its target, and points the mis-pointed-mission check at the admin Missions tab · 2026-09-20 manual update: SH-9b covers the missions picture control, which moved to the admin Missions tab the same day and now shows the picture on that screen rather than handing the file off · 2026-09-20 manual update: SH-A4c covers the paged moderation queue (25 a page, Previous/Next, filter change returns to page 1) · 2026-09-22 manual update: SH-1c covers the round as a field the scout marks (nothing pre-marked with two rounds open, submit waits for a mark, the mark survives a refresh) and the round named on the confirmation; SH-1d covers a closed round leaving the field reachable; SH-A4d covers the round's purpose above the moderation controls and the second confirmation on accept · 2026-10-01 manual update: one open round and the end-of-round award — SH-1c, SH-1d, SH-10c, SH-A1, SH-A3, SH-A4d, SH-A8, SH-A9b rewritten; SH-A-award and SH-A10d added · 2026-10-02 manual update: CS-4, SH-A3, SH-A4c and SH-A4d — Moderation opens on the open round with no round chips · 2026-10-05 manual update: SH-11b added (a failed load or mark-read says so); SH-A2b covers a failed rebuild showing its reason |
 | **Inventory wording** | 2026-10-01: banned-term wording removed from the inventory prose; no step in this script changed |
 
 ---
@@ -569,6 +569,27 @@ Result: web ☐
 
 ---
 
+### SH-11b — A failed load says so instead of showing an empty list
+
+**Role:** member · **Surfaces:** web
+
+**Precondition:** An open round with at least one of your nominations and one mission. Use the browser's developer tools to block requests (Network → block request URL), or go offline.
+
+**Steps:**
+1. Block `/api/skills-hunt/rounds/*/submissions`, open the My Finds tab, and press Refresh.
+2. Do the same for the Missions tab (`/missions`) and the Leaderboard tab (`/leaderboard`).
+3. Unblock the requests and press Refresh.
+4. Block `/api/skills-hunt/notifications/*/read`, open the Status panel, and tap an unread update.
+
+**Expected:**
+- Each blocked tab shows a red message saying it could not load (the route's own sentence when it answered, or a connection message when offline), not "No nominations yet", "No missions for this round yet" or "No entries yet".
+- After unblocking, each tab shows its list again.
+- A failed mark-read leaves the update unread and shows a red line at the top of the Status panel; it is not shown as read and then flipped back on the next poll.
+
+Result: web ☐
+
+---
+
 ### SH-12 — Feature reward card is visible on the Directory page
 
 **Role:** member · **Surfaces:** web
@@ -695,7 +716,7 @@ Result: web ☐
 1. In the admin Rounds tab (web) / on the admin screen with the round selected (Android), find the round's "Rebuild leaderboard" button and tap/click it; confirm the prompt.
 2. Open that round's Leaderboard tab and check the standings.
 
-**Expected:** The button shows a busy state, then a success notice ("Leaderboard rebuilt…" on Android). The Leaderboard reflects the current accepted submissions — a scout whose accepted submission was removed/rejected out-of-band no longer carries its points. A non-admin cannot reach this action. On Android the button sits in a "Leaderboard" card under the selected round and sends `x-ctf-csrf: '1'`.
+**Expected:** The button shows a busy state, then a success notice ("Leaderboard rebuilt…" on Android). The Leaderboard reflects the current accepted submissions — a scout whose accepted submission was removed/rejected out-of-band no longer carries its points. A non-admin cannot reach this action. On Android the button sits in a "Leaderboard" card under the selected round and sends `x-ctf-csrf: '1'`. If the rebuild fails (block `/leaderboard/rebuild` in the browser's developer tools to try it), the button reads "Failed — retry" and the route's reason appears in red under it.
 
 Result: web ☐
 
@@ -1349,6 +1370,20 @@ Result: web ☐
 Result: web ☐
 
 ---
+
+### SH-A19 — The seed and end-to-end smoke check run on an up-to-date database (added 2026-10-05)
+
+**Role:** operator · **Surfaces:** operational (scripts, no UI)
+
+**Precondition:** A scratch database built from the current `ctf/schema.sql` and post migrations.
+
+**Steps:**
+1. Run the Skills Hunt seed, then the Skills Hunt end-to-end smoke check against that database.
+
+**Expected:**
+- Step 1: every step passes, including the Directory profile step (source `community-generated`, the `@community-seed01` handle, the inviting username) and the one-row handle count. Before 2026-10-05 the smoke check stopped at the Directory profile step, because it selected two columns `directory_profiles` no longer has.
+
+**Result:** web ☐ mobile ☐ — notes:
 
 ## Parity check (web ↔ android)
 
