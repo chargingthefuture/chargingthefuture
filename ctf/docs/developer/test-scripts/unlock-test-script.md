@@ -422,6 +422,9 @@ queue has at least one row.
 The full-screen loading state does **not** flash — the current content stays visible until the fresh
 data lands, then the member screen reflects the new review status. The spinner stops when the pull
 completes, including on a failed request.
+Since 2026-10-05, if the access-tier read behind `commonsAccess` fails, the status answer still says
+`commonsAccess: false` (the Android app shows the Unlock screen, as before), and the failure is
+reported to error tracking under `unlock` / `status_access_tier` instead of being dropped.
 **Result:** android ☐ — notes:
 
 ---
