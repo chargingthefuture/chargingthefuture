@@ -219,15 +219,15 @@ Extension entity:
 Domain tables:
 
 1. `service_credits_wallets`
-2. `service_credits_transfers` — one row per member-to-member transfer. Columns: `id` UUID PK, `sender_user_id` TEXT, `recipient_user_id` TEXT, `amount` NUMERIC, `status` TEXT (`pending` | `completed` | `canceled` | `disputed`), `idempotency_key` TEXT (unique per `sender_user_id`), `completed_at` TIMESTAMPTZ, `origin_plugin` TEXT, `reason_code` TEXT, `created_at` TIMESTAMPTZ default now. **A direct send now delivers immediately**: `createTransfer` debits the sender and credits the recipient in one step and writes the row as `completed` (it no longer parks the funds in the sender's escrow as `pending`, which previously meant the recipient never received the credits). `origin_plugin` records the initiating surface — `service-credits` for a direct send from the "Send Credits" form, or the plugin slug for a plugin-mediated move (e.g. `chyme` tip, `foundation` call charge) — and `reason_code` the finer intent; together they let GDP recognition count genuine direct peer-to-peer activity and attribute plugin transfers to each plugin rather than blindly summing the ledger. The separate `createEscrowHold` / `releaseEscrow` / `refundEscrow` functions remain the hold-then-resolve path for real escrow use cases.
-3. `service_credits_escrow_holds`
+2. `service_credits_transfers` — one row per member-to-member transfer. Columns: `id` UUID PK, `sender_user_id` TEXT, `recipient_user_id` TEXT, `amount` NUMERIC, `status` TEXT (`pending` | `completed` | `canceled` | `disputed`), `idempotency_key` TEXT (unique per `sender_user_id`, enforced by `uq_service_credits_transfers_sender_idem`), `completed_at` TIMESTAMPTZ, `origin_plugin` TEXT, `reason_code` TEXT, `created_at` TIMESTAMPTZ default now. **A direct send now delivers immediately**: `createTransfer` debits the sender and credits the recipient in one step and writes the row as `completed` (it no longer parks the funds in the sender's escrow as `pending`, which previously meant the recipient never received the credits). `origin_plugin` records the initiating surface — `service-credits` for a direct send from the "Send Credits" form, or the plugin slug for a plugin-mediated move (e.g. `chyme` tip, `foundation` call charge) — and `reason_code` the finer intent; together they let GDP recognition count genuine direct peer-to-peer activity and attribute plugin transfers to each plugin rather than blindly summing the ledger. The separate `createEscrowHold` / `releaseEscrow` / `refundEscrow` functions remain the hold-then-resolve path for real escrow use cases.
+3. `service_credits_escrow_holds` — `transfer_id` is nullable: a hold has no transfer until `releaseEscrow` sets it.
 4. `service_credits_governance_events` — `governance_ticket_id` is **TEXT** (a free-text ticket reference such as `unlock:submission:5`, `skill-up:<cohort>:completion:<id>`, `contribution-<id>`, or an operator-typed ticket), not a UUID. A legacy UUID-typed column is converted to TEXT by a guarded block in `schema.sql`.
-5. `service_credits_treasury_events`
-6. `service_credits_dispute_adjustments`
+5. `service_credits_treasury_events` — unique on (`event_type`, `actor_id`, `idempotency_key`), the deletion reclaim's replay target.
+6. `service_credits_dispute_adjustments` — the case and amount live in `dispute_case_id` and `amount`; the legacy `dispute_id` and `adjustment_amount` columns are nullable and unread.
 7. `service_credits_command_idempotency`
 8. `service_credits_adapter_outbox`
 9. `service_credits_account_deletion_reclaims`
-10. `service_credits_wallet_tombstones`
+10. `service_credits_wallet_tombstones` — unique on (`account_id`, `deletion_request_id`); `user_id` holds the same account id.
 11. `service_credits_credit_limits` — per-account mutual-credit limit (`user_id` PK, `credit_limit` NUMERIC default 0, `updated_by_user_id`, `updated_at`). The most negative a wallet's `available_balance` may reach is `-credit_limit`; absent a row the limit is the treasury policy `mutualCredit.defaultLimit` (0 by default, so new accounts cannot go negative).
 12. `service_credits_ledger_entries` — the per-member ledger of individual credit movements; the read model behind `GET /api/service-credits/transactions`. Columns: `id` UUID PK (`gen_random_uuid()`), `user_id` TEXT, `entry_type` TEXT, `amount` NUMERIC, `reference_type` TEXT, `reference_id` TEXT, `accounting_scope` TEXT (e.g. `service_credits_non_gdp` — keeps circulation credits out of the GDP accounting boundary), `metadata` JSONB default `{}`, `created_at` TIMESTAMPTZ default now. Every non-mint credit movement (transfers-in, escrow releases, seed allocations) is recorded here, which is why a wallet's cached `available_balance` can legitimately exceed the sum of mint events in `service_credits_governance_events`.
 13. `service_credits_admin_audit_trail` — append-only admin/operator audit trail for ServiceCredits admin commands (wallet status/freeze, credit limits, governance mint/burn, treasury fees, dispute adjustments, escrow operations). One row per admin policy decision: actor, command, allow/deny status, reason, target, and metadata. This is the durable evidence behind the §5 audit controls and is the table the treasury-mint reward path writes alongside `service_credits_governance_events`.
@@ -301,6 +301,22 @@ ServiceCredits seeds wallets, transfers, escrow holds, and dispute fixtures via 
 ---
 
 ## 10) Change Log
+
+- 2026-10-05: **Ledger inserts now fit the schema (code review #2898, #2900, #2902).** Six inserts
+  into `service_credits_transfers` upsert on (`sender_user_id`, `idempotency_key`), the deletion
+  reclaim's tombstone on (`account_id`, `deletion_request_id`) and its treasury event on
+  (`event_type`, `actor_id`, `idempotency_key`), and no index in this repository backed any of the
+  three, so Postgres refused every member send, plugin send, escrow release, fee collection,
+  dispute adjustment and reclaim. `schema.sql` now creates the three unique indexes, and
+  `db/migrations/pre/0003_service_credits_unique_index_dedupe.sql` first gives any rows that share
+  a key distinct keys (nothing is deleted, no amount changes) so the index cannot fail on an
+  existing database. Escrow holds and dispute adjustments were also refused by legacy NOT NULL
+  columns the code never writes (`escrow_holds.transfer_id`, `dispute_adjustments.dispute_id` and
+  `adjustment_amount`); those are now nullable. The reclaim's tombstone and reclaim-record inserts
+  now write the NOT NULL `user_id` (the account id). `createEscrowHold` and
+  `applyDisputeAdjustment` now post to Formance after their local writes, like the reclaim, so a
+  local failure no longer leaves a posting in the external ledger with nothing behind it here. The
+  daily reclaim sweep now exits 1 when any execute fails, so a failed reclaim shows as a red run.
 
 - 2026-10-01: **SkillsHunt sends credits at the end of a round, not on each accept (owner decision).** A SkillsHunt round is now points only: accepting a nomination no longer mints ServiceCredits (the per-accept reward and its per-scout cap are removed from SkillsHunt). When a round closes, an admin sends its end-of-round award: the scouts whose final score reached the round's points bar share its ServiceCredits pool in proportion to their points. Each share is minted from the treasury through `mintGrant` with the new grant reason `skills_hunt_round_award` (actor `skills-hunt-incentive-system`, idempotency key `skills-hunt-round-award-<roundId>-<userId>`) and recorded in `service_credits_admin_audit_trail` as `service-credits.governance.mint.grant.skills-hunt`. Credits already sent per accept stay sent. The Earn tab card for SkillsHunt (`components/service-credits/service-credits.constants.ts`) now reads "Nominate survivors to earn points. When a round ends, scouts above its points bar share its ServiceCredits." with "End of round" in place of "Per acceptance". See the SkillsHunt inventory for the award rules.
 
