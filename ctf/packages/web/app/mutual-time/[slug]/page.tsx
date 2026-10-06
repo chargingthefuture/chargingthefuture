@@ -34,7 +34,7 @@ export default async function MutualTimePublicPage({ params }: { params: Promise
     expiredPicks = viewerPicks.expiredCount;
   }
 
-  const signInUrl = getHostedSignInUrl() ?? '/sign-in';
+  const signInUrl = getHostedSignInUrl() ?? '/';
 
   return (
     <MutualTimePublic

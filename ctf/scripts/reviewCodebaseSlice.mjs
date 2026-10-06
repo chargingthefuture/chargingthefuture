@@ -166,7 +166,7 @@ const CONTRACT_SUFFIXES = [
 // `joinOnly` roots never start a slice of their own: a page folder under app/ or app/apps/
 // (app/admin, app/account, app/apps/directory) joins the slice that already carries its name, so
 // the screen is read beside the routes and server code it renders. A page folder matching no slice
-// (app/guide, app/sign-in, app/apps/[pluginSlug]) is left to the `web-pages` catch-all below
+// (app/guide, app/apps/[pluginSlug]) is left to the `web-pages` catch-all below
 // rather than becoming a one-file slice that costs a run of its own. A page folder whose name
 // does not match its plugin (app/survey is the quora-deletion-survey entry screen) is declared
 // under `extraPaths` in the slice manifest and claimed before any name match.

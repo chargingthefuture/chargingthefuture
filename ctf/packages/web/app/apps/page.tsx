@@ -54,7 +54,7 @@ export default async function AppsPage() {
     ? await readTrustSelfExtensionOrStored(authDecision.userId).catch(() => buildFallbackTrust(authDecision.userId))
     : buildFallbackTrust(currentUser.userId);
 
-  const signInUrl = getHostedSignInUrl() ?? '/sign-in';
+  const signInUrl = getHostedSignInUrl() ?? '/';
 
   return (
     <CommunityShell

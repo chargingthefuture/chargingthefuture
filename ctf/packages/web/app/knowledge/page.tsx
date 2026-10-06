@@ -32,7 +32,7 @@ export const dynamic = 'force-dynamic';
 export default async function KnowledgePage() {
   const decision = await evaluatePluginAccess({ minUnlockTier: 'any_authenticated', requireUsername: false });
   if (!decision.allowed) {
-    return <ComicKnowledgePublicShell signInUrl={getHostedSignInUrl() ?? '/sign-in'} />;
+    return <ComicKnowledgePublicShell signInUrl={getHostedSignInUrl() ?? '/'} />;
   }
 
   // Ask for a Quora profile URL only when this member has none on file. Someone who already

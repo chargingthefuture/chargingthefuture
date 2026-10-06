@@ -159,7 +159,7 @@ function renderAccessDenied(decision: DenyDecision, selectedPlugin: SelectedPlug
     // link to one specific place — a blog reader joining one conversation — would arrive at
     // twenty-five tiles with no sign of what they came for, and leave. The destination rides along.
     const hostedSignIn = getHostedSignInUrl();
-    const signInUrl = hostedSignIn ? withSignInReturn(hostedSignIn, returnPath) : '/sign-in';
+    const signInUrl = hostedSignIn ? withSignInReturn(hostedSignIn, returnPath) : '/';
     // A signed-in-but-not-yet-verified member (denied with `unlock_required`)
     // is already authenticated, so the public shell's "Sign In / Join Free"
     // CTAs are wrong for them; pass a verifyUrl so the shell shows a single
@@ -224,7 +224,7 @@ function renderPluginShellA(
   query: PluginSearchParams,
 ): ReactNode | null {
   if (selectedPlugin.slug === 'beacon') {
-    return <BeaconShell isAdmin={decision.isAdmin} />;
+    return <BeaconShell isAdmin={decision.isAdmin} signInUrl={getHostedSignInUrl() ?? '/'} />;
   }
 
   if (selectedPlugin.slug === 'click-log') {
