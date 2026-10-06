@@ -479,6 +479,17 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
   place of the route's sentence. It now reads `message` first, like the other admin actions in this
   plugin. No schema, route shape or contract change.
 
+- 2026-10-05: **The Android Unlock screen says when the status read fails (code-review #2807).**
+  `fetchUnlockStatus` threw the fixed text "Unlock status unavailable." on any non-OK answer, so the
+  screen's check for 401/403 in that text never matched and every failure moved the member to the
+  submission form with nothing on screen. A member with a pending submission whose pull-to-refresh
+  failed was shown "Submit your Quora profile URL" as if the submission were gone. The client now
+  throws `UnlockStatusError` with the route's `message` and the HTTP status. A 401 or 403 still shows
+  the signed-out view. Any other failure goes to the mobile `reportError`, keeps the view the member
+  was on, and shows "Your verification status could not be read:" with the reason under the header.
+  A first load that fails falls back to the submission form as before, now with that line. No route,
+  schema or contract change. Test script UNLOCK-A7 step 4 added.
+
 - 2026-09-26: **Help for members stuck on the Quora profile URL.** The Unlock screen's help box and the Commons banner's help note were two versions of the same ask; they are now one component with the hint box in both places, plus a picture (`public/help/quora-profile-url.svg`, an illustration rather than a capture of Quora) and steps for the four ways members get stuck. A member not yet approved who asks @comic about Unlock gets a scripted answer built from the same steps, sent without review (owner decision; switchable from the log page), and `/admin/comic/unlock-help` lists each such conversation against whether the member was approved afterward. No change to who is approved or how: the assistant has no way to approve anybody. See the comic and commons inventories for those halves.
 
 - 2026-09-24: **A database update removed one spam denylist entry and did not put it back.** `post/0028` (the Quora URL re-keying) deleted the denylist rows and re-inserted them from a TEMP table; on the 2026-09-24 "Neon — Update DB" run the connection pooler ran the re-insert on a different session, the TEMP table was not there, and the deleted row stayed deleted. `post/0028` now runs in one transaction, so a failure undoes the delete. `post/0040` rebuilds missing entries from submissions marked `spam`, except a URL an admin removed from the denylist after that decision. An entry whose submission was deleted with its account cannot be rebuilt from the database.
