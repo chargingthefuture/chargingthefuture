@@ -228,6 +228,19 @@ is the setting this case is really testing. Before 2026-08-10 this case failed b
 in-browser screen-share started egress.
 **Result:** web ☐ mobile ☐ — notes:
 
+### BCN-A2d · A refused start-broadcast is shown on the host stage
+**Role:** admin · **Surfaces:** web (admin surface, desktop)
+**Precondition:** a live event, opened in the admin screen, with Stream set up so the refusal can be
+forced (for example a Stream app whose recording or HLS is turned off).
+**Steps:**
+1. Press Share screen and pick a window.
+2. Read the line next to the Stop sharing button.
+**Expected:** When start-broadcast is refused, the line reads "The public broadcast and recording did
+not start:" followed by the route's reason, in red, instead of "Your screen is live to the
+broadcast." Stopping and sharing again retries. When it succeeds the line reads "Your screen is live
+to the broadcast." as before.
+**Result:** web ☐ mobile ☐ — notes:
+
 ### BCN-A3 · Moderate the chat
 **Role:** admin · **Surfaces:** web (admin surface)
 **Precondition:** a live event with member chat.
