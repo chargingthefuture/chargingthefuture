@@ -256,6 +256,23 @@ broadcast." Stopping and sharing again retries. When it succeeds the line reads 
 to the broadcast." as before.
 **Result:** web ☐ mobile ☐ — notes:
 
+### BCN-A2e · A screen-share broadcast produces a recording, and the event chat accepts messages
+**Role:** admin · **Surfaces:** web (admin surface, desktop)
+**Precondition:** a draft event, and the "Check — Stream Chat Settings" workflow last ran green.
+**Steps:**
+1. Press Go Live, then Share screen and pick a window. Leave it live for at least a minute.
+2. Type a message in the event chat and send it.
+3. Press End. Wait a few minutes, then reload the admin screen and read the event's line in Event
+   history.
+**Expected:** Step 1: the line next to Stop sharing reads "Your screen is live to the broadcast." Step
+2: the message posts. It must not show "Message Failed · Unauthorized" or "pending messages not
+enabled for this app"; that text means "Mark Messages Pending" is on again for the `livestream`
+channel type, and the workflow with fix ticked turns it off. Step 3: the line reads `recording ready`
+with a Replay button, and the replay is posted to the Commons once. `no recording found` minutes after
+the end means recording never started. Until 2026-10-06 every event ended that way, because
+recording was requested with a second go-live instead of Stream's start-recording request.
+**Result:** web ☐ mobile ☐ — notes:
+
 ### BCN-A3 · Moderate the chat
 **Role:** admin · **Surfaces:** web (admin surface)
 **Precondition:** a live event with member chat.
