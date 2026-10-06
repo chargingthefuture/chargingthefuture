@@ -303,6 +303,14 @@ stops. HLS is used for public viewers so scale does not multiply WebRTC cost.
 
 ## Change Log
 
+- 2026-10-06: **The event chat keeps the Stream setting that blocks every send turned off (owner
+  report).** A message in a live event chat failed with "pending messages not enabled for this app":
+  "Mark Messages Pending" was on for the `livestream` channel type, which this Stream app does not
+  support, so Stream refused every send. Minting host and member chat credentials now reads that
+  setting through the Stream API and turns it off when it is on
+  (`lib/integrations/stream-channel-type-guard.ts`), at most once an hour per server process. A failed
+  read is reported and never stops credentials being issued. The Actions workflow
+  `check-stream-channel-config.yml` runs the same check for every channel type the app uses.
 - 2026-10-05: **A failed start-broadcast is shown to the admin (#2668).** The host stage sent
   `POST /api/beacon/[id]/start-broadcast` with only a network `.catch`, so a refusal (Stream, CSRF or
   origin) was dropped and the admin read "Your screen is live to the broadcast." while no public feed

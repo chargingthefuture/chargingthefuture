@@ -1,5 +1,6 @@
 import { createHmac } from 'crypto';
 import { StreamChat } from 'stream-chat';
+import { ensureChannelTypeAcceptsSends } from 'lib/integrations/stream-channel-type-guard';
 import { resolveStreamCredentials } from 'lib/integrations/stream-credentials';
 import { reportError } from 'lib/observability/report';
 import { BEACON_CHAT_CHANNEL_TYPE, BEACON_STREAM_CALL_TYPE } from './constants';
@@ -167,6 +168,7 @@ export async function createBeaconHostCredentials(input: {
     } catch (error) {
       reportError(error, { area: 'beacon', op: 'host_chat_upsert', extra: { eventId: input.eventId } });
     }
+    await ensureChannelTypeAcceptsSends(chatClient, credentials.apiKey, BEACON_CHAT_CHANNEL_TYPE);
     return {
       streamApiKey: credentials.apiKey,
       streamCallType: BEACON_STREAM_CALL_TYPE,
@@ -206,6 +208,7 @@ export async function createBeaconMemberChatCredentials(input: {
   try {
     const streamUserId = beaconStreamUserId(input.userId);
     await chatClient.upsertUser({ id: streamUserId, name: input.name });
+    await ensureChannelTypeAcceptsSends(chatClient, credentials.apiKey, BEACON_CHAT_CHANNEL_TYPE);
     return {
       streamApiKey: credentials.apiKey,
       streamChannelType: BEACON_CHAT_CHANNEL_TYPE,
