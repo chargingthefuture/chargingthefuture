@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createTransfer, insertServiceCreditsAudit } from 'lib/service-credits/repository';
+import { resolveTransferRecipient } from 'lib/service-credits/recipient';
 import { ensureMutationCsrf, requireServiceCreditsReadAccess, serviceCreditsErrorResponse } from 'lib/service-credits/_lib';
 import { isRegisteredPluginSlug } from 'lib/plugins/repository';
 import { notifySafe } from 'lib/notifications/repository';
@@ -113,10 +114,19 @@ export async function POST(request: Request) {
     return parsed.error;
   }
 
+  // The form accepts a username or an account id. Resolve it to a real account before anything is
+  // written, so a typo or a username is refused instead of creating a wallet keyed by that text and
+  // moving the sender's credits into it.
+  const recipient = await resolveTransferRecipient(parsed.data.recipientUserId);
+  if (recipient.status !== 'found') {
+    const code = recipient.status === 'not_found' ? 'recipient_not_found' : 'recipient_lookup_unavailable';
+    return serviceCreditsErrorResponse(new Error(code), 'Transfer unavailable.');
+  }
+
   try {
     const transfer = await createTransfer({
       senderUserId: gate.auth.userId,
-      recipientUserId: parsed.data.recipientUserId,
+      recipientUserId: recipient.userId,
       amount: parsed.data.amount,
       idempotencyKey: parsed.data.idempotencyKey,
       originPlugin: parsed.data.originPlugin,

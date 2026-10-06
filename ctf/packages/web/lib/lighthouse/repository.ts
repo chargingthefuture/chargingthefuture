@@ -21,6 +21,7 @@ import type {
   LighthouseWantedPosting,
 } from './types';
 import { createLighthouseParticipantToken, ensureLighthouseMatchChannel } from './stream';
+import { isAllowedMatchTransition } from './match-transitions';
 import { clearMemberPresence, recordMemberPresence } from 'lib/presence/live';
 
 // Cross-plugin presence: a LightHouse property listing marks its host as active in LightHouse.
@@ -631,6 +632,29 @@ function hideBlockedHostsSql(viewer: string): string {
           )`;
 }
 
+// The street address and postal code are the one part of a listing that says where somebody lives,
+// so a read returns them only to the host, an admin, and a seeker whose match on that listing is
+// accepted. Everyone else browsing sees city, state and country and nothing finer. Done in SQL so the
+// columns never leave the database for a reader who may not have them.
+function exactAddressColumnsSql(viewer: string, viewerIsAdmin: string): string {
+  const mayRead = `(
+            ${viewerIsAdmin}::boolean = TRUE
+            OR lighthouse_properties.host_user_id = ${viewer}::text
+            OR EXISTS (
+              SELECT 1
+              FROM lighthouse_matches m
+              WHERE m.property_id = lighthouse_properties.id
+                AND m.seeker_user_id = ${viewer}::text
+                AND m.status = 'accepted'
+            )
+          )`;
+  return `CASE WHEN ${mayRead} THEN address_line ELSE NULL END AS address_line,
+          city,
+          state,
+          country,
+          CASE WHEN ${mayRead} THEN zip_code ELSE NULL END AS zip_code`;
+}
+
 export async function listProperties(input: {
   page?: number;
   pageSize?: number;
@@ -640,12 +664,15 @@ export async function listProperties(input: {
   // Who is browsing. When set, listings from members they have blocked (or who blocked them) are
   // left out. Optional so a caller with no signed-in viewer keeps the previous behavior.
   viewerUserId?: string | null;
+  // Admins read the exact address on every listing; see exactAddressColumnsSql.
+  viewerIsAdmin?: boolean;
 }): Promise<{ items: LighthouseProperty[]; total: number; pagination: { page: number; pageSize: number } }> {
   const paging = normalizePage(input.page, input.pageSize);
   const country = normalizeNullableText(input.country);
   const city = normalizeNullableText(input.city);
   const onlyActive = input.onlyActive !== false;
   const viewerUserId = normalizeNullableText(input.viewerUserId);
+  const viewerIsAdmin = input.viewerIsAdmin === true;
 
   const [countResult, rows] = await Promise.all([
     queryDb<CountRow>(
@@ -667,11 +694,7 @@ export async function listProperties(input: {
           title,
           description,
           property_type,
-          address_line,
-          city,
-          state,
-          country,
-          zip_code,
+          ${exactAddressColumnsSql('$6', '$7')},
           bedrooms,
           bathrooms,
           monthly_rent,
@@ -691,7 +714,7 @@ export async function listProperties(input: {
         ORDER BY updated_at DESC
         OFFSET $4 LIMIT $5
       `,
-      [onlyActive, country, city, paging.offset, paging.pageSize, viewerUserId],
+      [onlyActive, country, city, paging.offset, paging.pageSize, viewerUserId, viewerIsAdmin],
     ),
   ]);
 
@@ -705,7 +728,10 @@ export async function listProperties(input: {
   };
 }
 
-export async function getPropertyById(propertyId: string): Promise<LighthouseProperty | null> {
+export async function getPropertyById(
+  propertyId: string,
+  viewer: { userId: string; isAdmin: boolean },
+): Promise<LighthouseProperty | null> {
   const result = await queryDb<LighthousePropertyRow>(
     `
       SELECT
@@ -714,11 +740,7 @@ export async function getPropertyById(propertyId: string): Promise<LighthousePro
         title,
         description,
         property_type,
-        address_line,
-        city,
-        state,
-        country,
-        zip_code,
+        ${exactAddressColumnsSql('$2', '$3')},
         bedrooms,
         bathrooms,
         monthly_rent,
@@ -734,7 +756,7 @@ export async function getPropertyById(propertyId: string): Promise<LighthousePro
       WHERE id = $1::uuid
       LIMIT 1
     `,
-    [propertyId],
+    [propertyId, viewer.userId, viewer.isAdmin],
   );
 
   if (!result.rows[0]) {
@@ -1254,6 +1276,32 @@ export async function listMatches(actorUserId: string): Promise<LighthouseMatch[
   return result.rows.map(mapMatch);
 }
 
+// A member moves a match only from their own side of it: the host accepts, declines or completes,
+// the seeker cancels, and either move must be one the current status allows.
+function assertMemberMayMoveMatch(
+  actorUserId: string,
+  match: LighthouseMatchRow,
+  status: LighthouseMatch['status'],
+): void {
+  let side: 'host' | 'seeker';
+  if (actorUserId === match.host_user_id) {
+    if (status !== 'accepted' && status !== 'rejected' && status !== 'completed') {
+      throw new Error('policy_denied');
+    }
+    side = 'host';
+  } else if (actorUserId === match.seeker_user_id) {
+    if (status !== 'canceled') {
+      throw new Error('policy_denied');
+    }
+    side = 'seeker';
+  } else {
+    throw new Error('policy_denied');
+  }
+  if (!isAllowedMatchTransition(side, match.status, status)) {
+    throw new Error('invalid_transition');
+  }
+}
+
 export async function updateMatch(input: {
   actorUserId: string;
   matchId: string;
@@ -1279,6 +1327,9 @@ export async function updateMatch(input: {
         FROM lighthouse_matches
         WHERE id = $1::uuid
         LIMIT 1
+        -- Locked so a seeker's cancel and a host's accept arriving together are decided one after
+        -- the other against the status the first one left, not both against the old one.
+        FOR UPDATE
       `,
       [input.matchId],
     );
@@ -1289,18 +1340,7 @@ export async function updateMatch(input: {
 
     const match = existing.rows[0];
     if (!input.isAdmin) {
-      if (input.actorUserId === match.host_user_id) {
-        const hostAllowed = input.status === 'accepted' || input.status === 'rejected' || input.status === 'completed';
-        if (!hostAllowed) {
-          throw new Error('policy_denied');
-        }
-      } else if (input.actorUserId === match.seeker_user_id) {
-        if (input.status !== 'canceled') {
-          throw new Error('policy_denied');
-        }
-      } else {
-        throw new Error('policy_denied');
-      }
+      assertMemberMayMoveMatch(input.actorUserId, match, input.status);
     }
 
     const nextHostResponse = typeof input.hostResponse === 'undefined'
