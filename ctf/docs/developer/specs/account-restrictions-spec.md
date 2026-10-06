@@ -54,7 +54,7 @@ ignored by the auth gate's `all`-scope check); a `contact` restriction blocks co
 - **TrustTransport `createRequest`** (`ensureUserNotRestricted`): blocks on `all`/`trading`.
 
 The helper is `getAccountRestrictionStatus(userId, actionScope)` in `lib/auth/account-restrictions.ts`;
-`restrictAccount(...)` / `unrestrictAccount(...)` upsert and write an audit row.
+`restrictAccount(...)` / `unrestrictAccount(...)` (and the scoped `restrictAccountAtScope(...)` / `liftAccountRestrictionAtScope(...)`) upsert and write an audit row, each in one transaction with its change. `unrestrictAccount` lifts only a restriction in force, writes its audit row only then, and returns `changed: false` when there was nothing to lift.
 
 ## Migration of existing flags
 
@@ -70,8 +70,8 @@ The helper is `getAccountRestrictionStatus(userId, actionScope)` in `lib/auth/ac
 ## Admin surface
 
 Platform-level, admin-gated, CSRF-protected:
-- `POST /api/admin/account-restrictions/restrict` ← `{ targetUserId, reason?, scope? }` (scope default `all`)
-- `POST /api/admin/account-restrictions/unrestrict` ← `{ targetUserId }`
+- `POST /api/admin/account-restrictions/restrict` ← `{ targetUserId, reason?, scope? }` (scope default `all`; 404 `target_not_found` for an id no account has)
+- `POST /api/admin/account-restrictions/unrestrict` ← `{ targetUserId }` (404 `not_restricted` when nothing was in force)
 - `GET  /api/admin/account-restrictions/audit` → recent restrict/unrestrict entries
 
 ## Open considerations

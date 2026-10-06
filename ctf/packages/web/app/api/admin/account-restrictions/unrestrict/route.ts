@@ -5,7 +5,7 @@ import { unrestrictAccount } from 'lib/auth/account-restrictions';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
 
-type UnrestrictBody = { targetUserId?: string };
+type UnrestrictBody = { targetUserId?: unknown };
 
 function csrfDeny(request: Request): NextResponse | null {
   if (request.headers.get('x-ctf-csrf') !== '1') {
@@ -36,12 +36,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, code: 'invalid_json', message: `Invalid JSON body: ${failureReason(error)}` }, { status: 400 });
   }
 
-  if (!body.targetUserId) {
+  const targetUserId = typeof body.targetUserId === 'string' ? body.targetUserId.trim() : '';
+  if (!targetUserId) {
     return NextResponse.json({ ok: false, code: 'invalid_payload', message: 'targetUserId is required.' }, { status: 400 });
   }
 
   try {
-    const restriction = await unrestrictAccount({ targetUserId: body.targetUserId, actorId: decision.userId });
+    const restriction = await unrestrictAccount({ targetUserId, actorId: decision.userId });
+    // Nothing was lifted: the account was never restricted, was already lifted, or the id matches
+    // no account. Said as such rather than as a success, and no audit row was written. This also
+    // covers a mistyped id without asking the sign-in provider, because nothing is written for it.
+    if (!restriction.changed) {
+      return NextResponse.json({ ok: false, code: 'not_restricted', message: `The account ${targetUserId} has no restriction in force, so there was nothing to lift.` }, { status: 404 });
+    }
     return NextResponse.json({ ok: true, restriction }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'account-restrictions', op: 'unrestrict' });
