@@ -172,7 +172,8 @@ to the env flag, then the default. With no admin setting and no env override, th
    a week's groceries, a place to live), each with its own small cards.
    The row ends with "+ Add your goal", which opens a form: one line for the goal and a box for its
    first cards, one per line. "Post goal" puts it on the board and selects it. A member can have up to
-   10 open goals at once; at 10 the chip is hidden, and a post past the cap is refused with a message
+   10 open goals at once in their current cohort (goals left open on an ended or earlier cohort are
+   read-only and do not count); at 10 the chip is hidden, and a post past the cap is refused with a message
    saying to close one first. Selecting one of your own goals shows it in a "Your goal" panel above
    the columns, with "Add card", "Reached it" and "Take it down". A goal that closes falls back to
    "All goals".
@@ -377,6 +378,17 @@ Deterministic PeerProgramming seed script: `ctf/scripts/seedPeerProgramming.mjs`
 6. No Android gap exists and none should be opened: PeerProgramming has no Android surface (rule 105). Android live video did ship for the Session tab on 2026-06-23 (issue #555) and was removed with the rest of the Android surface on 2026-07-20. No automated test harness exists for live Stream calls — verification on web is manual.
 
 ## Change Log
+
+- 2026-10-06: **The open-goal cap counts only the current cohort (code-review #2897).** `createGoal`
+  counted a member's open goals across every cohort, while the board shows only the current one. With
+  single standing cohort mode off, goals left open on last week's cohort or on an ended cohort could
+  not be seen or closed (an ended cohort's board is read-only) and still used up slots, so a member
+  could be refused at 10 with an empty board. Owner decision: goals on a cohort that has ended, or on
+  any cohort that is not the member's current one, are read-only and stop counting toward the cap;
+  they are not moved to the new cohort, the same way Direct Line goes read-only when a cohort ends.
+  The count now adds `cohort_id = $2` and stays in the same statement as the insert. Old goals are
+  kept with their status unchanged on purpose, because the stats read them; nothing withdraws or
+  deletes them. No schema, route contract or board change.
 
 - 2026-10-04: **Signed-out description names the goal board (owner report).** The public header
   in `peer-programming-public-shell.tsx` described only the weekly cohorts. It now opens with "A
