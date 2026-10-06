@@ -267,8 +267,10 @@ wrong, not Quora.
 **Steps:** Have two members contribute the exact same passage of text. Accept both.
 
 **Expected:** One `comic_knowledge_entries` row, not two — `content_hash` uses the same formula as the
-seed importer with ON CONFLICT DO NOTHING. Both contributions' entries point at that one row, so a
-withdrawal by either still reaches it.
+seed importer with ON CONFLICT DO NOTHING. Both contributions' entries point at that one row. The row
+belongs to the contribution that put it there first: withdrawing that one switches it off, and
+withdrawing the second leaves it on (changed 2026-10-05 — before, either withdrawal switched it off, so
+sending a copy of somebody else's entry and withdrawing it took their writing out of the library).
 
 **Result:** web ☐
 
@@ -316,7 +318,11 @@ rather than two copies to keep in step. The admin landing also lists **Contribut
 **Expected:**
 - Step 2: entries list newest-first with source, type, title/question, a content snippet, active state, and an "N of M entries active" summary; the pills filter and the counts follow.
 - Step 3: the toggle saves without a page reload (the row shows "off" and dims); the assistant's draft for that question no longer quotes the switched-off entry (retrieval skips inactive rows). The row is NOT deleted.
-- Step 4: the entry is active again and retrievable — off/on is reversible.
+- Step 4: the entry is active again and retrievable — off/on is reversible. The exception: an entry
+  from a contribution its member withdrew (CMC-C5) cannot be switched back on. The screen shows "This
+  entry came from a contribution its member withdrew, so it cannot be switched back on.", the entry
+  stays off, and the Audit log shows the attempt as **Refused**, "Because its member withdrew the
+  contribution."
 - Step 5: the page redirects the non-admin away, and the direct PUT is denied server-side (401/403); the PUT also requires the same-origin CSRF header.
 
 **Result:** web ☐

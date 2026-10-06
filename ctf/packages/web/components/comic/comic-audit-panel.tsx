@@ -39,6 +39,7 @@ const REASON_LABELS: Record<string, string> = {
   persistence_error: "the database write failed",
   policy: "policy refused it",
   already_reviewed: "it had already been decided",
+  contribution_withdrawn: "its member withdrew the contribution",
 };
 
 // The facts the metadata may carry, said plainly. A table rather than a chain of ifs, so a new
