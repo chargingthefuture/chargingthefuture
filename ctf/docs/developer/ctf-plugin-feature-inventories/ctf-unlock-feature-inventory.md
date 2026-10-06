@@ -435,6 +435,9 @@ Index `idx_unlock_verification_submissions_url_normalized` on `quora_profile_url
    to the Commons. Android: `Unlock.tsx` `QuoraHelp` calls `requestUnlockHelp()` and re-runs the host
    gate in `App.tsx`, which now passes on `status.commonsAccess`. Both Commons verify banners point a
    stuck member at the chat below rather than off to Quora. No React Native screen was added.
+10. Sign-out from the Unlock wall (2026-10-05) is **Android-only** by nature: the Android Unlock
+    screen covers the app, so it carries the shared `SignOutButton` at the bottom of each view. Web
+    members held at Unlock already have the account menu.
 
 ## 7) Seed Coverage Status
 
@@ -479,6 +482,15 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
   place of the route's sentence. It now reads `message` first, like the other admin actions in this
   plugin. No schema, route shape or contract change.
 
+- 2026-10-05: **Sign out from the Android Unlock screen (owner directive).** The Unlock wall covers
+  the entire Android app, so a signed-in member held there had no way to sign out: the Sign out button
+  on Account & Data sits behind the wall. The Android Unlock screen now ends with the same **Sign out**
+  control as Account & Data (`SignOutButton` from `packages/mobile/src/components/shared/SessionControls.tsx`,
+  with its "Signed in as …" line and a confirm), on the submission form, the status view and the
+  signed-out view. It is shown only while signed in. Signing out clears the stored session and returns
+  the member to the app shell with its sign-in card. Nothing else on the screen changed. Web-only by
+  nature: web members sign out from the account menu. No route, schema or contract change. Test script
+  UNLOCK-M5 added.
 - 2026-10-05: **The Android Unlock screen says when the status read fails (code-review #2807).**
   `fetchUnlockStatus` threw the fixed text "Unlock status unavailable." on any non-OK answer, so the
   screen's check for 401/403 in that text never matched and every failure moved the member to the

@@ -28,6 +28,7 @@ import {
 import { AuthProvider, useAuth } from './src/auth/auth-context';
 import { ThemeProvider, useTheme, getAppAccent, type ThemeName } from './src/theme';
 import { LoadingScreen } from './src/components/shared/LoadingScreen';
+import { SignInPrompt } from './src/components/shared/SessionControls';
 import { getPluginEmoji } from './src/theme/plugin-visuals';
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Path } from 'react-native-svg';
 import { StreamVideoRN } from '@stream-io/video-react-native-sdk';
@@ -309,7 +310,14 @@ function AppShell() {
         })}
       </ScrollView>
 
-      <View style={styles.content}>{featureView}</View>
+      {/* Signed out: the only way to an account. Listening to a Chyme room as a guest still works. */}
+      {isAuthenticated ? null : <SignInPrompt />}
+
+      {/* Keyed on the signed-in member so signing out (or in as somebody else) unmounts every screen
+          holding a Stream client, whose cleanup leaves the call and disconnects it. */}
+      <View key={user?.id ?? 'signed-out'} style={styles.content}>
+        {featureView}
+      </View>
 
       <Text style={[styles.webHint, { color: tokens.textSecondary }]}>
         The rest of the app is on the web — app.chargingthefuture.com
