@@ -62,8 +62,8 @@ export function BeaconHostStage({ credentials, eventId }: { credentials: BeaconH
     return () => {
       canceled = true;
       void (async () => {
-        try { await activeCall.leave(); } catch { /* already left */ }
-        try { await videoClient.disconnectUser(); } catch { /* ignore */ }
+        try { await activeCall.leave(); } catch { /* no-trace: cleanup on unmount; the call may already be left */ }
+        try { await videoClient.disconnectUser(); } catch { /* no-trace: cleanup on unmount; releases the client only */ }
       })();
     };
   }, [credentials.streamApiKey, credentials.streamCallType, credentials.streamCallId, credentials.streamUserId, credentials.hostToken, credentials.displayName]);
@@ -96,22 +96,47 @@ function ScreenShareControls({ eventId }: { eventId: string }) {
   // which is right here. The ref guards against firing more than once per share session and resets
   // when sharing stops so a later re-share starts egress again.
   const egressStartedRef = useRef<boolean>(false);
+  // Set when start-broadcast fails, so the admin is not told their screen is live to viewers while no
+  // public feed or recording has started. Cleared when sharing stops, since a re-share retries.
+  const [broadcastError, setBroadcastError] = useState<string | null>(null);
   useEffect(() => {
     if (!isSharing) {
       egressStartedRef.current = false;
+      setBroadcastError(null);
       return;
     }
     if (egressStartedRef.current) {
       return;
     }
     egressStartedRef.current = true;
-    void fetch(`/api/beacon/${eventId}/start-broadcast`, {
-      method: 'POST',
-      headers: { 'x-ctf-csrf': '1' },
-    }).catch((error) => {
-      // Egress is additive — the screen-share itself still works. Report and move on; do not block UI.
-      reportError(error, { area: 'beacon', op: 'start_broadcast_client', extra: { eventId } });
-    });
+    void (async () => {
+      try {
+        const res = await fetch(`/api/beacon/${eventId}/start-broadcast`, {
+          method: 'POST',
+          headers: { 'x-ctf-csrf': '1' },
+        });
+        if (res.ok) {
+          return;
+        }
+        // A refusal (Stream, CSRF or origin) resolves normally, so it has to be read here.
+        const data = (await res.json().catch((parseError: unknown) => {
+          reportError(parseError, { area: 'beacon', op: 'start_broadcast_client_body', extra: { eventId, status: res.status } });
+          return null;
+        })) as { message?: string; code?: string } | null;
+        const reason = data?.message ?? `the server answered ${res.status}`;
+        reportError(new Error(`start-broadcast refused: ${data?.code ?? res.status}`), {
+          area: 'beacon',
+          op: 'start_broadcast_client',
+          extra: { eventId, status: res.status },
+        });
+        setBroadcastError(`The public broadcast and recording did not start: ${reason}`);
+      } catch (error) {
+        reportError(error, { area: 'beacon', op: 'start_broadcast_client', extra: { eventId } });
+        setBroadcastError(
+          `The public broadcast and recording did not start: ${error instanceof Error ? error.message : 'the request did not reach the server'}`,
+        );
+      }
+    })();
   }, [isSharing, eventId]);
 
   return (
@@ -136,9 +161,16 @@ function ScreenShareControls({ eventId }: { eventId: string }) {
         {isMute ? <ScreenShare size={18} /> : <ScreenShareOff size={18} />}
         {isMute ? 'Share screen' : 'Stop sharing'}
       </button>
-      <span style={{ fontSize: 13, color: t.SUBTLE }}>
-        {isSharing ? 'Your screen is live to the broadcast.' : 'Pick a screen or window to demo from this computer.'}
-      </span>
+      {broadcastError ? (
+        // Shown in place of "Your screen is live to the broadcast.", which would be untrue here.
+        <span role="alert" style={{ fontSize: 13, color: '#F87171' }}>
+          {broadcastError}
+        </span>
+      ) : (
+        <span style={{ fontSize: 13, color: t.SUBTLE }}>
+          {isSharing ? 'Your screen is live to the broadcast.' : 'Pick a screen or window to demo from this computer.'}
+        </span>
+      )}
     </div>
   );
 }
