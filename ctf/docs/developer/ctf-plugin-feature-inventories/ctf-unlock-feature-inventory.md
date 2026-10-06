@@ -468,6 +468,17 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
 
 - 2026-10-05: **A rejected or revoked member kept full access wherever Unleash was set up (#2778).** `getUnlockAccessTier` asked the `feature-unlock-quora-onboarding` flag first and returned full access when it was on. Approval added the member to the flag, and no rejection, reward revoke or re-submission ever took them out, so the admin screen said support-only while every gate let them in. The stored submission row is now read first and decides whenever it exists; the flag is read only for a member with no row, which keeps a member added to it by hand in the Unleash dashboard working. Approval no longer writes to the flag, because nothing reads it for a member with a row, so `grantUnleashFlagForUser` and `lib/feature-flags/unleash-admin.ts` were removed. Existing flag entries can stay in Unleash; they have no effect on anybody with a submission. Test: `lib/unlock/access.test.ts`. No schema, route or contract change.
 
+- 2026-10-05: **Admin Quora history reads are audited against the member, and the denylist panel
+  shows the route's reason (code-review #2788, #2805).** (1) `GET /api/unlock/admin/quora-history`
+  wrote its `unlock.admin.quora.history.read` audit row with the member's id only inside `metadata`,
+  so `target_user_id` was null and a query by target id missed every admin read of a member's URL
+  history. It now passes `targetUserId`, as the audit contract's `targetContext` already names it, and
+  keeps `count` in metadata. Rows written before this change still carry the id in metadata only.
+  (2) The spam denylist panel's Remove read only `reason` and `code` from a failed answer, but the
+  remove route and the CSRF guard answer with `message`, so an admin saw "Remove failed (503)." in
+  place of the route's sentence. It now reads `message` first, like the other admin actions in this
+  plugin. No schema, route shape or contract change.
+
 - 2026-10-05: **The status route reports a failed access-tier read (code-review #2786).**
   `GET /api/unlock/status` resolves `commonsAccess` through `getUnlockAccessTier`, and a throw there
   was dropped by a bare `.catch(() => null)`, so the route answered `commonsAccess: false` with no
