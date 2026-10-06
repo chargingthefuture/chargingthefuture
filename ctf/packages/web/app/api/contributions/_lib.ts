@@ -156,6 +156,22 @@ export function contributionsErrorResponse(error: unknown, fallbackMessage: stri
     );
   }
 
+  // A confirm whose thank-you credit grant would go over the ServiceCredits mint budget for the current
+  // period. mintGrant refuses it by policy and the review transaction rolls back, so the submission is
+  // still pending. Retrying gives the same answer until the period resets or the budget is raised.
+  if (code === 'mint_budget_exceeded') {
+    return NextResponse.json(
+      {
+        ok: false,
+        code: 'contributions_mint_budget_exceeded',
+        message:
+          'The ServiceCredits mint budget for this period is used up, so this confirm cannot grant thank-you credits. ' +
+          'The contribution is still pending. Confirm it after the period resets or the budget is raised.',
+      },
+      { status: 409 },
+    );
+  }
+
   reportError(error, { area: 'contributions', op });
   return NextResponse.json({ ok: false, code: 'contributions_unavailable', message: fallbackMessage }, { status: 503 });
 }

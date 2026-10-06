@@ -527,6 +527,26 @@ The server returns an error (400 or 409 — the claim is not pending). The exist
 
 ---
 
+### CONT-A8b — A confirm over the ServiceCredits mint budget is refused plainly
+
+**Role:** Admin
+**Surfaces:** Web (`/admin/contributions`)
+**Precondition:** The ServiceCredits per-period mint budget is turned on and nearly used up (the ServiceCredits admin dashboard shows "mint budget remaining" below what the next confirm would grant). A pending gift-card claim exists whose grant is larger than what remains.
+
+**Steps:**
+1. In the review queue, confirm the pending claim with its confirmed amount.
+2. Read the message on the queue screen.
+3. Filter the queue to Pending.
+
+**Expected:**
+- The message says the ServiceCredits mint budget for this period is used up and the contribution is still pending. The API answer is 409 with code `contributions_mint_budget_exceeded`.
+- The claim is still listed as pending with no credits granted.
+- "Contribution review unavailable." at step 2 is the bug from #2979.
+
+**Result:** web ☐
+
+---
+
 ### CONT-A9 — Confirming a duplicate GitHub star grants 0 credits
 
 **Role:** Admin

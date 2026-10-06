@@ -113,7 +113,9 @@ flow is one-way, like gas-station reward points.
 - `POST /api/contributions/banner/dismiss` — Silent banner snooze (not audited).
 - `GET /api/contributions/admin/submissions` — Admin review queue (`?status=` filter).
 - `POST /api/contributions/admin/submissions/[submissionId]/review` — Confirm/reject (body:
-  `action`, optional `confirmedAmountUsd`, optional `reviewNote`).
+  `action`, optional `confirmedAmountUsd`, optional `reviewNote`). 409
+  `contributions_mint_budget_exceeded` when the ServiceCredits mint budget for the period would be
+  exceeded by the grant; the claim stays pending.
 - `GET /api/contributions/admin/config` / `PUT /api/contributions/admin/config` — Runtime config.
 - `GET /api/contributions/admin/cycles` / `POST /api/contributions/admin/cycles` — List/create
   cycles.
@@ -306,6 +308,14 @@ NOT EXISTS` per column) in `ctf/schema.sql`; the demo schema is regenerated into
 
 ## Change Log
 
+- 2026-10-05: **A confirm refused by the ServiceCredits mint budget now says so (#2979).** When the
+  per-period mint budget is turned on and a confirm's thank-you credit grant would go over it,
+  `mintGrant` refuses with `mint_budget_exceeded`. The review route did not recognize that code and
+  answered 503 "Contribution review unavailable.", which read as an outage and pointed nowhere. It
+  now answers 409 `contributions_mint_budget_exceeded` with a message that the budget for this period
+  is used up and the contribution is still pending, and the refusal is no longer sent to the error
+  report as an incident. The review transaction already rolled back, so nothing about what is stored
+  changes. Command contract updated with the refusal.
 - 2026-08-09: **Gift-card claims are integer dollars, $1 to $500, and credit grants are rounded**
   (owner decision, from the #2141 review discussion). Two independent changes, made together because
   they were raised together:
