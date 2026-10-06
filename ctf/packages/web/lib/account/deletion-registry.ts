@@ -583,7 +583,6 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       del('workforce_profiles', 'user_id', 'Your workforce profile.'),
       soft('workforce_user_extension', 'user_id', 'service_deleted_at', 'Your workforce plugin extension record.'),
       retain('workforce_admin_audit_trail', 'Admin action audit log; retained for compliance.'),
-      retain('workforce_deletion_events', 'Deletion accountability trail.'),
       retain('workforce_occupations', 'Shared occupation catalog; authorship columns are the admin audit.'),
       retain('workforce_export_jobs', 'Admin report-export jobs; the admin audit of who exported what.'),
       retain('workforce_config', 'Global settings and the admin audit of who changed them.'),

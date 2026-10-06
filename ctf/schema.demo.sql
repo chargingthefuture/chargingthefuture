@@ -2290,31 +2290,6 @@ CREATE TABLE IF NOT EXISTS workforce_recruited_sync_cursor (
   singleton_key BOOLEAN PRIMARY KEY DEFAULT TRUE,
   last_cursor_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
--- Service-scoped deletion event log written by the retired DELETE /api/workforce/profile (deletion
--- contract section 8). Nothing writes it since 2026-10-05; the central deletion orchestrator records
--- service deletes in account_deletion_events. Retained as the accountability trail.
-CREATE TABLE IF NOT EXISTS workforce_deletion_events (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id TEXT NOT NULL,
-  scope TEXT NOT NULL,
-  plugin_id TEXT NOT NULL,
-  requested_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  processed_at TIMESTAMPTZ,
-  result TEXT NOT NULL,
-  request_id TEXT,
-  trace_id TEXT,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-ALTER TABLE IF EXISTS workforce_deletion_events ADD COLUMN IF NOT EXISTS id UUID;
-ALTER TABLE IF EXISTS workforce_deletion_events ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS workforce_deletion_events ADD COLUMN IF NOT EXISTS scope TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS workforce_deletion_events ADD COLUMN IF NOT EXISTS plugin_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS workforce_deletion_events ADD COLUMN IF NOT EXISTS requested_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE IF EXISTS workforce_deletion_events ADD COLUMN IF NOT EXISTS processed_at TIMESTAMPTZ;
-ALTER TABLE IF EXISTS workforce_deletion_events ADD COLUMN IF NOT EXISTS result TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS workforce_deletion_events ADD COLUMN IF NOT EXISTS request_id TEXT;
-ALTER TABLE IF EXISTS workforce_deletion_events ADD COLUMN IF NOT EXISTS trace_id TEXT;
-ALTER TABLE IF EXISTS workforce_deletion_events ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
 -- === ServiceCredits tables ===
 CREATE TABLE IF NOT EXISTS service_credits_wallets (
@@ -10774,4 +10749,16 @@ DROP INDEX IF EXISTS uq_peer_programming_goals_one_open;
 -- lighthouse_profiles by foreign key, and the rejoin marker LightHouse reads is on
 -- lighthouse_user_extension, which this does not touch. Re-running deletes nothing new.
 DELETE FROM lighthouse_profiles WHERE service_deleted_at IS NOT NULL;
+
+
+-- ── post migration: 0052_drop_workforce_deletion_events.sql ──
+-- post/0052: Drop workforce_deletion_events.
+--
+-- The table was the event log of the in-plugin DELETE /api/workforce/profile, which was retired on
+-- 2026-10-05 because no screen called it. Its writer went with it, and nothing reads the table: the
+-- central deletion orchestrator records every Workforce service delete and full-account delete in
+-- account_deletion_events. The owner decided the table and the rows already in it, past deletion
+-- records included, are not kept. No other table references it. Guarded with IF EXISTS so it no-ops
+-- on a database that never had it, and re-runs do nothing.
+DROP TABLE IF EXISTS workforce_deletion_events;
 

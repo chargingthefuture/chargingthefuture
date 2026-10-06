@@ -113,9 +113,10 @@ If user returns after service-scoped deletion:
   - `account_deletion_events` (`service_name = 'workforce'`), written by the central deletion
     orchestrator (`lib/account/deletion-orchestrator.ts`) for both the service delete and the
     full-account delete
-  - `workforce_deletion_events` holds the rows the retired `DELETE /api/workforce/profile` wrote
-    before 2026-10-05; nothing writes it now, and the deletion registry retains it as the
-    accountability trail
+  - the plugin's own `workforce_deletion_events` table, written only by the retired
+    `DELETE /api/workforce/profile`, was dropped with its rows on 2026-10-06
+    (`post/0052_drop_workforce_deletion_events.sql`); `account_deletion_events` is the only
+    deletion event record for Workforce
 - Who can trigger deletion:
   - authenticated user (self)
   - full-account orchestrator/system actor
