@@ -31,7 +31,7 @@ import {
   type StreamVideoParticipant,
 } from '@stream-io/video-react-native-sdk';
 import type { ChymeJoinResponse } from './ChymeApi';
-import { postChymeHeartbeat, postChymeHand, getChymeRoom } from './ChymeApi';
+import { postChymeHeartbeat, postChymeHand, getChymeRoom, CHYME_HEARTBEAT_STOP_CODES } from './ChymeApi';
 import { ChymeTipButton } from './ChymeTipModal';
 import { useChymeBackChannel, type MobileBackChannelController } from './useChymeBackChannel';
 import { ChymeBackChannelInviteSheet } from './ChymeBackChannelInviteSheet';
@@ -185,9 +185,19 @@ export const ChymeAudioRoom: React.FC<ChymeAudioRoomProps> = ({
   useEffect(() => {
     if (status !== 'joined') return;
     const ping = () => {
-      void postChymeHeartbeat().catch(() => {
-        /* best-effort keepalive: the next ping reconciles */
-      });
+      void postChymeHeartbeat()
+        .then((result) => {
+          // The server will not keep this member present (removed by an admin, or the room is at its
+          // cap after they dropped out of the count): every later beat would be refused too, so stop
+          // beating and show its reason in place of the stage (with Leave), where a join refusal is.
+          if (!result.ok && result.code !== null && CHYME_HEARTBEAT_STOP_CODES.includes(result.code)) {
+            setErrorMessage(result.message ?? 'The room did not keep you in the call.');
+            setStatus('error');
+          }
+        })
+        .catch(() => {
+          /* no-trace: best-effort keepalive, the next ping reconciles */
+        });
     };
     ping();
     const intervalId = setInterval(ping, 35000);
@@ -279,36 +289,71 @@ export const ChymeAudioRoom: React.FC<ChymeAudioRoomProps> = ({
 const ChymeBackChannelOverlay: React.FC<{
   backChannel: MobileBackChannelController;
   displayName: string;
-}> = ({ backChannel, displayName }) => (
-  <>
-    {backChannel.incomingInvite && !backChannel.activeCall ? (
-      <ChymeBackChannelInviteSheet
-        visible
-        fromName={backChannel.incomingInvite.fromUsername ? '@' + backChannel.incomingInvite.fromUsername : 'A member'}
-        busy={backChannel.busy}
-        onAccept={() => {
-          const invite = backChannel.incomingInvite;
-          if (invite) void backChannel.accept(invite.callId);
-        }}
-        onDecline={() => {
-          const invite = backChannel.incomingInvite;
-          if (invite) void backChannel.decline(invite.callId);
-        }}
-      />
-    ) : null}
-    {backChannel.activeCall && backChannel.joinCredentials && backChannel.joinCredentials.callId === backChannel.activeCall.callId ? (
-      <ChymeBackChannelCall
-        credentials={backChannel.joinCredentials}
-        displayName={displayName}
-        otherName={backChannel.activeCall.otherUsername ? '@' + backChannel.activeCall.otherUsername : 'Member'}
-        onHangUp={() => {
-          const active = backChannel.activeCall;
-          if (active) void backChannel.hangUp(active.callId);
-        }}
-      />
-    ) : null}
-  </>
+}> = ({ backChannel, displayName }) => {
+  const { incomingInvite, activeCall, joinCredentials } = backChannel;
+  const invite = activeCall ? null : incomingInvite;
+  const live = activeCall && joinCredentials && joinCredentials.callId === activeCall.callId ? { activeCall, credentials: joinCredentials } : null;
+  return (
+    <>
+      {invite ? <ChymeBackChannelIncoming backChannel={backChannel} invite={invite} /> : null}
+      {live ? (
+        <ChymeBackChannelCall
+          credentials={live.credentials}
+          actionError={backChannel.error}
+          displayName={displayName}
+          otherName={live.activeCall.otherUsername ? '@' + live.activeCall.otherUsername : 'Member'}
+          onHangUp={() => void backChannel.hangUp(live.activeCall.callId)}
+        />
+      ) : null}
+      {/* A failed invite or /join has no sheet or call screen to sit in, so it gets its own notice. */}
+      <ChymeBackChannelErrorNotice message={invite || live ? null : backChannel.error} onDismiss={backChannel.clearError} />
+    </>
+  );
+};
+
+const ChymeBackChannelIncoming: React.FC<{
+  backChannel: MobileBackChannelController;
+  invite: NonNullable<MobileBackChannelController['incomingInvite']>;
+}> = ({ backChannel, invite }) => (
+  <ChymeBackChannelInviteSheet
+    visible
+    fromName={invite.fromUsername ? '@' + invite.fromUsername : 'A member'}
+    busy={backChannel.busy}
+    error={backChannel.error}
+    onAccept={() => void backChannel.accept(invite.callId)}
+    onDecline={() => void backChannel.decline(invite.callId)}
+  />
 );
+
+const ChymeBackChannelErrorNotice: React.FC<{ message: string | null; onDismiss: () => void }> = ({ message, onDismiss }) =>
+  message ? (
+    <View style={backChannelNoticeStyles.notice} accessibilityRole="alert">
+      <Text style={backChannelNoticeStyles.text}>{message}</Text>
+      <TouchableOpacity onPress={onDismiss} accessibilityRole="button">
+        <Text style={backChannelNoticeStyles.dismiss}>Dismiss</Text>
+      </TouchableOpacity>
+    </View>
+  ) : null;
+
+const backChannelNoticeStyles = StyleSheet.create({
+  notice: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    right: 12,
+    zIndex: 10,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: '#0d0f14',
+    borderWidth: 1,
+    borderColor: 'rgba(248,113,113,0.45)',
+  },
+  text: { flex: 1, color: '#F87171', fontSize: 13, fontFamily: interFamily('400') },
+  dismiss: { color: '#9ca3af', fontSize: 13, fontWeight: '600', fontFamily: interFamily('600') },
+});
 
 const ChymeAudioRoomLive: React.FC<{
   onOpenChat: () => void;

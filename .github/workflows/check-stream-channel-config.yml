@@ -1,0 +1,68 @@
+name: Check — Stream Chat Settings
+
+# Manually-run check: is a Stream channel-type setting stopping members from sending chat messages?
+#
+# Use this when a chat shows "Message Failed · Unauthorized" with the reason "pending messages not
+# enabled for this app". That comes from the "Mark Messages Pending" setting being on for a channel
+# type while the Stream app does not have the pending-messages feature, so Stream refuses every send
+# on that channel type. Nothing in the app code can cause or cure it; it is a setting on the Stream
+# side. This runs ctf/packages/web/scripts/check-stream-channel-config.mjs, which reads the setting
+# for every channel type the app sends into (plugin chats, the Beacon event chat, the gated
+# contributor channel) on both the production and demo Stream apps. It never prints a key or secret.
+#
+# Run it from the browser: Actions tab → "Check — Stream Chat Settings" → Run workflow. Leave "fix"
+# unticked to only report; tick it to turn the blocking setting off. A green run means members can
+# send on every channel type. The change takes effect at once; no redeploy is needed.
+#
+# Recurring: kept for the next time this setting is switched on.
+
+on:
+  workflow_dispatch:
+    inputs:
+      fix:
+        description: "Turn off any setting that blocks sending"
+        type: boolean
+        default: false
+
+jobs:
+  check:
+    name: Check Stream channel-type settings
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install dependencies
+        run: |
+          cd ctf
+          pnpm install
+
+      # Inject the production environment's secrets (env-slug "prod"), which is where the *_STAGING
+      # Stream pair lives too. If Infisical is unreachable this step fails the job, by design.
+      - name: Inject secrets from Infisical
+        uses: Infisical/secrets-action@v1.0.16
+        with:
+          client-id: ${{ secrets.INFISICAL_CLIENT_ID }}
+          client-secret: ${{ secrets.INFISICAL_CLIENT_SECRET }}
+          project-slug: ${{ secrets.INFISICAL_PROJECT_SLUG }}
+          env-slug: prod
+          domain: ${{ secrets.INFISICAL_URL }}
+          secret-path: /
+          recursive: true
+
+      - name: Check (and optionally fix) Stream channel-type settings
+        env:
+          FIX: ${{ inputs.fix }}
+        run: |
+          cd ctf/packages/web
+          if [ "$FIX" = "true" ]; then
+            node scripts/check-stream-channel-config.mjs --fix
+          else
+            node scripts/check-stream-channel-config.mjs
+          fi
