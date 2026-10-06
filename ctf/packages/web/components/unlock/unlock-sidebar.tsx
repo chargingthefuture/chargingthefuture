@@ -5,7 +5,7 @@ import { getUnlockTokens, STATUS_CONFIG, type DisplayStatus } from "./unlock-sha
 
 const MESSAGES: Record<DisplayStatus, string> = {
   pending: "Your submission is under review. An admin will respond within 24–48 hours.",
-  approved: "Your Quora profile has been verified. Full access is now unlocked.",
+  approved: "Your Quora profile has been reviewed. Full access is now unlocked.",
   rejected: "Your submission was not approved. You can re-submit a new profile URL below.",
 };
 
