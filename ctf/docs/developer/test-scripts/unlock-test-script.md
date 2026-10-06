@@ -489,7 +489,7 @@ this line with the rest of their data (see UNLOCK-A2c for the deletion walk).
 **Precondition:** a test account that submitted a Quora URL and has not been reviewed yet. This is the
 case that was broken: a waiting member has a stored `pending_readonly` tier, which passes no gate.
 **Steps:**
-1. Sign in. You land on the Verification Status screen showing "Pending Review".
+1. Sign in. You land on the Unlock status screen showing "Pending Review".
 2. Find "Can't find your Quora profile URL?" and press **Ask for help in the Commons**.
 3. Watch what happens on screen.
 4. Repeat on Android.
@@ -517,7 +517,7 @@ working, not a bug.
 ### UNLOCK-A8d · An approved member is not offered help they do not need
 **Role:** member with an **approved** submission · **Surfaces:** web + mobile-responsive, android
 **Steps:**
-1. Sign in as an approved member and open the Verification Status screen.
+1. Sign in as an approved member and open the Unlock status screen.
 2. Look below the "Approved — full access unlocked" card.
 **Expected:** No "Can't find your Quora profile URL?" card and no "Ask for help in the Commons" button.
 An approved member already has the Commons, so the button would grant access they hold and record a
