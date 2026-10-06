@@ -6,6 +6,8 @@
 // account deletion registry into read statements:
 //   - any table with a userColumn → SELECT * FROM <table> WHERE <userColumn> = $1
 //   - retain tables (no userColumn) → (no statement)
+//   - entries wrapped in notExported(...) → (no statement): rows matched by the member's id that
+//     are not the member's own (a block another member placed on them, a profile they nominated)
 //
 // Like `check-deletion-engine.mjs`, this extracts the SQL template literal straight from the
 // engine source and renders it for every registry entry — so if someone changes the engine's SQL
@@ -43,21 +45,51 @@ function parseOwnedTables(src) {
     );
   }
 
-  const callRe = /\b(del|soft|retain)\(\s*'([^']+)'(?:\s*,\s*'([^']+)')?(?:\s*,\s*'([^']+)')?/g;
+  // Entries wrapped in notExported(...) — keyed "table.userColumn". The wrapper must sit directly
+  // around one builder call, which is the only shape the registry uses.
+  const notExported = new Set();
+  const wrapRe = /\bnotExported\(\s*(?:del|soft|pseudo)\(\s*'([^']+)'\s*,\s*'([^']+)'/g;
+  let w;
+  while ((w = wrapRe.exec(src)) !== null) {
+    notExported.add(`${w[1]}.${w[2]}`);
+  }
+  if ((src.match(/\bnotExported\(/g) ?? []).length - 1 !== notExported.size) {
+    // One occurrence is the helper's own definition; every other one must have been parsed.
+    throw new Error('a notExported(...) call has a shape this check does not parse; wrap one del()/soft()/pseudo() call directly.');
+  }
+
+  const callRe = /\b(del|soft|pseudo|retain)\(\s*'([^']+)'(?:\s*,\s*'([^']+)')?(?:\s*,\s*'([^']+)')?/g;
   const owned = [];
   let m;
   while ((m = callRe.exec(src)) !== null) {
     const [, kind, a, b] = m;
+    const exportable = !notExported.has(`${a}.${b}`);
     if (kind === 'del') {
-      owned.push({ action: 'delete', table: a, userColumn: b });
+      owned.push({ action: 'delete', table: a, userColumn: b, exportable });
     } else if (kind === 'soft') {
-      owned.push({ action: 'soft-delete', table: a, userColumn: b });
+      owned.push({ action: 'soft-delete', table: a, userColumn: b, exportable });
+    } else if (kind === 'pseudo') {
+      owned.push({ action: 'pseudonymize', table: a, userColumn: b, exportable });
     } else {
       owned.push({ action: 'retain', table: a });
     }
   }
   return owned;
 }
+
+// Pairs whose rows must never reach the member's export. Unwrapping one of these in the registry
+// fails this check rather than quietly handing a member other people's data again.
+//   - lighthouse_blocks.blocked_user_id: blocks other members placed on this member, with the
+//     blocker's id and free-text reason (issue #2699).
+//   - directory_profiles.nominated_by_user_id: the profile of the person the member nominated,
+//     which after a claim holds their bio, payment addresses and location (issue #2643).
+const REQUIRED_NOT_EXPORTED = [
+  'lighthouse_blocks.blocked_user_id',
+  'directory_profiles.nominated_by_user_id',
+];
+
+// The engine must skip an entry marked exportable: false before it builds any SQL.
+const EXPORTABLE_GUARD_RE = /if \(!owned\.userColumn \|\| owned\.exportable === false\) \{\s*return null;/;
 
 // Pull the SELECT template literal out of the engine source so this check renders the engine's
 // real SQL, not a copy. If the engine's SQL shape changes in a way this pattern no longer
@@ -89,7 +121,11 @@ function main() {
   let selectSql;
   try {
     owned = parseOwnedTables(fs.readFileSync(registryPath, 'utf8'));
-    selectSql = extractEngineTemplate(fs.readFileSync(enginePath, 'utf8'));
+    const engineSrc = fs.readFileSync(enginePath, 'utf8');
+    selectSql = extractEngineTemplate(engineSrc);
+    if (!EXPORTABLE_GUARD_RE.test(engineSrc)) {
+      throw new Error('the engine no longer returns null for an entry marked exportable: false — re-read export-engine.ts.');
+    }
   } catch (error) {
     fail(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;
@@ -102,10 +138,26 @@ function main() {
     return;
   }
 
+  for (const pair of REQUIRED_NOT_EXPORTED) {
+    const [table, userColumn] = pair.split('.');
+    const matches = owned.filter((o) => o.table === table && o.userColumn === userColumn);
+    if (matches.length === 0) {
+      fail(`registry has no entry for ${pair}; update REQUIRED_NOT_EXPORTED if the entry was removed on purpose.`);
+    } else if (matches.some((o) => o.exportable)) {
+      fail(`${pair} must be wrapped in notExported(...): its rows are not the member's own.`);
+    }
+  }
+
   let statements = 0;
+  let skipped = 0;
   for (const entry of owned) {
     // Retain tables have no user column, so the export engine must skip them (no statement).
     if (entry.action === 'retain') {
+      continue;
+    }
+    // Entries marked notExported produce no statement (the engine guard is checked above).
+    if (!entry.exportable) {
+      skipped += 1;
       continue;
     }
     if (!entry.userColumn) {
@@ -137,7 +189,9 @@ function main() {
     process.exitCode = 1;
     return;
   }
-  console.log(`Export engine check passed: ${statements} engine-rendered statement(s) validated.`);
+  console.log(
+    `Export engine check passed: ${statements} engine-rendered statement(s) validated, ${skipped} entr${skipped === 1 ? 'y' : 'ies'} kept out of the export.`,
+  );
 }
 
 main();

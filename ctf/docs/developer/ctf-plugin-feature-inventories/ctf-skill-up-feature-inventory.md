@@ -199,7 +199,7 @@ separate.
 - `GET /api/skill-up/enrollments` — the calling member's own enrollments, each with cohort title/track, assigned trainer name, status, an `isCurrent` flag (true while the status is `enrolled` or `active`), and a milestone tally (`milestoneTotal` / `milestoneCompleted`, counting `validated` and `released` validations). Read-only, capped at 50, newest first. Scoped to the caller inside the repository query — it accepts no user id, so an admin calling it still gets only their own rows (per `enrollment.list` contract).
 - `POST /api/skill-up/milestones/[milestoneId]/validate`
 - `POST /api/skill-up/milestones/[milestoneId]/release`
-- `POST /api/skill-up/transfers` — self-transfer (recipient equals actor) is rejected with 400.
+- `POST /api/skill-up/transfers` — self-transfer (recipient equals actor) is rejected with 400. Sends through the canonical `createTransfer` from `lib/shared/credits-interface.ts`, so a frozen or trading-restricted sender is refused with 403 `skill_up_account_restricted`. Returns `{ ok, transfer: { id, senderUserId, recipientUserId, amount, status, escrowHoldId, externalLedgerTransactionId, rail } }`.
 - `POST /api/skill-up/disputes`
 - `POST /api/skill-up/disputes/[disputeId]/resolve` — admin, or the trainer assigned to the dispute's cohort (per `dispute.resolve` `trainerAssignmentOrAdmin`).
 - `POST /api/skill-up/admin/adjust-credits` — audit event records `targetContext` (`targetUserId`, `governanceTicketId`) per the `admin.adjust_credits` audit contract.
@@ -352,6 +352,14 @@ that exist today.
 5. ~~Auto cohorts' trainer payout did not fire because enrollments had no `assigned_trainer_id`.~~ **Resolved (2026-06-29):** enrolling in a claimed auto cohort now sets `assigned_trainer_id` to the claiming trainer (the cohort's `created_by_user_id` once it is no longer the scheduler placeholder), and `claim-trainer` backfills that trainer onto any enrollments made before the claim. So a milestone release now settles the trainer split for auto cohorts. (Admin/human-built cohorts are unchanged — they only get an assigned trainer when one is passed in, since their `created_by_user_id` may be an admin, not the trainer.)
 
 ## Change Log
+
+- 2026-10-05: **SkillUp transfers go through the canonical ServiceCredits transfer (code review
+  #2875).** `transferCreditsForSkillUp` imported a second copy of `createTransfer` that skipped the
+  wallet freeze check, the command idempotency record and the external ledger post. It now imports
+  `createTransfer` from `lib/shared/credits-interface.ts` and the copy is deleted. The route's
+  `transfer` response is now the canonical camelCase shape (`recipientUserId`, `amount` as a number)
+  instead of the raw table row; nothing in the app reads it. A refused sender gets 403
+  `skill_up_account_restricted`.
 
 - 2026-10-04: **Profile-and-deletion contract written.** A contract coverage audit found this plugin
   had three of the four contract files. `SKILL_UP_PROFILE_AND_DELETION_CONTRACT.md` now states the
