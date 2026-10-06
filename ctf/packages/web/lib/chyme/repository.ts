@@ -733,6 +733,35 @@ export async function deleteRoomMessage(
   });
 }
 
+// The cap check, under a lock on the room row so two members taking the last spot in the same
+// instant cannot both get it. A member already inside the presence window is never turned away by
+// their own row. Throws ChymeRoomFullError when the room is at the cap the quota policy sets, and
+// returns the policy for the caller's response.
+async function lockRoomAndAssertSpot(client: PoolClient, roomId: string, userId: string): Promise<ChymeQuotaPolicy> {
+  await client.query(`SELECT id FROM chyme_rooms WHERE id = $1 FOR UPDATE`, [roomId]);
+  const [present, policy] = await Promise.all([listRoomParticipants(client, roomId), readQuotaPolicy(client)]);
+  const alreadyIn = present.some((participant) => participant.userId === userId);
+  if (!alreadyIn && present.length >= policy.memberCap) {
+    throw new ChymeRoomFullError(present.length, policy.memberCap);
+  }
+  return policy;
+}
+
+// Is the member counted as present right now (their row seen inside the presence window)?
+async function isMemberPresent(client: PoolClient, roomId: string, userId: string): Promise<boolean> {
+  const result = await client.query<{ present: number }>(
+    `
+      SELECT 1 AS present
+      FROM chyme_room_members
+      WHERE room_id = $1 AND user_id = $2
+        AND last_seen_at > NOW() - ($3 || ' seconds')::interval
+      LIMIT 1
+    `,
+    [roomId, userId, String(CHYME_PRESENCE_TTL_SECONDS)],
+  );
+  return (result.rowCount ?? 0) > 0;
+}
+
 // Mark the member as in the call. The cap is checked here, under a lock on the room row, so two
 // members joining in the same instant cannot both take the last spot; a member already inside the
 // presence window is never turned away by their own row (a rejoin after a dropped connection).
@@ -744,13 +773,8 @@ export async function markRoomCallJoined(
 ): Promise<ChymeRoomResponse> {
   return withDbTransaction(async (client) => {
     const room = await ensureRoom(client, roomKey);
-    await client.query(`SELECT id FROM chyme_rooms WHERE id = $1 FOR UPDATE`, [room.id]);
     await assertNotRemoved(client, room.id, identity.userId);
-    const [present, policy] = await Promise.all([listRoomParticipants(client, room.id), readQuotaPolicy(client)]);
-    const alreadyIn = present.some((participant) => participant.userId === identity.userId);
-    if (!alreadyIn && present.length >= policy.memberCap) {
-      throw new ChymeRoomFullError(present.length, policy.memberCap);
-    }
+    const policy = await lockRoomAndAssertSpot(client, room.id, identity.userId);
     await ensureServiceProfile(client, identity);
     const credited = await upsertMember(client, room.id, identity);
     await recordStreamVideoUsage(client, chymeRoomSurface(roomKey), credited);
@@ -768,7 +792,11 @@ export async function markRoomCallJoined(
 }
 
 // Heartbeat from the audio room while a member is in the call: refreshes last_seen_at so the
-// member keeps counting as present (see listRoomParticipants' freshness window).
+// member keeps counting as present (see listRoomParticipants' freshness window). A beat from a
+// member who is not counted right now (no row, or a row older than the window, as after a tab sat
+// in the background) would put them back into the count, so it passes the same locked cap check
+// the join does and throws ChymeRoomFullError when the room filled meanwhile. A member already
+// counted takes no lock, so the routine beat stays one cheap write.
 export async function touchRoomPresence(
   identity: IdentityInput,
   roomKey: string = CHYME_MAIN_ROOM_KEY,
@@ -776,6 +804,9 @@ export async function touchRoomPresence(
   await withDbTransaction(async (client) => {
     const room = await ensureRoom(client, roomKey);
     await assertNotRemoved(client, room.id, identity.userId);
+    if (!(await isMemberPresent(client, room.id, identity.userId))) {
+      await lockRoomAndAssertSpot(client, room.id, identity.userId);
+    }
     const credited = await upsertMember(client, room.id, identity);
     // Each heartbeat is one participant's connected time since the last one; this is the minute
     // meter's only input for members, so it is written here and nowhere else on the member path.
