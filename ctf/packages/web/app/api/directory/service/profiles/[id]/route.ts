@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server';
 import { DIRECTORY_ERROR_CODE } from 'lib/directory/constants';
-import { getClaimedProfileForService, requireDirectoryServiceRead } from 'lib/directory/service-read';
+import { getProfileForService, requireDirectoryServiceRead } from 'lib/directory/service-read';
 import { logDirectoryAudit } from 'lib/directory/audit';
 import { reportError } from 'lib/observability/report';
 
-// One claimed Directory profile by id, for One Percent's desk and nothing else. The caller is
-// One Percent's server, with a credential from DIRECTORY_SERVICE_TOKENS; no member and no page in
-// this app calls it. The limits are in lib/directory/service-read.ts and the "One Percent is the
-// paid tier" section of CLAUDE.md. 404 for an unclaimed profile as well as a missing one.
+// One Directory profile by id, claimed or not and saying which, for One Percent's desk and nothing
+// else. The caller is One Percent's server, with a credential from DIRECTORY_SERVICE_TOKENS; no
+// member and no page in this app calls it. The limits are in lib/directory/service-read.ts and the "One Percent is the
+// paid tier" section of CLAUDE.md. 404 for a missing profile, and for a claimed one whose owner is
+// restricted from connecting, without saying which.
 export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
   const gate = requireDirectoryServiceRead(request);
   if (!gate.allowed) {
@@ -17,7 +18,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   const { id } = await context.params;
 
   try {
-    const profile = await getClaimedProfileForService(id);
+    const profile = await getProfileForService(id);
 
     logDirectoryAudit({
       actorId: gate.actorId,
@@ -35,7 +36,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
         {
           ok: false,
           code: DIRECTORY_ERROR_CODE.notFound,
-          message: 'No claimed Directory profile has this id. It may be unclaimed, or it may have been removed.',
+          message: 'No Directory profile has this id. It may have been removed.',
         },
         { status: 404 },
       );

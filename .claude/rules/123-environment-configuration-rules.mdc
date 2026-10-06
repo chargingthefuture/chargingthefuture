@@ -164,8 +164,8 @@ member-only.
 
 ### The Directory service credential
 
-`DIRECTORY_SERVICE_TOKENS` holds the credential One Percent's desk reads claimed Directory
-profiles with (owner decision, 2026-10-02; the name was approved by the owner). Same format and
+`DIRECTORY_SERVICE_TOKENS` holds the credential One Percent's desk reads Directory profiles with
+(owner decision, 2026-10-02; the name was approved by the owner). Same format and
 same binding as the taxonomy one above: `name:secret` entries, sent as
 `Authorization: Bearer <name>.<secret>`.
 
@@ -174,8 +174,9 @@ reverse holds, so either integration can be revoked without touching the other. 
 required: unset or empty means the route refuses everybody. Revoking it is removing the entry.
 
 Only `/api/directory/service/profiles/[id]` reads this list, through `requireDirectoryServiceRead`
-in `ctf/packages/web/lib/directory/service-read.ts`. That route answers for one claimed profile at
-a time, never one whose owner is restricted with scope `all` or `contact`, with the fields One Percent's desk shows, and has no member path.
+in `ctf/packages/web/lib/directory/service-read.ts`. That route answers for one profile at a
+time, claimed or not and saying which, never a claimed one whose owner is restricted with scope
+`all` or `contact`, with the fields One Percent's desk shows, and has no member path.
 
 ### Stream and Formance staging keys
 The single `production` Infisical environment additionally holds the demo/staging
