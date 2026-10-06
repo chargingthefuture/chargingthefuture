@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto';
 import type { PoolClient } from 'pg';
 import { queryDb, withDbTransaction } from 'lib/db/postgres';
-import { getAccountRestrictionStatus, restrictAccount, unrestrictAccount } from 'lib/auth/account-restrictions';
+import { getAccountRestrictionStatus, liftAccountRestrictionAtScope, restrictAccountAtScope } from 'lib/auth/account-restrictions';
 import {
   postBurnToFormance,
   postDeletionReclaimToFormance,
@@ -2102,11 +2102,20 @@ export async function getCreditLimitInfo(userId: string) {
 
 // Admin-only: freeze or unfreeze a wallet. Backed by the platform-wide restriction signal at 'trading'
 // scope, so a freeze blocks spending here and is visible to any other plugin that honours the signal.
+// The freeze only ever writes or lifts a 'trading' restriction: when the member already has an active
+// 'all' or 'contact' restriction (one row per member), freezing would replace it and unfreezing would
+// lift it, so both are refused with 'restriction_scope_conflict' and the restriction stays as it is.
 export async function setWalletFrozen(input: { actorId: string; targetUserId: string; frozen: boolean; reason?: string }) {
   if (input.frozen) {
-    await restrictAccount({ targetUserId: input.targetUserId, actorId: input.actorId, reason: input.reason ?? null, scope: 'trading' });
+    const outcome = await restrictAccountAtScope({ targetUserId: input.targetUserId, actorId: input.actorId, reason: input.reason ?? null, scope: 'trading' });
+    if (!outcome.applied) {
+      throw new Error('restriction_scope_conflict');
+    }
   } else {
-    await unrestrictAccount({ targetUserId: input.targetUserId, actorId: input.actorId });
+    const outcome = await liftAccountRestrictionAtScope({ targetUserId: input.targetUserId, actorId: input.actorId, scope: 'trading' });
+    if (!outcome.lifted && outcome.existingScope !== null) {
+      throw new Error('restriction_scope_conflict');
+    }
   }
 
   return { targetUserId: input.targetUserId, frozen: input.frozen };
