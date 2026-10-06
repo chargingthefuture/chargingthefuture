@@ -184,6 +184,13 @@ Step 3 opens `/api/beacon/replays/<id>/recording` and plays the recording. In st
 a recording for that event, the row now reads `recording ready`, a `Replay` button appears, and the
 replay is posted to the Commons once (a second reload posts nothing more). If Stream holds none, the
 row reads `no recording found`.
+5. On that row, open `Log`, then press `Copy log` and paste it into a note.
+**Expected (step 5):** The Log's first line starts `Recording:` and says what Stream answered: no
+recording for the call, recordings with no file yet, or the error the lookup hit. Below it, each
+logged broadcast step with its time in ET (went live, the feed and recording asked to start, Stream
+started / stopped / failed the recording, recording file ready, ended); a failed step carries its
+reason after a dash. An event broadcast before this change may show `No broadcast steps were logged
+for this event.` The pasted text starts with the event title and matches what the Log shows.
 **Result:** web ☐ mobile ☐ — notes:
 
 ### BCN-A2 · Go Live (both input paths)

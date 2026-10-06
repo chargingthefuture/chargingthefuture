@@ -365,13 +365,17 @@ export async function getBeaconHlsPlaybackUrl(eventId: string): Promise<string |
 // Source: Stream Video recording API, GET /api/v2/video/call/{type}/{id}/recordings, which answers
 // `{ recordings: [{ filename, url, start_time, end_time, session_id }] }`. Not re-checked against
 // Stream's docs from this change (the docs host is unreachable from the build container), so the
-// shape is read defensively and null is returned when anything is missing. Returns the most recent
-// recording's address, or null when Stream is not configured, has none, or the request fails; the
-// caller then falls back to the stored address.
-export async function getFreshBeaconRecordingUrl(eventId: string): Promise<string | null> {
+// shape is read defensively and null is returned when anything is missing.
+//
+// `detail` says why there is no address, in words the admin history shows: Stream not configured,
+// Stream answering with no recordings, recordings with no file yet, or the request failing with
+// Stream's own message. Without it, "Stream has none" and "the lookup failed" looked the same.
+export type BeaconRecordingLookup = { url: string | null; detail: string };
+
+export async function lookupBeaconRecording(eventId: string): Promise<BeaconRecordingLookup> {
   const ctx = await resolveStreamRest();
   if (!ctx) {
-    return null;
+    return { url: null, detail: 'Live video is not configured, so Stream was not asked.' };
   }
   const callId = beaconCallIdForEvent(eventId);
   try {
@@ -384,11 +388,23 @@ export async function getFreshBeaconRecordingUrl(eventId: string): Promise<strin
     const withUrl = recordings
       .filter((recording) => typeof recording.url === 'string' && recording.url.length > 0)
       .sort((a, b) => String(b.end_time ?? '').localeCompare(String(a.end_time ?? '')));
-    return withUrl.length > 0 ? (withUrl[0].url as string) : null;
+    if (withUrl.length > 0) {
+      return { url: withUrl[0].url as string, detail: `Stream has ${withUrl.length} recording file(s).` };
+    }
+    if (recordings.length > 0) {
+      return { url: null, detail: `Stream lists ${recordings.length} recording(s) for call ${callId}, none with a file address yet.` };
+    }
+    return { url: null, detail: `Stream has no recording for call ${callId}: the recording was never started or never finished.` };
   } catch (error) {
     reportError(error, { area: 'beacon', op: 'list_recordings', extra: { eventId } });
-    return null;
+    return { url: null, detail: `Asking Stream for the recording failed: ${error instanceof Error ? error.message : String(error)}` };
   }
+}
+
+// The address alone, for the public recording route: null when there is none, and the caller then
+// falls back to the stored address.
+export async function getFreshBeaconRecordingUrl(eventId: string): Promise<string | null> {
+  return (await lookupBeaconRecording(eventId)).url;
 }
 
 // End the call so Stream stops distribution and billing stops. This is the cost-critical path: the

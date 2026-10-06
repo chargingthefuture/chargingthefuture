@@ -20,6 +20,7 @@ import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-but
 import { StreamChatPanel } from '@/components/shared/stream-chat-panel';
 import { BeaconHostStage, type BeaconHostCredentials } from './beacon-host-stage';
 import { getBeaconTokens, type BeaconTokens } from './beacon-shared';
+import { BeaconEventLog, type BeaconEventLogEntry } from './beacon-event-log';
 import { reportError } from 'lib/observability/report';
 
 type BeaconEvent = {
@@ -33,6 +34,9 @@ type BeaconEvent = {
   commonsLivePostId: string | null;
   commonsRecordingPostId: string | null;
   createdAtIso: string;
+  // Admin list only: what Stream said when asked for a missing recording, and the event's log.
+  recordingLookup?: string;
+  log?: BeaconEventLogEntry[];
 };
 
 type IngestResponse = {
@@ -177,6 +181,16 @@ function formatEventTimeEt(event: BeaconEvent): string | null {
   return `${EASTERN_TIME.format(date)} ET`;
 }
 
+// The line under an event's title: status, time in ET, and whether its recording is ready.
+function eventStatusLine(event: BeaconEvent): string {
+  const time = formatEventTimeEt(event);
+  const parts: string[] = [event.status];
+  if (time) parts.push(time);
+  if (event.recordingUrl) parts.push('recording ready');
+  else if (event.status === 'ended') parts.push('no recording found');
+  return parts.join(' · ');
+}
+
 // One event row in the history list, with Replay / Open / two-step Delete controls.
 function EventHistoryRow({
   event,
@@ -201,12 +215,8 @@ function EventHistoryRow({
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
       <div style={{ minWidth: 0 }}>
         <div style={{ fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{event.title}</div>
-        <div style={{ fontSize: 12, color: t.SUBTLE }}>
-          {event.status}
-          {formatEventTimeEt(event) ? ` · ${formatEventTimeEt(event)}` : ''}
-          {event.recordingUrl ? ' · recording ready' : ''}
-          {event.status === 'ended' && !event.recordingUrl ? ' · no recording found' : ''}
-        </div>
+        <div style={{ fontSize: 12, color: t.SUBTLE }}>{eventStatusLine(event)}</div>
+        <BeaconEventLog title={event.title} recordingLookup={event.recordingLookup} log={event.log ?? []} t={t} />
       </div>
       <div style={{ display: 'flex', gap: 8 }}>
         {event.recordingUrl ? (

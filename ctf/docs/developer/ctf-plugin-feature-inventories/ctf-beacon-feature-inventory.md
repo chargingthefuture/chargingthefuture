@@ -113,7 +113,13 @@ feed; when the event ends, Beacon auto-posts the recording to the Commons as a r
 4. **Moderate** — mute a member, ban a member from the event chat, enable slow-mode.
 5. **End the event** — stops the broadcast and billing; on recording-ready, auto-posts the replay to
    the Commons.
-6. **See event history** (past events + their recordings).
+6. **See event history** (past events + their recordings). Each live or ended event has a **Log**
+   that opens under it: when there is still no recording, what Stream answered when asked for one
+   (no recording for the call, recordings with no file yet, or the lookup's own error), then each
+   broadcast step with its time in ET — went live, the screen share or a joining broadcaster asking
+   for the feed and recording to start, Stream starting, stopping or failing the recording, the
+   recording file ready, ended — and the reason for any step that failed. **Copy log** copies it as
+   plain text with the event title on top.
 7. **Delete a draft** — a draft that was mistyped or abandoned can be removed from the Event history
    list. Two clicks: `Delete` arms the row, `Confirm delete` does it. **Drafts only** — a live or
    ended event has no delete control, and the route refuses one with a 409, because an ended event is
@@ -148,10 +154,13 @@ feed; when the event ends, Beacon auto-posts the recording to the Commons as a r
   succeeds, so there is no publisher yet — HLS/recording start later via `start-broadcast`.
 - `POST /api/beacon/[id]/start-broadcast` — start the public HLS broadcast + recording once a host is
   publishing media to the call (called by the in-browser screen-share when sharing begins). Admin-only,
-  idempotent.
+  idempotent. A failure is written to the event's log with Stream's message.
 - `POST /api/beacon/[id]/end` — end the call; flips status to `ended`.
 - `GET /api/beacon/admin` — list events. For up to five ended events with no recording address, asks
   Stream for the recording, stores it and posts the replay, as the recording-ready webhook would.
+  When none comes back, the event carries `recordingLookup`, what Stream answered. Every non-draft
+  event carries `log`: up to its 12 most recent audit-trail rows (`atIso`, `command`, `ok`,
+  `reason`), oldest first, which the history row shows as the event's Log.
 - `POST /api/beacon/[id]/moderate` — mute / ban / slow-mode actions on the event chat.
 - `DELETE /api/beacon/[id]` — delete a **draft** event. Refuses a `live` or `ended` event with a 409
   (`beacon_conflict`); the draft-only rule is enforced in the route and again in the SQL predicate of
@@ -169,9 +178,12 @@ feed; when the event ends, Beacon auto-posts the recording to the Commons as a r
 
 ### Webhook
 - `POST /api/beacon/stream-webhook` — Stream call lifecycle events; verifies the Stream signature and
-  acts on three of them. On `call.session_participant_joined` it starts the public HLS feed and the
+  acts on these. On `call.session_participant_joined` it starts the public HLS feed and the
   recording for the matching `live` event, which is what carries a phone-only RTMP broadcast. On
   `call.recording_ready` it stores `recording_url` and posts the replay to the Commons. On
+  `call.recording_started`, `call.recording_stopped` and `call.recording_failed` it only writes a
+  line to the event's log (with Stream's reason for a failure); the participant-joined start and the
+  recording-ready store are logged too, under actor `stream-webhook`. On
   `call.session_participant_left` — for **any** call, not only Beacon's, since this is the one URL
   Stream sends every call event to — it credits the participant's `duration_seconds` to the app's
   Stream Video minute meter (`stream_video_usage_daily`, via `lib/stream-quota/webhook-usage.ts`)
@@ -306,6 +318,13 @@ stops. HLS is used for public viewers so scale does not multiply WebRTC cost.
 
 ## Change Log
 
+- 2026-10-06: **A log for each broadcast (owner report).** Every ended event read "no recording
+  found", the same words whether Stream had no recording or the lookup itself failed, and a failed
+  recording start was only in the hosting logs. The history row now opens a Log: what Stream said
+  about the recording, and each broadcast step with its time and, for a failed one, the reason. The
+  start-broadcast route writes its failures to the audit trail, and the Stream webhook writes the
+  publisher-joined start, recording started/stopped/failed and recording ready. No new table: it reads
+  `beacon_events_admin_audit_trail`. Web only; Android: out of scope (web-only per rule 105).
 - 2026-10-06: **Recordings link on the idle screen (owner request).** A visitor who missed the live
   broadcast had no way from Beacon to the past ones. The "No live event right now" card now carries a
   "Missed it? Watch the recordings" button to the blog's streams page (`BLOG_STREAMS_PAGE_URL`). The
