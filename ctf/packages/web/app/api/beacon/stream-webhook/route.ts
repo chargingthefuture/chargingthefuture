@@ -62,9 +62,9 @@ async function handleParticipantJoined(payload: Record<string, unknown>): Promis
     const started = await startBeaconBroadcastEgress(event.id);
     return NextResponse.json({ ok: true, handled: started }, { status: 200 });
   } catch (error) {
-    // Reaching here usually means egress was already running — the browser screen-share control got
-    // there first, or a second publisher joined — and Stream refused to start it twice. Either way the
-    // broadcast is already on air, so this is recorded and acknowledged rather than retried.
+    // startBeaconBroadcastEgress already treats "already running" as success, so reaching here is a
+    // real refusal of HLS or recording. It is reported (the message names which one and why) and
+    // acknowledged rather than retried, because Stream retrying the webhook would not change the answer.
     reportError(error, {
       area: 'beacon',
       op: 'start_egress_on_participant_joined',
