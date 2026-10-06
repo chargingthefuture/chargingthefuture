@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { CheckCircle2 } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { CountrySelect } from "@/components/shared/location-select";
 import { CurrencySelect } from "@/components/shared/currency-select";
-import { getLighthouseTokens, type Profile } from "./shared";
-import { failureText } from 'lib/errors/client-failure';
+import { getLighthouseTokens, type LighthouseTokens, type Profile } from "./shared";
+import { failureText, responseFailureText } from 'lib/errors/client-failure';
 
 // Seeker self-service setup. A member fills in their housing needs here so they can request a stay
 // on a listing. Saving upserts the shared lighthouse_profiles row via POST /api/lighthouse/profile.
@@ -129,6 +129,30 @@ function buildSeekerProfileBody(form: SeekerForm, budgetMin: number | null, budg
   };
 }
 
+// Shown when the saved details could not be read, with a way to read them again.
+function LoadErrorNotice({ t, message, onRetry }: { t: LighthouseTokens; message: string; onRetry: () => void }) {
+  return (
+    <div role="alert" style={{ color: "#EF4444", fontSize: 13, marginTop: 12, lineHeight: 1.6 }}>
+      {message}{" "}
+      <button type="button" onClick={onRetry} style={{ background: "none", border: "none", padding: 0, color: t.ACCENT, fontSize: 13, fontWeight: 600, cursor: "pointer", textDecoration: "underline" }}>
+        Try again
+      </button>
+    </div>
+  );
+}
+
+// Off while a save is in flight, and while the saved details could not be read (`blocked`).
+function SaveButton({ t, submitting, blocked, hasSeekerDetails, onSave }: { t: LighthouseTokens; submitting: boolean; blocked: boolean; hasSeekerDetails: boolean; onSave: () => void }) {
+  const off = submitting || blocked;
+  return (
+    <button type="button" onClick={onSave} disabled={off} style={{ padding: "9px 18px", borderRadius: 10, background: t.ACCENT, border: "none", color: "#0B0B0F", fontSize: 14, fontWeight: 700, cursor: off ? "default" : "pointer", opacity: off ? 0.6 : 1 }}>
+      {submitting ? "Saving…" : hasSeekerDetails ? "Save changes" : "Save your details"}
+    </button>
+  );
+}
+
+const LOAD_FAILURE_TEXT = "Could not load your saved details, so saving is off to keep them from being overwritten.";
+
 export function LighthouseSeekerProfile() {
   const { theme } = useTheme();
   const t = getLighthouseTokens(theme);
@@ -139,27 +163,38 @@ export function LighthouseSeekerProfile() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  // Set when the saved details could not be read. Saving writes every field, so a save over a form
+  // that failed to load would erase the stored phone, Signal link, budget and Wanted posting; Save
+  // stays off until a reload succeeds.
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const loadProfile = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const res = await fetch("/api/lighthouse/profile");
+      // A 404 (no profile yet) is expected for a first-time seeker; the empty form stands.
+      if (res.status === 404) return;
+      if (!res.ok) {
+        setLoadError(await responseFailureText(res, LOAD_FAILURE_TEXT, "member"));
+        return;
+      }
+      const data = (await res.json()) as { ok?: boolean; profile?: Profile };
+      const p = data.profile;
+      if (p) {
+        setExistingType(p.profileType === "host" ? "host" : "seeker");
+        setForm(profileToForm(p));
+      }
+    } catch (caught) {
+      setLoadError(failureText(caught, { area: 'lighthouse', op: 'load_seeker_profile', fallback: LOAD_FAILURE_TEXT, audience: 'member' }));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    void (async () => {
-      try {
-        const res = await fetch("/api/lighthouse/profile");
-        if (res.ok) {
-          const data = (await res.json()) as { ok?: boolean; profile?: Profile };
-          const p = data.profile;
-          if (p) {
-            setExistingType(p.profileType === "host" ? "host" : "seeker");
-            setForm(profileToForm(p));
-          }
-        }
-        // A 404 (no profile yet) is expected for a first-time seeker; the empty form stands.
-      } catch {
-        // Best-effort; the empty form still works.
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
+    void loadProfile();
+  }, [loadProfile]);
 
   function setField(key: StringFormKey, value: string) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -172,6 +207,7 @@ export function LighthouseSeekerProfile() {
   }
 
   async function submit() {
+    if (loadError) return;
     const budgetMin = toNumberOrNull(form.budgetMin);
     const budgetMax = toNumberOrNull(form.budgetMax);
     if (budgetMin !== null && budgetMax !== null && budgetMax < budgetMin) {
@@ -282,6 +318,7 @@ export function LighthouseSeekerProfile() {
           </div>
         </div>
 
+        {loadError ? <LoadErrorNotice t={t} message={loadError} onRetry={() => void loadProfile()} /> : null}
         {error ? <div style={{ color: "#EF4444", fontSize: 13, marginTop: 12 }}>{error}</div> : null}
         {saved ? (
           <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#22C55E", fontSize: 13, marginTop: 12 }}>
@@ -290,9 +327,7 @@ export function LighthouseSeekerProfile() {
         ) : null}
 
         <div style={{ marginTop: 14 }}>
-          <button type="button" onClick={() => void submit()} disabled={submitting} style={{ padding: "9px 18px", borderRadius: 10, background: t.ACCENT, border: "none", color: "#0B0B0F", fontSize: 14, fontWeight: 700, cursor: submitting ? "default" : "pointer", opacity: submitting ? 0.6 : 1 }}>
-            {submitting ? "Saving…" : existingType === "seeker" ? "Save changes" : "Save your details"}
-          </button>
+          <SaveButton t={t} submitting={submitting} blocked={loadError !== null} hasSeekerDetails={existingType === "seeker"} onSave={() => void submit()} />
         </div>
       </div>
     </div>
