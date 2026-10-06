@@ -168,8 +168,9 @@ export function reportRunBlocked({
 }
 
 // One call for a catch block: if `error` is an API answer that names an outside state, report it
-// and return true; otherwise return false so the caller prints its usual failure. A missing key
-// (`error === undefined` and no key in the environment) is reported as `no_key`.
+// and return true; otherwise return false so the caller prints its usual failure. It never sees a
+// missing key: each script checks ANTHROPIC_API_KEY before the model call and reports its absence
+// itself with `reportRunBlocked({ reason: 'no_key', ... })`.
 export function reportIfRunBlocked({ script, error, manualRoute, nothingLost }) {
   if (error instanceof AnthropicApiError) {
     const reason = apiUnavailableReason(error.status, error.body);

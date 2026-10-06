@@ -26,7 +26,7 @@
 //   TEST_SCRIPT_ALL=1               Generate all plugins in the manifest.
 //
 // Required environment:
-//   ANTHROPIC_API_KEY   For the model call. Absent -> the script no-ops (harmless to schedule).
+//   ANTHROPIC_API_KEY   For the model call. Absent -> reported as paused (no_key) and the run is red.
 //
 // Optional environment:
 //   TEST_SCRIPT_MODEL          Model id (default: claude-sonnet-4-6).
@@ -39,7 +39,7 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync, mkdirSync, readdirSync, statSync } from 'node:fs';
 import { join, dirname, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { anthropicApiError, reportIfRunBlocked } from './lib/anthropicRunBlocked.mjs';
+import { anthropicApiError, reportIfRunBlocked, reportRunBlocked } from './lib/anthropicRunBlocked.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(__dirname, '../..');
@@ -62,9 +62,16 @@ const CONTRACT_SUFFIXES = [
 const SOURCE_EXTENSIONS = ['.ts', '.tsx'];
 const SKIP_DIRS = new Set(['node_modules', '.next', 'dist', 'build', 'coverage', '__snapshots__', '.turbo']);
 
+// A missing key is an outside state (the key lives in Infisical). It is reported as paused and the
+// run is red, because a green run that wrote nothing would look healthy.
 if (!process.env.ANTHROPIC_API_KEY) {
-  console.log('generateManualTestScript: ANTHROPIC_API_KEY not set; nothing to do.');
-  process.exit(0);
+  reportRunBlocked({
+    script: 'generateManualTestScript',
+    reason: 'no_key',
+    manualRoute: '/test-script',
+    nothingLost: 'No file was changed; run the workflow again for the same plugin once this clears.',
+  });
+  process.exit(1);
 }
 
 function isDir(path) {
