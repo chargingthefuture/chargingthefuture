@@ -245,6 +245,8 @@ policies:
       requiresAdditionalAudit: false
     denyConditions:
       - actor_not_admin
+      # Switching ON an entry whose contribution its member withdrew (409 COMIC_CONFLICT).
+      - contribution_withdrawn
 
   - pluginId: comic
     command: comic.admin.unlock-help.set-review
