@@ -28,6 +28,7 @@ import {
   getChymeMessages,
   getChymeRoom,
   postChymeJoin,
+  postChymeLeave,
   postChymeMessage,
   getChymeUpcoming,
   type ChymeUpcomingSlot,
@@ -146,9 +147,19 @@ export const ChymeRoom: React.FC = () => {
   }, [joining]);
 
   const handleLeaveRoom = useCallback(() => {
+    // Unmount the audio room first (it leaves the Stream call and stops the heartbeat), then drop
+    // the presence row so the member stops counting at once, and refresh the count, as the web does.
     setJoinInfo(null);
     setViewState('roomList');
-  }, []);
+    void (async () => {
+      try {
+        await postChymeLeave();
+      } catch {
+        /* no-trace: best-effort, the 45s presence window drops the member anyway */
+      }
+      await loadRoom(true);
+    })();
+  }, [loadRoom]);
 
   const handleSendMessage = useCallback(async () => {
     const trimmed = chatInput.trim();

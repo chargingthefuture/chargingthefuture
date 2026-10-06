@@ -12,6 +12,7 @@ export {
   postChymeMessage,
   deleteChymeMessage,
   postChymeJoin,
+  postChymeLeave,
   postChymeTip,
   getChymeUpcoming,
   formatUpcomingWhen,

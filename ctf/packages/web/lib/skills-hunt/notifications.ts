@@ -136,6 +136,7 @@ export async function notifyRoundsEndingSoon(client: PoolClient): Promise<{ emit
       FROM skills_hunt_rounds r
       JOIN skills_hunt_submissions s ON s.round_id = r.id
       WHERE r.status = 'active'
+        AND s.deleted_at IS NULL
         AND r.ends_at <= NOW() + INTERVAL '24 hours'
         AND r.ends_at > NOW()
       GROUP BY r.id, r.name, r.ends_at, s.submitter_user_id

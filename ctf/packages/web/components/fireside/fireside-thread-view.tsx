@@ -489,14 +489,13 @@ export function FiresideThreadView({
     setError(null);
     try {
       const res = await fetch(`/api/fireside/threads?repo=${encodeURIComponent(postRepo)}&slug=${encodeURIComponent(postSlug)}`);
-      if (!res.ok) {
-        const body = (await res.json()) as { message?: string };
-        throw new Error(body.message ?? "Could not load this conversation.");
-      }
-      const data = (await res.json()) as {
+      // A body that is not JSON (a host's error page) falls through to this sentence and the status.
+      const data = (await res.json().catch(() => null)) as {
+        message?: string;
         comments: ThreadComment[];
         thread: { id: string; isClosed: boolean } | null;
-      };
+      } | null;
+      if (!res.ok || !data) throw new Error(data?.message ?? `Could not load this conversation (${res.status}).`);
       setComments(data.comments);
       setThread(data.thread);
     } catch (e) {
