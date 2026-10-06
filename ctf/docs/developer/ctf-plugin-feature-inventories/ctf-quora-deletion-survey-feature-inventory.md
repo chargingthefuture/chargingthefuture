@@ -389,6 +389,12 @@ this is not a plugin. The steps that matter:
   members as one repeat, the admin card showed `member deleted_member`, and the CSV `member_id`
   cell carried the placeholder. All three now treat the placeholder as a deleted account. The
   deletion contract's paragraph on the placeholder is updated to match.
+- 2026-10-05: **A failed hand-off to Unlock is reported.** `surveyRespondentNeedsUnlock` caught a
+  failed Unlock status read and returned "no offer" with nothing logged, so a broken read would
+  have removed the verification offer from every confirmation screen without trace.
+  `linkSurveyRespondentToUnlock` turned a failed status read, submission write or audit write into
+  a 503 for the member and recorded it nowhere. Both now call `reportError` (ops `needs-unlock`
+  and `unlock-link`) before returning; what the member sees is unchanged.
 - 2026-10-05: **The link preview no longer says answers are stored with no link to the account.**
   The page's metadata description, which search results and link previews show when the survey
   link is shared, still carried the promise withdrawn on 2026-08-19. Every response is saved with
