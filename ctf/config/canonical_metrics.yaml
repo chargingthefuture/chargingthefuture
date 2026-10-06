@@ -2236,11 +2236,11 @@ canonical_metrics:
     data_type: integer
     unit: members
     calculation: |
-      -- Live value for the current week (the workforce_recruited_current_count definition):
+      -- Live value for the current week (the workforce_recruited_current_count definition). Every
+      -- removal is a hard delete since post/0033 dropped the is_active and deleted_at tombstones, so
+      -- a present row is a listing:
       SELECT COUNT(*) AS v
-      FROM directory_profiles
-      WHERE is_active = TRUE
-        AND deleted_at IS NULL;
+      FROM directory_profiles;
       -- Current week: upsert that live value as this week's snapshot (last read of the week wins):
       INSERT INTO weekly_performance_goal_snapshots (metric_key, week_start_date, metric_value, captured_at)
       VALUES ('goal.workforce_recruited', :week_start, :live_value, NOW())
@@ -2264,7 +2264,7 @@ canonical_metrics:
         type: datetime
     example_values:
       - 67
-    last_updated: "2026-07-18T00:00:00Z"
+    last_updated: "2026-10-05T00:00:00Z"
     update_cadence: weekly
     retention: 120 months
     allowed_thresholds:
