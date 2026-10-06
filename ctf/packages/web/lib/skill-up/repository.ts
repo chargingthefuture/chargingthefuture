@@ -2010,6 +2010,46 @@ export async function refundHeldEscrowForCohort(cohortId: string): Promise<numbe
   return refundedCredits;
 }
 
+// Return every deposit a member still has held in SkillUp escrow, before their SkillUp data is
+// deleted (on its own or with the entire account). Deleting the enrollments removes the only rows
+// that lead back to these holds: leaving a cohort and a cohort closing both start from the
+// enrollment, so without this the credits would stay held in the member's wallet with no way back,
+// and a full-account reclaim would wait on holds that can never clear. Only holds ServiceCredits
+// still has as `held` are refunded, so a row the ledger already settled cannot block the deletion.
+// The idempotency key is fixed per escrow, so a retried deletion never refunds twice.
+export async function refundHeldDepositsBeforeDataDeletion(userId: string): Promise<number> {
+  const held = await queryDb<{ id: string; escrow_id: string; held_amount: string }>(
+    `SELECT me.id::text AS id,
+            me.escrow_id::text AS escrow_id,
+            me.held_amount::text AS held_amount
+       FROM skill_up_enrollment_milestone_escrows me
+       JOIN skill_up_enrollments e ON e.id = me.enrollment_id
+       JOIN service_credits_escrow_holds h ON h.id = me.escrow_id
+      WHERE e.user_id = $1 AND me.release_status = 'held' AND h.status = 'held'`,
+    [userId],
+  );
+
+  let refundedCredits = 0;
+  for (const escrow of held.rows) {
+    await refundEscrow({
+      actorId: userId,
+      escrowId: escrow.escrow_id,
+      refundReason: 'skill_up_data_deleted',
+      originPlugin: SKILL_UP_PLUGIN_SLUG,
+      idempotencyKey: `skill-up:data-deletion:refund:${escrow.escrow_id}`,
+    });
+    await queryDb(
+      `UPDATE skill_up_enrollment_milestone_escrows
+       SET release_status = 'refunded', updated_at = NOW()
+       WHERE id = $1::uuid`,
+      [escrow.id],
+    );
+    refundedCredits = roundCurrency(refundedCredits + toNumber(escrow.held_amount));
+  }
+
+  return refundedCredits;
+}
+
 export type LeaveCohortOutcome =
   | { status: 'left'; enrollmentId: string; refundedCredits: number }
   | { status: 'not_found' }
