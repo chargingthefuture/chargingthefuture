@@ -20,7 +20,7 @@ export default async function RecurringActivityPage() {
 
   const decision = await evaluatePluginAccess({ requireUsername: false });
   if (!decision.allowed) {
-    const signInUrl = getHostedSignInUrl() ?? '/sign-in';
+    const signInUrl = getHostedSignInUrl() ?? '/';
     // A signed-in-but-not-yet-verified member (denied with `unlock_required`) is already
     // authenticated, so the shell shows a single "Finish verifying" CTA pointing at the Unlock flow;
     // an anonymous visitor gets the normal sign-in / join CTAs. Any other deny falls through to the

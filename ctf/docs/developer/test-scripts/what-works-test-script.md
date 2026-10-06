@@ -101,7 +101,9 @@ sidebar scrolls the list to that problem.
 1. Sign out and open `/plugin/what-works`.
 2. Try to reach the full list or the suggest action.
 **Expected:** A teaser slice shows with a sign-in/sign-up gate. The full list and the suggest action
-require signing in; no survivor identity is rendered.
+require signing in; no survivor identity is rendered. Sign In opens the hosted sign-in page, and
+Create Account and Join to suggest items open the hosted sign-up page, on the accounts domain rather
+than a `/sign-in` or `/sign-up` page on this app.
 **Result:** web ☐ mobile ☐ — notes:
 
 ### WW-6 · Refresh the list
