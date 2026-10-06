@@ -98,6 +98,20 @@ card's text from the SkillsHunt admin screen, so if you see the old sentence, ch
 before filing it as a bug.
 **Result:** web ☐ mobile ☐ — notes:
 
+### DIR-1b · A failed load says so instead of reading as empty (added 2026-10-05)
+**Role:** member, then admin · **Surfaces:** web
+**Steps:**
+1. Open Directory, then use the browser's network tools to make `GET /api/directory/list` fail and
+   refresh the list.
+2. Open a shared profile link for a profile id that does not exist.
+3. Make the profile read fail and open the edit form.
+4. As an admin, make the takedown list and Audit log reads fail on `/admin/directory`.
+**Expected:** Step 1 shows the route's message (or a reported failure) where "No profiles yet" would
+be, and a list already on screen stays. Step 2 says above the browse view that the shared profile
+could not be opened. Step 3 shows the profile route's message. In step 4 the takedown panel shows the
+route's reason instead of a fixed sentence, and both panels name the failure.
+**Result:** web ☐ — notes:
+
 ### DIR-2 · Read a profile (real fields only)
 **Role:** member · **Surfaces:** all
 **Steps:**
