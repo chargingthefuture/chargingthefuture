@@ -186,6 +186,19 @@ The instant 1:1 call ring/answer lifecycle (issue #808 task 3) and per-block bil
 ## Change Log
 
 - 2026-10-05: **The instant-call ring no longer names the caller and Foundation on a discreet lock screen (#2953).** The ring push was built with the caller's name and the plugin name and never read the callee's notification settings, so a member who left discreet pings on (the default) still got a lock-screen alert saying who was calling and through which service. Both pushes now send the generic text while discreet pings are on (Security item 11). No schema, route or contract change. Test script step FDN-37b added.
+- 2026-10-05: **Foundation member screens say what failed instead of hiding it (#2968).** No schema,
+  route or contract change. Test script step FDN-42 added.
+  - Quote forms: `useQuoteTransitions` (`foundation-quote-actions.ts`) now resolves to `true` or to
+    the text to show. A refused move shows the state route's own message and reference instead of
+    the fixed "Could not send the quote." / "Could not mark the work done." lines, and a network
+    failure is reported. A failed re-read after a saved move is reported, not shown as a failed save.
+  - Direct Line from a quote row shows the token route's message for any code other than the two
+    mapped ones, and a network failure is reported.
+  - A failed provider search or quote-history read now shows an error instead of an empty browse
+    list or an empty Quotes tab.
+  - A shared provider link that answers an error or fails says so above Browse.
+  - A microphone that could not be turned on in an instant call is reported and said on the call
+    card while it stays off.
 - 2026-10-05: **The active-call poll keeps going after a failed read (#2959).** `useActiveCallPoll`
   in `components/foundation/foundation-instant-call.tsx` returned before scheduling its next tick on
   any non-OK answer or an answer without a call. One 503 ended polling for the rest of the call. A

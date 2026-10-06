@@ -1018,3 +1018,34 @@ table (fails the first). Do not do this against production.
   sentence (FDN-5, FDN-9), unchanged.
 
 Result: web ☐
+
+---
+
+### FDN-42 — Failed reads and refused quote moves say what went wrong (added 2026-10-05)
+
+**Role:** Member (survivor) + Member (provider)
+**Surface:** Web
+
+**Precondition:** Browser dev tools open (request blocking or offline mode).
+
+**Steps:**
+1. Block `/api/foundation/providers/search` and open Foundation (or refresh).
+2. Unblock it, then block `/api/foundation/quotes/history` and refresh.
+3. Open a shared provider link (`/apps/foundation/provider/<id>`) for an id that does not exist.
+4. As the provider, respond to a quote with a price while the quote's state route answers an error
+   (for example, have the survivor close the quote first in another tab, then send the price).
+5. On a quote row, open the Direct Line while
+   `/api/foundation/connections/threads/<threadId>/token` is blocked.
+6. Start an instant call in a browser where the microphone permission is denied.
+
+**Expected:**
+- Steps 1 and 2: a red message saying the search or the quotes could not be loaded, with the
+  route's reason and reference when it gave one. Never an empty browse list or an empty Quotes tab.
+- Step 3: Browse opens with "This provider link could not be opened." and the reason above the list.
+- Step 4: the form shows the route's own message (for a refused move, the refusal, not "Could not
+  send the quote. Try again.") and keeps the amount typed.
+- Step 5: "Could not open this Direct Line." The network failure appears in the error report.
+- Step 6: the call card says the microphone could not be turned on and the other person cannot hear
+  you. The message stays until the microphone is turned on.
+
+Result: web ☐
