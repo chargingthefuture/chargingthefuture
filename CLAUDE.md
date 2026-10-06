@@ -330,7 +330,7 @@ The credential itself is `TAXONOMY_SERVICE_TOKENS`, one `name:secret` entry per 
 removing an entry revokes it. Rule 123 carries the detail. It is optional, so an environment
 without one simply has no machine reader rather than no app.
 
-## One Percent is the paid tier, and reads claimed Directory profiles (owner decision, 2026-10-02)
+## One Percent is the paid tier, and reads Directory profiles (owner decisions, 2026-10-02 and 2026-10-06)
 
 Skills Economy stays as it is: free and self-service, every plugin. One Percent is its paid tier,
 the owner's time and judgment on top of what members can already do themselves. It keeps its own
@@ -342,11 +342,14 @@ The reason for a tier rather than two silos is the owner's labor. People the own
 entered in the Directory were being entered a second time in One Percent to make introductions.
 So One Percent reads them, under these limits:
 
-- **Claimed profiles only.** An unclaimed profile has no contact details, so nobody can be asked
-  or introduced, and it stays out of One Percent. A profile that is unclaimed or deleted later
-  stops resolving. So does one whose owner is restricted with scope `all` or `contact`: an
-  introduction is a connection, and those scopes already block one here. `trading` alone doesn't
-  hide a profile, and One Percent is never told that somebody is restricted.
+- **Claimed or not, and it says which** (owner decision, 2026-10-06). It began as claimed
+  profiles only, on the reasoning that an unclaimed one has no contact details. That was wrong: a
+  profile can't be created empty, so a community-generated one still has a name, skills, a location
+  and usually a profile link, and that it's unclaimed is itself worth knowing. So the read answers
+  for both and carries `claimed`. A deleted profile stops resolving. So does a claimed one whose
+  owner is restricted with scope `all` or `contact`: an introduction is a connection, and those
+  scopes already block one here. `trading` alone doesn't hide a profile, and One Percent is never
+  told that somebody is restricted.
 - **A pointer, not a copy.** One Percent stores the Directory profile id and nothing else about
   the person. A takedown here takes effect there with nothing to clean up, and cutting the
   integration off is revoking the credential.
@@ -363,8 +366,9 @@ So One Percent reads them, under these limits:
 The credential is this app's to issue and revoke, scoped to this read, and separate from the
 taxonomy one so either can be cut without the other. It is `DIRECTORY_SERVICE_TOKENS`, read only
 by `GET /api/directory/service/profiles/[id]` through `ctf/packages/web/lib/directory/service-read.ts`,
-with the access policy entry `directory.profile.service.get`. The route answers one claimed profile
-by id with name, headline, job title, sector, skill names, profile address and location. There's
+with the access policy entry `directory.profile.service.get`. The route answers one profile by id,
+claimed or not, with whether it's claimed, name, headline, job title, sector, skill names, profile
+address and location. There's
 no list and no search: the owner pastes the link of somebody they already know about.
 
 One second read, for one case (owner decision, 2026-10-02): a One Percent client's own profile.
@@ -379,8 +383,9 @@ whether the account exists. The audit names the profile it found and never the a
 
 No new features in Skills Economy. Bug fixes and changes to shipped screens continue, and every
 plugin stays live and maintained. A new capability is the owner's call and is asked about first,
-never built and offered afterwards. The One Percent read of claimed Directory profiles, in the
-section above, was decided before the freeze and is not caught by it. The by-account read beside it was asked
+never built and offered afterwards. The One Percent read of Directory profiles, in the section
+above, was decided before the freeze and is not caught by it; widening it to unclaimed profiles was
+the owner's own ask on 2026-10-06 and changes nothing a member sees. The by-account read beside it was asked
 for by the owner after the freeze, on the same day, and changes nothing a member sees.
 
 One exception for the bill (owner decision, 2026-10-05): a twice-yearly "Contribute if you can"

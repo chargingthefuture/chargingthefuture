@@ -77,6 +77,26 @@ Result: web ☐
 
 ---
 
+### SH-0r — Pasting a Quora link fills in the full name
+
+**Role:** member (scout) · **Surfaces:** web
+**Precondition:** Signed in, a round is open and inside its dates.
+
+**Steps:**
+1. Open the Scout tab with Full name empty. Paste `https://www.quora.com/profile/farah-brunache` into the Quora Profile URL field.
+2. Replace the link with `https://www.quora.com/profile/TJW-38`.
+3. Clear both fields, type `Amara Williams` into Full name, then paste the first link again.
+
+**Expected:**
+- At step 1 Full name reads "Farah Brunache".
+- At step 2 Full name changes to "TJW" — the guess follows the link, and the number is dropped.
+- At step 3 Full name stays "Amara Williams": a typed name is never replaced.
+- The filled-in name can be edited before submitting.
+
+Result: web ☐
+
+---
+
 ### SH-1 — Round discovery: active, upcoming, and closed rounds are visible
 
 **Role:** member · **Surfaces:** web, android

@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-// The claimed-profile read for One Percent. The limits that matter are enforced in the query and
-// the gate, so these tests pin them: only a DIRECTORY_SERVICE_TOKENS consumer gets in, the query
-// asks for claimed rows only, and an id that could not be a Directory id never reaches the
-// database.
+// The Directory profile read for One Percent. The limits that matter are enforced in the query and
+// the gate, so these tests pin them: only a DIRECTORY_SERVICE_TOKENS consumer gets in, a profile
+// comes back claimed or not and says which, a claimed one whose owner is restricted from connecting
+// doesn't come back, and an id that could not be a Directory id never reaches the database.
 
 const queryDb = vi.fn();
 vi.mock('lib/db/postgres', () => ({ queryDb: (...args: unknown[]) => queryDb(...args) }));
@@ -59,44 +59,45 @@ describe('requireDirectoryServiceRead', () => {
   });
 });
 
-describe('getClaimedProfileForService', () => {
+describe('getProfileForService', () => {
   beforeEach(() => queryDb.mockReset());
 
-  it('asks for a claimed profile only', async () => {
+  it('reads a profile claimed or not, says which, and keeps the restriction rule', async () => {
     queryDb.mockResolvedValue({ rows: [] });
-    const { getClaimedProfileForService } = await import('./service-read');
-    await getClaimedProfileForService('00000000-0000-4000-8000-000000000001');
+    const { getProfileForService } = await import('./service-read');
+    await getProfileForService('00000000-0000-4000-8000-000000000001');
     const sql = String(queryDb.mock.calls[0][0]);
-    expect(sql).toMatch(/claimed_by_user_id IS NOT NULL/);
+    expect(sql).toMatch(/\(p\.claimed_by_user_id IS NOT NULL\) AS claimed/);
+    expect(sql).not.toMatch(/AND p\.claimed_by_user_id IS NOT NULL/);
     expect(sql).toMatch(/account_restrictions/);
     expect(sql).toMatch(/restriction_scope IN \('all', 'contact'\)/);
     expect(sql).not.toMatch(/\bbio\b|venmo|monero|bitcoin|service_credits_address|claimed_by_user_id AS/);
   });
 
-  it('answers null for an unclaimed or missing profile', async () => {
+  it('answers null for a missing profile', async () => {
     queryDb.mockResolvedValue({ rows: [] });
-    const { getClaimedProfileForService } = await import('./service-read');
-    expect(await getClaimedProfileForService('00000000-0000-4000-8000-000000000001')).toBeNull();
+    const { getProfileForService } = await import('./service-read');
+    expect(await getProfileForService('00000000-0000-4000-8000-000000000001')).toBeNull();
   });
 
   it('never queries for an id that could not be a Directory id', async () => {
-    const { getClaimedProfileForService } = await import('./service-read');
-    expect(await getClaimedProfileForService("1' OR '1'='1")).toBeNull();
-    expect(await getClaimedProfileForService('')).toBeNull();
+    const { getProfileForService } = await import('./service-read');
+    expect(await getProfileForService("1' OR '1'='1")).toBeNull();
+    expect(await getProfileForService('')).toBeNull();
     expect(queryDb).not.toHaveBeenCalled();
   });
 
   it('maps a row to the fields the desk shows', async () => {
     queryDb.mockResolvedValue({
       rows: [{
-        id: 'demo-profile-1', first_name: 'Invented', last_name: 'Person', headline: 'Plumber',
+        id: 'demo-profile-1', claimed: false, first_name: 'Invented', last_name: 'Person', headline: 'Plumber',
         job_title_name: 'Plumber', sector_name: 'Trades', skills: ['Pipe fitting'],
         profile_url: 'https://example.test/invented', city: 'Nowhere', state: null, country: 'US',
       }],
     });
-    const { getClaimedProfileForService } = await import('./service-read');
-    expect(await getClaimedProfileForService('demo-profile-1')).toEqual({
-      id: 'demo-profile-1', firstName: 'Invented', lastName: 'Person', headline: 'Plumber',
+    const { getProfileForService } = await import('./service-read');
+    expect(await getProfileForService('demo-profile-1')).toEqual({
+      id: 'demo-profile-1', claimed: false, firstName: 'Invented', lastName: 'Person', headline: 'Plumber',
       jobTitle: 'Plumber', sector: 'Trades', skills: ['Pipe fitting'],
       profileUrl: 'https://example.test/invented', city: 'Nowhere', state: null, country: 'US',
     });
@@ -112,7 +113,6 @@ describe('getClaimedProfileForAccountService', () => {
     await getClaimedProfileForAccountService('user_inventedAccount0001');
     const [sql, params] = queryDb.mock.calls[0];
     expect(String(sql)).toMatch(/p\.claimed_by_user_id = \$1/);
-    expect(String(sql)).toMatch(/claimed_by_user_id IS NOT NULL/);
     expect(String(sql)).toMatch(/restriction_scope IN \('all', 'contact'\)/);
     expect(String(sql)).not.toMatch(/\bbio\b|claimed_by_user_id AS/);
     expect(params).toEqual(['user_inventedAccount0001']);
@@ -137,7 +137,7 @@ describe('getClaimedProfileForAccountService', () => {
   it('answers the same fields as the by-id read', async () => {
     queryDb.mockResolvedValue({
       rows: [{
-        id: 'demo-profile-2', first_name: 'Invented', last_name: 'Client', headline: null,
+        id: 'demo-profile-2', claimed: true, first_name: 'Invented', last_name: 'Client', headline: null,
         job_title_name: 'Electrician', sector_name: 'Trades', skills: [],
         profile_url: null, city: null, state: null, country: null,
       }],
@@ -146,6 +146,7 @@ describe('getClaimedProfileForAccountService', () => {
     const profile = await getClaimedProfileForAccountService('user_inventedAccount0002');
     expect(profile?.id).toBe('demo-profile-2');
     expect(profile?.jobTitle).toBe('Electrician');
+    expect(profile?.claimed).toBe(true);
     expect(Object.keys(profile || {})).not.toContain('claimedByUserId');
   });
 });

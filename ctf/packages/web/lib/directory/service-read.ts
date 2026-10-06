@@ -5,12 +5,14 @@ import { enforcePublicReadRateLimit } from 'lib/security/rate-limit';
 import { DIRECTORY_ERROR_CODE } from 'lib/directory/constants';
 import { OWNED_PROFILE_ORDER_SQL } from 'lib/directory/profile-claim';
 
-// One Percent reads claimed Directory profiles, one at a time, for the owner's desk (owner
-// decision, 2026-10-02; the "One Percent is the paid tier" section of CLAUDE.md). The limits that
-// decision sets are enforced here rather than promised:
+// One Percent reads Directory profiles, one at a time, for the owner's desk (owner decisions,
+// 2026-10-02 and 2026-10-06; the "One Percent is the paid tier" section of CLAUDE.md). The limits
+// those decisions set are enforced here rather than promised:
 //
-// - Claimed only. The query itself requires `claimed_by_user_id`, so an unclaimed profile is the
-//   same answer as a missing one, and a profile unclaimed or deleted later stops resolving.
+// - Claimed or not, and says which. A community-generated profile nobody has claimed still has a
+//   name, skills, a location and usually a profile link, so it's read like any other and comes
+//   back with `claimed: false`. A deleted profile stops resolving. The by-account read below is
+//   claimed by definition.
 // - Not a member Skills Economy blocks from connecting. A claiming account restricted with scope
 //   'all' or 'contact' reads as not found, because an introduction is a connection and those two
 //   scopes already stop the member from starting one here. 'trading' alone covers credits and
@@ -58,8 +60,9 @@ export function requireDirectoryServiceRead(request: Request): DirectoryServiceG
   return { allowed: true, actorId: `service:${consumer.name}` };
 }
 
-export type ClaimedProfileForService = {
+export type DirectoryProfileForService = {
   id: string;
+  claimed: boolean;
   firstName: string | null;
   lastName: string | null;
   headline: string | null;
@@ -74,6 +77,7 @@ export type ClaimedProfileForService = {
 
 type Row = {
   id: string;
+  claimed: boolean;
   first_name: string | null;
   last_name: string | null;
   headline: string | null;
@@ -90,11 +94,12 @@ type Row = {
 // cannot match a row, so it is answered as not found without reaching the database.
 const PROFILE_ID = /^[A-Za-z0-9_-]{1,64}$/;
 
-async function readClaimedProfile(column: 'id' | 'claimed_by_user_id', value: string): Promise<ClaimedProfileForService | null> {
+async function readProfile(column: 'id' | 'claimed_by_user_id', value: string): Promise<DirectoryProfileForService | null> {
   const result = await queryDb<Row>(
     `
       SELECT
         p.id::text AS id,
+        (p.claimed_by_user_id IS NOT NULL) AS claimed,
         p.first_name,
         p.last_name,
         p.headline,
@@ -115,7 +120,6 @@ async function readClaimedProfile(column: 'id' | 'claimed_by_user_id', value: st
       LEFT JOIN skills_taxonomy_sectors s ON s.id = p.sector_id
       LEFT JOIN skills_taxonomy_job_titles jt ON jt.id = p.job_title_id
       WHERE ${column === 'id' ? 'p.id::text' : 'p.claimed_by_user_id'} = $1
-        AND p.claimed_by_user_id IS NOT NULL
         AND NOT EXISTS (
           SELECT 1 FROM account_restrictions r
           WHERE r.user_id = p.claimed_by_user_id
@@ -133,6 +137,7 @@ async function readClaimedProfile(column: 'id' | 'claimed_by_user_id', value: st
   }
   return {
     id: row.id,
+    claimed: Boolean(row.claimed),
     firstName: row.first_name,
     lastName: row.last_name,
     headline: row.headline,
@@ -146,22 +151,22 @@ async function readClaimedProfile(column: 'id' | 'claimed_by_user_id', value: st
   };
 }
 
-export async function getClaimedProfileForService(profileId: string): Promise<ClaimedProfileForService | null> {
+export async function getProfileForService(profileId: string): Promise<DirectoryProfileForService | null> {
   const id = typeof profileId === 'string' ? profileId.trim() : '';
   if (!PROFILE_ID.test(id)) {
     return null;
   }
-  return readClaimedProfile('id', id);
+  return readProfile('id', id);
 }
 
 // Clerk account ids: "user_" and letters and digits. Anything else can't have claimed a profile,
 // so it's answered as not found without reaching the database.
 const ACCOUNT_ID = /^user_[A-Za-z0-9]{8,64}$/;
 
-export async function getClaimedProfileForAccountService(accountId: string): Promise<ClaimedProfileForService | null> {
+export async function getClaimedProfileForAccountService(accountId: string): Promise<DirectoryProfileForService | null> {
   const id = typeof accountId === 'string' ? accountId.trim() : '';
   if (!ACCOUNT_ID.test(id)) {
     return null;
   }
-  return readClaimedProfile('claimed_by_user_id', id);
+  return readProfile('claimed_by_user_id', id);
 }

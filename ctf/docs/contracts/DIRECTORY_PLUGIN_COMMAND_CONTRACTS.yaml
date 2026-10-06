@@ -118,14 +118,14 @@ contracts:
     command: directory.profile.service.get
     version: 1.0.0
     description: >-
-      One claimed directory profile by id, for One Percent's operator desk (owner decision,
-      2026-10-02). GET /api/directory/service/profiles/[id]. Machine caller only, authenticated by a
-      DIRECTORY_SERVICE_TOKENS consumer. Returns name, headline, job title, sector, skill names,
-      profile address and city/state/country, and nothing else: never the bio, payment addresses,
-      the claiming account id, or who nominated or invited the person. An unclaimed or missing
-      profile is the same 404, and so is one whose claiming account carries an account_restrictions
-      row with scope 'all' or 'contact'; the answer never says a member is restricted. No list and
-      no search.
+      One directory profile by id, claimed or not, for One Percent's operator desk (owner decisions,
+      2026-10-02 and 2026-10-06). GET /api/directory/service/profiles/[id]. Machine caller only,
+      authenticated by a DIRECTORY_SERVICE_TOKENS consumer. Returns whether it is claimed, name,
+      headline, job title, sector, skill names, profile address and city/state/country, and nothing
+      else: never the bio, payment addresses, the claiming account id, or who nominated or invited
+      the person. A missing profile is a 404, and so is a claimed one whose claiming account carries
+      an account_restrictions row with scope 'all' or 'contact'; the answer never says a member is
+      restricted. No list and no search.
     inputSchema:
       id:
         type: string
