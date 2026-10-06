@@ -7,6 +7,7 @@ import type { PublicVisitorShellProps } from '@/components/plugins/public-visito
 import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link';
 import { getWorkforceTokens } from './workforce-shared';
 import { PublicShellWorldwide } from '@/components/plugins/public-shell-worldwide';
+import { reportError } from 'lib/observability/report';
 
 // Layout from the WorkforcePublic / MobileWorkforcePublic design mockups; chrome colors come from
 // the shared Workforce theme tokens (default theme returns the exact shipped hex).
@@ -33,14 +34,18 @@ function useWorkforceSnapshot(): WorkforceSnapshot | null {
   useEffect(() => {
     let active = true;
     fetch('/api/workforce/public-snapshot', { cache: 'no-store' })
-      .then((res) => (res.ok ? res.json() : null))
+      .then((res) => {
+        if (!res.ok) throw new Error(`Workforce public snapshot request failed (HTTP ${res.status}).`);
+        return res.json();
+      })
       .then((data) => {
         if (active && data && typeof data.recruited === 'number') {
           setSnapshot({ recruited: data.recruited, sectorGaps: data.sectorGaps });
         }
       })
-      .catch(() => {
-        /* leave null — the snapshot degrades to neutral dashes */
+      .catch((error: unknown) => {
+        // Leave null so the snapshot shows neutral dashes, but record why it is blank.
+        reportError(error, { area: 'workforce', op: 'public_snapshot_read' });
       });
     return () => {
       active = false;

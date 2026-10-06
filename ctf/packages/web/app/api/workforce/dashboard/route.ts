@@ -36,7 +36,9 @@ export async function GET(request: Request) {
       },
       metadata: { evidence: { roleCheck: 'pass', projectionOnlyCheck: 'pass' } },
     });
-    return NextResponse.json({ dashboard }, { status: 200 });
+    // Contract output schema is { dashboard, generatedAt }; the timestamp also lives on
+    // dashboard.generatedAtIso, the same shape the config PUT uses for updatedAt.
+    return NextResponse.json({ dashboard, generatedAt: dashboard.generatedAtIso }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'workforce', op: 'dashboard' });
     return NextResponse.json(

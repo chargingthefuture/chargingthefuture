@@ -5,6 +5,7 @@ import { ChevronDown, ChevronRight, Loader2, Users } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { SharePicture } from '@/components/shared/share-picture';
 import { captureScreen } from 'lib/share/capture-screen';
+import { responseFailureText } from 'lib/errors/client-failure';
 import { getWorkforceTokens, type WorkforceTokens } from './workforce-shared';
 import { WorkforceMemberList } from './workforce-member-list';
 import type { WorkforceMatchedMember } from '../../lib/workforce/types';
@@ -172,7 +173,7 @@ export function WorkforceCommunityPlanning({ showPicture = false }: { showPictur
     fetch('/api/workforce/reports/community-planning', { signal: controller.signal })
       .then(async (res) => {
         if (!res.ok) {
-          throw new Error(`Request failed (${res.status}).`);
+          throw new Error(await responseFailureText(res, 'Request failed'));
         }
         const json = (await res.json()) as { report?: CommunityPlanningReport };
         setReport(json.report ?? null);
