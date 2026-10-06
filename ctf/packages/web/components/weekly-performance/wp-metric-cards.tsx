@@ -41,30 +41,80 @@ function compactNumber(value: number): string {
 
 // How to draw a week-over-week delta. The arrow follows the direction the number moved; the color
 // follows whether that direction is good for this metric — almost everything here is better when it
-// rises, but more deleted accounts is a rise and is not good news.
-function deltaTone(delta: number, metricKey: string): { rising: boolean; color: string } {
-  const rising = delta >= 0;
+// rises, but more deleted accounts is a rise and is not good news. No change is neither: it gets the
+// muted color and no arrow, for every metric.
+function deltaTone(delta: number, metricKey: string, mutedColor: string): { arrow: "up" | "down" | null; color: string } {
+  if (delta === 0) return { arrow: null, color: mutedColor };
+  const rising = delta > 0;
   const good = isRiseGoodFor(metricKey) ? rising : !rising;
-  return { rising, color: good ? "#22C55E" : "#F87171" };
+  return { arrow: rising ? "up" : "down", color: good ? "#22C55E" : "#F87171" };
+}
+
+type WpTokens = ReturnType<typeof getWeeklyPerformanceTokens>;
+
+// Goal rows show progress toward the owner-set target. Progress can be tiny early on; show two
+// decimals so movement is visible instead of rounding to 0%.
+function goalProgress(metricValue: number, goalTarget: number | undefined, notCaptured: boolean): number | null {
+  if (!goalTarget || notCaptured) return null;
+  return Math.min(100, (metricValue / goalTarget) * 100);
+}
+
+function metricHeadline(metric: WpMetric, goalTarget: number | undefined, notCaptured: boolean): string {
+  if (notCaptured) return "Not captured";
+  if (goalTarget) return compactNumber(metric.metricValue);
+  return formatMetricValue(metric.metricValue, metric.metricUnit);
+}
+
+function noDeltaLabel(goalTarget: number | undefined, notCaptured: boolean): string {
+  if (notCaptured) return "No snapshot was stored for this week";
+  return goalTarget ? "No prior-week snapshot" : "No prior-week comparison";
+}
+
+function GoalProgressBar({ progress, goalTarget, color, t }: { progress: number; goalTarget: number; color: string; t: WpTokens }) {
+  return (
+    <div style={{ marginBottom: 6 }}>
+      <div style={{ height: 6, borderRadius: 3, background: `${color}22`, overflow: "hidden", marginBottom: 5 }}>
+        <div style={{ width: `${Math.max(progress, 0.5)}%`, minWidth: 2, height: "100%", background: color }} />
+      </div>
+      <div style={{ fontSize: 11, color: t.MUTED }}>
+        {progress.toLocaleString(undefined, { maximumFractionDigits: 2 })}% of the {compactNumber(goalTarget)} goal
+      </div>
+    </div>
+  );
+}
+
+function DeltaLine({ delta, metric, t }: { delta: number; metric: WpMetric; t: WpTokens }) {
+  const tone = deltaTone(delta, metric.metricKey, t.MUTED);
+  let arrow = null;
+  if (tone.arrow === "up") arrow = <TrendingUp size={11} />;
+  else if (tone.arrow === "down") arrow = <TrendingDown size={11} />;
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: tone.color }}>
+      {arrow} {formatDelta(delta, metric.metricUnit)}
+    </div>
+  );
 }
 
 function MetricCard({
   metric,
   color,
   comparison,
+  isCurrent,
 }: {
   metric: WpMetric;
   color: string;
   comparison: WpComparison | null;
+  isCurrent: boolean;
 }) {
   const { theme } = useTheme();
   const t = getTokens(theme);
   const goalTarget = GOAL_TARGETS[metric.metricKey];
-  const delta = deltaFor(comparison, metric.metricKey, goalTarget !== undefined);
-  const tone = deltaTone(delta ?? 0, metric.metricKey);
-  // Goal rows show progress toward the owner-set target. Progress can be tiny early on; show two
-  // decimals so movement is visible instead of rounding to 0%.
-  const progress = goalTarget ? Math.min(100, (metric.metricValue / goalTarget) * 100) : null;
+  // A past week with no stored goal snapshot reports 0 rather than a reading (see goalMetricForWeek
+  // and the registry's wp_goal_* entries). Showing that 0 with a progress bar reads as a real reading
+  // of nothing, so the card says it was not captured instead. The current week is always a live read.
+  const notCaptured = goalTarget !== undefined && !isCurrent && metric.metricValue === 0;
+  const delta = notCaptured ? null : deltaFor(comparison, metric.metricKey, goalTarget !== undefined);
+  const progress = goalProgress(metric.metricValue, goalTarget, notCaptured);
   return (
     <div style={{ padding: "18px 16px", borderRadius: 14, background: t.SURFACE, border: `1px solid ${color}20` }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
@@ -72,24 +122,13 @@ function MetricCard({
         {goalTarget ? <Target size={14} color={color} /> : <TrendingUp size={14} color={color} />}
       </div>
       <div style={{ fontSize: 26, fontWeight: 800, color, marginBottom: 4 }}>
-        {goalTarget ? compactNumber(metric.metricValue) : formatMetricValue(metric.metricValue, metric.metricUnit)}
+        {metricHeadline(metric, goalTarget, notCaptured)}
       </div>
-      {goalTarget && progress !== null ? (
-        <div style={{ marginBottom: 6 }}>
-          <div style={{ height: 6, borderRadius: 3, background: `${color}22`, overflow: "hidden", marginBottom: 5 }}>
-            <div style={{ width: `${Math.max(progress, 0.5)}%`, minWidth: 2, height: "100%", background: color }} />
-          </div>
-          <div style={{ fontSize: 11, color: t.MUTED }}>
-            {progress.toLocaleString(undefined, { maximumFractionDigits: 2 })}% of the {compactNumber(goalTarget)} goal
-          </div>
-        </div>
-      ) : null}
+      {goalTarget && progress !== null ? <GoalProgressBar progress={progress} goalTarget={goalTarget} color={color} t={t} /> : null}
       {delta !== null ? (
-        <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: tone.color }}>
-          {tone.rising ? <TrendingUp size={11} /> : <TrendingDown size={11} />} {formatDelta(delta, metric.metricUnit)}
-        </div>
+        <DeltaLine delta={delta} metric={metric} t={t} />
       ) : (
-        <div style={{ fontSize: 11, color: t.MUTED }}>{goalTarget ? "No prior-week snapshot" : "No prior-week comparison"}</div>
+        <div style={{ fontSize: 11, color: t.MUTED }}>{noDeltaLabel(goalTarget, notCaptured)}</div>
       )}
     </div>
   );
@@ -100,9 +139,11 @@ const getTokens = getWeeklyPerformanceTokens;
 export function WeeklyPerformanceMetricCards({
   metrics,
   comparison,
+  isCurrent = false,
 }: {
   metrics: WpMetric[];
   comparison: WpComparison | null;
+  isCurrent?: boolean;
 }) {
   const { theme } = useTheme();
   const t = getTokens(theme);
@@ -129,7 +170,7 @@ export function WeeklyPerformanceMetricCards({
               {groupMetrics.map((metric) => {
                 const color = CARD_COLORS[colorIndex % CARD_COLORS.length];
                 colorIndex += 1;
-                return <MetricCard key={metric.metricKey} metric={metric} color={color} comparison={comparison} />;
+                return <MetricCard key={metric.metricKey} metric={metric} color={color} comparison={comparison} isCurrent={isCurrent} />;
               })}
             </div>
           </section>

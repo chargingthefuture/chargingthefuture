@@ -291,7 +291,9 @@ the model, the routes, and the manage-list. LightHouse's job is to honor it:
 - `GET /api/lighthouse/admin/hosts`
 - `GET /api/lighthouse/admin/properties`
 - `GET /api/lighthouse/admin/matches`
-- `PUT /api/lighthouse/admin/properties/:id`
+- `PUT /api/lighthouse/admin/properties/:id` — takes the full listing record (the admin page's
+  Hide/Restore resends it with `isActive` flipped) and reads `rentCurrency` and `acceptedCurrencies`
+  the same way the host route does, because `updateProperty` rewrites both on every save.
 - `PUT /api/lighthouse/admin/matches/:id`
 - `GET /api/lighthouse/admin/audit-events` — admin-gated (`requireLighthouseAdminAccess`) list of audit-trail rows (`listLighthouseAuditEvents`, `?limit=` default 100), reading `lighthouse_admin_audit_trail`.
 
@@ -411,6 +413,13 @@ Android admin present (2026-06-06): `AdminLighthouse.tsx` + `admin-api.ts` added
   one completed; it now allows only the moves in §1.5 item 5 and locks the row while deciding. The
   status icon showed a red cross for an accepted match because it only knew the old `approved`
   value; it now shows the green tick. No schema change. Test script step LH-4b added.
+- 2026-10-05: **An admin hiding or restoring a listing no longer wipes its currencies (#2818).**
+  The admin page sends the full listing with `rentCurrency` and `acceptedCurrencies`, but the admin
+  route's parser dropped both, and `updateProperty` then stored a null rent currency and deleted every
+  accepted-currency row. A ServiceCredits rent then showed at a dollar figure, and the listing stopped
+  accepting ServiceCredits. The admin parser now reads both fields like the host route. Listings an
+  admin already hid or restored keep the wiped values until the host saves them again; there is no
+  record of what they were.
 - 2026-10-05: **The admin Properties tab shows rent in the listing's own currency (#2829).** The
   admin rows used a local formatter that printed every rent as `$N/mo`, so a 20 ServiceCredits rent
   read "$20/mo" and a euro rent carried a dollar sign. `app/admin/lighthouse/page.tsx` now reads the
