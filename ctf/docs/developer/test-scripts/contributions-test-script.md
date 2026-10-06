@@ -471,6 +471,27 @@ The server returns 400 or 422 (missing required field). The claim stays pending.
 
 ---
 
+### CONT-A5b — A confirmed comment or star never counts as money given
+
+**Role:** Admin
+**Surfaces:** Web (`/apps/contributions`, `/apps/weekly-performance`)
+**Precondition:** The current week's Weekly Performance cards are visible. Note "Contributions Confirmed USD" and "Contributions Non Money Confirmed" for this week, and the USD raised on `/apps/contributions`.
+
+**Steps:**
+1. Confirm one pending Quora comment claim (or GitHub star claim) without a custom amount, as in CONT-A5.
+2. Reload `/apps/contributions` and read the USD raised.
+3. Refresh the Weekly Performance dashboard for the current week.
+4. Confirm one pending gift-card claim for 20 USD and refresh both screens again.
+
+**Expected:**
+- After step 1, USD raised on `/apps/contributions` and the "Contributions Confirmed USD" card are unchanged. Only real money counts toward a dollar figure; the comment's `confirmedAmountUsd` is the set value used for credits, not money.
+- "Contributions Non Money Confirmed" goes up by 1 (read in contributions, not USD).
+- After step 4, USD raised and "Contributions Confirmed USD" both go up by 20, and the non-money card does not move.
+
+**Result:** web ☐
+
+---
+
 ### CONT-A6 — Admin rejects a pending claim — no credits granted
 
 **Role:** Admin

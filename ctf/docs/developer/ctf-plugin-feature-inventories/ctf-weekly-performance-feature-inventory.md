@@ -162,7 +162,8 @@ is no dashboard-side copy of the SQL; changing a value event changes every readi
 - `value.lighthouse_stays_completed` — Lighthouse matches now in `completed`.
 - `value.chyme_tips_sent` — completed ServiceCredits transfers originated by Chyme (never self-to-self).
 - `value.service_credits_peer_sends` — completed direct peer sends originated by ServiceCredits.
-- `value.contributions_confirmed_usd` — confirmed real dollars this week (a sum, not a row count).
+- `value.contributions_confirmed_usd` — confirmed gift-card dollars this week (a sum, not a row count). Gift cards only: a comment or star is not money and never counts here.
+- `value.contributions_non_money_confirmed` — confirmed Quora comments and GitHub stars this week, read in "contributions" (a row count, never dollars).
 - `value.skills_hunt_nominations_accepted` — nominations a moderator accepted.
 - `value.what_works_tools_approved` — approved tools contributed.
 - `value.skill_up_completions` / `value.skill_up_trainer_payouts` — completed enrollments and trainer payouts.
@@ -238,6 +239,13 @@ V2's "verified" and "approved" member counts are intentionally omitted: V3's `us
 4. Contract gap: the shipped `PUT /api/weekly-performance/admin/week-selection` route (audit command `weekly-performance.admin.week.select`) is not represented in `docs/contracts/WEEKLY_PERFORMANCE_PLUGIN_COMMAND_CONTRACTS.yaml`, which lists only `week.list`, `week.get`, `metrics.get`, and `comparison.get`. The week-selection command should be added to the command/access/audit contracts.
 
 ## 8) Change Log
+
+- 2026-10-06: **Contributions confirmed USD counts gift cards only (owner decision; issue #2982).**
+  The card summed the set value of confirmed Quora comments and GitHub stars as if it were dollars,
+  so each one added a dollar to a figure read in USD. It now sums gift cards only, and a new card,
+  Contributions non-money confirmed, counts confirmed comments and stars as rows. Both come from the
+  shared value-event list (Contributor Access inventory); `wp_value_contributions_confirmed_usd` is
+  corrected and `wp_value_contributions_non_money_confirmed` is registered.
 
 - 2026-10-05: **Dashboard errors, loading and empty states, metrics date checks, and a registry fix (code-review issues #2834, #2836, #2838, #2841, #2843, #2845).** (1) A failed weeks read now shows its status and the route's message instead of a fixed "Failed to load weeks." A failed current-week read or comparison read is now shown as a note above the cards instead of being dropped. Before, a failed current-week read stopped live refresh with no sign of why, and a failed comparison read left every card saying there was no prior week. The four read routes now catch failures, report them, and answer 503 `weekly_performance_unavailable` with the reason instead of the framework's bare 500. (2) `GET /api/weekly-performance/metrics` now refuses a `weekStartDate` or `compareWeekStartDate` that is not a real ISO date on a Monday, with a 400 that names the parameter. Before, a value such as `2026-02-30` answered 200 with every card at 0, because each `$1::date` cast threw and the metric fell back to 0. (3) Opening a past week now reads "Weekly numbers are loading" while its numbers are fetched. Before, it showed "No activity recorded for this week", which was never true because the route always returns the full metric set. (4) A goal card for a past week with no stored snapshot now reads "Not captured", with no progress bar or delta, instead of 0. It uses the convention `goalMetricForWeek` and the registry already state (an uncaptured past week reports 0). (5) The registry's `wp_goal_workforce_recruited_weekly_snapshot` live-value query no longer filters on `is_active` and `deleted_at`, which post/0033 dropped. It now matches `workforce_recruited_current_count` and `liveWorkforceRecruited`. (6) A week-over-week change of exactly 0 is drawn muted with no arrow on every card. Before, it was drawn as a rise, which made it red on Accounts Deleted. No schema change.
 
