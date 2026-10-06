@@ -427,6 +427,12 @@ to "All goals", that goal leaves the row, its unfinished cards leave the board, 
 stay in Done with no controls. "Take it down" instead removes the goal and all its cards. With 10
 open goals, "+ Add your goal" is not in the row.
 
+**Also (added 2026-10-06):** with single standing cohort mode off, leave some goals open on one
+cohort, then end that cohort from `/admin/peer-programming` (or wait for the week to roll over) so the
+member lands in a new cohort. Those old goals are not on the new board and do not count: the member
+can post 10 open goals in the new cohort. The old goals are still in the database with status
+`open`; nothing closes or removes them.
+
 Result: web ☐
 
 ---
