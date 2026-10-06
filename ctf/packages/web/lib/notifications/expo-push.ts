@@ -32,7 +32,7 @@ export type SaveExpoPushSubscriptionInput = {
 // but with kind 'expo': the Expo push token is the identity, so it is stored in the endpoint column and
 // p256dh/auth are null (an Expo push is not the encrypted Web Push envelope). The (user_id, endpoint)
 // uniqueness means a device re-registering refreshes its row rather than duplicating, and the same
-// deletion-registry wiring that removes web rows on account/service deletion removes these too (the
+// deletion-registry wiring that removes web rows on account deletion removes these too (the
 // registry deletes every push_subscriptions row by user_id, regardless of kind).
 export async function saveExpoPushSubscription(input: SaveExpoPushSubscriptionInput): Promise<void> {
   await queryDb(

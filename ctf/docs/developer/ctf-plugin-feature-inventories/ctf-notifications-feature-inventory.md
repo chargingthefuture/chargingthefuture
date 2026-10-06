@@ -136,6 +136,7 @@ No seed yet. A follow-up seed can insert a couple of sample notifications for a 
 
 ## Change Log
 
+- 2026-10-05: `push_subscriptions` is now deleted under this plugin's registry entry instead of `foundation`'s (#2701), so it clears only with the account and a Foundation-only deletion no longer removes the devices a member turned notification pushes on for. Added to `NOTIFICATIONS_PROFILE_AND_DELETION_CONTRACT.md`.
 - 2026-07-23: PeerProgramming cohort-message producer. `POST /api/peer-programming/messages` now emits
   `peer-programming.cohort.message` (category `community`) via `notifySafe` to every other cohort member
   after a message is stored — deduped per (member, message), never the sender, deep-linked to the room.

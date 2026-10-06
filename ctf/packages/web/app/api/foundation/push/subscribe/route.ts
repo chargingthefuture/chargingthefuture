@@ -104,7 +104,8 @@ async function handleWebSubscription(
 //   - Expo native push (kind:'expo', issue #884): the Android app's Expo push token. The token is the
 //     identity (stored as the endpoint); there are no encryption keys.
 // Both store into the same user-global push_subscriptions table on (user_id, endpoint), so the same
-// account/service deletion wiring removes either kind.
+// account deletion wiring removes either kind (a Foundation-only deletion keeps them: notification
+// pushes send to the same rows).
 //
 // Secrets policy: the endpoint/token and any keys are stored but never logged; the audit metadata records
 // only the kind, never the endpoint URL, token, or any key material.

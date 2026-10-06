@@ -91,6 +91,11 @@ ServiceCredits uses canonical profile identity for wallet binding, authorization
   - Retention period: compliance retention window
   - Legal/compliance note: deletion accountability and operational monitoring
 
+- Table/entity: `service_credits_command_idempotency`
+  - Contains personal data? minimal (`actor_id` of the member who ran a send, escrow, grant, burn or fee command, the command name, its key and the stored response)
+  - Retention period: retained with the ledger (`retain` in `lib/account/deletion-registry.ts`)
+  - Legal/compliance note: the replay guard for credit commands; removing a row would let a retried command with the same key run a second time
+
 ## 5) Service-Scoped Deletion Contract
 
 When user deletes ServiceCredits plugin usage only (`DELETE /api/account/service-credits-profile`):
@@ -207,5 +212,6 @@ If user returns after plugin-scoped deletion:
 
 ## Change Log
 
+- 2026-10-05: Classified `service_credits_command_idempotency` and `service_credits_admin_audit_trail` as retained in the deletion registry; the coverage gate now also counts `actor_id` as a member column, which is why both surfaced.
 - 2026-06-15: Added the mutual-credit default rule (§12): a negative balance at full-account deletion is a treasury-absorbed `mutual_credit_default`, bounded by small per-account credit limits.
 - 2026-02-25: Created initial ServiceCredits profile/deletion contract with plugin-scoped deletion, full-account pending-deletion + reclaim window rules, escrow-blocked retry semantics, treasury-return finalization, and tombstone/audit requirements.

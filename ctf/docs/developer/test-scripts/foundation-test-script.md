@@ -862,6 +862,18 @@ skills and threads (existing behavior) — no currency preference survives the a
 
 Result: web ☐
 
+### Deleting only Foundation data keeps push devices (added 2026-10-05)
+
+**Steps:**
+1. Turn on call alerts on this device (FDN-37) and a device-ping category in Notifications.
+2. From the account area, delete only the Foundation data.
+3. Trigger a notification push to this member, then delete the entire account.
+
+**Expected:** After step 2 the member's `push_subscriptions` rows are still there and the
+notification push in step 3 still reaches the device. Deleting the entire account removes them.
+
+Result: web ☐
+
 
 ### FN-R1 — Record a closed quote as ongoing work
 
