@@ -479,6 +479,19 @@ one transaction, so the header counts read 0 as well. The gate
 `ctf/scripts/check-sql-placeholder-gaps.mjs` now fails any query whose placeholders skip a number.
 **Result:** web ☐ mobile ☐ — notes:
 
+### DIR-A1e · A saved profile keeps its source and handle; the invite queue counts only pending skills (added 2026-10-05)
+**Role:** admin · **Surfaces:** web
+**Precondition:** a community-generated profile with an unclaimed handle, and a profile whose
+proposed skill labels include one already promoted by the taxonomy apply run.
+**Steps:**
+1. On `/admin/directory`, edit the community-generated profile and save. Do not reload.
+2. Open `/admin/directory/invite-queue` and find the profile with the promoted label.
+**Expected:** After step 1 the row still shows its source and handle and keeps its **Remove at
+person's request** button, without a reload. In step 2 the promoted label is not counted under
+"Pending review"; only labels still pending review are, so the person stays in the group their
+pending labels put them in.
+**Result:** web ☐ — notes:
+
 ### DIR-A2 · Attach an unclaimed profile (two places)
 **Role:** admin · **Surfaces:** web
 **Steps:**
