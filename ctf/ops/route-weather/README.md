@@ -130,6 +130,11 @@ environment variables on the service:
 
 Ice/freezing or heavy snow → HOLD; snow, fog, or freezing-and-wet → CAUTION. An
 NWS alert containing "Warning" → HOLD; an "Advisory"/"Watch" → CAUTION.
+If the NWS alert lookup itself fails (the service is down, rate-limited, or sends
+back something unexpected), that stop is scored at least CAUTION with the reason
+"hazard alerts unavailable", and the reply says which stops could not be checked.
+A failed check is never reported as DRIVE, so the Shortcut still speaks. The
+failure is also written to the service log.
 
 ### Access token
 

@@ -11,7 +11,7 @@ import {
   CONTRIBUTION_CONSENT_VERSION,
 } from '../../lib/comic/contribution-consent';
 import { MAX_LINKED_POSTS } from '../../lib/comic/contribution-links';
-import { failureText } from 'lib/errors/client-failure';
+import { failureText, responseFailureText } from 'lib/errors/client-failure';
 import { QuoraExportFaqSection } from './comic-quora-export-faq';
 
 // The knowledge page (`/knowledge`): where a member lends their own public Quora writing to the
@@ -48,6 +48,10 @@ type ContributionResponse = {
   message?: string;
   unlockLink?: string;
 };
+
+// Shown when the list of what this member has sent could not be loaded. It is where Withdraw lives,
+// so the page says why it is missing rather than leaving the section out with no word.
+const HISTORY_LOAD_FAILED = 'Could not load what you have sent, so it cannot be withdrawn from here right now. Reload the page to try again.';
 
 const STATUS_LABEL: Record<ContributionSummary['status'], string> = {
   pending_review: 'Waiting to be read',
@@ -119,17 +123,26 @@ function useKnowledgeContribution(askForQuoraUrl: boolean) {
   // Silence here would leave a member unsure whether they still need to verify separately.
   const [unlockLink, setUnlockLink] = useState<string | null>(null);
   const [history, setHistory] = useState<ContributionSummary[]>([]);
+  // Why the history list could not be loaded. Without it the list, and each Withdraw button in it,
+  // would vanish with no word on the page.
+  const [historyError, setHistoryError] = useState<string | null>(null);
 
   const allAgreed = CONTRIBUTION_CONSENT_CLAUSES.every((clause) => agreed.has(clause.id));
 
   const loadHistory = useCallback(async () => {
     try {
       const res = await fetch('/api/comic/contributions', { cache: 'no-store' });
-      if (!res.ok) return;
+      if (!res.ok) {
+        setHistoryError(await responseFailureText(res, HISTORY_LOAD_FAILED, 'member'));
+        return;
+      }
       const data = (await res.json()) as { contributions?: ContributionSummary[] };
       setHistory(Array.isArray(data.contributions) ? data.contributions : []);
-    } catch {
-      // Non-fatal: the history list is context, never a blocker on sending.
+      setHistoryError(null);
+    } catch (caught) {
+      // Non-fatal: the history list is context, never a blocker on sending. Said on the page all the
+      // same, since it is also where Withdraw lives.
+      setHistoryError(failureText(caught, { area: 'comic', op: 'contribution_history', fallback: HISTORY_LOAD_FAILED, audience: 'member' }));
     }
   }, []);
 
@@ -262,6 +275,7 @@ function useKnowledgeContribution(askForQuoraUrl: boolean) {
     receipt,
     unlockLink,
     history,
+    historyError,
     submit,
     withdraw,
   };
@@ -320,6 +334,9 @@ export function ComicKnowledgeShell({ askForQuoraUrl = false }: { askForQuoraUrl
         {c.receipt ? <ReceiptSection t={t} receipt={c.receipt} unlockLink={c.unlockLink} /> : null}
 
         {c.history.length > 0 ? <HistorySection t={t} history={c.history} onWithdraw={c.withdraw} /> : null}
+        {c.historyError ? (
+          <p role="alert" style={{ ...bodyStyle(t), color: '#F87171' }}>{c.historyError}</p>
+        ) : null}
 
         <FooterNotes t={t} />
       </div>
@@ -827,6 +844,11 @@ function ReceiptSection({
         <p style={{ ...bodyStyle(t), color: '#F59E0B' }}>
           Your writing was received, but that Quora link was not a profile address, so
           verification did not start. Finish it on the Unlock screen.
+        </p>
+      ) : unlockLink === 'failed' ? (
+        <p style={{ ...bodyStyle(t), color: '#F59E0B' }}>
+          Your writing was received, but verification could not be started from here. Finish it on
+          the Unlock screen.
         </p>
       ) : null}
       {receipt.kind === 'export' ? (

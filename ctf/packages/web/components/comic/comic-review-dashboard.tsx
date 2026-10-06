@@ -13,6 +13,7 @@ import { getComicTokens } from './comic-shared';
 import type { ComicReviewItem, ComicTrainingStats } from '../../lib/comic/types';
 import styles from './comic-review-dashboard.module.css';
 import { startVisibleInterval } from '../../lib/shared/visible-interval';
+import { failureText } from 'lib/errors/client-failure';
 
 type ReviewListResponse = {
   ok: true;
@@ -131,29 +132,33 @@ function regenerateLabel(regenerating: boolean, hasDraft: boolean): string {
 }
 
 // At-a-glance counts of the collected training signal (owner corrections + rated answers).
-// Best-effort: a failure just leaves the counter hidden, never blocks the review queue.
-function useTrainingStats(): ComicTrainingStats | null {
+// Best-effort: a failure never blocks the review queue, but it is reported and its reason shown in
+// place of the counter, so a missing number can be told apart from a slow one.
+function useTrainingStats(): { stats: ComicTrainingStats | null; error: string | null } {
   const [trainingStats, setTrainingStats] = useState<ComicTrainingStats | null>(null);
+  const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     let canceled = false;
     void requestJson<TrainingStatsResponse>('/api/comic/admin/training-stats')
       .then((payload) => {
         if (!canceled) setTrainingStats(payload.stats);
       })
-      .catch(() => {
-        /* training counter is best-effort */
+      .catch((caught: unknown) => {
+        const text = failureText(caught, { area: 'comic', op: 'admin_training_stats', fallback: 'Training counts unavailable' });
+        if (!canceled) setError(text);
       });
     return () => {
       canceled = true;
     };
   }, []);
-  return trainingStats;
+  return { stats: trainingStats, error };
 }
 
-// Load the plugin registry once for the "Applicable plugins" picker. Best-effort: a failure just
-// leaves the picker empty and never blocks reviewing.
-function usePluginOptions(): PluginOption[] {
+// Load the plugin registry once for the "Applicable plugins" picker. Best-effort: a failure leaves
+// the picker empty and never blocks reviewing; the reason is reported and shown under the picker.
+function usePluginOptions(): { options: PluginOption[]; error: string | null } {
   const [pluginOptions, setPluginOptions] = useState<PluginOption[]>([]);
+  const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     let canceled = false;
     void requestJson<PluginsResponse>('/api/plugins')
@@ -162,14 +167,15 @@ function usePluginOptions(): PluginOption[] {
           setPluginOptions(payload.plugins.map((plugin) => ({ slug: plugin.slug, name: plugin.name })));
         }
       })
-      .catch(() => {
-        /* picker is best-effort */
+      .catch((caught: unknown) => {
+        const text = failureText(caught, { area: 'comic', op: 'admin_plugin_options', fallback: 'Plugin list unavailable right now' });
+        if (!canceled) setError(text);
       });
     return () => {
       canceled = true;
     };
   }, []);
-  return pluginOptions;
+  return { options: pluginOptions, error };
 }
 
 // All queue state, effects, and resolve/regenerate handlers for the dashboard. Grouped in one hook so
@@ -190,8 +196,8 @@ function useComicReview() {
   // The slugs the reviewer has toggled on for the selected item. The chosen slugs are sent with
   // approve/correct so the published answer renders those plugin links.
   const [selectedPluginSlugs, setSelectedPluginSlugs] = useState<string[]>([]);
-  const trainingStats = useTrainingStats();
-  const pluginOptions = usePluginOptions();
+  const { stats: trainingStats, error: trainingStatsError } = useTrainingStats();
+  const { options: pluginOptions, error: pluginOptionsError } = usePluginOptions();
 
   const refresh = useCallback(async () => {
     try {
@@ -340,7 +346,9 @@ function useComicReview() {
     regenerating,
     regenNote,
     trainingStats,
+    trainingStatsError,
     pluginOptions,
+    pluginOptionsError,
     selectedPluginSlugs,
     selected,
     pendingCount: items.length,
@@ -428,12 +436,14 @@ function QueueSidebar({
   onSelect,
   pendingCount,
   trainingStats,
+  trainingStatsError,
 }: {
   items: ComicReviewItem[];
   selectedId: string | null;
   onSelect: (id: string) => void;
   pendingCount: number;
   trainingStats: ComicTrainingStats | null;
+  trainingStatsError: string | null;
 }) {
   return (
     <aside className={styles.queueSidebar}>
@@ -444,6 +454,8 @@ function QueueSidebar({
           <div style={{ margin: '0 0 4px' }}>
             <TrainingStatsBadge stats={trainingStats} />
           </div>
+        ) : trainingStatsError ? (
+          <div className={styles.queueSub} role="status">{trainingStatsError}</div>
         ) : null}
         {pendingCount > 0 ? (
           <span className={styles.queuePendingBadge}>{pendingCount} pending</span>
@@ -699,10 +711,12 @@ function ConfidencePanel({ selected }: { selected: ComicReviewItem }) {
 // the published answer.
 function ApplicablePlugins({
   pluginOptions,
+  pluginOptionsError,
   selectedPluginSlugs,
   togglePluginSlug,
 }: {
   pluginOptions: PluginOption[];
+  pluginOptionsError: string | null;
   selectedPluginSlugs: string[];
   togglePluginSlug: (slug: string) => void;
 }) {
@@ -732,7 +746,7 @@ function ApplicablePlugins({
           </div>
         </>
       ) : (
-        <div className={styles.pluginPickerHint}>Plugin list unavailable right now.</div>
+        <div className={styles.pluginPickerHint}>{pluginOptionsError ?? 'Plugin list unavailable right now'}.</div>
       )}
     </div>
   );
@@ -801,6 +815,7 @@ type ReviewDetailProps = {
   correctedBody: string;
   setCorrectedBody: (value: string) => void;
   pluginOptions: PluginOption[];
+  pluginOptionsError: string | null;
   selectedPluginSlugs: string[];
   togglePluginSlug: (slug: string) => void;
   accent: string;
@@ -844,6 +859,7 @@ function ReviewDetail(props: ReviewDetailProps) {
 
       <ApplicablePlugins
         pluginOptions={props.pluginOptions}
+        pluginOptionsError={props.pluginOptionsError}
         selectedPluginSlugs={props.selectedPluginSlugs}
         togglePluginSlug={props.togglePluginSlug}
       />
@@ -920,6 +936,7 @@ export function ComicReviewDashboard() {
           onSelect={review.setSelectedId}
           pendingCount={review.pendingCount}
           trainingStats={review.trainingStats}
+          trainingStatsError={review.trainingStatsError}
         />
 
         {/* Main detail */}
@@ -948,6 +965,7 @@ export function ComicReviewDashboard() {
                 correctedBody={review.correctedBody}
                 setCorrectedBody={review.setCorrectedBody}
                 pluginOptions={review.pluginOptions}
+                pluginOptionsError={review.pluginOptionsError}
                 selectedPluginSlugs={review.selectedPluginSlugs}
                 togglePluginSlug={review.togglePluginSlug}
                 accent={t.ACCENT}
