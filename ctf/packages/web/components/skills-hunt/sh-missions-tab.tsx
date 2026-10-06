@@ -59,11 +59,14 @@ export function SkillsHuntMissionsTab({
   noActiveRound,
   loading,
   missions,
+  error = null,
   onNavTab,
 }: {
   noActiveRound: boolean;
   loading: boolean;
   missions: SkillsHuntMissionWithCommunityProgress[];
+  // A failed load, shown in place of the empty state so an outage does not read as "no missions".
+  error?: string | null;
   onNavTab: (tab: Tab) => void;
 }) {
   const { theme } = useTheme();
@@ -76,6 +79,8 @@ export function SkillsHuntMissionsTab({
         <div style={{ fontSize: 14, color: t.MUTED }}>No active round — no missions yet.</div>
       ) : loading ? (
         <div style={{ fontSize: 14, color: t.MUTED }}>Loading missions…</div>
+      ) : error ? (
+        <div role="alert" style={{ fontSize: 14, color: "#EF4444", lineHeight: 1.6 }}>{error}</div>
       ) : missions.length === 0 ? (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "40px 24px", gap: 16, textAlign: "center" }}>
           <div style={{ width: 64, height: 64, borderRadius: 20, background: `${t.ACCENT}10`, border: `1px dashed ${t.ACCENT}30`, display: "flex", alignItems: "center", justifyContent: "center" }}>
