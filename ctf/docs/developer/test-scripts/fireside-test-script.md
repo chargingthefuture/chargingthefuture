@@ -765,13 +765,17 @@ Result: web ☐
 2. Read the address bar, then copy the address and open it in a new tab.
 3. Press the browser's back button.
 4. Edit the address by hand to a page number past the end and load it.
+5. Press the browser's back button.
 
 **Expected:**
 - Page two shows the next 20 comments and the address carries `?page=2`.
 - The copied address opens on page two directly.
 - Back returns to page one, and the address has no page parameter on it — page one is the default
   and does not need saying.
-- A page past the end lands on the last page with its comments on it, not on an empty screen.
+- A page past the end lands on the last page with its comments on it, not on an empty screen, and
+  the address shows that last page in place of the number typed.
+- Back from there leaves for the page that was open before the typed address, rather than loading
+  the out-of-range page again.
 
 Result: web ☐
 

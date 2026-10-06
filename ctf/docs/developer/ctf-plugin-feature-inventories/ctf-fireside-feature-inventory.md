@@ -296,6 +296,20 @@ member active only in Fireside is seen by being read, which is what the plugin i
   Tests: `lib/fireside/deletion-keeps-replies.test.ts`. The deletion contract and test script
   FS-10 say what happens to those replies.
 
+- 2026-10-05: **Back leaves a paged list, a linked page is asked for once, and a host's error page
+  no longer reads as a parse error.** `useUrlPage` (`components/fireside/fireside-url-page.ts`)
+  now returns `{ page, setPage, adoptPage, ready }`. `setPage` is for a page the member chose and
+  pushes a history entry as before; `adoptPage` is for the page the server clamped to and replaces
+  the current entry, because pushing it stacked the corrected page on the out-of-range one and Back
+  then loaded the out-of-range page, clamped and pushed again, so Back never got past it (#2735).
+  `ready` turns true once the address bar has been read, and all five paged lists (own comments,
+  search, admin comments, admin conversations, export queue) wait on it before their first fetch,
+  so a link to page 3 no longer sends a page-1 request first whose answer could land after page 3's
+  and replace its rows (#2740). Every read in the member screens and the admin tabs, and the admin
+  writes, now read the body with a fallback for one that is not JSON, so a 502 or 504 page from the
+  host shows the screen's own sentence with the status code instead of the parser's message
+  (#2738). Tests: `lib/fireside/paged-lists.test.ts`.
+
 - 2026-10-05: **The export feed refuses a cursor of the wrong shape instead of reporting the
   database down.** `parseExportCursor` (`lib/fireside/export-review.ts`) checked only that a `|` had
   text on both sides, so a cursor such as `abc|def` reached the query, failed the `timestamptz` and

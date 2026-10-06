@@ -42,7 +42,9 @@ export const ChymeBackChannelCall: React.FC<{
   displayName: string;
   otherName: string;
   onHangUp: () => void;
-}> = ({ credentials, displayName, otherName, onHangUp }) => {
+  // Why the last hang-up failed, in the route's words; the call stays open, so it is shown here.
+  actionError?: string | null;
+}> = ({ credentials, displayName, otherName, onHangUp, actionError }) => {
   const { theme, tokens } = useTheme();
   const accent = getAppAccent('chyme', theme);
   const styles = makeStyles(tokens, accent);
@@ -93,6 +95,9 @@ export const ChymeBackChannelCall: React.FC<{
           <View style={styles.liveDot} />
           <Text style={styles.headerLabel}>BACK CHANNEL</Text>
         </View>
+        {actionError ? (
+          <Text style={[styles.errorText, styles.actionErrorText]} accessibilityRole="alert">{actionError}</Text>
+        ) : null}
 
         {status !== 'joined' || !client || !call ? (
           <View style={styles.center}>
@@ -205,6 +210,7 @@ function makeStyles(t: ThemeTokens, accent: string) {
     center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16 },
     connectingText: { color: t.textMuted, fontSize: 14, fontFamily: interFamily('400') },
     errorText: { color: '#F87171', fontSize: 15, fontFamily: interFamily('400') },
+    actionErrorText: { textAlign: 'center', paddingHorizontal: 24, marginTop: 8 },
     hangUpFallback: {
       flexDirection: 'row',
       alignItems: 'center',
