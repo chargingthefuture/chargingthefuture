@@ -603,11 +603,25 @@
   border-radius: 12px;
 }
 
-/* The admin-only "Share a picture" control above the composer, and the panel it opens. */
-.imageShareToggle {
-  margin: 0 20px 8px;
-  display: flex;
-  flex-shrink: 0;
+/* The admin-only camera chip in the icon row, and the "Share a picture" panel it opens above the composer. */
+.imageShareBtn {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 9px;
+  border-radius: 7px;
+  background: transparent;
+  border: 1px solid rgba(14, 165, 233, 0.3);
+  color: #38BDF8;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.imageShareBtn:hover,
+.imageShareBtnActive {
+  background: rgba(14, 165, 233, 0.12);
 }
 
 .imageSharePanel {

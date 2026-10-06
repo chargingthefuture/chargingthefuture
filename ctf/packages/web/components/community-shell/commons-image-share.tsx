@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Camera } from "lucide-react";
 import type { CommonsMessage } from "lib/commons/types";
 import styles from "./community-shell.module.css";
 import { scalePicture } from "lib/images/scale-picture";
@@ -43,7 +44,7 @@ function usePreviewUrl(file: File | null): string | null {
   return url;
 }
 
-function SharePanel({ onShared, onClose }: { onShared: (message: CommonsMessage) => void; onClose: () => void }) {
+export function CommonsImageSharePanel({ onShared, onClose }: { onShared: (message: CommonsMessage) => void; onClose: () => void }) {
   const [file, setFile] = useState<File | null>(null);
   const [alt, setAlt] = useState("");
   const [text, setText] = useState("");
@@ -94,16 +95,18 @@ function SharePanel({ onShared, onClose }: { onShared: (message: CommonsMessage)
   );
 }
 
-export function CommonsImageShare({ onShared }: { onShared: (message: CommonsMessage) => void }) {
-  const [open, setOpen] = useState(false);
-  if (!open) {
-    return (
-      <div className={styles.imageShareToggle}>
-        <button type="button" className={styles.chatActionBtn} onClick={() => setOpen(true)}>
-          Share a picture (admins)
-        </button>
-      </div>
-    );
-  }
-  return <SharePanel onShared={onShared} onClose={() => setOpen(false)} />;
+// The camera chip in the Commons icon row that opens the panel above (admins only).
+export function CommonsImageShareButton({ open, onClick }: { open: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      className={open ? `${styles.imageShareBtn} ${styles.imageShareBtnActive}` : styles.imageShareBtn}
+      onClick={onClick}
+      aria-pressed={open}
+      aria-label={open ? "Close picture sharing" : "Share a picture (admins)"}
+      title={open ? "Close picture sharing" : "Share a picture (admins)"}
+    >
+      <Camera size={15} aria-hidden="true" />
+    </button>
+  );
 }

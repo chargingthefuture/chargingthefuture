@@ -29,7 +29,7 @@ import { feedPostLength } from '../../lib/feed/normalize';
 import { FEED_ADMIN_MAX_COMMUNITY_POST_LENGTH, FEED_MAX_COMMUNITY_POST_LENGTH } from '../../lib/feed/constants';
 import { OFFICIAL_SENDER_LABEL } from '../../lib/commons/constants';
 import { ChatMessageImage } from './chat-message-image';
-import { CommonsImageShare } from './commons-image-share';
+import { CommonsImageShareButton, CommonsImageSharePanel } from './commons-image-share';
 import { motionAwareBehavior, useChatScrollPosition } from './chat-scroll';
 
 // Avatar glyph for a chat sender: the first letter of the sender's name, whoever they are. The
@@ -448,6 +448,8 @@ function AuthenticatedChatPanel({ currentUser, isAdmin = false }: AuthenticatedC
   // The 🔔 notifications center replaces the message stream + composer when open. It is a separate
   // feed (not a filter of the chat), so it is local UI state here rather than in the chat hook.
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  // The admin picture panel, opened from the camera chip in the icon row.
+  const [pictureShareOpen, setPictureShareOpen] = useState(false);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const { jumpToQuotedPost, flashTarget } = useDeepLinkNavigation(messagesContainerRef);
 
@@ -585,9 +587,14 @@ function AuthenticatedChatPanel({ currentUser, isAdmin = false }: AuthenticatedC
         onToggleNotifications={() => setNotificationsOpen((open) => !open)}
         onAsk={askComic}
         onAnswer={answerChip}
+        pictureShare={isAdmin && !notificationsOpen ? (
+          <CommonsImageShareButton open={pictureShareOpen} onClick={() => setPictureShareOpen((open) => !open)} />
+        ) : null}
       />
 
-      {isAdmin && !notificationsOpen ? <CommonsImageShare onShared={addSavedMessage} /> : null}
+      {isAdmin && !notificationsOpen && pictureShareOpen ? (
+        <CommonsImageSharePanel onShared={addSavedMessage} onClose={() => setPictureShareOpen(false)} />
+      ) : null}
 
       {/* Composer + helpers hide while the notifications center is open — you read notifications
           there, you don't post into them. The chip row above stays so 🔔 can toggle back. */}
@@ -977,6 +984,8 @@ type ConciergeChipRailProps = {
   onToggleNotifications: () => void;
   onAsk: (question: string) => void;
   onAnswer: (chip: Extract<CommonsSuggestionChip, { kind: 'answer' }>) => void;
+  // The admin-only camera chip, placed after the gift; null for everyone else.
+  pictureShare: ReactNode;
 };
 
 // One-tap suggestion chips (#471) — persistent (shown whether or not the chat already has messages),
@@ -996,6 +1005,7 @@ function ConciergeChipRail({
   onToggleNotifications,
   onAsk,
   onAnswer,
+  pictureShare,
 }: ConciergeChipRailProps) {
   return (
     <div className={styles.conciergeChipRail} role="group" aria-label="Ask what you need">
@@ -1007,6 +1017,7 @@ function ConciergeChipRail({
           and the full banner is dismissed or snoozed, so most of the time this row is unchanged.
           It stays visible with the notifications feed open, like the three glyph chips before it. */}
       <ContributionsGiftTrigger className={styles.contributeGiftBtn} />
+      {pictureShare}
       {notificationsOpen ? null : <SuggestionChips chips={chips} onAsk={onAsk} onAnswer={onAnswer} />}
     </div>
   );
