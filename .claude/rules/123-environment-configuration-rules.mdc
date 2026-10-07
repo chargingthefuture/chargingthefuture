@@ -173,9 +173,12 @@ It is a separate list on purpose. A taxonomy credential never opens the Director
 reverse holds, so either integration can be revoked without touching the other. Optional, never
 required: unset or empty means the route refuses everybody. Revoking it is removing the entry.
 
-Only `/api/directory/service/profiles/[id]` reads this list, through `requireDirectoryServiceRead`
-in `ctf/packages/web/lib/directory/service-read.ts`. That route answers for one profile at a
-time, claimed or not and saying which, never a claimed one whose owner is restricted with scope
+Three routes read this list, all through `requireDirectoryServiceRead` in
+`ctf/packages/web/lib/directory/service-read.ts`: `/api/directory/service/profiles/[id]` (one
+profile), `/api/directory/service/accounts/[accountId]/profile` (a client's own claimed profile)
+and `/api/directory/service/profiles` (a page of profiles for One Percent's Find matches, owner
+decision 2026-10-07, with its own per-consumer page limits in `service-list.ts`). Each answers for
+profiles claimed or not and saying which, never a claimed one whose owner is restricted with scope
 `all` or `contact`, with the fields One Percent's desk shows, and has no member path.
 
 ### Stream and Formance staging keys

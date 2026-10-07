@@ -174,6 +174,44 @@ contracts:
     idempotency: true
 
   - pluginId: directory
+    command: directory.profile.service.list
+    version: 1.0.0
+    description: >-
+      A page of directory profiles, claimed or not, for One Percent's Find matches on the owner's
+      operator desk (owner decision, 2026-10-07). GET /api/directory/service/profiles. Machine caller
+      only, the same DIRECTORY_SERVICE_TOKENS consumer as directory.profile.service.get, rate-limited
+      per consumer to one page a second and sixty an hour. Each profile carries the same fields as
+      the single read and nothing else; directory profiles hold no field for what somebody needs or
+      is looking for, so none is returned. Profiles whose claiming account is restricted with scope
+      'all' or 'contact' are left out without saying so. Ordered by creation time then id. No search
+      and no filters. 400 DIRECTORY_INVALID_PAYLOAD for a bad limit or a cursor this route did not
+      give out; 429 DIRECTORY_SERVICE_RATE_LIMITED past the page limits.
+    inputSchema:
+      limit:
+        type: integer
+        required: false
+        default: 50
+        maximum: 100
+      cursor:
+        type: string
+        required: false
+    outputSchema:
+      profiles:
+        type: array
+      nextCursor:
+        type: string_or_null
+    dataAccess:
+      - directory_profiles
+      - directory_profile_skills
+      - skills_taxonomy_skills
+      - skills_taxonomy_sectors
+      - skills_taxonomy_job_titles
+      - account_restrictions
+    purpose: one_percent_introduction
+    retentionClass: derived_short_lived
+    idempotency: true
+
+  - pluginId: directory
     command: directory.profile.get
     version: 1.0.0
     description: >-

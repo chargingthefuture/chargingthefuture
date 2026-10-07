@@ -5,8 +5,8 @@ import { enforcePublicReadRateLimit } from 'lib/security/rate-limit';
 import { DIRECTORY_ERROR_CODE } from 'lib/directory/constants';
 import { OWNED_PROFILE_ORDER_SQL } from 'lib/directory/profile-claim';
 
-// One Percent reads Directory profiles, one at a time, for the owner's desk (owner decisions,
-// 2026-10-02 and 2026-10-06; the "One Percent is the paid tier" section of CLAUDE.md). The limits
+// One Percent reads Directory profiles for the owner's desk (owner decisions, 2026-10-02,
+// 2026-10-06 and 2026-10-07; the "One Percent is the paid tier" section of CLAUDE.md). The limits
 // those decisions set are enforced here rather than promised:
 //
 // - Claimed or not, and says which. A community-generated profile nobody has claimed still has a
@@ -17,8 +17,11 @@ import { OWNED_PROFILE_ORDER_SQL } from 'lib/directory/profile-claim';
 //   'all' or 'contact' reads as not found, because an introduction is a connection and those two
 //   scopes already stop the member from starting one here. 'trading' alone covers credits and
 //   rides and does not hide the profile. The answer never says a member is restricted.
-// - One profile by id. There is no list and no search: the owner pastes the link of somebody
-//   they already know about, and the route answers for that one person.
+// - One profile by id: the owner pastes the link of somebody they already know about, and the
+//   route answers for that one person.
+// - Or a page of profiles, for the desk's Find matches (owner decision, 2026-10-07). That read is
+//   in service-list.ts, with the same fields, the same restriction rule and stricter limits. There
+//   is still no search.
 // - Or one profile by the account that claimed it (owner decision, 2026-10-02). A One Percent
 //   client signs in there with their Skills Economy account, so One Percent already holds that
 //   account's id; this answers which claimed profile, if any, belongs to it. Still one person,
@@ -75,7 +78,7 @@ export type DirectoryProfileForService = {
   country: string | null;
 };
 
-type Row = {
+export type ServiceProfileRow = {
   id: string;
   claimed: boolean;
   first_name: string | null;
@@ -94,10 +97,9 @@ type Row = {
 // cannot match a row, so it is answered as not found without reaching the database.
 const PROFILE_ID = /^[A-Za-z0-9_-]{1,64}$/;
 
-async function readProfile(column: 'id' | 'claimed_by_user_id', value: string): Promise<DirectoryProfileForService | null> {
-  const result = await queryDb<Row>(
-    `
-      SELECT
+// The projection both reads share, and the list read in service-list.ts beside it: the fields the
+// desk shows and nothing else. Restricted owners are filtered by SERVICE_RESTRICTION_FILTER_SQL.
+export const SERVICE_PROFILE_SELECT_SQL = `
         p.id::text AS id,
         (p.claimed_by_user_id IS NOT NULL) AS claimed,
         p.first_name,
@@ -118,23 +120,18 @@ async function readProfile(column: 'id' | 'claimed_by_user_id', value: string): 
         p.country
       FROM directory_profiles p
       LEFT JOIN skills_taxonomy_sectors s ON s.id = p.sector_id
-      LEFT JOIN skills_taxonomy_job_titles jt ON jt.id = p.job_title_id
-      WHERE ${column === 'id' ? 'p.id::text' : 'p.claimed_by_user_id'} = $1
-        AND NOT EXISTS (
+      LEFT JOIN skills_taxonomy_job_titles jt ON jt.id = p.job_title_id`;
+
+// A claimed profile whose owner is restricted from connecting never comes back. Unclaimed profiles
+// have no owner, so the NOT EXISTS is true for them.
+export const SERVICE_RESTRICTION_FILTER_SQL = `NOT EXISTS (
           SELECT 1 FROM account_restrictions r
           WHERE r.user_id = p.claimed_by_user_id
             AND r.is_restricted
             AND r.restriction_scope IN ('all', 'contact')
-        )
-      ORDER BY ${OWNED_PROFILE_ORDER_SQL}
-      LIMIT 1
-    `,
-    [value],
-  );
-  const row = result.rows[0];
-  if (!row) {
-    return null;
-  }
+        )`;
+
+export function toServiceProfile(row: ServiceProfileRow): DirectoryProfileForService {
   return {
     id: row.id,
     claimed: Boolean(row.claimed),
@@ -149,6 +146,21 @@ async function readProfile(column: 'id' | 'claimed_by_user_id', value: string): 
     state: row.state,
     country: row.country,
   };
+}
+
+async function readProfile(column: 'id' | 'claimed_by_user_id', value: string): Promise<DirectoryProfileForService | null> {
+  const result = await queryDb<ServiceProfileRow>(
+    `
+      SELECT ${SERVICE_PROFILE_SELECT_SQL}
+      WHERE ${column === 'id' ? 'p.id::text' : 'p.claimed_by_user_id'} = $1
+        AND ${SERVICE_RESTRICTION_FILTER_SQL}
+      ORDER BY ${OWNED_PROFILE_ORDER_SQL}
+      LIMIT 1
+    `,
+    [value],
+  );
+  const row = result.rows[0];
+  return row ? toServiceProfile(row) : null;
 }
 
 export async function getProfileForService(profileId: string): Promise<DirectoryProfileForService | null> {

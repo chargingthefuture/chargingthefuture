@@ -241,6 +241,38 @@ auditEvents:
       status: success_or_failure
       errorCategory: none_or_error_class
 
+  # One audit line per page, naming the consumer, page size and page number. Never the profile ids
+  # on the page, so the trail is not a copy of who was read.
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: service_consumer
+    pluginId: directory
+    command: directory.profile.service.list
+    commandVersion: 1.0.0
+    purpose: one_percent_introduction
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+      evidence:
+        consumerBindingCheck: pass_or_fail
+        consumerRateLimitCheck: pass_or_fail
+    dataClassesAccessed:
+      - directory_claimed_profile_projection
+    targetContext:
+      workspaceId: workspace_identifier
+      targetType: directory_profile_page
+      targetId: page_number
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+    metadata:
+      pageSize: integer
+      page: integer
+      returned: integer
+      hasMore: boolean
+
   - eventId: uuid
     timestamp: rfc3339
     actorId: principal
