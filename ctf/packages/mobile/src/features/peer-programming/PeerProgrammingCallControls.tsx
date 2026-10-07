@@ -6,6 +6,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { hasScreenShare, useCallStateHooks, type Call } from '@stream-io/video-react-native-sdk';
 import { PPButton } from './PPButton';
 import { usePPTheme } from './usePPTheme';
+import { reportError } from '../../observability/report';
 
 const SCREEN_DECLINED = 'Your screen is not being shared. Press Share screen again and allow it when Android asks.';
 
@@ -24,8 +25,11 @@ export function PeerProgrammingCallControls({ call, onLeave }: { call: Call; onL
     setNotice(null);
     try {
       await action();
-    } catch {
-      setNotice(failure);
+    } catch (error) {
+      // Show the reason the phone gave (a refused permission, a declined screen-share prompt) after the
+      // plain line, and report it.
+      reportError(error, { area: 'peer-programming', op: 'call_control' });
+      setNotice(error instanceof Error && error.message ? `${failure} ${error.message}` : failure);
     } finally {
       setBusy(false);
     }

@@ -532,7 +532,7 @@ async function chargeBlock(input: {
 }
 
 // Send a block back to the caller when it was taken but the call never ran it: the call left 'ringing'
-// (answer) or 'answered' (extend) between the charge and the write that records it — the caller cancelled,
+// (answer) or 'answered' (extend) between the charge and the write that records it — the caller canceled,
 // the ring timed out, or the other person hung up in that moment. Without this the caller's credits went to
 // the provider for a block nobody got. The key is deterministic per block, so a retry never sends it back
 // twice. Best effort: a failure is reported with the call id and block number so it can be put right by
