@@ -11,6 +11,8 @@ import {
   View,
 } from 'react-native';
 import { ChymeRoom } from './src/features/chyme';
+import { Beacon } from './src/features/beacon';
+import { AppsList } from './src/features/apps';
 import { Unlock } from './src/features/unlock';
 import { fetchUnlockStatus, type UnlockAccessTier } from './src/features/unlock/api';
 import { AccountData } from './src/features/account-data';
@@ -47,7 +49,8 @@ StreamVideoRN.updateConfig({
   foregroundService: {
     android: {
       channel: { id: 'chyme-audio', name: 'Chyme live audio' },
-      notificationTexts: { title: 'Chyme live audio', body: 'You are in a live audio room' },
+      // The same service keeps a Chyme room and a Beacon broadcast alive, so the text names neither.
+      notificationTexts: { title: 'Live now', body: 'You are in a live room or broadcast' },
     },
   },
 });
@@ -93,6 +96,7 @@ function BrandMark({ size = 36 }: { size?: number }) {
 // Emoji glyph for a nav pill, mirroring web's per-plugin tile emoji. Non-plugin keys get their own.
 function keyEmoji(key: FeatureKey): string {
   const special: Partial<Record<FeatureKey, string>> = {
+    apps: '🧩',
     'account-data': '🗄️',
     'blocked-members': '🚫',
     'bug-report': '🐞',
@@ -107,13 +111,16 @@ function keyAccent(key: FeatureKey, theme: ThemeName): string {
   return getAppAccent(key, theme);
 }
 
-// The native Android app carries only the small keep-list (Clerk auth wall, Chyme live audio, bug
-// reporting, and settings/account); everything else is served by the web app. See
+// The native Android app carries the plugins that materially benefit from being an installed app
+// (Chyme live audio, Beacon broadcasts), plus what they need to run (Clerk auth wall, bug reporting,
+// settings/account); everything else is served by the web app. The Apps list is home. See
 // `.claude/rules/105-web-android-feature-parity-rules.mdc`.
-type FeatureKey = 'chyme' | 'account-data' | 'blocked-members' | 'bug-report';
+type FeatureKey = 'apps' | 'chyme' | 'beacon' | 'account-data' | 'blocked-members' | 'bug-report';
 
 const featureOrder: Array<{ key: FeatureKey; label: string }> = [
+  { key: 'apps', label: 'Apps' },
   { key: 'chyme', label: 'Chyme' },
+  { key: 'beacon', label: 'Beacon' },
   { key: 'account-data', label: 'Account & Data' },
   { key: 'blocked-members', label: 'Blocked members' },
   { key: 'bug-report', label: 'Report a problem' },
@@ -149,9 +156,11 @@ export default function App() {
 // branching) keeps the per-render selection trivial.
 type FeatureRenderers = Record<FeatureKey, () => ReactElement>;
 
-function buildFeatureViews(): FeatureRenderers {
+function buildFeatureViews(open: (_key: FeatureKey) => void): FeatureRenderers {
   return {
+    apps: () => <AppsList onOpen={open} />,
     chyme: () => <ChymeRoom />,
+    beacon: () => <Beacon />,
     'account-data': () => <AccountData />,
     'blocked-members': () => <BlockedMembers />,
     'bug-report': () => (
@@ -170,7 +179,7 @@ type UnlockGate = { loading: boolean; walled: boolean };
 function AppShell() {
   const { isLoading, isAuthenticated, user } = useAuth();
   const { tokens, theme } = useTheme();
-  const [selected, setSelected] = useState<FeatureKey>('chyme');
+  const [selected, setSelected] = useState<FeatureKey>('apps');
 
   const isAdmin = Boolean(user?.isAdmin);
 
@@ -227,30 +236,30 @@ function AppShell() {
   }, [refreshUnlockGate]);
 
   // Android hardware back. The app is a flat pill navigator with no screen stack, so give back a
-  // predictable meaning: from any secondary pill (settings, blocked members, report a problem) go
-  // back to Chyme, the home surface; from Chyme, let Android do its default (leave the app). This
+  // predictable meaning: from any other pill go back to the Apps list, the home surface; from Apps,
+  // let Android do its default (leave the app). This
   // replaces the old behavior where back exited the app from anywhere. Note: "navigating away
   // without closing" — the case that must not drop a member from a live room — is pressing HOME or
   // switching apps (which backgrounds the app; the Chyme foreground service keeps the audio and the
   // presence timers alive). Back is an explicit "leave", so it does not need to preserve the call.
   useEffect(() => {
     const onBack = () => {
-      if (selected !== 'chyme') {
-        setSelected('chyme');
+      if (selected !== 'apps') {
+        setSelected('apps');
         return true; // handled — do not exit
       }
-      return false; // on Chyme: let Android leave the app
+      return false; // on Apps: let Android leave the app
     };
     const sub = BackHandler.addEventListener('hardwareBackPress', onBack);
     return () => sub.remove();
   }, [selected]);
 
   const featureView = useMemo(() => {
-    const renderers = buildFeatureViews();
+    const renderers = buildFeatureViews(setSelected);
     const render = renderers[selected];
-    // Every FeatureKey has an entry; the fallback preserves the default (Chyme)
+    // Every FeatureKey has an entry; the fallback preserves the default (Apps)
     // for any unexpected value.
-    return render ? render() : <ChymeRoom />;
+    return render ? render() : <AppsList onOpen={setSelected} />;
   }, [selected]);
 
   // While the app is bootstrapping (restoring any stored sign-in session), or

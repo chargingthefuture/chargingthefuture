@@ -2,35 +2,54 @@
 
 ## Intent
 Define which surfaces the native Android (React Native) app carries, and how the web app covers
-everything else. **Owner decision, 2026-07-20: the native Android app is narrowed to Chyme (live
-audio) plus the few things Chyme needs to run. Everything else is served by the installable web app
-(PWA).** This rule replaces the former "100% web↔Android parity" mandate; that mandate no longer
-applies.
+everything else.
+
+**The test (owner decision, 2026-10-06): the Android app carries any plugin that materially benefits
+from being an installed mobile app, plus whatever that plugin needs to run (sign-in, account, bug
+reporting).** Everything else is served by the installable web app (PWA). Full 1:1 Android parity is
+too much overhead and is not coming back. **There will never be an iOS app**; iPhone members use the
+web app.
+
+"Materially benefits" means the installed app can do something the web app cannot, or cannot do
+well: keep live audio or video running with the screen off or another app in front (a foreground
+service), or capture the phone's own screen (Android lets an installed app do this after asking; a
+web page never can). A plugin that only shows lists, forms or posts does not qualify.
+
+History: on 2026-07-20 the app was narrowed to Chyme alone, replacing the former "100% web↔Android
+parity" mandate. Beacon was added under the test above on 2026-10-06: its repeated ask was sharing
+the phone's screen in a live broadcast, which only an installed app can do. When a plugin is added,
+it gets a line in the keep-list below, a feature folder, a `plugin-parity-contracts.json` entry with
+`requiresMobileSurface: true`, and a card in the app's Apps list (`src/features/apps/AppsList.tsx`).
 
 ## Why the change
 The web app is now an installable PWA (`packages/web/app/manifest.ts` + `public/sw.js` + web push):
 members "Add to Home screen" on Android or iOS and get a standalone app icon that opens the Commons
 in its own window and receives push. So the mobile-responsive web app already covers the whole
-product on phones. The one thing the web cannot do well is Chyme's always-on live audio with a
-background/foreground service, so **that** is what the native app is for. Maintaining a second full
+product on phones. What the web cannot do well is live audio or video that keeps running in the
+background, and capturing the phone's screen, so **that** is what the native app is for. Maintaining a second full
 implementation of every plugin in React Native is no longer worth the cost.
 
 ## Android app scope — the keep-list (authoritative)
-The native Android app carries ONLY:
+The native Android app opens on an **Apps list** (the plugins below, one card each) and carries ONLY:
 
 1. **Clerk authentication** — sign-in / sign-up / session (`packages/mobile/src/auth/`). Required so a
    member can be signed in to use Chyme.
 2. **Chyme** (live audio) — `packages/mobile/src/features/chyme/` and everything it links to. **Any
    feature reachable from the Chyme plugin (its header, its screens, the things it opens) stays in the
-   app.** Chyme's live-audio background behavior (foreground service so audio keeps playing when the
-   app is backgrounded) is the whole reason the native app exists.
+   app.** Its live-audio background behavior (foreground service so audio keeps playing when the app
+   is backgrounded) is why it qualifies.
+2b. **Beacon** (live broadcasts) — `packages/mobile/src/features/beacon/`. Watching (HLS), the live
+   chat for signed-in members, and, for an admin, going live with the camera and microphone or by
+   sharing the phone's screen. Screen sharing from a phone is why it qualifies.
 3. **Bug reporting** — `packages/mobile/src/features/bug-reporting/`, so a member on the app can report
    a problem.
 4. **Settings / account** — the account/settings surface (theme, sign-out, the shared top-actions the
    Chyme header shows).
 
-Nothing else. If a surface is not on this list and is not required to keep Clerk or Chyme running, it
-does **not** belong in the Android app. It lives on the web app only.
+Nothing else. If a surface is not on this list and is not required to keep a listed plugin running,
+it does **not** belong in the Android app. It lives on the web app only. Adding a plugin is the
+owner's decision, made against the test in Intent; an agent may propose one with the reason, never
+add one unasked.
 
 ## What agents must and must not do
 - **Do not build or maintain Android/React Native parity for any feature outside the keep-list.** New
@@ -90,8 +109,8 @@ decision — not a default. Until the owner says so for a named feature, treat t
   deliverable, and "android" is complete in the sense that **there is no Android surface for this
   feature** — the native app intentionally does not carry it. State "Android: out of scope
   (web-only per rule 105)" in the PR body so the reader knows it was a decision, not a forgotten gap.
-- For a change to a **keep-list** surface (Clerk, Chyme, bug reporting, settings), the Android side
-  is in scope and must land with it, exactly as before.
+- For a change to a **keep-list** surface (Clerk, Chyme, Beacon, bug reporting, settings), the
+  Android side is in scope and must land with it, exactly as before.
 
 ## Testing Rules
 - Add acceptance criteria for critical paths in test plans. For Chyme specifically, the background/

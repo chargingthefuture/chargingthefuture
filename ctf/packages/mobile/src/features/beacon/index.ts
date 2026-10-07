@@ -1,0 +1,1 @@
+export { Beacon } from './Beacon';
