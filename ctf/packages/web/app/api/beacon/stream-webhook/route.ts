@@ -7,6 +7,7 @@ import {
   recordBeaconRecording,
 } from 'lib/beacon/repository';
 import { startBeaconBroadcastEgress, verifyBeaconWebhookSignature } from 'lib/beacon/stream';
+import type { StreamAppName } from 'lib/integrations/stream-credentials';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
 import { recordParticipantLeftUsage } from 'lib/stream-quota/webhook-usage';
@@ -46,7 +47,15 @@ function extractRecordingInfo(payload: Record<string, unknown>): { callId: strin
 //
 // Only publishers ever join this call: viewers watch over public HLS and never join it, so this
 // arrives once or twice per broadcast, not once per viewer.
-async function handleParticipantJoined(payload: Record<string, unknown>): Promise<NextResponse> {
+//
+// `ingress.started` arrives on the same path: it is Stream's own notice that the phone's RTMP feed
+// connected, and it is sent whether or not a session-participant event follows. Either one starts the
+// feed and recording, on the Stream app that sent the delivery; the second finds them already running.
+async function handleParticipantJoined(
+  payload: Record<string, unknown>,
+  app: StreamAppName,
+  command: string,
+): Promise<NextResponse> {
   const callId = extractCallId(payload);
   if (callId.length === 0) {
     return NextResponse.json({ ok: true, handled: false }, { status: 200 });
@@ -60,12 +69,12 @@ async function handleParticipantJoined(payload: Record<string, unknown>): Promis
   }
 
   try {
-    const started = await startBeaconBroadcastEgress(event.id);
+    const started = await startBeaconBroadcastEgress(event.id, app);
     await logWebhookStep(
       event.id,
-      'beacon.stream.publisher-joined',
+      command,
       started,
-      started ? 'ok: public feed and recording started' : 'Live video is not configured.',
+      started ? `ok (${app} Stream app): public feed and recording started` : `The ${app} Stream app is not configured.`,
     );
     return NextResponse.json({ ok: true, handled: started }, { status: 200 });
   } catch (error) {
@@ -79,9 +88,9 @@ async function handleParticipantJoined(payload: Record<string, unknown>): Promis
     });
     await logWebhookStep(
       event.id,
-      'beacon.stream.publisher-joined',
+      command,
       false,
-      `Starting the public feed or recording failed: ${error instanceof Error ? error.message : String(error)}`,
+      `Starting the public feed or recording on the ${app} Stream app failed: ${error instanceof Error ? error.message : String(error)}`,
     );
     return NextResponse.json({ ok: true, handled: false }, { status: 200 });
   }
@@ -112,7 +121,11 @@ const RECORDING_LIFECYCLE_COMMANDS: Record<string, string> = {
   'call.recording_started': 'beacon.stream.recording-started',
   'call.recording_stopped': 'beacon.stream.recording-stopped',
   'call.recording_failed': 'beacon.stream.recording-failed',
+  'ingress.stopped': 'beacon.stream.ingress-stopped',
+  'ingress.error': 'beacon.stream.ingress-error',
 };
+
+const FAILURE_EVENT_TYPES = new Set(['call.recording_failed', 'ingress.error']);
 
 async function handleRecordingLifecycle(type: string, payload: Record<string, unknown>): Promise<NextResponse> {
   const callId = extractCallId(payload);
@@ -120,11 +133,11 @@ async function handleRecordingLifecycle(type: string, payload: Record<string, un
   if (!event) {
     return NextResponse.json({ ok: true, handled: false }, { status: 200 });
   }
-  const failed = type === 'call.recording_failed';
+  const failed = FAILURE_EVENT_TYPES.has(type);
   const said = ['reason', 'error', 'message']
     .map((key) => payload[key])
     .find((value): value is string => typeof value === 'string' && value.length > 0);
-  const reason = failed ? `Stream reported the recording failed${said ? `: ${said}` : ' and gave no reason.'}` : 'ok';
+  const reason = failed ? `Stream reported ${type}${said ? `: ${said}` : ' and gave no reason.'}` : 'ok';
   await logWebhookStep(event.id, RECORDING_LIFECYCLE_COMMANDS[type], !failed, reason);
   return NextResponse.json({ ok: true, handled: true }, { status: 200 });
 }
@@ -155,13 +168,59 @@ async function handleRecordingReady(payload: Record<string, unknown>): Promise<N
   return NextResponse.json({ ok: true, handled: true }, { status: 200 });
 }
 
+// A delivery whose signature matches neither Stream app's secret is refused, and until now left no
+// trace: the event's log just had no start step. When the body names a Beacon call that exists, the
+// refusal is written to that event's log once per event type and server instance, in fixed words.
+// Nothing from the unverified body is written except an event type from this list.
+const LOGGED_REFUSAL_TYPES = new Set([
+  'call.session_participant_joined',
+  'ingress.started',
+  'call.recording_started',
+  'call.recording_ready',
+  'call.recording_failed',
+]);
+const loggedRefusals = new Set<string>();
+
+async function logRefusedDelivery(rawBody: string): Promise<void> {
+  try {
+    const payload = JSON.parse(rawBody) as Record<string, unknown>;
+    const type = typeof payload.type === 'string' ? payload.type : '';
+    const callId = extractCallId(payload);
+    if (!LOGGED_REFUSAL_TYPES.has(type) || !callId.startsWith('beacon-')) {
+      return;
+    }
+    const event = await getBeaconEventByCallId(callId);
+    const key = `${event?.id}:${type}`;
+    if (!event || loggedRefusals.has(key)) {
+      return;
+    }
+    loggedRefusals.add(key);
+    await logWebhookStep(
+      event.id,
+      'beacon.stream.delivery-refused',
+      false,
+      `Stream sent ${type}, but its signature matched neither Stream app's secret, so it was refused. The secret set for this app differs from the one in the Stream dashboard.`,
+    );
+  } catch (error) {
+    reportError(error, { area: 'beacon', op: 'webhook_refusal_log' });
+  }
+}
+
+// The two deliveries that mean a publisher's media has reached the call, and the log line each writes.
+const PUBLISHER_ARRIVED_COMMANDS: Record<string, string> = {
+  'call.session_participant_joined': 'beacon.stream.publisher-joined',
+  'ingress.started': 'beacon.stream.ingress-started',
+};
+
 // Stream Video webhook. Verifies the signature, then acts on these events:
 //
 //   - `call.session_participant_joined` — a publisher is now on the call, so start the public HLS
 //     feed and the recording. This is what carries a phone-only RTMP broadcast, which otherwise
 //     starts neither.
 //   - `call.recording_ready` — store the recording URL and post the replay to the Commons.
-//   - `call.recording_started` / `_stopped` / `_failed` — written to the event's log only.
+//   - `ingress.started` — the phone's RTMP feed connected; handled exactly like a participant join.
+//   - `call.recording_started` / `_stopped` / `_failed`, `ingress.stopped` / `.error` — written to
+//     the event's log only.
 //   - `call.session_participant_left` — for ANY call, not only Beacon's: this is the one URL Stream
 //     sends every call event to, and the event carries how long the participant was in the session,
 //     which is one participant's minutes. Credited to the Stream Video minute meter by the surface
@@ -169,6 +228,9 @@ async function handleRecordingReady(payload: Record<string, unknown>): Promise<N
 //     because their heartbeats already feed the meter (2026-09-19).
 //
 // Every other event is acknowledged without acting so Stream stops retrying.
+//
+// Both Stream apps (production, and the demo app) send here; the signature says which one, and the
+// start is made on that app.
 //
 // Idempotent in both directions: the recording URL and the Commons post id are each written only when
 // still null, so a redelivered webhook never double-posts the replay, and a repeated participant-join
@@ -184,8 +246,9 @@ export async function POST(request: Request) {
   const rawBody = await request.text();
   const signature = request.headers.get('x-signature');
 
-  const verified = await verifyBeaconWebhookSignature(rawBody, signature);
-  if (!verified) {
+  const app = verifyBeaconWebhookSignature(rawBody, signature);
+  if (!app) {
+    await logRefusedDelivery(rawBody);
     return NextResponse.json(
       { ok: false, code: BEACON_ERROR_CODE.webhookSignatureInvalid, message: 'Invalid webhook signature.' },
       { status: 401 },
@@ -202,8 +265,8 @@ export async function POST(request: Request) {
   const type = typeof payload.type === 'string' ? payload.type : '';
 
   try {
-    if (type === 'call.session_participant_joined') {
-      return await handleParticipantJoined(payload);
+    if (type in PUBLISHER_ARRIVED_COMMANDS) {
+      return await handleParticipantJoined(payload, app, PUBLISHER_ARRIVED_COMMANDS[type]);
     }
     if (type === 'call.recording_ready') {
       return await handleRecordingReady(payload);

@@ -24,3 +24,19 @@ export async function resolveStreamCredentials(): Promise<StreamCredentials | nu
 
   return { apiKey, apiSecret };
 }
+
+// The two Stream apps this project runs: production, and the demo app demo mode routes to.
+export type StreamAppName = 'production' | 'staging';
+
+// Credentials for a named Stream app, whatever the request's demo mode. For a caller that already
+// knows which app it is talking to, such as a webhook delivery, which carries no signed-in user and
+// so cannot tell demo mode from the request. Null when that app's credentials are absent.
+export function streamCredentialsFor(app: StreamAppName): StreamCredentials | null {
+  const staging = app === 'staging';
+  const apiKey = (staging ? process.env.STREAM_API_KEY_STAGING : process.env.STREAM_API_KEY)?.trim();
+  const apiSecret = (staging ? process.env.STREAM_API_SECRET_STAGING : process.env.STREAM_API_SECRET)?.trim();
+  if (!apiKey || !apiSecret) {
+    return null;
+  }
+  return { apiKey, apiSecret };
+}
