@@ -133,7 +133,7 @@ describe('GET /api/directory/service/profiles — what comes back', () => {
     expect(queryDb.mock.calls[2][1]).toEqual([8]);
   });
 
-  it('refuses a limit that is not a whole number above zero, and a cursor it did not give out', async () => {
+  it('refuses a limit below 1 or with a fraction, and a cursor it did not give out', async () => {
     expect((await get('?limit=0')).status).toBe(400);
     expect((await get('?limit=ten')).status).toBe(400);
     expect((await get('?cursor=not-a-cursor')).status).toBe(400);

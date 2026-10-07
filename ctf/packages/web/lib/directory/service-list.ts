@@ -124,7 +124,7 @@ export function parseServiceListParams(url: URL): ServiceListParams {
   let limit = SERVICE_LIST_DEFAULT_LIMIT;
   if (rawLimit !== null && rawLimit !== '') {
     if (!/^\d{1,6}$/.test(rawLimit) || Number(rawLimit) < 1) {
-      return { ok: false, message: `limit must be a whole number from 1 to ${SERVICE_LIST_MAX_LIMIT}.` };
+      return { ok: false, message: `limit must be a number from 1 to ${SERVICE_LIST_MAX_LIMIT}, with no fraction.` };
     }
     limit = Math.min(Number(rawLimit), SERVICE_LIST_MAX_LIMIT);
   }
