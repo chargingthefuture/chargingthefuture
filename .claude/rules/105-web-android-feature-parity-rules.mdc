@@ -19,7 +19,9 @@ History: on 2026-07-20 the app was narrowed to Chyme alone, replacing the former
 parity" mandate. Beacon was added under the test above on 2026-10-06: its repeated ask was sharing
 the phone's screen in a live broadcast, which only an installed app can do. PeerProgramming was added
 the same day: its live Session call keeps running with the screen off, and an installed app can share
-the phone's screen in it. When a plugin is added,
+the phone's screen in it. Foundation was added the same day for its instant calls only: an installed
+app can ring the phone dependably with the app closed (native push) and keep a call going with the
+screen off. When a plugin is added,
 it gets a line in the keep-list below, a feature folder, a `plugin-parity-contracts.json` entry with
 `requiresMobileSurface: true`, and a card in the app's Apps list (`src/features/apps/AppsList.tsx`).
 
@@ -48,6 +50,12 @@ The native Android app opens on an **Apps list** (the plugins below, one card ea
    member has the entire plugin in one place. It qualifies because the live Session call keeps running
    with the screen off or another app in front (the Stream foreground service), and on Android an
    installed app can share the phone's screen in that call.
+2d. **Foundation** (instant 1:1 calls only) — `packages/mobile/src/features/foundation/`. Call alerts
+   on this device (native push), the incoming-call ring with Answer / Decline, the live audio call with
+   Mute, Extend and End, and "Connect now" from the member's connections. It qualifies because an
+   installed app can ring the phone with the app closed and keep the call going with the screen off
+   (the Stream foreground service). Every other Foundation screen — provider search, quotes, history,
+   messages and the other settings — stays web-only.
 3. **Bug reporting** — `packages/mobile/src/features/bug-reporting/`, so a member on the app can report
    a problem.
 4. **Settings / account** — the account/settings surface (theme, sign-out, the shared top-actions the
@@ -116,7 +124,7 @@ decision — not a default. Until the owner says so for a named feature, treat t
   deliverable, and "android" is complete in the sense that **there is no Android surface for this
   feature** — the native app intentionally does not carry it. State "Android: out of scope
   (web-only per rule 105)" in the PR body so the reader knows it was a decision, not a forgotten gap.
-- For a change to a **keep-list** surface (Clerk, Chyme, Beacon, PeerProgramming, bug reporting, settings), the
+- For a change to a **keep-list** surface (Clerk, Chyme, Beacon, PeerProgramming, Foundation calls, bug reporting, settings), the
   Android side is in scope and must land with it, exactly as before.
 
 ## Testing Rules

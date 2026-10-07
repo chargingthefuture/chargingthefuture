@@ -3,7 +3,7 @@
 This is the manual test script for the **native Android app** overall. It exists because the
 Android app is no longer a full copy of the web product. Under the owner decisions of 2026-07-20 and
 2026-10-06 (rule 105), the native app carries the plugins that benefit from being an installed app —
-**Chyme live audio, Beacon live broadcasts and PeerProgramming's live call**, opened from an **Apps** list — plus **Clerk sign-in,
+**Chyme live audio, Beacon live broadcasts, PeerProgramming's live call and Foundation's instant calls**, opened from an **Apps** list — plus **Clerk sign-in,
 bug reporting, and settings/account**, and everything else is served by the installable web app.
 So instead of testing "parity across the board", this one script walks the entire native app end to
 end.
@@ -25,7 +25,7 @@ end.
    **Sign in** button above the content. The card shows on every pill while signed out.
 2. Tap **Sign in** and sign in with the approved test account through the Clerk hosted flow.
 3. Expect to land back in the app shell with the **Apps** pill selected by default, showing a card
-   for each of **Chyme**, **Beacon** and **PeerProgramming**, and the sign-in card gone. Tapping a card opens that app.
+   for each of **Chyme**, **Beacon**, **PeerProgramming** and **Foundation**, and the sign-in card gone. Tapping a card opens that app.
 
 ## AN-2 — Unlock wall
 
@@ -123,9 +123,50 @@ the same cohort on another device or on the web.
 8. Tap **Leave session**. Expect the **Join session** button again, and the other member sees you
    leave.
 
+## AN-FD — Foundation calls
+
+Use two approved accounts: the **provider** on the phone (instant calls turned on in Foundation on the
+web, with a rate set) and the **caller** on the web or a second phone, already connected to the
+provider (a quote requested once is enough). The caller needs enough ServiceCredits for a few blocks.
+
+1. **Call alerts.** On the phone open **Foundation** from the Apps list. Turn on **Call alerts on this
+   device**. On Android 13 or later, Android asks to allow notifications: allow it. The switch stays on
+   and the line reads that this phone rings even with the app closed. Close and reopen the app: the
+   switch is still on.
+2. **Ring with the app closed.** Swipe the app away. From the caller, tap **Connect now**, agree, and
+   tap **Start call**. Within a few seconds the phone shows a heads-up alert with sound. With discreet
+   pings on (the default) it reads "Charging The Future / You have a new update." and never names the
+   caller. Tap it: the app opens on the full-screen **Incoming call** with **Answer** and **Decline**.
+3. **Ring with the app open.** With the app open on any pill (for example Chyme), ring again from the
+   caller: the **Incoming call** screen appears above that pill within about 4 seconds.
+4. **Answer.** Tap **Answer**. Expect "Connecting…", then "Connected" once the caller is in, an
+   **Elapsed** clock that counts up, and the rate per block. Both people hear each other. Android never
+   asks for the camera.
+5. **Mute.** Tap **Mute**: the caller stops hearing you and the button reads **Unmute**. Tap it again.
+6. **Screen off.** Lock the phone for 30 seconds. The caller still hears you. Unlock: the call is still
+   running.
+7. **Extend once (as the caller on a phone).** Place the call from the phone instead: in **Your
+   connections** tap **Connect now** on the provider, check the rate and block limit, turn on the
+   agreement switch and tap **Start call**. Once answered, tap **Extend** twice quickly. Exactly one
+   block is added ("2 of N blocks"), the button reads "Adding block…" while it works, and the caller's
+   ServiceCredits drop by one block, not two.
+8. **End.** Tap **End call**. Both sides show "Call ended." and the screen closes after a moment. The
+   Android "Live now" notification is gone.
+9. **Decline.** Ring again and tap **Decline** on the phone. The caller sees "Call declined." No credits
+   move.
+10. **No answer.** Ring again and leave it for a minute. Both sides show "No answer." and nothing rings
+    afterwards.
+11. **Out of credits (402).** With a caller account that has fewer ServiceCredits than one block, tap
+    **Connect now** and **Start call**. The confirmation stays open and shows "You do not have enough
+    ServiceCredits to start this call." Nothing rings.
+12. **Sign out.** Turn alerts on, then sign out in **Account & Data**. Ring this account from the web:
+    the phone does not ring. Sign in as a different member on the same phone: the switch reads off.
+13. **Alerts off.** Turn the switch off and ring again with the app closed: no alert. Open the app:
+    the ring still appears on screen while it is open.
+
 ## AN-5 — Back button
 
-1. From any other pill (Chyme, Beacon, PeerProgramming, **Report a problem**, **Account & Data**, **Blocked
+1. From any other pill (Chyme, Beacon, PeerProgramming, Foundation, **Report a problem**, **Account & Data**, **Blocked
    members**), press the Android **back** button. Expect: you return to **Apps** (not out of the app).
 2. From Apps, press **back** again. Expect: Android leaves the app (default). Back is an explicit
    "leave" — the audio-keeps-playing case is Home/app-switch (AN-4), not back.
@@ -162,7 +203,7 @@ the same cohort on another device or on the web.
 
 ## What is intentionally NOT in the Android app
 
-Directory, LightHouse, TrustTransport, SocketRelay, Foundation, SkillsHunt, Workforce, GDP,
+Directory, LightHouse, TrustTransport, SocketRelay, the rest of Foundation (everything but its instant calls), SkillsHunt, Workforce, GDP,
 ServiceCredits, Weekly Performance, Feed/Announcements, Mood, GentlePulse, SkillUp,
 and the rest are **web-only** now (installable PWA). If any of these appears in the native app
 without an owner decision adding it to the rule 105 keep-list, that is a regression.

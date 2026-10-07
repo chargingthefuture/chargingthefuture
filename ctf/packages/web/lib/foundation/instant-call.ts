@@ -47,6 +47,7 @@ const FOUNDATION_INCOMING_CALL_PATH = '/apps/foundation';
 //   - A block is never charged twice (deterministic ...-block-N key + the blocks_charged guard).
 //   - A call never charges beyond authorized_blocks (the buyer-set cap).
 //   - On insufficient funds the call ends cleanly and no partial/zero transfer is left behind.
+//   - A block taken for a call that ended before the block was recorded is sent back (returnUnusedBlock).
 //
 // Task 5 (push) replaces the in-app-only ring delivery (see the seam comment in ringInstantCall). The
 // module reuses the Direct Line 1:1 thread and the existing participant-only Stream token route; it never
@@ -524,6 +525,37 @@ async function chargeBlock(input: {
   return transfer.id;
 }
 
+// Send a block back to the caller when it was taken but the call never ran it: the call left 'ringing'
+// (answer) or 'answered' (extend) between the charge and the write that records it — the caller cancelled,
+// the ring timed out, or the other person hung up in that moment. Without this the caller's credits went to
+// the provider for a block nobody got. The key is deterministic per block, so a retry never sends it back
+// twice. Best effort: a failure is reported with the call id and block number so it can be put right by
+// hand, and never fails the request (the call is already over either way).
+async function returnUnusedBlock(input: {
+  callId: string;
+  blockNumber: number;
+  callerUserId: string;
+  providerUserId: string;
+  rateCredits: number;
+}): Promise<void> {
+  try {
+    await createTransfer({
+      senderUserId: input.providerUserId,
+      recipientUserId: input.callerUserId,
+      amount: input.rateCredits,
+      idempotencyKey: `foundation-instant-call-${input.callId}-block-${input.blockNumber}-return`,
+      originPlugin: 'foundation',
+      reasonCode: 'foundation.instant_call.block_return',
+    });
+  } catch (error) {
+    reportError(error, {
+      area: 'foundation',
+      op: 'instant_call_block_return',
+      extra: { callId: input.callId, blockNumber: input.blockNumber },
+    });
+  }
+}
+
 // Mark an answered/ringing call ended with a billing reason, in its own short transaction. Used when a
 // charge fails for lack of funds (so the call ends cleanly and no credits moved) or an extend hits the cap.
 async function endCallWithReason(callId: string, reason: FoundationCallEndedReason): Promise<FoundationCallRow> {
@@ -616,9 +648,8 @@ export async function answerInstantCall(input: {
   }
 
   // 3. Record the answer: lock the rate/interval, set the first paid window, persist the transfer id. Guard
-  //    on ring_status = 'ringing' so a concurrent decline/timeout cannot be overwritten (the charge would
-  //    already be idempotent, and the call would simply stay terminal).
-  return withDbTransaction(async (client) => {
+  //    on ring_status = 'ringing' so a concurrent decline/timeout cannot be overwritten.
+  const recorded = await withDbTransaction(async (client) => {
     const updated = await client.query<FoundationCallRow>(
       `
         UPDATE foundation_call_sessions
@@ -633,13 +664,25 @@ export async function answerInstantCall(input: {
     );
     const row = updated.rows[0];
     if (!row) {
-      // The call left 'ringing' between the charge and this write (declined/timed_out/ended). The block-1
-      // charge is already idempotent; re-read and return the current terminal row rather than reopening it.
+      // Not recorded here: either a duplicate answer already recorded it (the same idempotent block-1
+      // transfer, nothing to undo), or the call left 'ringing' between the charge and this write
+      // (declined/timed_out/ended) and must not be reopened.
       const current = await loadParticipantCall(client, input.callId, input.calleeUserId);
-      return mapCallRow(current);
+      // blocks_charged, not ring_status: a recorded call may already have ended again by now.
+      return { call: mapCallRow(current), blockUnused: Number(current.blocks_charged ?? 0) < 1 };
     }
-    return mapCallRow(row);
+    return { call: mapCallRow(row), blockUnused: false };
   });
+  if (recorded.blockUnused) {
+    await returnUnusedBlock({
+      callId: input.callId,
+      blockNumber: 1,
+      callerUserId: prepared.callerUserId,
+      providerUserId: input.calleeUserId,
+      rateCredits: prepared.rateCredits,
+    });
+  }
+  return recorded.call;
 }
 
 // Charge the next block (issue #808 task 4). Caller-only. Validates the call is active and that the
@@ -699,7 +742,7 @@ export async function extendInstantCall(input: {
   // 3. Record the paid block: advance paid_through_at by exactly one interval from its current value, and
   //    only advance the block matching nextBlock so a duplicate extend can't double-count. Guard on the
   //    call still being answered.
-  return withDbTransaction(async (client) => {
+  const recorded = await withDbTransaction(async (client) => {
     const updated = await client.query<FoundationCallRow>(
       `
         UPDATE foundation_call_sessions
@@ -713,13 +756,24 @@ export async function extendInstantCall(input: {
     );
     const row = updated.rows[0];
     if (!row) {
-      // The block was already recorded (a duplicate extend) or the call left 'answered'. The charge is
-      // idempotent, so re-read and return the current row rather than advancing the window twice.
+      // Not recorded here: either a duplicate extend already recorded this block (the same idempotent
+      // transfer, nothing to undo), or the call left 'answered' before the block was recorded, so the
+      // block will never run.
       const current = await loadParticipantCall(client, input.callId, input.callerUserId);
-      return mapCallRow(current);
+      return { call: mapCallRow(current), blockUnused: Number(current.blocks_charged ?? 0) < prepared.nextBlock };
     }
-    return mapCallRow(row);
+    return { call: mapCallRow(row), blockUnused: false };
   });
+  if (recorded.blockUnused) {
+    await returnUnusedBlock({
+      callId: input.callId,
+      blockNumber: prepared.nextBlock,
+      callerUserId: input.callerUserId,
+      providerUserId: prepared.providerUserId,
+      rateCredits: prepared.rateCredits,
+    });
+  }
+  return recorded.call;
 }
 
 // Decline a ringing call. Only the callee may decline, and only while ringing. Terminal.
