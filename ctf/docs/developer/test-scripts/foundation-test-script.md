@@ -1095,3 +1095,34 @@ Result: web ☐
   last on that phone.
 
 Result: android ☐
+
+### FDN-45 — A ring the provider can't take ends at once (added 2026-10-06)
+
+**Role:** A member (caller) and a provider with instant calls turned on
+**Surface:** web and Android
+
+**Steps:**
+1. As the provider, turn instant calls on with a rate. As the caller, ring them with Connect now.
+2. While it rings, as the provider in another tab, turn instant calls off (or clear the rate), then
+   press **Answer** on the ring.
+
+**Expected:** The answer is refused, and the call ends at once for both people instead of ringing on
+until the timeout. Both screens read "This provider isn't set up to take calls right now." No credits
+moved.
+
+**Result:** web ☐ android ☐ — notes:
+
+### FDN-46 — A caller whose credits can't be sent (added 2026-10-06)
+
+**Role:** Admin, a member (caller) and a provider
+**Surface:** web and Android
+
+**Steps:**
+1. As an admin, put a `trading` restriction on the caller's account.
+2. As the caller, ring the provider; as the provider, press **Answer**.
+
+**Expected:** The call ends at once. The provider reads "The call couldn't start: the caller's credits
+can't be sent right now." Nothing on either screen says the account is restricted, and no credits
+moved. (Before this it was a generic error and the call kept ringing.) Lift the restriction after.
+
+**Result:** web ☐ android ☐ — notes:

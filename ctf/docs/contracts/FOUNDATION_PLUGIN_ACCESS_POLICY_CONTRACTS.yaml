@@ -230,6 +230,7 @@ policies:
       - call_not_found
       - caller_insufficient_funds
       - provider_billing_misconfigured
+      - caller_cannot_send
 
   - pluginId: foundation
     command: foundation.connection.instant-call.extend
@@ -253,6 +254,7 @@ policies:
       - call_not_found
       - block_cap_reached
       - caller_insufficient_funds
+      - caller_cannot_send
 
   - pluginId: foundation
     command: foundation.connection.instant-call.decline
@@ -660,3 +662,5 @@ changelog:
     change: Added access policies for Web Push delivery of the instant-call ring (issue #808 task 5) — foundation.push.subscribe / .unsubscribe (CSRF-guarded, the member acts only on their own device subscription) and foundation.push.vapid-public-key.read (read-only, returns the non-secret public key). Android/Expo native push is deferred to the #808 Android parity ticket.
   - date: 2026-06-26
     change: foundation.push.subscribe is now v1.1.0 to also accept an Expo (Android native) push subscription (kind 'expo', issue #884) — same member-self / CSRF-guarded controls, with a new invalid_token deny for a missing/blank Expo token. foundation.push.unsubscribe is unchanged and kind-agnostic (matches by endpoint, so it removes a web or expo row). The send-side Expo access token (EXPO_ACCESS_TOKEN) is a server-only secret read from env and never returned to a client.
+  - date: 2026-10-06
+    change: answer and extend gain a caller_cannot_send deny (409 on answer, 403 on extend, code FOUNDATION_CALL_CALLER_CANNOT_SEND) for a caller whose credits cannot be sent because of a spending restriction; it was a generic 503. An answer refused for provider_billing_misconfigured or caller_cannot_send now ends the ringing call (ended_reason provider_not_set_up / caller_cannot_send) instead of leaving it ringing until the timeout. A block taken for a call that ended before the block was recorded is sent back to the caller (reason code foundation.instant_call.block_return). No version bump to the request or response shapes.

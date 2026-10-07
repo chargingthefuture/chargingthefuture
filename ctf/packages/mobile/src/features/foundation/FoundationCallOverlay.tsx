@@ -20,11 +20,19 @@ type Actions = {
   onExtend: () => void;
 };
 
+// Endings with a reason of their own, as on the web.
+const ENDED_REASON_LABELS: Record<string, string> = {
+  caller_insufficient_funds: 'Session ended — out of credits.',
+  paid_window_elapsed: 'Session ended — block time used up.',
+  provider_not_set_up: 'This provider isn’t set up to take calls right now.',
+  caller_cannot_send: 'The call couldn’t start: the caller’s credits can’t be sent right now.',
+};
+
 // The final message once a call is over, or null while it is still going. Running out of credits and the
 // block time running out come first, as on the web.
 function terminalLabel(call: InstantCall | null, ringStatus: RingStatus): string | null {
-  if (call?.endedReason === 'caller_insufficient_funds') return 'Session ended — out of credits.';
-  if (call?.endedReason === 'paid_window_elapsed') return 'Session ended — block time used up.';
+  const reasonLabel = call?.endedReason ? ENDED_REASON_LABELS[call.endedReason] : undefined;
+  if (reasonLabel) return reasonLabel;
   const labels: Partial<Record<RingStatus, string>> = {
     declined: 'Call declined.',
     timed_out: 'No answer.',

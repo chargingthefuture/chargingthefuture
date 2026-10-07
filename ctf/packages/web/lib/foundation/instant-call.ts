@@ -57,7 +57,13 @@ const FOUNDATION_INCOMING_CALL_PATH = '/apps/foundation';
 type FoundationCallEndedReason =
   | 'caller_insufficient_funds'
   | 'paid_window_elapsed'
-  | 'block_cap_reached';
+  | 'block_cap_reached'
+  // The provider's rate or settings were no longer valid when they answered. Before this the answer
+  // was refused but the call kept ringing until it timed out.
+  | 'provider_not_set_up'
+  // The caller's credits could not be sent (a spending restriction on their account). Before this the
+  // answer failed with a generic error and the call kept ringing.
+  | 'caller_cannot_send';
 
 type FoundationCallRow = {
   id: string;
@@ -597,13 +603,11 @@ async function endCallWithReason(callId: string, reason: FoundationCallEndedReas
 //     can surface a clear error. The call is NEVER opened.
 //   - On success: the call becomes answered/active with first_block_charged = TRUE, blocks_charged = 1, the
 //     rate/interval locked, paid_through_at = answered_at + interval, and last_transfer_id set.
-export async function answerInstantCall(input: {
-  callId: string;
-  calleeUserId: string;
-}): Promise<FoundationInstantCall> {
-  // 1. Validate + snapshot the provider's current rate/interval. Done in its own transaction so the row is
-  //    read consistently; the charge happens AFTER this (createTransfer owns its own transaction).
-  const prepared = await withDbTransaction(async (client) => {
+// Step 1 of answering: validate the call and snapshot the provider's current rate/interval, in its own
+// transaction so the row is read consistently. The charge happens after this (createTransfer owns its own
+// transaction).
+async function prepareAnswer(input: { callId: string; calleeUserId: string }) {
+  return withDbTransaction(async (client) => {
     const row = await loadParticipantCall(client, input.callId, input.calleeUserId);
     if (row.callee_user_id !== input.calleeUserId) {
       throw new Error('not_callee');
@@ -626,6 +630,20 @@ export async function answerInstantCall(input: {
       intervalMinutes: providerSettings.intervalMinutes,
     };
   });
+}
+
+export async function answerInstantCall(input: {
+  callId: string;
+  calleeUserId: string;
+}): Promise<FoundationInstantCall> {
+  // 1. Validate + snapshot the provider's current rate/interval (prepareAnswer).
+  const prepared = await prepareAnswer(input).catch(async (error: unknown) => {
+    // The provider is not set up to take a block: end the ringing call rather than leave it ringing.
+    if (error instanceof Error && error.message === 'billing_misconfigured') {
+      await endCallWithReason(input.callId, 'provider_not_set_up');
+    }
+    throw error;
+  });
 
   // 2. Charge the first block (block 1) outside any transaction we own. createTransfer is idempotent on the
   //    deterministic key, so a retried answer does not double-charge.
@@ -643,6 +661,10 @@ export async function answerInstantCall(input: {
     if (message === 'insufficient_balance') {
       await endCallWithReason(input.callId, 'caller_insufficient_funds');
       throw new Error('caller_insufficient_funds');
+    }
+    if (message === 'account_restricted') {
+      await endCallWithReason(input.callId, 'caller_cannot_send');
+      throw new Error('caller_cannot_send');
     }
     throw error;
   }
@@ -735,6 +757,11 @@ export async function extendInstantCall(input: {
       // End cleanly, then surface the error so the caller UI shows "out of credits".
       void ended;
       throw new Error('caller_insufficient_funds');
+    }
+    // A spending restriction on the caller's account: the block cannot be sent, so the call cannot be
+    // extended. The current block keeps running; this was a generic 503 before.
+    if (message === 'account_restricted') {
+      throw new Error('caller_cannot_send');
     }
     throw error;
   }
