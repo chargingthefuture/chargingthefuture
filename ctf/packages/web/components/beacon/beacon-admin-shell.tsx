@@ -21,6 +21,7 @@ import { StreamChatPanel } from '@/components/shared/stream-chat-panel';
 import { BeaconHostStage, type BeaconHostCredentials } from './beacon-host-stage';
 import { getBeaconTokens, type BeaconTokens } from './beacon-shared';
 import { BeaconEventLog, type BeaconEventLogEntry } from './beacon-event-log';
+import { useBeaconLivePoll } from './use-beacon-live-poll';
 import { reportError } from 'lib/observability/report';
 
 type BeaconEvent = {
@@ -360,6 +361,7 @@ function useBeaconAdmin() {
   }, [loadEvents]);
 
   const activeEvent = events.find((event) => event.id === activeEventId) ?? null;
+  useBeaconLivePoll(activeEvent?.status === 'live' ? activeEvent.id : null);
 
   // When an event is selected (Open in the history list, or Create draft), scroll the Broadcast
   // section into view. On mobile the Broadcast section renders above the Event history, so without

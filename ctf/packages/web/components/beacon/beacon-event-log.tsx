@@ -17,6 +17,7 @@ const STEP_LABELS: Record<string, string> = {
   'beacon.event.ingest': 'Stream key shown',
   'beacon.event.go-live': 'Went live',
   'beacon.event.start-broadcast': 'Screen share asked to start the feed and recording',
+  'beacon.viewer.start-broadcast': 'Live page asked to start the feed and recording',
   'beacon.stream.publisher-joined': 'Broadcaster joined; feed and recording asked to start',
   'beacon.stream.recording-started': 'Stream started recording',
   'beacon.stream.recording-stopped': 'Stream stopped recording',

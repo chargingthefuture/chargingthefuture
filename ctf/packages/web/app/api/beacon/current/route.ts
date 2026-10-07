@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { kickBeaconEgressIfIdle } from 'lib/beacon/egress-kick';
 import { getBeaconHlsPlaybackUrl } from 'lib/beacon/stream';
 import { getLatestReplayBeaconEvent, getLiveBeaconEvent } from 'lib/beacon/repository';
 import { reportError } from 'lib/observability/report';
@@ -25,6 +26,11 @@ export async function GET(request: Request) {
       } catch (error) {
         // A Stream lookup failure must not break the public viewer; show the event without the URL.
         reportError(error, { area: 'beacon', op: 'current_hls', extra: { eventId: liveEvent.id } });
+      }
+      // Live with nothing playing: the feed and recording were never started (a phone broadcast whose
+      // join webhook did not arrive). Start them from here, throttled; see lib/beacon/egress-kick.ts.
+      if (!hlsPlaybackUrl) {
+        await kickBeaconEgressIfIdle(liveEvent.id);
       }
     }
     return NextResponse.json({ ok: true, event: liveEvent, hlsPlaybackUrl, replay: replayEvent }, { status: 200 });
