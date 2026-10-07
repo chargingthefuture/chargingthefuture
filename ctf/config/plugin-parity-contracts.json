@@ -45,8 +45,8 @@
     },
     {
       "slug": "foundation",
-      "mobileFeatureDirs": [],
-      "requiresMobileSurface": false,
+      "mobileFeatureDirs": ["foundation"],
+      "requiresMobileSurface": true,
       "requiresExplicitWebShell": true
     },
     {
@@ -69,8 +69,8 @@
     },
     {
       "slug": "peer-programming",
-      "mobileFeatureDirs": [],
-      "requiresMobileSurface": false,
+      "mobileFeatureDirs": ["peer-programming"],
+      "requiresMobileSurface": true,
       "requiresExplicitWebShell": true
     },
     {

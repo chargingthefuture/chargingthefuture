@@ -7,7 +7,10 @@ Standardize `packages/mobile` for React Native with Android production focus.
 The native Android app carries **any plugin that materially benefits from being an installed mobile
 app, plus what that plugin needs to run** — see `105-web-android-feature-parity-rules.mdc` for the
 test and the authoritative keep-list. Today it opens on an Apps list with Chyme (live audio) and
-Beacon (live broadcasts, including sharing the phone's screen), plus Clerk auth, bug reporting, and
+Beacon (live broadcasts, including sharing the phone's screen) and PeerProgramming (goal board,
+cohort chat and a live call that keeps running in the background and can share the phone's screen)
+and Foundation (instant 1:1 calls only: call alerts that ring the phone with the app closed, and the
+live audio call), plus Clerk auth, bug reporting, and
 settings / account. Everything else is served by the installable web app (PWA). Do **not** build or
 maintain a React Native screen for any feature outside that keep-list, and never an iOS app. What
 qualifies a plugin is what only an installed app does well: live audio or video kept running by an
