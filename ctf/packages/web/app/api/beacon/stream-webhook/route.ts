@@ -206,6 +206,12 @@ async function logRefusedDelivery(rawBody: string): Promise<void> {
   }
 }
 
+// The two deliveries that mean a publisher's media has reached the call, and the log line each writes.
+const PUBLISHER_ARRIVED_COMMANDS: Record<string, string> = {
+  'call.session_participant_joined': 'beacon.stream.publisher-joined',
+  'ingress.started': 'beacon.stream.ingress-started',
+};
+
 // Stream Video webhook. Verifies the signature, then acts on these events:
 //
 //   - `call.session_participant_joined` — a publisher is now on the call, so start the public HLS
@@ -215,9 +221,6 @@ async function logRefusedDelivery(rawBody: string): Promise<void> {
 //   - `ingress.started` — the phone's RTMP feed connected; handled exactly like a participant join.
 //   - `call.recording_started` / `_stopped` / `_failed`, `ingress.stopped` / `.error` — written to
 //     the event's log only.
-//
-// Both Stream apps (production, and the demo app) send here; the signature says which one, and the
-// start is made on that app.
 //   - `call.session_participant_left` — for ANY call, not only Beacon's: this is the one URL Stream
 //     sends every call event to, and the event carries how long the participant was in the session,
 //     which is one participant's minutes. Credited to the Stream Video minute meter by the surface
@@ -225,6 +228,9 @@ async function logRefusedDelivery(rawBody: string): Promise<void> {
 //     because their heartbeats already feed the meter (2026-09-19).
 //
 // Every other event is acknowledged without acting so Stream stops retrying.
+//
+// Both Stream apps (production, and the demo app) send here; the signature says which one, and the
+// start is made on that app.
 //
 // Idempotent in both directions: the recording URL and the Commons post id are each written only when
 // still null, so a redelivered webhook never double-posts the replay, and a repeated participant-join
@@ -259,11 +265,8 @@ export async function POST(request: Request) {
   const type = typeof payload.type === 'string' ? payload.type : '';
 
   try {
-    if (type === 'call.session_participant_joined') {
-      return await handleParticipantJoined(payload, app, 'beacon.stream.publisher-joined');
-    }
-    if (type === 'ingress.started') {
-      return await handleParticipantJoined(payload, app, 'beacon.stream.ingress-started');
+    if (type in PUBLISHER_ARRIVED_COMMANDS) {
+      return await handleParticipantJoined(payload, app, PUBLISHER_ARRIVED_COMMANDS[type]);
     }
     if (type === 'call.recording_ready') {
       return await handleRecordingReady(payload);
