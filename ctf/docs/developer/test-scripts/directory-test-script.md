@@ -623,7 +623,7 @@ summary with the count of each. It is read-only and never mutates the taxonomy.
 
 ---
 
-### DIR-A9 · One Percent reads one profile, claimed or not, and nothing else
+### DIR-A9 · One Percent reads profiles, claimed or not, and nothing else
 
 **Role:** none — a service credential, not a person · **Surfaces:** web (API only — no UI)
 
@@ -668,6 +668,26 @@ id and an unclaimed one from the admin list.
 - Steps 2, 3 and 5: the same **404**, with nothing saying which.
 - Step 4: **401** naming `DIRECTORY_SERVICE_TOKENS`.
 - The audit line carries the command `directory.profile.service.by-account.get` and the profile id when found, never the account id.
+**Result:** web ☐ — notes:
+
+**A page at a time.** The same credential, for Find matches on One Percent's desk:
+
+**Steps:**
+1. `GET /api/directory/service/profiles?limit=2` with `Authorization: Bearer <name>.<secret>`.
+2. The same with `cursor=<nextCursor from step 1>`, at least a second later.
+3. `GET /api/directory/service/profiles?limit=500`.
+4. Step 1 with `cursor=not-a-cursor`.
+5. Step 1 with no header.
+6. Step 1 twice inside the same second.
+
+**Expected:**
+- Step 1: **200**, `{ profiles, nextCursor }` with two profiles carrying the same fields as the by-id read, and a `nextCursor` when there are more.
+- Step 2: **200**, the next profiles, none repeated from step 1. A claimed profile whose owner is restricted with scope `contact` never appears on any page.
+- Step 3: **200**, at most 100 profiles.
+- Step 4: **400** saying the cursor wasn't one this route gave out.
+- Step 5: **401** naming `DIRECTORY_SERVICE_TOKENS`.
+- Step 6: the second is **429** with `Retry-After`.
+- The audit line carries the command `directory.profile.service.list`, `page-<n>` and the page size, and no profile id.
 **Result:** web ☐ — notes:
 
 ---

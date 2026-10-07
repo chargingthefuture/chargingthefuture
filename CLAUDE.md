@@ -330,7 +330,7 @@ The credential itself is `TAXONOMY_SERVICE_TOKENS`, one `name:secret` entry per 
 removing an entry revokes it. Rule 123 carries the detail. It is optional, so an environment
 without one simply has no machine reader rather than no app.
 
-## One Percent is the paid tier, and reads Directory profiles (owner decisions, 2026-10-02 and 2026-10-06)
+## One Percent is the paid tier, and reads Directory profiles (owner decisions, 2026-10-02, 2026-10-06 and 2026-10-07)
 
 Skills Economy stays as it is: free and self-service, every plugin. One Percent is its paid tier,
 the owner's time and judgment on top of what members can already do themselves. It keeps its own
@@ -368,8 +368,7 @@ taxonomy one so either can be cut without the other. It is `DIRECTORY_SERVICE_TO
 by `GET /api/directory/service/profiles/[id]` through `ctf/packages/web/lib/directory/service-read.ts`,
 with the access policy entry `directory.profile.service.get`. The route answers one profile by id,
 claimed or not, with whether it's claimed, name, headline, job title, sector, skill names, profile
-address and location. There's
-no list and no search: the owner pastes the link of somebody they already know about.
+address and location. The owner pastes the link of somebody they already know about.
 
 One second read, for one case (owner decision, 2026-10-02): a One Percent client's own profile.
 Clients sign in to One Percent with their Skills Economy account, so One Percent already holds the
@@ -379,6 +378,17 @@ owner doesn't look it up and paste it. The same credential, rate limit, fields a
 It answers for one account the caller already has, never a list or a search, and a 404 never says
 whether the account exists. The audit names the profile it found and never the account id.
 
+A third read, for Find matches (owner decision, 2026-10-07): a page of profiles. Find matches is a
+button on One Percent's desk, and only there. It reads the owner's own notes in One Percent beside
+Directory profiles and asks a self-hosted drafting model to suggest introductions, which the owner
+then decides on. Before it, the owner did this themselves by recalling conversations and scanning
+profiles one at a time. `GET /api/directory/service/profiles` (`directory.profile.service.list`,
+`ctf/packages/web/lib/directory/service-list.ts`) answers up to 100 profiles a page in a fixed
+order, with the same credential, fields and restriction rule as the by-id read, and its own limit
+of one page a second and sixty an hour per consumer. There's still no search and no filter. The
+audit names the page and never the profiles on it. It stays a pointer, not a copy: One Percent may
+hold a profile id on a suggestion and never the profile's fields.
+
 ## Feature freeze, and one message (owner decision, 2026-10-02)
 
 No new features in Skills Economy. Bug fixes and changes to shipped screens continue, and every
@@ -386,7 +396,8 @@ plugin stays live and maintained. A new capability is the owner's call and is as
 never built and offered afterwards. The One Percent read of Directory profiles, in the section
 above, was decided before the freeze and is not caught by it; widening it to unclaimed profiles was
 the owner's own ask on 2026-10-06 and changes nothing a member sees. The by-account read beside it was asked
-for by the owner after the freeze, on the same day, and changes nothing a member sees.
+for by the owner after the freeze, on the same day, and changes nothing a member sees. So was the
+page read for Find matches on 2026-10-07, and it changes nothing a member sees either.
 
 One exception for the bill (owner decision, 2026-10-05): a twice-yearly "Contribute if you can"
 Commons post, written as a draft on 5 April and 5 October with the current sign-ups, approved
