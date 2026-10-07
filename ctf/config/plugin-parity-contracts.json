@@ -45,8 +45,8 @@
     },
     {
       "slug": "foundation",
-      "mobileFeatureDirs": [],
-      "requiresMobileSurface": false,
+      "mobileFeatureDirs": ["foundation"],
+      "requiresMobileSurface": true,
       "requiresExplicitWebShell": true
     },
     {

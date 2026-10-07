@@ -7,7 +7,7 @@
 | **Plugin** | Foundation (`foundation`) |
 | **Visibility** | Member |
 | **Roles to test** | Member (survivor), Member (acting as provider), Admin |
-| **Surfaces** | Web (Next.js) — Android surface removed 2026-07-20 (rule 105, PR #1742); plugin is now web-only (PWA) |
+| **Surfaces** | Web (Next.js). Android: instant calls only, since 2026-10-06 (rule 105 keep-list item 2d) — tested in `android-app-test-script.md`, section **AN-FD — Foundation calls**; every other Foundation screen is web-only (PWA) |
 | **Seed first** | `pnpm --dir ctf seed:foundation` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-foundation-feature-inventory.md` |
 | **Generated** | 2026-07-29 (commit 03bee30a) · 2026-09-20: the inventory's prose was swept for a banned word (CLAUDE.md); no step here changes, because nothing about what the plugin does or how it is tested moved · 2026-09-22 manual update: FDN-39 checks a quote can move through its lifecycle, after the transition update was refused by the database for the same reason · 2026-09-23 manual update: FDN-40 checks that marking the work done settles a quote and that the value reaches the community index, after nothing in the app was found to send the closing transition |
@@ -1053,3 +1053,76 @@ Result: web ☐
   you. The message stays until the microphone is turned on.
 
 Result: web ☐
+
+---
+
+### FDN-43 — Instant call: a block is sent back when the call ended before the block was recorded (added 2026-10-06)
+
+**Role:** Member (survivor, caller) + Member (provider, callee)
+**Surface:** Web
+
+**Precondition:** Both accounts on separate devices. Note the caller's ServiceCredits before the call.
+
+**Steps:**
+1. Ring the provider. As the caller, tap **Cancel** at the same moment the provider taps **Answer**
+   (try a few times; the window is short).
+2. Start a new call and answer it. As the caller tap **Extend** while the provider taps **End call**
+   at the same moment.
+
+**Expected:**
+- Whenever the call did not open (step 1) or the added block was never recorded (step 2), the
+  caller's ServiceCredits come back to where they were before that block. The provider's history shows
+  a matching send back.
+- When the call did open or the block was recorded, nothing is sent back.
+- No call is left ringing or live on either side.
+
+Result: web ☐
+
+---
+
+### FDN-44 — Call alerts: one phone rings for one member (added 2026-10-06)
+
+**Role:** Two members on the same Android phone, one after the other
+**Surface:** Android (see `android-app-test-script.md`, AN-FD)
+
+**Steps:**
+1. Sign in as member A on the Android app and turn on **Call alerts on this device** in Foundation.
+2. Sign out, sign in as member B on the same phone and turn call alerts on.
+3. Ring member A from the web.
+
+**Expected:**
+- The phone does not ring for member A. It rings only for member B, the member who turned alerts on
+  last on that phone.
+
+Result: android ☐
+
+### FDN-45 — A ring the provider can't take ends at once (added 2026-10-06)
+
+**Role:** A member (caller) and a provider with instant calls turned on
+**Surface:** web and Android
+
+**Steps:**
+1. As the provider, turn instant calls on with a rate. As the caller, ring them with Connect now.
+2. While it rings, as the provider in another tab, turn instant calls off (or clear the rate), then
+   press **Answer** on the ring.
+
+**Expected:** The answer is refused, and the call ends at once for both people instead of ringing on
+until the timeout. Both screens read "This provider isn't set up to take calls right now." No credits
+moved.
+
+**Result:** web ☐ android ☐ — notes:
+
+### FDN-46 — A caller whose credits can't be sent (added 2026-10-06)
+
+**Role:** Admin, a member (caller) and a provider
+**Surface:** web and Android
+
+**Steps:**
+1. As an admin, put a `trading` restriction on the caller's account.
+2. As the caller, ring the provider; as the provider, press **Answer**.
+
+**Expected:** The call ends at once. The provider reads "The call couldn't start: the caller's credits
+can't be sent right now." Nothing on either screen says the account is restricted, and no credits
+moved. (Before this it was a generic error and the call kept ringing.) Lift the restriction after.
+
+**Result:** web ☐ android ☐ — notes:

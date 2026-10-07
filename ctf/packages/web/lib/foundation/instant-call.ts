@@ -47,6 +47,7 @@ const FOUNDATION_INCOMING_CALL_PATH = '/apps/foundation';
 //   - A block is never charged twice (deterministic ...-block-N key + the blocks_charged guard).
 //   - A call never charges beyond authorized_blocks (the buyer-set cap).
 //   - On insufficient funds the call ends cleanly and no partial/zero transfer is left behind.
+//   - A block taken for a call that ended before the block was recorded is sent back (returnUnusedBlock).
 //
 // Task 5 (push) replaces the in-app-only ring delivery (see the seam comment in ringInstantCall). The
 // module reuses the Direct Line 1:1 thread and the existing participant-only Stream token route; it never
@@ -56,7 +57,13 @@ const FOUNDATION_INCOMING_CALL_PATH = '/apps/foundation';
 type FoundationCallEndedReason =
   | 'caller_insufficient_funds'
   | 'paid_window_elapsed'
-  | 'block_cap_reached';
+  | 'block_cap_reached'
+  // The provider's rate or settings were no longer valid when they answered. Before this the answer
+  // was refused but the call kept ringing until it timed out.
+  | 'provider_not_set_up'
+  // The caller's credits could not be sent (a spending restriction on their account). Before this the
+  // answer failed with a generic error and the call kept ringing.
+  | 'caller_cannot_send';
 
 type FoundationCallRow = {
   id: string;
@@ -524,6 +531,37 @@ async function chargeBlock(input: {
   return transfer.id;
 }
 
+// Send a block back to the caller when it was taken but the call never ran it: the call left 'ringing'
+// (answer) or 'answered' (extend) between the charge and the write that records it — the caller cancelled,
+// the ring timed out, or the other person hung up in that moment. Without this the caller's credits went to
+// the provider for a block nobody got. The key is deterministic per block, so a retry never sends it back
+// twice. Best effort: a failure is reported with the call id and block number so it can be put right by
+// hand, and never fails the request (the call is already over either way).
+async function returnUnusedBlock(input: {
+  callId: string;
+  blockNumber: number;
+  callerUserId: string;
+  providerUserId: string;
+  rateCredits: number;
+}): Promise<void> {
+  try {
+    await createTransfer({
+      senderUserId: input.providerUserId,
+      recipientUserId: input.callerUserId,
+      amount: input.rateCredits,
+      idempotencyKey: `foundation-instant-call-${input.callId}-block-${input.blockNumber}-return`,
+      originPlugin: 'foundation',
+      reasonCode: 'foundation.instant_call.block_return',
+    });
+  } catch (error) {
+    reportError(error, {
+      area: 'foundation',
+      op: 'instant_call_block_return',
+      extra: { callId: input.callId, blockNumber: input.blockNumber },
+    });
+  }
+}
+
 // Mark an answered/ringing call ended with a billing reason, in its own short transaction. Used when a
 // charge fails for lack of funds (so the call ends cleanly and no credits moved) or an extend hits the cap.
 async function endCallWithReason(callId: string, reason: FoundationCallEndedReason): Promise<FoundationCallRow> {
@@ -565,13 +603,11 @@ async function endCallWithReason(callId: string, reason: FoundationCallEndedReas
 //     can surface a clear error. The call is NEVER opened.
 //   - On success: the call becomes answered/active with first_block_charged = TRUE, blocks_charged = 1, the
 //     rate/interval locked, paid_through_at = answered_at + interval, and last_transfer_id set.
-export async function answerInstantCall(input: {
-  callId: string;
-  calleeUserId: string;
-}): Promise<FoundationInstantCall> {
-  // 1. Validate + snapshot the provider's current rate/interval. Done in its own transaction so the row is
-  //    read consistently; the charge happens AFTER this (createTransfer owns its own transaction).
-  const prepared = await withDbTransaction(async (client) => {
+// Step 1 of answering: validate the call and snapshot the provider's current rate/interval, in its own
+// transaction so the row is read consistently. The charge happens after this (createTransfer owns its own
+// transaction).
+async function prepareAnswer(input: { callId: string; calleeUserId: string }) {
+  return withDbTransaction(async (client) => {
     const row = await loadParticipantCall(client, input.callId, input.calleeUserId);
     if (row.callee_user_id !== input.calleeUserId) {
       throw new Error('not_callee');
@@ -594,6 +630,20 @@ export async function answerInstantCall(input: {
       intervalMinutes: providerSettings.intervalMinutes,
     };
   });
+}
+
+export async function answerInstantCall(input: {
+  callId: string;
+  calleeUserId: string;
+}): Promise<FoundationInstantCall> {
+  // 1. Validate + snapshot the provider's current rate/interval (prepareAnswer).
+  const prepared = await prepareAnswer(input).catch(async (error: unknown) => {
+    // The provider is not set up to take a block: end the ringing call rather than leave it ringing.
+    if (error instanceof Error && error.message === 'billing_misconfigured') {
+      await endCallWithReason(input.callId, 'provider_not_set_up');
+    }
+    throw error;
+  });
 
   // 2. Charge the first block (block 1) outside any transaction we own. createTransfer is idempotent on the
   //    deterministic key, so a retried answer does not double-charge.
@@ -612,13 +662,16 @@ export async function answerInstantCall(input: {
       await endCallWithReason(input.callId, 'caller_insufficient_funds');
       throw new Error('caller_insufficient_funds');
     }
+    if (message === 'account_restricted') {
+      await endCallWithReason(input.callId, 'caller_cannot_send');
+      throw new Error('caller_cannot_send');
+    }
     throw error;
   }
 
   // 3. Record the answer: lock the rate/interval, set the first paid window, persist the transfer id. Guard
-  //    on ring_status = 'ringing' so a concurrent decline/timeout cannot be overwritten (the charge would
-  //    already be idempotent, and the call would simply stay terminal).
-  return withDbTransaction(async (client) => {
+  //    on ring_status = 'ringing' so a concurrent decline/timeout cannot be overwritten.
+  const recorded = await withDbTransaction(async (client) => {
     const updated = await client.query<FoundationCallRow>(
       `
         UPDATE foundation_call_sessions
@@ -633,13 +686,25 @@ export async function answerInstantCall(input: {
     );
     const row = updated.rows[0];
     if (!row) {
-      // The call left 'ringing' between the charge and this write (declined/timed_out/ended). The block-1
-      // charge is already idempotent; re-read and return the current terminal row rather than reopening it.
+      // Not recorded here: either a duplicate answer already recorded it (the same idempotent block-1
+      // transfer, nothing to undo), or the call left 'ringing' between the charge and this write
+      // (declined/timed_out/ended) and must not be reopened.
       const current = await loadParticipantCall(client, input.callId, input.calleeUserId);
-      return mapCallRow(current);
+      // blocks_charged, not ring_status: a recorded call may already have ended again by now.
+      return { call: mapCallRow(current), blockUnused: Number(current.blocks_charged ?? 0) < 1 };
     }
-    return mapCallRow(row);
+    return { call: mapCallRow(row), blockUnused: false };
   });
+  if (recorded.blockUnused) {
+    await returnUnusedBlock({
+      callId: input.callId,
+      blockNumber: 1,
+      callerUserId: prepared.callerUserId,
+      providerUserId: input.calleeUserId,
+      rateCredits: prepared.rateCredits,
+    });
+  }
+  return recorded.call;
 }
 
 // Charge the next block (issue #808 task 4). Caller-only. Validates the call is active and that the
@@ -693,13 +758,18 @@ export async function extendInstantCall(input: {
       void ended;
       throw new Error('caller_insufficient_funds');
     }
+    // A spending restriction on the caller's account: the block cannot be sent, so the call cannot be
+    // extended. The current block keeps running; this was a generic 503 before.
+    if (message === 'account_restricted') {
+      throw new Error('caller_cannot_send');
+    }
     throw error;
   }
 
   // 3. Record the paid block: advance paid_through_at by exactly one interval from its current value, and
   //    only advance the block matching nextBlock so a duplicate extend can't double-count. Guard on the
   //    call still being answered.
-  return withDbTransaction(async (client) => {
+  const recorded = await withDbTransaction(async (client) => {
     const updated = await client.query<FoundationCallRow>(
       `
         UPDATE foundation_call_sessions
@@ -713,13 +783,24 @@ export async function extendInstantCall(input: {
     );
     const row = updated.rows[0];
     if (!row) {
-      // The block was already recorded (a duplicate extend) or the call left 'answered'. The charge is
-      // idempotent, so re-read and return the current row rather than advancing the window twice.
+      // Not recorded here: either a duplicate extend already recorded this block (the same idempotent
+      // transfer, nothing to undo), or the call left 'answered' before the block was recorded, so the
+      // block will never run.
       const current = await loadParticipantCall(client, input.callId, input.callerUserId);
-      return mapCallRow(current);
+      return { call: mapCallRow(current), blockUnused: Number(current.blocks_charged ?? 0) < prepared.nextBlock };
     }
-    return mapCallRow(row);
+    return { call: mapCallRow(row), blockUnused: false };
   });
+  if (recorded.blockUnused) {
+    await returnUnusedBlock({
+      callId: input.callId,
+      blockNumber: prepared.nextBlock,
+      callerUserId: input.callerUserId,
+      providerUserId: prepared.providerUserId,
+      rateCredits: prepared.rateCredits,
+    });
+  }
+  return recorded.call;
 }
 
 // Decline a ringing call. Only the callee may decline, and only while ringing. Terminal.

@@ -85,13 +85,15 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     //     text shown to the user (iOS Info.plist usage strings + Android
     //     RECORD_AUDIO). Chyme is audio-only; Beacon's host uses the camera
     //     when they go live with it turned on.
-    //   - expo-notifications: the Foundation instant-call ring native push
-    //     (issue #884). expo-notifications needs native code (it cannot run in
-    //     Expo Go), so this config plugin must be present in the EAS build for a
-    //     device to be woken by an incoming call. Registering the plugin sets up
-    //     the Android notification channel/icon defaults; no per-user identity is
-    //     baked in — the device's Expo push token is fetched at runtime when the
-    //     member turns on "Call alerts on this device".
+    //   - expo-notifications: Foundation call alerts (issue #884). The app uses it
+    //     for the instant-call ring: src/features/foundation/callAlerts.ts creates
+    //     the `foundation-calls` channel the server's ring push targets, asks for
+    //     notification permission, and saves the device's Expo push token when the
+    //     member turns on "Call alerts on this device"; useCallPolls.ts opens the
+    //     incoming call when a ring push arrives or is tapped. It needs native code
+    //     (not Expo Go), so this plugin must be in the EAS build. No per-user
+    //     identity is baked in; the token is fetched at runtime and needs the EAS
+    //     project id (EXPO_MOBILE_PROJECT_ID → extra.eas.projectId).
     plugins: [
       ...(config.plugins ?? []),
       // `enableScreenshare` lets Beacon's host share the phone's screen: it adds the

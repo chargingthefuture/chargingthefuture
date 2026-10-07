@@ -11,7 +11,7 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-nati
 import { useTheme, getAppAccent } from '../../theme';
 import { getPluginEmoji } from '../../theme/plugin-visuals';
 
-export type MobileAppKey = 'chyme' | 'beacon' | 'peer-programming';
+export type MobileAppKey = 'chyme' | 'beacon' | 'peer-programming' | 'foundation';
 
 // Summaries are the web plugin registry's (ctf/packages/web/lib/plugins/repository.ts), so the app
 // and the web describe each app the same way.
@@ -23,6 +23,7 @@ const APPS: Array<{ key: MobileAppKey; name: string; summary: string }> = [
     summary: 'Live one-way broadcasts from Farah. Watch publicly with just a link; sign in to chat and react.',
   },
   { key: 'peer-programming', name: 'PeerProgramming', summary: 'Weekly global mastermind sessions.' },
+  { key: 'foundation', name: 'Foundation', summary: 'Find talent, tools, repairs, and infrastructure support in real time.' },
 ];
 
 export const AppsList: React.FC<{ onOpen: (_key: MobileAppKey) => void }> = ({ onOpen }) => {
