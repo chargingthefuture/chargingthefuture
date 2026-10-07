@@ -26,6 +26,10 @@ end.
 2. Tap **Sign in** and sign in with the approved test account through the Clerk hosted flow.
 3. Expect to land back in the app shell with the **Apps** pill selected by default, showing a card
    for each of **Chyme**, **Beacon**, **PeerProgramming** and **Foundation**, and the sign-in card gone. Tapping a card opens that app.
+4. If the app hits an error it cannot recover from, it must not close. Expect a dark screen titled
+   **Skills Economy stopped because of an error** with a **Reference** (like `M-…`), a **What failed**
+   line, and a **Restart the app** button. Screenshot it for the bug report; the reference is also on
+   the Sentry event when Sentry is configured.
 
 ## AN-2 — Unlock wall
 
