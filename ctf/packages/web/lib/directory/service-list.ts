@@ -96,20 +96,29 @@ export function encodeCursor(cursor: Cursor): string {
   return Buffer.from(JSON.stringify({ c: cursor.createdAt, i: cursor.id, n: cursor.page }), 'utf8').toString('base64url');
 }
 
+function isPageNumber(n: unknown): n is number {
+  return typeof n === 'number' && Number.isInteger(n) && n >= 2 && n <= 1_000_000;
+}
+
+function cursorFields(parsed: unknown): Cursor | null {
+  if (!parsed || typeof parsed !== 'object') {
+    return null;
+  }
+  const { c, i, n } = parsed as Record<string, unknown>;
+  const createdAtOk = typeof c === 'string' && CURSOR_CREATED_AT.test(c);
+  const idOk = typeof i === 'string' && PROFILE_ID.test(i);
+  if (!createdAtOk || !idOk || !isPageNumber(n)) {
+    return null;
+  }
+  return { createdAt: c as string, id: i as string, page: n };
+}
+
 export function decodeCursor(raw: string): Cursor | null {
   if (raw.length > 512 || !/^[A-Za-z0-9_-]+$/.test(raw)) {
     return null;
   }
   try {
-    const parsed: unknown = JSON.parse(Buffer.from(raw, 'base64url').toString('utf8'));
-    if (!parsed || typeof parsed !== 'object') {
-      return null;
-    }
-    const { c, i, n } = parsed as Record<string, unknown>;
-    if (typeof c !== 'string' || !CURSOR_CREATED_AT.test(c)) return null;
-    if (typeof i !== 'string' || !PROFILE_ID.test(i)) return null;
-    if (typeof n !== 'number' || !Number.isInteger(n) || n < 2 || n > 1_000_000) return null;
-    return { createdAt: c, id: i, page: n };
+    return cursorFields(JSON.parse(Buffer.from(raw, 'base64url').toString('utf8')));
   } catch {
     return null;
   }
