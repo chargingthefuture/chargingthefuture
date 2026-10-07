@@ -69,8 +69,8 @@
     },
     {
       "slug": "peer-programming",
-      "mobileFeatureDirs": [],
-      "requiresMobileSurface": false,
+      "mobileFeatureDirs": ["peer-programming"],
+      "requiresMobileSurface": true,
       "requiresExplicitWebShell": true
     },
     {

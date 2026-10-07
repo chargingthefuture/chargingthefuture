@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { ChymeRoom } from './src/features/chyme';
 import { Beacon } from './src/features/beacon';
+import { PeerProgramming } from './src/features/peer-programming';
 import { AppsList } from './src/features/apps';
 import { Unlock } from './src/features/unlock';
 import { fetchUnlockStatus, type UnlockAccessTier } from './src/features/unlock/api';
@@ -49,8 +50,9 @@ StreamVideoRN.updateConfig({
   foregroundService: {
     android: {
       channel: { id: 'chyme-audio', name: 'Chyme live audio' },
-      // The same service keeps a Chyme room and a Beacon broadcast alive, so the text names neither.
-      notificationTexts: { title: 'Live now', body: 'You are in a live room or broadcast' },
+      // The same service keeps a Chyme room, a Beacon broadcast and a PeerProgramming call alive, so
+      // the text names none of them.
+      notificationTexts: { title: 'Live now', body: 'You are in a live room, call or broadcast' },
     },
   },
 });
@@ -112,15 +114,16 @@ function keyAccent(key: FeatureKey, theme: ThemeName): string {
 }
 
 // The native Android app carries the plugins that materially benefit from being an installed app
-// (Chyme live audio, Beacon broadcasts), plus what they need to run (Clerk auth wall, bug reporting,
+// (Chyme live audio, Beacon broadcasts, PeerProgramming's live call), plus what they need to run (Clerk auth wall, bug reporting,
 // settings/account); everything else is served by the web app. The Apps list is home. See
 // `.claude/rules/105-web-android-feature-parity-rules.mdc`.
-type FeatureKey = 'apps' | 'chyme' | 'beacon' | 'account-data' | 'blocked-members' | 'bug-report';
+type FeatureKey = 'apps' | 'chyme' | 'beacon' | 'peer-programming' | 'account-data' | 'blocked-members' | 'bug-report';
 
 const featureOrder: Array<{ key: FeatureKey; label: string }> = [
   { key: 'apps', label: 'Apps' },
   { key: 'chyme', label: 'Chyme' },
   { key: 'beacon', label: 'Beacon' },
+  { key: 'peer-programming', label: 'PeerProgramming' },
   { key: 'account-data', label: 'Account & Data' },
   { key: 'blocked-members', label: 'Blocked members' },
   { key: 'bug-report', label: 'Report a problem' },
@@ -161,6 +164,7 @@ function buildFeatureViews(open: (_key: FeatureKey) => void): FeatureRenderers {
     apps: () => <AppsList onOpen={open} />,
     chyme: () => <ChymeRoom />,
     beacon: () => <Beacon />,
+    'peer-programming': () => <PeerProgramming />,
     'account-data': () => <AccountData />,
     'blocked-members': () => <BlockedMembers />,
     'bug-report': () => (

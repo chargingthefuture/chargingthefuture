@@ -17,7 +17,9 @@ web page never can). A plugin that only shows lists, forms or posts does not qua
 
 History: on 2026-07-20 the app was narrowed to Chyme alone, replacing the former "100% web↔Android
 parity" mandate. Beacon was added under the test above on 2026-10-06: its repeated ask was sharing
-the phone's screen in a live broadcast, which only an installed app can do. When a plugin is added,
+the phone's screen in a live broadcast, which only an installed app can do. PeerProgramming was added
+the same day: its live Session call keeps running with the screen off, and an installed app can share
+the phone's screen in it. When a plugin is added,
 it gets a line in the keep-list below, a feature folder, a `plugin-parity-contracts.json` entry with
 `requiresMobileSurface: true`, and a card in the app's Apps list (`src/features/apps/AppsList.tsx`).
 
@@ -41,6 +43,11 @@ The native Android app opens on an **Apps list** (the plugins below, one card ea
 2b. **Beacon** (live broadcasts) — `packages/mobile/src/features/beacon/`. Watching (HLS), the live
    chat for signed-in members, and, for an admin, going live with the camera and microphone or by
    sharing the phone's screen. Screen sharing from a phone is why it qualifies.
+2c. **PeerProgramming** (goal board, cohort chat, live Session call) —
+   `packages/mobile/src/features/peer-programming/`. The goal board and the chat come with it so the
+   member has the entire plugin in one place. It qualifies because the live Session call keeps running
+   with the screen off or another app in front (the Stream foreground service), and on Android an
+   installed app can share the phone's screen in that call.
 3. **Bug reporting** — `packages/mobile/src/features/bug-reporting/`, so a member on the app can report
    a problem.
 4. **Settings / account** — the account/settings surface (theme, sign-out, the shared top-actions the
@@ -109,7 +116,7 @@ decision — not a default. Until the owner says so for a named feature, treat t
   deliverable, and "android" is complete in the sense that **there is no Android surface for this
   feature** — the native app intentionally does not carry it. State "Android: out of scope
   (web-only per rule 105)" in the PR body so the reader knows it was a decision, not a forgotten gap.
-- For a change to a **keep-list** surface (Clerk, Chyme, Beacon, bug reporting, settings), the
+- For a change to a **keep-list** surface (Clerk, Chyme, Beacon, PeerProgramming, bug reporting, settings), the
   Android side is in scope and must land with it, exactly as before.
 
 ## Testing Rules

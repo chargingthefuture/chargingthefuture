@@ -770,8 +770,8 @@ but new PRs should use the three-part line.)
 **Android carries the plugins that benefit from being an installed app (owner decisions, 2026-07-20
 and 2026-10-06 — see rule 105).** The test: a plugin goes in the Android app when it materially
 benefits from being an installed mobile app (live audio or video that keeps running in the
-background, or sharing the phone's screen), plus whatever it needs to run. Today that is Chyme and
-Beacon, opened from the app's Apps list, with Clerk auth, bug reporting, and settings / account.
+background, or sharing the phone's screen), plus whatever it needs to run. Today that is Chyme,
+Beacon and PeerProgramming, opened from the app's Apps list, with Clerk auth, bug reporting, and settings / account.
 There will never be an iOS app, and full 1:1 Android parity is not coming back. Adding a plugin is
 the owner's call; propose it with the reason. Everything else is served by the installable web app
 (PWA). So for a **web-only**
@@ -779,7 +779,7 @@ change to any feature outside that keep-list — the common case now — the "an
 satisfied because the app intentionally has no Android surface for that feature. Use the same
 `Parity Status: web + mobile-responsive + android complete` line and add a one-liner in the body:
 `Android: out of scope (web-only per rule 105)`. Only a change to a keep-list surface (Clerk, Chyme,
-Beacon, bug reporting, settings) still needs its Android side built in the same PR. **Do not** add React
+Beacon, PeerProgramming, bug reporting, settings) still needs its Android side built in the same PR. **Do not** add React
 Native screens for non-keep-list features.
 
 ```
