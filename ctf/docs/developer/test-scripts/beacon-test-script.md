@@ -193,18 +193,26 @@ reason after a dash. An event broadcast before this change may show `No broadcas
 for this event.` The pasted text starts with the event title and matches what the Log shows.
 **Result:** web ☐ mobile ☐ — notes:
 
-### BCN-A2 · Go Live (both input paths)
+### BCN-A2 · Go Live (every input path)
 **Role:** admin · **Surfaces:** web (admin surface)
 **Steps:**
 1. Press Go Live. The RTMP ingest URL + stream key do not exist before this press — they are minted
    by it, so there is nothing to copy until Go Live has succeeded.
-2. For a phone demo: copy the per-event RTMP ingest URL + stream key and push the phone screen from a
+2. On a phone or a computer: press "Use camera and microphone", allow both when the browser asks,
+   and talk for a minute. Press "Flip camera" once.
+3. For a desktop demo: use "Share screen" to capture a desktop screen/window in the browser. On a
+   phone the button is not shown.
+4. To show a phone's own screen: copy the per-event RTMP ingest URL + stream key and push from a
    mobile broadcaster app. Setup detail is in `ctf/docs/developer/BEACON_PHONE_STREAMING_GUIDE.md`.
-3. For a desktop demo: use "Share screen" to capture a desktop screen/window in the browser.
 **Expected:** Go Live flips the event out of backstage to `live` and auto-posts the "live now" notice
-to the Commons. The host stage mounts after go-live; HLS + recording start once a host is actually
-publishing — either the in-browser screen-share posting to `start-broadcast`, or Stream's
-`call.session_participant_joined` webhook when a phone's RTMP feed joins the call. Only the host can
+to the Commons. The admin page does not join the call until a button in step 2 or 3 is pressed: the
+event's Log shows no "Broadcaster joined" line before then. In step 2 a preview of the camera
+appears, the line under the buttons reads "Your camera and microphone are live to the broadcast.",
+the flip switches between front and back cameras, and a signed-out viewer on another device sees and
+hears you (the player starts muted; its speaker button turns sound on). HLS + recording start once a
+host is actually publishing — the admin page posting to `start-broadcast`, or Stream's
+`call.session_participant_joined` / `ingress.started` webhook when a phone's RTMP feed joins the
+call. After the event ends, the replay has picture and sound. Only the host can
 publish — viewers never can. On error, the underlying Stream message is surfaced, not a generic text.
 Opening the call must succeed on the first press: Beacon asks Stream to record at 720p, and a
 missing recording size is what previously made every Go Live come back with `(400)` and

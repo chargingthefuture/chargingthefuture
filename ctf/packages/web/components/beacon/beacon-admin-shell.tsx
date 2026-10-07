@@ -3,8 +3,9 @@
 // Beacon admin broadcaster + controls. Dark admin design system (rule 131). One column, mobile
 // responsive. The admin can:
 //   - create an event (title + description)
-//   - go live: see the per-event RTMP url/key (for a phone broadcaster app) and a "Share screen"
-//     button (desktop in-browser screen-share), both feeding the same livestream call
+//   - go live: broadcast from this browser with the camera and microphone (phone or computer) or a
+//     shared screen, or push from a broadcaster app to the per-event RTMP url/key; all feed the same
+//     livestream call
 //   - read the live chat and moderate (mute / ban / slow-mode)
 //   - end the event (stops the broadcast and billing)
 //   - see event history with recordings
@@ -119,18 +120,18 @@ function BroadcastSection({
         <button type="button" onClick={() => onEndEvent(activeEvent.id)} style={{ ...primaryButtonStyle(t), background: 'rgba(239,68,68,0.14)', border: '1px solid rgba(239,68,68,0.35)', color: '#F87171' }}>End broadcast</button>
       )}
 
-      {ingest ? (
+      {host ? (
         <div style={{ marginTop: 18 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: t.SUBTLE, marginBottom: 8 }}>Phone demo — push to this RTMP target from a broadcaster app</div>
-          <CopyRow label="RTMP URL" value={ingest.rtmpIngestUrl} copied={copied === 'RTMP URL'} onCopy={() => onCopy('RTMP URL', ingest.rtmpIngestUrl)} />
-          <CopyRow label="Stream key" value={ingest.streamKey} copied={copied === 'Stream key'} onCopy={() => onCopy('Stream key', ingest.streamKey)} masked />
+          <div style={{ fontSize: 13, fontWeight: 700, color: t.SUBTLE, marginBottom: 8 }}>Broadcast from this browser — camera and microphone, or a computer screen</div>
+          <BeaconHostStage credentials={host} eventId={activeEvent.id} />
         </div>
       ) : null}
 
-      {host ? (
+      {ingest ? (
         <div style={{ marginTop: 18 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: t.SUBTLE, marginBottom: 8 }}>Computer demo — share a screen or window from this browser</div>
-          <BeaconHostStage credentials={host} eventId={activeEvent.id} />
+          <div style={{ fontSize: 13, fontWeight: 700, color: t.SUBTLE, marginBottom: 8 }}>Or use a broadcaster app — push to this RTMP target</div>
+          <CopyRow label="RTMP URL" value={ingest.rtmpIngestUrl} copied={copied === 'RTMP URL'} onCopy={() => onCopy('RTMP URL', ingest.rtmpIngestUrl)} />
+          <CopyRow label="Stream key" value={ingest.streamKey} copied={copied === 'Stream key'} onCopy={() => onCopy('Stream key', ingest.streamKey)} masked />
         </div>
       ) : null}
 

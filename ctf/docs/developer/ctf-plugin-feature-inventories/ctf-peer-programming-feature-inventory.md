@@ -400,6 +400,13 @@ Deterministic PeerProgramming seed script: `ctf/scripts/seedPeerProgramming.mjs`
   and Gaps sections no longer say Android was removed. Quota note:
   `ctf/docs/quota-impact/2026-10-06-android-peer-programming.md`. No route, schema or contract
   change: the app calls the routes the web already uses.
+- 2026-10-06: **Session tab counts the cohort (owner report).** The Session tab read "0 participants"
+  and showed no roster for every cohort: the shell built the room with a fixed empty participant
+  list and never used the `members` the room route already returns. It now fills the list from
+  `members` (name from the username, or "Member" plus the first six characters of the id when there is
+  none, the fallback the chat already uses), and the count reads "1 participant" for one. Web only;
+  no route, schema or contract change. Android: out of scope here (the Android Session tab in #3076
+  shows the cohort label and member count from the room route).
 - 2026-10-06: **The open-goal cap counts only the current cohort (code-review #2897).** `createGoal`
   counted a member's open goals across every cohort, while the board shows only the current one. With
   single standing cohort mode off, goals left open on last week's cohort or on an ended cohort could
