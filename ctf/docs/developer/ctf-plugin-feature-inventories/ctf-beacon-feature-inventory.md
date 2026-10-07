@@ -264,16 +264,24 @@ default on the ALTER (the `id` default lesson from the announcements fix). Regen
   with RTMP url/key plus desktop screen-share, live chat + moderation, end, history). Public viewer
   at `/apps/beacon` (HLS player, "live and public" indicator, member live chat, idle/replay state).
   Both are mobile-responsive.
-- Android (React Native): **surface removed 2026-07-20 (rule 105, PR #1742)** — this feature is now
-  web-only, served by the installable web app (PWA). Historical detail: a viewer was previously built
-  (issue #712). `src/features/beacon/` — `BeaconApi.ts` (the
-  public `GET /api/beacon/current` and the member `POST /api/beacon/[id]/chat-token`) and a `Beacon.tsx`
-  viewer screen registered in the mobile navigator (`App.tsx`). Same three states as web: live (HLS
-  player via `expo-video` + the "live and public" indicator + member live chat through the reused
-  `StreamChatView`; anonymous viewers see a sign-in-to-chat prompt and still watch), replay (plays the
-  recording URL when one is present), idle ("no live event right now"). Admin broadcasting is not on
-  mobile — the admin pushes the phone screen through a third-party RTMP app per the plan. The HLS player
-  is a native module (`expo-video`); it runs only in an EAS dev/production build, not Expo Go.
+- Android (React Native): **built (owner decision, 2026-10-06; rule 105 keep-list).** Beacon is back
+  in the Android app because an installed Android app can share the phone's screen and a web page
+  cannot. It opens from the app's **Apps** list (home) or its own pill. `src/features/beacon/`:
+  - `Beacon.tsx` — polls `GET /api/beacon/current` every 15 seconds; live (`BeaconLiveView`: HLS
+    player via `expo-video`, the "LIVE AND PUBLIC" badge, member chat through the shared
+    `StreamChatView`, sign-in prompt when signed out), replay and idle (`BeaconIdleView`).
+  - `BeaconHostPanel.tsx` (admins only) — title, then **Go live** (create, `GET ingest` for the host
+    credentials, `go-live`), or **Broadcast to it from this phone** for an event already live, and
+    **End broadcast**.
+  - `BeaconHostStage.tsx` / `BeaconHostControls.tsx` — a Stream Video client joined only when a button
+    is pressed: **Use camera and microphone** (preview, **Flip camera**) and **Share screen** (Android
+    asks first). `useBeaconEgressStart.ts` posts `start-broadcast` once anything is sent, retried.
+  - `BeaconApi.ts` — the viewer and host routes through `authedFetch` (Bearer token; `x-ctf-csrf: 1`
+    on every POST).
+  The app's build config sets `enableScreenshare: true` on the Stream plugin (media-projection
+  permission and service). Native modules: everything runs only in an EAS build, not Expo Go.
+  History: a viewer-only Android surface existed from 2026-06-23 (issue #712) and was removed on
+  2026-07-20 (rule 105, PR #1742) when the app was narrowed to Chyme.
 
 ## Seed Coverage Status
 
@@ -347,6 +355,16 @@ stops. HLS is used for public viewers so scale does not multiply WebRTC cost.
 
 ## Change Log
 
+- 2026-10-06: **Beacon in the Android app, with screen share (owner decision).** The repeated ask was
+  sharing the phone's screen in a live broadcast, which only an installed app can do, so Beacon joins
+  the Android keep-list under the owner's test: the app carries any plugin that materially benefits
+  from being an installed mobile app (rule 105 rewritten to say so; there will never be an iOS app).
+  The app now opens on an **Apps** list (Chyme, Beacon). Beacon on Android: watch, member chat, and
+  for an admin go live with the camera and microphone or share the phone's screen, then end. The
+  viewer is the one removed on 2026-07-20, restored; the host side is new and joins the call only
+  when a button is pressed. Parity contract: `mobileFeatureDirs: ["beacon"]`,
+  `requiresMobileSurface: true`. No route, schema or contract change: the app calls the existing
+  routes with its Bearer token.
 - 2026-10-06: **Broadcast from the phone's camera and microphone (owner decision).** Beacon was meant
   to be a live stream from the phone, the host on camera and talking, and the admin page offered only
   a computer screen share, so a phone could broadcast only through a separate RTMP app. A test
