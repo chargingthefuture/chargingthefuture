@@ -246,10 +246,12 @@ during it.
 Stream's `call.session_participant_joined` webhook fires when the phone's RTMP feed joins, the route
 starts HLS and the recording for that `live` event, and `GET /api/beacon/current` begins returning an
 `hlsPlaybackUrl`. After the event ends, `call.recording_ready` arrives and the replay is posted to the
-Commons. An empty player after a minute means egress never started — check that the webhook is
-reaching the app and that `call.session_participant_joined` is enabled in the Stream dashboard, which
-is the setting this case is really testing. Before 2026-08-10 this case failed by design: only an
-in-browser screen-share started egress.
+Commons. If the webhook does not arrive, the live page starts them instead: within about 15 seconds
+of the phone connecting, while the admin page or any viewer page is open. The event's Log in Event
+history then shows `Live page asked to start the feed and recording` (with Stream's reason if it
+failed) instead of `Broadcaster joined; …`. An empty player after a minute means neither worked;
+open the event's Log for the reason. Before 2026-08-10 this case failed by design: only an in-browser
+screen-share started egress.
 **Result:** web ☐ mobile ☐ — notes:
 
 ### BCN-A2d · A refused start-broadcast is shown on the host stage

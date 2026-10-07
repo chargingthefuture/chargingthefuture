@@ -129,7 +129,13 @@ feed; when the event ends, Beacon auto-posts the recording to the Commons as a r
 ## API Surface and Route Map
 
 ### Member / public routes
-- `GET /api/beacon/current` — the currently-live event (or null) + the public HLS playback URL.
+- `GET /api/beacon/current` — the currently-live event (or null) + the public HLS playback URL. When
+  an event is live and Stream has no playlist yet, it also tries to start the public feed and the
+  recording (`lib/beacon/egress-kick.ts`): at most once per 15 seconds per event per server instance,
+  never again once a start has worked, and each distinct outcome written once to the event's log as
+  `beacon.viewer.start-broadcast`. This is the fallback when Stream's join webhook never arrives. The
+  admin page reads this route every 15 seconds while the event it has open is live
+  (`use-beacon-live-poll.ts`), so a phone broadcast starts even with no other viewer.
 - `GET /api/beacon/replays?page=` — every ended event with a recording, newest first, 20 per page,
   page clamped into range. Public, per-IP rate-limited, open to any origin (the blog reads it from the
   browser). Returns title, description, start/end times, the app's recording address and the watch
@@ -318,6 +324,14 @@ stops. HLS is used for public viewers so scale does not multiply WebRTC cost.
 
 ## Change Log
 
+- 2026-10-06: **The live page starts a phone broadcast's recording (owner report).** Two phone
+  broadcasts after the event log shipped logged went live, then ended, with no start step between:
+  Stream's `call.session_participant_joined` webhook, the only trigger for a phone broadcast, never
+  arrived, so neither the public feed nor the recording started. `GET /api/beacon/current` now starts
+  them when the event is live and nothing is playing, throttled and logged, and the admin page reads
+  that route every 15 seconds while its open event is live. The webhook still starts them when it
+  arrives; whichever comes first wins and the other counts "already running" as success. Web only;
+  Android: out of scope (web-only per rule 105).
 - 2026-10-06: **A log for each broadcast (owner report).** Every ended event read "no recording
   found", the same words whether Stream had no recording or the lookup itself failed, and a failed
   recording start was only in the hosting logs. The history row now opens a Log: what Stream said

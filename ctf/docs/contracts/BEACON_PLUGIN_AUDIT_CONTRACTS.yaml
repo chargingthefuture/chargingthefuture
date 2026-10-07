@@ -193,3 +193,25 @@ auditEvents:
     result:
       status: success_or_failure
       errorCategory: none_or_error_class
+
+  # Written by GET /api/beacon/current (actorId `beacon-viewer-poll`) when it starts a live event's
+  # public feed and recording because nothing is playing yet. One row per distinct outcome.
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: beacon-viewer-poll
+    pluginId: beacon
+    command: viewer.start-broadcast
+    commandVersion: 1.0.0
+    purpose: event_lifecycle
+    policyDecision:
+      status: allow_or_deny
+      reason: stream_reported_reason
+    dataClassesAccessed:
+      - beacon_event_record
+    targetContext:
+      eventId: beacon_event_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
