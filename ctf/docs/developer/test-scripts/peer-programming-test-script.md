@@ -66,7 +66,9 @@ After the seed, the admin cohort list shows at least one cohort and the topic fo
 web ☐
 
 **5. The cohort's video call opens**
-Signed in as a cohort member, open the Session tab and press "Join Session." The call opens with your
+Signed in as a cohort member, open the Session tab. Before joining, the line under the title reads
+"<cohort label> · N participants" with N the cohort's member count (never 0 for a cohort you are in),
+and the roster shows one tile per member by name. Press "Join Session." The call opens with your
 own camera tile, and mute, camera, and leave controls are visible; leaving returns to the Session tab
 without an error. If live video is not configured in this environment, the readable "live video
 unavailable" notice counts as a pass here — the full walkthrough covers both paths in PP-10 and
