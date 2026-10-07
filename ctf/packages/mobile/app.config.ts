@@ -83,8 +83,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     //     (StreamVideoRN.updateConfig).
     //   - @config-plugins/react-native-webrtc: the microphone/camera permission
     //     text shown to the user (iOS Info.plist usage strings + Android
-    //     RECORD_AUDIO). Chyme is audio-only, but the camera string is required
-    //     by the WebRTC layer even when video is never published.
+    //     RECORD_AUDIO). Chyme is audio-only; Beacon's host uses the camera
+    //     when they go live with it turned on.
     //   - expo-notifications: the Foundation instant-call ring native push
     //     (issue #884). expo-notifications needs native code (it cannot run in
     //     Expo Go), so this config plugin must be present in the EAS build for a
@@ -94,14 +94,17 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     //     member turns on "Call alerts on this device".
     plugins: [
       ...(config.plugins ?? []),
-      ['@stream-io/video-react-native-sdk', { androidKeepCallAlive: true }],
+      // `enableScreenshare` lets Beacon's host share the phone's screen: it adds the
+      // FOREGROUND_SERVICE_MEDIA_PROJECTION permission and turns on the WebRTC media-projection
+      // service in MainActivity, which Android requires before it hands an app the screen.
+      ['@stream-io/video-react-native-sdk', { androidKeepCallAlive: true, enableScreenshare: true }],
       [
         '@config-plugins/react-native-webrtc',
         {
           microphonePermission:
             'Charging the Future needs microphone access so you can speak in a live Chyme audio room.',
           cameraPermission:
-            'Charging the Future does not record video; this permission is required by the audio engine and is never used to capture video.',
+            'Charging the Future uses the camera only when you go live on Beacon and turn your camera on.',
         },
       ],
       'expo-notifications',

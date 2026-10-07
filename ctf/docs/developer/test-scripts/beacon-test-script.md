@@ -1,6 +1,6 @@
 # Beacon — Manual Test Script
 
-> **Android: not applicable.** This feature is web-only (rule 105 / PR #1742, 2026-07-20). Test on web only: desktop and the mobile-responsive (~390px) layout. Any `android` surface tags below are retained as history but no longer apply.
+> **Android: in scope again (owner decision, 2026-10-06, rule 105).** Test on web (the phone-width layout) and in the Android app; the Android host steps are AN-BN in `android-app-test-script.md`.
 
 > Walk these steps on a real device to confirm the plugin works end to end. This script is
 > generated from the plugin's feature inventory and contracts — those files are the source of
@@ -329,9 +329,10 @@ to `ended`. When the recording is ready, the replay auto-posts to the Commons (i
 For BCN-1, BCN-2, and BCN-3, the android viewer and the mobile-responsive web layout must behave the
 same: the same three states (live HLS player + "live and public" indicator, replay, idle), the same
 member-chat gate (signed-in posts; anonymous sees a sign-in-to-chat prompt and still watches), and the
-same 15-second poll of the current event. Admin broadcasting is **web-only** — there is no android
-admin surface by design (the admin pushes the phone screen through a third-party RTMP app). Note any
-viewer drift here rather than filing separate bugs.
+same 15-second poll of the current event. Admin broadcasting is on both: the web admin page and the
+Android app's **Go live** card (camera and microphone, flip camera, and on Android only, sharing the
+phone's screen). The Android host steps are AN-BN in `android-app-test-script.md`. Note any drift
+here rather than filing separate bugs.
 
 **Result:** matches ☐ — drift notes:
 

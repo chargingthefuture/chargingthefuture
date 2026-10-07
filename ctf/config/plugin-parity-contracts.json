@@ -141,8 +141,8 @@
     },
     {
       "slug": "beacon",
-      "mobileFeatureDirs": [],
-      "requiresMobileSurface": false,
+      "mobileFeatureDirs": ["beacon"],
+      "requiresMobileSurface": true,
       "requiresExplicitWebShell": true
     },
     {
