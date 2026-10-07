@@ -1,6 +1,6 @@
 # PeerProgramming — Manual Test Script
 
-> **Android: not applicable.** This feature is web-only (rule 105 / PR #1742, 2026-07-20). The React Native screens were deleted and there is nothing to install; the Android app carries only Clerk sign-in, Chyme, bug reporting, and settings. Test on web only: desktop and the phone-width (~390px) layout. The `android` surface tags and steps that used to sit throughout this script were removed on 2026-08-18 because they kept being read as work still to do.
+> **Android: in scope (owner decision, 2026-10-06).** The native Android app carries PeerProgramming again: the goal board, the cohort chat and the live Session call, including sharing the phone's screen and keeping the call running in the background. The Android steps live in one place, **AN-PP** in `android-app-test-script.md`, on a real device build (not Expo Go). The cases in this script are the web steps: desktop and the phone-width (~390px) layout.
 
 > Generated from the feature inventory and command contracts for `peer-programming`; this is the runnable checklist for a human tester on a real device. Regenerate with: `pnpm --dir ctf test-script:generate -- peer-programming`
 
@@ -9,7 +9,7 @@
 | **Plugin** | PeerProgramming |
 | **Visibility** | member |
 | **Roles to test** | member, admin |
-| **Surfaces** | web only (`/apps/peer-programming`, `/admin/peer-programming`) — no Android surface |
+| **Surfaces** | web (`/apps/peer-programming`, `/admin/peer-programming`); Android app (member screen only; see AN-PP in `android-app-test-script.md`) |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-peer-programming-feature-inventory.md` |
 | **Generated** | 2026-07-18 (commit 34badcbb) · 2026-09-20: the inventory's prose was swept for a banned word (CLAUDE.md); no step here changes, because nothing about what the plugin does or how it is tested moved |
@@ -753,11 +753,12 @@ Result: web ☐
 
 ---
 
-## Parity check — not applicable
+## Parity check — web and Android
 
-There is no second surface to compare against: PeerProgramming is web-only (rule 105). The cases
-below are kept as the list of behavior that matters most, and should be checked on both a desktop
-browser and the phone-width layout — but a missing Android result is never a bug.
+The Android app carries the member screen (Goals, Chat, Session) since 2026-10-06; the admin screen
+stays on the web. The cases below are the behavior that matters most: check them on a desktop browser
+and the phone-width layout, and the member cases (not the PP-A ones) on Android through AN-PP in
+`android-app-test-script.md`.
 
 | Case | What must match |
 |---|---|
@@ -789,8 +790,10 @@ browser and the phone-width layout — but a missing Android result is never a b
 
 3. **Weekly cron requires `CRON_SECRET` to be configured.** The `PeerProgramming — Weekly Cohort Assignment` GitHub Actions workflow skips with a visible warning rather than failing when `CRON_SECRET` or `NEXT_PUBLIC_APP_URL` is not set in repository Actions secrets. Admins form cohorts manually from the admin screen until those secrets are configured. Do not file this as a bug.
 
-4. **No automated test harness exists for live Stream calls.** Live video cases (PP-10, PP-11) are verified by hand in the browser. There is no Android build to test — that surface was removed on 2026-07-20 — so an EAS dev build is no longer a precondition for any case here.
+4. **No automated test harness exists for live Stream calls.** Live video cases (PP-10, PP-11) are verified by hand in the browser, and on Android by AN-PP on a real device build.
 
 > _Terminology (2026-07-20): the source inventory's user-facing section is now titled **User Features** (was "Target User Features"), and its admin section **Admin Features**. Heading rename only — no test steps changed._
 >
 > _Android removal (2026-08-18): every `android` surface tag, step, and precondition was removed from this script to match the inventory. The Android screens were deleted on 2026-07-20 and testers kept treating the leftover tags as untested work. No web step changed._
+>
+> _Android back in scope (2026-10-06, owner decision): the header, Surfaces row, parity check and known gap 4 now point to AN-PP in `android-app-test-script.md` for the Android steps. No web step changed._

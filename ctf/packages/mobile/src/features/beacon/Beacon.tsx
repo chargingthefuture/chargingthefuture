@@ -30,6 +30,7 @@ import { BeaconLiveView } from './BeaconLiveView';
 import { BeaconIdleView } from './BeaconIdleView';
 import { useAuth } from '../../auth/auth-context';
 import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
+import { reportError } from '../../observability/report';
 
 const POLL_INTERVAL_MS = 15000;
 
@@ -77,9 +78,10 @@ export const Beacon: React.FC = () => {
   const loadCurrent = useCallback(async () => {
     try {
       setCurrent(await getBeaconCurrent());
-    } catch {
+    } catch (error) {
       // Network blip: keep the last known state and try again on the next poll, like the web viewer.
-      // The first failure (no prior state) falls through to idle.
+      // The first failure (no prior state) falls through to idle. Reported so a lasting failure shows.
+      reportError(error, { area: 'beacon', op: 'current_poll' });
     } finally {
       setLoading(false);
     }

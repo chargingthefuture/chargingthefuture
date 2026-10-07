@@ -19,6 +19,7 @@ import {
   type TokenResponse,
 } from "expo-auth-session";
 import { registerAuthTokenGetter } from "./authedFetch";
+import { runSignOutTasks } from "./signOutTasks";
 import { getClerkOAuthClientId, getClerkOAuthEndpoints } from "./clerkOAuth";
 import {
   clearStoredSession,
@@ -297,6 +298,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [clientId, discovery, persistSession, promptAsync, redirectUri, request]);
 
   const handleSignOut = useCallback(async () => {
+    // Still signed in here, so a task can reach the server (e.g. removing this phone's call alerts).
+    await runSignOutTasks();
     await persistSession(null);
     registerAuthTokenGetter(null);
   }, [persistSession]);
