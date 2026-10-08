@@ -348,7 +348,11 @@ contracts:
       correction that reached the file and was still awaiting export is set to exported with an
       exported_at stamp, which is what moves the admin dashboard's awaiting-export / exported counts.
       The file is unchanged by this — it is the entire dataset on every call, not a take-once queue.
-      Pass preview=1 to read it without marking anything.
+      Pass preview=1 to read it without marking anything. Question and answer text is passed
+      through redactContributedText before it reaches the file (contact details, profile links,
+      handles and other links removed) — this narrows exposure and is not de-identification. Every
+      run, preview or not, success or failure, writes a comic_admin_audit_trail row carrying the
+      format and markedExported.
     inputSchema:
       format:
         type: string
@@ -384,6 +388,7 @@ contracts:
       - comic_training_examples
       - comic_answer_ratings
       - comic_turns
+      - comic_admin_audit_trail
       - comic_review_queue
     purpose: assistant_training_export
     retentionClass: derived_short_lived
