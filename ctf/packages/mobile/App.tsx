@@ -14,7 +14,9 @@ import { AppsList } from './src/features/apps';
 import { Unlock } from './src/features/unlock';
 import { fetchUnlockStatus, type UnlockAccessTier } from './src/features/unlock/api';
 import { AccountData } from './src/features/account-data';
-import { BlockedMembers, BlockedMembersLink } from './src/features/blocks';
+import { BlockedMembers } from './src/features/blocks';
+import { AccountHub, getAccountTokens } from './src/features/account';
+import { UserCircle } from 'lucide-react-native';
 import {
   useFonts,
   Inter_400Regular,
@@ -56,18 +58,22 @@ StreamVideoRN.updateConfig({
 // The native Android app carries the plugins that materially benefit from being an installed app
 // (Chyme live audio, Beacon broadcasts, PeerProgramming's live call, Foundation's instant calls), plus what they need to run (Clerk auth wall, bug reporting,
 // settings/account); everything else is served by the web app. The Apps list is home; the top bar's
-// gear opens Account & Data, and Blocked members sits under it, as on the web's /account page. See
+// gear opens Your account, and Account & Data and Blocked members sit under it, as the web's
+// /account, /account/data and /account/blocks do. See
 // `.claude/rules/105-web-android-feature-parity-rules.mdc`.
-type FeatureKey = 'apps' | 'chyme' | 'beacon' | 'peer-programming' | 'foundation' | 'account-data' | 'blocked-members';
+type FeatureKey = 'apps' | 'chyme' | 'beacon' | 'peer-programming' | 'foundation' | 'account' | 'account-data' | 'blocked-members' | 'unlock';
+
+// The account screens, all reached from the gear and only while signed in.
+const ACCOUNT_KEYS: readonly FeatureKey[] = ['account', 'account-data', 'blocked-members', 'unlock'];
+
 
 // What each screen's header calls it. Apps has no header title: it carries the top bar instead.
-const SCREEN_TITLES: Record<Exclude<FeatureKey, 'apps'>, string> = {
+const SCREEN_TITLES: Record<'chyme' | 'beacon' | 'peer-programming' | 'foundation' | 'account', string> = {
   chyme: 'Chyme',
   beacon: 'Beacon',
   'peer-programming': 'PeerProgramming',
   foundation: 'Foundation',
-  'account-data': 'Account & Data',
-  'blocked-members': 'Blocked members',
+  account: 'Your account',
 };
 
 const PLUGIN_KEYS = ['chyme', 'beacon', 'peer-programming', 'foundation'] as const;
@@ -78,7 +84,7 @@ function isPluginKey(key: FeatureKey): key is PluginKey {
 
 // Where the header's back chevron and Android's back button go from each screen.
 function parentOf(key: FeatureKey): FeatureKey {
-  return key === 'blocked-members' ? 'account-data' : 'apps';
+  return key === 'account-data' || key === 'blocked-members' || key === 'unlock' ? 'account' : 'apps';
 }
 
 export default function App() {
@@ -137,21 +143,58 @@ function SystemBarInsets({ children }: { children: ReactElement }) {
 // branching) keeps the per-render selection trivial.
 type FeatureRenderers = Record<FeatureKey, () => ReactElement>;
 
-function buildFeatureViews(open: (_key: FeatureKey) => void): FeatureRenderers {
+function buildFeatureViews(open: (_key: FeatureKey) => void, back: () => void): FeatureRenderers {
   return {
     apps: () => <AppsList onOpen={open} />,
     chyme: () => <ChymeRoom />,
     beacon: () => <Beacon />,
     'peer-programming': () => <PeerProgramming />,
     foundation: () => <Foundation />,
-    'account-data': () => (
-      <View style={styles.fill}>
-        <BlockedMembersLink onPress={() => open('blocked-members')} />
-        <AccountData />
-      </View>
+    account: () => (
+      <AccountHub
+        onOpenData={() => open('account-data')}
+        onOpenBlocks={() => open('blocked-members')}
+        onOpenVerification={() => open('unlock')}
+      />
     ),
-    'blocked-members': () => <BlockedMembers />,
+    'account-data': () => <AccountData onBack={back} />,
+    'blocked-members': () => <BlockedMembers onBack={back} />,
+    // The hub's Verification row opens the Unlock screen, as the web row opens /plugin/unlock. No
+    // onStatusChanged here: a member who reached the app is already past the wall, and re-running the
+    // wall check would swap this screen for the loading screen on every status read.
+    unlock: () => <Unlock />,
   };
+}
+
+// The bar above each screen, as the web draws it: the top bar on Apps; the shared screen header on
+// each plugin and on Your account (web MobileScreenHeader with the UserCircle icon); nothing on
+// Account & Data and Blocked members, which draw their own header as the web screens do.
+function ScreenChrome({ selected, onBack, onOpenAccount }: { selected: FeatureKey; onBack: () => void; onOpenAccount: () => void }) {
+  const { tokens, theme } = useTheme();
+  if (selected === 'apps') return <TopBar onOpenAccount={onOpenAccount} />;
+  if (isPluginKey(selected)) {
+    return (
+      <ScreenHeader
+        title={SCREEN_TITLES[selected]}
+        emoji={getPluginEmoji(selected)}
+        accent={getAppAccent(selected, theme)}
+        onBack={onBack}
+        onOpenAccount={onOpenAccount}
+        pluginSlug={selected}
+      />
+    );
+  }
+  if (selected !== 'account') return null;
+  const brand = getAccountTokens(tokens).BRAND;
+  return (
+    <ScreenHeader
+      title={SCREEN_TITLES.account}
+      icon={<UserCircle size={18} color={brand} />}
+      accent={brand}
+      onBack={onBack}
+      onOpenAccount={onOpenAccount}
+    />
+  );
 }
 
 // The name the other person sees in a Foundation call.
@@ -166,16 +209,16 @@ type UnlockGate = { loading: boolean; walled: boolean };
 
 function AppShell() {
   const { isLoading, isAuthenticated, user } = useAuth();
-  const { tokens, theme } = useTheme();
+  const { tokens } = useTheme();
   const [selected, setSelected] = useState<FeatureKey>('apps');
 
   const isAdmin = Boolean(user?.isAdmin);
-  const openAccount = useCallback(() => setSelected('account-data'), []);
+  const openAccount = useCallback(() => setSelected('account'), []);
 
-  // Account & Data and Blocked members are reached only from the gear, which shows only to a
-  // signed-in member, as on the web. Signing out while on one of them goes back to Apps.
+  // The account screens are reached only from the gear, which shows only to a signed-in member, as
+  // on the web. Signing out while on one of them goes back to Apps.
   useEffect(() => {
-    if (!isAuthenticated && (selected === 'account-data' || selected === 'blocked-members')) {
+    if (!isAuthenticated && ACCOUNT_KEYS.includes(selected)) {
       setSelected('apps');
     }
   }, [isAuthenticated, selected]);
@@ -233,7 +276,7 @@ function AppShell() {
   }, [refreshUnlockGate]);
 
   // Android hardware back. The app has no screen stack, so give back a predictable meaning: from a
-  // screen go to its parent (Blocked members to Account & Data, the rest to Apps); from Apps,
+  // screen go to its parent (Account & Data and Blocked members to Your account, the rest to Apps); from Apps,
   // let Android do its default (leave the app). This
   // replaces the old behavior where back exited the app from anywhere. Note: "navigating away
   // without closing" — the case that must not drop a member from a live room — is pressing HOME or
@@ -252,7 +295,7 @@ function AppShell() {
   }, [selected]);
 
   const featureView = useMemo(() => {
-    const renderers = buildFeatureViews(setSelected);
+    const renderers = buildFeatureViews(setSelected, () => setSelected(parentOf(selected)));
     const render = renderers[selected];
     // Every FeatureKey has an entry; the fallback preserves the default (Apps)
     // for any unexpected value.
@@ -281,22 +324,11 @@ function AppShell() {
       <ShellBackground />
       {/* The web frame at phone width: the Apps home carries the top bar, every other screen the
           back-chevron header (web MobileTopBar and MobileScreenHeader). */}
-      {selected === 'apps' ? (
-        <TopBar onOpenAccount={openAccount} />
-      ) : (
-        <ScreenHeader
-          title={SCREEN_TITLES[selected]}
-          emoji={isPluginKey(selected) ? getPluginEmoji(selected) : undefined}
-          accent={isPluginKey(selected) ? getAppAccent(selected, theme) : undefined}
-          onBack={() => setSelected(parentOf(selected))}
-          onOpenAccount={openAccount}
-          pluginSlug={isPluginKey(selected) ? selected : undefined}
-        />
-      )}
+      <ScreenChrome selected={selected} onBack={() => setSelected(parentOf(selected))} onOpenAccount={openAccount} />
 
       {/* Keyed on the signed-in member so signing out (or in as somebody else) unmounts every screen
           holding a Stream client, whose cleanup leaves the call and disconnects it. */}
-      <View key={user?.id ?? 'signed-out'} style={[styles.content, selected === 'apps' ? null : styles.contentPadded]}>
+      <View key={user?.id ?? 'signed-out'} style={[styles.content, isPluginKey(selected) ? styles.contentPadded : null]}>
         {/* Foundation instant calls: the incoming ring and the live call show above every tab, as the web
             mounts its call controller at the shell root. Inside the keyed view, so signing out hangs up. */}
         <FoundationCallController signedIn={isAuthenticated} displayName={callDisplayName(user)}>
@@ -321,8 +353,5 @@ const styles = StyleSheet.create({
   contentPadded: {
     paddingHorizontal: 12,
     paddingTop: 10,
-  },
-  fill: {
-    flex: 1,
   },
 });

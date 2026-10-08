@@ -50,6 +50,15 @@ export async function fetchAccountServices(): Promise<AccountServicesResponse> {
   return res.json() as Promise<AccountServicesResponse>;
 }
 
+// The server said no. Carries the route's own message, or the web's default when it gave none, so
+// the screen can tell a refusal apart from a network failure as the web does.
+export class AccountRequestError extends Error {}
+
+async function readMessage(res: Response, fallback: string): Promise<string> {
+  const body = (await res.json().catch(() => ({}))) as { message?: string };
+  return body.message ?? fallback;
+}
+
 export async function deleteServiceData(slug: string): Promise<void> {
   const res = await fetchWithTimeout(`/api/account/services/${encodeURIComponent(slug)}`, {
     method: 'DELETE',
@@ -59,8 +68,7 @@ export async function deleteServiceData(slug: string): Promise<void> {
     },
   });
   if (!res.ok) {
-    const body = (await res.json().catch(() => ({}))) as { message?: string; code?: string };
-    throw new Error(body.message ?? body.code ?? `service_delete_failed:${res.status}`);
+    throw new AccountRequestError(await readMessage(res, 'Unable to delete this data. Please try again.'));
   }
 }
 
@@ -73,7 +81,6 @@ export async function deleteFullAccount(): Promise<void> {
     },
   });
   if (!res.ok) {
-    const body = (await res.json().catch(() => ({}))) as { message?: string; code?: string };
-    throw new Error(body.message ?? body.code ?? `full_account_delete_failed:${res.status}`);
+    throw new AccountRequestError(await readMessage(res, 'Unable to complete full-account deletion. Please try again.'));
   }
 }

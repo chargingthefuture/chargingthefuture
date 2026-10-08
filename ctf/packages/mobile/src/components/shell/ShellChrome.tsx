@@ -8,7 +8,7 @@
 //                   every app screen — back chevron, app icon tile, title, then the same controls.
 //   - ShellBackground  the web .shell backdrop: two soft glows (purple top left, cyan top right).
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Svg, { Defs, LinearGradient, Path, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { Bug, ChevronLeft, Settings } from 'lucide-react-native';
@@ -83,7 +83,7 @@ export function ShellBackground() {
 }
 
 type ChromeActions = {
-  /** Opens Account & Data — the gear, as the web gear opens /account. */
+  /** Opens Your account — the gear, as the web gear opens /account. */
   onOpenAccount: () => void;
   /** The plugin the member is in, passed to the bug report so triage knows where it happened. */
   pluginSlug?: string;
@@ -170,10 +170,18 @@ export function TopBar(props: ChromeActions) {
 export function ScreenHeader({
   title,
   emoji,
+  icon,
   accent,
   onBack,
   ...actions
-}: ChromeActions & { title: string; emoji?: string; accent?: string; onBack: () => void }) {
+}: ChromeActions & {
+  title: string;
+  emoji?: string;
+  /** A drawn icon for the tile instead of an emoji, as the web passes a lucide icon (e.g. Your account). */
+  icon?: ReactNode;
+  accent?: string;
+  onBack: () => void;
+}) {
   const { tokens } = useTheme();
   const s = useMemo(() => makeStyles(tokens), [tokens]);
   const chevronColor = accent ?? tokens.textPrimary;
@@ -190,14 +198,14 @@ export function ScreenHeader({
       >
         <ChevronLeft size={20} color={chevronColor} />
       </TouchableOpacity>
-      {emoji ? (
+      {emoji || icon ? (
         <View
           style={[
             s.appIcon,
             accent ? { backgroundColor: `${accent}26`, borderColor: `${accent}66` } : null,
           ]}
         >
-          <Text style={s.appIconEmoji}>{emoji}</Text>
+          {icon ?? <Text style={s.appIconEmoji}>{emoji}</Text>}
         </View>
       ) : null}
       <Text style={s.screenTitle} numberOfLines={1}>
