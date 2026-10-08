@@ -11,12 +11,8 @@
 //                                          the last replay for the idle state.
 //   - POST /api/beacon/[id]/chat-token     member; a Stream Chat token for the event chat.
 // Host (admin):
-//   - GET  /api/beacon/admin               events newest first.
-//   - POST /api/beacon                     create a draft { title }.
-//   - GET  /api/beacon/[id]/ingest         sets up the call; returns the host's Stream credentials.
-//   - POST /api/beacon/[id]/go-live        takes the call out of backstage; posts "live now".
 //   - POST /api/beacon/[id]/start-broadcast starts the public feed and recording once media exists.
-//   - POST /api/beacon/[id]/end            ends the broadcast.
+// The rest of the admin routes are in BeaconAdminApi.ts.
 import { authedFetch } from '../../auth/authedFetch';
 
 // Mirrors the web viewer's BeaconEventLike shape from /api/beacon/current.
@@ -45,7 +41,7 @@ export type BeaconChatCredentials = {
   streamToken: string;
 };
 
-// The host's Stream Video credentials from GET /api/beacon/[id]/ingest.
+// The host's Stream Video credentials, part of the GET /api/beacon/[id]/ingest answer.
 export type BeaconHostCredentials = {
   streamApiKey: string;
   streamCallType: string;
@@ -102,37 +98,9 @@ export async function getBeaconChatCredentials(eventId: string): Promise<BeaconC
   }
 }
 
-export async function listBeaconAdminEvents(): Promise<BeaconEventLike[]> {
-  const data = await readJson(await authedFetch('/api/beacon/admin', { method: 'GET' }), 'The event list');
-  return Array.isArray(data.events) ? (data.events as BeaconEventLike[]) : [];
-}
-
-export async function createBeaconEvent(title: string): Promise<BeaconEventLike> {
-  const res = await authedFetch('/api/beacon', {
-    method: 'POST',
-    headers: { ...CSRF_HEADERS, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title, description: '' }),
-  });
-  const data = await readJson(res, 'Creating the event');
-  return data.event as BeaconEventLike;
-}
-
-export async function getBeaconHostCredentials(eventId: string): Promise<BeaconHostCredentials> {
-  const data = await readJson(await authedFetch(`/api/beacon/${eventId}/ingest`, { method: 'GET' }), 'Setting up the broadcast');
-  return {
-    streamApiKey: data.streamApiKey as string,
-    streamCallType: data.streamCallType as string,
-    streamCallId: data.streamCallId as string,
-    streamUserId: data.streamUserId as string,
-    hostToken: data.hostToken as string,
-  };
-}
-
 async function postBeacon(eventId: string, step: string, what: string): Promise<void> {
   await readJson(await authedFetch(`/api/beacon/${eventId}/${step}`, { method: 'POST', headers: CSRF_HEADERS }), what);
 }
 
-export const goLiveBeaconEvent = (eventId: string) => postBeacon(eventId, 'go-live', 'Going live');
 export const startBeaconBroadcast = (eventId: string) =>
   postBeacon(eventId, 'start-broadcast', 'Starting the public broadcast and recording');
-export const endBeaconEvent = (eventId: string) => postBeacon(eventId, 'end', 'Ending the broadcast');

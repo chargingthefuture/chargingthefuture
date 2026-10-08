@@ -7,7 +7,7 @@ import {
   View,
 } from 'react-native';
 import { ChymeRoom } from './src/features/chyme';
-import { Beacon } from './src/features/beacon';
+import { Beacon, BeaconAdmin } from './src/features/beacon';
 import { PeerProgramming } from './src/features/peer-programming';
 import { Foundation, FoundationCallController } from './src/features/foundation';
 import { AppsList } from './src/features/apps';
@@ -28,6 +28,7 @@ import { AuthProvider, useAuth } from './src/auth/auth-context';
 import { ThemeProvider, useTheme, getAppAccent } from './src/theme';
 import { LoadingScreen } from './src/components/shared/LoadingScreen';
 import { ScreenHeader, ShellBackground, TopBar } from './src/components/shell/ShellChrome';
+import { HeaderPill, HeaderRefreshButton } from './src/components/shell/HeaderActions';
 import { getPluginEmoji } from './src/theme/plugin-visuals';
 import { StreamVideoRN } from '@stream-io/video-react-native-sdk';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -58,12 +59,21 @@ StreamVideoRN.updateConfig({
 // settings/account); everything else is served by the web app. The Apps list is home; the top bar's
 // gear opens Account & Data, and Blocked members sits under it, as on the web's /account page. See
 // `.claude/rules/105-web-android-feature-parity-rules.mdc`.
-type FeatureKey = 'apps' | 'chyme' | 'beacon' | 'peer-programming' | 'foundation' | 'account-data' | 'blocked-members';
+type FeatureKey =
+  | 'apps'
+  | 'chyme'
+  | 'beacon'
+  | 'beacon-admin'
+  | 'peer-programming'
+  | 'foundation'
+  | 'account-data'
+  | 'blocked-members';
 
 // What each screen's header calls it. Apps has no header title: it carries the top bar instead.
 const SCREEN_TITLES: Record<Exclude<FeatureKey, 'apps'>, string> = {
   chyme: 'Chyme',
   beacon: 'Beacon',
+  'beacon-admin': 'Beacon Admin',
   'peer-programming': 'PeerProgramming',
   foundation: 'Foundation',
   'account-data': 'Account & Data',
@@ -76,9 +86,41 @@ function isPluginKey(key: FeatureKey): key is PluginKey {
   return (PLUGIN_KEYS as readonly string[]).includes(key);
 }
 
-// Where the header's back chevron and Android's back button go from each screen.
+// The plugin a screen belongs to, for its header icon, accent and bug reports. An admin screen
+// belongs to its plugin.
+function pluginOf(key: FeatureKey): PluginKey | undefined {
+  if (key === 'beacon-admin') return 'beacon';
+  return isPluginKey(key) ? key : undefined;
+}
+
+// Where the header's back chevron and Android's back button go from each screen. Beacon Admin goes to
+// Apps too: the web swaps the member and admin pages in place, so back never bounces between them.
 function parentOf(key: FeatureKey): FeatureKey {
   return key === 'blocked-members' ? 'account-data' : 'apps';
+}
+
+// The header's actions slot, as the web fills it: Beacon shows an Admin button to admins; Beacon
+// Admin shows the admin refresh control and a Member view button.
+function headerExtra(
+  key: FeatureKey,
+  isAdmin: boolean,
+  accent: string | undefined,
+  open: (_key: FeatureKey) => void,
+  refresh: () => void,
+): ReactElement | undefined {
+  const color = accent ?? '#C8A84B';
+  if (key === 'beacon' && isAdmin) {
+    return <HeaderPill label="Admin" accent={color} onPress={() => open('beacon-admin')} accessibilityLabel="Admin panel" />;
+  }
+  if (key === 'beacon-admin') {
+    return (
+      <>
+        <HeaderRefreshButton accent={color} onRefresh={refresh} />
+        <HeaderPill label="Member view" accent={color} onPress={() => open('beacon')} accessibilityLabel="Open the member view" />
+      </>
+    );
+  }
+  return undefined;
 }
 
 export default function App() {
@@ -137,11 +179,13 @@ function SystemBarInsets({ children }: { children: ReactElement }) {
 // branching) keeps the per-render selection trivial.
 type FeatureRenderers = Record<FeatureKey, () => ReactElement>;
 
-function buildFeatureViews(open: (_key: FeatureKey) => void): FeatureRenderers {
+function buildFeatureViews(open: (_key: FeatureKey) => void, refreshToken: number): FeatureRenderers {
   return {
     apps: () => <AppsList onOpen={open} />,
     chyme: () => <ChymeRoom />,
     beacon: () => <Beacon />,
+    // Keyed on the refresh count, so the refresh control remounts it and reloads its data.
+    'beacon-admin': () => <BeaconAdmin key={refreshToken} />,
     'peer-programming': () => <PeerProgramming />,
     foundation: () => <Foundation />,
     'account-data': () => (
@@ -178,7 +222,14 @@ function AppShell() {
     if (!isAuthenticated && (selected === 'account-data' || selected === 'blocked-members')) {
       setSelected('apps');
     }
-  }, [isAuthenticated, selected]);
+    // Beacon Admin is for admins only; anyone else goes to Beacon, as the web redirects them.
+    if (!isAdmin && selected === 'beacon-admin') {
+      setSelected('beacon');
+    }
+  }, [isAuthenticated, isAdmin, selected]);
+
+  const [refreshToken, setRefreshToken] = useState(0);
+  const refreshScreen = useCallback(() => setRefreshToken((count) => count + 1), []);
 
   // Client-side Unlock wall. The server 403 gates are the real enforcement; this
   // only mirrors the web redirect so a not-yet-approved member does not see the
@@ -252,12 +303,15 @@ function AppShell() {
   }, [selected]);
 
   const featureView = useMemo(() => {
-    const renderers = buildFeatureViews(setSelected);
+    const renderers = buildFeatureViews(setSelected, refreshToken);
     const render = renderers[selected];
     // Every FeatureKey has an entry; the fallback preserves the default (Apps)
     // for any unexpected value.
     return render ? render() : <AppsList onOpen={setSelected} />;
-  }, [selected]);
+  }, [selected, refreshToken]);
+
+  const headerPlugin = pluginOf(selected);
+  const headerAccent = headerPlugin ? getAppAccent(headerPlugin, theme) : undefined;
 
   // While the app is bootstrapping (restoring any stored sign-in session), or
   // while the first unlock-status check is in flight for a signed-in non-admin,
@@ -286,11 +340,12 @@ function AppShell() {
       ) : (
         <ScreenHeader
           title={SCREEN_TITLES[selected]}
-          emoji={isPluginKey(selected) ? getPluginEmoji(selected) : undefined}
-          accent={isPluginKey(selected) ? getAppAccent(selected, theme) : undefined}
+          emoji={headerPlugin ? getPluginEmoji(headerPlugin) : undefined}
+          accent={headerAccent}
           onBack={() => setSelected(parentOf(selected))}
           onOpenAccount={openAccount}
-          pluginSlug={isPluginKey(selected) ? selected : undefined}
+          pluginSlug={headerPlugin}
+          extra={headerExtra(selected, isAdmin, headerAccent, setSelected, refreshScreen)}
         />
       )}
 
