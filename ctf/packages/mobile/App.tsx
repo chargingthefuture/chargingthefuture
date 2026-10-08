@@ -4,7 +4,6 @@ import {
   AppState,
   BackHandler,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
 import { ChymeRoom } from './src/features/chyme';
@@ -138,32 +137,20 @@ function SystemBarInsets({ children }: { children: ReactElement }) {
 // branching) keeps the per-render selection trivial.
 type FeatureRenderers = Record<FeatureKey, () => ReactElement>;
 
-// Account & Data and Blocked members read the member's own records, so a signed-out visitor got
-// "We couldn't load…" with a Retry that could never succeed. They get the reason instead, the same
-// way Foundation already tells a signed-out visitor to sign in.
-function SignedOutNote({ text }: { text: string }) {
-  const { tokens } = useTheme();
-  return <Text style={[styles.signedOutNote, { color: tokens.textSecondary }]}>{text}</Text>;
-}
-
-function buildFeatureViews(open: (_key: FeatureKey) => void, signedIn: boolean): FeatureRenderers {
+function buildFeatureViews(open: (_key: FeatureKey) => void): FeatureRenderers {
   return {
     apps: () => <AppsList onOpen={open} />,
     chyme: () => <ChymeRoom />,
     beacon: () => <Beacon />,
     'peer-programming': () => <PeerProgramming />,
     foundation: () => <Foundation />,
-    'account-data': () =>
-      signedIn ? (
-        <View style={styles.fill}>
-          <BlockedMembersLink onPress={() => open('blocked-members')} />
-          <AccountData />
-        </View>
-      ) : (
-        <SignedOutNote text="Sign in to see and manage your data." />
-      ),
-    'blocked-members': () =>
-      signedIn ? <BlockedMembers /> : <SignedOutNote text="Sign in to see the members you have blocked." />,
+    'account-data': () => (
+      <View style={styles.fill}>
+        <BlockedMembersLink onPress={() => open('blocked-members')} />
+        <AccountData />
+      </View>
+    ),
+    'blocked-members': () => <BlockedMembers />,
   };
 }
 
@@ -184,6 +171,14 @@ function AppShell() {
 
   const isAdmin = Boolean(user?.isAdmin);
   const openAccount = useCallback(() => setSelected('account-data'), []);
+
+  // Account & Data and Blocked members are reached only from the gear, which shows only to a
+  // signed-in member, as on the web. Signing out while on one of them goes back to Apps.
+  useEffect(() => {
+    if (!isAuthenticated && (selected === 'account-data' || selected === 'blocked-members')) {
+      setSelected('apps');
+    }
+  }, [isAuthenticated, selected]);
 
   // Client-side Unlock wall. The server 403 gates are the real enforcement; this
   // only mirrors the web redirect so a not-yet-approved member does not see the
@@ -257,12 +252,12 @@ function AppShell() {
   }, [selected]);
 
   const featureView = useMemo(() => {
-    const renderers = buildFeatureViews(setSelected, isAuthenticated);
+    const renderers = buildFeatureViews(setSelected);
     const render = renderers[selected];
     // Every FeatureKey has an entry; the fallback preserves the default (Apps)
     // for any unexpected value.
     return render ? render() : <AppsList onOpen={setSelected} />;
-  }, [selected, isAuthenticated]);
+  }, [selected]);
 
   // While the app is bootstrapping (restoring any stored sign-in session), or
   // while the first unlock-status check is in flight for a signed-in non-admin,
@@ -329,10 +324,5 @@ const styles = StyleSheet.create({
   },
   fill: {
     flex: 1,
-  },
-  signedOutNote: {
-    fontSize: 14,
-    fontFamily: 'Inter_500Medium',
-    marginTop: 8,
   },
 });
