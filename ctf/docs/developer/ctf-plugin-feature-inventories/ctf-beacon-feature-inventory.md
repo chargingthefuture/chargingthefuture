@@ -195,10 +195,12 @@ feed; when the event ends, Beacon auto-posts the recording to the Commons as a r
   each with a signed download address. `CRON_SECRET` Bearer.
 - `POST /api/internal/beacon/recordings-archive` — `{ eventId, archivedUrl }`; records where the kept
   copy lives. Accepts only
-  `https://github.com/chargingthefuture/chargingthefuture/releases/download/beacon-recordings/<eventId>.mp4`.
+  `https://github.com/chargingthefuture/chargingthefuture/releases/download/beacon-recording-<eventId>/<eventId>.mp4`.
   Both are called by `.github/workflows/beacon-recordings-archive.yml` (every six hours, and by hand),
   which downloads each recording, re-encodes it to 540p if it is 2 GB or more (the release asset
-  limit), uploads it to the `beacon-recordings` release, and reports back.
+  limit), creates a draft release tagged `beacon-recording-<eventId>`, uploads the file to it, publishes
+  it, and reports back. One release per recording because this repository's releases are immutable: a
+  published release takes no new files.
 
 ### Webhook
 - `POST /api/beacon/stream-webhook` — Stream call lifecycle events from **both** Stream apps
@@ -313,8 +315,8 @@ stops. HLS is used for public viewers so scale does not multiply WebRTC cost.
 - Replay hosting: link to Stream's recording URL vs. re-hosting; start with the Stream URL. Since
   2026-09-29 every public link goes through `/api/beacon/replays/[id]/recording`, which asks Stream
   for a fresh address, so an expired signature no longer breaks an old replay. Also since
-  2026-09-29 (owner decision: keep our own copies), every recording is copied to the
-  `beacon-recordings` GitHub release, which costs nothing, and played from there. A recording still
+  2026-09-29 (owner decision: keep our own copies), every recording is copied to its
+  own GitHub release (`beacon-recording-<eventId>`), which costs nothing, and played from there. A recording still
   2 GB or more after re-encoding to 540p stays on Stream's copy only, and the workflow says so in its
   summary. A copy has to happen before Stream deletes its file; the workflow runs every six hours.
 - ~~**A phone-only (RTMP) broadcast may never start the public HLS feed or the recording.**~~ Closed
@@ -354,6 +356,14 @@ stops. HLS is used for public viewers so scale does not multiply WebRTC cost.
 12. **Android viewer parity** — deferred via a parity ticket on the build PR.
 
 ## Change Log
+
+- 2026-10-08: **Each recording gets its own release.** The archive workflow had never kept a copy:
+  this repository's releases are immutable, so once its first run published the shared
+  `beacon-recordings` release, every upload to it was refused (HTTP 422, "Cannot upload assets to an
+  immutable release"). Each recording now goes to its own release, tagged `beacon-recording-<eventId>`,
+  created as a draft, given its file, then published. A draft left by a failed run is finished on the
+  next one. The write-back route accepts only the new address. The empty `beacon-recordings` release
+  is no longer used.
 
 - 2026-10-06: **Beacon in the Android app, with screen share (owner decision).** The repeated ask was
   sharing the phone's screen in a live broadcast, which only an installed app can do, so Beacon joins
