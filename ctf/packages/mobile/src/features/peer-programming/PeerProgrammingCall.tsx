@@ -11,11 +11,12 @@
  * the app alive while a call is joined.
  */
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { StreamCall, StreamVideo, StreamVideoClient, type Call } from '@stream-io/video-react-native-sdk';
+import { Video } from 'lucide-react-native';
+import { interFamily } from '../../components/ui';
 import type { SessionCredentials } from './PeerProgrammingApi';
 import { PeerProgrammingCallStage } from './PeerProgrammingCallStage';
-import { PPButton } from './PPButton';
 import { usePPTheme } from './usePPTheme';
 
 const CALL_TYPE = 'default';
@@ -78,20 +79,25 @@ function useCohortCall(credentials: SessionCredentials) {
   return { joined, error };
 }
 
+// Connecting, or the reason the call could not start, as the web's waiting card draws it.
+function CallWaiting({ error, onLeave }: { error: string | null; onLeave: () => void }) {
+  const t = usePPTheme();
+  return (
+    <View style={[styles.card, { borderRadius: t.r(16), borderColor: `${t.ACCENT}30`, backgroundColor: t.CARD_BG }]}>
+      <Video size={48} color={t.ACCENT} style={styles.icon} />
+      <Text style={[styles.text, { color: error ? '#F87171' : t.SUBTLE }]}>{error ?? 'Connecting to the live session…'}</Text>
+      {error ? (
+        <TouchableOpacity onPress={onLeave} accessibilityRole="button" style={[styles.back, { borderRadius: t.r(10) }]}>
+          <Text style={styles.backText}>Back</Text>
+        </TouchableOpacity>
+      ) : null}
+    </View>
+  );
+}
+
 export function PeerProgrammingCall({ credentials, onLeave }: { credentials: SessionCredentials; onLeave: () => void }) {
-  const { tokens, accent } = usePPTheme();
   const { joined, error } = useCohortCall(credentials);
-  if (!joined) {
-    return (
-      <View style={[styles.card, { borderColor: tokens.border, borderRadius: tokens.radius }]}>
-        {error ? null : <ActivityIndicator color={accent} />}
-        <Text style={[styles.text, { color: error ? tokens.danger : tokens.textSecondary }]}>
-          {error ?? 'Connecting to the live session…'}
-        </Text>
-        {error ? <PPButton label="Back" danger onPress={onLeave} /> : null}
-      </View>
-    );
-  }
+  if (!joined) return <CallWaiting error={error} onLeave={onLeave} />;
   return (
     <StreamVideo client={joined.client}>
       <StreamCall call={joined.call}>
@@ -102,6 +108,16 @@ export function PeerProgrammingCall({ credentials, onLeave }: { credentials: Ses
 }
 
 const styles = StyleSheet.create({
-  card: { borderWidth: 1, padding: 32, alignItems: 'center', gap: 12 },
-  text: { fontSize: 15, textAlign: 'center' },
+  card: { paddingVertical: 60, borderWidth: 1, alignItems: 'center' },
+  icon: { marginBottom: 12 },
+  text: { fontSize: 15, textAlign: 'center', fontFamily: interFamily('400') },
+  back: {
+    marginTop: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 22,
+    borderWidth: 1,
+    borderColor: 'rgba(239,68,68,0.3)',
+    backgroundColor: 'rgba(239,68,68,0.12)',
+  },
+  backText: { color: '#F87171', fontSize: 14, fontFamily: interFamily('700') },
 });

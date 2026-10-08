@@ -1,88 +1,70 @@
 /**
- * BeaconChatGate — the body of the Beacon live chat panel.
+ * BeaconChatGate — the body of the Beacon live chat panel, copied from the chat side of the web
+ * BeaconLiveView (components/beacon/beacon-viewer.tsx).
  *
  * Watching a Beacon broadcast is public, but chatting requires a signed-in member (the server-side
  * chat-token route is the real gate):
  *   - signed in + credentials ready → the shared StreamChatView (threads/reactions)
  *   - signed in, credentials pending → "Connecting to chat…" (or the error)
- *   - signed out → a "sign in to chat" prompt with a sign-in button
+ *   - signed out → the lock, a "sign in to chat" line and a sign-in button
  */
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Lock } from 'lucide-react-native';
 import { StreamChatView } from '../../components/shared/StreamChatView';
-import { type ThemeTokens } from '../../theme';
 import { type BeaconChatCredentials } from './BeaconApi';
+import { centeredStyle, centeredText, ctaStyle, ctaText, type BeaconTokens } from './BeaconTheme';
 
 export interface BeaconChatGateProps {
-  tokens: ThemeTokens;
-  accent: string;
+  t: BeaconTokens;
   isAuthenticated: boolean;
   chat: BeaconChatCredentials | null;
   chatError: string | null;
   onSignIn: () => void;
 }
 
-export const BeaconChatGate: React.FC<BeaconChatGateProps> = ({
-  tokens,
-  accent,
-  isAuthenticated,
-  chat,
-  chatError,
-  onSignIn,
-}) => {
-  if (isAuthenticated) {
-    if (chat) {
-      return (
-        <View style={styles.chatBody}>
-          <StreamChatView
-            streamApiKey={chat.streamApiKey}
-            streamToken={chat.streamToken}
-            streamUserId={chat.streamUserId}
-            streamChannelId={chat.streamChannelId}
-            channelType={chat.streamChannelType}
-            accentColor={accent}
-          />
-        </View>
-      );
-    }
+export const BeaconChatGate: React.FC<BeaconChatGateProps> = ({ t, isAuthenticated, chat, chatError, onSignIn }) => {
+  if (isAuthenticated && chat) {
     return (
-      <View style={styles.chatCenter}>
-        <Text style={[styles.chatCenterText, { color: tokens.textSecondary }]}>
-          {chatError ?? 'Connecting to chat…'}
-        </Text>
+      <View style={styles.chatBody}>
+        <StreamChatView
+          streamApiKey={chat.streamApiKey}
+          streamToken={chat.streamToken}
+          streamUserId={chat.streamUserId}
+          streamChannelId={chat.streamChannelId}
+          channelType={chat.streamChannelType}
+          accentColor={t.ACCENT}
+        />
       </View>
     );
   }
-
+  if (isAuthenticated) {
+    return (
+      <View style={[centeredStyle(t), styles.fill]}>
+        <Text style={centeredText(t)}>{chatError ?? 'Connecting to chat…'}</Text>
+      </View>
+    );
+  }
   return (
-    <View style={styles.chatCenter}>
-      <Text style={[styles.signInLead, { color: tokens.textSecondary }]}>
-        Sign in to chat and react. Anyone can watch — chatting is for members.
-      </Text>
+    <View style={[centeredStyle(t), styles.fill, styles.signedOut]}>
+      <Lock size={28} color={t.SUBTLE} />
+      <Text style={centeredText(t)}>Sign in to chat and react. Anyone can watch — chatting is for members.</Text>
       <TouchableOpacity
-        style={[
-          styles.signInBtn,
-          { borderRadius: tokens.radius, borderColor: accent, backgroundColor: accent + '20' },
-        ]}
+        style={[ctaStyle(t, 18, 9), styles.signIn]}
         onPress={onSignIn}
         accessibilityRole="button"
         accessibilityLabel="Sign in to chat"
       >
-        <Text style={[styles.signInBtnText, { color: accent }]}>Sign in to chat</Text>
+        <Text style={ctaText(t)}>Sign in to chat</Text>
       </TouchableOpacity>
     </View>
   );
 };
 
+// The web aside is at least 420px tall and its header row takes about 45px of it.
 const styles = StyleSheet.create({
-  chatBody: { height: 360 },
-  chatCenter: { padding: 24, alignItems: 'center', justifyContent: 'center', gap: 12 },
-  chatCenterText: { fontSize: 14, textAlign: 'center' },
-  signInLead: { fontSize: 14, textAlign: 'center', lineHeight: 20 },
-  signInBtn: {
-    borderWidth: 1,
-    paddingVertical: 9,
-    paddingHorizontal: 18,
-  },
-  signInBtnText: { fontSize: 14, fontWeight: '700' },
+  chatBody: { height: 375 },
+  fill: { flex: 1 },
+  signedOut: { gap: 12, padding: 24 },
+  signIn: { alignSelf: 'center' },
 });

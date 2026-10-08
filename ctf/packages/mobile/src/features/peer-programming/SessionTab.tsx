@@ -1,42 +1,65 @@
-// The Session tab: the cohort's live video call. Before joining it shows the cohort and a Join
-// session button; the button asks POST /api/peer-programming/session/join for credentials and, on
-// success, mounts the call. A 404 (no cohort) or 503 (live video not configured) shows the route's
-// own message. A member listening in on a cohort they were not placed in can read it but cannot join
-// its call, the same as the web.
+// The Session tab, copied from the web's PeerProgrammingSessionTab (web components/peer-programming/
+// pp-session-tab.tsx): the "Live Session" heading with the cohort and its member count, then either
+// the join card and the roster, or the live call once joined. Join session asks
+// POST /api/peer-programming/session/join for credentials; a failure shows the route's own message.
 import React, { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Video } from 'lucide-react-native';
+import { interFamily } from '../../components/ui';
 import { joinSession, type Room, type SessionCredentials } from './PeerProgrammingApi';
 import { PeerProgrammingCall } from './PeerProgrammingCall';
-import { PPButton } from './PPButton';
+import { PPHero } from './PPHero';
+import { initials, memberName } from './ppChat';
 import { usePPTheme } from './usePPTheme';
 
-// Why the viewer cannot join, or null when they can.
-function joinBlocked(room: Room): string | null {
-  if (!room.cohort) return 'Join a cohort to access live sessions';
-  if (room.access !== 'member') return 'You’re listening in — only cohort members can join the call.';
-  return null;
+function JoinCard({ hasCohort, joining, error, onJoin }: { hasCohort: boolean; joining: boolean; error: string | null; onJoin: () => void }) {
+  const t = usePPTheme();
+  return (
+    <View style={[styles.card, { borderRadius: t.r(16), borderColor: `${t.ACCENT}30`, backgroundColor: t.CARD_BG }]}>
+      <Video size={48} color={t.ACCENT} style={styles.icon} />
+      <Text style={[styles.cardTitle, { color: t.MUTED }]}>Video session</Text>
+      {hasCohort ? null : <Text style={[styles.cardNote, { color: t.FAINT }]}>Join a cohort to access live sessions</Text>}
+      {error ? <Text style={[styles.cardNote, styles.cardError]}>{error}</Text> : null}
+      {hasCohort ? (
+        <TouchableOpacity
+          onPress={onJoin}
+          disabled={joining}
+          accessibilityRole="button"
+          style={[styles.join, { borderRadius: t.r(10), backgroundColor: t.ACCENT, opacity: joining ? 0.6 : 1 }]}
+        >
+          <Text style={styles.joinText}>{joining ? 'Connecting…' : 'Join Session'}</Text>
+        </TouchableOpacity>
+      ) : null}
+    </View>
+  );
 }
 
-function JoinCard({ room, joining, error, onJoin }: { room: Room; joining: boolean; error: string | null; onJoin: () => void }) {
-  const { tokens } = usePPTheme();
-  const blocked = joinBlocked(room);
+// The roster before joining: four tiles a row, each with the member's initials and name.
+const GRID_GAP = 10;
+
+function ParticipantGrid({ room }: { room: Room }) {
+  const t = usePPTheme();
+  const [rowWidth, setRowWidth] = useState(0);
+  if (room.members.length === 0) return null;
+  const width = (rowWidth - GRID_GAP * 3) / 4;
   return (
-    <View style={[styles.card, { borderColor: tokens.border, borderRadius: tokens.radius }]}>
-      <Text style={[styles.title, { color: tokens.textPrimary }]}>Video session</Text>
-      {blocked ? <Text style={[styles.text, { color: tokens.textMuted }]}>{blocked}</Text> : null}
-      {error ? <Text style={[styles.text, { color: tokens.danger }]}>{error}</Text> : null}
-      {blocked ? null : <PPButton label={joining ? 'Connecting…' : 'Join session'} primary disabled={joining} onPress={onJoin} />}
-      {blocked ? null : (
-        <Text style={[styles.text, { color: tokens.textMuted }]}>
-          Your camera and microphone turn on when you join. The call keeps going if you switch to another app.
-        </Text>
-      )}
+    <View style={styles.grid} onLayout={(e) => setRowWidth(e.nativeEvent.layout.width)}>
+      {rowWidth > 0 && room.members.map((member) => {
+        const name = memberName(member);
+        return (
+          <View key={member.userId} style={[styles.tile, { width, borderRadius: t.r(12), borderColor: `${t.ACCENT}15`, backgroundColor: t.CARD_BG }]}>
+            <View style={[styles.avatar, { borderRadius: t.r(20), backgroundColor: `${t.ACCENT}25` }]}>
+              <Text style={[styles.avatarText, { color: t.ACCENT }]}>{initials(name)}</Text>
+            </View>
+            <Text style={[styles.tileName, { color: t.SUBTLE }]}>{name}</Text>
+          </View>
+        );
+      })}
     </View>
   );
 }
 
 export function SessionTab({ room }: { room: Room }) {
-  const { tokens } = usePPTheme();
   const [credentials, setCredentials] = useState<SessionCredentials | null>(null);
   const [joining, setJoining] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,26 +76,35 @@ export function SessionTab({ room }: { room: Room }) {
     }
   };
 
-  const cohortLine = room.cohort ? `${room.cohort.cohortLabel} · ${room.cohort.memberCount} members` : 'Your cohort';
+  const count = room.members.length;
+  const line = `${room.cohort?.cohortLabel || 'Your Cohort'} · ${count} ${count === 1 ? 'participant' : 'participants'}`;
   return (
-    <View style={styles.stack}>
-      <View>
-        <Text style={[styles.heading, { color: tokens.textPrimary }]}>Live Session</Text>
-        <Text style={[styles.text, { color: tokens.textSecondary }]}>{cohortLine}</Text>
-      </View>
+    <View style={styles.pad}>
+      <PPHero id="ppSessionHero" title="Live Session" line={line} />
       {credentials ? (
         <PeerProgrammingCall credentials={credentials} onLeave={() => setCredentials(null)} />
       ) : (
-        <JoinCard room={room} joining={joining} error={error} onJoin={() => void join()} />
+        <>
+          <JoinCard hasCohort={Boolean(room.cohort)} joining={joining} error={error} onJoin={() => void join()} />
+          <ParticipantGrid room={room} />
+        </>
       )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  stack: { gap: 12 },
-  heading: { fontSize: 20, fontWeight: '800' },
-  card: { borderWidth: 1, padding: 24, alignItems: 'center', gap: 10 },
-  title: { fontSize: 16, fontWeight: '600' },
-  text: { fontSize: 13, textAlign: 'center' },
+  pad: { padding: 24 },
+  card: { paddingVertical: 60, alignItems: 'center', borderWidth: 1, marginBottom: 20 },
+  icon: { marginBottom: 12 },
+  cardTitle: { fontSize: 16, fontFamily: interFamily('400'), marginBottom: 4 },
+  cardNote: { fontSize: 13, fontFamily: interFamily('400'), textAlign: 'center' },
+  cardError: { color: '#F87171', marginTop: 8 },
+  join: { marginTop: 16, paddingVertical: 12, paddingHorizontal: 32 },
+  joinText: { color: '#fff', fontSize: 15, fontFamily: interFamily('700') },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: GRID_GAP },
+  tile: { padding: 12, borderWidth: 1, alignItems: 'center' },
+  avatar: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
+  avatarText: { fontSize: 14, fontFamily: interFamily('700') },
+  tileName: { fontSize: 11, fontFamily: interFamily('400'), textAlign: 'center' },
 });

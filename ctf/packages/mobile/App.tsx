@@ -2,23 +2,13 @@ import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 import {
   AppState,
-  BackHandler,
-  ScrollView,
   StyleSheet,
-  Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
-import { ChymeRoom } from './src/features/chyme';
-import { Beacon } from './src/features/beacon';
-import { PeerProgramming } from './src/features/peer-programming';
-import { Foundation, FoundationCallController } from './src/features/foundation';
+import { FoundationCallController } from './src/features/foundation';
 import { AppsList } from './src/features/apps';
 import { Unlock } from './src/features/unlock';
 import { fetchUnlockStatus, type UnlockAccessTier } from './src/features/unlock/api';
-import { AccountData } from './src/features/account-data';
-import { BlockedMembers } from './src/features/blocks';
-import { ReportAProblemEntry } from './src/features/bug-reporting';
 import {
   useFonts,
   Inter_400Regular,
@@ -29,11 +19,14 @@ import {
   Inter_900Black,
 } from '@expo-google-fonts/inter';
 import { AuthProvider, useAuth } from './src/auth/auth-context';
-import { ThemeProvider, useTheme, getAppAccent, type ThemeName } from './src/theme';
+import { ThemeProvider, useTheme } from './src/theme';
 import { LoadingScreen } from './src/components/shared/LoadingScreen';
-import { SignInPrompt } from './src/components/shared/SessionControls';
-import { getPluginEmoji } from './src/theme/plugin-visuals';
-import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Path } from 'react-native-svg';
+import { ShellBackground } from './src/components/shell/ShellChrome';
+import { ScreenOverrideContext } from './src/components/shell/HeaderActions';
+import { AppHeader } from './src/navigation/AppHeader';
+import { buildFeatureViews } from './src/navigation/feature-views';
+import { pluginOf } from './src/navigation/screens';
+import { useAppNavigation } from './src/navigation/useAppNavigation';
 import { StreamVideoRN } from '@stream-io/video-react-native-sdk';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -58,78 +51,11 @@ StreamVideoRN.updateConfig({
   },
 });
 
-// The Skills Economy brand mark — the mobile counterpart of the web icon-rail logo. It draws the
-// "Stack" (skill progression) logo: three ascending rounded bars filled with the brand teal→purple
-// gradient (vector source: design/logo-options concept-d-stack-mark, chosen 2026-07-26). Comic theme
-// keeps the ink panel + hard cream border and paints the same mark in the border ink so it reads on
-// the warm newsprint surface. Kept small and self-contained.
-const SE_MARK_PATH =
-  'm94 105.7h-26v-7.7h25.5c1.5-0.1 3.1-1.3 3.1-3.3v-11.7c0-1.5-1.2-2.9-2.8-2.9l-22.5-0.1c-1.7 0-3.3 1.4-3.3 3.1l0.1 9.7h-24.8c-1.6 0-3 1.3-3 2.9v12.9h-25.7c-1.6 0-3.1 1.3-3.1 2.9v8.1c0 1.4 1.2 2.7 2.6 2.7h79.9c1.5 0 2.8-1.3 2.9-2.7v-11.3c-0.2-1.3-1.4-2.6-2.9-2.6zm-0.2 21.2h-79.3c-1.4 0-2.9 1.2-2.9 2.8v8.3c0 1.4 1.2 3 2.8 3h79.6c1.6 0 2.8-1.3 2.8-2.8v-8c0-1.8-1.4-3.2-3-3.3z';
-
-function BrandMark({ size = 36 }: { size?: number }) {
-  const { tokens } = useTheme();
-  const radius = tokens.radiusControl;
-  return (
-    <View
-      style={{
-        width: size,
-        height: size,
-        borderRadius: radius,
-        overflow: 'hidden',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: tokens.isComic ? tokens.surface : 'transparent',
-        borderWidth: tokens.isComic ? 1.5 : 0,
-        borderColor: tokens.border,
-      }}
-    >
-      <Svg width={size} height={size} viewBox="4 67.9 100 85">
-        <Defs>
-          <SvgLinearGradient id="brandmark" x1="11.51" y1="110.4" x2="96.71" y2="110.4" gradientUnits="userSpaceOnUse">
-            <Stop offset="0" stopColor="#006D72" />
-            <Stop offset="1" stopColor="#8F4BB2" />
-          </SvgLinearGradient>
-        </Defs>
-        <Path d={SE_MARK_PATH} fill={tokens.isComic ? tokens.border : 'url(#brandmark)'} />
-      </Svg>
-    </View>
-  );
-}
-
-// Emoji glyph for a nav pill, mirroring web's per-plugin tile emoji. Non-plugin keys get their own.
-function keyEmoji(key: FeatureKey): string {
-  const special: Partial<Record<FeatureKey, string>> = {
-    apps: '🧩',
-    'account-data': '🗄️',
-    'blocked-members': '🚫',
-    'bug-report': '🐞',
-  };
-  if (special[key]) return special[key] as string;
-  return getPluginEmoji(key);
-}
-
-// Accent for a nav pill's active state — the plugin's own accent, so each app keeps its color
-// identity in the nav (matches web). Non-plugin keys fall back to the neutral accent.
-function keyAccent(key: FeatureKey, theme: ThemeName): string {
-  return getAppAccent(key, theme);
-}
-
-// The native Android app carries the plugins that materially benefit from being an installed app
-// (Chyme live audio, Beacon broadcasts, PeerProgramming's live call, Foundation's instant calls), plus what they need to run (Clerk auth wall, bug reporting,
-// settings/account); everything else is served by the web app. The Apps list is home. See
-// `.claude/rules/105-web-android-feature-parity-rules.mdc`.
-type FeatureKey = 'apps' | 'chyme' | 'beacon' | 'peer-programming' | 'foundation' | 'account-data' | 'blocked-members' | 'bug-report';
-
-const featureOrder: Array<{ key: FeatureKey; label: string }> = [
-  { key: 'apps', label: 'Apps' },
-  { key: 'chyme', label: 'Chyme' },
-  { key: 'beacon', label: 'Beacon' },
-  { key: 'peer-programming', label: 'PeerProgramming' },
-  { key: 'foundation', label: 'Foundation' },
-  { key: 'account-data', label: 'Account & Data' },
-  { key: 'blocked-members', label: 'Blocked members' },
-  { key: 'bug-report', label: 'Report a problem' },
-];
+// The screens, their titles and where back goes from each live in src/navigation/screens.ts; the
+// header above each screen in src/navigation/AppHeader.tsx; the screen for each key in
+// src/navigation/feature-views.tsx. The Apps list is home; the top bar's gear opens Your account,
+// and Account & Data, Blocked members, Verification and Recurring activity sit under it, as on the
+// web's /account page.
 
 export default function App() {
   // Load the brand typeface (Inter) so text rendered through the shared type scale uses it at the
@@ -183,37 +109,6 @@ function SystemBarInsets({ children }: { children: ReactElement }) {
   );
 }
 
-// Maps each navigation key to the screen it renders. A plain lookup table (no
-// branching) keeps the per-render selection trivial.
-type FeatureRenderers = Record<FeatureKey, () => ReactElement>;
-
-// Account & Data and Blocked members read the member's own records, so a signed-out visitor got
-// "We couldn't load…" with a Retry that could never succeed. They get the reason instead, the same
-// way Foundation already tells a signed-out visitor to sign in.
-function SignedOutNote({ text }: { text: string }) {
-  const { tokens } = useTheme();
-  return <Text style={[styles.signedOutNote, { color: tokens.textSecondary }]}>{text}</Text>;
-}
-
-function buildFeatureViews(open: (_key: FeatureKey) => void, signedIn: boolean): FeatureRenderers {
-  return {
-    apps: () => <AppsList onOpen={open} />,
-    chyme: () => <ChymeRoom />,
-    beacon: () => <Beacon />,
-    'peer-programming': () => <PeerProgramming />,
-    foundation: () => <Foundation />,
-    'account-data': () =>
-      signedIn ? <AccountData /> : <SignedOutNote text="Sign in to see and manage your data." />,
-    'blocked-members': () =>
-      signedIn ? <BlockedMembers /> : <SignedOutNote text="Sign in to see the members you have blocked." />,
-    'bug-report': () => (
-      <ScrollView contentContainerStyle={styles.bugReportStack}>
-        <ReportAProblemEntry />
-      </ScrollView>
-    ),
-  };
-}
-
 // The name the other person sees in a Foundation call.
 function callDisplayName(user: { username?: string | null } | null): string {
   return user?.username ?? 'Member';
@@ -221,31 +116,26 @@ function callDisplayName(user: { username?: string | null } | null): string {
 
 // Result of the client-side Unlock check. `walled` mirrors the web redirect in
 // app/page.tsx: a signed-in non-admin whose tier is neither approved_full nor
-// locked_support_only cannot reach the app.
-type UnlockGate = { loading: boolean; walled: boolean };
+// locked_support_only cannot reach the app. `checked` turns true once the first check for the
+// signed-in member has finished; only that first check shows the loading screen.
+type UnlockGate = { loading: boolean; walled: boolean; checked: boolean };
 
-function AppShell() {
-  const { isLoading, isAuthenticated, user } = useAuth();
-  const { tokens, theme } = useTheme();
-  const [selected, setSelected] = useState<FeatureKey>('apps');
-
-  const isAdmin = Boolean(user?.isAdmin);
-
-  // Client-side Unlock wall. The server 403 gates are the real enforcement; this
-  // only mirrors the web redirect so a not-yet-approved member does not see the
-  // app shell. Defaults to not-walled and fails open on any fetch error.
-  const [unlockGate, setUnlockGate] = useState<UnlockGate>({ loading: false, walled: false });
+// Client-side Unlock wall. The server 403 gates are the real enforcement; this
+// only mirrors the web redirect so a not-yet-approved member does not see the
+// app shell. Defaults to not-walled and fails open on any fetch error.
+function useUnlockGate(isLoading: boolean, isAuthenticated: boolean, isAdmin: boolean) {
+  const [unlockGate, setUnlockGate] = useState<UnlockGate>({ loading: false, walled: false, checked: false });
   const fetchSeq = useRef(0);
 
   const refreshUnlockGate = useCallback(async () => {
     // Only signed-in non-admins need a check. Admins always pass; signed-out
     // users keep the existing sign-in path untouched.
     if (!isAuthenticated || isAdmin) {
-      setUnlockGate({ loading: false, walled: false });
+      setUnlockGate({ loading: false, walled: false, checked: false });
       return;
     }
     const seq = ++fetchSeq.current;
-    setUnlockGate((prev) => ({ loading: true, walled: prev.walled }));
+    setUnlockGate((prev) => ({ ...prev, loading: true }));
     try {
       const status = await fetchUnlockStatus();
       if (seq !== fetchSeq.current) return;
@@ -257,13 +147,13 @@ function AppShell() {
       // place with nobody to ask — which is the dead end the help button exists to open.
       const passes =
         tier === 'approved_full' || tier === 'locked_support_only' || status.commonsAccess === true;
-      setUnlockGate({ loading: false, walled: !passes });
+      setUnlockGate({ loading: false, walled: !passes, checked: true });
     } catch (error) {
       // Fail open: never lock out an approved member because of a flaky status
       // call. The server-side gates still enforce real access.
       console.error('[unlock] status fetch failed; failing open (not walling)', error);
       if (seq !== fetchSeq.current) return;
-      setUnlockGate({ loading: false, walled: false });
+      setUnlockGate({ loading: false, walled: false, checked: true });
     }
   }, [isAuthenticated, isAdmin]);
 
@@ -283,39 +173,59 @@ function AppShell() {
     return () => sub.remove();
   }, [refreshUnlockGate]);
 
-  // Android hardware back. The app is a flat pill navigator with no screen stack, so give back a
-  // predictable meaning: from any other pill go back to the Apps list, the home surface; from Apps,
-  // let Android do its default (leave the app). This
-  // replaces the old behavior where back exited the app from anywhere. Note: "navigating away
-  // without closing" — the case that must not drop a member from a live room — is pressing HOME or
-  // switching apps (which backgrounds the app; the Chyme foreground service keeps the audio and the
-  // presence timers alive). Back is an explicit "leave", so it does not need to preserve the call.
+  return { unlockGate, refreshUnlockGate };
+}
+
+function AppShell() {
+  const { isLoading, isAuthenticated, user } = useAuth();
+  const { tokens } = useTheme();
+  const isAdmin = Boolean(user?.isAdmin);
+  const { selected, open, back, openRecurringFromFoundation, override, setOverride } = useAppNavigation(isAuthenticated, isAdmin);
+  // The cohort PeerProgramming opens on (null: the member's own), and the count the admin refresh
+  // control bumps to remount an admin screen.
+  const [ppCohortId, setPpCohortId] = useState<string | null>(null);
+  const [refreshToken, setRefreshToken] = useState(0);
+  const refreshScreen = useCallback(() => setRefreshToken((count) => count + 1), []);
   useEffect(() => {
-    const onBack = () => {
-      if (selected !== 'apps') {
-        setSelected('apps');
-        return true; // handled — do not exit
-      }
-      return false; // on Apps: let Android leave the app
-    };
-    const sub = BackHandler.addEventListener('hardwareBackPress', onBack);
-    return () => sub.remove();
+    if (selected !== 'peer-programming') setPpCohortId(null);
   }, [selected]);
 
+  const openAccount = useCallback(() => open('account'), [open]);
+  const { unlockGate, refreshUnlockGate } = useUnlockGate(isLoading, isAuthenticated, isAdmin);
+
   const featureView = useMemo(() => {
-    const renderers = buildFeatureViews(setSelected, isAuthenticated);
+    const renderers = buildFeatureViews({
+      open,
+      back,
+      openRecurringFromFoundation,
+      onUnlockStatusChanged: () => void refreshUnlockGate(),
+      onUnlockGoHome: () => {
+        open('apps');
+        void refreshUnlockGate();
+      },
+      openAccount,
+      refreshToken,
+      ppCohortId,
+      openPpRoom: (cohortId: string) => {
+        open('peer-programming');
+        setPpCohortId(cohortId);
+      },
+    });
     const render = renderers[selected];
     // Every FeatureKey has an entry; the fallback preserves the default (Apps)
     // for any unexpected value.
-    return render ? render() : <AppsList onOpen={setSelected} />;
-  }, [selected, isAuthenticated]);
+    return render ? render() : <AppsList onOpen={open} />;
+  }, [selected, open, back, openRecurringFromFoundation, refreshToken, ppCohortId, refreshUnlockGate, openAccount]);
 
   // While the app is bootstrapping (restoring any stored sign-in session), or
   // while the first unlock-status check is in flight for a signed-in non-admin,
   // show the universal "Exit Their Economy / Exit The Psyop" loading screen so
   // the loading state is consistent app-wide and matches web — and so the
-  // navigator never flashes before the gate resolves.
-  if (isLoading || unlockGate.loading) {
+  // navigator never flashes before the gate resolves. Later re-checks (returning to the app, or the
+  // Unlock screen reporting a status read) keep the current screen up: swapping in the loading
+  // screen unmounted the Unlock wall, which re-read its status on remount and asked for another
+  // check, over and over.
+  if (isLoading || (unlockGate.loading && !unlockGate.checked)) {
     return <LoadingScreen />;
   }
 
@@ -324,66 +234,36 @@ function AppShell() {
   // shell, matching the web redirect to /plugin/unlock. A successful submission
   // re-runs the check so an approval mid-session lets them through.
   if (unlockGate.walled) {
-    return <Unlock onStatusChanged={refreshUnlockGate} />;
+    return <Unlock onStatusChanged={refreshUnlockGate} onGoHome={() => void refreshUnlockGate()} showSignOut />;
   }
 
   return (
     <View style={[styles.container, { backgroundColor: tokens.bg }]}>
-      <View style={styles.brandRow}>
-        <BrandMark />
-        <View>
-          <Text style={[styles.wordmark, { color: tokens.textPrimary }]}>Skills Economy</Text>
-          <Text style={[styles.subtitle, { color: tokens.textSecondary }]}>Community</Text>
-        </View>
-      </View>
-
-      <ScrollView horizontal style={styles.pillRow} contentContainerStyle={styles.pillContent}>
-        {featureOrder.map((feature) => {
-          const active = selected === feature.key;
-          const accent = keyAccent(feature.key, theme);
-          return (
-            <TouchableOpacity
-              key={feature.key}
-              style={[
-                styles.pill,
-                {
-                  backgroundColor: active ? `${accent}22` : tokens.surface,
-                  borderColor: active ? accent : tokens.border,
-                  borderRadius: tokens.isComic ? 0 : 999,
-                },
-              ]}
-              onPress={() => setSelected(feature.key)}
-            >
-              <Text
-                style={[
-                  styles.pillText,
-                  { color: active ? tokens.textPrimary : tokens.textSecondary },
-                ]}
-              >
-                {keyEmoji(feature.key)}  {feature.label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
-
-      {/* Signed out: the only way to an account. Listening to a Chyme room as a guest still works. */}
-      {isAuthenticated ? null : <SignInPrompt />}
+      <ShellBackground />
+      <AppHeader
+        selected={selected}
+        isAdmin={isAdmin}
+        signedIn={isAuthenticated}
+        open={open}
+        onBack={back}
+        onOpenAccount={openAccount}
+        onRefresh={refreshScreen}
+        override={override}
+      />
 
       {/* Keyed on the signed-in member so signing out (or in as somebody else) unmounts every screen
           holding a Stream client, whose cleanup leaves the call and disconnects it. */}
-      <View key={user?.id ?? 'signed-out'} style={styles.content}>
+      <View key={user?.id ?? 'signed-out'} style={[styles.content, pluginOf(selected) ? styles.contentPadded : null]}>
         {/* Foundation instant calls: the incoming ring and the live call show above every tab, as the web
             mounts its call controller at the shell root. Inside the keyed view, so signing out hangs up. */}
         <FoundationCallController signedIn={isAuthenticated} displayName={callDisplayName(user)}>
-          {featureView}
+          <ScreenOverrideContext.Provider value={setOverride}>{featureView}</ScreenOverrideContext.Provider>
         </FoundationCallController>
       </View>
 
-      <Text style={[styles.webHint, { color: tokens.textSecondary }]}>
-        The rest of the app is on the web — app.chargingthefuture.com
-      </Text>
-      <StatusBar style={tokens.isComic ? 'light' : 'auto'} />
+      {/* Both themes are dark, so the clock and icons are always light. 'auto' followed the phone's
+          light/dark setting and drew dark icons on the dark bar in light mode. */}
+      <StatusBar style="light" />
     </View>
   );
 }
@@ -391,73 +271,12 @@ function AppShell() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    paddingTop: 8,
-    paddingHorizontal: 12,
-  },
-  brandRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 8,
-  },
-  wordmark: {
-    fontSize: 18,
-    fontWeight: '800',
-    fontFamily: 'Inter_800ExtraBold',
-  },
-  subtitle: {
-    fontSize: 12,
-    fontWeight: '600',
-    fontFamily: 'Inter_600SemiBold',
-  },
-  pillRow: {
-    maxHeight: 48,
-  },
-  pillContent: {
-    gap: 8,
-    alignItems: 'center',
-    paddingVertical: 4,
-  },
-  pill: {
-    borderWidth: 1,
-    borderColor: '#d0d0d0',
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: '#f8f8f8',
-  },
-  pillActive: {
-    backgroundColor: '#111',
-    borderColor: '#111',
-  },
-  pillText: {
-    fontSize: 12,
-    color: '#222',
-    fontWeight: '600',
-    fontFamily: 'Inter_600SemiBold',
-  },
-  pillTextActive: {
-    color: '#fff',
   },
   content: {
     flex: 1,
-    marginTop: 10,
   },
-  signedOutNote: {
-    fontSize: 14,
-    fontFamily: 'Inter_500Medium',
-    marginTop: 8,
-  },
-  bugReportStack: {
-    gap: 12,
-    paddingBottom: 24,
-  },
-  webHint: {
-    fontSize: 11,
-    fontWeight: '500',
-    fontFamily: 'Inter_500Medium',
-    textAlign: 'center',
-    paddingVertical: 8,
+  contentPadded: {
+    paddingHorizontal: 12,
+    paddingTop: 10,
   },
 });

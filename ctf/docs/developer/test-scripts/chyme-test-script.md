@@ -15,7 +15,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-chyme-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-08-04 manual note: inventory scope line corrected to the real constant names (`CHYME_MAIN_ROOM_KEY`, `CHYME_CONTRIBUTORS_ROOM_KEY`) — no test change; the two-room cases below already match the shipped product · 2026-08-24 manual update: CH-7 now also checks that the signed-out view scrolls as a page (pinned header, Safari Full Page reaches the bottom) and ships one layout at every width · 2026-09-20 manual update: CH-7 now also checks the **Leave** control beside refresh, which a signed-out listener uses to stop listening without closing the page · 2026-09-20 manual update: CH-1 room name no longer carries a fixed topic · 2026-09-21 manual update: CH-A2 now also checks the day-by-day range control (7 days / 30 days / This month / All of it) and that "Copy as text" pastes the selected range · 2026-10-05 manual update: CH-4 Android leave drops the row at once; CH-7 step 7 re-admits a listener pruned while the tab was hidden; CH-12 refused Back Channel actions show their reason; CH-23 step 5 a removed member already in the room sees the reason |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-08-04 manual note: inventory scope line corrected to the real constant names (`CHYME_MAIN_ROOM_KEY`, `CHYME_CONTRIBUTORS_ROOM_KEY`) — no test change; the two-room cases below already match the shipped product · 2026-08-24 manual update: CH-7 now also checks that the signed-out view scrolls as a page (pinned header, Safari Full Page reaches the bottom) and ships one layout at every width · 2026-09-20 manual update: CH-7 now also checks the **Leave** control beside refresh, which a signed-out listener uses to stop listening without closing the page · 2026-09-20 manual update: CH-1 room name no longer carries a fixed topic · 2026-09-21 manual update: CH-A2 now also checks the day-by-day range control (7 days / 30 days / This month / All of it) and that "Copy as text" pastes the selected range · 2026-10-05 manual update: CH-4 Android leave drops the row at once; CH-7 step 7 re-admits a listener pruned while the tab was hidden; CH-12 refused Back Channel actions show their reason; CH-23 step 5 a removed member already in the room sees the reason · 2026-10-08 manual update: CH-AND checks the Android screen against the web page at phone width (signed in, signed out, admin screens) |
 
 ## How to run this
 
@@ -776,3 +776,18 @@ hit one of these, it is already tracked, not a new bug:
   page. The pill says so now; the Android app's foreground service is the answer for a long sit.
 
 > _Terminology (2026-07-20): the source inventory's user-facing section is now titled **User Features** (was "Target User Features"), and its admin section **Admin Features**. Heading rename only — no test steps changed._
+
+### CH-AND · Android Chyme matches the web page at phone width
+**Role:** member, then signed out, then admin · **Surfaces:** android, compared with web (~390px)
+**Steps:**
+1. Signed in, open Chyme in the Android app beside the web page at phone width. The rooms rail
+   (Main Room, Weavers of the Commons), the hosting statement, "Coming up on TI Radio", the Join Room
+   row with refresh, the room header with Chat, the stage and the control row match the web in
+   wording, order and colors, in both themes.
+2. Signed out, open Chyme: the web's public page shows with its own green header and Sign In, and
+   no second app header above it. Listen without an account, then tap Leave.
+3. As an admin, tap **Admin** in the Chyme header: Live audio usage opens with the Gauge icon, the
+   refresh control and **Member view**. Open the readings loop from it; back returns to Live audio
+   usage, and back again returns to Chyme.
+**Expected:** Every part of the web page is present and nothing the web lacks is added.
+**Result:** android ☐ — notes:

@@ -12,8 +12,6 @@
 //   - POST /api/foundation/connections/instant-calls/[callId]/end     either side hangs up (or the caller cancels)
 //   - POST /api/foundation/connections/instant-calls/[callId]/extend  caller adds one block
 //   - POST /api/foundation/connections/threads/[threadId]/instant-call { authorizedBlocks } — ring
-//   - GET  /api/foundation/connections/history                        the member's connection threads
-//   - GET  /api/foundation/providers/[providerId]                     a provider's name and call settings
 import { authedFetch } from '../../auth/authedFetch';
 
 export type RingStatus = 'none' | 'ringing' | 'answered' | 'declined' | 'timed_out' | 'ended';
@@ -45,23 +43,6 @@ export type CallState = {
 };
 
 export type CallResult = { ok: true; call: InstantCall } | { ok: false; error: string };
-
-export type ConnectionThread = {
-  id: string;
-  survivorUserId: string;
-  providerUserId: string;
-  providerDirectoryProfileId: string;
-  status: 'active' | 'closed';
-};
-
-export type ProviderCallSettings = {
-  profileId: string;
-  providerUserId: string;
-  displayName: string;
-  instantCallEnabled: boolean;
-  instantCallRateCredits: number | null;
-  instantCallIntervalMinutes: number;
-};
 
 // The same default and ceiling as the web picker (FOUNDATION_INSTANT_CALL_DEFAULT_AUTHORIZED_BLOCKS and
 // FOUNDATION_INSTANT_CALL_MAX_AUTHORIZED_BLOCKS in web lib/foundation/constants.ts).
@@ -177,27 +158,6 @@ export async function fetchCallState(callId: string): Promise<CallState | null> 
     streamToken: data.streamToken ?? null,
     streamCallId: data.streamCallId || data.call.streamCallId,
   };
-}
-
-export async function fetchThreads(): Promise<ConnectionThread[]> {
-  const res = await authedFetch('/api/foundation/connections/history?includeMessages=false&includeCalls=false&pageSize=50', { method: 'GET' });
-  if (!res.ok) throw new Error(await readError(res, 'Could not load your connections.'));
-  const data = (await res.json()) as { threads?: ConnectionThread[] };
-  return data.threads ?? [];
-}
-
-export async function fetchProvider(profileId: string): Promise<{ provider: ProviderCallSettings; viewerUserId: string }> {
-  const res = await authedFetch(`/api/foundation/providers/${encodeURIComponent(profileId)}`, { method: 'GET' });
-  if (!res.ok) throw new Error(await readError(res, 'Could not load this provider.'));
-  return (await res.json()) as { provider: ProviderCallSettings; viewerUserId: string };
-}
-
-// The web's canOfferConnectNow: the provider opted in with an integer rate of at least 1 credit,
-// and is not the viewer.
-export function canOfferConnectNow(provider: ProviderCallSettings, viewerUserId: string): boolean {
-  const rate = provider.instantCallRateCredits;
-  if (!provider.instantCallEnabled || rate === null || !Number.isFinite(rate) || rate < 1) return false;
-  return provider.providerUserId !== viewerUserId;
 }
 
 export function creditsLabel(count: number): string {

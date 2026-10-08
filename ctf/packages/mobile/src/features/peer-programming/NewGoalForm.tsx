@@ -9,7 +9,7 @@ export function NewGoalForm({ busy, onPost, onCancel }: {
   onPost: (_title: string, _tasks: string[]) => Promise<boolean>;
   onCancel: () => void;
 }) {
-  const { tokens } = usePPTheme();
+  const t = usePPTheme();
   const [title, setTitle] = useState('');
   const [tasks, setTasks] = useState('');
   const submit = async () => {
@@ -20,7 +20,7 @@ export function NewGoalForm({ busy, onPost, onCancel }: {
     }
   };
   return (
-    <View accessibilityLabel="New goal" style={[styles.panel, { borderColor: tokens.border, borderRadius: tokens.radius }]}>
+    <View accessibilityLabel="New goal" style={[styles.panel, { borderColor: t.BORDER_STRONG, borderRadius: t.r(12) }]}>
       <PPTextBox value={title} onChange={setTitle} lines={2} maxLength={200} placeholder="One goal with a finish line, e.g. a yard jockey job in Texas" />
       <PPTextBox
         value={tasks}

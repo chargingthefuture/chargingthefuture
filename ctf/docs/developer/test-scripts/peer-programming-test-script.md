@@ -1,6 +1,6 @@
 # PeerProgramming — Manual Test Script
 
-> **Android: in scope (owner decision, 2026-10-06).** The native Android app carries PeerProgramming again: the goal board, the cohort chat and the live Session call, including sharing the phone's screen and keeping the call running in the background. The Android steps live in one place, **AN-PP** in `android-app-test-script.md`, on a real device build (not Expo Go). The cases in this script are the web steps: desktop and the phone-width (~390px) layout.
+> **Android: in scope (owner decision, 2026-10-06).** The native Android app carries PeerProgramming again, the same as the web page at phone width since 2026-10-08: the goal board, the Cohorts tab, the Direct Line, the live Session call (including sharing the phone's screen and keeping the call running in the background) and the admin screen. The Android steps live in one place, **AN-PP** in `android-app-test-script.md`, on a real device build (not Expo Go). The cases in this script are the web steps: desktop and the phone-width (~390px) layout.
 
 > Generated from the feature inventory and command contracts for `peer-programming`; this is the runnable checklist for a human tester on a real device. Regenerate with: `pnpm --dir ctf test-script:generate -- peer-programming`
 
@@ -9,7 +9,7 @@
 | **Plugin** | PeerProgramming |
 | **Visibility** | member |
 | **Roles to test** | member, admin |
-| **Surfaces** | web (`/apps/peer-programming`, `/admin/peer-programming`); Android app (member screen only; see AN-PP in `android-app-test-script.md`) |
+| **Surfaces** | web (`/apps/peer-programming`, `/admin/peer-programming`); Android app (member and admin screens; see AN-PP in `android-app-test-script.md`) |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-peer-programming-feature-inventory.md` |
 | **Generated** | 2026-07-18 (commit 34badcbb) · 2026-09-20: the inventory's prose was swept for a banned word (CLAUDE.md); no step here changes, because nothing about what the plugin does or how it is tested moved |
@@ -755,10 +755,10 @@ Result: web ☐
 
 ## Parity check — web and Android
 
-The Android app carries the member screen (Goals, Chat, Session) since 2026-10-06; the admin screen
-stays on the web. The cases below are the behavior that matters most: check them on a desktop browser
-and the phone-width layout, and the member cases (not the PP-A ones) on Android through AN-PP in
-`android-app-test-script.md`.
+The Android app carries the member screen since 2026-10-06 and, since 2026-10-08, matches the web
+page at phone width: Goals, Cohorts, Session and Direct Line, plus the admin screen. The cases below
+are the behavior that matters most: check them on a desktop browser and the phone-width layout, and
+on Android through AN-PP in `android-app-test-script.md`.
 
 | Case | What must match |
 |---|---|

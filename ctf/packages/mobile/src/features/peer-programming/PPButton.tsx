@@ -1,18 +1,17 @@
-// The small button and text box the PeerProgramming screen uses everywhere, so every control on the
-// board, in the chat and in the call looks the same.
+// The small button and text box of the goal board, copied from the web's SmallButton and TextBox
+// (web components/peer-programming/pp-goals-parts.tsx).
 import React from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity } from 'react-native';
+import { interFamily } from '../../components/ui';
 import { usePPTheme } from './usePPTheme';
 
-export function PPButton({ label, onPress, disabled, primary, danger }: {
+export function PPButton({ label, onPress, disabled, primary }: {
   label: string;
   onPress: () => void;
   disabled?: boolean;
   primary?: boolean;
-  danger?: boolean;
 }) {
-  const { tokens, accent } = usePPTheme();
-  const color = danger ? tokens.danger : accent;
+  const t = usePPTheme();
   return (
     <TouchableOpacity
       disabled={disabled}
@@ -22,14 +21,14 @@ export function PPButton({ label, onPress, disabled, primary, danger }: {
       style={[
         styles.button,
         {
-          borderRadius: tokens.radiusControl,
-          borderColor: primary || danger ? color : tokens.border,
-          backgroundColor: primary ? color : 'transparent',
+          borderRadius: t.r(8),
+          borderColor: primary ? t.ACCENT : t.BORDER_STRONG,
+          backgroundColor: primary ? t.ACCENT : 'transparent',
           opacity: disabled ? 0.5 : 1,
         },
       ]}
     >
-      <Text style={[styles.label, { color: primary ? '#fff' : danger ? color : tokens.textPrimary }]}>{label}</Text>
+      <Text style={[styles.label, { color: primary ? '#fff' : t.TEXT }]}>{label}</Text>
     </TouchableOpacity>
   );
 }
@@ -41,13 +40,13 @@ export function PPTextBox({ value, onChange, placeholder, lines = 1, maxLength }
   lines?: number;
   maxLength: number;
 }) {
-  const { tokens } = usePPTheme();
+  const t = usePPTheme();
   return (
     <TextInput
       value={value}
       onChangeText={onChange}
       placeholder={placeholder}
-      placeholderTextColor={tokens.textMuted}
+      placeholderTextColor={t.MUTED}
       accessibilityLabel={placeholder}
       multiline={lines > 1}
       numberOfLines={lines}
@@ -56,10 +55,10 @@ export function PPTextBox({ value, onChange, placeholder, lines = 1, maxLength }
         styles.box,
         {
           minHeight: 20 * lines + 16,
-          borderRadius: tokens.radiusControl,
-          borderColor: tokens.border,
-          backgroundColor: tokens.surfaceAlt,
-          color: tokens.textPrimary,
+          borderRadius: t.r(8),
+          borderColor: t.BORDER_HI,
+          backgroundColor: t.INPUT_BG,
+          color: t.TEXT,
         },
       ]}
     />
@@ -67,7 +66,7 @@ export function PPTextBox({ value, onChange, placeholder, lines = 1, maxLength }
 }
 
 const styles = StyleSheet.create({
-  button: { borderWidth: 1, paddingVertical: 8, paddingHorizontal: 12, alignSelf: 'flex-start' },
-  label: { fontSize: 13, fontWeight: '600' },
-  box: { borderWidth: 1, paddingHorizontal: 10, paddingVertical: 8, fontSize: 15, textAlignVertical: 'top' },
+  button: { borderWidth: 1, paddingVertical: 6, paddingHorizontal: 12, alignSelf: 'flex-start' },
+  label: { fontSize: 13, fontFamily: interFamily('600') },
+  box: { borderWidth: 1, paddingHorizontal: 10, paddingVertical: 8, fontSize: 14, fontFamily: interFamily('400'), textAlignVertical: 'top' },
 });
