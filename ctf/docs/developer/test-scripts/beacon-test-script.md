@@ -116,8 +116,8 @@ by the reader and shows one item per replay, newest first, each with a playable 
 answers "No recorded broadcast has that id." with a 404. A draft or live event never appears in the
 list or the feed.
 5. After the next run of the Actions workflow "Beacon — Keep a copy of each recording" (or run it by
-   hand), open the `beacon-recordings` release in the repository and repeat step 2.
-**Expected (step 5):** the release holds `<eventId>.mp4` for each recorded broadcast, the run summary
+   hand), open the release tagged `beacon-recording-<eventId>` in the repository and repeat step 2.
+**Expected (step 5):** each recorded broadcast has its own release holding `<eventId>.mp4`, the run summary
 lists each one as copied, and the player plays it; the recording address now sends the player to
 the release file.
 **Result:** web ☐ — notes:

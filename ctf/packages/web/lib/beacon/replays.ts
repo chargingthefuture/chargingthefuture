@@ -19,14 +19,19 @@ export function isBeaconEventId(value: string): boolean {
   return UUID_REGEX.test(value);
 }
 
-// Where the archive workflow puts this project's copy of each recording: one GitHub release in this
-// repository, one asset per broadcast named by event id. The recording route only trusts an address
-// under this prefix, so the write-back cannot be used to point listeners anywhere else.
-export const BEACON_ARCHIVE_URL_PREFIX =
-  'https://github.com/chargingthefuture/chargingthefuture/releases/download/beacon-recordings/';
+// Where the archive workflow puts this project's copy of each recording: one GitHub release per
+// broadcast in this repository, tagged `beacon-recording-<eventId>` and holding `<eventId>.mp4`. One
+// release each because this repository's releases are immutable: once published, a release takes no
+// new files, so a single shared release could only ever hold its first recording. The recording route
+// only trusts this exact address, so the write-back cannot be used to point listeners anywhere else.
+const BEACON_ARCHIVE_URL_PREFIX = 'https://github.com/chargingthefuture/chargingthefuture/releases/download/';
+
+export function beaconArchiveUrl(eventId: string): string {
+  return `${BEACON_ARCHIVE_URL_PREFIX}beacon-recording-${eventId}/${eventId}.mp4`;
+}
 
 export function isBeaconArchiveUrl(value: string, eventId: string): boolean {
-  return value === `${BEACON_ARCHIVE_URL_PREFIX}${eventId}.mp4`;
+  return value === beaconArchiveUrl(eventId);
 }
 
 export type PublicBeaconReplay = {

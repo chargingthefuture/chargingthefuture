@@ -79,7 +79,7 @@ export async function POST(request: Request) {
       {
         ok: false,
         code: 'beacon_archive_invalid_payload',
-        message: 'archivedUrl must be this repository\'s beacon-recordings release asset named <eventId>.mp4.',
+        message: 'archivedUrl must be <eventId>.mp4 on this repository\'s beacon-recording-<eventId> release.',
       },
       { status: 400 },
     );
