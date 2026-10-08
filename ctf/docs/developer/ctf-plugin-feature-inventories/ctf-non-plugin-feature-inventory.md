@@ -17,6 +17,14 @@
 2. Shared app-shell gating wrappers for authenticated access.
 3. Shared approval and terms gating wrappers before app/plugin usage.
 4. Shared access-denied and redirect behavior contracts across web and Android.
+5. Apps home. Web: the community shell's Apps section (`components/community-shell/shell-apps-panel.tsx`
+   under `MobileTopBar` in `community-shell.tsx`). Android: complete, a copy of the same screen for the
+   four apps the Android app carries — `packages/mobile/src/features/apps/` (`AppsList.tsx`,
+   `AppCard.tsx`, `AppsSortSelect.tsx`, `useAppsOrder.ts`) under the top bar in
+   `packages/mobile/src/components/shell/` (`ShellChrome.tsx` `TopBar`, `TopBarControls.tsx`). Left out
+   on Android: the Commons / Apps section icons and the Admin button (the Commons and the admin area are
+   web-only), and the status badge (every app the Android app carries is fully available, so the web
+   would show none either).
 
 ### 1.2 Auth and Account Lifecycle + Onboarding/Approval/Terms Gating
 
@@ -350,6 +358,8 @@ Owner decision, 2026-09-26. The owner pays the running costs of Skills Economy a
 ---
 
 ## 5) Change Log
+
+- 2026-10-08: **Android Apps home matches the web Apps section (§1.1 item 5).** The Android home gains the web's Sort control (Recent, A-Z, Most Used, kept on the phone as the web keeps them in the browser) and the "Search apps…" box with its no-match line. Tapping a card now highlights it as on the web, and the "Open plugin →" pill opens the app. Cards use the web's tint and border in the comic theme too. The closing line about the other apps being on the web is removed; the web has no such line. The top bar now matches the web bar: the account picture sits after the settings gear, the bug icon opens the same one-item "Report a problem" menu, the Sign in button has the web's size and weight, the brand mark keeps its gradient in the comic theme, and the wordmark spacing and bottom line match.
 
 - 2026-10-05: **Data export no longer hands a member rows that are not theirs; account deletion removes the LightHouse profile row.** The export read every registry entry with a user column as the member's own rows, so it returned the LightHouse blocks other members had placed on the member (blocker id and free-text reason, #2699) and the full Directory profile of everyone the member had nominated, claimed profiles included (#2643). A new `exportable: false` flag on a registry entry, set with `notExported(...)`, keeps such an entry out of the export while deletion still acts on it; `check-export-engine.mjs` now renders pseudonymize entries too, asserts the engine skips flagged entries, and fails if either of the two pairs loses its flag. Separately, account deletion soft-deleted `lighthouse_profiles` and kept the phone number and Signal link, while the plugin's own delete removed the row; the registry now deletes it (#2700), and `post/0050` removes the rows the soft delete left behind.
 - 2026-10-05: **Legacy profile redirects reach their mapped address (§1.11).** The page called `redirect()` inside the lookup's `try`, so the catch swallowed the redirect, logged a false lookup failure, and sent every old link to the plugin shell. The lookup now resolves the mapped id inside the `try` and the redirects run after it. No schema or route change.

@@ -1,21 +1,28 @@
 /**
- * AppsList — the Android app's home: the apps it carries, one card each. Tapping a card opens it.
+ * AppsList — the Android app's home: the apps it carries, one card each.
  *
  * Owner decision, 2026-10-06: the Android app carries any plugin that materially benefits from being
  * an installed app, plus what that plugin needs to run (sign-in, account, bug reporting); everything
  * else is on the web app. Rule 105 holds the list and the reasons. A new entry here goes with a
  * feature folder, a rule 105 keep-list line and a parity contract.
+ *
+ * Drawn as the web Apps panel at phone width (components/community-shell/shell-apps-panel.tsx and
+ * .apps* in community-shell.module.css): the "All Apps" heading and line with the Sort control beside
+ * them, the search box, the no-match line, then the cards.
  */
-import React from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useTheme, getAppAccent } from '../../theme';
 import { getPluginEmoji } from '../../theme/plugin-visuals';
 import { interFamily } from '../../components/ui';
+import { AppCard } from './AppCard';
+import { AppsSortSelect } from './AppsSortSelect';
+import { sortApps, useAppsOrder } from './useAppsOrder';
 
 export type MobileAppKey = 'chyme' | 'beacon' | 'peer-programming' | 'foundation';
 
-// Summaries are the web plugin registry's (ctf/packages/web/lib/plugins/repository.ts), so the app
-// and the web describe each app the same way.
+// Names and summaries are the web plugin registry's (ctf/packages/web/lib/plugins/repository.ts and
+// the ctf_plugin_registry seed), so the app and the web describe each app the same way.
 const APPS: Array<{ key: MobileAppKey; name: string; summary: string }> = [
   { key: 'chyme', name: 'Chyme', summary: 'Live social audio rooms. Broadcast, listen, and connect in real time.' },
   {
@@ -27,8 +34,8 @@ const APPS: Array<{ key: MobileAppKey; name: string; summary: string }> = [
   { key: 'foundation', name: 'Foundation', summary: 'Find talent, tools, repairs, and infrastructure support in real time.' },
 ];
 
-// Card backgrounds are the web's per-plugin `bg` (components/community-shell/shell-plugin-config.ts);
-// the comic theme uses its flat card surface, as the web does.
+// Card bases are the web's per-plugin `bg` (components/community-shell/shell-plugin-config.ts); the
+// comic theme uses its flat ink surface for every card, as the web does.
 const CARD_BG: Record<MobileAppKey, string> = {
   chyme: '#04160A',
   beacon: '#140303',
@@ -37,78 +44,88 @@ const CARD_BG: Record<MobileAppKey, string> = {
 };
 const COMIC_CARD_BG = '#141414';
 
-// Matches the web Apps panel at phone width (shell-apps-panel.tsx): an "All Apps" heading, then one
-// card per app — tinted background, icon tile, name, summary and an "Open plugin →" pill. The web's
-// sort and search controls are left out: with four apps there is nothing to sort or search.
 export const AppsList: React.FC<{ onOpen: (_key: MobileAppKey) => void }> = ({ onOpen }) => {
   const { tokens, theme } = useTheme();
+  const { sortMode, setSortMode, recent, counts, recordOpen } = useAppsOrder();
+  const [query, setQuery] = useState('');
+  const [activeApp, setActiveApp] = useState<MobileAppKey | null>(null);
   const subtle = tokens.isComic ? tokens.textSecondary : '#6B7280';
+
+  const shown = useMemo(() => {
+    const ordered = sortApps(APPS, sortMode, recent, counts);
+    const needle = query.trim().toLowerCase();
+    if (!needle) return ordered;
+    return ordered.filter((app) => `${app.name} ${app.summary}`.toLowerCase().includes(needle));
+  }, [sortMode, recent, counts, query]);
+
+  const open = (key: MobileAppKey) => {
+    setActiveApp(key);
+    recordOpen(key);
+    onOpen(key);
+  };
+
   return (
-    <ScrollView contentContainerStyle={styles.panel}>
-      <Text style={[styles.title, { color: tokens.textPrimary }]}>All Apps</Text>
-      <Text style={[styles.sub, { color: subtle }]}>
-        Your complete peer-to-peer marketplace — from survivor to thriver
-      </Text>
-      <View style={styles.grid}>
-        {APPS.map((app) => {
-          const color = getAppAccent(app.key, theme);
-          const bg = tokens.isComic ? COMIC_CARD_BG : CARD_BG[app.key];
-          return (
-            <TouchableOpacity
-              key={app.key}
-              onPress={() => onOpen(app.key)}
-              accessibilityRole="button"
-              accessibilityLabel={`Open ${app.name}`}
-              activeOpacity={0.85}
-              style={[
-                styles.card,
-                {
-                  backgroundColor: tokens.isComic ? bg : `${bg}88`,
-                  borderColor: tokens.isComic ? tokens.border : `${color}20`,
-                  borderRadius: tokens.radius,
-                },
-              ]}
-            >
-              <View
-                style={[
-                  styles.icon,
-                  { backgroundColor: `${color}20`, borderColor: `${color}35`, borderRadius: tokens.isComic ? 0 : 10 },
-                ]}
-              >
-                <Text style={styles.emoji}>{getPluginEmoji(app.key)}</Text>
-              </View>
-              <Text style={[styles.name, { color: tokens.textPrimary }]}>{app.name}</Text>
-              <Text style={[styles.summary, { color: subtle }]}>{app.summary}</Text>
-              <View
-                style={[
-                  styles.action,
-                  { borderColor: `${color}35`, backgroundColor: `${color}15`, borderRadius: tokens.isComic ? 0 : 8 },
-                ]}
-              >
-                <Text style={[styles.actionText, { color }]}>Open plugin →</Text>
-              </View>
-            </TouchableOpacity>
-          );
-        })}
+    <ScrollView contentContainerStyle={styles.panel} keyboardShouldPersistTaps="handled">
+      <View style={styles.header}>
+        <View style={styles.headerText}>
+          <Text style={[styles.title, { color: tokens.textPrimary }]}>All Apps</Text>
+          <Text style={[styles.sub, { color: subtle }]}>
+            Your complete peer-to-peer marketplace — from survivor to thriver
+          </Text>
+        </View>
+        <AppsSortSelect value={sortMode} onChange={setSortMode} />
       </View>
-      <Text style={[styles.webNote, { color: subtle }]}>
-        Every other app is on the web at app.chargingthefuture.com
-      </Text>
+
+      <TextInput
+        value={query}
+        onChangeText={setQuery}
+        placeholder="Search apps…"
+        placeholderTextColor={tokens.textMuted}
+        accessibilityLabel="Search apps…"
+        returnKeyType="search"
+        autoCorrect={false}
+        style={[styles.search, { color: tokens.textSecondary, borderRadius: tokens.isComic ? 0 : 8 }]}
+      />
+
+      {shown.length === 0 ? (
+        <Text style={[styles.empty, { color: subtle }]}>No matching plugins. Try a different search.</Text>
+      ) : null}
+
+      <View style={styles.grid}>
+        {shown.map((app) => (
+          <AppCard
+            key={app.key}
+            name={app.name}
+            summary={app.summary}
+            emoji={getPluginEmoji(app.key)}
+            color={getAppAccent(app.key, theme)}
+            bg={tokens.isComic ? COMIC_CARD_BG : CARD_BG[app.key]}
+            isActive={activeApp === app.key}
+            onSelect={() => setActiveApp(activeApp === app.key ? null : app.key)}
+            onOpen={() => open(app.key)}
+          />
+        ))}
+      </View>
     </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   panel: { padding: 20 },
+  header: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, marginBottom: 16 },
+  headerText: { flexShrink: 1 },
   title: { fontSize: 22, fontFamily: interFamily('800'), marginBottom: 4 },
-  sub: { fontSize: 14, fontFamily: interFamily('400'), marginBottom: 16 },
+  sub: { fontSize: 14, fontFamily: interFamily('400') },
+  search: {
+    marginBottom: 16,
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)',
+    fontSize: 13,
+    fontFamily: interFamily('400'),
+  },
+  empty: { fontSize: 14, fontFamily: interFamily('400'), marginBottom: 12 },
   grid: { gap: 12 },
-  card: { padding: 18, borderWidth: 1 },
-  icon: { width: 40, height: 40, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
-  emoji: { fontSize: 20 },
-  name: { fontSize: 15, fontFamily: interFamily('700'), marginBottom: 4 },
-  summary: { fontSize: 13, lineHeight: 19.5, fontFamily: interFamily('400'), marginBottom: 14 },
-  action: { alignSelf: 'flex-start', borderWidth: 1, paddingVertical: 6, paddingHorizontal: 14 },
-  actionText: { fontSize: 12, fontFamily: interFamily('600') },
-  webNote: { fontSize: 12, fontFamily: interFamily('500'), textAlign: 'center', marginTop: 20 },
 });
