@@ -1,7 +1,6 @@
 // The "Connect now" confirmation, copied from the web ConnectNowDialog (foundation-connect-now.tsx):
-// the rate box, the block limit picker, the agreement checkbox and Start call, in the same card. The
-// wording says credits are sent, never paid or charged (CLAUDE.md, "Credits Are Not Money"), so the
-// web's money words are swapped one for one and nothing else changes.
+// the rate box, the send limit picker, the agreement checkbox and Start call, in the same card and the
+// same words.
 import React, { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Check, PhoneCall, X } from 'lucide-react-native';
@@ -51,9 +50,9 @@ function BlockLimit({ blocks, interval, rate, onChange }: { blocks: number; inte
   const { t, r } = useFDTheme();
   return (
     <View style={styles.mb14}>
-      <Caption text="Block limit" color={t.MUTED} style={styles.mb6} />
+      <Caption text="Send limit" color={t.MUTED} style={styles.mb6} />
       <FDSelect
-        label="Block limit"
+        label="Send limit"
         value={blocks}
         options={BLOCK_CAP_OPTIONS.map((n) => ({ value: n, label: `${blocksLabel(n)} · up to ${n * interval} min` }))}
         onChange={onChange}
@@ -92,7 +91,7 @@ export function ConnectNowConfirm({ provider, onClose }: { provider: ProviderVie
               </Pressable>
             </View>
             <Text style={[font(13.5), styles.lh22, styles.mb14, subtle]}>
-              Start a live 1:1 call with <Text style={[font(13.5, '700'), { color: t.TITLE }]}>{provider.displayName}</Text> right now.
+              Start a live 1:1 call with <Text style={[font(13.5, '700'), { color: t.TITLE }]}>{provider.displayName}</Text> right now, for ServiceCredits.
             </Text>
             <View style={[styles.rateBox, { borderRadius: r(12), backgroundColor: alpha(t.ACCENT, '10'), borderColor: alpha(t.ACCENT, '28') }]}>
               <Caption text="Rate" color={t.MUTED} style={styles.mb6} />
@@ -103,10 +102,10 @@ export function ConnectNowConfirm({ provider, onClose }: { provider: ProviderVie
             </View>
             <BlockLimit blocks={blocks} interval={interval} rate={rate} onChange={setBlocks} />
             <Text style={[font(12.5), styles.lh21, styles.mb14, subtle]}>
-              This starts a live 1:1 call. You&apos;ll send the provider&apos;s rate per block until you end it or reach your block limit. Only start a call you mean to send credits for.
+              This starts a live 1:1 call. You&apos;ll send the provider&apos;s rate per block until you end it or reach your send limit. Only start a call you mean to send credits for.
             </Text>
             {error ? <Text style={[font(13), styles.lh19, styles.mb12, { color: '#F87171' }]} accessibilityRole="alert">{error}</Text> : null}
-            <Agreement checked={agreed} onToggle={() => setAgreed((v) => !v)} text={`I agree to send ${rateText} for this call, up to ${creditsLabel(rate * blocks)}.`} />
+            <Agreement checked={agreed} onToggle={() => setAgreed((v) => !v)} text={`I understand this call uses ServiceCredits and I agree to send ${rateText}, up to ${creditsLabel(rate * blocks)}.`} />
             <FDButton
               wide
               label={starting ? 'Starting…' : 'Start call'}
@@ -118,7 +117,7 @@ export function ConnectNowConfirm({ provider, onClose }: { provider: ProviderVie
               onPress={() => void start()}
             />
             <Text style={[font(12), styles.footer, subtle]}>
-              The first block is sent when the provider answers. Ringing sends nothing, and you only send credits for blocks you use up to your limit.
+              The first block is sent when the provider answers. Ringing is free, and you only send credits for blocks you use up to your limit.
             </Text>
           </ScrollView>
         </Pressable>

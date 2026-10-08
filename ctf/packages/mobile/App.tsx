@@ -28,6 +28,7 @@ import { AuthProvider, useAuth } from './src/auth/auth-context';
 import { ThemeProvider, useTheme, getAppAccent, type ThemeName } from './src/theme';
 import { LoadingScreen } from './src/components/shared/LoadingScreen';
 import { HeaderPill, ScreenHeader, ShellBackground, TopBar } from './src/components/shell/ShellChrome';
+import { RefreshButton, ScreenOverrideProvider, type ScreenOverride } from './src/components/shell/ScreenOverride';
 import { Briefcase } from 'lucide-react-native';
 import { getPluginEmoji } from './src/theme/plugin-visuals';
 import { StreamVideoRN } from '@stream-io/video-react-native-sdk';
@@ -182,26 +183,54 @@ function headerPill(selected: FeatureKey, accent: string | undefined, isAdmin: b
   return undefined;
 }
 
-function ShellHeader({ selected, theme, isAdmin, onSelect, onOpenAccount }: {
+function headerActions(selected: FeatureKey, accent: string | undefined, isAdmin: boolean, override: ScreenOverride | null, onSelect: (_key: FeatureKey) => void): ReactElement | undefined {
+  // A screen inside a plugin (a profile, a chat) carries no Admin pill, as the web page it copies does not.
+  const pill = override?.onBack ? undefined : headerPill(selected, accent, isAdmin, onSelect);
+  const refresh = override?.refresh;
+  if (!refresh) return pill;
+  const button = <RefreshButton onRefresh={refresh.onRefresh} admin={refresh.admin} accent={accent} />;
+  // The web member header puts the Admin pill before Refresh; the admin header puts Refresh first.
+  return refresh.admin ? <>{button}{pill}</> : <>{pill}{button}</>;
+}
+
+// The plugin, accent, tile and title the header shows for a screen, with what the open screen asks for.
+function headerAccent(plugin: PluginKey | undefined, theme: ThemeName, override: ScreenOverride | null): string | undefined {
+  if (override?.accent) return override.accent;
+  return plugin ? getAppAccent(plugin, theme) : undefined;
+}
+
+// The web admin header shows a Briefcase icon in the tile where the member screen shows the app icon.
+function headerIcon(selected: FeatureKey, accent: string | undefined, override: ScreenOverride | null): ReactElement | undefined {
+  if (override?.icon) return <>{override.icon}</>;
+  return ADMIN_OF[selected] && accent ? <Briefcase size={18} color={accent} /> : undefined;
+}
+
+function headerLook(selected: Exclude<FeatureKey, 'apps'>, theme: ThemeName, override: ScreenOverride | null) {
+  const plugin = isPluginKey(selected) ? selected : ADMIN_OF[selected];
+  const accent = headerAccent(plugin, theme, override);
+  const icon = headerIcon(selected, accent, override);
+  const emoji = plugin && !icon ? getPluginEmoji(plugin) : undefined;
+  return { plugin, accent, icon, emoji, title: override?.title ?? SCREEN_TITLES[selected] };
+}
+
+function ShellHeader({ selected, theme, isAdmin, override, onSelect, onOpenAccount }: {
   selected: FeatureKey;
   theme: ThemeName;
   isAdmin: boolean;
+  override: ScreenOverride | null;
   onSelect: (_key: FeatureKey) => void;
   onOpenAccount: () => void;
 }) {
   if (selected === 'apps') return <TopBar onOpenAccount={onOpenAccount} />;
-  const plugin = isPluginKey(selected) ? selected : ADMIN_OF[selected];
-  const accent = plugin ? getAppAccent(plugin, theme) : undefined;
-  // The web admin header shows a Briefcase icon in the tile where the member screen shows the app icon.
-  const adminIcon = ADMIN_OF[selected] && accent ? <Briefcase size={18} color={accent} /> : undefined;
+  const { plugin, accent, icon, emoji, title } = headerLook(selected, theme, override);
   return (
     <ScreenHeader
-      title={SCREEN_TITLES[selected]}
-      emoji={plugin && !adminIcon ? getPluginEmoji(plugin) : undefined}
-      icon={adminIcon}
+      title={title}
+      emoji={emoji}
+      icon={icon}
       accent={accent}
-      action={headerPill(selected, accent, isAdmin, onSelect)}
-      onBack={() => onSelect(parentOf(selected))}
+      action={headerActions(selected, accent, isAdmin, override, onSelect)}
+      onBack={override?.onBack ?? (() => onSelect(parentOf(selected)))}
       onOpenAccount={onOpenAccount}
       pluginSlug={plugin}
     />
@@ -215,6 +244,18 @@ function useAdminGuard(selected: FeatureKey, isAdmin: boolean, onSelect: (_key: 
     const memberScreen = ADMIN_OF[selected];
     if (memberScreen && !isAdmin) onSelect(memberScreen);
   }, [selected, isAdmin, onSelect]);
+}
+
+// What the open screen asks of the header (ScreenOverride), kept in state for the header and in a ref
+// for Android's back button.
+function useOverrideState() {
+  const [override, setOverrideState] = useState<ScreenOverride | null>(null);
+  const overrideRef = useRef<ScreenOverride | null>(null);
+  const setOverride = useCallback((next: ScreenOverride | null) => {
+    overrideRef.current = next;
+    setOverrideState(next);
+  }, []);
+  return { override, overrideRef, setOverride };
 }
 
 // The name the other person sees in a Foundation call.
@@ -235,6 +276,7 @@ function AppShell() {
   const isAdmin = Boolean(user?.isAdmin);
   const openAccount = useCallback(() => setSelected('account-data'), []);
   useAdminGuard(selected, isAdmin, setSelected);
+  const { override, overrideRef, setOverride } = useOverrideState();
 
   // Account & Data and Blocked members are reached only from the gear, which shows only to a
   // signed-in member, as on the web. Signing out while on one of them goes back to Apps.
@@ -305,6 +347,12 @@ function AppShell() {
   // presence timers alive). Back is an explicit "leave", so it does not need to preserve the call.
   useEffect(() => {
     const onBack = () => {
+      // A screen inside a plugin goes back to the screen it came from first.
+      const inner = overrideRef.current?.onBack;
+      if (inner) {
+        inner();
+        return true;
+      }
       if (selected !== 'apps') {
         setSelected(parentOf(selected));
         return true; // handled — do not exit
@@ -313,7 +361,7 @@ function AppShell() {
     };
     const sub = BackHandler.addEventListener('hardwareBackPress', onBack);
     return () => sub.remove();
-  }, [selected]);
+  }, [selected, overrideRef]);
 
   const featureView = useMemo(() => {
     const renderers = buildFeatureViews(setSelected);
@@ -343,7 +391,7 @@ function AppShell() {
   return (
     <View style={[styles.container, { backgroundColor: tokens.bg }]}>
       <ShellBackground />
-      <ShellHeader selected={selected} theme={theme} isAdmin={isAdmin} onSelect={setSelected} onOpenAccount={openAccount} />
+      <ShellHeader selected={selected} theme={theme} isAdmin={isAdmin} override={override} onSelect={setSelected} onOpenAccount={openAccount} />
 
       {/* Keyed on the signed-in member so signing out (or in as somebody else) unmounts every screen
           holding a Stream client, whose cleanup leaves the call and disconnects it. */}
@@ -351,7 +399,7 @@ function AppShell() {
         {/* Foundation's instant calls: the incoming ring and the live call show above every screen, as the web
             mounts its call controller at the shell root. Inside the keyed view, so signing out hangs up. */}
         <FoundationCallController signedIn={isAuthenticated} displayName={callDisplayName(user)}>
-          {featureView}
+          <ScreenOverrideProvider onChange={setOverride}>{featureView}</ScreenOverrideProvider>
         </FoundationCallController>
       </View>
 

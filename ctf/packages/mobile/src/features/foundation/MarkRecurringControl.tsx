@@ -1,11 +1,12 @@
 // "Is this ongoing?" on a closed Foundation quote and in the Direct Line, copied from the web
 // MarkRecurringControl (components/shared/mark-recurring-control.tsx) with Foundation's values: it records
 // an ongoing arrangement with the provider through POST /api/recurring-activity. Recurring Activity itself
-// is not in the app, so "See your ongoing arrangements" opens it on the web, as the web link does.
+// opens in the app on top of the Foundation screen it came from (recurring/RecurringActivity.tsx).
 import React, { useCallback, useEffect, useState } from 'react';
-import { Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Repeat } from 'lucide-react-native';
-import { authedFetch, getApiBaseUrl } from '../../auth/authedFetch';
+import { authedFetch } from '../../auth/authedFetch';
+import { useFoundationNav } from './FoundationNav';
 import { FDButton } from './FDButton';
 import { FDSelect } from './FDSelect';
 import { font, useFDTheme } from './useFDTheme';
@@ -74,20 +75,13 @@ async function record(body: Record<string, unknown>): Promise<string | null> {
   }
 }
 
-function openHub() {
-  try {
-    void Linking.openURL(`${getApiBaseUrl()}/apps/recurring-activity`);
-  } catch (caught) {
-    reportError(caught, { area: 'foundation', op: 'open_recurring_activity' });
-  }
-}
-
 function RecordedLine({ accent }: { accent: string }) {
+  const nav = useFoundationNav();
   return (
     <View style={styles.recorded}>
       <Repeat size={13} color={accent} />
       <Text style={[font(12), { color: accent }]}>Recorded — waiting for this member to confirm it.</Text>
-      <Pressable onPress={openHub} accessibilityRole="link">
+      <Pressable onPress={() => nav?.openRecurring()} accessibilityRole="link">
         <Text style={[font(12), styles.link, { color: accent }]}>See your ongoing arrangements</Text>
       </Pressable>
     </View>

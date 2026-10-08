@@ -7,7 +7,7 @@ import { alpha, font, useFDTheme } from './useFDTheme';
 
 export type SelectOption<V extends string | number> = { value: V; label: string };
 
-export function FDSelect<V extends string | number>({ value, options, onChange, label, boxStyle, textStyle, disabled }: {
+export function FDSelect<V extends string | number>({ value, options, onChange, label, boxStyle, textStyle, disabled, accent: accentProp }: {
   value: V;
   options: SelectOption<NoInfer<V>>[];
   onChange: (_value: NoInfer<V>) => void;
@@ -15,8 +15,11 @@ export function FDSelect<V extends string | number>({ value, options, onChange, 
   boxStyle: StyleProp<ViewStyle>;
   textStyle: StyleProp<TextStyle>;
   disabled?: boolean;
+  // The highlight in the option list; Foundation's accent unless the screen has its own.
+  accent?: string;
 }) {
   const { t, r } = useFDTheme();
+  const accent = accentProp ?? t.ACCENT;
   const [open, setOpen] = useState(false);
   const current = options.find((o) => o.value === value)?.label ?? '';
   return (
@@ -33,7 +36,7 @@ export function FDSelect<V extends string | number>({ value, options, onChange, 
       </Pressable>
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
         <Pressable style={styles.backdrop} onPress={() => setOpen(false)} accessibilityLabel="Close">
-          <View style={[styles.sheet, { borderRadius: r(16), borderColor: alpha(t.ACCENT, '30') }]}>
+          <View style={[styles.sheet, { borderRadius: r(16), borderColor: alpha(accent, '30') }]}>
             <ScrollView>
               {options.map((o) => {
                 const selected = o.value === value;
@@ -43,9 +46,9 @@ export function FDSelect<V extends string | number>({ value, options, onChange, 
                     onPress={() => { onChange(o.value); setOpen(false); }}
                     accessibilityRole="button"
                     accessibilityState={{ selected }}
-                    style={[styles.option, selected ? { backgroundColor: alpha(t.ACCENT, '1A') } : null]}
+                    style={[styles.option, selected ? { backgroundColor: alpha(accent, '1A') } : null]}
                   >
-                    <Text style={[font(14, selected ? '700' : '500'), { color: selected ? t.ACCENT : t.TITLE }]}>{o.label}</Text>
+                    <Text style={[font(14, selected ? '700' : '500'), { color: selected ? accent : t.TITLE }]}>{o.label}</Text>
                   </Pressable>
                 );
               })}

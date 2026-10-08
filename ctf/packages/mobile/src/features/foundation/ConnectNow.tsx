@@ -9,7 +9,7 @@ import { ConnectNowConfirm } from './ConnectNowConfirm';
 import { FDButton, looks } from './FDButton';
 import { alpha, font, useFDTheme } from './useFDTheme';
 
-// The provider opted in and set a whole-credit rate of at least 1.
+// The provider opted in and set a rate of at least 1 credit, in round credits.
 export function acceptsInstantCalls(provider: ProviderView): boolean {
   if (!provider.instantCallEnabled) return false;
   const rate = provider.instantCallRateCredits;

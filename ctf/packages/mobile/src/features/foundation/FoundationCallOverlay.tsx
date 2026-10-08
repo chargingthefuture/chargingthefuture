@@ -21,11 +21,10 @@ type Actions = {
   onExtend: () => void;
 };
 
-// Endings with a reason of their own, as on the web; "paid time" reads "block time" because credits are
-// not money (CLAUDE.md).
+// Endings with a reason of their own, as on the web.
 const ENDED_REASON_LABELS: Record<string, string> = {
   caller_insufficient_funds: 'Session ended — out of credits.',
-  paid_window_elapsed: 'Session ended — block time used up.',
+  paid_window_elapsed: 'Session ended — the time you sent credits for is used up.',
   provider_not_set_up: 'This provider isn’t set up to take calls right now.',
   caller_cannot_send: 'The call couldn’t start: the caller’s credits can’t be sent right now.',
 };

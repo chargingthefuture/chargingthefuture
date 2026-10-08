@@ -525,6 +525,29 @@ policies:
       - unresolved_quota_impact_note
 
   - pluginId: foundation
+    command: foundation.admin.dashboard.get
+    version: 1.0.0
+    requiredRoles:
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      readOnly: true
+      aggregateCountsOnly: true
+    consentRequirements:
+      scopes:
+        - operational_governance
+      fallbackLawfulBasis: legitimate_interest_service_reliability
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - insufficient_role
+
+  - pluginId: foundation
     command: foundation.provider.instant-call.get
     version: 1.0.0
     requiredRoles:

@@ -137,7 +137,8 @@ The caller needs enough ServiceCredits for a few blocks.
 1. **Browse.** Open **Foundation** from the Apps list. Expect the **Browse / Offer / Quotes** tabs,
    the search box, the "Find providers offering a skill" panel and the provider cards, as on the web.
    Type in the search box: the list narrows while the box keeps focus. Tap a skill chip: the
-   "Offering: …" banner appears with **Clear**. Pull down to refresh.
+   "Offering: …" banner appears with **Clear**. Tap the refresh button in the header: its icon spins
+   and the list reloads.
 2. **Offer (as the provider).** Open **Offer**. Write a listing blurb and tap **Save**: "Saved"
    shows. Turn on **Allow instant 1:1 calls**, set a rate and block length, and tap **Save**. Turn on
    one skill under **Offer your skills**; "1 of N offered" updates.
@@ -147,12 +148,15 @@ The caller needs enough ServiceCredits for a few blocks.
 4. **Profile and Request Quote (as the caller).** On **Browse**, tap the provider's card. Expect the
    **Provider Profile** page with **← Back**, **Share**, **Request Quote** and **Connect now**. Tap
    **Request Quote**: the app lands in the **Direct Line** chat. Send a message; the provider sees it
-   on the web.
+   on the web. Press Android **back**: Foundation opens on **Quotes**, not Apps. Open a profile again
+   and tap the header chevron: Foundation's tabs come back.
 5. **Quotes.** Back on **Quotes**, the request shows as **Pending** with **Direct Line**. As the
    provider, respond with a price; as either side, tap **Mark the work done** and confirm. After it
-   closes, the caller sees **Is this ongoing?**.
+   closes, the caller sees **Is this ongoing?**. Record it, then tap **See your ongoing
+   arrangements**: **Recurring Activity** opens in the app with the arrangement listed. Press back:
+   the Quotes tab returns.
 6. **Ring with the app closed.** On the provider's phone, swipe the app away. From the caller, tap
-   **Connect now**, pick a block limit, tick the agreement and tap **Start call**. Within a few seconds
+   **Connect now**, pick a send limit, tick the agreement and tap **Start call**. Within a few seconds
    the phone shows a heads-up alert with sound. With discreet pings on (the default) it reads
    "Charging The Future / You have a new update." and never names the caller. Tap it: the app opens on
    the **Incoming call** card with **Decline** and **Answer**.
@@ -181,7 +185,8 @@ The caller needs enough ServiceCredits for a few blocks.
 17. **Alerts off.** Tap **Turn off on this device** and ring again with the app closed: no alert. Open
     the app: the ring still appears on screen while it is open.
 18. **Admin.** Signed in as an admin, the Foundation header shows **Admin**; a member does not see it.
-    Tap it: **Foundation Admin** opens with the **Capacity policy** card. Change the quota state, tap
+    Tap it: **Foundation Admin** opens with the five snapshot counts and the **Capacity policy** card,
+    and an accent refresh button in the header. Change the quota state, tap
     **Save policy**, and expect "Capacity policy saved.". **Member view** returns to Foundation.
 
 ## AN-5 — Back button

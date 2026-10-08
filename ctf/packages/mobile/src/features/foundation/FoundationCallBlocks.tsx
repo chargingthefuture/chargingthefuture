@@ -40,8 +40,7 @@ function blockView(call: InstantCall, left: number | null, rateCredits: number) 
     nearEnd,
     highlight: nearEnd && !atCap,
     clock: left === null ? '—' : formatCountdown(left),
-    // "N used" where the web says "N paid": credits are not money (CLAUDE.md).
-    capText: call.authorizedBlocks === null ? `${call.blocksCharged} used` : `${call.blocksCharged} of ${call.authorizedBlocks} blocks`,
+    capText: call.authorizedBlocks === null ? `${call.blocksCharged} sent` : `${call.blocksCharged} of ${call.authorizedBlocks} blocks`,
     extendText: rateCredits === 1 ? '1 credit' : `${rateCredits} credits`,
   };
 }

@@ -17,13 +17,13 @@ export type QuoteTransitionResult = true | string;
 
 export function useFoundationData(searchTerm: string, skillId: string | null) {
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [providers, setProviders] = useState<ProviderView[]>([]);
   const [viewerUserId, setViewerUserId] = useState<string | null>(null);
   const [quotes, setQuotes] = useState<QuoteView[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const loadedOnce = useRef(false);
+  const refreshDone = useRef<(() => void) | null>(null);
 
   const loadQuotes = useCallback(async () => {
     setQuotes(await fetchQuotes());
@@ -31,7 +31,7 @@ export function useFoundationData(searchTerm: string, skillId: string | null) {
 
   useEffect(() => {
     let active = true;
-    // Only the first load covers the screen. A search, a skill filter or a pull to refresh reloads
+    // Only the first load covers the screen. A search, a skill filter or the header refresh reloads
     // under the screen, so the search box keeps its focus while the member types.
     if (!loadedOnce.current) setLoading(true);
     setError(null);
@@ -48,7 +48,8 @@ export function useFoundationData(searchTerm: string, skillId: string | null) {
         if (active) {
           loadedOnce.current = true;
           setLoading(false);
-          setRefreshing(false);
+          refreshDone.current?.();
+          refreshDone.current = null;
         }
       }
     })();
@@ -57,10 +58,15 @@ export function useFoundationData(searchTerm: string, skillId: string | null) {
     };
   }, [searchTerm, skillId, loadQuotes, refreshKey]);
 
-  const refresh = useCallback(() => {
-    setRefreshing(true);
-    setRefreshKey((k) => k + 1);
-  }, []);
+  // The header refresh button: resolves once the reload has finished, so its icon spins until then.
+  const refresh = useCallback(
+    () =>
+      new Promise<void>((resolve) => {
+        refreshDone.current = resolve;
+        setRefreshKey((k) => k + 1);
+      }),
+    [],
+  );
 
   const transition = useCallback(async (quoteId: string, body: Record<string, unknown>, fallback: string): Promise<QuoteTransitionResult> => {
     const result = await transitionQuote(quoteId, body, fallback);
@@ -85,7 +91,7 @@ export function useFoundationData(searchTerm: string, skillId: string | null) {
     [transition],
   );
 
-  return { loading, refreshing, error, providers, viewerUserId, quotes, loadQuotes, refresh, respondToQuote, closeQuote };
+  return { loading, error, providers, viewerUserId, quotes, loadQuotes, refresh, respondToQuote, closeQuote };
 }
 
 // Request Quote's own state: submitting, the inline error and the confirmation.

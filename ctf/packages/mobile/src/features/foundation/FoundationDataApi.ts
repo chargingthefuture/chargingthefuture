@@ -259,3 +259,21 @@ export async function saveCapacityPolicy(form: CapacityPolicyForm): Promise<stri
   const data = await readBody(res);
   return data.message ?? data.reason ?? `Save failed (${res.status}).`;
 }
+
+export type AdminDashboard = {
+  providersTotal: number;
+  threadsTotal: number;
+  quotesTotal: number;
+  activeCallsTotal: number;
+  pendingNotificationsTotal: number;
+  generatedAtIso: string;
+};
+
+// The admin page's snapshot counts (GET /api/foundation/admin/dashboard), admins only.
+export async function fetchAdminDashboard(): Promise<AdminDashboard> {
+  const res = await authedFetch('/api/foundation/admin/dashboard', { method: 'GET' });
+  if (!res.ok) throw new Error(await responseFailureText(res, `Admin snapshot unavailable (${res.status}).`));
+  const dashboard = ((await res.json()) as { dashboard?: AdminDashboard }).dashboard;
+  if (!dashboard) throw new Error('Admin snapshot unavailable.');
+  return dashboard;
+}

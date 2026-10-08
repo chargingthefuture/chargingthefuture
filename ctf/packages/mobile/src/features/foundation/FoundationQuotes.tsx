@@ -11,7 +11,6 @@ import { QuoteCloseForm, QuoteRespondForm, formatQuotedPrice } from './Foundatio
 import { MarkRecurringControl } from './MarkRecurringControl';
 import { FOUNDATION_COLOR, alpha, font, useFDTheme } from './useFDTheme';
 
-// "send" where the web says "pay": credits are not money (CLAUDE.md).
 const EMPTY_STEPS = [
   'Request an electrician, plumber, or other trade',
   'Get quotes from community providers',

@@ -15,8 +15,7 @@ export function FoundationPublic() {
   return (
     <View style={[styles.screen, { backgroundColor: t.BG }]}>
       <View style={styles.top}>
-        {/* The web ends this line "Pay with ServiceCredits."; credits are not money (CLAUDE.md), so that sentence is left out. */}
-        <Text style={[font(14), styles.lh21, { color: t.SUBTLE }]}>Electricians, plumbers, carpenters, and more — fellow community members.</Text>
+        <Text style={[font(14), styles.lh21, { color: t.SUBTLE }]}>Electricians, plumbers, carpenters, and more — fellow community members. Send ServiceCredits for the work.</Text>
         <View style={styles.worldwide}>
           <Globe size={13} color={t.MUTED} />
           <Text style={[font(12), { color: t.MUTED }]}>Open to members worldwide</Text>

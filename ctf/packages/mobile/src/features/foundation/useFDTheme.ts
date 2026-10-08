@@ -57,9 +57,13 @@ const DEFAULT: Omit<FDTokens, 'ACCENT'> = {
   BORDER_SOLID: '#1E2A3A',
 };
 
+// The web getPluginShellTokens for any accent: the chrome colors around it.
+export function getShellTokens(accent: string, theme: ThemeName): FDTokens {
+  return theme === 'comic' ? { ACCENT: accent, ...COMIC } : { ACCENT: accent, ...DEFAULT };
+}
+
 export function getFoundationTokens(theme: ThemeName): FDTokens {
-  if (theme === 'comic') return { ACCENT: getAppAccent('foundation', 'comic'), ...COMIC };
-  return { ACCENT: FOUNDATION_COLOR, ...DEFAULT };
+  return getShellTokens(theme === 'comic' ? getAppAccent('foundation', 'comic') : FOUNDATION_COLOR, theme);
 }
 
 export type FDTheme = { t: FDTokens; r: (_radius: number) => number; isComic: boolean };

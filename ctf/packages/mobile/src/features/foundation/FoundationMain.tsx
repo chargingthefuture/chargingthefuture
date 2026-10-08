@@ -1,8 +1,8 @@
 // The Browse / Offer / Quotes screen, copied from the web FoundationMainScreen (foundation-shell.tsx):
 // the header block with the tab bar and, on Browse, the search box, then the active tab's panel. The
-// web header's title row is the app's screen header above this; its refresh button is a pull to refresh.
+// web header's title row, with its Admin pill and refresh button, is the app's screen header above this.
 import React from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Search } from 'lucide-react-native';
 import type { ProviderView, QuoteView } from './FoundationDataApi';
 import type { QuoteTransitionResult } from './useFoundationData';
@@ -35,8 +35,6 @@ export type FoundationMainProps = {
   onOpenDirectLine: (_quote: QuoteView) => void;
   onRespond: (_quote: QuoteView, _amount: number, _currency: string) => Promise<QuoteTransitionResult>;
   onClose: (_quote: QuoteView) => Promise<QuoteTransitionResult>;
-  refreshing: boolean;
-  onRefresh: () => void;
 };
 
 function Header({ tab, onTabChange, query, onQueryChange }: Pick<FoundationMainProps, 'tab' | 'onTabChange' | 'query' | 'onQueryChange'>) {
@@ -86,7 +84,6 @@ function Header({ tab, onTabChange, query, onQueryChange }: Pick<FoundationMainP
 }
 
 export function FoundationMain(props: FoundationMainProps) {
-  const { t } = useFDTheme();
   const { tab } = props;
   return (
     <View style={styles.fill}>
@@ -95,7 +92,6 @@ export function FoundationMain(props: FoundationMainProps) {
         style={styles.fill}
         contentContainerStyle={styles.body}
         keyboardShouldPersistTaps="handled"
-        refreshControl={<RefreshControl refreshing={props.refreshing} onRefresh={props.onRefresh} tintColor={t.ACCENT} colors={[t.ACCENT]} />}
       >
         {tab === 'browse' ? (
           <BrowsePanel

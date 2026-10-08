@@ -176,7 +176,7 @@ requires the same-origin CSRF header (`x-ctf-csrf: 1`) and writes an audit row.
 
 ## Web and Android Delivery Status
 
-Delivery: **web + mobile-responsive complete**. **Android (React Native) surface removed 2026-07-20 (rule 105, PR #1742)** — this feature is now web-only, served by the installable web app (PWA). Web hub at
+Delivery: **web + mobile-responsive complete**. **Android, since 2026-10-08:** the hub page is in the Android app as part of Foundation, opened from Foundation's "See your ongoing arrangements" (`packages/mobile/src/features/foundation/recurring/`), copied from the web shell: create form with the member picker, the list with Confirm / Decline / End activity and visibility, empty, loading and error states, and the refresh button. It is not a card on the app's Apps list. **Android (React Native) surface removed 2026-07-20 (rule 105, PR #1742)** — this feature is now web-only, served by the installable web app (PWA). Web hub at
 `/apps/recurring-activity`. Historical detail: a former Android feature lived at
 `packages/mobile/src/features/recurring-activity` (now removed). The web surface enforces the no-amount-for-fiat rule.
 
@@ -221,6 +221,7 @@ flow, the Trust signal, and both GDP recognition branches. RACT's contribution w
 
 ## Change Log
 
+- 2026-10-08: The hub page is in the Android app, opened from Foundation's "See your ongoing arrangements", because Foundation is carried in full and that link is part of it (rule 105). Same routes; no server change.
 - 2026-10-05: **Confirm, decline, end and visibility work again.** The four
   `POST /api/recurring-activity/[activityId]/*` routes read the path value synchronously, but this
   Next.js version hands route handlers their params as a Promise, so `activityId` was always

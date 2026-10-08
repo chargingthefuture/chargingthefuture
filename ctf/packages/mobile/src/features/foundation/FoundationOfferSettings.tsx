@@ -176,8 +176,7 @@ export function InstantCallSettings() {
   const field = [input, styles.inputBorder];
   return (
     <GradientPanel>
-      {/* "send" where the web says "pay": credits are not money (CLAUDE.md). */}
-      <PanelTitle icon={PhoneCall} title="Instant connection" text="Turn this on to let other members ring you for a live 1:1 call right now. They send the rate you set for each block of time. You can turn it off anytime." />
+      <PanelTitle icon={PhoneCall} title="Instant connection" text="Turn this on to let other members ring you for a live 1:1 call right now. They send you the rate you set for each block of time. You can turn it off anytime." />
       {s.error ? <ErrorBanner text={s.error} style={styles.mb12} /> : null}
       {s.loading ? (
         <Text style={[font(14), styles.loading, { color: t.MUTED }]}>Loading…</Text>
