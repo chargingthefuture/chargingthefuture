@@ -170,7 +170,7 @@ function OccupationPrefill({ occupations, canAddMore, onAddOccupationSkills }: {
   return (
     <div style={{ marginBottom: 10 }}>
       <label htmlFor="sh-occupation-prefill" style={{ fontSize: 11, color: t.SUBTLE, display: "block", marginBottom: 4 }}>
-        Know their profession? Add its skills <span style={{ color: t.FAINT }}>(optional — fills the skills in for you)</span>
+        Know their job title? Add its skills <span style={{ color: t.FAINT }}>(optional — fills the skills in for you)</span>
       </label>
       <select
         id="sh-occupation-prefill"
@@ -179,7 +179,7 @@ function OccupationPrefill({ occupations, canAddMore, onAddOccupationSkills }: {
         onChange={(e) => { const occ = e.target.value; if (occ && occupations[occ]) onAddOccupationSkills(occupations[occ]); }}
         style={{ width: "100%", padding: "8px 12px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, fontSize: 13, color: t.TEXT, outline: "none", cursor: canAddMore ? "pointer" : "default", opacity: canAddMore ? 1 : 0.5 }}
       >
-        <option value="">Select a profession…</option>
+        <option value="">Select a job title…</option>
         {occupationNames.map((occ) => (
           <option key={occ} value={occ}>{occ}</option>
         ))}
