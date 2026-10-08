@@ -409,7 +409,39 @@ const SKIPPED_PLACEMENT = {
     'Classification was skipped for this run (started with skip_classification). The session that started the run adds the suggested sector and occupation to this issue.',
 };
 
-function buildIssueBody({ skillLabel, sector, occupation, rationale, source, sourceSubmissionId }) {
+// The allowed placements, written into an issue filed without classification. The session that
+// fills the placement in has no database access, so without this list it can only guess at
+// occupation names, which is how a proposal ends up suggesting an occupation that does not exist.
+// Grouped by sector, collapsed so the issue still reads short. Taxonomy rows are reference data,
+// never member data. Dropped with a note if it would push the body near GitHub's 65,536 limit.
+const PLACEMENT_CHOICES_MAX_CHARS = 40000;
+
+function buildPlacementChoices(occupations) {
+  const bySector = new Map();
+  for (const o of occupations) {
+    if (!bySector.has(o.sector)) bySector.set(o.sector, []);
+    bySector.get(o.sector).push(o.name);
+  }
+  const rows = [...bySector.keys()]
+    .sort((a, b) => a.localeCompare(b))
+    .map((sector) => `- **${sector}**: ${bySector.get(sector).join(' · ')}`);
+  const text = rows.join('\n');
+  if (text.length > PLACEMENT_CHOICES_MAX_CHARS) {
+    return ['## Allowed placements', '', 'The occupation list was too long to include in this issue.', ''];
+  }
+  return [
+    '## Allowed placements',
+    '',
+    '<details><summary>Every active occupation, by sector</summary>',
+    '',
+    text,
+    '',
+    '</details>',
+    '',
+  ];
+}
+
+function buildIssueBody({ skillLabel, sector, occupation, rationale, source, sourceSubmissionId, occupations }) {
   const mapping =
     sector && occupation
       ? `- Suggested sector: **${sector}**\n- Suggested occupation: **${occupation}**`
@@ -440,6 +472,7 @@ function buildIssueBody({ skillLabel, sector, occupation, rationale, source, sou
     ...(sector && occupation
       ? ['> Caveat: the sector and occupation above are an AI guess, not a decision. Check them before promoting.', '']
       : []),
+    ...(SKIP_CLASSIFICATION ? buildPlacementChoices(occupations) : []),
     '## Source',
     '',
     `- Source app: ${sourceLabel}`,
@@ -690,6 +723,7 @@ async function main() {
           rationale,
           source: candidate.source,
           sourceSubmissionId: candidate.source_submission_id,
+          occupations,
         });
         const { number, url } = await createIssue({ skillLabel: candidate.skill_label, body });
 
