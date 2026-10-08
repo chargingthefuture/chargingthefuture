@@ -22,7 +22,7 @@ function MobileFoundationPublic({ signInUrl, verifyUrl }: { signInUrl: string; v
           <Hammer size={20} color={t.ACCENT} />
           <span style={{ fontSize: 20, fontWeight: 800 }}>Foundation</span>
         </div>
-        <p style={{ margin: 0, fontSize: 14, color: t.SUBTLE, lineHeight: 1.5 }}>Electricians, plumbers, carpenters, and more — fellow community members. Pay with ServiceCredits.</p>
+        <p style={{ margin: 0, fontSize: 14, color: t.SUBTLE, lineHeight: 1.5 }}>Electricians, plumbers, carpenters, and more — fellow community members. Send ServiceCredits for the work.</p>
         <PublicShellWorldwide color={t.MUTED} />
         <a href={verifyUrl ?? signInUrl} style={{ padding: '14px', borderRadius: 12, background: t.ACCENT, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', textAlign: 'center', textDecoration: 'none' }}>{verifyUrl ? 'Finish verifying' : 'Join Skills Economy — Free'}</a>
       </div>

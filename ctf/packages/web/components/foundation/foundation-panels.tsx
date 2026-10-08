@@ -102,7 +102,7 @@ function QuoteRespondForm({
 const EMPTY_STEPS = [
   "Request an electrician, plumber, or other trade",
   "Get quotes from community providers",
-  "Accept a quote and pay with ServiceCredits",
+  "Accept a quote and send ServiceCredits",
 ];
 
 // How many skills a provider's browse card shows before collapsing the rest behind
