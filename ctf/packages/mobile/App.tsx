@@ -3,10 +3,8 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } 
 import {
   AppState,
   BackHandler,
-  ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { ChymeRoom } from './src/features/chyme';
@@ -17,8 +15,7 @@ import { AppsList } from './src/features/apps';
 import { Unlock } from './src/features/unlock';
 import { fetchUnlockStatus, type UnlockAccessTier } from './src/features/unlock/api';
 import { AccountData } from './src/features/account-data';
-import { BlockedMembers } from './src/features/blocks';
-import { ReportAProblemEntry } from './src/features/bug-reporting';
+import { BlockedMembers, BlockedMembersLink } from './src/features/blocks';
 import {
   useFonts,
   Inter_400Regular,
@@ -29,11 +26,10 @@ import {
   Inter_900Black,
 } from '@expo-google-fonts/inter';
 import { AuthProvider, useAuth } from './src/auth/auth-context';
-import { ThemeProvider, useTheme, getAppAccent, type ThemeName } from './src/theme';
+import { ThemeProvider, useTheme, getAppAccent } from './src/theme';
 import { LoadingScreen } from './src/components/shared/LoadingScreen';
-import { SignInPrompt } from './src/components/shared/SessionControls';
+import { ScreenHeader, ShellBackground, TopBar } from './src/components/shell/ShellChrome';
 import { getPluginEmoji } from './src/theme/plugin-visuals';
-import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Path } from 'react-native-svg';
 import { StreamVideoRN } from '@stream-io/video-react-native-sdk';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -58,78 +54,33 @@ StreamVideoRN.updateConfig({
   },
 });
 
-// The Skills Economy brand mark — the mobile counterpart of the web icon-rail logo. It draws the
-// "Stack" (skill progression) logo: three ascending rounded bars filled with the brand teal→purple
-// gradient (vector source: design/logo-options concept-d-stack-mark, chosen 2026-07-26). Comic theme
-// keeps the ink panel + hard cream border and paints the same mark in the border ink so it reads on
-// the warm newsprint surface. Kept small and self-contained.
-const SE_MARK_PATH =
-  'm94 105.7h-26v-7.7h25.5c1.5-0.1 3.1-1.3 3.1-3.3v-11.7c0-1.5-1.2-2.9-2.8-2.9l-22.5-0.1c-1.7 0-3.3 1.4-3.3 3.1l0.1 9.7h-24.8c-1.6 0-3 1.3-3 2.9v12.9h-25.7c-1.6 0-3.1 1.3-3.1 2.9v8.1c0 1.4 1.2 2.7 2.6 2.7h79.9c1.5 0 2.8-1.3 2.9-2.7v-11.3c-0.2-1.3-1.4-2.6-2.9-2.6zm-0.2 21.2h-79.3c-1.4 0-2.9 1.2-2.9 2.8v8.3c0 1.4 1.2 3 2.8 3h79.6c1.6 0 2.8-1.3 2.8-2.8v-8c0-1.8-1.4-3.2-3-3.3z';
-
-function BrandMark({ size = 36 }: { size?: number }) {
-  const { tokens } = useTheme();
-  const radius = tokens.radiusControl;
-  return (
-    <View
-      style={{
-        width: size,
-        height: size,
-        borderRadius: radius,
-        overflow: 'hidden',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: tokens.isComic ? tokens.surface : 'transparent',
-        borderWidth: tokens.isComic ? 1.5 : 0,
-        borderColor: tokens.border,
-      }}
-    >
-      <Svg width={size} height={size} viewBox="4 67.9 100 85">
-        <Defs>
-          <SvgLinearGradient id="brandmark" x1="11.51" y1="110.4" x2="96.71" y2="110.4" gradientUnits="userSpaceOnUse">
-            <Stop offset="0" stopColor="#006D72" />
-            <Stop offset="1" stopColor="#8F4BB2" />
-          </SvgLinearGradient>
-        </Defs>
-        <Path d={SE_MARK_PATH} fill={tokens.isComic ? tokens.border : 'url(#brandmark)'} />
-      </Svg>
-    </View>
-  );
-}
-
-// Emoji glyph for a nav pill, mirroring web's per-plugin tile emoji. Non-plugin keys get their own.
-function keyEmoji(key: FeatureKey): string {
-  const special: Partial<Record<FeatureKey, string>> = {
-    apps: '🧩',
-    'account-data': '🗄️',
-    'blocked-members': '🚫',
-    'bug-report': '🐞',
-  };
-  if (special[key]) return special[key] as string;
-  return getPluginEmoji(key);
-}
-
-// Accent for a nav pill's active state — the plugin's own accent, so each app keeps its color
-// identity in the nav (matches web). Non-plugin keys fall back to the neutral accent.
-function keyAccent(key: FeatureKey, theme: ThemeName): string {
-  return getAppAccent(key, theme);
-}
-
 // The native Android app carries the plugins that materially benefit from being an installed app
 // (Chyme live audio, Beacon broadcasts, PeerProgramming's live call, Foundation's instant calls), plus what they need to run (Clerk auth wall, bug reporting,
-// settings/account); everything else is served by the web app. The Apps list is home. See
+// settings/account); everything else is served by the web app. The Apps list is home; the top bar's
+// gear opens Account & Data, and Blocked members sits under it, as on the web's /account page. See
 // `.claude/rules/105-web-android-feature-parity-rules.mdc`.
-type FeatureKey = 'apps' | 'chyme' | 'beacon' | 'peer-programming' | 'foundation' | 'account-data' | 'blocked-members' | 'bug-report';
+type FeatureKey = 'apps' | 'chyme' | 'beacon' | 'peer-programming' | 'foundation' | 'account-data' | 'blocked-members';
 
-const featureOrder: Array<{ key: FeatureKey; label: string }> = [
-  { key: 'apps', label: 'Apps' },
-  { key: 'chyme', label: 'Chyme' },
-  { key: 'beacon', label: 'Beacon' },
-  { key: 'peer-programming', label: 'PeerProgramming' },
-  { key: 'foundation', label: 'Foundation' },
-  { key: 'account-data', label: 'Account & Data' },
-  { key: 'blocked-members', label: 'Blocked members' },
-  { key: 'bug-report', label: 'Report a problem' },
-];
+// What each screen's header calls it. Apps has no header title: it carries the top bar instead.
+const SCREEN_TITLES: Record<Exclude<FeatureKey, 'apps'>, string> = {
+  chyme: 'Chyme',
+  beacon: 'Beacon',
+  'peer-programming': 'PeerProgramming',
+  foundation: 'Foundation',
+  'account-data': 'Account & Data',
+  'blocked-members': 'Blocked members',
+};
+
+const PLUGIN_KEYS = ['chyme', 'beacon', 'peer-programming', 'foundation'] as const;
+type PluginKey = (typeof PLUGIN_KEYS)[number];
+function isPluginKey(key: FeatureKey): key is PluginKey {
+  return (PLUGIN_KEYS as readonly string[]).includes(key);
+}
+
+// Where the header's back chevron and Android's back button go from each screen.
+function parentOf(key: FeatureKey): FeatureKey {
+  return key === 'blocked-members' ? 'account-data' : 'apps';
+}
 
 export default function App() {
   // Load the brand typeface (Inter) so text rendered through the shared type scale uses it at the
@@ -203,14 +154,16 @@ function buildFeatureViews(open: (_key: FeatureKey) => void, signedIn: boolean):
     'peer-programming': () => <PeerProgramming />,
     foundation: () => <Foundation />,
     'account-data': () =>
-      signedIn ? <AccountData /> : <SignedOutNote text="Sign in to see and manage your data." />,
+      signedIn ? (
+        <View style={styles.fill}>
+          <BlockedMembersLink onPress={() => open('blocked-members')} />
+          <AccountData />
+        </View>
+      ) : (
+        <SignedOutNote text="Sign in to see and manage your data." />
+      ),
     'blocked-members': () =>
       signedIn ? <BlockedMembers /> : <SignedOutNote text="Sign in to see the members you have blocked." />,
-    'bug-report': () => (
-      <ScrollView contentContainerStyle={styles.bugReportStack}>
-        <ReportAProblemEntry />
-      </ScrollView>
-    ),
   };
 }
 
@@ -230,6 +183,7 @@ function AppShell() {
   const [selected, setSelected] = useState<FeatureKey>('apps');
 
   const isAdmin = Boolean(user?.isAdmin);
+  const openAccount = useCallback(() => setSelected('account-data'), []);
 
   // Client-side Unlock wall. The server 403 gates are the real enforcement; this
   // only mirrors the web redirect so a not-yet-approved member does not see the
@@ -283,8 +237,8 @@ function AppShell() {
     return () => sub.remove();
   }, [refreshUnlockGate]);
 
-  // Android hardware back. The app is a flat pill navigator with no screen stack, so give back a
-  // predictable meaning: from any other pill go back to the Apps list, the home surface; from Apps,
+  // Android hardware back. The app has no screen stack, so give back a predictable meaning: from a
+  // screen go to its parent (Blocked members to Account & Data, the rest to Apps); from Apps,
   // let Android do its default (leave the app). This
   // replaces the old behavior where back exited the app from anywhere. Note: "navigating away
   // without closing" — the case that must not drop a member from a live room — is pressing HOME or
@@ -293,7 +247,7 @@ function AppShell() {
   useEffect(() => {
     const onBack = () => {
       if (selected !== 'apps') {
-        setSelected('apps');
+        setSelected(parentOf(selected));
         return true; // handled — do not exit
       }
       return false; // on Apps: let Android leave the app
@@ -329,50 +283,25 @@ function AppShell() {
 
   return (
     <View style={[styles.container, { backgroundColor: tokens.bg }]}>
-      <View style={styles.brandRow}>
-        <BrandMark />
-        <View>
-          <Text style={[styles.wordmark, { color: tokens.textPrimary }]}>Skills Economy</Text>
-          <Text style={[styles.subtitle, { color: tokens.textSecondary }]}>Community</Text>
-        </View>
-      </View>
-
-      <ScrollView horizontal style={styles.pillRow} contentContainerStyle={styles.pillContent}>
-        {featureOrder.map((feature) => {
-          const active = selected === feature.key;
-          const accent = keyAccent(feature.key, theme);
-          return (
-            <TouchableOpacity
-              key={feature.key}
-              style={[
-                styles.pill,
-                {
-                  backgroundColor: active ? `${accent}22` : tokens.surface,
-                  borderColor: active ? accent : tokens.border,
-                  borderRadius: tokens.isComic ? 0 : 999,
-                },
-              ]}
-              onPress={() => setSelected(feature.key)}
-            >
-              <Text
-                style={[
-                  styles.pillText,
-                  { color: active ? tokens.textPrimary : tokens.textSecondary },
-                ]}
-              >
-                {keyEmoji(feature.key)}  {feature.label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
-
-      {/* Signed out: the only way to an account. Listening to a Chyme room as a guest still works. */}
-      {isAuthenticated ? null : <SignInPrompt />}
+      <ShellBackground />
+      {/* The web frame at phone width: the Apps home carries the top bar, every other screen the
+          back-chevron header (web MobileTopBar and MobileScreenHeader). */}
+      {selected === 'apps' ? (
+        <TopBar onOpenAccount={openAccount} />
+      ) : (
+        <ScreenHeader
+          title={SCREEN_TITLES[selected]}
+          emoji={isPluginKey(selected) ? getPluginEmoji(selected) : undefined}
+          accent={isPluginKey(selected) ? getAppAccent(selected, theme) : undefined}
+          onBack={() => setSelected(parentOf(selected))}
+          onOpenAccount={openAccount}
+          pluginSlug={isPluginKey(selected) ? selected : undefined}
+        />
+      )}
 
       {/* Keyed on the signed-in member so signing out (or in as somebody else) unmounts every screen
           holding a Stream client, whose cleanup leaves the call and disconnects it. */}
-      <View key={user?.id ?? 'signed-out'} style={styles.content}>
+      <View key={user?.id ?? 'signed-out'} style={[styles.content, selected === 'apps' ? null : styles.contentPadded]}>
         {/* Foundation instant calls: the incoming ring and the live call show above every tab, as the web
             mounts its call controller at the shell root. Inside the keyed view, so signing out hangs up. */}
         <FoundationCallController signedIn={isAuthenticated} displayName={callDisplayName(user)}>
@@ -380,10 +309,9 @@ function AppShell() {
         </FoundationCallController>
       </View>
 
-      <Text style={[styles.webHint, { color: tokens.textSecondary }]}>
-        The rest of the app is on the web — app.chargingthefuture.com
-      </Text>
-      <StatusBar style={tokens.isComic ? 'light' : 'auto'} />
+      {/* Both themes are dark, so the clock and icons are always light. 'auto' followed the phone's
+          light/dark setting and drew dark icons on the dark bar in light mode. */}
+      <StatusBar style="light" />
     </View>
   );
 }
@@ -391,73 +319,20 @@ function AppShell() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    paddingTop: 8,
-    paddingHorizontal: 12,
-  },
-  brandRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 8,
-  },
-  wordmark: {
-    fontSize: 18,
-    fontWeight: '800',
-    fontFamily: 'Inter_800ExtraBold',
-  },
-  subtitle: {
-    fontSize: 12,
-    fontWeight: '600',
-    fontFamily: 'Inter_600SemiBold',
-  },
-  pillRow: {
-    maxHeight: 48,
-  },
-  pillContent: {
-    gap: 8,
-    alignItems: 'center',
-    paddingVertical: 4,
-  },
-  pill: {
-    borderWidth: 1,
-    borderColor: '#d0d0d0',
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: '#f8f8f8',
-  },
-  pillActive: {
-    backgroundColor: '#111',
-    borderColor: '#111',
-  },
-  pillText: {
-    fontSize: 12,
-    color: '#222',
-    fontWeight: '600',
-    fontFamily: 'Inter_600SemiBold',
-  },
-  pillTextActive: {
-    color: '#fff',
   },
   content: {
     flex: 1,
-    marginTop: 10,
+  },
+  contentPadded: {
+    paddingHorizontal: 12,
+    paddingTop: 10,
+  },
+  fill: {
+    flex: 1,
   },
   signedOutNote: {
     fontSize: 14,
     fontFamily: 'Inter_500Medium',
     marginTop: 8,
-  },
-  bugReportStack: {
-    gap: 12,
-    paddingBottom: 24,
-  },
-  webHint: {
-    fontSize: 11,
-    fontWeight: '500',
-    fontFamily: 'Inter_500Medium',
-    textAlign: 'center',
-    paddingVertical: 8,
   },
 });

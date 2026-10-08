@@ -10,6 +10,7 @@ import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useTheme, getAppAccent } from '../../theme';
 import { getPluginEmoji } from '../../theme/plugin-visuals';
+import { interFamily } from '../../components/ui';
 
 export type MobileAppKey = 'chyme' | 'beacon' | 'peer-programming' | 'foundation';
 
@@ -26,37 +27,88 @@ const APPS: Array<{ key: MobileAppKey; name: string; summary: string }> = [
   { key: 'foundation', name: 'Foundation', summary: 'Find talent, tools, repairs, and infrastructure support in real time.' },
 ];
 
+// Card backgrounds are the web's per-plugin `bg` (components/community-shell/shell-plugin-config.ts);
+// the comic theme uses its flat card surface, as the web does.
+const CARD_BG: Record<MobileAppKey, string> = {
+  chyme: '#04160A',
+  beacon: '#140303',
+  'peer-programming': '#021208',
+  foundation: '#1B1101',
+};
+const COMIC_CARD_BG = '#141414';
+
+// Matches the web Apps panel at phone width (shell-apps-panel.tsx): an "All Apps" heading, then one
+// card per app — tinted background, icon tile, name, summary and an "Open plugin →" pill. The web's
+// sort and search controls are left out: with four apps there is nothing to sort or search.
 export const AppsList: React.FC<{ onOpen: (_key: MobileAppKey) => void }> = ({ onOpen }) => {
   const { tokens, theme } = useTheme();
+  const subtle = tokens.isComic ? tokens.textSecondary : '#6B7280';
   return (
-    <ScrollView contentContainerStyle={styles.list}>
-      {APPS.map((app) => {
-        const accent = getAppAccent(app.key, theme);
-        return (
-          <TouchableOpacity
-            key={app.key}
-            onPress={() => onOpen(app.key)}
-            accessibilityRole="button"
-            accessibilityLabel={`Open ${app.name}`}
-            style={[styles.card, { borderColor: accent, backgroundColor: tokens.surface, borderRadius: tokens.radius }]}
-          >
-            <Text style={styles.emoji}>{getPluginEmoji(app.key)}</Text>
-            <View style={styles.text}>
+    <ScrollView contentContainerStyle={styles.panel}>
+      <Text style={[styles.title, { color: tokens.textPrimary }]}>All Apps</Text>
+      <Text style={[styles.sub, { color: subtle }]}>
+        Your complete peer-to-peer marketplace — from survivor to thriver
+      </Text>
+      <View style={styles.grid}>
+        {APPS.map((app) => {
+          const color = getAppAccent(app.key, theme);
+          const bg = tokens.isComic ? COMIC_CARD_BG : CARD_BG[app.key];
+          return (
+            <TouchableOpacity
+              key={app.key}
+              onPress={() => onOpen(app.key)}
+              accessibilityRole="button"
+              accessibilityLabel={`Open ${app.name}`}
+              activeOpacity={0.85}
+              style={[
+                styles.card,
+                {
+                  backgroundColor: tokens.isComic ? bg : `${bg}88`,
+                  borderColor: tokens.isComic ? tokens.border : `${color}20`,
+                  borderRadius: tokens.radius,
+                },
+              ]}
+            >
+              <View
+                style={[
+                  styles.icon,
+                  { backgroundColor: `${color}20`, borderColor: `${color}35`, borderRadius: tokens.isComic ? 0 : 10 },
+                ]}
+              >
+                <Text style={styles.emoji}>{getPluginEmoji(app.key)}</Text>
+              </View>
               <Text style={[styles.name, { color: tokens.textPrimary }]}>{app.name}</Text>
-              <Text style={[styles.summary, { color: tokens.textSecondary }]}>{app.summary}</Text>
-            </View>
-          </TouchableOpacity>
-        );
-      })}
+              <Text style={[styles.summary, { color: subtle }]}>{app.summary}</Text>
+              <View
+                style={[
+                  styles.action,
+                  { borderColor: `${color}35`, backgroundColor: `${color}15`, borderRadius: tokens.isComic ? 0 : 8 },
+                ]}
+              >
+                <Text style={[styles.actionText, { color }]}>Open plugin →</Text>
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+      <Text style={[styles.webNote, { color: subtle }]}>
+        Every other app is on the web at app.chargingthefuture.com
+      </Text>
     </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
-  list: { padding: 16, gap: 12 },
-  card: { borderWidth: 1, padding: 16, flexDirection: 'row', gap: 14, alignItems: 'center' },
-  emoji: { fontSize: 28 },
-  text: { flex: 1, gap: 4 },
-  name: { fontSize: 17, fontWeight: '700' },
-  summary: { fontSize: 13, lineHeight: 18 },
+  panel: { padding: 20 },
+  title: { fontSize: 22, fontFamily: interFamily('800'), marginBottom: 4 },
+  sub: { fontSize: 14, fontFamily: interFamily('400'), marginBottom: 16 },
+  grid: { gap: 12 },
+  card: { padding: 18, borderWidth: 1 },
+  icon: { width: 40, height: 40, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
+  emoji: { fontSize: 20 },
+  name: { fontSize: 15, fontFamily: interFamily('700'), marginBottom: 4 },
+  summary: { fontSize: 13, lineHeight: 19.5, fontFamily: interFamily('400'), marginBottom: 14 },
+  action: { alignSelf: 'flex-start', borderWidth: 1, paddingVertical: 6, paddingHorizontal: 14 },
+  actionText: { fontSize: 12, fontFamily: interFamily('600') },
+  webNote: { fontSize: 12, fontFamily: interFamily('500'), textAlign: 'center', marginTop: 20 },
 });

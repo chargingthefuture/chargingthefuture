@@ -8,3 +8,4 @@ export {
   type BlocksListResponse,
   type SafetyEscalation,
 } from './api';
+export { BlockedMembersLink } from './BlockedMembersLink';
