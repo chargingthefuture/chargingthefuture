@@ -17,7 +17,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:directory` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-directory-feature-inventory.md` |
-| **Generated** | 2026-07-16 (hand-updated: `country` is now required on every profile — see DIR-4, DIR-4b, DIR-A1; plus the unified skills picker and ported v2 location fields — see DIR-2; 2026-07-17: android member self-edit (#1325) and android admin editable skills (#1335) now ship — see DIR-4, DIR-4b, DIR-A1; 2026-07-18: "Weavers of the Commons" contributor badge on claimed profiles — see DIR-8; 2026-07-19: android badge parity (#1680) ships — DIR-8 gains android; 2026-09-21: the tombstone-column drop's leftover readers are fixed — no step here changes, but a SkillsHunt accept and a Foundation connect must both succeed again; regenerate via CI to stamp the commit) · 2026-10-08 manual update: DIR-A1f checks the admin edit drawer's new Sector and Job title selects · 2026-09-22 manual update: DIR-A1d checks the admin list loads at all, after its page query was refused by the database for a gap in its placeholder numbering |
+| **Generated** | 2026-07-16 (hand-updated: `country` is now required on every profile — see DIR-4, DIR-4b, DIR-A1; plus the unified skills picker and ported v2 location fields — see DIR-2; 2026-07-17: android member self-edit (#1325) and android admin editable skills (#1335) now ship — see DIR-4, DIR-4b, DIR-A1; 2026-07-18: "Weavers of the Commons" contributor badge on claimed profiles — see DIR-8; 2026-07-19: android badge parity (#1680) ships — DIR-8 gains android; 2026-09-21: the tombstone-column drop's leftover readers are fixed — no step here changes, but a SkillsHunt accept and a Foundation connect must both succeed again; regenerate via CI to stamp the commit) · 2026-10-08 manual update: core smoke step 4 checks the signed-out landing has no SkillsHunt card · 2026-10-08 manual update: DIR-A1f checks the admin edit drawer's new Sector and Job title selects · 2026-09-22 manual update: DIR-A1d checks the admin list loads at all, after its page query was refused by the database for a gap in its placeholder numbering |
 | **Inventory wording** | 2026-10-01: banned-term wording removed from the inventory prose; no step in this script changed |
 
 ## How to run this
@@ -45,7 +45,8 @@ can't-ship-broken checks. Member role unless noted.
    does **not** describe members as "sharing" or "offering" their skills — offering skills is
    Foundation, and Directory includes unclaimed community-generated profiles. → web ☐ mobile ☐
 4. **Not public.** Signed out, the Directory plugin route does not expose member profile data; there
-   is no anonymous projection route. → web ☐ mobile ☐
+   is no anonymous projection route. The signed-out landing shows the description, the join button and
+   the sign-in box, and no SkillsHunt card (removed 2026-10-08). → web ☐ mobile ☐
 5. **No verification over-claim.** Nowhere on the Directory (browse hero, header, or the signed-out
    landing) does copy claim members are "verified" or a "Verified Network" — members are framed as
    fellow community members sharing their skills, consistent with Foundation's "not a formally vetted
