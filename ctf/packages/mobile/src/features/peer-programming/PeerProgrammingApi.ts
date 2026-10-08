@@ -1,13 +1,15 @@
 // PeerProgramming API client (mobile).
 //
 // Mirrors the web client (ctf/packages/web/components/peer-programming/pp-goals-api.ts, the room
-// load in peer-programming-shell.tsx and the session join in pp-session-tab.tsx). Every call goes
+// load, message post and feedback in peer-programming-shell.tsx and the session join in
+// pp-session-tab.tsx). Every call goes
 // through authedFetch, which sends the Clerk token as a Bearer header; every POST sends
 // `x-ctf-csrf: 1`, which the PeerProgramming mutation routes require.
 //
-//   - GET  /api/peer-programming/room                          topic, the member's cohort, roster, messages, access
+//   - GET  /api/peer-programming/room[?cohortId=]              topic, the open cohort, roster, messages, access,
+//                                                              the week's running cohorts and the member's own
 //   - POST /api/peer-programming/messages                      { cohortId, body }
-//   - POST /api/peer-programming/messages/[messageId]/replies  { cohortId, body }
+//   - POST /api/peer-programming/feedback                      feedback on the member's ended cohort
 //   - GET  /api/peer-programming/goals                         the goal board for the member's cohort
 //   - POST /api/peer-programming/goals                         { title, tasks }
 //   - POST /api/peer-programming/goals/[goalId]                { action: 'add_task' | 'close', ... }
@@ -74,7 +76,7 @@ export type RoomMessage = {
 
 export type RoomMember = { userId: string; username: string | null };
 
-export type RoomCohort = { id: string; cohortLabel: string; memberCount: number };
+export type RoomCohort = { id: string; cohortLabel: string; memberCount: number; fallbackOpen: boolean };
 
 export type Room = {
   topic: { title: string; guidance?: string } | null;
@@ -83,6 +85,10 @@ export type Room = {
   messages: RoomMessage[];
   access: RoomAccess;
   ended: boolean;
+  /** Every cohort running this week, for the "Other running cohorts" list. */
+  cohorts: RoomCohort[];
+  /** The member's own cohort this week, or null when they have not been placed. */
+  myCohortId: string | null;
 };
 
 export type SessionCredentials = {
@@ -164,8 +170,10 @@ export function actOnTask(taskId: string, action: TaskAction, result?: string): 
 
 type RoomResponse = Partial<Room> & { cohort?: RoomCohort | null; ended?: boolean };
 
-export async function loadRoom(): Promise<Room> {
-  const data = await getJson<RoomResponse>('/api/peer-programming/room', 'The PeerProgramming room could not be loaded');
+// With no cohort id the member's own cohort opens; with one, that cohort opens to listen in.
+export async function loadRoom(cohortId?: string | null): Promise<Room> {
+  const path = cohortId ? `/api/peer-programming/room?cohortId=${encodeURIComponent(cohortId)}` : '/api/peer-programming/room';
+  const data = await getJson<RoomResponse>(path, 'The PeerProgramming room could not be loaded');
   const cohort = data.cohort ?? null;
   return {
     topic: data.topic ?? null,
@@ -174,6 +182,8 @@ export async function loadRoom(): Promise<Room> {
     messages: data.messages ?? [],
     access: data.access ?? (cohort ? 'member' : 'listener'),
     ended: Boolean(data.ended),
+    cohorts: data.cohorts ?? [],
+    myCohortId: data.myCohortId ?? null,
   };
 }
 
@@ -181,8 +191,13 @@ export function postMessage(cohortId: string, body: string): Promise<ActionResul
   return post('/api/peer-programming/messages', { cohortId, body }, 'The message could not be posted');
 }
 
-export function postReply(cohortId: string, messageId: string, body: string): Promise<ActionResult> {
-  return post(`/api/peer-programming/messages/${encodeURIComponent(messageId)}/replies`, { cohortId, body }, 'The reply could not be posted');
+// Feedback on the member's own cohort once it has ended, with the same fields the web sends.
+export function sendFeedback(cohortId: string | null, note: string): Promise<ActionResult> {
+  return post(
+    '/api/peer-programming/feedback',
+    { cohortId, issueType: 'general', suggestionCategory: 'general', releaseSurface: 'android', note },
+    'Failed to submit feedback',
+  );
 }
 
 type JoinResponse = (Partial<SessionCredentials> & { message?: string }) | null;

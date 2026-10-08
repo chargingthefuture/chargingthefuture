@@ -1,31 +1,25 @@
-// Chat helpers: author names and grouping replies under the message they answer.
-import type { RoomMember, RoomMessage } from './PeerProgrammingApi';
+// Name and time helpers for the Direct Line and the session roster, the same as the web shell's
+// (web components/peer-programming/peer-programming-shell.tsx, pp-shared.ts, pp-chat-tab.tsx).
+import type { RoomMember } from './PeerProgrammingApi';
 
-export type Thread = { message: RoomMessage; replies: RoomMessage[] };
+// A member's username, or a short id when it could not be resolved.
+export function memberName(member: RoomMember): string {
+  return member.username ?? `Member ${member.userId.slice(0, 6)}`;
+}
 
-// The author's username from the cohort roster, or a short id when it could not be resolved. Same
-// fallback as the web room, so one author reads the same way on both.
+// The author's username from the cohort roster, or a short id when it could not be resolved.
 export function authorName(authorUserId: string, members: RoomMember[]): string {
   const member = members.find((item) => item.userId === authorUserId);
   return member?.username ?? `Member ${authorUserId.slice(0, 6)}`;
 }
 
-// Top-level messages in the order the room returns them, each with its replies. A reply whose parent
-// is not in the list is shown as a top-level message so nothing goes missing.
-export function groupThreads(messages: RoomMessage[]): Thread[] {
-  const ids = new Set(messages.map((message) => message.id));
-  const threads: Thread[] = [];
-  const byId = new Map<string, Thread>();
-  for (const message of messages) {
-    if (message.parentMessageId && ids.has(message.parentMessageId)) continue;
-    const thread = { message, replies: [] };
-    threads.push(thread);
-    byId.set(message.id, thread);
-  }
-  for (const message of messages) {
-    if (message.parentMessageId) byId.get(message.parentMessageId)?.replies.push(message);
-  }
-  return threads;
+export function initials(name: string): string {
+  return name
+    .split(' ')
+    .map((word) => word[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
 }
 
 // Date and time, not time alone, so messages from different days can be told apart.

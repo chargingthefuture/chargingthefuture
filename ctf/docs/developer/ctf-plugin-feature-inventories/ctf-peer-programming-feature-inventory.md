@@ -5,7 +5,7 @@
 - Plugin name: `PeerProgramming`
 - Plugin slug / service key: `peer-programming`
 - Owned surfaces: `/apps/peer-programming` (web), the PeerProgramming screen in the Android app (`packages/mobile/src/features/peer-programming/`), `/api/peer-programming/*` routes, `peer_programming_*` tables.
-- **Android: member screen only (owner decision, 2026-10-06).** The Android app carries PeerProgramming again under rule 105's keep-list (item 2c): the goal board, the cohort chat and the live Session call, opened from the app's Apps list. It qualifies because the call keeps running with the screen off (the Stream foreground service) and an installed Android app can share the phone's screen in it. The admin screen stays on the web. (The earlier React Native screens were deleted on 2026-07-20, PR #1742; the 2026-10-06 screens are new code, not a restore.)
+- **Android: the member and admin screens (owner decisions, 2026-10-06 and 2026-10-08).** The Android app carries PeerProgramming again under rule 105's keep-list (item 2c), opened from the app's Apps list. It qualifies because the call keeps running with the screen off (the Stream foreground service) and an installed Android app can share the phone's screen in it. Since 2026-10-08 the Android screens copy the web page at phone width, with every screen and feature, the admin screen included. (The earlier React Native screens were deleted on 2026-07-20, PR #1742; the 2026-10-06 screens are new code, not a restore.)
 - Not owned: identity (Clerk), chat infrastructure (Chyme/Hub), notifications transport (shared notifications plugin).
 
 ## Intent and Outcome
@@ -332,14 +332,18 @@ somebody is using the app but not being selected, the sign-in record is what to 
 
 ## Web and Android Delivery Status
 
-Delivery: **web + mobile-responsive complete** (pixel-pass delivered). **Android member screen built 2026-10-06 (owner decision; rule 105 keep-list item 2c).** The web surface lives under `/apps/peer-programming`; the admin screen is web only.
+Delivery: **web + mobile-responsive complete** (pixel-pass delivered). **Android member screen built 2026-10-06 (owner decision; rule 105 keep-list item 2c); made to match the web page at phone width, with the admin screen added, 2026-10-08 (owner directive).** The web surface lives under `/apps/peer-programming` and `/admin/peer-programming`.
 
-**Android (2026-10-06):** `packages/mobile/src/features/peer-programming/`, opened from the app's Apps list and the PeerProgramming pill. The week's topic sits on top, then three tabs:
-- **Goals** (opens first, as on the web): `GoalsTab.tsx`, `useGoalBoard.ts`, `GoalsBoard.tsx`, `GoalChips.tsx`, `GoalSection.tsx`, `GoalCard.tsx`, `GoalCardControls.tsx`, `YourGoalPanel.tsx`, `NewGoalForm.tsx`, `ppBoard.ts`. Same rules as the web board: chips ordered own goals first, "+ Add your goal" hidden at `maxOpenGoals`, Take it / Post result / Let it go, It helped / Keep / Send back, Edit and Remove on your own open card, add a card, Reached it / Take it down, the hold-hours notice, the cards-done-in-24-hours count, read-only when the cohort has ended. The web's three columns are stacked sections on the phone.
-- **Chat**: `ChatTab.tsx`, `ChatThread.tsx`, `ChatComposer.tsx`, `ppChat.ts`. Messages from `GET /api/peer-programming/room`, posting through `POST /api/peer-programming/messages`, and replies through `POST /api/peer-programming/messages/[messageId]/replies`, shown under the message they answer. A notice replaces the composer when there is no cohort, the cohort has ended, or the viewer is listening in.
-- **Session**: `SessionTab.tsx`, `PeerProgrammingCall.tsx`, `PeerProgrammingCallStage.tsx`, `PeerProgrammingCallControls.tsx`. Join session calls `POST /api/peer-programming/session/join` and joins the cohort's `default` call with the camera and microphone on; one tile per member; Mute, Stop camera, Flip camera, Share screen (Android asks first; declining shows a calm line) and Leave session. A shared screen is shown large above the tiles. The call stays joined while the member switches tabs, switches apps or turns the screen off (the Stream foreground service in `App.tsx`).
-- Shared: `PeerProgramming.tsx` (screen, header, tabs), `useRoom.ts`, `PeerProgrammingApi.ts` (every call through `authedFetch` with `x-ctf-csrf: 1` on POSTs), `PPButton.tsx`, `usePPTheme.ts`, `index.ts`.
-- Not on Android: the Cohorts tab (listen-in on other cohorts), the end-of-cohort feedback form and the admin screen. Parity contract: `peer-programming` → `mobileFeatureDirs: ["peer-programming"]`, `requiresMobileSurface: true`. Test steps: AN-PP in `android-app-test-script.md`.
+**Android (2026-10-08):** `packages/mobile/src/features/peer-programming/`, opened from the app's Apps list. Every layout, string, color, size and state is copied from the web components named in each file's header comment.
+- **Header**: the app header carries the web title row: back, icon, "PeerProgramming", the **Admin** pill (admins only), **Refresh** (reloads the open cohort's room, as the web button does), then report and settings. The header controls come from the screen through `components/shell/HeaderActions.tsx` (`useHeaderActions`, `HeaderRefreshButton`, `HeaderPillButton`) and `ScreenHeader`'s new `actions` and `icon` props.
+- **Tab row**: Goals, Cohorts, Session, Direct Line, opening on Goals, or on the Direct Line when the admin screen opens a cohort's room.
+- **Goals**: `GoalsTab.tsx`, `useGoalBoard.ts`, `GoalsBoard.tsx`, `GoalChips.tsx`, `GoalSection.tsx`, `GoalCard.tsx`, `GoalCardControls.tsx`, `YourGoalPanel.tsx`, `NewGoalForm.tsx`, `ppBoard.ts`. The web board: the target icon and cards-done count, the chips row, the three columns side by side at 82% width scrolling sideways, every control and line.
+- **Cohorts**: `CohortsTab.tsx`, `RunningCohorts.tsx`, `FeedbackForm.tsx`, `PPHero.tsx`. The "Weekly Global Masterminds" card, the member's cohort (Active / Ended badge, topic, member count, Join Session) or the not-yet-assigned card, "In this cohort", "Other running cohorts" with Listen in (`GET /api/peer-programming/room?cohortId=`), and Session Feedback once the member's own cohort has ended (`POST /api/peer-programming/feedback`, `releaseSurface: 'android'`).
+- **Session**: `SessionTab.tsx`, `PeerProgrammingCall.tsx`, `PeerProgrammingCallStage.tsx`, `PeerProgrammingCallControls.tsx`. The "Live Session" card, the join card, the four-a-row roster, then the call: "Live · N participants", 4:3 tiles in columns at least 180 wide, round mute / camera / leave buttons. Android adds two round buttons the web page cannot offer on a phone: flip camera and share screen (a shared screen shows large above the tiles). The call stays joined while the member switches tabs, switches apps or turns the screen off (the Stream foreground service in `App.tsx`).
+- **Direct Line**: `ChatTab.tsx`, `ChatComposer.tsx`, `ppChat.ts`. Messages in the order the room returns them (initials, name and time over a bubble), the web message box with its square send button, or the no-cohort / ended / listening-in line in its place.
+- **Admin**: `PeerProgrammingAdmin.tsx`, `usePeerProgrammingAdmin.ts`, `PeerProgrammingAdminApi.ts`, `AdminParts.tsx`, `AdminSections.tsx`, `AdminCohorts.tsx`, `AdminTopicForm.tsx`, `AdminAssignments.tsx`. The web admin page: header with the code icon and **Member view** pill, the heading card, error and notice banners, Member feedback, Single standing Cohort 1 mode, Weekly topic, Weekly cohort assignment, and Cohorts with End cohort and Open room. Same admin routes as the web. Opened from the **Admin** pill, for admins only; the routes check it again.
+- Shared: `PeerProgramming.tsx` (screen and tab row), `useRoom.ts`, `PeerProgrammingApi.ts` (every call through `authedFetch` with `x-ctf-csrf: 1` on writes), `PPButton.tsx`, `usePPTheme.ts` (the web shell's colors for both themes; comic corners are square, as the web's comic rule makes them), `index.ts`.
+- Differences from the web, each because the app cannot do the same: the week start date in the admin topic form is typed as YYYY-MM-DD (the app has no date picker installed); the tick boxes are drawn squares (React Native has no native tick box); End cohort asks in Android's dialog rather than the browser's; the header icon is the app's emoji tile, as on every app screen. Parity contract: `peer-programming` → `mobileFeatureDirs: ["peer-programming"]`, `requiresMobileSurface: true`. Test steps: AN-PP in `android-app-test-script.md`.
 
 Historical parity detail: an earlier Android surface lived in the same folder until it was removed on 2026-07-20; the paragraphs below marked History describe that version.
 
@@ -384,10 +388,23 @@ Deterministic PeerProgramming seed script: `ctf/scripts/seedPeerProgramming.mjs`
    start the session. Nothing about this is committed: no schema, no route, no design. Mutual Time's
    own model (one-hour windows, a chosen window, a link to the meeting surface) is the reference, but
    the embedded version would drop the closing step that plugin has.
-6. The Android app carries the member screen only (Goals, Chat, Session); the admin screen, the Cohorts tab (listen-in on other cohorts) and the end-of-cohort feedback form stay on the web, and no Android gap should be opened for them. No automated test harness exists for live Stream calls — verification on web and on Android (AN-PP in `android-app-test-script.md`) is manual.
+6. The Android app carries every PeerProgramming screen the web has, the admin screen included (2026-10-08). No automated test harness exists for live Stream calls — verification on web and on Android (AN-PP in `android-app-test-script.md`) is manual.
 
 ## Change Log
 
+- 2026-10-08: **The Android screens match the web page (owner directive).** The Android PeerProgramming
+  screen looked like a different product. It now copies the web at phone width: the separate title,
+  topic line and Refresh button under the header are gone; Refresh and, for admins, an Admin pill sit
+  in the header as on the web; the tab row reads Goals, Cohorts, Session, Direct Line; the board's
+  columns sit side by side and scroll sideways; the Direct Line shows messages as the web does, with
+  no reply threads (the web has none), and the web message box; the Session tab has the web cards,
+  roster, tiles and round call buttons (flip camera and share screen stay, as Android-only call
+  controls). Added, because the web has them and the routes already exist: the Cohorts tab with
+  Listen in and Session Feedback, and the admin screen (feedback inbox, single standing Cohort 1
+  switch, weekly topic, weekly assignment, cohorts with End cohort and Open room). Removed with no
+  users left: `ChatThread.tsx`, the reply call `postReply`, the threads helper, and the Android-only
+  notes on the join card. No route, schema or contract change: the app calls the routes the web
+  already uses.
 - 2026-10-06: **PeerProgramming is in the Android app again (owner decision).** The Android app now
   carries any plugin that materially benefits from being an installed app, and PeerProgramming does:
   its live Session call keeps running with the screen off (the Stream foreground service), and on

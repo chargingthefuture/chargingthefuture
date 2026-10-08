@@ -1,9 +1,10 @@
 // The row of goals above the board, scrolled sideways. "All goals" shows every card; pressing a goal
-// narrows the sections to that goal's cards; "+ Add your goal" opens the new goal form and hides once
+// narrows the columns to that goal's cards; "+ Add your goal" opens the new goal form and hides once
 // the member has as many open goals as the board allows. Same order as the web: the viewer's own
 // open goals first, then everyone else's, newest first.
 import React from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { interFamily } from '../../components/ui';
 import type { BoardGoal } from './PeerProgrammingApi';
 import { ALL_GOALS, NEW_GOAL, doneCount, goalColor, nameOf } from './ppBoard';
 import { usePPTheme } from './usePPTheme';
@@ -15,7 +16,7 @@ function Chip({ selected, label, detail, color, onPress }: {
   color?: string;
   onPress: () => void;
 }) {
-  const { tokens, accent } = usePPTheme();
+  const t = usePPTheme();
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -24,16 +25,17 @@ function Chip({ selected, label, detail, color, onPress }: {
       style={[
         styles.chip,
         {
-          borderRadius: tokens.radiusControl,
-          borderColor: selected ? accent : tokens.border,
-          backgroundColor: selected ? `${accent}1F` : 'transparent',
-          borderLeftColor: color ?? (selected ? accent : tokens.border),
-          borderLeftWidth: color ? 4 : 1,
+          borderRadius: t.r(8),
+          borderColor: selected ? t.ACCENT_TAB_BORDER : t.BORDER_STRONG,
+          backgroundColor: selected ? t.ACCENT_TINT_BG : 'transparent',
+          paddingLeft: color ? 14 : 12,
         },
       ]}
     >
-      <Text numberOfLines={1} style={[styles.label, { color: selected ? accent : tokens.textSecondary }]}>{label}</Text>
-      {detail ? <Text numberOfLines={1} style={[styles.detail, { color: tokens.textMuted }]}>{detail}</Text> : null}
+      {/* The goal's color as a stripe inside the left edge, as the web's inset shadow draws it. */}
+      {color ? <View style={[styles.stripe, { backgroundColor: color }]} /> : null}
+      <Text numberOfLines={1} style={[styles.label, { color: selected ? t.ACCENT : t.SUBTLE }]}>{label}</Text>
+      {detail ? <Text numberOfLines={1} style={[styles.detail, { color: t.MUTED }]}>{detail}</Text> : null}
     </TouchableOpacity>
   );
 }
@@ -66,7 +68,8 @@ export function GoalChips({ goals, selected, viewerUserId, names, canAdd, onSele
 
 const styles = StyleSheet.create({
   row: { gap: 8, paddingBottom: 4 },
-  chip: { borderWidth: 1, paddingVertical: 6, paddingHorizontal: 12, maxWidth: 200, gap: 2 },
-  label: { fontSize: 13, fontWeight: '600' },
-  detail: { fontSize: 11 },
+  chip: { borderWidth: 1, paddingVertical: 6, paddingRight: 12, maxWidth: 200, gap: 2, overflow: 'hidden' },
+  stripe: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 4 },
+  label: { fontSize: 13, fontFamily: interFamily('600') },
+  detail: { fontSize: 11, fontFamily: interFamily('400') },
 });

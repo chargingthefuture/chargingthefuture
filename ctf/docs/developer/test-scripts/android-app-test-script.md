@@ -99,33 +99,52 @@ second test member in the same room.
    started and the recording file ready, and the replay has picture and sound.
 7. As a non-admin, the **Go live** card is not shown.
 
-## AN-PP — PeerProgramming: goals, chat, and the live call
+## AN-PP — PeerProgramming: goals, cohorts, Direct Line, the live call, and admin
 
 Use an approved account that the weekly assignment has placed in a cohort, and a second member of
-the same cohort on another device or on the web.
+the same cohort on another device or on the web. Keep the web page open at phone width beside the
+phone: every step should look the same on both, apart from the call buttons the web does not
+have (flip camera, share screen).
 
-1. Open **PeerProgramming** from the Apps list. Expect the week's topic under the title and the
-   **Goals** tab selected, with the goal chips row and the **Up for grabs**, **Doing** and **Done**
-   sections stacked one under the other. An account with no cohort sees "You are not in a cohort
-   yet, so there is no goal board to show."
-2. As the second member, post a goal with two cards. On the phone, tap **Refresh**, then **Take it**
-   on one card. Expect the card to move to **Doing** with "You are on it" and the "Post by …" line.
-   Type a result and tap **Post result**: the card moves to **Done**.
+1. Open **PeerProgramming** from the Apps list. Expect the header with the back chevron, title,
+   **Refresh** (and **Admin** for an admin), report and settings, then the tab row **Goals**,
+   **Cohorts**, **Session**, **Direct Line** with **Goals** selected, the cards-done count, the goal
+   chips row and the **Up for grabs**, **Doing** and **Done** columns side by side, scrolling
+   sideways. An account with no cohort sees "You are not in a cohort yet, so there is no goal board
+   to show."
+2. As the second member, post a goal with two cards. On the phone, open **Cohorts** and come back
+   to **Goals** (this reloads the board, as on the web), then tap **Take it** on one card. Expect the card to move to **Doing** with "You are on it" and
+   the "Post by …" line. Type a result and tap **Post result**: the card moves to **Done**.
 3. As the goal's owner on the other device, tap **It helped** on that card. On the phone, after
-   **Refresh**, the card reads "Done by you · it helped".
-4. Open **Chat**. Type a message and tap **Send**: it appears in the list. Tap **Reply** under the
-   other member's message, type a reply and tap **Send reply**: it appears under that message. The
-   other member sees both after a refresh.
-5. Open **Session** and tap **Join session**. Allow the camera and microphone. Expect your own tile,
-   and a tile for the second member once they join. Tap **Mute** and **Stop camera**: they mute and
-   stop; tap again to turn them back on. Tap **Flip camera**: your tile switches cameras.
-6. Tap **Share screen** and accept Android's prompt. Expect the phone's screen shown large above the
-   tiles, on the phone and on the other device. Decline the prompt once: expect the calm line asking
-   you to try again, and the call carries on. Tap **Stop sharing**.
-7. Press **Home** and wait 30 seconds. The other member still sees and hears you. Return to the app:
-   the call is still running. Switch to the **Chat** tab and back: the call is still running.
-8. Tap **Leave session**. Expect the **Join session** button again, and the other member sees you
+   leaving **Goals** and coming back, the card reads "Done by you · it helped".
+4. Open **Cohorts**. Expect the "Weekly Global Masterminds" card, your cohort with its **Active**
+   badge, topic, member count and **Join Session** button, and the "In this cohort" names. When
+   other cohorts are running, tap **Listen in** on one: the **Direct Line** opens on that cohort
+   with "You're listening in — only cohort members can post here." in place of the message box.
+   Leave and reopen PeerProgramming to return to your own cohort.
+5. Open **Direct Line**. Type a message and tap the send button: it appears in the list with your
+   initials, name and time. The other member sees it after tapping **Refresh**.
+6. Open **Session** and tap **Join Session**. Allow the camera and microphone. Expect the
+   "Live · 1 participant" line, your own tile, and a tile for the second member once they join. Tap
+   the microphone and camera buttons: they mute and stop; tap again to turn them back on. Tap the
+   flip button: your tile switches cameras.
+7. Tap the share screen button and accept Android's prompt. Expect the phone's screen shown large
+   above the tiles, on the phone and on the other device. Decline the prompt once: expect the calm
+   line asking you to try again, and the call carries on. Tap the button again to stop sharing.
+8. Press **Home** and wait 30 seconds. The other member still sees and hears you. Return to the app:
+   the call is still running. Switch to the **Direct Line** tab and back: the call is still running.
+9. Tap the red leave button. Expect the **Join Session** button again, and the other member sees you
    leave.
+10. Switch the theme to comic in Settings and reopen PeerProgramming. Expect square corners and the
+    comic colors, the same as the web in the comic theme.
+11. As an admin, tap **Admin** in the header. Expect "PeerProgramming Admin" with the code icon and
+    a **Member view** pill, the heading card with the ADMIN tag, then Member feedback, Single
+    standing Cohort 1 mode, Weekly topic, Weekly cohort assignment and Cohorts, as on the web admin
+    page. Save a draft topic: expect "Draft saved.". Tick **Publish** and save: expect "Topic
+    published.". Tap **Turn on** / **Turn off** and check the On / Off badge and source line.
+12. On a cohort row, tap **Open room →**: the member screen opens on that cohort's **Direct Line**.
+    Tap **Admin**, then **End cohort** on a test cohort and confirm: expect "Cohort ended. Its
+    conversation is now read-only." and the **Ended** badge. Tap **Member view** to return.
 
 ## AN-FD — Foundation calls
 

@@ -8,7 +8,7 @@
 //                   every app screen — back chevron, app icon tile, title, then the same controls.
 //   - ShellBackground  the web .shell backdrop: two soft glows (purple top left, cyan top right).
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Svg, { Defs, LinearGradient, Path, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { Bug, ChevronLeft, Settings } from 'lucide-react-native';
@@ -170,10 +170,21 @@ export function TopBar(props: ChromeActions) {
 export function ScreenHeader({
   title,
   emoji,
+  icon,
   accent,
   onBack,
-  ...actions
-}: ChromeActions & { title: string; emoji?: string; accent?: string; onBack: () => void }) {
+  actions,
+  ...chrome
+}: ChromeActions & {
+  title: string;
+  emoji?: string;
+  /** An icon drawn in the app icon tile instead of the emoji (web MobileScreenHeader `icon`). */
+  icon?: ReactNode;
+  accent?: string;
+  onBack: () => void;
+  /** The screen's own controls, before report / settings (web MobileScreenHeader `actions`). */
+  actions?: ReactNode;
+}) {
   const { tokens } = useTheme();
   const s = useMemo(() => makeStyles(tokens), [tokens]);
   const chevronColor = accent ?? tokens.textPrimary;
@@ -190,20 +201,21 @@ export function ScreenHeader({
       >
         <ChevronLeft size={20} color={chevronColor} />
       </TouchableOpacity>
-      {emoji ? (
+      {icon || emoji ? (
         <View
           style={[
             s.appIcon,
             accent ? { backgroundColor: `${accent}26`, borderColor: `${accent}66` } : null,
           ]}
         >
-          <Text style={s.appIconEmoji}>{emoji}</Text>
+          {icon ?? <Text style={s.appIconEmoji}>{emoji}</Text>}
         </View>
       ) : null}
       <Text style={s.screenTitle} numberOfLines={1}>
         {title}
       </Text>
-      <BarControls {...actions} />
+      {actions ? <View style={s.controls}>{actions}</View> : null}
+      <BarControls {...chrome} />
     </View>
   );
 }

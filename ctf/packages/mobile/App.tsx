@@ -1,5 +1,5 @@
 import { StatusBar } from 'expo-status-bar';
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from 'react';
 import {
   AppState,
   BackHandler,
@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { ChymeRoom } from './src/features/chyme';
 import { Beacon } from './src/features/beacon';
-import { PeerProgramming } from './src/features/peer-programming';
+import { PeerProgramming, PeerProgrammingAdmin } from './src/features/peer-programming';
 import { Foundation, FoundationCallController } from './src/features/foundation';
 import { AppsList } from './src/features/apps';
 import { Unlock } from './src/features/unlock';
@@ -28,6 +28,8 @@ import { AuthProvider, useAuth } from './src/auth/auth-context';
 import { ThemeProvider, useTheme, getAppAccent } from './src/theme';
 import { LoadingScreen } from './src/components/shared/LoadingScreen';
 import { ScreenHeader, ShellBackground, TopBar } from './src/components/shell/ShellChrome';
+import { HeaderActionsContext } from './src/components/shell/HeaderActions';
+import { Code2 } from 'lucide-react-native';
 import { getPluginEmoji } from './src/theme/plugin-visuals';
 import { StreamVideoRN } from '@stream-io/video-react-native-sdk';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -58,13 +60,22 @@ StreamVideoRN.updateConfig({
 // settings/account); everything else is served by the web app. The Apps list is home; the top bar's
 // gear opens Account & Data, and Blocked members sits under it, as on the web's /account page. See
 // `.claude/rules/105-web-android-feature-parity-rules.mdc`.
-type FeatureKey = 'apps' | 'chyme' | 'beacon' | 'peer-programming' | 'foundation' | 'account-data' | 'blocked-members';
+type FeatureKey =
+  | 'apps'
+  | 'chyme'
+  | 'beacon'
+  | 'peer-programming'
+  | 'peer-programming-admin'
+  | 'foundation'
+  | 'account-data'
+  | 'blocked-members';
 
 // What each screen's header calls it. Apps has no header title: it carries the top bar instead.
 const SCREEN_TITLES: Record<Exclude<FeatureKey, 'apps'>, string> = {
   chyme: 'Chyme',
   beacon: 'Beacon',
   'peer-programming': 'PeerProgramming',
+  'peer-programming-admin': 'PeerProgramming Admin',
   foundation: 'Foundation',
   'account-data': 'Account & Data',
   'blocked-members': 'Blocked members',
@@ -74,6 +85,13 @@ const PLUGIN_KEYS = ['chyme', 'beacon', 'peer-programming', 'foundation'] as con
 type PluginKey = (typeof PLUGIN_KEYS)[number];
 function isPluginKey(key: FeatureKey): key is PluginKey {
   return (PLUGIN_KEYS as readonly string[]).includes(key);
+}
+
+// The plugin a screen belongs to, for the header's accent and the bug report: an admin screen
+// belongs to its plugin.
+function headerPlugin(key: FeatureKey): PluginKey | undefined {
+  if (key === 'peer-programming-admin') return 'peer-programming';
+  return isPluginKey(key) ? key : undefined;
 }
 
 // Where the header's back chevron and Android's back button go from each screen.
@@ -137,12 +155,21 @@ function SystemBarInsets({ children }: { children: ReactElement }) {
 // branching) keeps the per-render selection trivial.
 type FeatureRenderers = Record<FeatureKey, () => ReactElement>;
 
-function buildFeatureViews(open: (_key: FeatureKey) => void): FeatureRenderers {
+// PeerProgramming's admin screen opens a cohort's room for the member screen to show, as the web
+// admin's "Open room" link does with ?cohortId=.
+type PeerProgrammingRoute = { cohortId: string | null; openRoom: (_cohortId: string | null) => void };
+
+function buildFeatureViews(open: (_key: FeatureKey) => void, pp: PeerProgrammingRoute): FeatureRenderers {
   return {
     apps: () => <AppsList onOpen={open} />,
     chyme: () => <ChymeRoom />,
     beacon: () => <Beacon />,
-    'peer-programming': () => <PeerProgramming />,
+    'peer-programming': () => (
+      <PeerProgramming key={pp.cohortId ?? 'own'} initialCohortId={pp.cohortId} onOpenAdmin={() => open('peer-programming-admin')} />
+    ),
+    'peer-programming-admin': () => (
+      <PeerProgrammingAdmin onOpenMember={() => pp.openRoom(null)} onOpenRoom={(cohortId) => pp.openRoom(cohortId)} />
+    ),
     foundation: () => <Foundation />,
     'account-data': () => (
       <View style={styles.fill}>
@@ -168,6 +195,13 @@ function AppShell() {
   const { isLoading, isAuthenticated, user } = useAuth();
   const { tokens, theme } = useTheme();
   const [selected, setSelected] = useState<FeatureKey>('apps');
+  // The cohort PeerProgramming opens on (null: the member's own), and the controls the open screen
+  // puts in the header.
+  const [ppCohortId, setPpCohortId] = useState<string | null>(null);
+  const [headerActions, setHeaderActions] = useState<ReactNode>(null);
+  useEffect(() => {
+    if (selected !== 'peer-programming') setPpCohortId(null);
+  }, [selected]);
 
   const isAdmin = Boolean(user?.isAdmin);
   const openAccount = useCallback(() => setSelected('account-data'), []);
@@ -252,12 +286,16 @@ function AppShell() {
   }, [selected]);
 
   const featureView = useMemo(() => {
-    const renderers = buildFeatureViews(setSelected);
+    const openRoom = (cohortId: string | null) => {
+      setPpCohortId(cohortId);
+      setSelected('peer-programming');
+    };
+    const renderers = buildFeatureViews(setSelected, { cohortId: ppCohortId, openRoom });
     const render = renderers[selected];
     // Every FeatureKey has an entry; the fallback preserves the default (Apps)
     // for any unexpected value.
     return render ? render() : <AppsList onOpen={setSelected} />;
-  }, [selected]);
+  }, [selected, ppCohortId]);
 
   // While the app is bootstrapping (restoring any stored sign-in session), or
   // while the first unlock-status check is in flight for a signed-in non-admin,
@@ -276,6 +314,8 @@ function AppShell() {
     return <Unlock onStatusChanged={refreshUnlockGate} />;
   }
 
+  const plugin = headerPlugin(selected);
+
   return (
     <View style={[styles.container, { backgroundColor: tokens.bg }]}>
       <ShellBackground />
@@ -287,10 +327,12 @@ function AppShell() {
         <ScreenHeader
           title={SCREEN_TITLES[selected]}
           emoji={isPluginKey(selected) ? getPluginEmoji(selected) : undefined}
-          accent={isPluginKey(selected) ? getAppAccent(selected, theme) : undefined}
+          icon={selected === 'peer-programming-admin' ? <Code2 size={18} color={getAppAccent('peer-programming', theme)} /> : undefined}
+          accent={plugin ? getAppAccent(plugin, theme) : undefined}
           onBack={() => setSelected(parentOf(selected))}
           onOpenAccount={openAccount}
-          pluginSlug={isPluginKey(selected) ? selected : undefined}
+          pluginSlug={plugin}
+          actions={headerActions}
         />
       )}
 
@@ -300,7 +342,7 @@ function AppShell() {
         {/* Foundation instant calls: the incoming ring and the live call show above every tab, as the web
             mounts its call controller at the shell root. Inside the keyed view, so signing out hangs up. */}
         <FoundationCallController signedIn={isAuthenticated} displayName={callDisplayName(user)}>
-          {featureView}
+          <HeaderActionsContext.Provider value={setHeaderActions}>{featureView}</HeaderActionsContext.Provider>
         </FoundationCallController>
       </View>
 
