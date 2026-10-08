@@ -191,6 +191,32 @@ contracts:
     idempotency: true
 
   - pluginId: skills-hunt
+    command: skills-hunt.submission.check
+    version: 1.0.0
+    description: >-
+      Before a nomination is filled in, answer whether a Quora profile link is already nominated in
+      any round or is on Directory's takedown list. The same two refusals submission.create makes,
+      with the same sentences; read-only, and submission.create still runs both as the real guard.
+    inputSchema:
+      quoraProfileUrl:
+        type: string
+        required: true
+    outputSchema:
+      state:
+        type: string
+        description: not_a_profile_url | open | already_nominated | taken_down
+      message:
+        type: string
+        description: Present for already_nominated and taken_down.
+    dataAccess:
+      - skills_hunt_submissions
+      - skills_hunt_rounds
+      - directory_suppressed_quora_urls
+    purpose: community_contribution
+    retentionClass: derived_short_lived
+    idempotency: true
+
+  - pluginId: skills-hunt
     command: skills-hunt.submission.list
     version: 1.0.0
     description: List round submissions with role-scoped filtering and pagination.
@@ -964,3 +990,7 @@ changelog:
       skills-hunt.submission.review goes to 2.0.0: an accept no longer mints ServiceCredits, so the
       ServiceCredits tables leave its dataAccess. Added skills-hunt.round.award.preview and
       skills-hunt.round.award.send.
+  - date: 2026-10-08
+    change: >-
+      Added skills-hunt.submission.check, the read the Scout form makes as soon as a Quora link is
+      pasted, so a scout learns the person is already nominated before filling in the rest.
