@@ -502,7 +502,7 @@ shape, so a later funded run picks up where the hand-done one left off.
 | `/product-update` | [`.claude/commands/product-update.md`](.claude/commands/product-update.md) | `generate-product-update.yml` — the update JSON, published through the workflow's `update_json` input. |
 | `/user-guide` | [`.claude/commands/user-guide.md`](.claude/commands/user-guide.md) | `generate-user-guide.yml` — the guide sections, rendered with `USER_GUIDE_RENDER_ONLY=1`. |
 | `/test-script` | [`.claude/commands/test-script.md`](.claude/commands/test-script.md) | `manual-test-script.yml` — one plugin's manual test script. |
-| `/sp` | [`.claude/commands/sp.md`](.claude/commands/sp.md) | `skills-proposal-issues.yml` — sector, occupation and a promote-or-close call on each `skill-proposal` issue filed by `skills-proposal-issues-manual.yml`. |
+| `/sp` | [`.claude/commands/sp.md`](.claude/commands/sp.md) | `skills-proposal-issues.yml` — runs `skills-proposal-issues-manual.yml`, places every pending `skill-proposal` issue, and opens one owner-review PR with the skills worth adding. |
 
 ### Every API-funded workflow ships with its slash command (owner directive, 2026-10-03)
 
