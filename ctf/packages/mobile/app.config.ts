@@ -121,6 +121,10 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       // the upload — it only makes stack traces in Sentry point at original source lines instead of
       // the bundled output. To turn the upload back on later, add SENTRY_ORG, SENTRY_PROJECT, and
       // SENTRY_AUTH_TOKEN to the build environment first, then drop this option.
+      //
+      // @sentry/react-native is pinned to the version Expo SDK 55 supports (~7.11). That version's
+      // config plugin ignores `disableAutoUpload`; its Gradle step reads SENTRY_DISABLE_AUTO_UPLOAD
+      // instead, which eas.json sets for both build profiles. Keep both until the upload is wanted.
       ['@sentry/react-native/expo', { disableAutoUpload: true }],
     ],
     updates: {
