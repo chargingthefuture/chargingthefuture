@@ -194,6 +194,10 @@ jobs:
             const url = process.env.BUILD_URL;
             const marker = '<!-- expo-preview-build -->';
             const body = `${marker}\n**Android preview build started.**\n\nProfile: \`preview\` · Channel: \`preview\` · Backend: production\n\nOpen this page on your phone once the build finishes, then tap **Install** to put it on your Android device:\n\n${url}\n\nThe first build can take several minutes and may set up an Android signing key automatically.`;
+            // A manual run ("Run workflow") has no pull request to comment on, so the link goes on the
+            // run's own page instead of failing the job after the build already started.
+            await core.summary.addRaw(body.replace(marker, '')).write();
+            if (!context.issue.number) { core.info(`Build page: ${url}`); return; }
             const { owner, repo } = context.repo;
             const issue_number = context.issue.number;
             const comments = await github.rest.issues.listComments({ owner, repo, issue_number });
