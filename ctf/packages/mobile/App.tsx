@@ -6,7 +6,8 @@ import {
   StyleSheet,
   View,
 } from 'react-native';
-import { ChymeRoom } from './src/features/chyme';
+import { ChymeHeaderPill, ChymeReadingsAdmin, ChymeRoom, ChymeStreamUsage } from './src/features/chyme';
+import { Gauge, Radio } from 'lucide-react-native';
 import { Beacon } from './src/features/beacon';
 import { PeerProgramming } from './src/features/peer-programming';
 import { Foundation, FoundationCallController } from './src/features/foundation';
@@ -25,7 +26,7 @@ import {
   Inter_900Black,
 } from '@expo-google-fonts/inter';
 import { AuthProvider, useAuth } from './src/auth/auth-context';
-import { ThemeProvider, useTheme, getAppAccent } from './src/theme';
+import { ThemeProvider, useTheme, getAppAccent, type ThemeName } from './src/theme';
 import { LoadingScreen } from './src/components/shared/LoadingScreen';
 import { ScreenHeader, ShellBackground, TopBar } from './src/components/shell/ShellChrome';
 import { getPluginEmoji } from './src/theme/plugin-visuals';
@@ -58,11 +59,24 @@ StreamVideoRN.updateConfig({
 // settings/account); everything else is served by the web app. The Apps list is home; the top bar's
 // gear opens Account & Data, and Blocked members sits under it, as on the web's /account page. See
 // `.claude/rules/105-web-android-feature-parity-rules.mdc`.
-type FeatureKey = 'apps' | 'chyme' | 'beacon' | 'peer-programming' | 'foundation' | 'account-data' | 'blocked-members';
+type FeatureKey =
+  | 'apps'
+  | 'chyme'
+  | 'chyme-admin'
+  | 'chyme-readings'
+  | 'beacon'
+  | 'peer-programming'
+  | 'foundation'
+  | 'account-data'
+  | 'blocked-members';
 
 // What each screen's header calls it. Apps has no header title: it carries the top bar instead.
 const SCREEN_TITLES: Record<Exclude<FeatureKey, 'apps'>, string> = {
   chyme: 'Chyme',
+  // The Chyme admin screens (web /admin/chyme and /admin/chyme/readings), reached from the Admin
+  // button in the Chyme header.
+  'chyme-admin': 'Live audio usage',
+  'chyme-readings': 'Chyme readings loop',
   beacon: 'Beacon',
   'peer-programming': 'PeerProgramming',
   foundation: 'Foundation',
@@ -77,8 +91,26 @@ function isPluginKey(key: FeatureKey): key is PluginKey {
 }
 
 // Where the header's back chevron and Android's back button go from each screen.
+const PARENTS: Partial<Record<FeatureKey, FeatureKey>> = {
+  'blocked-members': 'account-data',
+  'chyme-admin': 'chyme',
+  'chyme-readings': 'chyme-admin',
+};
 function parentOf(key: FeatureKey): FeatureKey {
-  return key === 'blocked-members' ? 'account-data' : 'apps';
+  return PARENTS[key] ?? 'apps';
+}
+
+// What a screen's header carries besides its title. Plugin screens show the plugin's emoji and
+// accent. The Chyme screen gives an admin the web's Admin button; the two Chyme admin screens carry
+// the web's icon, the Chyme accent and its Member view button.
+function screenChrome(key: FeatureKey, theme: ThemeName, isAdmin: boolean, open: (_key: FeatureKey) => void) {
+  const chymeAccent = getAppAccent('chyme', theme);
+  const memberView = <ChymeHeaderPill label="Member view" accessibilityLabel="Open the member view (/apps/chyme)" onPress={() => open('chyme')} />;
+  if (key === 'chyme-admin') return { accent: chymeAccent, icon: <Gauge size={18} color={chymeAccent} />, actions: memberView, pluginSlug: 'chyme' };
+  if (key === 'chyme-readings') return { accent: chymeAccent, icon: <Radio size={18} color={chymeAccent} />, actions: memberView, pluginSlug: 'chyme' };
+  if (!isPluginKey(key)) return {};
+  const actions = key === 'chyme' && isAdmin ? <ChymeHeaderPill label="Admin" accessibilityLabel="Admin panel" onPress={() => open('chyme-admin')} /> : undefined;
+  return { emoji: getPluginEmoji(key), accent: getAppAccent(key, theme), pluginSlug: key, actions };
 }
 
 export default function App() {
@@ -141,6 +173,8 @@ function buildFeatureViews(open: (_key: FeatureKey) => void): FeatureRenderers {
   return {
     apps: () => <AppsList onOpen={open} />,
     chyme: () => <ChymeRoom />,
+    'chyme-admin': () => <ChymeStreamUsage onOpenReadings={() => open('chyme-readings')} />,
+    'chyme-readings': () => <ChymeReadingsAdmin />,
     beacon: () => <Beacon />,
     'peer-programming': () => <PeerProgramming />,
     foundation: () => <Foundation />,
@@ -286,11 +320,9 @@ function AppShell() {
       ) : (
         <ScreenHeader
           title={SCREEN_TITLES[selected]}
-          emoji={isPluginKey(selected) ? getPluginEmoji(selected) : undefined}
-          accent={isPluginKey(selected) ? getAppAccent(selected, theme) : undefined}
+          {...screenChrome(selected, theme, isAdmin, setSelected)}
           onBack={() => setSelected(parentOf(selected))}
           onOpenAccount={openAccount}
-          pluginSlug={isPluginKey(selected) ? selected : undefined}
         />
       )}
 

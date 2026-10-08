@@ -170,10 +170,21 @@ export function TopBar(props: ChromeActions) {
 export function ScreenHeader({
   title,
   emoji,
+  icon,
   accent,
   onBack,
-  ...actions
-}: ChromeActions & { title: string; emoji?: string; accent?: string; onBack: () => void }) {
+  actions,
+  ...chromeActions
+}: ChromeActions & {
+  title: string;
+  emoji?: string;
+  /** A drawn icon for the tile, where the web screen uses one instead of the app's emoji. */
+  icon?: React.ReactNode;
+  accent?: string;
+  onBack: () => void;
+  /** Screen-specific controls before report / settings, as the web header's `actions`. */
+  actions?: React.ReactNode;
+}) {
   const { tokens } = useTheme();
   const s = useMemo(() => makeStyles(tokens), [tokens]);
   const chevronColor = accent ?? tokens.textPrimary;
@@ -190,20 +201,21 @@ export function ScreenHeader({
       >
         <ChevronLeft size={20} color={chevronColor} />
       </TouchableOpacity>
-      {emoji ? (
+      {emoji || icon ? (
         <View
           style={[
             s.appIcon,
             accent ? { backgroundColor: `${accent}26`, borderColor: `${accent}66` } : null,
           ]}
         >
-          <Text style={s.appIconEmoji}>{emoji}</Text>
+          {icon ?? <Text style={s.appIconEmoji}>{emoji}</Text>}
         </View>
       ) : null}
       <Text style={s.screenTitle} numberOfLines={1}>
         {title}
       </Text>
-      <BarControls {...actions} />
+      {actions}
+      <BarControls {...chromeActions} />
     </View>
   );
 }

@@ -1,324 +1,71 @@
 /**
- * ChymeRoom — pixel-aligned Android screen for the Chyme social-audio plugin.
+ * ChymeRoom — the Chyme screen on Android, drawn to match the web Chyme page at phone width
+ * (web components/chyme/chyme-shell.tsx and what it renders). Under the app's screen header: the
+ * rooms rail, the hosting statement, what is coming up on TI Radio, then the selected room.
  *
- * Design source: design/artifacts/mockup-sandbox/src/components/mockups/survivor-hub/
- *   MobileChyme.tsx, MobileChymeLoading.tsx, MobileChymeEmpty.tsx
+ * Every room the member has opened stays mounted and the others are hidden, as on the web, so
+ * switching rooms never drops a live call. Back Channel's invite card, call card and notice are
+ * drawn over the screen, outside the scrolling content, so they stay put while the room scrolls.
  *
- * States rendered:
- *   loading  → ChymeLoading (minimal branded splash per mockup)
- *   error    → inline error with retry (no mockup state; safe fallback)
- *   empty    → ChymeEmpty (no rooms live yet; backed by callActive === false + 0 participants)
- *   roomList → ChymeRoomList (room directory; one real room from GET /api/chyme/room)
- *   inRoom   → ChymeAudioRoom (LIVE audio stage via the Stream Video SDK; you
- *              hear and speak in real time, with one tile per live participant)
- *   chat     → ChymeChatView (companion text chat; GET+POST /api/chyme/messages)
- *
- * All data is real — bound to /api/chyme/* endpoints via api.ts. The live audio
- * room joins the same Stream call as the web room, using the same Stream user
- * token (POST /api/chyme/join). No mock or fabricated data is rendered.
- *
- * NOTE: the live audio needs native WebRTC code, so the in-room screen only
- * works in an EAS dev/production build — not in Expo Go (see app.config.ts).
+ * The live audio needs native WebRTC code, so the in-room screen only works in an EAS dev or
+ * production build, not in Expo Go (see app.config.ts).
  */
-import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import {
-  chymeHandle,
-  deleteChymeMessage,
-  getChymeMessages,
-  getChymeRoom,
-  postChymeJoin,
-  postChymeLeave,
-  postChymeMessage,
-  getChymeUpcoming,
-  type ChymeUpcomingSlot,
-} from './api';
-import type { ChymeJoinResponse } from './ChymeApi';
-import { ChymeLoading } from './chyme-loading';
-import { ChymeEmpty } from './chyme-empty';
-import { ChymeRoomList, type RoomSummary } from './chyme-room-list';
-import { ChymeAudioRoom } from './ChymeAudioRoom';
-import { ChymeChatView } from './chyme-chat-view';
-import type { ChatMessage } from './chyme-chat-view';
-import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
-import { interFamily } from '../../components/ui';
+import React, { useCallback, useState } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { useAuth } from '../../auth/auth-context';
+import { chymeHandle, type ChymeRoomScope } from './ChymeApi';
+import { useChymeTokens } from './chyme-tokens';
+import { ChymeHostingNote, ChymeRoomsRail } from './chyme-rail';
+import { ChymeUpcoming } from './chyme-upcoming';
+import { ChymeLiveRoom } from './chyme-live-room';
+import { ChymeBackChannelLayer } from './chyme-back-channel-layer';
+import { useChymeBackChannel } from './useChymeBackChannel';
 
-type ViewState = 'loading' | 'error' | 'empty' | 'roomList' | 'inRoom' | 'chat';
-
-type RoomPayload = Awaited<ReturnType<typeof getChymeRoom>>;
-
-// The room list's view of the room: the count, the cap in force, and the quota notice the server
-// sends while the Stream Video month is getting tight. `capacity`/`quota` are optional here so an
-// older server answer (without them) still renders.
-function toRoomSummary(room: RoomPayload): RoomSummary {
-  return {
-    roomId: room.roomId,
-    roomName: room.roomName,
-    roomKey: room.roomKey,
-    callActive: room.callActive,
-    participantCount: room.participants.length,
-    guestCount: room.guestCount ?? 0,
-    capacityMax: room.capacity?.max,
-    quotaNotice: room.quota?.notice ?? null,
-    quotaBand: room.quota?.band,
-  };
-}
-type MessagePayload = Awaited<ReturnType<typeof getChymeMessages>>['messages'][number];
+const SCOPES: ChymeRoomScope[] = ['main', 'contributors'];
 
 export const ChymeRoom: React.FC = () => {
-  const { tokens, theme } = useTheme();
-  const styles = React.useMemo(() => makeStyles(tokens), [tokens]);
-  const accent = getAppAccent('chyme', theme);
-  const [viewState, setViewState] = useState<ViewState>('loading');
-  const [room, setRoom] = useState<RoomPayload | null>(null);
-  const [joinInfo, setJoinInfo] = useState<ChymeJoinResponse | null>(null);
-  const [joining, setJoining] = useState(false);
-  const [messages, setMessages] = useState<MessagePayload[]>([]);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [chatInput, setChatInput] = useState('');
-  const [sending, setSending] = useState(false);
-  const [tab, setTab] = useState<'live' | 'upcoming'>('live');
-  const [refreshing, setRefreshing] = useState(false);
-  // The Upcoming tab: the next booked slots on the TI Radio guide (scheduled rooms MVP,
-  // 2026-09-19). Read alongside the room; a failed read shows its reason on the tab, never an
-  // empty list pretending nothing is scheduled.
-  const [upcoming, setUpcoming] = useState<ChymeUpcomingSlot[] | null>(null);
-  const [upcomingError, setUpcomingError] = useState<string | null>(null);
+  const t = useChymeTokens();
+  const { user } = useAuth();
+  const currentUser = { userId: user?.id ?? '', username: user?.username ?? null };
+  const [roomScope, setRoomScope] = useState<ChymeRoomScope>('main');
+  const [mounted, setMounted] = useState<ReadonlySet<ChymeRoomScope>>(() => new Set<ChymeRoomScope>(['main']));
+  const [backChannelEnabled, setBackChannelEnabled] = useState(false);
+  const backChannel = useChymeBackChannel(backChannelEnabled);
+  const onBackChannelEnabled = useCallback((enabled: boolean) => setBackChannelEnabled(enabled), []);
 
-  const loadUpcoming = useCallback(async () => {
-    try {
-      setUpcoming(await getChymeUpcoming());
-      setUpcomingError(null);
-    } catch (err) {
-      setUpcomingError(err instanceof Error ? err.message : 'Unable to read the TI Radio guide.');
-    }
-  }, []);
+  const selectRoom = (scope: ChymeRoomScope) => {
+    setMounted((current) => (current.has(scope) ? current : new Set([...current, scope])));
+    setRoomScope(scope);
+  };
 
-  // `background` skips the branded splash so pull-to-refresh keeps the room list visible.
-  const loadRoom = useCallback(async (background = false) => {
-    if (!background) setViewState('loading');
-    try {
-      const [roomPayload, msgPayload] = await Promise.all([getChymeRoom(), getChymeMessages()]);
-      void loadUpcoming();
-      setRoom(roomPayload);
-      setMessages(msgPayload.messages ?? []);
-      const hasParticipants = (roomPayload.participants?.length ?? 0) > 0;
-      setViewState(hasParticipants ? 'roomList' : 'empty');
-    } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : 'Unable to load Chyme room.');
-      setViewState('error');
-    }
-  }, [loadUpcoming]);
-
-  useEffect(() => {
-    void loadRoom();
-  }, [loadRoom]);
-
-  // Pull-to-refresh on the room list: re-pull room data without flashing the splash.
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    try {
-      await loadRoom(true);
-    } finally {
-      setRefreshing(false);
-    }
-  }, [loadRoom]);
-
-  const handleJoinRoom = useCallback(async () => {
-    if (joining) return;
-    setJoining(true);
-    try {
-      // POST /api/chyme/join mints the Stream credentials (api key, call id,
-      // user id, and the user token that serves both chat and audio). We hold
-      // onto them so the live audio room can join the same Stream call.
-      const res = await postChymeJoin();
-      if (res.ok) {
-        // Hold the join credentials and switch to the live audio room. The live
-        // participant list comes from Stream in real time, so we do NOT re-run
-        // loadRoom here — that would flip viewState back to the room list.
-        setJoinInfo(res);
-        setViewState('inRoom');
-      }
-    } catch (err) {
-      Alert.alert('Join failed', err instanceof Error ? err.message : 'Unable to join room.');
-    } finally {
-      setJoining(false);
-    }
-  }, [joining]);
-
-  const handleLeaveRoom = useCallback(() => {
-    // Unmount the audio room first (it leaves the Stream call and stops the heartbeat), then drop
-    // the presence row so the member stops counting at once, and refresh the count, as the web does.
-    setJoinInfo(null);
-    setViewState('roomList');
-    void (async () => {
-      try {
-        await postChymeLeave();
-      } catch {
-        /* no-trace: best-effort, the 45s presence window drops the member anyway */
-      }
-      await loadRoom(true);
-    })();
-  }, [loadRoom]);
-
-  const handleSendMessage = useCallback(async () => {
-    const trimmed = chatInput.trim();
-    if (!trimmed || sending) return;
-    setSending(true);
-    try {
-      const res = await postChymeMessage(trimmed);
-      setMessages((prev) => [...prev, res.message]);
-      setChatInput('');
-    } catch (err) {
-      Alert.alert('Send failed', err instanceof Error ? err.message : 'Unable to send message.');
-    } finally {
-      setSending(false);
-    }
-  }, [chatInput, sending]);
-
-  // Delete one of the member's OWN messages. Optimistically removes it, then DELETEs; on failure it
-  // is restored (in time order) and an alert is shown. Author-only is enforced server-side. Mirrors
-  // the web room chat's handleDeleteMessage.
-  const handleDeleteMessage = useCallback(async (messageId: string) => {
-    let removed: MessagePayload | undefined;
-    setMessages((prev) => {
-      removed = prev.find((m) => m.id === messageId);
-      return prev.filter((m) => m.id !== messageId);
-    });
-    try {
-      await deleteChymeMessage(messageId);
-    } catch (err) {
-      if (removed) {
-        const restored = removed;
-        setMessages((prev) => [...prev, restored].sort((a, b) => a.sentAtIso.localeCompare(b.sentAtIso)));
-      }
-      Alert.alert('Delete failed', err instanceof Error ? err.message : 'Unable to delete your message.');
-    }
-  }, []);
-
-  // Edit = delete + repost (no in-place edit): load the message text into the composer and delete the
-  // original, so the member fixes it and sends a fresh message (new id/timestamp). Mirrors the web.
-  const handleEditMessage = useCallback((messageId: string, text: string) => {
-    setChatInput(text);
-    void handleDeleteMessage(messageId);
-  }, [handleDeleteMessage]);
-
-  if (viewState === 'loading') {
-    return <ChymeLoading />;
-  }
-
-  if (viewState === 'error') {
-    return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorTitle}>Unable to load Chyme</Text>
-        <Text style={styles.errorMsg}>{errorMsg ?? 'An unexpected error occurred.'}</Text>
-        <TouchableOpacity style={styles.retryBtn} onPress={() => void loadRoom()}>
-          <Text style={styles.retryBtnText}>Retry</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
-  if (viewState === 'empty' || !room) {
-    return <ChymeEmpty onStartRoom={handleJoinRoom} tokens={tokens} accent={accent} />;
-  }
-
-  if (viewState === 'chat') {
-    const chatMessages: ChatMessage[] = messages.map((m) => ({
-      id: m.id,
-      userId: m.userId,
-      username: m.username,
-      text: m.text,
-      sentAtIso: m.sentAtIso,
-    }));
-    // The chat is only reachable after joining, so joinInfo is set here; the Stream user id is
-    // `chyme-<clerkUserId>`, and message.userId is that same clerk id — so stripping the prefix
-    // gives the id used to show Edit/Delete on the member's own messages only.
-    const currentUserId = joinInfo ? joinInfo.streamUserId.replace(/^chyme-/, '') : '';
-    return (
-      <ChymeChatView
-        messages={chatMessages}
-        input={chatInput}
-        sending={sending}
-        currentUserId={currentUserId}
-        onChangeInput={setChatInput}
-        onSend={handleSendMessage}
-        onEditMessage={handleEditMessage}
-        onDeleteMessage={handleDeleteMessage}
-        onBack={() => setViewState('inRoom')}
-      />
-    );
-  }
-
-  if (viewState === 'inRoom' && joinInfo) {
-    return (
-      <ChymeAudioRoom
-        joinInfo={joinInfo}
-        // Fallback display name only. The server already upserts each Chyme
-        // user's real handle to Stream, so participant tiles show that handle;
-        // this is just the local label until the server name resolves.
-        displayName={chymeHandle(null, joinInfo.streamUserId.replace(/^chyme-/, ''))}
-        onOpenChat={() => setViewState('chat')}
-        onLeave={handleLeaveRoom}
-      />
-    );
-  }
-
-  // viewState === 'roomList'
   return (
-    <View style={styles.roomListContainer}>
-      <ChymeRoomList
-        room={toRoomSummary(room)}
-        upcoming={upcoming}
-        upcomingError={upcomingError}
-        tab={tab}
-        onTabChange={setTab}
-        onJoinRoom={handleJoinRoom}
-        onStartRoom={handleJoinRoom}
-        tokens={tokens}
-        accent={accent}
-        refreshing={refreshing}
-        onRefresh={onRefresh}
-      />
+    <View style={[styles.screen, { backgroundColor: t.BG }]}>
+      <ScrollView style={styles.fill} keyboardShouldPersistTaps="handled">
+        <ChymeRoomsRail roomScope={roomScope} onSelect={selectRoom} />
+        <ChymeHostingNote />
+        <ChymeUpcoming />
+        {SCOPES.map((scope) =>
+          mounted.has(scope) ? (
+            <View key={scope} style={scope === roomScope ? null : styles.hidden}>
+              <ChymeLiveRoom
+                scope={scope}
+                user={currentUser}
+                backChannel={backChannel}
+                onBackChannelEnabled={scope === 'main' ? onBackChannelEnabled : undefined}
+              />
+            </View>
+          ) : null,
+        )}
+      </ScrollView>
+      {backChannelEnabled ? <ChymeBackChannelLayer controller={backChannel} displayName={chymeHandle(currentUser.username, currentUser.userId)} /> : null}
     </View>
   );
 };
 
-function makeStyles(t: ThemeTokens) {
-  // Default theme keeps the deep-green Chyme chrome; comic theme uses the ink palette.
-  const bg = t.isComic ? t.bg : '#04160A';
-  return StyleSheet.create({
-    errorContainer: {
-      flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: bg,
-      paddingHorizontal: 24,
-    },
-    errorTitle: {
-      fontSize: 18,
-      fontWeight: '700',
-      fontFamily: interFamily('700'),
-      color: t.isComic ? t.textPrimary : '#F0FDF4',
-      marginBottom: 8,
-    },
-    errorMsg: {
-      fontSize: 14,
-      fontFamily: interFamily('400'),
-      color: t.textSecondary,
-      textAlign: 'center',
-      marginBottom: 20,
-      lineHeight: 22,
-    },
-    retryBtn: {
-      paddingVertical: 12,
-      paddingHorizontal: 32,
-      borderRadius: t.radius,
-      backgroundColor: t.isComic ? t.surface : t.success,
-      borderWidth: t.isComic ? 1.5 : 0,
-      borderColor: t.border,
-    },
-    retryBtnText: { color: t.isComic ? t.border : '#fff', fontWeight: '700', fontSize: 15, fontFamily: interFamily('700') },
-    roomListContainer: { flex: 1, backgroundColor: bg },
-  });
-}
+const styles = StyleSheet.create({
+  // The app pads every screen's content area; the web Chyme page runs edge to edge under its
+  // header, so this screen takes that padding back.
+  screen: { flex: 1, marginHorizontal: -12, marginTop: -10 },
+  fill: { flex: 1 },
+  hidden: { display: 'none' },
+});
