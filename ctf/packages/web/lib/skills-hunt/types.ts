@@ -94,6 +94,9 @@ export type SkillsHuntSubmissionInput = {
   quoraProfileUrl: string;
   skills: string[];
   proposedSkills?: string[];
+  // The nominee's job title (a skills_taxonomy_job_titles id), optional. Saved with the nomination and
+  // carried, with its sector, onto the Directory profile an accepted nomination creates.
+  jobTitleId?: string | null;
   // Nominee location. `country` is required (validated); `state`/`city` are optional. Plain names per
   // the shared location standard; carried into the generated directory profile on accept.
   country: string;

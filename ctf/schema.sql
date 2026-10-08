@@ -670,6 +670,11 @@ CREATE TABLE IF NOT EXISTS skills_hunt_submissions (
   country TEXT NULL,
   state TEXT NULL,
   city TEXT NULL,
+  -- The nominee's job title (skills_taxonomy_job_titles.id), picked from the Scout form's job title
+  -- list; optional. On accept it and its sector carry into the generated directory_profiles row. The
+  -- submit insert stores it only when it names an active job title, otherwise null. No hard FK,
+  -- mirroring directory_profiles.job_title_id (the taxonomy table is created later in this file).
+  job_title_id UUID NULL,
   skills JSONB NOT NULL DEFAULT '[]'::jsonb,
   proposed_skills JSONB NOT NULL DEFAULT '[]'::jsonb,
   signature_hash TEXT NOT NULL,
@@ -5732,6 +5737,7 @@ ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS url_valid
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS edit_history JSONB NOT NULL DEFAULT '[]'::jsonb;
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS edited_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS job_title_id UUID;
 DO $skills_hunt_submissions_url_validation_check$
 BEGIN
   IF NOT EXISTS (
