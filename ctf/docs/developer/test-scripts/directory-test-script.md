@@ -17,7 +17,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:directory` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-directory-feature-inventory.md` |
-| **Generated** | 2026-07-16 (hand-updated: `country` is now required on every profile — see DIR-4, DIR-4b, DIR-A1; plus the unified skills picker and ported v2 location fields — see DIR-2; 2026-07-17: android member self-edit (#1325) and android admin editable skills (#1335) now ship — see DIR-4, DIR-4b, DIR-A1; 2026-07-18: "Weavers of the Commons" contributor badge on claimed profiles — see DIR-8; 2026-07-19: android badge parity (#1680) ships — DIR-8 gains android; 2026-09-21: the tombstone-column drop's leftover readers are fixed — no step here changes, but a SkillsHunt accept and a Foundation connect must both succeed again; regenerate via CI to stamp the commit) · 2026-09-22 manual update: DIR-A1d checks the admin list loads at all, after its page query was refused by the database for a gap in its placeholder numbering |
+| **Generated** | 2026-07-16 (hand-updated: `country` is now required on every profile — see DIR-4, DIR-4b, DIR-A1; plus the unified skills picker and ported v2 location fields — see DIR-2; 2026-07-17: android member self-edit (#1325) and android admin editable skills (#1335) now ship — see DIR-4, DIR-4b, DIR-A1; 2026-07-18: "Weavers of the Commons" contributor badge on claimed profiles — see DIR-8; 2026-07-19: android badge parity (#1680) ships — DIR-8 gains android; 2026-09-21: the tombstone-column drop's leftover readers are fixed — no step here changes, but a SkillsHunt accept and a Foundation connect must both succeed again; regenerate via CI to stamp the commit) · 2026-10-08 manual update: DIR-A1f checks the admin edit drawer's new Sector and Job title selects · 2026-09-22 manual update: DIR-A1d checks the admin list loads at all, after its page query was refused by the database for a gap in its placeholder numbering |
 | **Inventory wording** | 2026-10-01: banned-term wording removed from the inventory prose; no step in this script changed |
 
 ## How to run this
@@ -505,6 +505,16 @@ person's request** button, without a reload. In step 2 the promoted label is not
 "Pending review"; only labels still pending review are, so the person stays in the group their
 pending labels put them in.
 **Result:** web ☐ — notes:
+
+### DIR-A1f · The admin edit drawer sets a profile's sector and job title (added 2026-10-08)
+
+1. On `/admin/directory`, open **Edit** on any profile. Below City, confirm **Sector (optional)** and
+   **Job title (optional)** selects, each starting at the profile's stored value or "Not set".
+2. Open Job title and confirm it lists every job title grouped by sector. Pick one, confirm its sector
+   fills in, and save. Reopen the drawer and confirm both stuck, and that the profile's public page
+   shows the job title.
+3. Change the sector to a different one and confirm the job title resets to "Not set". Set both to
+   "Not set", save, reopen, and confirm both are cleared.
 
 ### DIR-A2 · Attach an unclaimed profile (two places)
 **Role:** admin · **Surfaces:** web
