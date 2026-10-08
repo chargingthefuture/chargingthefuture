@@ -14,7 +14,7 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 
 // The web prints toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute:
 // '2-digit' }), e.g. "Oct 8, 09:05 PM". Built by hand so it does not lean on the phone's Intl data.
-function formatSentAt(iso: string): string {
+export function formatSentAt(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
   const hour12 = d.getHours() % 12 === 0 ? 12 : d.getHours() % 12;

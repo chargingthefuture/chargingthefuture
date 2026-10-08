@@ -3,13 +3,11 @@
  * (web components/chyme/chyme-stream-usage-shell.tsx, at /admin/chyme): the Stream Video minute
  * meter against the month's budget, what the quota policy is doing, the minutes by surface and by
  * day, the settings in force, and the members removed from a room. Admin-only on the server.
- *
- * The web copies the numbers to the clipboard. The app carries no clipboard module, so "Copy as
- * text" opens the phone's share sheet with the same text, which offers Copy.
  */
 import React, { useCallback, useEffect, useState } from 'react';
-import { ScrollView, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { ClipboardCopy, RefreshCw } from 'lucide-react-native';
+import * as Clipboard from 'expo-clipboard';
 import { interFamily } from '../../components/ui';
 import { getStreamUsage, type UsagePayload } from './chyme-admin-api';
 import { useShellTokens, type ChymeTokens } from './chyme-tokens';
@@ -70,7 +68,7 @@ export function ChymeStreamUsage({ onOpenReadings }: { onOpenReadings: () => voi
   const onCopy = useCallback(async () => {
     if (!payload) return;
     try {
-      await Share.share({ message: asPlainText(payload, range) });
+      await Clipboard.setStringAsync(asPlainText(payload, range));
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
     } catch (caught) {

@@ -172,7 +172,7 @@ type FeatureRenderers = Record<FeatureKey, () => ReactElement>;
 function buildFeatureViews(open: (_key: FeatureKey) => void): FeatureRenderers {
   return {
     apps: () => <AppsList onOpen={open} />,
-    chyme: () => <ChymeRoom />,
+    chyme: () => <ChymeRoom onBack={() => open('apps')} />,
     'chyme-admin': () => <ChymeStreamUsage onOpenReadings={() => open('chyme-readings')} />,
     'chyme-readings': () => <ChymeReadingsAdmin />,
     beacon: () => <Beacon />,
@@ -186,6 +186,35 @@ function buildFeatureViews(open: (_key: FeatureKey) => void): FeatureRenderers {
     ),
     'blocked-members': () => <BlockedMembers />,
   };
+}
+
+// The bar above the screen: the top bar on Apps, the back-chevron header elsewhere. The signed-out
+// Chyme page draws its own header, as the web public page does, so it gets neither.
+function AppHeader({
+  selected,
+  theme,
+  isAdmin,
+  signedIn,
+  open,
+  onOpenAccount,
+}: {
+  selected: FeatureKey;
+  theme: ThemeName;
+  isAdmin: boolean;
+  signedIn: boolean;
+  open: (_key: FeatureKey) => void;
+  onOpenAccount: () => void;
+}) {
+  if (selected === 'apps') return <TopBar onOpenAccount={onOpenAccount} />;
+  if (selected === 'chyme' && !signedIn) return null;
+  return (
+    <ScreenHeader
+      title={SCREEN_TITLES[selected]}
+      {...screenChrome(selected, theme, isAdmin, open)}
+      onBack={() => open(parentOf(selected))}
+      onOpenAccount={onOpenAccount}
+    />
+  );
 }
 
 // The name the other person sees in a Foundation call.
@@ -315,16 +344,7 @@ function AppShell() {
       <ShellBackground />
       {/* The web frame at phone width: the Apps home carries the top bar, every other screen the
           back-chevron header (web MobileTopBar and MobileScreenHeader). */}
-      {selected === 'apps' ? (
-        <TopBar onOpenAccount={openAccount} />
-      ) : (
-        <ScreenHeader
-          title={SCREEN_TITLES[selected]}
-          {...screenChrome(selected, theme, isAdmin, setSelected)}
-          onBack={() => setSelected(parentOf(selected))}
-          onOpenAccount={openAccount}
-        />
-      )}
+      <AppHeader selected={selected} theme={theme} isAdmin={isAdmin} signedIn={isAuthenticated} open={setSelected} onOpenAccount={openAccount} />
 
       {/* Keyed on the signed-in member so signing out (or in as somebody else) unmounts every screen
           holding a Stream client, whose cleanup leaves the call and disconnects it. */}

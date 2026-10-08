@@ -14,8 +14,9 @@ type UpcomingState =
   | { kind: 'ready'; slots: ChymeUpcomingSlot[] }
   | { kind: 'error'; message: string };
 
-// Read once when the screen opens, as the signed-in web page does.
-export function ChymeUpcoming() {
+// Read when the screen opens, and again whenever `refreshKey` changes (the signed-out page's
+// refresh control). `compact` is the signed-out page's tighter padding.
+export function ChymeUpcoming({ refreshKey = 0, compact = false }: { refreshKey?: number; compact?: boolean }) {
   const t = useChymeTokens();
   const [state, setState] = useState<UpcomingState>({ kind: 'loading' });
 
@@ -29,10 +30,10 @@ export function ChymeUpcoming() {
 
   useEffect(() => {
     void load();
-  }, [load]);
+  }, [load, refreshKey]);
 
   return (
-    <View accessibilityLabel="Coming up on TI Radio" style={[styles.section, { borderBottomColor: t.BORDER, backgroundColor: t.HEADER }]}>
+    <View accessibilityLabel="Coming up on TI Radio" style={[styles.section, compact ? styles.compact : null, { borderBottomColor: t.BORDER, backgroundColor: t.HEADER }]}>
       <View style={styles.headRow}>
         <View style={styles.headLeft}>
           <CalendarClock size={13} color={t.FAINT} />
@@ -99,6 +100,7 @@ function UpcomingCards({ slots, t }: { slots: ChymeUpcomingSlot[]; t: ChymeToken
 
 const styles = StyleSheet.create({
   section: { paddingVertical: 12, paddingHorizontal: 14, borderBottomWidth: 1 },
+  compact: { paddingVertical: 10, paddingHorizontal: 12 },
   headRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 },
   headLeft: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   heading: { fontSize: 11, letterSpacing: 0.88, textTransform: 'uppercase', fontFamily: interFamily('700') },

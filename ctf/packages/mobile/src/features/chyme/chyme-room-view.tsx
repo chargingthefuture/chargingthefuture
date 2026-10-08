@@ -34,7 +34,7 @@ function RoomHeader({ room, user, showChat, onToggleChat, t }: { room: ChymeRoom
     <View style={[styles.header, { borderBottomColor: t.BORDER }]}>
       <View style={styles.headerMain}>
         <View style={styles.badgeRow}>
-          <View style={[styles.dot, { borderRadius: t.radius(4), backgroundColor: t.ACCENT }]} />
+          <View style={[styles.dot, { borderRadius: t.radius(4), backgroundColor: t.ACCENT, boxShadow: `0 0 8px ${t.ACCENT}` }]} />
           <View style={[styles.liveBadge, { borderRadius: t.radius(20), backgroundColor: `${t.ACCENT}15`, borderColor: `${t.ACCENT}30` }]}>
             <Text style={[styles.liveText, { color: t.ACCENT }]}>{room.callActive ? '🔴 Live' : 'Idle'}</Text>
           </View>

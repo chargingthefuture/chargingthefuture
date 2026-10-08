@@ -453,13 +453,19 @@ decision the owner has not made, or owned elsewhere. Nothing here is code work l
   shows while the quota policy allows Back Channel, as on the web. Also added, for 1:1 parity: the
   private Weavers of the Commons room with its "how it's earned" explainer, and, for admins, the
   Admin button opening the live audio usage screen (meter, by surface, by day, settings, removed
-  members with "Let back in") and the readings loop switch. The call join, the presence heartbeat,
-  the foreground keep-alive and the moderation requests are unchanged. Differences that remain: no
-  colored glow around a speaking avatar (Android cannot draw a colored shadow on a view); "Copy as
-  text" on the usage screen opens the share sheet, which offers Copy, because the app has no
-  clipboard module; the Foundation note on a Back Channel call is plain text rather than a link,
-  since leaving the screen would end both calls; the admin header has no refresh control (the usage
-  screen keeps its own Refresh); the signed-out Chyme page (guest listening) is not yet on Android.
+  members with "Let back in", whose "Copy as text" copies to the clipboard through the new
+  `expo-clipboard` dependency) and the readings loop switch. A signed-out visitor now gets the web's
+  public Chyme page (`ChymePublicScreen.tsx`): its own green header, the invitation card with Sign
+  In, the TI Radio row, the Live Rooms row with Leave and refresh, listening without an account
+  (`chyme-guest-listen.tsx`, the same guest listen, heartbeat and leave routes and the same retries)
+  and the read-only room chat (`chyme-guest-chat.tsx`). The speaking and own-tile glows and the card
+  shadows use React Native's `boxShadow`. The call join, the presence heartbeat, the foreground
+  keep-alive and the moderation requests are unchanged. Differences that remain: the Foundation note
+  on a Back Channel call is plain text rather than a link, since leaving the screen would end both
+  calls; the admin screens' back control goes to Chyme (the app has no admin index) and their header
+  has no refresh control (the usage screen keeps its own Refresh); the glow appears without the web's
+  short fade; the browser-only cases (no WebRTC, the autoplay unlock) cannot occur in the app; the
+  blog invite cards the web floats on signed-out pages are not part of Chyme and are not shown.
   No route, schema or contract change.
 
 - 2026-10-05: **Tips go through the canonical ServiceCredits transfer (code review #2875).**

@@ -35,10 +35,10 @@ import { reportError } from '../../observability/report';
 
 // Open social audio: everyone who joins may publish audio, so the plain "default" call type. Never
 // video. Matches the web room.
-const CALL_TYPE = 'default';
+export const CALL_TYPE = 'default';
 
 // Stream call ids accept [0-9a-zA-Z_-]; anything else is replaced. Matches the web room.
-function toCallId(raw: string): string {
+export function toCallId(raw: string): string {
   const cleaned = raw.replace(/[^0-9a-zA-Z_-]/g, '-');
   return cleaned.length > 0 ? cleaned : 'chyme-main-room';
 }

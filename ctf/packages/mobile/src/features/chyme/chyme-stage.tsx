@@ -16,7 +16,7 @@ function StageTile({ participant, isSelf, t }: { participant: Participant; isSel
   return (
     <View style={styles.tile}>
       <View>
-        <View style={[styles.avatar, { borderRadius: t.radius(36), backgroundColor: `${t.ACCENT}20`, borderColor: isSelf ? t.ACCENT : 'transparent' }]}>
+        <View style={[styles.avatar, { borderRadius: t.radius(36), backgroundColor: `${t.ACCENT}20`, borderColor: isSelf ? t.ACCENT : 'transparent', boxShadow: isSelf ? `0 0 20px ${t.ACCENT}50` : undefined }]}>
           <Text style={[styles.initials, { color: t.ACCENT }]}>{initials(participant.username ?? participant.userId)}</Text>
         </View>
         <View style={[styles.badge, { borderRadius: t.radius(11), backgroundColor: t.ACCENT }]}>

@@ -1,7 +1,8 @@
 /**
  * ChymeRoom — the Chyme screen on Android, drawn to match the web Chyme page at phone width
  * (web components/chyme/chyme-shell.tsx and what it renders). Under the app's screen header: the
- * rooms rail, the hosting statement, what is coming up on TI Radio, then the selected room.
+ * rooms rail, the hosting statement, what is coming up on TI Radio, then the selected room. A
+ * signed-out visitor gets the public page instead (ChymePublicScreen).
  *
  * Every room the member has opened stays mounted and the others are hidden, as on the web, so
  * switching rooms never drops a live call. Back Channel's invite card, call card and notice are
@@ -20,10 +21,17 @@ import { ChymeUpcoming } from './chyme-upcoming';
 import { ChymeLiveRoom } from './chyme-live-room';
 import { ChymeBackChannelLayer } from './chyme-back-channel-layer';
 import { useChymeBackChannel } from './useChymeBackChannel';
+import { ChymePublicScreen } from './ChymePublicScreen';
 
 const SCOPES: ChymeRoomScope[] = ['main', 'contributors'];
 
-export const ChymeRoom: React.FC = () => {
+// A signed-out visitor gets the public page, as the web does for a visitor without an account.
+export const ChymeRoom: React.FC<{ onBack: () => void }> = ({ onBack }) => {
+  const { isAuthenticated } = useAuth();
+  return isAuthenticated ? <ChymeMemberScreen /> : <ChymePublicScreen onBack={onBack} />;
+};
+
+function ChymeMemberScreen() {
   const t = useChymeTokens();
   const { user } = useAuth();
   const currentUser = { userId: user?.id ?? '', username: user?.username ?? null };
@@ -60,7 +68,7 @@ export const ChymeRoom: React.FC = () => {
       {backChannelEnabled ? <ChymeBackChannelLayer controller={backChannel} displayName={chymeHandle(currentUser.username, currentUser.userId)} /> : null}
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   // The app pads every screen's content area; the web Chyme page runs edge to edge under its

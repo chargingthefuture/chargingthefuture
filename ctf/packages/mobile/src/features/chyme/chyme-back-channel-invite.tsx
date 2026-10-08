@@ -78,7 +78,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#0d0f14',
     borderWidth: 1,
     borderColor: 'rgba(34,197,94,0.35)',
-    elevation: 12,
+    boxShadow: '0 16px 48px rgba(0,0,0,0.55)',
   },
   topBar: { height: 3 },
   body: { paddingTop: 14, paddingHorizontal: 16, paddingBottom: 16 },

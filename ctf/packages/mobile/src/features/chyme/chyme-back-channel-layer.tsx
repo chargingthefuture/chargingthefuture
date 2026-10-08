@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#0d0f14',
     borderWidth: 1,
     borderColor: 'rgba(248,113,113,0.45)',
-    elevation: 12,
+    boxShadow: '0 12px 32px rgba(0,0,0,0.5)',
   },
   noticeText: { flex: 1, minWidth: 0, color: '#f87171', fontSize: 12, fontFamily: interFamily('400') },
   dismiss: { color: '#9ca3af', fontSize: 12, fontFamily: interFamily('600') },

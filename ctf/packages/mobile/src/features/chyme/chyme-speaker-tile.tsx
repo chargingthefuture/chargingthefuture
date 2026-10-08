@@ -2,9 +2,7 @@
 // chyme-audio-room.tsx ChymeSpeakerTile): the round avatar with its microphone badge and raised hand,
 // the name, the speaking / muted / listening pill, and under another member's tile Tip, Back
 // Channel and, for an admin, the moderation actions.
-//
-// The web also draws a green glow around a speaking or own avatar (a colored box-shadow). Android
-// cannot draw a colored shadow on a view, so the ring alone marks it here.
+
 
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -17,7 +15,7 @@ import { ChymeModeratorActions, type MobileModerationContext } from './ChymeMode
 import type { MobileBackChannelController } from './useChymeBackChannel';
 import { initials, useChymeTokens } from './chyme-tokens';
 
-function isPublishingAudio(participant: StreamVideoParticipant): boolean {
+export function isPublishingAudio(participant: StreamVideoParticipant): boolean {
   return participant.publishedTracks.includes(SfuModels.TrackType.AUDIO);
 }
 
@@ -28,11 +26,17 @@ function ringColor(accent: string, speaking: boolean, isSelf: boolean): string {
   return isSelf ? `${accent}80` : 'transparent';
 }
 
-function SpeakerAvatar({ name, speaking, isSelf, isGuest, audioActive, handRaised }: AvatarProps) {
+// The web's glow: strong while speaking, faint on the member's own tile.
+function glow(accent: string, speaking: boolean, isSelf: boolean): string | undefined {
+  if (speaking) return `0 0 20px ${accent}80`;
+  return isSelf ? `0 0 12px ${accent}40` : undefined;
+}
+
+export function SpeakerAvatar({ name, speaking, isSelf, isGuest, audioActive, handRaised }: AvatarProps) {
   const t = useChymeTokens();
   return (
     <View>
-      <View style={[styles.avatar, { borderRadius: t.radius(36), backgroundColor: `${t.ACCENT}20`, borderColor: ringColor(t.ACCENT, speaking, isSelf) }]}>
+      <View style={[styles.avatar, { borderRadius: t.radius(36), backgroundColor: `${t.ACCENT}20`, borderColor: ringColor(t.ACCENT, speaking, isSelf), boxShadow: glow(t.ACCENT, speaking, isSelf) }]}>
         <Text style={[styles.initials, { color: t.ACCENT }]}>{initials(name)}</Text>
       </View>
       <View style={[styles.micBadge, { borderRadius: t.radius(11), backgroundColor: audioActive ? t.ACCENT : 'rgba(120,120,120,0.9)' }]}>
@@ -52,7 +56,7 @@ function statusLabel(isGuest: boolean, audioActive: boolean): string {
   return audioActive ? 'speaking' : 'muted';
 }
 
-function StatusBadge({ isGuest, audioActive }: { isGuest: boolean; audioActive: boolean }) {
+export function StatusBadge({ isGuest, audioActive }: { isGuest: boolean; audioActive: boolean }) {
   const t = useChymeTokens();
   return (
     <View

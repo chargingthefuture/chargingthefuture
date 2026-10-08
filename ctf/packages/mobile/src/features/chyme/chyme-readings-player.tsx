@@ -149,7 +149,7 @@ function usePlayback(player: VideoPlayer, tracks: ReadingsTrack[]): Playback {
   return { index, playing, starting, problem, start, stop };
 }
 
-export function ChymeReadingsPlayer() {
+export function ChymeReadingsPlayer({ onRoomLive }: { onRoomLive?: () => void } = {}) {
   const tracks = useTracks();
   const player = useVideoPlayer(null);
   const playback = usePlayback(player, tracks);
@@ -163,10 +163,11 @@ export function ChymeReadingsPlayer() {
         if (!live) return;
         stop();
         setWentLive(true);
+        onRoomLive?.();
       });
     }, LIVE_CHECK_MS);
     return () => clearInterval(timer);
-  }, [playing, stop]);
+  }, [playing, stop, onRoomLive]);
 
   if (tracks.length === 0) return null;
   const current = playback.index === null ? null : tracks[playback.index] ?? null;
