@@ -30,6 +30,11 @@ on:
         required: false
         type: boolean
         default: false
+      build_id:
+        description: "Look up an existing build instead of starting one: paste its EAS build id to get the direct APK link. Spends no build."
+        required: false
+        type: string
+        default: ""
 
 concurrency:
   group: expo-preview-${{ github.ref }}
@@ -41,7 +46,7 @@ jobs:
     # Opt-in only: a manual run, or a PR that carries the `build-apk` label. This
     # keeps the scarce free-plan Android builds tied to a deliberate request
     # instead of firing on every mobile-touching PR.
-    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'build-apk') }}
+    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.build_id == '') || contains(github.event.pull_request.labels.*.name, 'build-apk') }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -209,3 +214,54 @@ jobs:
             }
         env:
           BUILD_URL: ${{ steps.build.outputs.build_url }}
+
+  # The owner works from a phone, where opening a build on expo.dev means signing in to Expo. This
+  # reads a finished build with the repository's EXPO_TOKEN and puts the direct .apk link on the run
+  # page and in the log, so the APK downloads straight from the link with no Expo sign-in.
+  lookup:
+    name: Look up an existing build's APK link
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_id != '' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      BUILD_ID: ${{ inputs.build_id }}
+    steps:
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Setup EAS CLI
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Print the build's APK link
+        run: |
+          set -euo pipefail
+          if ! printf '%s' "$BUILD_ID" | grep -Eq '^[0-9a-f-]{36}$'; then
+            echo "::error::build_id must be an EAS build id like 68860c08-966d-49ba-a89e-dc98e9a43293, got: $BUILD_ID"
+            exit 1
+          fi
+          if ! eas build:view "$BUILD_ID" --json > build.json 2> eas-stderr.txt; then
+            echo "::error::Could not read build $BUILD_ID from EAS: $(tail -n 5 eas-stderr.txt | tr '\n' ' ')"
+            exit 1
+          fi
+          STATUS=$(node -e "process.stdout.write(String(JSON.parse(require('fs').readFileSync('build.json','utf8')).status || 'unknown'))")
+          APK_URL=$(node -e "const b = JSON.parse(require('fs').readFileSync('build.json','utf8')); process.stdout.write((b.artifacts && (b.artifacts.applicationArchiveUrl || b.artifacts.buildUrl)) || '')")
+          if [ -z "$APK_URL" ]; then
+            echo "::error::Build $BUILD_ID has no APK yet (status: $STATUS). Run this again once the build finishes."
+            exit 1
+          fi
+          echo "Build status: $STATUS"
+          echo "Direct APK download: $APK_URL"
+          {
+            echo "### Android build $BUILD_ID"
+            echo ""
+            echo "Status: $STATUS"
+            echo ""
+            echo "Direct APK download: $APK_URL"
+          } >> "$GITHUB_STEP_SUMMARY"
