@@ -114,19 +114,31 @@ function mapSubmissionCreateError(message: string): { status: number; code: stri
   return null;
 }
 
+// Small readers for the untrusted POST body, so toSubmissionInput stays inside the complexity budget (rule 116).
+function stringOr<T extends string | null>(value: unknown, fallback: T): string | T {
+  return typeof value === 'string' ? value : fallback;
+}
+
+function stringList(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
+}
+
+function trimmedOrNull(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
 function toSubmissionInput(roundId: string, body: SubmissionBody): SkillsHuntSubmissionInput {
   return {
     roundId,
-    fullName: typeof body.fullName === 'string' ? body.fullName : '',
-    bio: typeof body.bio === 'string' ? body.bio : '',
-    quoraProfileUrl: typeof body.quoraProfileUrl === 'string' ? body.quoraProfileUrl : '',
-    skills: Array.isArray(body.skills) ? body.skills.filter((item): item is string => typeof item === 'string') : [],
-    proposedSkills: Array.isArray(body.proposedSkills)
-      ? body.proposedSkills.filter((item): item is string => typeof item === 'string')
-      : [],
-    country: typeof body.country === 'string' ? body.country : '',
-    state: typeof body.state === 'string' ? body.state : null,
-    city: typeof body.city === 'string' ? body.city : null,
+    fullName: stringOr(body.fullName, ''),
+    bio: stringOr(body.bio, ''),
+    quoraProfileUrl: stringOr(body.quoraProfileUrl, ''),
+    skills: stringList(body.skills),
+    proposedSkills: stringList(body.proposedSkills),
+    jobTitleId: trimmedOrNull(body.jobTitleId),
+    country: stringOr(body.country, ''),
+    state: stringOr(body.state, null),
+    city: stringOr(body.city, null),
   };
 }
 
