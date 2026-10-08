@@ -343,7 +343,8 @@ Delivery: **web + mobile-responsive complete** (pixel-pass delivered). **Android
 - **Direct Line**: `ChatTab.tsx`, `ChatComposer.tsx`, `ppChat.ts`. Messages in the order the room returns them (initials, name and time over a bubble), the web message box with its square send button, or the no-cohort / ended / listening-in line in its place.
 - **Admin**: `PeerProgrammingAdmin.tsx`, `usePeerProgrammingAdmin.ts`, `PeerProgrammingAdminApi.ts`, `AdminParts.tsx`, `AdminSections.tsx`, `AdminCohorts.tsx`, `AdminTopicForm.tsx`, `AdminAssignments.tsx`. The web admin page: header with the code icon and **Member view** pill, the heading card, error and notice banners, Member feedback, Single standing Cohort 1 mode, Weekly topic, Weekly cohort assignment, and Cohorts with End cohort and Open room. Same admin routes as the web. Opened from the **Admin** pill, for admins only; the routes check it again.
 - Shared: `PeerProgramming.tsx` (screen and tab row), `useRoom.ts`, `PeerProgrammingApi.ts` (every call through `authedFetch` with `x-ctf-csrf: 1` on writes), `PPButton.tsx`, `usePPTheme.ts` (the web shell's colors for both themes; comic corners are square, as the web's comic rule makes them), `index.ts`.
-- Differences from the web, each because the app cannot do the same: the week start date in the admin topic form is typed as YYYY-MM-DD (the app has no date picker installed); the tick boxes are drawn squares (React Native has no native tick box); End cohort asks in Android's dialog rather than the browser's; the header icon is the app's emoji tile, as on every app screen. Parity contract: `peer-programming` → `mobileFeatureDirs: ["peer-programming"]`, `requiresMobileSurface: true`. Test steps: AN-PP in `android-app-test-script.md`.
+- The header icon is the web's: Users on its own beside the title on the member screen, Code2 in the accent tile on the admin screen. The admin week start date opens Android's date picker (`@react-native-community/datetimepicker`, the version Expo bundles), as the web date box opens the browser's.
+- Differences from the web, each because the app cannot do the same: the tick boxes are drawn squares (React Native has no native tick box); End cohort asks in Android's dialog rather than the browser's. Parity contract: `peer-programming` → `mobileFeatureDirs: ["peer-programming"]`, `requiresMobileSurface: true`. Test steps: AN-PP in `android-app-test-script.md`.
 
 Historical parity detail: an earlier Android surface lived in the same folder until it was removed on 2026-07-20; the paragraphs below marked History describe that version.
 
@@ -403,8 +404,9 @@ Deterministic PeerProgramming seed script: `ctf/scripts/seedPeerProgramming.mjs`
   Listen in and Session Feedback, and the admin screen (feedback inbox, single standing Cohort 1
   switch, weekly topic, weekly assignment, cohorts with End cohort and Open room). Removed with no
   users left: `ChatThread.tsx`, the reply call `postReply`, the threads helper, and the Android-only
-  notes on the join card. No route, schema or contract change: the app calls the routes the web
-  already uses.
+  notes on the join card. The header shows the web's Users icon (Code2 on the admin screen), and the
+  admin week start date uses Android's date picker, added as `@react-native-community/datetimepicker`
+  8.6.0. No route, schema or contract change: the app calls the routes the web already uses.
 - 2026-10-06: **PeerProgramming is in the Android app again (owner decision).** The Android app now
   carries any plugin that materially benefits from being an installed app, and PeerProgramming does:
   its live Session call keeps running with the screen off (the Stream foreground service), and on

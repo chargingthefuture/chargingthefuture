@@ -8,7 +8,7 @@
  *
  * Copied from the web shell (web components/peer-programming/peer-programming-shell.tsx) at phone
  * width (owner directive, 2026-10-08). The app's screen header above stands in for the web title row
- * (back, icon, title, then this screen's Admin pill for an admin and Refresh, then report and
+ * (back, the Users icon, title, then this screen's Admin pill for an admin and Refresh, then report and
  * settings). Under it sits the web's tab row — Goals, Cohorts, Session, Direct Line — opening on
  * Goals (or on the Direct Line when the admin screen opened a cohort's room), then the open tab.
  * The Session tab stays mounted while another tab is open (and behind an error), so moving away

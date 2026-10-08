@@ -25,11 +25,11 @@ import {
   Inter_900Black,
 } from '@expo-google-fonts/inter';
 import { AuthProvider, useAuth } from './src/auth/auth-context';
-import { ThemeProvider, useTheme, getAppAccent } from './src/theme';
+import { ThemeProvider, useTheme, getAppAccent, type ThemeName } from './src/theme';
 import { LoadingScreen } from './src/components/shared/LoadingScreen';
 import { ScreenHeader, ShellBackground, TopBar } from './src/components/shell/ShellChrome';
 import { HeaderActionsContext } from './src/components/shell/HeaderActions';
-import { Code2 } from 'lucide-react-native';
+import { Code2, Users } from 'lucide-react-native';
 import { getPluginEmoji } from './src/theme/plugin-visuals';
 import { StreamVideoRN } from '@stream-io/video-react-native-sdk';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -92,6 +92,15 @@ function isPluginKey(key: FeatureKey): key is PluginKey {
 function headerPlugin(key: FeatureKey): PluginKey | undefined {
   if (key === 'peer-programming-admin') return 'peer-programming';
   return isPluginKey(key) ? key : undefined;
+}
+
+// Screens whose web header shows a lucide icon rather than the app's emoji tile: PeerProgramming's
+// own title row draws Users bare, its admin page draws Code2 in the tile.
+function headerIcon(key: FeatureKey, theme: ThemeName): ReactNode {
+  const accent = getAppAccent('peer-programming', theme);
+  if (key === 'peer-programming') return <Users size={18} color={accent} />;
+  if (key === 'peer-programming-admin') return <Code2 size={18} color={accent} />;
+  return undefined;
 }
 
 // Where the header's back chevron and Android's back button go from each screen.
@@ -327,7 +336,8 @@ function AppShell() {
         <ScreenHeader
           title={SCREEN_TITLES[selected]}
           emoji={isPluginKey(selected) ? getPluginEmoji(selected) : undefined}
-          icon={selected === 'peer-programming-admin' ? <Code2 size={18} color={getAppAccent('peer-programming', theme)} /> : undefined}
+          icon={headerIcon(selected, theme)}
+          iconTile={selected !== 'peer-programming'}
           accent={plugin ? getAppAccent(plugin, theme) : undefined}
           onBack={() => setSelected(parentOf(selected))}
           onOpenAccount={openAccount}

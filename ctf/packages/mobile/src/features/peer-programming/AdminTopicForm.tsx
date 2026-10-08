@@ -1,12 +1,50 @@
 // The weekly topic editor, copied from the web's PeerProgrammingAdminTopicForm (web components/
-// peer-programming/pp-admin-topic-form.tsx). The week start date is typed as YYYY-MM-DD: the web
-// uses the browser's date box, and the app has no date picker installed.
+// peer-programming/pp-admin-topic-form.tsx). The week start date opens Android's date picker, as the
+// web's date box opens the browser's.
 import React, { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { interFamily } from '../../components/ui';
 import type { AdminTopic, TopicDraft } from './PeerProgrammingAdminApi';
 import { AdminInput, FieldLabel, SolidButton, TickBox } from './AdminParts';
 import { usePPTheme } from './usePPTheme';
+
+// YYYY-MM-DD (the value the route takes) to and from a date at midnight UTC.
+function parseDay(value: string): Date {
+  const parsed = new Date(`${value}T00:00:00Z`);
+  return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+}
+
+// The web date box shows the date in the phone's own format; so does this field.
+function showDay(value: string): string {
+  const parsed = new Date(`${value}T00:00:00Z`);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleDateString(undefined, { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'UTC' });
+}
+
+// The web's date input: a box like the other fields that opens the date picker.
+function DateField({ value, onChange }: { value: string; onChange: (_value: string) => void }) {
+  const t = usePPTheme();
+  const open = () =>
+    DateTimePickerAndroid.open({
+      value: parseDay(value),
+      mode: 'date',
+      timeZoneName: 'UTC',
+      onChange: (event, date) => {
+        if (event.type === 'set' && date) onChange(date.toISOString().slice(0, 10));
+      },
+    });
+  return (
+    <TouchableOpacity
+      onPress={open}
+      accessibilityRole="button"
+      accessibilityLabel="Week start date"
+      style={[styles.date, { backgroundColor: t.BG, borderColor: t.BORDER_SOLID, borderRadius: t.r(8) }]}
+    >
+      <Text style={[styles.dateText, { color: t.TITLE }]}>{showDay(value)}</Text>
+    </TouchableOpacity>
+  );
+}
 
 function draftFromTopic(topic: AdminTopic | null, defaultWeekStart: string): TopicDraft {
   return {
@@ -44,7 +82,7 @@ export function AdminTopicForm({ topic, defaultWeekStart, busy, onSubmit }: {
     <View style={styles.form}>
       <View>
         <FieldLabel text="Week start date" />
-        <AdminInput value={draft.weekStartDate} onChangeText={(weekStartDate) => update({ weekStartDate })} placeholder="YYYY-MM-DD" autoCapitalize="none" />
+        <DateField value={draft.weekStartDate} onChange={(weekStartDate) => update({ weekStartDate })} />
         <Text style={[styles.hint, { color: t.MUTED }]}>Use the Monday of the target week. The room shows the topic for the current week only.</Text>
       </View>
       <View>
@@ -82,5 +120,7 @@ export function AdminTopicForm({ topic, defaultWeekStart, busy, onSubmit }: {
 
 const styles = StyleSheet.create({
   form: { gap: 16 },
+  date: { borderWidth: 1, paddingVertical: 8, paddingHorizontal: 10 },
+  dateText: { fontSize: 13, fontFamily: interFamily('400') },
   hint: { fontSize: 11, lineHeight: 16.5, marginTop: 6, fontFamily: interFamily('400') },
 });

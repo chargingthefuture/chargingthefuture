@@ -171,6 +171,7 @@ export function ScreenHeader({
   title,
   emoji,
   icon,
+  iconTile = true,
   accent,
   onBack,
   actions,
@@ -180,6 +181,8 @@ export function ScreenHeader({
   emoji?: string;
   /** An icon drawn in the app icon tile instead of the emoji (web MobileScreenHeader `icon`). */
   icon?: ReactNode;
+  /** False draws `icon` on its own, as a plugin header that builds its own title row does on the web. */
+  iconTile?: boolean;
   accent?: string;
   onBack: () => void;
   /** The screen's own controls, before report / settings (web MobileScreenHeader `actions`). */
@@ -201,7 +204,8 @@ export function ScreenHeader({
       >
         <ChevronLeft size={20} color={chevronColor} />
       </TouchableOpacity>
-      {icon || emoji ? (
+      {icon && !iconTile ? icon : null}
+      {(icon && iconTile) || (!icon && emoji) ? (
         <View
           style={[
             s.appIcon,
