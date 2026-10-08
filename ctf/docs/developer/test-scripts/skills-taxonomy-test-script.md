@@ -17,7 +17,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:skills-taxonomy` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-skills-taxonomy-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit); manually updated 2026-07-15 (browser made read-only — dead admin "add" buttons removed); 2026-08-04 (admin write surface recorded as retired — admin walkthrough marked API-only); 2026-08-29 (TAX-5 extended for changes 58–67 — the Childcare Workers and Tutors occupations under Education); 2026-08-29 (TAX-5 extended for changes 68–78 — the Photographer merge and the two plural renames); 2026-08-29 (TAX-5 extended for change 79 — the surviving label of the lighting pair); 2026-08-29 (TAX-5b added — the apply-time plural-twin guard); 2026-09-14 (TAX-5c added — the per-occupation demand weight and its mandatory rationale); 2026-10-01 (TAX-A7 added — the machine reader, its bound credential, and the routes it cannot reach) |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit); manually updated 2026-07-15 (browser made read-only — dead admin "add" buttons removed); 2026-08-04 (admin write surface recorded as retired — admin walkthrough marked API-only); 2026-08-29 (TAX-5 extended for changes 58–67 — the Childcare Workers and Tutors occupations under Education); 2026-08-29 (TAX-5 extended for changes 68–78 — the Photographer merge and the two plural renames); 2026-08-29 (TAX-5 extended for change 79 — the surviving label of the lighting pair); 2026-08-29 (TAX-5b added — the apply-time plural-twin guard); 2026-09-14 (TAX-5c added — the per-occupation demand weight and its mandatory rationale); 2026-10-01 (TAX-A7 added — the machine reader, its bound credential, and the routes it cannot reach); 2026-10-08 (TAX-5g added — change 143, Laboratory testing (basic) moved under Lab Technicians) |
 
 ## How to run this
 
@@ -323,6 +323,21 @@ age-scoped name quietly excludes half the people who could teach it. Adult teach
 covered by Vocational Trainers' `Adult education and training`. **Adaptive and inclusive physical
 education** must be present and must not be folded into `Physical education teaching`; a learner who
 cannot do ordinary PE needs a teacher who can say so.
+**Result:** web ☐ mobile ☐ — notes:
+
+### TAX-5g · Laboratory testing sits with lab technicians, and its holders keep it (added 2026-10-08)
+**Role:** member · **Surfaces:** all
+**Precondition:** change 143 has been applied by the owner-run
+`Skills Taxonomy — Apply Changes (production)` workflow.
+**Steps:**
+1. Browse to **R&D & High-Tech** and open **Lab Technicians**.
+2. Browse to **Water & Sanitation** and open **Treatment-Plant Operators**.
+3. Search the keyword box for `Laboratory testing (basic)` and read the results.
+4. Open a Directory profile that lists **Laboratory testing (basic)** and read its specializations.
+**Expected:** **Lab Technicians** carries `Laboratory testing (basic)` beside `Laboratory safety and
+SOP adherence`. **Treatment-Plant Operators** no longer carries it. The search returns one row, under
+Lab Technicians in R&D & High-Tech. The profile still lists the skill: the move keeps the row id, so
+nobody who held it loses it.
 **Result:** web ☐ mobile ☐ — notes:
 
 ### TAX-6 · Refresh re-pulls the hierarchy without reopening the app
