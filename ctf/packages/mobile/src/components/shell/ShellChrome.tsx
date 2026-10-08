@@ -3,7 +3,8 @@
 // on the web side has an obvious counterpart here.
 //
 //   - TopBar        web MobileTopBar (components/community-shell/community-shell.tsx): the 52px bar
-//                   on the Apps home — mark, wordmark, then report / settings, or Sign in when signed out.
+//                   on the Apps home — mark, wordmark, then report / settings / avatar, or Sign in
+//                   when signed out (TopBarControls.tsx).
 //   - ScreenHeader  web MobileScreenHeader (components/shared/mobile-screen-header.tsx): the bar on
 //                   every app screen — back chevron, app icon tile, title, then the same controls.
 //   - ShellBackground  the web .shell backdrop: two soft glows (purple top left, cyan top right).
@@ -16,9 +17,11 @@ import { useAuth } from '../../auth/auth-context';
 import { useTheme, type ThemeTokens } from '../../theme';
 import { CtaButton, interFamily } from '../ui';
 import { BugReportModal } from '../../features/bug-reporting';
+import { TopBarControls } from './TopBarControls';
 
-// The Skills Economy "Stack" mark (vector source: design/logo-options concept-d-stack-mark). Comic
-// theme paints it in the border ink on an ink panel, as the web does.
+// The Skills Economy "Stack" mark (web components/shared/se-mark.tsx), always in its gradient. The
+// web .mobileBarLogo box is 30px, radius 9, with no fill; the comic theme gives it the raised ink
+// panel, a 1px cream border and the offset shadow.
 const SE_MARK_PATH =
   'm94 105.7h-26v-7.7h25.5c1.5-0.1 3.1-1.3 3.1-3.3v-11.7c0-1.5-1.2-2.9-2.8-2.9l-22.5-0.1c-1.7 0-3.3 1.4-3.3 3.1l0.1 9.7h-24.8c-1.6 0-3 1.3-3 2.9v12.9h-25.7c-1.6 0-3.1 1.3-3.1 2.9v8.1c0 1.4 1.2 2.7 2.6 2.7h79.9c1.5 0 2.8-1.3 2.9-2.7v-11.3c-0.2-1.3-1.4-2.6-2.9-2.6zm-0.2 21.2h-79.3c-1.4 0-2.9 1.2-2.9 2.8v8.3c0 1.4 1.2 3 2.8 3h79.6c1.6 0 2.8-1.3 2.8-2.8v-8c0-1.8-1.4-3.2-3-3.3z';
 
@@ -32,9 +35,10 @@ export function BrandMark({ size = 26 }: { size?: number }) {
         borderRadius: tokens.isComic ? 0 : 9,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: tokens.isComic ? tokens.surface : 'transparent',
-        borderWidth: tokens.isComic ? 1.5 : 0,
+        backgroundColor: tokens.isComic ? '#1C1C1C' : 'transparent',
+        borderWidth: tokens.isComic ? 1 : 0,
         borderColor: tokens.border,
+        boxShadow: tokens.isComic ? '3px 3px 0px #D4C49A' : undefined,
       }}
     >
       <Svg width={size} height={size} viewBox="4 67.9 100 85">
@@ -44,7 +48,7 @@ export function BrandMark({ size = 26 }: { size?: number }) {
             <Stop offset="1" stopColor="#8F4BB2" />
           </LinearGradient>
         </Defs>
-        <Path d={SE_MARK_PATH} fill={tokens.isComic ? tokens.border : 'url(#brandmark)'} />
+        <Path d={SE_MARK_PATH} fill="url(#brandmark)" />
       </Svg>
     </View>
   );
@@ -142,7 +146,7 @@ function BarControls({ onOpenAccount, pluginSlug }: ChromeActions) {
   );
 }
 
-export function TopBar(props: ChromeActions) {
+export function TopBar({ onOpenAccount }: { onOpenAccount: () => void }) {
   const { isAuthenticated } = useAuth();
   const { tokens } = useTheme();
   const s = useMemo(() => makeStyles(tokens), [tokens]);
@@ -151,7 +155,7 @@ export function TopBar(props: ChromeActions) {
       <BrandMark />
       {/* Signed out: the "SE / SKILLS ECONOMY" lockup. Signed in: the two-line "SKILLS / ECONOMY". */}
       {isAuthenticated ? (
-        <View style={s.wordmark}>
+        <View style={s.wordmarkStacked}>
           <Text style={s.stackedLine}>Skills</Text>
           <Text style={s.stackedLine}>Economy</Text>
         </View>
@@ -162,7 +166,7 @@ export function TopBar(props: ChromeActions) {
         </View>
       )}
       <View style={s.spacer} />
-      <BarControls {...props} />
+      <TopBarControls onOpenAccount={onOpenAccount} />
     </View>
   );
 }
@@ -233,13 +237,17 @@ function makeStyles(t: ThemeTokens) {
       paddingHorizontal: 8,
       backgroundColor: t.surfaceAlt,
       borderBottomWidth: 1,
-      borderBottomColor: t.borderFaint,
+      // Hard-coded on the web too, so the comic bar keeps the same faint line.
+      borderBottomColor: 'rgba(255,255,255,0.06)',
     },
-    wordmark: { justifyContent: 'center', gap: 1 },
-    initials: { fontSize: 17, fontFamily: interFamily('800'), letterSpacing: 0.5, color: t.textShell },
+    // Both lockups are set at line-height 1 on the web.
+    wordmark: { justifyContent: 'center', flexShrink: 1, overflow: 'hidden' },
+    wordmarkStacked: { justifyContent: 'center', gap: 1, flexShrink: 1, overflow: 'hidden' },
+    initials: { fontSize: 17, lineHeight: 17, fontFamily: interFamily('800'), letterSpacing: 0.5, color: t.textShell },
     lockupName: {
-      marginTop: 1,
+      marginTop: 2,
       fontSize: 7,
+      lineHeight: 7,
       fontFamily: interFamily('600'),
       letterSpacing: 1.6,
       textTransform: 'uppercase',
@@ -247,6 +255,7 @@ function makeStyles(t: ThemeTokens) {
     },
     stackedLine: {
       fontSize: 8,
+      lineHeight: 8,
       fontFamily: interFamily('600'),
       letterSpacing: 1.2,
       textTransform: 'uppercase',
