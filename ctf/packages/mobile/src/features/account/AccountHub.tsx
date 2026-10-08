@@ -1,6 +1,6 @@
 // Your account — the Android copy of the web /account hub (components/account/account-hub-shell.tsx).
 // The gear opens it. The header above it ("Your account", back to Apps) is the shared ScreenHeader
-// in App.tsx, as the web hub uses the shared MobileScreenHeader.
+// in src/navigation/AppHeader.tsx, as the web hub uses the shared MobileScreenHeader.
 //
 // Every section of the web hub is here: the heading and intro, Identity (with the account menu,
 // where sign out lives, as the web's Clerk account menu sits on that card), Trust, Your ongoing

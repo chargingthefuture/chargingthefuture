@@ -76,73 +76,107 @@ export function ActivityList({ activities, currencies, busy, ...handlers }: Hand
   );
 }
 
-function ActivityItem({ activity, currencies, t, tokens, busyAction, onConfirm, onDecline, onEnd, onVisibility }: Handlers & {
+type ItemProps = Handlers & {
   activity: Activity;
   currencies: Currency[];
   t: RecurringActivityTokens;
   tokens: ThemeTokens;
   busyAction: ActionKind | null;
-}) {
-  const [visDraft, setVisDraft] = useState<RecurringActivityVisibility>(activity.visibility);
-  useEffect(() => setVisDraft(activity.visibility), [activity.visibility]);
-  const withName = activity.counterpartyName ? `with ${activity.counterpartyName}` : 'with a member';
-  const isCounterpartyPending = activity.status === 'pending' && activity.role === 'counterparty';
-  const canEnd = activity.status === 'pending' || activity.status === 'active';
-  const canSetVisibility = activity.role === 'owner' && activity.status === 'active';
-  const scLine = scValueLabel(activity, currencies);
-  const color = statusColor(activity.status, t);
-  const busy = busyAction !== null;
+};
 
+function ActivityItem(props: ItemProps) {
+  const { t, tokens } = props;
   return (
     <View style={{ backgroundColor: t.SURFACE, borderWidth: 1, borderColor: t.BORDER_SOLID, borderRadius: rr(tokens, 14), paddingVertical: 16, paddingHorizontal: 18, marginBottom: 12 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-        <View style={{ flexShrink: 1, minWidth: 0 }}>
-          <Text style={{ fontSize: 15, fontFamily: interFamily('700'), color: t.TITLE, marginBottom: 4 }}>{withName}</Text>
-          <Text style={{ fontSize: 13, lineHeight: 20.8, fontFamily: interFamily('400'), color: t.SUBTLE }}>
-            {SECTOR_LABEL[activity.sector]} · {currencyLabel(activity.currencyCode, currencies)} · {CADENCE_LABEL[activity.cadence]}
-          </Text>
-          {scLine ? <Text style={{ fontSize: 13, fontFamily: interFamily('400'), color: t.TEXT, marginTop: 4 }}>{scLine}</Text> : null}
-          {activity.originPlugin ? (
-            <Text style={{ fontSize: 12, fontFamily: interFamily('400'), color: t.SUBTLE, marginTop: 4 }}>
-              Recorded from {ORIGIN_LABEL[activity.originPlugin] ?? activity.originPlugin}
-            </Text>
-          ) : null}
-        </View>
-        <Text style={{ fontSize: 11, fontFamily: interFamily('600'), paddingVertical: 4, paddingHorizontal: 10, borderRadius: rr(tokens, 999), overflow: 'hidden', color, backgroundColor: `${color}1A` }}>
-          {STATUS_LABEL[activity.status]}
-        </Text>
-      </View>
+      <ActivitySummary activity={props.activity} currencies={props.currencies} t={t} tokens={tokens} />
+      <ActivityActions {...props} />
+    </View>
+  );
+}
 
-      {isCounterpartyPending || canEnd || canSetVisibility ? (
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: t.BORDER_SOLID }}>
-          {isCounterpartyPending ? (
-            <>
-              <ActionButton t={t} tokens={tokens} kind="primary" busy={busy} label={busyAction === 'confirm' ? 'Confirming…' : 'Confirm'} onPress={() => onConfirm(activity.id)} />
-              <ActionButton t={t} tokens={tokens} kind="ghost" busy={busy} label={busyAction === 'decline' ? 'Declining…' : 'Decline'} onPress={() => onDecline(activity.id)} />
-            </>
-          ) : null}
-          {canEnd ? (
-            <ActionButton t={t} tokens={tokens} kind="ghost" busy={busy} label={busyAction === 'end' ? 'Ending…' : 'End activity'} onPress={() => onEnd(activity.id)} />
-          ) : null}
-          {canSetVisibility ? (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
-              <Text style={{ fontSize: 12, fontFamily: interFamily('400'), color: t.MUTED }}>Visible to</Text>
-              <SelectField
-                label="Who can see this activity"
-                value={visDraft}
-                disabled={busy}
-                fontSize={12}
-                style={{ paddingVertical: 6, paddingHorizontal: 8, gap: 6 }}
-                options={VISIBILITY_ORDER.map((v) => ({ value: v, label: VISIBILITY_LABEL[v] }))}
-                onChange={(next) => {
-                  setVisDraft(next);
-                  onVisibility(activity.id, next);
-                }}
-              />
-            </View>
-          ) : null}
-        </View>
+// Who it is with, sector, unit and cadence, the ServiceCredits line, where it was recorded, and the
+// status badge.
+function ActivitySummary({ activity, currencies, t, tokens }: Pick<ItemProps, 'activity' | 'currencies' | 't' | 'tokens'>) {
+  const withName = activity.counterpartyName ? `with ${activity.counterpartyName}` : 'with a member';
+  const scLine = scValueLabel(activity, currencies);
+  const color = statusColor(activity.status, t);
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+      <View style={{ flexShrink: 1, minWidth: 0 }}>
+        <Text style={{ fontSize: 15, fontFamily: interFamily('700'), color: t.TITLE, marginBottom: 4 }}>{withName}</Text>
+        <Text style={{ fontSize: 13, lineHeight: 20.8, fontFamily: interFamily('400'), color: t.SUBTLE }}>
+          {SECTOR_LABEL[activity.sector]} · {currencyLabel(activity.currencyCode, currencies)} · {CADENCE_LABEL[activity.cadence]}
+        </Text>
+        {scLine ? <Text style={{ fontSize: 13, fontFamily: interFamily('400'), color: t.TEXT, marginTop: 4 }}>{scLine}</Text> : null}
+        {activity.originPlugin ? (
+          <Text style={{ fontSize: 12, fontFamily: interFamily('400'), color: t.SUBTLE, marginTop: 4 }}>
+            Recorded from {ORIGIN_LABEL[activity.originPlugin] ?? activity.originPlugin}
+          </Text>
+        ) : null}
+      </View>
+      <Text style={{ fontSize: 11, fontFamily: interFamily('600'), paddingVertical: 4, paddingHorizontal: 10, borderRadius: rr(tokens, 999), overflow: 'hidden', color, backgroundColor: `${color}1A` }}>
+        {STATUS_LABEL[activity.status]}
+      </Text>
+    </View>
+  );
+}
+
+// Which actions an activity offers, as the web item decides them.
+function actionsFor(activity: Activity) {
+  const { status, role } = activity;
+  return {
+    isCounterpartyPending: status === 'pending' && role === 'counterparty',
+    canEnd: status === 'pending' || status === 'active',
+    canSetVisibility: role === 'owner' && status === 'active',
+  };
+}
+
+// A button's label, with the web's "…ing" form while that action runs.
+function actionLabel(busyAction: ActionKind | null, action: ActionKind, idle: string, running: string): string {
+  return busyAction === action ? running : idle;
+}
+
+// Confirm and Decline for a pending counterparty, End activity, and the owner's "Visible to" choice.
+function ActivityActions({ activity, t, tokens, busyAction, onConfirm, onDecline, onEnd, onVisibility }: ItemProps) {
+  const { isCounterpartyPending, canEnd, canSetVisibility } = actionsFor(activity);
+  const busy = busyAction !== null;
+  if (!isCounterpartyPending && !canEnd && !canSetVisibility) return null;
+
+  return (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: t.BORDER_SOLID }}>
+      {isCounterpartyPending ? (
+        <>
+          <ActionButton t={t} tokens={tokens} kind="primary" busy={busy} label={actionLabel(busyAction, 'confirm', 'Confirm', 'Confirming…')} onPress={() => onConfirm(activity.id)} />
+          <ActionButton t={t} tokens={tokens} kind="ghost" busy={busy} label={actionLabel(busyAction, 'decline', 'Decline', 'Declining…')} onPress={() => onDecline(activity.id)} />
+        </>
       ) : null}
+      {canEnd ? (
+        <ActionButton t={t} tokens={tokens} kind="ghost" busy={busy} label={actionLabel(busyAction, 'end', 'End activity', 'Ending…')} onPress={() => onEnd(activity.id)} />
+      ) : null}
+      {canSetVisibility ? <VisibilityPicker activity={activity} t={t} busy={busy} onVisibility={onVisibility} /> : null}
+    </View>
+  );
+}
+
+// The owner's "Visible to" choice on an active activity.
+function VisibilityPicker({ activity, t, busy, onVisibility }: Pick<ItemProps, 'activity' | 't' | 'onVisibility'> & { busy: boolean }) {
+  const [visDraft, setVisDraft] = useState<RecurringActivityVisibility>(activity.visibility);
+  useEffect(() => setVisDraft(activity.visibility), [activity.visibility]);
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
+      <Text style={{ fontSize: 12, fontFamily: interFamily('400'), color: t.MUTED }}>Visible to</Text>
+      <SelectField
+        label="Who can see this activity"
+        value={visDraft}
+        disabled={busy}
+        fontSize={12}
+        style={{ paddingVertical: 6, paddingHorizontal: 8, gap: 6 }}
+        options={VISIBILITY_ORDER.map((v) => ({ value: v, label: VISIBILITY_LABEL[v] }))}
+        onChange={(next) => {
+          setVisDraft(next);
+          onVisibility(activity.id, next);
+        }}
+      />
     </View>
   );
 }

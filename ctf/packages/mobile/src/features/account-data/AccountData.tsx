@@ -23,6 +23,7 @@ import {
   fetchAccountServices,
   type AccountService,
 } from './api';
+import { reportError } from '../../observability/report';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -47,7 +48,8 @@ export function AccountData({ onBack }: { onBack: () => void }) {
       setDeletable(data.deletable ?? []);
       setRetained(data.retained ?? []);
       setLoadState('ready');
-    } catch {
+    } catch (caught) {
+      reportError(caught, { area: 'account-data', op: 'load_services' });
       setLoadState('error');
     }
   }, []);

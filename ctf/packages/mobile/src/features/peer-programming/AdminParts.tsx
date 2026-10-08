@@ -1,7 +1,7 @@
 // The pieces the PeerProgramming admin screen is built from, copied from the web admin
 // (web components/peer-programming/pp-admin-shell.tsx, pp-admin-topic-form.tsx,
 // pp-admin-assignments.tsx): the section card, its heading and lead line, the green / red / amber
-// banners, the labelled text box, the tick box and the solid accent button.
+// banners, the labeled text box, the tick box and the solid accent button.
 import React, { type ReactNode } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View, type TextInputProps } from 'react-native';
 import { Check } from 'lucide-react-native';

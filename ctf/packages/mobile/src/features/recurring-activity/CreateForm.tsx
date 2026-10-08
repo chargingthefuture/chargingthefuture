@@ -135,7 +135,7 @@ function CounterpartyPicker({ t, tokens, selected, onSelect, onClear }: {
       try {
         setResults(await searchMembers(term, controller.signal));
       } catch {
-        // Aborted or transient; the picker simply shows no new results.
+        // no-trace: aborted when the member types again, or a transient miss; the picker simply shows no new results.
       } finally {
         if (!controller.signal.aborted) setLoading(false);
       }

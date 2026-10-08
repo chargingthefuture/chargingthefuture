@@ -222,7 +222,14 @@ function makeStyles(t: ThemeTokens) {
     },
     avatarImage: { width: 32, height: 32 },
     avatarInitial: { fontSize: 13, fontFamily: interFamily('700'), color: t.isComic ? t.border : '#FFFFFF' },
-    // .mobileBarSignIn, and its comic override (ink panel, cream border, offset shadow).
+    ...signInStyles(t),
+  });
+}
+
+// .mobileBarSignIn, and its comic override (ink panel, cream border, offset shadow). Kept apart from
+// makeStyles so each stays under the complexity limit.
+function signInStyles(t: ThemeTokens) {
+  return {
     signIn: {
       paddingVertical: 7,
       paddingHorizontal: 14,
@@ -234,5 +241,5 @@ function makeStyles(t: ThemeTokens) {
       boxShadow: t.isComic ? COMIC_SHADOW : undefined,
     },
     signInText: { fontSize: 13, fontFamily: interFamily('600'), color: t.isComic ? t.border : '#FFFFFF' },
-  });
+  } as const;
 }

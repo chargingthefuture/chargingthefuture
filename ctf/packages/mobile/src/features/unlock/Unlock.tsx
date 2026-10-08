@@ -14,6 +14,7 @@ import { fetchUnlockStatus, submitUnlockUrl, type UnlockStatus } from './api';
 import { toDisplayStatus } from './unlock-tokens';
 import { UnlockSubmissionView } from './UnlockSubmissionView';
 import { UnlockStatusView } from './UnlockStatusView';
+import { reportError } from '../../observability/report';
 
 export function Unlock({
   onStatusChanged,
@@ -39,7 +40,8 @@ export function Unlock({
     if (initial) setLoading(true);
     try {
       setStatus(await fetchUnlockStatus());
-    } catch {
+    } catch (caught) {
+      reportError(caught, { area: 'unlock', op: 'load_status' });
       setError('Unlock status unavailable.');
     } finally {
       if (initial) setLoading(false);

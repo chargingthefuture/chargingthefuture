@@ -8,6 +8,27 @@ import { interFamily } from '../../components/ui';
 import type { RoomCohort } from './PeerProgrammingApi';
 import { usePPTheme } from './usePPTheme';
 
+// Listen in, or "Viewing" on the cohort open now.
+function ListenButton({ isOpen, busy, onOpen }: { isOpen: boolean; busy: boolean; onOpen: () => void }) {
+  const t = usePPTheme();
+  const color = isOpen ? t.MUTED : t.ACCENT;
+  return (
+    <TouchableOpacity
+      onPress={onOpen}
+      disabled={busy || isOpen}
+      accessibilityRole="button"
+      style={[styles.listen, {
+        borderRadius: t.r(8),
+        backgroundColor: isOpen ? t.BORDER : `${t.ACCENT}1A`,
+        borderColor: isOpen ? t.BORDER_HI : `${t.ACCENT}40`,
+      }]}
+    >
+      <Headphones size={13} color={color} />
+      <Text style={[styles.listenText, { color }]}>{isOpen ? 'Viewing' : 'Listen in'}</Text>
+    </TouchableOpacity>
+  );
+}
+
 function CohortRow({ cohort, isOpen, busy, onOpen }: { cohort: RoomCohort; isOpen: boolean; busy: boolean; onOpen: () => void }) {
   const t = usePPTheme();
   const count = `${cohort.memberCount} member${cohort.memberCount !== 1 ? 's' : ''}`;
@@ -30,19 +51,7 @@ function CohortRow({ cohort, isOpen, busy, onOpen }: { cohort: RoomCohort; isOpe
         </View>
         <Text style={[styles.count, { color: t.MUTED }]}>{count}</Text>
       </View>
-      <TouchableOpacity
-        onPress={onOpen}
-        disabled={busy || isOpen}
-        accessibilityRole="button"
-        style={[styles.listen, {
-          borderRadius: t.r(8),
-          backgroundColor: isOpen ? t.BORDER : `${t.ACCENT}1A`,
-          borderColor: isOpen ? t.BORDER_HI : `${t.ACCENT}40`,
-        }]}
-      >
-        <Headphones size={13} color={isOpen ? t.MUTED : t.ACCENT} />
-        <Text style={[styles.listenText, { color: isOpen ? t.MUTED : t.ACCENT }]}>{isOpen ? 'Viewing' : 'Listen in'}</Text>
-      </TouchableOpacity>
+      <ListenButton isOpen={isOpen} busy={busy} onOpen={onOpen} />
     </View>
   );
 }

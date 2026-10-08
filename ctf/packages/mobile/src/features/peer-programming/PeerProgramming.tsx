@@ -82,27 +82,64 @@ export function PeerProgramming({ initialCohortId = null }: { initialCohortId?: 
     <View style={[styles.root, { backgroundColor: t.BG }]}>
       {error ? null : <TabRow tab={tab} onSelect={setTab} />}
       <ScrollView contentContainerStyle={error ? styles.errorFill : null} keyboardShouldPersistTaps="handled">
-        {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
-        {!error && tab === 'goals' ? <GoalsTab /> : null}
-        {!error && tab === 'cohorts' && room ? (
-          <CohortsTab
+        {error ? (
+          <Text accessibilityRole="alert" style={styles.error}>{error}</Text>
+        ) : (
+          <TabBody
+            tab={tab}
             room={room}
-            openCohortId={activeCohortId}
+            activeCohortId={activeCohortId}
             switching={switching}
             isAdmin={isAdmin}
             onOpenCohort={(cohortId) => void openCohort(cohortId).then((opened) => opened && setTab('chat'))}
             onJoinSession={() => setTab('session')}
+            onSend={send}
           />
-        ) : null}
-        {!error && tab === 'chat' && room ? <ChatTab room={room} onSend={send} /> : null}
-        {room ? (
-          <View style={!error && tab === 'session' ? null : styles.hidden}>
-            <SessionTab room={room} />
-          </View>
-        ) : null}
+        )}
+        <KeptSession room={room} visible={!error && tab === 'session'} />
       </ScrollView>
     </View>
   );
+}
+
+type RoomState = ReturnType<typeof useRoom>;
+
+// The session tab stays mounted while hidden, so a live call survives switching tabs.
+function KeptSession({ room, visible }: { room: RoomState['room']; visible: boolean }) {
+  if (!room) return null;
+  return (
+    <View style={visible ? null : styles.hidden}>
+      <SessionTab room={room} />
+    </View>
+  );
+}
+
+// The Goals, Cohorts and Direct Line tabs (Session is kept mounted by the caller).
+function TabBody({ tab, room, activeCohortId, switching, isAdmin, onOpenCohort, onJoinSession, onSend }: {
+  tab: Tab;
+  room: RoomState['room'];
+  activeCohortId: RoomState['activeCohortId'];
+  switching: RoomState['switching'];
+  isAdmin: boolean;
+  onOpenCohort: (_cohortId: string) => void;
+  onJoinSession: () => void;
+  onSend: RoomState['send'];
+}) {
+  if (tab === 'goals') return <GoalsTab />;
+  if (!room) return null;
+  if (tab === 'cohorts') {
+    return (
+      <CohortsTab
+        room={room}
+        openCohortId={activeCohortId}
+        switching={switching}
+        isAdmin={isAdmin}
+        onOpenCohort={onOpenCohort}
+        onJoinSession={onJoinSession}
+      />
+    );
+  }
+  return tab === 'chat' ? <ChatTab room={room} onSend={onSend} /> : null;
 }
 
 const styles = StyleSheet.create({

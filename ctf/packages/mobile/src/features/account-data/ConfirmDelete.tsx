@@ -46,21 +46,7 @@ export function ConfirmDelete({
     }
   }
 
-  if (status === 'done') {
-    return (
-      <Modal visible animationType="none" onRequestClose={() => undefined}>
-        <View style={s.doneRoot}>
-          <View style={s.doneIcon}>
-            <CheckCircle size={30} color="#22C55E" />
-          </View>
-          <Text style={s.doneTitle}>Deletion queued</Text>
-          <Text style={s.doneBody}>
-            Your request has been received. Your personal data is being removed across all services, and your sign-in is removed with it — you will not be able to sign back in. Your ServiceCredits are held for 7 days from now, then returned to the community treasury; if any are locked in an active escrow, the return waits until that escrow resolves. Some audit records are retained for platform integrity.
-          </Text>
-        </View>
-      </Modal>
-    );
-  }
+  if (status === 'done') return <DeletionQueued s={s} />;
 
   const points: Array<{ t: string; Icon: LucideIcon; c: string }> = [
     { t: `All personal data deleted across ${serviceCount} services`, Icon: Trash2, c: '#EF4444' },
@@ -126,17 +112,7 @@ export function ConfirmDelete({
             ) : null}
 
             <View style={s.actions}>
-              <TouchableOpacity
-                onPress={handleConfirm}
-                disabled={!ready}
-                accessibilityRole="button"
-                style={[s.deleteBtn, ready ? s.deleteBtnReady : null]}
-              >
-                {submitting ? <Spinner size={15} color="#374151" /> : <Trash2 size={15} color={ready ? '#EF4444' : '#374151'} />}
-                <Text style={[s.deleteText, ready ? s.deleteTextReady : null]}>
-                  {submitting ? 'Deleting…' : 'Delete permanently'}
-                </Text>
-              </TouchableOpacity>
+              <DeleteButton s={s} ready={ready} submitting={submitting} onPress={() => void handleConfirm()} />
               <TouchableOpacity onPress={onCancel} disabled={submitting} accessibilityRole="button" style={s.keepBtn}>
                 <Text style={s.keepText}>Keep my data</Text>
               </TouchableOpacity>
@@ -160,6 +136,42 @@ function BandGradient() {
       </Defs>
       <Rect width="100%" height="100%" fill="url(#confirmBand)" />
     </Svg>
+  );
+}
+
+
+
+// Delete permanently: dark until the phrase is typed, then red; a spinner while it runs.
+function DeleteButton({ s, ready, submitting, onPress }: { s: ReturnType<typeof makeStyles>; ready: boolean; submitting: boolean; onPress: () => void }) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      disabled={!ready}
+      accessibilityRole="button"
+      style={[s.deleteBtn, ready ? s.deleteBtnReady : null]}
+    >
+      {submitting ? <Spinner size={15} color="#374151" /> : <Trash2 size={15} color={ready ? '#EF4444' : '#374151'} />}
+      <Text style={[s.deleteText, ready ? s.deleteTextReady : null]}>
+        {submitting ? 'Deleting…' : 'Delete permanently'}
+      </Text>
+    </TouchableOpacity>
+  );
+}
+
+// The "Deletion queued" acknowledgement shown once the delete request is accepted.
+function DeletionQueued({ s }: { s: ReturnType<typeof makeStyles> }) {
+  return (
+    <Modal visible animationType="none" onRequestClose={() => undefined}>
+      <View style={s.doneRoot}>
+        <View style={s.doneIcon}>
+          <CheckCircle size={30} color="#22C55E" />
+        </View>
+        <Text style={s.doneTitle}>Deletion queued</Text>
+        <Text style={s.doneBody}>
+          Your request has been received. Your personal data is being removed across all services, and your sign-in is removed with it — you will not be able to sign back in. Your ServiceCredits are held for 7 days from now, then returned to the community treasury; if any are locked in an active escrow, the return waits until that escrow resolves. Some audit records are retained for platform integrity.
+        </Text>
+      </View>
+    </Modal>
   );
 }
 

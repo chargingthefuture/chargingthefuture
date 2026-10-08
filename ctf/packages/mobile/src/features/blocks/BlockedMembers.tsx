@@ -13,6 +13,7 @@ import { useTheme, type ThemeTokens } from '../../theme';
 import { interFamily } from '../../components/ui';
 import { AccountBackButton, DEFAULT_ACCOUNT_TOKENS, getAccountTokens, radius, Spinner, type AccountTokens } from '../account';
 import { fetchBlockedMembers, unblockMember, type BlockedMember } from './api';
+import { reportError } from '../../observability/report';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
@@ -33,7 +34,8 @@ export function BlockedMembers({ onBack }: { onBack: () => void }) {
     try {
       setBlocks(await fetchBlockedMembers());
       setLoadState('ready');
-    } catch {
+    } catch (caught) {
+      reportError(caught, { area: 'blocks', op: 'load_blocked_members' });
       setLoadState('error');
     }
   }, []);

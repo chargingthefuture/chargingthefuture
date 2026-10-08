@@ -1,6 +1,6 @@
-// The screens of the Android app and how they connect. The app has no screen stack: App.tsx holds
-// one selected key, the header's back chevron and Android's back button go to `parentOf(key)`, and
-// the header names the screen with SCREEN_TITLES.
+// The screens of the Android app and how they connect. The app has no screen stack: useAppNavigation.ts holds
+// one selected key, the header's back chevron and Android's back button go to `parentOf(key)` (with the
+// exceptions listed there), and the header names the screen with SCREEN_TITLES.
 //
 // The native Android app carries the plugins that materially benefit from being an installed app
 // (Chyme live audio, Beacon broadcasts, PeerProgramming's live call, Foundation's instant calls), plus
@@ -97,7 +97,7 @@ const PARENTS: Partial<Record<FeatureKey, FeatureKey>> = {
   'account-data': 'account',
   'blocked-members': 'account',
   unlock: 'account',
-  // Recurring Activity is also opened from Foundation; App.tsx sends back there when it was.
+  // Recurring Activity is also opened from Foundation; useAppNavigation sends back there when it was.
   'recurring-activity': 'account',
 };
 

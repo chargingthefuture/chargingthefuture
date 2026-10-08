@@ -117,7 +117,7 @@ export function AppHeader({
   isAdmin: boolean;
   signedIn: boolean;
   open: Open;
-  /** Back from the selected screen (App.tsx knows where it was opened from). */
+  /** Back from the selected screen (useAppNavigation knows where it was opened from). */
   onBack: () => void;
   onOpenAccount: () => void;
   /** Remounts the open screen, for the admin refresh control. */

@@ -171,18 +171,7 @@ export function TopBar({ onOpenAccount }: { onOpenAccount: () => void }) {
   );
 }
 
-export function ScreenHeader({
-  title,
-  emoji,
-  icon,
-  iconTile = true,
-  accent,
-  onBack,
-  actions,
-  background,
-  gap,
-  ...chrome
-}: ChromeActions & {
+type ScreenHeaderProps = ChromeActions & {
   title: string;
   emoji?: string;
   /** An icon drawn in the app icon tile instead of the emoji (web MobileScreenHeader `icon`). */
@@ -197,46 +186,42 @@ export function ScreenHeader({
   background?: string;
   /** The space between the items in the bar and in the actions cluster, for the same case. */
   gap?: number;
-}) {
+};
+
+// The app icon: the emoji or icon in a 32px tile tinted with the accent, or the icon bare.
+function HeaderIcon({ emoji, icon, iconTile = true, accent }: Pick<ScreenHeaderProps, 'emoji' | 'icon' | 'iconTile' | 'accent'>) {
   const { tokens } = useTheme();
   const s = useMemo(() => makeStyles(tokens), [tokens]);
-  const chevronColor = accent ?? tokens.textPrimary;
+  if (icon && !iconTile) return <>{icon}</>;
+  if (!icon && !emoji) return null;
   return (
-    <View
-      style={[
-        s.screenHeader,
-        background === undefined ? null : { backgroundColor: background },
-        gap === undefined ? null : { gap },
-      ]}
-    >
+    <View style={[s.appIcon, accent ? { backgroundColor: `${accent}26`, borderColor: `${accent}66` } : null]}>
+      {icon ?? <Text style={s.appIconEmoji}>{emoji}</Text>}
+    </View>
+  );
+}
+
+export function ScreenHeader({ title, emoji, icon, iconTile, accent, onBack, actions, background, gap, ...chrome }: ScreenHeaderProps) {
+  const { tokens } = useTheme();
+  const s = useMemo(() => makeStyles(tokens), [tokens]);
+  const gapStyle = gap === undefined ? null : { gap };
+  return (
+    <View style={[s.screenHeader, background === undefined ? null : { backgroundColor: background }, gapStyle]}>
       <TouchableOpacity
         onPress={onBack}
         accessibilityRole="button"
         accessibilityLabel="Back"
-        style={[
-          s.iconBtn,
-          accent ? { backgroundColor: `${accent}1A`, borderColor: `${accent}4D` } : null,
-        ]}
+        style={[s.iconBtn, accent ? { backgroundColor: `${accent}1A`, borderColor: `${accent}4D` } : null]}
       >
-        <ChevronLeft size={20} color={chevronColor} />
+        <ChevronLeft size={20} color={accent ?? tokens.textPrimary} />
       </TouchableOpacity>
-      {icon && !iconTile ? icon : null}
-      {(icon && iconTile) || (!icon && emoji) ? (
-        <View
-          style={[
-            s.appIcon,
-            accent ? { backgroundColor: `${accent}26`, borderColor: `${accent}66` } : null,
-          ]}
-        >
-          {icon ?? <Text style={s.appIconEmoji}>{emoji}</Text>}
-        </View>
-      ) : null}
+      <HeaderIcon emoji={emoji} icon={icon} iconTile={iconTile} accent={accent} />
       <Text style={s.screenTitle} numberOfLines={1}>
         {title}
       </Text>
       {/* The web header's `actions` slot (an Admin or Member view button, a refresh control) sits
           before the shared controls, 10px apart. */}
-      {actions ? <View style={[s.actions, gap === undefined ? null : { gap }]}>{actions}</View> : null}
+      {actions ? <View style={[s.actions, gapStyle]}>{actions}</View> : null}
       <BarControls {...chrome} />
     </View>
   );
