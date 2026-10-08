@@ -98,6 +98,7 @@ export const DIRECTORY_INVITE_ALREADY_WRITTEN = [
   'holly-d-192',
   'nikki-martindale-9',
   'no-name-individual',
+  'indiko-1',
 ] as const;
 
 const DIRECTORY_PROFILE_BASE = 'https://app.chargingthefuture.com/apps/directory/profile/';
