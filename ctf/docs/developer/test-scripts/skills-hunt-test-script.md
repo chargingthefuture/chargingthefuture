@@ -13,7 +13,7 @@
 | **Surfaces** | Web (`/apps/skills-hunt`, `/admin/skills-hunt`) · Android (`SkillsHunt.tsx`, `AdminSkillsHunt.tsx`) |
 | **Seed first** | `pnpm --dir ctf seed:skills-hunt` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-skills-hunt-feature-inventory.md` |
-| **Generated** | 2026-08-27 (hand-updated: 2026-10-08 "profession" reads "job title" — SH-2; team leaderboard removed — SH-8; report flow removed — SH-13, SH-A13; flag reversal + re-add after remove — SH-A6, SH-A6b; taken-down URL refused — SH-A6c; unflag — SH-A6; admin list hides nothing — SH-A6d; restore a removed row — SH-A6e) · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-09-17 manual update: SH-2 now checks that the nomination is really written, not only acknowledged on screen — the submission INSERT listed 18 columns against 19 values and Postgres refused every nomination · 2026-09-17 manual update: SH-A10b and SH-A10c cover the named-skill mission goal, the mission Edit control and Recompute progress; SH-9 now says how to read a count against its title · 2026-09-18 manual update: SH-9 expects a count capped at its target, and points the mis-pointed-mission check at the admin Missions tab · 2026-09-20 manual update: SH-9b covers the missions picture control, which moved to the admin Missions tab the same day and now shows the picture on that screen rather than handing the file off · 2026-09-20 manual update: SH-A4c covers the paged moderation queue (25 a page, Previous/Next, filter change returns to page 1) · 2026-09-22 manual update: SH-1c covers the round as a field the scout marks (nothing pre-marked with two rounds open, submit waits for a mark, the mark survives a refresh) and the round named on the confirmation; SH-1d covers a closed round leaving the field reachable; SH-A4d covers the round's purpose above the moderation controls and the second confirmation on accept · 2026-10-01 manual update: one open round and the end-of-round award — SH-1c, SH-1d, SH-10c, SH-A1, SH-A3, SH-A4d, SH-A8, SH-A9b rewritten; SH-A-award and SH-A10d added · 2026-10-02 manual update: CS-4, SH-A3, SH-A4c and SH-A4d — Moderation opens on the open round with no round chips · 2026-10-05 manual update: SH-11b added (a failed load or mark-read says so); SH-A2b covers a failed rebuild showing its reason |
+| **Generated** | 2026-08-27 (hand-updated: 2026-10-08 "profession" reads "job title" — SH-2; 2026-10-08 the nomination keeps its job title — SH-7b; team leaderboard removed — SH-8; report flow removed — SH-13, SH-A13; flag reversal + re-add after remove — SH-A6, SH-A6b; taken-down URL refused — SH-A6c; unflag — SH-A6; admin list hides nothing — SH-A6d; restore a removed row — SH-A6e) · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-09-17 manual update: SH-2 now checks that the nomination is really written, not only acknowledged on screen — the submission INSERT listed 18 columns against 19 values and Postgres refused every nomination · 2026-09-17 manual update: SH-A10b and SH-A10c cover the named-skill mission goal, the mission Edit control and Recompute progress; SH-9 now says how to read a count against its title · 2026-09-18 manual update: SH-9 expects a count capped at its target, and points the mis-pointed-mission check at the admin Missions tab · 2026-09-20 manual update: SH-9b covers the missions picture control, which moved to the admin Missions tab the same day and now shows the picture on that screen rather than handing the file off · 2026-09-20 manual update: SH-A4c covers the paged moderation queue (25 a page, Previous/Next, filter change returns to page 1) · 2026-09-22 manual update: SH-1c covers the round as a field the scout marks (nothing pre-marked with two rounds open, submit waits for a mark, the mark survives a refresh) and the round named on the confirmation; SH-1d covers a closed round leaving the field reachable; SH-A4d covers the round's purpose above the moderation controls and the second confirmation on accept · 2026-10-01 manual update: one open round and the end-of-round award — SH-1c, SH-1d, SH-10c, SH-A1, SH-A3, SH-A4d, SH-A8, SH-A9b rewritten; SH-A-award and SH-A10d added · 2026-10-02 manual update: CS-4, SH-A3, SH-A4c and SH-A4d — Moderation opens on the open round with no round chips · 2026-10-05 manual update: SH-11b added (a failed load or mark-read says so); SH-A2b covers a failed rebuild showing its reason |
 | **Inventory wording** | 2026-10-01: banned-term wording removed from the inventory prose; no step in this script changed |
 
 ---
@@ -416,6 +416,24 @@ Result: web ☐
 5. Submit the full form.
 
 **Expected:** Submission succeeds. The proposed skill is stored and visible in My Finds as a chip. The total skills + proposed skills count does not exceed 10. A proposed skill becomes a real taxonomy skill only after the owner approves it — an `addSkill` entry appended to the taxonomy change list (`ctf/scripts/lib/taxonomyChange.mjs`) and applied by the owner-run apply workflow.
+
+Result: web ☐
+
+---
+
+### SH-7b — The job title picked on a nomination reaches the Directory profile (added 2026-10-08)
+
+**Role:** member, then admin · **Surfaces:** web
+
+**Precondition:** Active round exists. Member is signed in. An admin account is available.
+
+**Steps:**
+1. On the Scout tab, open **Know their job title?** and pick a job title (e.g. Graphic / Visual Designers).
+2. Confirm the list now shows that job title, and its skills appear as separate chips. Remove one of them.
+3. Pick "Select a job title…" and confirm the list clears while the skill chips stay. Pick the job title again, fill in the rest of the form, and submit.
+4. As an admin, accept the nomination. Open the Directory profile it created.
+
+**Expected:** The profile shows the picked job title and its sector, and the skills exactly as submitted (the removed one is absent). A nomination submitted with no job title creates a profile with no job title.
 
 Result: web ☐
 

@@ -2,13 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { X, ChevronDown, Search } from "lucide-react";
-import { groupSkillsByOccupation, groupTaxonomyBySector, type TaxonomyFlattenedRow } from "./sh-shared";
+import { groupSkillsByOccupation, groupTaxonomyBySector, jobTitleIdsByName, type TaxonomyFlattenedRow } from "./sh-shared";
 import { useTheme } from '@/hooks/useTheme';
 import { getSkillsHuntTokens } from './sh-shared';
 
 type TaxonomyLoadState =
   | { status: "loading" }
-  | { status: "ready"; categories: Record<string, string[]>; occupations: Record<string, string[]> }
+  | { status: "ready"; categories: Record<string, string[]>; occupations: Record<string, string[]>; occupationIds: Record<string, string> }
   | { status: "error" };
 
 // Cache the grouped taxonomy for the page session so the picker never has to show "Loading…"
@@ -17,18 +17,19 @@ type TaxonomyLoadState =
 // skill re-rendering the picker. Both groupings come from the one flattened fetch.
 let cachedCategories: Record<string, string[]> | null = null;
 let cachedOccupations: Record<string, string[]> | null = null;
+let cachedOccupationIds: Record<string, string> | null = null;
 
 // Fetch the canonical skills taxonomy once and group it by sector for the picker. On error or an
 // empty result the picker still renders the free-text proposed-skills box so a scout can proceed.
 function useTaxonomy(): TaxonomyLoadState {
   const [state, setState] = useState<TaxonomyLoadState>(
-    cachedCategories && cachedOccupations
-      ? { status: "ready", categories: cachedCategories, occupations: cachedOccupations }
+    cachedCategories && cachedOccupations && cachedOccupationIds
+      ? { status: "ready", categories: cachedCategories, occupations: cachedOccupations, occupationIds: cachedOccupationIds }
       : { status: "loading" },
   );
 
   useEffect(() => {
-    if (cachedCategories && cachedOccupations) return;
+    if (cachedCategories && cachedOccupations && cachedOccupationIds) return;
     let active = true;
     void (async () => {
       try {
@@ -39,9 +40,11 @@ function useTaxonomy(): TaxonomyLoadState {
         const rows = data.items ?? [];
         const categories = groupTaxonomyBySector(rows);
         const occupations = groupSkillsByOccupation(rows);
+        const occupationIds = jobTitleIdsByName(rows);
         cachedCategories = categories;
         cachedOccupations = occupations;
-        setState({ status: "ready", categories, occupations });
+        cachedOccupationIds = occupationIds;
+        setState({ status: "ready", categories, occupations, occupationIds });
       } catch {
         if (active) setState({ status: "error" });
       }
@@ -59,11 +62,12 @@ function useTaxonomy(): TaxonomyLoadState {
 function readTaxonomy(taxonomy: TaxonomyLoadState): {
   categories: Record<string, string[]>;
   occupations: Record<string, string[]>;
+  occupationIds: Record<string, string>;
 } {
   if (taxonomy.status === "ready") {
-    return { categories: taxonomy.categories, occupations: taxonomy.occupations };
+    return { categories: taxonomy.categories, occupations: taxonomy.occupations, occupationIds: taxonomy.occupationIds };
   }
-  return { categories: {}, occupations: {} };
+  return { categories: {}, occupations: {}, occupationIds: {} };
 }
 
 interface SkillsPickerProps {
@@ -74,7 +78,8 @@ interface SkillsPickerProps {
   canAddMore: boolean;
   allSkillCount: number;
   onToggleSkill: (s: string) => void;
-  onAddOccupationSkills: (skillNames: string[]) => void;
+  jobTitleId: string | null;
+  onSelectJobTitle: (jobTitleId: string | null, skillNames: string[]) => void;
   onRemoveProposed: (s: string) => void;
   onOpenCategory: (c: string | null) => void;
   onFreeText: (v: string) => void;
@@ -156,28 +161,35 @@ function CategoryRow({ category, categorySkills, skills, isOpen, canAddMore, onO
   );
 }
 
-// Optional profession prefill — fills in an entire occupation's skills at once. Renders nothing
-// until the taxonomy is loaded and at least one occupation is known.
-function OccupationPrefill({ occupations, canAddMore, onAddOccupationSkills }: {
+// Optional job title. Picking one is saved with the nomination (and becomes the job title on the
+// Directory profile an accepted nomination creates) and also fills in that job title's skills, which
+// stay listed one by one for the scout to trim. "Not set" clears the job title and leaves the skills
+// alone. Renders nothing until the taxonomy is loaded and at least one job title is known.
+function JobTitlePicker({ occupations, occupationIds, jobTitleId, onSelectJobTitle }: {
   occupations: Record<string, string[]>;
-  canAddMore: boolean;
-  onAddOccupationSkills: (skillNames: string[]) => void;
+  occupationIds: Record<string, string>;
+  jobTitleId: string | null;
+  onSelectJobTitle: (jobTitleId: string | null, skillNames: string[]) => void;
 }) {
   const { theme } = useTheme();
   const t = getSkillsHuntTokens(theme);
-  const occupationNames = Object.keys(occupations);
+  const occupationNames = Object.keys(occupations).filter((name) => occupationIds[name]);
   if (occupationNames.length === 0) return null;
+  const selectedName = occupationNames.find((name) => occupationIds[name] === jobTitleId) ?? "";
   return (
     <div style={{ marginBottom: 10 }}>
       <label htmlFor="sh-occupation-prefill" style={{ fontSize: 11, color: t.SUBTLE, display: "block", marginBottom: 4 }}>
-        Know their job title? Add its skills <span style={{ color: t.FAINT }}>(optional — fills the skills in for you)</span>
+        Know their job title? <span style={{ color: t.FAINT }}>(optional — fills its skills in for you)</span>
       </label>
       <select
         id="sh-occupation-prefill"
-        value=""
-        disabled={!canAddMore}
-        onChange={(e) => { const occ = e.target.value; if (occ && occupations[occ]) onAddOccupationSkills(occupations[occ]); }}
-        style={{ width: "100%", padding: "8px 12px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, fontSize: 13, color: t.TEXT, outline: "none", cursor: canAddMore ? "pointer" : "default", opacity: canAddMore ? 1 : 0.5 }}
+        value={selectedName}
+        onChange={(e) => {
+          const name = e.target.value;
+          if (!name) onSelectJobTitle(null, []);
+          else onSelectJobTitle(occupationIds[name] ?? null, occupations[name] ?? []);
+        }}
+        style={{ width: "100%", padding: "8px 12px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, fontSize: 13, color: t.TEXT, outline: "none", cursor: "pointer" }}
       >
         <option value="">Select a job title…</option>
         {occupationNames.map((occ) => (
@@ -331,9 +343,9 @@ function FooterStatus({ canAddMore, allSkillCount }: {
 export function SkillsPicker(props: SkillsPickerProps) {
   const { theme } = useTheme();
   const t = getSkillsHuntTokens(theme);
-  const { skills, proposedSkills, freeText, openCategory, canAddMore, allSkillCount, onToggleSkill, onAddOccupationSkills, onRemoveProposed, onOpenCategory, onFreeText, onAddProposed } = props;
+  const { skills, proposedSkills, freeText, openCategory, canAddMore, allSkillCount, onToggleSkill, jobTitleId, onSelectJobTitle, onRemoveProposed, onOpenCategory, onFreeText, onAddProposed } = props;
   const taxonomy = useTaxonomy();
-  const { categories, occupations } = readTaxonomy(taxonomy);
+  const { categories, occupations, occupationIds } = readTaxonomy(taxonomy);
   const hasCategories = Object.keys(categories).length > 0;
 
   // Keyword search across every sector — a flat, de-duplicated skill list filtered
@@ -356,7 +368,7 @@ export function SkillsPicker(props: SkillsPickerProps) {
 
       <SelectedChips skills={skills} proposedSkills={proposedSkills} onToggleSkill={onToggleSkill} onRemoveProposed={onRemoveProposed} />
 
-      <OccupationPrefill occupations={occupations} canAddMore={canAddMore} onAddOccupationSkills={onAddOccupationSkills} />
+      <JobTitlePicker occupations={occupations} occupationIds={occupationIds} jobTitleId={jobTitleId} onSelectJobTitle={onSelectJobTitle} />
 
       <TaxonomyStatus taxonomy={taxonomy} />
 

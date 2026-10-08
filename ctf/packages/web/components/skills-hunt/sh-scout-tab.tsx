@@ -33,7 +33,8 @@ export interface ScoutFormModel {
   onState: (v: string) => void;
   onCity: (v: string) => void;
   onToggleSkill: (s: string) => void;
-  onAddOccupationSkills: (skillNames: string[]) => void;
+  jobTitleId: string | null;
+  onSelectJobTitle: (jobTitleId: string | null, skillNames: string[]) => void;
   onRemoveProposed: (s: string) => void;
   onOpenCategory: (c: string | null) => void;
   onFreeText: (v: string) => void;
@@ -279,7 +280,8 @@ function NominationForm({ form, activeRound }: {
           canAddMore={form.canAddMore}
           allSkillCount={form.allSkillCount}
           onToggleSkill={form.onToggleSkill}
-          onAddOccupationSkills={form.onAddOccupationSkills}
+          jobTitleId={form.jobTitleId}
+          onSelectJobTitle={form.onSelectJobTitle}
           onRemoveProposed={form.onRemoveProposed}
           onOpenCategory={form.onOpenCategory}
           onFreeText={form.onFreeText}

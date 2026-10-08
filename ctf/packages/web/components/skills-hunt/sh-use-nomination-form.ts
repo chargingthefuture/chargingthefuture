@@ -87,6 +87,7 @@ export function useNominationForm(activeRound: SkillsHuntRound | null): {
   const [city, setCity] = useState("");
   const [skills, setSkills] = useState<string[]>([]);
   const [proposedSkills, setProposed] = useState<string[]>([]);
+  const [jobTitleId, setJobTitleId] = useState<string | null>(null);
   const [freeText, setFreeText] = useState("");
   const [openCategory, setOpenCategory] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -112,11 +113,13 @@ export function useNominationForm(activeRound: SkillsHuntRound | null): {
     setFreeText("");
   }
 
-  // Bulk-add the skills of a chosen profession (occupation). A convenience so a scout who knows
-  // someone is, say, a Pharmacist does not have to remember every skill: picking the profession
-  // fills its taxonomy skills into the existing skills field (deduped, and only up to the cap),
-  // which the scout can then trim. Nothing new is stored — the skills remain the source of truth.
-  function addOccupationSkills(skillNames: string[]) {
+  // Pick (or clear) the nominee's job title. The id is saved with the nomination and becomes the job
+  // title on the Directory profile an accepted nomination creates. Picking one also fills in its
+  // taxonomy skills (deduped, and only up to the cap), so a scout who knows someone is, say, a
+  // Pharmacist does not have to remember every skill; the skills stay listed one by one and the scout
+  // can trim them. Clearing the job title leaves the skills as they are.
+  function selectJobTitle(nextJobTitleId: string | null, skillNames: string[]) {
+    setJobTitleId(nextJobTitleId);
     setSkills((prev) => {
       const next = [...prev];
       for (const name of skillNames) {
@@ -143,6 +146,7 @@ export function useNominationForm(activeRound: SkillsHuntRound | null): {
           quoraProfileUrl: quora.trim(),
           skills,
           proposedSkills,
+          jobTitleId,
           country: country.trim(),
           state: stateRegion.trim() ? stateRegion.trim() : null,
           city: city.trim() ? city.trim() : null,
@@ -175,17 +179,17 @@ export function useNominationForm(activeRound: SkillsHuntRound | null): {
   function resetForm() {
     setFullName(""); setBio(""); setQuora(""); setGuessedName("");
     setCountry(""); setStateRegion(""); setCity("");
-    setSkills([]); setProposed([]); setFreeText("");
+    setSkills([]); setProposed([]); setFreeText(""); setJobTitleId(null);
     setSubmitted(false); setSubmitError(null);
   }
 
   const form: ScoutFormModel = {
-    fullName, bio, quora, country, state: stateRegion, city, skills, proposedSkills, freeText, openCategory,
+    fullName, bio, quora, country, state: stateRegion, city, skills, proposedSkills, jobTitleId, freeText, openCategory,
     quoraBlocked, submitting, submitError, allSkillCount, canAddMore,
     onFullName: setFullName, onBio: setBio, onQuora: changeQuora,
     onCountry: setCountry, onState: setStateRegion, onCity: setCity,
     onToggleSkill: toggleSkill,
-    onAddOccupationSkills: addOccupationSkills,
+    onSelectJobTitle: selectJobTitle,
     onRemoveProposed: (s) => setProposed((prev) => prev.filter((x) => x !== s)),
     onOpenCategory: setOpenCategory, onFreeText: setFreeText, onAddProposed: addProposed,
     onSubmit: () => void handleSubmit(),

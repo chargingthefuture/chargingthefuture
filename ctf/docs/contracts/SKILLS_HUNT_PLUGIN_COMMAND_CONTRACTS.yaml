@@ -137,7 +137,7 @@ contracts:
 
   - pluginId: skills-hunt
     command: skills-hunt.submission.create
-    version: 1.1.0
+    version: 1.2.0
     description: >-
       Create a contributor submission with validated profile URL, skill set, and
       the nominee's location. `quoraProfileUrl` is required and must be a Quora profile link (owner
@@ -146,7 +146,9 @@ contracts:
       location carries into the generated directory profile (the shared member profile). Admins are
       exempt from the scout rate limits (the rolling weekly submission cap and the reputation-driven
       pre-approval/restricted gate); the active-round window and the one-active-submission-per-Quora-URL
-      duplicate guard still apply to everyone.
+      duplicate guard still apply to everyone. `jobTitleId` is optional (owner decision, 2026-10-08):
+      the job title picked from the Scout form's list, stored only when it names an active job title,
+      and carried with its sector onto the directory profile generated on accept.
     inputSchema:
       roundId:
         type: string
@@ -172,6 +174,9 @@ contracts:
       city:
         type: string
         required: false
+      jobTitleId:
+        type: string
+        required: false
     outputSchema:
       submissionId:
         type: string
@@ -186,6 +191,8 @@ contracts:
       - directory_suppressed_quora_urls
       - skills_hunt_rare_skills_lookup
       - skills_hunt_audit_log
+      # Read-only: the insert stores jobTitleId only when it names an active job title.
+      - skills_taxonomy_job_titles
     purpose: community_contribution
     retentionClass: transactional_long_lived
     idempotency: true
@@ -293,6 +300,9 @@ contracts:
       # Read-only, through lib/shared/directory-interface.ts: a nomination is refused when the
       # person's Quora URL is on Directory's takedown list.
       - directory_suppressed_quora_urls
+      # Read-only: an accept reads the nomination's job title and its sector for the generated
+      # directory profile.
+      - skills_taxonomy_job_titles
     purpose: moderation_and_scoring
     retentionClass: audit_long_lived
     idempotency: true
@@ -994,3 +1004,5 @@ changelog:
     change: >-
       Added skills-hunt.submission.check, the read the Scout form makes as soon as a Quora link is
       pasted, so a scout learns the person is already nominated before filling in the rest.
+  - date: 2026-10-08
+    change: Bumped skills-hunt.submission.create to v1.2.0 — new optional jobTitleId input, stored on skills_hunt_submissions.job_title_id only when it names an active job title. An accept (skills-hunt.submission.review) copies it and its sector onto the generated directory profile; both commands now list skills_taxonomy_job_titles as a read.
