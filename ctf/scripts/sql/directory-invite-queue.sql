@@ -50,17 +50,31 @@ WITH already_written AS (
     'eli-paniagua-1',   -- an-invitation-to-eli.md
     'brecht-corbeel',   -- an-invitation-to-brecht.md
     'matthew-a-davis-1', -- an-invitation-to-matthew-a-davis.md
-    'sherri-jenkins-12' -- an-invitation-to-sherri.md
+    'sherri-jenkins-12', -- an-invitation-to-sherri.md
+    'wheeler-aaron',    -- an-invitation-to-aaron.md
+    'jane-doe-11966',   -- an-invitation-to-jane.md
+    'julie-6645',       -- an-invitation-to-julie.md
+    'holly-d-192',      -- an-invitation-to-holly.md
+    'nikki-martindale-9', -- an-invitation-to-nikki.md
+    'no-name-individual' -- an-invitation-to-no-name-individual.md
   ]) AS handle
 ),
 listed_skills AS (
   SELECT
     ps.profile_id::text AS profile_id,
     string_agg(s.name, '; ' ORDER BY ps.display_order, s.name) AS skills,
+    -- Each skill with the job title and sector it sits under. An invite post states how thin the
+    -- skill's own sector is, and two skills on one listing can sit in two sectors.
+    string_agg(
+      s.name || ' — ' || coalesce(sjt.name, 'no job title') || ' (' || coalesce(ssec.name, 'no sector') || ')',
+      '; ' ORDER BY ps.display_order, s.name
+    ) AS skill_places,
     count(*) AS skill_count,
     count(*) FILTER (WHERE s.name ILIKE '%advocacy%') AS advocacy_count
   FROM directory_profile_skills ps
   JOIN skills_taxonomy_skills s ON s.id::text = ps.skill_id::text
+  LEFT JOIN skills_taxonomy_job_titles sjt ON sjt.id::text = s.job_title_id::text
+  LEFT JOIN skills_taxonomy_sectors ssec ON ssec.id::text = sjt.sector_id::text
   WHERE s.is_active
   GROUP BY ps.profile_id::text
 ),
@@ -80,10 +94,12 @@ SELECT
   p.id AS profile_id,
   nullif(trim(concat_ws(' ', p.first_name, p.last_name)), '') AS name,
   p.profile_url AS quora_url,
+  'https://app.chargingthefuture.com/apps/directory/profile/' || p.id::text AS directory_url,
   nullif(concat_ws(', ', nullif(p.city, ''), nullif(p.state, ''), nullif(p.country, '')), '') AS location,
   sec.name AS sector,
   jt.name AS job_title,
   coalesce(ls.skills, '') AS skills,
+  coalesce(ls.skill_places, '') AS skill_places,
   coalesce(pn.proposed_skills, '') AS pending_skills,
   p.headline,
   p.bio,

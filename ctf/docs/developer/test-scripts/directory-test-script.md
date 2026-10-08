@@ -718,9 +718,14 @@ the Advocacy placeholder and one carrying only that placeholder.
 - Step 1: both routes lead to the queue. The row on Directory Admin sits with the Taken-down URLs and
   Audit log rows at the foot of the list. Before these existed the page could only be reached by
   typing the address, which is not something anybody does on a phone.
-- Step 2: rows render with name, Quora address, skills, and a plain-language label — "Write about the
-  skill", "General invitation", or "Nothing recorded yet". The counts line adds up to the number of
-  rows shown.
+- Step 2: rows render with name, Quora address, Directory profile address, and a plain-language label
+  — "Write about the skill", "General invitation", or "Nothing recorded yet". The counts line adds up
+  to the number of rows shown.
+- Step 2: each skill sits on its own line with the job title and sector it belongs to, for example
+  "Business-plan development and market analysis — Business Development Officers / SME Advisors
+  (Microfinance & SME Support)". Two skills on one listing can show two different sectors; an invite
+  post states how thin each skill's own sector is, so the profile's single sector field is not
+  enough (added 2026-10-07). A skill listed twice shows twice, without a warning in the console.
 - Step 2: a row whose only skill is the Advocacy placeholder reads **General invitation**. Advocacy
   stands in for a trade nobody has stated, so that row's post cannot name one.
 - Step 3: your own listing appears; anybody already written about does not. The owner was excluded
@@ -734,7 +739,8 @@ the Advocacy placeholder and one carrying only that placeholder.
   the thing worth seeing. The numbers are counts only: no name, address or skill of any member
   appears in this block.
 - Step 5: the clipboard holds plain text, readable without a spreadsheet: the coverage figures
-  first, then one block per person. This is the path that matters — the person who writes the
+  first, then one block per person, each carrying a `directory:` line with the profile address and a
+  `skills:` list of one line per skill with its job title and sector. This is the path that matters — the person who writes the
   invite posts works from a phone, and the posts argue from those figures, so a paste carrying the
   people without the numbers means the numbers get copied forward from an older reading instead.
 - Step 6: redirected to `/apps/directory`. Gathered and sorted this way the Directory is a different
@@ -754,7 +760,8 @@ the Advocacy placeholder and one carrying only that placeholder.
 - Step 1: the statement runs and returns rows. Before 2026-10-05 it stopped with a missing-column
   error, because it still tested a column that was dropped from `directory_profiles`.
 - Step 2: the profile with no Quora address is absent, and nobody already written about appears,
-  matching the screen.
+  matching the screen. The `directory_url` and `skill_places` columns match the screen's profile
+  address and per-skill lines (added 2026-10-07).
 - Step 3: the Directory section carries the profile count, the distinct-skills count, the coverage
   line toward 650 and the most-listed skills, rather than a skipped note.
 **Result:** web ☐ mobile ☐ — notes:
