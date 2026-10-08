@@ -783,9 +783,10 @@ but new PRs should use the three-part line.)
 2026-10-06 and 2026-10-08 — see rule 105).** The test: a plugin goes in the Android app when it materially
 benefits from being an installed mobile app (live audio or video that keeps running in the
 background, a call that rings the phone with the app closed, or sharing the phone's screen), plus
-whatever it needs to run. Today that is Chyme, Beacon, PeerProgramming and Foundation (in full since
-2026-10-08, owner decision; it was its instant calls alone before that), opened from the app's Apps
-list, with Clerk auth, bug reporting, and settings / account.
+whatever it needs to run. Today that is Chyme, Beacon, PeerProgramming and Foundation, each carried
+in full with its admin screens (Foundation in full since 2026-10-08, owner decision; it was its
+instant calls alone before that), opened from the app's Apps list, with Clerk auth, bug reporting,
+and settings / account.
 There will never be an iOS app. Adding a plugin is
 the owner's call; propose it with the reason. Everything else is served by the installable web app
 (PWA).
@@ -793,7 +794,7 @@ the owner's call; propose it with the reason. Everything else is served by the i
 **A carried plugin matches its web plugin one to one, design included (owner decision, 2026-10-08 —
 standing rule for all agents).** Which plugins are in the Android app is the owner's call. How much of
 a carried plugin is there is not: every screen, feature, piece of copy and state the web plugin has,
-plus whatever else the app needs for that plugin to work (sign-in, account, bug reporting, the feeds
+its admin screens included, plus whatever else the app needs for that plugin to work (sign-in, account, bug reporting, the feeds
 its screens read). Carrying one feature of a plugin is not an option. The Android screens copy the web
 design exactly — layout, copy, colors, sizes, spacing, icons and states — and nothing is invented: no
 copy, layout, row, note, color or state the web does not have. The only allowed differences are

@@ -40,25 +40,20 @@ The native Android app opens on an **Apps list** (the plugins below, one card ea
 
 1. **Clerk authentication** — sign-in / sign-up / session (`packages/mobile/src/auth/`). Required so a
    member can be signed in to use Chyme.
-2. **Chyme** (live audio) — `packages/mobile/src/features/chyme/` and everything it links to. **Any
-   feature reachable from the Chyme plugin (its header, its screens, the things it opens) stays in the
-   app.** Its live-audio background behavior (foreground service so audio keeps playing when the app
-   is backgrounded) is why it qualifies.
-2b. **Beacon** (live broadcasts) — `packages/mobile/src/features/beacon/`. Watching (HLS), the live
-   chat for signed-in members, and, for an admin, going live with the camera and microphone or by
-   sharing the phone's screen. Screen sharing from a phone is why it qualifies.
-2c. **PeerProgramming** (goal board, cohort chat, live Session call) —
-   `packages/mobile/src/features/peer-programming/`. The goal board and the chat come with it so the
-   member has the entire plugin in one place. It qualifies because the live Session call keeps running
-   with the screen off or another app in front (the Stream foreground service), and on Android an
-   installed app can share the phone's screen in that call.
-2d. **Foundation** (in full, owner decision 2026-10-08) — `packages/mobile/src/features/foundation/`.
-   Browse with search and the skill filter, a provider's profile with Request Quote and Connect now,
-   the Offer tab (listing blurb, instant connection settings, call alerts on this device, offered
-   skills), the Quotes tab with the price response and "Mark the work done", the Direct Line chat, and
-   the instant 1:1 call: the incoming ring with Answer / Decline and the live audio call with Mute,
-   Extend and End. It qualifies because an installed app can ring the phone with the app closed (native
-   push) and keep the call going with the screen off (the Stream foreground service).
+Each plugin below is carried **in full, admin screens included**: every screen, feature, piece of
+copy and state its web plugin has (see "Parity of a carried plugin" below). The note after each name
+is why it qualifies, not a limit on what is carried.
+
+2. **Chyme** — `packages/mobile/src/features/chyme/`. Qualifies for its live audio, which keeps
+   playing with the app in the background (the foreground service).
+2b. **Beacon** — `packages/mobile/src/features/beacon/`. Qualifies because an admin can go live by
+   sharing the phone's screen, which only an installed app can do.
+2c. **PeerProgramming** — `packages/mobile/src/features/peer-programming/`. Qualifies because the live
+   Session call keeps running with the screen off or another app in front (the Stream foreground
+   service), and an installed app can share the phone's screen in that call.
+2d. **Foundation** — `packages/mobile/src/features/foundation/` (in full since 2026-10-08; its instant
+   calls alone from 2026-10-06). Qualifies because an installed app can ring the phone with the app
+   closed (native push) and keep a call going with the screen off (the Stream foreground service).
 3. **Bug reporting** — `packages/mobile/src/features/bug-reporting/`, so a member on the app can report
    a problem.
 4. **Settings / account** — the account/settings surface (theme, sign-out, the shared top-actions the
@@ -74,7 +69,8 @@ Which plugins are in the Android app is the owner's call. How much of a carried 
 not: a plugin the owner adds to the app gets one-to-one parity with its web plugin — every screen,
 feature, piece of copy and state — plus whatever else the app needs for that plugin to work (sign-in,
 account, bug reporting, the feeds its screens read). Carrying one feature of a plugin is not an
-option.
+option. That covers the plugin's admin screens too: an admin reaches them from the plugin's header in
+the app, as on the web.
 
 Parity includes the design. The Android screens copy the web design exactly: layout, copy, colors,
 sizes, spacing, icons and every state (loading, empty, error, signed-out, populated). Nothing is

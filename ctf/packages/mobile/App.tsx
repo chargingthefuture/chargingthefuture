@@ -9,7 +9,7 @@ import {
 import { ChymeRoom } from './src/features/chyme';
 import { Beacon } from './src/features/beacon';
 import { PeerProgramming } from './src/features/peer-programming';
-import { Foundation, FoundationCallController } from './src/features/foundation';
+import { Foundation, FoundationAdmin, FoundationCallController } from './src/features/foundation';
 import { AppsList } from './src/features/apps';
 import { Unlock } from './src/features/unlock';
 import { fetchUnlockStatus, type UnlockAccessTier } from './src/features/unlock/api';
@@ -27,7 +27,8 @@ import {
 import { AuthProvider, useAuth } from './src/auth/auth-context';
 import { ThemeProvider, useTheme, getAppAccent, type ThemeName } from './src/theme';
 import { LoadingScreen } from './src/components/shared/LoadingScreen';
-import { ScreenHeader, ShellBackground, TopBar } from './src/components/shell/ShellChrome';
+import { HeaderPill, ScreenHeader, ShellBackground, TopBar } from './src/components/shell/ShellChrome';
+import { Briefcase } from 'lucide-react-native';
 import { getPluginEmoji } from './src/theme/plugin-visuals';
 import { StreamVideoRN } from '@stream-io/video-react-native-sdk';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -54,11 +55,11 @@ StreamVideoRN.updateConfig({
 });
 
 // The native Android app carries the plugins that materially benefit from being an installed app
-// (Chyme live audio, Beacon broadcasts, PeerProgramming's live call, Foundation in full with its instant calls), plus what they need to run (Clerk auth wall, bug reporting,
+// (Chyme, Beacon, PeerProgramming and Foundation, each in full with its admin screens, owner decision 2026-10-08), plus what they need to run (Clerk auth wall, bug reporting,
 // settings/account); everything else is served by the web app. The Apps list is home; the top bar's
 // gear opens Account & Data, and Blocked members sits under it, as on the web's /account page. See
 // `.claude/rules/105-web-android-feature-parity-rules.mdc`.
-type FeatureKey = 'apps' | 'chyme' | 'beacon' | 'peer-programming' | 'foundation' | 'account-data' | 'blocked-members';
+type FeatureKey = 'apps' | 'chyme' | 'beacon' | 'peer-programming' | 'foundation' | 'foundation-admin' | 'account-data' | 'blocked-members';
 
 // What each screen's header calls it. Apps has no header title: it carries the top bar instead.
 const SCREEN_TITLES: Record<Exclude<FeatureKey, 'apps'>, string> = {
@@ -66,6 +67,7 @@ const SCREEN_TITLES: Record<Exclude<FeatureKey, 'apps'>, string> = {
   beacon: 'Beacon',
   'peer-programming': 'PeerProgramming',
   foundation: 'Foundation',
+  'foundation-admin': 'Foundation Admin',
   'account-data': 'Account & Data',
   'blocked-members': 'Blocked members',
 };
@@ -77,9 +79,20 @@ function isPluginKey(key: FeatureKey): key is PluginKey {
 }
 
 // Where the header's back chevron and Android's back button go from each screen.
+const PARENTS: Partial<Record<FeatureKey, FeatureKey>> = {
+  'blocked-members': 'account-data',
+  'foundation-admin': 'foundation',
+};
+
 function parentOf(key: FeatureKey): FeatureKey {
-  return key === 'blocked-members' ? 'account-data' : 'apps';
+  return PARENTS[key] ?? 'apps';
 }
+
+// A plugin's admin screen and the plugin it belongs to: the Admin pill on the member screen (admins
+// only) opens it, and its Member view pill goes back, as the web PluginAdminButton and
+// PluginUserShellButton do. The admin screen takes its plugin's accent.
+const ADMIN_SCREENS: Partial<Record<PluginKey, FeatureKey>> = { foundation: 'foundation-admin' };
+const ADMIN_OF: Partial<Record<FeatureKey, PluginKey>> = { 'foundation-admin': 'foundation' };
 
 export default function App() {
   // Load the brand typeface (Inter) so text rendered through the shared type scale uses it at the
@@ -144,6 +157,7 @@ function buildFeatureViews(open: (_key: FeatureKey) => void): FeatureRenderers {
     beacon: () => <Beacon />,
     'peer-programming': () => <PeerProgramming />,
     foundation: () => <Foundation />,
+    'foundation-admin': () => <FoundationAdmin />,
     'account-data': () => (
       <View style={styles.fill}>
         <BlockedMembersLink onPress={() => open('blocked-members')} />
@@ -156,24 +170,51 @@ function buildFeatureViews(open: (_key: FeatureKey) => void): FeatureRenderers {
 
 // The web frame at phone width: the Apps home carries the top bar, every other screen the back-chevron
 // header (web MobileTopBar and MobileScreenHeader).
-function ShellHeader({ selected, theme, onSelect, onOpenAccount }: {
+function headerPill(selected: FeatureKey, accent: string | undefined, isAdmin: boolean, onSelect: (_key: FeatureKey) => void): ReactElement | undefined {
+  const adminOf = ADMIN_OF[selected];
+  if (adminOf && accent) {
+    return <HeaderPill label="Member view" accent={accent} accessibilityLabel={`Open the member view (${SCREEN_TITLES[adminOf]})`} onPress={() => onSelect(adminOf)} />;
+  }
+  const admin = isPluginKey(selected) ? ADMIN_SCREENS[selected] : undefined;
+  if (admin && accent && isAdmin) {
+    return <HeaderPill label="Admin" accent={accent} accessibilityLabel="Admin panel" onPress={() => onSelect(admin)} />;
+  }
+  return undefined;
+}
+
+function ShellHeader({ selected, theme, isAdmin, onSelect, onOpenAccount }: {
   selected: FeatureKey;
   theme: ThemeName;
+  isAdmin: boolean;
   onSelect: (_key: FeatureKey) => void;
   onOpenAccount: () => void;
 }) {
   if (selected === 'apps') return <TopBar onOpenAccount={onOpenAccount} />;
-  const plugin = isPluginKey(selected) ? selected : undefined;
+  const plugin = isPluginKey(selected) ? selected : ADMIN_OF[selected];
+  const accent = plugin ? getAppAccent(plugin, theme) : undefined;
+  // The web admin header shows a Briefcase icon in the tile where the member screen shows the app icon.
+  const adminIcon = ADMIN_OF[selected] && accent ? <Briefcase size={18} color={accent} /> : undefined;
   return (
     <ScreenHeader
       title={SCREEN_TITLES[selected]}
-      emoji={plugin ? getPluginEmoji(plugin) : undefined}
-      accent={plugin ? getAppAccent(plugin, theme) : undefined}
+      emoji={plugin && !adminIcon ? getPluginEmoji(plugin) : undefined}
+      icon={adminIcon}
+      accent={accent}
+      action={headerPill(selected, accent, isAdmin, onSelect)}
       onBack={() => onSelect(parentOf(selected))}
       onOpenAccount={onOpenAccount}
       pluginSlug={plugin}
     />
   );
+}
+
+// An admin screen is for admins only: anybody else on one (signed out, or never an admin) goes back to
+// its member screen, as the web admin page redirects to the plugin.
+function useAdminGuard(selected: FeatureKey, isAdmin: boolean, onSelect: (_key: FeatureKey) => void) {
+  useEffect(() => {
+    const memberScreen = ADMIN_OF[selected];
+    if (memberScreen && !isAdmin) onSelect(memberScreen);
+  }, [selected, isAdmin, onSelect]);
 }
 
 // The name the other person sees in a Foundation call.
@@ -193,6 +234,7 @@ function AppShell() {
 
   const isAdmin = Boolean(user?.isAdmin);
   const openAccount = useCallback(() => setSelected('account-data'), []);
+  useAdminGuard(selected, isAdmin, setSelected);
 
   // Account & Data and Blocked members are reached only from the gear, which shows only to a
   // signed-in member, as on the web. Signing out while on one of them goes back to Apps.
@@ -301,7 +343,7 @@ function AppShell() {
   return (
     <View style={[styles.container, { backgroundColor: tokens.bg }]}>
       <ShellBackground />
-      <ShellHeader selected={selected} theme={theme} onSelect={setSelected} onOpenAccount={openAccount} />
+      <ShellHeader selected={selected} theme={theme} isAdmin={isAdmin} onSelect={setSelected} onOpenAccount={openAccount} />
 
       {/* Keyed on the signed-in member so signing out (or in as somebody else) unmounts every screen
           holding a Stream client, whose cleanup leaves the call and disconnects it. */}

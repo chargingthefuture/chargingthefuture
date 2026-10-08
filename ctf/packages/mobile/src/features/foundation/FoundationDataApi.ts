@@ -224,3 +224,38 @@ export async function fetchCurrencies(): Promise<Currency[]> {
   const data = (await res.json()) as { currencies?: Currency[] };
   return Array.isArray(data.currencies) ? data.currencies : [];
 }
+
+// The admin page's capacity policy (GET/PUT /api/foundation/admin/capacity-policy), admins only.
+export type QuotaState = 'green' | 'yellow' | 'orange' | 'red';
+
+export type CapacityPolicyForm = {
+  maxActiveThreadsPerUser: number;
+  maxMessagesPerMinute: number;
+  maxSearchesPerMinute: number;
+  maxQuoteTransitionsPerMinute: number;
+  maxCallDurationMinutes: number;
+  quotaState: QuotaState;
+};
+
+export async function fetchCapacityPolicy(): Promise<CapacityPolicyForm> {
+  const res = await authedFetch('/api/foundation/admin/capacity-policy', { method: 'GET' });
+  if (!res.ok) throw new Error(await responseFailureText(res, `Capacity policy unavailable (${res.status}).`));
+  const policy = ((await res.json()) as { policy?: CapacityPolicyForm }).policy;
+  if (!policy) throw new Error('Capacity policy unavailable.');
+  return {
+    maxActiveThreadsPerUser: policy.maxActiveThreadsPerUser,
+    maxMessagesPerMinute: policy.maxMessagesPerMinute,
+    maxSearchesPerMinute: policy.maxSearchesPerMinute,
+    maxQuoteTransitionsPerMinute: policy.maxQuoteTransitionsPerMinute,
+    maxCallDurationMinutes: policy.maxCallDurationMinutes,
+    quotaState: policy.quotaState,
+  };
+}
+
+// null on success, or the text to show (the web save's own wording).
+export async function saveCapacityPolicy(form: CapacityPolicyForm): Promise<string | null> {
+  const res = await post('/api/foundation/admin/capacity-policy', form, 'PUT');
+  if (res.ok) return null;
+  const data = await readBody(res);
+  return data.message ?? data.reason ?? `Save failed (${res.status}).`;
+}

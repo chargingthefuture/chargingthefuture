@@ -8,7 +8,7 @@
 //                   every app screen — back chevron, app icon tile, title, then the same controls.
 //   - ShellBackground  the web .shell backdrop: two soft glows (purple top left, cyan top right).
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Svg, { Defs, LinearGradient, Path, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { Bug, ChevronLeft, Settings } from 'lucide-react-native';
@@ -52,6 +52,30 @@ export function BrandMark({ size = 26 }: { size?: number }) {
 
 // The web .shell background: rgba(124,58,237,.22) at 15% 10% fading out by 35%, and
 // rgba(14,165,233,.15) at 85% 5% fading out by 28%, over the page color. The comic theme is flat.
+// The web PluginAdminButton / PluginUserShellButton: the accent pill in a plugin header that switches
+// between the member screen ("Admin" for admins) and its admin screen ("Member view").
+export function HeaderPill({ label, accent, onPress, accessibilityLabel }: { label: string; accent: string; onPress: () => void; accessibilityLabel: string }) {
+  const { tokens } = useTheme();
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      style={{
+        height: 34,
+        paddingHorizontal: 12,
+        borderRadius: tokens.isComic ? 0 : 10,
+        backgroundColor: `${accent}1A`,
+        borderWidth: 1,
+        borderColor: `${accent}40`,
+        justifyContent: 'center',
+      }}
+    >
+      <Text style={{ fontSize: 13, fontFamily: interFamily('700'), color: accent }}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
 export function ShellBackground() {
   const { tokens } = useTheme();
   const [size, setSize] = useState<{ width: number; height: number } | null>(null);
@@ -167,13 +191,17 @@ export function TopBar(props: ChromeActions) {
   );
 }
 
+// `icon` replaces the emoji in the tile (the web `icon` slot, e.g. an admin screen's icon); `action` sits
+// before the shared controls (the web `actions` slot, e.g. the Admin / Member view pill).
 export function ScreenHeader({
   title,
   emoji,
+  icon,
   accent,
+  action,
   onBack,
   ...actions
-}: ChromeActions & { title: string; emoji?: string; accent?: string; onBack: () => void }) {
+}: ChromeActions & { title: string; emoji?: string; icon?: ReactNode; accent?: string; action?: ReactNode; onBack: () => void }) {
   const { tokens } = useTheme();
   const s = useMemo(() => makeStyles(tokens), [tokens]);
   const chevronColor = accent ?? tokens.textPrimary;
@@ -190,19 +218,20 @@ export function ScreenHeader({
       >
         <ChevronLeft size={20} color={chevronColor} />
       </TouchableOpacity>
-      {emoji ? (
+      {emoji || icon ? (
         <View
           style={[
             s.appIcon,
             accent ? { backgroundColor: `${accent}26`, borderColor: `${accent}66` } : null,
           ]}
         >
-          <Text style={s.appIconEmoji}>{emoji}</Text>
+          {icon ?? <Text style={s.appIconEmoji}>{emoji}</Text>}
         </View>
       ) : null}
       <Text style={s.screenTitle} numberOfLines={1}>
         {title}
       </Text>
+      {action}
       <BarControls {...actions} />
     </View>
   );

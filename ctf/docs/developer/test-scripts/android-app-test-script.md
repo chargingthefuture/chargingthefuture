@@ -3,7 +3,7 @@
 This is the manual test script for the **native Android app** overall. It exists because the
 Android app is no longer a full copy of the web product. Under the owner decisions of 2026-07-20 and
 2026-10-06 (rule 105), the native app carries the plugins that benefit from being an installed app —
-**Chyme live audio, Beacon live broadcasts, PeerProgramming's live call and Foundation (in full since 2026-10-08)**, opened from an **Apps** list — plus **Clerk sign-in,
+**Chyme, Beacon, PeerProgramming and Foundation, each in full with its admin screens (owner decision, 2026-10-08)**, opened from an **Apps** list — plus **Clerk sign-in,
 bug reporting, and settings/account**, and everything else is served by the installable web app.
 So instead of testing "parity across the board", this one script walks the entire native app end to
 end.
@@ -180,6 +180,9 @@ The caller needs enough ServiceCredits for a few blocks.
     and **Sign in**. Sign in as a different member on the same phone: call alerts read off.
 17. **Alerts off.** Tap **Turn off on this device** and ring again with the app closed: no alert. Open
     the app: the ring still appears on screen while it is open.
+18. **Admin.** Signed in as an admin, the Foundation header shows **Admin**; a member does not see it.
+    Tap it: **Foundation Admin** opens with the **Capacity policy** card. Change the quota state, tap
+    **Save policy**, and expect "Capacity policy saved.". **Member view** returns to Foundation.
 
 ## AN-5 — Back button
 

@@ -21,6 +21,8 @@ export type FDTokens = {
   BORDER_STRONG: string;
   BORDER_HI: string;
   INPUT_BG: string;
+  SURFACE: string;
+  BORDER_SOLID: string;
 };
 
 const COMIC: Omit<FDTokens, 'ACCENT'> = {
@@ -35,6 +37,8 @@ const COMIC: Omit<FDTokens, 'ACCENT'> = {
   BORDER_STRONG: '#D4C49A2E',
   BORDER_HI: '#D4C49A3A',
   INPUT_BG: '#141414',
+  SURFACE: '#141414',
+  BORDER_SOLID: '#D4C49A1A',
 };
 
 const DEFAULT: Omit<FDTokens, 'ACCENT'> = {
@@ -49,6 +53,8 @@ const DEFAULT: Omit<FDTokens, 'ACCENT'> = {
   BORDER_STRONG: 'rgba(255,255,255,0.08)',
   BORDER_HI: 'rgba(255,255,255,0.1)',
   INPUT_BG: 'rgba(255,255,255,0.04)',
+  SURFACE: '#161B27',
+  BORDER_SOLID: '#1E2A3A',
 };
 
 export function getFoundationTokens(theme: ThemeName): FDTokens {
