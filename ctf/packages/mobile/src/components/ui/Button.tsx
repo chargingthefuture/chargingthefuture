@@ -11,11 +11,13 @@
 // `CtaButton` is `Button` pinned to the brand variant. RN has no CSS gradients, so the brand fill is
 // drawn with react-native-svg behind the label.
 
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   StyleSheet,
   Text,
   TouchableOpacity,
+  View,
+  type LayoutChangeEvent,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
@@ -67,23 +69,39 @@ export function Button({
       accessibilityState={{ disabled }}
       style={[s.base, container, disabled ? s.disabled : null, style]}
     >
-      {isBrandGradient ? (
-        <Svg pointerEvents="none" style={StyleSheet.absoluteFill} width="100%" height="100%">
-          <Defs>
-            <LinearGradient id={BRAND_GRADIENT_ID} x1={0} y1={0} x2={1} y2={1}>
-              <Stop offset={0} stopColor="#7C3AED" />
-              <Stop offset={1} stopColor="#0EA5E9" />
-            </LinearGradient>
-          </Defs>
-          <Rect width="100%" height="100%" fill={`url(#${BRAND_GRADIENT_ID})`} />
-        </Svg>
-      ) : null}
+      {isBrandGradient ? <BrandGradientFill /> : null}
       {children ?? (
         <Text style={[typeScale.button, { color: labelColor }]} numberOfLines={1}>
           {title}
         </Text>
       )}
     </TouchableOpacity>
+  );
+}
+
+// The gradient sits in an absolutely positioned View and is drawn at that View's measured size.
+// Percentage sizes on the Svg itself resolved against the wrong box on Android, so the fill drew as
+// a short bar at the top of the button with the label hanging below it.
+function BrandGradientFill() {
+  const [size, setSize] = useState<{ width: number; height: number } | null>(null);
+  const onLayout = useCallback((e: LayoutChangeEvent) => {
+    const { width, height } = e.nativeEvent.layout;
+    setSize((prev) => (prev && prev.width === width && prev.height === height ? prev : { width, height }));
+  }, []);
+  return (
+    <View pointerEvents="none" style={StyleSheet.absoluteFill} onLayout={onLayout}>
+      {size ? (
+        <Svg width={size.width} height={size.height}>
+          <Defs>
+            <LinearGradient id={BRAND_GRADIENT_ID} x1={0} y1={0} x2={1} y2={1}>
+              <Stop offset={0} stopColor="#7C3AED" />
+              <Stop offset={1} stopColor="#0EA5E9" />
+            </LinearGradient>
+          </Defs>
+          <Rect width={size.width} height={size.height} fill={`url(#${BRAND_GRADIENT_ID})`} />
+        </Svg>
+      ) : null}
+    </View>
   );
 }
 

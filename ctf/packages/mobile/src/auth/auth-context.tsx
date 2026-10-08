@@ -267,8 +267,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const handleSignIn = useCallback(async () => {
     if (!discovery || !clientId || !request) {
       Alert.alert(
-        "Sign in not configured",
-        "Set NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY and EXPO_PUBLIC_CLERK_OAUTH_CLIENT_ID, and register the Clerk OAuth application, to enable sign-in.",
+        // Shown to members, so it names no setting. The cause (missing publishable key or OAuth
+        // client id in the build) is a build problem a member cannot fix.
+        "Sign-in isn't available",
+        "This copy of the app can't sign you in. Install the latest version, or sign in on the web at app.chargingthefuture.com.",
       );
       return;
     }

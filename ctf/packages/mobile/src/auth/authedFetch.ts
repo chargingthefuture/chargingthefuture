@@ -47,7 +47,9 @@ export function getApiBaseUrl(): string {
   if (typeof appUrl === 'string' && appUrl.trim().length > 0) {
     return appUrl.trim().replace(/\/$/, '');
   }
-  throw new Error('APP_URL is required for mobile API calls.');
+  // Screens show this message to members, so it names no setting. The cause is a build that
+  // shipped without APP_URL (see scripts/write-eas-build-env.mjs).
+  throw new Error("This copy of the app can't reach Skills Economy. Install the latest version.");
 }
 
 async function resolveAuthToken(): Promise<string | null> {
