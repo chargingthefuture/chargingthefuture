@@ -69,10 +69,11 @@ sweep, community stats, product update, user guide, manual test script) all use 
 
 Each of those jobs also has a hand route for the months the account is unfunded — a slash command
 in `.claude/commands/` (`/triage-bug`, `/build-bug`, `/rs`, `/community-stats`,
-`/product-update`, `/user-guide`, `/test-script`; the table in `CLAUDE.md` maps each to its
+`/product-update`, `/user-guide`, `/test-script`, `/sp`; the table in `CLAUDE.md` maps each to its
 workflow). Two of them need a workflow because the chat session has no database or app secrets:
 `generate-community-stats-manual.yml` files the numbers, and `generate-product-update.yml` takes
-hand-written content through its `update_json` input.
+hand-written content through its `update_json` input, and `skills-proposal-issues-manual.yml`
+files the skill-proposal issues with the allowed placements listed in each one for `/sp` to pick from.
 
 Worked example: `ctf/scripts/proposeSkillPromotions.mjs` — it maps the vendor's own machine-readable
 error type to a named state and only marks the states that are genuinely outside the repo.
@@ -149,7 +150,7 @@ deploy's status (live or failed) — it does not build or deploy anything itself
 | `seed-demo.yml` | Demo — Seed Schema | Manual (demo owner id) | Regenerates the demo schema, brings the demo database up to date, and runs the demo seed script for a given user. |
 | `seed-skills-taxonomy.yml` | Skills Taxonomy — Apply Changes (production) | Manual | Applies the append-only taxonomy change list to the live production taxonomy via `ctf/scripts/seedSkillsTaxonomy.mjs` — the only path that writes the taxonomy from the repo. Idempotent; no hard deletes. |
 | `service-credits-reclaim-sweep.yml` | ServiceCredits — Account-Deletion Reclaim Sweep | Daily 04:20 UTC; manual | Drains queued post-deletion ServiceCredits reclaims to treasury once each account's 7-day grace window elapses. Idempotent. |
-| `skills-proposal-issues-manual.yml` | Skills Hunt — Propose Skill Promotions (no AI, manual) | Manual (optional `proposal_limit`) | The no-credit companion to the scheduled workflow below. Files the same `skill-proposal` issues with the placement left open and no Anthropic API call; an agent session starts it when the account is unfunded and then adds the suggested sector and occupation to each issue. Same dedupe row, so a later funded scheduled run files no duplicates. |
+| `skills-proposal-issues-manual.yml` | Skills Hunt — Propose Skill Promotions (no AI, manual) | Manual (optional `proposal_limit`) | The no-credit companion to the scheduled workflow below. Files the same `skill-proposal` issues with the placement left open and no Anthropic API call; an agent session starts it when the account is unfunded and then adds the suggested sector and occupation to each issue (`/sp`, which picks from the allowed placements the run lists in each issue). Same dedupe row, so a later funded scheduled run files no duplicates. |
 | `skills-proposal-issues.yml` | Skills Hunt — Propose Skill Promotions | Every 6 hours at :17; manual | Turns free-text "proposed" skills from accepted Skills Hunt nominations into GitHub issues proposing they join the canonical taxonomy, with an AI-suggested sector + occupation. Only files issues — never writes the taxonomy. Red, on purpose, while the Anthropic account is unfunded (see the manual companion above). |
 | `stream-gated-channel-type-setup.yml` | Stream — Gated Channel Type Setup | Manual (production or staging) | One-time (re-runnable) setup of the `ctf-gated` Stream channel type used by the gated contributor channel; run once per Stream app. Never prints a secret. |
 | `unit-tests.yml` | Unit Tests (non-blocking) | Push to `main` (scoped paths); daily 07:41 UTC; manual | Runs the scoped unit-test suites (ServiceCredits amounts, economic-models, trust evidence) and files a `test-failure` issue on failure. Deliberately not a PR check — it never blocks a merge. |

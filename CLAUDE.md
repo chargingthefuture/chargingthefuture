@@ -487,7 +487,7 @@ Owner directive, 2026-08-17, extended 2026-09-22; `/bpr` renamed `/br` on 2026-0
 | `/fix` | [`.claude/commands/fix.md`](.claude/commands/fix.md) | The owner points at a sentence that does not read right. |
 | `/fl` | [`.claude/commands/fl.md`](.claude/commands/fl.md) | The owner asks whether this chat can be archived. |
 
-Seven more do by hand what a scheduled workflow does with the Anthropic API, for the months the
+Eight more do by hand what a scheduled workflow does with the Anthropic API, for the months the
 account has no credit (owner decision, 2026-10-03). The workflows stay as they are and go red on
 purpose while unfunded; the product does not wait on the bill, because the owner has a chat agent
 even then. Each command names the workflow it stands in for and files the same output in the same
@@ -502,6 +502,7 @@ shape, so a later funded run picks up where the hand-done one left off.
 | `/product-update` | [`.claude/commands/product-update.md`](.claude/commands/product-update.md) | `generate-product-update.yml` — the update JSON, published through the workflow's `update_json` input. |
 | `/user-guide` | [`.claude/commands/user-guide.md`](.claude/commands/user-guide.md) | `generate-user-guide.yml` — the guide sections, rendered with `USER_GUIDE_RENDER_ONLY=1`. |
 | `/test-script` | [`.claude/commands/test-script.md`](.claude/commands/test-script.md) | `manual-test-script.yml` — one plugin's manual test script. |
+| `/sp` | [`.claude/commands/sp.md`](.claude/commands/sp.md) | `skills-proposal-issues.yml` — sector, occupation and a promote-or-close call on each `skill-proposal` issue filed by `skills-proposal-issues-manual.yml`. |
 
 ### Every API-funded workflow ships with its slash command (owner directive, 2026-10-03)
 
