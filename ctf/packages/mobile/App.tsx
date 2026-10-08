@@ -1,20 +1,15 @@
 import { StatusBar } from 'expo-status-bar';
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from 'react';
 import {
   AppState,
   BackHandler,
   StyleSheet,
   View,
 } from 'react-native';
-import { ChymeRoom } from './src/features/chyme';
-import { Beacon, BeaconAdmin } from './src/features/beacon';
-import { PeerProgramming } from './src/features/peer-programming';
-import { Foundation, FoundationCallController } from './src/features/foundation';
+import { FoundationCallController } from './src/features/foundation';
 import { AppsList } from './src/features/apps';
 import { Unlock } from './src/features/unlock';
 import { fetchUnlockStatus, type UnlockAccessTier } from './src/features/unlock/api';
-import { AccountData } from './src/features/account-data';
-import { BlockedMembers, BlockedMembersLink } from './src/features/blocks';
 import {
   useFonts,
   Inter_400Regular,
@@ -25,11 +20,13 @@ import {
   Inter_900Black,
 } from '@expo-google-fonts/inter';
 import { AuthProvider, useAuth } from './src/auth/auth-context';
-import { ThemeProvider, useTheme, getAppAccent } from './src/theme';
+import { ThemeProvider, useTheme } from './src/theme';
 import { LoadingScreen } from './src/components/shared/LoadingScreen';
-import { ScreenHeader, ShellBackground, TopBar } from './src/components/shell/ShellChrome';
-import { HeaderPill, HeaderRefreshButton } from './src/components/shell/HeaderActions';
-import { getPluginEmoji } from './src/theme/plugin-visuals';
+import { ShellBackground } from './src/components/shell/ShellChrome';
+import { HeaderActionsContext } from './src/components/shell/HeaderActions';
+import { AppHeader } from './src/navigation/AppHeader';
+import { buildFeatureViews } from './src/navigation/feature-views';
+import { isAdminKey, parentOf, pluginOf, type FeatureKey } from './src/navigation/screens';
 import { StreamVideoRN } from '@stream-io/video-react-native-sdk';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -54,74 +51,10 @@ StreamVideoRN.updateConfig({
   },
 });
 
-// The native Android app carries the plugins that materially benefit from being an installed app
-// (Chyme live audio, Beacon broadcasts, PeerProgramming's live call, Foundation's instant calls), plus what they need to run (Clerk auth wall, bug reporting,
-// settings/account); everything else is served by the web app. The Apps list is home; the top bar's
-// gear opens Account & Data, and Blocked members sits under it, as on the web's /account page. See
-// `.claude/rules/105-web-android-feature-parity-rules.mdc`.
-type FeatureKey =
-  | 'apps'
-  | 'chyme'
-  | 'beacon'
-  | 'beacon-admin'
-  | 'peer-programming'
-  | 'foundation'
-  | 'account-data'
-  | 'blocked-members';
-
-// What each screen's header calls it. Apps has no header title: it carries the top bar instead.
-const SCREEN_TITLES: Record<Exclude<FeatureKey, 'apps'>, string> = {
-  chyme: 'Chyme',
-  beacon: 'Beacon',
-  'beacon-admin': 'Beacon Admin',
-  'peer-programming': 'PeerProgramming',
-  foundation: 'Foundation',
-  'account-data': 'Account & Data',
-  'blocked-members': 'Blocked members',
-};
-
-const PLUGIN_KEYS = ['chyme', 'beacon', 'peer-programming', 'foundation'] as const;
-type PluginKey = (typeof PLUGIN_KEYS)[number];
-function isPluginKey(key: FeatureKey): key is PluginKey {
-  return (PLUGIN_KEYS as readonly string[]).includes(key);
-}
-
-// The plugin a screen belongs to, for its header icon, accent and bug reports. An admin screen
-// belongs to its plugin.
-function pluginOf(key: FeatureKey): PluginKey | undefined {
-  if (key === 'beacon-admin') return 'beacon';
-  return isPluginKey(key) ? key : undefined;
-}
-
-// Where the header's back chevron and Android's back button go from each screen. Beacon Admin goes to
-// Apps too: the web swaps the member and admin pages in place, so back never bounces between them.
-function parentOf(key: FeatureKey): FeatureKey {
-  return key === 'blocked-members' ? 'account-data' : 'apps';
-}
-
-// The header's actions slot, as the web fills it: Beacon shows an Admin button to admins; Beacon
-// Admin shows the admin refresh control and a Member view button.
-function headerExtra(
-  key: FeatureKey,
-  isAdmin: boolean,
-  accent: string | undefined,
-  open: (_key: FeatureKey) => void,
-  refresh: () => void,
-): ReactElement | undefined {
-  const color = accent ?? '#C8A84B';
-  if (key === 'beacon' && isAdmin) {
-    return <HeaderPill label="Admin" accent={color} onPress={() => open('beacon-admin')} accessibilityLabel="Admin panel" />;
-  }
-  if (key === 'beacon-admin') {
-    return (
-      <>
-        <HeaderRefreshButton accent={color} onRefresh={refresh} />
-        <HeaderPill label="Member view" accent={color} onPress={() => open('beacon')} accessibilityLabel="Open the member view" />
-      </>
-    );
-  }
-  return undefined;
-}
+// The screens, their titles and where back goes from each live in src/navigation/screens.ts; the
+// header above each screen in src/navigation/AppHeader.tsx; the screen for each key in
+// src/navigation/feature-views.tsx. The Apps list is home; the top bar's gear opens Account & Data,
+// and Blocked members sits under it, as on the web's /account page.
 
 export default function App() {
   // Load the brand typeface (Inter) so text rendered through the shared type scale uses it at the
@@ -175,29 +108,6 @@ function SystemBarInsets({ children }: { children: ReactElement }) {
   );
 }
 
-// Maps each navigation key to the screen it renders. A plain lookup table (no
-// branching) keeps the per-render selection trivial.
-type FeatureRenderers = Record<FeatureKey, () => ReactElement>;
-
-function buildFeatureViews(open: (_key: FeatureKey) => void, refreshToken: number): FeatureRenderers {
-  return {
-    apps: () => <AppsList onOpen={open} />,
-    chyme: () => <ChymeRoom />,
-    beacon: () => <Beacon />,
-    // Keyed on the refresh count, so the refresh control remounts it and reloads its data.
-    'beacon-admin': () => <BeaconAdmin key={refreshToken} />,
-    'peer-programming': () => <PeerProgramming />,
-    foundation: () => <Foundation />,
-    'account-data': () => (
-      <View style={styles.fill}>
-        <BlockedMembersLink onPress={() => open('blocked-members')} />
-        <AccountData />
-      </View>
-    ),
-    'blocked-members': () => <BlockedMembers />,
-  };
-}
-
 // The name the other person sees in a Foundation call.
 function callDisplayName(user: { username?: string | null } | null): string {
   return user?.username ?? 'Member';
@@ -208,32 +118,43 @@ function callDisplayName(user: { username?: string | null } | null): string {
 // locked_support_only cannot reach the app.
 type UnlockGate = { loading: boolean; walled: boolean };
 
-function AppShell() {
-  const { isLoading, isAuthenticated, user } = useAuth();
-  const { tokens, theme } = useTheme();
-  const [selected, setSelected] = useState<FeatureKey>('apps');
-
-  const isAdmin = Boolean(user?.isAdmin);
-  const openAccount = useCallback(() => setSelected('account-data'), []);
-
-  // Account & Data and Blocked members are reached only from the gear, which shows only to a
-  // signed-in member, as on the web. Signing out while on one of them goes back to Apps.
+// Keeps a member on a screen they may see: the account screens need a signed-in member (the gear
+// that reaches them shows only when signed in), and an admin screen needs an admin — anyone else goes
+// to the plugin's member page, as the web redirects them.
+function useScreenGuards(selected: FeatureKey, setSelected: (_key: FeatureKey) => void, isAuthenticated: boolean, isAdmin: boolean) {
   useEffect(() => {
     if (!isAuthenticated && (selected === 'account-data' || selected === 'blocked-members')) {
       setSelected('apps');
+    } else if (!isAdmin && isAdminKey(selected)) {
+      setSelected(pluginOf(selected) ?? 'apps');
     }
-    // Beacon Admin is for admins only; anyone else goes to Beacon, as the web redirects them.
-    if (!isAdmin && selected === 'beacon-admin') {
-      setSelected('beacon');
-    }
-  }, [isAuthenticated, isAdmin, selected]);
+  }, [isAuthenticated, isAdmin, selected, setSelected]);
+}
 
-  const [refreshToken, setRefreshToken] = useState(0);
-  const refreshScreen = useCallback(() => setRefreshToken((count) => count + 1), []);
+// Android hardware back. The app has no screen stack, so give back a predictable meaning: from a
+// screen go to its parent (src/navigation/screens.ts); from Apps, let Android do its default (leave
+// the app). Note: "navigating away without closing" — the case that must not drop a member from a
+// live room — is pressing HOME or switching apps (which backgrounds the app; the Chyme foreground
+// service keeps the audio and the presence timers alive). Back is an explicit "leave", so it does
+// not need to preserve the call.
+function useHardwareBack(selected: FeatureKey, setSelected: (_key: FeatureKey) => void) {
+  useEffect(() => {
+    const onBack = () => {
+      if (selected !== 'apps') {
+        setSelected(parentOf(selected));
+        return true; // handled — do not exit
+      }
+      return false; // on Apps: let Android leave the app
+    };
+    const sub = BackHandler.addEventListener('hardwareBackPress', onBack);
+    return () => sub.remove();
+  }, [selected, setSelected]);
+}
 
-  // Client-side Unlock wall. The server 403 gates are the real enforcement; this
-  // only mirrors the web redirect so a not-yet-approved member does not see the
-  // app shell. Defaults to not-walled and fails open on any fetch error.
+// Client-side Unlock wall. The server 403 gates are the real enforcement; this
+// only mirrors the web redirect so a not-yet-approved member does not see the
+// app shell. Defaults to not-walled and fails open on any fetch error.
+function useUnlockGate(isLoading: boolean, isAuthenticated: boolean, isAdmin: boolean) {
   const [unlockGate, setUnlockGate] = useState<UnlockGate>({ loading: false, walled: false });
   const fetchSeq = useRef(0);
 
@@ -283,35 +204,40 @@ function AppShell() {
     return () => sub.remove();
   }, [refreshUnlockGate]);
 
-  // Android hardware back. The app has no screen stack, so give back a predictable meaning: from a
-  // screen go to its parent (Blocked members to Account & Data, the rest to Apps); from Apps,
-  // let Android do its default (leave the app). This
-  // replaces the old behavior where back exited the app from anywhere. Note: "navigating away
-  // without closing" — the case that must not drop a member from a live room — is pressing HOME or
-  // switching apps (which backgrounds the app; the Chyme foreground service keeps the audio and the
-  // presence timers alive). Back is an explicit "leave", so it does not need to preserve the call.
+  return { unlockGate, refreshUnlockGate };
+}
+
+function AppShell() {
+  const { isLoading, isAuthenticated, user } = useAuth();
+  const { tokens } = useTheme();
+  const [selected, setSelected] = useState<FeatureKey>('apps');
+  // The cohort PeerProgramming opens on (null: the member's own), the controls the open screen puts
+  // in the header, and the count the admin refresh control bumps to remount an admin screen.
+  const [ppCohortId, setPpCohortId] = useState<string | null>(null);
+  const [screenActions, setScreenActions] = useState<ReactNode>(null);
+  const [refreshToken, setRefreshToken] = useState(0);
+  const refreshScreen = useCallback(() => setRefreshToken((count) => count + 1), []);
   useEffect(() => {
-    const onBack = () => {
-      if (selected !== 'apps') {
-        setSelected(parentOf(selected));
-        return true; // handled — do not exit
-      }
-      return false; // on Apps: let Android leave the app
-    };
-    const sub = BackHandler.addEventListener('hardwareBackPress', onBack);
-    return () => sub.remove();
+    if (selected !== 'peer-programming') setPpCohortId(null);
   }, [selected]);
 
+  const isAdmin = Boolean(user?.isAdmin);
+  const openAccount = useCallback(() => setSelected('account-data'), []);
+  useScreenGuards(selected, setSelected, isAuthenticated, isAdmin);
+  useHardwareBack(selected, setSelected);
+  const { unlockGate, refreshUnlockGate } = useUnlockGate(isLoading, isAuthenticated, isAdmin);
+
   const featureView = useMemo(() => {
-    const renderers = buildFeatureViews(setSelected, refreshToken);
+    const openPpRoom = (cohortId: string | null) => {
+      setPpCohortId(cohortId);
+      setSelected('peer-programming');
+    };
+    const renderers = buildFeatureViews({ open: setSelected, refreshToken, ppCohortId, openPpRoom });
     const render = renderers[selected];
     // Every FeatureKey has an entry; the fallback preserves the default (Apps)
     // for any unexpected value.
     return render ? render() : <AppsList onOpen={setSelected} />;
-  }, [selected, refreshToken]);
-
-  const headerPlugin = pluginOf(selected);
-  const headerAccent = headerPlugin ? getAppAccent(headerPlugin, theme) : undefined;
+  }, [selected, refreshToken, ppCohortId]);
 
   // While the app is bootstrapping (restoring any stored sign-in session), or
   // while the first unlock-status check is in flight for a signed-in non-admin,
@@ -333,21 +259,14 @@ function AppShell() {
   return (
     <View style={[styles.container, { backgroundColor: tokens.bg }]}>
       <ShellBackground />
-      {/* The web frame at phone width: the Apps home carries the top bar, every other screen the
-          back-chevron header (web MobileTopBar and MobileScreenHeader). */}
-      {selected === 'apps' ? (
-        <TopBar onOpenAccount={openAccount} />
-      ) : (
-        <ScreenHeader
-          title={SCREEN_TITLES[selected]}
-          emoji={headerPlugin ? getPluginEmoji(headerPlugin) : undefined}
-          accent={headerAccent}
-          onBack={() => setSelected(parentOf(selected))}
-          onOpenAccount={openAccount}
-          pluginSlug={headerPlugin}
-          extra={headerExtra(selected, isAdmin, headerAccent, setSelected, refreshScreen)}
-        />
-      )}
+      <AppHeader
+        selected={selected}
+        isAdmin={isAdmin}
+        open={setSelected}
+        onOpenAccount={openAccount}
+        onRefresh={refreshScreen}
+        screenActions={screenActions}
+      />
 
       {/* Keyed on the signed-in member so signing out (or in as somebody else) unmounts every screen
           holding a Stream client, whose cleanup leaves the call and disconnects it. */}
@@ -355,7 +274,7 @@ function AppShell() {
         {/* Foundation instant calls: the incoming ring and the live call show above every tab, as the web
             mounts its call controller at the shell root. Inside the keyed view, so signing out hangs up. */}
         <FoundationCallController signedIn={isAuthenticated} displayName={callDisplayName(user)}>
-          {featureView}
+          <HeaderActionsContext.Provider value={setScreenActions}>{featureView}</HeaderActionsContext.Provider>
         </FoundationCallController>
       </View>
 
@@ -376,8 +295,5 @@ const styles = StyleSheet.create({
   contentPadded: {
     paddingHorizontal: 12,
     paddingTop: 10,
-  },
-  fill: {
-    flex: 1,
   },
 });

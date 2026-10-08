@@ -9,7 +9,7 @@
 //                   every app screen — back chevron, app icon tile, title, then the same controls.
 //   - ShellBackground  the web .shell backdrop: two soft glows (purple top left, cyan top right).
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Svg, { Defs, LinearGradient, Path, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { Bug, ChevronLeft, Settings } from 'lucide-react-native';
@@ -174,16 +174,41 @@ export function TopBar({ onOpenAccount }: { onOpenAccount: () => void }) {
 export function ScreenHeader({
   title,
   emoji,
+  icon,
+  iconTile = true,
   accent,
   onBack,
-  extra,
-  ...actions
-}: ChromeActions & { title: string; emoji?: string; accent?: string; onBack: () => void; extra?: React.ReactNode }) {
+  actions,
+  background,
+  gap,
+  ...chrome
+}: ChromeActions & {
+  title: string;
+  emoji?: string;
+  /** An icon drawn in the app icon tile instead of the emoji (web MobileScreenHeader `icon`). */
+  icon?: ReactNode;
+  /** False draws `icon` on its own, as a plugin header that builds its own title row does on the web. */
+  iconTile?: boolean;
+  accent?: string;
+  onBack: () => void;
+  /** The screen's own controls, before report / settings (web MobileScreenHeader `actions`). */
+  actions?: ReactNode;
+  /** The bar color, for a plugin that draws its own header bar on the web (PeerProgramming). */
+  background?: string;
+  /** The space between the items in the bar and in the actions cluster, for the same case. */
+  gap?: number;
+}) {
   const { tokens } = useTheme();
   const s = useMemo(() => makeStyles(tokens), [tokens]);
   const chevronColor = accent ?? tokens.textPrimary;
   return (
-    <View style={s.screenHeader}>
+    <View
+      style={[
+        s.screenHeader,
+        background === undefined ? null : { backgroundColor: background },
+        gap === undefined ? null : { gap },
+      ]}
+    >
       <TouchableOpacity
         onPress={onBack}
         accessibilityRole="button"
@@ -195,23 +220,24 @@ export function ScreenHeader({
       >
         <ChevronLeft size={20} color={chevronColor} />
       </TouchableOpacity>
-      {emoji ? (
+      {icon && !iconTile ? icon : null}
+      {(icon && iconTile) || (!icon && emoji) ? (
         <View
           style={[
             s.appIcon,
             accent ? { backgroundColor: `${accent}26`, borderColor: `${accent}66` } : null,
           ]}
         >
-          <Text style={s.appIconEmoji}>{emoji}</Text>
+          {icon ?? <Text style={s.appIconEmoji}>{emoji}</Text>}
         </View>
       ) : null}
       <Text style={s.screenTitle} numberOfLines={1}>
         {title}
       </Text>
-      {/* The web header's `actions` slot (an Admin or Member view button, an admin refresh control)
-          sits before the shared controls, 10px apart. */}
-      {extra ? <View style={s.extra}>{extra}</View> : null}
-      <BarControls {...actions} />
+      {/* The web header's `actions` slot (an Admin or Member view button, a refresh control) sits
+          before the shared controls, 10px apart. */}
+      {actions ? <View style={[s.actions, gap === undefined ? null : { gap }]}>{actions}</View> : null}
+      <BarControls {...chrome} />
     </View>
   );
 }
@@ -267,7 +293,7 @@ function makeStyles(t: ThemeTokens) {
     },
     spacer: { flex: 1 },
     controls: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-    extra: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    actions: { flexDirection: 'row', alignItems: 'center', gap: 10 },
     iconBtn: square,
     signIn: { minHeight: 34, paddingVertical: 7, paddingHorizontal: 14 },
     screenHeader: {

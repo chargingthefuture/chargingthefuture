@@ -2,6 +2,7 @@
 // closing it either way (reached, or taken down).
 import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { interFamily } from '../../components/ui';
 import type { BoardGoal } from './PeerProgrammingApi';
 import { doneCount } from './ppBoard';
 import { PPButton, PPTextBox } from './PPButton';
@@ -13,15 +14,15 @@ export function YourGoalPanel({ goal, busy, onAddTask, onClose }: {
   onAddTask: (_goalId: string, _description: string) => Promise<boolean>;
   onClose: (_goalId: string, _outcome: 'reached' | 'withdrawn') => void;
 }) {
-  const { tokens, accent } = usePPTheme();
+  const t = usePPTheme();
   const [task, setTask] = useState('');
   const add = async () => {
     if (await onAddTask(goal.id, task)) setTask('');
   };
   return (
-    <View accessibilityLabel="Your goal" style={[styles.panel, { borderColor: accent, backgroundColor: tokens.surface, borderRadius: tokens.radius }]}>
-      <Text style={[styles.meta, { color: tokens.textMuted }]}>Your goal · {doneCount(goal)} of {goal.tasks.length} cards done</Text>
-      <Text style={[styles.title, { color: tokens.textPrimary }]}>{goal.title}</Text>
+    <View accessibilityLabel="Your goal" style={[styles.panel, { borderColor: t.ACCENT_TAB_BORDER, backgroundColor: t.SURFACE, borderRadius: t.r(12) }]}>
+      <Text style={[styles.meta, { color: t.MUTED }]}>Your goal · {doneCount(goal)} of {goal.tasks.length} cards done</Text>
+      <Text style={[styles.title, { color: t.TITLE }]}>{goal.title}</Text>
       <PPTextBox value={task} onChange={setTask} lines={2} maxLength={300} placeholder="Another card somebody could do from a phone" />
       <View style={styles.row}>
         <PPButton label="Add card" disabled={busy || task.trim().length === 0} onPress={() => void add()} />
@@ -34,7 +35,7 @@ export function YourGoalPanel({ goal, busy, onAddTask, onClose }: {
 
 const styles = StyleSheet.create({
   panel: { borderWidth: 1, padding: 12, gap: 8 },
-  meta: { fontSize: 12 },
-  title: { fontSize: 16, fontWeight: '700', lineHeight: 22 },
+  meta: { fontSize: 12, fontFamily: interFamily('400') },
+  title: { fontSize: 15, fontFamily: interFamily('700'), lineHeight: 21 },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
 });

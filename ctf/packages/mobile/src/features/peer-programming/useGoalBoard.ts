@@ -3,8 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { failureOf, loadBoard, type ActionResult, type Board } from './PeerProgrammingApi';
 
-// `refreshKey` changes when the screen's Refresh button is pressed, which reloads the board too.
-export function useGoalBoard(refreshKey: number) {
+export function useGoalBoard() {
   const [board, setBoard] = useState<Board | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -25,7 +24,7 @@ export function useGoalBoard(refreshKey: number) {
     return () => {
       mounted.current = false;
     };
-  }, [reload, refreshKey]);
+  }, [reload]);
 
   const run = useCallback(async (action: () => Promise<ActionResult>): Promise<boolean> => {
     setBusy(true);
@@ -38,10 +37,5 @@ export function useGoalBoard(refreshKey: number) {
     return result.ok;
   }, [reload]);
 
-  const refresh = useCallback(async () => {
-    setError(null);
-    await reload();
-  }, [reload]);
-
-  return { board, error, busy, run, refresh };
+  return { board, error, busy, run };
 }
