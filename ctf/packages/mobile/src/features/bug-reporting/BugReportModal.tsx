@@ -19,6 +19,7 @@ import {
   View,
 } from 'react-native';
 import { CheckCircle, AlertCircle, Clock, X, type LucideIcon } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme, type ThemeTokens } from '../../theme';
 import { interFamily } from '../../components/ui';
 import { submitBugReport, type BugReportSubmitResult } from './api';
@@ -41,6 +42,7 @@ type BugReportModalProps = {
 export function BugReportModal({ visible, onClose, pluginSlug }: BugReportModalProps) {
   const { tokens } = useTheme();
   const s = useMemo(() => makeStyles(tokens), [tokens]);
+  const insets = useSafeAreaInsets();
 
   const [message, setMessage] = useState('');
   const [context, setContext] = useState('');
@@ -102,7 +104,8 @@ export function BugReportModal({ visible, onClose, pluginSlug }: BugReportModalP
     <Modal visible={visible} transparent animationType="slide" onRequestClose={closeIfIdle}>
       <Pressable style={s.overlay} onPress={closeIfIdle}>
         {/* Stop taps inside the sheet from closing it. */}
-        <Pressable style={s.sheet} onPress={() => undefined}>
+        {/* Pad by the system button bar: the sheet is drawn behind it, which covered Cancel. */}
+        <Pressable style={[s.sheet, { paddingBottom: insets.bottom }]} onPress={() => undefined}>
           <View style={s.handle} />
           <ScrollView contentContainerStyle={s.sheetContent} keyboardShouldPersistTaps="handled">
             {view === 'form' ? (

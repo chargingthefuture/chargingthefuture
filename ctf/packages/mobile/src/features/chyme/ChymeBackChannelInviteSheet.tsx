@@ -6,6 +6,7 @@
 import React from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Phone } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getAppAccent, useTheme, type ThemeTokens } from '../../theme';
 import { interFamily } from '../../components/ui';
 
@@ -29,12 +30,14 @@ export const ChymeBackChannelInviteSheet: React.FC<{
   const { theme, tokens } = useTheme();
   const accent = getAppAccent('chyme', theme);
   const styles = makeStyles(tokens, accent);
+  const insets = useSafeAreaInsets();
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onDecline}>
       <View style={styles.scrim}>
         <Pressable style={styles.scrimFill} onPress={onDecline} accessibilityLabel="Dismiss" />
-        <View style={styles.sheet}>
+        {/* Pad by the system button bar, which the sheet is drawn behind. */}
+        <View style={[styles.sheet, { paddingBottom: insets.bottom + 34 }]}>
           <View style={styles.accentBar} />
           <View style={styles.handle} />
           <Text style={styles.sectionLabel}>INCOMING BACK CHANNEL</Text>

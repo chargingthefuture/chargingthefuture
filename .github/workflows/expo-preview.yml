@@ -139,6 +139,14 @@ jobs:
         if: ${{ steps.quota.outputs.build_allowed == 'true' }}
         run: pnpm --dir ctf --filter @ctf/mobile run check:mobile-env
 
+      # Expo's build server re-reads app.config.ts without this job's environment, so the
+      # values Infisical loaded above must be handed over through the profile's env in eas.json.
+      # Without this the APK shipped with no API address and no sign-in keys.
+      - name: Hand app settings to the Expo build
+        if: ${{ steps.quota.outputs.build_allowed == 'true' }}
+        working-directory: ctf/packages/mobile
+        run: node scripts/write-eas-build-env.mjs preview
+
       - name: Build preview APK on EAS
         id: build
         if: ${{ steps.quota.outputs.build_allowed == 'true' }}

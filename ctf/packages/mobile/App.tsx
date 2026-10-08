@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } 
 import {
   AppState,
   BackHandler,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -36,6 +35,7 @@ import { SignInPrompt } from './src/components/shared/SessionControls';
 import { getPluginEmoji } from './src/theme/plugin-visuals';
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Path } from 'react-native-svg';
 import { StreamVideoRN } from '@stream-io/video-react-native-sdk';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Register the Android foreground service once, at module load, before any Chyme call is joined.
 // This is what keeps a backgrounded member hearing the room and staying in the roster: with the
@@ -149,11 +149,37 @@ export default function App() {
   }
 
   return (
-    <AuthProvider>
-      <ThemeProvider>
-        <AppShell />
-      </ThemeProvider>
-    </AuthProvider>
+    <SafeAreaProvider>
+      <AuthProvider>
+        <ThemeProvider>
+          <SystemBarInsets>
+            <AppShell />
+          </SystemBarInsets>
+        </ThemeProvider>
+      </AuthProvider>
+    </SafeAreaProvider>
+  );
+}
+
+// Android draws the app edge to edge, behind the status bar and the back/home/recent buttons, and
+// React Native's own SafeAreaView only pads on iOS. So the header sat under the clock and the bottom
+// line sat under the buttons. This pads every screen (shell, Unlock wall) by the real bar heights.
+function SystemBarInsets({ children }: { children: ReactElement }) {
+  const insets = useSafeAreaInsets();
+  const { tokens } = useTheme();
+  return (
+    <View
+      style={{
+        flex: 1,
+        backgroundColor: tokens.bg,
+        paddingTop: insets.top,
+        paddingBottom: insets.bottom,
+        paddingLeft: insets.left,
+        paddingRight: insets.right,
+      }}
+    >
+      {children}
+    </View>
   );
 }
 
@@ -161,15 +187,25 @@ export default function App() {
 // branching) keeps the per-render selection trivial.
 type FeatureRenderers = Record<FeatureKey, () => ReactElement>;
 
-function buildFeatureViews(open: (_key: FeatureKey) => void): FeatureRenderers {
+// Account & Data and Blocked members read the member's own records, so a signed-out visitor got
+// "We couldn't load…" with a Retry that could never succeed. They get the reason instead, the same
+// way Foundation already tells a signed-out visitor to sign in.
+function SignedOutNote({ text }: { text: string }) {
+  const { tokens } = useTheme();
+  return <Text style={[styles.signedOutNote, { color: tokens.textSecondary }]}>{text}</Text>;
+}
+
+function buildFeatureViews(open: (_key: FeatureKey) => void, signedIn: boolean): FeatureRenderers {
   return {
     apps: () => <AppsList onOpen={open} />,
     chyme: () => <ChymeRoom />,
     beacon: () => <Beacon />,
     'peer-programming': () => <PeerProgramming />,
     foundation: () => <Foundation />,
-    'account-data': () => <AccountData />,
-    'blocked-members': () => <BlockedMembers />,
+    'account-data': () =>
+      signedIn ? <AccountData /> : <SignedOutNote text="Sign in to see and manage your data." />,
+    'blocked-members': () =>
+      signedIn ? <BlockedMembers /> : <SignedOutNote text="Sign in to see the members you have blocked." />,
     'bug-report': () => (
       <ScrollView contentContainerStyle={styles.bugReportStack}>
         <ReportAProblemEntry />
@@ -267,12 +303,12 @@ function AppShell() {
   }, [selected]);
 
   const featureView = useMemo(() => {
-    const renderers = buildFeatureViews(setSelected);
+    const renderers = buildFeatureViews(setSelected, isAuthenticated);
     const render = renderers[selected];
     // Every FeatureKey has an entry; the fallback preserves the default (Apps)
     // for any unexpected value.
     return render ? render() : <AppsList onOpen={setSelected} />;
-  }, [selected]);
+  }, [selected, isAuthenticated]);
 
   // While the app is bootstrapping (restoring any stored sign-in session), or
   // while the first unlock-status check is in flight for a signed-in non-admin,
@@ -292,7 +328,7 @@ function AppShell() {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: tokens.bg }]}>
+    <View style={[styles.container, { backgroundColor: tokens.bg }]}>
       <View style={styles.brandRow}>
         <BrandMark />
         <View>
@@ -348,7 +384,7 @@ function AppShell() {
         The rest of the app is on the web — app.chargingthefuture.com
       </Text>
       <StatusBar style={tokens.isComic ? 'light' : 'auto'} />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -407,6 +443,11 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     marginTop: 10,
+  },
+  signedOutNote: {
+    fontSize: 14,
+    fontFamily: 'Inter_500Medium',
+    marginTop: 8,
   },
   bugReportStack: {
     gap: 12,

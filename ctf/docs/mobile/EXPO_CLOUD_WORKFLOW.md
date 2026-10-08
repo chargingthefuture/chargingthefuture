@@ -54,6 +54,14 @@ different name (see the note above). The Expo-specific ones — `EXPO_PUBLIC_CLE
 `EXPO_MOBILE_PROJECT_ID`, and `EXPO_MOBILE_UPDATES_URL` — may need to be added to Infisical `prod` if
 they are not there yet.
 
+**The cloud build does not see the job environment.** `eas build` re-runs `app.config.ts` on Expo's
+build server, which reads only the build profile's `env` block in `eas.json`. So each build workflow
+runs `scripts/write-eas-build-env.mjs <profile>` after `check:mobile-env`. The script copies these
+values into that profile's `env` on the runner and never commits or prints them. Before this step,
+the APK shipped with no `APP_URL` and no sign-in keys even though `check:mobile-env` passed. `eas
+update` runs `app.config.ts` on the runner itself and does not need the step. When `app.config.ts`
+gains a new value, add its name to the script's list too.
+
 There is **no per-user identity** to configure. The signed-in user is resolved at runtime by an OAuth
 sign-in against Clerk, and every API call carries an `Authorization: Bearer <token>` the backend
 verifies.
