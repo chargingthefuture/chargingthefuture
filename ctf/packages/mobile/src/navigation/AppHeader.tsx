@@ -1,16 +1,16 @@
 // The bar above each screen, as the web draws it: the top bar on Apps (web MobileTopBar), the shared
 // back-chevron header everywhere else (web MobileScreenHeader, or the plugin's own header where the
-// web plugin draws one).
+// web plugin draws one), and nothing on the screens that draw the web's own header themselves.
 
 import React, { type ReactNode } from 'react';
-import { Code2, UserCircle, Users } from 'lucide-react-native';
+import { Code2, Gauge, Radio, UserCircle, Users, type LucideIcon } from 'lucide-react-native';
 import { ScreenHeader, TopBar } from '../components/shell/ShellChrome';
 import { AdminRefreshButton, HeaderPill } from '../components/shell/HeaderActions';
 import { getAppAccent, useTheme, type ThemeName, type ThemeTokens } from '../theme';
 import { getPluginEmoji } from '../theme/plugin-visuals';
 import { usePPTheme } from '../features/peer-programming/usePPTheme';
 import { getAccountTokens } from '../features/account';
-import { hasSharedHeader, isAdminKey, parentOf, pluginOf, SCREEN_TITLES, type FeatureKey, type PluginKey } from './screens';
+import { hasSharedHeader, isAdminKey, parentOf, pluginOf, SCREEN_TITLES, type FeatureKey } from './screens';
 
 type Open = (_key: FeatureKey) => void;
 
@@ -23,37 +23,44 @@ type HeaderLook = {
   gap?: number;
 };
 
-// The icon and accent of each header. A plugin screen shows the plugin's emoji in its accent. Your
-// account shows UserCircle in the brand color (web /account). PeerProgramming draws its own title
-// row on the web: Users bare (no tile), on the #0D0F14 header color with 8px gaps. Its admin page
-// uses the shared header with Code2 in the tile.
+// The lucide icon a web header draws in the tile instead of the app's emoji.
+const HEADER_ICONS: Partial<Record<FeatureKey, LucideIcon>> = {
+  'chyme-admin': Gauge,
+  'chyme-readings': Radio,
+  beacon: Radio,
+  'beacon-admin': Radio,
+  'peer-programming-admin': Code2,
+};
+
+// The icon and accent of each header. A plugin screen shows the plugin's emoji, or the web's icon
+// (HEADER_ICONS), in its accent. Your account shows UserCircle in the brand color (web /account).
+// PeerProgramming draws its own title row on the web: Users bare (no tile), on the plugin's header
+// color (#0D0F14) with 8px gaps.
 function headerLook(key: FeatureKey, theme: ThemeName, tokens: ThemeTokens, ppHeader: string): HeaderLook {
-  const plugin = pluginOf(key);
   if (key === 'account') {
     const brand = getAccountTokens(tokens).BRAND;
     return { accent: brand, icon: <UserCircle size={18} color={brand} /> };
   }
-  const accent = plugin ? getAppAccent(plugin, theme) : undefined;
-  return { accent, ...pluginLook(key, theme, ppHeader, plugin) };
-}
-
-function pluginLook(key: FeatureKey, theme: ThemeName, ppHeader: string, plugin: PluginKey | undefined): HeaderLook {
+  const plugin = pluginOf(key);
+  if (!plugin) return {};
+  const accent = getAppAccent(plugin, theme);
   if (key === 'peer-programming') {
-    const accent = getAppAccent('peer-programming', theme);
-    return { icon: <Users size={18} color={accent} />, iconTile: false, background: ppHeader, gap: 8 };
+    return { accent, icon: <Users size={18} color={accent} />, iconTile: false, background: ppHeader, gap: 8 };
   }
-  if (key === 'peer-programming-admin') {
-    return { icon: <Code2 size={18} color={getAppAccent('peer-programming', theme)} /> };
-  }
-  return { emoji: plugin ? getPluginEmoji(plugin) : undefined };
+  const Icon = HEADER_ICONS[key];
+  return Icon ? { accent, icon: <Icon size={18} color={accent} /> } : { accent, emoji: getPluginEmoji(plugin) };
 }
 
 // The controls the shell puts in the header's actions slot, as the web fills it. A member page shows
 // an Admin button to admins; an admin page shows the admin refresh control (web AdminRefreshControl,
-// which every admin header carries) and a Member view button. PeerProgramming's member page puts its
-// own Admin and Refresh buttons there (useHeaderActions), so it is not listed here.
-const ADMIN_PAGES: Partial<Record<FeatureKey, FeatureKey>> = { beacon: 'beacon-admin' };
-const MEMBER_PAGES: Partial<Record<FeatureKey, FeatureKey>> = { 'beacon-admin': 'beacon' };
+// which every admin header carries) and a Member view button. PeerProgramming puts its own buttons
+// there (useHeaderActions in PeerProgramming and PeerProgrammingAdmin), so it has no entry here.
+const ADMIN_PAGES: Partial<Record<FeatureKey, FeatureKey>> = { beacon: 'beacon-admin', chyme: 'chyme-admin' };
+const MEMBER_PAGES: Partial<Record<FeatureKey, FeatureKey>> = {
+  'beacon-admin': 'beacon',
+  'chyme-admin': 'chyme',
+  'chyme-readings': 'chyme',
+};
 
 function shellActions(key: FeatureKey, isAdmin: boolean, accent: string, open: Open, refresh: () => void): ReactNode {
   const adminPage = ADMIN_PAGES[key];
@@ -75,6 +82,7 @@ function shellActions(key: FeatureKey, isAdmin: boolean, accent: string, open: O
 export function AppHeader({
   selected,
   isAdmin,
+  signedIn,
   open,
   onOpenAccount,
   onRefresh,
@@ -82,6 +90,7 @@ export function AppHeader({
 }: {
   selected: FeatureKey;
   isAdmin: boolean;
+  signedIn: boolean;
   open: Open;
   onOpenAccount: () => void;
   /** Remounts the open screen, for the admin refresh control. */
@@ -92,9 +101,9 @@ export function AppHeader({
   const { theme, tokens } = useTheme();
   const pp = usePPTheme();
   if (selected === 'apps') return <TopBar onOpenAccount={onOpenAccount} />;
-  // The account sub-screens draw the web's own header, with its back control.
-  if (!hasSharedHeader(selected)) return null;
-  const plugin = pluginOf(selected);
+  // Screens that draw the web's own header themselves: the account sub-screens, and Chyme signed out
+  // (the web public page has its own header with Sign in).
+  if (!hasSharedHeader(selected) || (selected === 'chyme' && !signedIn)) return null;
   const look = headerLook(selected, theme, tokens, pp.HEADER);
   const fromShell = shellActions(selected, isAdmin, look.accent ?? tokens.brand, open, onRefresh);
   return (
@@ -103,7 +112,7 @@ export function AppHeader({
       {...look}
       onBack={() => open(parentOf(selected))}
       onOpenAccount={onOpenAccount}
-      pluginSlug={plugin}
+      pluginSlug={pluginOf(selected)}
       actions={fromShell || screenActions ? <>{fromShell}{screenActions}</> : undefined}
     />
   );

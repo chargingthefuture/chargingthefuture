@@ -279,6 +279,7 @@ function AppShell() {
       <AppHeader
         selected={selected}
         isAdmin={isAdmin}
+        signedIn={isAuthenticated}
         open={setSelected}
         onOpenAccount={openAccount}
         onRefresh={refreshScreen}

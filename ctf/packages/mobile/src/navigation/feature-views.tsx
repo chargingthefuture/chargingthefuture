@@ -2,7 +2,7 @@
 // per-render selection in App.tsx trivial.
 
 import React, { type ReactElement } from 'react';
-import { ChymeRoom } from '../features/chyme';
+import { ChymeReadingsAdmin, ChymeRoom, ChymeStreamUsage } from '../features/chyme';
 import { Beacon, BeaconAdmin } from '../features/beacon';
 import { PeerProgramming, PeerProgrammingAdmin } from '../features/peer-programming';
 import { Foundation } from '../features/foundation';
@@ -38,7 +38,10 @@ export function buildFeatureViews(ctx: FeatureViewContext): FeatureRenderers {
   const { open, refreshToken, ppCohortId, openPpRoom } = ctx;
   return {
     apps: () => <AppsList onOpen={open} />,
-    chyme: () => <ChymeRoom />,
+    // onBack serves the signed-out public page, which draws its own header with a back control.
+    chyme: () => <ChymeRoom onBack={() => open('apps')} />,
+    'chyme-admin': () => <ChymeStreamUsage key={refreshToken} onOpenReadings={() => open('chyme-readings')} />,
+    'chyme-readings': () => <ChymeReadingsAdmin key={refreshToken} />,
     beacon: () => <Beacon />,
     'beacon-admin': () => <BeaconAdmin key={refreshToken} />,
     'peer-programming': () => (

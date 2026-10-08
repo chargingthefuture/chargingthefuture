@@ -10,6 +10,8 @@
 export type FeatureKey =
   | 'apps'
   | 'chyme'
+  | 'chyme-admin'
+  | 'chyme-readings'
   | 'beacon'
   | 'beacon-admin'
   | 'peer-programming'
@@ -42,6 +44,9 @@ export function hasSharedHeader(key: FeatureKey): key is SharedHeaderKey {
 // What each shared header calls its screen. Apps carries the top bar instead.
 export const SCREEN_TITLES: Record<SharedHeaderKey, string> = {
   chyme: 'Chyme',
+  // The Chyme admin screens (web /admin/chyme and /admin/chyme/readings).
+  'chyme-admin': 'Live audio usage',
+  'chyme-readings': 'Chyme readings loop',
   beacon: 'Beacon',
   'beacon-admin': 'Beacon Admin',
   'peer-programming': 'PeerProgramming',
@@ -59,6 +64,8 @@ function isPluginKey(key: FeatureKey): key is PluginKey {
 
 // The admin screens, each with the plugin it belongs to. Only an admin may be on one.
 const ADMIN_PLUGINS: Partial<Record<FeatureKey, PluginKey>> = {
+  'chyme-admin': 'chyme',
+  'chyme-readings': 'chyme',
   'beacon-admin': 'beacon',
   'peer-programming-admin': 'peer-programming',
 };
@@ -73,9 +80,16 @@ export function pluginOf(key: FeatureKey): PluginKey | undefined {
   return ADMIN_PLUGINS[key] ?? (isPluginKey(key) ? key : undefined);
 }
 
-// Where back goes from each screen. Beacon Admin and PeerProgramming Admin go to Apps too: the web
-// swaps the member and admin pages in place, so back never bounces between them.
+// Where back goes from each screen: everything not listed goes to Apps. The web's back is the
+// browser's, so from an admin screen it returns to the page that opened it: the plugin's member page
+// (its Admin button), or Live audio usage for the readings loop (its link there). The Member view
+// button goes the other way, and back from the member page is Apps, so back never bounces between
+// the two.
 const PARENTS: Partial<Record<FeatureKey, FeatureKey>> = {
+  'chyme-admin': 'chyme',
+  'chyme-readings': 'chyme-admin',
+  'beacon-admin': 'beacon',
+  'peer-programming-admin': 'peer-programming',
   'account-data': 'account',
   'blocked-members': 'account',
   unlock: 'account',

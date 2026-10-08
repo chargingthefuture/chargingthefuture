@@ -202,7 +202,7 @@ importers:
         specifier: ~55.0.13
         version: 55.0.14(expo@55.0.14)
       expo-clipboard:
-        specifier: ^55.0.17
+        specifier: ~55.0.17
         version: 55.0.17(expo@55.0.14)(react-native@0.83.6(@babel/core@7.29.7)(@react-native/metro-config@0.85.1(@babel/core@7.29.7)(bufferutil@4.1.0))(@types/react@19.2.14)(bufferutil@4.1.0)(react@19.2.0))(react@19.2.0)
       expo-constants:
         specifier: ^55.0.7
