@@ -779,20 +779,32 @@ below). The line keeps its three-part wording only so the CI gate and older PRs 
 older `Parity Status: web+android complete` is still accepted by the gate so older PRs don't break,
 but new PRs should use the three-part line.)
 
-**Android carries the plugins that benefit from being an installed app (owner decisions, 2026-07-20
-and 2026-10-06 — see rule 105).** The test: a plugin goes in the Android app when it materially
+**Android carries the plugins that benefit from being an installed app (owner decisions, 2026-07-20,
+2026-10-06 and 2026-10-08 — see rule 105).** The test: a plugin goes in the Android app when it materially
 benefits from being an installed mobile app (live audio or video that keeps running in the
 background, a call that rings the phone with the app closed, or sharing the phone's screen), plus
-whatever it needs to run. Today that is Chyme, Beacon, PeerProgramming and Foundation's instant calls
-(the rest of Foundation stays web-only), opened from the app's Apps list, with Clerk auth, bug reporting, and settings / account.
-There will never be an iOS app, and full 1:1 Android parity is not coming back. Adding a plugin is
+whatever it needs to run. Today that is Chyme, Beacon, PeerProgramming and Foundation, each carried
+in full with its admin screens (Foundation in full since 2026-10-08, owner decision; it was its
+instant calls alone before that), opened from the app's Apps list, with Clerk auth, bug reporting,
+and settings / account.
+There will never be an iOS app. Adding a plugin is
 the owner's call; propose it with the reason. Everything else is served by the installable web app
-(PWA). So for a **web-only**
+(PWA).
+
+**A carried plugin matches its web plugin one to one, design included (owner decision, 2026-10-08 —
+standing rule for all agents).** Which plugins are in the Android app is the owner's call. How much of
+a carried plugin is there is not: every screen, feature, piece of copy and state the web plugin has,
+its admin screens included, plus whatever else the app needs for that plugin to work (sign-in, account, bug reporting, the feeds
+its screens read). Carrying one feature of a plugin is not an option. The Android screens copy the web
+design exactly — layout, copy, colors, sizes, spacing, icons and states — and nothing is invented: no
+copy, layout, row, note, color or state the web does not have. The only allowed differences are
+something React Native genuinely cannot do (say what and why), and the native call behavior an
+installed app exists for (ringing, background audio and video, screen share). So for a **web-only**
 change to any feature outside that keep-list — the common case now — the "android" part of the line is
 satisfied because the app intentionally has no Android surface for that feature. Use the same
 `Parity Status: web + mobile-responsive + android complete` line and add a one-liner in the body:
 `Android: out of scope (web-only per rule 105)`. Only a change to a keep-list surface (Clerk, Chyme,
-Beacon, PeerProgramming, Foundation calls, bug reporting, settings) still needs its Android side built in the same PR. **Do not** add React
+Beacon, PeerProgramming, Foundation, bug reporting, settings) still needs its Android side built in the same PR. **Do not** add React
 Native screens for non-keep-list features.
 
 ```

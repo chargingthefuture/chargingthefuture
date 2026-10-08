@@ -1,15 +1,17 @@
 // Recurring Activity — the Android copy of the web /apps/recurring-activity page
 // (components/recurring-activity/recurring-activity-shell.tsx), opened from Your account's
-// "Your ongoing activities" row as on the web. It draws the shared screen header itself, because a
+// "Your ongoing activities" row as on the web, and from Foundation's "See your ongoing arrangements";
+// back returns to whichever opened it. It draws the shared screen header itself, because a
 // member who has not finished Unlock gets the web's "Finish verifying" view, which has its own.
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Animated, Easing, ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import { HeartHandshake, RefreshCw } from 'lucide-react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { HeartHandshake } from 'lucide-react-native';
 import { useTheme } from '../../theme';
 import { interFamily } from '../../components/ui';
 import { LoadingScreen } from '../../components/shared/LoadingScreen';
 import { ScreenHeader } from '../../components/shell/ShellChrome';
+import { HeaderRefreshButton } from '../../components/shell/HeaderActions';
 import { ActivityList } from './ActivityList';
 import { CreateForm } from './CreateForm';
 import { VerifyView } from './VerifyView';
@@ -118,7 +120,7 @@ export function RecurringActivity(nav: Nav) {
         <View style={{ marginBottom: 20 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 6 }}>
             <Text style={{ fontSize: 20, fontFamily: interFamily('700'), color: t.TITLE }}>Recurring Activity</Text>
-            <RefreshButton onRefresh={() => loadData(true)} />
+            <HeaderRefreshButton onRefresh={() => loadData(true)} />
           </View>
           <Text style={{ fontSize: 13, lineHeight: 22.1, fontFamily: interFamily('400'), color: t.MUTED }}>
             Acknowledge the ongoing ties you share with another member. This is recognition, never a bill — and it is yours to keep private.
@@ -147,50 +149,5 @@ export function RecurringActivity(nav: Nav) {
         />
       </ScrollView>
     </View>
-  );
-}
-
-// The web RefreshButton: a 38px square in the system chrome colors; the icon turns while a refresh
-// runs, for at least 600ms so a quick one still shows.
-function RefreshButton({ onRefresh }: { onRefresh: () => Promise<void> }) {
-  const { tokens } = useTheme();
-  const [refreshing, setRefreshing] = useState(false);
-  const turn = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    if (!refreshing) return undefined;
-    turn.setValue(0);
-    const loop = Animated.loop(Animated.timing(turn, { toValue: 1, duration: 1000, easing: Easing.linear, useNativeDriver: true }));
-    loop.start();
-    return () => loop.stop();
-  }, [refreshing, turn]);
-
-  const press = useCallback(async () => {
-    if (refreshing) return;
-    setRefreshing(true);
-    const minSpin = new Promise((resolve) => setTimeout(resolve, 600));
-    try {
-      await onRefresh();
-    } catch {
-      // The screen shows its own load errors.
-    } finally {
-      await minSpin;
-      setRefreshing(false);
-    }
-  }, [onRefresh, refreshing]);
-
-  const rotate = turn.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
-  return (
-    <TouchableOpacity
-      onPress={() => void press()}
-      disabled={refreshing}
-      accessibilityRole="button"
-      accessibilityLabel="Refresh"
-      style={{ width: 38, height: 38, borderRadius: rr(tokens, 10), backgroundColor: tokens.surface, borderWidth: 1, borderColor: tokens.border, alignItems: 'center', justifyContent: 'center' }}
-    >
-      <Animated.View style={{ transform: [{ rotate }] }}>
-        <RefreshCw size={18} color={tokens.textPrimary} />
-      </Animated.View>
-    </TouchableOpacity>
   );
 }

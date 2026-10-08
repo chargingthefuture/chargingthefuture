@@ -17,6 +17,7 @@ export type FeatureKey =
   | 'peer-programming'
   | 'peer-programming-admin'
   | 'foundation'
+  | 'foundation-admin'
   | 'account'
   | 'account-data'
   | 'blocked-members'
@@ -35,7 +36,7 @@ export function isAccountKey(key: FeatureKey): boolean {
 // The screens that draw the web's own header instead of the shared one: the account sub-screens
 // (back control in the page, as on the web).
 type OwnHeaderKey = 'account-data' | 'blocked-members' | 'unlock' | 'recurring-activity';
-export type SharedHeaderKey = Exclude<FeatureKey, 'apps' | OwnHeaderKey>;
+type SharedHeaderKey = Exclude<FeatureKey, 'apps' | OwnHeaderKey>;
 
 export function hasSharedHeader(key: FeatureKey): key is SharedHeaderKey {
   return key !== 'apps' && (key === 'account' || !isAccountKey(key));
@@ -52,11 +53,12 @@ export const SCREEN_TITLES: Record<SharedHeaderKey, string> = {
   'peer-programming': 'PeerProgramming',
   'peer-programming-admin': 'PeerProgramming Admin',
   foundation: 'Foundation',
+  'foundation-admin': 'Foundation Admin',
   account: 'Your account',
 };
 
 const PLUGIN_KEYS = ['chyme', 'beacon', 'peer-programming', 'foundation'] as const;
-export type PluginKey = (typeof PLUGIN_KEYS)[number];
+type PluginKey = (typeof PLUGIN_KEYS)[number];
 
 function isPluginKey(key: FeatureKey): key is PluginKey {
   return (PLUGIN_KEYS as readonly string[]).includes(key);
@@ -68,6 +70,7 @@ const ADMIN_PLUGINS: Partial<Record<FeatureKey, PluginKey>> = {
   'chyme-readings': 'chyme',
   'beacon-admin': 'beacon',
   'peer-programming-admin': 'peer-programming',
+  'foundation-admin': 'foundation',
 };
 
 export function isAdminKey(key: FeatureKey): boolean {
@@ -90,9 +93,11 @@ const PARENTS: Partial<Record<FeatureKey, FeatureKey>> = {
   'chyme-readings': 'chyme-admin',
   'beacon-admin': 'beacon',
   'peer-programming-admin': 'peer-programming',
+  'foundation-admin': 'foundation',
   'account-data': 'account',
   'blocked-members': 'account',
   unlock: 'account',
+  // Recurring Activity is also opened from Foundation; App.tsx sends back there when it was.
   'recurring-activity': 'account',
 };
 

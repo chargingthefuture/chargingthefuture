@@ -1,38 +1,39 @@
-// The controls a screen puts in its header's actions slot (ScreenHeader `actions`), copied from the
-// web plugin headers:
+// The app's screen header is drawn by App.tsx (src/navigation/AppHeader.tsx) above every screen. This
+// file holds the one way a screen shapes that header while it is open, and the controls the header's
+// actions slot carries, copied from the web plugin headers:
+//
+//   - useScreenOverride   a screen asks for a refresh button, or, for a screen inside a plugin (a
+//                         provider's profile, a chat), a back that returns to the screen it came from.
+//                         Android's back button follows the same back.
 //   - HeaderPill          web PluginAdminButton ("Admin") and PluginUserShellButton ("Member view"):
 //                         34px tall, accent-tinted, 13px bold.
-//   - HeaderRefreshButton web RefreshButton (components/shared/refresh-button.tsx): a 38px square in
-//                         the same surface and border as the report and settings icons, its arrows
-//                         spinning while the reload runs.
-//   - AdminRefreshButton  web AdminRefreshControl: the accent-tinted 38px refresh square every admin
-//                         screen carries; it remounts the screen.
-//
-// The header is drawn by App.tsx above every screen. App.tsx fills `actions` itself when the controls
-// only navigate (Beacon, Chyme); a screen whose controls need its own state (PeerProgramming's reload)
-// hands them up through HeaderActionsContext with useHeaderActions.
+//   - HeaderRefreshButton web RefreshButton (38px, surface fill, border, text-colored icon) or, with
+//                         `admin`, web AdminRefreshControl (the same size tinted with the accent,
+//                         dimmed while it works). The icon spins while the reload runs, at least 600ms.
 
-import React, { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, Animated, Easing, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { RefreshCw } from 'lucide-react-native';
 import { useTheme } from '../../theme';
 import { interFamily } from '../ui';
 
-type SetActions = (_actions: ReactNode) => void;
+export type ScreenOverride = {
+  onBack?: () => void;
+  /** The reload behind the header's refresh button. */
+  refresh?: () => Promise<void> | void;
+};
 
-export const HeaderActionsContext = createContext<SetActions>(() => undefined);
+type SetOverride = (_override: ScreenOverride | null) => void;
 
-/**
- * Put `actions` in the header while this screen is open. `deps` say when to redraw them; the header
- * is cleared when the screen closes.
- */
-export function useHeaderActions(actions: ReactNode, deps: ReadonlyArray<unknown>): void {
-  const setActions = useContext(HeaderActionsContext);
+export const ScreenOverrideContext = createContext<SetOverride | null>(null);
+
+/** Pass a memoized value; null leaves the header as the app draws it. Cleared when the screen closes. */
+export function useScreenOverride(override: ScreenOverride | null): void {
+  const set = useContext(ScreenOverrideContext);
   useEffect(() => {
-    setActions(actions);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- the caller names what the controls depend on
-  }, deps);
-  useEffect(() => () => setActions(null), [setActions]);
+    set?.(override);
+  }, [set, override]);
+  useEffect(() => () => set?.(null), [set]);
 }
 
 export function HeaderPill({ label, accent, accessibilityLabel, onPress }: {
@@ -54,19 +55,26 @@ export function HeaderPill({ label, accent, accessibilityLabel, onPress }: {
   );
 }
 
-// Spins for at least 600ms, so a quick reload still shows it happened.
-export function HeaderRefreshButton({ onRefresh, title = 'Refresh' }: { onRefresh: () => Promise<void>; title?: string }) {
-  const { tokens } = useTheme();
-  const [refreshing, setRefreshing] = useState(false);
-  const spin = useRef(new Animated.Value(0)).current;
-
+function useSpin(spinning: boolean) {
+  const turn = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    if (!refreshing) return undefined;
-    spin.setValue(0);
-    const loop = Animated.loop(Animated.timing(spin, { toValue: 1, duration: 1000, easing: Easing.linear, useNativeDriver: true }));
+    if (!spinning) return undefined;
+    turn.setValue(0);
+    const loop = Animated.loop(Animated.timing(turn, { toValue: 1, duration: 1000, easing: Easing.linear, useNativeDriver: true }));
     loop.start();
     return () => loop.stop();
-  }, [refreshing, spin]);
+  }, [spinning, turn]);
+  return turn.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
+}
+
+export function HeaderRefreshButton({ onRefresh, admin, accent }: {
+  onRefresh: () => Promise<void> | void;
+  admin?: boolean;
+  accent?: string;
+}) {
+  const { tokens } = useTheme();
+  const [refreshing, setRefreshing] = useState(false);
+  const rotate = useSpin(refreshing);
 
   const press = async () => {
     if (refreshing) return;
@@ -74,6 +82,8 @@ export function HeaderRefreshButton({ onRefresh, title = 'Refresh' }: { onRefres
     const minSpin = new Promise((resolve) => setTimeout(resolve, 600));
     try {
       await onRefresh();
+      // The web admin control announces the refresh through a polite live region.
+      if (admin) AccessibilityInfo.announceForAccessibility('Screen refreshed.');
     } catch {
       // no-trace: the screen shows its own load errors; the button only drives the reload
     } finally {
@@ -82,37 +92,26 @@ export function HeaderRefreshButton({ onRefresh, title = 'Refresh' }: { onRefres
     }
   };
 
-  const rotate = spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
+  const tinted = admin && accent;
   return (
     <TouchableOpacity
       onPress={() => void press()}
       disabled={refreshing}
       accessibilityRole="button"
-      accessibilityLabel={title}
-      style={[styles.square, { borderRadius: tokens.isComic ? 0 : 10, backgroundColor: tokens.surface, borderColor: tokens.border }]}
+      accessibilityLabel={admin ? 'Refresh this screen' : 'Refresh'}
+      style={[
+        styles.square,
+        {
+          borderRadius: tokens.isComic ? 0 : 10,
+          borderColor: tinted ? `${accent}4D` : tokens.border,
+          backgroundColor: tinted ? `${accent}1A` : tokens.surface,
+          opacity: admin && refreshing ? 0.6 : 1,
+        },
+      ]}
     >
       <Animated.View style={{ transform: [{ rotate }] }}>
-        <RefreshCw size={18} color={tokens.textPrimary} />
+        <RefreshCw size={18} color={tinted ? accent : tokens.textPrimary} />
       </Animated.View>
-    </TouchableOpacity>
-  );
-}
-
-// Refreshing remounts the screen (the caller changes its key), as the web control does, and
-// announces it to a screen reader the way the web's polite live region does.
-export function AdminRefreshButton({ accent, onRefresh }: { accent: string; onRefresh: () => void }) {
-  const { tokens } = useTheme();
-  return (
-    <TouchableOpacity
-      onPress={() => {
-        onRefresh();
-        AccessibilityInfo.announceForAccessibility('Screen refreshed.');
-      }}
-      accessibilityRole="button"
-      accessibilityLabel="Refresh this screen"
-      style={[styles.square, { borderRadius: tokens.isComic ? 0 : 10, backgroundColor: `${accent}1A`, borderColor: `${accent}4D` }]}
-    >
-      <RefreshCw size={18} color={accent} />
     </TouchableOpacity>
   );
 }

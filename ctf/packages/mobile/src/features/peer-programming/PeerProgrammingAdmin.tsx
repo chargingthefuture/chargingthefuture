@@ -8,7 +8,6 @@ import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Code2 } from 'lucide-react-native';
 import { interFamily } from '../../components/ui';
-import { HeaderPill, useHeaderActions } from '../../components/shell/HeaderActions';
 import { Banner } from './AdminParts';
 import { CohortsSection, WeeklyAssignmentSection, WeeklyTopicSection } from './AdminCohorts';
 import { FeedbackSection, SingleOpenCohortSection } from './AdminSections';
@@ -41,15 +40,10 @@ function HeaderCard() {
   );
 }
 
-export function PeerProgrammingAdmin({ onOpenMember, onOpenRoom }: { onOpenMember: () => void; onOpenRoom: (_cohortId: string) => void }) {
+export function PeerProgrammingAdmin({ onOpenRoom }: { onOpenRoom: (_cohortId: string) => void }) {
   const t = usePPTheme();
   const defaultWeekStart = useMemo(() => currentWeekStartDate(), []);
   const admin = usePeerProgrammingAdmin();
-
-  useHeaderActions(
-    <HeaderPill label="Member view" accent={t.ACCENT} accessibilityLabel="Open the member view" onPress={onOpenMember} />,
-    [t.ACCENT, onOpenMember],
-  );
 
   return (
     <View style={[styles.root, { backgroundColor: t.BG }]}>

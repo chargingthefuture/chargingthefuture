@@ -14,11 +14,11 @@
  * The Session tab stays mounted while another tab is open (and behind an error), so moving away
  * does not drop the call.
  */
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useAuth } from '../../auth/auth-context';
 import { LoadingScreen } from '../../components/shared/LoadingScreen';
-import { HeaderPill, HeaderRefreshButton, useHeaderActions } from '../../components/shell/HeaderActions';
+import { useScreenOverride } from '../../components/shell/HeaderActions';
 import { interFamily } from '../../components/ui';
 import { ChatTab } from './ChatTab';
 import { CohortsTab } from './CohortsTab';
@@ -62,7 +62,7 @@ function TabRow({ tab, onSelect }: { tab: Tab; onSelect: (_tab: Tab) => void }) 
   );
 }
 
-export function PeerProgramming({ initialCohortId = null, onOpenAdmin }: { initialCohortId?: string | null; onOpenAdmin: () => void }) {
+export function PeerProgramming({ initialCohortId = null }: { initialCohortId?: string | null }) {
   const t = usePPTheme();
   const { user } = useAuth();
   const isAdmin = Boolean(user?.isAdmin);
@@ -71,14 +71,10 @@ export function PeerProgramming({ initialCohortId = null, onOpenAdmin }: { initi
   // opens on its conversation.
   const [tab, setTab] = useState<Tab>(initialCohortId ? 'chat' : 'goals');
 
-  // The web header's Admin pill (admins only) and Refresh, which reloads the open cohort's room.
-  useHeaderActions(
-    <>
-      {isAdmin ? <HeaderPill label="Admin" accent={t.ACCENT} accessibilityLabel="Admin panel" onPress={onOpenAdmin} /> : null}
-      <HeaderRefreshButton onRefresh={reload} />
-    </>,
-    [isAdmin, t.ACCENT, onOpenAdmin, reload],
-  );
+  // The web header's Refresh, which reloads the open cohort's room. The shell header puts the Admin
+  // pill (admins only) before it.
+  const override = useMemo(() => ({ refresh: reload }), [reload]);
+  useScreenOverride(override);
 
   if (loading) return <LoadingScreen />;
 

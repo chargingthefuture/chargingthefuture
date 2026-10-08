@@ -1,16 +1,17 @@
 // The bar above each screen, as the web draws it: the top bar on Apps (web MobileTopBar), the shared
 // back-chevron header everywhere else (web MobileScreenHeader, or the plugin's own header where the
-// web plugin draws one), and nothing on the screens that draw the web's own header themselves.
+// web plugin draws one), and nothing on the screens that draw the web's own header themselves. The
+// open screen can shape it through useScreenOverride (components/shell/HeaderActions.tsx).
 
 import React, { type ReactNode } from 'react';
-import { Code2, Gauge, Radio, UserCircle, Users, type LucideIcon } from 'lucide-react-native';
+import { Briefcase, Code2, Gauge, Radio, UserCircle, Users, type LucideIcon } from 'lucide-react-native';
 import { ScreenHeader, TopBar } from '../components/shell/ShellChrome';
-import { AdminRefreshButton, HeaderPill } from '../components/shell/HeaderActions';
+import { HeaderPill, HeaderRefreshButton, type ScreenOverride } from '../components/shell/HeaderActions';
 import { getAppAccent, useTheme, type ThemeName, type ThemeTokens } from '../theme';
 import { getPluginEmoji } from '../theme/plugin-visuals';
 import { usePPTheme } from '../features/peer-programming/usePPTheme';
 import { getAccountTokens } from '../features/account';
-import { hasSharedHeader, isAdminKey, parentOf, pluginOf, SCREEN_TITLES, type FeatureKey } from './screens';
+import { hasSharedHeader, isAdminKey, pluginOf, SCREEN_TITLES, type FeatureKey } from './screens';
 
 type Open = (_key: FeatureKey) => void;
 
@@ -30,6 +31,7 @@ const HEADER_ICONS: Partial<Record<FeatureKey, LucideIcon>> = {
   beacon: Radio,
   'beacon-admin': Radio,
   'peer-programming-admin': Code2,
+  'foundation-admin': Briefcase,
 };
 
 // The icon and accent of each header. A plugin screen shows the plugin's emoji, or the web's icon
@@ -51,27 +53,49 @@ function headerLook(key: FeatureKey, theme: ThemeName, tokens: ThemeTokens, ppHe
   return Icon ? { accent, icon: <Icon size={18} color={accent} /> } : { accent, emoji: getPluginEmoji(plugin) };
 }
 
-// The controls the shell puts in the header's actions slot, as the web fills it. A member page shows
-// an Admin button to admins; an admin page shows the admin refresh control (web AdminRefreshControl,
-// which every admin header carries) and a Member view button. PeerProgramming puts its own buttons
-// there (useHeaderActions in PeerProgramming and PeerProgrammingAdmin), so it has no entry here.
-const ADMIN_PAGES: Partial<Record<FeatureKey, FeatureKey>> = { beacon: 'beacon-admin', chyme: 'chyme-admin' };
+// Each member page with an admin page: the Admin pill (admins only) opens it, and its Member view
+// pill comes back, as the web PluginAdminButton and PluginUserShellButton do.
+const ADMIN_PAGES: Partial<Record<FeatureKey, FeatureKey>> = {
+  beacon: 'beacon-admin',
+  chyme: 'chyme-admin',
+  'peer-programming': 'peer-programming-admin',
+  foundation: 'foundation-admin',
+};
 const MEMBER_PAGES: Partial<Record<FeatureKey, FeatureKey>> = {
   'beacon-admin': 'beacon',
   'chyme-admin': 'chyme',
   'chyme-readings': 'chyme',
+  'peer-programming-admin': 'peer-programming',
+  'foundation-admin': 'foundation',
 };
 
-function shellActions(key: FeatureKey, isAdmin: boolean, accent: string, open: Open, refresh: () => void): ReactNode {
+type ActionInput = {
+  key: FeatureKey;
+  isAdmin: boolean;
+  accent: string;
+  open: Open;
+  /** Remounts the open screen, for an admin page that has no reload of its own. */
+  remount: () => void;
+  override: ScreenOverride | null;
+};
+
+// A member page: the Admin pill, then the screen's Refresh (web order). A screen inside the plugin (a
+// profile, a chat) carries no Admin pill, as the web page it copies does not.
+function memberActions({ key, isAdmin, accent, open, override }: ActionInput): ReactNode {
   const adminPage = ADMIN_PAGES[key];
-  if (adminPage) {
-    return isAdmin ? <HeaderPill label="Admin" accent={accent} accessibilityLabel="Admin panel" onPress={() => open(adminPage)} /> : null;
-  }
-  if (!isAdminKey(key)) return null;
+  const pill = adminPage && isAdmin && !override?.onBack
+    ? <HeaderPill label="Admin" accent={accent} accessibilityLabel="Admin panel" onPress={() => open(adminPage)} />
+    : null;
+  const refresh = override?.refresh ? <HeaderRefreshButton onRefresh={override.refresh} /> : null;
+  return pill || refresh ? <>{pill}{refresh}</> : null;
+}
+
+// An admin page: the admin refresh control every web admin header carries, then Member view.
+function adminActions({ key, accent, open, remount, override }: ActionInput): ReactNode {
   const memberPage = MEMBER_PAGES[key];
   return (
     <>
-      <AdminRefreshButton accent={accent} onRefresh={refresh} />
+      <HeaderRefreshButton admin accent={accent} onRefresh={override?.refresh ?? remount} />
       {memberPage ? (
         <HeaderPill label="Member view" accent={accent} accessibilityLabel="Open the member view" onPress={() => open(memberPage)} />
       ) : null}
@@ -84,36 +108,39 @@ export function AppHeader({
   isAdmin,
   signedIn,
   open,
+  onBack,
   onOpenAccount,
   onRefresh,
-  screenActions,
+  override,
 }: {
   selected: FeatureKey;
   isAdmin: boolean;
   signedIn: boolean;
   open: Open;
+  /** Back from the selected screen (App.tsx knows where it was opened from). */
+  onBack: () => void;
   onOpenAccount: () => void;
   /** Remounts the open screen, for the admin refresh control. */
   onRefresh: () => void;
-  /** Controls the open screen handed up through HeaderActionsContext. */
-  screenActions: ReactNode;
+  /** What the open screen asked of the header. */
+  override: ScreenOverride | null;
 }) {
   const { theme, tokens } = useTheme();
   const pp = usePPTheme();
   if (selected === 'apps') return <TopBar onOpenAccount={onOpenAccount} />;
-  // Screens that draw the web's own header themselves: the account sub-screens, and Chyme signed out
-  // (the web public page has its own header with Sign in).
+  // Screens that draw the web's own header themselves: the account sub-screens and Recurring
+  // Activity, and Chyme signed out (the web public page has its own header with Sign in).
   if (!hasSharedHeader(selected) || (selected === 'chyme' && !signedIn)) return null;
   const look = headerLook(selected, theme, tokens, pp.HEADER);
-  const fromShell = shellActions(selected, isAdmin, look.accent ?? tokens.brand, open, onRefresh);
+  const input: ActionInput = { key: selected, isAdmin, accent: look.accent ?? tokens.brand, open, remount: onRefresh, override };
   return (
     <ScreenHeader
       title={SCREEN_TITLES[selected]}
       {...look}
-      onBack={() => open(parentOf(selected))}
+      onBack={override?.onBack ?? onBack}
       onOpenAccount={onOpenAccount}
       pluginSlug={pluginOf(selected)}
-      actions={fromShell || screenActions ? <>{fromShell}{screenActions}</> : undefined}
+      actions={isAdminKey(selected) ? adminActions(input) : memberActions(input)}
     />
   );
 }

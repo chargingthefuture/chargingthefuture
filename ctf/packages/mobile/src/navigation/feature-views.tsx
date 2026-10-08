@@ -5,7 +5,7 @@ import React, { type ReactElement } from 'react';
 import { ChymeReadingsAdmin, ChymeRoom, ChymeStreamUsage } from '../features/chyme';
 import { Beacon, BeaconAdmin } from '../features/beacon';
 import { PeerProgramming, PeerProgrammingAdmin } from '../features/peer-programming';
-import { Foundation } from '../features/foundation';
+import { Foundation, FoundationAdmin } from '../features/foundation';
 import { AppsList } from '../features/apps';
 import { AccountData } from '../features/account-data';
 import { BlockedMembers } from '../features/blocks';
@@ -14,12 +14,14 @@ import { RecurringActivity } from '../features/recurring-activity';
 import { Unlock } from '../features/unlock';
 import type { FeatureKey } from './screens';
 
-export type FeatureRenderers = Record<FeatureKey, () => ReactElement>;
+type FeatureRenderers = Record<FeatureKey, () => ReactElement>;
 
-export type FeatureViewContext = {
+type FeatureViewContext = {
   open: (_key: FeatureKey) => void;
-  /** Goes to the open screen's parent, for a screen that draws its own back control. */
+  /** Goes back from the open screen, for a screen that draws its own back control. */
   back: () => void;
+  /** Opens Recurring Activity from Foundation, so its back returns to Foundation. */
+  openRecurringFromFoundation: () => void;
   /** Re-runs the Unlock check, after the Unlock screen reads or changes the member's status. */
   onUnlockStatusChanged: () => void;
   /** The Unlock screen's way home: Apps, with a fresh Unlock check. */
@@ -31,7 +33,7 @@ export type FeatureViewContext = {
   /** The cohort PeerProgramming opens on (null: the member's own), as the web's ?cohortId=. */
   ppCohortId: string | null;
   /** Opens PeerProgramming on a cohort's room, as the web admin's "Open room" link does. */
-  openPpRoom: (_cohortId: string | null) => void;
+  openPpRoom: (_cohortId: string) => void;
 };
 
 export function buildFeatureViews(ctx: FeatureViewContext): FeatureRenderers {
@@ -45,12 +47,13 @@ export function buildFeatureViews(ctx: FeatureViewContext): FeatureRenderers {
     beacon: () => <Beacon />,
     'beacon-admin': () => <BeaconAdmin key={refreshToken} />,
     'peer-programming': () => (
-      <PeerProgramming key={ppCohortId ?? 'own'} initialCohortId={ppCohortId} onOpenAdmin={() => open('peer-programming-admin')} />
+      <PeerProgramming key={ppCohortId ?? 'own'} initialCohortId={ppCohortId} />
     ),
     'peer-programming-admin': () => (
-      <PeerProgrammingAdmin key={refreshToken} onOpenMember={() => openPpRoom(null)} onOpenRoom={(cohortId) => openPpRoom(cohortId)} />
+      <PeerProgrammingAdmin key={refreshToken} onOpenRoom={(cohortId) => openPpRoom(cohortId)} />
     ),
-    foundation: () => <Foundation />,
+    foundation: () => <Foundation onOpenRecurring={ctx.openRecurringFromFoundation} />,
+    'foundation-admin': () => <FoundationAdmin />,
     ...accountViews(ctx),
   };
 }

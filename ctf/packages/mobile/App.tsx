@@ -1,8 +1,7 @@
 import { StatusBar } from 'expo-status-bar';
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 import {
   AppState,
-  BackHandler,
   StyleSheet,
   View,
 } from 'react-native';
@@ -23,10 +22,11 @@ import { AuthProvider, useAuth } from './src/auth/auth-context';
 import { ThemeProvider, useTheme } from './src/theme';
 import { LoadingScreen } from './src/components/shared/LoadingScreen';
 import { ShellBackground } from './src/components/shell/ShellChrome';
-import { HeaderActionsContext } from './src/components/shell/HeaderActions';
+import { ScreenOverrideContext } from './src/components/shell/HeaderActions';
 import { AppHeader } from './src/navigation/AppHeader';
 import { buildFeatureViews } from './src/navigation/feature-views';
-import { isAccountKey, isAdminKey, parentOf, pluginOf, type FeatureKey } from './src/navigation/screens';
+import { pluginOf } from './src/navigation/screens';
+import { useAppNavigation } from './src/navigation/useAppNavigation';
 import { StreamVideoRN } from '@stream-io/video-react-native-sdk';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -120,39 +120,6 @@ function callDisplayName(user: { username?: string | null } | null): string {
 // signed-in member has finished; only that first check shows the loading screen.
 type UnlockGate = { loading: boolean; walled: boolean; checked: boolean };
 
-// Keeps a member on a screen they may see: the account screens need a signed-in member (the gear
-// that reaches them shows only when signed in), and an admin screen needs an admin — anyone else goes
-// to the plugin's member page, as the web redirects them.
-function useScreenGuards(selected: FeatureKey, setSelected: (_key: FeatureKey) => void, isAuthenticated: boolean, isAdmin: boolean) {
-  useEffect(() => {
-    if (!isAuthenticated && isAccountKey(selected)) {
-      setSelected('apps');
-    } else if (!isAdmin && isAdminKey(selected)) {
-      setSelected(pluginOf(selected) ?? 'apps');
-    }
-  }, [isAuthenticated, isAdmin, selected, setSelected]);
-}
-
-// Android hardware back. The app has no screen stack, so give back a predictable meaning: from a
-// screen go to its parent (src/navigation/screens.ts); from Apps, let Android do its default (leave
-// the app). Note: "navigating away without closing" — the case that must not drop a member from a
-// live room — is pressing HOME or switching apps (which backgrounds the app; the Chyme foreground
-// service keeps the audio and the presence timers alive). Back is an explicit "leave", so it does
-// not need to preserve the call.
-function useHardwareBack(selected: FeatureKey, setSelected: (_key: FeatureKey) => void) {
-  useEffect(() => {
-    const onBack = () => {
-      if (selected !== 'apps') {
-        setSelected(parentOf(selected));
-        return true; // handled — do not exit
-      }
-      return false; // on Apps: let Android leave the app
-    };
-    const sub = BackHandler.addEventListener('hardwareBackPress', onBack);
-    return () => sub.remove();
-  }, [selected, setSelected]);
-}
-
 // Client-side Unlock wall. The server 403 gates are the real enforcement; this
 // only mirrors the web redirect so a not-yet-approved member does not see the
 // app shell. Defaults to not-walled and fails open on any fetch error.
@@ -212,46 +179,43 @@ function useUnlockGate(isLoading: boolean, isAuthenticated: boolean, isAdmin: bo
 function AppShell() {
   const { isLoading, isAuthenticated, user } = useAuth();
   const { tokens } = useTheme();
-  const [selected, setSelected] = useState<FeatureKey>('apps');
-  // The cohort PeerProgramming opens on (null: the member's own), the controls the open screen puts
-  // in the header, and the count the admin refresh control bumps to remount an admin screen.
+  const isAdmin = Boolean(user?.isAdmin);
+  const { selected, open, back, openRecurringFromFoundation, override, setOverride } = useAppNavigation(isAuthenticated, isAdmin);
+  // The cohort PeerProgramming opens on (null: the member's own), and the count the admin refresh
+  // control bumps to remount an admin screen.
   const [ppCohortId, setPpCohortId] = useState<string | null>(null);
-  const [screenActions, setScreenActions] = useState<ReactNode>(null);
   const [refreshToken, setRefreshToken] = useState(0);
   const refreshScreen = useCallback(() => setRefreshToken((count) => count + 1), []);
   useEffect(() => {
     if (selected !== 'peer-programming') setPpCohortId(null);
   }, [selected]);
 
-  const isAdmin = Boolean(user?.isAdmin);
-  const openAccount = useCallback(() => setSelected('account'), []);
-  useScreenGuards(selected, setSelected, isAuthenticated, isAdmin);
-  useHardwareBack(selected, setSelected);
+  const openAccount = useCallback(() => open('account'), [open]);
   const { unlockGate, refreshUnlockGate } = useUnlockGate(isLoading, isAuthenticated, isAdmin);
 
   const featureView = useMemo(() => {
-    const openPpRoom = (cohortId: string | null) => {
-      setPpCohortId(cohortId);
-      setSelected('peer-programming');
-    };
     const renderers = buildFeatureViews({
-      open: setSelected,
-      back: () => setSelected(parentOf(selected)),
+      open,
+      back,
+      openRecurringFromFoundation,
       onUnlockStatusChanged: () => void refreshUnlockGate(),
       onUnlockGoHome: () => {
-        setSelected('apps');
+        open('apps');
         void refreshUnlockGate();
       },
       openAccount,
       refreshToken,
       ppCohortId,
-      openPpRoom,
+      openPpRoom: (cohortId: string) => {
+        open('peer-programming');
+        setPpCohortId(cohortId);
+      },
     });
     const render = renderers[selected];
     // Every FeatureKey has an entry; the fallback preserves the default (Apps)
     // for any unexpected value.
-    return render ? render() : <AppsList onOpen={setSelected} />;
-  }, [selected, refreshToken, ppCohortId, refreshUnlockGate, openAccount]);
+    return render ? render() : <AppsList onOpen={open} />;
+  }, [selected, open, back, openRecurringFromFoundation, refreshToken, ppCohortId, refreshUnlockGate, openAccount]);
 
   // While the app is bootstrapping (restoring any stored sign-in session), or
   // while the first unlock-status check is in flight for a signed-in non-admin,
@@ -280,10 +244,11 @@ function AppShell() {
         selected={selected}
         isAdmin={isAdmin}
         signedIn={isAuthenticated}
-        open={setSelected}
+        open={open}
+        onBack={back}
         onOpenAccount={openAccount}
         onRefresh={refreshScreen}
-        screenActions={screenActions}
+        override={override}
       />
 
       {/* Keyed on the signed-in member so signing out (or in as somebody else) unmounts every screen
@@ -292,7 +257,7 @@ function AppShell() {
         {/* Foundation instant calls: the incoming ring and the live call show above every tab, as the web
             mounts its call controller at the shell root. Inside the keyed view, so signing out hangs up. */}
         <FoundationCallController signedIn={isAuthenticated} displayName={callDisplayName(user)}>
-          <HeaderActionsContext.Provider value={setScreenActions}>{featureView}</HeaderActionsContext.Provider>
+          <ScreenOverrideContext.Provider value={setOverride}>{featureView}</ScreenOverrideContext.Provider>
         </FoundationCallController>
       </View>
 

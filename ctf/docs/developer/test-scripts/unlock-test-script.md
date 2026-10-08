@@ -110,6 +110,20 @@ not see this banner. On android the client Unlock gate lets a treatment member t
 (instead of walling them) and the banner behaves the same. Inert when the flag is off everywhere.
 **Result:** web ☐ android ☐ — notes:
 
+### UNLOCK-M3 · Android Unlock screen matches the web, and the wall holds still
+**Role:** member (not yet verified), then an approved member · **Surfaces:** android, compared with web (~390px)
+**Steps:**
+1. As an unverified member with no submission, open the app: the Unlock wall shows the web's
+   heading, wording, the "Show me where to find it" steps with the picture, the optional hint box,
+   the account-removal survey note and the ban policy, plus Sign out (the one addition to the web).
+2. Wait on the wall for a minute: it stays put. It must not flash the loading screen again and again.
+3. Submit a valid Quora profile URL: the status view shows the pending state with the web's wording.
+4. As an approved member, open the gear, then Your account, then Verification: the same Unlock
+   screen opens with a back control, and back returns to Your account.
+**Expected:** The Android screens match the web screens line for line; only the first check after
+sign-in shows the loading screen.
+**Result:** android ☐ — notes:
+
 ### UNLOCK-M4 · The Commons is stripped back until approval (added 2026-09-26)
 **Role:** member not yet approved, then the same member approved; an approved member; admin · **Surfaces:** web + mobile-responsive
 **Steps:**

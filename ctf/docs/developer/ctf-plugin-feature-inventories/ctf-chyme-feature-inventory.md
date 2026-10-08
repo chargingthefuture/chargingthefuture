@@ -462,8 +462,9 @@ decision the owner has not made, or owned elsewhere. Nothing here is code work l
   shadows use React Native's `boxShadow`. The call join, the presence heartbeat, the foreground
   keep-alive and the moderation requests are unchanged. Differences that remain: the Foundation note
   on a Back Channel call is plain text rather than a link, since leaving the screen would end both
-  calls; the admin screens' back control goes to Chyme (the app has no admin index) and their header
-  has no refresh control (the usage screen keeps its own Refresh); the glow appears without the web's
+  calls; the admin screens' back control goes to the screen that opened them (Live audio usage to Chyme,
+  the readings loop to Live audio usage), since the app has no admin index; their header carries the
+  admin refresh control every web admin header has, beside the usage screen's own Refresh; the glow appears without the web's
   short fade; the browser-only cases (no WebRTC, the autoplay unlock) cannot occur in the app; the
   blog invite cards the web floats on signed-out pages are not part of Chyme and are not shown.
   No route, schema or contract change.
