@@ -12,6 +12,9 @@ export interface ScoutFormModel {
   fullName: string;
   bio: string;
   quora: string;
+  // Why this person cannot be nominated, from the check that runs when the link is pasted; null
+  // when nothing is in the way or the check has not answered.
+  quoraBlocked: string | null;
   country: string;
   state: string;
   city: string;
@@ -134,6 +137,23 @@ function NominationFields({ form }: { form: ScoutFormModel }) {
   const t = getSkillsHuntTokens(theme);
   return (
     <>
+      {/* The Quora link comes first: pasting it fills Full Name and checks straight away whether this
+          person is already nominated, before any other field is typed. */}
+      <div>
+        <label htmlFor="sh-scout-quora" style={{ fontSize: 12, fontWeight: 600, color: t.SUBTLE, display: "block", marginBottom: 6 }}>
+          Quora Profile URL <span style={{ color: t.ACCENT }}>*</span>
+        </label>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", background: t.INPUT_BG, border: form.quoraBlocked ? "1px solid rgba(239,68,68,0.5)" : fieldBorder(Boolean(form.quora), t), borderRadius: 10 }}>
+          <ExternalLink size={14} style={{ color: t.MUTED, flexShrink: 0 }} />
+          <input id="sh-scout-quora" value={form.quora} onChange={(e) => form.onQuora(e.target.value)} placeholder="https://quora.com/profile/..."
+            style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontSize: 14, color: t.TEXT }} />
+        </div>
+        <div style={{ fontSize: 11, color: t.FAINT, marginTop: 4 }}>Quora activity helps verify this is a real person — reduces risk of trafficker infiltration.</div>
+        {form.quoraBlocked && (
+          <div role="alert" style={{ marginTop: 8, padding: "10px 14px", borderRadius: 10, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#EF4444", fontSize: 13 }}>{form.quoraBlocked}</div>
+        )}
+      </div>
+
       <div>
         <label htmlFor="sh-scout-fullname" style={{ fontSize: 12, fontWeight: 600, color: t.SUBTLE, display: "block", marginBottom: 6 }}>
           Full Name <span style={{ color: t.ACCENT }}>*</span>
@@ -152,18 +172,6 @@ function NominationFields({ form }: { form: ScoutFormModel }) {
         <textarea id="sh-scout-bio" value={form.bio} onChange={(e) => form.onBio(e.target.value.slice(0, BIO_MAX))} rows={2} placeholder="e.g. Carpenter in Houston who builds and repairs homes."
           style={{ width: "100%", padding: "10px 14px", background: t.INPUT_BG, border: fieldBorder(Boolean(form.bio), t), borderRadius: 10, fontSize: 14, color: t.TEXT, outline: "none", resize: "vertical", boxSizing: "border-box", fontFamily: "inherit" }} />
         <div style={{ fontSize: 11, color: form.bio.length > 240 ? "#F59E0B" : t.FAINT, textAlign: "right", marginTop: 3 }}>{form.bio.length}/{BIO_MAX}</div>
-      </div>
-
-      <div>
-        <label htmlFor="sh-scout-quora" style={{ fontSize: 12, fontWeight: 600, color: t.SUBTLE, display: "block", marginBottom: 6 }}>
-          Quora Profile URL <span style={{ color: t.ACCENT }}>*</span>
-        </label>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", background: t.INPUT_BG, border: fieldBorder(Boolean(form.quora), t), borderRadius: 10 }}>
-          <ExternalLink size={14} style={{ color: t.MUTED, flexShrink: 0 }} />
-          <input id="sh-scout-quora" value={form.quora} onChange={(e) => form.onQuora(e.target.value)} placeholder="https://quora.com/profile/..."
-            style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontSize: 14, color: t.TEXT }} />
-        </div>
-        <div style={{ fontSize: 11, color: t.FAINT, marginTop: 4 }}>Quora activity helps verify this is a real person — reduces risk of trafficker infiltration.</div>
       </div>
 
       {/* Location. Country is required (it matters for non-US members and the GDP country view);
@@ -228,7 +236,8 @@ function canSubmitNomination(form: ScoutFormModel, activeRound: SkillsHuntRound 
   return form.fullName.trim().length >= 2
     && form.allSkillCount > 0
     && form.country.trim().length > 0
-    && form.quora.trim().length > 0;
+    && form.quora.trim().length > 0
+    && !form.quoraBlocked;
 }
 
 function NominationForm({ form, activeRound }: {

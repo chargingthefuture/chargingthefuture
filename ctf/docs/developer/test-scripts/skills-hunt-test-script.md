@@ -36,7 +36,7 @@ Open `/apps/skills-hunt` (web) and the SkillsHunt screen (Android). Confirm at l
 web ☐
 
 **CS-2 — Scout tab / nomination form is reachable**
-From the rounds list, tap or click into the active round. Navigate to the Scout tab. The "Nominate a Survivor" form renders with fields: Full name, Bio, Quora URL (required — marked with *), a skills picker, and a location block (Country — required, State/region and City — optional). On web the Country field is a dropdown; on Android it is a button that opens a searchable country list.
+From the rounds list, tap or click into the active round. Navigate to the Scout tab. The "Nominate a Survivor" form renders with fields: Quora URL (required — marked with *, first), Full name, Bio, a skills picker, and a location block (Country — required, State/region and City — optional). On web the Country field is a dropdown; on Android it is a button that opens a searchable country list.
 web ☐
 
 **CS-3 — Leaderboard tab loads**
@@ -92,6 +92,21 @@ Result: web ☐
 - At step 2 Full name changes to "TJW" — the guess follows the link, and the number is dropped.
 - At step 3 Full name stays "Amara Williams": a typed name is never replaced.
 - The filled-in name can be edited before submitting.
+
+### SH-0s — An already-nominated link is flagged before the rest of the form
+
+**Role:** member (scout) · **Surfaces:** web
+**Precondition:** Signed in, a round is open and inside its dates, and some person already has a nomination that is pending, flagged or accepted.
+
+**Steps:**
+1. Open the Scout tab. Check the first field is Quora Profile URL, above Full name.
+2. Paste the Quora link of the person who is already nominated. Fill in nothing else.
+3. Replace it with the link of somebody not yet nominated.
+
+**Expected:**
+- At step 2, within a second, a red note under the Quora field reads "This person is already nominated in the round …, where that nomination …" naming the round and its status, and Full name is filled from the link. Submit stays off even after the other fields are filled.
+- At step 3 the note goes away and Submit comes on once the required fields are filled.
+- A link on the Directory takedown list shows "This person asked to be removed from the directory…" the same way.
 
 Result: web ☐
 

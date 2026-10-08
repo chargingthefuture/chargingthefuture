@@ -46,6 +46,7 @@ import type {
 } from './types';
 import { isRoundAcceptingSubmissions } from './round-window';
 import { checkUrlLiveness } from './url-validation';
+import { findNominationBlocker } from './nomination-check';
 import { reportError } from 'lib/observability/report';
 import { recomputeMissionProgressForUser } from './missions';
 import {
@@ -1764,18 +1765,7 @@ export async function createSubmission(
     // Read back WHICH row blocks, not just that one does. The blocker can sit in a round the
     // admin is not looking at, or in a status their current filter hides, so a bare "already
     // nominated" leaves them hunting for something they cannot see (owner bug report 2026-08-28).
-    const existingActive = await client.query<{ status: string; round_name: string }>(
-      `SELECT s.status, r.name AS round_name
-         FROM skills_hunt_submissions s
-         JOIN skills_hunt_rounds r ON r.id = s.round_id
-        WHERE s.quora_profile_url_normalized = $1
-          AND s.status <> 'rejected'
-          AND s.deleted_at IS NULL
-        ORDER BY s.created_at DESC
-        LIMIT 1`,
-      [normalizedUrl],
-    );
-    const blocker = existingActive.rows[0];
+    const blocker = await findNominationBlocker(client, normalizedUrl);
     if (blocker) {
       throw new Error(
         `skills_hunt_duplicate_submission:${JSON.stringify({ status: blocker.status, round: blocker.round_name })}`,
