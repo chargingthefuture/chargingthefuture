@@ -770,8 +770,11 @@ the Advocacy placeholder and one carrying only that placeholder.
 **Role:** admin · **Surfaces:** web (admin surface)
 **Precondition:** One profile carrying a member-added "skill not listed" chip (DIR-3), and one
 community-generated profile whose nomination proposed a free-text skill that is not in the taxonomy
-(SkillsHunt SH-7, accepted). Ideally one of the two labels matches an existing taxonomy skill name
-exactly (for example a chip reading `Librarianship`).
+(SkillsHunt SH-7, accepted), approved before the `Skills Hunt — Propose Skill Promotions` workflow
+has filed an issue for that skill. Ideally a second accepted nomination proposes the same free-text
+skill for a different person. Ideally the member-added label matches an existing taxonomy skill name
+exactly (for example a chip reading `Librarianship`); a nominated label that matches a taxonomy name
+or alias is linked as a real skill on approval and is never a chip.
 **Steps:**
 1. As the admin, open `/admin/directory`, scroll to the foot, and press **Pending skill proposals**.
    Then go back to `/admin` and check the list there for the same destination.
@@ -795,6 +798,10 @@ exactly (for example a chip reading `Librarianship`).
   two chips narrow to one source. An unclaimed profile carries an "Unclaimed" badge and a removed
   a proposal whose profile has been deleted a "Profile deleted" badge — listed and marked, never
   hidden. The list loads without an error (an earlier build failed here on a dropped column).
+  The nominated chip is listed although no issue has been filed for it yet (no issue link, no tracker
+  status), and a second nomination proposing the same skill is listed as its own row (an earlier
+  build listed a nominated chip only after the proposal workflow had filed it, and only for the
+  first nomination).
 - Step 3: the row carries an "Already a taxonomy skill" badge. The member's profile detail does not
   show that chip (it hides a duplicate of a held taxonomy name), but the admin sees it here, because
   it is exactly the row that needs dropping.
@@ -802,7 +809,9 @@ exactly (for example a chip reading `Librarianship`).
   **Keep it** disarms it; the second press removes the row from the list with no page reload.
 - Step 5: the chip is gone from the profile detail and from the edit form's "skill not listed"
   box, so a later save does not put it back.
-- Step 6: the chip is gone from the community-generated profile's Specializations section.
+- Step 6: the chip is gone from the community-generated profile's Specializations section, and from
+  the list for every other nominated profile carrying the same label (the drop is one decision per
+  skill). This holds when no issue had been filed: the drop records the skill as `dropped` itself.
 - Step 7: two entries read "Dropped a pending skill proposal", each with the profile, label, source,
   and the state before and after in the detail.
 - Step 8: the dropped nominated label is not filed as a new issue and not re-claimed — the tracker
