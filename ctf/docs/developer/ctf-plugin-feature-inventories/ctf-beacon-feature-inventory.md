@@ -269,12 +269,18 @@ default on the ALTER (the `id` default lesson from the announcements fix). Regen
 - Android (React Native): **built (owner decision, 2026-10-06; rule 105 keep-list).** Beacon is back
   in the Android app because an installed Android app can share the phone's screen and a web page
   cannot. It opens from the app's **Apps** list (home) or its own pill. `src/features/beacon/`:
-  - `Beacon.tsx` — polls `GET /api/beacon/current` every 15 seconds; live (`BeaconLiveView`: HLS
-    player via `expo-video`, the "LIVE AND PUBLIC" badge, member chat through the shared
-    `StreamChatView`, sign-in prompt when signed out), replay and idle (`BeaconIdleView`).
-  - `BeaconHostPanel.tsx` (admins only) — title, then **Go live** (create, `GET ingest` for the host
-    credentials, `go-live`), or **Broadcast to it from this phone** for an event already live, and
-    **End broadcast**.
+  - `Beacon.tsx` — below the screen header, the same radio icon, "Beacon" title and description line
+    as the web member page; polls `GET /api/beacon/current` every 15 seconds; loading card, live
+    (`BeaconLiveView`: the "LIVE AND PUBLIC" badge, HLS player via `expo-video`, the public notice,
+    the **Live chat** panel with member chat through the shared `StreamChatView`, or the lock and
+    **Sign in to chat** when signed out), and idle (`BeaconIdleView`: "No live event right now",
+    **Missed it? Watch the recordings** opening the blog's recordings page, and the last replay).
+    Colors, sizes and corners copy the web viewer (`BeaconTheme.ts`), comic theme included.
+  - `BeaconHostPanel.tsx` + `useBeaconHost.ts` (admins only) — the web admin page's notice and error
+    banners, its **Create an event** card (title, description, **Create draft**) and its
+    **Broadcast: <title>** card (**Go live** for a draft: `GET ingest` for the host credentials, then
+    `go-live`; **End broadcast** once live). An event already live when the screen opens is picked
+    up and its host credentials fetched, so the host can broadcast to it again from the phone.
   - `BeaconHostStage.tsx` / `BeaconHostControls.tsx` — a Stream Video client joined only when a button
     is pressed: **Use camera and microphone** (preview, **Flip camera**) and **Share screen** (Android
     asks first). `useBeaconEgressStart.ts` posts `start-broadcast` once anything is sent, retried.
@@ -356,6 +362,20 @@ stops. HLS is used for public viewers so scale does not multiply WebRTC cost.
 12. **Android viewer parity** — deferred via a parity ticket on the build PR.
 
 ## Change Log
+
+- 2026-10-08: **The Android Beacon screen looks like the web screen (owner directive).** Every color,
+  size, corner, icon and line of copy below the screen header now comes from the web member page
+  and, for admins, the web admin page. Added: the radio icon beside the title, the web's description
+  line ("Watch with just a link"), the **Missed it? Watch the recordings** button and radio icon on
+  the idle card, the lock on the signed-out chat panel, a "Loading…" card in place of a spinner,
+  icons on the host buttons, the description field, and the web's notice and error banners. The
+  host panel now follows the web admin steps (**Create an event**, then **Broadcast: <title>** with
+  **Go live** or **End broadcast**) in place of the single "Go live" card and the "Broadcast to it
+  from this phone" button; an already-live event is picked up without that button. Left out on
+  Android, as before: event history, chat moderation, the RTMP address and stream key, and the
+  web's "Broadcast from this browser" label, which would be untrue in the app. Watching, member
+  chat, camera, screen share and keeping the call running in the background work as they did. No
+  route, server or web change.
 
 - 2026-10-08: **Each recording gets its own release.** The archive workflow had never kept a copy:
   this repository's releases are immutable, so once its first run published the shared

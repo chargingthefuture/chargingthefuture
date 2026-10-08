@@ -2,149 +2,144 @@
  * BeaconHostPanel — going live from the Android app. Shown on the Beacon screen to admins only; the
  * routes behind it are admin-gated on the server, which is the real enforcement.
  *
- * Steps, the same as the web admin page: create a draft (or pick up the event already live), set up
- * the call and fetch the host's credentials (GET ingest), take the call out of backstage (go-live,
- * which posts "live now" to the Commons), then broadcast with BeaconHostStage. End broadcast stops
- * it. Leaving the Beacon screen leaves the call; the event stays live until ended, here or on the web.
+ * Copies the web admin page's banners and its "Create an event" and "Broadcast: …" cards
+ * (components/beacon/beacon-admin-shell.tsx); the steps live in useBeaconHost. Leaving the Beacon
+ * screen leaves the call; the event stays live until ended, here or on the web.
  */
-import React, { useCallback, useEffect, useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { type ThemeTokens } from '../../theme';
-import {
-  createBeaconEvent,
-  endBeaconEvent,
-  getBeaconHostCredentials,
-  goLiveBeaconEvent,
-  listBeaconAdminEvents,
-  type BeaconEventLike,
-  type BeaconHostCredentials,
-} from './BeaconApi';
+import React from 'react';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View, type TextStyle, type ViewStyle } from 'react-native';
 import { BeaconHostStage } from './BeaconHostStage';
+import { useBeaconHost } from './useBeaconHost';
+import {
+  ctaStyle,
+  ctaText,
+  DANGER_BG,
+  DANGER_BORDER,
+  DANGER_TEXT,
+  font,
+  radius,
+  type BeaconTokens,
+} from './BeaconTheme';
 
 export interface BeaconHostPanelProps {
-  tokens: ThemeTokens;
-  accent: string;
+  t: BeaconTokens;
   displayName: string;
   onChanged: () => void;
 }
 
-type HostSession = { event: BeaconEventLike; credentials: BeaconHostCredentials };
-
-export const BeaconHostPanel: React.FC<BeaconHostPanelProps> = ({ tokens, accent, displayName, onChanged }) => {
-  const [liveEvent, setLiveEvent] = useState<BeaconEventLike | null>(null);
-  const [session, setSession] = useState<HostSession | null>(null);
-  const [title, setTitle] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const loadEvents = useCallback(async () => {
-    try {
-      const events = await listBeaconAdminEvents();
-      setLiveEvent(events.find((event) => event.status === 'live') ?? null);
-    } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : 'The event list did not load.');
-    }
-  }, []);
-
-  useEffect(() => {
-    void loadEvents();
-  }, [loadEvents]);
-
-  const run = async (action: () => Promise<void>) => {
-    setBusy(true);
-    setError(null);
-    try {
-      await action();
-    } catch (actionError) {
-      setError(actionError instanceof Error ? actionError.message : 'That step failed.');
-    } finally {
-      setBusy(false);
-      onChanged();
-    }
-  };
-
-  // A new event: create the draft, set up the call, then go live.
-  const goLive = () =>
-    run(async () => {
-      const event = await createBeaconEvent(title.trim());
-      const credentials = await getBeaconHostCredentials(event.id);
-      await goLiveBeaconEvent(event.id);
-      setSession({ event: { ...event, status: 'live' }, credentials });
-      setTitle('');
-    });
-
-  // The event already live (started here or on the web): only the host credentials are needed.
-  const rejoin = (event: BeaconEventLike) =>
-    run(async () => {
-      setSession({ event, credentials: await getBeaconHostCredentials(event.id) });
-    });
-
-  const end = (event: BeaconEventLike) =>
-    run(async () => {
-      setSession(null);
-      await endBeaconEvent(event.id);
-      setLiveEvent(null);
-    });
-
+export const BeaconHostPanel: React.FC<BeaconHostPanelProps> = ({ t, displayName, onChanged }) => {
+  const h = useBeaconHost(onChanged);
+  const event = h.activeEvent;
   return (
-    <View style={[styles.card, { borderColor: tokens.border, backgroundColor: tokens.surface, borderRadius: tokens.radius }]}>
-      <Text style={[styles.heading, { color: tokens.textPrimary }]}>Go live</Text>
-      {session ? (
-        <>
-          <Text style={[styles.body, { color: tokens.textSecondary }]}>Live: {session.event.title}</Text>
-          <BeaconHostStage credentials={session.credentials} eventId={session.event.id} displayName={displayName} tokens={tokens} accent={accent} />
-          <PanelButton label="End broadcast" color="#F87171" busy={busy} tokens={tokens} onPress={() => end(session.event)} />
-        </>
-      ) : liveEvent ? (
-        <>
-          <Text style={[styles.body, { color: tokens.textSecondary }]}>“{liveEvent.title}” is live.</Text>
-          <PanelButton label="Broadcast to it from this phone" color={accent} busy={busy} tokens={tokens} onPress={() => rejoin(liveEvent)} />
-          <PanelButton label="End broadcast" color="#F87171" busy={busy} tokens={tokens} onPress={() => end(liveEvent)} />
-        </>
-      ) : (
-        <>
-          <TextInput
-            value={title}
-            onChangeText={setTitle}
-            placeholder="Title, e.g. State of the Skills Economy"
-            placeholderTextColor={tokens.textMuted}
-            maxLength={160}
-            style={[styles.input, { color: tokens.textPrimary, borderColor: tokens.border, borderRadius: tokens.radius }]}
-          />
-          <PanelButton label="Go live" color={accent} busy={busy || title.trim().length === 0} tokens={tokens} onPress={goLive} />
-        </>
-      )}
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+    <View>
+      {h.error ? <Banner t={t} text={h.error} color={DANGER_TEXT} borderColor={DANGER_BORDER} /> : null}
+      {h.notice ? <Banner t={t} text={h.notice} color={t.ACCENT} borderColor={`${t.ACCENT}55`} /> : null}
+
+      <View style={cardStyle(t)}>
+        <Text style={[styles.cardTitle, { color: t.TITLE }]}>Create an event</Text>
+        <Text style={[styles.label, { color: t.SUBTLE }]}>Title</Text>
+        <TextInput
+          value={h.title}
+          onChangeText={h.setTitle}
+          placeholder="State of the Skills Economy"
+          placeholderTextColor={t.SUBTLE}
+          accessibilityLabel="Title"
+          style={inputStyle(t)}
+        />
+        <Text style={[styles.label, { color: t.SUBTLE }]}>Description</Text>
+        <TextInput
+          value={h.description}
+          onChangeText={h.setDescription}
+          multiline
+          numberOfLines={3}
+          accessibilityLabel="Description"
+          style={[inputStyle(t), styles.textarea]}
+        />
+        <PanelButton t={t} label={h.creating ? 'Creating…' : 'Create draft'} disabled={h.creating} onPress={() => void h.createEvent()} />
+      </View>
+
+      {event && event.status !== 'ended' ? (
+        <View style={cardStyle(t)}>
+          <Text style={[styles.cardTitle, { color: t.TITLE }]}>Broadcast: {event.title}</Text>
+          {event.status === 'draft' ? (
+            <PanelButton t={t} label="Go live" disabled={h.busy} onPress={() => void h.goLive(event)} />
+          ) : (
+            <PanelButton t={t} label="End broadcast" danger disabled={h.busy} onPress={() => void h.endEvent(event)} />
+          )}
+          {h.host ? (
+            <View style={styles.stage}>
+              <BeaconHostStage credentials={h.host} eventId={event.id} displayName={displayName} t={t} />
+            </View>
+          ) : null}
+        </View>
+      ) : null}
     </View>
   );
 };
 
-function PanelButton({ label, color, busy, tokens, onPress }: {
+function Banner({ t, text, color, borderColor }: { t: BeaconTokens; text: string; color: string; borderColor: string }) {
+  return (
+    <View style={[styles.banner, { backgroundColor: t.SURFACE, borderColor, borderRadius: radius(t, 10) }]}>
+      <Text style={[styles.bannerText, { color }]}>{text}</Text>
+    </View>
+  );
+}
+
+// web primaryButtonStyle; End broadcast swaps in the red fill, border and text.
+function PanelButton({ t, label, danger, disabled, onPress }: {
+  t: BeaconTokens;
   label: string;
-  color: string;
-  busy: boolean;
-  tokens: ThemeTokens;
-  onPress: () => Promise<void>;
+  danger?: boolean;
+  disabled: boolean;
+  onPress: () => void;
 }) {
+  const box: ViewStyle = danger ? { backgroundColor: DANGER_BG, borderColor: DANGER_BORDER } : {};
+  const text: TextStyle = danger ? { color: DANGER_TEXT } : {};
   return (
     <TouchableOpacity
-      disabled={busy}
-      onPress={() => void onPress()}
+      disabled={disabled}
+      onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={label}
-      style={[styles.button, { borderColor: color, backgroundColor: color + '22', borderRadius: tokens.radius, opacity: busy ? 0.6 : 1 }]}
+      style={[ctaStyle(t, 18, 10), styles.button, box]}
     >
-      <Text style={[styles.buttonText, { color }]}>{label}</Text>
+      <Text style={[ctaText(t), text]}>{label}</Text>
     </TouchableOpacity>
   );
 }
 
+function cardStyle(t: BeaconTokens): ViewStyle {
+  return {
+    marginTop: 18,
+    borderRadius: radius(t, 14),
+    backgroundColor: t.HEADER,
+    borderWidth: 1,
+    borderColor: t.BORDER_SOLID,
+    padding: 18,
+  };
+}
+
+function inputStyle(t: BeaconTokens): TextStyle {
+  return {
+    backgroundColor: t.SURFACE,
+    borderWidth: 1,
+    borderColor: t.BORDER_SOLID,
+    borderRadius: radius(t, 10),
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    color: t.TITLE,
+    fontSize: 14,
+    marginBottom: 8,
+    ...font('400'),
+  };
+}
+
 const styles = StyleSheet.create({
-  card: { borderWidth: 1, padding: 16, gap: 10, marginBottom: 16 },
-  heading: { fontSize: 16, fontWeight: '700' },
-  body: { fontSize: 14 },
-  input: { borderWidth: 1, paddingVertical: 10, paddingHorizontal: 12, fontSize: 15 },
-  button: { borderWidth: 1, paddingVertical: 10, paddingHorizontal: 14, alignSelf: 'flex-start' },
-  buttonText: { fontSize: 14, fontWeight: '700' },
-  error: { fontSize: 13, color: '#F87171' },
+  cardTitle: { fontSize: 16, ...font('700'), marginBottom: 12 },
+  label: { fontSize: 12, ...font('600'), marginTop: 8, marginBottom: 4 },
+  textarea: { minHeight: 80, textAlignVertical: 'top' },
+  button: { marginTop: 8 },
+  stage: { marginTop: 18 },
+  banner: { marginTop: 14, paddingVertical: 10, paddingHorizontal: 14, borderWidth: 1 },
+  bannerText: { fontSize: 14, ...font('400') },
 });

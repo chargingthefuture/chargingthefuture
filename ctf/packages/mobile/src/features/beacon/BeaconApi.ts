@@ -12,7 +12,7 @@
 //   - POST /api/beacon/[id]/chat-token     member; a Stream Chat token for the event chat.
 // Host (admin):
 //   - GET  /api/beacon/admin               events newest first.
-//   - POST /api/beacon                     create a draft { title }.
+//   - POST /api/beacon                     create a draft { title, description }.
 //   - GET  /api/beacon/[id]/ingest         sets up the call; returns the host's Stream credentials.
 //   - POST /api/beacon/[id]/go-live        takes the call out of backstage; posts "live now".
 //   - POST /api/beacon/[id]/start-broadcast starts the public feed and recording once media exists.
@@ -107,11 +107,11 @@ export async function listBeaconAdminEvents(): Promise<BeaconEventLike[]> {
   return Array.isArray(data.events) ? (data.events as BeaconEventLike[]) : [];
 }
 
-export async function createBeaconEvent(title: string): Promise<BeaconEventLike> {
+export async function createBeaconEvent(title: string, description: string): Promise<BeaconEventLike> {
   const res = await authedFetch('/api/beacon', {
     method: 'POST',
     headers: { ...CSRF_HEADERS, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title, description: '' }),
+    body: JSON.stringify({ title, description }),
   });
   const data = await readJson(res, 'Creating the event');
   return data.event as BeaconEventLike;
