@@ -7,7 +7,7 @@
 | **Plugin** | Foundation (`foundation`) |
 | **Visibility** | Member |
 | **Roles to test** | Member (survivor), Member (acting as provider), Admin |
-| **Surfaces** | Web (Next.js). Android: instant calls only, since 2026-10-06 (rule 105 keep-list item 2d) — tested in `android-app-test-script.md`, section **AN-FD — Foundation calls**; every other Foundation screen is web-only (PWA) |
+| **Surfaces** | Web (Next.js). Android: all of Foundation since 2026-10-08 (rule 105 keep-list item 2d; instant calls alone from 2026-10-06) — tested in `android-app-test-script.md`, section **AN-FD — Foundation** |
 | **Seed first** | `pnpm --dir ctf seed:foundation` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-foundation-feature-inventory.md` |
 | **Generated** | 2026-07-29 (commit 03bee30a) · 2026-09-20: the inventory's prose was swept for a banned word (CLAUDE.md); no step here changes, because nothing about what the plugin does or how it is tested moved · 2026-09-22 manual update: FDN-39 checks a quote can move through its lifecycle, after the transition update was refused by the database for the same reason · 2026-09-23 manual update: FDN-40 checks that marking the work done settles a quote and that the value reaches the community index, after nothing in the app was found to send the closing transition |

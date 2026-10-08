@@ -25,7 +25,7 @@ import {
   Inter_900Black,
 } from '@expo-google-fonts/inter';
 import { AuthProvider, useAuth } from './src/auth/auth-context';
-import { ThemeProvider, useTheme, getAppAccent } from './src/theme';
+import { ThemeProvider, useTheme, getAppAccent, type ThemeName } from './src/theme';
 import { LoadingScreen } from './src/components/shared/LoadingScreen';
 import { ScreenHeader, ShellBackground, TopBar } from './src/components/shell/ShellChrome';
 import { getPluginEmoji } from './src/theme/plugin-visuals';
@@ -54,7 +54,7 @@ StreamVideoRN.updateConfig({
 });
 
 // The native Android app carries the plugins that materially benefit from being an installed app
-// (Chyme live audio, Beacon broadcasts, PeerProgramming's live call, Foundation's instant calls), plus what they need to run (Clerk auth wall, bug reporting,
+// (Chyme live audio, Beacon broadcasts, PeerProgramming's live call, Foundation in full with its instant calls), plus what they need to run (Clerk auth wall, bug reporting,
 // settings/account); everything else is served by the web app. The Apps list is home; the top bar's
 // gear opens Account & Data, and Blocked members sits under it, as on the web's /account page. See
 // `.claude/rules/105-web-android-feature-parity-rules.mdc`.
@@ -152,6 +152,28 @@ function buildFeatureViews(open: (_key: FeatureKey) => void): FeatureRenderers {
     ),
     'blocked-members': () => <BlockedMembers />,
   };
+}
+
+// The web frame at phone width: the Apps home carries the top bar, every other screen the back-chevron
+// header (web MobileTopBar and MobileScreenHeader).
+function ShellHeader({ selected, theme, onSelect, onOpenAccount }: {
+  selected: FeatureKey;
+  theme: ThemeName;
+  onSelect: (_key: FeatureKey) => void;
+  onOpenAccount: () => void;
+}) {
+  if (selected === 'apps') return <TopBar onOpenAccount={onOpenAccount} />;
+  const plugin = isPluginKey(selected) ? selected : undefined;
+  return (
+    <ScreenHeader
+      title={SCREEN_TITLES[selected]}
+      emoji={plugin ? getPluginEmoji(plugin) : undefined}
+      accent={plugin ? getAppAccent(plugin, theme) : undefined}
+      onBack={() => onSelect(parentOf(selected))}
+      onOpenAccount={onOpenAccount}
+      pluginSlug={plugin}
+    />
+  );
 }
 
 // The name the other person sees in a Foundation call.
@@ -279,25 +301,12 @@ function AppShell() {
   return (
     <View style={[styles.container, { backgroundColor: tokens.bg }]}>
       <ShellBackground />
-      {/* The web frame at phone width: the Apps home carries the top bar, every other screen the
-          back-chevron header (web MobileTopBar and MobileScreenHeader). */}
-      {selected === 'apps' ? (
-        <TopBar onOpenAccount={openAccount} />
-      ) : (
-        <ScreenHeader
-          title={SCREEN_TITLES[selected]}
-          emoji={isPluginKey(selected) ? getPluginEmoji(selected) : undefined}
-          accent={isPluginKey(selected) ? getAppAccent(selected, theme) : undefined}
-          onBack={() => setSelected(parentOf(selected))}
-          onOpenAccount={openAccount}
-          pluginSlug={isPluginKey(selected) ? selected : undefined}
-        />
-      )}
+      <ShellHeader selected={selected} theme={theme} onSelect={setSelected} onOpenAccount={openAccount} />
 
       {/* Keyed on the signed-in member so signing out (or in as somebody else) unmounts every screen
           holding a Stream client, whose cleanup leaves the call and disconnects it. */}
       <View key={user?.id ?? 'signed-out'} style={[styles.content, selected === 'apps' ? null : styles.contentPadded]}>
-        {/* Foundation instant calls: the incoming ring and the live call show above every tab, as the web
+        {/* Foundation's instant calls: the incoming ring and the live call show above every screen, as the web
             mounts its call controller at the shell root. Inside the keyed view, so signing out hangs up. */}
         <FoundationCallController signedIn={isAuthenticated} displayName={callDisplayName(user)}>
           {featureView}

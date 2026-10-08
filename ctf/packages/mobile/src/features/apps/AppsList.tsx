@@ -3,7 +3,8 @@
  *
  * Owner decision, 2026-10-06: the Android app carries any plugin that materially benefits from being
  * an installed app, plus what that plugin needs to run (sign-in, account, bug reporting); everything
- * else is on the web app. Rule 105 holds the list and the reasons. A new entry here goes with a
+ * else is on the web app. A plugin that is carried is carried in full, matching its web plugin
+ * screen for screen (owner decision, 2026-10-08). Rule 105 holds the list and the reasons. A new entry here goes with a
  * feature folder, a rule 105 keep-list line and a parity contract.
  */
 import React from 'react';

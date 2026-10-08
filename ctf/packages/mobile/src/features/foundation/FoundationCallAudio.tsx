@@ -10,7 +10,8 @@
  * app alive while a call is joined.
  */
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Mic, MicOff, PhoneOff } from 'lucide-react-native';
 import {
   StreamCall,
   StreamVideo,
@@ -18,8 +19,9 @@ import {
   useCallStateHooks,
   type Call,
 } from '@stream-io/video-react-native-sdk';
-import { FDButton } from './FDButton';
-import { useFDTheme } from './useFDTheme';
+import { FDButton, looks } from './FDButton';
+import { Caption } from './FDParts';
+import { alpha, font, useFDTheme } from './useFDTheme';
 import { reportError } from '../../observability/report';
 
 const CALL_TYPE = 'default';
@@ -32,8 +34,9 @@ export type CallCredentials = {
   displayName: string;
 };
 
+// The web text, with "this site" read as this app in Android settings.
 const MIC_FAILURE_TEXT =
-  'Your microphone could not be turned on, so the other person cannot hear you. Allow microphone access for this app in Android settings, then press Unmute.';
+  'Your microphone could not be turned on, so the other person cannot hear you. Allow microphone access for this app in Android settings, then press Muted to turn it on.';
 
 // Stream call ids accept [0-9a-zA-Z_-]; anything else is replaced so an id is never refused.
 function toCallId(raw: string): string {
@@ -104,16 +107,9 @@ function useAudioCall(credentials: CallCredentials) {
 }
 
 export function FoundationCallAudio({ credentials, onEnd }: { credentials: CallCredentials; onEnd: () => void }) {
-  const { tokens, accent } = useFDTheme();
   const { joined, error, micFailed } = useAudioCall(credentials);
   if (!joined) {
-    return (
-      <View style={styles.column}>
-        {error ? null : <ActivityIndicator color={accent} />}
-        <Text style={[styles.message, { color: error ? tokens.danger : tokens.textSecondary }]}>{error ?? 'Connecting…'}</Text>
-        <FDButton label="End call" variant="danger" onPress={onEnd} />
-      </View>
-    );
+    return <CallShell state={error ? 'error' : 'connecting'} message={error ?? 'Connecting…'} onEnd={onEnd} />;
   }
   return (
     <StreamVideo client={joined.client}>
@@ -125,7 +121,6 @@ export function FoundationCallAudio({ credentials, onEnd }: { credentials: CallC
 }
 
 function LiveControls({ onEnd, micFailed }: { onEnd: () => void; micFailed: boolean }) {
-  const { tokens } = useFDTheme();
   const { useParticipants, useMicrophoneState } = useCallStateHooks();
   const participants = useParticipants();
   const { microphone, isMute } = useMicrophoneState();
@@ -134,24 +129,65 @@ function LiveControls({ onEnd, micFailed }: { onEnd: () => void; micFailed: bool
   useEffect(() => {
     if (!isMute) setMicCameOn(true);
   }, [isMute]);
-  const otherJoined = participants.length > 1;
+  return (
+    <CallShell
+      state="in-call"
+      message={participants.length > 1 ? 'Connected' : 'Waiting for the other person to join…'}
+      notice={micFailed && !micCameOn ? MIC_FAILURE_TEXT : null}
+      muted={isMute}
+      onToggleMute={() => void microphone.toggle()}
+      onEnd={onEnd}
+    />
+  );
+}
 
+type ConnState = 'connecting' | 'error' | 'in-call';
+
+const STATE_LABEL: Record<ConnState, string> = { 'in-call': 'In call', error: 'Call error', connecting: 'Connecting' };
+
+// The web CallShell: one frame for connecting, error and in-call so the card keeps its shape. Mute shows
+// only in a call.
+function CallShell({ state, message, notice, muted, onToggleMute, onEnd }: {
+  state: ConnState;
+  message: string;
+  notice?: string | null;
+  muted?: boolean;
+  onToggleMute?: () => void;
+  onEnd: () => void;
+}) {
+  const { t } = useFDTheme();
+  const look = looks(t);
+  const muteLook = muted
+    ? { bg: t.BORDER, border: 'rgba(255,255,255,0.12)', color: t.SUBTLE }
+    : { bg: alpha(t.ACCENT, '1A'), border: alpha(t.ACCENT, '40'), color: t.ACCENT };
   return (
     <View style={styles.column}>
-      <Text style={[styles.message, { color: tokens.textSecondary }]} accessibilityLiveRegion="polite">
-        {otherJoined ? 'Connected' : 'Waiting for the other person to join…'}
-      </Text>
-      {micFailed && !micCameOn ? <Text style={[styles.message, { color: tokens.danger }]}>{MIC_FAILURE_TEXT}</Text> : null}
+      <Caption text={STATE_LABEL[state]} color={state === 'error' ? '#F87171' : t.ACCENT} />
+      <Text style={[font(14), styles.message]} accessibilityLiveRegion="polite">{message}</Text>
+      {notice ? <Text style={[font(13), styles.notice]} accessibilityRole="alert">{notice}</Text> : null}
       <View style={styles.row}>
-        <FDButton label={isMute ? 'Unmute' : 'Mute'} onPress={() => void microphone.toggle()} />
-        <FDButton label="End call" variant="danger" onPress={onEnd} />
+        {state === 'in-call' && onToggleMute ? (
+          <FDButton
+            label={muted ? 'Muted' : 'Mute'}
+            accessibilityLabel={muted ? 'Unmute microphone' : 'Mute microphone'}
+            icon={muted ? MicOff : Mic}
+            look={muteLook}
+            weight="600"
+            pad={[11, 18]}
+            radius={12}
+            size={14}
+            onPress={onToggleMute}
+          />
+        ) : null}
+        <FDButton label="End call" icon={PhoneOff} look={look.danger} pad={[11, 18]} radius={12} size={14} onPress={onEnd} />
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  column: { alignItems: 'center', gap: 14, alignSelf: 'stretch' },
-  row: { flexDirection: 'row', gap: 12 },
-  message: { fontSize: 14, textAlign: 'center', lineHeight: 20 },
+  column: { alignItems: 'center', gap: 18 },
+  row: { flexDirection: 'row', gap: 12, marginTop: 4 },
+  message: { color: '#D1D5DB', textAlign: 'center', minHeight: 20 },
+  notice: { color: '#F87171', textAlign: 'center', lineHeight: 19.5 },
 });
