@@ -5,18 +5,21 @@
 //
 //   - Sign in itself is the gradient button in the top bar and every screen header
 //     (src/components/shell/ShellChrome.tsx), as on the web.
-//   - `SignOutButton` sits on the Account & Data screen, and on the Unlock screen, which covers the
-//     app for a member still held at the Unlock wall. Signing out clears the stored session from
-//     the device keychain and drops the bearer token; App.tsx keys the content view on the signed-in
-//     member's id, so every Chyme screen holding a Stream client unmounts and disconnects it.
+//   - `UserMenuButton` is the account menu on the Your account screen's Identity card, where the
+//     web places Clerk's account menu (UserButton) and its Sign out item. Clerk's menu cannot be
+//     drawn in React Native, so a round avatar opens the same choice as a system menu.
+//   - `SignOutButton` sits on the Unlock screen, which covers the app for a member still held at
+//     the Unlock wall.
 //
-// It reuses the shared Button primitive so it matches the shipped controls in either theme.
+// Signing out clears the stored session from the device keychain and drops the bearer token;
+// App.tsx keys the content view on the signed-in member's id, so every Chyme screen holding a
+// Stream client unmounts and disconnects it.
 
 import React, { useCallback, useMemo } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useAuth } from '../../auth/auth-context';
 import { useTheme, type ThemeTokens } from '../../theme';
-import { Button, typeScale } from '../ui';
+import { Button, interFamily, typeScale } from '../ui';
 
 export function SignOutButton() {
   const { signOut, user, isAuthenticated } = useAuth();
@@ -48,6 +51,40 @@ export function SignOutButton() {
     </View>
   );
 }
+
+// The web's Clerk UserButton: a 28px round avatar. Pressing it offers Sign out, the one item of
+// Clerk's menu the app can carry (its Manage account page is web-only).
+export function UserMenuButton() {
+  const { signOut, user, isAuthenticated } = useAuth();
+  const { tokens } = useTheme();
+
+  const onPress = useCallback(() => {
+    const who = user?.email ?? user?.username ?? 'Your account';
+    Alert.alert(who, undefined, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Sign out', onPress: () => void signOut() },
+    ]);
+  }, [signOut, user]);
+
+  if (!isAuthenticated) return null;
+  const initial = (user?.username ?? user?.email ?? 'S').charAt(0).toUpperCase();
+
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel="Your account — sign out"
+      style={[avatarStyles.avatar, { backgroundColor: tokens.brand, borderRadius: tokens.isComic ? 0 : 14 }]}
+    >
+      <Text style={[avatarStyles.avatarText, { color: tokens.brandText }]}>{initial}</Text>
+    </TouchableOpacity>
+  );
+}
+
+const avatarStyles = StyleSheet.create({
+  avatar: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center', marginHorizontal: 5 },
+  avatarText: { fontSize: 12, fontFamily: interFamily('700') },
+});
 
 function makeStyles(t: ThemeTokens) {
   return StyleSheet.create({

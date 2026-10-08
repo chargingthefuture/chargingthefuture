@@ -1,636 +1,103 @@
-// Unlock mobile screen — pixel pass to design/.../survivor-hub/MobileUnlock.tsx
-// States: loading → submission form (no submission) → status view (pending/approved/rejected)
-// Public/unauthenticated state: shown when status fetch returns 401/403.
-// Real-data-only: timeline dates and quoraProfileUrl are absent from /api/unlock/status
-// and are therefore omitted (no fabrication).
+// Unlock — the Android copy of the web /plugin/unlock screen (components/unlock/unlock-shell.tsx).
+// It shows the loading screen, then the submission form when the member has not sent a profile
+// address, or the status screen when they have. App.tsx shows it two ways: as the wall in front of
+// the app for a member who has not passed it, and from Your account's Verification row.
+//
+// The one thing here the web screen does not have is the Sign out button on the wall (`showSignOut`).
+// On the web a held member can still reach /account from the address bar; the app has no address bar
+// and the wall covers everything else, so without it a held member could not leave or switch accounts.
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-} from 'react-native';
-import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
-import { UNLOCK_REWARD_SLA_HOURS } from './constants';
-import { reportError } from '../../observability/report';
-import { UnlockStatusError, fetchUnlockStatus, requestUnlockHelp, submitUnlockUrl } from './api';
-import type { UnlockStatus, UnlockReviewStatus } from './api';
+import React, { useCallback, useEffect, useState } from 'react';
+import { LoadingScreen } from '../../components/shared/LoadingScreen';
 import { SignOutButton } from '../../components/shared/SessionControls';
+import { fetchUnlockStatus, submitUnlockUrl, type UnlockStatus } from './api';
+import { toDisplayStatus } from './unlock-tokens';
+import { UnlockSubmissionView } from './UnlockSubmissionView';
+import { UnlockStatusView } from './UnlockStatusView';
 
-type DisplayStatus = 'pending' | 'approved' | 'rejected';
-
-// Verification-state palette — kept raw (not themed): the pending amber, rejected red, and the
-// approved brand purple are verification-state signals. The approved literal matches the unlock
-// accent in the default theme.
-const STATUS_CFG: Record<DisplayStatus, { color: string; bg: string; label: string }> = {
-  pending: { color: '#F59E0B', bg: 'rgba(245,158,11,0.08)', label: 'Pending Review' },
-  approved: { color: '#C084FC', bg: 'rgba(16,185,129,0.08)', label: 'Approved' },
-  rejected: { color: '#EF4444', bg: 'rgba(239,68,68,0.08)', label: 'Rejected' },
-};
-
-const BENEFITS = ['Full Directory access', 'SkillsHunt participation', 'ServiceCredits trading', 'Plugin marketplace', 'GDP contribution'];
-
-function toDisplayStatus(r: UnlockReviewStatus | null): DisplayStatus {
-  if (r === 'approved') return 'approved';
-  if (r === 'rejected' || r === 'spam') return 'rejected';
-  return 'pending';
-}
-
-type Styles = ReturnType<typeof makeStyles>;
-
-// A dimmed form of the accent, used while the help request is in flight.
-function fadedAccent(accent: string): string {
-  return `${accent}99`;
-}
-
-// Help for a member who cannot produce a Quora profile URL.
-//
-// This used to send them to the network's Quora space to comment and wait for a reply — which asks a
-// person who cannot find their way around Quora to go find their way around Quora, and sends them out
-// of the app with no way back. Roughly half of all sign-ups stopped at this screen.
-//
-// Now the help is inside the app: the button records the request, which is what opens the Commons to a
-// member with no submission, and `onHelped` re-runs the host gate so they land in the app shell where
-// they can ask in the chat. The verification prompt follows them there, so the Quora URL is still
-// asked for — it is just no longer the only thing they can do.
-function QuoraHelp({ s, accent, onHelped }: { s: Styles; accent: string; onHelped: () => void }) {
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function askForHelp() {
-    if (busy) return;
-    setBusy(true);
-    setError(null);
-    try {
-      await requestUnlockHelp();
-      onHelped();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not open the Commons just now.');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <View style={s.quoraHelp} accessibilityRole="summary">
-      <Text style={s.quoraHelpTitle}>Can&apos;t find your Quora profile URL?</Text>
-      <Text style={s.quoraHelpBody}>
-        You don&apos;t have to work it out alone. Open the Commons and ask — real people are in there,
-        and I&apos;ll help you find your profile link. You can come back and finish this whenever
-        you&apos;re ready.
-      </Text>
-      <TouchableOpacity
-        onPress={() => void askForHelp()}
-        disabled={busy}
-        style={[s.primaryBtn, { backgroundColor: busy ? fadedAccent(accent) : accent, marginTop: 10 }]}
-      >
-        <Text style={[s.primaryBtnText, { color: '#fff' }]}>
-          {busy ? 'Opening the Commons…' : 'Ask for help in the Commons'}
-        </Text>
-      </TouchableOpacity>
-      {error ? <Text style={s.errorText}>{error}</Text> : null}
-    </View>
-  );
-}
-
-// What gets an account banned, said where a member reads the rules of the gate.
-//
-// It is here rather than only in the guide because a ban closes the account itself rather than this
-// app's access to it, so it reaches anything else a member signs into with the same account. A rule
-// with that reach should not be something somebody finds out by hitting it.
-//
-// Closed by default. Somebody arriving to verify is not there to read a list of ways to be removed,
-// and leading with it reads as suspicion of a person who has done nothing. The third paragraph is the
-// one worth opening it for: not finishing is not a ban, and a member sitting in a long queue should
-// not have to guess whether silence means they are in trouble.
-function BanPolicy({ s, accent }: { s: Styles; accent: string }) {
-  const [open, setOpen] = useState(false);
-
-  return (
-    <View style={s.banPolicy}>
-      <TouchableOpacity
-        onPress={() => setOpen((prev) => !prev)}
-        accessibilityRole="button"
-        accessibilityState={{ expanded: open }}
-        style={s.banPolicyHeader}
-      >
-        <Text style={s.banPolicyTitle}>What gets an account banned</Text>
-        <Text style={[s.banPolicyToggle, { color: accent }]}>{open ? 'Hide' : 'Read'}</Text>
-      </TouchableOpacity>
-
-      {open ? (
-        <View style={{ marginTop: 8 }}>
-          <Text style={s.banPolicyBody}>
-            Signing up to harass people here gets the account banned. That includes the address it is
-            signed up with — an address chosen to mock somebody is the harassment, not a preamble to it.
-          </Text>
-          <Text style={[s.banPolicyBody, { marginTop: 8 }]}>
-            Running a second account when you already have one gets the second one banned. Your first
-            is untouched.
-          </Text>
-          <Text style={[s.banPolicyBody, s.banPolicyEmphasis, { marginTop: 8 }]}>
-            Not finishing this step is not one of them. An account that never sends a profile address
-            stays where it is, with the access that carries, for as long as it takes. Nobody is removed
-            for being slow, for not finding their profile address, or for asking for help instead.
-          </Text>
-          <Text style={[s.banPolicyBody, { marginTop: 8 }]}>
-            A ban closes the account rather than this app alone, so anything else you sign into with it
-            closes too. It is not a deletion and it can be lifted.
-          </Text>
-        </View>
-      ) : null}
-    </View>
-  );
-}
-
-// Loading state
-function LoadingView({ s, t }: { s: Styles; t: ThemeTokens }) {
-  return (
-    <View style={[s.fill, s.center, { backgroundColor: t.bg }]}>
-      <Text style={s.tagline}>EXIT THEIR ECONOMY</Text>
-      <Text style={s.tagline}>EXIT THE PSYOP</Text>
-    </View>
-  );
-}
-
-// Public / unauthenticated state
-function PublicView({ s, t, accent }: { s: Styles; t: ThemeTokens; accent: string }) {
-  return (
-    <ScrollView style={{ flex: 1, backgroundColor: t.bg }} contentContainerStyle={{ padding: 24 }}>
-      <View style={s.header}>
-        <Text style={s.headerTitle}>Unlock Access</Text>
-      </View>
-      <Text style={[s.badge, { marginBottom: 14 }]}>Verified access only</Text>
-      <Text style={s.heroTitle}>Create your account to begin{' '}
-        <Text style={{ color: accent }}>the verification process</Text>
-      </Text>
-      <Text style={[s.bodyText, { marginBottom: 20 }]}>
-        Skills Economy uses Quora profile verification to confirm members are real people. This protects the community.
-      </Text>
-      {[
-        { n: '1', title: 'Create a free account', desc: 'Sign up in 60 seconds.' },
-        { n: '2', title: 'Submit your Quora URL', desc: 'Share your public Quora profile.' },
-        { n: '3', title: 'Admin reviews in 48h', desc: 'A human checks your profile.' },
-        { n: '4', title: 'Full access unlocked', desc: 'Access all apps and the economy.' },
-      ].map(({ n, title, desc }) => (
-        <React.Fragment key={n}>
-          <View style={s.stepCard}>
-            <View style={s.stepBadge}><Text style={s.stepBadgeText}>{n}</Text></View>
-            <View style={{ flex: 1 }}>
-              <Text style={s.stepTitle}>{title}</Text>
-              <Text style={s.stepDesc}>{desc}</Text>
-            </View>
-          </View>
-        </React.Fragment>
-      ))}
-      {/* The Unlock wall covers the app, so this is the only place a held member can sign out. */}
-      <SignOutButton />
-    </ScrollView>
-  );
-}
-
-// Shown when the latest status read failed. The screen keeps what it last knew rather than guessing,
-// so this line is what tells the member the status on screen may not be current, and why.
-function StatusReadError({ s, message }: { s: Styles; message: string | null }) {
-  if (!message) return null;
-  return <Text style={s.errorText}>Your verification status could not be read: {message}</Text>;
-}
-
-// Submission form (no previous submission)
-function SubmissionView({
-  onSubmitted,
-  s,
-  t,
-  accent,
-  refreshing,
-  onRefresh,
-  statusError,
+export function Unlock({
+  onStatusChanged,
+  onGoHome,
+  onBack,
+  showSignOut = false,
 }: {
-  onSubmitted: () => void;
-  s: Styles;
-  t: ThemeTokens;
-  accent: string;
-  refreshing: boolean;
-  onRefresh: () => void;
-  statusError: string | null;
+  /** Fires after each status read, so the host can re-check whether the member passes the wall. */
+  onStatusChanged?: () => void;
+  /** The web's links to "/" (the help button, "Continue to the Commons"): the app's home. */
+  onGoHome: () => void;
+  /** Present when the screen was opened from somewhere it can go back to. */
+  onBack?: () => void;
+  showSignOut?: boolean;
 }) {
+  const [loading, setLoading] = useState(true);
+  const [status, setStatus] = useState<UnlockStatus | null>(null);
   const [url, setUrl] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const canSubmit = url.trim().length > 0 && !submitting;
 
-  async function handleSubmit() {
-    if (!canSubmit) return;
-    setSubmitting(true);
-    setError(null);
+  const loadStatus = useCallback(async (initial = false) => {
+    if (initial) setLoading(true);
     try {
-      await submitUnlockUrl(url.trim());
-      onSubmitted();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Submission failed.');
+      setStatus(await fetchUnlockStatus());
+    } catch {
+      setError('Unlock status unavailable.');
     } finally {
-      setSubmitting(false);
+      if (initial) setLoading(false);
+      onStatusChanged?.();
     }
-  }
+  }, [onStatusChanged]);
 
-  return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: t.bg }}
-      contentContainerStyle={{ padding: 20 }}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={accent} />}
-    >
-      <View style={s.header}>
-        <Text style={s.headerTitle}>Unlock Full Access</Text>
-        <Text style={s.headerSub}>Verify your Quora profile to get started</Text>
-      </View>
-      <StatusReadError s={s} message={statusError} />
-      <Text style={s.formHeading}>Submit your Quora profile URL</Text>
-      <Text style={[s.bodyText, { marginBottom: 18 }]}>
-        To unlock full access, submit your Quora profile URL for manual verification. This helps confirm you're a real person and reduces infiltration risk.
-      </Text>
-      <Text style={s.fieldLabel}>Your Quora Profile URL <Text style={{ color: accent }}>*</Text></Text>
-      <View style={[s.inputWrap, { borderColor: url ? accent + '80' : t.border }]}>
-        <TextInput
-          value={url}
-          onChangeText={setUrl}
-          placeholder="https://quora.com/profile/your-name"
-          placeholderTextColor={t.textSecondary}
-          style={s.input}
-          autoCapitalize="none"
-          autoCorrect={false}
-          keyboardType="url"
-        />
-      </View>
-      <Text style={s.hint}>Make sure your Quora profile is set to public before submitting.</Text>
-      <QuoraHelp s={s} accent={accent} onHelped={onSubmitted} />
-      <BanPolicy s={s} accent={accent} />
-      {error ? <Text style={s.errorText}>{error}</Text> : null}
-      <TouchableOpacity
-        onPress={handleSubmit}
-        disabled={!canSubmit}
-        style={[s.primaryBtn, { backgroundColor: canSubmit ? accent : t.borderFaint }]}
-      >
-        <Text style={[s.primaryBtnText, { color: canSubmit ? '#fff' : t.textSecondary }]}>
-          {submitting ? 'Submitting…' : 'Submit for Verification'}
-        </Text>
-      </TouchableOpacity>
-      <View style={s.whyCard}>
-        <Text style={[s.cardHeading, { color: accent }]}>Why we verify via Quora</Text>
-        {[
-          { icon: '🔗', t: 'Real-person proof', d: "Quora activity proves you're a real person with history online." },
-          { icon: '🛡', t: 'Reduces infiltration', d: 'Makes it harder for traffickers to create fake accounts.' },
-          { icon: '✅', t: 'Admin-reviewed', d: 'A human reviews every submission — no automated rejection.' },
-        ].map(({ icon, t: title, d }) => (
-          <React.Fragment key={title}>
-            <View style={s.whyRow}>
-              <Text style={{ fontSize: 16, flexShrink: 0 }}>{icon}</Text>
-              <View style={{ flex: 1 }}>
-                <Text style={s.whyTitle}>{title}</Text>
-                <Text style={s.whyDesc}>{d}</Text>
-              </View>
-            </View>
-          </React.Fragment>
-        ))}
-      </View>
-      <View style={s.benefitsCard}>
-        <Text style={s.benefitsHeading}>What gets unlocked</Text>
-        {BENEFITS.map(f => (
-          <React.Fragment key={f}>
-            <Text style={s.benefitItem}>· {f}</Text>
-          </React.Fragment>
-        ))}
-      </View>
-      {/* The Unlock wall covers the app, so this is the only place a held member can sign out. */}
-      <SignOutButton />
-    </ScrollView>
-  );
-}
+  useEffect(() => {
+    void loadStatus(true);
+    // Load once when the screen opens, as the web does; a new onStatusChanged must not reload it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-// Status view (has submission — pending / approved / rejected)
-// The re-submit card shown after a rejection. Its own component so StatusView keeps one job and
-// stays inside the rule-116 complexity limit.
-function ResubmitCard({
-  s,
-  t,
-  url,
-  onUrlChange,
-  submitting,
-  error,
-  onSubmit,
-  accent,
-  onHelped,
-}: {
-  s: Styles;
-  t: ThemeTokens;
-  url: string;
-  onUrlChange: (_value: string) => void;
-  submitting: boolean;
-  error: string | null;
-  onSubmit: () => void;
-  accent: string;
-  onHelped: () => void;
-}) {
-  return (
-    <View style={s.resubCard}>
-      <Text style={s.cardHeading}>Re-submit with a new URL</Text>
-      <QuoraHelp s={s} accent={accent} onHelped={onHelped} />
-      <TextInput
-        value={url}
-        onChangeText={onUrlChange}
-        placeholder="https://quora.com/profile/…"
-        placeholderTextColor={t.textSecondary}
-        style={[s.input, { borderWidth: 1, borderColor: t.border, borderRadius: 10, padding: 10, marginBottom: 10, color: t.textPrimary }]}
-        autoCapitalize="none"
-        autoCorrect={false}
-      />
-      {error ? <Text style={s.errorText}>{error}</Text> : null}
-      <TouchableOpacity
-        onPress={onSubmit}
-        disabled={!url.trim() || submitting}
-        style={[s.primaryBtn, { backgroundColor: '#EF4444' }]}
-      >
-        <Text style={[s.primaryBtnText, { color: '#fff' }]}>{submitting ? 'Re-submitting…' : 'Re-submit'}</Text>
-      </TouchableOpacity>
-    </View>
-  );
-}
-
-function StatusView({
-  status,
-  onResubmitted,
-  s,
-  t,
-  accent,
-  refreshing,
-  onRefresh,
-  statusError,
-}: {
-  status: UnlockStatus;
-  onResubmitted: () => void;
-  s: Styles;
-  t: ThemeTokens;
-  accent: string;
-  refreshing: boolean;
-  onRefresh: () => void;
-  statusError: string | null;
-}) {
-  const display = toDisplayStatus(status.reviewStatus);
-  const cfg = STATUS_CFG[display];
-  const [resubUrl, setResubUrl] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function handleResubmit() {
-    const trimmed = resubUrl.trim();
+  const submit = useCallback(async (quoraProfileUrl: string) => {
+    const trimmed = quoraProfileUrl.trim();
     if (!trimmed || submitting) return;
     setSubmitting(true);
     setError(null);
     try {
       await submitUnlockUrl(trimmed);
-      onResubmitted();
+      setUrl('');
+      await loadStatus();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Re-submission failed.');
+      setError(e instanceof Error ? e.message : 'Submission failed.');
     } finally {
       setSubmitting(false);
     }
+  }, [submitting, loadStatus]);
+
+  if (loading) return <LoadingScreen />;
+
+  const footer = showSignOut ? <SignOutButton /> : null;
+
+  if (!status?.hasSubmission) {
+    return (
+      <UnlockSubmissionView
+        url={url}
+        onUrlChange={setUrl}
+        onSubmit={() => void submit(url)}
+        submitting={submitting}
+        error={error}
+        onGoHome={onGoHome}
+        footer={footer}
+      />
+    );
   }
 
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: t.bg }}
-      contentContainerStyle={{ padding: 16 }}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={accent} />}
-    >
-      <View style={[s.header, { marginBottom: 16 }]}>
-        <Text style={s.headerTitle}>Unlock</Text>
-        <View style={[s.statusBadge, { backgroundColor: cfg.bg, borderColor: cfg.color + '50' }]}>
-          <Text style={[s.statusBadgeText, { color: cfg.color }]}>{cfg.label}</Text>
-        </View>
-      </View>
-      <StatusReadError s={s} message={statusError} />
-
-      {/* Status card */}
-      <View style={[s.statusCard, { backgroundColor: cfg.bg, borderColor: cfg.color + '40' }]}>
-        <View style={[s.statusIconWrap, { backgroundColor: cfg.color + '20', borderColor: cfg.color + '50' }]}>
-          <Text style={{ fontSize: 22 }}>{display === 'approved' ? '✅' : display === 'rejected' ? '❌' : '⏳'}</Text>
-        </View>
-        <Text style={[s.statusLabel, { color: cfg.color }]}>{cfg.label}</Text>
-        {display === 'approved' && (
-          <View style={s.approvedBox}>
-            <Text style={{ fontSize: 26, textAlign: 'center' }}>🎉</Text>
-            <Text style={[s.approvedTitle, { color: accent }]}>Welcome to Skills Economy (SE)</Text>
-            <Text style={[s.bodyText, { textAlign: 'center' }]}>All features are now unlocked.</Text>
-            <Text style={[s.bodyText, { textAlign: 'center', marginTop: 8 }]}>
-              {status.incentiveGrantedAt
-                ? 'Your ServiceCredits reward has been granted.'
-                : `Your ServiceCredits reward is issued automatically and arrives within ${UNLOCK_REWARD_SLA_HOURS} hours, if not sooner.`}
-            </Text>
-          </View>
-        )}
-        {display === 'rejected' && (
-          <View style={s.rejectedBox}>
-            <Text style={s.rejectedLabel}>Rejection reason</Text>
-            {/* reviewNote absent from UnlockStatus — omitted per real-data-only rule */}
-            <Text style={s.bodyText}>The profile URL could not be verified. Please re-submit with a valid, publicly accessible Quora profile URL.</Text>
-          </View>
-        )}
-      </View>
-
-      {/* A member waiting on review gave a URL and did everything asked of them, but until they can
-          reach the Commons there is nobody to ask while they wait. Matches the web status screen; an
-          approved member sees nothing here, having no need of it. */}
-      {display === 'pending' && (
-        <QuoraHelp s={s} accent={accent} onHelped={onResubmitted} />
-      )}
-
-      {display === 'rejected' && (
-        <ResubmitCard
-          s={s}
-          t={t}
-          url={resubUrl}
-          onUrlChange={setResubUrl}
-          submitting={submitting}
-          error={error}
-          onSubmit={handleResubmit}
-          accent={accent}
-          onHelped={onResubmitted}
-        />
-      )}
-
-      {/* Shown whatever the verification status is: the rules of the gate are the same for a member
-          waiting, a member turned down, and a member already through. */}
-      <BanPolicy s={s} accent={accent} />
-
-      {/* What gets unlocked */}
-      <View style={s.benefitsCard}>
-        <Text style={s.benefitsHeading}>What gets unlocked</Text>
-        {BENEFITS.map(f => (
-          <React.Fragment key={f}>
-            <Text style={[s.benefitItem, { color: display === 'approved' ? t.textPrimary : t.textSecondary }]}>
-              {display === 'approved' ? '✓ ' : '· '}{f}
-            </Text>
-          </React.Fragment>
-        ))}
-      </View>
-      {/* The Unlock wall covers the app, so this is the only place a held member can sign out. */}
-      <SignOutButton />
-    </ScrollView>
+    <UnlockStatusView
+      status={toDisplayStatus(status.reviewStatus)}
+      resubmitUrl={url}
+      onResubmitUrlChange={setUrl}
+      onResubmit={() => void submit(url)}
+      submitting={submitting}
+      error={error}
+      onGoHome={onGoHome}
+      onBack={onBack}
+      footer={footer}
+    />
   );
-}
-
-// Root screen — orchestrates state transitions.
-// `onStatusChanged` (optional) fires after each status reload so a host gate
-// (e.g. the app-wide Unlock wall) can re-evaluate access without a restart.
-export const Unlock: React.FC<{
-  onStatusChanged?: () => void;
-}> = ({ onStatusChanged }) => {
-  const { tokens, theme } = useTheme();
-  const accent = getAppAccent('unlock', theme);
-  const s = useMemo(() => makeStyles(tokens, accent), [tokens, accent]);
-
-  const [phase, setPhase] = useState<'loading' | 'public' | 'submit' | 'status'>('loading');
-  const [unlockStatus, setUnlockStatus] = useState<UnlockStatus | null>(null);
-  const [statusError, setStatusError] = useState<string | null>(null);
-
-  const loadStatus = useCallback(async () => {
-    try {
-      const st = await fetchUnlockStatus();
-      setUnlockStatus(st);
-      setStatusError(null);
-      setPhase(st.hasSubmission ? 'status' : 'submit');
-    } catch (e: unknown) {
-      if (e instanceof UnlockStatusError && (e.status === 401 || e.status === 403)) {
-        setPhase('public');
-        return;
-      }
-      reportError(e, { area: 'unlock', op: 'mobile_status_load' });
-      setStatusError(e instanceof Error ? e.message : 'Unlock status unavailable.');
-      // Keep the last known view, so a failed refresh never moves a pending member back to the
-      // submission form. Only a first load with nothing known falls back to the form.
-      setPhase((prev) => (prev === 'loading' ? 'submit' : prev));
-    } finally {
-      onStatusChanged?.();
-    }
-  }, [onStatusChanged]);
-
-  useEffect(() => { void loadStatus(); }, [loadStatus]);
-
-  // Pull-to-refresh: re-pull the verification status. loadStatus never re-enters the
-  // full-screen loading view after the first load, so the current content stays visible.
-  const [refreshing, setRefreshing] = useState(false);
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    try {
-      await loadStatus();
-    } finally {
-      setRefreshing(false);
-    }
-  }, [loadStatus]);
-
-  if (phase === 'loading') return <LoadingView s={s} t={tokens} />;
-  if (phase === 'public') return <PublicView s={s} t={tokens} accent={accent} />;
-  if (phase === 'submit')
-    return (
-      <SubmissionView
-        onSubmitted={() => void loadStatus()}
-        s={s}
-        t={tokens}
-        accent={accent}
-        refreshing={refreshing}
-        onRefresh={onRefresh}
-        statusError={statusError}
-      />
-    );
-  if (phase === 'status' && unlockStatus) {
-    return (
-      <StatusView
-        status={unlockStatus}
-        onResubmitted={() => void loadStatus()}
-        s={s}
-        t={tokens}
-        accent={accent}
-        refreshing={refreshing}
-        onRefresh={onRefresh}
-        statusError={statusError}
-      />
-    );
-  }
-  return <LoadingView s={s} t={tokens} />;
-};
-
-function makeStyles(t: ThemeTokens, accent: string) {
-  return StyleSheet.create({
-    fill: { flex: 1 },
-    center: { alignItems: 'center', justifyContent: 'center', padding: 32 },
-    tagline: { fontSize: 10, letterSpacing: 2.5, color: 'rgba(255,255,255,0.22)', textTransform: 'uppercase', fontWeight: '500', marginBottom: 4 },
-    header: { marginBottom: 12 },
-    headerTitle: { fontSize: 18, fontWeight: '800', color: t.textPrimary },
-    headerSub: { fontSize: 12, color: t.textSecondary, marginTop: 2 },
-    badge: { paddingHorizontal: 12, paddingVertical: 3, borderRadius: 20, backgroundColor: accent + '20', borderWidth: 1, borderColor: accent + '40', fontSize: 11, color: accent, fontWeight: '600', alignSelf: 'flex-start' },
-    heroTitle: { fontSize: 22, fontWeight: '800', color: t.textPrimary, lineHeight: 30, marginBottom: 10 },
-    bodyText: { fontSize: 13, color: t.textSecondary, lineHeight: 20 },
-    stepCard: { flexDirection: 'row', gap: 12, padding: 14, borderRadius: t.radius, backgroundColor: t.surface, borderWidth: 1, borderColor: t.border, marginBottom: 10, alignItems: 'center' },
-    stepBadge: { width: 28, height: 28, borderRadius: 14, backgroundColor: accent + '20', borderWidth: 1, borderColor: accent + '40', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-    stepBadgeText: { fontSize: 12, fontWeight: '700', color: accent },
-    stepTitle: { fontSize: 13, fontWeight: '600', color: t.textPrimary },
-    stepDesc: { fontSize: 11, color: t.textSecondary },
-    formHeading: { fontSize: 20, fontWeight: '800', color: t.textPrimary, marginBottom: 8 },
-    fieldLabel: { fontSize: 13, fontWeight: '600', color: t.textSecondary, marginBottom: 8 },
-    inputWrap: { flexDirection: 'row', alignItems: 'center', padding: 11, backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderRadius: t.radius, marginBottom: 6 },
-    input: { flex: 1, fontSize: 14, color: t.textPrimary },
-    hint: { fontSize: 11, color: t.textMuted, marginBottom: 8 },
-    errorText: { fontSize: 12, color: '#F87171', marginBottom: 8 },
-    primaryBtn: { padding: 14, borderRadius: t.radius, alignItems: 'center', marginBottom: 16 },
-    primaryBtnText: { fontSize: 15, fontWeight: '700' },
-    whyCard: { padding: 16, borderRadius: 14, backgroundColor: t.surface, borderWidth: 1, borderColor: t.border, marginBottom: 12 },
-    cardHeading: { fontSize: 13, fontWeight: '700', marginBottom: 12 },
-    whyRow: { flexDirection: 'row', gap: 10, marginBottom: 10 },
-    whyTitle: { fontSize: 12, fontWeight: '600', color: t.textPrimary, marginBottom: 2 },
-    whyDesc: { fontSize: 11, color: t.textSecondary, lineHeight: 17 },
-    benefitsCard: { padding: 14, borderRadius: t.radius, backgroundColor: accent + '0F', borderWidth: 1, borderColor: accent + '30', marginBottom: 16 },
-    benefitsHeading: { fontSize: 11, fontWeight: '700', color: accent, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 },
-    benefitItem: { fontSize: 12, color: t.textSecondary, marginBottom: 5 },
-    statusCard: { padding: 20, borderRadius: 16, borderWidth: 1, marginBottom: 14, alignItems: 'flex-start' },
-    statusIconWrap: { width: 44, height: 44, borderRadius: t.radius, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
-    statusLabel: { fontSize: 18, fontWeight: '800', marginBottom: 10 },
-    statusBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 20, borderWidth: 1, alignSelf: 'flex-start', marginTop: 4 },
-    statusBadgeText: { fontSize: 11, fontWeight: '600' },
-    approvedBox: { padding: 14, borderRadius: t.radius, backgroundColor: accent + '0D', borderWidth: 1, borderColor: accent + '30', width: '100%', alignItems: 'center' },
-    approvedTitle: { fontSize: 15, fontWeight: '700', marginTop: 6, marginBottom: 4 },
-    rejectedBox: { padding: 12, borderRadius: 10, backgroundColor: 'rgba(239,68,68,0.05)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.2)', width: '100%' },
-    rejectedLabel: { fontSize: 12, fontWeight: '600', color: '#EF4444', marginBottom: 4 },
-    resubCard: { padding: 16, borderRadius: 14, backgroundColor: t.surface, borderWidth: 1, borderColor: t.border, marginBottom: 14 },
-    quoraHelp: {
-      marginTop: 16,
-      marginBottom: 8,
-      paddingHorizontal: 14,
-      paddingVertical: 12,
-      borderRadius: t.radius,
-      backgroundColor: accent + '14',
-      borderWidth: 1.5,
-      borderColor: accent + '66',
-    },
-    quoraHelpTitle: { fontSize: 14, fontWeight: '800', color: t.textPrimary, marginBottom: 5 },
-    quoraHelpBody: { fontSize: 13, color: t.textSecondary, lineHeight: 19 },
-    quoraHelpLink: { color: accent, fontWeight: '700', textDecorationLine: 'underline' },
-    banPolicy: {
-      marginTop: 12,
-      marginBottom: 8,
-      paddingHorizontal: 14,
-      paddingVertical: 12,
-      borderRadius: t.radius,
-      backgroundColor: t.surface,
-      borderWidth: 1,
-      borderColor: t.border,
-    },
-    banPolicyHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-    banPolicyTitle: { fontSize: 13, fontWeight: '800', color: t.textPrimary, flex: 1 },
-    banPolicyToggle: { fontSize: 12, fontWeight: '700' },
-    banPolicyBody: { fontSize: 12, color: t.textSecondary, lineHeight: 18 },
-    banPolicyEmphasis: { color: t.textPrimary },
-  });
 }

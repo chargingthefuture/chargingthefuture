@@ -2,20 +2,30 @@
 // per-render selection in App.tsx trivial.
 
 import React, { type ReactElement } from 'react';
-import { StyleSheet, View } from 'react-native';
 import { ChymeRoom } from '../features/chyme';
 import { Beacon, BeaconAdmin } from '../features/beacon';
 import { PeerProgramming, PeerProgrammingAdmin } from '../features/peer-programming';
 import { Foundation } from '../features/foundation';
 import { AppsList } from '../features/apps';
 import { AccountData } from '../features/account-data';
-import { BlockedMembers, BlockedMembersLink } from '../features/blocks';
+import { BlockedMembers } from '../features/blocks';
+import { AccountHub } from '../features/account';
+import { RecurringActivity } from '../features/recurring-activity';
+import { Unlock } from '../features/unlock';
 import type { FeatureKey } from './screens';
 
 export type FeatureRenderers = Record<FeatureKey, () => ReactElement>;
 
 export type FeatureViewContext = {
   open: (_key: FeatureKey) => void;
+  /** Goes to the open screen's parent, for a screen that draws its own back control. */
+  back: () => void;
+  /** Re-runs the Unlock check, after the Unlock screen reads or changes the member's status. */
+  onUnlockStatusChanged: () => void;
+  /** The Unlock screen's way home: Apps, with a fresh Unlock check. */
+  onUnlockGoHome: () => void;
+  /** Opens Your account. */
+  openAccount: () => void;
   /** Bumped by the admin refresh control; an admin screen keyed on it remounts and reloads. */
   refreshToken: number;
   /** The cohort PeerProgramming opens on (null: the member's own), as the web's ?cohortId=. */
@@ -38,16 +48,34 @@ export function buildFeatureViews(ctx: FeatureViewContext): FeatureRenderers {
       <PeerProgrammingAdmin key={refreshToken} onOpenMember={() => openPpRoom(null)} onOpenRoom={(cohortId) => openPpRoom(cohortId)} />
     ),
     foundation: () => <Foundation />,
-    'account-data': () => (
-      <View style={styles.fill}>
-        <BlockedMembersLink onPress={() => open('blocked-members')} />
-        <AccountData />
-      </View>
-    ),
-    'blocked-members': () => <BlockedMembers />,
+    ...accountViews(ctx),
   };
 }
 
-const styles = StyleSheet.create({
-  fill: { flex: 1 },
-});
+// Your account and the screens under it (web /account, /account/data, /account/blocks,
+// /plugin/unlock and /apps/recurring-activity). The sub-screens draw their own header.
+function accountViews(ctx: FeatureViewContext) {
+  const { open, back } = ctx;
+  return {
+    account: () => (
+      <AccountHub
+        onOpenData={() => open('account-data')}
+        onOpenBlocks={() => open('blocked-members')}
+        onOpenVerification={() => open('unlock')}
+        onOpenRecurring={() => open('recurring-activity')}
+      />
+    ),
+    'account-data': () => <AccountData onBack={back} />,
+    'blocked-members': () => <BlockedMembers onBack={back} />,
+    // The hub's Verification row opens the Unlock screen, as the web row opens /plugin/unlock.
+    unlock: () => <Unlock onStatusChanged={ctx.onUnlockStatusChanged} onGoHome={ctx.onUnlockGoHome} onBack={back} />,
+    'recurring-activity': () => (
+      <RecurringActivity
+        onBack={back}
+        onOpenAccount={ctx.openAccount}
+        onOpenApps={() => open('apps')}
+        onOpenVerification={() => open('unlock')}
+      />
+    ),
+  } satisfies Partial<FeatureRenderers>;
+}

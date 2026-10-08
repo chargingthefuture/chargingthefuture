@@ -87,7 +87,7 @@ export function ShellBackground() {
 }
 
 type ChromeActions = {
-  /** Opens Account & Data — the gear, as the web gear opens /account. */
+  /** Opens Your account — the gear, as the web gear opens /account. */
   onOpenAccount: () => void;
   /** The plugin the member is in, passed to the bug report so triage knows where it happened. */
   pluginSlug?: string;

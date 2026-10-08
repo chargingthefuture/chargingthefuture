@@ -3,17 +3,19 @@
 // web plugin draws one).
 
 import React, { type ReactNode } from 'react';
-import { Code2, Users } from 'lucide-react-native';
+import { Code2, UserCircle, Users } from 'lucide-react-native';
 import { ScreenHeader, TopBar } from '../components/shell/ShellChrome';
 import { AdminRefreshButton, HeaderPill } from '../components/shell/HeaderActions';
-import { getAppAccent, useTheme, type ThemeName } from '../theme';
+import { getAppAccent, useTheme, type ThemeName, type ThemeTokens } from '../theme';
 import { getPluginEmoji } from '../theme/plugin-visuals';
 import { usePPTheme } from '../features/peer-programming/usePPTheme';
-import { isAdminKey, parentOf, pluginOf, SCREEN_TITLES, type FeatureKey } from './screens';
+import { getAccountTokens } from '../features/account';
+import { hasSharedHeader, isAdminKey, parentOf, pluginOf, SCREEN_TITLES, type FeatureKey, type PluginKey } from './screens';
 
 type Open = (_key: FeatureKey) => void;
 
 type HeaderLook = {
+  accent?: string;
   emoji?: string;
   icon?: ReactNode;
   iconTile?: boolean;
@@ -21,11 +23,21 @@ type HeaderLook = {
   gap?: number;
 };
 
-// Screens whose web header differs from the plugin's emoji tile. PeerProgramming draws its own title
+// The icon and accent of each header. A plugin screen shows the plugin's emoji in its accent. Your
+// account shows UserCircle in the brand color (web /account). PeerProgramming draws its own title
 // row on the web: Users bare (no tile), on the #0D0F14 header color with 8px gaps. Its admin page
 // uses the shared header with Code2 in the tile.
-function headerLook(key: FeatureKey, theme: ThemeName, ppHeader: string): HeaderLook {
+function headerLook(key: FeatureKey, theme: ThemeName, tokens: ThemeTokens, ppHeader: string): HeaderLook {
   const plugin = pluginOf(key);
+  if (key === 'account') {
+    const brand = getAccountTokens(tokens).BRAND;
+    return { accent: brand, icon: <UserCircle size={18} color={brand} /> };
+  }
+  const accent = plugin ? getAppAccent(plugin, theme) : undefined;
+  return { accent, ...pluginLook(key, theme, ppHeader, plugin) };
+}
+
+function pluginLook(key: FeatureKey, theme: ThemeName, ppHeader: string, plugin: PluginKey | undefined): HeaderLook {
   if (key === 'peer-programming') {
     const accent = getAppAccent('peer-programming', theme);
     return { icon: <Users size={18} color={accent} />, iconTile: false, background: ppHeader, gap: 8 };
@@ -80,14 +92,15 @@ export function AppHeader({
   const { theme, tokens } = useTheme();
   const pp = usePPTheme();
   if (selected === 'apps') return <TopBar onOpenAccount={onOpenAccount} />;
+  // The account sub-screens draw the web's own header, with its back control.
+  if (!hasSharedHeader(selected)) return null;
   const plugin = pluginOf(selected);
-  const accent = plugin ? getAppAccent(plugin, theme) : undefined;
-  const fromShell = shellActions(selected, isAdmin, accent ?? tokens.brand, open, onRefresh);
+  const look = headerLook(selected, theme, tokens, pp.HEADER);
+  const fromShell = shellActions(selected, isAdmin, look.accent ?? tokens.brand, open, onRefresh);
   return (
     <ScreenHeader
       title={SCREEN_TITLES[selected]}
-      {...headerLook(selected, theme, pp.HEADER)}
-      accent={accent}
+      {...look}
       onBack={() => open(parentOf(selected))}
       onOpenAccount={onOpenAccount}
       pluginSlug={plugin}

@@ -15,19 +15,39 @@ export type FeatureKey =
   | 'peer-programming'
   | 'peer-programming-admin'
   | 'foundation'
+  | 'account'
   | 'account-data'
-  | 'blocked-members';
+  | 'blocked-members'
+  | 'unlock'
+  | 'recurring-activity';
 
-// What each screen's header calls it. Apps has no header title: it carries the top bar instead.
-export const SCREEN_TITLES: Record<Exclude<FeatureKey, 'apps'>, string> = {
+// The account screens: the gear opens Your account (web /account), and Account & Data, Blocked
+// members, Verification (Unlock) and Recurring activity sit under it, as /account/data,
+// /account/blocks, /plugin/unlock and /apps/recurring-activity do. All need a signed-in member.
+const ACCOUNT_KEYS: readonly FeatureKey[] = ['account', 'account-data', 'blocked-members', 'unlock', 'recurring-activity'];
+
+export function isAccountKey(key: FeatureKey): boolean {
+  return ACCOUNT_KEYS.includes(key);
+}
+
+// The screens that draw the web's own header instead of the shared one: the account sub-screens
+// (back control in the page, as on the web).
+type OwnHeaderKey = 'account-data' | 'blocked-members' | 'unlock' | 'recurring-activity';
+export type SharedHeaderKey = Exclude<FeatureKey, 'apps' | OwnHeaderKey>;
+
+export function hasSharedHeader(key: FeatureKey): key is SharedHeaderKey {
+  return key !== 'apps' && (key === 'account' || !isAccountKey(key));
+}
+
+// What each shared header calls its screen. Apps carries the top bar instead.
+export const SCREEN_TITLES: Record<SharedHeaderKey, string> = {
   chyme: 'Chyme',
   beacon: 'Beacon',
   'beacon-admin': 'Beacon Admin',
   'peer-programming': 'PeerProgramming',
   'peer-programming-admin': 'PeerProgramming Admin',
   foundation: 'Foundation',
-  'account-data': 'Account & Data',
-  'blocked-members': 'Blocked members',
+  account: 'Your account',
 };
 
 const PLUGIN_KEYS = ['chyme', 'beacon', 'peer-programming', 'foundation'] as const;
@@ -56,7 +76,10 @@ export function pluginOf(key: FeatureKey): PluginKey | undefined {
 // Where back goes from each screen. Beacon Admin and PeerProgramming Admin go to Apps too: the web
 // swaps the member and admin pages in place, so back never bounces between them.
 const PARENTS: Partial<Record<FeatureKey, FeatureKey>> = {
-  'blocked-members': 'account-data',
+  'account-data': 'account',
+  'blocked-members': 'account',
+  unlock: 'account',
+  'recurring-activity': 'account',
 };
 
 export function parentOf(key: FeatureKey): FeatureKey {
