@@ -1,5 +1,5 @@
 ---
-description: Skill proposals by hand — run the filing workflow, place every pending proposal, and open one PR with the taxonomy changes worth making.
+description: Run the skills taxonomy proposals — file new ones, place each, and open one PR with the skills worth adding.
 ---
 
 Do the job of `.github/workflows/skills-proposal-issues.yml` (`ctf/scripts/proposeSkillPromotions.mjs`)
