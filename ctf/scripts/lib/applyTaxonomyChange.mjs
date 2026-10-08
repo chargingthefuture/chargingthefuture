@@ -142,12 +142,14 @@ async function applyProposalPromotions(client, skillId, normalizedSkills, summar
   summary.directorySkillsAutoAttached += attached.rowCount ?? 0;
 
   // Nominated / community-generated profiles surface a proposed skill through
-  // skills_hunt_directory_profiles -> the cross-app tracker (loadProfilePendingSkills), NOT through
-  // directory_profile_proposed_skills. Attach the now-official skill to those profiles too, or the
-  // "pending review" chip would just vanish when the tracker flips to 'promoted' above. This does not
-  // depend on the tracker status (it may already be 'promoted'), so re-applying repairs any nominated
-  // profile that lost the skill before this branch existed. directory_profile_id is TEXT (v2
-  // varchar/uuid), so only cast rows that are UUID-shaped — a malformed id can never abort the run.
+  // skills_hunt_directory_profiles -> the nomination's proposed_skills (loadProfilePendingSkills), NOT
+  // through directory_profile_proposed_skills. Attach the now-official skill to those profiles too, or
+  // the "pending review" chip would just vanish when the tracker flips to 'promoted' above. Matched on
+  // the nomination's own labels rather than the tracker's source_submission_id, which names only the
+  // earliest nomination of a skill and would leave every later one without it. This does not depend
+  // on the tracker status (it may already be 'promoted'), so re-applying repairs any nominated profile
+  // that lost the skill. directory_profile_id is TEXT (v2 varchar/uuid), so only cast rows that are
+  // UUID-shaped — a malformed id can never abort the run.
   const attachedNominated = await client.query(
     `INSERT INTO directory_profile_skills (profile_id, skill_id, display_order)
      SELECT
@@ -159,12 +161,18 @@ async function applyProposalPromotions(client, skillId, normalizedSkills, summar
          0
        ) + 1
      FROM skills_hunt_directory_profiles shdp
-     JOIN skills_hunt_proposed_skill_promotions prom
-       ON prom.source_submission_id = shdp.submission_id
+     JOIN skills_hunt_submissions sub
+       ON sub.id = shdp.submission_id
      JOIN skills_taxonomy_skills sk
        ON sk.id = $1
       AND sk.is_active = true
-     WHERE lower(btrim(prom.normalized_skill)) = ANY($2::text[])
+     WHERE EXISTS (
+         SELECT 1
+         FROM jsonb_array_elements_text(
+           CASE WHEN jsonb_typeof(sub.proposed_skills) = 'array' THEN sub.proposed_skills ELSE '[]'::jsonb END
+         ) AS proposed(value)
+         WHERE lower(btrim(proposed.value)) = ANY($2::text[])
+       )
        AND shdp.directory_profile_id ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
      ON CONFLICT (profile_id, skill_id) DO NOTHING`,
     [skillId, labels],
