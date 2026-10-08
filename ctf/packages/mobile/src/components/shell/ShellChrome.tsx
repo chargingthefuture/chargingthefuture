@@ -172,8 +172,9 @@ export function ScreenHeader({
   emoji,
   accent,
   onBack,
+  extra,
   ...actions
-}: ChromeActions & { title: string; emoji?: string; accent?: string; onBack: () => void }) {
+}: ChromeActions & { title: string; emoji?: string; accent?: string; onBack: () => void; extra?: React.ReactNode }) {
   const { tokens } = useTheme();
   const s = useMemo(() => makeStyles(tokens), [tokens]);
   const chevronColor = accent ?? tokens.textPrimary;
@@ -203,6 +204,9 @@ export function ScreenHeader({
       <Text style={s.screenTitle} numberOfLines={1}>
         {title}
       </Text>
+      {/* The web header's `actions` slot (an Admin or Member view button, an admin refresh control)
+          sits before the shared controls, 10px apart. */}
+      {extra ? <View style={s.extra}>{extra}</View> : null}
       <BarControls {...actions} />
     </View>
   );
@@ -254,6 +258,7 @@ function makeStyles(t: ThemeTokens) {
     },
     spacer: { flex: 1 },
     controls: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+    extra: { flexDirection: 'row', alignItems: 'center', gap: 10 },
     iconBtn: square,
     signIn: { minHeight: 34, paddingVertical: 7, paddingHorizontal: 14 },
     screenHeader: {

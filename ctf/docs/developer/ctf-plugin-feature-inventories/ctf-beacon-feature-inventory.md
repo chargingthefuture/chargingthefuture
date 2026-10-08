@@ -276,16 +276,27 @@ default on the ALTER (the `id` default lesson from the announcements fix). Regen
     **Sign in to chat** when signed out), and idle (`BeaconIdleView`: "No live event right now",
     **Missed it? Watch the recordings** opening the blog's recordings page, and the last replay).
     Colors, sizes and corners copy the web viewer (`BeaconTheme.ts`), comic theme included.
-  - `BeaconHostPanel.tsx` + `useBeaconHost.ts` (admins only) — the web admin page's notice and error
-    banners, its **Create an event** card (title, description, **Create draft**) and its
-    **Broadcast: <title>** card (**Go live** for a draft: `GET ingest` for the host credentials, then
-    `go-live`; **End broadcast** once live). An event already live when the screen opens is picked
-    up and its host credentials fetched, so the host can broadcast to it again from the phone.
+  - `BeaconAdmin.tsx` — the **Beacon Admin** screen, the web `/admin/beacon` page at phone width,
+    for admins only. The Beacon header shows admins an **Admin** button; Beacon Admin's header has
+    the admin refresh control and a **Member view** button, as on the web. Notice and error banners;
+    **Create an event** (title, description, **Create draft**); **Broadcast: <title>**
+    (`BeaconBroadcastSection.tsx`: **Go live** for a draft, **End broadcast** once live, the host's
+    camera and screen controls, the broadcaster-app **RTMP URL** and masked **Stream key** each with
+    **Copy**, and while live **Moderate the chat** with Mute, Ban, Slow-mode 10s, Slow-mode off and the
+    admin's own chat view); **Event history** (`BeaconEventHistory.tsx`: status line in Eastern Time,
+    the folding **Log** with **Copy log** from `BeaconEventLog.tsx`, **Replay**, **Open**, and the
+    two-step **Delete** for drafts). State and actions in `useBeaconAdmin.ts` and
+    `useBeaconAdminActions.ts`, with the web's steps, notices and error lines. While a live event is
+    open it reads `GET /api/beacon/current` every 15 seconds, as the web admin page does. One
+    addition: **Open** on a live event also fetches its broadcast details (`GET ingest`), so the host
+    can broadcast to it again from the phone after leaving the screen.
   - `BeaconHostStage.tsx` / `BeaconHostControls.tsx` — a Stream Video client joined only when a button
     is pressed: **Use camera and microphone** (preview, **Flip camera**) and **Share screen** (Android
     asks first). `useBeaconEgressStart.ts` posts `start-broadcast` once anything is sent, retried.
-  - `BeaconApi.ts` — the viewer and host routes through `authedFetch` (Bearer token; `x-ctf-csrf: 1`
-    on every POST).
+  - `BeaconApi.ts` (viewer, chat token, `start-broadcast`) and `BeaconAdminApi.ts` (admin list,
+    create, delete, ingest, go-live, end, moderate) — through `authedFetch` (Bearer token;
+    `x-ctf-csrf: 1` on every POST and DELETE). The stream key is never logged. Copying uses
+    `expo-clipboard`.
   The app's build config sets `enableScreenshare: true` on the Stream plugin (media-projection
   permission and service). Native modules: everything runs only in an EAS build, not Expo Go.
   History: a viewer-only Android surface existed from 2026-06-23 (issue #712) and was removed on
@@ -367,15 +378,20 @@ stops. HLS is used for public viewers so scale does not multiply WebRTC cost.
   size, corner, icon and line of copy below the screen header now comes from the web member page
   and, for admins, the web admin page. Added: the radio icon beside the title, the web's description
   line ("Watch with just a link"), the **Missed it? Watch the recordings** button and radio icon on
-  the idle card, the lock on the signed-out chat panel, a "Loading…" card in place of a spinner,
-  icons on the host buttons, the description field, and the web's notice and error banners. The
-  host panel now follows the web admin steps (**Create an event**, then **Broadcast: <title>** with
-  **Go live** or **End broadcast**) in place of the single "Go live" card and the "Broadcast to it
-  from this phone" button; an already-live event is picked up without that button. Left out on
-  Android, as before: event history, chat moderation, the RTMP address and stream key, and the
-  web's "Broadcast from this browser" label, which would be untrue in the app. Watching, member
-  chat, camera, screen share and keeping the call running in the background work as they did. No
-  route, server or web change.
+  the idle card, the lock on the signed-out chat panel, a "Loading…" card in place of a spinner, and
+  icons on the host buttons; the host status line now uses the web's wording. Under the owner's
+  1:1 parity decision of the same day, going live moved off the member screen to a new **Beacon
+  Admin** screen copied from the web admin page, reached from an **Admin** button in the Beacon
+  header, with the web's refresh control and **Member view** button. It carries everything the web
+  page has: banners, **Create an event** with a description, the **Broadcast** card with the
+  broadcaster-app RTMP address and masked stream key (**Copy**), chat moderation and the admin's
+  chat view, and **Event history** with the log, **Replay**, **Open** and two-step **Delete**. The
+  single "Go live" card and the "Broadcast to it from this phone" button are gone; **Open** on a
+  live event fetches its broadcast details instead. Left out: the web's "Broadcast from this
+  browser" heading, which would be untrue in the app, and the demo-mode banner the web admin layout
+  shows. New dependency: `expo-clipboard`, for the copy buttons. Watching, member chat, camera,
+  screen share and keeping the call running in the background work as they did. No route, server
+  or web change.
 
 - 2026-10-08: **Each recording gets its own release.** The archive workflow had never kept a copy:
   this repository's releases are immutable, so once its first run published the shared

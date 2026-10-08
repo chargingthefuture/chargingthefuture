@@ -9,8 +9,8 @@
  *
  * The preview is the host's own outgoing picture. Starting the public feed and recording is handled
  * by useBeaconEgressStart once anything is being sent. The buttons, icons and status line copy the
- * web host controls (components/beacon/beacon-host-controls.tsx); the idle status line names the
- * screen share, which only the app offers on a phone.
+ * web host controls (components/beacon/beacon-host-controls.tsx), wording included. The web offers
+ * Share screen only where the browser can capture a screen; the app always can.
  */
 import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -138,7 +138,7 @@ function HostStatus({ t, error, onCamera, isSharing }: { t: BeaconTokens; error:
     ? 'Your camera and microphone are live to the broadcast.'
     : isSharing
       ? 'Your screen is live to the broadcast.'
-      : 'Go live with your camera and microphone, or share this phone’s screen.';
+      : 'Go live with your camera and microphone, from a phone or a computer.';
   return <Text style={[styles.status, { color: t.SUBTLE }]}>{text}</Text>;
 }
 

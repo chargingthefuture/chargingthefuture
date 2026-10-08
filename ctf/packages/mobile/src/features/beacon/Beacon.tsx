@@ -13,8 +13,8 @@
  *             a signed-out viewer sees a "sign in to chat" prompt instead. (BeaconLiveView)
  *   replay  → nothing live, but the response carries the last replay's recording. (BeaconIdleView)
  *   idle    → a calm "no live event right now" empty state. (BeaconIdleView)
- * An admin also sees BeaconHostPanel above it, the go-live cards of the web admin page: go live with
- * the camera and microphone, or share the phone's screen.
+ * Going live is on the Beacon Admin screen (BeaconAdmin.tsx), reached from the Admin button in the
+ * header, as on the web.
  *
  * This file owns the polling, the chat-token lifecycle, and which state to show.
  */
@@ -28,7 +28,6 @@ import {
   type BeaconCurrentResponse,
   type BeaconEventLike,
 } from './BeaconApi';
-import { BeaconHostPanel } from './BeaconHostPanel';
 import { BeaconLiveView } from './BeaconLiveView';
 import { BeaconIdleView } from './BeaconIdleView';
 import { useAuth } from '../../auth/auth-context';
@@ -73,7 +72,7 @@ function useBeaconChat(isAuthenticated: boolean, liveEvent: BeaconEventLike | nu
 export const Beacon: React.FC = () => {
   const { tokens, theme } = useTheme();
   const t = React.useMemo(() => getBeaconTokens(tokens, theme), [tokens, theme]);
-  const { isAuthenticated, signIn, user } = useAuth();
+  const { isAuthenticated, signIn } = useAuth();
 
   const [current, setCurrent] = useState<BeaconCurrentResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -109,10 +108,6 @@ export const Beacon: React.FC = () => {
         Live broadcasts from Farah. Watch with just a link; sign in to chat and react.
       </Text>
 
-      {user?.isAdmin ? (
-        <BeaconHostPanel t={t} displayName={hostName(user.username)} onChanged={() => void loadCurrent()} />
-      ) : null}
-
       <BeaconBody
         t={t}
         loading={loading}
@@ -129,10 +124,6 @@ export const Beacon: React.FC = () => {
 
 function liveEventOf(current: BeaconCurrentResponse | null): BeaconEventLike | null {
   return current?.event && current.event.status === 'live' ? current.event : null;
-}
-
-function hostName(username: string | null | undefined): string {
-  return username ?? 'Beacon host';
 }
 
 // Loading, live or idle: which of the three viewer states to show.
