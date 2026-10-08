@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { MAX_SKILLS, type SkillsHuntRound } from "./sh-shared";
 import { isRoundOpenForNominations } from "lib/skills-hunt/round-window";
 import { nameFromQuoraProfileUrl } from "lib/skills-hunt/name-from-quora-url";
@@ -35,6 +35,35 @@ function isNominationReady(
   );
 }
 
+// How long after the last keystroke in the Quora field the form asks whether that person can be
+// nominated. A paste settles at once; typing a link by hand asks once at the end, not per letter.
+const QUORA_CHECK_DELAY_MS = 400;
+
+// Asks the server, as soon as a Quora link is in the field, whether this person is already nominated
+// or asked to be removed, so the scout finds out before filling in the rest of the form. Returns the
+// sentence to show under the field, or null. Submit still runs the same check as the real guard, so a
+// failed or slow check here only means the scout hears it at submit, as before.
+function useQuoraNominationCheck(quora: string): string | null {
+  const [blocked, setBlocked] = useState<{ url: string; message: string } | null>(null);
+  useEffect(() => {
+    const url = quora.trim();
+    if (!url) return;
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      fetch(`/api/skills-hunt/nomination-check?quoraProfileUrl=${encodeURIComponent(url)}`, { signal: controller.signal })
+        .then((res) => (res.ok ? (res.json() as Promise<{ state?: string; message?: string }>) : null))
+        .then((body) => {
+          const refused = body && (body.state === "already_nominated" || body.state === "taken_down") && body.message;
+          setBlocked(refused ? { url, message: body.message! } : null);
+        })
+        .catch(() => { /* aborted or offline: submit runs the same check */ });
+    }, QUORA_CHECK_DELAY_MS);
+    return () => { clearTimeout(timer); controller.abort(); };
+  }, [quora]);
+  // Only the answer for the link now in the field counts; an edited link waits for its own answer.
+  return blocked && blocked.url === quora.trim() ? blocked.message : null;
+}
+
 function nominationErrorMessage(e: unknown): string {
   return e instanceof Error ? e.message : "Failed to submit nomination.";
 }
@@ -63,6 +92,8 @@ export function useNominationForm(activeRound: SkillsHuntRound | null): {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+
+  const quoraBlocked = useQuoraNominationCheck(quora);
 
   const allSkillCount = skills.length + proposedSkills.length;
   const canAddMore = allSkillCount < MAX_SKILLS;
@@ -99,7 +130,7 @@ export function useNominationForm(activeRound: SkillsHuntRound | null): {
   async function handleSubmit() {
     // Country and the Quora profile URL are both required (the server enforces both); full name and
     // at least one skill as before.
-    if (!isNominationReady(activeRound, fullName, allSkillCount, country, quora)) return;
+    if (!isNominationReady(activeRound, fullName, allSkillCount, country, quora) || quoraBlocked) return;
     setSubmitting(true);
     setSubmitError(null);
     try {
@@ -150,7 +181,7 @@ export function useNominationForm(activeRound: SkillsHuntRound | null): {
 
   const form: ScoutFormModel = {
     fullName, bio, quora, country, state: stateRegion, city, skills, proposedSkills, freeText, openCategory,
-    submitting, submitError, allSkillCount, canAddMore,
+    quoraBlocked, submitting, submitError, allSkillCount, canAddMore,
     onFullName: setFullName, onBio: setBio, onQuora: changeQuora,
     onCountry: setCountry, onState: setStateRegion, onCity: setCity,
     onToggleSkill: toggleSkill,

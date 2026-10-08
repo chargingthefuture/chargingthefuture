@@ -4,6 +4,7 @@ import { isReservedUsername } from 'lib/auth/username-policy';
 import { logSkillsHuntAudit } from 'lib/skills-hunt/audit';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
 import { createSubmission, describeSubmissionInputProblem, listSubmissions } from 'lib/skills-hunt/repository';
+import { describeDuplicateNomination, TAKEN_DOWN_NOMINATION_MESSAGE } from 'lib/skills-hunt/nomination-check';
 import type { SkillsHuntSubmissionInput } from 'lib/skills-hunt/types';
 import { reportError } from 'lib/observability/report';
 import { failureReason, failureResponse } from 'lib/errors/failure';
@@ -53,7 +54,7 @@ const SUBMISSION_CREATE_FAILURES: ReadonlyArray<{
     message: 'skills_hunt_quora_url_taken_down',
     status: 409,
     code: SKILLS_HUNT_ERROR_CODE.quoraUrlTakenDown,
-    responseMessage: 'This person asked to be removed from the directory, so they cannot be nominated. Contact an admin if you believe that is a mistake.',
+    responseMessage: TAKEN_DOWN_NOMINATION_MESSAGE,
   },
   { message: 'skills_hunt_invalid_quora_url', status: 400, code: SKILLS_HUNT_ERROR_CODE.invalidPayload, responseMessage: 'Invalid Quora profile URL.' },
   {
@@ -63,14 +64,6 @@ const SUBMISSION_CREATE_FAILURES: ReadonlyArray<{
     responseMessage: 'This Quora profile URL appears to be removed or unreachable. Please verify and try again.',
   },
 ];
-
-// Plain words for the status of the nomination that is in the way.
-function describeBlockingStatus(status: string): string {
-  if (status === 'pending') return 'is waiting for review';
-  if (status === 'accepted') return 'has already been accepted';
-  if (status === 'flagged') return 'is flagged for a second look';
-  return `is ${status}`;
-}
 
 // The duplicate guard reports which nomination blocks this one, because the blocker can sit in a
 // round the admin is not looking at or a status their filter hides. Say where it is and what to do
@@ -82,7 +75,7 @@ function describeDuplicate(message: string): string {
     const status = typeof detail.status === 'string' ? detail.status : null;
     const round = typeof detail.round === 'string' ? detail.round : null;
     if (status && round) {
-      return `This person is already nominated in the round "${round}", where that nomination ${describeBlockingStatus(status)}. An admin can reject or remove it there if it should not stand.`;
+      return describeDuplicateNomination(status, round);
     }
   } catch {
     // Fall through to the plain sentence below.
