@@ -176,9 +176,18 @@ requires the same-origin CSRF header (`x-ctf-csrf: 1`) and writes an audit row.
 
 ## Web and Android Delivery Status
 
-Delivery: **web + mobile-responsive complete**. **Android (React Native) surface removed 2026-07-20 (rule 105, PR #1742)** — this feature is now web-only, served by the installable web app (PWA). Web hub at
-`/apps/recurring-activity`. Historical detail: a former Android feature lived at
-`packages/mobile/src/features/recurring-activity` (now removed). The web surface enforces the no-amount-for-fiat rule.
+Delivery: **web + mobile-responsive + Android complete**. The Android surface was removed 2026-07-20
+(rule 105, PR #1742) and rebuilt 2026-10-08 as a copy of the web page, because the web account hub
+links to it and the Android account hub now carries every hub section (owner decision, 2026-10-08).
+Web hub at `/apps/recurring-activity`; Android at `packages/mobile/src/features/recurring-activity`
+(feature key `recurring-activity` in `App.tsx`, opened from Your account's "Your ongoing activities"
+row, back returns there). It calls the same routes (`GET/POST /api/recurring-activity`,
+`POST /api/recurring-activity/[activityId]/{confirm,decline,end,visibility}`, `GET /api/currencies`,
+`GET /api/directory/list?q=`). A member who has not finished Unlock gets the web's "Finish verifying"
+view, which opens the app's Unlock screen. Differences: the form's choices open in a list over the
+screen (React Native has no select element), and the faded mark on the "Finish verifying" view is not
+blurred (React Native cannot blur a view without an extra native module). Parity contract:
+`mobileFeatureDirs: ["recurring-activity"]`. Both surfaces enforce the no-amount-for-fiat rule.
 
 A signed-out visitor (or a signed-in member not verified yet) now sees the marketing landing shell
 (`recurring-activity-public-shell.tsx`) at `/apps/recurring-activity` instead of being redirected to
@@ -221,6 +230,7 @@ flow, the Trust signal, and both GDP recognition branches. RACT's contribution w
 
 ## Change Log
 
+- 2026-10-08: **Recurring Activity is back on Android, copied from the web page.** Owner decision: the Android account hub carries every section of the web one, and the web hub links here. The new screen has the web's header, intro, refresh button, the "Acknowledge an ongoing activity" form with the member search, the list with Confirm, Decline, End activity and "Visible to", the empty and error states, and the "Finish verifying" view for a member who has not finished Unlock. It calls the existing routes only. No API, schema or contract change; the parity contract entry now lists the Android directory.
 - 2026-10-05: **Confirm, decline, end and visibility work again.** The four
   `POST /api/recurring-activity/[activityId]/*` routes read the path value synchronously, but this
   Next.js version hands route handlers their params as a Promise, so `activityId` was always

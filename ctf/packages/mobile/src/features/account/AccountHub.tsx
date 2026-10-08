@@ -4,17 +4,16 @@
 //
 // Every section of the web hub is here: the heading and intro, Identity (with the account menu,
 // where sign out lives, as the web's Clerk account menu sits on that card), Trust, Your ongoing
-// activities, Verification, and Data & privacy. Recurring activity has no Android screen, so its row
-// opens the web page in the browser; Verification opens the app's Unlock screen.
+// activities, Verification, and Data & privacy. Recurring activity and Verification open the app's
+// Recurring Activity and Unlock screens.
 //
 // The web renders this page on the server with the Trust signals already read. Here they load after
 // the screen opens, so the Trust card appears once they arrive; if the read fails the card shows the
 // empty state, as the web does when its read fails.
 
 import React, { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Alert, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { ChevronRight, Database, HeartHandshake, ShieldCheck, ShieldOff, Sparkles } from 'lucide-react-native';
-import { getApiBaseUrl } from '../../auth/authedFetch';
 import { reportError } from '../../observability/report';
 import { TrustCard } from './trust/TrustCard';
 import { fetchOwnTrust, type TrustPeerEvidenceItem } from './trust/api';
@@ -23,16 +22,6 @@ import { useTheme, type ThemeTokens } from '../../theme';
 import { interFamily } from '../../components/ui';
 import { UserMenuButton } from '../../components/shared/SessionControls';
 import { getAccountTokens, radius, type AccountTokens } from './tokens';
-
-// Recurring activity is web-only (rule 105), so its row opens the web page in the browser.
-async function openRecurringActivity(): Promise<void> {
-  try {
-    await Linking.openURL(`${getApiBaseUrl()}/apps/recurring-activity`);
-  } catch (caught) {
-    reportError(caught, { area: 'account', op: 'open_recurring_activity' });
-    Alert.alert('Unable to open', 'We could not open Recurring activity in your browser.');
-  }
-}
 
 function useOwnTrust(): TrustPeerEvidenceItem[] | null {
   const [evidence, setEvidence] = useState<TrustPeerEvidenceItem[] | null>(null);
@@ -53,10 +42,12 @@ export function AccountHub({
   onOpenData,
   onOpenBlocks,
   onOpenVerification,
+  onOpenRecurring,
 }: {
   onOpenData: () => void;
   onOpenBlocks: () => void;
   onOpenVerification: () => void;
+  onOpenRecurring: () => void;
 }) {
   const { user } = useAuth();
   const evidence = useOwnTrust();
@@ -112,7 +103,7 @@ export function AccountHub({
           icon={<HeartHandshake size={18} color={tok.BRAND} />}
           title="Recurring activity"
           desc="Acknowledge the ongoing ties you share with another member. Recognition, never a bill — and yours to keep private."
-          onPress={() => void openRecurringActivity()}
+          onPress={onOpenRecurring}
           last
         />
       </View>

@@ -16,6 +16,7 @@ import { fetchUnlockStatus, type UnlockAccessTier } from './src/features/unlock/
 import { AccountData } from './src/features/account-data';
 import { BlockedMembers } from './src/features/blocks';
 import { AccountHub, getAccountTokens } from './src/features/account';
+import { RecurringActivity } from './src/features/recurring-activity';
 import { UserCircle } from 'lucide-react-native';
 import {
   useFonts,
@@ -61,10 +62,10 @@ StreamVideoRN.updateConfig({
 // gear opens Your account, and Account & Data and Blocked members sit under it, as the web's
 // /account, /account/data and /account/blocks do. See
 // `.claude/rules/105-web-android-feature-parity-rules.mdc`.
-type FeatureKey = 'apps' | 'chyme' | 'beacon' | 'peer-programming' | 'foundation' | 'account' | 'account-data' | 'blocked-members' | 'unlock';
+type FeatureKey = 'apps' | 'chyme' | 'beacon' | 'peer-programming' | 'foundation' | 'account' | 'account-data' | 'blocked-members' | 'unlock' | 'recurring-activity';
 
 // The account screens, all reached from the gear and only while signed in.
-const ACCOUNT_KEYS: readonly FeatureKey[] = ['account', 'account-data', 'blocked-members', 'unlock'];
+const ACCOUNT_KEYS: readonly FeatureKey[] = ['account', 'account-data', 'blocked-members', 'unlock', 'recurring-activity'];
 
 
 // What each screen's header calls it. Apps has no header title: it carries the top bar instead.
@@ -84,7 +85,7 @@ function isPluginKey(key: FeatureKey): key is PluginKey {
 
 // Where the header's back chevron and Android's back button go from each screen.
 function parentOf(key: FeatureKey): FeatureKey {
-  return key === 'account-data' || key === 'blocked-members' || key === 'unlock' ? 'account' : 'apps';
+  return ['account-data', 'blocked-members', 'unlock', 'recurring-activity'].includes(key) ? 'account' : 'apps';
 }
 
 export default function App() {
@@ -143,7 +144,9 @@ function SystemBarInsets({ children }: { children: ReactElement }) {
 // branching) keeps the per-render selection trivial.
 type FeatureRenderers = Record<FeatureKey, () => ReactElement>;
 
-function buildFeatureViews(open: (_key: FeatureKey) => void, back: () => void): FeatureRenderers {
+type UnlockHooks = { onStatusChanged: () => void; onGoHome: () => void; onOpenAccount: () => void };
+
+function buildFeatureViews(open: (_key: FeatureKey) => void, back: () => void, unlock: UnlockHooks): FeatureRenderers {
   return {
     apps: () => <AppsList onOpen={open} />,
     chyme: () => <ChymeRoom />,
@@ -155,14 +158,22 @@ function buildFeatureViews(open: (_key: FeatureKey) => void, back: () => void): 
         onOpenData={() => open('account-data')}
         onOpenBlocks={() => open('blocked-members')}
         onOpenVerification={() => open('unlock')}
+        onOpenRecurring={() => open('recurring-activity')}
       />
     ),
     'account-data': () => <AccountData onBack={back} />,
     'blocked-members': () => <BlockedMembers onBack={back} />,
-    // The hub's Verification row opens the Unlock screen, as the web row opens /plugin/unlock. No
-    // onStatusChanged here: a member who reached the app is already past the wall, and re-running the
-    // wall check would swap this screen for the loading screen on every status read.
-    unlock: () => <Unlock />,
+    // The hub's Verification row opens the Unlock screen, as the web row opens /plugin/unlock.
+    unlock: () => <Unlock onStatusChanged={unlock.onStatusChanged} onGoHome={unlock.onGoHome} onBack={back} />,
+    // Your account's Recurring activity row, as on the web; the screen draws its own header.
+    'recurring-activity': () => (
+      <RecurringActivity
+        onBack={back}
+        onOpenAccount={unlock.onOpenAccount}
+        onOpenApps={() => open('apps')}
+        onOpenVerification={() => open('unlock')}
+      />
+    ),
   };
 }
 
@@ -204,8 +215,9 @@ function callDisplayName(user: { username?: string | null } | null): string {
 
 // Result of the client-side Unlock check. `walled` mirrors the web redirect in
 // app/page.tsx: a signed-in non-admin whose tier is neither approved_full nor
-// locked_support_only cannot reach the app.
-type UnlockGate = { loading: boolean; walled: boolean };
+// locked_support_only cannot reach the app. `checked` turns true once the first check for the
+// signed-in member has finished; only that first check shows the loading screen.
+type UnlockGate = { loading: boolean; walled: boolean; checked: boolean };
 
 function AppShell() {
   const { isLoading, isAuthenticated, user } = useAuth();
@@ -226,18 +238,18 @@ function AppShell() {
   // Client-side Unlock wall. The server 403 gates are the real enforcement; this
   // only mirrors the web redirect so a not-yet-approved member does not see the
   // app shell. Defaults to not-walled and fails open on any fetch error.
-  const [unlockGate, setUnlockGate] = useState<UnlockGate>({ loading: false, walled: false });
+  const [unlockGate, setUnlockGate] = useState<UnlockGate>({ loading: false, walled: false, checked: false });
   const fetchSeq = useRef(0);
 
   const refreshUnlockGate = useCallback(async () => {
     // Only signed-in non-admins need a check. Admins always pass; signed-out
     // users keep the existing sign-in path untouched.
     if (!isAuthenticated || isAdmin) {
-      setUnlockGate({ loading: false, walled: false });
+      setUnlockGate({ loading: false, walled: false, checked: false });
       return;
     }
     const seq = ++fetchSeq.current;
-    setUnlockGate((prev) => ({ loading: true, walled: prev.walled }));
+    setUnlockGate((prev) => ({ ...prev, loading: true }));
     try {
       const status = await fetchUnlockStatus();
       if (seq !== fetchSeq.current) return;
@@ -249,13 +261,13 @@ function AppShell() {
       // place with nobody to ask — which is the dead end the help button exists to open.
       const passes =
         tier === 'approved_full' || tier === 'locked_support_only' || status.commonsAccess === true;
-      setUnlockGate({ loading: false, walled: !passes });
+      setUnlockGate({ loading: false, walled: !passes, checked: true });
     } catch (error) {
       // Fail open: never lock out an approved member because of a flaky status
       // call. The server-side gates still enforce real access.
       console.error('[unlock] status fetch failed; failing open (not walling)', error);
       if (seq !== fetchSeq.current) return;
-      setUnlockGate({ loading: false, walled: false });
+      setUnlockGate({ loading: false, walled: false, checked: true });
     }
   }, [isAuthenticated, isAdmin]);
 
@@ -295,19 +307,29 @@ function AppShell() {
   }, [selected]);
 
   const featureView = useMemo(() => {
-    const renderers = buildFeatureViews(setSelected, () => setSelected(parentOf(selected)));
+    const renderers = buildFeatureViews(setSelected, () => setSelected(parentOf(selected)), {
+      onStatusChanged: () => void refreshUnlockGate(),
+      onGoHome: () => {
+        setSelected('apps');
+        void refreshUnlockGate();
+      },
+      onOpenAccount: openAccount,
+    });
     const render = renderers[selected];
     // Every FeatureKey has an entry; the fallback preserves the default (Apps)
     // for any unexpected value.
     return render ? render() : <AppsList onOpen={setSelected} />;
-  }, [selected]);
+  }, [selected, refreshUnlockGate, openAccount]);
 
   // While the app is bootstrapping (restoring any stored sign-in session), or
   // while the first unlock-status check is in flight for a signed-in non-admin,
   // show the universal "Exit Their Economy / Exit The Psyop" loading screen so
   // the loading state is consistent app-wide and matches web — and so the
-  // navigator never flashes before the gate resolves.
-  if (isLoading || unlockGate.loading) {
+  // navigator never flashes before the gate resolves. Later re-checks (returning to the app, or the
+  // Unlock screen reporting a status read) keep the current screen up: swapping in the loading
+  // screen unmounted the Unlock wall, which re-read its status on remount and asked for another
+  // check, over and over.
+  if (isLoading || (unlockGate.loading && !unlockGate.checked)) {
     return <LoadingScreen />;
   }
 
@@ -316,7 +338,7 @@ function AppShell() {
   // shell, matching the web redirect to /plugin/unlock. A successful submission
   // re-runs the check so an approval mid-session lets them through.
   if (unlockGate.walled) {
-    return <Unlock onStatusChanged={refreshUnlockGate} />;
+    return <Unlock onStatusChanged={refreshUnlockGate} onGoHome={() => void refreshUnlockGate()} showSignOut />;
   }
 
   return (

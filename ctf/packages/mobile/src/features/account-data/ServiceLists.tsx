@@ -1,10 +1,9 @@
 // The Personal data and Always retained lists, copied from the web's MobileDataView
-// (components/account-data/account-data-mobile.tsx), without the download buttons (see
-// AccountDataView.tsx for why).
+// (components/account-data/account-data-mobile.tsx), with each exportable service's download button.
 
 import React, { useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Lock, Trash2 } from 'lucide-react-native';
+import { Download, Lock, Trash2 } from 'lucide-react-native';
 import { useTheme, type ThemeTokens } from '../../theme';
 import { interFamily } from '../../components/ui';
 import { getAccountTokens, radius, Spinner, type AccountTokens } from '../account';
@@ -20,13 +19,17 @@ export function ServiceLists({
   retained,
   pendingSlug,
   rowError,
+  exportingKey,
   onDeleteService,
+  onExportService,
 }: {
   remaining: AccountService[];
   retained: AccountService[];
   pendingSlug: string | null;
   rowError: { slug: string; message: string } | null;
+  exportingKey: string | null;
   onDeleteService: (_service: AccountService) => void;
+  onExportService: (_service: AccountService) => void;
 }) {
   const { tokens } = useTheme();
   const tok = getAccountTokens(tokens);
@@ -49,6 +52,9 @@ export function ServiceLists({
                 <Text style={s.name}>{service.name}</Text>
                 <Text style={[s.summary, error ? s.summaryError : null]}>{error ?? service.summary}</Text>
               </View>
+              {service.exportable ? (
+                <ExportButton s={s} tok={tok} service={service} exporting={exportingKey === service.slug} onPress={onExportService} />
+              ) : null}
               <TouchableOpacity
                 onPress={() => onDeleteService(service)}
                 disabled={isPending}
@@ -81,6 +87,9 @@ export function ServiceLists({
                     </View>
                     <Text style={[s.retainedSummary, error ? s.summaryError : null]}>{error ?? service.summary}</Text>
                   </View>
+                  {service.exportable ? (
+                    <ExportButton s={s} tok={tok} service={service} exporting={exportingKey === service.slug} onPress={onExportService} />
+                  ) : null}
                 </View>
               );
             })}
@@ -88,6 +97,29 @@ export function ServiceLists({
         </>
       ) : null}
     </>
+  );
+}
+
+type Styles = ReturnType<typeof makeStyles>;
+
+// The per-service download button: the delete button's shape in the brand color (web ExportButton).
+function ExportButton({ s, tok, service, exporting, onPress }: {
+  s: Styles;
+  tok: AccountTokens;
+  service: AccountService;
+  exporting: boolean;
+  onPress: (_service: AccountService) => void;
+}) {
+  return (
+    <TouchableOpacity
+      onPress={() => onPress(service)}
+      disabled={exporting}
+      accessibilityRole="button"
+      accessibilityLabel={`Download your ${service.name} data as JSON`}
+      style={s.exportBtn}
+    >
+      {exporting ? <Spinner size={12} color={tok.BRAND} /> : <Download size={12} color={tok.BRAND} />}
+    </TouchableOpacity>
   );
 }
 
@@ -105,6 +137,7 @@ function makeStyles(t: ThemeTokens, tok: AccountTokens) {
     name: { fontSize: 13, fontFamily: interFamily('600'), color: tok.TEXT },
     summary: { fontSize: 11, lineHeight: 14.3, fontFamily: interFamily('400'), color: '#4B5563', marginTop: 1 },
     summaryError: { color: '#F87171' },
+    exportBtn: { paddingVertical: 5, paddingHorizontal: 8, borderRadius: radius(t, 7), backgroundColor: `${tok.BRAND}08`, borderWidth: 1, borderColor: `${tok.BRAND}25` },
     deleteBtn: { paddingVertical: 5, paddingHorizontal: 8, borderRadius: radius(t, 7), backgroundColor: 'rgba(239,68,68,0.06)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.2)' },
     retainedRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-start', paddingVertical: 11, paddingHorizontal: 12, borderRadius: radius(t, 12), backgroundColor: 'rgba(255,255,255,0.01)', borderWidth: 1, borderColor: tok.BORDER },
     retainedGlyph: { width: 30, height: 30, borderRadius: radius(t, 8), backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: tok.BORDER, alignItems: 'center', justifyContent: 'center' },

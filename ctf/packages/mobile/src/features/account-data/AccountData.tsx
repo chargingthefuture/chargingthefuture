@@ -2,7 +2,8 @@
 // (components/account-data/account-data-shell.tsx). Reached from Your account; back returns there.
 //
 // API bindings: GET /api/account/services, DELETE /api/account/services/:slug,
-// DELETE /api/account/full-account. Service names and summaries come from the live registry.
+// DELETE /api/account/full-account, and the two JSON export routes. Service names and summaries
+// come from the live registry.
 //
 // The loading and error screens use the default dark colors in either theme and carry no header,
 // as on the web. The web asks the member to refresh the page; here pulling down on the error screen
@@ -18,6 +19,7 @@ import {
   AccountRequestError,
   deleteFullAccount,
   deleteServiceData,
+  exportAccountData,
   fetchAccountServices,
   type AccountService,
 } from './api';
@@ -34,6 +36,8 @@ export function AccountData({ onBack }: { onBack: () => void }) {
   const [rowError, setRowError] = useState<{ slug: string; message: string } | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  // Which export is in flight: a service slug, or 'full-account' for the download-all action.
+  const [exportingKey, setExportingKey] = useState<string | null>(null);
 
   // `background` keeps the current screen up while a pull-to-refresh reloads the list.
   const load = useCallback(async (background = false) => {
@@ -87,6 +91,33 @@ export function AccountData({ onBack }: { onBack: () => void }) {
     );
   }, [runDelete]);
 
+  const downloadExport = useCallback(async (path: string, filename: string, key: string) => {
+    setExportingKey(key);
+    setRowError(null);
+    try {
+      await exportAccountData(path, filename);
+    } catch (error) {
+      const message = error instanceof AccountRequestError ? error.message : 'Network error. Please try again.';
+      setRowError({ slug: key, message });
+    } finally {
+      setExportingKey(null);
+    }
+  }, []);
+
+  const handleExportService = useCallback((service: AccountService) => {
+    const date = new Date().toISOString().slice(0, 10);
+    void downloadExport(
+      `/api/account/services/${encodeURIComponent(service.slug)}/export`,
+      `ctf-account-data-${service.slug}-${date}.json`,
+      service.slug,
+    );
+  }, [downloadExport]);
+
+  const handleExportAll = useCallback(() => {
+    const date = new Date().toISOString().slice(0, 10);
+    void downloadExport('/api/account/full-account/export', `ctf-account-data-full-account-${date}.json`, 'full-account');
+  }, [downloadExport]);
+
   const handleConfirmFullAccount = useCallback(async () => {
     try {
       await deleteFullAccount();
@@ -109,6 +140,9 @@ export function AccountData({ onBack }: { onBack: () => void }) {
         deletedSlugs={deletedSlugs}
         pendingSlug={pendingSlug}
         rowError={rowError}
+        exportingKey={exportingKey}
+        onExportService={handleExportService}
+        onExportAll={handleExportAll}
         refreshing={refreshing}
         onRefresh={onRefresh}
         onBack={onBack}

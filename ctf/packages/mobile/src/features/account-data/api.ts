@@ -7,6 +7,8 @@
 // account routes require. All calls go through authedFetch so the Clerk bearer token is
 // attached and the base URL comes from runtime config (APP_URL).
 
+import { File, Paths } from 'expo-file-system';
+import { shareAsync } from 'expo-sharing';
 import { authedFetch } from '../../auth/authedFetch';
 
 // Bound every request so a stalled connection can't trap the screen in a loading or
@@ -33,6 +35,9 @@ export type AccountService = {
   name: string;
   summary: string;
   serviceScopeSupported: boolean;
+  // Whether the JSON export has anything to read for this service. Absent on older payloads,
+  // treated as false.
+  exportable?: boolean;
 };
 
 export type AccountServicesResponse = {
@@ -83,4 +88,22 @@ export async function deleteFullAccount(): Promise<void> {
   if (!res.ok) {
     throw new AccountRequestError(await readMessage(res, 'Unable to complete full-account deletion. Please try again.'));
   }
+}
+
+// Download a JSON export, as the web's download buttons do: GET the export route, then hand the file
+// to the member. A phone has no downloads bar, so the file is written to the app's cache and offered
+// through the system share sheet, where the member saves it to Files or Drive or sends it on.
+//   GET /api/account/services/:slug/export   one service
+//   GET /api/account/full-account/export     every service
+export async function exportAccountData(path: string, filename: string): Promise<void> {
+  const res = await fetchWithTimeout(path);
+  if (!res.ok) {
+    throw new AccountRequestError(await readMessage(res, 'Unable to export this data. Please try again.'));
+  }
+  const text = await res.text();
+  const file = new File(Paths.cache, filename);
+  if (file.exists) file.delete();
+  file.create();
+  file.write(text);
+  await shareAsync(file.uri, { mimeType: 'application/json', dialogTitle: filename });
 }

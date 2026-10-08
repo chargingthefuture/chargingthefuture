@@ -3,15 +3,15 @@
 // service count, theme toggle), the Your Data / Danger Zone tabs, then the service list, the empty
 // state or the danger card.
 //
-// Left out: the Download all my data (JSON) button and each service's download button. The app has
-// no way to save a file on the phone (no file-system or sharing module is installed).
+// The download controls write the JSON file to the app's cache and open the system share sheet, the
+// phone's way to save or send a file (see exportAccountData in api.ts).
 
 import React, { useMemo } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { AlertTriangle, ChevronRight, Info, Shield } from 'lucide-react-native';
+import { AlertTriangle, ChevronRight, Download, Info, Shield } from 'lucide-react-native';
 import { ThemeToggle, useTheme, type ThemeTokens } from '../../theme';
 import { interFamily } from '../../components/ui';
-import { AccountBackButton, getAccountTokens, radius, type AccountTokens } from '../account';
+import { AccountBackButton, getAccountTokens, radius, Spinner, type AccountTokens } from '../account';
 import { ServiceLists } from './ServiceLists';
 import type { AccountService } from './api';
 
@@ -25,6 +25,10 @@ export type AccountDataViewProps = {
   deletedSlugs: string[];
   pendingSlug: string | null;
   rowError: { slug: string; message: string } | null;
+  /** The export currently in flight: a service slug, or 'full-account'. */
+  exportingKey: string | null;
+  onExportService: (_service: AccountService) => void;
+  onExportAll: () => void;
   refreshing: boolean;
   onRefresh: () => void;
   onBack: () => void;
@@ -71,12 +75,15 @@ export function AccountDataView(props: AccountDataViewProps) {
               <Info size={13} color={tok.BRAND} style={s.noticeIcon} />
               <Text style={s.noticeText}>Deleting from a service is permanent. Some audit records are retained for platform integrity.</Text>
             </View>
+            <ExportAll s={s} tok={tok} rowError={props.rowError} exportingKey={props.exportingKey} onExportAll={props.onExportAll} />
             <ServiceLists
               remaining={remaining}
               retained={retained}
               pendingSlug={props.pendingSlug}
               rowError={props.rowError}
+              exportingKey={props.exportingKey}
               onDeleteService={props.onDeleteService}
+              onExportService={props.onExportService}
             />
           </>
         )}
@@ -107,6 +114,36 @@ function Tabs({ s, view, onViewChange }: { s: Styles; view: AccountDataTab; onVi
         );
       })}
     </View>
+  );
+}
+
+// "Download all my data" and its error or help line (web ExportAllSection).
+function ExportAll({ s, tok, rowError, exportingKey, onExportAll }: {
+  s: Styles;
+  tok: AccountTokens;
+  rowError: { slug: string; message: string } | null;
+  exportingKey: string | null;
+  onExportAll: () => void;
+}) {
+  const exporting = exportingKey === 'full-account';
+  const error = rowError?.slug === 'full-account' ? rowError.message : null;
+  return (
+    <>
+      <TouchableOpacity
+        onPress={onExportAll}
+        disabled={exporting}
+        accessibilityRole="button"
+        style={[s.exportAll, error ? s.exportAllError : null]}
+      >
+        {exporting ? <Spinner size={14} color={tok.BRAND} /> : <Download size={14} color={tok.BRAND} />}
+        <Text style={s.exportAllText}>{exporting ? 'Preparing your download…' : 'Download all my data (JSON)'}</Text>
+      </TouchableOpacity>
+      {error ? (
+        <Text style={[s.exportLine, s.exportLineError]}>{error}</Text>
+      ) : (
+        <Text style={s.exportLine}>One JSON file with your own rows from every service. Money ledgers and audit records are retained by design and not included.</Text>
+      )}
+    </>
   );
 }
 
@@ -186,6 +223,11 @@ function makeStyles(t: ThemeTokens, tok: AccountTokens) {
     notice: { flexDirection: 'row', gap: 8, alignItems: 'flex-start', paddingVertical: 10, paddingHorizontal: 12, borderRadius: radius(t, 10), backgroundColor: `${tok.BRAND}06`, borderWidth: 1, borderColor: `${tok.BRAND}18`, marginBottom: 12 },
     noticeIcon: { marginTop: 1 },
     noticeText: { flex: 1, fontSize: 12, lineHeight: 18, fontFamily: interFamily('400'), color: '#9CA3AF' },
+    exportAll: { width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 10, paddingHorizontal: 12, borderRadius: radius(t, 10), backgroundColor: `${tok.BRAND}0C`, borderWidth: 1, borderColor: `${tok.BRAND}30`, marginBottom: 6 },
+    exportAllError: { borderColor: 'rgba(239,68,68,0.35)' },
+    exportAllText: { fontSize: 13, fontFamily: interFamily('700'), color: tok.BRAND },
+    exportLine: { fontSize: 11, lineHeight: 15.4, fontFamily: interFamily('400'), color: '#4B5563', marginBottom: 10 },
+    exportLineError: { color: '#F87171' },
     empty: { alignItems: 'center', paddingVertical: 24, paddingHorizontal: 4 },
     emptyTile: { width: 56, height: 56, borderRadius: radius(t, 16), backgroundColor: `${tok.BRAND}08`, borderWidth: 1, borderStyle: 'dashed', borderColor: `${tok.BRAND}30`, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
     emptyTitle: { fontSize: 19, fontFamily: interFamily('800'), color: tok.TEXT, marginBottom: 8, textAlign: 'center' },
