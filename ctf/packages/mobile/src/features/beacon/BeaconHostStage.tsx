@@ -12,19 +12,18 @@
  */
 import React, { useEffect, useState } from 'react';
 import { StreamCall, StreamVideo, StreamVideoClient, type Call } from '@stream-io/video-react-native-sdk';
-import { type ThemeTokens } from '../../theme';
 import { type BeaconHostCredentials } from './BeaconApi';
 import { BeaconHostControls } from './BeaconHostControls';
+import { type BeaconTokens } from './BeaconTheme';
 
 export interface BeaconHostStageProps {
   credentials: BeaconHostCredentials;
   eventId: string;
   displayName: string;
-  tokens: ThemeTokens;
-  accent: string;
+  t: BeaconTokens;
 }
 
-export const BeaconHostStage: React.FC<BeaconHostStageProps> = ({ credentials, eventId, displayName, tokens, accent }) => {
+export const BeaconHostStage: React.FC<BeaconHostStageProps> = ({ credentials, eventId, displayName, t }) => {
   const [client, setClient] = useState<StreamVideoClient | null>(null);
   const [call, setCall] = useState<Call | null>(null);
 
@@ -63,7 +62,7 @@ export const BeaconHostStage: React.FC<BeaconHostStageProps> = ({ credentials, e
   return (
     <StreamVideo client={client}>
       <StreamCall call={call}>
-        <BeaconHostControls call={call} eventId={eventId} tokens={tokens} accent={accent} />
+        <BeaconHostControls call={call} eventId={eventId} t={t} />
       </StreamCall>
     </StreamVideo>
   );

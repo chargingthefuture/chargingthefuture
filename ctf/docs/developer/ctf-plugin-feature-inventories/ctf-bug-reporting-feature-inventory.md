@@ -151,13 +151,15 @@ contract follows the code):
 - **mobile-responsive:** complete — the same web modal renders as a bottom sheet at phone width
   and the Help control sits on the top bar.
 - **android:** complete — `packages/mobile/src/features/bug-reporting/` (`BugReportModal.tsx`,
-  `ReportAProblemEntry.tsx`, `api.ts`) mirrors the web surface one-to-one with the same five states
-  and the same endpoint + CSRF wiring.
+  `api.ts`) mirrors the web surface one-to-one with the same five states and the same endpoint +
+  CSRF wiring. As on the web, the modal opens from the bug icon in the top bar and in every screen
+  header (`packages/mobile/src/components/shell/ShellChrome.tsx`); the old "Report a problem" tab
+  and its `ReportAProblemEntry.tsx` row were removed when the app's frame was matched to the web.
 
 The plugin is registered as `bug-reporting` (`implemented_shell`, hidden) — it stays hidden
 because it is a Help-menu modal, not a grid tile. Its `ctf/config/plugin-parity-contracts.json`
 entry declares `mobileFeatureDirs: ["bug-reporting"]` with `requiresMobileSurface: false`
-(the mobile entry is a help/settings row, not a required full plugin surface).
+(the mobile entry is a header control, not a required full plugin surface).
 
 ## Seed Coverage Status
 
@@ -179,6 +181,10 @@ No seed script. Reports are user-generated at runtime; there is no fixture data 
 
 ## Change Log
 
+- 2026-10-08: **Android opens the report from the header.** The Android app's frame now matches the
+  web (top bar on the Apps home, back-chevron header on every screen), and the bug icon in both opens
+  the report modal, as the web header does. The separate "Report a problem" tab and its
+  `ReportAProblemEntry.tsx` row are gone.
 - 2026-10-04: **Contract coverage is enforced.** CI job `contract-coverage-gate`
   (`ctf/scripts/check-contract-coverage.mjs`) now fails on any API surface missing one of the four
   contract files without a recorded reason, so this plugin cannot drift back to having none.

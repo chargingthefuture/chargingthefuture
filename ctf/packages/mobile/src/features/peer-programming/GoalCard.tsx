@@ -2,6 +2,7 @@
 // posted result, and the controls the viewer has for it.
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { interFamily } from '../../components/ui';
 import type { TaskAction } from './PeerProgrammingApi';
 import { goalColor, nameOf, statusLine, type Card } from './ppBoard';
 import { GoalCardControls } from './GoalCardControls';
@@ -18,19 +19,19 @@ export type BoardProps = {
 };
 
 export function GoalCard({ card, ...props }: BoardProps & { card: Card }) {
-  const { tokens, accent } = usePPTheme();
+  const t = usePPTheme();
   const { task, goal } = card;
   const isOwner = goal.ownerUserId === props.viewerUserId;
   const owner = isOwner ? 'Your goal' : nameOf(goal.ownerUserId, props.names);
   const status = statusLine(card, props.viewerUserId, props.names);
   const canAct = !props.readOnly && goal.status === 'open';
   return (
-    <View style={[styles.card, { backgroundColor: tokens.surface, borderLeftColor: goalColor(goal.id), borderRadius: tokens.radius }]}>
-      <Text numberOfLines={1} style={[styles.owner, { color: tokens.textMuted }]}>{owner} · {goal.title}</Text>
-      <Text style={[styles.description, { color: tokens.textPrimary }]}>{task.description}</Text>
-      {status ? <Text style={[styles.status, { color: tokens.textSecondary }]}>{status}</Text> : null}
+    <View style={[styles.card, { backgroundColor: t.SURFACE, borderLeftColor: goalColor(goal.id), borderRadius: t.r(10) }]}>
+      <Text numberOfLines={1} style={[styles.owner, { color: t.MUTED }]}>{owner} · {goal.title}</Text>
+      <Text style={[styles.description, { color: t.TEXT }]}>{task.description}</Text>
+      {status ? <Text style={[styles.status, { color: t.SUBTLE }]}>{status}</Text> : null}
       {task.result ? (
-        <Text style={[styles.result, { color: tokens.textPrimary, backgroundColor: `${accent}1F` }]}>{task.result}</Text>
+        <Text style={[styles.result, { color: t.TEXT, backgroundColor: t.ACCENT_TINT_BG, borderRadius: t.r(8) }]}>{task.result}</Text>
       ) : null}
       {canAct ? <GoalCardControls task={task} isOwner={isOwner} {...props} /> : null}
     </View>
@@ -39,8 +40,8 @@ export function GoalCard({ card, ...props }: BoardProps & { card: Card }) {
 
 const styles = StyleSheet.create({
   card: { padding: 10, borderLeftWidth: 4, gap: 6 },
-  owner: { fontSize: 11 },
-  description: { fontSize: 15, lineHeight: 21 },
-  status: { fontSize: 12 },
-  result: { fontSize: 13, padding: 8, borderRadius: 8 },
+  owner: { fontSize: 11, fontFamily: interFamily('400') },
+  description: { fontSize: 14, lineHeight: 20, fontFamily: interFamily('400') },
+  status: { fontSize: 12, fontFamily: interFamily('400') },
+  result: { fontSize: 13, paddingVertical: 6, paddingHorizontal: 8, fontFamily: interFamily('400') },
 });

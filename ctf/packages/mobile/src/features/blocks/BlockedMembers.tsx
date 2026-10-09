@@ -1,38 +1,26 @@
-// "Blocked members" manage screen (mobile) — Android parity for issue #809, mirrors the web's
-// components/blocks/blocked-members-shell.tsx.
+// Blocked members — the Android copy of the web /account/blocks screen
+// (components/blocks/blocked-members-shell.tsx). Reached from Your account; back returns there.
 //
-// Lists who the signed-in member has blocked, newest first, with the resolved display name and when
-// each block was created, and an Unblock control on each row. Covers loading, error, empty, and
-// populated states. Reads the live backend through the blocks API client (no mobile-only endpoint).
-// Visual style follows the shipped Account & Data screen so it matches the rest of the settings area.
+// Lists who the signed-in member has blocked, newest first, with an Unblock control on each row.
+// Reads the live backend through the blocks API client. The loading and error screens use the
+// default dark colors in either theme and carry no header, as on the web; pulling down on the error
+// screen reloads, where the web asks the member to refresh the page.
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { ShieldOff, UserX } from 'lucide-react-native';
 import { useTheme, type ThemeTokens } from '../../theme';
 import { interFamily } from '../../components/ui';
+import { AccountBackButton, DEFAULT_ACCOUNT_TOKENS, getAccountTokens, radius, Spinner, type AccountTokens } from '../account';
 import { fetchBlockedMembers, unblockMember, type BlockedMember } from './api';
+import { reportError } from '../../observability/report';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
-// The blocked-members accent matches the Account & Data destructive zone: comic-danger in comic
-// theme, the pink brand in default theme — the same pairing the web uses for the account area.
-function accentFor(t: ThemeTokens): string {
-  return t.isComic ? '#B91C1C' : '#D946EF';
-}
-
-export function BlockedMembers() {
+export function BlockedMembers({ onBack }: { onBack: () => void }) {
   const { tokens } = useTheme();
-  const brand = accentFor(tokens);
-  const s = useMemo(() => makeStyles(tokens, brand), [tokens, brand]);
+  const tok = getAccountTokens(tokens);
+  const s = useMemo(() => makeStyles(tokens, tok), [tokens, tok]);
 
   const [loadState, setLoadState] = useState<LoadState>('loading');
   const [blocks, setBlocks] = useState<BlockedMember[]>([]);
@@ -40,22 +28,22 @@ export function BlockedMembers() {
   const [rowError, setRowError] = useState<{ id: string; message: string } | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  // `background` skips the full-screen spinner so pull-to-refresh keeps the current list visible.
-  const load = useCallback((background = false) => {
+  // `background` keeps the current screen up while a pull-to-refresh reloads the list.
+  const load = useCallback(async (background = false) => {
     if (!background) setLoadState('loading');
-    return fetchBlockedMembers()
-      .then((rows) => {
-        setBlocks(rows);
-        setLoadState('ready');
-      })
-      .catch(() => setLoadState('error'));
+    try {
+      setBlocks(await fetchBlockedMembers());
+      setLoadState('ready');
+    } catch (caught) {
+      reportError(caught, { area: 'blocks', op: 'load_blocked_members' });
+      setLoadState('error');
+    }
   }, []);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
-  // Pull-to-refresh: re-pull the block list without flashing the loading state.
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
@@ -70,14 +58,10 @@ export function BlockedMembers() {
     setRowError(null);
     try {
       await unblockMember(member.blockedUserId);
-      // Optimistic removal: the server is idempotent, so dropping the row locally keeps the list
-      // correct without a refetch.
+      // The server is idempotent, so dropping the row locally keeps the list correct.
       setBlocks((prev) => prev.filter((b) => b.blockedUserId !== member.blockedUserId));
     } catch (error) {
-      setRowError({
-        id: member.blockedUserId,
-        message: error instanceof Error ? error.message : 'Unable to unblock. Please try again.',
-      });
+      setRowError({ id: member.blockedUserId, message: error instanceof Error ? error.message : 'Unable to unblock. Please try again.' });
     } finally {
       setPendingId(null);
     }
@@ -85,57 +69,51 @@ export function BlockedMembers() {
 
   if (loadState === 'loading') {
     return (
-      <View style={[s.root, s.center]}>
-        <ActivityIndicator color={brand} />
+      <View style={[s.plain, s.center]}>
+        <Spinner size={22} color={DEFAULT_ACCOUNT_TOKENS.TEXT} />
       </View>
     );
   }
 
   if (loadState === 'error') {
     return (
-      <View style={[s.root, s.center]}>
-        <Text style={s.errTitle}>We couldn&apos;t load your blocked members</Text>
-        <Text style={s.errSub}>Please try again.</Text>
-        <TouchableOpacity style={s.retryBtn} onPress={() => load()} accessibilityRole="button">
-          <Text style={s.retryText}>Retry</Text>
-        </TouchableOpacity>
-      </View>
+      <ScrollView
+        style={s.plain}
+        contentContainerStyle={s.center}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
+        <Text style={s.errorTitle}>We couldn&apos;t load your blocked members</Text>
+        <Text style={s.errorBody}>Please refresh the page to try again.</Text>
+      </ScrollView>
     );
   }
 
   return (
     <View style={s.root}>
       <View style={s.header}>
-        <View style={s.headerRow}>
-          <View style={s.headerIcon}>
-            <ShieldOff size={16} color={brand} strokeWidth={2} />
-          </View>
-          <View>
-            <Text style={s.headerTitle}>Blocked members</Text>
-            <Text style={s.headerSub}>{blocks.length} {blocks.length === 1 ? 'person' : 'people'} · your control</Text>
-          </View>
+        <AccountBackButton accent={tok.BRAND} onPress={onBack} />
+        <View style={s.headerTitleRow}>
+          <ShieldOff size={17} color={tok.BRAND} />
+          <Text style={s.headerTitle}>Blocked members</Text>
         </View>
       </View>
 
       <ScrollView
-        style={s.scroll}
-        contentContainerStyle={s.scrollContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={brand} />}
+        style={s.flex}
+        contentContainerStyle={s.content}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={tok.BRAND} />}
       >
         <Text style={s.intro}>
-          People you&apos;ve blocked can&apos;t see or contact you, and they&apos;re never told.
-          Unblock someone here to let them see and reach you again.
+          People you&apos;ve blocked can&apos;t see or contact you, and they&apos;re never told. Unblock someone here to let them see and reach you again.
         </Text>
 
         {blocks.length === 0 ? (
-          <View style={s.emptyWrap}>
-            <View style={s.emptyAnchor}>
-              <UserX size={24} color={brand} strokeWidth={2} />
+          <View style={s.empty}>
+            <View style={s.emptyTile}>
+              <UserX size={26} color={`${tok.BRAND}80`} />
             </View>
             <Text style={s.emptyTitle}>You haven&apos;t blocked anyone.</Text>
-            <Text style={s.emptySub}>
-              When you block a member, they appear here so you can unblock them at any time.
-            </Text>
+            <Text style={s.emptyBody}>When you block a member, they appear here so you can unblock them at any time.</Text>
           </View>
         ) : (
           <View style={s.list}>
@@ -143,32 +121,27 @@ export function BlockedMembers() {
               const isPending = pendingId === member.blockedUserId;
               const error = rowError?.id === member.blockedUserId ? rowError.message : null;
               return (
-                <React.Fragment key={member.blockedUserId}>
-                  <View style={[s.row, error ? s.rowError : null, isPending && s.rowPending]}>
-                    <View style={s.rowGlyph}>
-                      <UserX size={14} color={brand} strokeWidth={2} />
-                    </View>
-                    <View style={s.rowBody}>
-                      <Text style={s.rowName} numberOfLines={1}>{member.displayName}</Text>
-                      <Text style={[s.rowMeta, error ? s.rowMetaError : null]}>
-                        {error ?? `Blocked ${formatBlockedDate(member.createdAtIso)}`}
-                      </Text>
-                    </View>
-                    <TouchableOpacity
-                      onPress={() => handleUnblock(member)}
-                      disabled={isPending}
-                      style={s.unblockBtn}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Unblock ${member.displayName}`}
-                    >
-                      {isPending ? (
-                        <ActivityIndicator color={brand} size="small" />
-                      ) : (
-                        <Text style={s.unblockText}>Unblock</Text>
-                      )}
-                    </TouchableOpacity>
+                <View key={member.blockedUserId} style={[s.row, error ? s.rowError : null, isPending ? s.rowPending : null]}>
+                  <View style={s.rowTile}>
+                    <UserX size={17} color={tok.BRAND} />
                   </View>
-                </React.Fragment>
+                  <View style={s.rowBody}>
+                    <Text style={s.rowName} numberOfLines={1}>{member.displayName}</Text>
+                    <Text style={[s.rowMeta, error ? s.rowMetaError : null]}>
+                      {error ?? `Blocked ${formatBlockedDate(member.createdAtIso)}`}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => handleUnblock(member)}
+                    disabled={isPending}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Unblock ${member.displayName}`}
+                    style={s.unblock}
+                  >
+                    {isPending ? <Spinner size={13} color={tok.BRAND} /> : null}
+                    <Text style={s.unblockText}>{isPending ? 'Unblocking…' : 'Unblock'}</Text>
+                  </TouchableOpacity>
+                </View>
               );
             })}
           </View>
@@ -178,79 +151,40 @@ export function BlockedMembers() {
   );
 }
 
-// A calm, human date for a block ("on Jun 24, 2026"). Falls back to a neutral word rather than
-// throwing on an unexpected value. Mirrors the web's formatBlockedDate.
+// A calm, human date for a block ("on Jun 24, 2026"). Mirrors the web's formatBlockedDate.
 function formatBlockedDate(iso: string): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return 'recently';
   return `on ${date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}`;
 }
 
-// makeStyles is split into grouped helpers so no single function exceeds the complexity budget
-// imposed by the many `t.isComic` branches. The merged result is identical to one
-// StyleSheet.create call over all keys.
-function makeStyles(t: ThemeTokens, brand: string) {
-  return {
-    ...makeStylesHeader(t, brand),
-    ...makeStylesRows(t, brand),
-    ...makeStylesEmpty(t, brand),
-    ...makeStylesError(t, brand),
-  };
-}
-
-function makeStylesHeader(t: ThemeTokens, brand: string) {
-  const rChip = t.radiusChip;
+function makeStyles(t: ThemeTokens, tok: AccountTokens) {
   return StyleSheet.create({
-    root: { flex: 1, backgroundColor: t.bg },
-    center: { alignItems: 'center', justifyContent: 'center', padding: 32 },
-    header: { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 10, borderBottomWidth: t.isComic ? 2 : 1, borderBottomColor: t.border },
-    headerRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    headerIcon: { width: 34, height: 34, borderRadius: rChip, backgroundColor: t.isComic ? t.bg : `${brand}20`, borderWidth: t.isComic ? 2 : 1, borderColor: t.isComic ? t.border : `${brand}35`, alignItems: 'center', justifyContent: 'center' },
-    headerIconText: { fontSize: 16, color: brand, fontFamily: interFamily('400') },
-    headerTitle: { fontSize: 16, fontWeight: '700', fontFamily: interFamily('700'), color: t.textPrimary, letterSpacing: t.isComic ? 0.6 : 0, textTransform: t.isComic ? 'uppercase' : 'none' },
-    headerSub: { fontSize: 11, color: t.textSecondary, fontFamily: interFamily('400') },
-    scroll: { flex: 1 },
-    scrollContent: { padding: 16, paddingBottom: 28 },
-    intro: { fontSize: 13, color: t.textSecondary, lineHeight: 20, marginBottom: 18, fontFamily: interFamily('400') },
-    list: { gap: t.isComic ? 5 : 7 },
-  });
-}
-
-function makeStylesRows(t: ThemeTokens, brand: string) {
-  const danger = t.danger;
-  const r = t.radius;
-  const rChip = t.radiusChip;
-  return StyleSheet.create({
-    row: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 11, borderRadius: r, backgroundColor: t.surface, borderWidth: t.isComic ? 1.5 : 1, borderColor: t.isComic ? `${t.border}35` : t.border },
-    rowError: { borderColor: t.isComic ? danger : 'rgba(239,68,68,0.35)' },
+    plain: { flex: 1, backgroundColor: DEFAULT_ACCOUNT_TOKENS.BG },
+    center: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 },
+    errorTitle: { fontSize: 18, fontFamily: interFamily('700'), color: DEFAULT_ACCOUNT_TOKENS.TEXT, marginBottom: 10, textAlign: 'center' },
+    errorBody: { fontSize: 14, lineHeight: 22.4, fontFamily: interFamily('400'), color: '#9CA3AF', textAlign: 'center' },
+    root: { flex: 1, backgroundColor: tok.BG },
+    flex: { flex: 1 },
+    header: { height: 56, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: tok.BORDER, backgroundColor: tok.BG },
+    headerTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    headerTitle: { fontSize: 15, fontFamily: interFamily('700'), color: tok.TEXT },
+    content: { paddingTop: 20, paddingHorizontal: 16, paddingBottom: 64 },
+    intro: { fontSize: 14, lineHeight: 22.4, fontFamily: interFamily('400'), color: tok.SUBTLE, marginBottom: 24 },
+    empty: { alignItems: 'center', justifyContent: 'center', paddingVertical: 48, paddingHorizontal: 24 },
+    emptyTile: { width: 60, height: 60, borderRadius: radius(t, 18), backgroundColor: `${tok.BRAND}08`, borderWidth: 1, borderStyle: 'dashed', borderColor: `${tok.BRAND}30`, alignItems: 'center', justifyContent: 'center', marginBottom: 18 },
+    emptyTitle: { fontSize: 18, fontFamily: interFamily('800'), color: tok.TEXT, marginBottom: 8, textAlign: 'center' },
+    emptyBody: { fontSize: 14, lineHeight: 22.4, fontFamily: interFamily('400'), color: tok.SUBTLE, textAlign: 'center', maxWidth: 420 },
+    list: { gap: 8 },
+    row: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 14, paddingVertical: 14, paddingHorizontal: 16, borderRadius: radius(t, 12), backgroundColor: tok.SURFACE, borderWidth: 1, borderColor: tok.BORDER },
+    rowError: { borderColor: 'rgba(239,68,68,0.35)' },
     rowPending: { opacity: 0.7 },
-    rowGlyph: { width: 30, height: 30, borderRadius: rChip, backgroundColor: t.isComic ? `${t.border}0C` : `${brand}10`, borderWidth: 1, borderColor: t.isComic ? `${t.border}30` : `${brand}20`, alignItems: 'center', justifyContent: 'center' },
-    rowGlyphText: { fontSize: 14, fontFamily: interFamily('400') },
-    rowBody: { flex: 1 },
-    rowName: { fontSize: 13, fontWeight: t.isComic ? '700' : '600', fontFamily: interFamily(t.isComic ? '700' : '600'), color: t.textPrimary },
-    rowMeta: { fontSize: t.isComic ? 10 : 11, color: t.textMuted, lineHeight: 15, marginTop: 1, fontFamily: interFamily('400') },
-    rowMetaError: { color: t.isComic ? danger : '#F87171' },
-  });
-}
-
-function makeStylesEmpty(t: ThemeTokens, brand: string) {
-  return StyleSheet.create({
-    unblockBtn: { paddingVertical: 7, paddingHorizontal: 13, borderRadius: t.isComic ? 0 : 9, backgroundColor: t.isComic ? t.surface : `${brand}12`, borderWidth: 1.5, borderColor: t.isComic ? brand : `${brand}35`, minWidth: 76, alignItems: 'center' },
-    unblockText: { color: brand, fontSize: 13, fontWeight: '600', fontFamily: interFamily('600') },
-    emptyWrap: { alignItems: 'center', paddingVertical: 32 },
-    emptyAnchor: { width: 56, height: 56, borderRadius: t.isComic ? 0 : 16, backgroundColor: t.isComic ? `${t.border}14` : `${brand}14`, borderWidth: t.isComic ? 2 : 1, borderColor: t.isComic ? t.border : `${brand}30`, borderStyle: t.isComic ? 'solid' : 'dashed', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
-    emptyAnchorText: { fontSize: 24, fontFamily: interFamily('400') },
-    emptyTitle: { fontSize: 19, fontWeight: '800', fontFamily: interFamily('800'), color: t.textPrimary, marginBottom: 8, textAlign: 'center' },
-    emptySub: { fontSize: 13, color: t.textSecondary, lineHeight: 20, textAlign: 'center', fontFamily: interFamily('400') },
-  });
-}
-
-function makeStylesError(t: ThemeTokens, brand: string) {
-  const r = t.radius;
-  return StyleSheet.create({
-    errTitle: { fontSize: 16, fontWeight: '700', fontFamily: interFamily('700'), color: t.textPrimary, marginBottom: 8, textAlign: 'center' },
-    errSub: { fontSize: 13, color: t.textSecondary, textAlign: 'center', marginBottom: 16, fontFamily: interFamily('400') },
-    retryBtn: { paddingVertical: 10, paddingHorizontal: 24, borderRadius: r, backgroundColor: t.isComic ? `${t.border}15` : `${brand}15`, borderWidth: 1, borderColor: t.isComic ? t.border : `${brand}30` },
-    retryText: { color: t.isComic ? t.textPrimary : brand, fontSize: 14, fontWeight: '600', fontFamily: interFamily('600') },
+    rowTile: { width: 38, height: 38, borderRadius: radius(t, 10), backgroundColor: `${tok.BRAND}10`, borderWidth: 1, borderColor: `${tok.BRAND}20`, alignItems: 'center', justifyContent: 'center' },
+    rowBody: { flex: 1, minWidth: 0 },
+    rowName: { fontSize: 14, fontFamily: interFamily('600'), color: tok.TEXT, marginBottom: 2 },
+    rowMeta: { fontSize: 12, lineHeight: 16.8, fontFamily: interFamily('400'), color: tok.SUBTLE },
+    rowMetaError: { color: '#F87171' },
+    unblock: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 7, paddingHorizontal: 13, borderRadius: radius(t, 9), backgroundColor: `${tok.BRAND}12`, borderWidth: 1, borderColor: `${tok.BRAND}35` },
+    unblockText: { fontSize: 13, fontFamily: interFamily('600'), color: tok.BRAND },
   });
 }

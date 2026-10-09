@@ -438,6 +438,18 @@ Index `idx_unlock_verification_submissions_url_normalized` on `quora_profile_url
 10. Sign-out from the Unlock wall (2026-10-05) is **Android-only** by nature: the Android Unlock
     screen covers the app, so it carries the shared `SignOutButton` at the bottom of each view. Web
     members held at Unlock already have the account menu.
+11. Android copy of the web screen (2026-10-08): `Unlock.tsx` (controller), `UnlockSubmissionView.tsx`,
+    `UnlockStatusView.tsx`, `UnlockQuoraHelp.tsx`, `UnlockNotes.tsx` (ban policy and the account-removal
+    survey note), `unlock-tokens.ts` and `quora-url-help.ts` (the help steps and picture, copied from
+    `lib/unlock/quora-url-help-steps.ts` and `public/help/quora-profile-url.svg`; keep in step). The
+    screen now has the web's headers, wording, "Show me where to find it" steps, the optional hint box
+    (sent as `quoraHint`), the survey note and the ban policy; the separate signed-out view is gone,
+    as the web has none. It shows as the wall and from Your account's Verification row (feature key
+    `unlock`). Left out or different: the admin shortcut (the app has no Unlock admin screen), the
+    survey link opens the web survey in the browser, and the wall keeps its Sign out button (item 10).
+    The wall re-check now shows the loading screen only for the first check: before, every status
+    read on the wall asked for a re-check, the re-check swapped the wall for the loading screen, and
+    the wall read its status again when it came back, over and over.
 
 ## 7) Seed Coverage Status
 
@@ -467,6 +479,7 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
 
 ## 9) Change Log
 
+- 2026-10-08: **The Android Unlock screen is a copy of the web one, and the wall no longer reloads itself.** The submission and status screens were redrawn from the web components with the web's wording, help steps and picture, hint box, survey note and ban policy, and the screen also opens from Your account's Verification row. The wall's status reads and the app's re-check were feeding each other: each read asked for a re-check, each re-check replaced the wall with the loading screen, and the wall read again when it came back. Re-checks after the first now leave the current screen up. The mobile `requestUnlockHelp` now sends the hint as `quoraHint`. No API, schema or contract change.
 - 2026-10-06: **Status screen header reads "Unlock".** The header on the web and Android status screen said "Verification Status", which wrapped to two lines beside the Admin and Approved badges and did not match the feature name. It now reads "Unlock". The manual test script refers to it as the Unlock status screen.
 
 - 2026-10-05: **A rejected or revoked member kept full access wherever Unleash was set up (#2778).** `getUnlockAccessTier` asked the `feature-unlock-quora-onboarding` flag first and returned full access when it was on. Approval added the member to the flag, and no rejection, reward revoke or re-submission ever took them out, so the admin screen said support-only while every gate let them in. The stored submission row is now read first and decides whenever it exists; the flag is read only for a member with no row, which keeps a member added to it by hand in the Unleash dashboard working. Approval no longer writes to the flag, because nothing reads it for a member with a row, so `grantUnleashFlagForUser` and `lib/feature-flags/unleash-admin.ts` were removed. Existing flag entries can stay in Unleash; they have no effect on anybody with a submission. Test: `lib/unlock/access.test.ts`. No schema, route or contract change.

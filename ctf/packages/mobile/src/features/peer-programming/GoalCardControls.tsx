@@ -5,6 +5,7 @@
 // Only "It helped" counts toward the Weavers of the Commons badge and the daily count.
 import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { interFamily } from '../../components/ui';
 import type { BoardTask, TaskAction } from './PeerProgrammingApi';
 import { formatHoldDeadline } from './ppBoard';
 import { PPButton, PPTextBox } from './PPButton';
@@ -73,13 +74,13 @@ function OwnerControls(props: CardControlProps) {
 }
 
 function HelperControls({ task, viewerUserId, busy, taskHoldHours, onAction }: CardControlProps) {
-  const { tokens } = usePPTheme();
+  const t = usePPTheme();
   const [result, setResult] = useState('');
   if (task.status === 'open') {
     return (
-      <View style={styles.stack}>
+      <View style={styles.takeStack}>
         <PPButton label="Take it" primary disabled={busy} onPress={() => onAction(task.id, 'take')} />
-        <Text style={[styles.note, { color: tokens.textMuted }]}>
+        <Text style={[styles.takeNote, { color: t.MUTED }]}>
           Post a result within {taskHoldHours} hours of taking it, or it goes back to Up for grabs for someone else.
         </Text>
       </View>
@@ -89,7 +90,7 @@ function HelperControls({ task, viewerUserId, busy, taskHoldHours, onAction }: C
   return (
     <View style={styles.stack}>
       {task.takenAtIso ? (
-        <Text style={[styles.note, { color: tokens.textSecondary }]}>
+        <Text style={[styles.note, { color: t.SUBTLE }]}>
           Post by {formatHoldDeadline(task.takenAtIso, taskHoldHours)} or this goes back to Up for grabs for someone else to take.
         </Text>
       ) : null}
@@ -109,5 +110,7 @@ export function GoalCardControls(props: CardControlProps) {
 const styles = StyleSheet.create({
   stack: { gap: 8 },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  note: { fontSize: 12, lineHeight: 16 },
+  takeStack: { gap: 4 },
+  takeNote: { fontSize: 11, fontFamily: interFamily('400') },
+  note: { fontSize: 12, fontFamily: interFamily('400') },
 });

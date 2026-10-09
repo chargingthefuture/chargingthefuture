@@ -1,5 +1,6 @@
 /**
- * BeaconLiveView — the "live" state of the Beacon viewer.
+ * BeaconLiveView — the "live" state of the Beacon viewer, copied from the web BeaconLiveView
+ * (components/beacon/beacon-viewer.tsx) at phone width, where its two columns stack.
  *
  * The live badge, the event title/description, the HLS player (or a "starting…" frame while the
  * playlist URL is not yet present), the public-notice fineprint, and the live chat panel. The chat
@@ -7,14 +8,13 @@
  */
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { type ThemeTokens } from '../../theme';
 import { type BeaconChatCredentials, type BeaconEventLike } from './BeaconApi';
 import { BeaconChatGate } from './BeaconChatGate';
-import { BeaconVideo } from './BeaconVideo';
+import { BeaconVideo, BeaconVideoFrame } from './BeaconVideo';
+import { centeredStyle, centeredText, font, panelStyle, radius, type BeaconTokens } from './BeaconTheme';
 
 export interface BeaconLiveViewProps {
-  tokens: ThemeTokens;
-  accent: string;
+  t: BeaconTokens;
   liveEvent: BeaconEventLike;
   hlsUrl: string | null;
   isAuthenticated: boolean;
@@ -23,88 +23,57 @@ export interface BeaconLiveViewProps {
   onSignIn: () => void;
 }
 
-export const BeaconLiveView: React.FC<BeaconLiveViewProps> = ({
-  tokens,
-  accent,
-  liveEvent,
-  hlsUrl,
-  isAuthenticated,
-  chat,
-  chatError,
-  onSignIn,
-}) => {
-  const styles = React.useMemo(() => makeStyles(tokens), [tokens]);
-
-  return (
-    <View style={styles.liveBlock}>
-      <View style={[styles.liveBadge, { borderColor: accent, backgroundColor: accent + '22' }]}>
-        <View style={[styles.liveDot, { backgroundColor: accent }]} />
-        <Text style={[styles.liveBadgeText, { color: accent }]}>LIVE AND PUBLIC</Text>
+export const BeaconLiveView: React.FC<BeaconLiveViewProps> = ({ t, liveEvent, hlsUrl, isAuthenticated, chat, chatError, onSignIn }) => (
+  <View style={styles.grid}>
+    <View>
+      <View style={[styles.badge, { borderColor: `${t.ACCENT}55`, borderRadius: radius(t, 999) }]}>
+        <View style={[styles.dot, { backgroundColor: t.ACCENT, borderRadius: radius(t, 4) }]} />
+        <Text style={[styles.badgeText, { color: t.ACCENT }]}>LIVE AND PUBLIC</Text>
       </View>
-
-      <Text style={[styles.eventTitle, { color: tokens.textPrimary }]}>{liveEvent.title}</Text>
+      <Text style={[styles.eventTitle, { color: t.TITLE }]}>{liveEvent.title}</Text>
       {liveEvent.description ? (
-        <Text style={[styles.eventDesc, { color: tokens.textSecondary }]}>{liveEvent.description}</Text>
+        <Text style={[styles.eventDesc, { color: t.SUBTLE }]}>{liveEvent.description}</Text>
       ) : null}
-
       {hlsUrl ? (
-        <BeaconVideo source={hlsUrl} autoPlay muted />
+        <BeaconVideo t={t} source={hlsUrl} autoPlay muted />
       ) : (
-        <View style={styles.startingFrame}>
-          <Text style={[styles.startingText, { color: tokens.textSecondary }]}>The broadcast is starting…</Text>
-        </View>
+        <BeaconVideoFrame t={t} style={centeredStyle(t)}>
+          <Text style={centeredText(t)}>The broadcast is starting…</Text>
+        </BeaconVideoFrame>
       )}
-
-      <Text style={[styles.fineprint, { color: tokens.textMuted }]}>
+      <Text style={[styles.fineprint, { color: t.SUBTLE }]}>
         This broadcast and its chat are public. The event is recorded; the replay is posted to the Commons.
       </Text>
-
-      <View style={[styles.chatPanel, { borderColor: tokens.border, backgroundColor: tokens.surface }]}>
-        <View style={[styles.chatHeader, { borderBottomColor: tokens.border }]}>
-          <Text style={[styles.chatHeaderText, { color: tokens.textPrimary }]}>Live chat</Text>
-        </View>
-        <BeaconChatGate
-          tokens={tokens}
-          accent={accent}
-          isAuthenticated={isAuthenticated}
-          chat={chat}
-          chatError={chatError}
-          onSignIn={onSignIn}
-        />
-      </View>
     </View>
-  );
-};
 
-function makeStyles(t: ThemeTokens) {
-  return StyleSheet.create({
-    liveBlock: { gap: 10 },
-    liveBadge: {
-      alignSelf: 'flex-start',
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      borderWidth: 1,
-      borderRadius: t.isComic ? t.radiusChip : 999,
-      paddingVertical: 4,
-      paddingHorizontal: 12,
-    },
-    liveDot: { width: 8, height: 8, borderRadius: 4 },
-    liveBadgeText: { fontSize: 12, fontWeight: '700', letterSpacing: 0.5 },
-    eventTitle: { fontSize: 18, fontWeight: '700', marginTop: 4 },
-    eventDesc: { fontSize: 14, marginBottom: 2 },
-    startingFrame: {
-      width: '100%',
-      aspectRatio: 16 / 9,
-      backgroundColor: '#000',
-      borderRadius: 12,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    startingText: { fontSize: 14 },
-    fineprint: { fontSize: 12, marginTop: 2 },
-    chatPanel: { marginTop: 8, borderWidth: 1, borderRadius: t.radius, overflow: 'hidden' },
-    chatHeader: { padding: 12, borderBottomWidth: 1 },
-    chatHeaderText: { fontSize: 14, fontWeight: '700' },
-  });
-}
+    <View style={[panelStyle(t), styles.aside]}>
+      <View style={[styles.chatHeader, { borderBottomColor: t.BORDER_SOLID }]}>
+        <Text style={[styles.chatHeaderText, { color: t.TITLE }]}>Live chat</Text>
+      </View>
+      <BeaconChatGate t={t} isAuthenticated={isAuthenticated} chat={chat} chatError={chatError} onSignIn={onSignIn} />
+    </View>
+  </View>
+);
+
+const styles = StyleSheet.create({
+  grid: { gap: 16 },
+  badge: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(245,158,11,0.14)',
+    borderWidth: 1,
+    paddingVertical: 4,
+    paddingHorizontal: 12,
+    marginBottom: 12,
+  },
+  dot: { width: 8, height: 8 },
+  badgeText: { fontSize: 12, ...font('700'), letterSpacing: 0.48 },
+  eventTitle: { fontSize: 20, ...font('700'), marginBottom: 6 },
+  eventDesc: { fontSize: 14, marginBottom: 12, ...font('400') },
+  fineprint: { fontSize: 12, marginTop: 10, marginBottom: 12, ...font('400') },
+  aside: { padding: 0, minHeight: 420, overflow: 'hidden' },
+  chatHeader: { paddingVertical: 12, paddingHorizontal: 16, borderBottomWidth: 1 },
+  chatHeaderText: { fontSize: 14, ...font('700') },
+});

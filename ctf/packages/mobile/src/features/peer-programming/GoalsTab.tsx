@@ -1,38 +1,41 @@
-// The Goals tab: loading, error and no-cohort states, the read-only notice for an ended cohort, and
-// the board itself.
+// The Goals tab, copied from the web's PeerProgrammingGoalsTab (web components/peer-programming/
+// pp-goals-tab.tsx): a loading line, the error, the no-cohort line, the read-only line for an ended
+// cohort, and the board itself.
 import React from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { interFamily } from '../../components/ui';
 import { actOnTask, addGoalTask, closeGoal, editGoalTask, postGoal } from './PeerProgrammingApi';
 import { GoalsBoard } from './GoalsBoard';
-import { PPButton } from './PPButton';
 import { useGoalBoard } from './useGoalBoard';
 import { usePPTheme } from './usePPTheme';
 
 function Notice({ text, tone }: { text: string; tone: 'muted' | 'error' }) {
-  const { tokens } = usePPTheme();
+  const t = usePPTheme();
   return (
-    <Text accessibilityRole={tone === 'error' ? 'alert' : undefined} style={[styles.notice, { color: tone === 'error' ? tokens.danger : tokens.textSecondary }]}>
+    <Text accessibilityRole={tone === 'error' ? 'alert' : undefined} style={[styles.notice, { color: tone === 'error' ? '#EF4444' : t.MUTED }]}>
       {text}
     </Text>
   );
 }
 
-export function GoalsTab({ refreshKey }: { refreshKey: number }) {
-  const { accent } = usePPTheme();
-  const { board, error, busy, run, refresh } = useGoalBoard(refreshKey);
+export function GoalsTab() {
+  const { board, error, busy, run } = useGoalBoard();
   if (!board) {
-    return error ? (
-      <View style={styles.stack}>
-        <Notice tone="error" text={error} />
-        <PPButton label="Try again" onPress={() => void refresh()} />
+    return (
+      <View style={styles.pad}>
+        {error ? <Notice tone="error" text={error} /> : <Notice tone="muted" text="Loading the goal board…" />}
       </View>
-    ) : (
-      <ActivityIndicator style={styles.spinner} color={accent} accessibilityLabel="Loading the goal board" />
     );
   }
-  if (!board.cohortId) return <Notice tone="muted" text="You are not in a cohort yet, so there is no goal board to show." />;
+  if (!board.cohortId) {
+    return (
+      <View style={styles.pad}>
+        <Notice tone="muted" text="You are not in a cohort yet, so there is no goal board to show." />
+      </View>
+    );
+  }
   return (
-    <View style={styles.stack}>
+    <View style={[styles.pad, styles.stack]}>
       {error ? <Notice tone="error" text={error} /> : null}
       {board.ended ? <Notice tone="muted" text="This cohort has ended, so its board is read-only." /> : null}
       <GoalsBoard
@@ -49,7 +52,7 @@ export function GoalsTab({ refreshKey }: { refreshKey: number }) {
 }
 
 const styles = StyleSheet.create({
+  pad: { padding: 16 },
   stack: { gap: 12 },
-  notice: { fontSize: 13, textAlign: 'center', paddingVertical: 8 },
-  spinner: { marginTop: 24 },
+  notice: { fontSize: 13, textAlign: 'center', paddingVertical: 8, fontFamily: interFamily('400') },
 });

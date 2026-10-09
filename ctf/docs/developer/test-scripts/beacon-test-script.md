@@ -14,10 +14,10 @@
 | **Plugin** | Beacon (`beacon`) |
 | **Visibility** | Member-facing |
 | **Roles to test** | member, admin |
-| **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
+| **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-beacon-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-10-08 manual update: BN-AND checks the Android member and admin screens against the web |
 
 ## How to run this
 
@@ -366,6 +366,19 @@ one of these, it is already tracked, not a new bug:
 - Whether anonymous viewers see the live chat read-only or just a "sign in to chat" panel — leaning
   read-only so the room feels alive.
 - Replay hosting links to Stream's recording URL rather than re-hosting, for now.
-- Android viewer parity shipped; android admin broadcasting is intentionally out of scope.
+- Android carries the member page and, for admins, Beacon Admin (create, go live, end, moderate, history), copied from the web (BN-AND).
+
+### BN-AND · Android Beacon matches the web at phone width
+**Role:** member, then admin · **Surfaces:** android, compared with web (~390px)
+**Steps:**
+1. Open Beacon in the Android app beside the web page: the header shows the Radio icon, and below
+   it the title, "Watch with just a link" line, idle or live view and **Missed it? Watch the
+   recordings** match the web in wording and colors, in both themes.
+2. As an admin, tap **Admin** in the header: Beacon Admin opens with the refresh control and
+   **Member view**. Create a draft, open it, and check **RTMP URL** and **Stream key** each copy.
+3. Tap the refresh control: the screen reloads. Press back: Beacon returns; back again: Apps.
+4. As a member who is not an admin, confirm no **Admin** button shows.
+**Expected:** Every part of the web member and admin pages is present, and nothing the web lacks.
+**Result:** android ☐ — notes:
 
 > _Terminology (2026-07-20): the source inventory's user-facing section is now titled **User Features** (was "Target User Features"), and its admin section **Admin Features**. Heading rename only — no test steps changed._

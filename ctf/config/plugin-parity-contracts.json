@@ -147,8 +147,8 @@
     },
     {
       "slug": "recurring-activity",
-      "mobileFeatureDirs": [],
-      "requiresMobileSurface": false,
+      "mobileFeatureDirs": ["recurring-activity"],
+      "requiresMobileSurface": true,
       "requiresExplicitWebShell": false
     },
     {

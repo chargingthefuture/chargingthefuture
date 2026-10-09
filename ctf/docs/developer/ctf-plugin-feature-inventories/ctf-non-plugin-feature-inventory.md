@@ -17,6 +17,14 @@
 2. Shared app-shell gating wrappers for authenticated access.
 3. Shared approval and terms gating wrappers before app/plugin usage.
 4. Shared access-denied and redirect behavior contracts across web and Android.
+5. Apps home. Web: the community shell's Apps section (`components/community-shell/shell-apps-panel.tsx`
+   under `MobileTopBar` in `community-shell.tsx`). Android: complete, a copy of the same screen for the
+   four apps the Android app carries — `packages/mobile/src/features/apps/` (`AppsList.tsx`,
+   `AppCard.tsx`, `AppsSortSelect.tsx`, `useAppsOrder.ts`) under the top bar in
+   `packages/mobile/src/components/shell/` (`ShellChrome.tsx` `TopBar`, `TopBarControls.tsx`). Left out
+   on Android: the Commons / Apps section icons and the Admin button (the Commons and the admin area are
+   web-only), and the status badge (every app the Android app carries is fully available, so the web
+   would show none either).
 
 ### 1.2 Auth and Account Lifecycle + Onboarding/Approval/Terms Gating
 
@@ -104,8 +112,24 @@
     replacing the page.
     Reached from the community shell icon rail (the previously-disabled settings slot now links to
     `/account/data`).
-  - Android: `ctf/packages/mobile/src/features/account-data/` (`AccountData.tsx` + `api.ts`),
-    registered in `ctf/packages/mobile/App.tsx`, binding to the same three endpoints.
+  - Android: `ctf/packages/mobile/src/features/account-data/` (`AccountData.tsx`,
+    `AccountDataView.tsx`, `ServiceLists.tsx`, `ConfirmDelete.tsx` + `api.ts`), registered in
+    `ctf/packages/mobile/App.tsx` (feature key `account-data`), binding to the same three endpoints.
+    It copies the web phone layout: its own header (back, shield tile, title and service count, theme
+    toggle), the Your Data / Danger Zone tabs, the service lists, the empty state, the danger card and
+    the type-the-phrase confirmation. The JSON download controls are on Android too: the file
+    is written to the app's cache with `expo-file-system` and offered through the system share sheet
+    with `expo-sharing` (both added 2026-10-08), the phone's way to save or send a file.
+  - Android Your account hub: `ctf/packages/mobile/src/features/account/AccountHub.tsx` (feature key
+    `account`) copies the web `/account` hub. The top bar's gear opens it; Account & Data and Blocked
+    members open from its Data & privacy rows and go back to it, as `/account/data` and
+    `/account/blocks` go back to `/account` on the web. It carries every section of the web hub:
+    the heading, the Identity card (with the account menu, where Sign out lives), the Trust card
+    (`account/trust/`, reading `GET /api/trust/user/self`, with "Your trust" and "What members see";
+    `peer-summary.ts` is a copy of the web's `lib/trust/peer-summary.ts` and must be kept in step
+    with it), Your ongoing activities (the Recurring activity row opens the app's Recurring Activity
+    screen), Verification (opens the app's Unlock screen, feature key
+    `unlock`) and Data & privacy.
   - Not added to `ctf/config/plugin-parity-contracts.json`: that file is keyed to the **plugin**
     registry (`lib/plugins/repository.ts`), and `check-web-android-parity.mjs` fails any contract
     slug with no matching registry entry. Account & Data is a non-plugin account surface, so its
@@ -162,7 +186,7 @@
 2. `GET /api/account/blocks` lists the member's blocks newest-first (`listBlocksForUser`). `POST /api/account/blocks` creates a block (body `{ blockedUserId }`; CSRF-guarded; idempotent; a self-block or a blank target returns 400). `DELETE /api/account/blocks/[blockedUserId]` removes a block (CSRF-guarded; idempotent — unblocking a member who is not blocked still returns ok).
 3. Optional safety escalation (opt-in): a `POST` with `safetyConcern: true` and an optional short `safetyDetail` writes the block AND a `member_safety_reports` row in one transaction (they succeed or fail together) — the only path by which a member block reaches an admin. Without the flag, nothing is written to the reports table.
 
-**Web and Android delivery status: complete on both.** Web ships the manage-list (`components/blocks/blocked-members-shell.tsx`, mounted at `/account/blocks`) and the reusable block action (`components/blocks/block-member-button.tsx`, with the opt-in safety escalation). Android ships the matching surface in `packages/mobile/src/features/blocks/`: an API client (`api.ts` — `fetchBlockedMembers`, `blockMember`, `unblockMember`, all through the shared authenticated fetch with the `x-ctf-csrf: 1` header on mutations), the "Blocked members" manage screen (`BlockedMembers.tsx` — loading / empty / error / populated states with per-row Unblock), and the reusable `BlockMemberButton.tsx` (confirm dialog with the same opt-in safety escalation). The screen is mounted in the mobile navigator (`App.tsx`, feature key `blocked-members`). Both clients call the same three account routes; no backend, schema, or contract change.
+**Web and Android delivery status: complete on both.** Web ships the manage-list (`components/blocks/blocked-members-shell.tsx`, mounted at `/account/blocks`) and the reusable block action (`components/blocks/block-member-button.tsx`, with the opt-in safety escalation). Android ships the matching surface in `packages/mobile/src/features/blocks/`: an API client (`api.ts` — `fetchBlockedMembers`, `blockMember`, `unblockMember`, all through the shared authenticated fetch with the `x-ctf-csrf: 1` header on mutations), the "Blocked members" manage screen (`BlockedMembers.tsx` — loading / empty / error / populated states with per-row Unblock, laid out as the web screen with its own back header, opened from the Your account hub), and the reusable `BlockMemberButton.tsx` (confirm dialog with the same opt-in safety escalation). The screen is mounted in the mobile navigator (`App.tsx`, feature key `blocked-members`). Both clients call the same three account routes; no backend, schema, or contract change.
 
 **Where a member can start a block, and where the block is enforced (updated 2026-08-03).** On web the
 reusable `BlockMemberButton` is attached to the LightHouse listing detail — the first real member-to-
@@ -351,6 +375,9 @@ Owner decision, 2026-09-26. The owner pays the running costs of Skills Economy a
 
 ## 5) Change Log
 
+- 2026-10-08: **Android Apps home matches the web Apps section (§1.1 item 5).** The Android home gains the web's Sort control (Recent, A-Z, Most Used, kept on the phone as the web keeps them in the browser) and the "Search apps…" box with its no-match line. Tapping a card now highlights it as on the web, and the "Open plugin →" pill opens the app. Cards use the web's tint and border in the comic theme too. The closing line about the other apps being on the web is removed; the web has no such line. The top bar now matches the web bar: the account picture sits after the settings gear, the bug icon opens the same one-item "Report a problem" menu, the Sign in button has the web's size and weight, the brand mark keeps its gradient in the comic theme, and the wordmark spacing and bottom line match.
+
+- 2026-10-08: **The Android account screens match the web's (§1.2, §1.6).** The gear now opens a Your account screen copied from the web `/account` hub with all of its sections: the heading and intro, the Identity card with the account menu (Sign out lives there, as in the web's account menu on that card), the Trust card (read from `GET /api/trust/user/self`), Your ongoing activities (opens the app's Recurring Activity screen), Verification (opens the Unlock screen), and the Data & privacy card linking to Account & Data and Blocked members, which go back to it. The made-up Blocked members row that sat above Account & Data is gone. Account & Data was redrawn from the web phone layout: its own header with back and the theme toggle, the web's tab, list, empty, danger and confirmation wording (including the 7-day ServiceCredits hold), and no sign-out button, Retry button or Terms and Accessibility links, which the web screen does not have. Blocked members was redrawn the same way, with the web's back header and no count line. The JSON downloads are there too: the file is saved through the phone's share sheet (new `expo-file-system` and `expo-sharing` modules). No API, schema or contract change.
 - 2026-10-05: **Data export no longer hands a member rows that are not theirs; account deletion removes the LightHouse profile row.** The export read every registry entry with a user column as the member's own rows, so it returned the LightHouse blocks other members had placed on the member (blocker id and free-text reason, #2699) and the full Directory profile of everyone the member had nominated, claimed profiles included (#2643). A new `exportable: false` flag on a registry entry, set with `notExported(...)`, keeps such an entry out of the export while deletion still acts on it; `check-export-engine.mjs` now renders pseudonymize entries too, asserts the engine skips flagged entries, and fails if either of the two pairs loses its flag. Separately, account deletion soft-deleted `lighthouse_profiles` and kept the phone number and Signal link, while the plugin's own delete removed the row; the registry now deletes it (#2700), and `post/0050` removes the rows the soft delete left behind.
 - 2026-10-05: **Legacy profile redirects reach their mapped address (§1.11).** The page called `redirect()` inside the lookup's `try`, so the catch swallowed the redirect, logged a false lookup failure, and sent every old link to the plugin shell. The lookup now resolves the mapped id inside the `try` and the redirects run after it. No schema or route change.
 - 2026-10-06: **The app's own `/sign-in` and `/sign-up` pages are removed.** Owner decision: those pages were never meant to exist, so they are deleted rather than kept as redirects, and a request for either path is now a 404. Every link that pointed at them now points at the hosted Account Portal through `getHostedSignInUrl()` / `getHostedSignUpUrl()`, falling back to the home page when no hosted URL resolves (the same place the old `/sign-in` page sent people in that case): the home page, `/apps`, `/apps/[pluginSlug]` (including Beacon), Contributions, Recurring Activity, the Knowledge Library, TI Radio, Mutual Time, the account-closed page, the Quora survey landing, the community shell defaults, and the WhatWorks public preview. Sign-in itself never used these pages: the middleware sets no sign-in URL, and `ClerkProvider` already received the hosted URLs. No schema change; the two page routes are gone and no API route changed.

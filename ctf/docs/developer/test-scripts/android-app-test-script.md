@@ -3,7 +3,7 @@
 This is the manual test script for the **native Android app** overall. It exists because the
 Android app is no longer a full copy of the web product. Under the owner decisions of 2026-07-20 and
 2026-10-06 (rule 105), the native app carries the plugins that benefit from being an installed app —
-**Chyme live audio, Beacon live broadcasts, PeerProgramming's live call and Foundation's instant calls**, opened from an **Apps** list — plus **Clerk sign-in,
+**Chyme, Beacon, PeerProgramming and Foundation, each in full with its admin screens (owner decision, 2026-10-08)**, opened from an **Apps** list — plus **Clerk sign-in,
 bug reporting, and settings/account**, and everything else is served by the installable web app.
 So instead of testing "parity across the board", this one script walks the entire native app end to
 end.
@@ -99,74 +99,114 @@ second test member in the same room.
    started and the recording file ready, and the replay has picture and sound.
 7. As a non-admin, the **Go live** card is not shown.
 
-## AN-PP — PeerProgramming: goals, chat, and the live call
+## AN-PP — PeerProgramming: goals, cohorts, Direct Line, the live call, and admin
 
 Use an approved account that the weekly assignment has placed in a cohort, and a second member of
-the same cohort on another device or on the web.
+the same cohort on another device or on the web. Keep the web page open at phone width beside the
+phone: every step should look the same on both, apart from the call buttons the web does not
+have (flip camera, share screen).
 
-1. Open **PeerProgramming** from the Apps list. Expect the week's topic under the title and the
-   **Goals** tab selected, with the goal chips row and the **Up for grabs**, **Doing** and **Done**
-   sections stacked one under the other. An account with no cohort sees "You are not in a cohort
-   yet, so there is no goal board to show."
-2. As the second member, post a goal with two cards. On the phone, tap **Refresh**, then **Take it**
-   on one card. Expect the card to move to **Doing** with "You are on it" and the "Post by …" line.
-   Type a result and tap **Post result**: the card moves to **Done**.
+1. Open **PeerProgramming** from the Apps list. Expect the header with the back chevron, title,
+   **Refresh** (and **Admin** for an admin), report and settings, then the tab row **Goals**,
+   **Cohorts**, **Session**, **Direct Line** with **Goals** selected, the cards-done count, the goal
+   chips row and the **Up for grabs**, **Doing** and **Done** columns side by side, scrolling
+   sideways. An account with no cohort sees "You are not in a cohort yet, so there is no goal board
+   to show."
+2. As the second member, post a goal with two cards. On the phone, open **Cohorts** and come back
+   to **Goals** (this reloads the board, as on the web), then tap **Take it** on one card. Expect the card to move to **Doing** with "You are on it" and
+   the "Post by …" line. Type a result and tap **Post result**: the card moves to **Done**.
 3. As the goal's owner on the other device, tap **It helped** on that card. On the phone, after
-   **Refresh**, the card reads "Done by you · it helped".
-4. Open **Chat**. Type a message and tap **Send**: it appears in the list. Tap **Reply** under the
-   other member's message, type a reply and tap **Send reply**: it appears under that message. The
-   other member sees both after a refresh.
-5. Open **Session** and tap **Join session**. Allow the camera and microphone. Expect your own tile,
-   and a tile for the second member once they join. Tap **Mute** and **Stop camera**: they mute and
-   stop; tap again to turn them back on. Tap **Flip camera**: your tile switches cameras.
-6. Tap **Share screen** and accept Android's prompt. Expect the phone's screen shown large above the
-   tiles, on the phone and on the other device. Decline the prompt once: expect the calm line asking
-   you to try again, and the call carries on. Tap **Stop sharing**.
-7. Press **Home** and wait 30 seconds. The other member still sees and hears you. Return to the app:
-   the call is still running. Switch to the **Chat** tab and back: the call is still running.
-8. Tap **Leave session**. Expect the **Join session** button again, and the other member sees you
+   leaving **Goals** and coming back, the card reads "Done by you · it helped".
+4. Open **Cohorts**. Expect the "Weekly Global Masterminds" card, your cohort with its **Active**
+   badge, topic, member count and **Join Session** button, and the "In this cohort" names. When
+   other cohorts are running, tap **Listen in** on one: the **Direct Line** opens on that cohort
+   with "You're listening in — only cohort members can post here." in place of the message box.
+   Leave and reopen PeerProgramming to return to your own cohort.
+5. Open **Direct Line**. Type a message and tap the send button: it appears in the list with your
+   initials, name and time. The other member sees it after tapping **Refresh**.
+6. Open **Session** and tap **Join Session**. Allow the camera and microphone. Expect the
+   "Live · 1 participant" line, your own tile, and a tile for the second member once they join. Tap
+   the microphone and camera buttons: they mute and stop; tap again to turn them back on. Tap the
+   flip button: your tile switches cameras.
+7. Tap the share screen button and accept Android's prompt. Expect the phone's screen shown large
+   above the tiles, on the phone and on the other device. Decline the prompt once: expect the calm
+   line asking you to try again, and the call carries on. Tap the button again to stop sharing.
+8. Press **Home** and wait 30 seconds. The other member still sees and hears you. Return to the app:
+   the call is still running. Switch to the **Direct Line** tab and back: the call is still running.
+9. Tap the red leave button. Expect the **Join Session** button again, and the other member sees you
    leave.
+10. Switch the theme to comic in Settings and reopen PeerProgramming. Expect square corners and the
+    comic colors, the same as the web in the comic theme.
+11. As an admin, tap **Admin** in the header. Expect "PeerProgramming Admin" with the code icon and
+    a **Member view** pill, the heading card with the ADMIN tag, then Member feedback, Single
+    standing Cohort 1 mode, Weekly topic, Weekly cohort assignment and Cohorts, as on the web admin
+    page. Save a draft topic: expect "Draft saved.". Tick **Publish** and save: expect "Topic
+    published.". Tap **Turn on** / **Turn off** and check the On / Off badge and source line.
+12. On a cohort row, tap **Open room →**: the member screen opens on that cohort's **Direct Line**.
+    Tap **Admin**, then **End cohort** on a test cohort and confirm: expect "Cohort ended. Its
+    conversation is now read-only." and the **Ended** badge. Tap **Member view** to return.
 
-## AN-FD — Foundation calls
+## AN-FD — Foundation
 
-Use two approved accounts: the **provider** on the phone (instant calls turned on in Foundation on the
-web, with a rate set) and the **caller** on the web or a second phone, already connected to the
-provider (a quote requested once is enough). The caller needs enough ServiceCredits for a few blocks.
+Since 2026-10-08 the app carries Foundation in full, and every screen should look like the web
+Foundation page at phone width. Use two approved accounts: the **provider** (with at least one skill on
+their Directory profile) and the **caller**, one on the phone and one on the web or a second phone.
+The caller needs enough ServiceCredits for a few blocks.
 
-1. **Call alerts.** On the phone open **Foundation** from the Apps list. Turn on **Call alerts on this
-   device**. On Android 13 or later, Android asks to allow notifications: allow it. The switch stays on
-   and the line reads that this phone rings even with the app closed. Close and reopen the app: the
-   switch is still on.
-2. **Ring with the app closed.** Swipe the app away. From the caller, tap **Connect now**, agree, and
-   tap **Start call**. Within a few seconds the phone shows a heads-up alert with sound. With discreet
-   pings on (the default) it reads "Charging The Future / You have a new update." and never names the
-   caller. Tap it: the app opens on the full-screen **Incoming call** with **Answer** and **Decline**.
-3. **Ring with the app open.** With the app open on any pill (for example Chyme), ring again from the
-   caller: the **Incoming call** screen appears above that pill within about 4 seconds.
-4. **Answer.** Tap **Answer**. Expect "Connecting…", then "Connected" once the caller is in, an
-   **Elapsed** clock that counts up, and the rate per block. Both people hear each other. Android never
-   asks for the camera.
-5. **Mute.** Tap **Mute**: the caller stops hearing you and the button reads **Unmute**. Tap it again.
-6. **Screen off.** Lock the phone for 30 seconds. The caller still hears you. Unlock: the call is still
-   running.
-7. **Extend once (as the caller on a phone).** Place the call from the phone instead: in **Your
-   connections** tap **Connect now** on the provider, check the rate and block limit, turn on the
-   agreement switch and tap **Start call**. Once answered, tap **Extend** twice quickly. Exactly one
-   block is added ("2 of N blocks"), the button reads "Adding block…" while it works, and the caller's
-   ServiceCredits drop by one block, not two.
-8. **End.** Tap **End call**. Both sides show "Call ended." and the screen closes after a moment. The
-   Android "Live now" notification is gone.
-9. **Decline.** Ring again and tap **Decline** on the phone. The caller sees "Call declined." No credits
-   move.
-10. **No answer.** Ring again and leave it for a minute. Both sides show "No answer." and nothing rings
+1. **Browse.** Open **Foundation** from the Apps list. Expect the **Browse / Offer / Quotes** tabs,
+   the search box, the "Find providers offering a skill" panel and the provider cards, as on the web.
+   Type in the search box: the list narrows while the box keeps focus. Tap a skill chip: the
+   "Offering: …" banner appears with **Clear**. Tap the refresh button in the header: its icon spins
+   and the list reloads.
+2. **Offer (as the provider).** Open **Offer**. Write a listing blurb and tap **Save**: "Saved"
+   shows. Turn on **Allow instant 1:1 calls**, set a rate and block length, and tap **Save**. Turn on
+   one skill under **Offer your skills**; "1 of N offered" updates.
+3. **Call alerts.** Still on **Offer** with instant calls on, tap **Enable call alerts on this device**.
+   On Android 13 or later, Android asks to allow notifications: allow it. Expect "On for this device"
+   and **Turn off on this device**. Close and reopen the app: it still reads on.
+4. **Profile and Request Quote (as the caller).** On **Browse**, tap the provider's card. Expect the
+   **Provider Profile** page with **← Back**, **Share**, **Request Quote** and **Connect now**. Tap
+   **Request Quote**: the app lands in the **Direct Line** chat. Send a message; the provider sees it
+   on the web. Press Android **back**: Foundation opens on **Quotes**, not Apps. Open a profile again
+   and tap the header chevron: Foundation's tabs come back.
+5. **Quotes.** Back on **Quotes**, the request shows as **Pending** with **Direct Line**. As the
+   provider, respond with a price; as either side, tap **Mark the work done** and confirm. After it
+   closes, the caller sees **Is this ongoing?**. Record it, then tap **See your ongoing
+   arrangements**: **Recurring Activity** opens in the app with the arrangement listed. Press back:
+   Foundation comes back, opened fresh as the web page is after the browser's back.
+6. **Ring with the app closed.** On the provider's phone, swipe the app away. From the caller, tap
+   **Connect now**, pick a send limit, tick the agreement and tap **Start call**. Within a few seconds
+   the phone shows a heads-up alert with sound. With discreet pings on (the default) it reads
+   "Charging The Future / You have a new update." and never names the caller. Tap it: the app opens on
+   the **Incoming call** card with **Decline** and **Answer**.
+7. **Ring with the app open.** With the app open on any screen (for example Chyme), ring again: the
+   **Incoming call** card appears above it within about 4 seconds.
+8. **Answer.** Tap **Answer**. Expect "Connecting", then "In call" and "Connected" once the caller is
+   in. Both people hear each other. Android never asks for the camera.
+9. **Mute.** Tap **Mute**: the caller stops hearing you and the button reads **Muted**. Tap it again.
+10. **Screen off.** Lock the phone for 30 seconds. The caller still hears you. Unlock: the call is
+    still running.
+11. **Extend once (as the caller on a phone).** Place the call from the phone. Once answered, the
+    **This block** strip shows the time left and "1 of N blocks". Tap **Extend** twice quickly. Exactly
+    one block is added ("2 of N blocks"), the button reads "Adding block…" while it works, and the
+    caller's ServiceCredits drop by one block, not two.
+12. **End.** Tap **End call**. Both sides show "Call ended." and the card closes after a moment. The
+    Android "Live now" notification is gone.
+13. **Decline.** Ring again and tap **Decline** on the phone. The caller sees "Call declined." No
+    credits move.
+14. **No answer.** Ring again and leave it for a minute. Both sides show "No answer." and nothing rings
     afterwards.
-11. **Out of credits (402).** With a caller account that has fewer ServiceCredits than one block, tap
-    **Connect now** and **Start call**. The confirmation stays open and shows "You do not have enough
-    ServiceCredits to start this call." Nothing rings.
-12. **Sign out.** Turn alerts on, then sign out in **Account & Data**. Ring this account from the web:
-    the phone does not ring. Sign in as a different member on the same phone: the switch reads off.
-13. **Alerts off.** Turn the switch off and ring again with the app closed: no alert. Open the app:
-    the ring still appears on screen while it is open.
+15. **Out of credits (402).** With a caller account that has fewer ServiceCredits than one block, tap
+    **Connect now** and **Start call**. The confirmation stays open and shows the reason. Nothing rings.
+16. **Sign out.** Turn alerts on, then sign out in **Account & Data**. Ring this account from the web:
+    the phone does not ring. Foundation shows the signed-out page with **Join Skills Economy — Free**
+    and **Sign in**. Sign in as a different member on the same phone: call alerts read off.
+17. **Alerts off.** Tap **Turn off on this device** and ring again with the app closed: no alert. Open
+    the app: the ring still appears on screen while it is open.
+18. **Admin.** Signed in as an admin, the Foundation header shows **Admin**; a member does not see it.
+    Tap it: **Foundation Admin** opens with the five snapshot counts and the **Capacity policy** card,
+    and an accent refresh button in the header. Change the quota state, tap
+    **Save policy**, and expect "Capacity policy saved.". **Member view** returns to Foundation.
 
 ## AN-5 — Back button
 
@@ -207,7 +247,7 @@ provider (a quote requested once is enough). The caller needs enough ServiceCred
 
 ## What is intentionally NOT in the Android app
 
-Directory, LightHouse, TrustTransport, SocketRelay, the rest of Foundation (everything but its instant calls), SkillsHunt, Workforce, GDP,
+Directory, LightHouse, TrustTransport, SocketRelay, SkillsHunt, Workforce, GDP,
 ServiceCredits, Weekly Performance, Feed/Announcements, Mood, GentlePulse, SkillUp,
 and the rest are **web-only** now (installable PWA). If any of these appears in the native app
 without an owner decision adding it to the rule 105 keep-list, that is a regression.

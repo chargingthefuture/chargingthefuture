@@ -1,55 +1,58 @@
 /**
- * BeaconIdleView — the "idle" state of the Beacon viewer.
+ * BeaconIdleView — the "idle" state of the Beacon viewer, copied from the web BeaconIdleView
+ * (components/beacon/beacon-viewer.tsx).
  *
- * Shown when nothing is live: a calm "no live event right now" empty state. When the current
- * response carries the last replay's recording URL, that replay is offered as a paused, playable
- * recording beneath it.
+ * Shown when nothing is live: the radio icon, "No live event right now", the link to the recordings
+ * page on the blog, and, when the current response carries the last replay's recording URL, that
+ * replay as a paused, playable recording beneath it.
  */
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { type ThemeTokens } from '../../theme';
+import { Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Radio } from 'lucide-react-native';
 import { type BeaconEventLike } from './BeaconApi';
 import { BeaconVideo } from './BeaconVideo';
+import { ctaStyle, ctaText, font, panelStyle, type BeaconTokens } from './BeaconTheme';
+import { reportError } from '../../observability/report';
 
-export interface BeaconIdleViewProps {
-  tokens: ThemeTokens;
-  replay: BeaconEventLike | null;
-}
+// The blog's recordings page; the same address as the web's BLOG_STREAMS_PAGE_URL (lib/beacon/replays.ts).
+const BLOG_STREAMS_PAGE_URL = 'https://chargingthefuture.github.io/chargingthefuture/streams';
 
-export const BeaconIdleView: React.FC<BeaconIdleViewProps> = ({ tokens, replay }) => {
-  const styles = React.useMemo(() => makeStyles(tokens), [tokens]);
-
-  return (
-    <View style={styles.idleCard}>
-      <Text style={[styles.idleTitle, { color: tokens.textPrimary }]}>No live event right now</Text>
-      <Text style={[styles.idleBody, { color: tokens.textSecondary }]}>
-        When Farah goes live, it will appear here.
-      </Text>
-      {replay?.recordingUrl ? (
-        <View style={styles.replayBlock}>
-          <Text style={[styles.replayLabel, { color: tokens.textSecondary }]}>Last replay</Text>
-          <BeaconVideo source={replay.recordingUrl} autoPlay={false} muted={false} />
-          <Text style={[styles.replayTitle, { color: tokens.textPrimary }]}>{replay.title}</Text>
-        </View>
-      ) : null}
-    </View>
-  );
-};
-
-function makeStyles(t: ThemeTokens) {
-  return StyleSheet.create({
-    idleCard: {
-      marginTop: 16,
-      padding: 24,
-      borderRadius: t.radius,
-      borderWidth: 1,
-      borderColor: t.border,
-      alignItems: 'center',
-    },
-    idleTitle: { fontSize: 16, fontWeight: '700' },
-    idleBody: { fontSize: 14, marginTop: 6, textAlign: 'center' },
-    replayBlock: { marginTop: 20, alignSelf: 'stretch', gap: 8 },
-    replayLabel: { fontSize: 13, fontWeight: '700' },
-    replayTitle: { fontSize: 14, fontWeight: '600' },
+function openRecordings(): void {
+  Linking.openURL(BLOG_STREAMS_PAGE_URL).catch((error: unknown) => {
+    reportError(error, { area: 'beacon', op: 'open_recordings' });
   });
 }
+
+export const BeaconIdleView: React.FC<{ t: BeaconTokens; replay: BeaconEventLike | null }> = ({ t, replay }) => (
+  <View style={[panelStyle(t), styles.card]}>
+    <Radio size={40} color={t.SUBTLE} style={styles.icon} />
+    <Text style={[styles.title, { color: t.TITLE }]}>No live event right now</Text>
+    <Text style={[styles.body, { color: t.SUBTLE }]}>When Farah goes live, it will appear here.</Text>
+    <TouchableOpacity
+      style={[ctaStyle(t, 18, 9), styles.cta]}
+      onPress={openRecordings}
+      accessibilityRole="link"
+      accessibilityLabel="Missed it? Watch the recordings"
+    >
+      <Text style={ctaText(t)}>Missed it? Watch the recordings</Text>
+    </TouchableOpacity>
+    {replay?.recordingUrl ? (
+      <View style={styles.replayBlock}>
+        <Text style={[styles.replayLabel, { color: t.SUBTLE }]}>Last replay</Text>
+        <BeaconVideo t={t} source={replay.recordingUrl} autoPlay={false} muted={false} />
+        <Text style={[styles.replayTitle, { color: t.TITLE }]}>{replay.title}</Text>
+      </View>
+    ) : null}
+  </View>
+);
+
+const styles = StyleSheet.create({
+  card: { alignItems: 'center', paddingVertical: 48, paddingHorizontal: 24 },
+  icon: { marginBottom: 12 },
+  title: { fontSize: 16, ...font('600'), textAlign: 'center' },
+  body: { fontSize: 14, marginTop: 6, marginBottom: 14, textAlign: 'center', ...font('400') },
+  cta: { alignSelf: 'center', marginTop: 16 },
+  replayBlock: { marginTop: 20, alignSelf: 'stretch' },
+  replayLabel: { fontSize: 13, ...font('700'), marginBottom: 8 },
+  replayTitle: { fontSize: 14, ...font('600'), marginTop: 8 },
+});
