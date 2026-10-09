@@ -153,8 +153,9 @@ load after approval.
    "Hub" (terminology fix, 2026-08-03, owner-specified wording per the brand lexicon).
 3. On web, confirm the button reads "Continue to the Commons" and tapping it lands on the Commons
    home page (`/`), not the plugin navigator (`/apps`).
-4. On android, confirm the same "Welcome to Skills Economy (SE)" title (that card has no continue
-   button).
+4. On android, confirm the same "Welcome to Skills Economy (SE)" title and the same "Continue to the
+   Commons" button. Tapping it opens the web app's Commons home page (`/`) in the phone's browser,
+   because the Android app has no Commons (owner decision, 2026-10-09).
 5. Before approval, on the submission screen: confirm the explanation says "To unlock full access to
    Skills Economy" on web, and "Skills Economy uses Quora profile verification" on android — neither
    should say "Survivor Hub" (name retired 2026-08-09).
