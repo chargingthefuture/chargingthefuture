@@ -438,6 +438,7 @@ decision the owner has not made, or owned elsewhere. Nothing here is code work l
 
 ## Change Log
 
+- 2026-10-09: **The Back Channel note no longer links to Foundation (owner decision).** The line "For calls with ServiceCredits attached, use Foundation instead." stays on the web and Android Back Channel card, but "Foundation" is no longer a link to `/apps/foundation` on the web. Foundation is in both apps, and each plugin stays self-contained. Android already showed it as plain text.
 - 2026-10-08: **The Android Chyme screen matches the web Chyme page (owner directive).** The Android
   screen was redrawn as a copy of the web page at phone width, in the web's colors, sizes, copy and
   states, in both themes. Removed because the web does not have them: the branded loading splash,
