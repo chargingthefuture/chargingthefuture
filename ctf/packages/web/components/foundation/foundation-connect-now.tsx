@@ -304,21 +304,21 @@ function ConnectNowDialog({
         </div>
 
         <div style={{ fontSize: 13.5, color: t.SUBTLE, lineHeight: 1.6, marginBottom: 14 }}>
-          Start a live, paid 1:1 call with <strong style={{ color: t.TITLE }}>{providerName}</strong> right now.
+          Start a live 1:1 call with <strong style={{ color: t.TITLE }}>{providerName}</strong> right now, for ServiceCredits.
         </div>
 
         <div style={{ padding: "14px 16px", borderRadius: 12, background: `${t.ACCENT}10`, border: `1px solid ${t.ACCENT}28`, marginBottom: 14 }}>
           <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: t.MUTED, textTransform: "uppercase", marginBottom: 6 }}>Rate</div>
           <div style={{ fontSize: 17, fontWeight: 800, color: t.ACCENT }}>{rateLabel}</div>
           <div style={{ fontSize: 12.5, color: t.SUBTLE, marginTop: 4 }}>
-            You&apos;re charged this rate for each {intervalMinutes}-minute block. The first block is charged
+            You send this rate for each {intervalMinutes}-minute block. The first block is sent
             when {providerName} answers. You can end the call anytime.
           </div>
         </div>
 
         <div style={{ marginBottom: 14 }}>
           <label htmlFor="connect-now-block-cap" style={{ display: "block", fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: t.MUTED, textTransform: "uppercase", marginBottom: 6 }}>
-            Spend limit
+            Send limit
           </label>
           <select
             id="connect-now-block-cap"
@@ -337,14 +337,14 @@ function ConnectNowDialog({
             ))}
           </select>
           <div style={{ fontSize: 12.5, color: t.SUBTLE, marginTop: 6, lineHeight: 1.5 }}>
-            The call will not run past this limit. You&apos;ll be charged for at most{" "}
+            The call will not run past this limit. You&apos;ll send at most{" "}
             <strong style={{ color: t.TITLE }}>{maxSpendLabel}</strong> ({blocksLabel(authorizedBlocks)}, up to {maxMinutes} min).
           </div>
         </div>
 
         <div style={{ fontSize: 12.5, color: t.SUBTLE, lineHeight: 1.7, marginBottom: 14 }}>
-          This starts a live 1:1 call. You&apos;ll be charged the provider&apos;s rate per block until you
-          end it or reach your spend limit. Only start a call you mean to pay for.
+          This starts a live 1:1 call. You&apos;ll send the provider&apos;s rate per block until you
+          end it or reach your send limit. Only start a call you mean to send credits for.
         </div>
 
         {error ? (
@@ -359,7 +359,7 @@ function ConnectNowDialog({
             style={{ marginTop: 2, width: 16, height: 16, accentColor: t.ACCENT, flexShrink: 0 }}
           />
           <span style={{ fontSize: 13, color: "#D1D5DB", lineHeight: 1.5 }}>
-            I understand this is a paid call and I agree to be charged {rateLabel}, up to {maxSpendLabel}.
+            I understand this call uses ServiceCredits and I agree to send {rateLabel}, up to {maxSpendLabel}.
           </span>
         </label>
 
@@ -373,7 +373,7 @@ function ConnectNowDialog({
           {starting ? "Starting…" : "Start call"}
         </button>
         <div style={{ marginTop: 10, fontSize: 12, color: t.SUBTLE, lineHeight: 1.6, textAlign: "center" }}>
-          The first block is charged when the provider answers. Ringing is free, and you only pay for blocks
+          The first block is sent when the provider answers. Ringing is free, and you only send credits for blocks
           you use up to your limit.
         </div>
       </div>
