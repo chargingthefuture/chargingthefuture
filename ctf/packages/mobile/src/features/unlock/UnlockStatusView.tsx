@@ -8,15 +8,14 @@
 // shortcut is left out: the app has no Unlock admin screen.
 
 import React, { useMemo, type ReactNode } from 'react';
-import { Alert, Linking, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { ChevronLeft, ChevronRight, RefreshCw, Unlock as UnlockIcon } from 'lucide-react-native';
 import { useTheme, type ThemeTokens } from '../../theme';
 import { interFamily } from '../../components/ui';
-import { getApiBaseUrl } from '../../auth/authedFetch';
-import { reportError } from '../../observability/report';
 import { UNLOCK_REWARD_SLA_HOURS } from './constants';
 import { getUnlockTokens, STATUS_CONFIG, type DisplayStatus, type UnlockTokens } from './unlock-tokens';
 import { UnlockQuoraHelp } from './UnlockQuoraHelp';
+import { openWebCommons } from './openWebCommons';
 import { SurveyInviteNote, UnlockBanPolicy } from './UnlockNotes';
 
 const SUBTEXT: Record<DisplayStatus, string> = {
@@ -75,18 +74,6 @@ export function UnlockStatusView(props: Props) {
   );
 }
 
-// "Continue to the Commons" opens the web app's Commons in the phone's browser, so the label means
-// what it says: the Android app has no Commons (owner decision, 2026-10-09). The button only shows
-// once a member is approved.
-async function openCommons(): Promise<void> {
-  try {
-    await Linking.openURL(`${getApiBaseUrl()}/`);
-  } catch (caught) {
-    reportError(caught, { area: 'unlock', op: 'open_commons' });
-    Alert.alert('Unable to open', 'We could not open the Commons in your browser.');
-  }
-}
-
 function StatusCard({ s, tok, status, resubmitUrl, onResubmitUrlChange, onResubmit, submitting, error }: Props & { s: Styles; tok: UnlockTokens }) {
   const cfg = STATUS_CONFIG[status];
   const Icon = cfg.icon;
@@ -111,7 +98,7 @@ function StatusCard({ s, tok, status, resubmitUrl, onResubmitUrlChange, onResubm
             <Text style={s.welcomeReward}>
               Your ServiceCredits reward is issued automatically and arrives within {UNLOCK_REWARD_SLA_HOURS} hours, if not sooner.
             </Text>
-            <TouchableOpacity onPress={openCommons} accessibilityRole="link" style={s.continueBtn}>
+            <TouchableOpacity onPress={() => void openWebCommons()} accessibilityRole="link" style={s.continueBtn}>
               <Text style={s.continueText}>Continue to the Commons</Text>
               <ChevronRight size={14} color="#fff" />
             </TouchableOpacity>

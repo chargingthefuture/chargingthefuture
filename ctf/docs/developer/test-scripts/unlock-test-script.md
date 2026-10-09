@@ -520,7 +520,9 @@ screen** — that was the bug. The screen you are leaving is not repainted first
 to where you started. The verification banner sits above the chat, and your pending submission is
 untouched — asking for help never changes your place in the queue. Step 4: Android shows the same help
 card on a pending status screen and behaves the same. If the grant cannot be recorded, an error appears
-with a link onward rather than a button that silently did nothing.
+with a link onward rather than a button that silently did nothing. On Android that link, "Try opening
+the Commons anyway", opens the web app's Commons home page in the phone's browser (owner decision,
+2026-10-09).
 **Result:** web ☐ · android ☐ — notes:
 
 ### UNLOCK-A8b · Coming back a second day opens the Commons on its own
