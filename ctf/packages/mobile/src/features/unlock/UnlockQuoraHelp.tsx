@@ -81,6 +81,10 @@ export function UnlockQuoraHelp({ alreadyVerified = false, onGoHome }: { already
       setBusy(false);
       return;
     }
+    // The request is recorded; the member asks in the Commons, which is on the web (owner decision,
+    // 2026-10-09). onGoHome then re-runs the Unlock check so the app behind the browser lets them in.
+    await openWebCommons();
+    setBusy(false);
     onGoHome();
   }
 

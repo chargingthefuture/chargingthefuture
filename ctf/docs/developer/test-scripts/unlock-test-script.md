@@ -519,7 +519,9 @@ case that was broken: a waiting member has a stored `pending_readonly` tier, whi
 screen** — that was the bug. The screen you are leaving is not repainted first, and you do not return
 to where you started. The verification banner sits above the chat, and your pending submission is
 untouched — asking for help never changes your place in the queue. Step 4: Android shows the same help
-card on a pending status screen and behaves the same. If the grant cannot be recorded, an error appears
+card on a pending status screen; pressing the button records the request and opens the web app's
+Commons home page in the phone's browser, and the app behind it moves on to the Apps list (owner
+decision, 2026-10-09). If the grant cannot be recorded, an error appears
 with a link onward rather than a button that silently did nothing. On Android that link, "Try opening
 the Commons anyway", opens the web app's Commons home page in the phone's browser (owner decision,
 2026-10-09).
