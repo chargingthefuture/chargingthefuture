@@ -9,6 +9,7 @@ import { FoundationCallController } from './src/features/foundation';
 import { AppsList } from './src/features/apps';
 import { Unlock } from './src/features/unlock';
 import { fetchUnlockStatus, type UnlockAccessTier } from './src/features/unlock/api';
+import { reportError } from './src/observability/report';
 import {
   useFonts,
   Inter_400Regular,
@@ -151,7 +152,9 @@ function useUnlockGate(isLoading: boolean, isAuthenticated: boolean, isAdmin: bo
     } catch (error) {
       // Fail open: never lock out an approved member because of a flaky status
       // call. The server-side gates still enforce real access.
-      console.error('[unlock] status fetch failed; failing open (not walling)', error);
+      // The reason still has to reach the operator: a status route failing for everyone lets every
+      // member through with nothing on record.
+      reportError(error, { area: 'unlock', op: 'status_gate' });
       if (seq !== fetchSeq.current) return;
       setUnlockGate({ loading: false, walled: false, checked: true });
     }
