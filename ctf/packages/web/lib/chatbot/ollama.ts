@@ -212,7 +212,7 @@ export function describeOllamaFailure(err: unknown, timeoutMs: number = OLLAMA_T
   if (err instanceof Error && err.name === 'AbortError') {
     if (timeoutMs >= OLLAMA_DRAFT_TIMEOUT_MS) {
       const runpodHint = ollamaProviderIsRunpod()
-        ? ' The RunPod job was cancelled. Check the endpoint has at least 1 max worker in the RunPod dashboard — RunPod sets it to 0 after about two weeks with no requests.'
+        ? ' The RunPod job was canceled. Check the endpoint has at least 1 max worker in the RunPod dashboard — RunPod sets it to 0 after about two weeks with no requests.'
         : '';
       return `The engine did not answer within ${Math.round(timeoutMs / 60_000)} minutes.${runpodHint}`;
     }
@@ -256,7 +256,7 @@ const RUNPOD_POLL_INTERVAL_MS = 1_500;
 
 // Talk to a RunPod serverless endpoint: submit the chat as a job, then poll until
 // it finishes. The exchange shares one timeout budget (OLLAMA_TIMEOUT_MS unless the
-// caller passes a longer one); when it runs out the job is cancelled and the caller
+// caller passes a longer one); when it runs out the job is canceled and the caller
 // falls back to the template draft and a human still answers. The endpoint base is
 // OLLAMA_BASE_URL (e.g. https://api.runpod.ai/v2/<id>); OLLAMA_API_KEY is the
 // RunPod API key, sent as the bearer by ollamaHeaders().
