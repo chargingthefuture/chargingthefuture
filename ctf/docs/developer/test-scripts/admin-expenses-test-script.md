@@ -43,6 +43,25 @@ Use made-up amounts only. This repository is public, and the real figures are th
 
 ---
 
+### EXP-GPU-1b — A gap in the daily read keeps the typed figure (added 2026-10-12)
+
+**Role:** Admin
+**Surfaces:** Web (`/admin/expenses`)
+**Precondition:** EXP-GPU-1 passed. A local or preview database you can change.
+
+**Steps:**
+1. In that database, delete the `admin_expense_gpu_bill_days` rows for three of the last 30 full days (for example `DELETE FROM admin_expense_gpu_bill_days WHERE bill_date BETWEEN CURRENT_DATE - 5 AND CURRENT_DATE - 3;`).
+2. Reload `/admin/expenses`.
+3. Press **Read the bill now**.
+
+**Expected:**
+- Step 2: the RunPod card says in amber that 3 of the last 30 full days have not been read, with the last read time, and shows no 30-day figure. The **Read the bill now** button is still there. The RunPod line shows the typed figure with the amber "estimate, typed by hand" tag, not a short measured sum.
+- Step 3: the card shows the last 30 full days again and the RunPod line goes back to the green "measured from the RunPod bill, last 30 days" tag (#2714).
+
+**Result:** web ☐
+
+---
+
 ### EXP-GPU-2 — Only this product's endpoint is read, and a settled day does not change
 
 **Role:** Admin
