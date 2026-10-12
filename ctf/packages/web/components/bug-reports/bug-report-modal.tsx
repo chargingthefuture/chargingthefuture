@@ -118,7 +118,8 @@ export function BugReportModal({ open, onClose }: BugReportModalProps) {
       result = await submitBugReport({
         message: message.trim(),
         context,
-        pageUrl: typeof window !== 'undefined' ? window.location.href : undefined,
+        // Origin and path only: the query string and `#` part can carry search terms or a token.
+        pageUrl: typeof window !== 'undefined' ? `${window.location.origin}${window.location.pathname}` : undefined,
         pluginSlug: pathname ? derivePluginSlugFromPath(pathname) : undefined,
       });
     } finally {

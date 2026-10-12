@@ -61,7 +61,9 @@ const ABUSIVE_WORDS = [
   'nigger',
 ];
 
-const ABUSIVE_PATTERN = new RegExp(`\\b(?:${ABUSIVE_WORDS.join('|')})\\b`, 'i');
+// No word boundaries: a listed word with a suffix ("-ing", "-ed") or inside a compound must still
+// hold the report. A false positive (a place name that contains one) only costs a human a look.
+const ABUSIVE_PATTERN = new RegExp(`(?:${ABUSIVE_WORDS.join('|')})`, 'i');
 
 export type SanitizeResult = {
   redactedMessage: string;
@@ -100,6 +102,19 @@ function redactField(value: string, flags: Set<BugReportRiskFlag>): string {
   PHONE_PATTERN.lastIndex = 0;
 
   return out;
+}
+
+// The page a report came from, without its query string or `#` part. Those can carry search terms,
+// an email address or a sign-in token, and the page address is published to the triage issue
+// without passing through the redaction above. Anything that does not parse as an absolute URL
+// is cut at the first `?` or `#`.
+export function pageAddressOnly(value: string): string {
+  try {
+    const url = new URL(value);
+    return `${url.origin}${url.pathname}`;
+  } catch {
+    return value.split(/[?#]/, 1)[0];
+  }
 }
 
 export function sanitizeBugReport(message: string, context: string | null): SanitizeResult {

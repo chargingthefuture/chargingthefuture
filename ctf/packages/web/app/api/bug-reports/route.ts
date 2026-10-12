@@ -10,6 +10,7 @@ import {
 } from 'lib/bug-reports/constants';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
+import { pageAddressOnly } from 'lib/bug-reports/sanitize';
 
 type BugReportSubmitInput = {
   message?: unknown;
@@ -64,7 +65,9 @@ export async function POST(request: Request) {
   }
 
   const context = asTrimmedString(input.context, BUG_REPORT_CONTEXT_MAX_LENGTH);
-  const pageUrl = asTrimmedString(input.pageUrl, BUG_REPORT_METADATA_MAX_LENGTH);
+  // Stored without its query string or `#` part (see pageAddressOnly).
+  const rawPageUrl = asTrimmedString(input.pageUrl, BUG_REPORT_METADATA_MAX_LENGTH);
+  const pageUrl = rawPageUrl ? pageAddressOnly(rawPageUrl) || null : null;
   const pluginSlug = asTrimmedString(input.pluginSlug, BUG_REPORT_METADATA_MAX_LENGTH);
   const appVersion = asTrimmedString(input.appVersion, BUG_REPORT_METADATA_MAX_LENGTH);
   const userAgent = asTrimmedString(

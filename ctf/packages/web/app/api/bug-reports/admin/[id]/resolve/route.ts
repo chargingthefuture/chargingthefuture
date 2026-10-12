@@ -10,9 +10,9 @@ type ResolveBody = { action?: unknown };
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function invalidPayload(message: string): NextResponse {
+function invalidPayload(message: string, reason?: string): NextResponse {
   return NextResponse.json(
-    { ok: false, code: BUG_REPORT_ERROR_CODE.invalidPayload, message },
+    { ok: false, code: BUG_REPORT_ERROR_CODE.invalidPayload, message, ...(reason ? { reason } : {}) },
     { status: 400 },
   );
 }
@@ -30,8 +30,8 @@ async function parseResolveRequest(
   let body: ResolveBody;
   try {
     body = (await request.json()) as ResolveBody;
-  } catch {
-    return { error: invalidPayload('Invalid JSON body.') };
+  } catch (error) {
+    return { error: invalidPayload('Invalid JSON body.', failureReason(error)) };
   }
 
   if (body.action !== 'release' && body.action !== 'reject') {
@@ -80,7 +80,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         metadata: { action },
       });
       return NextResponse.json(
-        { ok: false, code: BUG_REPORT_ERROR_CODE.forbidden, message: 'Report is not in a state that can be resolved.' },
+        { ok: false, code: BUG_REPORT_ERROR_CODE.conflict, message: 'Report is not in a state that can be resolved.' },
         { status: 409 },
       );
     }
