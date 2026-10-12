@@ -2812,9 +2812,9 @@
 }
 
 .notificationsManage {
-  margin-top: 12px;
-  padding: 12px 8px 4px;
-  border-top: 1px solid var(--ctf-border-dim, rgba(255, 255, 255, 0.12));
+  margin-bottom: 12px;
+  padding: 4px 8px 12px;
+  border-bottom: 1px solid var(--ctf-border-dim, rgba(255, 255, 255, 0.12));
 }
 
 .notificationsManageToggle {
