@@ -11,6 +11,7 @@ import { getGdpShellStats } from '../lib/gdp/repository';
 import { listPluginRegistry, filterPluginsForViewer } from '../lib/plugins/repository';
 import { readTrustSelfExtensionOrStored } from '../lib/trust/repository';
 import { getHostedSignInUrl } from '../lib/auth/provider-env';
+import { reportError } from '../lib/observability/report';
 
 function buildShellUser(userId: string, username: string | null): ShellCurrentUser {
   const safeUsername = username && username !== 'guest' ? username : null;
@@ -72,7 +73,11 @@ async function resolveVerification(
   if (!userId || tier === 'approved_full') {
     return null;
   }
-  const unlockStatus = await getUnlockStatusForUser(userId).catch(() => null);
+  const unlockStatus = await getUnlockStatusForUser(userId).catch((error: unknown) => {
+    // Without the status the banner cannot say what is pending, so it is left out; report why.
+    reportError(error, { area: 'home', op: 'unlock_status_read' });
+    return null;
+  });
   if (!unlockStatus) {
     return null;
   }
@@ -97,7 +102,11 @@ async function resolveTrust(
 export default async function HomePage() {
   const pluginsPromise = listPluginRegistry();
   const shellStatsPromise = getGdpShellStats().catch(() => ({ memberCount: null, gdpValueUsd: null }));
-  const identityPromise = resolveRequestIdentity().catch(() => null);
+  const identityPromise = resolveRequestIdentity().catch((error: unknown) => {
+    // Renders the signed-out Hub; report it so a sign-in outage is not silent.
+    reportError(error, { area: 'home', op: 'identity_read' });
+    return null;
+  });
 
   const [plugins, shellStats, identity] = await Promise.all([
     pluginsPromise,
@@ -133,13 +142,23 @@ export default async function HomePage() {
     }
   }
 
-  const tier = userId ? await getUnlockAccessTier(userId).catch(() => null) : null;
+  // A failed tier read is not "no tier": treating it as one sent an approved member back into Unlock.
+  // When the read fails, report it and render the Hub without the verification banner instead. Each
+  // plugin route checks the tier again on its own, so this only decides what the Hub shows.
+  let tierReadFailed = false;
+  const tier = userId
+    ? await getUnlockAccessTier(userId).catch((error: unknown) => {
+        reportError(error, { area: 'home', op: 'unlock_tier_read' });
+        tierReadFailed = true;
+        return null;
+      })
+    : null;
 
-  if (shouldRedirectToUnlock({ userId, isAdmin, tier })) {
+  if (!tierReadFailed && shouldRedirectToUnlock({ userId, isAdmin, tier })) {
     redirect('/plugin/unlock');
   }
 
-  const verification = await resolveVerification(tier, userId);
+  const verification = tierReadFailed ? null : await resolveVerification(tier, userId);
 
   const isAuthenticated = Boolean(userId);
 

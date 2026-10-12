@@ -220,6 +220,17 @@ There is no `seedHub.mjs`; the Commons channel's data layer is seeded by the Fee
 
 ## Change Log
 
+- 2026-10-12: **A failed read on the home page no longer sends an approved member into Unlock, and a
+  page that fails to render says so plainly.** `app/page.tsx` treated a failed Unlock tier read as "no
+  tier" and redirected the member to `/plugin/unlock`; it now reports `home/unlock_tier_read` and
+  renders the Hub without the verification banner (each plugin route checks the tier again on its
+  own). The identity read (`home/identity_read`), the Unlock status read (`home/unlock_status_read`)
+  and the `/apps` access check (`apps/access_check`) keep their fallbacks and are now reported
+  (#2769). A page that throws while rendering now lands on a new root `app/error.tsx`, inside the
+  layout, and `app/global-error.tsx` no longer shows Next's built-in client-side notice: both show
+  "This page could not be shown.", the error's reference (`digest`) when there is one, and a link to
+  the home page (`components/shared/page-error-notice.tsx`) (#2767).
+
 - 2026-10-06: **The admin picture button is a camera icon in the icon row (owner directive).** The
   "Share a picture (admins)" button sat on its own row under the chips. It is now a camera chip after
   the gift in the same row (`CommonsImageShareButton`), shown to admins only and hidden while
