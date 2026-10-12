@@ -375,6 +375,14 @@ Owner decision, 2026-09-26. The owner pays the running costs of Skills Economy a
 
 ## 5) Change Log
 
+- 2026-10-12: **Blocked members lists each member once and says why a load failed (issues #2671,
+  #2673).** `listBlocksForUser` joined `directory_profiles` on `claimed_by_user_id`, which is not
+  unique, so a blocked member who claimed two profiles appeared twice (duplicate rows and keys on web
+  and Android). The join is now a `LEFT JOIN LATERAL ... LIMIT 1` taking the oldest claimed profile,
+  so the label is the same on every load. The web and Android Blocked members screens now show the
+  reason under the existing error heading, and a failed Android pull-to-refresh keeps the list on
+  screen with the reason above it. The blocks contract now describes the one-profile join. No route
+  or schema change.
 - 2026-10-12: **Web shell: dead files removed, silent catches now leave a trace.** Deleted
   `packages/web/src/` (an unreachable second PeerProgramming cohorts route, placeholder helpers and an
   empty mood file; Next ignores `src/app` when a root `app/` exists and nothing imported the rest),
