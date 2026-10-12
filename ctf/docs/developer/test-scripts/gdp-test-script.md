@@ -34,6 +34,8 @@
 
 4. **Countries API returns data.** Same session, confirm `GET /api/gdp/countries` returns HTTP 200 with `{ ok: true, countries: [...], totalMembers: <number>, unspecified: <number> }`. web ☐
 
+4b. **A failed read explains itself.** On a local build, make one recognition source query fail (for example rename `foundation_quote_requests`) and reload `/apps/gdp`. `GET /api/gdp/report/current` answers 503 with `code: "gdp_report_unavailable"`, a plain `message` and a `reference`; the screen shows that message with the reference rather than a fixed sentence, and the error report carries the same reference with the database reason. Value by Source labels read **SkillUp credits sent to trainers for validated work** and **Foundation service calls settled in ServiceCredits**, never "payouts" or "paid". web ☐
+
 5. **No currency symbol on the Community Value Index.** The hero figure on the dashboard has no `$`, `€`, or other currency prefix. web ☐
 
 6. **Projected figure stays out of the index.** In the `GET /api/gdp/report/current` body, any projected value appears only inside the `projection` object; the `metrics` array contains no projected row. If the community has open posts, a "Value waiting to happen" panel renders below the hero, visually apart from it. web ☐

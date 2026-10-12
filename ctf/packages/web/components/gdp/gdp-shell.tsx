@@ -25,6 +25,8 @@ import { SharePicture } from "@/components/shared/share-picture";
 import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 import { PluginUserShellButton } from "@/components/shared/plugin-user-shell-button";
 import { captureScreen } from "lib/share/capture-screen";
+import { failureText, responseFailureText } from "lib/errors/client-failure";
+import { reportError } from "lib/observability/report";
 
 const GDP_DEEP_LINK = "https://app.chargingthefuture.com/apps/gross-domestic-product";
 const GDP_MEMBER_PATH = "/apps/gross-domestic-product";
@@ -154,7 +156,11 @@ export default function GdpShell({ sharePicture = false, isAdmin = false }: { sh
     setError(null);
     try {
       const res = await fetch("/api/gdp/report/current", { signal });
-      if (!res.ok) throw new Error("Failed to load GDP report");
+      if (!res.ok) {
+        const text = await responseFailureText(res, "Failed to load GDP report", "member");
+        if (!isAborted(signal)) setError(text);
+        return;
+      }
       const data = (await res.json()) as { report?: GdpReportPayload | null };
       if (isAborted(signal)) return;
       const parsed = parseGdpReportResponse(data);
@@ -163,7 +169,7 @@ export default function GdpShell({ sharePicture = false, isAdmin = false }: { sh
       setMetricRows(parsed.metricRows);
     } catch (e: unknown) {
       if (isAborted(signal)) return;
-      setError(e instanceof Error ? e.message : "Failed to load GDP data.");
+      setError(failureText(e, { area: "gdp", op: "fetch_report", fallback: "Failed to load GDP data.", audience: "member" }));
     } finally {
       if (initial && !isAborted(signal)) setLoading(false);
     }
@@ -174,12 +180,21 @@ export default function GdpShell({ sharePicture = false, isAdmin = false }: { sh
   const fetchCountries = useCallback(async (signal?: AbortSignal) => {
     try {
       const res = await fetch("/api/gdp/countries", { signal });
-      if (!res.ok || isAborted(signal)) return;
+      if (isAborted(signal)) return;
+      if (!res.ok) {
+        // The panel stays empty (it never blocks the dashboard), but the route's reason reaches the
+        // error report so an empty All Countries panel is never a silent one.
+        const text = await responseFailureText(res, "Could not load the member count by country");
+        reportError(new Error(text), { area: "gdp", op: "fetch_countries" });
+        return;
+      }
       const data = (await res.json()) as { countries?: Array<{ country: string; members: number }>; unspecified?: number; totalMembers?: number };
       if (isAborted(signal)) return;
       setCountries(buildGdpCountries(data));
-    } catch {
-      // Leave the panel empty.
+    } catch (e: unknown) {
+      if (isAborted(signal)) return;
+      // Leave the panel empty; failureText reports the caught value.
+      failureText(e, { area: "gdp", op: "fetch_countries", fallback: "Could not load the member count by country." });
     }
   }, []);
 
