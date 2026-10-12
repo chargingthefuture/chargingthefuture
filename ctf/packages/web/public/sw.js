@@ -47,7 +47,9 @@ self.addEventListener('notificationclick', function (event) {
   event.notification.close();
 
   var data = event.notification.data || {};
-  var targetUrl = data.url || '/apps/foundation';
+  // Every sender puts the destination under data.url: the Foundation call ring and the notification
+  // center's pushes. With none given, open the app's home rather than an unrelated plugin.
+  var targetUrl = data.url || '/';
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (clientList) {

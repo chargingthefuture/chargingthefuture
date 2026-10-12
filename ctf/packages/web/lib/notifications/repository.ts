@@ -122,14 +122,17 @@ function isCategoryPushEnabled(category: NotificationCategory, prefs: Notificati
 // with no plugin name or content — safe on a shared or monitored lock screen; the tappable detail
 // lives behind sign-in in the feed. `sendWebPushToUser` is itself best-effort and a no-op when VAPID
 // is unconfigured, so this never throws in a way that matters.
+//
+// The destination goes under `data.url` because that is the key `public/sw.js` reads when the
+// notification is tapped (the Foundation call ring uses the same key).
 async function maybeSendDevicePush(input: NotificationInput): Promise<void> {
   const prefs = await getNotificationPreferences(input.userId);
   if (!isCategoryPushEnabled(input.category, prefs)) {
     return;
   }
   const payload = prefs.discreetPush
-    ? { title: 'Charging The Future', body: 'You have a new update.', data: { path: input.linkPath ?? '/' } }
-    : { title: 'Charging The Future', body: input.summary, data: { path: input.linkPath ?? '/' } };
+    ? { title: 'Charging The Future', body: 'You have a new update.', data: { url: input.linkPath ?? '/' } }
+    : { title: 'Charging The Future', body: input.summary, data: { url: input.linkPath ?? '/' } };
   await sendWebPushToUser(input.userId, payload);
 }
 

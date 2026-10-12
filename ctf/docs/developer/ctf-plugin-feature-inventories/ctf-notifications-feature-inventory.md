@@ -136,6 +136,12 @@ No seed yet. A follow-up seed can insert a couple of sample notifications for a 
 
 ## Change Log
 
+- 2026-10-12: **Tapping a device push opens the item it is about (code review #2906).**
+  `maybeSendDevicePush` put the destination under `data.path`, and the service worker
+  (`public/sw.js`) reads `data.url`, so every notification-center push opened `/apps/foundation`
+  when tapped, whatever it was about. The push now sends `data.url` (the key the Foundation call
+  ring already used), and a push with no destination opens `/` instead of Foundation. No schema,
+  contract or route change.
 - 2026-07-23: PeerProgramming cohort-message producer. `POST /api/peer-programming/messages` now emits
   `peer-programming.cohort.message` (category `community`) via `notifySafe` to every other cohort member
   after a message is stored — deduped per (member, message), never the sender, deep-linked to the room.
