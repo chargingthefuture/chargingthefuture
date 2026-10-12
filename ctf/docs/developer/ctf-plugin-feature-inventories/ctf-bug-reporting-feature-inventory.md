@@ -29,8 +29,9 @@ and does no external calls.
   shell's icon rail on the desktop layout, and the top bar on the phone-width layout). It is
   **not** a plugin grid tile and **not** a standalone page — it opens a modal.
 - One short form: what went wrong (required), what you were trying to do (optional). Page and
-  plugin are attached automatically; the browser is read server-side. (No app-version constant
-  exists in the app yet, so `appVersion` is not sent.)
+  plugin are attached automatically; the browser is read server-side. The Android app also sends
+  its installed version (`appVersion`, from `Constants.expoConfig.version`); the web app has no
+  app-version constant and sends none.
 - Under the intro line, above the first text box: "Not a bug? To talk to Farah about your
   work." — "talk to Farah about your work" opens One Percent (https://farahbrunache.com), the paid tier, in a new
   tab (web) or the device browser (android). It is a pointer only: the form, its fields and the
@@ -181,6 +182,12 @@ No seed script. Reports are user-generated at runtime; there is no fixture data 
 
 ## Change Log
 
+- 2026-10-12: **Android reports carry the app version, and a reply that cannot be read is
+  reported.** `submitBugReport` in `packages/mobile/src/features/bug-reporting/api.ts` now sends
+  `appVersion` from `Constants.expoConfig.version` when it is set, so the admin page shows which
+  Android build a report came from (the web app still sends none). When the 201 reply body fails to
+  parse, the error is reported (`op: submit_parse`) before the screen falls back to the plain
+  success line. No route, schema or contract change.
 - 2026-10-08: **Android opens the report from the header.** The Android app's frame now matches the
   web (top bar on the Apps home, back-chevron header on every screen), and the bug icon in both opens
   the report modal, as the web header does. The separate "Report a problem" tab and its

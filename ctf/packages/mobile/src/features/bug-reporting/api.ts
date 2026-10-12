@@ -8,6 +8,7 @@
 // All calls go through authedFetch so the Clerk bearer token is attached and the
 // base URL comes from runtime config (APP_URL).
 
+import Constants from 'expo-constants';
 import { authedFetch } from '../../auth/authedFetch';
 import { reportError } from '../../observability/report';
 
@@ -74,6 +75,12 @@ export async function submitBugReport(
   if (input.pluginSlug) {
     payload.pluginSlug = input.pluginSlug;
   }
+  // The installed build's version (app.config.ts `version`), so triage can tell which Android
+  // build a report came from. The web app has no such constant and sends none.
+  const appVersion = Constants.expoConfig?.version;
+  if (typeof appVersion === 'string' && appVersion.trim().length > 0) {
+    payload.appVersion = appVersion.trim();
+  }
 
   let response: Response;
   try {
@@ -95,7 +102,10 @@ export async function submitBugReport(
     let body: unknown = null;
     try {
       body = await response.json();
-    } catch {
+    } catch (caught) {
+      // The report was saved either way, so the screen still shows success. Record the failure,
+      // because without the body a held-for-review report shows the plain success line.
+      reportError(caught, { area: 'bug-reporting', op: 'submit_parse' });
       body = null;
     }
     return { kind: 'success', status: readStatus(body) };
