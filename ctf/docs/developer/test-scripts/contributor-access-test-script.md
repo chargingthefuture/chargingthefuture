@@ -321,6 +321,8 @@ Result: web ☐
 
 **Expected:** The new message shows a quoted block referencing the original message. The quoted block is presented as a button that, when clicked, scrolls to and highlights the original message (web). The reply is stored and visible to other eligible members when they load the channel.
 
+**API edge (optional, developer tools):** a POST to `/api/contributor-access/channel/messages` with a `replyToPostId` that is not a UUID (for example `abc`) returns 400 with "The message you are replying to is no longer available.", not a 503 (issue #2984).
+
 Result: web ☐ mobile-responsive ☐
 
 ---
@@ -439,6 +441,8 @@ Result: web ☐
 4. Then enter a reason (e.g. "Test revocation — this is a manual test run") and confirm.
 
 **Expected:** With an empty reason, the revoke does not proceed — the UI shows a validation error or the confirm button is disabled. With a non-empty reason and confirmation, the revoke succeeds, the member is marked revoked, and their revoked status is visible in the list.
+
+**Expected (when the Stream channel sync fails):** the revoke still succeeds and the list refreshes, and the status banner above the list then reads "Gated channel membership sync failed; it reconciles on the next sync." It does not disappear with the refresh (issue #2983). Reinstating, and opening the channel in the settings, show the warning their route returns in the same banner.
 
 Result: web ☐
 
