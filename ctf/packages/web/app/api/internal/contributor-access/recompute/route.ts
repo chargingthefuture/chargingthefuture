@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { computeEligibility } from 'lib/contributor-access/eligibility';
 import { syncGatedChannelMembershipIfOpen } from 'lib/contributor-access/gated-channel';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 // Internal, schedule-driven recompute of Contributor Access eligibility. Recomputing on a schedule
 // (not instantly on an action) means nobody spikes the signals and coasts; the recompute is
@@ -36,6 +37,9 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     reportError(error, { area: 'contributor-access', op: 'internal_recompute' });
-    return NextResponse.json({ error: 'Recompute failed' }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, code: 'contributor_access_recompute_failed', message: `Recompute failed: ${failureReason(error)}` },
+      { status: 500 },
+    );
   }
 }

@@ -81,10 +81,15 @@ Admin-or-operations routes (`ensureWeeklyPerformanceAdmin` admits `isAdmin` or t
 Internal (service-to-service, never member/browser callable):
 
 - `POST /api/internal/weekly-performance/goal-snapshot` — records the current week's goal readings
-  (GDP Community Value Index, Workforce recruited) into `weekly_performance_goal_snapshots` by
-  computing the current week's metrics (the compute upserts the snapshot rows). Guarded by
+  (GDP Community Value Index, Workforce recruited) into `weekly_performance_goal_snapshots` through
+  `captureCurrentWeekGoalSnapshots` (`lib/weekly-performance/live-metrics.ts`), which reads each goal
+  live and upserts its row. Guarded by
   `Authorization: Bearer INTERNAL_SERVICE_SECRET` (same posture as `/api/internal/product-update`);
-  501 when the secret is unconfigured, 401 on a bad token. Called daily by the scheduled workflow
+  503 when the secret is unconfigured, 401 on a bad token. When any goal reading was not stored (the
+  table is missing, the live read failed, or the write failed) it answers 503
+  `{ ok: false, code: 'goal_snapshot_not_stored', message, weekStartDate, goals }` with each goal and
+  its reason in `message`, so the workflow run goes red; an unexpected throw answers 500
+  `{ ok: false, code: 'goal_snapshot_failed', message }` with the reason. Called daily by the scheduled workflow
   `.github/workflows/weekly-performance-goal-snapshot.yml` so goal history never depends on someone
   opening the dashboard that week (last capture of the week wins — the stored value converges to the
   week's closing reading). Contract: `weekly-performance.goal-snapshot.capture`.
@@ -240,6 +245,7 @@ V2's "verified" and "approved" member counts are intentionally omitted: V3's `us
 
 ## 8) Change Log
 
+- 2026-10-12: **A goal snapshot that was not stored now fails the scheduled run (#2934, #2938).** The capture route wrote the goal rows only as a side effect of `computeLiveWeekMetrics`, whose snapshot write logged a failure with `console.error` and carried on, and which skipped the write when the table was missing; the route answered 200 either way, so `weekly-performance-goal-snapshot.yml` stayed green while the week's reading was lost. Past weeks cannot be recomputed, so the workflow's "the next day's run covers a missed day" safety net needs a missed day to show red. The route now calls `captureCurrentWeekGoalSnapshots`, which returns each goal that was not stored with its reason, and answers 503 naming them. The dashboard read keeps returning the live value on a failed write, and now reports that failure through `reportError` instead of `console.error`. Both failure responses carry `failureReason(error)` instead of the fixed "Snapshot capture failed". No schema change.
 - 2026-10-06: **Contributions confirmed USD counts gift cards only (owner decision; issue #2982).**
   The card summed the set value of confirmed Quora comments and GitHub stars as if it were dollars,
   so each one added a dollar to a figure read in USD. It now sums gift cards only, and a new card,

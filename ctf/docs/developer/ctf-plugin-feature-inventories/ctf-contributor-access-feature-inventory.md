@@ -360,6 +360,7 @@ fill on the first recompute / config save / member post.
 
 ## Change Log
 
+- 2026-10-12 — The internal recompute route's failure now says why (#2938). A throw from the recompute answered 500 with the fixed `{ error: 'Recompute failed' }`, which is all `contributor-access-recompute.yml` prints on a red run. It now answers 500 `{ ok: false, code: 'contributor_access_recompute_failed', message: 'Recompute failed: <reason>' }`. Status codes unchanged.
 - 2026-10-06 — Contributions split into a money event and a non-money event (owner decision; issue
   #2982). Only real money counts toward a dollar figure. `value.contributions_confirmed_usd` summed
   `confirmed_amount_usd` over every confirmed submission, and for a Quora comment or GitHub star that
