@@ -270,6 +270,9 @@ importers:
       react-native-web:
         specifier: ^0.21.2
         version: 0.21.2(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
+      stream-chat:
+        specifier: ^9.43.0
+        version: 9.43.0(bufferutil@4.1.0)
       stream-chat-react-native:
         specifier: ^8.12.4
         version: 8.13.13(t75l6w47ojccawp6j6fxdyu7oa)
