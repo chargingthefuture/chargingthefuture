@@ -1,6 +1,16 @@
 const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL ?? '';
 export const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? 'llama3.2';
 const OLLAMA_TIMEOUT_MS = 30_000;
+// Budget for an AI Assistant review draft. Nobody is waiting on that draft in real time — it is saved
+// for the owner to edit and approve — so it waits out a RunPod cold start (the worker starting and
+// loading the model, often one to three minutes) instead of giving up at 30s while RunPod finishes
+// the job anyway and bills for an answer the app never kept.
+export const OLLAMA_DRAFT_TIMEOUT_MS = 300_000;
+
+export type OllamaCallOptions = {
+  // How long the entire exchange may take before it is abandoned. Defaults to OLLAMA_TIMEOUT_MS.
+  timeoutMs?: number;
+};
 
 // Optional bearer token for reaching the Ollama host. Empty when the host is the
 // private-network Render service (ctf-ollama), which needs no auth. When Ollama is
@@ -115,26 +125,27 @@ export async function pingOllama(): Promise<OllamaPing> {
 
 // Shared abort-timeout log for the native and RunPod chat paths. Only logs on an AbortError so the
 // caller's blanket rethrow keeps identical behavior; `tag` distinguishes the two log lines.
-function logAbortTimeout(err: unknown, tag: string): void {
+function logAbortTimeout(err: unknown, tag: string, timeoutMs: number): void {
   if (err instanceof Error && err.name === 'AbortError') {
-    console.error(`${tag} Request timed out`, { model: OLLAMA_MODEL, timeoutMs: OLLAMA_TIMEOUT_MS });
+    console.error(`${tag} Request timed out`, { model: OLLAMA_MODEL, timeoutMs });
   }
 }
 
-export async function callOllamaChat(messages: OllamaMessage[]): Promise<OllamaResult> {
+export async function callOllamaChat(messages: OllamaMessage[], options: OllamaCallOptions = {}): Promise<OllamaResult> {
   if (!isOllamaConfigured()) {
     throw new Error('ollama_not_configured');
   }
 
+  const timeoutMs = options.timeoutMs ?? OLLAMA_TIMEOUT_MS;
   if (ollamaProviderIsRunpod()) {
-    return callRunpodChat(messages);
+    return callRunpodChat(messages, timeoutMs);
   }
 
   const url = `${OLLAMA_BASE_URL.replace(/\/$/, '')}/api/chat`;
   const startedAt = Date.now();
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), OLLAMA_TIMEOUT_MS);
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const response = await fetch(url, {
@@ -169,7 +180,7 @@ export async function callOllamaChat(messages: OllamaMessage[]): Promise<OllamaR
       latencyMs: Date.now() - startedAt,
     };
   } catch (err) {
-    logAbortTimeout(err, '[ollama]');
+    logAbortTimeout(err, '[ollama]', timeoutMs);
     throw err;
   } finally {
     clearTimeout(timeoutId);
@@ -197,9 +208,15 @@ function describeHttpError(status: number): string {
   return `The engine returned HTTP ${Number.isFinite(status) ? status : 'error'}.`;
 }
 
-export function describeOllamaFailure(err: unknown): string {
+export function describeOllamaFailure(err: unknown, timeoutMs: number = OLLAMA_TIMEOUT_MS): string {
   if (err instanceof Error && err.name === 'AbortError') {
-    return `The engine did not respond within ${Math.round(OLLAMA_TIMEOUT_MS / 1000)}s — the model may still be loading (a cold start). Try again in a moment.`;
+    if (timeoutMs >= OLLAMA_DRAFT_TIMEOUT_MS) {
+      const runpodHint = ollamaProviderIsRunpod()
+        ? ' The RunPod job was cancelled. Check the endpoint has at least 1 max worker in the RunPod dashboard — RunPod sets it to 0 after about two weeks with no requests.'
+        : '';
+      return `The engine did not answer within ${Math.round(timeoutMs / 60_000)} minutes.${runpodHint}`;
+    }
+    return `The engine did not respond within ${Math.round(timeoutMs / 1000)}s — the model may still be loading (a cold start). Try again in a moment.`;
   }
   const code = err instanceof Error ? err.message : '';
   if (code === 'ollama_not_configured') {
@@ -238,9 +255,9 @@ const RUNPOD_TERMINAL_STATUSES = new Set(['COMPLETED', 'FAILED', 'CANCELLED', 'T
 const RUNPOD_POLL_INTERVAL_MS = 1_500;
 
 // Talk to a RunPod serverless endpoint: submit the chat as a job, then poll until
-// it finishes. The entire exchange shares one OLLAMA_TIMEOUT_MS budget, so a slow
-// cold start aborts the same way the native path does — the caller then falls back
-// to the template draft and a human still answers. The endpoint base is
+// it finishes. The exchange shares one timeout budget (OLLAMA_TIMEOUT_MS unless the
+// caller passes a longer one); when it runs out the job is cancelled and the caller
+// falls back to the template draft and a human still answers. The endpoint base is
 // OLLAMA_BASE_URL (e.g. https://api.runpod.ai/v2/<id>); OLLAMA_API_KEY is the
 // RunPod API key, sent as the bearer by ollamaHeaders().
 // Only pin the model when the deployment explicitly set OLLAMA_MODEL. Otherwise let the
@@ -293,12 +310,28 @@ function runpodJobContent(job: RunpodJobResponse, startedAt: number): string {
   return content;
 }
 
-async function callRunpodChat(messages: OllamaMessage[]): Promise<OllamaResult> {
+// Cancel a RunPod job the app has given up on, so it does not sit in the queue, start later and get
+// billed for an answer nobody keeps. Best-effort: a failure is logged and never replaces the
+// original error.
+async function cancelRunpodJob(base: string, jobId: string): Promise<void> {
+  try {
+    const response = await fetch(`${base}/cancel/${jobId}`, { method: 'POST', headers: ollamaHeaders() });
+    if (!response.ok) {
+      console.error('[ollama/runpod] cancel HTTP error', { status: response.status, jobId });
+    }
+  } catch (err) {
+    console.error('[ollama/runpod] cancel failed', { jobId, err });
+  }
+}
+
+async function callRunpodChat(messages: OllamaMessage[], timeoutMs: number): Promise<OllamaResult> {
   const base = OLLAMA_BASE_URL.replace(/\/$/, '');
   const startedAt = Date.now();
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), OLLAMA_TIMEOUT_MS);
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  // Set once RunPod accepts the job, so a timeout can cancel it.
+  let jobId: string | null = null;
 
   try {
     const runResponse = await fetch(`${base}/run`, {
@@ -323,6 +356,7 @@ async function callRunpodChat(messages: OllamaMessage[]): Promise<OllamaResult> 
     }
 
     const initialJob = (await runResponse.json()) as RunpodJobResponse;
+    jobId = initialJob.id ?? null;
     const job = await pollRunpodJob(base, initialJob, controller, startedAt);
     const content = runpodJobContent(job, startedAt);
 
@@ -331,7 +365,10 @@ async function callRunpodChat(messages: OllamaMessage[]): Promise<OllamaResult> 
       latencyMs: Date.now() - startedAt,
     };
   } catch (err) {
-    logAbortTimeout(err, '[ollama/runpod]');
+    logAbortTimeout(err, '[ollama/runpod]', timeoutMs);
+    if (jobId && err instanceof Error && err.name === 'AbortError') {
+      await cancelRunpodJob(base, jobId);
+    }
     throw err;
   } finally {
     clearTimeout(timeoutId);

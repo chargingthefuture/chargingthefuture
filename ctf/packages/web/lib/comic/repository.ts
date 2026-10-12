@@ -1,6 +1,14 @@
 import type { PoolClient } from 'pg';
 import { queryDb, withDbTransaction } from 'lib/db/postgres';
-import { callOllamaChat, describeOllamaFailure, isOllamaConfigured, OLLAMA_MODEL, SURVIVOR_SYSTEM_PROMPT } from 'lib/chatbot/ollama';
+import {
+  callOllamaChat,
+  describeOllamaFailure,
+  isOllamaConfigured,
+  OLLAMA_DRAFT_TIMEOUT_MS,
+  OLLAMA_MODEL,
+  SURVIVOR_SYSTEM_PROMPT,
+} from 'lib/chatbot/ollama';
+import { runDraftOnce, type DraftOutcome } from 'lib/comic/draft-in-flight';
 import {
   COMIC_ANSWER_RATINGS,
   COMIC_ASKER_STREAM_LIMIT,
@@ -385,10 +393,14 @@ async function generateComicDraft(questionBody: string, systemAddendum = ''): Pr
       const groundingPrompt = grounding.length > 0 ? buildGroundingPrompt(grounding) : '';
       const systemPrompt = SURVIVOR_SYSTEM_PROMPT + systemAddendum + groundingPrompt;
 
-      const result = await callOllamaChat([
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: questionBody },
-      ]);
+      // A review draft waits out a cold start rather than abandoning a job RunPod still bills for.
+      const result = await callOllamaChat(
+        [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: questionBody },
+        ],
+        { timeoutMs: OLLAMA_DRAFT_TIMEOUT_MS },
+      );
 
       return {
         body: result.content,
@@ -403,7 +415,7 @@ async function generateComicDraft(questionBody: string, systemAddendum = ''): Pr
       };
     } catch (err) {
       console.error('[comic/repository] Ollama draft failed, using template fallback', err);
-      failureReason = describeOllamaFailure(err);
+      failureReason = describeOllamaFailure(err, OLLAMA_DRAFT_TIMEOUT_MS);
     }
   } else {
     failureReason = describeOllamaFailure(new Error('ollama_not_configured'));
@@ -566,7 +578,9 @@ export async function routeComicMessage(
   // A scripted Unlock answer is already the draft, so the model is not asked for one.
   if (needsModelDraft(safety.flagged, unlockHelp)) {
     const systemAddendum = unlockHelp ? UNLOCK_HELP_MODEL_FACTS : '';
-    void generateAndAttachDraft({ actorId, conversationId, reviewId, questionBody, systemAddendum, unlockHelp });
+    void runDraftOnce(reviewId, () =>
+      generateAndAttachDraft({ actorId, conversationId, reviewId, questionBody, systemAddendum, unlockHelp }),
+    );
   }
 
   if (sent) {
@@ -646,7 +660,8 @@ function fallbackDraftFor(unlockHelp: UnlockHelpPlan | null): AttachableDraft | 
   return { body: UNLOCK_HELP_MODEL_FALLBACK, engine: 'template', groundingEntryIds: [] };
 }
 
-async function generateAndAttachDraft(input: BackgroundDraftInput): Promise<void> {
+// Returns the outcome so a "Generate draft" press that joins this run (runDraftOnce) learns it too.
+async function generateAndAttachDraft(input: BackgroundDraftInput): Promise<DraftOutcome> {
   try {
     const draft = await generateComicDraft(input.questionBody, input.systemAddendum);
     // A `template` engine means Ollama was unavailable and generateComicDraft fell back to the
@@ -655,13 +670,16 @@ async function generateAndAttachDraft(input: BackgroundDraftInput): Promise<void
     // an Unlock answer going out unreviewed, which gets the fixed fallback instead).
     if (draft.engine === 'template') {
       const fallback = fallbackDraftFor(input.unlockHelp);
-      if (fallback) await attachBackgroundDraft(input, fallback);
-      return;
+      if (!fallback) return { attached: false, reason: draft.failureReason };
+      await attachBackgroundDraft(input, fallback);
+      return { attached: true, reason: null };
     }
     await logComicInference({ actorId: input.actorId, draft });
     await attachBackgroundDraft(input, draft);
+    return { attached: true, reason: null };
   } catch (err) {
     console.error('[comic/repository] background draft generation/attach failed', err);
+    return { attached: false, reason: 'The draft could not be saved.' };
   }
 }
 
@@ -696,7 +714,8 @@ async function attachBackgroundDraft(input: BackgroundDraftInput, draft: Attacha
 }
 
 // Admin "Regenerate draft": re-run the model for a still-pending review and (re)attach its draft.
-// Unlike the background draft at ask time, this is synchronous so the dashboard learns the outcome.
+// Unlike the background draft at ask time, this is synchronous so the dashboard learns the outcome;
+// on a cold start it can wait several minutes (OLLAMA_DRAFT_TIMEOUT_MS).
 // Returns whether a real draft was attached; when drafting fails (template fallback), nothing is
 // attached and { attached: false, reason } is returned — `reason` names the real cause (timeout,
 // model-not-found, auth, network) so the UI can say WHY instead of a blanket "unreachable". Used to
@@ -728,7 +747,20 @@ export async function regenerateComicDraft(
 
   // An Unlock question drafted again gets the same Unlock facts it was first drafted with.
   const isUnlockHelp = (turn.intent ?? '').startsWith(UNLOCK_HELP_INTENT_PREFIX);
-  const draft = await generateComicDraft(turn.body, isUnlockHelp ? UNLOCK_HELP_MODEL_FACTS : '');
+  // A press while a draft for this item is already running joins it rather than sending a second
+  // billed job; the result is saved on the review row either way, even if the reviewer leaves.
+  return runDraftOnce(reviewId, () =>
+    regenerateAndAttach(actorId, reviewId, turn, isUnlockHelp ? UNLOCK_HELP_MODEL_FACTS : ''),
+  );
+}
+
+async function regenerateAndAttach(
+  actorId: string,
+  reviewId: string,
+  turn: { conversation_id: string; body: string },
+  systemAddendum: string,
+): Promise<DraftOutcome> {
+  const draft = await generateComicDraft(turn.body, systemAddendum);
   // Drafting failed -> template fallback. Leave the item human-first rather than attaching a
   // placeholder, exactly as the background path does, but pass back the real reason it failed.
   if (draft.engine === 'template') {

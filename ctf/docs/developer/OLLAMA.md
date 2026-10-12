@@ -78,8 +78,11 @@ API. Two pieces make it work:
      `Dockerfile`.
 2. The client adapter — `lib/chatbot/ollama.ts` detects a RunPod endpoint (when
    `OLLAMA_BASE_URL`'s host is `api.runpod.ai`) and submits a job to `/run`, then
-   polls `/status/<id>` until it finishes, within the same 30s budget as the native
-   path. No native-API change.
+   polls `/status/<id>` until it finishes, within the same budget as the native
+   path: 30s by default, 5 minutes (`OLLAMA_DRAFT_TIMEOUT_MS`) for AI Assistant
+   review drafts so a cold start is waited out. A job that runs out of time is
+   cancelled (`/cancel/<id>`) so it is not billed for an answer nobody keeps.
+   No native-API change.
 
 Recommended GPU: 24 GB (fits `qwen2.5:32b`). Max workers 1–2 is plenty for a
 low-volume chat; serverless only bills while a worker is actually running.
