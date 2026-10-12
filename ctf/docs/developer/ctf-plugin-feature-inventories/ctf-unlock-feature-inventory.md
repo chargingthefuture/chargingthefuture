@@ -283,7 +283,8 @@ Admin page:
    `/account-closed` instead of being let through to a Commons where every call answers 403. Before
    this the app simply appeared broken to them, with nothing saying a decision had been made.
 2. The page reads the restriction marker and says which it was. A **duplicate** is told their original
-   account still works and is offered a sign-in link plus a link to delete this identity — the useful
+   account still works and is offered a sign-in button (it signs this closed session out, then opens the
+   sign-in form) plus a link to delete this identity — the useful
    thing to say to somebody whose account is sitting right there. A **spam** closure gets a plain
    statement, the account-management link, and one route to a human (the Quora space); no invitation to
    sign in as somebody else, because there is nobody else.
@@ -479,6 +480,7 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
 
 ## 9) Change Log
 
+- 2026-10-12: **"Sign in to your other account" on `/account-closed` signs this session out first (code-review #2706, #2707).** The button was a plain link to the hosted sign-in page, but a member reaches `/account-closed` only while signed in to the closed duplicate. The sign-in page saw that session, skipped its form, and sent them to the home page, which sent them straight back to `/account-closed`. The button now signs the closed session out with the sign-in page as the redirect target, so the form appears; if the sign-out fails it is reported and the page says so. The identity and restriction checks on `/account-closed`, and the restriction check on the home page, now report a failure (area `account-closed`) before falling back instead of dropping it. The fallback itself is unchanged: a failed check still sends the member to the app. No route, schema or contract change; web only.
 - 2026-10-09 (later still): **On Android, "Ask for help in the Commons" opens the web Commons after recording the request (owner decision).** It recorded the request, said "Opening the Commons…", and landed the member on the Apps list, where there is nobody to ask. It now opens the web app's Commons home page in the phone's browser, then re-runs the Unlock check as before. Test script UNLOCK-A8 updated.
 - 2026-10-09 (later): **On Android, "Try opening the Commons anyway" opens the web Commons too (owner decision).** The link under a failed help request went to the Apps list; it now opens the web app's Commons home page in the phone's browser, like the approved card's button. Both use `src/features/unlock/openWebCommons.ts`. Test script UNLOCK-A8 updated.
 - 2026-10-09: **On Android, "Continue to the Commons" opens the web Commons (owner decision).** The approved card's button kept the web wording but went to the Apps list, because the Android app has no Commons. It now opens the web app's Commons home page (`/`) in the phone's browser, so the label means what it says. The member is already approved when it shows. A failure to open is reported and shown as "We could not open the Commons in your browser." Test script step updated.

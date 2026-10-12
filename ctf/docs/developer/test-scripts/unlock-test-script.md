@@ -283,7 +283,8 @@ neither the Support-only counter nor its tab, because the restriction means they
 Step 3: **the Quora URL is NOT on the denylist** — this is the point of the decision existing. If
 it were, the first account's submission would be auto-spammed and the real person locked out. Step 4:
 they land on `/account-closed`, not on a Commons that fails — it says they already have an account,
-offers a sign-in link for the original, and a link to manage or delete this identity. Step 5: both are
+offers a sign-in button for the original, and a link to manage or delete this identity; pressing the
+sign-in button signs this account out and shows the sign-in form, not the same page again. Step 5: both are
 denied. Step 6: the first account is completely unaffected — full access, reward intact. Step 7: the
 restriction lifts, because a later approved/rejected decision clears the `unlock:duplicate` marker.
 Note: credits an already-approved duplicate received are clawed back by **Revoke reward**, not by this

@@ -5,6 +5,7 @@ import type { TrustUserExtension } from '../lib/trust/types';
 import { resolveRequestIdentity, type RequestIdentity } from '../lib/auth/request-identity';
 import { getUnlockAccessTier } from '../lib/unlock/access';
 import { getAccountRestrictionStatus } from '../lib/auth/account-restrictions';
+import { reportError } from '../lib/observability/report';
 import { getUnlockStatusForUser } from '../lib/unlock/repository';
 import type { UnlockAccessTier } from '../lib/unlock/types';
 import { getGdpShellStats } from '../lib/gdp/repository';
@@ -127,7 +128,10 @@ export default async function HomePage() {
   // broken instead of saying a decision was made. Send them to the page that explains it and offers the
   // one thing they can still do: sign in as their other account, or delete this identity.
   if (userId && !isAdmin) {
-    const restriction = await getAccountRestrictionStatus(userId, 'all').catch(() => ({ isRestricted: false }));
+    const restriction = await getAccountRestrictionStatus(userId, 'all').catch((error: unknown) => {
+      reportError(error, { area: 'account-closed', op: 'home_restriction_check' });
+      return { isRestricted: false };
+    });
     if (restriction.isRestricted) {
       redirect('/account-closed');
     }
