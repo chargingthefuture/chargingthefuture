@@ -140,7 +140,7 @@ The Commons home channel is backed by the Feed model. Commons routes under `/api
   plus the gated contributor channel when it is open and this member is eligible (or is an admin) —
   filtered server-side so a non-eligible member's response contains no trace of it. Multi-channel
   beyond that is deferred.
-- `POST /api/commons/join` — mints the live Stream credentials for the Commons home shell. Backed by `getFeedStreamCredentials(userId, displayName, 'community')` (the shared `ctf-feed-community` channel). Returns `{ ok: true, configured: true, streamApiKey, streamChannelId, streamUserId, streamToken }` when Stream is configured, or `{ ok: true, configured: false }` when it is not (no API key/secret) so the client stays on polling. Commons access gate enforced. Previously returned hardcoded stub credentials (`'todo-stream-token'`); the stub is removed.
+- `POST /api/commons/join` — mints the live Stream credentials for the Commons home shell. Backed by `getFeedStreamCredentials(userId, displayName, 'community')` (the shared `ctf-feed-community` channel). Returns `{ ok: true, configured: true, streamApiKey, streamChannelId, streamUserId, streamToken }` when Stream is configured, or `{ ok: true, configured: false }` when it is not (no API key/secret) so the client stays on polling. Commons access gate and the CSRF check (`ensureMutationCsrf`: `x-ctf-csrf: 1` header plus origin) enforced. Previously returned hardcoded stub credentials (`'todo-stream-token'`); the stub is removed.
 
 Feed routes that own the data layer remain under `/api/feed/*` (timeline, announcements lifecycle, questions/answers, community posts/replies) and `/admin/feed-announcements`.
 
@@ -220,6 +220,14 @@ There is no `seedHub.mjs`; the Commons channel's data layer is seeded by the Fee
 
 ## Change Log
 
+- 2026-10-12: **`POST /api/commons/join` checks CSRF like every other Commons POST (issue #2976).**
+  The join route went from the access gate straight to minting Stream credentials, which writes to
+  Stream (upserts the member, creates the channel, adds members), with no `ensureMutationCsrf`. A
+  page on another site could make a signed-in member's browser send the POST. It now calls
+  `ensureMutationCsrf` after the access gate, as the sibling routes and the gated channel join do,
+  and answers 403 without the `x-ctf-csrf: 1` header or with a foreign origin. The web client
+  already sent the header; its comment, which said the route checked Origin, is corrected. No
+  mobile client calls this route.
 - 2026-10-06: **The admin picture button is a camera icon in the icon row (owner directive).** The
   "Share a picture (admins)" button sat on its own row under the chips. It is now a camera chip after
   the gift in the same row (`CommonsImageShareButton`), shown to admins only and hidden while

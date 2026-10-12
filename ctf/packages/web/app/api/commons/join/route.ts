@@ -3,11 +3,19 @@ import type { CommonsJoinResponse } from 'lib/commons/types';
 import { getFeedStreamCredentials } from 'lib/feed/stream';
 import { requireCommonsAccess } from '../_lib';
 import { reportError } from 'lib/observability/report';
+import { ensureMutationCsrf } from '../../feed/_lib';
 
-export async function POST() {
+export async function POST(request: Request) {
   const gate = await requireCommonsAccess();
   if (!gate.allowed) {
     return gate.response;
+  }
+
+  // Same CSRF posture as every other Commons POST: joining has a Stream-side effect (it upserts the
+  // member and adds them to the channel), so a page on another site must not be able to trigger it.
+  const csrfDeny = ensureMutationCsrf(request);
+  if (csrfDeny) {
+    return csrfDeny;
   }
 
   try {

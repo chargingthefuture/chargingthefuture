@@ -934,9 +934,8 @@ async function connectLiveWhenConfigured(
 // failure, fall back to the frequent poll.
 async function joinAndConnect(ctx: ChatBootstrapContext): Promise<void> {
   try {
-    // The join route gates on Origin today, not on this header, so the call works without it. The
-    // header is sent so the join keeps working if the route ever moves to the header-based check
-    // that the rest of the Commons POSTs use, and so no Commons mutation is the odd one out.
+    // The join route requires this header and checks the request origin, like every other Commons
+    // POST, because joining writes to Stream.
     const join = await requestJson<CommonsJoinResponse>('/api/commons/join', {
       method: 'POST',
       headers: { 'x-ctf-csrf': '1' },
