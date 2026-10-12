@@ -375,6 +375,17 @@ Owner decision, 2026-09-26. The owner pays the running costs of Skills Economy a
 
 ## 5) Change Log
 
+- 2026-10-12: **Web shell: dead files removed, silent catches now leave a trace.** Deleted
+  `packages/web/src/` (an unreachable second PeerProgramming cohorts route, placeholder helpers and an
+  empty mood file; Next ignores `src/app` when a root `app/` exists and nothing imported the rest),
+  `packages/web/scripts/check-clerk-env.mjs` (an unused re-export; `check:clerk-env` already runs
+  `check-auth-env.mjs`) and `packages/web/scripts/seed-trust-demo.js` (its import path did not
+  resolve; `ctf/scripts/seedDemo.mjs` seeds `trust_user_extension`), and dropped `src` from the web
+  `lint` script (#2761, #2762). `instrumentation.ts` now logs a failed Sentry start and a request
+  error it could not report, instead of discarding both (#2763). `hooks/useTheme.tsx` reports a theme
+  save or first-load read that fails with anything other than a 401, and a thrown fetch, as
+  `account/theme_save` / `account/theme_load`; the local choice still applies (#2764).
+
 - 2026-10-08: **Android Apps home matches the web Apps section (§1.1 item 5).** The Android home gains the web's Sort control (Recent, A-Z, Most Used, kept on the phone as the web keeps them in the browser) and the "Search apps…" box with its no-match line. Tapping a card now highlights it as on the web, and the "Open plugin →" pill opens the app. Cards use the web's tint and border in the comic theme too. The closing line about the other apps being on the web is removed; the web has no such line. The top bar now matches the web bar: the account picture sits after the settings gear, the bug icon opens the same one-item "Report a problem" menu, the Sign in button has the web's size and weight, the brand mark keeps its gradient in the comic theme, and the wordmark spacing and bottom line match.
 
 - 2026-10-08: **The Android account screens match the web's (§1.2, §1.6).** The gear now opens a Your account screen copied from the web `/account` hub with all of its sections: the heading and intro, the Identity card with the account menu (Sign out lives there, as in the web's account menu on that card), the Trust card (read from `GET /api/trust/user/self`), Your ongoing activities (opens the app's Recurring Activity screen), Verification (opens the Unlock screen), and the Data & privacy card linking to Account & Data and Blocked members, which go back to it. The made-up Blocked members row that sat above Account & Data is gone. Account & Data was redrawn from the web phone layout: its own header with back and the theme toggle, the web's tab, list, empty, danger and confirmation wording (including the 7-day ServiceCredits hold), and no sign-out button, Retry button or Terms and Accessibility links, which the web screen does not have. Blocked members was redrawn the same way, with the web's back header and no count line. The JSON downloads are there too: the file is saved through the phone's share sheet (new `expo-file-system` and `expo-sharing` modules). No API, schema or contract change.
