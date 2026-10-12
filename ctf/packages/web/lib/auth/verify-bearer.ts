@@ -1,5 +1,6 @@
-import { verifyToken } from '@clerk/backend';
+import { createClerkClient, verifyToken } from '@clerk/backend';
 import { getClerkSecretKey } from './clerk-env';
+import { reportError } from 'lib/observability/report';
 
 /**
  * Verified identity resolved from an external `Authorization: Bearer <token>`
@@ -63,7 +64,9 @@ export async function verifyClerkSessionToken(
     return null;
   }
 
-  return buildBearerIdentity(claims);
+  const identity = buildBearerIdentity(claims);
+  if (!identity || (identity.username && identity.role)) return identity;
+  return fillFromClerkAccount(identity, secretKey);
 }
 
 // Read one claim, preferring the top-level value and falling back to the same key under metadata.
@@ -82,10 +85,56 @@ function buildBearerIdentity(claims: Record<string, unknown>): VerifiedBearerIde
 
   return {
     userId,
-    username: pickClaim(claims, metadata, 'username'),
-    firstName: pickClaim(claims, metadata, 'first_name'),
-    lastName: pickClaim(claims, metadata, 'last_name'),
+    // `preferred_username`, `given_name` and `family_name` are the names the Android app's sign-in
+    // token (Clerk's OAuth id_token) uses; the web session token uses the customized names.
+    username: pickClaim(claims, metadata, 'username') ?? claimString(claims.preferred_username),
+    firstName: pickClaim(claims, metadata, 'first_name') ?? claimString(claims.given_name),
+    lastName: pickClaim(claims, metadata, 'last_name') ?? claimString(claims.family_name),
     role: pickClaim(claims, metadata, 'role')?.toLowerCase() ?? null,
+  };
+}
+
+type AccountFields = Pick<VerifiedBearerIdentity, 'username' | 'firstName' | 'lastName' | 'role'>;
+
+// How long one account's Clerk record is reused, so a screen's burst of requests costs one lookup.
+// A role change reaches the Android app within this window.
+const ACCOUNT_CACHE_MS = 5 * 60 * 1000;
+const accountCache = new Map<string, { fields: AccountFields | null; expiresAt: number }>();
+
+async function readClerkAccount(userId: string, secretKey: string): Promise<AccountFields | null> {
+  const cached = accountCache.get(userId);
+  if (cached && cached.expiresAt > Date.now()) return cached.fields;
+  let fields: AccountFields | null = null;
+  try {
+    const user = await createClerkClient({ secretKey }).users.getUser(userId);
+    const metadata = asRecord(user.publicMetadata);
+    fields = {
+      username: claimString(user.username),
+      firstName: claimString(user.firstName),
+      lastName: claimString(user.lastName),
+      role: claimString(metadata?.role)?.toLowerCase() ?? null,
+    };
+  } catch (caught) {
+    // The token is already verified, so the request goes on with what the token carried.
+    reportError(caught, { area: 'auth', op: 'bearer_account_lookup' });
+  }
+  accountCache.set(userId, { fields, expiresAt: Date.now() + ACCOUNT_CACHE_MS });
+  return fields;
+}
+
+// The Android app signs in through Clerk's OAuth flow, and that id_token carries neither the role nor
+// the username the web session token is customized to carry. Without them an admin is treated as a
+// member and every handle falls back to a short id, so the verified subject's own Clerk account
+// supplies whatever the token left out. Only the subject's own record is read, and token values win.
+async function fillFromClerkAccount(identity: VerifiedBearerIdentity, secretKey: string): Promise<VerifiedBearerIdentity> {
+  const account = await readClerkAccount(identity.userId, secretKey);
+  if (!account) return identity;
+  return {
+    userId: identity.userId,
+    username: identity.username ?? account.username,
+    firstName: identity.firstName ?? account.firstName,
+    lastName: identity.lastName ?? account.lastName,
+    role: identity.role ?? account.role,
   };
 }
 
