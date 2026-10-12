@@ -114,6 +114,8 @@ to lose permanently — this cannot be undone. Note its email before you start.
 gone from the auth provider, not merely emptied. Step 4: the account is not in the sign-up list at all
 (it no longer exists), so it is not sitting in the "No Quora URL" tab as if it were someone who never
 verified. If the auth provider is unreachable at the moment of deletion, the data deletion still
-succeeds and the response carries `identityRemoved: false` with the reason — the leftover account is
-then cleared through the operator `Delete Account (manual)` workflow.
+succeeds and the response carries `identityRemoved: false` with the reason; the "Deletion queued"
+screen then says the sign-in could not be removed, gives that reason, and points at Report a bug,
+instead of saying the sign-in is gone. The leftover account is cleared through the operator
+`Delete Account (manual)` workflow.
 **Result:** web ☐ · android ☐ — notes:

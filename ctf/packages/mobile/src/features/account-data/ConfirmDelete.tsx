@@ -11,6 +11,7 @@ import { useTheme, type ThemeTokens } from '../../theme';
 import { interFamily } from '../../components/ui';
 import { getAccountTokens, radius, Spinner, type AccountTokens } from '../account';
 import { FULL_ACCOUNT_CONFIRM_PHRASE } from './glyphs';
+import type { FullAccountDeletionResult } from './api';
 
 type ConfirmStatus = 'idle' | 'submitting' | 'done' | 'error';
 
@@ -21,8 +22,11 @@ export function ConfirmDelete({
 }: {
   serviceCount: number;
   onCancel: () => void;
-  /** Runs DELETE /api/account/full-account. Resolves on success, rejects with a member-facing message. */
-  onConfirm: () => Promise<void>;
+  /**
+   * Runs DELETE /api/account/full-account. Resolves on success with whether the sign-in was removed,
+   * rejects with a member-facing message.
+   */
+  onConfirm: () => Promise<FullAccountDeletionResult>;
 }) {
   const { tokens } = useTheme();
   const tok = getAccountTokens(tokens);
@@ -30,6 +34,7 @@ export function ConfirmDelete({
   const [input, setInput] = useState('');
   const [status, setStatus] = useState<ConfirmStatus>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [result, setResult] = useState<FullAccountDeletionResult>({ identityRemoved: true, identityError: null });
   const submitting = status === 'submitting';
   const ready = input.toLowerCase().trim() === FULL_ACCOUNT_CONFIRM_PHRASE && !submitting;
 
@@ -38,7 +43,7 @@ export function ConfirmDelete({
     setStatus('submitting');
     setErrorMessage(null);
     try {
-      await onConfirm();
+      setResult(await onConfirm());
       setStatus('done');
     } catch (error) {
       setStatus('error');
@@ -46,7 +51,7 @@ export function ConfirmDelete({
     }
   }
 
-  if (status === 'done') return <DeletionQueued s={s} />;
+  if (status === 'done') return <DeletionQueued s={s} result={result} />;
 
   const points: Array<{ t: string; Icon: LucideIcon; c: string }> = [
     { t: `All personal data deleted across ${serviceCount} services`, Icon: Trash2, c: '#EF4444' },
@@ -159,7 +164,17 @@ function DeleteButton({ s, ready, submitting, onPress }: { s: ReturnType<typeof 
 }
 
 // The "Deletion queued" acknowledgement shown once the delete request is accepted.
-function DeletionQueued({ s }: { s: ReturnType<typeof makeStyles> }) {
+// The sentence about the sign-in, for either outcome — the same wording as the web's
+// signInRemovalSentence (components/account-data/account-data-shared.ts).
+function signInRemovalSentence(result: FullAccountDeletionResult): string {
+  if (result.identityRemoved) {
+    return 'Your personal data is being removed across all services, and your sign-in is removed with it — you will not be able to sign back in.';
+  }
+  const reason = result.identityError ? ` The reason given: ${result.identityError.replace(/\.?$/, '.')}` : '';
+  return `Your personal data is being removed across all services, but your sign-in could not be removed, so you can still sign in to an empty account.${reason} Use Report a bug to have the sign-in removed for you.`;
+}
+
+function DeletionQueued({ s, result }: { s: ReturnType<typeof makeStyles>; result: FullAccountDeletionResult }) {
   return (
     <Modal visible animationType="none" onRequestClose={() => undefined}>
       <View style={s.doneRoot}>
@@ -168,7 +183,7 @@ function DeletionQueued({ s }: { s: ReturnType<typeof makeStyles> }) {
         </View>
         <Text style={s.doneTitle}>Deletion queued</Text>
         <Text style={s.doneBody}>
-          Your request has been received. Your personal data is being removed across all services, and your sign-in is removed with it — you will not be able to sign back in. Your ServiceCredits are held for 7 days from now, then returned to the community treasury; if any are locked in an active escrow, the return waits until that escrow resolves. Some audit records are retained for platform integrity.
+          Your request has been received. {signInRemovalSentence(result)} Your ServiceCredits are held for 7 days from now, then returned to the community treasury; if any are locked in an active escrow, the return waits until that escrow resolves. Some audit records are retained for platform integrity.
         </Text>
       </View>
     </Modal>

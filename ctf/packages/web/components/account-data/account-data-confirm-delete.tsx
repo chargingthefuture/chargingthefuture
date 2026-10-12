@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Trash2, Lock, CheckCircle, X, Loader2 } from 'lucide-react';
 import {
-  getAccountDataTokens, FULL_ACCOUNT_CONFIRM_PHRASE,
+  getAccountDataTokens, FULL_ACCOUNT_CONFIRM_PHRASE, signInRemovalSentence, type FullAccountDeletionResult,
 } from './account-data-shared';
 import { useTheme } from '@/hooks/useTheme';
 
@@ -13,8 +13,9 @@ type ConfirmProps = {
   serviceCount: number;
   isMobile: boolean;
   onCancel: () => void;
-  // Performs the live DELETE /api/account/full-account call. Resolves on success, rejects on failure.
-  onConfirm: () => Promise<void>;
+  // Performs the live DELETE /api/account/full-account call. Resolves on success with whether the
+  // sign-in was removed, rejects on failure.
+  onConfirm: () => Promise<FullAccountDeletionResult>;
 };
 
 // The confirm/cancel button row. Kept as its own component so the ready/submitting style branches
@@ -61,6 +62,7 @@ export function AccountDataConfirmDelete({ serviceCount, onCancel, onConfirm }: 
   const [input, setInput] = useState('');
   const [status, setStatus] = useState<ConfirmStatus>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [result, setResult] = useState<FullAccountDeletionResult>({ identityRemoved: true, identityError: null });
 
   const ready = input.toLowerCase().trim() === FULL_ACCOUNT_CONFIRM_PHRASE && status !== 'submitting';
 
@@ -71,7 +73,7 @@ export function AccountDataConfirmDelete({ serviceCount, onCancel, onConfirm }: 
     setStatus('submitting');
     setErrorMessage(null);
     try {
-      await onConfirm();
+      setResult(await onConfirm());
       setStatus('done');
     } catch (error) {
       setStatus('error');
@@ -88,7 +90,7 @@ export function AccountDataConfirmDelete({ serviceCount, onCancel, onConfirm }: 
           </div>
           <div style={{ fontSize: 22, fontWeight: 800, color: TEXT, marginBottom: 10 }}>Deletion queued</div>
           <div style={{ fontSize: 14, color: SUBTLE, lineHeight: 1.7 }}>
-            Your request has been received. Your personal data is being removed across all services, and your sign-in is removed with it — you will not be able to sign back in. Your ServiceCredits are held for 7 days from now, then returned to the community treasury; if any are locked in an active escrow, the return waits until that escrow resolves. Some audit records are retained for platform integrity.
+            Your request has been received. {signInRemovalSentence(result)} Your ServiceCredits are held for 7 days from now, then returned to the community treasury; if any are locked in an active escrow, the return waits until that escrow resolves. Some audit records are retained for platform integrity.
           </div>
         </div>
       </div>
