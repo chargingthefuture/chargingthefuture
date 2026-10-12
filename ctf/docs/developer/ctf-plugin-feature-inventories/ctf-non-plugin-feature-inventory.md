@@ -375,6 +375,14 @@ Owner decision, 2026-09-26. The owner pays the running costs of Skills Economy a
 
 ## 5) Change Log
 
+- 2026-10-12: **A failed ROLLBACK no longer hides the error that caused it (issue #2957).**
+  `withDbTransaction` in `lib/db/postgres.ts` ran `ROLLBACK` bare in its catch, so when the rollback
+  itself threw, that error replaced the one the callback threw and the real cause (a constraint
+  violation, a dropped connection) was never reported. The client was also released normally and
+  went back to the pool, where a transaction that never ended could fail the next request's query.
+  The rollback now runs in its own try/catch: its failure is reported under `db` /
+  `transaction_rollback`, the original error is still the one thrown, and `client.release(error)`
+  discards a client whose rollback failed.
 - 2026-10-08: **Android Apps home matches the web Apps section (§1.1 item 5).** The Android home gains the web's Sort control (Recent, A-Z, Most Used, kept on the phone as the web keeps them in the browser) and the "Search apps…" box with its no-match line. Tapping a card now highlights it as on the web, and the "Open plugin →" pill opens the app. Cards use the web's tint and border in the comic theme too. The closing line about the other apps being on the web is removed; the web has no such line. The top bar now matches the web bar: the account picture sits after the settings gear, the bug icon opens the same one-item "Report a problem" menu, the Sign in button has the web's size and weight, the brand mark keeps its gradient in the comic theme, and the wordmark spacing and bottom line match.
 
 - 2026-10-08: **The Android account screens match the web's (§1.2, §1.6).** The gear now opens a Your account screen copied from the web `/account` hub with all of its sections: the heading and intro, the Identity card with the account menu (Sign out lives there, as in the web's account menu on that card), the Trust card (read from `GET /api/trust/user/self`), Your ongoing activities (opens the app's Recurring Activity screen), Verification (opens the Unlock screen), and the Data & privacy card linking to Account & Data and Blocked members, which go back to it. The made-up Blocked members row that sat above Account & Data is gone. Account & Data was redrawn from the web phone layout: its own header with back and the theme toggle, the web's tab, list, empty, danger and confirmation wording (including the 7-day ServiceCredits hold), and no sign-out button, Retry button or Terms and Accessibility links, which the web screen does not have. Blocked members was redrawn the same way, with the web's back header and no count line. The JSON downloads are there too: the file is saved through the phone's share sheet (new `expo-file-system` and `expo-sharing` modules). No API, schema or contract change.
