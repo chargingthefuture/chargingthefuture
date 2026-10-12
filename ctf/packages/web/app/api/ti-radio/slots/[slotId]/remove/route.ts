@@ -25,7 +25,23 @@ export async function POST(request: Request, context: { params: Promise<{ slotId
   }
   const { slotId } = await context.params;
 
-  const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+  // A body that does not parse is refused, as the booking route does, rather than read as "no
+  // reason": the reason is what this removal has to be answerable for afterwards.
+  let body: Record<string, unknown>;
+  try {
+    const parsed: unknown = await request.json();
+    body = parsed && typeof parsed === 'object' ? (parsed as Record<string, unknown>) : {};
+  } catch (error) {
+    return NextResponse.json(
+      {
+        ok: false,
+        code: TI_RADIO_ERROR_CODE.invalidPayload,
+        message: 'Invalid request body.',
+        reason: failureReason(error),
+      },
+      { status: 400 },
+    );
+  }
   const rawReason = typeof body.reason === 'string' ? body.reason.trim() : '';
   const reason = rawReason.length > 0 ? rawReason.slice(0, TI_RADIO_MAX_REMOVAL_REASON_LENGTH) : null;
 
