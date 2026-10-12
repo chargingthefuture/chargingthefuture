@@ -100,35 +100,13 @@ async function ensureDeviceSubscribed(fromTap: boolean): Promise<string | null> 
     return fromTap ? 'This browser can’t show device alerts — the list below still updates in the app.' : null;
   }
   try {
-    if (Notification.permission === 'denied') {
-      return 'Device alerts are blocked in your browser settings — the list below still updates in the app.';
-    }
-    if (Notification.permission !== 'granted') {
-      if (!fromTap) return null;
-      const permission = await Notification.requestPermission();
-      if (permission !== 'granted') {
-        return 'Device alerts are off for now — the list below still updates in the app.';
-      }
-    }
-    const keyRes = await fetch('/api/notifications/push/vapid-public-key', { cache: 'no-store' });
-    const keyData = (await keyRes.json().catch(() => ({}))) as { ok?: boolean; publicKey?: string };
-    if (!keyRes.ok || !keyData.publicKey) {
+    const permission = await ensurePermission(fromTap);
+    if (permission !== 'granted') return permission;
+    const serverKey = await fetchServerKey();
+    if (!serverKey) {
       return 'Device alerts aren’t available yet — the list below still updates in the app.';
     }
-    const serverKey = urlBase64ToUint8Array(keyData.publicKey);
-    const registration = await navigator.serviceWorker.register('/sw.js');
-    await navigator.serviceWorker.ready;
-    let subscription = await registration.pushManager.getSubscription();
-    if (subscription && !sameServerKey(subscription, serverKey)) {
-      await subscription.unsubscribe();
-      subscription = null;
-    }
-    if (!subscription) {
-      subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: serverKey,
-      });
-    }
+    const subscription = await currentSubscription(serverKey);
     if (!(await saveDeviceSubscription(subscription))) {
       return 'Couldn’t save device alerts for this device — the list below still updates in the app.';
     }
@@ -137,6 +115,36 @@ async function ensureDeviceSubscribed(fromTap: boolean): Promise<string | null> 
     reportError(error, { area: 'notifications', op: fromTap ? 'device_subscribe' : 'device_resync' });
     return 'Couldn’t turn on device alerts on this device — the list below still updates in the app.';
   }
+}
+
+// 'granted', or the note to show (null for a quiet no without a tap). Asks only from a tap, and as the
+// first awaited step, so iOS still counts the request as coming from that tap.
+async function ensurePermission(fromTap: boolean): Promise<'granted' | string | null> {
+  if (Notification.permission === 'granted') return 'granted';
+  if (Notification.permission === 'denied') {
+    return 'Device alerts are blocked in your browser settings — the list below still updates in the app.';
+  }
+  if (!fromTap) return null;
+  const permission = await Notification.requestPermission();
+  return permission === 'granted' ? 'granted' : 'Device alerts are off for now — the list below still updates in the app.';
+}
+
+// The server's public push key as bytes, or null when push is not configured on the server.
+async function fetchServerKey(): Promise<Uint8Array<ArrayBuffer> | null> {
+  const keyRes = await fetch('/api/notifications/push/vapid-public-key', { cache: 'no-store' });
+  const keyData = (await keyRes.json().catch(() => ({}))) as { ok?: boolean; publicKey?: string };
+  return keyRes.ok && keyData.publicKey ? urlBase64ToUint8Array(keyData.publicKey) : null;
+}
+
+// This device's subscription for the current server key: the existing one when it matches, otherwise
+// a fresh one (an old-key subscription is dropped first).
+async function currentSubscription(serverKey: Uint8Array<ArrayBuffer>): Promise<PushSubscription> {
+  const registration = await navigator.serviceWorker.register('/sw.js');
+  await navigator.serviceWorker.ready;
+  const existing = await registration.pushManager.getSubscription();
+  if (existing && sameServerKey(existing, serverKey)) return existing;
+  if (existing) await existing.unsubscribe();
+  return registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: serverKey });
 }
 
 // The notifications center: the member's own feed of updates across plugins, plus the device-push
