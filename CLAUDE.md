@@ -389,6 +389,18 @@ of one page a second and sixty an hour per consumer. There's still no search and
 audit names the page and never the profiles on it. It stays a pointer, not a copy: One Percent may
 hold a profile id on a suggestion and never the profile's fields.
 
+Public skill counts (owner decision, 2026-10-13): One Percent's public match page, where a blog
+reader picks a skill and sees how many people could help, shows real Directory counts per job
+title, with no sign-in. Counts only: no name, id, profile link or location finer than the job title
+ever reaches that page, and any count under 5 is left blank by the query itself, so a small number
+never leaves the database. Unclaimed profiles count. Unclaimed does not mean somebody does not want
+to be listed: the Directory is the feature members ask for most, it was public once because its
+entries came from public Quora answers, and the sign-in in front of it exists because a public list
+of trafficking survivors would be wrong, not because the people on it asked to be hidden. Anyone
+can have their profile removed, and nobody has asked. Restricted owners (scope `all` or `contact`)
+are left out, the same rule as the reads above. Do not ask the owner again whether unclaimed
+profiles belong in a count or a read; they do.
+
 ## Feature freeze, and one message (owner decision, 2026-10-02)
 
 No new features in Skills Economy. Bug fixes and changes to shipped screens continue, and every
