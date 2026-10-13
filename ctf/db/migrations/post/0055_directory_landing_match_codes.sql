@@ -69,10 +69,10 @@ CREATE OR REPLACE VIEW directory_public_skill_counts AS
   LEFT JOIN per_seek sk ON sk.job_title_id = jt.id::text
   WHERE jt.is_active;
 
--- One row: everybody in the Directory (restriction rule as above), and how many list a job title.
+-- One row: everybody in the Directory, restriction rule as above.
 CREATE OR REPLACE VIEW directory_public_totals AS
   WITH people AS (
-    SELECT p.id::text AS id, p.job_title_id::text AS job_title_id
+    SELECT p.id::text AS id
     FROM directory_profiles p
     WHERE NOT EXISTS (
       SELECT 1 FROM account_restrictions r
@@ -81,9 +81,5 @@ CREATE OR REPLACE VIEW directory_public_totals AS
         AND r.restriction_scope IN ('all', 'contact')
     )
   )
-  SELECT
-    (SELECT COUNT(*)::integer FROM people) AS total,
-    (SELECT COUNT(*)::integer FROM people pp
-      WHERE pp.job_title_id IS NOT NULL
-         OR EXISTS (SELECT 1 FROM directory_profile_skills ps WHERE ps.profile_id::text = pp.id)) AS with_a_title;
+  SELECT (SELECT COUNT(*)::integer FROM people) AS total;
 COMMIT;

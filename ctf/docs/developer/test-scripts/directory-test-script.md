@@ -720,7 +720,7 @@ it in the Neon SQL Editor after `post/0055` and `ctf/scripts/sql/landing_page_lo
 
 **Expected:**
 - Step 1: the busiest titles with a count each, all 5 or more; `seekers` is empty until 5 people have saved the same title.
-- Step 2: `total` matches the Directory's profile count, less owners restricted with scope `all` or `contact`.
+- Step 2: one column, `total`, matching the Directory's profile count, less owners restricted with scope `all` or `contact`.
 - Step 3: `people` is empty, never 1 to 4.
 - Step 4: the code shown on the page, with no name or contact detail anywhere in the row.
 - Step 5: refused with "permission denied for table directory_profiles".
