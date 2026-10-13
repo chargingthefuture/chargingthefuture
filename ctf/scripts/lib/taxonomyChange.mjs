@@ -580,6 +580,13 @@ export const TAXONOMY_CHANGES = [
   // occupation, so each is promoted as the skill the person does.
   { id: 144, op: 'addSkill', sector: 'Health', occupation: 'Mental Health Counselors', occupationExisting: true, skill: 'Life coaching', proposalNormalizedSkills: ['life coach'] },
   { id: 145, op: 'addSkill', sector: 'R&D & High-Tech', occupation: 'Systems / Hardware Engineers', occupationExisting: true, skill: 'Mechanical design and drafting (CAD)', proposalNormalizedSkills: ['mechanical designer & drafter'] },
+  // Skill proposal #3088 (owner decision, 2026-10-13): a taxi driver is its own job, apart from bus,
+  // train and truck driving, with its own license and training, so it gets an occupation beside Truck
+  // Drivers rather than a skill under one of those.
+  { id: 146, op: 'addOccupation', sector: 'Transport & Logistics', occupation: 'Taxi Drivers' },
+  { id: 147, op: 'addSkill', sector: 'Transport & Logistics', occupation: 'Taxi Drivers', skill: 'Taxi driving', proposalNormalizedSkills: ['taxi driver'] },
+  { id: 148, op: 'addSkill', sector: 'Transport & Logistics', occupation: 'Taxi Drivers', skill: 'Local route knowledge and navigation' },
+  { id: 149, op: 'addSkill', sector: 'Transport & Logistics', occupation: 'Taxi Drivers', skill: 'Passenger safety and service' },
 ];
 
 // ---------------------------------------------------------------------------
