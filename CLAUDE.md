@@ -401,13 +401,17 @@ can have their profile removed, and nobody has asked. Restricted owners (scope `
 are left out, the same rule as the reads above. Do not ask the owner again whether unclaimed
 profiles belong in a count or a read; they do.
 
-The page reads those counts live and saves matches (owner decision, 2026-10-13). A reader can save
-the skill they picked as a 10-character code and come back with it to see who has been added, since
-the owner adds people most days. The code holds the job title and the count when saved, never a
+The page reads those counts live and saves matches (owner decision, 2026-10-13). A visitor picks
+what they need, and the page says how many people match them, each person counted once across the
+skills behind those needs. That count comes from `directory_public_match_count`, which rounds down
+to a multiple of 5 so that subtracting one answer from another cannot reveal a group under 5. A
+reader can save what they picked as a 10-character code and come back with it to see who has been added, since
+the owner adds people most days. The code holds the job titles and the count when saved, never a
 name, contact detail or IP address. Saved matches also give a "looking for this" count per title,
 under the same blank-under-5 rule. The page connects with its own login, `landing_page`, which can
-read `directory_public_skill_counts` and `directory_public_totals`, read and add rows in
-`directory_landing_match_codes`, and nothing else; the views do the counting and the blanking, so
+read `directory_public_skill_counts` and `directory_public_totals`, call
+`directory_public_match_count`, read and add rows in `directory_landing_match_codes`, and nothing
+else; the views do the counting and the blanking, so
 the login never touches a member row. Create that login with SQL
 (`ctf/scripts/sql/landing_page_login_grants.sql`), never on Neon's Roles screen, which gives a new
 role `neon_superuser`. Its connection address is a secret like any other: Infisical first, then the

@@ -7114,6 +7114,7 @@ ON CONFLICT (user_id) DO NOTHING;
 CREATE TABLE IF NOT EXISTS directory_landing_match_codes (
   code TEXT PRIMARY KEY,
   job_title_id TEXT NOT NULL,
+  job_title_ids TEXT[],
   people_at_save INTEGER,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   last_seen_at TIMESTAMPTZ
@@ -7122,14 +7123,15 @@ ALTER TABLE IF EXISTS directory_landing_match_codes ADD COLUMN IF NOT EXISTS job
 ALTER TABLE IF EXISTS directory_landing_match_codes ADD COLUMN IF NOT EXISTS people_at_save INTEGER;
 ALTER TABLE IF EXISTS directory_landing_match_codes ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS directory_landing_match_codes ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ;
+-- The job titles behind the needs a visitor picked (job_title_id keeps the first, for older rows).
+ALTER TABLE IF EXISTS directory_landing_match_codes ADD COLUMN IF NOT EXISTS job_title_ids TEXT[];
 CREATE INDEX IF NOT EXISTS idx_directory_landing_match_codes_job_title ON directory_landing_match_codes (job_title_id);
 
--- One row per active job title. people counts claimed and unclaimed profiles that list the title,
--- by their job title or any of their skills, leaving out owners restricted with scope all or
--- contact. seekers counts saved matches for the title. Either is NULL under 5, inside the database,
--- so a small number never reaches the page. Ids are compared as text because some production id
--- columns are VARCHAR.
-CREATE OR REPLACE VIEW directory_public_skill_counts AS
+-- Who lists which job title, by their job title or any of their skills, claimed or unclaimed,
+-- leaving out owners restricted with scope all or contact. Not granted to the landing page: it
+-- holds profile ids. The two public views and directory_public_match_count read it. Ids are
+-- compared as text because some production id columns are VARCHAR.
+CREATE OR REPLACE VIEW directory_person_job_titles AS
   WITH people AS (
     SELECT p.id::text AS id, p.job_title_id::text AS job_title_id
     FROM directory_profiles p
@@ -7139,20 +7141,25 @@ CREATE OR REPLACE VIEW directory_public_skill_counts AS
         AND r.is_restricted
         AND r.restriction_scope IN ('all', 'contact')
     )
-  ),
-  person_title AS (
-    SELECT id AS person_id, job_title_id FROM people WHERE job_title_id IS NOT NULL
-    UNION
-    SELECT pp.id, sk.job_title_id::text
-    FROM people pp
-    JOIN directory_profile_skills ps ON ps.profile_id::text = pp.id
-    JOIN skills_taxonomy_skills sk ON sk.id::text = ps.skill_id::text
-  ),
-  per_title AS (
-    SELECT job_title_id, COUNT(*)::integer AS n FROM person_title GROUP BY job_title_id
+  )
+  SELECT id AS person_id, job_title_id FROM people WHERE job_title_id IS NOT NULL
+  UNION
+  SELECT pp.id, sk.job_title_id::text
+  FROM people pp
+  JOIN directory_profile_skills ps ON ps.profile_id::text = pp.id
+  JOIN skills_taxonomy_skills sk ON sk.id::text = ps.skill_id::text;
+
+-- One row per active job title: people who list it, and seekers who saved a match that includes
+-- it. Either is NULL under 5, inside the database, so a small number never reaches the page.
+CREATE OR REPLACE VIEW directory_public_skill_counts AS
+  WITH per_title AS (
+    SELECT job_title_id, COUNT(*)::integer AS n FROM directory_person_job_titles GROUP BY job_title_id
   ),
   per_seek AS (
-    SELECT job_title_id, COUNT(*)::integer AS n FROM directory_landing_match_codes GROUP BY job_title_id
+    SELECT t AS job_title_id, COUNT(*)::integer AS n
+    FROM directory_landing_match_codes c,
+         unnest(COALESCE(c.job_title_ids, ARRAY[c.job_title_id])) AS t
+    GROUP BY t
   )
   SELECT jt.id::text AS job_title_id,
          s.name AS sector,
@@ -7180,6 +7187,24 @@ CREATE OR REPLACE VIEW directory_public_totals AS
     )
   )
   SELECT (SELECT COUNT(*)::integer FROM people) AS total;
+
+-- How many people match a visitor: everyone who lists any of the given job titles, each counted
+-- once. Rounded down to a multiple of 5 and NULL under 5, so subtracting one answer from another
+-- cannot reveal a small group. Runs with its owner's rights so the landing page can call it
+-- without reading directory_person_job_titles itself; at most 60 titles per call.
+CREATE OR REPLACE FUNCTION directory_public_match_count(title_ids TEXT[])
+RETURNS INTEGER
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT CASE WHEN n >= 5 THEN (n / 5) * 5 END
+  FROM (
+    SELECT COUNT(DISTINCT person_id)::integer AS n
+    FROM directory_person_job_titles
+    WHERE job_title_id = ANY (title_ids[1:60])
+  ) x
+$$;
+REVOKE ALL ON FUNCTION directory_public_match_count(TEXT[]) FROM PUBLIC;
 
 -- === beacon-plugin ===
 -- Beacon: admin-only one-way livestream. An admin goes live ad hoc to broadcast a live demo

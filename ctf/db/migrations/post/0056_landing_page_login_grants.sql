@@ -5,8 +5,8 @@
 -- access back after every run.
 --
 -- What it does: when the landing_page login exists, grants exactly what
--- ctf/scripts/sql/landing_page_login_grants.sql grants: read the two count views, read and add saved
--- matches, set last_seen_at. Nothing more. When the login does not exist yet (it is created by hand
+-- ctf/scripts/sql/landing_page_login_grants.sql grants: read the two count views, call the match count, read and add
+-- saved matches, set last_seen_at. Nothing more. When the login does not exist yet (it is created by hand
 -- in the Neon dashboard), it does nothing.
 --
 -- Safe to re-run: granting what is already granted changes nothing.
@@ -17,5 +17,6 @@ BEGIN
     GRANT SELECT ON directory_public_skill_counts, directory_public_totals TO landing_page;
     GRANT SELECT, INSERT ON directory_landing_match_codes TO landing_page;
     GRANT UPDATE (last_seen_at) ON directory_landing_match_codes TO landing_page;
+    GRANT EXECUTE ON FUNCTION directory_public_match_count(TEXT[]) TO landing_page;
   END IF;
 END $$;

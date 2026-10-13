@@ -717,6 +717,7 @@ it in the Neon SQL Editor after `post/0055` and `ctf/scripts/sql/landing_page_lo
 3. Pick a job title with fewer than 5 people in the admin Directory list and find it in step 1's view without the `LIMIT`.
 4. Save a match on the landing page, then `SELECT code, people_at_save, created_at FROM directory_landing_match_codes ORDER BY created_at DESC LIMIT 1;`
 5. Connected as `landing_page` (its connection address), `SELECT * FROM directory_profiles LIMIT 1;`
+6. Pick two job titles from step 1 that some people share, then `SELECT directory_public_match_count(ARRAY['<id 1>', '<id 2>']);` and the same with each id alone.
 
 **Expected:**
 - Step 1: the busiest titles with a count each, all 5 or more; `seekers` is empty until 5 people have saved the same title.
@@ -724,6 +725,7 @@ it in the Neon SQL Editor after `post/0055` and `ctf/scripts/sql/landing_page_lo
 - Step 3: `people` is empty, never 1 to 4.
 - Step 4: the code shown on the page, with no name or contact detail anywhere in the row.
 - Step 5: refused with "permission denied for table directory_profiles".
+- Step 6: each answer is a multiple of 5 or empty, and the pair is never more than the two single answers added together.
 **Result:** web ☐ — notes:
 
 ---
