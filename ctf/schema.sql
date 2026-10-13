@@ -656,12 +656,15 @@ CREATE TABLE IF NOT EXISTS skills_hunt_submissions (
   full_name TEXT NOT NULL,
   bio TEXT NOT NULL,
   quora_profile_url TEXT NOT NULL,
-  -- Canonical matching key, not free text: exactly what canonicalizeQuoraUrl
-  -- (packages/web/lib/shared/quora-url.ts) returns, which is https://www.quora.com + the lowercased
-  -- path with trailing slashes removed. The per-round "first match" bonus and every per-person read
-  -- compare this column, and Directory's takedown list keys on the same form, so a row written in
-  -- any other spelling makes one person look like two. Rows stored before 2026-09-18 were re-keyed by
-  -- ctf/db/migrations/post/0027_canonical_quora_urls_directory_skills_hunt.sql.
+  -- Canonical matching key, not free text: exactly what canonicalizeNominationUrl
+  -- (packages/web/lib/skills-hunt/nomination-url.ts) returns. It takes the link out of the pasted
+  -- text, cuts a profile tab such as /activity back to /profile/<name>, then applies
+  -- canonicalizeQuoraUrl (packages/web/lib/shared/quora-url.ts): https://www.quora.com + the
+  -- lowercased path with trailing slashes removed. The per-round "first match" bonus and every
+  -- per-person read compare this column, and Directory's takedown list keys on the same form, so a
+  -- row written in any other spelling makes one person look like two. Rows stored before 2026-09-18
+  -- were re-keyed by ctf/db/migrations/post/0027_canonical_quora_urls_directory_skills_hunt.sql, and
+  -- rows stored with a profile tab by post/0054_skills_hunt_quora_profile_tab_urls.sql.
   quora_profile_url_normalized TEXT NOT NULL,
   -- Nominee location. `country` is required at submit time (enforced in validateSubmissionInput);
   -- `state`/`city` are optional. Columns are nullable so legacy rows and the guarded ALTER are safe;

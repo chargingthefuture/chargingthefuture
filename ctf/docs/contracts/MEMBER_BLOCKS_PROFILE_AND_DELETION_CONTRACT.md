@@ -36,8 +36,9 @@
 
 ## 3) Resolving the blocked member's display label
 
-The manage-list resolves `blocked_user_id` to a human label by a LEFT JOIN to `directory_profiles`
-on `claimed_by_user_id` (active profiles only, `deleted_at IS NULL`), using
+The manage-list resolves `blocked_user_id` to a human label by a LEFT JOIN LATERAL to
+`directory_profiles` on `claimed_by_user_id`, taking one profile (the oldest claimed one, `LIMIT 1`)
+so a member who claimed more than one profile still appears once, using
 `TRIM(first_name || ' ' || last_name)`. When there is no claimed profile, the label falls back to the
 neutral word "Member" so every row still names someone the viewer can recognize and unblock.
 
