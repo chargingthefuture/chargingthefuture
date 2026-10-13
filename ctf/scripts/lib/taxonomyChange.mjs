@@ -576,6 +576,10 @@ export const TAXONOMY_CHANGES = [
   // so it moves beside Laboratory safety and SOP adherence under Lab Technicians (owner decision,
   // 2026-10-08). A reparent keeps the row id, so members holding the skill keep it.
   { id: 143, op: 'reparentSkill', skill: 'Laboratory testing (basic)', fromSector: 'Water & Sanitation', fromOccupation: 'Treatment-Plant Operators', fromOccupationExisting: true, toSector: 'R&D & High-Tech', toOccupation: 'Lab Technicians', toOccupationExisting: true },
+  // Skill proposals #3144 and #3145 (2026-10-13). Both were worded as job titles with no matching
+  // occupation, so each is promoted as the skill the person does.
+  { id: 144, op: 'addSkill', sector: 'Health', occupation: 'Mental Health Counselors', occupationExisting: true, skill: 'Life coaching', proposalNormalizedSkills: ['life coach'] },
+  { id: 145, op: 'addSkill', sector: 'R&D & High-Tech', occupation: 'Systems / Hardware Engineers', occupationExisting: true, skill: 'Mechanical design and drafting (CAD)', proposalNormalizedSkills: ['mechanical designer & drafter'] },
 ];
 
 // ---------------------------------------------------------------------------
