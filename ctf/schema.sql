@@ -7149,29 +7149,21 @@ CREATE OR REPLACE VIEW directory_person_job_titles AS
   JOIN directory_profile_skills ps ON ps.profile_id::text = pp.id
   JOIN skills_taxonomy_skills sk ON sk.id::text = ps.skill_id::text;
 
--- One row per active job title: people who list it, and seekers who saved a match that includes
--- it. Either is NULL under 5, inside the database, so a small number never reaches the page.
+-- One row per active job title and the people who list it, NULL under 5, inside the database, so a
+-- small number never reaches the page.
 CREATE OR REPLACE VIEW directory_public_skill_counts AS
   WITH per_title AS (
     SELECT job_title_id, COUNT(*)::integer AS n FROM directory_person_job_titles GROUP BY job_title_id
-  ),
-  per_seek AS (
-    SELECT t AS job_title_id, COUNT(*)::integer AS n
-    FROM directory_landing_match_codes c,
-         unnest(COALESCE(c.job_title_ids, ARRAY[c.job_title_id])) AS t
-    GROUP BY t
   )
   SELECT jt.id::text AS job_title_id,
          s.name AS sector,
          s.display_order AS sector_order,
          jt.name AS title,
          jt.display_order AS title_order,
-         CASE WHEN pt.n >= 5 THEN pt.n END AS people,
-         CASE WHEN sk.n >= 5 THEN sk.n END AS seekers
+         CASE WHEN pt.n >= 5 THEN pt.n END AS people
   FROM skills_taxonomy_job_titles jt
   JOIN skills_taxonomy_sectors s ON s.id = jt.sector_id AND s.is_active
   LEFT JOIN per_title pt ON pt.job_title_id = jt.id::text
-  LEFT JOIN per_seek sk ON sk.job_title_id = jt.id::text
   WHERE jt.is_active;
 
 -- One row: everybody in the Directory, restriction rule as above.

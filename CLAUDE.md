@@ -407,8 +407,7 @@ skills behind those needs. That count comes from `directory_public_match_count`,
 to a multiple of 5 so that subtracting one answer from another cannot reveal a group under 5. A
 reader can save what they picked as a 10-character code and come back with it to see who has been added, since
 the owner adds people most days. The code holds the job titles and the count when saved, never a
-name, contact detail or IP address. Saved matches also give a "looking for this" count per title,
-under the same blank-under-5 rule. The page connects with its own login, `landing_page`, which can
+name, contact detail or IP address. The page connects with its own login, `landing_page`, which can
 read `directory_public_skill_counts` and `directory_public_totals`, call
 `directory_public_match_count`, read and add rows in `directory_landing_match_codes`, and nothing
 else; the views do the counting and the blanking, so

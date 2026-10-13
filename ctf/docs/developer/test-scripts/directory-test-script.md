@@ -712,7 +712,7 @@ public landing page (`landing-page-v4`) reads, and that its own login can reach 
 it in the Neon SQL Editor after `post/0055` and `ctf/scripts/sql/landing_page_login_grants.sql`.
 
 **Steps:**
-1. `SELECT title, people, seekers FROM directory_public_skill_counts ORDER BY people DESC NULLS LAST LIMIT 5;`
+1. `SELECT title, people FROM directory_public_skill_counts ORDER BY people DESC NULLS LAST LIMIT 5;`
 2. `SELECT * FROM directory_public_totals;`
 3. Pick a job title with fewer than 5 people in the admin Directory list and find it in step 1's view without the `LIMIT`.
 4. Save a match on the landing page, then `SELECT code, people_at_save, created_at FROM directory_landing_match_codes ORDER BY created_at DESC LIMIT 1;`
@@ -720,7 +720,7 @@ it in the Neon SQL Editor after `post/0055` and `ctf/scripts/sql/landing_page_lo
 6. Pick two job titles from step 1 that some people share, then `SELECT directory_public_match_count(ARRAY['<id 1>', '<id 2>']);` and the same with each id alone.
 
 **Expected:**
-- Step 1: the busiest titles with a count each, all 5 or more; `seekers` is empty until 5 people have saved the same title.
+- Step 1: the busiest titles with a count each, all 5 or more.
 - Step 2: one column, `total`, matching the Directory's profile count, less owners restricted with scope `all` or `contact`.
 - Step 3: `people` is empty, never 1 to 4.
 - Step 4: the code shown on the page, with no name or contact detail anywhere in the row.
