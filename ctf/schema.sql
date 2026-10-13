@@ -7149,8 +7149,7 @@ CREATE OR REPLACE VIEW directory_person_job_titles AS
   JOIN directory_profile_skills ps ON ps.profile_id::text = pp.id
   JOIN skills_taxonomy_skills sk ON sk.id::text = ps.skill_id::text;
 
--- One row per active job title and the people who list it, NULL under 5, inside the database, so a
--- small number never reaches the page.
+-- One row per active job title and how many people list it (0 when nobody does).
 CREATE OR REPLACE VIEW directory_public_skill_counts AS
   WITH per_title AS (
     SELECT job_title_id, COUNT(*)::integer AS n FROM directory_person_job_titles GROUP BY job_title_id
@@ -7160,7 +7159,7 @@ CREATE OR REPLACE VIEW directory_public_skill_counts AS
          s.display_order AS sector_order,
          jt.name AS title,
          jt.display_order AS title_order,
-         CASE WHEN pt.n >= 5 THEN pt.n END AS people
+         COALESCE(pt.n, 0) AS people
   FROM skills_taxonomy_job_titles jt
   JOIN skills_taxonomy_sectors s ON s.id = jt.sector_id AND s.is_active
   LEFT JOIN per_title pt ON pt.job_title_id = jt.id::text
@@ -7181,15 +7180,14 @@ CREATE OR REPLACE VIEW directory_public_totals AS
   SELECT (SELECT COUNT(*)::integer FROM people) AS total;
 
 -- How many people match a visitor: everyone who lists any of the given job titles, each counted
--- once. Rounded down to a multiple of 5 and NULL under 5, so subtracting one answer from another
--- cannot reveal a small group. Runs with its owner's rights so the landing page can call it
+-- once, as an exact number. Runs with its owner's rights so the landing page can call it
 -- without reading directory_person_job_titles itself; at most 60 titles per call.
 CREATE OR REPLACE FUNCTION directory_public_match_count(title_ids TEXT[])
 RETURNS INTEGER
 LANGUAGE sql STABLE SECURITY DEFINER
 SET search_path = public
 AS $$
-  SELECT CASE WHEN n >= 5 THEN (n / 5) * 5 END
+  SELECT n
   FROM (
     SELECT COUNT(DISTINCT person_id)::integer AS n
     FROM directory_person_job_titles
