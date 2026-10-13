@@ -4,10 +4,12 @@
  * It shows a notification when a push arrives and focuses (or opens) the app at the call when the
  * notification is clicked. It does not cache or intercept fetches.
  *
- * The push payload shape (set by lib/notifications/push.ts):
- *   { title, body, data: { type, callId, url } }
+ * The push payload shapes (sent through lib/notifications/push.ts):
+ *   Foundation instant-call ring: { title, body, data: { type, callId, url } }
+ *   Notifications center:         { title, body, data: { path } }
  * For an instant-call ring, data.type is 'foundation.instant_call.ring' and data.url deep-links to the
  * Foundation app, where the existing incoming-call overlay (the in-app poll) renders the answer/decline UI.
+ * A notifications-center ping carries data.path, the same in-app link as the row's "Open" pill.
  */
 
 self.addEventListener('install', function () {
@@ -47,7 +49,7 @@ self.addEventListener('notificationclick', function (event) {
   event.notification.close();
 
   var data = event.notification.data || {};
-  var targetUrl = data.url || '/apps/foundation';
+  var targetUrl = data.url || data.path || '/apps/foundation';
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (clientList) {

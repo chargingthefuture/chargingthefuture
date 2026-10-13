@@ -52,6 +52,7 @@
     "react-native-svg": "15.15.3",
     "react-native-vector-icons": "^10.3.0",
     "react-native-web": "^0.21.2",
+    "stream-chat": "^9.43.0",
     "stream-chat-react-native": "^8.12.4"
   },
   "devDependencies": {
