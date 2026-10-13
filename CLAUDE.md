@@ -401,6 +401,18 @@ can have their profile removed, and nobody has asked. Restricted owners (scope `
 are left out, the same rule as the reads above. Do not ask the owner again whether unclaimed
 profiles belong in a count or a read; they do.
 
+The page reads those counts live and saves matches (owner decision, 2026-10-13). A reader can save
+the skill they picked as a 10-character code and come back with it to see who has been added, since
+the owner adds people most days. The code holds the job title and the count when saved, never a
+name, contact detail or IP address. Saved matches also give a "looking for this" count per title,
+under the same blank-under-5 rule. The page connects with its own login, `landing_page`, which can
+read `directory_public_skill_counts` and `directory_public_totals`, read and add rows in
+`directory_landing_match_codes`, and nothing else; the views do the counting and the blanking, so
+the login never touches a member row. Create that login with SQL
+(`ctf/scripts/sql/landing_page_login_grants.sql`), never on Neon's Roles screen, which gives a new
+role `neon_superuser`. Its connection address is a secret like any other: Infisical first, then the
+Vercel project's `DATABASE_URL`.
+
 ## Feature freeze, and one message (owner decision, 2026-10-02)
 
 No new features in Skills Economy. Bug fixes and changes to shipped screens continue, and every
