@@ -75,8 +75,14 @@ const PRESENCE_SOURCES: PresenceSource[] = [
           [userId, TRUST_TRANSPORT_TERMINAL_STATUSES],
         ),
         queryDb<{ id: string }>(
-          `SELECT id::text AS id FROM trust_transport_offers
-           WHERE provider_user_id = $1 AND LOWER(status) <> ALL($2::text[])`,
+          // An accepted offer keeps status `accepted` after its trip ends, so it is only presence while
+          // its trip (if any) is still running.
+          `SELECT o.id::text AS id FROM trust_transport_offers o
+           WHERE o.provider_user_id = $1 AND LOWER(o.status) <> ALL($2::text[])
+             AND NOT EXISTS (
+               SELECT 1 FROM trust_transport_trips t
+               WHERE t.offer_id = o.id AND LOWER(t.status) = ANY($2::text[])
+             )`,
           [userId, TRUST_TRANSPORT_TERMINAL_STATUSES],
         ),
       ]);
