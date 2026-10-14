@@ -40,7 +40,7 @@ export function UnlockShell({ isAdmin }: { isAdmin?: boolean } = {}) {
     try {
       const res = await fetch("/api/unlock/submission", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
         body: JSON.stringify({ quoraProfileUrl: trimmed }),
       });
       if (!res.ok) {
