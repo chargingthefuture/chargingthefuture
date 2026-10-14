@@ -280,6 +280,15 @@ member active only in Fireside is seen by being read, which is what the plugin i
 
 ## Change Log
 
+- 2026-10-14: **Withdrawing a comment no longer clears the author's record (#2751).** The export
+  queue's author record counted removals by `status = 'removed'` and refusals by `export_review =
+  'refused'`, and `withdrawOwnComment` set both columns back on any comment the author had not
+  already withdrawn, an admin-removed one included. So an account could have comments removed and
+  exports refused, withdraw each, and reach the next review with a clean record. Removals are now
+  counted from `removed_by IS NOT NULL` (a restore clears it, a withdrawal does not), and a withdrawal
+  keeps a refused export refused along with who refused it and when, the way an admin removal already
+  did. Whether an author may withdraw a comment an admin has removed is unchanged and left on the
+  issue for an owner decision. No schema, route or contract change.
 - 2026-10-05: **Deleting an account no longer deletes other members' replies.**
   `fireside_comments.parent_comment_id` was `ON DELETE CASCADE`, so the plain delete account deletion
   runs on a member's comments also deleted every reply other members had written under them, with

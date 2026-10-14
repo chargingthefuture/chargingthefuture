@@ -121,7 +121,9 @@ export async function getAuthorRecord(userId: string): Promise<FiresideAuthorRec
     exports_approved: string;
   }>(
     `SELECT COUNT(*) AS comments,
-            COUNT(*) FILTER (WHERE status = 'removed') AS removed,
+            -- removed_by, not status: an author can withdraw a comment an admin already removed, which
+            -- changes its status, and the removal must still count. A restore clears removed_by.
+            COUNT(*) FILTER (WHERE removed_by IS NOT NULL) AS removed,
             COUNT(*) FILTER (WHERE export_review = 'refused') AS exports_refused,
             COUNT(*) FILTER (WHERE export_review = 'approved') AS exports_approved
        FROM fireside_comments

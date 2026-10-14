@@ -2,7 +2,8 @@
 // never leaves the database; only a redacted restatement is ever published to the
 // triage repo (see rule 129).
 
-import { queryDb } from 'lib/db/postgres';
+import type { PoolClient } from 'pg';
+import { queryDb, withDbTransaction } from 'lib/db/postgres';
 import { sanitizeBugReport, type BugReportRiskFlag } from 'lib/bug-reports/sanitize';
 import {
   BUG_REPORT_RATE_LIMIT_WINDOW_MINUTES,
@@ -47,30 +48,42 @@ export type CreateBugReportResult = {
   riskLevel: BugReportRiskLevel;
 };
 
-// How many reports this user has filed inside the rolling rate-limit window. Used to
-// reject accidental floods before they ever hit the table's main path.
-export async function countRecentReportsByUser(userId: string): Promise<number> {
-  const result = await queryDb<{ count: string }>(
-    `SELECT COUNT(*)::text AS count
-       FROM bug_reports
-      WHERE user_id = $1
-        AND created_at > NOW() - ($2 || ' minutes')::interval`,
-    [userId, String(BUG_REPORT_RATE_LIMIT_WINDOW_MINUTES)],
-  );
-
-  return Number(result.rows[0]?.count ?? '0');
+// Store one report, unless the member already filed `limit` reports inside the rolling
+// rate-limit window; then nothing is stored and null comes back. The count and the insert run
+// in one transaction under a per-member advisory lock, so several reports sent at the same
+// moment are counted one after another instead of all reading the same count.
+//
+// The sanitizer runs synchronously so the redacted copy and the risk classification land with
+// the row. A flagged report is born `held_for_review` and is never eligible for
+// auto-publishing; a clean one is born `new`.
+export async function createBugReportWithinRateLimit(
+  input: CreateBugReportInput,
+  limit: number,
+): Promise<CreateBugReportResult | null> {
+  return withDbTransaction(async (client) => {
+    await client.query(`SELECT pg_advisory_xact_lock(hashtext('bug_reports:' || $1))`, [input.userId]);
+    const recent = await client.query<{ count: string }>(
+      `SELECT COUNT(*)::text AS count
+         FROM bug_reports
+        WHERE user_id = $1
+          AND created_at > NOW() - ($2 || ' minutes')::interval`,
+      [input.userId, String(BUG_REPORT_RATE_LIMIT_WINDOW_MINUTES)],
+    );
+    if (Number(recent.rows[0]?.count ?? '0') >= limit) {
+      return null;
+    }
+    return insertBugReport(client, input);
+  });
 }
 
-// Store one report. The sanitizer runs synchronously so the redacted copy and the risk
-// classification land with the row. A flagged report is born `held_for_review` and is
-// never eligible for auto-publishing; a clean one is born `new`.
-export async function createBugReport(
+async function insertBugReport(
+  client: PoolClient,
   input: CreateBugReportInput,
 ): Promise<CreateBugReportResult> {
   const sanitized = sanitizeBugReport(input.message, input.context);
   const status: BugReportStatus = sanitized.riskLevel === 'flagged' ? 'held_for_review' : 'new';
 
-  const result = await queryDb<{ id: string; status: BugReportStatus }>(
+  const result = await client.query<{ id: string; status: BugReportStatus }>(
     `INSERT INTO bug_reports (
        user_id, status, raw_message, raw_context, page_url, plugin_slug,
        app_version, user_agent, redacted_message, redacted_context,
@@ -215,5 +228,20 @@ export async function markReportIssueCreated(
             updated_at = NOW()
       WHERE id = $1`,
     [id, triageRepo, issueNumber, issueUrl],
+  );
+}
+
+// Account deletion: replace each of the member's raw report texts with its redacted copy, inside
+// the deletion transaction and before the registry's pseudonymize step overwrites `user_id` (after
+// that the rows can no longer be found by the member's id). `raw_message` is NOT NULL, so the
+// registry's clear-columns (which write NULL) cannot reach it; an unredacted report keeps an empty
+// string. Nothing in the app shows raw text to an admin, so triage loses nothing.
+export async function redactRawBugReportTextForDeletion(client: PoolClient, userId: string): Promise<void> {
+  await client.query(
+    `UPDATE bug_reports
+        SET raw_message = COALESCE(redacted_message, ''),
+            updated_at = NOW()
+      WHERE user_id = $1`,
+    [userId],
   );
 }
