@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireDirectoryAdminAccess } from '../../_lib';
-import { DIRECTORY_ERROR_CODE } from 'lib/directory/constants';
+import { DIRECTORY_ERROR_CODE, QUORA_URL_SUPPRESSED_MESSAGE } from 'lib/directory/constants';
 import { createAdminProfile, listAdminProfiles, parsePaginationParams, validateProfileInput } from 'lib/directory/repository';
 import type { AdminProfileClaimFilter } from 'lib/directory/repository';
 import { recordDirectoryAdminAudit } from 'lib/directory/audit';
@@ -26,6 +26,17 @@ function stringArray(value: unknown): string[] {
 function mapSelectorError(error: unknown): { response: NextResponse; isValidation: boolean } {
   const message = error instanceof Error ? error.message : 'unknown';
   const isValidation = message.includes('_not_found');
+  // The Quora address is on the takedown list (the person asked to be removed). The create can never
+  // succeed until an admin lifts that block, so say so with a 409 instead of a 503.
+  if (message === 'directory_quora_url_suppressed') {
+    return {
+      response: NextResponse.json(
+        { ok: false, code: DIRECTORY_ERROR_CODE.quoraUrlSuppressed, message: QUORA_URL_SUPPRESSED_MESSAGE },
+        { status: 409 },
+      ),
+      isValidation: false,
+    };
+  }
 
   const response = NextResponse.json(
     {
@@ -37,6 +48,13 @@ function mapSelectorError(error: unknown): { response: NextResponse; isValidatio
   );
 
   return { response, isValidation };
+}
+
+function createFailureCategory(isSuppressed: boolean, isValidation: boolean): string {
+  if (isSuppressed) {
+    return 'policy';
+  }
+  return isValidation ? 'validation' : 'persistence_error';
 }
 
 function parseBody(body: AdminProfileBody): DirectoryProfileInput {
@@ -133,18 +151,22 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true, profile }, { status: 201 });
   } catch (error) {
-    reportError(error, { area: 'directory', op: 'admin_profiles' });
+    const isSuppressed = error instanceof Error && error.message === 'directory_quora_url_suppressed';
+    // An expected refusal is audited as a deny and kept out of error tracking.
+    if (!isSuppressed) {
+      reportError(error, { area: 'directory', op: 'admin_profiles' });
+    }
     const { response, isValidation } = mapSelectorError(error);
 
     await recordDirectoryAdminAudit({
       actorId: gate.auth.userId,
       command: 'directory.admin.profile.create',
-      status: 'allow',
-      reason: 'admin_route_guard',
+      status: isSuppressed ? 'deny' : 'allow',
+      reason: isSuppressed ? 'quora_url_suppressed' : 'admin_route_guard',
       targetType: 'profile',
       targetId: 'pending',
       result: 'failure',
-      errorCategory: isValidation ? 'validation' : 'persistence_error',
+      errorCategory: createFailureCategory(isSuppressed, isValidation),
     });
 
     return response;

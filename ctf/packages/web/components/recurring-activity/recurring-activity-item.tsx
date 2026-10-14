@@ -99,7 +99,9 @@ export function RecurringActivityItem({
         t={t}
         flags={flags}
         busyAction={busyAction}
-        visDraft={visDraft}
+        // The draft only shows while its request is in flight. Once it settles the select shows the
+        // saved value again, so a failed change does not leave a setting on screen that was not saved.
+        visDraft={busyAction === 'visibility' ? visDraft : activity.visibility}
         onConfirm={onConfirm}
         onDecline={onDecline}
         onEnd={onEnd}

@@ -180,7 +180,7 @@ export function InstantCallSettings() {
         <div style={{ fontSize: 20, fontWeight: 800, color: t.TITLE }}>Instant connection</div>
       </div>
       <div style={{ fontSize: 14, color: t.SUBTLE, marginBottom: 16 }}>
-        Turn this on to let other members ring you for a live 1:1 call right now. They pay the rate you
+        Turn this on to let other members ring you for a live 1:1 call right now. They send you the rate you
         set for each block of time. You can turn it off anytime.
       </div>
 
