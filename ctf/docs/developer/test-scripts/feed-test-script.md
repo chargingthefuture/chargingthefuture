@@ -620,8 +620,14 @@ FD-12b), with at least one reaction on it.
 **Expected:**
 - Draft is created and listed with status `draft`.
 - If a linked plugin was selected, it is shown in the list row.
+- The picker never offers Weekly Performance, Mutual Time, or a hidden plugin. The server drops those
+  on save, so offering them produced a link that vanished with no explanation.
+- If the plugin list cannot load, a red line under the picker says why (the route's message, or the
+  HTTP status) instead of the picker just being empty.
 - No 503 or CSRF error.
 - The form does **not** reset on a failed submit — it retains the typed content.
+- A save, publish or archive that never got an answer shows "Request did not complete. Try again."
+  followed by the reason in brackets, not a bare "Network error".
 
 **Result:** web ☐
 
