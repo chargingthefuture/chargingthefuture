@@ -55,8 +55,17 @@ jobs:
           name: ${{ env.RELEASE_TAG }}
           tag_name: ${{ env.RELEASE_TAG }}
           body: |
-            Skills Economy phone wallpapers. Pick the file that matches your phone, open it,
-            and save it to your photos, then set it as your wallpaper from your phone's settings.
+            Skills Economy phone wallpapers, in four colors. Pick your phone and a color, open the
+            file, and save it to your photos, then set it as your wallpaper from your phone's settings.
 
-            - `se-wallpaper-android-1080x2400.png` — most current Android phones
-            - `se-wallpaper-iphone-16e-1170x2532.png` — iPhone 16e (also fits iPhone 13 / 14)
+            Android (most current Android phones):
+            - `se-wallpaper-android-1080x2400.png` — teal and purple
+            - `se-wallpaper-android-burgundy-1080x2400.png` — burgundy
+            - `se-wallpaper-android-coral-1080x2400.png` — coral
+            - `se-wallpaper-android-forest-1080x2400.png` — green
+
+            iPhone 16e (also fits iPhone 13 / 14):
+            - `se-wallpaper-iphone-16e-1170x2532.png` — teal and purple
+            - `se-wallpaper-iphone-16e-burgundy-1170x2532.png` — burgundy
+            - `se-wallpaper-iphone-16e-coral-1170x2532.png` — coral
+            - `se-wallpaper-iphone-16e-forest-1170x2532.png` — green

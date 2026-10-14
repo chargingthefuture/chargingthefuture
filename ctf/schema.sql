@@ -656,12 +656,15 @@ CREATE TABLE IF NOT EXISTS skills_hunt_submissions (
   full_name TEXT NOT NULL,
   bio TEXT NOT NULL,
   quora_profile_url TEXT NOT NULL,
-  -- Canonical matching key, not free text: exactly what canonicalizeQuoraUrl
-  -- (packages/web/lib/shared/quora-url.ts) returns, which is https://www.quora.com + the lowercased
-  -- path with trailing slashes removed. The per-round "first match" bonus and every per-person read
-  -- compare this column, and Directory's takedown list keys on the same form, so a row written in
-  -- any other spelling makes one person look like two. Rows stored before 2026-09-18 were re-keyed by
-  -- ctf/db/migrations/post/0027_canonical_quora_urls_directory_skills_hunt.sql.
+  -- Canonical matching key, not free text: exactly what canonicalizeNominationUrl
+  -- (packages/web/lib/skills-hunt/nomination-url.ts) returns. It takes the link out of the pasted
+  -- text, cuts a profile tab such as /activity back to /profile/<name>, then applies
+  -- canonicalizeQuoraUrl (packages/web/lib/shared/quora-url.ts): https://www.quora.com + the
+  -- lowercased path with trailing slashes removed. The per-round "first match" bonus and every
+  -- per-person read compare this column, and Directory's takedown list keys on the same form, so a
+  -- row written in any other spelling makes one person look like two. Rows stored before 2026-09-18
+  -- were re-keyed by ctf/db/migrations/post/0027_canonical_quora_urls_directory_skills_hunt.sql, and
+  -- rows stored with a profile tab by post/0054_skills_hunt_quora_profile_tab_urls.sql.
   quora_profile_url_normalized TEXT NOT NULL,
   -- Nominee location. `country` is required at submit time (enforced in validateSubmissionInput);
   -- `state`/`city` are optional. Columns are nullable so legacy rows and the guarded ALTER are safe;
@@ -670,6 +673,11 @@ CREATE TABLE IF NOT EXISTS skills_hunt_submissions (
   country TEXT NULL,
   state TEXT NULL,
   city TEXT NULL,
+  -- The nominee's job title (skills_taxonomy_job_titles.id), picked from the Scout form's job title
+  -- list; optional. On accept it and its sector carry into the generated directory_profiles row. The
+  -- submit insert stores it only when it names an active job title, otherwise null. No hard FK,
+  -- mirroring directory_profiles.job_title_id (the taxonomy table is created later in this file).
+  job_title_id UUID NULL,
   skills JSONB NOT NULL DEFAULT '[]'::jsonb,
   proposed_skills JSONB NOT NULL DEFAULT '[]'::jsonb,
   signature_hash TEXT NOT NULL,
@@ -5732,6 +5740,7 @@ ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS url_valid
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS edit_history JSONB NOT NULL DEFAULT '[]'::jsonb;
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS edited_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS job_title_id UUID;
 DO $skills_hunt_submissions_url_validation_check$
 BEGIN
   IF NOT EXISTS (
@@ -7092,6 +7101,129 @@ SELECT user_id, TRUE, 'trading', COALESCE(frozen_at, NOW()), frozen_by_user_id, 
 FROM service_credits_wallets
 WHERE is_frozen = TRUE
 ON CONFLICT (user_id) DO NOTHING;
+
+-- === directory public landing page (owner decision, 2026-10-13) ===
+-- The public match page (landing-page-v4, on Vercel) reads Directory counts per job title and saves
+-- the match a visitor asks to come back to. It connects with its own login, landing_page, which may
+-- read the two views below and read and add rows in directory_landing_match_codes, and nothing else
+-- (the grants are pasted in the Neon dashboard, not kept here, because the login is created there).
+-- Defined at the END so directory_profiles, the taxonomy tables and account_restrictions exist.
+--
+-- A saved match holds the code, the job title and the count when it was saved. No name, no contact
+-- details, no IP address: the code is the only way back to it, on purpose.
+CREATE TABLE IF NOT EXISTS directory_landing_match_codes (
+  code TEXT PRIMARY KEY,
+  job_title_id TEXT NOT NULL,
+  job_title_ids TEXT[],
+  people_at_save INTEGER,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  last_seen_at TIMESTAMPTZ
+);
+ALTER TABLE IF EXISTS directory_landing_match_codes ADD COLUMN IF NOT EXISTS job_title_id TEXT;
+ALTER TABLE IF EXISTS directory_landing_match_codes ADD COLUMN IF NOT EXISTS people_at_save INTEGER;
+ALTER TABLE IF EXISTS directory_landing_match_codes ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS directory_landing_match_codes ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ;
+-- The job titles behind the needs a visitor picked (job_title_id keeps the first, for older rows).
+ALTER TABLE IF EXISTS directory_landing_match_codes ADD COLUMN IF NOT EXISTS job_title_ids TEXT[];
+CREATE INDEX IF NOT EXISTS idx_directory_landing_match_codes_job_title ON directory_landing_match_codes (job_title_id);
+
+-- Who lists which job title, by their job title or any of their skills, claimed or unclaimed,
+-- leaving out owners restricted with scope all or contact. Not granted to the landing page: it
+-- holds profile ids. The two public views and directory_public_match_count read it. Ids are
+-- compared as text because some production id columns are VARCHAR.
+CREATE OR REPLACE VIEW directory_person_job_titles AS
+  WITH people AS (
+    SELECT p.id::text AS id, p.job_title_id::text AS job_title_id
+    FROM directory_profiles p
+    WHERE NOT EXISTS (
+      SELECT 1 FROM account_restrictions r
+      WHERE r.user_id::text = p.claimed_by_user_id::text
+        AND r.is_restricted
+        AND r.restriction_scope IN ('all', 'contact')
+    )
+  )
+  SELECT id AS person_id, job_title_id FROM people WHERE job_title_id IS NOT NULL
+  UNION
+  SELECT pp.id, sk.job_title_id::text
+  FROM people pp
+  JOIN directory_profile_skills ps ON ps.profile_id::text = pp.id
+  JOIN skills_taxonomy_skills sk ON sk.id::text = ps.skill_id::text;
+
+-- One row per active job title and how many people list it (0 when nobody does).
+CREATE OR REPLACE VIEW directory_public_skill_counts AS
+  WITH per_title AS (
+    SELECT job_title_id, COUNT(*)::integer AS n FROM directory_person_job_titles GROUP BY job_title_id
+  )
+  SELECT jt.id::text AS job_title_id,
+         s.name AS sector,
+         s.display_order AS sector_order,
+         jt.name AS title,
+         jt.display_order AS title_order,
+         COALESCE(pt.n, 0) AS people
+  FROM skills_taxonomy_job_titles jt
+  JOIN skills_taxonomy_sectors s ON s.id = jt.sector_id AND s.is_active
+  LEFT JOIN per_title pt ON pt.job_title_id = jt.id::text
+  WHERE jt.is_active;
+
+-- One row: everybody in the Directory, restriction rule as above.
+CREATE OR REPLACE VIEW directory_public_totals AS
+  WITH people AS (
+    SELECT p.id::text AS id
+    FROM directory_profiles p
+    WHERE NOT EXISTS (
+      SELECT 1 FROM account_restrictions r
+      WHERE r.user_id::text = p.claimed_by_user_id::text
+        AND r.is_restricted
+        AND r.restriction_scope IN ('all', 'contact')
+    )
+  )
+  SELECT (SELECT COUNT(*)::integer FROM people) AS total;
+
+-- One row: how many different active skills at least one Directory profile lists, and how many
+-- active skills there are. The same query as Workforce's Skills Coverage tile
+-- (lib/workforce/repository.ts getDashboard), so the landing page shows the same percentage.
+-- Counts of skills only; nothing about a person.
+CREATE OR REPLACE VIEW directory_public_skill_coverage AS
+  SELECT
+    (SELECT COUNT(DISTINCT dps.skill_id)::integer
+       FROM directory_profile_skills dps
+       JOIN directory_profiles p ON dps.profile_id::text = p.id::text
+       JOIN skills_taxonomy_skills s ON s.id = dps.skill_id
+      WHERE s.is_active = TRUE) AS covered,
+    (SELECT COUNT(*)::integer FROM skills_taxonomy_skills WHERE is_active = TRUE) AS catalog;
+
+-- How many people match a visitor: everyone who lists any of the given job titles, each counted
+-- once, as an exact number. Runs with its owner's rights so the landing page can call it
+-- without reading directory_person_job_titles itself; at most 60 titles per call.
+CREATE OR REPLACE FUNCTION directory_public_match_count(title_ids TEXT[])
+RETURNS INTEGER
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT n
+  FROM (
+    SELECT COUNT(DISTINCT person_id)::integer AS n
+    FROM directory_person_job_titles
+    WHERE job_title_id = ANY (title_ids[1:60])
+  ) x
+$$;
+REVOKE ALL ON FUNCTION directory_public_match_count(TEXT[]) FROM PUBLIC;
+
+-- In-demand needs (owner decision, 2026-10-13): each time a visitor on the landing page picks a need
+-- and nobody in the Directory matches it, the page records it once per visit, so the owner can see
+-- which needs go unmet and look for somebody. One row per time asked: the need's label (or
+-- "skill:<job title>" for a single added skill), the job titles behind it, and when. Nothing about
+-- the visitor: no code, name, contact detail or IP address. The landing page login may only add rows.
+CREATE TABLE IF NOT EXISTS directory_unmet_needs (
+  id BIGSERIAL PRIMARY KEY,
+  need TEXT NOT NULL,
+  job_title_ids TEXT[] NOT NULL DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS directory_unmet_needs ADD COLUMN IF NOT EXISTS need TEXT;
+ALTER TABLE IF EXISTS directory_unmet_needs ADD COLUMN IF NOT EXISTS job_title_ids TEXT[] NOT NULL DEFAULT '{}';
+ALTER TABLE IF EXISTS directory_unmet_needs ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_directory_unmet_needs_need ON directory_unmet_needs (need, created_at DESC);
 
 -- === beacon-plugin ===
 -- Beacon: admin-only one-way livestream. An admin goes live ad hoc to broadcast a live demo

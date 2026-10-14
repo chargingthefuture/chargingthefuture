@@ -293,6 +293,19 @@ app asks for a sign-in rather than showing an empty card. Nothing on this screen
 numbers you type live in the browser only and are gone on reload, and everything else recomputes.
 **Result:** web ☐ mobile ☐ — notes:
 
+### WF-13 · A failed read says why (added 2026-10-05)
+**Role:** member · **Surfaces:** web
+**Steps:**
+1. Open Workforce, then let the session expire (or sign out in another tab) and open the Overview,
+   Community, a bucket drilldown, Occupations and What's your 1%? tabs in turn.
+2. With the browser's network tools, make one later page of the Occupations list fail.
+3. Read `GET /api/workforce/dashboard` directly.
+**Expected:** Each tab in step 1 shows the message the route sent, not a fixed "Request failed (N)."
+line; only a body with no message or reason falls back to the status code. In step 2 the Occupations
+list shows its error state instead of a short list with a wrong count. In step 3 the answer carries a
+top-level `generatedAt` equal to `dashboard.generatedAtIso`.
+**Result:** web ☐ — notes:
+
 ---
 
 ## Admin walkthrough
