@@ -13,6 +13,24 @@ import {
 } from 'lib/feed/community-images';
 import { requireCommonsAccess } from '../_lib';
 import { ensureMutationCsrf } from '../../feed/_lib';
+import { feedPostCreateFailureOutcome, recordFeedAdminAudit, type FeedAuditEvent } from 'lib/feed/audit';
+
+// Every outcome of an admin picture post is a durable feed_admin_audit_trail row (the audit
+// contract's feed.community.post.image.create): the post is visible to signed-out visitors.
+function auditImagePost(
+  actorId: string,
+  outcome: Pick<FeedAuditEvent, 'status' | 'reason' | 'result' | 'errorCategory'>,
+  postId: string,
+): Promise<void> {
+  return recordFeedAdminAudit({
+    actorId,
+    pluginId: 'feed',
+    command: 'feed.community.post.image.create',
+    ...outcome,
+    targetType: 'feed_community_post',
+    targetId: postId,
+  });
+}
 
 // Post a message with a picture to the Commons. Admins only (owner decision, 2026-09-25): the owner
 // explains the product with screenshots, and Quora erases the accounts they were shared from. Members
@@ -93,6 +111,7 @@ export async function POST(request: Request) {
     return gate.response;
   }
   if (!gate.auth.isAdmin) {
+    await auditImagePost(gate.auth.userId, { status: 'deny', reason: 'admin_required', result: 'failure', errorCategory: 'forbidden' }, 'unknown');
     return NextResponse.json(
       { ok: false, code: FEED_ERROR_CODE.forbidden, message: 'Only admins can share pictures in the Commons.' },
       { status: 403 },
@@ -105,6 +124,7 @@ export async function POST(request: Request) {
 
   const parsed = await parseUpload(request);
   if ('error' in parsed) {
+    await auditImagePost(gate.auth.userId, { status: 'deny', reason: 'invalid_upload', result: 'failure', errorCategory: 'validation' }, 'unknown');
     return parsed.error;
   }
 
@@ -131,8 +151,10 @@ export async function POST(request: Request) {
       replyCount: 0,
       image: toCommonsMessageImage(result.postId, parsed.image),
     };
+    await auditImagePost(gate.auth.userId, { status: 'allow', reason: 'admin_picture_post', result: 'success', errorCategory: null }, result.postId);
     return NextResponse.json({ ok: true, message }, { status: 201 });
   } catch (error) {
+    await auditImagePost(gate.auth.userId, feedPostCreateFailureOutcome(error), 'unknown');
     return mapImagePostError(error);
   }
 }
