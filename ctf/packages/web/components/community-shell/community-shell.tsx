@@ -110,7 +110,7 @@ function normalizeShellProps(props: CommunityShellProps): NormalizedShellFlags {
     initialSection: props.initialSection ?? 'chat',
     isAuthenticated: props.isAuthenticated ?? false,
     isAdmin: props.isAdmin ?? false,
-    signInUrl: props.signInUrl ?? '/sign-in',
+    signInUrl: props.signInUrl ?? '/',
     verification: props.verification ?? null,
   };
 }

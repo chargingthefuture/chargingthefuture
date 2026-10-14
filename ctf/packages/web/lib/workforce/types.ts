@@ -27,19 +27,6 @@ export type WorkforceDashboard = {
   generatedAtIso: string;
 };
 
-export type WorkforceProfile = {
-  userId: string;
-  occupationId: string | null;
-  occupationName: string | null;
-  skillLevel: string;
-  recruitedState: boolean;
-  recruitedResolvedAtIso: string | null;
-  availabilityPreferences: Record<string, unknown>;
-  workPreferences: Record<string, unknown>;
-  serviceDeletedAtIso: string | null;
-  updatedAtIso: string;
-};
-
 // An occupation in the workforce tracker is a Skills Taxonomy job title (read-only). Workforce never
 // creates or edits occupations; it reads them and overlays the demand/supply numbers.
 export type WorkforceOccupation = {

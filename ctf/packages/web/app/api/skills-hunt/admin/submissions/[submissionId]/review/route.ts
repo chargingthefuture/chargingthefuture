@@ -7,7 +7,6 @@ import {
   reviewSubmission,
   validateReviewInput,
 } from 'lib/skills-hunt/repository';
-import { SKILLS_HUNT_REVIEW_ACTIONS } from 'lib/skills-hunt/types';
 import type { SkillsHuntReviewAction, SkillsHuntSubmissionReviewInput } from 'lib/skills-hunt/types';
 import { reportError } from 'lib/observability/report';
 import { failureReason, withReason } from 'lib/errors/failure';
@@ -16,9 +15,10 @@ type ReviewBody = Partial<SkillsHuntSubmissionReviewInput>;
 
 function toReviewInput(body: ReviewBody): SkillsHuntSubmissionReviewInput {
   return {
-    action: SKILLS_HUNT_REVIEW_ACTIONS.includes(body.action as SkillsHuntReviewAction)
-      ? (body.action as SkillsHuntReviewAction)
-      : 'flag',
+    // Passed through as sent: validateReviewInput refuses anything outside
+    // SKILLS_HUNT_REVIEW_ACTIONS with a 400. Defaulting a missing or misspelled action to 'flag'
+    // used to flag the submission and zero its points on a bad request.
+    action: (typeof body.action === 'string' ? body.action : '') as SkillsHuntReviewAction,
     notes: typeof body.notes === 'string' ? body.notes : null,
   };
 }
@@ -108,7 +108,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ sub
     logSkillsHuntAudit({
       actorId: gate.auth.userId,
       command: 'skills-hunt.submission.review',
-      commandVersion: '1.1.0',
+      commandVersion: '2.0.0',
       status: 'allow',
       reason: 'moderator_or_admin_route_guard',
       targetType: 'submission',
@@ -146,7 +146,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ sub
     logSkillsHuntAudit({
       actorId: gate.auth.userId,
       command: 'skills-hunt.submission.review',
-      commandVersion: '1.1.0',
+      commandVersion: '2.0.0',
       status: 'allow',
       reason: 'moderator_or_admin_route_guard',
       targetType: 'submission',

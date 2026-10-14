@@ -3,7 +3,9 @@
 import { useId } from 'react';
 
 // Skills Economy brand mark — the "Stack" (skill progression) logo: three ascending rounded bars
-// filled with the brand teal→purple gradient. Vector source: design/logo-options concept-d-stack-mark
+// filled with a burgundy gradient. Burgundy is the free tier's color across the project's sites
+// (chargingthefuture.com wears it; farahbrunache.com, the paid tier, is forest green), so the mark
+// ties the app to that family; it was teal→purple until 2026-10-14. Vector source: design/logo-options concept-d-stack-mark
 // (Concept D, chosen 2026-07-26). Rendered inline so it stays crisp at every chip size and inherits
 // no external asset. Each instance gets a unique gradient id (useId) so multiple marks on one page
 // (icon rail + phone bar) don't share/clobber the <linearGradient>.
@@ -19,8 +21,8 @@ export function SeMark({ size = 40, className }: { size?: number; className?: st
       className={className}
     >
       <linearGradient id={gradientId} x1="11.51" x2="96.71" y1="110.4" y2="110.4" gradientUnits="userSpaceOnUse">
-        <stop stopColor="#006D72" offset="0" />
-        <stop stopColor="#8F4BB2" offset="1" />
+        <stop stopColor="#D8687F" offset="0" />
+        <stop stopColor="#97304A" offset="1" />
       </linearGradient>
       <path
         fill={`url(#${gradientId})`}

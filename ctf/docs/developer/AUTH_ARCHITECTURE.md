@@ -34,17 +34,19 @@ after a completed flow.
     Account Portal origin is **derived from the publishable key** (`deriveAccountPortalOrigin`) and
     `/sign-in` is appended.
   - `getHostedSignUpUrl()` / `getHostedAfterSignOutUrl()` — sign-up on the same portal; after
-    sign-out, the configured URL unless it would loop, else the app home page.
+    sign-out, the configured URL unless it points at a same-host `/sign-in`, else the app home page.
 - `app/layout.tsx` passes `signInUrl` / `signUpUrl` / `signInFallbackRedirectUrl` /
   `signUpFallbackRedirectUrl` / `afterSignOutUrl` to `<ClerkProvider>`.
-- `app/sign-in/[[...sign-in]]/page.tsx` is a thin catch-all that forwards stray in-app `/sign-in`
-  links to the hosted portal (or home), and can never redirect to a `/sign-in` path on this host.
+- The app has **no `/sign-in` or `/sign-up` page of its own** (owner decision, 2026-10-06: those
+  pages were an oversight and were removed). A request for either path is a 404, and no redirect is
+  kept for them. Every sign-in or sign-up link in the app uses `getHostedSignInUrl()` /
+  `getHostedSignUpUrl()`, falling back to the home page (`/`) when no hosted URL can be resolved.
+  Do not add a link or redirect to `/sign-in` or `/sign-up` on this host.
 
-**Redirect-loop pitfall (do not reintroduce):** `NEXT_PUBLIC_AUTH_SIGN_IN_URL` must be the Account
-Portal URL (e.g. `https://accounts.<domain>/sign-in`). Setting it to `/sign-in` — or any URL on the
-app's own host — makes the in-app `/sign-in` page redirect to itself forever
-(`ERR_TOO_MANY_REDIRECTS`). A same-host/relative value is ignored at runtime (the app falls back to
-the key-derived portal) and is flagged by `scripts/check-auth-env.mjs`.
+**Same-host sign-in URL pitfall:** `NEXT_PUBLIC_AUTH_SIGN_IN_URL` must be the Account Portal URL
+(e.g. `https://accounts.<domain>/sign-in`). Setting it to `/sign-in` — or any URL on the app's own
+host — points at a page that does not exist. A same-host/relative value is ignored at runtime (the
+app falls back to the key-derived portal) and is flagged by `scripts/check-auth-env.mjs`.
 
 ---
 
@@ -201,7 +203,7 @@ import { evaluatePluginAccess } from "@/lib/auth/server-authz";
 // Default minUnlockTier is 'approved_full' (full access). Use 'support_only' for the Hub
 // general channel and 'any_authenticated' for unlock/account/deletion routes.
 const decision = await evaluatePluginAccess();
-if (!decision.allowed) redirect("/sign-in");
+if (!decision.allowed) redirect(getHostedSignInUrl() ?? "/");
 ```
 
 ---

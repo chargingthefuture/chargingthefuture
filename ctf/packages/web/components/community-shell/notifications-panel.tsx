@@ -59,12 +59,24 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
   return output;
 }
 
-// Save this browser's push subscription for the signed-in member. Returns null when the server saved
-// it, or the route's own reason when it did not (CSRF denial, bad payload, a failed save), so the
-// member is never told device alerts are on when nothing was stored.
-async function saveSubscriptionOnServer(subscription: PushSubscription): Promise<string | null> {
+// True when this device's subscription was made with the server's current public key. One made with an
+// older key can never be delivered to, so it is replaced rather than reused.
+function sameServerKey(subscription: PushSubscription, key: Uint8Array): boolean {
+  const current = subscription.options.applicationServerKey;
+  if (!current) return false;
+  const bytes = new Uint8Array(current);
+  if (bytes.length !== key.length) return false;
+  return bytes.every((value, index) => value === key[index]);
+}
+
+// Send this device's subscription to the server. The save upserts on (user, endpoint), so sending a
+// subscription the server already holds is harmless, and sending it every time repairs a server copy
+// that went missing (pruned after a failed send, or an earlier save that failed). Returns null when the
+// server saved it, or the route's own reason when it did not (CSRF denial, bad payload, a failed save),
+// so the member is never told device alerts are on when nothing was stored.
+async function saveDeviceSubscription(subscription: PushSubscription): Promise<string | null> {
   const json = subscription.toJSON();
-  const res = await fetch('/api/notifications/push/subscribe', {
+  const response = await fetch('/api/notifications/push/subscribe', {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-ctf-csrf': '1' },
     body: JSON.stringify({
@@ -73,57 +85,74 @@ async function saveSubscriptionOnServer(subscription: PushSubscription): Promise
       userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
     }),
   });
-  if (res.ok) return null;
+  if (response.ok) return null;
   return responseFailureText(
-    res,
-    'Couldn’t turn on device alerts on this device — the list above still updates in the app.',
+    response,
+    'Couldn’t save device alerts for this device — the list below still updates in the app.',
     'member',
   );
 }
 
-// Ensure this device has a Web Push subscription so opted-in categories can ping it. Best-effort:
-// returns a short note when it can't (unsupported browser, permission denied, push not configured on
-// the server, the server did not save it). The in-app feed works regardless; this only governs the
-// device ping. An existing browser subscription is still sent to the server: the save upserts on
-// (user_id, endpoint), so sending it again is safe, and it is the only way to repair a device whose
-// first save failed or register a second account on a shared browser.
-async function ensureDeviceSubscribed(): Promise<string | null> {
+// Ensure this device has a Web Push subscription the server knows about, so opted-in categories can
+// ping it. Best-effort: returns a short note when it can't (unsupported browser, permission denied,
+// push not configured on the server, the save failed). The in-app feed works regardless; this only
+// governs the device ping. Reuses the user-global push subscription (shared with Foundation).
+//
+// `fromTap` is true when a member just switched a category on. Only then may it ask for permission,
+// and it asks before anything else is awaited: iOS ignores a permission request that no longer counts
+// as coming from the tap. Without a tap (the panel opening) it never prompts; it only re-sends an
+// existing subscription and stays quiet about a browser that can't take one.
+async function ensureDeviceSubscribed(fromTap: boolean): Promise<string | null> {
   if (!pushSupported()) {
-    return 'This browser can’t show device alerts — the list above still updates in the app.';
+    return fromTap ? 'This browser can’t show device alerts — the list below still updates in the app.' : null;
   }
   try {
-    const registration = await navigator.serviceWorker.getRegistration();
-    const existing = registration ? await registration.pushManager.getSubscription() : null;
-    if (existing) {
-      return await saveSubscriptionOnServer(existing);
+    const permission = await ensurePermission(fromTap);
+    if (permission !== 'granted') return permission;
+    const serverKey = await fetchServerKey();
+    if (!serverKey) {
+      return 'Device alerts aren’t available yet — the list below still updates in the app.';
     }
-    if (Notification.permission === 'denied') {
-      return 'Device alerts are blocked in your browser settings — the list above still updates in the app.';
-    }
-    const permission = await Notification.requestPermission();
-    if (permission !== 'granted') {
-      return 'Device alerts are off for now — the list above still updates in the app.';
-    }
-    const keyRes = await fetch('/api/notifications/push/vapid-public-key', { cache: 'no-store' });
-    const keyData = (await keyRes.json().catch(() => ({}))) as { ok?: boolean; publicKey?: string };
-    if (!keyRes.ok || !keyData.publicKey) {
-      return 'Device alerts aren’t available yet — the list above still updates in the app.';
-    }
-    const reg = await navigator.serviceWorker.register('/sw.js');
-    await navigator.serviceWorker.ready;
-    const subscription = await reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(keyData.publicKey),
-    });
-    return await saveSubscriptionOnServer(subscription);
+    const subscription = await currentSubscription(serverKey);
+    return await saveDeviceSubscription(subscription);
   } catch (caught) {
     return failureText(caught, {
       area: 'notifications',
-      op: 'push_subscribe_device',
-      fallback: 'Couldn’t turn on device alerts on this device — the list above still updates in the app.',
+      op: fromTap ? 'device_subscribe' : 'device_resync',
+      fallback: 'Couldn’t turn on device alerts on this device — the list below still updates in the app.',
       audience: 'member',
     });
   }
+}
+
+// 'granted', or the note to show (null for a quiet no without a tap). Asks only from a tap, and as the
+// first awaited step, so iOS still counts the request as coming from that tap.
+async function ensurePermission(fromTap: boolean): Promise<'granted' | string | null> {
+  if (Notification.permission === 'granted') return 'granted';
+  if (Notification.permission === 'denied') {
+    return 'Device alerts are blocked in your browser settings — the list below still updates in the app.';
+  }
+  if (!fromTap) return null;
+  const permission = await Notification.requestPermission();
+  return permission === 'granted' ? 'granted' : 'Device alerts are off for now — the list below still updates in the app.';
+}
+
+// The server's public push key as bytes, or null when push is not configured on the server.
+async function fetchServerKey(): Promise<Uint8Array<ArrayBuffer> | null> {
+  const keyRes = await fetch('/api/notifications/push/vapid-public-key', { cache: 'no-store' });
+  const keyData = (await keyRes.json().catch(() => ({}))) as { ok?: boolean; publicKey?: string };
+  return keyRes.ok && keyData.publicKey ? urlBase64ToUint8Array(keyData.publicKey) : null;
+}
+
+// This device's subscription for the current server key: the existing one when it matches, otherwise
+// a fresh one (an old-key subscription is dropped first).
+async function currentSubscription(serverKey: Uint8Array<ArrayBuffer>): Promise<PushSubscription> {
+  const registration = await navigator.serviceWorker.register('/sw.js');
+  await navigator.serviceWorker.ready;
+  const existing = await registration.pushManager.getSubscription();
+  if (existing && sameServerKey(existing, serverKey)) return existing;
+  if (existing) await existing.unsubscribe();
+  return registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: serverKey });
 }
 
 // The notifications center: the member's own feed of updates across plugins, plus the device-push
@@ -236,6 +265,9 @@ function NotificationsManage({
       >
         {manageOpen ? 'Hide' : 'Manage what pings your device'}
       </button>
+      {pushNote ? (
+        <p className={styles.notificationsManageNote} role="status">{pushNote}</p>
+      ) : null}
       {manageOpen ? (
         <div className={styles.notificationsManageBody}>
           <p className={styles.notificationsManageNote}>
@@ -244,9 +276,6 @@ function NotificationsManage({
           </p>
           {prefsError ? (
             <p className={styles.notificationsManageNote} role="status">{prefsError}</p>
-          ) : null}
-          {pushNote ? (
-            <p className={styles.notificationsManageNote} role="status">{pushNote}</p>
           ) : null}
           {PUSH_TOGGLES.map((toggle) => (
             <label key={toggle.key} className={styles.notificationsPrefRow} aria-label={toggle.label}>
@@ -332,10 +361,20 @@ export function NotificationsPanel({ onOpenDeepLink }: { onOpenDeepLink?: (linkP
   useEffect(() => {
     void requestJson<NotificationPreferencesResponse>('/api/notifications/preferences')
       .then((payload) => {
+        if (!mountedRef.current) return;
         setPrefs(payload.preferences);
         setPrefsError(null);
+        // A member who already has pings on gets this device's subscription re-sent to the server
+        // each time the panel opens, so a lost server copy repairs itself without toggling a switch.
+        const { pushSafety, pushActivity, pushCommunity } = payload.preferences;
+        if (pushSafety || pushActivity || pushCommunity) {
+          void ensureDeviceSubscribed(false).then((note) => {
+            if (mountedRef.current && note) setPushNote(note);
+          });
+        }
       })
       .catch((loadError: unknown) => {
+        if (!mountedRef.current) return;
         // The panel still shows the feed; say why the device-ping switches are missing.
         setPrefsError(
           loadError instanceof Error ? loadError.message : 'Unable to load your device alert settings.',
@@ -373,7 +412,7 @@ export function NotificationsPanel({ onOpenDeepLink }: { onOpenDeepLink?: (linkP
       const turningOnPush =
         (key === 'pushSafety' || key === 'pushActivity' || key === 'pushCommunity') && next[key] === true;
       if (turningOnPush) {
-        void ensureDeviceSubscribed().then((note) => setPushNote(note));
+        void ensureDeviceSubscribed(true).then((note) => setPushNote(note));
       }
       void requestJson<NotificationPreferencesResponse>('/api/notifications/preferences', {
         method: 'PUT',
@@ -403,12 +442,6 @@ export function NotificationsPanel({ onOpenDeepLink }: { onOpenDeepLink?: (linkP
         ) : null}
       </div>
 
-      <NotificationsFeedStatus loading={loading} error={error} count={items.length} />
-
-      {items.map((item) => (
-        <NotificationRow key={item.id} item={item} markRead={markRead} onOpenDeepLink={onOpenDeepLink} />
-      ))}
-
       <NotificationsManage
         prefs={prefs}
         savingPref={savingPref}
@@ -418,6 +451,13 @@ export function NotificationsPanel({ onOpenDeepLink }: { onOpenDeepLink?: (linkP
         setManageOpen={setManageOpen}
         togglePref={togglePref}
       />
+
+      <NotificationsFeedStatus loading={loading} error={error} count={items.length} />
+
+      {items.map((item) => (
+        <NotificationRow key={item.id} item={item} markRead={markRead} onOpenDeepLink={onOpenDeepLink} />
+      ))}
+
     </div>
   );
 }
