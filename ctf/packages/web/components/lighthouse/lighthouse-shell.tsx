@@ -57,6 +57,7 @@ function LighthouseTabContent({
   onSelectMatch,
   onEditHandled,
   onListYourPlace,
+  onMatchUpdated,
 }: {
   tab: Tab;
   visibleProperties: Property[];
@@ -83,6 +84,7 @@ function LighthouseTabContent({
   onSelectMatch: (match: Match | null) => void;
   onEditHandled: () => void;
   onListYourPlace: () => void;
+  onMatchUpdated: () => void;
 }) {
   return (
     <>
@@ -107,7 +109,7 @@ function LighthouseTabContent({
         />
       )}
       {tab === "matches" && (
-        <LighthouseMatches matches={matches} properties={properties} onSelectProperty={onSelectProperty} viewerUserId={viewerUserId} />
+        <LighthouseMatches matches={matches} properties={properties} onSelectProperty={onSelectProperty} viewerUserId={viewerUserId} onMatchUpdated={onMatchUpdated} />
       )}
       {tab === "chat" && (
         <LighthouseChat
@@ -288,6 +290,7 @@ export function LighthouseShell({ userId, username, isAdmin }: { userId: string;
       onSelectMatch={setSelectedMatch}
       onEditHandled={() => setEditPropertyId(null)}
       onListYourPlace={() => setTab("host")}
+      onMatchUpdated={() => void reloadMatches()}
     />
   );
 

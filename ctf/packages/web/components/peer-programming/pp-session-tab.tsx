@@ -124,7 +124,7 @@ export function PeerProgrammingSessionTab({ room, participants }: { room: Room |
     <div style={{ flex: 1, padding: 24, overflowY: "auto", minHeight: 0 }}>
       <div style={{ marginBottom: 20, padding: "18px 24px", borderRadius: 16, background: `linear-gradient(135deg,${t.ACCENT}15 0%,rgba(139,92,246,0.05) 100%)`, border: `1px solid ${t.ACCENT}25` }}>
         <div style={{ fontSize: 20, fontWeight: 800, color: t.TITLE, marginBottom: 4 }}>Live Session</div>
-        <div style={{ fontSize: 14, color: t.SUBTLE }}>{room?.name || "Your Cohort"} · {participants.length} participants</div>
+        <div style={{ fontSize: 14, color: t.SUBTLE }}>{room?.name || "Your Cohort"} · {participants.length} {participants.length === 1 ? "participant" : "participants"}</div>
       </div>
 
       {credentials ? (

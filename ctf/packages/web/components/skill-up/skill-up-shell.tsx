@@ -13,6 +13,7 @@ import { SkillUpWallet } from "./su-wallet";
 import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 import { RefreshButton } from "@/components/shared/refresh-button";
+import { reportError } from "lib/observability/report";
 
 const HEADINGS: Record<NavKey, string> = {
   browse: "Browse Cohorts",
@@ -56,23 +57,41 @@ async function fetchWallet(signal: AbortSignal): Promise<Wallet | null> {
   return "wallet" in wd && wd.wallet ? (wd.wallet as Wallet) : (wd as Wallet);
 }
 
+// A refused or failed section read: carries the route's own message, or what failed and the HTTP
+// status when the route sent none. A failed read used to come back as an empty list, so an outage
+// read as "No trainers listed yet" (rule 137).
+class SectionReadError extends Error {}
+
+async function sectionReadError(res: Response, what: string): Promise<SectionReadError> {
+  const body = (await res.json().catch(() => null)) as { message?: unknown } | null;
+  const routeMessage = typeof body?.message === "string" && body.message.trim() ? body.message : null;
+  return new SectionReadError(routeMessage ?? `Unable to load ${what} (HTTP ${res.status}).`);
+}
+
+const SECTION_NAMES: Record<string, string> = { trainers: "trainers", achievements: "achievements", wallet: "your wallet" };
+
+function sectionLoadErrorMessage(section: string, e: unknown): string {
+  if (e instanceof SectionReadError) return e.message;
+  return `Unable to load ${SECTION_NAMES[section] ?? section}. Check your connection and try again.`;
+}
+
 async function fetchTrainers(signal: AbortSignal): Promise<Trainer[]> {
   const res = await fetch("/api/skill-up/trainers", { signal });
-  if (!res.ok) return [];
+  if (!res.ok) throw await sectionReadError(res, "trainers");
   const data = (await res.json()) as { trainers?: Trainer[] };
   return data.trainers ?? [];
 }
 
 async function fetchAchievements(signal: AbortSignal): Promise<Achievement[]> {
   const res = await fetch("/api/skill-up/achievements", { signal });
-  if (!res.ok) return [];
+  if (!res.ok) throw await sectionReadError(res, "achievements");
   const data = (await res.json()) as { achievements?: Achievement[] };
   return data.achievements ?? [];
 }
 
 async function fetchWalletView(signal: AbortSignal): Promise<WalletView | null> {
   const res = await fetch("/api/skill-up/wallet", { signal });
-  if (!res.ok) return null;
+  if (!res.ok) throw await sectionReadError(res, "your wallet");
   const data = (await res.json()) as { wallet?: WalletView };
   return data.wallet ?? null;
 }
@@ -112,6 +131,14 @@ function CenteredNote({ color, children }: { color: string; children: React.Reac
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 200, color, fontSize: 14 }}>{children}</div>
   );
+}
+
+// A lazily loaded section: loading until its read settles, then its error in place of the section
+// (so a failure never reads as an empty list), otherwise the section itself.
+function SectionBody({ loaded, error, t, children }: { loaded: boolean; error: string | undefined; t: SkillUpTokens; children: React.ReactNode }) {
+  if (!loaded) return <CenteredNote color={t.TEXT_SUBTLE}>Loading…</CenteredNote>;
+  if (error) return <div role="alert"><CenteredNote color="#EF4444">{error}</CenteredNote></div>;
+  return <>{children}</>;
 }
 
 function ShellContent({
@@ -165,6 +192,7 @@ export function SkillUpShell({ isAdmin = false }: { userId?: string; isAdmin?: b
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [walletView, setWalletView] = useState<WalletView | null>(null);
   const [sectionLoaded, setSectionLoaded] = useState<Record<string, boolean>>({});
+  const [sectionErrors, setSectionErrors] = useState<Record<string, string>>({});
   const { theme } = useTheme();
   const t = getSkillUpTokens(theme);
 
@@ -222,6 +250,11 @@ export function SkillUpShell({ isAdmin = false }: { userId?: string; isAdmin?: b
     const controller = new AbortController();
     const { signal } = controller;
     void (async () => {
+      setSectionErrors((prev) => {
+        const next = { ...prev };
+        delete next[nav];
+        return next;
+      });
       try {
         if (nav === "trainers") {
           const data = await fetchTrainers(signal);
@@ -234,9 +267,11 @@ export function SkillUpShell({ isAdmin = false }: { userId?: string; isAdmin?: b
           if (!signal.aborted) setWalletView(data);
         }
         if (!signal.aborted) setSectionLoaded((prev) => ({ ...prev, [nav]: true }));
-      } catch {
-        // Section fetch failures fall back to that section's empty/unavailable state.
-        if (!signal.aborted) setSectionLoaded((prev) => ({ ...prev, [nav]: true }));
+      } catch (e: unknown) {
+        if (signal.aborted) return;
+        reportError(e, { area: "skill-up", op: `member_${nav}_load` });
+        setSectionErrors((prev) => ({ ...prev, [nav]: sectionLoadErrorMessage(nav, e) }));
+        setSectionLoaded((prev) => ({ ...prev, [nav]: true }));
       }
     })();
     return () => { controller.abort(); };
@@ -310,9 +345,9 @@ export function SkillUpShell({ isAdmin = false }: { userId?: string; isAdmin?: b
           />
         )}
         progress={<SkillUpProgress enrollments={enrollments} onBrowse={() => setNav("browse")} onLeft={() => void handleRefresh()} />}
-        trainers={sectionLoaded.trainers ? <SkillUpTrainers trainers={trainers} /> : <CenteredNote color={t.TEXT_SUBTLE}>Loading…</CenteredNote>}
-        achievements={sectionLoaded.achievements ? <SkillUpAchievements achievements={achievements} /> : <CenteredNote color={t.TEXT_SUBTLE}>Loading…</CenteredNote>}
-        wallet={sectionLoaded.wallet ? <SkillUpWallet wallet={walletView} /> : <CenteredNote color={t.TEXT_SUBTLE}>Loading…</CenteredNote>}
+        trainers={<SectionBody loaded={Boolean(sectionLoaded.trainers)} error={sectionErrors.trainers} t={t}><SkillUpTrainers trainers={trainers} /></SectionBody>}
+        achievements={<SectionBody loaded={Boolean(sectionLoaded.achievements)} error={sectionErrors.achievements} t={t}><SkillUpAchievements achievements={achievements} /></SectionBody>}
+        wallet={<SectionBody loaded={Boolean(sectionLoaded.wallet)} error={sectionErrors.wallet} t={t}><SkillUpWallet wallet={walletView} /></SectionBody>}
       />
     </>
   );

@@ -679,6 +679,35 @@ contracts:
     idempotency: false
 
   - pluginId: foundation
+    command: foundation.admin.dashboard.get
+    version: 1.0.0
+    description: Read the Foundation Admin snapshot counts (providers who offer a skill, connection threads, quote requests, active calls, unacknowledged notifications). The same getFoundationDashboard query the web admin page reads on its server, served for the Android admin screen. Read only.
+    inputSchema: {}
+    outputSchema:
+      providersTotal:
+        type: integer
+      threadsTotal:
+        type: integer
+      quotesTotal:
+        type: integer
+      activeCallsTotal:
+        type: integer
+      pendingNotificationsTotal:
+        type: integer
+      generatedAtIso:
+        type: string
+    dataAccess:
+      - directory_profiles
+      - foundation_provider_skills
+      - foundation_connection_threads
+      - foundation_quote_requests
+      - foundation_call_sessions
+      - foundation_notification_events
+    purpose: operational_governance
+    retentionClass: derived_short_lived
+    idempotency: true
+
+  - pluginId: foundation
     command: foundation.provider.instant-call.get
     version: 1.0.0
     description: Read the signed-in member's own Foundation instant 1:1 call settings (whether they are reachable for an immediate paid call, the rate in ServiceCredits, and the per-block interval in minutes).
