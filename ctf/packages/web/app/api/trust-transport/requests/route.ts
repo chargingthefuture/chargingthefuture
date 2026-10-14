@@ -116,9 +116,15 @@ export async function POST(request: Request) {
     );
   }
 
-  const idempotencyKey = typeof body.idempotencyKey === 'string' && body.idempotencyKey.trim().length > 0
-    ? body.idempotencyKey.trim()
-    : `${gate.auth.userId}:${Date.now()}`;
+  // Required by the command contract. A key made up here would differ on every retry, so a booking
+  // resent after a lost response would create a second open request.
+  const idempotencyKey = typeof body.idempotencyKey === 'string' ? body.idempotencyKey.trim() : '';
+  if (!idempotencyKey) {
+    return NextResponse.json(
+      { ok: false, code: TRUST_TRANSPORT_ERROR_CODE.invalidPayload, message: 'idempotencyKey is required.' },
+      { status: 400 },
+    );
+  }
 
   try {
     const item = await createRequest(gate.auth.userId, input, idempotencyKey);
