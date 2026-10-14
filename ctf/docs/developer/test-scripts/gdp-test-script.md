@@ -11,7 +11,7 @@
 | **Surfaces** | Web (`/apps/gdp`, `/api/gdp/report/current`, `/api/gdp/countries`) — web-only since 2026-07-20; Android surface removed |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-gross-domestic-product-feature-inventory.md` |
-| **Generated** | 2026-07-28 (commit 5564bff3) · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-09-20 manual update: GDP-15 covers sharing the page as a capture of itself · 2026-09-20 manual update: the picture control moved to the new /admin/gdp page, so GDP-15 runs there and GDP-A1 now asserts that page exists rather than that it does not · 2026-09-21 manual update: GDP-A1 step 1b covers the Admin / Member view header pair |
+| **Generated** | 2026-07-28 (commit 5564bff3) · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-09-20 manual update: GDP-15 covers sharing the page as a capture of itself · 2026-09-20 manual update: the picture control moved to the new /admin/gdp page, so GDP-15 runs there and GDP-A1 now asserts that page exists rather than that it does not · 2026-09-21 manual update: GDP-A1 step 1b covers the Admin / Member view header pair · 2026-10-14 manual note: the `dashboard.snapshot.get` contract and the `gdp_value_index` / `total_members` metric entries were corrected to describe the live report the route already returns — documentation only, no test change |
 
 ---
 

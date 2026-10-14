@@ -371,6 +371,18 @@ GDP draws aggregated values from upstream plugin schemas; no dedicated seed scri
 ## 10) Change Log
 
 - 2026-10-12: **Report and countries failures explain themselves; credits labels; the weekly post's index matches the dashboard (#2936, #2942, #2939).** (1) `GET /api/gdp/report/current` and `GET /api/gdp/countries` had no error handling, so a failing read was a bare 500 with no code and no report. Both now answer 503 through `failureResponse` (member audience: plain sentence, `code`, `reference`; reason to the error report). The shell shows the route's message for a non-OK report answer instead of a fixed sentence, reports the caught value through `failureText`, and a failed country read now reaches the error report instead of leaving the panel empty with no trace. (2) Two Value by Source labels described ServiceCredits in money terms; they now read **SkillUp credits sent to trainers for validated work** and **Foundation service calls settled in ServiceCredits**. (3) `ctf/scripts/lib/gdpValueIndex.mjs`, used by the weekly community stats draft and `recognizeGdp.mjs`, had drifted from `recognition.ts`: it lacked the Foundation completed-quote source, and its recurring ServiceCredits query counted lines declared inside per-occurrence apps by value (counting those credits twice) instead of as one RACT each. The script now carries the quote source and mirrors `PER_OCCURRENCE_ORIGIN_PLUGINS`, so the posted index and the stored weekly snapshot match the dashboard. No schema change.
+- 2026-10-14: **The dashboard contract and the metric registry describe what the code does (#2945,
+  #2947).** `dashboard.snapshot.get` (now v1.2.0) listed a required `year` input and GDP-total outputs
+  (`totalGDP`, `serviceGDP`, `goodsGDP`, `perCapita`, breakdowns, `rolloutProgress`) that
+  `GET /api/gdp/report/current` never took or returned. Its schema is now the live report shape
+  (`{ ok, report: { publication, metrics, sources, projection } }`, type `GdpLiveReport`), and its
+  `dataAccess` lists what the route reads: `foundation_quote_requests` and `socket_relay_requests`
+  as recognition sources, `directory_profiles` for the member count, and no longer the snapshot
+  history tables the live route does not touch. In `ctf/config/canonical_metrics.yaml`,
+  `gdp_value_index` now says the weights are the fixed `DEFAULT_CONTRIBUTION_WEIGHTS` in code rather
+  than owner-set `currency_usd_rates`, and lists every source table; a new `total_members` entry
+  states that the figure is the Directory roster and that a failed roster read falls back to the
+  accounts count, a different population. Documentation only: no code, route or schema change.
 - 2026-09-21: **The GDP header gained the admin↔member pair (owner report).** Every other plugin
   header carries an Admin pill for admins and a Member view pill on its admin side; GDP had
   neither, so the new admin page could only be reached from the admin index and there was no way
