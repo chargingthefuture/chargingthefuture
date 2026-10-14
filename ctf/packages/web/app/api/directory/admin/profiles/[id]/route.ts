@@ -116,6 +116,20 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
     return NextResponse.json({ ok: true, profile }, { status: 200 });
   } catch (error) {
+    // The submitted Quora address is on the takedown list (the person asked to be removed). The edit
+    // cannot succeed until an admin lifts that block, so answer 409 and keep the expected refusal out
+    // of error tracking.
+    if (error instanceof Error && error.message === 'directory_quora_url_suppressed') {
+      return NextResponse.json(
+        {
+          ok: false,
+          code: DIRECTORY_ERROR_CODE.quoraUrlSuppressed,
+          message:
+            "This Quora profile was removed from the Directory at the person's request, so it cannot be listed again until an admin lifts that block.",
+        },
+        { status: 409 },
+      );
+    }
     reportError(error, { area: 'directory', op: 'admin_profiles_id' });
     return mapSelectorError(error);
   }

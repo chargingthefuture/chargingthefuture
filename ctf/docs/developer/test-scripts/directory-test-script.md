@@ -580,6 +580,9 @@ nomination, so it carries a Quora URL. Note its Quora URL.
 4. Try to re-list that Quora URL: (a) accept a fresh SkillsHunt nomination of the same Quora URL —
    confirm **no** community-generated directory profile is created; (b) as an admin, create a profile
    with that Quora URL — confirm it is rejected (409 `DIRECTORY_QUORA_URL_SUPPRESSED`).
+   (c) as an admin, edit a **different** existing profile and paste that Quora URL into it — confirm
+   the save is rejected (409 `DIRECTORY_QUORA_URL_SUPPRESSED`), and that editing that profile's
+   other fields without touching its address still saves.
 5. In the panel, click **"Allow again"** on that entry; confirm a reason is required. Enter one and
    confirm. Now repeat step 4(b) — the profile can be created again.
 5a. Before lifting it, try step 4 again with the **same** URL written differently each time: drop
