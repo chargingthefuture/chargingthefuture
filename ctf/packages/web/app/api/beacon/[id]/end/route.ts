@@ -33,6 +33,27 @@ export async function POST(request: Request, context: RouteContext) {
       );
     }
 
+    // Only a live event can be ended. Ending a draft would turn it into an ended row that delete
+    // (drafts only) then refuses, and an ended event has nothing left to stop.
+    if (event.status !== 'live') {
+      await insertBeaconAudit({
+        actorId: gate.auth.userId,
+        command: 'beacon.event.end',
+        policyStatus: 'deny',
+        reason: `not_live:${event.status}`,
+        targetType: 'event',
+        targetId: event.id,
+      });
+      return NextResponse.json(
+        {
+          ok: false,
+          code: BEACON_ERROR_CODE.conflict,
+          message: event.status === 'draft' ? 'This event has not gone live, so there is nothing to end.' : 'This event has already ended.',
+        },
+        { status: 409 },
+      );
+    }
+
     // Stop the call first so billing stops even if the DB update were to fail. A null return means
     // Stream is not configured, in which case there is nothing to stop — proceed to mark ended.
     try {
@@ -43,7 +64,8 @@ export async function POST(request: Request, context: RouteContext) {
       reportError(streamError, { area: 'beacon', op: 'end_stop_call', extra: { eventId: event.id } });
     }
 
-    const endedEvent = (await markBeaconEventEnded(event.id)) ?? event;
+    // Null means a simultaneous end already moved the row; answer with its current state.
+    const endedEvent = (await markBeaconEventEnded(event.id)) ?? (await getBeaconEvent(event.id)) ?? event;
 
     await insertBeaconAudit({
       actorId: gate.auth.userId,

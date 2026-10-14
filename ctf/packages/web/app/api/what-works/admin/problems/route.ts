@@ -6,6 +6,7 @@ import {
   parseJsonBody,
   readTrimmedString,
   requireWhatWorksAdminAccess,
+  runAuditedWhatWorksAdminMutation,
   whatWorksError,
 } from '../../_lib';
 import { logWhatWorksAudit, recordWhatWorksAdminAudit } from 'lib/what-works/audit';
@@ -69,11 +70,16 @@ export async function POST(request: Request) {
   if (csrf) {
     return csrf;
   }
-  const gate = await requireWhatWorksAdminAccess();
+  const target = { command: 'what-works.admin.problem.create', targetType: 'problem', targetId: 'new' };
+  const gate = await requireWhatWorksAdminAccess(target);
   if (!gate.allowed) {
     return gate.response;
   }
+  const actorId = gate.auth.userId;
+  return runAuditedWhatWorksAdminMutation(actorId, target, () => createProblemFromRequest(request, actorId));
+}
 
+async function createProblemFromRequest(request: Request, actorId: string): Promise<NextResponse> {
   const body = await parseJsonBody(request);
   if (!body) {
     return whatWorksError('Invalid JSON body.', 'what_works_invalid_body', 400);
@@ -90,10 +96,10 @@ export async function POST(request: Request) {
     emoji,
     context,
     sortOrder,
-    createdBy: gate.auth.userId,
+    createdBy: actorId,
   });
   await recordWhatWorksAdminAudit({
-    actorId: gate.auth.userId,
+    actorId,
     command: 'what-works.admin.problem.create',
     status: 'allow',
     reason: 'admin_route_guard',

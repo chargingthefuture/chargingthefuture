@@ -13,6 +13,7 @@ import {
   parseJsonBody,
   readTrimmedString,
   requireWhatWorksAdminAccess,
+  runAuditedWhatWorksAdminMutation,
   whatWorksError,
 } from '../../../_lib';
 import { recordWhatWorksAdminAudit } from 'lib/what-works/audit';
@@ -139,11 +140,23 @@ export async function PATCH(request: Request, context: RouteContext) {
   if (csrf) {
     return csrf;
   }
-  const gate = await requireWhatWorksAdminAccess();
+  const { id } = await context.params;
+  // Update until the body says it is a review; the audited run reads the command after it finishes.
+  const target = { command: 'what-works.admin.product.update', targetType: 'product', targetId: id };
+  const gate = await requireWhatWorksAdminAccess(target);
   if (!gate.allowed) {
     return gate.response;
   }
-  const { id } = await context.params;
+  const actorId = gate.auth.userId;
+  return runAuditedWhatWorksAdminMutation(actorId, target, () => patchProductFromRequest(request, id, actorId, target));
+}
+
+async function patchProductFromRequest(
+  request: Request,
+  id: string,
+  actorId: string,
+  target: { command: string },
+): Promise<NextResponse> {
   const existing = await getProductById(id);
   if (!existing) {
     return whatWorksError('That item could not be found.', 'what_works_product_not_found', 404);
@@ -156,9 +169,10 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   const action = readTrimmedString(body.action);
   if (action === null) {
-    return handleProductEdit(id, body, gate.auth.userId);
+    return handleProductEdit(id, body, actorId);
   }
-  return handleProductModeration(id, body, action, gate.auth.userId);
+  target.command = 'what-works.admin.product.review';
+  return handleProductModeration(id, body, action, actorId);
 }
 
 export async function DELETE(request: Request, context: RouteContext) {
@@ -166,18 +180,24 @@ export async function DELETE(request: Request, context: RouteContext) {
   if (csrf) {
     return csrf;
   }
-  const gate = await requireWhatWorksAdminAccess();
+  const { id } = await context.params;
+  const target = { command: 'what-works.admin.product.delete', targetType: 'product', targetId: id };
+  const gate = await requireWhatWorksAdminAccess(target);
   if (!gate.allowed) {
     return gate.response;
   }
-  const { id } = await context.params;
+  const actorId = gate.auth.userId;
+  return runAuditedWhatWorksAdminMutation(actorId, target, () => deleteProductById(id, actorId));
+}
+
+async function deleteProductById(id: string, actorId: string): Promise<NextResponse> {
   const existing = await getProductById(id);
   if (!existing) {
     return whatWorksError('That item could not be found.', 'what_works_product_not_found', 404);
   }
   await deleteProduct(id);
   await recordWhatWorksAdminAudit({
-    actorId: gate.auth.userId,
+    actorId,
     command: 'what-works.admin.product.delete',
     status: 'allow',
     reason: 'admin_route_guard',
