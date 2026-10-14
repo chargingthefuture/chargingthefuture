@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { participantLeftUsage, surfaceForCallCid } from './webhook-usage';
+import { participantLeftDedupeKey, participantLeftUsage, surfaceForCallCid } from './webhook-usage';
 
 // The webhook meter credits the calls that have no heartbeat and never the ones that do: a Chyme
 // minute must not be counted twice, and an odd payload must be ignored rather than thrown on.
@@ -35,5 +35,26 @@ describe('participantLeftUsage', () => {
     expect(participantLeftUsage({ type: 'call.session_participant_left', call_cid: 'default:pp-1', duration_seconds: 0 })).toBeNull();
     expect(participantLeftUsage({ type: 'call.session_participant_left', call_cid: 'default:chyme-main-room', duration_seconds: 60 })).toBeNull();
     expect(participantLeftUsage({ type: 'call.session_participant_left', call_cid: 'default:pp-1' })).toBeNull();
+  });
+});
+
+describe('participantLeftDedupeKey', () => {
+  it('keys one participant leaving one session, so a re-sent delivery matches the first', () => {
+    const payload = {
+      type: 'call.session_participant_left',
+      call_cid: 'default:pp-1',
+      session_id: 'session-1',
+      participant: { user_session_id: 'join-7' },
+      duration_seconds: 60,
+    };
+    expect(participantLeftDedupeKey(payload)).toBe('default:pp-1|session-1|join-7');
+    expect(participantLeftDedupeKey({ ...payload, participant: { user_session_id: 'join-8' } })).not.toBe(
+      participantLeftDedupeKey(payload),
+    );
+  });
+
+  it('gives no key when any part is missing', () => {
+    expect(participantLeftDedupeKey({ call_cid: 'default:pp-1', session_id: 'session-1' })).toBeNull();
+    expect(participantLeftDedupeKey({ call_cid: 'default:pp-1', participant: { user_session_id: 'j' } })).toBeNull();
   });
 });
