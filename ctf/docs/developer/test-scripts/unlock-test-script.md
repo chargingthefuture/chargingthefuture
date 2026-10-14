@@ -110,6 +110,20 @@ not see this banner. On android the client Unlock gate lets a treatment member t
 (instead of walling them) and the banner behaves the same. Inert when the flag is off everywhere.
 **Result:** web ☐ android ☐ — notes:
 
+### UNLOCK-M3 · Android Unlock screen matches the web, and the wall holds still
+**Role:** member (not yet verified), then an approved member · **Surfaces:** android, compared with web (~390px)
+**Steps:**
+1. As an unverified member with no submission, open the app: the Unlock wall shows the web's
+   heading, wording, the "Show me where to find it" steps with the picture, the optional hint box,
+   the account-removal survey note and the ban policy, plus Sign out (the one addition to the web).
+2. Wait on the wall for a minute: it stays put. It must not flash the loading screen again and again.
+3. Submit a valid Quora profile URL: the status view shows the pending state with the web's wording.
+4. As an approved member, open the gear, then Your account, then Verification: the same Unlock
+   screen opens with a back control, and back returns to Your account.
+**Expected:** The Android screens match the web screens line for line; only the first check after
+sign-in shows the loading screen.
+**Result:** android ☐ — notes:
+
 ### UNLOCK-M4 · The Commons is stripped back until approval (added 2026-09-26)
 **Role:** member not yet approved, then the same member approved; an approved member; admin · **Surfaces:** web + mobile-responsive
 **Steps:**
@@ -139,8 +153,9 @@ load after approval.
    "Hub" (terminology fix, 2026-08-03, owner-specified wording per the brand lexicon).
 3. On web, confirm the button reads "Continue to the Commons" and tapping it lands on the Commons
    home page (`/`), not the plugin navigator (`/apps`).
-4. On android, confirm the same "Welcome to Skills Economy (SE)" title (that card has no continue
-   button).
+4. On android, confirm the same "Welcome to Skills Economy (SE)" title and the same "Continue to the
+   Commons" button. Tapping it opens the web app's Commons home page (`/`) in the phone's browser,
+   because the Android app has no Commons (owner decision, 2026-10-09).
 5. Before approval, on the submission screen: confirm the explanation says "To unlock full access to
    Skills Economy" on web, and "Skills Economy uses Quora profile verification" on android — neither
    should say "Survivor Hub" (name retired 2026-08-09).
@@ -504,8 +519,12 @@ case that was broken: a waiting member has a stored `pending_readonly` tier, whi
 screen** — that was the bug. The screen you are leaving is not repainted first, and you do not return
 to where you started. The verification banner sits above the chat, and your pending submission is
 untouched — asking for help never changes your place in the queue. Step 4: Android shows the same help
-card on a pending status screen and behaves the same. If the grant cannot be recorded, an error appears
-with a link onward rather than a button that silently did nothing.
+card on a pending status screen; pressing the button records the request and opens the web app's
+Commons home page in the phone's browser, and the app behind it moves on to the Apps list (owner
+decision, 2026-10-09). If the grant cannot be recorded, an error appears
+with a link onward rather than a button that silently did nothing. On Android that link, "Try opening
+the Commons anyway", opens the web app's Commons home page in the phone's browser (owner decision,
+2026-10-09).
 **Result:** web ☐ · android ☐ — notes:
 
 ### UNLOCK-A8b · Coming back a second day opens the Commons on its own

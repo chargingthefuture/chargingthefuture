@@ -13,9 +13,9 @@ import styles from './accessibility.module.css';
 // when the status or the "last reviewed" date changes there, change it here.
 
 export const metadata: Metadata = {
-  title: 'Accessibility — Charging the Future',
+  title: 'Accessibility — Skills Economy',
   description:
-    'How Charging the Future works toward WCAG 2.2 AA accessibility, where it stands today, and how to report a problem.',
+    'How Skills Economy works toward WCAG 2.2 AA accessibility, where it stands today, and how to report a problem.',
 };
 
 const LAST_REVIEWED = 'July 11, 2026';
@@ -26,7 +26,7 @@ export default function AccessibilityPage() {
       <div className={styles.container}>
         <PublicPageNav />
         <header className={styles.header}>
-          <p className={styles.brand}>Charging the Future</p>
+          <p className={styles.brand}>Skills Economy</p>
           <h1 className={styles.title}>Accessibility</h1>
           <p className={styles.updated}>Last reviewed: {LAST_REVIEWED}</p>
           <p className={styles.lead}>

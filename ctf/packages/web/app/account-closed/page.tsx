@@ -41,7 +41,7 @@ export default async function AccountClosedPage() {
       isDuplicate={isDuplicate}
       // Their own identity is the one thing they can still act on: sign in as the other account, or
       // delete this one. Both live on the provider's hosted portal, outside anything we gate.
-      signInUrl={getHostedSignInUrl() ?? '/sign-in'}
+      signInUrl={getHostedSignInUrl() ?? '/'}
       manageAccountUrl={portalOrigin ? `${portalOrigin}/user` : null}
     />
   );

@@ -97,6 +97,31 @@ Bypass keywords still work but are no longer required to build a new surface: `b
 
 Full policy, the deprecated stop-for-design machinery (history), and worked examples: see `.claude/rules/127-design-pass-gating-rules.mdc`.
 
+## One Design, One Color per Site (owner decision, 2026-10-14)
+
+The name shown everywhere is Skills Economy (owner decision, 2026-10-13). Charging The Future
+appears only in the domain names, never as a displayed name: page titles, headers, footers,
+notification titles, feed titles, generated text and the prompts that write it all say Skills
+Economy. Published posts keep the name they were written with. The legal operator name in
+`app/terms/policy-content.ts` (`OPERATOR_NAME`) is the owner's call and is not changed with the rest.
+
+The project's websites share one design, each in its own color, so a visitor can tell which part
+they are in: farahbrunache.com (One Percent, the paid tier) is forest green, chargingthefuture.com
+(the free tier) burgundy, and the blog black and white with coral. Titles are Newsreader and text
+DM Sans, self-hosted everywhere. The app keeps its own look; it carries the family only in the
+phone bar's wordmark (Newsreader, a light burgundy) and the SE mark's burgundy gradient, on web
+(`components/shared/se-mark.tsx`, `community-shell.module.css`) and Android
+(`components/shell/ShellChrome.tsx`). Change those together.
+
+The Skills Economy mark (the "Stack") is the logo on every site, in that site's color (owner
+decision, 2026-10-13); the heart Charging The Future logo is retired. In the app it is burgundy
+in the header, `public/brand/` and the web and Android icons. The wallpapers
+(`ctf/scripts/wallpapers/`) are a choice of colors rather than a brand color: the original
+teal-to-purple stays, with burgundy, coral and green beside it. The mission line is "Exit their
+economy, exit the psyop."; "Live,
+Work & Prevail" is retired, and older posts keep it. The domains stay as they are. No site loads
+anything from Google: fonts are self-hosted and video players load only when somebody taps play.
+
 # Monorepo Layout
 
 ```
@@ -330,7 +355,7 @@ The credential itself is `TAXONOMY_SERVICE_TOKENS`, one `name:secret` entry per 
 removing an entry revokes it. Rule 123 carries the detail. It is optional, so an environment
 without one simply has no machine reader rather than no app.
 
-## One Percent is the paid tier, and reads claimed Directory profiles (owner decision, 2026-10-02)
+## One Percent is the paid tier, and reads Directory profiles (owner decisions, 2026-10-02, 2026-10-06 and 2026-10-07)
 
 Skills Economy stays as it is: free and self-service, every plugin. One Percent is its paid tier,
 the owner's time and judgment on top of what members can already do themselves. It keeps its own
@@ -342,11 +367,14 @@ The reason for a tier rather than two silos is the owner's labor. People the own
 entered in the Directory were being entered a second time in One Percent to make introductions.
 So One Percent reads them, under these limits:
 
-- **Claimed profiles only.** An unclaimed profile has no contact details, so nobody can be asked
-  or introduced, and it stays out of One Percent. A profile that is unclaimed or deleted later
-  stops resolving. So does one whose owner is restricted with scope `all` or `contact`: an
-  introduction is a connection, and those scopes already block one here. `trading` alone doesn't
-  hide a profile, and One Percent is never told that somebody is restricted.
+- **Claimed or not, and it says which** (owner decision, 2026-10-06). It began as claimed
+  profiles only, on the reasoning that an unclaimed one has no contact details. That was wrong: a
+  profile can't be created empty, so a community-generated one still has a name, skills, a location
+  and usually a profile link, and that it's unclaimed is itself worth knowing. So the read answers
+  for both and carries `claimed`. A deleted profile stops resolving. So does a claimed one whose
+  owner is restricted with scope `all` or `contact`: an introduction is a connection, and those
+  scopes already block one here. `trading` alone doesn't hide a profile, and One Percent is never
+  told that somebody is restricted.
 - **A pointer, not a copy.** One Percent stores the Directory profile id and nothing else about
   the person. A takedown here takes effect there with nothing to clean up, and cutting the
   integration off is revoking the credential.
@@ -363,9 +391,9 @@ So One Percent reads them, under these limits:
 The credential is this app's to issue and revoke, scoped to this read, and separate from the
 taxonomy one so either can be cut without the other. It is `DIRECTORY_SERVICE_TOKENS`, read only
 by `GET /api/directory/service/profiles/[id]` through `ctf/packages/web/lib/directory/service-read.ts`,
-with the access policy entry `directory.profile.service.get`. The route answers one claimed profile
-by id with name, headline, job title, sector, skill names, profile address and location. There's
-no list and no search: the owner pastes the link of somebody they already know about.
+with the access policy entry `directory.profile.service.get`. The route answers one profile by id,
+claimed or not, with whether it's claimed, name, headline, job title, sector, skill names, profile
+address and location. The owner pastes the link of somebody they already know about.
 
 One second read, for one case (owner decision, 2026-10-02): a One Percent client's own profile.
 Clients sign in to One Percent with their Skills Economy account, so One Percent already holds the
@@ -375,13 +403,57 @@ owner doesn't look it up and paste it. The same credential, rate limit, fields a
 It answers for one account the caller already has, never a list or a search, and a 404 never says
 whether the account exists. The audit names the profile it found and never the account id.
 
+A third read, for Find matches (owner decision, 2026-10-07): a page of profiles. Find matches is a
+button on One Percent's desk, and only there. It reads the owner's own notes in One Percent beside
+Directory profiles and asks a self-hosted drafting model to suggest introductions, which the owner
+then decides on. Before it, the owner did this themselves by recalling conversations and scanning
+profiles one at a time. `GET /api/directory/service/profiles` (`directory.profile.service.list`,
+`ctf/packages/web/lib/directory/service-list.ts`) answers up to 100 profiles a page in a fixed
+order, with the same credential, fields and restriction rule as the by-id read, and its own limit
+of one page a second and sixty an hour per consumer. There's still no search and no filter. The
+audit names the page and never the profiles on it. It stays a pointer, not a copy: One Percent may
+hold a profile id on a suggestion and never the profile's fields.
+
+Public skill counts (owner decision, 2026-10-13): One Percent's public match page, where a blog
+reader picks a skill and sees how many people could help, shows real Directory counts per job
+title, with no sign-in. Counts only: no name, id, profile link or location finer than the job title
+ever reaches that page. Every count is exact, small ones included (owner decision, 2026-10-13): no
+name or location is attached to a count, so a small one says nothing about who is behind it. Unclaimed profiles count. Unclaimed does not mean somebody does not want
+to be listed: the Directory is the feature members ask for most, it was public once because its
+entries came from public Quora answers, and the sign-in in front of it exists because a public list
+of trafficking survivors would be wrong, not because the people on it asked to be hidden. Anyone
+can have their profile removed, and nobody has asked. Restricted owners (scope `all` or `contact`)
+are left out, the same rule as the reads above. Do not ask the owner again whether unclaimed
+profiles belong in a count or a read; they do.
+
+The page reads those counts live and saves matches (owner decision, 2026-10-13). A visitor picks
+what they need, and the page says how many people match them, each person counted once across the
+skills behind those needs. That count comes from `directory_public_match_count`. A
+reader can save what they picked as a 10-character code and come back with it to see who has been added, since
+the owner adds people most days. The code holds the job titles and the count when saved, never a
+name, contact detail or IP address. The page connects with its own login, `landing_page`, which can
+read `directory_public_skill_counts`, `directory_public_totals` and `directory_public_skill_coverage` (the Workforce skills coverage counts), call
+`directory_public_match_count`, read and add rows in `directory_landing_match_codes`, and nothing
+else; the views and the function do the counting, so the login never touches a member row. Create that login with SQL
+(`ctf/scripts/sql/landing_page_login_grants.sql`), never on Neon's Roles screen, which gives a new
+role `neon_superuser`. Its connection address is a secret like any other: Infisical first, then the
+Vercel project's `DATABASE_URL`.
+
+A need nobody matches is recorded (owner decision, 2026-10-13). When a visitor picks a need and the
+count is 0, the page adds a row to `directory_unmet_needs`, once per need per visit, so the owner
+can see which needs go unmet and look for somebody. The row holds the need and its job titles and
+nothing about the visitor; the login may add rows and never read them. The owner reads them with
+`ctf/scripts/sql/landing_unmet_needs_report.sql`.
+
 ## Feature freeze, and one message (owner decision, 2026-10-02)
 
 No new features in Skills Economy. Bug fixes and changes to shipped screens continue, and every
 plugin stays live and maintained. A new capability is the owner's call and is asked about first,
-never built and offered afterwards. The One Percent read of claimed Directory profiles, in the
-section above, was decided before the freeze and is not caught by it. The by-account read beside it was asked
-for by the owner after the freeze, on the same day, and changes nothing a member sees.
+never built and offered afterwards. The One Percent read of Directory profiles, in the section
+above, was decided before the freeze and is not caught by it; widening it to unclaimed profiles was
+the owner's own ask on 2026-10-06 and changes nothing a member sees. The by-account read beside it was asked
+for by the owner after the freeze, on the same day, and changes nothing a member sees. So was the
+page read for Find matches on 2026-10-07, and it changes nothing a member sees either.
 
 One exception for the bill (owner decision, 2026-10-05): a twice-yearly "Contribute if you can"
 Commons post, written as a draft on 5 April and 5 October with the current sign-ups, approved
@@ -471,7 +543,7 @@ Owner directive, 2026-08-17, extended 2026-09-22; `/bpr` renamed `/br` on 2026-0
 | `/fix` | [`.claude/commands/fix.md`](.claude/commands/fix.md) | The owner points at a sentence that does not read right. |
 | `/fl` | [`.claude/commands/fl.md`](.claude/commands/fl.md) | The owner asks whether this chat can be archived. |
 
-Seven more do by hand what a scheduled workflow does with the Anthropic API, for the months the
+Eight more do by hand what a scheduled workflow does with the Anthropic API, for the months the
 account has no credit (owner decision, 2026-10-03). The workflows stay as they are and go red on
 purpose while unfunded; the product does not wait on the bill, because the owner has a chat agent
 even then. Each command names the workflow it stands in for and files the same output in the same
@@ -486,6 +558,7 @@ shape, so a later funded run picks up where the hand-done one left off.
 | `/product-update` | [`.claude/commands/product-update.md`](.claude/commands/product-update.md) | `generate-product-update.yml` — the update JSON, published through the workflow's `update_json` input. |
 | `/user-guide` | [`.claude/commands/user-guide.md`](.claude/commands/user-guide.md) | `generate-user-guide.yml` — the guide sections, rendered with `USER_GUIDE_RENDER_ONLY=1`. |
 | `/test-script` | [`.claude/commands/test-script.md`](.claude/commands/test-script.md) | `manual-test-script.yml` — one plugin's manual test script. |
+| `/sp` | [`.claude/commands/sp.md`](.claude/commands/sp.md) | `skills-proposal-issues.yml` — runs `skills-proposal-issues-manual.yml`, places every pending `skill-proposal` issue, and opens one owner-review PR with the skills worth adding. |
 
 ### Every API-funded workflow ships with its slash command (owner directive, 2026-10-03)
 
@@ -762,14 +835,32 @@ below). The line keeps its three-part wording only so the CI gate and older PRs 
 older `Parity Status: web+android complete` is still accepted by the gate so older PRs don't break,
 but new PRs should use the three-part line.)
 
-**Android app is narrowed to Chyme (owner decision, 2026-07-20 — see rule 105).** The native Android
-app now carries only Clerk auth, Chyme (and any feature the Chyme plugin links to), bug reporting, and
-settings / account; everything else is served by the installable web app (PWA). So for a **web-only**
+**Android carries the plugins that benefit from being an installed app (owner decisions, 2026-07-20,
+2026-10-06 and 2026-10-08 — see rule 105).** The test: a plugin goes in the Android app when it materially
+benefits from being an installed mobile app (live audio or video that keeps running in the
+background, a call that rings the phone with the app closed, or sharing the phone's screen), plus
+whatever it needs to run. Today that is Chyme, Beacon, PeerProgramming and Foundation, each carried
+in full with its admin screens (Foundation in full since 2026-10-08, owner decision; it was its
+instant calls alone before that), opened from the app's Apps list, with Clerk auth, bug reporting,
+and settings / account.
+There will never be an iOS app. Adding a plugin is
+the owner's call; propose it with the reason. Everything else is served by the installable web app
+(PWA).
+
+**A carried plugin matches its web plugin one to one, design included (owner decision, 2026-10-08 —
+standing rule for all agents).** Which plugins are in the Android app is the owner's call. How much of
+a carried plugin is there is not: every screen, feature, piece of copy and state the web plugin has,
+its admin screens included, plus whatever else the app needs for that plugin to work (sign-in, account, bug reporting, the feeds
+its screens read). Carrying one feature of a plugin is not an option. The Android screens copy the web
+design exactly — layout, copy, colors, sizes, spacing, icons and states — and nothing is invented: no
+copy, layout, row, note, color or state the web does not have. The only allowed differences are
+something React Native genuinely cannot do (say what and why), and the native call behavior an
+installed app exists for (ringing, background audio and video, screen share). So for a **web-only**
 change to any feature outside that keep-list — the common case now — the "android" part of the line is
 satisfied because the app intentionally has no Android surface for that feature. Use the same
 `Parity Status: web + mobile-responsive + android complete` line and add a one-liner in the body:
 `Android: out of scope (web-only per rule 105)`. Only a change to a keep-list surface (Clerk, Chyme,
-bug reporting, settings) still needs its Android side built in the same PR. **Do not** add React
+Beacon, PeerProgramming, Foundation, bug reporting, settings) still needs its Android side built in the same PR. **Do not** add React
 Native screens for non-keep-list features.
 
 ```

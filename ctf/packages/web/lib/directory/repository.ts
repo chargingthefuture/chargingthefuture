@@ -18,6 +18,7 @@ import {
 import { recordTrainerSkillChanges, type TrainerSkillChange } from 'lib/shared/skill-up-interface';
 import { normalizeQuoraProfileUrl } from './quora-url';
 import { lockAccountProfileClaim, OWNED_PROFILE_ORDER_SQL } from './profile-claim';
+import { NOMINATED_PENDING_SKILLS_SQL } from './nominated-pending-skills';
 import type {
   DirectoryAnnouncement,
   DirectoryAnnouncementInput,
@@ -143,24 +144,16 @@ async function loadProfileSkills(client: PoolClient, profileId: string): Promise
 }
 
 // Free-text skills nominated for this profile through SkillsHunt that are not yet in
-// the canonical taxonomy. Join chain: the profile links to its originating SkillsHunt
-// submission via skills_hunt_directory_profiles.directory_profile_id, and the submission's
-// proposed (not-yet-promoted) skills live in skills_hunt_proposed_skill_promotions keyed by
-// source_submission_id. Surfaced as muted "pending review" chips so a community-generated
-// profile is never empty just because its nominated skill has not been promoted yet.
+// the canonical taxonomy, read from the nomination itself (see NOMINATED_PENDING_SKILLS_SQL).
+// Surfaced as muted "pending review" chips so a community-generated profile is never empty
+// just because its nominated skill has not been promoted yet.
 async function loadProfilePendingSkills(client: PoolClient, profileId: string): Promise<string[]> {
   const result = await client.query<{ skill_label: string }>(
     `
-      SELECT DISTINCT prom.skill_label
-      FROM skills_hunt_directory_profiles shdp
-      JOIN skills_hunt_proposed_skill_promotions prom
-        ON prom.source_submission_id = shdp.submission_id
-      WHERE shdp.directory_profile_id = $1
-        -- 'dropped' is the admin's decision not to promote (lib/directory/pending-skill-proposals.ts);
-        -- the chip goes with it, or a non-promotion would leave it on the profile for good.
-        AND prom.status NOT IN ('promoted', 'dropped')
-        AND btrim(prom.skill_label) <> ''
-      ORDER BY prom.skill_label ASC
+      SELECT n.skill_label
+      FROM (${NOMINATED_PENDING_SKILLS_SQL}) n
+      WHERE n.profile_id = $1::text
+      ORDER BY n.skill_label ASC
     `,
     [profileId],
   );
@@ -311,14 +304,10 @@ async function loadSkillsForProfiles(
 async function loadPendingSkillsForProfiles(client: PoolClient, profileIds: string[]): Promise<Map<string, string[]>> {
   const result = await client.query<{ profile_id: string; skill_label: string }>(
     `
-      SELECT DISTINCT shdp.directory_profile_id::text AS profile_id, prom.skill_label
-      FROM skills_hunt_directory_profiles shdp
-      JOIN skills_hunt_proposed_skill_promotions prom
-        ON prom.source_submission_id = shdp.submission_id
-      WHERE shdp.directory_profile_id::text = ANY($1::text[])
-        AND prom.status NOT IN ('promoted', 'dropped')
-        AND btrim(prom.skill_label) <> ''
-      ORDER BY prom.skill_label ASC
+      SELECT n.profile_id, n.skill_label
+      FROM (${NOMINATED_PENDING_SKILLS_SQL}) n
+      WHERE n.profile_id = ANY($1::text[])
+      ORDER BY n.skill_label ASC
     `,
     [profileIds],
   );
