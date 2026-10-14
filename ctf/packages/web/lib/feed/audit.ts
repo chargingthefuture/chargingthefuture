@@ -2,7 +2,7 @@ import { randomUUID } from 'crypto';
 import { queryDb } from 'lib/db/postgres';
 import { reportError } from 'lib/observability/report';
 
-type FeedAuditEvent = {
+export type FeedAuditEvent = {
   actorId: string;
   pluginId: 'feed' | 'announcements';
   command: string;
@@ -108,4 +108,23 @@ export async function listFeedAdminAuditEvents(limit = 100): Promise<FeedAuditRo
   );
 
   return result.rows;
+}
+
+// The audit outcome for a failed community post create, from the error code createFeedCommunityPost
+// throws. A rate limit, a moderation block or an unavailable reply target is a refusal (deny); anything
+// else is the request failing after it was allowed.
+export function feedPostCreateFailureOutcome(
+  error: unknown,
+): Pick<FeedAuditEvent, 'status' | 'reason' | 'result' | 'errorCategory'> {
+  const code = error instanceof Error ? error.message : 'unknown_error';
+  if (code === 'rate_limit_exceeded') {
+    return { status: 'deny', reason: 'rate_limit_exceeded', result: 'failure', errorCategory: 'rate_limit' };
+  }
+  if (code === 'content_policy_violation') {
+    return { status: 'deny', reason: 'content_policy_violation', result: 'failure', errorCategory: 'moderation' };
+  }
+  if (code === 'reply_target_invalid' || code === 'reply_target_not_found') {
+    return { status: 'deny', reason: code, result: 'failure', errorCategory: 'validation' };
+  }
+  return { status: 'allow', reason: 'community_post_allowed', result: 'failure', errorCategory: 'persistence_error' };
 }

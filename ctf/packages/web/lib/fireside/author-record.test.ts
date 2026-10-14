@@ -89,3 +89,19 @@ describe('the admin actually sees it', () => {
     expect(queueSource).toContain('from sending or receiving value');
   });
 });
+
+describe('the author cannot clear their own record by withdrawing', () => {
+  const repositorySource = readFileSync(join(__dirname, 'repository.ts'), 'utf8');
+
+  it('counts a removal from removed_by, which a withdrawal does not touch', () => {
+    const record = functionBody(exportSource, 'export async function getAuthorRecord');
+    expect(record).toContain('FILTER (WHERE removed_by IS NOT NULL) AS removed');
+    expect(record).not.toContain("FILTER (WHERE status = 'removed')");
+  });
+
+  it('keeps a refused export refused when the author withdraws the comment', () => {
+    const withdraw = functionBody(repositorySource, 'export async function withdrawOwnComment');
+    expect(withdraw).toContain("export_review = CASE WHEN export_review = 'refused' THEN 'refused' ELSE 'not_requested' END");
+    expect(withdraw).not.toContain('removed_by = NULL');
+  });
+});
