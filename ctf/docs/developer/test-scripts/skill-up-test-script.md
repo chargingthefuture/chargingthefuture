@@ -36,7 +36,7 @@ and released as each is validated, and the member's credits view here is read-on
 transfer action. Any screen that offers to spend, transfer, or cash out credits, or that describes a
 deposit in money terms, is a bug (inventory Intent and Outcome, added 2026-08-18).
 
-**Seed before starting:** `pnpm --dir ctf seed:skill-up`
+**Seed before starting:** `pnpm --dir ctf seed:skill-up` (it finishes without a `column ... does not exist` error; the stipend and microgrant columns it used to write were dropped)
 
 1. Sign in as the seed **member** (trainee 1). Open the SkillUp app. The cohort browse screen loads without error and shows at least one cohort card.
    web ☐
@@ -699,7 +699,7 @@ Result: web ☐
 - The refresh banner reports how many proposals were ranked / superseded / cohorts closed. If the pre-flight guard fires (no positive `workforce_share`), it shows `skipped: no_workforce_share` — not a blank screen or error.
 - The list is **sector-diverse**: the top rows span different sectors rather than all coming from one sector (no single sector dominates the top of the queue).
 - Approving opens a real cohort: a success banner names the occupation and end date, the proposal leaves the queue, and the cohort overview shows a new cohort with an `auto` badge (and `needs trainer` until a trainer claims it). Its end date is ~3 months out.
-- The new cohort's title is the occupation on its own — "Journalists / Reporters", not "SkillUp: Journalists / Reporters" and not "LevelUp: …". No cohort row anywhere in the plugin (browse, admin overview, progress) shows a plugin-name prefix on its title; the older cohorts had theirs stripped by `post/0009`.
+- The new cohort's title is the occupation on its own — "Journalists / Reporters", not "SkillUp: Journalists / Reporters" and not "LevelUp: …". No cohort row anywhere in the plugin (browse, admin overview, progress) shows a plugin-name prefix on its title; the older cohorts had theirs stripped by `post/0009`. That migration only touches cohorts created before 2026-08-30, so a cohort an admin creates now with a title such as "SkillUp: Welding basics" keeps that title after the next deploy (added 2026-10-14).
 - Dismissing removes that proposal from the queue with no cohort created.
 
 Result: web ☐
