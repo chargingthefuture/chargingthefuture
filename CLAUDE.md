@@ -432,7 +432,7 @@ skills behind those needs. That count comes from `directory_public_match_count`.
 reader can save what they picked as a 10-character code and come back with it to see who has been added, since
 the owner adds people most days. The code holds the job titles and the count when saved, never a
 name, contact detail or IP address. The page connects with its own login, `landing_page`, which can
-read `directory_public_skill_counts` and `directory_public_totals`, call
+read `directory_public_skill_counts`, `directory_public_totals` and `directory_public_skill_coverage` (the Workforce skills coverage counts), call
 `directory_public_match_count`, read and add rows in `directory_landing_match_codes`, and nothing
 else; the views and the function do the counting, so the login never touches a member row. Create that login with SQL
 (`ctf/scripts/sql/landing_page_login_grants.sql`), never on Neon's Roles screen, which gives a new
