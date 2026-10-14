@@ -62,7 +62,8 @@ WITH already_written AS (
     'bev-419',          -- an-invitation-to-bev.md
     'king-unique-4',    -- an-invitation-to-king-unique.md
     'tired-of-being-a-ti', -- an-invitation-to-tired-of-being-a-ti.md
-    'andre-kovacs-1'    -- an-invitation-to-andre.md
+    'andre-kovacs-1',   -- an-invitation-to-andre.md
+    'ms-thompson-11'    -- an-invitation-to-ms-thompson.md
   ]) AS handle
 ),
 listed_skills AS (
