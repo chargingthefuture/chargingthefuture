@@ -67,7 +67,9 @@ contracts:
       generatedAt:
         type: string
     dataAccess:
-      - skills_taxonomy_flattened_projection
+      - skills_taxonomy_skills
+      - skills_taxonomy_job_titles
+      - skills_taxonomy_sectors
     purpose: taxonomy_read_model
     retentionClass: derived_short_lived
     idempotency: true
@@ -107,3 +109,5 @@ changelog:
     change: Initial Skills Taxonomy command contract skeleton added with hierarchy reads, CRUD commands, and dependency-impact preview governance.
   - date: 2026-06-27
     change: Reconciled the audit data class name from skills_taxonomy_audit_log to skills_taxonomy_change_events to match the actual durable audit store written by the delete path; no skills_taxonomy_audit_log table exists.
+  - date: 2026-10-14
+    change: skills-taxonomy.flattened.get dataAccess now names skills_taxonomy_skills, skills_taxonomy_job_titles and skills_taxonomy_sectors, the three base tables getFlattened joins; it no longer reads skills_taxonomy_flattened_projection.
