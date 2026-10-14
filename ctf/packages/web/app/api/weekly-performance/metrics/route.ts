@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireWeeklyPerformanceReadAccess } from 'lib/weekly-performance/_lib';
+import { requireWeeklyPerformanceAdminAccess } from 'lib/weekly-performance/_lib';
 import { getWeekComparison, getWeekMetrics, insertWeeklyPerformanceAudit } from 'lib/weekly-performance/repository';
 import { weekStartProblem } from 'lib/weekly-performance/week-start';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
 
 export async function GET(request: NextRequest) {
-  const gate = await requireWeeklyPerformanceReadAccess();
+  const gate = await requireWeeklyPerformanceAdminAccess();
   if (!gate.allowed) {
     return gate.response;
   }

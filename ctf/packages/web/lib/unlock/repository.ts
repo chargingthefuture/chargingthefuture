@@ -1,6 +1,6 @@
 import { queryDb } from 'lib/db/postgres';
 import { reportError } from 'lib/observability/report';
-import { addUnlockBannedAccount, removeUnlockBannedAccount } from './banned-accounts';
+import { addUnlockBannedAccount, getUnlockBannedReason, removeUnlockBannedAccount } from './banned-accounts';
 import { banAccountWithProvider, unbanAccountWithProvider } from './provider-ban';
 import { recordQuoraUrlChangeStandalone, type QuoraUrlChangeSource } from 'lib/shared/directory-interface';
 import { addSpamQuoraUrl, isSpamQuoraUrl, removeSpamQuoraUrl } from './spam-denylist';
@@ -572,6 +572,8 @@ export async function reviewUnlockSubmission(input: ReviewUnlockSubmissionInput)
 // must not roll it back or fail the caller. A failure is reported instead, and the recorded row keeps
 // the refusal, so an admin sees a ban that needs another press rather than believing in one that never
 // happened.
+const UNLOCK_PERP_BAN_REASON = 'perp';
+
 async function syncProviderBanForDecision(input: {
   userId: string;
   reviewStatus: UnlockReviewStatus;
@@ -582,6 +584,12 @@ async function syncProviderBanForDecision(input: {
   const extra = { submissionId: input.submissionId };
 
   try {
+    // A perp ban placed from the sign-up list is not a review decision's to lift or relabel: only the
+    // ban route's own unban path lifts it. Leave both the provider ban and the row alone.
+    if ((await getUnlockBannedReason(input.userId)) === UNLOCK_PERP_BAN_REASON) {
+      return;
+    }
+
     if (blocking) {
       const outcome = await banAccountWithProvider(input.userId);
       await addUnlockBannedAccount({

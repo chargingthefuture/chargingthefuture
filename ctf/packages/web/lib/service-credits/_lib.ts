@@ -87,6 +87,13 @@ const SERVICE_CREDITS_ERROR_RESPONSES: Record<string, { code: string; message: s
   active_escrow_holds: { code: 'service_credits_active_escrow_holds', message: 'The account has active escrow holds; the reclaim is deferred until they clear.', status: 409 },
 };
 
+// The mapped response for a known ServiceCredits error, or null for anything else. For a plugin route
+// that sends credits through createTransfer and keeps its own answer for an unexpected failure.
+export function knownServiceCreditsErrorResponse(error: unknown): NextResponse | null {
+  const mapped = error instanceof Error ? SERVICE_CREDITS_ERROR_RESPONSES[error.message] : undefined;
+  return mapped ? NextResponse.json({ ok: false, code: mapped.code, message: mapped.message }, { status: mapped.status }) : null;
+}
+
 export function serviceCreditsErrorResponse(error: unknown, fallbackMessage: string): NextResponse {
   const mapped = error instanceof Error ? SERVICE_CREDITS_ERROR_RESPONSES[error.message] : undefined;
   if (mapped) {
