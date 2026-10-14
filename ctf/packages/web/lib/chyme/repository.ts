@@ -51,6 +51,7 @@ import {
 import type {
   ChymeDeletionResponse,
   ChymeMessage,
+  ChymePublicMessage,
   ChymeParticipant,
   ChymeRoomResponse,
 } from './types';
@@ -601,7 +602,7 @@ export async function removeGuestListener(guestId: string): Promise<void> {
 // The main room's recent chat for a signed-out visitor (owner directive, 2026-09-18: a visitor can
 // read the room chat and signs in to write). Read-only and identity-free: nothing is upserted, and a
 // room that no member has ever opened yields an empty list rather than being created here.
-export async function listPublicRoomMessages(limit = CHYME_DEFAULT_MESSAGES_LIMIT): Promise<ChymeMessage[]> {
+export async function listPublicRoomMessages(limit = CHYME_DEFAULT_MESSAGES_LIMIT): Promise<ChymePublicMessage[]> {
   return withDbTransaction(async (client) => {
     const room = await getMainRoomReadOnly(client);
     if (!room) {
@@ -618,7 +619,15 @@ export async function listPublicRoomMessages(limit = CHYME_DEFAULT_MESSAGES_LIMI
       `,
       [room.id, boundedLimit],
     );
-    return result.rows.reverse().map(mapMessage);
+    // A reduced shape for anonymous readers: the handle is built here so the member's account id
+    // never leaves the server on this route.
+    return result.rows.reverse().map((row) => ({
+      id: row.id,
+      username: row.username,
+      handle: chymeHandle(row.username, row.user_id),
+      text: row.text,
+      sentAtIso: row.sent_at.toISOString(),
+    }));
   });
 }
 
