@@ -525,7 +525,7 @@ function computeHeadingSubline(side: ActiveSide, ringStatus: RingStatus): { head
 // paid-time-elapsed take precedence over the plain ring-status endings.
 const ENDED_REASON_LABELS: Record<string, string> = {
   caller_insufficient_funds: "Session ended — out of credits.",
-  paid_window_elapsed: "Session ended — paid time used up.",
+  paid_window_elapsed: "Session ended — the time you sent credits for is used up.",
   provider_not_set_up: "This provider isn't set up to take calls right now.",
   caller_cannot_send: "The call couldn't start: the caller's credits can't be sent right now.",
 };
@@ -782,7 +782,7 @@ function CallerBillingStrip({
   const { theme } = useTheme();
   const t = getFoundationTokens(theme);
   const countdown = secondsLeft === null ? "—" : formatCountdown(secondsLeft);
-  const capText = authorizedBlocks === null ? `${blocksCharged} paid` : `${blocksCharged} of ${authorizedBlocks} blocks`;
+  const capText = authorizedBlocks === null ? `${blocksCharged} sent` : `${blocksCharged} of ${authorizedBlocks} blocks`;
 
   return (
     <div

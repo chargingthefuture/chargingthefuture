@@ -6,6 +6,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { BackChevronButton, useSmartBack } from '@/lib/nav/back-history';
 import { MUTUAL_TIME_MAX_PICKS } from 'lib/mutual-time/constants';
+import { reportError } from 'lib/observability/report';
 import type { MutualTimePublicEvent, MutualTimeViewerState } from 'lib/mutual-time/types';
 import { SlotPicker, PicksSummary } from './mutual-time-slot-picker';
 import {
@@ -432,8 +433,10 @@ function VoteView({
           setSavedPicks(refreshed.viewer.picks);
           setExpiredPicks(refreshed.viewer.expiredPicks ?? 0);
         }
-      } catch {
-        /* count refresh is best-effort */
+      } catch (refreshError) {
+        // The picks are already saved; only the re-read failed. The screen keeps the load-time event,
+        // so record why for the next look rather than dropping it.
+        reportError(refreshError, { area: 'mutual-time', op: 'vote_refresh', extra: { slug: event.slug } });
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not save your picks.');

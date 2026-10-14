@@ -127,6 +127,7 @@ Result: web ☐
 - At step 2 the claim is refused and the card shows the server's own sentence, which names what to change — that the profile carries no skill for this occupation and adding one you actually have will let you claim it. It is not a generic failure.
 - At step 4 the claim succeeds, the card says you are the trainer for this cohort, and the list reloads so the cohort no longer offers the control. The cohort's trainer name is now yours on reload.
 - At step 5 the refusal says to claim your Directory profile first.
+- If two eligible members press **Claim as trainer** on the same cohort at the same moment (two devices, pressed together), only one becomes the trainer. The other is refused with "This cohort already has a trainer." and is not shown as the trainer on reload.
 - None of this needs an admin. The entire flow works for a signed-in member with read access.
 - A cohort whose occupation was never set refuses with the sentence about no occupation to match against, which names an admin as the person who can fix it.
 - At phone width the control and any refusal wrap rather than overflowing, and the page does not scroll sideways.
