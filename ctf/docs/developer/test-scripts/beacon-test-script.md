@@ -17,7 +17,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-beacon-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-10-08 manual update: BN-AND checks the Android member and admin screens against the web |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-10-08 manual update: BN-AND checks the Android member and admin screens against the web · 2026-10-14 manual update: the meter check covers a re-sent participant-left delivery counting once |
 
 ## How to run this
 
@@ -355,6 +355,10 @@ After a publisher leaves a Beacon call, `/admin/chyme` (Live Audio Usage) shows 
 "Beacon broadcasts (publishers)" within a minute — credited from Stream's
 `call.session_participant_left` event through this plugin's webhook route. Viewers on the public
 HLS feed never join the call and never appear there.
+
+When Stream re-sends the same `call.session_participant_left` delivery (for example after a slow
+response, or by resending it from the Stream dashboard's webhook log), the minutes are counted once:
+the Beacon broadcasts figure does not rise a second time (2026-10-14).
 
 ## Known gaps — do not file these as bugs
 

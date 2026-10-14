@@ -489,6 +489,17 @@ CREATE TABLE IF NOT EXISTS stream_video_usage_daily (
 );
 ALTER TABLE IF EXISTS stream_video_usage_daily ADD COLUMN IF NOT EXISTS participant_seconds BIGINT NOT NULL DEFAULT 0;
 ALTER TABLE IF EXISTS stream_video_usage_daily ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- One row per processed `call.session_participant_left` webhook delivery, so a delivery Stream
+-- re-sends after a slow response does not credit the same minutes to stream_video_usage_daily
+-- twice. The key is call cid | session id | the participant's Stream session id (a per-join Stream
+-- id, not a member id); no personal data. Rows older than a day are pruned on each insert
+-- (lib/stream-quota/webhook-usage.ts).
+CREATE TABLE IF NOT EXISTS stream_video_webhook_deliveries (
+  dedupe_key TEXT PRIMARY KEY,
+  received_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS stream_video_webhook_deliveries ADD COLUMN IF NOT EXISTS received_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS stream_video_webhook_deliveries_received_at_idx ON stream_video_webhook_deliveries (received_at);
 -- Moderation (2026-09-19, owner decision): a room has a speak mode, a removed-members list, and
 -- an admin audit trail. In 'open' mode every joiner may speak (the room as shipped); in
 -- 'hand_raise' mode a joiner listens until an admin lets them speak.
