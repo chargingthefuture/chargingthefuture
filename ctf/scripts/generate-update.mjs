@@ -8,7 +8,7 @@
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { anthropicApiError, reportIfRunBlocked } from './lib/anthropicRunBlocked.mjs';
+import { anthropicApiError, reportIfRunBlocked, reportRunBlocked } from './lib/anthropicRunBlocked.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(__dirname, '../..');
@@ -19,8 +19,15 @@ if (!commits.trim()) {
   process.exit(1);
 }
 
+// A missing key is an outside state (the key lives in Infisical), reported as paused so the health
+// check does not file it as a broken run.
 if (!process.env.ANTHROPIC_API_KEY) {
-  console.error('ANTHROPIC_API_KEY is not set');
+  reportRunBlocked({
+    script: 'generate-update',
+    reason: 'no_key',
+    manualRoute: '/product-update',
+    nothingLost: 'No tag was moved, so the next run after this clears covers the same commits.',
+  });
   process.exit(1);
 }
 
