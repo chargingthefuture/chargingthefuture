@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { captureCurrentWeekGoalSnapshots } from 'lib/weekly-performance/live-metrics';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
+import { secretsMatch } from 'lib/auth/internal-secret';
 
 // Internal, schedule-driven capture of the Weekly Performance goal snapshots (GDP Community Value
 // Index toward 300B; Workforce recruited toward 2,000,000). Those are STATE metrics — past weeks
@@ -23,7 +24,7 @@ export async function POST(request: NextRequest) {
   }
 
   const auth = request.headers.get('authorization');
-  if (auth !== `Bearer ${secret}`) {
+  if (!secretsMatch(auth, `Bearer ${secret}`)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

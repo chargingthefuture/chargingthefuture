@@ -3,6 +3,7 @@ import { computeEligibility } from 'lib/contributor-access/eligibility';
 import { syncGatedChannelMembershipIfOpen } from 'lib/contributor-access/gated-channel';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
+import { secretsMatch } from 'lib/auth/internal-secret';
 
 // Internal, schedule-driven recompute of Contributor Access eligibility. Recomputing on a schedule
 // (not instantly on an action) means nobody spikes the signals and coasts; the recompute is
@@ -22,7 +23,7 @@ export async function POST(request: NextRequest) {
   }
 
   const auth = request.headers.get('authorization');
-  if (auth !== `Bearer ${secret}`) {
+  if (!secretsMatch(auth, `Bearer ${secret}`)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

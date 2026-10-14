@@ -74,9 +74,13 @@ Admin-only analytics plugin — these are the can't-ship-broken checks. Admin / 
 2. As an admin, open the same page.
 3. If an `operations`-role account is available, confirm it also passes.
 **Expected:** The member does not see the plugin in nav; the admin page redirects them to `/apps`
-and the read routes deny with a stable reason (`insufficient_role`). The admin sees the full
+and the read routes deny with a stable reason (`missing_required_role`). The admin sees the full
 dashboard on the admin page (the only surface). The admin gate (`ensureWeeklyPerformanceAdmin`)
 admits `admin` or the `operations` role, matching `requiredRoles: [admin, operations]`.
+As the plain member, call each read route directly — `GET /api/weekly-performance/weeks`,
+`/weeks/<a Monday>`, `/current-week` and `/metrics?weekStartDate=<a Monday>`. Each answers 403 with
+`missing_required_role`, and no `weekly_performance_audit_trail` row is written with that member's id
+(added 2026-10-14; these routes admitted any approved member before).
 **Result:** web ☐ mobile ☐ — notes:
 
 ### WP-A1b · Sign-in record screen
@@ -90,7 +94,7 @@ reads "NOT recorded" in red, the database's own error text is shown under it and
 Active Members rows will be wrong for the same reason. "Members today" is at least 1 (you), "Active
 this week" at least 1, and today's row in the fourteen-day list is at least 1. "Copy the reading"
 puts the same figures on the clipboard as plain text. The member's request is denied with
-`insufficient_role`. "inconsistent types deduced for parameter $1" under a red first line means the
+`missing_required_role`. "inconsistent types deduced for parameter $1" under a red first line means the
 member id is no longer cast to text in the write (fixed 2026-09-24); that is a regression, file it.
 After `post/0038` has run, the fourteen-day list shows members on 2026-09-21 to 2026-09-23 wherever
 the command trails hold evidence for them, rather than 0; after `post/0039`, also members whose last

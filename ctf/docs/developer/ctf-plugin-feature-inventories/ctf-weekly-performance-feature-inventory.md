@@ -57,7 +57,7 @@ The route set below is the **shipped** surface (the earlier draft above named a
 different, never-built `/admin/weeks/:weekStart/...` shape; the routes that
 actually exist are listed here).
 
-Read routes (admin or approved user). Each writes a `weekly_performance_audit_trail` row on an allow decision:
+Read routes (admin or `operations` role, the same gate as the admin routes). Each writes a `weekly_performance_audit_trail` row on an allow decision:
 
 - `GET /api/weekly-performance/weeks` — a continuous run of weeks, newest first: every week from the current week (an ISO Monday start) back to the earliest of one year ago or the oldest tracked week, so the list never skips a week. The run stops at the week containing the platform launch date (`PLATFORM_LAUNCH_DATE_ISO` = 2026-06-12, `ctf/packages/web/lib/platform/launch.ts`), so the oldest week in the list is the week of Jun 8–14, 2026 and no pre-launch week is offered — the floor applies to stored rows too, so demo/seed data cannot pull the list back past launch. Stored weeks keep their real status; generated weeks with no row are `open` and read live per window. Audits `weekly-performance.week.list`.
 - `GET /api/weekly-performance/weeks/[weekStart]` — canonical window metadata for an arbitrary week start date (`{weekStart, weekEnd, isCurrentWeek, status}`); this is the full `weekly-performance.week.get` surface (accepts any `weekStart`, validated as an ISO `YYYY-MM-DD` date), audits `weekly-performance.week.get`.
@@ -239,13 +239,15 @@ V2's "verified" and "approved" member counts are intentionally omitted: V3's `us
 ## 7) Gaps and Known Technical Debt
 
 1. Non-financial metric dictionary and formulas live in code; no canonical governance document captures the dictionary outside the implementation.
-2. The `operations` role now passes the admin gate (week-selection) alongside `admin`, matching the access-policy contract `requiredRoles: [admin, operations]`. Read routes already admit any approved member.
+2. The `operations` role now passes the admin gate (week-selection) alongside `admin`, matching the access-policy contract `requiredRoles: [admin, operations]`. The read routes use the same gate since 2026-10-14 (#2832); before that they admitted any approved member.
 3. Mood-related comparison fields are excluded from the current dictionary; whether to reintroduce them is an outstanding product question.
 4. Contract gap: the shipped `PUT /api/weekly-performance/admin/week-selection` route (audit command `weekly-performance.admin.week.select`) is not represented in `docs/contracts/WEEKLY_PERFORMANCE_PLUGIN_COMMAND_CONTRACTS.yaml`, which lists only `week.list`, `week.get`, `metrics.get`, and `comparison.get`. The week-selection command should be added to the command/access/audit contracts.
 
 ## 8) Change Log
 
 - 2026-10-12: **A goal snapshot that was not stored now fails the scheduled run (#2934, #2938).** The capture route wrote the goal rows only as a side effect of `computeLiveWeekMetrics`, whose snapshot write logged a failure with `console.error` and carried on, and which skipped the write when the table was missing; the route answered 200 either way, so `weekly-performance-goal-snapshot.yml` stayed green while the week's reading was lost. Past weeks cannot be recomputed, so the workflow's "the next day's run covers a missed day" safety net needs a missed day to show red. The route now calls `captureCurrentWeekGoalSnapshots`, which returns each goal that was not stored with its reason, and answers 503 naming them. The dashboard read keeps returning the live value on a failed write, and now reports that failure through `reportError` instead of `console.error`. Both failure responses carry `failureReason(error)` instead of the fixed "Snapshot capture failed". No schema change.
+- 2026-10-14: **The read routes are admin and operations only, and the audit trail is classified for account deletion (code review #2832, #2848).** `GET /api/weekly-performance/weeks`, `/weeks/[weekStart]`, `/current-week` and `/metrics` called `requireWeeklyPerformanceReadAccess`, the plain Unlock gate, so any approved member could read every dashboard aggregate (the Foundation calls count included) and trigger the goal snapshot write. They now call `requireWeeklyPerformanceAdminAccess`, matching the access policy's `requiredRoles: [admin, operations]` and the admin-only page. `weekly_performance_audit_trail` is added to the plugin's account deletion registry entry as `retain`, like the sibling admin audit trails; its id column is `actor_id`, which the registry gate (looking for `*user_id`) did not catch.
+
 - 2026-10-06: **Contributions confirmed USD counts gift cards only (owner decision; issue #2982).**
   The card summed the set value of confirmed Quora comments and GitHub stars as if it were dollars,
   so each one added a dollar to a figure read in USD. It now sums gift cards only, and a new card,
