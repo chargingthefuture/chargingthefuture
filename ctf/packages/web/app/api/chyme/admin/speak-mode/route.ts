@@ -6,8 +6,10 @@ import { recordModerationAudit, recordModerationAuditFailure, moderationResponse
 
 // POST /api/chyme/admin/speak-mode  { mode: 'open' | 'hand_raise' }  (+ ?room=)
 // Switch how the room decides who may speak. Switching to hand-raise turns everyone present except
-// this admin into a listener and mutes them in the call; switching to open lets everyone unmute
-// again (the role column is not read in open mode; Stream roles are reset to the default).
+// this admin into a listener, mutes them in the call and gives them the listener role there;
+// switching to open lets everyone unmute again (the role column is not read in open mode) and puts
+// everyone present back on the default Stream role. A member who joins later gets the role the
+// mode calls for from the join route.
 export async function POST(request: Request) {
   const access = await requireChymeAdminModerationAccess(request);
   if (!access.allowed) {
@@ -20,15 +22,22 @@ export async function POST(request: Request) {
   }
   const audit = { actorId: access.gate.auth.userId, command: 'chyme.admin.speak-mode' as const, targetType: 'room', targetId: access.roomKey, roomKey: access.roomKey };
   try {
-    const { demotedUserIds } = await setRoomSpeakMode(access.roomKey, mode, access.gate.identity);
+    const { demotedUserIds, restoredUserIds } = await setRoomSpeakMode(access.roomKey, mode, access.gate.identity);
     let stream = await muteMembersInCall(access.roomKey, mode === 'hand_raise' ? demotedUserIds : []);
-    for (const userId of demotedUserIds) {
-      const roleResult = await setCallMemberRole(access.roomKey, userId, 'listener');
+    const roleChanges = [
+      ...demotedUserIds.map((userId) => ({ userId, role: 'listener' as const })),
+      ...restoredUserIds.map((userId) => ({ userId, role: 'speaker' as const })),
+    ];
+    for (const change of roleChanges) {
+      const roleResult = await setCallMemberRole(access.roomKey, change.userId, change.role);
       if (!roleResult.ok && stream.ok) {
         stream = roleResult;
       }
     }
-    await recordModerationAudit({ ...audit, metadata: { mode, demoted: demotedUserIds.length, streamApplied: stream.ok } });
+    await recordModerationAudit({
+      ...audit,
+      metadata: { mode, demoted: demotedUserIds.length, restored: restoredUserIds.length, streamApplied: stream.ok },
+    });
     return moderationResponse(stream, { mode, demoted: demotedUserIds.length });
   } catch (error) {
     return recordModerationAuditFailure(error, { ...audit, metadata: { mode } }, 'admin_speak_mode');
