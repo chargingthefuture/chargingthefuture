@@ -277,6 +277,7 @@ These checks confirm the plugin is alive. If any fail, stop and file a bug befor
 
 **Expected:**
 - A row exists for the snapshot refresh. It is the only mutation Trust has left, so it is the only mutation row to expect.
+- The snapshot refresh row's `metadata` holds `snapshotId`, `snapshotGeneratedAt` and `evidenceCount` only — no `metrics` key, no sign-in time and no per-plugin counts (the audit trail outlives Trust deletion).
 - Reads are audited too: the panel reads in TR-A1/TR-A3 add `trust.summary.read` rows, so this session has read rows alongside it.
 - No `trust.visibility.update` or `trust.admin.verification.review` row can appear — neither command exists any more.
 - Each row has a non-null `id` (UUID), `actor_user_id`, `command`, `policy_status`, `target_user_id`, `request_id`, and `created_at`.
