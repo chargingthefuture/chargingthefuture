@@ -41,7 +41,8 @@ collect_changed_files() {
     # behavior, and without this it would drag every pre-existing complexity violation in those
     # files into scope — failing the gate on debt the change did not create and cannot fix. See
     # ctf/scripts/changed-files.mjs; it drops dialect-only files and nothing else.
-    node "$CTF_ROOT/scripts/changed-files.mjs" --base "$merge_base" --relative-to ctf 2>/dev/null || true
+    # A failure here must stop the gate: an empty list reads as "nothing changed" and passes.
+    node "$CTF_ROOT/scripts/changed-files.mjs" --base "$merge_base" --relative-to ctf || return 1
   fi
 
   # Also include any uncommitted / untracked working-tree changes so the gate is useful locally too.
@@ -49,8 +50,13 @@ collect_changed_files() {
   git ls-files --others --exclude-standard -- packages 2>/dev/null || true
 }
 
+if ! changed_list="$(collect_changed_files)"; then
+  echo "❌ Modularity/complexity governance check failed: could not list the files this branch changed (reason above)."
+  exit 1
+fi
+
 mapfile -t target_files < <(
-  collect_changed_files \
+  printf '%s\n' "$changed_list" \
     | grep -E '^packages/.+\.(ts|tsx|js|jsx)$' \
     | grep -Ev '\.(test|spec|stories)\.(ts|tsx|js|jsx)$' \
     | sort -u
