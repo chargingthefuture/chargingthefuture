@@ -13,6 +13,7 @@ import { HelpCircle, Loader2 } from 'lucide-react-native';
 import { useTheme, type ThemeTokens } from '../../theme';
 import { interFamily } from '../../components/ui';
 import { requestUnlockHelp } from './api';
+import { openWebCommons } from './openWebCommons';
 import { getUnlockTokens, type UnlockTokens } from './unlock-tokens';
 import { QUORA_URL_HELP_IMAGE_ALT, QUORA_URL_HELP_ORDER, QUORA_URL_HELP_STEPS, QUORA_URL_HELP_SVG } from './quora-url-help';
 
@@ -80,6 +81,10 @@ export function UnlockQuoraHelp({ alreadyVerified = false, onGoHome }: { already
       setBusy(false);
       return;
     }
+    // The request is recorded; the member asks in the Commons, which is on the web (owner decision,
+    // 2026-10-09). onGoHome then re-runs the Unlock check so the app behind the browser lets them in.
+    await openWebCommons();
+    setBusy(false);
     onGoHome();
   }
 
@@ -110,7 +115,7 @@ export function UnlockQuoraHelp({ alreadyVerified = false, onGoHome }: { already
       {error ? (
         <Text style={s.error}>
           {error}{' '}
-          <Text style={s.errorLink} onPress={onGoHome} accessibilityRole="link">Try opening the Commons anyway</Text>
+          <Text style={s.errorLink} onPress={() => void openWebCommons()} accessibilityRole="link">Try opening the Commons anyway</Text>
         </Text>
       ) : null}
     </View>

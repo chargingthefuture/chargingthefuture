@@ -179,6 +179,7 @@
 3. Runtime accessibility token/class application remains app-shell-owned.
 4. Plugins consume settings/accessibility state as read-only dependency and do not fork keys.
 5. The per-user UI theme is persisted in `user_ui_preferences` (`user_id` PK, `theme` default `'default'`, `updated_at`) and served by `GET` / `PUT /api/account/ui-preferences` (`getUserTheme` / `setUserTheme`; the value is normalized via `normalizeTheme`, CSRF-guarded on write, and gated by `requireAccountAccess` so any signed-in identity reads and sets only its own row).
+6. `GET /api/account/identity` returns the caller's own `{ ok, userId, username, isAdmin }`, gated by `requireAccountAccess` (any signed-in identity, its own values only, no writes). The Android app reads it after sign-in, retries a failed read three times (2, 5 and 15 seconds) and reads it again each time the app returns to the foreground, because its Clerk OAuth id_token carries neither the username nor the role; without it an admin gets no Admin pill and handles fall back to a short id. On the server, `verifyClerkSessionToken` (`lib/auth/verify-bearer.ts`) reads `preferred_username` / `given_name` / `family_name` from that token and fills a missing username or role from the subject's own Clerk account (`users.getUser`, a successful lookup cached five minutes per account; a failed one is not cached); values in the token always win.
 
 ### 1.6 Member Blocking (cross-cutting safety control)
 
@@ -374,6 +375,40 @@ Owner decision, 2026-09-26. The owner pays the running costs of Skills Economy a
 ---
 
 ## 5) Change Log
+
+- 2026-10-14: **Android admin pages no longer go missing after one failed read (owner report).** The
+  Chyme and Beacon admin pages (and Foundation's and PeerProgramming's) were already in the app behind
+  the header's Admin pill, but the app asked `GET /api/account/identity` once per sign-in and never
+  again, so one failed read (no signal, the server waking up) left an admin without the pill until they
+  signed out and back in. The app now retries a failed read three times and reads it again whenever it
+  returns to the foreground, which also brings a role granted later into the app without signing out.
+  On the server, a failed Clerk account lookup is no longer cached for five minutes.
+- 2026-10-12: **Android shows the member's username and admin pages (owner report).** The Android
+  sign-in token (Clerk's OAuth id_token) has no `username` or `role` claim, so Chyme showed
+  `user-user_361` instead of `@handle` and an admin saw no Admin pill on Beacon, Chyme,
+  PeerProgramming or Foundation, while the server also treated app requests from an admin as a
+  member's. `verify-bearer.ts` now reads `preferred_username` / `given_name` / `family_name` and
+  fills a missing username or role from the subject's own Clerk account, cached five minutes. New
+  `GET /api/account/identity` returns the caller's own username and admin flag, which the app's
+  `AuthProvider` merges over the token's values (`auth/serverIdentity.ts`).
+- 2026-10-12: **Blocked members lists each member once and says why a load failed (issues #2671,
+  #2673).** `listBlocksForUser` joined `directory_profiles` on `claimed_by_user_id`, which is not
+  unique, so a blocked member who claimed two profiles appeared twice (duplicate rows and keys on web
+  and Android). The join is now a `LEFT JOIN LATERAL ... LIMIT 1` taking the oldest claimed profile,
+  so the label is the same on every load. The web and Android Blocked members screens now show the
+  reason under the existing error heading, and a failed Android pull-to-refresh keeps the list on
+  screen with the reason above it. The blocks contract now describes the one-profile join. No route
+  or schema change.
+- 2026-10-12: **Web shell: dead files removed, silent catches now leave a trace.** Deleted
+  `packages/web/src/` (an unreachable second PeerProgramming cohorts route, placeholder helpers and an
+  empty mood file; Next ignores `src/app` when a root `app/` exists and nothing imported the rest),
+  `packages/web/scripts/check-clerk-env.mjs` (an unused re-export; `check:clerk-env` already runs
+  `check-auth-env.mjs`) and `packages/web/scripts/seed-trust-demo.js` (its import path did not
+  resolve; `ctf/scripts/seedDemo.mjs` seeds `trust_user_extension`), and dropped `src` from the web
+  `lint` script (#2761, #2762). `instrumentation.ts` now logs a failed Sentry start and a request
+  error it could not report, instead of discarding both (#2763). `hooks/useTheme.tsx` reports a theme
+  save or first-load read that fails with anything other than a 401, and a thrown fetch, as
+  `account/theme_save` / `account/theme_load`; the local choice still applies (#2764).
 
 - 2026-10-08: **Android Apps home matches the web Apps section (§1.1 item 5).** The Android home gains the web's Sort control (Recent, A-Z, Most Used, kept on the phone as the web keeps them in the browser) and the "Search apps…" box with its no-match line. Tapping a card now highlights it as on the web, and the "Open plugin →" pill opens the app. Cards use the web's tint and border in the comic theme too. The closing line about the other apps being on the web is removed; the web has no such line. The top bar now matches the web bar: the account picture sits after the settings gear, the bug icon opens the same one-item "Report a problem" menu, the Sign in button has the web's size and weight, the brand mark keeps its gradient in the comic theme, and the wordmark spacing and bottom line match.
 

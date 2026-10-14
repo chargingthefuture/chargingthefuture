@@ -15,6 +15,7 @@ import { interFamily } from '../../components/ui';
 import { UNLOCK_REWARD_SLA_HOURS } from './constants';
 import { getUnlockTokens, STATUS_CONFIG, type DisplayStatus, type UnlockTokens } from './unlock-tokens';
 import { UnlockQuoraHelp } from './UnlockQuoraHelp';
+import { openWebCommons } from './openWebCommons';
 import { SurveyInviteNote, UnlockBanPolicy } from './UnlockNotes';
 
 const SUBTEXT: Record<DisplayStatus, string> = {
@@ -73,7 +74,7 @@ export function UnlockStatusView(props: Props) {
   );
 }
 
-function StatusCard({ s, tok, status, resubmitUrl, onResubmitUrlChange, onResubmit, submitting, error, onGoHome }: Props & { s: Styles; tok: UnlockTokens }) {
+function StatusCard({ s, tok, status, resubmitUrl, onResubmitUrlChange, onResubmit, submitting, error }: Props & { s: Styles; tok: UnlockTokens }) {
   const cfg = STATUS_CONFIG[status];
   const Icon = cfg.icon;
   const canResubmit = resubmitUrl.trim().length > 0 && !submitting;
@@ -97,7 +98,7 @@ function StatusCard({ s, tok, status, resubmitUrl, onResubmitUrlChange, onResubm
             <Text style={s.welcomeReward}>
               Your ServiceCredits reward is issued automatically and arrives within {UNLOCK_REWARD_SLA_HOURS} hours, if not sooner.
             </Text>
-            <TouchableOpacity onPress={onGoHome} accessibilityRole="link" style={s.continueBtn}>
+            <TouchableOpacity onPress={() => void openWebCommons()} accessibilityRole="link" style={s.continueBtn}>
               <Text style={s.continueText}>Continue to the Commons</Text>
               <ChevronRight size={14} color="#fff" />
             </TouchableOpacity>
