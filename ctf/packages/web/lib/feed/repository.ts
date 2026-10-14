@@ -1326,10 +1326,13 @@ function groupRepliesByPost(replyRows: FeedCommunityReplyRow[]): Map<string, Fee
 
 // Resolve each quoted (replied-to) post's author handle and a short snippet of its body. The quoted
 // post may sit outside this timeline page, so look up the referenced ids directly. Returns a map
-// id → { author, snippet }.
+// id → { author, snippet }. A quoted post whose author has a block in either direction with the
+// viewer is left out, the same rule hideBlockedCommunityAuthorsSql applies to the timeline, so the
+// quote resolves to nothing, as for a removed post.
 async function loadQuotedPosts(
   client: PoolClient,
   postRows: FeedCommunityPostRow[],
+  viewerUserId: string,
 ): Promise<Map<string, FeedQuotedPost>> {
   const quotedById = new Map<string, FeedQuotedPost>();
   const quotedIds = Array.from(
@@ -1346,12 +1349,18 @@ async function loadQuotedPosts(
     body: string;
   }>(
     `
-            SELECT id, author_user_id, author_username, body
-            FROM feed_community_posts
-            WHERE id = ANY($1::uuid[])
-              AND moderation_status = 'accepted'
+            SELECT p.id, p.author_user_id, p.author_username, p.body
+            FROM feed_community_posts p
+            WHERE p.id = ANY($1::uuid[])
+              AND p.moderation_status = 'accepted'
+              AND NOT EXISTS (
+                SELECT 1
+                FROM member_blocks mb
+                WHERE (mb.blocker_user_id = $2 AND mb.blocked_user_id = p.author_user_id)
+                   OR (mb.blocker_user_id = p.author_user_id AND mb.blocked_user_id = $2)
+              )
           `,
-    [quotedIds],
+    [quotedIds, viewerUserId],
   );
   for (const row of quotedRows.rows) {
     quotedById.set(row.id, {
@@ -1444,7 +1453,7 @@ async function loadCommunityDetails(
 
   const reactionsByPost = groupReactionsByPost(reactionRows.rows);
   const repliesByPost = groupRepliesByPost(replyRows.rows);
-  const quotedById = await loadQuotedPosts(client, postRows.rows);
+  const quotedById = await loadQuotedPosts(client, postRows.rows, userId);
   const imagesByPost = await loadCommunityPostImages(client, postRows.rows.map((row) => row.id));
 
   for (const row of postRows.rows) {
@@ -2277,7 +2286,17 @@ export async function createFeedCommunityPost(
       if (target.rows.length === 0) {
         throw new Error('reply_target_not_found');
       }
-      replyParentAuthorId = target.rows[0].author_user_id;
+      // A block in either direction between the poster and the quoted post's author means the
+      // author is never told about this reply: a blocked member must not be able to reach the
+      // person who blocked them through a reply notification.
+      const blocked = await client.query(
+        `SELECT 1 FROM member_blocks
+          WHERE (blocker_user_id = $1 AND blocked_user_id = $2)
+             OR (blocker_user_id = $2 AND blocked_user_id = $1)
+          LIMIT 1`,
+        [actorId, target.rows[0].author_user_id],
+      );
+      replyParentAuthorId = blocked.rows.length > 0 ? null : target.rows[0].author_user_id;
     }
 
     const allowed = await evaluateFeedRateLimit(client, {

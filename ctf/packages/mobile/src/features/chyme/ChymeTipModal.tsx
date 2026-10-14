@@ -8,6 +8,7 @@
 import React, { useMemo, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Coins, X } from 'lucide-react-native';
+import { randomUUID } from 'expo-crypto';
 import { interFamily } from '../../components/ui';
 import { postChymeTip } from './api';
 import { useChymeTokens, type ChymeTokens } from './chyme-tokens';
@@ -53,6 +54,10 @@ const ChymeTipModal: React.FC<{
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  // One idempotency key per filled-in tip, as on the web: a retry after an error or a lost response
+  // sends the same key, so the server returns the first transfer instead of sending again. A new
+  // amount is a new tip with a new key.
+  const [tipKey, setTipKey] = useState(() => randomUUID());
 
   const numeric = Number(amount);
   const canSend = !submitting && !success && amount.length > 0 && !Number.isNaN(numeric) && numeric > 0;
@@ -62,7 +67,7 @@ const ChymeTipModal: React.FC<{
     setSubmitting(true);
     setError(null);
     try {
-      await postChymeTip(recipientUserId, numeric, message);
+      await postChymeTip(recipientUserId, numeric, message, tipKey);
       setSuccess(true);
       setTimeout(onClose, 1000);
     } catch (e: unknown) {
@@ -87,7 +92,10 @@ const ChymeTipModal: React.FC<{
           <Text style={styles.label}>Amount (ServiceCredits)</Text>
           <TextInput
             value={amount}
-            onChangeText={setAmount}
+            onChangeText={(value) => {
+              setAmount(value);
+              setTipKey(randomUUID());
+            }}
             keyboardType="number-pad"
             placeholder="e.g. 10"
             placeholderTextColor={t.MUTED}
