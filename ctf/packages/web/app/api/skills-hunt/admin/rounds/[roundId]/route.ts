@@ -74,7 +74,18 @@ export async function PUT(request: Request, { params }: { params: Promise<{ roun
     );
   }
 
-  const existing = await getRound(roundId);
+  // Read inside its own try so a failed read answers with a reasoned 503 the Rounds tab can show,
+  // not a bare 500 with no JSON body (rule 137).
+  let existing: SkillsHuntRound | null;
+  try {
+    existing = await getRound(roundId);
+  } catch (error) {
+    reportError(error, { area: 'skills-hunt', op: 'admin_rounds_roundid_read' });
+    return NextResponse.json(
+      { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: `Unable to read round: ${failureReason(error)}` },
+      { status: 503 },
+    );
+  }
   if (!existing) {
     return NextResponse.json(
       { ok: false, code: SKILLS_HUNT_ERROR_CODE.roundNotFound, message: 'Round not found.' },

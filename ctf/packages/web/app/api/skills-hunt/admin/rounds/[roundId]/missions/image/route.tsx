@@ -11,6 +11,7 @@ import {
 } from 'lib/skills-hunt/mission-poster-image';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
 import { reportError } from 'lib/observability/report';
+import { withReason } from 'lib/errors/failure';
 import { requireSkillsHuntAdminAccess } from '../../../../../_lib';
 
 // A round's active missions drawn as one tall PNG, for posting somewhere that takes a picture.
@@ -76,7 +77,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ roun
   } catch (error) {
     reportError(error, { area: 'skills-hunt', op: 'admin_rounds_roundid_missions_image' });
     return NextResponse.json(
-      { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: 'Unable to draw the missions picture.' },
+      { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: withReason('Unable to draw the missions picture', error) },
       { status: 503 },
     );
   }

@@ -70,7 +70,7 @@ async function fetchSubmissionPage(
 // What the round is for, shown above the Accept/Reject controls. The round's description is the
 // only place its purpose is written, and a reviewer working a list of names cannot otherwise tell
 // whether a nomination belongs here (owner report: a nomination unrelated to the round's subject
-// was accepted and paid its reward).
+// was accepted and its reward sent).
 function RoundPurpose({ round }: { round: SkillsHuntRound | null }) {
   const { theme } = useTheme();
   const t = getSkillsHuntAdminTokens(theme);

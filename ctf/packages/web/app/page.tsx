@@ -149,10 +149,10 @@ export default async function HomePage() {
 
   const trust = await resolveTrust(userId, currentUser.userId);
 
-  // Send "Sign In" straight to Clerk's hosted Account Portal. Falls back to the
-  // in-app `/sign-in` catch-all (which itself forwards to the portal) only when
-  // no hosted URL can be resolved.
-  const signInUrl = getHostedSignInUrl() ?? '/sign-in';
+  // Send "Sign In" straight to Clerk's hosted Account Portal. This app has no
+  // `/sign-in` page of its own, so when no hosted URL can be resolved the button
+  // falls back to the home page.
+  const signInUrl = getHostedSignInUrl() ?? '/';
 
   return (
     <CommunityShell

@@ -23,24 +23,48 @@ export type UnlockStatus = {
   commonsAccess?: boolean;
 };
 
+// A failed status read. Carries the HTTP status so the screen can tell "not signed in" (401/403) from
+// an outage, and the route's own message so the member is told what failed.
+export class UnlockStatusError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'UnlockStatusError';
+    this.status = status;
+  }
+}
+
 export async function fetchUnlockStatus(): Promise<UnlockStatus> {
   const res = await authedFetch('/api/unlock/status', {
     cache: 'no-store',
   });
-  if (!res.ok) throw new Error('Unlock status unavailable.');
+  if (!res.ok) {
+    const payload = (await res.json().catch(() => null)) as { message?: string; reason?: string } | null;
+    const said = payload?.message ?? payload?.reason ?? 'Unlock status unavailable.';
+    throw new UnlockStatusError(`${said} (HTTP ${res.status})`, res.status);
+  }
   const data = (await res.json()) as { ok: boolean; status: UnlockStatus };
   return data.status;
 }
 
 // "I can't do this step — let me ask somebody." Records the request, which is what opens the Commons
-// to a member with no submission, so there is somebody to ask. The caller refreshes the Unlock gate
-// afterwards, which is what actually moves them into the app shell.
-export async function requestUnlockHelp(): Promise<void> {
-  const res = await authedFetch('/api/unlock/help-request', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
-  });
-  if (!res.ok) throw new Error('Could not open the Commons just now.');
+// to a member with no submission, with whatever the member wrote to help an admin find them on Quora
+// (`quoraHint`, optional). Resolves to null on success, or the message to show. The caller refreshes
+// the Unlock gate afterwards, which is what moves them into the app shell.
+export async function requestUnlockHelp(quoraHint: string, failed: string): Promise<string | null> {
+  try {
+    const res = await authedFetch('/api/unlock/help-request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
+      body: JSON.stringify({ quoraHint: quoraHint.trim() }),
+    });
+    if (res.ok) return null;
+    const data = (await res.json().catch(() => null)) as { message?: string } | null;
+    return data?.message ?? failed;
+  } catch {
+    return 'Network error. Try again.';
+  }
 }
 
 export async function submitUnlockUrl(quoraProfileUrl: string): Promise<void> {
