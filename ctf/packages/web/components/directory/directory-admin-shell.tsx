@@ -48,6 +48,7 @@ import { AdminRefreshControl } from "@/components/shared/admin-refresh";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 import { getDirectoryTokens } from "./shared";
 import { DirectorySkillsPicker } from "./directory-skills-picker";
+import { DirectoryJobTitleFields } from "./directory-job-title-fields";
 import { CountrySelect, StateField } from "@/components/shared/location-select";
 import { failureText, responseFailureText } from 'lib/errors/client-failure';
 import { DIRECTORY_MAX_PROPOSED_SKILL_LENGTH, DIRECTORY_MAX_PROPOSED_SKILLS } from "@/lib/directory/constants";
@@ -126,6 +127,8 @@ type EditForm = {
   headline: string;
   bio: string;
   profileUrl: string;
+  sectorId: string;
+  jobTitleId: string;
   skillIds: string[];
   proposedSkills: string[];
   city: string;
@@ -137,7 +140,7 @@ type TaxonomyOption = { id: string; name: string };
 type JobTitleOption = { id: string; name: string; sectorId: string };
 type SkillOption = { id: string; name: string; jobTitleId: string };
 
-type FieldDef = { label: string; key: Exclude<keyof EditForm, "skillIds" | "proposedSkills">; placeholder: string };
+type FieldDef = { label: string; key: Exclude<keyof EditForm, "skillIds" | "proposedSkills" | "sectorId" | "jobTitleId">; placeholder: string };
 
 const EDIT_FIELDS: FieldDef[] = [
   { label: "First name", key: "firstName", placeholder: "First name" },
@@ -185,6 +188,8 @@ function toForm(p: AdminDirectoryProfile): EditForm {
     headline: formText(p.headline),
     bio: formText(p.bio),
     profileUrl: formText(p.profileUrl),
+    sectorId: formText(p.sectorId),
+    jobTitleId: formText(p.jobTitleId),
     skillIds: (p.skills ?? []).map((s) => s.id),
     proposedSkills: p.proposedSkills ?? [],
     city: formText(p.city),
@@ -202,18 +207,17 @@ function validateEditForm(form: EditForm): string | null {
   return null;
 }
 
-// Build the PUT body for a profile edit. The sector/job-title classification is preserved so an edit
-// here does not wipe it (skills are editable through the picker). An emptied location field clears the
-// stored value.
-function buildProfilePayload(form: EditForm, editing: AdminDirectoryProfile) {
+// Build the PUT body for a profile edit. "Not set" on the sector or job title clears it, the same as
+// the member self-edit form. An emptied location field clears the stored value.
+function buildProfilePayload(form: EditForm) {
   return {
     firstName: form.firstName.trim(),
     lastName: form.lastName.trim() || null,
     headline: form.headline.trim() || null,
     bio: form.bio.trim() || null,
     profileUrl: form.profileUrl.trim() || null,
-    sectorId: editing.sectorId,
-    jobTitleId: editing.jobTitleId,
+    sectorId: form.sectorId || null,
+    jobTitleId: form.jobTitleId || null,
     skillIds: form.skillIds,
     proposedSkills: form.proposedSkills,
     city: form.city.trim(),
@@ -356,7 +360,7 @@ function useProfileEditor(
   reload: () => void,
 ) {
   const [editId, setEditId] = useState<string | null>(null);
-  const [form, setForm] = useState<EditForm>({ firstName: "", lastName: "", headline: "", bio: "", profileUrl: "", skillIds: [], proposedSkills: [], city: "", state: "", country: "" });
+  const [form, setForm] = useState<EditForm>({ firstName: "", lastName: "", headline: "", bio: "", profileUrl: "", sectorId: "", jobTitleId: "", skillIds: [], proposedSkills: [], city: "", state: "", country: "" });
   // Draft text for the "skill not listed" box, before it is committed to form.proposedSkills.
   const [proposedInput, setProposedInput] = useState("");
   const [assignInput, setAssignInput] = useState("");
@@ -417,7 +421,7 @@ function useProfileEditor(
       const res = await fetch(`/api/directory/admin/profiles/${editing.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
-        body: JSON.stringify(buildProfilePayload(form, editing)),
+        body: JSON.stringify(buildProfilePayload(form)),
       });
       const body = (await res.json().catch(() => ({}))) as { ok?: boolean; profile?: AdminDirectoryProfile; message?: string; reason?: string };
       if (res.ok && body.ok && body.profile) {
@@ -700,6 +704,19 @@ function DrawerBody(props: DrawerBodyProps) {
           style={FIELD_INPUT_STYLE}
         />
       </div>
+
+      <DirectoryJobTitleFields
+        idPrefix="dadm"
+        sectors={sectors}
+        jobTitles={jobTitles}
+        sectorId={form.sectorId}
+        jobTitleId={form.jobTitleId}
+        disabled={saving || taxonomyLoading}
+        labelStyle={{ ...LABEL_STYLE, display: "block" }}
+        selectStyle={FIELD_INPUT_STYLE}
+        hintColor={SUBTLE}
+        onChange={(next) => setForm((f) => ({ ...f, ...next }))}
+      />
 
       {/* Skills use the same structured picker as the member self-edit form and SkillsHunt, including
           the free-text proposal box: the taxonomy does not carry every skill, and an admin recording a

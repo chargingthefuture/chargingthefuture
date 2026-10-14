@@ -16,6 +16,13 @@ const ROAD_FACTOR = 1.25;
 // minus grades and slower state limits). Only used to bucket each stop to the
 // nearest forecast hour, so approximate is fine. Override per request with `mph`.
 const DEFAULT_MPH = 58;
+// Outside the US there is no alert lookup at all, which is not a failure.
+const NO_ALERT_LOOKUP = { events: [], failed: null };
+// Said when the NWS alert lookup failed, so a quiet reply is never mistaken for a
+// checked one. The stop is scored at least CAUTION (see assessHazard).
+function alertsUnavailableNote(where, verdict) {
+  return `Hazard alerts could not be checked ${where}, so ${verdict} uses wind, temperature, and conditions only.`;
+}
 
 const COMPASS_WORDS = {
   N: 'north', NNE: 'north-northeast', NE: 'northeast', ENE: 'east-northeast',
@@ -166,11 +173,16 @@ export async function buildRouteReport({ from, to, via = [], depart, mph }) {
     places.map(async (p, i) => {
       const sample = await sampleAt(p, etas[i]);
       const isUS = p.countryCode === 'US' || inUS(p.lat, p.lon);
-      const [alerts, roadEvents] = await Promise.all([
-        isUS ? fetchUSAlerts(p.lat, p.lon) : Promise.resolve([]),
+      const [alertLookup, roadEvents] = await Promise.all([
+        isUS ? fetchUSAlerts(p.lat, p.lon) : Promise.resolve(NO_ALERT_LOOKUP),
         isUS ? fetchRoadEvents(p.lat, p.lon) : Promise.resolve([]),
       ]);
-      return { place: p, eta: etas[i], sample, alerts, roadEvents, hz: assessHazard(sample, alerts, roadEvents) };
+      const alerts = alertLookup.events;
+      const alertsFailed = Boolean(alertLookup.failed);
+      return {
+        place: p, eta: etas[i], sample, alerts, roadEvents, alertsFailed,
+        hz: assessHazard(sample, alerts, roadEvents, alertsFailed),
+      };
     }),
   );
 
@@ -211,6 +223,9 @@ export async function buildRouteReport({ from, to, via = [], depart, mph }) {
   )];
   if (allRoad.length) lines.push('', `Road conditions: ${allRoad.join('; ')}.`);
 
+  const unchecked = rows.filter((r) => r.alertsFailed).map((r) => `${r.place.name} ${r.place.region}`);
+  if (unchecked.length) lines.push('', alertsUnavailableNote(`at ${unchecked.join('; ')}`, 'the verdict there'));
+
   if (rows.some((r) => r.place.countryCode && r.place.countryCode !== 'US')) {
     lines.push('', 'Note: government hazard alerts are US-only; outside the US the verdict uses wind, temperature, and conditions.');
   }
@@ -246,13 +261,15 @@ export async function buildPointReport({ lat, lon, heading, speed }) {
   }
 
   const isUS = inUS(point.lat, point.lon);
-  const [samples, alerts, roadEvents, place] = await Promise.all([
+  const [samples, alertLookup, roadEvents, place] = await Promise.all([
     Promise.all(stops.map((s) => sampleAt(s.point, s.at))),
-    isUS ? fetchUSAlerts(point.lat, point.lon) : Promise.resolve([]),
+    isUS ? fetchUSAlerts(point.lat, point.lon) : Promise.resolve(NO_ALERT_LOOKUP),
     isUS ? fetchRoadEvents(point.lat, point.lon) : Promise.resolve([]),
     reverseGeocode(point.lat, point.lon),
   ]);
-  const assessments = samples.map((s) => assessHazard(s, alerts, roadEvents));
+  const alerts = alertLookup.events;
+  const alertsFailed = Boolean(alertLookup.failed);
+  const assessments = samples.map((s) => assessHazard(s, alerts, roadEvents, alertsFailed));
   const overall = worst(assessments.map((a) => a.level));
   const tz = samples[0].timeZone;
 
@@ -274,6 +291,7 @@ export async function buildPointReport({ lat, lon, heading, speed }) {
   if (drivingAlerts.length) lines.push('', `Alerts: ${drivingAlerts.join('; ')}.`);
   if (otherAlerts.length) lines.push('', `Also active (not driving): ${otherAlerts.join('; ')}.`);
   if (roadEvents.length) lines.push('', `Road conditions: ${[...new Set(roadEvents)].join('; ')}.`);
+  if (alertsFailed) lines.push('', alertsUnavailableNote('here', 'the verdict'));
   if (!isUS) lines.push('', 'Note: government hazard alerts are US-only; outside the US the verdict uses wind, temperature, and conditions.');
   lines.push('', `(Times in ${tz}.)`);
   return { text: lines.join('\n'), verdict: overall };

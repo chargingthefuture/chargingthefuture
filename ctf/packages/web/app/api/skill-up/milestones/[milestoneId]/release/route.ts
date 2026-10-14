@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { insertSkillUpAudit, isTrainerForCohort, releaseMilestoneCredits } from 'lib/skill-up/repository';
+import { insertSkillUpAudit, isTrainerForCohort, loadMilestoneSignOffScope, milestoneSignOffDenial, releaseMilestoneCredits } from 'lib/skill-up/repository';
 import { ensureMutationCsrf, skillUpErrorResponse, requireSkillUpReadAccess } from 'lib/skill-up/_lib';
 import { notifySafe } from 'lib/notifications/repository';
 import { reportError } from 'lib/observability/report';
@@ -12,7 +12,6 @@ type RouteProps = {
 
 const releaseSchema = z.object({
   enrollmentId: z.string().uuid(),
-  cohortId: z.string().uuid(),
   idempotencyKey: z.string().min(3),
 });
 
@@ -41,12 +40,22 @@ export async function POST(request: Request, { params }: RouteProps) {
     return NextResponse.json({ ok: false, code: 'skill_up_invalid_payload', message: 'Invalid release payload.', issues: parsed.error.issues }, { status: 400 });
   }
 
-  const trainerForScope = await isTrainerForCohort(gate.auth.userId, parsed.data.cohortId);
-  if (!gate.auth.isAdmin && !trainerForScope) {
-    return NextResponse.json({ ok: false, code: 'skill_up_forbidden', message: 'Trainer or admin role required for milestone release.' }, { status: 403 });
-  }
-
   try {
+    // The cohort comes from the enrollment, not the body, so a trainer can only sign off enrollments
+    // in their own cohort; see milestoneSignOffDenial for the full rule.
+    const scope = await loadMilestoneSignOffScope(parsed.data.enrollmentId, resolvedParams.milestoneId);
+    const trainerForCohort = scope ? await isTrainerForCohort(gate.auth.userId, scope.cohortId) : false;
+    const denial = milestoneSignOffDenial({
+      actorId: gate.auth.userId,
+      isAdmin: gate.auth.isAdmin,
+      trainerForCohort,
+      scope,
+      action: 'release',
+    });
+    if (denial) {
+      return NextResponse.json({ ok: false, code: denial.code, message: denial.message }, { status: denial.status });
+    }
+
     const release = await releaseMilestoneCredits({
       actorId: gate.auth.userId,
       enrollmentId: parsed.data.enrollmentId,

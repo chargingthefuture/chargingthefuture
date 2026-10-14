@@ -34,7 +34,15 @@ export type SaveExpoPushSubscriptionInput = {
 // uniqueness means a device re-registering refreshes its row rather than duplicating, and the same
 // deletion-registry wiring that removes web rows on account/service deletion removes these too (the
 // registry deletes every push_subscriptions row by user_id, regardless of kind).
+//
+// One phone rings for one member: an Expo token belongs to the device, so a row holding the same token for
+// any other account is removed first. Without this, a phone signed in as one member and later as another
+// rang for both, because the first member's row was never replaced (the unique key includes user_id).
 export async function saveExpoPushSubscription(input: SaveExpoPushSubscriptionInput): Promise<void> {
+  await queryDb(
+    `DELETE FROM push_subscriptions WHERE kind = 'expo' AND endpoint = $1 AND user_id <> $2`,
+    [input.token, input.userId],
+  );
   await queryDb(
     `
       INSERT INTO push_subscriptions (user_id, kind, endpoint, p256dh, auth, user_agent, last_used_at)

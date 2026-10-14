@@ -53,10 +53,13 @@ describe('buildBeaconReplayFeedXml', () => {
 
 describe('isBeaconArchiveUrl', () => {
   it('accepts only this repository release asset named for the same event', () => {
-    const good = `https://github.com/chargingthefuture/chargingthefuture/releases/download/beacon-recordings/${event.id}.mp4`;
+    const good = `https://github.com/chargingthefuture/chargingthefuture/releases/download/beacon-recording-${event.id}/${event.id}.mp4`;
     expect(isBeaconArchiveUrl(good, event.id)).toBe(true);
     expect(isBeaconArchiveUrl(good, '00000000-0000-4000-8000-000000000000')).toBe(false);
     expect(isBeaconArchiveUrl('https://example.com/x.mp4', event.id)).toBe(false);
+    // The old shared release, which immutable releases made impossible to add to.
+    const shared = `https://github.com/chargingthefuture/chargingthefuture/releases/download/beacon-recordings/${event.id}.mp4`;
+    expect(isBeaconArchiveUrl(shared, event.id)).toBe(false);
   });
 });
 

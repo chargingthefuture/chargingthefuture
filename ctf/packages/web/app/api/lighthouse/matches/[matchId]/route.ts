@@ -22,6 +22,11 @@ const LIGHTHOUSE_ERROR_RESPONSES: Record<string, { code: string; message: string
   policy_denied: { code: LIGHTHOUSE_ERROR_CODE.policyDenied, message: 'Operation denied by policy.', status: 403 },
   blocked_pair: { code: LIGHTHOUSE_ERROR_CODE.blockedPair, message: 'This listing is not available to you.', status: 403 },
   duplicate_match: { code: LIGHTHOUSE_ERROR_CODE.duplicateMatch, message: 'Active match request already exists.', status: 409 },
+  invalid_transition: {
+    code: LIGHTHOUSE_ERROR_CODE.invalidTransition,
+    message: 'This request can no longer be changed that way. It may have been withdrawn or already answered.',
+    status: 409,
+  },
   'invalid payload': { code: LIGHTHOUSE_ERROR_CODE.invalidPayload, message: 'Invalid payload.', status: 400 },
 };
 
