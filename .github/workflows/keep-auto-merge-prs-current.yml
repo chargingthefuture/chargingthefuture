@@ -46,29 +46,53 @@ jobs:
             exit 1
           fi
 
+          # A light list first (merge state only), retried on a server error. Asking for every PR's
+          # checks in the same request timed out (HTTP 504) with about 60 PRs open.
+          list_prs() {
+            local try
+            for try in 1 2 3; do
+              if gh pr list --repo "$REPO" --state open --limit 200 \
+                --json number,isDraft,autoMergeRequest,mergeStateStatus \
+                --jq '[.[] | select(.isDraft | not) | select(.autoMergeRequest != null) | {number, state: .mergeStateStatus}]'; then
+                return 0
+              fi
+              echo "Listing the PRs failed (try $try of 3); trying again in 15 seconds." >&2
+              sleep 15
+            done
+            return 1
+          }
+
           # GitHub recomputes each PR's merge state after main moves, and reports UNKNOWN until it
           # has. Read the list until no auto-merge PR reads UNKNOWN, or give up after a few tries.
-          # spelling:disable — GitHub's own check conclusion values (CANCELLED), which must match exactly.
           for attempt in 1 2 3 4 5; do
-            PRS=$(gh pr list --repo "$REPO" --state open --limit 200 \
-              --json number,isDraft,autoMergeRequest,mergeStateStatus,statusCheckRollup \
-              --jq '[.[] | select(.isDraft | not) | select(.autoMergeRequest != null) | {
-                  number,
-                  state: .mergeStateStatus,
-                  checks: (.statusCheckRollup | length),
-                  pending: ([.statusCheckRollup[] | select(
-                    (.status != null and .status != "COMPLETED") or
-                    (.state == "PENDING" or .state == "EXPECTED"))] | length),
-                  failed: ([.statusCheckRollup[] | select(
-                    (.conclusion // "" | IN("FAILURE", "TIMED_OUT", "CANCELLED", "STARTUP_FAILURE", "ACTION_REQUIRED")) or
-                    (.state // "" | IN("FAILURE", "ERROR")))] | length)
-                }]')
-            UNKNOWN=$(echo "$PRS" | jq '[.[] | select(.state == "UNKNOWN")] | length')
+            LIST=$(list_prs)
+            UNKNOWN=$(echo "$LIST" | jq '[.[] | select(.state == "UNKNOWN")] | length')
             [ "$UNKNOWN" = "0" ] && break
             echo "$UNKNOWN auto-merge PR(s) still read UNKNOWN; reading again in 20 seconds."
             sleep 20
           done
-          # spelling:enable
+
+          # Then each PR's checks, one small request per PR. A PR whose checks cannot be read is
+          # counted as having checks running, so the run waits rather than updating a second PR.
+          PRS="[]"
+          for NUM in $(echo "$LIST" | jq -r '.[] | select(.state != "DIRTY") | .number'); do
+            STATE=$(echo "$LIST" | jq -r --argjson n "$NUM" '.[] | select(.number == $n) | .state')
+            # spelling:disable — GitHub's own check conclusion values (CANCELLED), which must match exactly.
+            if ! COUNTS=$(gh pr view "$NUM" --repo "$REPO" --json statusCheckRollup --jq '{
+                checks: (.statusCheckRollup | length),
+                pending: ([.statusCheckRollup[] | select(
+                  (.status != null and .status != "COMPLETED") or
+                  (.state == "PENDING" or .state == "EXPECTED"))] | length),
+                failed: ([.statusCheckRollup[] | select(
+                  (.conclusion // "" | IN("FAILURE", "TIMED_OUT", "CANCELLED", "STARTUP_FAILURE", "ACTION_REQUIRED")) or
+                  (.state // "" | IN("FAILURE", "ERROR")))] | length)
+              }'); then
+              echo "Could not read the checks on #$NUM; treating them as still running."
+              COUNTS='{"checks":0,"pending":1,"failed":0}'
+            fi
+            # spelling:enable
+            PRS=$(echo "$PRS" | jq --argjson n "$NUM" --arg s "$STATE" --argjson c "$COUNTS" '. + [{number: $n, state: $s} + $c]')
+          done
 
           echo "Auto-merge PRs: $(echo "$PRS" | jq 'length')"
 
