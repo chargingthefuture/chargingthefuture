@@ -419,7 +419,8 @@ used across member-to-member surfaces.
 **Expected:** A pending invite lapses (B's prompt disappears) within ~45s when a party leaves before
 accepting. An already-accepted call is **not** ended by leaving the room — it keeps going until
 someone hangs up. Hang up ends the call for both; no history or record remains anywhere. Every call
-surface shows the Foundation note ("For calls with ServiceCredits attached, use Foundation instead") —
+surface shows the Foundation note ("For calls with ServiceCredits attached, use Foundation instead"),
+with "Foundation" as plain text, not a link, on web and Android alike —
 Back Channel itself never mentions or moves credits.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 

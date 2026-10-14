@@ -266,7 +266,9 @@ function BackChannelPanelLive({ otherName, onHangUp }: { otherName: string; onHa
           <Info size={12} style={{ color: '#6b7280', flexShrink: 0, marginTop: 1 }} />
           <span style={{ fontSize: 10, color: '#9ca3af', lineHeight: 1.4 }}>
             For calls with ServiceCredits attached, use{' '}
-            <a href="/apps/foundation" style={{ color: PRIMARY, fontWeight: 600 }}>Foundation</a> instead.
+            {/* Plain text, no link: Foundation is in both the web and Android apps, and each plugin stays
+                self-contained (owner decision, 2026-10-08). */}
+            <span style={{ color: PRIMARY, fontWeight: 600 }}>Foundation</span> instead.
           </span>
         </div>
       </div>
