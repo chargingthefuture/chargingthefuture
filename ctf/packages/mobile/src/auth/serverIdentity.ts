@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { AppState } from 'react-native';
 import { authedFetchJson } from './authedFetch';
 import { reportError } from '../observability/report';
 
@@ -24,23 +25,48 @@ async function fetchServerIdentity(): Promise<ServerIdentity | null> {
   };
 }
 
-// Reads the identity whenever the signed-in subject changes; null while signed out or until it answers.
-// A failed read leaves the token's own values in place, so the app still works, only without the admin
-// pages or the handle.
+// How often a failed read is tried again before waiting for the app to come back to the foreground.
+const RETRY_DELAYS_MS = [2_000, 5_000, 15_000];
+
+// Reads the identity whenever the signed-in subject changes, and again each time the app comes back to
+// the foreground, so a role granted later, or a first read that failed (no signal, the server waking
+// up), reaches the app without signing out. A failed read is tried again a few times; until one
+// answers, the token's own values stay in place, so the app still works, only without the admin pages
+// or the handle. Null while signed out or until the first answer.
 export function useServerIdentity(subject: string | null): ServerIdentity | null {
   const [identity, setIdentity] = useState<ServerIdentity | null>(null);
   useEffect(() => {
     setIdentity(null);
     if (!subject) return;
     let active = true;
-    fetchServerIdentity().then(
-      (next) => {
-        if (active && next && next.userId === subject) setIdentity(next);
-      },
-      (caught: unknown) => reportError(caught, { area: 'auth', op: 'server_identity' }),
-    );
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let attempt = 0;
+    const read = () => {
+      if (timer) clearTimeout(timer);
+      timer = null;
+      fetchServerIdentity().then(
+        (next) => {
+          attempt = 0;
+          if (active && next && next.userId === subject) setIdentity(next);
+        },
+        (caught: unknown) => {
+          reportError(caught, { area: 'auth', op: 'server_identity', extra: { attempt } });
+          const delay = RETRY_DELAYS_MS[attempt];
+          attempt += 1;
+          if (active && delay !== undefined) timer = setTimeout(read, delay);
+        },
+      );
+    };
+    read();
+    const sub = AppState.addEventListener('change', (next) => {
+      if (next !== 'active') return;
+      attempt = 0;
+      read();
+    });
     return () => {
       active = false;
+      if (timer) clearTimeout(timer);
+      sub.remove();
     };
   }, [subject]);
   return identity;

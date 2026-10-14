@@ -179,7 +179,7 @@
 3. Runtime accessibility token/class application remains app-shell-owned.
 4. Plugins consume settings/accessibility state as read-only dependency and do not fork keys.
 5. The per-user UI theme is persisted in `user_ui_preferences` (`user_id` PK, `theme` default `'default'`, `updated_at`) and served by `GET` / `PUT /api/account/ui-preferences` (`getUserTheme` / `setUserTheme`; the value is normalized via `normalizeTheme`, CSRF-guarded on write, and gated by `requireAccountAccess` so any signed-in identity reads and sets only its own row).
-6. `GET /api/account/identity` returns the caller's own `{ ok, userId, username, isAdmin }`, gated by `requireAccountAccess` (any signed-in identity, its own values only, no writes). The Android app reads it once per sign-in because its Clerk OAuth id_token carries neither the username nor the role; without it an admin gets no Admin pill and handles fall back to a short id. On the server, `verifyClerkSessionToken` (`lib/auth/verify-bearer.ts`) reads `preferred_username` / `given_name` / `family_name` from that token and fills a missing username or role from the subject's own Clerk account (`users.getUser`, cached five minutes per account); values in the token always win.
+6. `GET /api/account/identity` returns the caller's own `{ ok, userId, username, isAdmin }`, gated by `requireAccountAccess` (any signed-in identity, its own values only, no writes). The Android app reads it after sign-in, retries a failed read three times (2, 5 and 15 seconds) and reads it again each time the app returns to the foreground, because its Clerk OAuth id_token carries neither the username nor the role; without it an admin gets no Admin pill and handles fall back to a short id. On the server, `verifyClerkSessionToken` (`lib/auth/verify-bearer.ts`) reads `preferred_username` / `given_name` / `family_name` from that token and fills a missing username or role from the subject's own Clerk account (`users.getUser`, a successful lookup cached five minutes per account; a failed one is not cached); values in the token always win.
 
 ### 1.6 Member Blocking (cross-cutting safety control)
 
@@ -376,6 +376,13 @@ Owner decision, 2026-09-26. The owner pays the running costs of Skills Economy a
 
 ## 5) Change Log
 
+- 2026-10-14: **Android admin pages no longer go missing after one failed read (owner report).** The
+  Chyme and Beacon admin pages (and Foundation's and PeerProgramming's) were already in the app behind
+  the header's Admin pill, but the app asked `GET /api/account/identity` once per sign-in and never
+  again, so one failed read (no signal, the server waking up) left an admin without the pill until they
+  signed out and back in. The app now retries a failed read three times and reads it again whenever it
+  returns to the foreground, which also brings a role granted later into the app without signing out.
+  On the server, a failed Clerk account lookup is no longer cached for five minutes.
 - 2026-10-12: **Android shows the member's username and admin pages (owner report).** The Android
   sign-in token (Clerk's OAuth id_token) has no `username` or `role` claim, so Chyme showed
   `user-user_361` instead of `@handle` and an admin saw no Admin pill on Beacon, Chyme,
