@@ -58,7 +58,10 @@ WITH already_written AS (
     'nikki-martindale-9', -- an-invitation-to-nikki.md
     'no-name-individual', -- an-invitation-to-no-name-individual.md
     'indiko-1',         -- an-invitation-to-indiko.md
-    'marilyn-1921'      -- an-invitation-to-marilyn.md
+    'marilyn-1921',     -- an-invitation-to-marilyn.md
+    'bev-419',          -- an-invitation-to-bev.md
+    'king-unique-4',    -- an-invitation-to-king-unique.md
+    'tired-of-being-a-ti' -- an-invitation-to-tired-of-being-a-ti.md
   ]) AS handle
 ),
 listed_skills AS (

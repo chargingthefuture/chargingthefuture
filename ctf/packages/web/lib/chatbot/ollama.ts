@@ -12,12 +12,10 @@ export type OllamaCallOptions = {
   timeoutMs?: number;
 };
 
-// Optional bearer token for reaching the Ollama host. Empty when the host is the
-// private-network Render service (ctf-ollama), which needs no auth. When Ollama is
-// moved to an external GPU host reachable over the internet, that host must sit
-// behind a gateway/proxy that checks this token — Ollama itself has no auth — and
-// OLLAMA_API_KEY is set on the web service so every request carries it. Backward
-// compatible: unset → no Authorization header → today's behavior, unchanged.
+// Optional bearer token for reaching the Ollama host. Production points OLLAMA_BASE_URL at the
+// RunPod Serverless endpoint, which checks this token (Ollama itself has no auth), so
+// OLLAMA_API_KEY is set on the web service and every request carries it. Unset → no
+// Authorization header, for a host that needs none, such as a local Ollama.
 const OLLAMA_API_KEY = process.env.OLLAMA_API_KEY ?? '';
 
 function ollamaHeaders(): Record<string, string> {

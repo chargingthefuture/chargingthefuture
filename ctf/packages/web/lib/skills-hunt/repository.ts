@@ -4,7 +4,7 @@ import { queryDb, withDbTransaction } from 'lib/db/postgres';
 // Directory owns the takedown list. This is the sanctioned crossing point; SkillsHunt only asks
 // whether a Quora URL is on it (rule 112 plugin isolation).
 import { isQuoraUrlSuppressed } from 'lib/shared/directory-interface';
-import { canonicalizeQuoraUrl } from 'lib/shared/quora-url';
+import { canonicalizeNominationUrl } from './nomination-url';
 import {
   SKILLS_HUNT_DEFAULT_PAGE,
   SKILLS_HUNT_DEFAULT_PAGE_SIZE,
@@ -240,8 +240,9 @@ function containsUnsafeText(value: string): boolean {
 // list calls too — a URL suppressed there has to match the string a nomination was deduped on, and
 // two copies of the same rules drifted apart is exactly how that stops being true. This wrapper adds
 // only the throw: SkillsHunt refuses a bad URL at submission time, where Directory tolerates one.
+// nomination-url.ts first finds the link in what was pasted and drops a profile tab like /activity.
 function normalizeQuoraProfileUrl(value: string): string {
-  const canonical = canonicalizeQuoraUrl(value);
+  const canonical = canonicalizeNominationUrl(value);
   if (!canonical) {
     throw new Error('skills_hunt_invalid_quora_url');
   }
