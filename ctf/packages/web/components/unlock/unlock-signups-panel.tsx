@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronDown, ChevronUp, Users } from 'lucide-react';
-import type { UnlockSignupOverview } from 'lib/unlock/types';
+import type { UnlockReviewStatus, UnlockSignupOverview } from 'lib/unlock/types';
 import { failureText } from 'lib/errors/client-failure';
 import { useTheme } from '@/hooks/useTheme';
 import { getUnlockTokens, type UnlockTokens } from './unlock-shared';
@@ -68,6 +68,15 @@ function SignupsHeader({
 //
 // The panel starts closed. The admin's daily job is the review queue underneath it, and the full list of
 // everyone who never submitted stood between the two; the headline keeps the number in sight either way.
+// What the panel shows after an admin adds a URL, from the status the server stored: a URL on the
+// spam denylist is marked spam and the account blocked, not queued as pending.
+function addedUrlOutcome(stored: UnlockReviewStatus | undefined): { status: UnlockReviewStatus; notice: string } {
+  if (stored === 'spam') {
+    return { status: 'spam', notice: 'That URL is on the spam denylist, so it was marked spam and the account was blocked.' };
+  }
+  return { status: stored ?? 'pending', notice: 'URL added and sent to the review queue as pending — approve or reject it there.' };
+}
+
 export function UnlockSignupsPanel({ overview }: { overview: UnlockSignupOverview }) {
   const router = useRouter();
   const { theme } = useTheme();
@@ -181,7 +190,7 @@ export function UnlockSignupsPanel({ overview }: { overview: UnlockSignupOvervie
         body: JSON.stringify({ userId, quoraProfileUrl: url }),
       });
       const data = (await res.json().catch(() => null)) as
-        | { ok?: boolean; message?: string; code?: string; submission?: { reviewStatus?: string } }
+        | { ok?: boolean; message?: string; code?: string; submission?: { reviewStatus?: UnlockReviewStatus } }
         | null;
       if (!res.ok) {
         setError(data?.message ?? data?.code ?? `Could not add that URL (${res.status}).`);
@@ -189,19 +198,20 @@ export function UnlockSignupsPanel({ overview }: { overview: UnlockSignupOvervie
       }
       // Move the row out of "No Quora URL" straight away, so the list matches what was just done
       // without waiting on the server round trip that follows.
+      const added = addedUrlOutcome(data?.submission?.reviewStatus);
       setAccounts((prev) =>
         prev.map((account) =>
           account.userId === userId
             ? {
                 ...account,
                 hasSubmission: true,
-                reviewStatus: 'pending',
+                reviewStatus: added.status,
                 submittedAt: new Date().toISOString(),
               }
             : account,
         ),
       );
-      setNotice('URL added and sent to the review queue as pending — approve or reject it there.');
+      setNotice(added.notice);
       router.refresh();
     } catch (caught) {
       setError(failureText(caught, { area: 'unlock', op: 'add_quora_url', fallback: 'Network error. Try again.' }));

@@ -193,26 +193,49 @@ export async function deleteDraftBeaconEvent(eventId: string): Promise<boolean> 
   return (result.rowCount ?? 0) > 0;
 }
 
+// Draft -> live only. The `status = 'draft'` predicate means an ended event (which keeps its
+// ended_at and recording) can never be set live again, and of two simultaneous go-live calls only
+// one gets the row back. Returns null when the event is missing or is no longer a draft. A second
+// event going live at the same time hits beacon_events_one_live_idx and throws a unique violation.
 export async function markBeaconEventLive(eventId: string): Promise<BeaconEvent | null> {
   const result = await queryDb<BeaconEventRow>(
     `UPDATE beacon_events
      SET status = 'live', started_at = COALESCE(started_at, NOW()), updated_at = NOW()
-     WHERE id = $1::uuid
+     WHERE id = $1::uuid AND status = 'draft'
      RETURNING ${EVENT_COLUMNS}`,
     [eventId],
   );
   return result.rows[0] ? mapEventRow(result.rows[0]) : null;
 }
 
+// Undo markBeaconEventLive when the Stream go-live call that follows it fails, so the event is a
+// draft again and can be retried or deleted. Only a live event with no live-now Commons post yet
+// is put back, which is exactly the state go-live leaves it in before Stream answers.
+export async function revertBeaconEventToDraft(eventId: string): Promise<void> {
+  await queryDb(
+    `UPDATE beacon_events
+     SET status = 'draft', started_at = NULL, updated_at = NOW()
+     WHERE id = $1::uuid AND status = 'live' AND commons_live_post_id IS NULL`,
+    [eventId],
+  );
+}
+
+// Live -> ended only, so a draft can never become an ended row (which delete would then refuse).
+// Returns null when the event is missing or is not live.
 export async function markBeaconEventEnded(eventId: string): Promise<BeaconEvent | null> {
   const result = await queryDb<BeaconEventRow>(
     `UPDATE beacon_events
      SET status = 'ended', ended_at = COALESCE(ended_at, NOW()), updated_at = NOW()
-     WHERE id = $1::uuid
+     WHERE id = $1::uuid AND status = 'live'
      RETURNING ${EVENT_COLUMNS}`,
     [eventId],
   );
   return result.rows[0] ? mapEventRow(result.rows[0]) : null;
+}
+
+// Postgres unique_violation: the one-live-event partial unique index refused a second live row.
+export function isBeaconUniqueViolation(error: unknown): boolean {
+  return Boolean(error) && typeof error === 'object' && (error as { code?: string }).code === '23505';
 }
 
 // Store the live-now Commons post id on the event. Idempotent — only sets it when still null, so a

@@ -39,7 +39,9 @@ auditEvents:
       status: allow_or_deny
       reason: policy_reason_code
     dataClassesAccessed:
-      - skills_taxonomy_flattened_projection
+      - skills_taxonomy_skills
+      - skills_taxonomy_job_titles
+      - skills_taxonomy_sectors
     targetContext:
       workspaceId: workspace_identifier
     requestId: request_identifier
@@ -77,3 +79,5 @@ changelog:
     change: Initial Skills Taxonomy audit contract skeleton added with policy decision evidence for reads, CRUD actions, and dependency-impact previews.
   - date: 2026-06-27
     change: Reconciled the audit data class name from skills_taxonomy_audit_log to skills_taxonomy_change_events to match the actual durable audit store written by the delete path; no skills_taxonomy_audit_log table exists.
+  - date: 2026-10-14
+    change: skills-taxonomy.flattened.get dataClassesAccessed now names skills_taxonomy_skills, skills_taxonomy_job_titles and skills_taxonomy_sectors, the three base tables getFlattened joins; it no longer reads skills_taxonomy_flattened_projection.
