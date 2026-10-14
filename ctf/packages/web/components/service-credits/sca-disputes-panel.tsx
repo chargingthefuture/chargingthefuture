@@ -11,6 +11,7 @@ import { Field, ConfirmAction, Feedback } from './sca-fields';
 import { scAdminMutate, newIdempotencyKey, type DisputeAdjustmentResponse } from './sca-shared';
 import { useTheme } from '@/hooks/useTheme';
 import { getServiceCreditsTokens, type ServiceCreditsTokens } from './sc-shared';
+import { failureText, responseFailureText } from 'lib/errors/client-failure';
 
 // One open dispute in the review list (mirrors ServiceCreditsAdminDispute from the repository).
 type OpenDispute = {
@@ -100,10 +101,12 @@ function OpenDisputeRow({
 // case ID (the operator still supplies source/destination/amount). Drives the admin dot.
 function OpenDisputesList({
   openDisputes,
+  loadError,
   onResolve,
   t,
 }: {
   openDisputes: OpenDispute[];
+  loadError: string | null;
   onResolve: (id: string) => void;
   t: ServiceCreditsTokens;
 }) {
@@ -112,7 +115,10 @@ function OpenDisputesList({
       <h3 style={{ fontSize: 13, fontWeight: 700, color: t.TITLE, margin: 0 }}>
         Open disputes {openDisputes.length > 0 ? `(${openDisputes.length})` : ''}
       </h3>
-      {openDisputes.length === 0 ? (
+      {/* A failed read must not read as an empty queue, or an admin concludes there is nothing to review. */}
+      {loadError ? (
+        <Feedback error={loadError} notice={null} />
+      ) : openDisputes.length === 0 ? (
         <p style={{ fontSize: 13, color: t.MUTED, margin: 0 }}>No open disputes.</p>
       ) : (
         openDisputes.map((dispute) => (
@@ -135,16 +141,23 @@ export function ServiceCreditsDisputesPanel() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [openDisputes, setOpenDisputes] = useState<OpenDispute[]>([]);
+  const [disputesError, setDisputesError] = useState<string | null>(null);
 
-  // Best-effort: a failure leaves the list empty; the manual adjustment form still works.
+  // A failed read shows its reason in place of the list; the manual adjustment form still works.
   const loadOpenDisputes = useCallback(async () => {
     try {
       const res = await fetch('/api/service-credits/admin/disputes', { cache: 'no-store' });
-      if (!res.ok) return;
+      if (!res.ok) {
+        setDisputesError(await responseFailureText(res, 'Open disputes could not be loaded.'));
+        return;
+      }
       const data = (await res.json()) as { ok: boolean; disputes: OpenDispute[] };
       setOpenDisputes(data.disputes ?? []);
-    } catch {
-      // best-effort
+      setDisputesError(null);
+    } catch (caught) {
+      setDisputesError(
+        failureText(caught, { area: 'service-credits', op: 'admin_disputes_load', fallback: 'Open disputes could not be loaded.' }),
+      );
     }
   }, []);
 
@@ -203,7 +216,7 @@ export function ServiceCreditsDisputesPanel() {
         </p>
       </header>
 
-      <OpenDisputesList openDisputes={openDisputes} onResolve={setDisputeCaseId} t={t} />
+      <OpenDisputesList openDisputes={openDisputes} loadError={disputesError} onResolve={setDisputeCaseId} t={t} />
 
       <Feedback error={error} notice={notice} />
 

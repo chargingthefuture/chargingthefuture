@@ -10,8 +10,8 @@ import { GUIDELINE_SECTIONS, GUIDELINES_EFFECTIVE_DATE, type GuidelineSection } 
 // so the two policy pages read as one set.
 
 export const metadata: Metadata = {
-  title: 'Community Guidelines — Charging the Future',
-  description: 'What discussions belong on the Charging the Future community platform, what does not, and how the rules are enforced.',
+  title: 'Community Guidelines — Skills Economy',
+  description: 'What discussions belong on the Skills Economy community platform, what does not, and how the rules are enforced.',
 };
 
 function GuidelineSectionView({ section }: { section: GuidelineSection }) {
@@ -39,7 +39,7 @@ export default function GuidelinesPage() {
       <div className={styles.container}>
         <PublicPageNav />
         <header className={styles.header}>
-          <p className={styles.brand}>Charging the Future</p>
+          <p className={styles.brand}>Skills Economy</p>
           <h1 className={styles.title}>Community Guidelines</h1>
           <p className={styles.updated}>Last updated: {GUIDELINES_EFFECTIVE_DATE}</p>
         </header>
