@@ -1,6 +1,6 @@
 import { createHmac } from 'crypto';
 import { StreamChat } from 'stream-chat';
-import { resolveStreamCredentials } from 'lib/integrations/stream-credentials';
+import { resolveStreamCredentials, streamCredentialsFor, type StreamAppName } from 'lib/integrations/stream-credentials';
 import { reportError } from 'lib/observability/report';
 import { BEACON_CHAT_CHANNEL_TYPE, BEACON_MUTE_MINUTES, BEACON_STREAM_CALL_TYPE } from './constants';
 
@@ -73,8 +73,9 @@ type StreamRestContext = {
   serverToken: string;
 };
 
-async function resolveStreamRest(): Promise<StreamRestContext | null> {
-  const credentials = await resolveStreamCredentials();
+// `app` names the Stream app outright; without it the request's demo mode picks one.
+async function resolveStreamRest(app?: StreamAppName): Promise<StreamRestContext | null> {
+  const credentials = app ? streamCredentialsFor(app) : await resolveStreamCredentials();
   if (!credentials) {
     return null;
   }
@@ -295,23 +296,48 @@ export async function goLiveBeaconCall(eventId: string): Promise<boolean> {
 // Start the public HLS broadcast and the recording once a publisher is actually live. Returns false
 // when Stream is not configured.
 //
-// Source: Stream Video HLS docs (getstream.io/video/docs/api/streaming/hls/), confirmed 2026-06-21.
-// go_live is idempotent on an already-live call: calling POST /api/v2/video/call/{type}/{id}/go_live
-// again with start_hls + start_recording starts the HLS broadcast and recording now that media is
-// present, which avoids guessing standalone start-HLS/start-recording endpoint names. start_hls
-// begins the public HLS broadcast (the response carries `egress.hls.playlist_url`, read by
-// getBeaconHlsPlaybackUrl) and start_recording feeds the recording-ready webhook.
-export async function startBeaconBroadcastEgress(eventId: string): Promise<boolean> {
-  const ctx = await resolveStreamRest();
+// Each is started through its own endpoint: POST /api/v2/video/call/{type}/{id}/start_broadcasting
+// (HLS; the call then carries `egress.hls.playlist_url`, read by getBeaconHlsPlaybackUrl) and
+// POST .../start_recording (which feeds the recording-ready webhook). These are the paths Stream's own
+// client uses for call.startHLS() and call.startRecording() (@stream-io/video-client 1.47.0). This
+// used to send a second go_live with start_hls + start_recording to a call that was already live,
+// and no recording was ever made for any event, so every ended event showed "no recording found".
+//
+// Both are attempted even when the first one fails, so a broadcast that is already on air still gets
+// its recording started. Stream answers a start for something already running with an error naming
+// it as already running; that is the state this function exists to reach, so it counts as success.
+// Any other refusal is thrown after both attempts, naming each one that failed.
+//
+// `app` is passed by the webhook, which knows which Stream app sent the delivery; every other caller
+// leaves it to the request's demo mode.
+export async function startBeaconBroadcastEgress(eventId: string, app?: StreamAppName): Promise<boolean> {
+  const ctx = await resolveStreamRest(app);
   if (!ctx) {
     return false;
   }
   const callId = beaconCallIdForEvent(eventId);
-  await streamVideoFetch(ctx, `/api/v2/video/call/${BEACON_STREAM_CALL_TYPE}/${callId}/go_live`, {
-    method: 'POST',
-    body: { start_hls: true, start_recording: true },
-  });
+  const base = `/api/v2/video/call/${BEACON_STREAM_CALL_TYPE}/${callId}`;
+  const failures: string[] = [];
+  for (const endpoint of ['start_broadcasting', 'start_recording']) {
+    try {
+      await streamVideoFetch(ctx, `${base}/${endpoint}`, { method: 'POST', body: {} });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (!isAlreadyRunningRefusal(message)) {
+        failures.push(message);
+      }
+    }
+  }
+  if (failures.length > 0) {
+    throw new Error(failures.join(' | '));
+  }
   return true;
+}
+
+// Stream's refusal to start an egress that is already running reads "... already ..." (for example
+// "call is already being recorded"). Matched loosely because the exact wording is Stream's.
+function isAlreadyRunningRefusal(message: string): boolean {
+  return /already/i.test(message);
 }
 
 // Return the public HLS playback URL for the live call so anonymous viewers can watch with no token.
@@ -343,13 +369,17 @@ export async function getBeaconHlsPlaybackUrl(eventId: string): Promise<string |
 // Source: Stream Video recording API, GET /api/v2/video/call/{type}/{id}/recordings, which answers
 // `{ recordings: [{ filename, url, start_time, end_time, session_id }] }`. Not re-checked against
 // Stream's docs from this change (the docs host is unreachable from the build container), so the
-// shape is read defensively and null is returned when anything is missing. Returns the most recent
-// recording's address, or null when Stream is not configured, has none, or the request fails; the
-// caller then falls back to the stored address.
-export async function getFreshBeaconRecordingUrl(eventId: string): Promise<string | null> {
+// shape is read defensively and null is returned when anything is missing.
+//
+// `detail` says why there is no address, in words the admin history shows: Stream not configured,
+// Stream answering with no recordings, recordings with no file yet, or the request failing with
+// Stream's own message. Without it, "Stream has none" and "the lookup failed" looked the same.
+export type BeaconRecordingLookup = { url: string | null; detail: string };
+
+export async function lookupBeaconRecording(eventId: string): Promise<BeaconRecordingLookup> {
   const ctx = await resolveStreamRest();
   if (!ctx) {
-    return null;
+    return { url: null, detail: 'Live video is not configured, so Stream was not asked.' };
   }
   const callId = beaconCallIdForEvent(eventId);
   try {
@@ -362,11 +392,23 @@ export async function getFreshBeaconRecordingUrl(eventId: string): Promise<strin
     const withUrl = recordings
       .filter((recording) => typeof recording.url === 'string' && recording.url.length > 0)
       .sort((a, b) => String(b.end_time ?? '').localeCompare(String(a.end_time ?? '')));
-    return withUrl.length > 0 ? (withUrl[0].url as string) : null;
+    if (withUrl.length > 0) {
+      return { url: withUrl[0].url as string, detail: `Stream has ${withUrl.length} recording file(s).` };
+    }
+    if (recordings.length > 0) {
+      return { url: null, detail: `Stream lists ${recordings.length} recording(s) for call ${callId}, none with a file address yet.` };
+    }
+    return { url: null, detail: `Stream has no recording for call ${callId}: the recording was never started or never finished.` };
   } catch (error) {
     reportError(error, { area: 'beacon', op: 'list_recordings', extra: { eventId } });
-    return null;
+    return { url: null, detail: `Asking Stream for the recording failed: ${error instanceof Error ? error.message : String(error)}` };
   }
+}
+
+// The address alone, for the public recording route: null when there is none, and the caller then
+// falls back to the stored address.
+export async function getFreshBeaconRecordingUrl(eventId: string): Promise<string | null> {
+  return (await lookupBeaconRecording(eventId)).url;
 }
 
 // End the call so Stream stops distribution and billing stops. This is the cost-critical path: the
@@ -448,17 +490,28 @@ export async function moderateBeaconChat(input: {
   }
 }
 
-// Verify the Stream webhook signature. Stream signs the raw body with the app secret (HMAC-SHA256)
-// and sends it in the `x-signature` header. A request whose signature does not match is rejected.
-export async function verifyBeaconWebhookSignature(rawBody: string, signature: string | null): Promise<boolean> {
+// Verify the Stream webhook signature and say which Stream app signed it. Stream signs the raw body
+// with the app secret (HMAC-SHA256) and sends it in the `x-signature` header.
+//
+// Both apps send their webhooks to this one address, and a delivery carries no signed-in user, so
+// the request's demo mode cannot say which secret to check. Checking only the production secret
+// refused every delivery from the demo app, which is where an admin in demo mode broadcasts. Each
+// app's secret is tried; null when neither matches.
+export function verifyBeaconWebhookSignature(rawBody: string, signature: string | null): StreamAppName | null {
   if (!signature) {
-    return false;
+    return null;
   }
-  const credentials = await resolveStreamCredentials();
-  if (!credentials) {
-    return false;
+  for (const app of ['production', 'staging'] as const) {
+    const credentials = streamCredentialsFor(app);
+    if (credentials && signatureMatches(credentials.apiSecret, rawBody, signature)) {
+      return app;
+    }
   }
-  const expected = createHmac('sha256', credentials.apiSecret).update(rawBody).digest('hex');
+  return null;
+}
+
+function signatureMatches(apiSecret: string, rawBody: string, signature: string): boolean {
+  const expected = createHmac('sha256', apiSecret).update(rawBody).digest('hex');
   // Length-guard before compare so a malformed signature can't throw.
   if (expected.length !== signature.length) {
     return false;

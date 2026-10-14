@@ -10,12 +10,15 @@ import { PRIMARY, initials } from './chyme-shared';
 export function ChymeBackChannelInvite({
   fromName,
   busy,
+  error,
   onAccept,
   onDecline,
 }: {
   fromName: string;
   isMobile: boolean;
   busy: boolean;
+  // Why the last accept or decline failed, in the route's words; shown above the buttons' footnote.
+  error?: string | null;
   onAccept: () => void;
   onDecline: () => void;
 }) {
@@ -114,6 +117,11 @@ export function ChymeBackChannelInvite({
             Decline
           </button>
         </div>
+        {error ? (
+          <div role="alert" style={{ marginTop: 10, fontSize: 12, color: '#f87171' }}>
+            {error}
+          </div>
+        ) : null}
         <div style={{ marginTop: 10, fontSize: 10, color: '#6b7280' }}>
           Declining sends no message. Back Channels are private.
         </div>

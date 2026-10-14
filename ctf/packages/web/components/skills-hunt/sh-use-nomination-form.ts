@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { MAX_SKILLS, type SkillsHuntRound } from "./sh-shared";
 import { isRoundOpenForNominations } from "lib/skills-hunt/round-window";
+import { nameFromQuoraProfileUrl } from "lib/skills-hunt/name-from-quora-url";
 import type { ScoutFormModel } from "./sh-scout-tab";
 
 // A nomination is ready to submit once the round is open, the full name is plausible, there is at
@@ -34,6 +35,35 @@ function isNominationReady(
   );
 }
 
+// How long after the last keystroke in the Quora field the form asks whether that person can be
+// nominated. A paste settles at once; typing a link by hand asks once at the end, not per letter.
+const QUORA_CHECK_DELAY_MS = 400;
+
+// Asks the server, as soon as a Quora link is in the field, whether this person is already nominated
+// or asked to be removed, so the scout finds out before filling in the rest of the form. Returns the
+// sentence to show under the field, or null. Submit still runs the same check as the real guard, so a
+// failed or slow check here only means the scout hears it at submit, as before.
+function useQuoraNominationCheck(quora: string): string | null {
+  const [blocked, setBlocked] = useState<{ url: string; message: string } | null>(null);
+  useEffect(() => {
+    const url = quora.trim();
+    if (!url) return;
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      fetch(`/api/skills-hunt/nomination-check?quoraProfileUrl=${encodeURIComponent(url)}`, { signal: controller.signal })
+        .then((res) => (res.ok ? (res.json() as Promise<{ state?: string; message?: string }>) : null))
+        .then((body) => {
+          const refused = body && (body.state === "already_nominated" || body.state === "taken_down") && body.message;
+          setBlocked(refused ? { url, message: body.message! } : null);
+        })
+        .catch(() => { /* aborted or offline: submit runs the same check */ });
+    }, QUORA_CHECK_DELAY_MS);
+    return () => { clearTimeout(timer); controller.abort(); };
+  }, [quora]);
+  // Only the answer for the link now in the field counts; an edited link waits for its own answer.
+  return blocked && blocked.url === quora.trim() ? blocked.message : null;
+}
+
 function nominationErrorMessage(e: unknown): string {
   return e instanceof Error ? e.message : "Failed to submit nomination.";
 }
@@ -48,16 +78,23 @@ export function useNominationForm(activeRound: SkillsHuntRound | null): {
   const [fullName, setFullName] = useState("");
   const [bio, setBio] = useState("");
   const [quora, setQuora] = useState("");
+  // The last name filled in from a Quora link. A pasted link fills Full Name while the field is
+  // empty or still holds that guess, so pasting a corrected link updates it, and a name the scout
+  // typed themselves is never overwritten.
+  const [guessedName, setGuessedName] = useState("");
   const [country, setCountry] = useState("");
   const [stateRegion, setStateRegion] = useState("");
   const [city, setCity] = useState("");
   const [skills, setSkills] = useState<string[]>([]);
   const [proposedSkills, setProposed] = useState<string[]>([]);
+  const [jobTitleId, setJobTitleId] = useState<string | null>(null);
   const [freeText, setFreeText] = useState("");
   const [openCategory, setOpenCategory] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+
+  const quoraBlocked = useQuoraNominationCheck(quora);
 
   const allSkillCount = skills.length + proposedSkills.length;
   const canAddMore = allSkillCount < MAX_SKILLS;
@@ -76,11 +113,13 @@ export function useNominationForm(activeRound: SkillsHuntRound | null): {
     setFreeText("");
   }
 
-  // Bulk-add the skills of a chosen profession (occupation). A convenience so a scout who knows
-  // someone is, say, a Pharmacist does not have to remember every skill: picking the profession
-  // fills its taxonomy skills into the existing skills field (deduped, and only up to the cap),
-  // which the scout can then trim. Nothing new is stored — the skills remain the source of truth.
-  function addOccupationSkills(skillNames: string[]) {
+  // Pick (or clear) the nominee's job title. The id is saved with the nomination and becomes the job
+  // title on the Directory profile an accepted nomination creates. Picking one also fills in its
+  // taxonomy skills (deduped, and only up to the cap), so a scout who knows someone is, say, a
+  // Pharmacist does not have to remember every skill; the skills stay listed one by one and the scout
+  // can trim them. Clearing the job title leaves the skills as they are.
+  function selectJobTitle(nextJobTitleId: string | null, skillNames: string[]) {
+    setJobTitleId(nextJobTitleId);
     setSkills((prev) => {
       const next = [...prev];
       for (const name of skillNames) {
@@ -94,7 +133,7 @@ export function useNominationForm(activeRound: SkillsHuntRound | null): {
   async function handleSubmit() {
     // Country and the Quora profile URL are both required (the server enforces both); full name and
     // at least one skill as before.
-    if (!isNominationReady(activeRound, fullName, allSkillCount, country, quora)) return;
+    if (!isNominationReady(activeRound, fullName, allSkillCount, country, quora) || quoraBlocked) return;
     setSubmitting(true);
     setSubmitError(null);
     try {
@@ -107,6 +146,7 @@ export function useNominationForm(activeRound: SkillsHuntRound | null): {
           quoraProfileUrl: quora.trim(),
           skills,
           proposedSkills,
+          jobTitleId,
           country: country.trim(),
           state: stateRegion.trim() ? stateRegion.trim() : null,
           city: city.trim() ? city.trim() : null,
@@ -127,20 +167,29 @@ export function useNominationForm(activeRound: SkillsHuntRound | null): {
     }
   }
 
+  function changeQuora(value: string) {
+    setQuora(value);
+    const guess = nameFromQuoraProfileUrl(value);
+    if (guess && (fullName.trim() === "" || fullName === guessedName)) {
+      setFullName(guess);
+      setGuessedName(guess);
+    }
+  }
+
   function resetForm() {
-    setFullName(""); setBio(""); setQuora("");
+    setFullName(""); setBio(""); setQuora(""); setGuessedName("");
     setCountry(""); setStateRegion(""); setCity("");
-    setSkills([]); setProposed([]); setFreeText("");
+    setSkills([]); setProposed([]); setFreeText(""); setJobTitleId(null);
     setSubmitted(false); setSubmitError(null);
   }
 
   const form: ScoutFormModel = {
-    fullName, bio, quora, country, state: stateRegion, city, skills, proposedSkills, freeText, openCategory,
-    submitting, submitError, allSkillCount, canAddMore,
-    onFullName: setFullName, onBio: setBio, onQuora: setQuora,
+    fullName, bio, quora, country, state: stateRegion, city, skills, proposedSkills, jobTitleId, freeText, openCategory,
+    quoraBlocked, submitting, submitError, allSkillCount, canAddMore,
+    onFullName: setFullName, onBio: setBio, onQuora: changeQuora,
     onCountry: setCountry, onState: setStateRegion, onCity: setCity,
     onToggleSkill: toggleSkill,
-    onAddOccupationSkills: addOccupationSkills,
+    onSelectJobTitle: selectJobTitle,
     onRemoveProposed: (s) => setProposed((prev) => prev.filter((x) => x !== s)),
     onOpenCategory: setOpenCategory, onFreeText: setFreeText, onAddProposed: addProposed,
     onSubmit: () => void handleSubmit(),

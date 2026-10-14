@@ -74,7 +74,7 @@ contracts:
   - pluginId: beacon
     command: event.recording.archive
     version: 1.0.0
-    description: Cron-only (CRON_SECRET Bearer), GET and POST /api/internal/beacon/recordings-archive. GET lists up to 5 ended, recorded events with no kept copy, each with a signed download address. POST records where the copy now lives; only this repository's beacon-recordings release asset named <eventId>.mp4 is accepted. Run by the beacon-recordings-archive workflow.
+    description: Cron-only (CRON_SECRET Bearer), GET and POST /api/internal/beacon/recordings-archive. GET lists up to 5 ended, recorded events with no kept copy, each with a signed download address. POST records where the copy now lives; only <eventId>.mp4 on this repository's beacon-recording-<eventId> release is accepted. Run by the beacon-recordings-archive workflow.
     inputSchema:
       eventId:
         type: string

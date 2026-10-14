@@ -12,7 +12,7 @@ type RouteContext = { params: Promise<{ id: string }> };
 // Admin: start the public HLS broadcast and recording once a host is publishing media to the
 // livestream call. Go-live only flips the call out of backstage; this starts the egress (HLS +
 // recording) at the moment media exists, which is when the in-browser screen-share host begins
-// sharing. Idempotent — go_live with the egress flags can be called again safely.
+// sharing. Safe to call again: a start for something already running counts as success.
 export async function POST(request: Request, context: RouteContext) {
   const csrfDeny = ensureBeaconMutationCsrf(request);
   if (csrfDeny) {
@@ -68,7 +68,7 @@ export async function POST(request: Request, context: RouteContext) {
       actorId: gate.auth.userId,
       command: 'beacon.event.start-broadcast',
       policyStatus: 'allow',
-      reason: 'ok',
+      reason: 'ok: public feed and recording started',
       targetType: 'event',
       targetId: event.id,
       metadata: {},
@@ -77,6 +77,20 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'beacon', op: 'start_broadcast', extra: { eventId: id } });
-    return beaconErrorResponse(`Could not start the public broadcast: ${error instanceof Error ? error.message : 'unknown error'}`);
+    const reason = error instanceof Error ? error.message : 'unknown error';
+    // Written to the event's log so the admin history shows why the recording never started.
+    try {
+      await insertBeaconAudit({
+        actorId: gate.auth.userId,
+        command: 'beacon.event.start-broadcast',
+        policyStatus: 'deny',
+        reason: `Starting the public feed or recording failed: ${reason}`,
+        targetType: 'event',
+        targetId: id,
+      });
+    } catch (auditError) {
+      reportError(auditError, { area: 'beacon', op: 'start_broadcast_log', extra: { eventId: id } });
+    }
+    return beaconErrorResponse(`Could not start the public broadcast: ${reason}`);
   }
 }

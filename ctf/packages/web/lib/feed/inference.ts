@@ -22,12 +22,12 @@ const APPROVED_SOURCE_MAP: Record<FeedQuestionCategory, FeedAnswerSource[]> = {
     {
       id: 'directory-housing',
       label: 'Directory housing profiles',
-      detail: 'Approved survivor-safe housing listings and provider profiles inside CTF Directory.',
+      detail: 'Approved survivor-safe housing listings and provider profiles inside the Skills Economy Directory.',
     },
     {
       id: 'lighthouse-matches',
       label: 'LightHouse housing workflows',
-      detail: 'Housing request and match workflows already governed in the CTF LightHouse plugin.',
+      detail: 'Housing request and match workflows already governed in the Skills Economy LightHouse plugin.',
     },
   ],
   services: [
@@ -50,7 +50,7 @@ const APPROVED_SOURCE_MAP: Record<FeedQuestionCategory, FeedAnswerSource[]> = {
     },
     {
       id: 'ctf-approved-guidance',
-      label: 'CTF approved support guidance',
+      label: 'Skills Economy approved support guidance',
       detail: 'Approved internal support playbooks and survivor-facing help content.',
     },
   ],
@@ -62,7 +62,7 @@ const APPROVED_SOURCE_MAP: Record<FeedQuestionCategory, FeedAnswerSource[]> = {
     },
     {
       id: 'ctf-safety-guidance',
-      label: 'CTF safety guidance',
+      label: 'Skills Economy safety guidance',
       detail: 'Approved internal escalation and survivor safety playbooks.',
     },
   ],
@@ -74,7 +74,7 @@ const APPROVED_SOURCE_MAP: Record<FeedQuestionCategory, FeedAnswerSource[]> = {
     },
     {
       id: 'ctf-benefits-guidance',
-      label: 'CTF benefits guidance',
+      label: 'Skills Economy benefits guidance',
       detail: 'Internal benefits navigation guidance approved for survivor-facing support.',
     },
   ],
@@ -129,7 +129,7 @@ function buildTemplateAnswer(input: {
     housing: `Start with housing inventory and verified host/provider matches ${locationLabel}. Prioritize listings with clear move-in windows, support availability, and direct follow-up through LightHouse or Directory rather than off-platform contact.`,
     services: `Start with verified service providers ${locationLabel}. Focus on providers with clearly scoped support, availability, and safe handoff paths inside Foundation or Directory before sharing any private details.`,
     general: `Use the unified Feed, admin announcements, and verified provider directories to narrow the next safe step ${locationLabel}. If the question spans multiple topics, start with the most immediate survivor need and branch from there.`,
-    safety: `Treat the first step as a safety workflow ${locationLabel}. Prefer transport and escalation guidance that keeps location-sharing minimal and uses approved CTF coordination paths when live help is needed.`,
+    safety: `Treat the first step as a safety workflow ${locationLabel}. Prefer transport and escalation guidance that keeps location-sharing minimal and uses approved Skills Economy coordination paths when live help is needed.`,
     benefits: `Focus on approved benefits-navigation references ${locationLabel}. Gather the minimum facts needed for eligibility questions and route follow-up through verified support listings rather than unverified outside links.`,
   };
 
@@ -154,7 +154,7 @@ function buildOllamaUserPrompt(input: {
     `A survivor submitted the following question (category: ${input.category}, location: ${locationLabel}):`,
     `"${input.questionBody.trim()}"`,
     ``,
-    `Provide a focused, survivor-safe response. Reference these CTF platform resources where applicable: ${sources}.`,
+    `Provide a focused, survivor-safe response. Reference these Skills Economy resources where applicable: ${sources}.`,
   ].join('\n');
 }
 

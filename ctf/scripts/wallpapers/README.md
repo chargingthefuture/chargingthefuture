@@ -1,7 +1,10 @@
 # Wallpaper sources
 
 Each `.html` file here is the source for one phone wallpaper carrying the Skills Economy
-"Stack" logo (the three ascending bars, teal-to-purple gradient). The vector path and colors
+"Stack" logo (the three ascending bars), in one of four colors so members can pick one: the
+original teal-to-purple, and burgundy, coral and green (the colors of the project's sites). The
+`-burgundy`, `-coral` and `-forest` files are copies of the original with only the logo gradient and
+the glow colors changed; keep their layout in step with the original. The vector path and colors
 are copied from the brand mark in
 `ctf/packages/web/components/shared/se-mark.tsx` — if the brand mark ever changes, update the
 path here to match and re-render.
@@ -17,6 +20,7 @@ the same Releases page that carries the Android APK.
 |---|---|---|
 | `se-wallpaper-iphone-16e.html` | 1170 × 2532 | iPhone 16e / 14 / 13 (native resolution) |
 | `se-wallpaper-android.html` | 1080 × 2400 | Most current Android phones (FHD+ 20:9) |
+| `se-wallpaper-<phone>-burgundy.html`, `-coral.html`, `-forest.html` | the same sizes, `se-wallpaper-<phone>-<color>-<size>.png` | the same phones |
 
 ## Re-rendering
 
