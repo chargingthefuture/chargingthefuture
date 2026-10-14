@@ -6,6 +6,7 @@ import { deleteAuthIdentity } from 'lib/account/identity-deletion';
 import { runWithForcedPool } from 'lib/db/postgres';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
+import { bearerMatches } from 'lib/auth/internal-secret';
 
 // Operator-only: delete ANY user's account by id, for clearing duplicate accounts the owner finds.
 // This is the admin counterpart to the self-service `DELETE /api/account/full-account` route: it runs
@@ -23,7 +24,7 @@ const OPERATOR_ACTOR_ID = 'account-deletion-operator';
 // POST is the single place that checks for presence), so this only compares the supplied Bearer token
 // against the known-non-empty secret.
 function isAuthorized(request: Request, secret: string): boolean {
-  return request.headers.get('authorization') === `Bearer ${secret}`;
+  return bearerMatches(request, secret);
 }
 
 // Presence + Bearer gate. Distinguish "not configured" (503 — secret missing in the app runtime) from
@@ -85,9 +86,11 @@ async function parseDeleteRequest(request: Request): Promise<{ error: NextRespon
 }
 
 // Optionally delete the Clerk identity after the DB deletion has already succeeded. Runs only when
-// requested; a Clerk failure is surfaced (clerkError) without failing the request so the operator can
-// retry just the Clerk side (e.g. the user was already removed there). The removal itself is the
-// shared `deleteAuthIdentity` the self-service delete route also uses, so the two cannot drift.
+// requested. A Clerk failure is returned as clerkError, reported to error tracking and recorded as a
+// failure on the audit line; the request itself still answers 200 because the data deletion did
+// complete. There is no Clerk-only mode, so a re-run repeats the data deletion as well. The removal
+// itself is the shared `deleteAuthIdentity` the self-service delete route also uses, so the two
+// cannot drift.
 async function deleteClerkAccountIfRequested(
   userId: string,
   deleteClerk: boolean,
@@ -96,6 +99,14 @@ async function deleteClerkAccountIfRequested(
     return { clerkDeleted: false, clerkError: null };
   }
   const outcome = await deleteAuthIdentity(userId);
+  if (!outcome.deleted) {
+    // deleteAuthIdentity swallows the error and returns its reason, so without this report a
+    // sign-in left live after an operator deletion would show up nowhere but the response body.
+    reportError(new Error(`Clerk sign-in was not removed: ${outcome.error ?? 'no reason given'}`), {
+      area: 'account',
+      op: 'operator_delete_clerk',
+    });
+  }
   return { clerkDeleted: outcome.deleted, clerkError: outcome.error };
 }
 
@@ -133,8 +144,10 @@ export async function POST(request: Request) {
       status: 'allow',
       reason: 'operator_account_deletion',
       target: { scope: 'account', userId, schema: targetLabel, clerkDeleted: String(clerkDeleted) },
-      result: 'success',
-      errorCategory: null,
+      // The data deletion completed either way; when the sign-in was asked to go and did not, the line
+      // says so instead of reading as a clean success.
+      result: clerkError ? 'failure' : 'success',
+      errorCategory: clerkError ? 'clerk_delete_failed' : null,
     });
 
     return NextResponse.json({
