@@ -4,6 +4,7 @@ import { getActiveUserIdsLastDays } from 'lib/engagement/login-activity';
 import { listUnlockedUserIds } from 'lib/unlock/repository';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
+import { bearerMatches } from 'lib/auth/internal-secret';
 
 // Cron-only: forms this week's PeerProgramming cohorts from the last-7-days active set, without an
 // admin clicking "Run weekly assignment". Guarded by CRON_SECRET (Bearer), matching the Unlock
@@ -17,7 +18,7 @@ function isAuthorized(request: Request): boolean {
   if (!cronSecret || cronSecret.trim().length === 0) {
     return false;
   }
-  return request.headers.get('authorization') === `Bearer ${cronSecret}`;
+  return bearerMatches(request, cronSecret);
 }
 
 export async function POST(request: Request) {

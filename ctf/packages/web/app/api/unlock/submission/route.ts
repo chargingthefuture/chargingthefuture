@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { normalizeQuoraProfileUrl, requireUnlockUserAccess, resolveUnlockRequestId, unlockErrorResponse } from 'lib/unlock/_lib';
+import { ensureUnlockMutationCsrf, normalizeQuoraProfileUrl, requireUnlockUserAccess, resolveUnlockRequestId, unlockErrorResponse } from 'lib/unlock/_lib';
 import { createOrUpdateUnlockSubmission, insertUnlockAudit } from 'lib/unlock/repository';
 import { applyDenylistBlockIfSpam } from 'lib/unlock/denylist-block';
 import { reportError } from 'lib/observability/report';
@@ -9,6 +9,13 @@ type SubmissionBody = {
 };
 
 export async function POST(request: Request) {
+  // The write replaces the member's stored URL and puts an approved member back in the queue, so a
+  // forged cross-site request must not reach it. Same check as the help-request route.
+  const csrfDeny = ensureUnlockMutationCsrf(request);
+  if (csrfDeny) {
+    return csrfDeny;
+  }
+
   const gate = await requireUnlockUserAccess();
   if (!gate.allowed) {
     return gate.response;
