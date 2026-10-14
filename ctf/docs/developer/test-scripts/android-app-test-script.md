@@ -177,7 +177,7 @@ The caller needs enough ServiceCredits for a few blocks.
 6. **Ring with the app closed.** On the provider's phone, swipe the app away. From the caller, tap
    **Connect now**, pick a send limit, tick the agreement and tap **Start call**. Within a few seconds
    the phone shows a heads-up alert with sound. With discreet pings on (the default) it reads
-   "Charging The Future / You have a new update." and never names the caller. Tap it: the app opens on
+   "Skills Economy / You have a new update." and never names the caller. Tap it: the app opens on
    the **Incoming call** card with **Decline** and **Answer**.
 7. **Ring with the app open.** With the app open on any screen (for example Chyme), ring again: the
    **Incoming call** card appears above it within about 4 seconds.
