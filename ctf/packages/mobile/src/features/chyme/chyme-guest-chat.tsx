@@ -6,7 +6,6 @@ import React, { useEffect, useState } from 'react';
 import { Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { ChevronDown, ChevronRight, Hash, LogIn } from 'lucide-react-native';
 import { interFamily } from '../../components/ui';
-import { chymeHandle } from './ChymeApi';
 import { formatSentAt } from './chyme-chat-panel';
 import { readPublicChat, type ChatState } from './chyme-public-api';
 import { useChymeTokens } from './chyme-tokens';
@@ -46,7 +45,7 @@ function GuestChatBody({ state }: { state: ChatState }) {
       {state.messages.map((message) => (
         <View key={message.id} style={styles.message}>
           <View style={styles.meta}>
-            <Text style={styles.author}>{chymeHandle(message.username, message.userId)}</Text>
+            <Text style={styles.author}>{message.handle}</Text>
             <Text style={styles.time}>{formatSentAt(message.sentAtIso)}</Text>
           </View>
           <Text style={[styles.text, { color: t.SUBTLE }]}>{message.text}</Text>

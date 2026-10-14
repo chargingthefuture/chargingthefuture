@@ -243,6 +243,49 @@ contracts:
     idempotency: true
 
   - pluginId: chyme
+    command: chyme.transfer
+    version: 1.0.0
+    description: Send ServiceCredits to another member from the main room (POST /api/chyme/service-credits, the tip dialog). Main-room only. Goes through the shared transfer primitive (createTransfer), so balance, freeze and restriction checks are the ServiceCredits ones. The optional message only selects the reason code (chyme.transfer.message vs chyme.transfer); it is not stored.
+    inputSchema:
+      toUserId:
+        type: string
+        required: true
+        rule: Must not be the caller's own id.
+      amount:
+        type: number
+        required: true
+        rule: Finite, greater than 0, at most 10000 (CHYME_MAX_TIP_AMOUNT).
+      message:
+        type: string
+        required: false
+      idempotencyKey:
+        type: string
+        required: false
+        rule: >-
+          Client nonce, one per filled-in tip (web and Android mint a new one when the amount changes).
+          Namespaced under the sender as chyme-<senderUserId>-<nonce>, so a retried press returns the
+          first transfer instead of sending again. Without one the server mints a per-request key.
+    outputSchema:
+      ok:
+        type: boolean
+      transaction:
+        type: object
+    statusCodes:
+      200: Transfer created.
+      400: Invalid JSON, a body that is not an object, missing or non-positive amount, missing recipient, a self-tip, or an amount over the cap.
+      401: AUTH_UNAUTHORIZED — not signed in (shared deny body).
+      403: Not approved (shared deny body), CSRF check failed, or chyme_account_restricted when the sender is restricted from trading.
+      500: The transfer failed; the error is reported to observability (area chyme, op service_credits).
+    audit: Writes one chyme.transfer event on 200, 400 (deny, invalid_tip_payload), 403 restricted (deny, account_restricted) and 500. The message text is never logged.
+    dataAccess:
+      - service_credits_wallets
+      - service_credits_transfers
+      - service_credits_command_idempotency
+    purpose: social_audio_tip
+    retentionClass: transactional_long_lived
+    idempotency: true
+
+  - pluginId: chyme
     command: chyme.public.room.read
     version: 1.0.0
     description: Public, unauthenticated, read-only. Whether the one default room is live, how many members and signed-out listeners are in it, and whether listening without an account is open under the Stream quota policy. Touches nothing on Stream (since 2026-09-19 the guest identity is minted on the tap, by chyme.public.listen).
@@ -328,6 +371,38 @@ contracts:
       - chyme_guest_listeners
     purpose: social_audio_public_listen
     retentionClass: derived_short_lived
+    idempotency: true
+
+  - pluginId: chyme
+    command: chyme.public.messages.read
+    version: 1.0.0
+    description: Public, unauthenticated, read-only (GET /api/chyme/public/messages). The default room's most recent chat messages, only while the room is live; an empty list otherwise. Each message carries the display handle and never the member's account id. Per-IP rate limited.
+    inputSchema:
+      limit:
+        type: number
+        required: false
+        default: 50
+        minimum: 1
+        maximum: 100
+    outputSchema:
+      ok:
+        type: boolean
+      isLive:
+        type: boolean
+      messages:
+        type: array
+        items:
+          id: string
+          username: string | null
+          handle: string (`@username`, or `user-` plus the first 8 characters of the account id when the member has no username)
+          text: string
+          sentAtIso: string
+    dataAccess:
+      - chyme_rooms
+      - chyme_room_members
+      - chyme_messages
+    purpose: social_audio_public_listen
+    retentionClass: communication_medium_lived
     idempotency: true
 
   - pluginId: chyme
