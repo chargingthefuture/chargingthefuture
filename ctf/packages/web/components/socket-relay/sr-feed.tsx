@@ -246,6 +246,12 @@ function LoadMoreButton({
   );
 }
 
+// A short failure note in the feed (a refused "I can help" / "Re-post", or a failed "Load more").
+function FeedNotice({ text }: { text: string | null }) {
+  if (!text) return null;
+  return <div role="alert" style={{ fontSize: 13, color: "#EF4444", margin: "4px 0 12px", textAlign: "center" }}>{text}</div>;
+}
+
 export function SocketRelayFeed({
   requests,
   currentUserId,
@@ -254,6 +260,8 @@ export function SocketRelayFeed({
   filterActive = false,
   hasMore = false,
   loadingMore = false,
+  loadMoreError = null,
+  notice = null,
   onLoadMore,
   onClaim,
   onPost,
@@ -272,6 +280,10 @@ export function SocketRelayFeed({
   // The board has more open requests than are loaded; show a "Load more" button that pulls the next page.
   hasMore?: boolean;
   loadingMore?: boolean;
+  // Why the last "Load more" page failed, shown under the list.
+  loadMoreError?: string | null;
+  // Why the last "I can help" / "Re-post" tap was refused, shown above the list.
+  notice?: string | null;
   onLoadMore?: () => void;
   onClaim: (id: string) => void;
   onPost: () => void;
@@ -283,6 +295,7 @@ export function SocketRelayFeed({
   return (
     <ScrollArea style={{ flex: 1, minHeight: 0 }}>
       <div style={{ padding: "20px 24px" }}>
+        <FeedNotice text={notice} />
         {requests.length === 0 ? (
           <FeedEmptyState filterActive={filterActive} onPost={onPost} t={t} />
         ) : (
@@ -293,6 +306,7 @@ export function SocketRelayFeed({
             {hasMore && onLoadMore && (
               <LoadMoreButton loadingMore={loadingMore} onLoadMore={onLoadMore} t={t} />
             )}
+            <FeedNotice text={loadMoreError} />
           </div>
         )}
       </div>

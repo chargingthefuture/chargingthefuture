@@ -32,7 +32,7 @@ function MobileTrustTransportPublic({ signInUrl, verifyUrl }: { signInUrl: strin
           <Car size={20} color={t.ACCENT} />
           <span style={{ fontSize: 20, fontWeight: 800 }}>TrustTransport</span>
         </div>
-        <p style={{ margin: 0, fontSize: 14, color: t.SUBTLE, lineHeight: 1.5 }}>Rides, package delivery, and food from fellow community members. Pay with ServiceCredits.</p>
+        <p style={{ margin: 0, fontSize: 14, color: t.SUBTLE, lineHeight: 1.5 }}>Rides, package delivery, and food from fellow community members. Settle with ServiceCredits.</p>
         <PublicShellWorldwide color={t.MUTED} />
 
         {/* Service type cards */}
