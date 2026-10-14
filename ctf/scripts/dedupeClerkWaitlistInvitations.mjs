@@ -34,8 +34,8 @@ const EXECUTE = process.argv.includes('--execute');
 const clerk = createClerkClient({ secretKey: requireEnv('CLERK_SECRET_KEY') });
 
 // Clerk's default rate limit comfortably covers a few hundred sequential calls, but a write
-// loop this size is worth a small, bounded retry on a 429 rather than failing the whole run
-// over one throttled request.
+// loop this size is worth a small, bounded retry on a 429 rather than failing the run over
+// one throttled request.
 async function withRetry(fn, label) {
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
