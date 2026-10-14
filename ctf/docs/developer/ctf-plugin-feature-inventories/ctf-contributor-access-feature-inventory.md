@@ -384,6 +384,10 @@ fill on the first recompute / config save / member post.
   the owner set before the split keeps applying to comments and stars; the config editor now shows
   that effective weight rather than the default, and saving the form writes it as the new key's own.
 
+- 2026-10-05: **A failed contributor channel send keeps the typed text (#2634).** The composer was
+  cleared before the send and never refilled on failure, so a message over the length cap or a network
+  failure lost what the member wrote. It is now put back when the box is still empty, the same rule the
+  Commons composer uses. No route or contract change.
 - 2026-10-04: **Profile-and-deletion contract written.** A contract coverage audit found this plugin
   had the command, access-policy and audit contracts but not the deletion one that rule 114
   requires. `CONTRIBUTOR_ACCESS_PROFILE_AND_DELETION_CONTRACT.md` now states the registry entry

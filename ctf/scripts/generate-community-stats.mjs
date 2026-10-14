@@ -26,7 +26,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { Pool } from 'pg';
 import { PROJECTION_SOURCES, RECOGNITION_SOURCES, computeValueIndex } from './lib/gdpValueIndex.mjs';
-import { anthropicApiError, reportIfRunBlocked } from './lib/anthropicRunBlocked.mjs';
+import { anthropicApiError, reportIfRunBlocked, reportRunBlocked } from './lib/anthropicRunBlocked.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(__dirname, '../..');
@@ -46,7 +46,17 @@ const databaseUrl = requireEnv('DATABASE_URL');
 // aggregate counts, print them as `{ statsMarkdown }`, and make no model call. The workflow files
 // the numbers as a `draft-needed` issue and the `/community-stats` command writes the post from it.
 const STATS_ONLY = process.env.STATS_ONLY === '1';
-if (!STATS_ONLY) requireEnv('ANTHROPIC_API_KEY');
+// A missing key is an outside state (the key lives in Infisical), reported as paused so the health
+// check does not file it as a broken run. A missing DATABASE_URL above stays a plain failure.
+if (!STATS_ONLY && !process.env.ANTHROPIC_API_KEY?.trim()) {
+  reportRunBlocked({
+    script: 'generate-community-stats',
+    reason: 'no_key',
+    manualRoute: '/community-stats',
+    nothingLost: 'The counts are read fresh on every run, so the next run after this clears drafts the post.',
+  });
+  process.exit(1);
+}
 
 // The number of documented skills a functioning economy needs — the point at which the community can
 // meet its own needs. Any economy can be any size; covering all 650 skills is what makes it
