@@ -59,67 +59,64 @@ contracts:
 
   - pluginId: gross-domestic-product
     command: dashboard.snapshot.get
-    version: 1.1.0
+    version: 1.2.0
     description: >-
-      Get the aggregate GDP dashboard for the authenticated survivor-facing view. Computed LIVE on each
-      request (no weekly publish/snapshot step): the Community Value Index is recognized from every
-      registered non-incentive settled-value source right now, alongside live member counts. Reads only
-      community-wide aggregates — never per-user figures. Also returns a SEPARATE `projection` block —
-      what the posts still open would add if every one closed successfully — computed by
-      lib/gdp/projection.ts and carried in its own field so it is never summed into the index, never
-      written to a snapshot, and never read by the weekly recognition job.
-    inputSchema:
-      year:
-        type: integer
-        required: true
-      includeRolloutProgress:
-        type: boolean
-        required: false
+      Get the GDP dashboard report for the authenticated survivor-facing view
+      (GET /api/gdp/report/current). Computed LIVE on each request (no weekly publish/snapshot step):
+      the Community Value Index is recognized from every registered non-incentive settled-value source
+      right now, alongside the live member count. Reads only community-wide aggregates, never per-user
+      figures. Also returns a SEPARATE `projection` block — what the posts still open would add if
+      every one closed successfully — computed by lib/gdp/projection.ts and carried in its own field so
+      it is never summed into the index, never written to a snapshot, and never read by the weekly
+      recognition job. The index is a relative, unitless measure, never a money total. v1.2.0 matches
+      the schema to the live route (type GdpLiveReport in lib/gdp/repository.ts): v1.1.0 listed a
+      required `year` input the route never read and GDP-total outputs (totalGDP, serviceGDP, goodsGDP,
+      perCapita, breakdowns, rolloutProgress) the route never returned.
+    inputSchema: {}
     outputSchema:
-      totalGDP:
-        type: number
-      serviceGDP:
-        type: number
-      goodsGDP:
-        type: number
-      perCapita:
-        type: number
-      categoryBreakdown:
-        type: array
-      providerTierBreakdown:
-        type: array
-      rolloutProgress:
+      ok:
+        type: boolean
+      report:
         type: object
-      # Open, not-yet-closed posts, kept apart from every recognized figure above:
-      # { projectedValueIndex, openPostCount, perSource: [{ pluginSlug, label, valueIndex, openCount }] }.
-      # Null when the projection read fails, in which case the panel is simply not rendered.
-      projection:
-        type: object
+        properties:
+          # The standing live heading: { id: 'live', weekStartDate, title, summary, status: 'published' }.
+          publication:
+            type: object
+          # [{ metricKey, metricValue, dpSuppressed, lawfulBasis, sourcePlugin, isEstimate }]:
+          # gdp_value_index always; total_members when the member count could be read.
+          metrics:
+            type: array
+          # Each recognition source's share of the index: [{ pluginSlug, label, valueIndex }].
+          sources:
+            type: array
+          # Open, not-yet-closed posts, kept apart from every recognized figure above:
+          # { projectedValueIndex, openPostCount, perSource: [{ pluginSlug, label, valueIndex, openCount }] }.
+          # Null when the projection read fails, in which case the panel is simply not rendered.
+          projection:
+            type: object
+            nullable: true
     dataAccess:
-      # Live recognition sources (non-incentive settled value) + activity counts read on each request:
+      # Live recognition sources (non-incentive settled value), read on each request:
       - foundation_call_sessions
+      - foundation_quote_requests
       - trust_transport_earnings_ledger
       - service_credits_governance_events
       - service_credits_transfers
       - socket_relay_fulfillments
+      - socket_relay_requests
       - recurring_activities
       # LightHouse: an accepted match contributes one month of the listed rent (later months belong to
       # the recurring_activities source above, so no month is counted twice):
       - lighthouse_matches
       - lighthouse_properties
+      # Member count: the active Directory roster; login_events / users only when that read fails.
+      - directory_profiles
       - login_events
       - users
       # Projection sources — OPEN posts only, read for the separate projected figure. Each reads rows the
-      # recognition sources deliberately skip, so nothing is counted in both figures. LightHouse is the
-      # one shared table: the projection reads only listings with NO accepted/completed match:
+      # recognition sources deliberately skip, so nothing is counted in both figures. foundation_quote_requests,
+      # socket_relay_requests, recurring_activities and the LightHouse tables are listed above:
       - trust_transport_requests
-      - foundation_quote_requests
-      - socket_relay_requests
-      # Published-snapshot history (retained, not what the live dashboard shows):
-      - gdp_metric_snapshots
-      - gdp_category_breakdowns
-      - gdp_provider_tier_snapshots
-      - gdp_rollout_actuals
     purpose: transparency_reporting
     retentionClass: derived_medium_lived
     idempotency: true
