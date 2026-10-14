@@ -171,6 +171,9 @@ importers:
       '@expo-google-fonts/inter':
         specifier: ^0.4.2
         version: 0.4.2
+      '@expo-google-fonts/newsreader':
+        specifier: ^0.4.1
+        version: 0.4.1
       '@expo/vector-icons':
         specifier: ^15.1.1
         version: 15.1.1(expo-font@55.0.6(expo@55.0.14)(react-native@0.83.6(@babel/core@7.29.7)(@react-native/metro-config@0.85.1(@babel/core@7.29.7)(bufferutil@4.1.0))(@types/react@19.2.14)(bufferutil@4.1.0)(react@19.2.0))(react@19.2.0))(react-native@0.83.6(@babel/core@7.29.7)(@react-native/metro-config@0.85.1(@babel/core@7.29.7)(bufferutil@4.1.0))(@types/react@19.2.14)(bufferutil@4.1.0)(react@19.2.0))(react@19.2.0)
@@ -332,6 +335,9 @@ importers:
       '@ctf/shared':
         specifier: workspace:*
         version: link:../shared
+      '@fontsource-variable/newsreader':
+        specifier: ^5.3.0
+        version: 5.3.0
       '@fontsource/inter':
         specifier: ^5.2.8
         version: 5.2.8
@@ -1940,6 +1946,9 @@ packages:
   '@expo-google-fonts/inter@0.4.2':
     resolution: {integrity: sha512-syfiImMaDmq7cFi0of+waE2M4uSCyd16zgyWxdPOY7fN2VBmSLKEzkfbZgeOjJq61kSqPBNNtXjggiQiSD6gMQ==}
 
+  '@expo-google-fonts/newsreader@0.4.1':
+    resolution: {integrity: sha512-j96W112+mj/VYP06DCq00w+twyw42w0MY7eHB/XXioNK80BcG0cIk/zogjOENZSY7qejzIFbHE/PZYqlh/6VKQ==}
+
   '@expo/cli@55.0.23':
     resolution: {integrity: sha512-OTGFvb70OGOTa3KZm8f23cPw4X16qavPBNotsumWwdUvLPfKHEQIvbCNWCMs1eAVW/Act/8psnO7cscXnf6Iug==}
     hasBin: true
@@ -2162,6 +2171,9 @@ packages:
 
   '@floating-ui/utils@0.2.11':
     resolution: {integrity: sha512-RiB/yIh78pcIxl6lLMG0CgBXAZ2Y0eVHqMPYugu+9U0AeT6YBeiJpf7lbdJNIugFP5SIjwNRgo4DhR1Qxi26Gg==}
+
+  '@fontsource-variable/newsreader@5.3.0':
+    resolution: {integrity: sha512-rrzYi43qMpbzwuFtf9OkWH8sxAPVPcQQQEwXpPtwaKYeJ8yVg5aLs5kawmo1f2Q1t1M38TLmEKCkGVDsYwgdFw==}
 
   '@fontsource/inter@5.2.8':
     resolution: {integrity: sha512-P6r5WnJoKiNVV+zvW2xM13gNdFhAEpQ9dQJHt3naLvfg+LkF2ldgSLiF4T41lf1SQCM9QmkqPTn4TH568IRagg==}
@@ -10082,6 +10094,8 @@ snapshots:
 
   '@expo-google-fonts/inter@0.4.2': {}
 
+  '@expo-google-fonts/newsreader@0.4.1': {}
+
   '@expo/cli@55.0.23(@expo/dom-webview@55.0.5)(bufferutil@4.1.0)(expo-constants@55.0.13(expo@55.0.14)(react-native@0.83.6(@babel/core@7.29.7)(@react-native/metro-config@0.85.1(@babel/core@7.29.7)(bufferutil@4.1.0))(@types/react@19.2.14)(bufferutil@4.1.0)(react@19.2.0))(typescript@5.9.3))(expo-font@55.0.6(expo@55.0.14)(react-native@0.83.6(@babel/core@7.29.7)(@react-native/metro-config@0.85.1(@babel/core@7.29.7)(bufferutil@4.1.0))(@types/react@19.2.14)(bufferutil@4.1.0)(react@19.2.0))(react@19.2.0))(expo@55.0.14)(react-dom@19.2.0(react@19.2.0))(react-native@0.83.6(@babel/core@7.29.7)(@react-native/metro-config@0.85.1(@babel/core@7.29.7)(bufferutil@4.1.0))(@types/react@19.2.14)(bufferutil@4.1.0)(react@19.2.0))(react@19.2.0)(typescript@5.9.3)':
     dependencies:
       '@expo/code-signing-certificates': 0.0.6
@@ -10520,6 +10534,8 @@ snapshots:
       tabbable: 6.4.0
 
   '@floating-ui/utils@0.2.11': {}
+
+  '@fontsource-variable/newsreader@5.3.0': {}
 
   '@fontsource/inter@5.2.8': {}
 

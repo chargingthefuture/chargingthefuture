@@ -18,6 +18,7 @@
   "dependencies": {
     "@ctf/shared": "workspace:*",
     "@expo-google-fonts/inter": "^0.4.2",
+    "@expo-google-fonts/newsreader": "^0.4.1",
     "@expo/vector-icons": "^15.1.1",
     "@notifee/react-native": "9.1.8",
     "@react-native-community/datetimepicker": "8.6.0",
