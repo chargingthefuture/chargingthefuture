@@ -5,8 +5,9 @@ name: Bug Reports — Triage
 # opens a PR. See rule 129.
 #
 # Manual-dispatch for now. Enable the schedule once GH_PAT can read+write issues on the
-# triage repo and ANTHROPIC_API_KEY is available (injected by Infisical below). Until then
-# the script no-ops safely.
+# triage repo and ANTHROPIC_API_KEY is available (injected by Infisical below). Without
+# GH_TOKEN the script no-ops; without the key it reports the run as paused (no_key), so the
+# health check lists it under "Paused, not broken".
 on:
   workflow_dispatch: {}
   schedule:

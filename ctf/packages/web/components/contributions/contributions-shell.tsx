@@ -20,12 +20,21 @@ import { goalsFromFundraiser, GoalRow } from './contributions-drive-progress';
 import { ContributionPaths, type PathsProps, type SubmitGiftCardInput } from './contributions-paths';
 import { ContributionsHistoryList, ContributionsEmptyHistory } from './contributions-history';
 import { ContributionsConfirmation } from './contributions-confirmation';
+import { failureText, responseFailureText } from 'lib/errors/client-failure';
+import { reportError } from 'lib/observability/report';
 
 
 type View = 'main' | 'confirmation';
 type MobileTab = 'drive' | 'contribute' | 'history';
 
 const CSRF_HEADERS = { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' } as const;
+
+const LOAD_FALLBACK = 'We could not load the contribution drive. Try again in a moment.';
+const SUBMIT_FALLBACK = 'We could not record your contribution. Try again in a moment.';
+
+// A failure the route answered. Its text is what the route said (member-safe), so the screen shows it
+// as is; a request that never answered is a plain Error and goes through failureText, which reports it.
+class RouteAnsweredError extends Error {}
 
 // Fetches the drive and the member's submissions in parallel and parses both. Kept at module scope so
 // the loadData callback stays small; it throws on a failed response and the caller handles aborts.
@@ -36,8 +45,15 @@ async function fetchContributionsData(
     fetch('/api/contributions/fundraiser', { cache: 'no-store', signal }),
     fetch('/api/contributions/submission', { cache: 'no-store', signal }),
   ]);
-  if (!fundraiserRes.ok || !submissionsRes.ok) {
-    throw new Error('We could not load the contribution drive. Try again in a moment.');
+  const failed = !fundraiserRes.ok ? fundraiserRes : !submissionsRes.ok ? submissionsRes : null;
+  if (failed) {
+    const text = await responseFailureText(failed, LOAD_FALLBACK, 'member');
+    reportError(new Error(`Contributions load answered HTTP ${failed.status}: ${text}`), {
+      area: 'contributions',
+      op: 'member_load',
+      extra: { url: failed.url, status: failed.status },
+    });
+    throw new RouteAnsweredError(text);
   }
   const fundraiserData = (await fundraiserRes.json()) as FundraiserResponse;
   const submissionsData = (await submissionsRes.json()) as SubmissionsResponse;
@@ -72,7 +88,11 @@ export function ContributionsShell({ isAdmin }: { isAdmin?: boolean } = {}) {
       if ((e as Error).name === 'AbortError') {
         return;
       }
-      setError(e instanceof Error ? e.message : 'We could not load the contribution drive.');
+      setError(
+        e instanceof RouteAnsweredError
+          ? e.message
+          : failureText(e, { area: 'contributions', op: 'member_load', fallback: LOAD_FALLBACK, audience: 'member' }),
+      );
     } finally {
       if (!signal?.aborted) {
         setLoading(false);
@@ -98,7 +118,9 @@ export function ContributionsShell({ isAdmin }: { isAdmin?: boolean } = {}) {
         });
         const payload = (await res.json().catch(() => null)) as SubmissionCreateResponse | null;
         if (!res.ok || !payload?.ok) {
-          throw new Error(payload?.message ?? 'We could not record your contribution. Try again in a moment.');
+          // A refused submission is usually the member's own input (a bad link, an amount out of range);
+          // the route reports its own 5xx answers, so this shows the route's text without a second report.
+          throw new RouteAnsweredError(payload?.message ?? SUBMIT_FALLBACK);
         }
         await loadData();
         if (showConfirmation) {
@@ -107,7 +129,11 @@ export function ContributionsShell({ isAdmin }: { isAdmin?: boolean } = {}) {
           setMobileTab('history');
         }
       } catch (e) {
-        setSubmitError(e instanceof Error ? e.message : 'We could not record your contribution.');
+        setSubmitError(
+          e instanceof RouteAnsweredError
+            ? e.message
+            : failureText(e, { area: 'contributions', op: 'member_submit', fallback: SUBMIT_FALLBACK, audience: 'member' }),
+        );
       } finally {
         setSubmitting(false);
       }

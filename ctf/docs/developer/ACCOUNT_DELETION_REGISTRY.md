@@ -73,8 +73,9 @@ The registry is data; two small modules turn it into action:
   into the exact SQL to run (`DELETE FROM <table> WHERE <userColumn> = $1`, with
   ` AND (<rowFilter>)` appended when the registry narrows it, or an idempotent
   `UPDATE ... SET <softDeleteColumn> = NOW() WHERE <userColumn> = $1 AND <softDeleteColumn> IS NULL`,
+  a pseudonymizing `UPDATE ... SET <userColumn> = 'deleted_member'[, <clearColumn> = NULL ...] WHERE <userColumn> = $1`,
   or nothing for `retain`). Because it is pure, its output is checked without a database by
-  `ctf/scripts/check-deletion-engine.mjs` (run in CI). `executeEntry` runs the plan against an open
+  `ctf/scripts/check-deletion-engine.mjs` (run in CI), for all three statement shapes. `executeEntry` runs the plan against an open
   transaction.
 - **`deletion-orchestrator.ts`** — `deleteServiceScopeData(slug, userId)` deletes one plugin's data;
   `deleteAllAccountData(userId)` deletes every plugin's data. Both run inside a single
