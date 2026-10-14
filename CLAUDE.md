@@ -430,10 +430,10 @@ The page reads those counts live and saves matches (owner decision, 2026-10-13).
 what they need, and the page says how many people match them, each person counted once across the
 skills behind those needs. That count comes from `directory_public_match_count`. A
 reader can save what they picked as a 10-character code and come back with it to see who has been added, since
-the owner adds people most days. The code holds the job titles and the count when saved, never a
+the owner adds people most days. Saving again with the code a phone holds updates that code rather than making a second one. The code holds the job titles and the count when saved, never a
 name, contact detail or IP address. The page connects with its own login, `landing_page`, which can
 read `directory_public_skill_counts`, `directory_public_totals` and `directory_public_skill_coverage` (the Workforce skills coverage counts), call
-`directory_public_match_count`, read and add rows in `directory_landing_match_codes`, and nothing
+`directory_public_match_count`, read, add and update rows in `directory_landing_match_codes`, and nothing
 else; the views and the function do the counting, so the login never touches a member row. Create that login with SQL
 (`ctf/scripts/sql/landing_page_login_grants.sql`), never on Neon's Roles screen, which gives a new
 role `neon_superuser`. Its connection address is a secret like any other: Infisical first, then the
