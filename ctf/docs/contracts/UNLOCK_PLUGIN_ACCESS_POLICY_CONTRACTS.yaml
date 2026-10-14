@@ -11,6 +11,7 @@ policies:
       activeSessionRequired: true
       quoraProfileUrlPattern: strict
       submitterScopeOnly: true
+      csrfConfirmationRequired: true
     consentRequirements:
       scopes:
         - unlock_verification_submit
