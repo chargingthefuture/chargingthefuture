@@ -128,8 +128,8 @@ async function maybeSendDevicePush(input: NotificationInput): Promise<void> {
     return;
   }
   const payload = prefs.discreetPush
-    ? { title: 'Charging The Future', body: 'You have a new update.', data: { path: input.linkPath ?? '/' } }
-    : { title: 'Charging The Future', body: input.summary, data: { path: input.linkPath ?? '/' } };
+    ? { title: 'Skills Economy', body: 'You have a new update.', data: { path: input.linkPath ?? '/' } }
+    : { title: 'Skills Economy', body: input.summary, data: { path: input.linkPath ?? '/' } };
   await sendWebPushToUser(input.userId, payload);
 }
 

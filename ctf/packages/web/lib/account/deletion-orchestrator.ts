@@ -20,9 +20,11 @@ import type { PoolClient } from 'pg';
 import { withDbTransaction } from 'lib/db/postgres';
 import { DIRECTORY_MEMBER_DELETION_REASON, removeClaimedDirectoryProfile } from 'lib/directory/repository';
 import { refundHeldDepositsBeforeDataDeletion } from 'lib/skill-up/repository';
+import { withdrawAnsweredCommentsForDeletion } from 'lib/fireside/repository';
 import { logAccountAudit } from './audit';
 import {
   accountDeletionRegistry,
+  DELETED_MEMBER_PLACEHOLDER,
   getDeletionEntry,
   type PluginDeletionEntry,
 } from './deletion-registry';
@@ -160,6 +162,12 @@ async function recordEvent(
 async function runInTransactionSteps(client: PoolClient, userId: string, slugs: readonly string[]): Promise<void> {
   if (slugs.includes('directory')) {
     await removeClaimedDirectoryProfile(client, userId, DIRECTORY_MEMBER_DELETION_REASON);
+  }
+  // A Fireside comment somebody else answered is emptied and kept rather than deleted, so the
+  // replies under it stay where they are. The plan's delete then removes the member's other
+  // comments; it has to run after this, or it would take the answered ones too.
+  if (slugs.includes('fireside')) {
+    await withdrawAnsweredCommentsForDeletion(client, userId, DELETED_MEMBER_PLACEHOLDER);
   }
 }
 

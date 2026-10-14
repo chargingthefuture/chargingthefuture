@@ -42,6 +42,11 @@ received. The trauma-informed answer (owner decision, 2026-07-20):
 4. "Manage what pings your device": three plain opt-in switches — Safety/rides/calls,
    Your activity and credits, Community — plus a "keep device pings discreet" switch. All push
    switches default off; discreet defaults on. Everything shows in the feed regardless of these.
+   It sits at the top of the panel, above the feed, so a member with a long list still finds it.
+   Switching a category on asks the device for permission first, then saves this device to the
+   server and says so if the save failed. Each time the panel opens with any category on, the
+   device's subscription is sent to the server again, so a device the server lost starts getting
+   pings again without touching a switch. Tapping a ping opens the same place the row's "Open" does.
 
 ## 2) Admin Features
 
@@ -110,6 +115,8 @@ No seed yet. A follow-up seed can insert a couple of sample notifications for a 
   server keys (`VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`) in the environment; when they
   are unset every send is a logged no-op, so the in-app feed still works. Platform limits apply:
   Web Push reaches Android/Chrome and installed iOS web apps, not a plain iOS browser tab.
+  On iOS the permission request has to come straight from the tap, so the panel asks before it does
+  anything else; a subscription made with an older server key is replaced rather than reused.
 - Emergency real-time (an incoming Foundation call ring) is a separate live mechanism from this
   durable feed and is tracked with the Safety producers.
 
@@ -136,6 +143,15 @@ No seed yet. A follow-up seed can insert a couple of sample notifications for a 
 
 ## Change Log
 
+- 2026-10-12: Device pings on iPhone (owner report: an installed iPhone web app with every category
+  on got no pings). The panel asked for permission only after other awaited work, which iOS can ignore;
+  it never checked whether the server saved the subscription; and once a device had a subscription it
+  never sent it again, so a server copy that went missing stayed missing. Now it asks first, checks the
+  save, re-sends the subscription on every tap and every panel open while a category is on, and
+  replaces a subscription made with an older server key. Tapping a ping opened Foundation for every
+  notification because the worker read `data.url` while this feed sends `data.path`; it now reads
+  both. "Manage what pings your device" moved from below the feed to above it, and its notes now say
+  "the list below". No route, schema, or contract change.
 - 2026-10-05: `push_subscriptions` is now deleted under this plugin's registry entry instead of `foundation`'s (#2701), so it clears only with the account and a Foundation-only deletion no longer removes the devices a member turned notification pushes on for. Added to `NOTIFICATIONS_PROFILE_AND_DELETION_CONTRACT.md`.
 - 2026-07-23: PeerProgramming cohort-message producer. `POST /api/peer-programming/messages` now emits
   `peer-programming.cohort.message` (category `community`) via `notifySafe` to every other cohort member
