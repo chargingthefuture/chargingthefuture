@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { reconcileUnlockRewards } from 'lib/unlock/reconcile-rewards';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
+import { bearerMatches } from 'lib/auth/internal-secret';
 
 type ReconcileBody = { limit?: number };
 
@@ -13,7 +14,7 @@ function isAuthorized(request: Request): boolean {
   if (!cronSecret || cronSecret.trim().length === 0) {
     return false;
   }
-  return request.headers.get('authorization') === `Bearer ${cronSecret}`;
+  return bearerMatches(request, cronSecret);
 }
 
 export async function POST(request: Request) {

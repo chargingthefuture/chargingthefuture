@@ -165,8 +165,8 @@ the host tab.
 1. Matches route parity target (`/apps/lighthouse/matches`).
 2. Seeker match request is **implemented on web (desktop + mobile-responsive); it shipped 2026-07-14 and also had an Android surface, which was removed 2026-07-20 (rule 105, PR #1742)** — the "Request to stay"
    action on a listing (web `lighthouse-property-detail.tsx`; Android `LighthouseRequestToStay.tsx`)
-   posts `POST /api/lighthouse/matches` with an optional message and preferred move-in date, opening
-   the private match chat channel on host acceptance. The no-seeker-profile (`policy_denied`),
+   posts `POST /api/lighthouse/matches` with an optional message and preferred move-in date. The
+   private match chat channel is created only once the host accepts. The no-seeker-profile (`policy_denied`),
    duplicate (`duplicate_match`), and blocked-pair (`blocked_pair`) cases are surfaced inline.
 3. Role-specific match list views for seekers and hosts are preserved.
 4. **Host accept/decline is on the Matches tab (web, 2026-10-05).** A pending request on a listing
@@ -270,18 +270,19 @@ the model, the routes, and the manage-list. LightHouse's job is to honor it:
 
 ### 3.2 Property APIs
 
-- `GET /api/lighthouse/properties`
-- `GET /api/lighthouse/properties/:id`
+- `GET /api/lighthouse/properties` — browse: active listings only, minus hosts blocked in either direction. `onlyActive=false` is honored for an admin only and ignored for anyone else.
+- `GET /api/lighthouse/properties/:id` — the host and an admin read any listing. Anyone else gets an active listing whose host is not blocked with them, or a hidden one they already have a match on (unless blocked); otherwise 404.
 - `GET /api/lighthouse/my-properties`
 - `POST /api/lighthouse/properties`
-- `PUT /api/lighthouse/properties/:id`
+- `PUT /api/lighthouse/properties/:id` — a body without `isActive` or `photos` keeps the stored values (the host form sends neither), so a host edit never puts back a listing an admin hid.
 - `DELETE /api/lighthouse/properties/:id`
 
 ### 3.3 Match APIs
 
 - `GET /api/lighthouse/matches`
-- `POST /api/lighthouse/matches`
-- `PUT /api/lighthouse/matches/:id` — status change; 409 `LIGHTHOUSE_INVALID_MATCH_TRANSITION` for a move the table in §1.5 item 5 does not allow
+- `POST /api/lighthouse/matches` — answers `{ ok, match }`. Creates no chat: no Stream channel, members or token until the host accepts and the chat route is called. One open request per seeker and listing, held by a transaction-scoped advisory lock around the duplicate check, so two requests sent together cannot both pass it.
+- `POST /api/lighthouse/matches/:matchId/chat` — Stream credentials for an `accepted` match only; CSRF-guarded (`x-ctf-csrf: 1`) because it writes to Stream before minting the token.
+- `PUT /api/lighthouse/matches/:id` — status change; 409 `LIGHTHOUSE_INVALID_MATCH_TRANSITION` for a move the table in §1.5 item 5 does not allow. A move to `rejected` or `canceled` then takes both members off the match's chat channel (best-effort).
 
 ### 3.4 Admin APIs
 
@@ -306,7 +307,7 @@ listed here were removed on 2026-08-03 — see §1.6 above.
 
 ### 3.6 ServiceCredits
 
-- `POST /api/lighthouse/service-credits` — send ServiceCredits from the caller to `toUserId` (body `{ toUserId, amount, message?, idempotencyKey? }`; `amount` must be > 0; CSRF-guarded). Delegates to the shared `createTransfer` with `originPlugin: 'lighthouse'` and `reasonCode: 'lighthouse.transfer'`; an idempotency key is auto-generated when none is supplied.
+- `POST /api/lighthouse/service-credits` — send ServiceCredits from the caller to `toUserId` (body `{ toUserId, amount, message?, idempotencyKey }`; `amount` must be > 0; `idempotencyKey` is required (400 without it); CSRF-guarded). Delegates to the shared `createTransfer` with `originPlugin: 'lighthouse'` and `reasonCode: 'lighthouse.transfer'`. A known ServiceCredits refusal (insufficient balance, restricted or frozen sender) is answered with the shared ServiceCredits code and status; anything else is a 503. No screen calls it.
 
 ## 4) Data Model and Storage Contracts
 
@@ -423,6 +424,15 @@ Android admin present (2026-06-06): `AdminLighthouse.tsx` + `admin-api.ts` added
    release after this one has shipped, the same sequence `post/0048` used.
 
 ## 9) Change Log
+
+- 2026-10-14: **Hidden listings stay hidden, chat waits for the host, and stay requests and credit sends cannot double (#2811, #2817, #2819, #2826, #2827, #2828, #2830).**
+  - `GET /api/lighthouse/properties/:id` returned any listing to anyone holding the id, an admin-hidden one or a blocked host's included, and any member could pass `onlyActive=false` to browse every hidden listing. `getPropertyById` now returns a listing to its host and an admin, and otherwise only on browse's terms (active, host not blocked), plus a hidden listing the viewer already has a match on. `onlyActive=false` is honored for admins only.
+  - The host edit form sends no `isActive` and no `photos`, and the PUT route defaulted them to `true` and `[]`, so any host edit put an admin-hidden listing back into browse and cleared its photos. `updateProperty` now keeps the stored values when the body leaves them out. Whether a host may ever turn back on a listing an admin hid is left on #2819 for an owner decision; the form has no control that does it.
+  - `createMatchRequest` created the Stream channel, added both members and returned a token to the seeker at request time, so a seeker could message a host who never agreed and keep doing so after a decline. It now creates no chat; the chat route, which answers only for an accepted match, does. A decline or cancel takes both members off the channel, which also covers requests made before this change. The create response is now `{ ok, match }`; no screen read the removed Stream fields.
+  - Two stay requests sent together could both pass the duplicate check. A transaction-scoped advisory lock on the seeker and listing now makes the second wait and then answer `duplicate_match`. No schema change.
+  - `POST /api/lighthouse/matches/:matchId/chat` wrote to Stream with no CSRF check; it now takes `ensureMutationCsrf`, and the shell sends `x-ctf-csrf: 1`.
+  - `POST /api/lighthouse/service-credits` made up a new idempotency key per call when none was sent, so a retried send moved credits twice, and answered every failure with a 503. The key is now required, and known ServiceCredits refusals keep their own code and status.
+  - The Wanted card read "Can pay … a month" for a ServiceCredits budget. It now reads "Can send … a month" for ServiceCredits; every other currency keeps "Can pay".
 
 - 2026-10-05: **Account deletion deletes the LightHouse profile row; the data export leaves out
   blocks placed on the member.** The account deletion registry soft-deleted `lighthouse_profiles`,
