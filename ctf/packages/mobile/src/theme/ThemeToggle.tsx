@@ -2,10 +2,13 @@ import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useTheme } from './theme-context';
 import { type ThemeName } from './theme-tokens';
+import { interFamily } from '../components/ui/typography';
 
 // Two-state segmented control for the app theme, mirroring the web's ThemeToggle
 // (components/theme/theme-toggle.tsx). Styled from the active theme tokens so it reads
-// correctly in both themes. Lives in the Account & Data screen.
+// correctly in both themes. Lives in the Account & Data screen's header, where the web puts it.
+// Colors follow the web's CSS variables: --ctf-border, --ctf-control-radius, --ctf-surface,
+// --ctf-brand / --ctf-brand-text for the active option and --ctf-text-subtle for the other.
 
 const OPTIONS: { value: ThemeName; label: string }[] = [
   { value: 'default', label: 'Default' },
@@ -23,7 +26,7 @@ export const ThemeToggle: React.FC = () => {
         styles.group,
         {
           borderColor: tokens.border,
-          borderRadius: tokens.radiusChip,
+          borderRadius: tokens.radiusControl,
           backgroundColor: tokens.surface,
         },
       ]}
@@ -38,13 +41,13 @@ export const ThemeToggle: React.FC = () => {
             onPress={() => setTheme(option.value)}
             style={[
               styles.option,
-              active && { backgroundColor: tokens.isComic ? tokens.border : tokens.textPrimary },
+              active && { backgroundColor: tokens.brand },
             ]}
           >
             <Text
               style={[
                 styles.optionText,
-                { color: active ? tokens.bg : tokens.textSecondary },
+                { color: active ? tokens.brandText : textSubtle(tokens.isComic, tokens.textSecondary) },
               ]}
             >
               {option.label}
@@ -56,12 +59,16 @@ export const ThemeToggle: React.FC = () => {
   );
 };
 
+// web --ctf-text-subtle: #6B7280 in the default theme, the ink-dim shade in comic.
+function textSubtle(isComic: boolean, comicValue: string): string {
+  return isComic ? comicValue : '#6B7280';
+}
+
 const styles = StyleSheet.create({
   group: {
     flexDirection: 'row',
     borderWidth: 1.5,
     overflow: 'hidden',
-    alignSelf: 'flex-start',
   },
   option: {
     paddingHorizontal: 16,
@@ -69,8 +76,8 @@ const styles = StyleSheet.create({
   },
   optionText: {
     fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.7,
+    fontFamily: interFamily('700'),
+    letterSpacing: 0.72,
     textTransform: 'uppercase',
   },
 });

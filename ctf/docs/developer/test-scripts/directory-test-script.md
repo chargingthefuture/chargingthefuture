@@ -17,7 +17,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:directory` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-directory-feature-inventory.md` |
-| **Generated** | 2026-07-16 (hand-updated: `country` is now required on every profile — see DIR-4, DIR-4b, DIR-A1; plus the unified skills picker and ported v2 location fields — see DIR-2; 2026-07-17: android member self-edit (#1325) and android admin editable skills (#1335) now ship — see DIR-4, DIR-4b, DIR-A1; 2026-07-18: "Weavers of the Commons" contributor badge on claimed profiles — see DIR-8; 2026-07-19: android badge parity (#1680) ships — DIR-8 gains android; 2026-09-21: the tombstone-column drop's leftover readers are fixed — no step here changes, but a SkillsHunt accept and a Foundation connect must both succeed again; regenerate via CI to stamp the commit) · 2026-09-22 manual update: DIR-A1d checks the admin list loads at all, after its page query was refused by the database for a gap in its placeholder numbering |
+| **Generated** | 2026-07-16 (hand-updated: `country` is now required on every profile — see DIR-4, DIR-4b, DIR-A1; plus the unified skills picker and ported v2 location fields — see DIR-2; 2026-07-17: android member self-edit (#1325) and android admin editable skills (#1335) now ship — see DIR-4, DIR-4b, DIR-A1; 2026-07-18: "Weavers of the Commons" contributor badge on claimed profiles — see DIR-8; 2026-07-19: android badge parity (#1680) ships — DIR-8 gains android; 2026-09-21: the tombstone-column drop's leftover readers are fixed — no step here changes, but a SkillsHunt accept and a Foundation connect must both succeed again; regenerate via CI to stamp the commit) · 2026-10-08 manual update: core smoke step 4 checks the signed-out landing has no SkillsHunt card · 2026-10-08 manual update: DIR-A1f checks the admin edit drawer's new Sector and Job title selects · 2026-09-22 manual update: DIR-A1d checks the admin list loads at all, after its page query was refused by the database for a gap in its placeholder numbering |
 | **Inventory wording** | 2026-10-01: banned-term wording removed from the inventory prose; no step in this script changed |
 
 ## How to run this
@@ -45,7 +45,8 @@ can't-ship-broken checks. Member role unless noted.
    does **not** describe members as "sharing" or "offering" their skills — offering skills is
    Foundation, and Directory includes unclaimed community-generated profiles. → web ☐ mobile ☐
 4. **Not public.** Signed out, the Directory plugin route does not expose member profile data; there
-   is no anonymous projection route. → web ☐ mobile ☐
+   is no anonymous projection route. The signed-out landing shows the description, the join button and
+   the sign-in box, and no SkillsHunt card (removed 2026-10-08). → web ☐ mobile ☐
 5. **No verification over-claim.** Nowhere on the Directory (browse hero, header, or the signed-out
    landing) does copy claim members are "verified" or a "Verified Network" — members are framed as
    fellow community members sharing their skills, consistent with Foundation's "not a formally vetted
@@ -97,6 +98,20 @@ must not call the Quora profile the social proof (retired 2026-09-13). An admin 
 card's text from the SkillsHunt admin screen, so if you see the old sentence, check that saved row
 before filing it as a bug.
 **Result:** web ☐ mobile ☐ — notes:
+
+### DIR-1b · A failed load says so instead of reading as empty (added 2026-10-05)
+**Role:** member, then admin · **Surfaces:** web
+**Steps:**
+1. Open Directory, then use the browser's network tools to make `GET /api/directory/list` fail and
+   refresh the list.
+2. Open a shared profile link for a profile id that does not exist.
+3. Make the profile read fail and open the edit form.
+4. As an admin, make the takedown list and Audit log reads fail on `/admin/directory`.
+**Expected:** Step 1 shows the route's message (or a reported failure) where "No profiles yet" would
+be, and a list already on screen stays. Step 2 says above the browse view that the shared profile
+could not be opened. Step 3 shows the profile route's message. In step 4 the takedown panel shows the
+route's reason instead of a fixed sentence, and both panels name the failure.
+**Result:** web ☐ — notes:
 
 ### DIR-2 · Read a profile (real fields only)
 **Role:** member · **Surfaces:** all
@@ -479,6 +494,29 @@ one transaction, so the header counts read 0 as well. The gate
 `ctf/scripts/check-sql-placeholder-gaps.mjs` now fails any query whose placeholders skip a number.
 **Result:** web ☐ mobile ☐ — notes:
 
+### DIR-A1e · A saved profile keeps its source and handle; the invite queue counts only pending skills (added 2026-10-05)
+**Role:** admin · **Surfaces:** web
+**Precondition:** a community-generated profile with an unclaimed handle, and a profile whose
+proposed skill labels include one already promoted by the taxonomy apply run.
+**Steps:**
+1. On `/admin/directory`, edit the community-generated profile and save. Do not reload.
+2. Open `/admin/directory/invite-queue` and find the profile with the promoted label.
+**Expected:** After step 1 the row still shows its source and handle and keeps its **Remove at
+person's request** button, without a reload. In step 2 the promoted label is not counted under
+"Pending review"; only labels still pending review are, so the person stays in the group their
+pending labels put them in.
+**Result:** web ☐ — notes:
+
+### DIR-A1f · The admin edit drawer sets a profile's sector and job title (added 2026-10-08)
+
+1. On `/admin/directory`, open **Edit** on any profile. Below City, confirm **Sector (optional)** and
+   **Job title (optional)** selects, each starting at the profile's stored value or "Not set".
+2. Open Job title and confirm it lists every job title grouped by sector. Pick one, confirm its sector
+   fills in, and save. Reopen the drawer and confirm both stuck, and that the profile's public page
+   shows the job title.
+3. Change the sector to a different one and confirm the job title resets to "Not set". Set both to
+   "Not set", save, reopen, and confirm both are cleared.
+
 ### DIR-A2 · Attach an unclaimed profile (two places)
 **Role:** admin · **Surfaces:** web
 **Steps:**
@@ -486,10 +524,13 @@ one transaction, so the header counts read 0 as well. The gate
    profile.
 2. From `/admin/directory`, assign an unclaimed profile to a user id.
 3. Try to attach a profile that another member already claimed.
+4. Try to attach a different unclaimed profile to the account you used in step 2, which now owns one.
 **Expected:** Both the inline control and the dedicated page assign an unclaimed profile. After
 attach, the profile reads as claimed and the inline section stops rendering. Reassigning a profile
 that is already claimed by another member is blocked (a `409` / claimed-profile guard, recorded as a
-deny event) — an admin cannot silently overwrite another member's claim.
+deny event) — an admin cannot silently overwrite another member's claim. Step 4 is refused with a
+`409` saying the account already owns a Directory profile and can own only one; the second profile
+stays unclaimed, and the audit log shows the refusal (#2833).
 **Result:** web ☐ mobile ☐ — notes:
 
 ### DIR-A2b · A profile keeps its nominator after it is claimed (added 2026-09-30)
@@ -503,6 +544,16 @@ deny event) — an admin cannot silently overwrite another member's claim.
 profile is recorded as its nominator (`directory_profiles.nominated_by_user_id`). After the attach in
 step 3 the number does not change: claiming hides the "Community-generated profile" line, but the
 nomination stays.
+**Result:** web ☐ — notes:
+
+### DIR-A2c · A nominator's data export leaves out the profiles they nominated (added 2026-10-05)
+**Role:** admin who has created or nominated at least one profile · **Surfaces:** web
+**Steps:**
+1. As that admin, download the data export from the account area.
+2. Search the export for the name of a profile they created or nominated.
+**Expected:** The export holds the admin's own Directory profile, if any, and none of the profiles
+they nominated: no nominee bio, payment address or location. Deleting the admin's account still
+clears their id from those profiles' nominator field.
 **Result:** web ☐ — notes:
 
 ### DIR-A3 · Unclaimed-only delete
@@ -583,7 +634,7 @@ summary with the count of each. It is read-only and never mutates the taxonomy.
 
 ---
 
-### DIR-A9 · One Percent reads one claimed profile, and nothing else
+### DIR-A9 · One Percent reads profiles, claimed or not, and nothing else
 
 **Role:** none — a service credential, not a person · **Surfaces:** web (API only — no UI)
 
@@ -603,12 +654,13 @@ id and an unclaimed one from the admin list.
 7. Repeat step 1 many times in quick succession.
 
 **Expected:**
-- Step 1: **200**, `{ profile }` with name, headline, job title, sector, skill names, profile
-  address, city, state and country. No bio, no payment address, no account id.
-- Steps 2 and 3: the same **404**. An unclaimed profile reads exactly like a missing one.
+- Step 1: **200**, `{ profile }` with `claimed: true`, name, headline, job title, sector, skill
+  names, profile address, city, state and country. No bio, no payment address, no account id.
+- Step 2: **200**, the same fields with `claimed: false`. No nominator.
+- Step 3: **404**.
 - Steps 4, 5 and 6: **401** naming `DIRECTORY_SERVICE_TOKENS`. The taxonomy credential doesn't
   open this route, and there's no member path.
-- Step 6a: `contact` gives the same **404** as an unclaimed profile, with no word about a restriction. `trading` still gives **200**.
+- Step 6a: `contact` gives the same **404** as a missing profile, with no word about a restriction. `trading` still gives **200**.
 - Step 7: eventually **429**.
 - The audit lines carry `service:<name>` as the actor and the command `directory.profile.service.get`.
 **Result:** web ☐ — notes:
@@ -627,6 +679,56 @@ id and an unclaimed one from the admin list.
 - Steps 2, 3 and 5: the same **404**, with nothing saying which.
 - Step 4: **401** naming `DIRECTORY_SERVICE_TOKENS`.
 - The audit line carries the command `directory.profile.service.by-account.get` and the profile id when found, never the account id.
+**Result:** web ☐ — notes:
+
+**A page at a time.** The same credential, for Find matches on One Percent's desk:
+
+**Steps:**
+1. `GET /api/directory/service/profiles?limit=2` with `Authorization: Bearer <name>.<secret>`.
+2. The same with `cursor=<nextCursor from step 1>`, at least a second later.
+3. `GET /api/directory/service/profiles?limit=500`.
+4. Step 1 with `cursor=not-a-cursor`.
+5. Step 1 with no header.
+6. Step 1 twice inside the same second.
+
+**Expected:**
+- Step 1: **200**, `{ profiles, nextCursor }` with two profiles carrying the same fields as the by-id read, and a `nextCursor` when there are more.
+- Step 2: **200**, the next profiles, none repeated from step 1. A claimed profile whose owner is restricted with scope `contact` never appears on any page.
+- Step 3: **200**, at most 100 profiles.
+- Step 4: **400** saying the cursor wasn't one this route gave out.
+- Step 5: **401** naming `DIRECTORY_SERVICE_TOKENS`.
+- Step 6: the second is **429** with `Retry-After`.
+- The audit line carries the command `directory.profile.service.list`, `page-<n>` and the page size, and no profile id.
+**Result:** web ☐ — notes:
+
+---
+
+### DIR-A10 · The landing page's counts and saved matches (added 2026-10-13)
+
+**Role:** owner, in the Neon dashboard · **Surfaces:** none in the app (the public landing page reads these)
+
+Nothing a member does in the app changes. This checks the two views and the saved-match table the
+public landing page (`landing-page-v4`) reads, and that its own login can reach nothing else. Run
+it in the Neon SQL Editor after `post/0055` and `ctf/scripts/sql/landing_page_login_grants.sql`.
+
+**Steps:**
+1. `SELECT title, people FROM directory_public_skill_counts ORDER BY people DESC NULLS LAST LIMIT 5;`
+2. `SELECT * FROM directory_public_totals;`
+3. Pick a job title with 1 to 4 people in the admin Directory list and find it in step 1's view without the `LIMIT`.
+4. Save a match on the landing page, then `SELECT code, people_at_save, created_at FROM directory_landing_match_codes ORDER BY created_at DESC LIMIT 1;`
+5. Connected as `landing_page` (its connection address), `SELECT * FROM directory_profiles LIMIT 1;`
+6. Pick two job titles from step 1 that some people share, then `SELECT directory_public_match_count(ARRAY['<id 1>', '<id 2>']);` and the same with each id alone.
+7. On the landing page, tap a need that 0 people match, then paste `ctf/scripts/sql/landing_unmet_needs_report.sql` into the Neon SQL Editor.
+8. `SELECT * FROM directory_public_skill_coverage;` then open Workforce → Overview.
+**Expected:**
+- Step 1: the busiest titles, each with its exact count.
+- Step 2: one column, `total`, matching the Directory's profile count, less owners restricted with scope `all` or `contact`.
+- Step 3: `people` is that exact number.
+- Step 4: the code shown on the page, with no name or contact detail anywhere in the row.
+- Step 5: refused with "permission denied for table directory_profiles".
+- Step 6: the pair is never more than the two single answers added together, and is less whenever somebody lists both.
+- Step 7: that need is listed with one more `times_asked` than before, and tapping it again on the same visit adds nothing.
+- Step 8: `covered` and `catalog` equal the Skills Coverage tile's "X of Y skills", and the landing page's "…% of the skills" sentence shows the same rounded percentage.
 **Result:** web ☐ — notes:
 
 ---
@@ -657,9 +759,14 @@ the Advocacy placeholder and one carrying only that placeholder.
 - Step 1: both routes lead to the queue. The row on Directory Admin sits with the Taken-down URLs and
   Audit log rows at the foot of the list. Before these existed the page could only be reached by
   typing the address, which is not something anybody does on a phone.
-- Step 2: rows render with name, Quora address, skills, and a plain-language label — "Write about the
-  skill", "General invitation", or "Nothing recorded yet". The counts line adds up to the number of
-  rows shown.
+- Step 2: rows render with name, Quora address, Directory profile address, and a plain-language label
+  — "Write about the skill", "General invitation", or "Nothing recorded yet". The counts line adds up
+  to the number of rows shown.
+- Step 2: each skill sits on its own line with the job title and sector it belongs to, for example
+  "Business-plan development and market analysis — Business Development Officers / SME Advisors
+  (Microfinance & SME Support)". Two skills on one listing can show two different sectors; an invite
+  post states how thin each skill's own sector is, so the profile's single sector field is not
+  enough (added 2026-10-07). A skill listed twice shows twice, without a warning in the console.
 - Step 2: a row whose only skill is the Advocacy placeholder reads **General invitation**. Advocacy
   stands in for a trade nobody has stated, so that row's post cannot name one.
 - Step 3: your own listing appears; anybody already written about does not. The owner was excluded
@@ -673,19 +780,42 @@ the Advocacy placeholder and one carrying only that placeholder.
   the thing worth seeing. The numbers are counts only: no name, address or skill of any member
   appears in this block.
 - Step 5: the clipboard holds plain text, readable without a spreadsheet: the coverage figures
-  first, then one block per person. This is the path that matters — the person who writes the
+  first, then one block per person, each carrying a `directory:` line with the profile address and a
+  `skills:` list of one line per skill with its job title and sector. This is the path that matters — the person who writes the
   invite posts works from a phone, and the posts argue from those figures, so a paste carrying the
   people without the numbers means the numbers get copied forward from an older reading instead.
 - Step 6: redirected to `/apps/directory`. Gathered and sorted this way the Directory is a different
   object from the public sources it was built from, which is why it is admin-only here.
 **Result:** web ☐ mobile ☐ — notes:
 
+### DIR-A7b · The paste-ready invite queue SQL runs in the Neon dashboard (added 2026-10-05)
+**Role:** owner · **Surfaces:** operational (Neon dashboard, no app UI)
+**Precondition:** The same profiles as DIR-A7, plus one profile with no Quora address.
+**Steps:**
+1. Paste the contents of `ctf/scripts/sql/directory-invite-queue.sql` into the Neon SQL editor for
+   production and run it.
+2. Compare the rows with the Invite queue screen from DIR-A7.
+3. In the weekly community stats draft (or the `draft-needed` issue the no-credit route files), read
+   the Directory lines.
+**Expected:**
+- Step 1: the statement runs and returns rows. Before 2026-10-05 it stopped with a missing-column
+  error, because it still tested a column that was dropped from `directory_profiles`.
+- Step 2: the profile with no Quora address is absent, and nobody already written about appears,
+  matching the screen. The `directory_url` and `skill_places` columns match the screen's profile
+  address and per-skill lines (added 2026-10-07).
+- Step 3: the Directory section carries the profile count, the distinct-skills count, the coverage
+  line toward 650 and the most-listed skills, rather than a skipped note.
+**Result:** web ☐ mobile ☐ — notes:
+
 ### DIR-A8 · Pending skill proposals list, and dropping a chip after a non-promotion
 **Role:** admin · **Surfaces:** web (admin surface)
 **Precondition:** One profile carrying a member-added "skill not listed" chip (DIR-3), and one
 community-generated profile whose nomination proposed a free-text skill that is not in the taxonomy
-(SkillsHunt SH-7, accepted). Ideally one of the two labels matches an existing taxonomy skill name
-exactly (for example a chip reading `Librarianship`).
+(SkillsHunt SH-7, accepted), approved before the `Skills Hunt — Propose Skill Promotions` workflow
+has filed an issue for that skill. Ideally a second accepted nomination proposes the same free-text
+skill for a different person. Ideally the member-added label matches an existing taxonomy skill name
+exactly (for example a chip reading `Librarianship`); a nominated label that matches a taxonomy name
+or alias is linked as a real skill on approval and is never a chip.
 **Steps:**
 1. As the admin, open `/admin/directory`, scroll to the foot, and press **Pending skill proposals**.
    Then go back to `/admin` and check the list there for the same destination.
@@ -709,6 +839,10 @@ exactly (for example a chip reading `Librarianship`).
   two chips narrow to one source. An unclaimed profile carries an "Unclaimed" badge and a removed
   a proposal whose profile has been deleted a "Profile deleted" badge — listed and marked, never
   hidden. The list loads without an error (an earlier build failed here on a dropped column).
+  The nominated chip is listed although no issue has been filed for it yet (no issue link, no tracker
+  status), and a second nomination proposing the same skill is listed as its own row (an earlier
+  build listed a nominated chip only after the proposal workflow had filed it, and only for the
+  first nomination).
 - Step 3: the row carries an "Already a taxonomy skill" badge. The member's profile detail does not
   show that chip (it hides a duplicate of a held taxonomy name), but the admin sees it here, because
   it is exactly the row that needs dropping.
@@ -716,7 +850,9 @@ exactly (for example a chip reading `Librarianship`).
   **Keep it** disarms it; the second press removes the row from the list with no page reload.
 - Step 5: the chip is gone from the profile detail and from the edit form's "skill not listed"
   box, so a later save does not put it back.
-- Step 6: the chip is gone from the community-generated profile's Specializations section.
+- Step 6: the chip is gone from the community-generated profile's Specializations section, and from
+  the list for every other nominated profile carrying the same label (the drop is one decision per
+  skill). This holds when no issue had been filed: the drop records the skill as `dropped` itself.
 - Step 7: two entries read "Dropped a pending skill proposal", each with the profile, label, source,
   and the state before and after in the detail.
 - Step 8: the dropped nominated label is not filed as a new issue and not re-claimed — the tracker

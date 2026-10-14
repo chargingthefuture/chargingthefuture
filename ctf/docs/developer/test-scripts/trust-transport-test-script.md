@@ -149,6 +149,8 @@ Result: web ☐
 
 **Expected:** The offer is accepted and a trip is created. The request moves to an accepted state. Per model B, the pickup/drop-off is now available to the accepted provider through the trip. The trip ID is visible (the sidebar/detail shows it, not "— → —"). A "Chat" control opens the trip's Direct Line on both web and android.
 
+Since 2026-10-05: with Stream Chat unreachable or refusing the channel setup, the accept still succeeds and answers with the trip; the failure is reported, and opening Direct Line afterwards sets the channel up.
+
 Result: web ☐
 
 ---
@@ -564,6 +566,8 @@ Result: web ☐
 2. Look for audit entries for `trust-transport.request.create`, `trust-transport.offer.accept`, `trust-transport.trip.status.update`, and `trust-transport.payout.request`.
 
 **Expected:** All four member-facing command types appear as audit rows. Each row has a timestamp, actor ID, command name, and result status.
+
+Since 2026-10-05: an emergency stop (TT-10) and an order cancel (TT-11) also appear, as `trust-transport.trip.status.update` rows with `nextStatus` `emergency_frozen` or `canceled`.
 
 Result: web ☐
 

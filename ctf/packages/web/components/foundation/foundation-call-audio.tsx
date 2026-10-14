@@ -37,6 +37,9 @@ export type FoundationCallCredentials = {
 
 type ConnState = "connecting" | "in-call" | "error";
 
+const MIC_FAILURE_TEXT =
+  "Your microphone could not be turned on, so the other person cannot hear you. Allow microphone access for this site, then press Muted to turn it on.";
+
 export function FoundationCallAudio({
   credentials,
   onEnd,
@@ -48,6 +51,9 @@ export function FoundationCallAudio({
   const [call, setCall] = useState<Call | null>(null);
   const [status, setStatus] = useState<ConnState>("connecting");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  // Set when the microphone could not be turned on: the member is in a call, and may be paying for
+  // it, while the other person cannot hear them, so that is said on the call card.
+  const [micError, setMicError] = useState<string | null>(null);
 
   useEffect(() => {
     let canceled = false;
@@ -64,7 +70,12 @@ export function FoundationCallAudio({
         // Audio only: never publish video. Microphone is enabled so the two parties can talk; the member
         // can mute with the control below.
         try { await activeCall.camera.disable(); } catch { /* no camera to disable */ }
-        try { await activeCall.microphone.enable(); } catch { /* no mic available */ }
+        try {
+          await activeCall.microphone.enable();
+        } catch (micFailure) {
+          reportError(micFailure, { area: "foundation", op: "instant_call_microphone_enable" });
+          if (!canceled) setMicError(MIC_FAILURE_TEXT);
+        }
         if (canceled) return;
         setClient(videoClient);
         setCall(activeCall);
@@ -103,18 +114,23 @@ export function FoundationCallAudio({
   return (
     <StreamVideo client={client}>
       <StreamCall call={call}>
-        <FoundationCallLive onEnd={onEnd} />
+        <FoundationCallLive onEnd={onEnd} micError={micError} />
       </StreamCall>
     </StreamVideo>
   );
 }
 
-function FoundationCallLive({ onEnd }: { onEnd: () => void }) {
+function FoundationCallLive({ onEnd, micError }: { onEnd: () => void; micError: string | null }) {
   const { useParticipants, useMicrophoneState } = useCallStateHooks();
   const participants = useParticipants();
   const { microphone, isMute } = useMicrophoneState();
   // The other party is present once there is more than one participant on the call.
   const otherJoined = participants.length > 1;
+  // Once the microphone has been on, a later mute is the member's choice, not the failure.
+  const [micCameOn, setMicCameOn] = useState(false);
+  useEffect(() => {
+    if (!isMute) setMicCameOn(true);
+  }, [isMute]);
 
   return (
     <>
@@ -124,6 +140,8 @@ function FoundationCallLive({ onEnd }: { onEnd: () => void }) {
         muted={isMute}
         onToggleMute={() => void microphone.toggle()}
         onEnd={onEnd}
+        // Shown until the microphone has come on once (unmuting after allowing access clears it).
+        notice={micCameOn ? null : micError}
       />
       {/* Headless — plays every participant's audio track. */}
       <ParticipantsAudio participants={participants} />
@@ -139,9 +157,11 @@ function CallShell({
   muted,
   onToggleMute,
   onEnd,
+  notice,
 }: {
   state: ConnState;
   message: string;
+  notice?: string | null;
   muted?: boolean;
   onToggleMute?: () => void;
   onEnd: () => void;
@@ -161,6 +181,7 @@ function CallShell({
         {stateLabel}
       </div>
       <div style={{ fontSize: 14, color: "#D1D5DB", textAlign: "center", minHeight: 20 }}>{message}</div>
+      {notice ? <div role="alert" style={{ fontSize: 13, color: "#F87171", textAlign: "center", lineHeight: 1.5 }}>{notice}</div> : null}
 
       <div style={{ display: "flex", gap: 12, marginTop: 4 }}>
         {state === "in-call" && onToggleMute ? (

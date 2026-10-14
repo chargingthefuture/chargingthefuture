@@ -998,7 +998,7 @@ function hideBlockedCommunityAuthorsSql(viewer: string): string {
           )`;
 }
 
-// Hide a Commons post or AI Q&A card whose source row is gone.
+// Hide a Commons post or AI Q&A card whose source row is gone, or hidden by a moderator.
 //
 // A community/question item in `feed_items` is only ever a COPY of a row in `feed_community_posts` /
 // `feed_questions`, carrying the same text. When the source row went away but the copy did not, the
@@ -1008,14 +1008,26 @@ function hideBlockedCommunityAuthorsSql(viewer: string): string {
 // clears the ones already left behind; this guard is the standing safeguard so no other path can put
 // a member's deleted words back on screen. Announcement items carry neither source id and pass
 // straight through.
-const HIDE_ORPHANED_SOURCE_ROWS_SQL = `
+//
+// A moderator's hide changes only the source row's `moderation_status`; the copy keeps its text and
+// stays active. So the guard also requires the source to be `accepted`, the same test the detail
+// loaders apply. Without it a hidden post or question stayed in every member's Commons, signed with
+// the fallback handle because the detail loader had dropped its author. Restoring the source puts the
+// item back with nothing else to undo.
+const HIDE_MISSING_OR_HIDDEN_SOURCE_ROWS_SQL = `
           AND (
             f.source_community_post_id IS NULL
-            OR EXISTS (SELECT 1 FROM feed_community_posts p WHERE p.id = f.source_community_post_id)
+            OR EXISTS (
+              SELECT 1 FROM feed_community_posts p
+              WHERE p.id = f.source_community_post_id AND p.moderation_status = 'accepted'
+            )
           )
           AND (
             f.source_question_id IS NULL
-            OR EXISTS (SELECT 1 FROM feed_questions q WHERE q.id = f.source_question_id)
+            OR EXISTS (
+              SELECT 1 FROM feed_questions q
+              WHERE q.id = f.source_question_id AND q.moderation_status = 'accepted'
+            )
           )`;
 
 async function countFeedTimeline(client: PoolClient, params: FeedTimelineQueryParams, viewerUserId: string): Promise<number> {
@@ -1034,7 +1046,7 @@ async function countFeedTimeline(client: PoolClient, params: FeedTimelineQueryPa
             WHERE t.item_id = f.id
               AND t.target_role IN ($1, 'member', 'admin', 'all')
               AND ($2::text IS NULL OR t.target_plugin IS NULL OR t.target_plugin = $2)
-          )${hideBlockedCommunityAuthorsSql('$5')}${HIDE_ORPHANED_SOURCE_ROWS_SQL}
+          )${hideBlockedCommunityAuthorsSql('$5')}${HIDE_MISSING_OR_HIDDEN_SOURCE_ROWS_SQL}
       `,
     [params.actorRole, params.pluginFilter, params.allowedItemTypes, params.mentionPatterns, viewerUserId],
   );
@@ -1116,7 +1128,7 @@ async function resolveEffectiveOffset(
                   AND t.target_role IN ($1, 'member', 'admin', 'all')
                   AND ($2::text IS NULL OR t.target_plugin IS NULL OR t.target_plugin = $2)
               )
-              AND (f.published_at > $5 OR (f.published_at = $5 AND f.id > $6::uuid))${hideBlockedCommunityAuthorsSql('$7')}${HIDE_ORPHANED_SOURCE_ROWS_SQL}
+              AND (f.published_at > $5 OR (f.published_at = $5 AND f.id > $6::uuid))${hideBlockedCommunityAuthorsSql('$7')}${HIDE_MISSING_OR_HIDDEN_SOURCE_ROWS_SQL}
           `,
     [params.actorRole, params.pluginFilter, params.allowedItemTypes, params.mentionPatterns, target.published_at, target.id, options.viewerUserId],
   );
@@ -1166,7 +1178,7 @@ async function queryFeedTimelineRows(
             WHERE t.item_id = f.id
               AND t.target_role IN ($1, 'member', 'admin', 'all')
               AND ($2::text IS NULL OR t.target_plugin IS NULL OR t.target_plugin = $2)
-          )${hideBlockedCommunityAuthorsSql('$4')}${HIDE_ORPHANED_SOURCE_ROWS_SQL}
+          )${hideBlockedCommunityAuthorsSql('$4')}${HIDE_MISSING_OR_HIDDEN_SOURCE_ROWS_SQL}
         ORDER BY f.published_at DESC, f.id DESC
         OFFSET $5 LIMIT $6
       `,

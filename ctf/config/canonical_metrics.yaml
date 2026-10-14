@@ -1768,7 +1768,7 @@ canonical_metrics:
 
   - id: wp_value_contributions_confirmed_usd
     name: Weekly Contributions Confirmed USD
-    description: Sum (not a row count) of confirmed contribution dollars reviewed within the week window. Differs from contributions_fiat_confirmed_total, which is the cumulative all-time gift-card total; this one is windowed on reviewed_at.
+    description: Sum (not a row count) of confirmed gift-card dollars reviewed within the week window. Gift cards only, because only real money counts toward a dollar figure; a confirmed Quora comment or GitHub star carries the admin's set value per non-money contribution in confirmed_amount_usd, which is not money and is counted by wp_value_contributions_non_money_confirmed instead (owner decision, 2026-10-06). Differs from contributions_fiat_confirmed_total, which is the cumulative all-time gift-card total; this one is windowed on reviewed_at.
     owner: analytics-owner@chargingthefuture.org
     data_type: number
     unit: USD
@@ -1776,9 +1776,12 @@ canonical_metrics:
       SELECT COALESCE(SUM(confirmed_amount_usd), 0) AS v
       FROM contributions_submissions
       WHERE status = 'confirmed'
+        AND kind = 'gift_card'
         AND reviewed_at >= :week_start
         AND reviewed_at < :week_end;
     inputs:
+      - name: contributions_submissions.kind
+        type: string
       - name: contributions_submissions.status
         type: string
       - name: contributions_submissions.reviewed_at
@@ -1787,8 +1790,37 @@ canonical_metrics:
         type: currency
     example_values:
       - 45
-      - 120.5
-    last_updated: "2026-07-18T00:00:00Z"
+      - 120
+    last_updated: "2026-10-06T00:00:00Z"
+    update_cadence: weekly
+    retention: 24 months
+    allowed_thresholds:
+      min: 0
+
+  - id: wp_value_contributions_non_money_confirmed
+    name: Weekly Contributions Non-Money Confirmed
+    description: Count of confirmed non-money contributions (Quora comments and GitHub stars) reviewed within the week window. A row count, never dollars, kept apart from wp_value_contributions_confirmed_usd so the dollar figure holds real money only (owner decision, 2026-10-06). Read from the shared value-event definition (lib/contributor-access/value-events.ts), which the Weavers of the Commons badge and the daily exchange count also read.
+    owner: analytics-owner@chargingthefuture.org
+    data_type: integer
+    unit: contributions
+    calculation: |
+      SELECT COUNT(*) AS v
+      FROM contributions_submissions
+      WHERE status = 'confirmed'
+        AND kind <> 'gift_card'
+        AND reviewed_at >= :week_start
+        AND reviewed_at < :week_end;
+    inputs:
+      - name: contributions_submissions.kind
+        type: string
+      - name: contributions_submissions.status
+        type: string
+      - name: contributions_submissions.reviewed_at
+        type: datetime
+    example_values:
+      - 0
+      - 12
+    last_updated: "2026-10-06T00:00:00Z"
     update_cadence: weekly
     retention: 24 months
     allowed_thresholds:
@@ -2236,11 +2268,11 @@ canonical_metrics:
     data_type: integer
     unit: members
     calculation: |
-      -- Live value for the current week (the workforce_recruited_current_count definition):
+      -- Live value for the current week (the workforce_recruited_current_count definition). Every
+      -- removal is a hard delete since post/0033 dropped the is_active and deleted_at tombstones, so
+      -- a present row is a listing:
       SELECT COUNT(*) AS v
-      FROM directory_profiles
-      WHERE is_active = TRUE
-        AND deleted_at IS NULL;
+      FROM directory_profiles;
       -- Current week: upsert that live value as this week's snapshot (last read of the week wins):
       INSERT INTO weekly_performance_goal_snapshots (metric_key, week_start_date, metric_value, captured_at)
       VALUES ('goal.workforce_recruited', :week_start, :live_value, NOW())
@@ -2264,7 +2296,7 @@ canonical_metrics:
         type: datetime
     example_values:
       - 67
-    last_updated: "2026-07-18T00:00:00Z"
+    last_updated: "2026-10-05T00:00:00Z"
     update_cadence: weekly
     retention: 120 months
     allowed_thresholds:
