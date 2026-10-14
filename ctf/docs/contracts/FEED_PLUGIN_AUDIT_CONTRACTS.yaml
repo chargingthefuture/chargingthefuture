@@ -299,6 +299,9 @@ auditEvents:
     command: feed.community.post.create
     commandVersion: 1.0.0
     purpose: community_engagement
+    # Written by POST /api/feed/community/posts on success and by POST /api/commons/messages (the
+    # Commons composer) on success, refusal (rate limit, moderation, unavailable reply target) and
+    # failure. A log line, not a durable row: this is a member action.
     policyDecision:
       status: allow_or_deny
       reason: policy_reason_code
@@ -317,6 +320,36 @@ auditEvents:
       status: success_or_failure
       errorCategory: none_or_error_class
 
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: feed
+    command: feed.community.post.image.create
+    commandVersion: 1.0.0
+    purpose: community_engagement
+    # Route POST /api/commons/images (admin only). An admin mutation: every outcome, including a
+    # member refused as not an admin and an unreadable upload, is a durable feed_admin_audit_trail row
+    # written by recordFeedAdminAudit. Reasons: admin_picture_post, admin_required, invalid_upload,
+    # rate_limit_exceeded, content_policy_violation, community_post_allowed (allowed, then failed).
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+      evidence:
+        roleCheck: pass_or_fail
+        uploadCheck: pass_or_fail
+        contentModerationCheck: pass_or_fail
+    dataClassesAccessed:
+      - feed_community_post_metadata
+      - feed_community_post_images
+    targetContext:
+      targetType: feed_community_post
+      postId: post_identifier (unknown when no post was created)
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
   - eventId: uuid
     timestamp: rfc3339
     actorId: principal
