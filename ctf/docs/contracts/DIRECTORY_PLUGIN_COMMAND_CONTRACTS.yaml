@@ -118,14 +118,14 @@ contracts:
     command: directory.profile.service.get
     version: 1.0.0
     description: >-
-      One claimed directory profile by id, for One Percent's operator desk (owner decision,
-      2026-10-02). GET /api/directory/service/profiles/[id]. Machine caller only, authenticated by a
-      DIRECTORY_SERVICE_TOKENS consumer. Returns name, headline, job title, sector, skill names,
-      profile address and city/state/country, and nothing else: never the bio, payment addresses,
-      the claiming account id, or who nominated or invited the person. An unclaimed or missing
-      profile is the same 404, and so is one whose claiming account carries an account_restrictions
-      row with scope 'all' or 'contact'; the answer never says a member is restricted. No list and
-      no search.
+      One directory profile by id, claimed or not, for One Percent's operator desk (owner decisions,
+      2026-10-02 and 2026-10-06). GET /api/directory/service/profiles/[id]. Machine caller only,
+      authenticated by a DIRECTORY_SERVICE_TOKENS consumer. Returns whether it is claimed, name,
+      headline, job title, sector, skill names, profile address and city/state/country, and nothing
+      else: never the bio, payment addresses, the claiming account id, or who nominated or invited
+      the person. A missing profile is a 404, and so is a claimed one whose claiming account carries
+      an account_restrictions row with scope 'all' or 'contact'; the answer never says a member is
+      restricted. No list and no search.
     inputSchema:
       id:
         type: string
@@ -162,6 +162,44 @@ contracts:
     outputSchema:
       profile:
         type: object
+    dataAccess:
+      - directory_profiles
+      - directory_profile_skills
+      - skills_taxonomy_skills
+      - skills_taxonomy_sectors
+      - skills_taxonomy_job_titles
+      - account_restrictions
+    purpose: one_percent_introduction
+    retentionClass: derived_short_lived
+    idempotency: true
+
+  - pluginId: directory
+    command: directory.profile.service.list
+    version: 1.0.0
+    description: >-
+      A page of directory profiles, claimed or not, for One Percent's Find matches on the owner's
+      operator desk (owner decision, 2026-10-07). GET /api/directory/service/profiles. Machine caller
+      only, the same DIRECTORY_SERVICE_TOKENS consumer as directory.profile.service.get, rate-limited
+      per consumer to one page a second and sixty an hour. Each profile carries the same fields as
+      the single read and nothing else; directory profiles hold no field for what somebody needs or
+      is looking for, so none is returned. Profiles whose claiming account is restricted with scope
+      'all' or 'contact' are left out without saying so. Ordered by creation time then id. No search
+      and no filters. 400 DIRECTORY_INVALID_PAYLOAD for a bad limit or a cursor this route did not
+      give out; 429 DIRECTORY_SERVICE_RATE_LIMITED past the page limits.
+    inputSchema:
+      limit:
+        type: integer
+        required: false
+        default: 50
+        maximum: 100
+      cursor:
+        type: string
+        required: false
+    outputSchema:
+      profiles:
+        type: array
+      nextCursor:
+        type: string_or_null
     dataAccess:
       - directory_profiles
       - directory_profile_skills
@@ -257,7 +295,7 @@ contracts:
   - pluginId: directory
     command: directory.admin.profile.assign
     version: 1.0.0
-    description: Assign an unclaimed directory profile to a target user under admin role guard.
+    description: Assign an unclaimed directory profile to a target user under admin role guard. Refused (409) when the profile is already claimed, or when the target account already owns a claimed profile; an account owns at most one.
     inputSchema:
       profileId:
         type: string

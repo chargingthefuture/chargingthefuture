@@ -38,10 +38,13 @@ function LeaderboardRow({ entry, isMe }: { entry: SkillsHuntLeaderboardItem; isM
 export function SkillsHuntLeaderboardTab({
   loading,
   leaderboard,
+  error = null,
   userId,
 }: {
   loading: boolean;
   leaderboard: SkillsHuntLeaderboardItem[];
+  // A failed load, shown in place of the empty state so an outage does not read as "no entries".
+  error?: string | null;
   userId?: string;
 }) {
   const { theme } = useTheme();
@@ -56,6 +59,8 @@ export function SkillsHuntLeaderboardTab({
 
       {loading ? (
         <div style={{ fontSize: 14, color: t.MUTED }}>Loading leaderboard…</div>
+      ) : error ? (
+        <div role="alert" style={{ fontSize: 14, color: "#EF4444", lineHeight: 1.6 }}>{error}</div>
       ) : leaderboard.length === 0 ? (
         <div style={{ fontSize: 14, color: t.MUTED }}>No entries yet — be the first scout!</div>
       ) : (

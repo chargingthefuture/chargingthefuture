@@ -44,10 +44,15 @@ function asPlainText(rows: DirectoryInviteQueueRow[], coverage: DirectorySkillCo
     .map((row) => {
       const parts = [
         `${row.name ?? '(no name)'} — ${row.quoraUrl}`,
+        `  directory: ${row.directoryUrl}`,
         `  kind: ${row.inviteKind}`,
         row.location ? `  where: ${row.location}` : null,
         row.sector ? `  sector: ${row.sector}${row.jobTitle ? ` / ${row.jobTitle}` : ''}` : null,
-        row.skills.length > 0 ? `  skills: ${row.skills.join('; ')}` : null,
+        // One line per skill with where it sits in the taxonomy, because an invite post states
+        // how thin the skill's own sector is and two skills on one listing can sit in two sectors.
+        row.skillPlaces.length > 0
+          ? ['  skills:', ...row.skillPlaces.map((p) => `    - ${p.skill} — ${p.jobTitle ?? 'no job title'} (${p.sector ?? 'no sector'})`)].join('\n')
+          : null,
         row.pendingSkills.length > 0 ? `  pending: ${row.pendingSkills.join('; ')}` : null,
         row.headline ? `  headline: ${row.headline}` : null,
         row.bio ? `  about: ${row.bio}` : null,
@@ -267,10 +272,19 @@ export function DirectoryInviteQueueShell() {
                 {row.location && (
                   <div style={{ fontSize: 12, color: t.SUBTLE, marginTop: 6 }}>{row.location}</div>
                 )}
-                {row.skills.length > 0 && (
-                  <div style={{ fontSize: 12, color: t.TEXT, marginTop: 8, lineHeight: 1.5 }}>
-                    {row.skills.join(' · ')}
-                  </div>
+                <div style={{ fontSize: 12, color: t.SUBTLE, marginTop: 3, wordBreak: 'break-all' }}>{row.directoryUrl}</div>
+                {row.skillPlaces.length > 0 && (
+                  <ul style={{ fontSize: 12, color: t.TEXT, marginTop: 8, lineHeight: 1.5, paddingLeft: 16 }}>
+                    {/* The same skill can appear twice on one listing (it sits under two job titles), so the key carries the position. */}
+                    {row.skillPlaces.map((place, index) => (
+                      <li key={`${place.skill}-${index}`}>
+                        {place.skill}
+                        <span style={{ color: t.SUBTLE }}>
+                          {' '}— {place.jobTitle ?? 'no job title'} ({place.sector ?? 'no sector'})
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
                 )}
                 {row.pendingSkills.length > 0 && (
                   <div style={{ fontSize: 12, color: t.SUBTLE, marginTop: 6, lineHeight: 1.5 }}>
