@@ -77,14 +77,12 @@
 3. As B, open the Commons and look for A's posts.
 4. As an admin, open the Commons moderation admin and check the full post list.
 5. As B, reply to an official announcement. As A, open that announcement's replies.
-6. As a third member C, quote-reply to one of B's posts. As A, find C's post in the Commons.
-7. As B, quote-reply to one of A's posts, and post a message that mentions `@A`. As A, open notifications.
+6. As B, post a message that mentions `@A`. As A, open notifications.
 
 **Expected:**
 - Steps 1–3: B's posts and replies do not render for A, and A's do not render for B (both directions). Announcements and AI answers always show — they have no member author.
 - Step 5: B's reply does not appear in A's list of announcement replies, and the reply count A sees on that announcement does not count it (added 2026-10-14).
-- Step 6: C's post shows without the quote block, so B's handle and words do not appear for A (added 2026-10-14).
-- Step 7: A gets neither "Someone replied to your post" nor "Someone mentioned you" from B's posts (added 2026-10-14).
+- Step 6: A gets no "Someone mentioned you" from B's post (added 2026-10-14).
 - A post's reply counter may read higher than the replies shown to a member with a block — accepted, not a bug.
 - Step 4: admin/moderation views are never filtered.
 - Neither member gets any signal that a block exists.

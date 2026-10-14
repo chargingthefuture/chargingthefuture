@@ -1334,13 +1334,10 @@ function groupRepliesByPost(replyRows: FeedCommunityReplyRow[]): Map<string, Fee
 
 // Resolve each quoted (replied-to) post's author handle and a short snippet of its body. The quoted
 // post may sit outside this timeline page, so look up the referenced ids directly. Returns a map
-// id → { author, snippet }. A quoted post whose author is blocked in either direction with the viewer
-// is left out, so the quote block is not rendered and the blocked person's handle and words stay
-// hidden, the same as their own posts.
+// id → { author, snippet }.
 async function loadQuotedPosts(
   client: PoolClient,
   postRows: FeedCommunityPostRow[],
-  userId: string,
 ): Promise<Map<string, FeedQuotedPost>> {
   const quotedById = new Map<string, FeedQuotedPost>();
   const quotedIds = Array.from(
@@ -1360,9 +1357,9 @@ async function loadQuotedPosts(
             SELECT id, author_user_id, author_username, body
             FROM feed_community_posts
             WHERE id = ANY($1::uuid[])
-              AND moderation_status = 'accepted'${notBlockedWithViewerSql('$2', 'feed_community_posts.author_user_id')}
+              AND moderation_status = 'accepted'
           `,
-    [quotedIds, userId],
+    [quotedIds],
   );
   for (const row of quotedRows.rows) {
     quotedById.set(row.id, {
@@ -1455,7 +1452,7 @@ async function loadCommunityDetails(
 
   const reactionsByPost = groupReactionsByPost(reactionRows.rows);
   const repliesByPost = groupRepliesByPost(replyRows.rows);
-  const quotedById = await loadQuotedPosts(client, postRows.rows, userId);
+  const quotedById = await loadQuotedPosts(client, postRows.rows);
   const imagesByPost = await loadCommunityPostImages(client, postRows.rows.map((row) => row.id));
 
   for (const row of postRows.rows) {
@@ -2329,8 +2326,7 @@ export async function createFeedCommunityPost(
 
   // Notify the parent post's author that someone replied — after commit, best-effort, never for a
   // self-reply. Neutral summary (no author name or content) so it is safe wherever it surfaces.
-  // Skipped when either has blocked the other: a block stops one member reaching the other.
-  if (replyParentAuthorId && replyParentAuthorId !== actorId && !(await isBlockedSafe(actorId, replyParentAuthorId))) {
+  if (replyParentAuthorId && replyParentAuthorId !== actorId) {
     await notifySafe({
       userId: replyParentAuthorId,
       sourcePlugin: 'commons',
@@ -2350,17 +2346,6 @@ export async function createFeedCommunityPost(
   await notifyMentionedMembers(committedBody, actorId, replyParentAuthorId, result.postId);
 
   return result;
-}
-
-// Block check for the reply notification. A failed check counts as blocked, so a database error can
-// only drop a notification, never send one a block should have stopped.
-async function isBlockedSafe(actorId: string, otherId: string): Promise<boolean> {
-  try {
-    return await isBlockedBetween(actorId, otherId);
-  } catch (error) {
-    reportError(error, { area: 'notifications', op: 'emit_commons.reply_block_check' });
-    return true;
-  }
 }
 
 // Resolve the @-mentions in a just-posted body and notify each addressed member. Best-effort and
