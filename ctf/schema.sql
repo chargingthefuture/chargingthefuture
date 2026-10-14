@@ -7179,6 +7179,19 @@ CREATE OR REPLACE VIEW directory_public_totals AS
   )
   SELECT (SELECT COUNT(*)::integer FROM people) AS total;
 
+-- One row: how many different active skills at least one Directory profile lists, and how many
+-- active skills there are. The same query as Workforce's Skills Coverage tile
+-- (lib/workforce/repository.ts getDashboard), so the landing page shows the same percentage.
+-- Counts of skills only; nothing about a person.
+CREATE OR REPLACE VIEW directory_public_skill_coverage AS
+  SELECT
+    (SELECT COUNT(DISTINCT dps.skill_id)::integer
+       FROM directory_profile_skills dps
+       JOIN directory_profiles p ON dps.profile_id::text = p.id::text
+       JOIN skills_taxonomy_skills s ON s.id = dps.skill_id
+      WHERE s.is_active = TRUE) AS covered,
+    (SELECT COUNT(*)::integer FROM skills_taxonomy_skills WHERE is_active = TRUE) AS catalog;
+
 -- How many people match a visitor: everyone who lists any of the given job titles, each counted
 -- once, as an exact number. Runs with its owner's rights so the landing page can call it
 -- without reading directory_person_job_titles itself; at most 60 titles per call.
