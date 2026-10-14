@@ -77,17 +77,23 @@ plugin and there is no per-service slice of them.
 
 ## 6) Full-Account Deletion Contract
 
-When a member deletes their account, the `bug-reports` entry runs one statement:
+When a member deletes their account, two statements run in the deletion transaction, in this
+order:
 
 ```sql
-UPDATE bug_reports SET user_id = 'deleted_member' WHERE user_id = $1
+-- lib/bug-reports/repository.ts redactRawBugReportTextForDeletion (orchestrator step)
+UPDATE bug_reports SET raw_message = COALESCE(redacted_message, ''), updated_at = NOW() WHERE user_id = $1
+-- the registry's pseudonymize entry
+UPDATE bug_reports SET user_id = 'deleted_member', raw_context = NULL, user_agent = NULL WHERE user_id = $1
 ```
 
-- Every report the member filed stays. Only the reporter id is overwritten with the shared
-  placeholder `deleted_member`; no other column is cleared.
-- What stays in each row after deletion: `raw_message`, `raw_context`, `user_agent`, `page_url`,
-  the redacted text, the risk fields, the status and any issue link. If the person wrote
-  identifying details into the report itself, those stay too.
+- Every report the member filed stays. The reporter id is overwritten with the shared placeholder
+  `deleted_member`, the raw message is replaced with its redacted copy (`raw_message` is NOT NULL,
+  so it cannot simply be cleared), and the raw context and browser description are cleared.
+- What stays in each row after deletion: the redacted text (now also in `raw_message`),
+  `page_url`, `plugin_slug`, `app_version`, the risk fields, the status and any issue link. The
+  redaction removes emails, phone numbers, card-like numbers and token-like strings only, so a name
+  or other detail the person wrote into the report stays.
 - The reason recorded in the registry: a report is triage input the owner still needs after the
   reporter leaves, and it may already be copied into a triage issue.
 - After deletion the admin list shows the report with a null username (the join on `users.id` no
