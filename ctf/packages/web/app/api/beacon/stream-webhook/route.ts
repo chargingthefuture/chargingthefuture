@@ -265,7 +265,9 @@ const PUBLISHER_ARRIVED_COMMANDS: Record<string, string> = {
 //
 // Idempotent in both directions: the recording URL and the Commons post id are each written only when
 // still null, so a redelivered webhook never double-posts the replay, and a repeated participant-join
-// is reported and ignored rather than starting a second broadcast.
+// is reported and ignored rather than starting a second broadcast. A redelivered participant-left is
+// recognized by its call, session and participant session ids (stream_video_webhook_deliveries) and
+// credits nothing the second time.
 //
 // Source: Stream Video recording docs (getstream.io/video/docs/react/advanced/recording/), confirmed
 // 2026-06-21, and Stream Video webhook events (getstream.io/video/docs/api/webhooks/events/),
