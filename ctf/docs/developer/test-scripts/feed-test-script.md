@@ -76,9 +76,15 @@
 2. As A, open a post that B replied to.
 3. As B, open the Commons and look for A's posts.
 4. As an admin, open the Commons moderation admin and check the full post list.
+5. As B, reply to an official announcement. As A, open that announcement's replies.
+6. As a third member C, quote-reply to one of B's posts. As A, find C's post in the Commons.
+7. As B, quote-reply to one of A's posts, and post a message that mentions `@A`. As A, open notifications.
 
 **Expected:**
 - Steps 1–3: B's posts and replies do not render for A, and A's do not render for B (both directions). Announcements and AI answers always show — they have no member author.
+- Step 5: B's reply does not appear in A's list of announcement replies, and the reply count A sees on that announcement does not count it (added 2026-10-14).
+- Step 6: C's post shows without the quote block, so B's handle and words do not appear for A (added 2026-10-14).
+- Step 7: A gets neither "Someone replied to your post" nor "Someone mentioned you" from B's posts (added 2026-10-14).
 - A post's reply counter may read higher than the replies shown to a member with a block — accepted, not a bug.
 - Step 4: admin/moderation views are never filtered.
 - Neither member gets any signal that a block exists.
@@ -1237,12 +1243,16 @@ Step 3: rejected for CSRF. Step 4: 400 — a missing `hidden` field must be an e
 3. Try to re-label the category of a question id that does not exist, then reopen the panel.
 4. Publish an announcement draft, then reopen the panel.
 5. Emit a membership event, then reopen the panel.
+6. Send a hide request for a post without the `x-ctf-csrf: 1` header (for example from the browser's developer tools), then reopen the panel.
+7. As a signed-in member who is not an admin, send `PUT /api/feed/admin/config`, then as the admin reopen the panel.
 
 **Expected:**
 - Step 2: entries newest first, at most 200, each naming the action in plain words ("Published an announcement", "Hid a Commons post", "Changed the feed settings"), with the admin's id, what it was done to, and the local date and time. Every row carries a chip reading `feed` or `announcements` saying which surface the action came from.
 - Step 3: the failure appears, marked **Refused** or **Failed**, with a reason line reading "Because the record was not there". An action that did not happen is recorded, not dropped.
 - Step 4: a "Published an announcement" row appears with the `feed` chip; publishing from the Announcements side shows the same action with the `announcements` chip.
 - Step 5: a "Recorded a membership change" row appears.
+- Step 6: a "Hid or restored a Commons post" row marked **Refused**, "Because policy refused it" (added 2026-10-14).
+- Step 7: a "Changed the feed settings" row marked **Refused** with the member's id (added 2026-10-14). A bad payload, a missing record or a database failure on any of the seven admin actions is also a row.
 - Nothing an admin did in this session is missing from the list.
 
 **Note:** `POST /api/announcements/admin/targeting/validate` deliberately writes no audit row — it validates a targeting expression and changes nothing, so there is no action to record. Its absence from this list is correct, not a gap.

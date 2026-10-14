@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { ensureMutationCsrf, requireFeedAdminAccess } from '../../../_lib';
+import { recordFeedAdminFailure, requireFeedAdminMutation } from '../../../_lib';
 import { FEED_ERROR_CODE } from 'lib/feed/constants';
 import { recordFeedAdminAudit } from 'lib/feed/audit';
 import { updateAnnouncementDraft, validateAnnouncementDraftInput } from 'lib/feed/repository';
@@ -27,20 +27,18 @@ function parseBody(body: AnnouncementBody): AnnouncementDraftInput {
 }
 
 export async function PUT(request: Request, { params }: RouteParams) {
-  const gate = await requireFeedAdminAccess();
+  const { announcementId } = await params;
+  const audit = { command: 'feed.announcement.draft.update', targetType: 'announcement', targetId: announcementId };
+  const gate = await requireFeedAdminMutation(request, audit);
   if (!gate.allowed) {
     return gate.response;
-  }
-
-  const csrfDeny = ensureMutationCsrf(request);
-  if (csrfDeny) {
-    return csrfDeny;
   }
 
   let body: AnnouncementBody;
   try {
     body = (await request.json()) as AnnouncementBody;
   } catch (error) {
+    await recordFeedAdminFailure(gate.auth.userId, audit, { status: 'allow', reason: 'invalid_payload', errorCategory: 'invalid_payload' });
     return NextResponse.json(
       { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: `Invalid JSON body: ${failureReason(error)}` },
       { status: 400 },
@@ -49,13 +47,12 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
   const input = parseBody(body);
   if (!validateAnnouncementDraftInput(input)) {
+    await recordFeedAdminFailure(gate.auth.userId, audit, { status: 'allow', reason: 'invalid_payload', errorCategory: 'invalid_payload' });
     return NextResponse.json(
       { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: 'Invalid announcement payload.' },
       { status: 400 },
     );
   }
-
-  const { announcementId } = await params;
 
   try {
     const announcement = await updateAnnouncementDraft(gate.auth.userId, announcementId, input);
@@ -75,6 +72,11 @@ export async function PUT(request: Request, { params }: RouteParams) {
     reportError(error, { area: 'feed', op: 'admin_announcements_announcementid' });
     const message = error instanceof Error ? error.message : 'error';
     const status = message === 'announcement_not_found' ? 404 : 503;
+    await recordFeedAdminFailure(gate.auth.userId, audit, {
+      status: 'allow',
+      reason: status === 404 ? 'announcement_not_found' : 'persistence_error',
+      errorCategory: status === 404 ? 'not_found' : 'persistence_error',
+    });
     const code = message === 'announcement_not_found' ? FEED_ERROR_CODE.notFound : FEED_ERROR_CODE.persistenceUnavailable;
 
     return NextResponse.json(

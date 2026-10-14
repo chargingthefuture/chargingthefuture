@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { ensureMutationCsrf, requireFeedAdminAccess } from '../../_lib';
+import { requireFeedAdminAccess, recordFeedAdminFailure, requireFeedAdminMutation } from '../../_lib';
 import { FEED_ALLOWED_CHANNELS, FEED_ERROR_CODE } from 'lib/feed/constants';
 import { getFeedConfig, updateFeedConfig, validateFeedConfigInput } from 'lib/feed/repository';
 import { recordFeedAdminAudit } from 'lib/feed/audit';
@@ -40,20 +40,17 @@ export async function GET() {
 }
 
 export async function PUT(request: Request) {
-  const gate = await requireFeedAdminAccess();
+  const audit = { command: 'feed.admin.config.update', targetType: 'feed_config', targetId: 'singleton' };
+  const gate = await requireFeedAdminMutation(request, audit);
   if (!gate.allowed) {
     return gate.response;
-  }
-
-  const csrfDeny = ensureMutationCsrf(request);
-  if (csrfDeny) {
-    return csrfDeny;
   }
 
   let body: ConfigBody;
   try {
     body = (await request.json()) as ConfigBody;
   } catch (error) {
+    await recordFeedAdminFailure(gate.auth.userId, audit, { status: 'allow', reason: 'invalid_payload', errorCategory: 'invalid_payload' });
     return NextResponse.json(
       { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: `Invalid JSON body: ${failureReason(error)}` },
       { status: 400 },
@@ -62,6 +59,7 @@ export async function PUT(request: Request) {
 
   const input = parseBody(body);
   if (!validateFeedConfigInput(input)) {
+    await recordFeedAdminFailure(gate.auth.userId, audit, { status: 'allow', reason: 'invalid_payload', errorCategory: 'invalid_payload' });
     return NextResponse.json(
       { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: 'Invalid feed config payload.' },
       { status: 400 },
@@ -88,6 +86,7 @@ export async function PUT(request: Request) {
     return NextResponse.json({ ok: true, config }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'feed', op: 'admin_config' });
+    await recordFeedAdminFailure(gate.auth.userId, audit, { status: 'allow', reason: failureReason(error), errorCategory: 'persistence_error' });
     return NextResponse.json(
       { ok: false, code: FEED_ERROR_CODE.persistenceUnavailable, message: `Unable to update feed config: ${failureReason(error)}` },
       { status: 503 },

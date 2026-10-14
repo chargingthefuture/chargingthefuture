@@ -374,7 +374,8 @@ contracts:
       Create a community support post visible in the feed community channel. Body length and link
       count are capped as anti-spam: members up to 1200 characters and 3 links; admins up to 4000
       characters and 20 links (so the owner's detailed welcome/help posts are not blocked). Raw HTML
-      (`<` / `>`) is rejected for everyone.
+      (`<` / `>`) is rejected for everyone. The reply and mention notifications it sends skip any member
+      blocked in either direction with the poster.
     inputSchema:
       body:
         type: string
@@ -393,6 +394,7 @@ contracts:
     dataAccess:
       - feed_community_posts
       - feed_items
+      - member_blocks
     purpose: community_engagement
     retentionClass: transactional_long_lived
     idempotency: false
@@ -546,7 +548,8 @@ contracts:
     version: 1.0.0
     description: >-
       List the accepted replies on an official announcement (oldest-first thread order), each author
-      resolved to a display handle with an isMine flag for the requesting member.
+      resolved to a display handle with an isMine flag for the requesting member. Replies by a member
+      blocked in either direction with the requester are left out.
     inputSchema:
       announcementId:
         type: string
@@ -560,6 +563,7 @@ contracts:
         type: array
     dataAccess:
       - announcement_replies
+      - member_blocks
     purpose: community_engagement
     retentionClass: transactional_long_lived
     idempotency: true
