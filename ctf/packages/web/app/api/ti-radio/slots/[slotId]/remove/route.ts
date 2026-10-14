@@ -8,6 +8,36 @@ import { removeSlot } from 'lib/ti-radio/repository';
 
 export const dynamic = 'force-dynamic';
 
+// A body that does not parse is refused, as the booking route does, rather than read as "no
+// reason": the reason is what this removal has to be answerable for afterwards.
+async function readRemovalReason(
+  request: Request,
+): Promise<{ ok: true; reason: string | null } | { ok: false; response: NextResponse }> {
+  let body: Record<string, unknown>;
+  try {
+    const parsed: unknown = await request.json();
+    body = parsed && typeof parsed === 'object' ? (parsed as Record<string, unknown>) : {};
+  } catch (error) {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        {
+          ok: false,
+          code: TI_RADIO_ERROR_CODE.invalidPayload,
+          message: 'Invalid request body.',
+          reason: failureReason(error),
+        },
+        { status: 400 },
+      ),
+    };
+  }
+  const rawReason = typeof body.reason === 'string' ? body.reason.trim() : '';
+  return {
+    ok: true,
+    reason: rawReason.length > 0 ? rawReason.slice(0, TI_RADIO_MAX_REMOVAL_REASON_LENGTH) : null,
+  };
+}
+
 // POST /api/ti-radio/slots/[slotId]/remove — an admin takes a booked slot off the schedule.
 //
 // Separate from the host's own release so the two are never confused in the record: this one keeps
@@ -25,9 +55,11 @@ export async function POST(request: Request, context: { params: Promise<{ slotId
   }
   const { slotId } = await context.params;
 
-  const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
-  const rawReason = typeof body.reason === 'string' ? body.reason.trim() : '';
-  const reason = rawReason.length > 0 ? rawReason.slice(0, TI_RADIO_MAX_REMOVAL_REASON_LENGTH) : null;
+  const parsed = await readRemovalReason(request);
+  if (!parsed.ok) {
+    return parsed.response;
+  }
+  const { reason } = parsed;
 
   try {
     const removed = await removeSlot({ userId: gate.auth.userId }, slotId, reason);

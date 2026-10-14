@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { getHostedSignInUrl } from 'lib/auth/provider-env';
 import { isUserUnlocked } from 'lib/shared/unlock-interface';
 import { readerIdentity } from 'lib/ti-radio/_lib';
+import { reportError } from 'lib/observability/report';
 import { getGuide } from 'lib/ti-radio/repository';
 import { TiRadioGuideView } from '@/components/ti-radio/ti-radio-guide';
 
@@ -22,7 +23,11 @@ export const metadata: Metadata = {
 // allow/deny, so a signed-out visitor gets the page rather than a wall.
 export default async function TiRadioPage() {
   const reader = await readerIdentity();
-  const approved = reader.userId ? await isUserUnlocked(reader.userId).catch(() => false) : false;
+  const approved = reader.userId ? await isUserUnlocked(reader.userId).catch((error: unknown) => {
+        // Render the guide without hosting controls rather than failing the public page, and report it.
+        reportError(error, { area: 'ti-radio', op: 'page_unlock_read' });
+        return false;
+      }) : false;
   const guide = await getGuide({
     userId: reader.userId,
     canHost: approved || reader.isAdmin,

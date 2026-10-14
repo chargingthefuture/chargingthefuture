@@ -253,6 +253,13 @@ There is no `seedHub.mjs`; the Commons channel's data layer is seeded by the Fee
   the gift in the same row (`CommonsImageShareButton`), shown to admins only and hidden while
   notifications are open; tapping it opens or closes the same panel above the message box
   (`CommonsImageSharePanel`). The screen-reader label keeps the old wording.
+- 2026-10-05: **Two Commons failures that were hidden now show (#2636, #2637).** A failed first history
+  read set its error and the join that follows cleared it at once, leaving an empty stream with no
+  reason; the join now clears only its own error, and the next history poll that succeeds clears the
+  history error. A failed `/api/commons/channels` read was swallowed, leaving the channel list empty;
+  the shell now shows the route's reason above the channel row and reports a thrown failure. A 401/403
+  from that read is left to the chat panel, which already says why the member is not in. No route,
+  contract or schema change.
 - 2026-10-03: **Removed the keyword concierge that nothing called (#2627).** `lib/concierge/resolver.ts`
   and `lib/concierge/intents.ts` matched typed text to a plugin, and `useHomeChat` wrapped them as
   `sendConciergeAsk` and `starterPrompts`, but no screen used either after the chip row moved to

@@ -171,6 +171,7 @@ Result: web ☐
 4. As the author, return to the Fireside screen and try to turn the request on again.
 5. As the admin, reopen the queue.
 6. Repeat with a second comment, approving it this time.
+7. As the author, withdraw the declined comment. As an admin, remove another of that author's comments, then as the author withdraw that one too. Have the author request an export on a third comment and reopen the queue as the admin.
 
 **Expected:**
 - The queue lists only requests whose authors asked, oldest first, paged rather than endless.
@@ -180,6 +181,7 @@ Result: web ☐
 - An approved request also leaves the queue, and the author's screen says approved with the note that switching it off still stops the copy.
 - Approving a request whose author then turns their own switch off leaves the comment not exportable — both keys have to be turned at the moment of copying.
 - Both decisions are recorded in the audit trail, separately from a comment removal.
+- Step 7: the author's record on the third comment's row still counts the declined export and the removal. Withdrawing a comment does not clear either (added 2026-10-14).
 
 Result: web ☐
 
@@ -338,7 +340,7 @@ is **not** approved in Unlock. Signed out, private window.
 1. Request `/api/fireside/export`.
 2. Read the response.
 3. Ask for it again with the `nextCursor` it returned, if it returned one.
-4. Request it with a cursor of `nonsense` and with `limit=99999`.
+4. Request it with a cursor of `nonsense`, with a cursor of `abc|def`, and with `limit=99999`.
 
 **Expected:**
 - Only the asked-and-approved comment from the approved author comes back. All five other states are
@@ -353,7 +355,8 @@ is **not** approved in Unlock. Signed out, private window.
   refused rows sit at the end of a page.
 - `nextCursor` is null once the last read came back short.
 - A cursor that cannot be read is refused with a sentence saying what a cursor is, not answered from
-  the beginning as though it were absent. A limit past the ceiling is clamped rather than honored.
+  the beginning as though it were absent. `abc|def` gets the same 400, not a 503 saying the feed is
+  unavailable. A limit past the ceiling is clamped rather than honored.
 - No sign-in, no 401, no 403. Reading this needs no account, the same as the conversation itself.
 
 Result: web ☐
