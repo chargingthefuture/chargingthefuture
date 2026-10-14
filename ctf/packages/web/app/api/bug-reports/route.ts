@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireReporterAccess, ensureMutationCsrf } from './_lib';
-import { createBugReport, countRecentReportsByUser } from 'lib/bug-reports/repository';
+import { createBugReportWithinRateLimit } from 'lib/bug-reports/repository';
 import {
   BUG_REPORT_ERROR_CODE,
   BUG_REPORT_MESSAGE_MAX_LENGTH,
@@ -52,6 +52,19 @@ export async function POST(request: Request) {
     );
   }
 
+  // `null`, a number or an array parses as JSON but is not a report; reading fields off it
+  // would throw outside the try below and end as an unexplained 500.
+  if (!input || typeof input !== 'object' || Array.isArray(input)) {
+    return NextResponse.json(
+      {
+        ok: false,
+        code: BUG_REPORT_ERROR_CODE.invalidPayload,
+        message: 'The request body must be a JSON object with a message.',
+      },
+      { status: 400 },
+    );
+  }
+
   const message = asTrimmedString(input.message, BUG_REPORT_MESSAGE_MAX_LENGTH);
   if (!message) {
     return NextResponse.json(
@@ -76,27 +89,28 @@ export async function POST(request: Request) {
   );
 
   try {
-    const recentCount = await countRecentReportsByUser(gate.auth.userId);
-    if (recentCount >= BUG_REPORT_RATE_LIMIT_COUNT) {
+    const created = await createBugReportWithinRateLimit(
+      {
+        userId: gate.auth.userId,
+        message,
+        context,
+        pageUrl,
+        pluginSlug,
+        appVersion,
+        userAgent,
+      },
+      BUG_REPORT_RATE_LIMIT_COUNT,
+    );
+    if (!created) {
       return NextResponse.json(
         {
           ok: false,
           code: BUG_REPORT_ERROR_CODE.rateLimited,
-          message: 'Thanks — we already have your recent reports. Please try again a little later.',
+          message: 'We already have your recent reports. Please try again a little later.',
         },
         { status: 429 },
       );
     }
-
-    const created = await createBugReport({
-      userId: gate.auth.userId,
-      message,
-      context,
-      pageUrl,
-      pluginSlug,
-      appVersion,
-      userAgent,
-    });
 
     return NextResponse.json(
       { ok: true, reportId: created.id, status: created.status },

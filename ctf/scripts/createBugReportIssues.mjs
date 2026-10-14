@@ -6,8 +6,11 @@
 //     and are never touched here — they wait for the owner in the private admin view.
 //   - The RAW user text is never published. Only the redacted fields go to the issue.
 //   - Issues are created in the private triage repo, not the public app repo.
-//   - The row is flipped to 'issue_created' only after the issue is made, so a crash
-//     mid-run never double-publishes.
+//   - Each row is claimed (locked while still 'new') before its issue is made and flipped
+//     to 'issue_created' in the same transaction, so an admin who rejects the report while a
+//     batch runs either waits for the publish or wins and the report is skipped. A crash
+//     between creating the issue and committing the flip leaves the row 'new', so that one
+//     report can be published a second time on the next run.
 //
 // This script no-ops safely when its environment is not configured, so it is harmless
 // to schedule before the secrets/labels are in place.
@@ -100,41 +103,63 @@ async function main() {
     );
 
     for (const row of rows) {
-      const title = buildIssueTitle(row);
-      const body = buildIssueBody(row);
+      // Claim the row: lock it and re-check that it is still 'new'. rejectReport() and
+      // releaseHeldReport() update the same row, so a concurrent reject now waits for this
+      // transaction and then finds nothing to change, instead of being overwritten by it.
+      await client.query('BEGIN');
+      let published = false;
+      try {
+        const claim = await client.query(
+          `SELECT id FROM bug_reports WHERE id = $1 AND status = 'new' FOR UPDATE`,
+          [row.id],
+        );
+        if (claim.rows.length === 0) {
+          // Rejected or otherwise moved on since the batch was read; the finally block rolls back.
+          continue;
+        }
 
-      // gh prints the new issue URL on success.
-      const issueUrl = execFileSync(
-        'gh',
-        [
-          'issue',
-          'create',
-          '--repo',
-          TRIAGE_REPO,
-          '--title',
-          title,
-          '--body',
-          body,
-          '--label',
-          'user-report',
-          '--label',
-          'needs-triage',
-        ],
-        { encoding: 'utf8' },
-      ).trim();
+        const title = buildIssueTitle(row);
+        const body = buildIssueBody(row);
 
-      const issueNumber = Number(issueUrl.split('/').pop());
+        // gh prints the new issue URL on success.
+        const issueUrl = execFileSync(
+          'gh',
+          [
+            'issue',
+            'create',
+            '--repo',
+            TRIAGE_REPO,
+            '--title',
+            title,
+            '--body',
+            body,
+            '--label',
+            'user-report',
+            '--label',
+            'needs-triage',
+          ],
+          { encoding: 'utf8' },
+        ).trim();
 
-      await client.query(
-        `UPDATE bug_reports
-            SET status = 'issue_created',
-                triage_repo = $2,
-                issue_number = $3,
-                issue_url = $4,
-                updated_at = NOW()
-          WHERE id = $1`,
-        [row.id, TRIAGE_REPO, Number.isFinite(issueNumber) ? issueNumber : null, issueUrl],
-      );
+        const issueNumber = Number(issueUrl.split('/').pop());
+
+        await client.query(
+          `UPDATE bug_reports
+              SET status = 'issue_created',
+                  triage_repo = $2,
+                  issue_number = $3,
+                  issue_url = $4,
+                  updated_at = NOW()
+            WHERE id = $1 AND status = 'new'`,
+          [row.id, TRIAGE_REPO, Number.isFinite(issueNumber) ? issueNumber : null, issueUrl],
+        );
+        await client.query('COMMIT');
+        published = true;
+      } finally {
+        if (!published) {
+          await client.query('ROLLBACK').catch(() => undefined);
+        }
+      }
 
       created += 1;
     }
