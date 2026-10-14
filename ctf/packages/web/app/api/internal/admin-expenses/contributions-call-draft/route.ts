@@ -10,6 +10,7 @@ import { logFeedAudit } from 'lib/feed/audit';
 import { getAppUrl } from 'lib/auth/runtime-env';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
+import { bearerMatches } from 'lib/auth/internal-secret';
 
 // Cron-only: writes the twice-yearly "Contribute if you can" Commons post as an unpublished draft,
 // with the current sign-up count, approved-member count and hosting cost filled in
@@ -22,7 +23,7 @@ function isAuthorized(request: Request): boolean {
   if (!cronSecret || cronSecret.trim().length === 0) {
     return false;
   }
-  return request.headers.get('authorization') === `Bearer ${cronSecret}`;
+  return bearerMatches(request, cronSecret);
 }
 
 // A missing RunPod reading is not a failure: the RunPod line falls back to its typed figure, as on

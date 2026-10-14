@@ -28,7 +28,7 @@ class ChatRefusal extends Error {}
 
 /** Ask the chat route for Stream credentials; a refusal carries the route's own reason. */
 async function requestChatCredentials(matchId: string): Promise<ChatCredentials> {
-  const res = await fetch(`/api/lighthouse/matches/${matchId}/chat`, { method: "POST" });
+  const res = await fetch(`/api/lighthouse/matches/${matchId}/chat`, { method: "POST", headers: { "x-ctf-csrf": "1" } });
   if (!res.ok) throw new ChatRefusal(await responseFailureText(res, CHAT_OPEN_FAILURE, 'member'));
   const data = await res.json() as ChatCredentials & { ok?: boolean; message?: string };
   if (!data.ok) throw new ChatRefusal(data.message || CHAT_OPEN_FAILURE);
