@@ -313,6 +313,24 @@ Admin parity (2026-06-06): the Android admin screen `AdminTrustTransport.tsx` (e
 ## Change Log
 
 
+- 2026-10-14: **Restricted providers, repeat bookings, failed settlements and finished-trip presence
+  (code review #2859, #2860, #2866, #2867).** (1) `acceptOffer` now reads the provider's `trading`
+  restriction and refuses with `offer_not_available` (409, "This offer is no longer available."), so a
+  pending offer from an account an admin restricted cannot become a trip that hands them the pickup and
+  drop-off; the copy is neutral so the requester is not told about the restriction. This is the
+  `offer_not_eligible` deny condition the access policy already names. (2) `POST
+  /api/trust-transport/requests` now requires `idempotencyKey`, as the command contract says, and
+  answers 400 without it instead of making one up per call. The Book tab sends one key per booking and
+  reuses it on a retry of the same booking, and `createRequest` takes a transaction advisory lock on the
+  member and key before its replay lookup, so two sends with one key create one request. (3) A trip
+  settlement that throws now writes a `trust-transport.trip.settlement` audit row with `policy_status`
+  `deny`, reason `settlement_failed`, the rail, currency, amount and failure reason, so a completed trip
+  that moved nothing can be found in the trail. Whether to tell the provider, and whether to check the
+  requester's balance before acceptance, are open owner decisions on #2866. (4) The accepted offer keeps
+  status `accepted`; the provider's "Offering rides" presence now follows the trip instead: a trip
+  reaching a terminal status (status update, both-party completion, or order cancel) clears it, and the
+  presence derive path skips an offer whose trip is terminal.
+
 - 2026-10-05: **An offer accept no longer fails on a Stream error, and emergency stop and order cancel
   are audited.** `acceptOffer` set up the trip's Stream channel after the transaction committed with
   no guard, so a Stream refusal turned a committed accept into a 503: the route skipped its audit row
