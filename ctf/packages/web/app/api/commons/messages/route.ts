@@ -23,6 +23,7 @@ import { feedPostLength as normalizedPostLength } from 'lib/feed/normalize';
 import { requireCommonsAccess } from '../_lib';
 import { ensureMutationCsrf } from '../../feed/_lib';
 import { failureReason } from 'lib/errors/failure';
+import { feedPostCreateFailureOutcome, logFeedAudit } from 'lib/feed/audit';
 
 // The Commons home channel is backed by the Feed model (feed_items) as the single source of truth.
 // The channel is one blended stream interleaving admin announcements, AI Q&A, and peer-to-peer
@@ -371,8 +372,28 @@ export async function POST(request: Request) {
       image: null,
     };
 
+    logFeedAudit({
+      actorId: gate.auth.userId,
+      pluginId: 'feed',
+      command: 'feed.community.post.create',
+      status: 'allow',
+      reason: 'community_post_allowed',
+      targetType: 'feed_community_post',
+      targetId: result.postId,
+      result: 'success',
+      errorCategory: null,
+    });
     return NextResponse.json({ ok: true, message }, { status: 201 });
   } catch (error) {
+    logFeedAudit({
+      actorId: gate.auth.userId,
+      pluginId: 'feed',
+      command: 'feed.community.post.create',
+      ...feedPostCreateFailureOutcome(error),
+      targetType: 'feed_community_post',
+      targetId: 'unknown',
+      metadata: { surface: 'commons' },
+    });
     return mapCommonsPostError(error);
   }
 }

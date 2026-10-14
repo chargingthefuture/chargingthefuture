@@ -175,6 +175,7 @@ Result: web ☐
 4. As the author, return to the Fireside screen and try to turn the request on again.
 5. As the admin, reopen the queue.
 6. Repeat with a second comment, approving it this time.
+7. As the author, withdraw the declined comment. As an admin, remove another of that author's comments, then as the author withdraw that one too. Have the author request an export on a third comment and reopen the queue as the admin.
 
 **Expected:**
 - The queue lists only requests whose authors asked, oldest first, paged rather than endless.
@@ -184,6 +185,7 @@ Result: web ☐
 - An approved request also leaves the queue, and the author's screen says approved with the note that switching it off still stops the copy.
 - Approving a request whose author then turns their own switch off leaves the comment not exportable — both keys have to be turned at the moment of copying.
 - Both decisions are recorded in the audit trail, separately from a comment removal.
+- Step 7: the author's record on the third comment's row still counts the declined export and the removal. Withdrawing a comment does not clear either (added 2026-10-14).
 
 Result: web ☐
 
