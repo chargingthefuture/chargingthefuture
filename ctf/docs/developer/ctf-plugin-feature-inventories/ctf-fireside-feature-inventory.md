@@ -280,6 +280,15 @@ member active only in Fireside is seen by being read, which is what the plugin i
 
 ## Change Log
 
+- 2026-10-14: **Withdrawing a comment no longer clears the author's record (#2751).** The export
+  queue's author record counted removals by `status = 'removed'` and refusals by `export_review =
+  'refused'`, and `withdrawOwnComment` set both columns back on any comment the author had not
+  already withdrawn, an admin-removed one included. So an account could have comments removed and
+  exports refused, withdraw each, and reach the next review with a clean record. Removals are now
+  counted from `removed_by IS NOT NULL` (a restore clears it, a withdrawal does not), and a withdrawal
+  keeps a refused export refused along with who refused it and when, the way an admin removal already
+  did. Whether an author may withdraw a comment an admin has removed is unchanged and left on the
+  issue for an owner decision. No schema, route or contract change.
 - 2026-10-05: **Deleting an account no longer deletes other members' replies.**
   `fireside_comments.parent_comment_id` was `ON DELETE CASCADE`, so the plain delete account deletion
   runs on a member's comments also deleted every reply other members had written under them, with
@@ -309,6 +318,15 @@ member active only in Fireside is seen by being read, which is what the plugin i
   writes, now read the body with a fallback for one that is not JSON, so a 502 or 504 page from the
   host shows the screen's own sentence with the status code instead of the parser's message
   (#2738). Tests: `lib/fireside/paged-lists.test.ts`.
+
+- 2026-10-05: **The export feed refuses a cursor of the wrong shape instead of reporting the
+  database down.** `parseExportCursor` (`lib/fireside/export-review.ts`) checked only that a `|` had
+  text on both sides, so a cursor such as `abc|def` reached the query, failed the `timestamptz` and
+  `uuid` casts, and came back as a 503 `fireside_persistence_unavailable`, which a build retries
+  forever (#2754). It now also requires the left half to be a timestamp in the shape the feed writes
+  and the right half to be a UUID, so the route's existing check answers 400 with its sentence about
+  what a cursor is. Tests: `lib/fireside/export-feed.test.ts`; test script FS-12 now
+  tries `abc|def`.
 
 - 2026-09-20: **A member can search the conversation, and nobody who was answered goes untold.**
   Owner request: close the last two recorded gaps.
