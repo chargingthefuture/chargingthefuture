@@ -7,6 +7,7 @@ import {
   parseJsonBody,
   readTrimmedString,
   requireWhatWorksAdminAccess,
+  runAuditedWhatWorksAdminMutation,
   whatWorksError,
 } from '../../../_lib';
 import { recordWhatWorksAdminAudit } from 'lib/what-works/audit';
@@ -69,11 +70,17 @@ export async function PATCH(request: Request, context: RouteContext) {
   if (csrf) {
     return csrf;
   }
-  const gate = await requireWhatWorksAdminAccess();
+  const { id } = await context.params;
+  const target = { command: 'what-works.admin.problem.update', targetType: 'problem', targetId: id };
+  const gate = await requireWhatWorksAdminAccess(target);
   if (!gate.allowed) {
     return gate.response;
   }
-  const { id } = await context.params;
+  const actorId = gate.auth.userId;
+  return runAuditedWhatWorksAdminMutation(actorId, target, () => updateProblemFromRequest(request, id, actorId));
+}
+
+async function updateProblemFromRequest(request: Request, id: string, actorId: string): Promise<NextResponse> {
   const existing = await getProblemById(id);
   if (!existing) {
     return whatWorksError('That problem could not be found.', 'what_works_problem_not_found', 404);
@@ -92,7 +99,7 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   const problem = await updateProblem(id, patch);
   await recordWhatWorksAdminAudit({
-    actorId: gate.auth.userId,
+    actorId,
     command: 'what-works.admin.problem.update',
     status: 'allow',
     reason: 'admin_route_guard',
@@ -109,18 +116,24 @@ export async function DELETE(request: Request, context: RouteContext) {
   if (csrf) {
     return csrf;
   }
-  const gate = await requireWhatWorksAdminAccess();
+  const { id } = await context.params;
+  const target = { command: 'what-works.admin.problem.delete', targetType: 'problem', targetId: id };
+  const gate = await requireWhatWorksAdminAccess(target);
   if (!gate.allowed) {
     return gate.response;
   }
-  const { id } = await context.params;
+  const actorId = gate.auth.userId;
+  return runAuditedWhatWorksAdminMutation(actorId, target, () => deleteProblemById(id, actorId));
+}
+
+async function deleteProblemById(id: string, actorId: string): Promise<NextResponse> {
   const existing = await getProblemById(id);
   if (!existing) {
     return whatWorksError('That problem could not be found.', 'what_works_problem_not_found', 404);
   }
   await deleteProblem(id);
   await recordWhatWorksAdminAudit({
-    actorId: gate.auth.userId,
+    actorId,
     command: 'what-works.admin.problem.delete',
     status: 'allow',
     reason: 'admin_route_guard',

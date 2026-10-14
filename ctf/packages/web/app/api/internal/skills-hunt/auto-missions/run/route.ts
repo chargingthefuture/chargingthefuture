@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { runAutoMissions } from 'lib/skills-hunt/auto-missions';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
+import { bearerMatches } from 'lib/auth/internal-secret';
 
 // Cron-only: tops up every active SkillsHunt round with missions for the sectors Workforce shows
 // the largest talent gaps in (weekly schedule, .github/workflows/skills-hunt-auto-missions.yml).
@@ -14,7 +15,7 @@ function isAuthorized(request: Request): boolean {
   if (!cronSecret || cronSecret.trim().length === 0) {
     return false;
   }
-  return request.headers.get('authorization') === `Bearer ${cronSecret}`;
+  return bearerMatches(request, cronSecret);
 }
 
 export async function POST(request: Request) {
