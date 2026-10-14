@@ -88,6 +88,13 @@ function joinRange(min: number | null, max: number | null, render: (value: numbe
   return null;
 }
 
+// The words before a Wanted budget. ServiceCredits are sent, never paid, so a credits budget reads
+// "Can send"; every other currency keeps "Can pay".
+export function budgetLeadIn(posting: WantedPosting, currencies: CurrencyMap): string {
+  const currency = posting.budgetCurrency ? currencies[posting.budgetCurrency] : undefined;
+  return currency?.isServiceCredits ? "Can send" : "Can pay";
+}
+
 export function formatBudgetRange(posting: WantedPosting, currencies: CurrencyMap): string | null {
   const min = typeof posting.budgetMin === "number" ? posting.budgetMin : null;
   const max = typeof posting.budgetMax === "number" ? posting.budgetMax : null;
