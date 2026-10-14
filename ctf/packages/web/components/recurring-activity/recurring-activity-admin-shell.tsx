@@ -74,6 +74,7 @@ function Section({
 export function RecurringActivityAdminShell() {
   const [review, setReview] = useState<Review | null>(null);
   const [names, setNames] = useState<Record<string, string | null>>({});
+  const [namesUnavailable, setNamesUnavailable] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -92,6 +93,7 @@ export function RecurringActivityAdminShell() {
         message?: string;
         review?: Review;
         names?: Record<string, string | null>;
+        namesUnavailable?: boolean;
       };
       if (!data.ok || !data.review) {
         setError(data.message ?? 'Could not load the review: the response carried no review.');
@@ -99,6 +101,7 @@ export function RecurringActivityAdminShell() {
       }
       setReview(data.review);
       setNames(data.names ?? {});
+      setNamesUnavailable(data.namesUnavailable === true);
     } catch (caught) {
       // The request never answered, so there is no server text — name the reason here and send the
       // caught value to the error report rather than dropping it.
@@ -142,6 +145,11 @@ export function RecurringActivityAdminShell() {
               {review.truncated ? (
                 <div style={{ fontSize: 11, color: '#F59E0B', marginTop: 6 }}>
                   Only the most recent arrangements were read — this is a partial picture, not the full one.
+                </div>
+              ) : null}
+              {namesUnavailable ? (
+                <div style={{ fontSize: 11, color: '#F59E0B', marginTop: 6 }}>
+                  Member names could not be loaded, so the rows below show account ids instead.
                 </div>
               ) : null}
             </Card>

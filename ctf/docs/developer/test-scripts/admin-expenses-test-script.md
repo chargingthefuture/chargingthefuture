@@ -37,7 +37,7 @@ Use made-up amounts only. This repository is public, and the real figures are th
 - Step 4: the card says "Not read yet" and shows the **Read the bill now** button.
 - Step 5: the button reads "Reading…", then the card shows the last 30 full days, today so far (marked still changing), up to seven recent days with the newest marked "may still change", and the time it was last read.
 - Step 6: the RunPod line shows the card's 30-day figure in place of the typed range, not added to it, with a green tag "measured from the RunPod bill, last 30 days". The monthly total changes by the difference only. The copied text carries the same label on the RunPod line.
-- Step 7: the newest entry is the bill read, by you.
+- Step 7: the newest entry is the bill read, by you, headed "Read the RunPod bill" with a line such as "1 endpoint, 31 days read". It must not show the raw command name or "details edited".
 
 **Result:** web ☐
 
