@@ -410,6 +410,14 @@ Owner decision, 2026-09-26. The owner pays the running costs of Skills Economy a
   save or first-load read that fails with anything other than a 401, and a thrown fetch, as
   `account/theme_save` / `account/theme_load`; the local choice still applies (#2764).
 
+- 2026-10-12: **A failed ROLLBACK no longer hides the error that caused it (issue #2957).**
+  `withDbTransaction` in `lib/db/postgres.ts` ran `ROLLBACK` bare in its catch, so when the rollback
+  itself threw, that error replaced the one the callback threw and the real cause (a constraint
+  violation, a dropped connection) was never reported. The client was also released normally and
+  went back to the pool, where a transaction that never ended could fail the next request's query.
+  The rollback now runs in its own try/catch: its failure is reported under `db` /
+  `transaction_rollback`, the original error is still the one thrown, and `client.release(error)`
+  discards a client whose rollback failed.
 - 2026-10-12: **Expenses: the RunPod 30-day figure is not used while days are missing (#2714).** `loadGpuBillState` added up whatever rows were saved for the 30 full days before today, so after the daily read stopped for some days the sum came out short and still replaced the typed RunPod figure as "measured", understating the monthly total, the per-member figure, the Contributions goal suggestion and the copied text. A read saves a row for every day in its window, a quiet day included, so a missing row means a day was never read. Now `missingBillDays` (`lib/admin-expenses/runpod-billing.ts`) counts the days without a row for every endpoint; when any are missing, `last30DaysCents` is null, the new `incompleteReason` on `gpuBill` says how many and when it was last read, the card shows that with the read button still available, and the RunPod line keeps its typed figure. No schema change.
 - 2026-10-08: **Android Apps home matches the web Apps section (§1.1 item 5).** The Android home gains the web's Sort control (Recent, A-Z, Most Used, kept on the phone as the web keeps them in the browser) and the "Search apps…" box with its no-match line. Tapping a card now highlights it as on the web, and the "Open plugin →" pill opens the app. Cards use the web's tint and border in the comic theme too. The closing line about the other apps being on the web is removed; the web has no such line. The top bar now matches the web bar: the account picture sits after the settings gear, the bug icon opens the same one-item "Report a problem" menu, the Sign in button has the web's size and weight, the brand mark keeps its gradient in the comic theme, and the wordmark spacing and bottom line match.
 
