@@ -125,11 +125,15 @@ and their existing listing is unaffected — the same account both hosts and req
 2. Then set up your details (LH-3), return to the listing, and use **Request to stay** with a message
    and a preferred move-in date.
 3. Open the matches screen and find the new request. Try **Request to stay** again on the same listing.
+4. In the browser's network tools, read the answer to the request in step 2, then send two requests
+   for another listing at the same moment (two tabs).
 **Expected:** With no active seeker profile, the action routes you to **Your details** with a clear
 prompt (never a silent failure or a raw error). After details are saved, the request is created with
 status `pending` and shows on the matches screen. A second request on the same property is refused as
 a duplicate, shown inline. If you and the host have blocked each other, the request is refused. The
-action never appears on your own listing.
+action never appears on your own listing. Step 4: the answer carries the match and no Stream key,
+user or token (chat does not exist until the host accepts), and of the two requests sent together one
+is created and the other is refused as a duplicate (added 2026-10-14).
 **Result:** web ☐ mobile ☐ — notes:
 
 ### LH-4c · A listing's street address stays private until a stay is agreed (added 2026-10-05)
@@ -159,11 +163,14 @@ request the seeker has since withdrawn.
 4. Open the Direct Line tab and pick the accepted match.
 5. Send the route a host accept for the withdrawn request (for example from the browser's network
    tools, `PUT /api/lighthouse/matches/:matchId` with `{"status":"accepted"}` and `x-ctf-csrf: 1`).
+6. As the seeker of the declined request, try to open a chat for it, and send
+   `POST /api/lighthouse/matches/:matchId/chat` for the accepted match without the `x-ctf-csrf` header.
 **Expected:** The first card reads "Match: Accepted" with a green tick and the buttons are gone; the
 second reads "Match: Rejected". The accepted match opens a chat in Direct Line. The withdrawn request
 is refused with status 409 and "This request can no longer be changed that way. It may have been
 withdrawn or already answered." If a save fails, the route's message shows in red under the buttons
-and the request stays pending.
+and the request stays pending. Step 6: the declined request has no chat, and the chat route refuses a
+request without the CSRF header with 403 (added 2026-10-14).
 **Result:** web ☐ — notes:
 
 ### LH-5 · List your own place (self-service hosting)
@@ -189,8 +196,11 @@ in "Your listings".
 **Steps:**
 1. Open your own listing's detail view.
 2. Use Edit listing, change a field (e.g. rent), and save.
+3. Have an admin hide the listing (LH-A3). As the host, edit its title and save, then check browse as
+   another member.
 **Expected:** On your own listing the detail shows "This is your listing." with an Edit button — not
-"Apply Now"/"Message Host". The edit form prefills the full record and the change persists.
+"Apply Now"/"Message Host". The edit form prefills the full record and the change persists. Step 3:
+the listing stays hidden after the host's edit and keeps any photos it had (added 2026-10-14).
 **Result:** web ☐ mobile ☐ — notes:
 
 ### LH-7 · A host can't also be a seeker
@@ -265,7 +275,8 @@ actively looking" takes it down the same way.
 3. Clear both budget amounts and save.
 **Expected:** The fiat budget shows with that currency's symbol. The ServiceCredits budget reads as
 the amount followed by **ServiceCredits** — never a "$", never a bare "SC", and never a
-credits-to-fiat equivalence, exactly as a listing's rent behaves (LH-2). With both amounts cleared
+credits-to-fiat equivalence, exactly as a listing's rent behaves (LH-2). The fiat budget line reads
+"Can pay … a month"; the ServiceCredits one reads "Can send … a month" (added 2026-10-14). With both amounts cleared
 the card shows no budget line at all rather than a currency with no figure. On a narrow (mobile)
 width a long label like "ServiceCredits" stays inside the card instead of spilling past its edge.
 **Result:** web ☐ mobile ☐ — notes:
@@ -371,9 +382,13 @@ CSRF guard; an unknown status is refused with a readable error rather than silen
    ServiceCredits.
 2. Hide it from the admin Properties tab, then restore it.
 3. Open the listing as a member.
+4. Hide it again. As a member with no match on it, open its address directly
+   (`GET /api/lighthouse/properties/:id`) and request `GET /api/lighthouse/properties?onlyActive=false`.
 **Expected:** Hide/restore flips the listing's active state and preserves both currency fields: the
 rent still reads in its own currency (never a "$" figure for ServiceCredits) and the listing still
 shows "Accepts ServiceCredits". The write is CSRF-guarded and the change is reflected in the list.
+Step 4: the hidden listing answers 404 by id and does not appear in the list; the host and an admin
+still read it (added 2026-10-14).
 **Result:** web ☐ mobile ☐ — notes:
 
 ### LH-A4 · Audit trail

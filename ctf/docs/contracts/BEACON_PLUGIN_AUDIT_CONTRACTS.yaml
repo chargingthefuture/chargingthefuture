@@ -41,6 +41,9 @@ auditEvents:
       status: success_or_failure
       errorCategory: none_or_error_class
 
+  # Written on both outcomes. Deny reasons: `not_draft:<status>` (only a draft can go live),
+  # `not_draft:changed` (a simultaneous request moved the draft first) and `another_event_live`
+  # (a different event is live, or the one-live-event unique index refused this one).
   - eventId: uuid
     timestamp: rfc3339
     actorId: principal
@@ -63,6 +66,7 @@ auditEvents:
       status: success_or_failure
       errorCategory: none_or_error_class
 
+  # Written on both outcomes; deny reason `not_live:<status>` when the event is not live.
   - eventId: uuid
     timestamp: rfc3339
     actorId: principal
@@ -83,6 +87,8 @@ auditEvents:
       status: success_or_failure
       errorCategory: none_or_error_class
 
+  # Written on both outcomes; deny reason `not_live:<status>` when the event is a draft or has
+  # already ended.
   - eventId: uuid
     timestamp: rfc3339
     actorId: principal
@@ -125,6 +131,8 @@ auditEvents:
       status: success_or_failure
       errorCategory: none_or_error_class
 
+  # A mute is a timed ban on the event's chat channel (BEACON_MUTE_MINUTES); a ban lasts until
+  # lifted. Both stop the member posting to every viewer, not only to the admin.
   - eventId: uuid
     timestamp: rfc3339
     actorId: principal
@@ -148,6 +156,11 @@ auditEvents:
       status: success_or_failure
       errorCategory: none_or_error_class
 
+  # Written by the Stream webhook route with actor `system`. Allow: after a recording-ready
+  # delivery is stored and the replay notice posted, targeting the event, with metadata
+  # `{ commonsRecordingPostId, recordingStored }` (false on a redelivery). Deny: a delivery with a
+  # missing or wrong signature (`missing_signature` / `invalid_signature`), target type `webhook`;
+  # nothing from the body or the signature is stored.
   - eventId: uuid
     timestamp: rfc3339
     actorId: principal
