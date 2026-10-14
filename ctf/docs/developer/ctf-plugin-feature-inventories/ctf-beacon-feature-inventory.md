@@ -164,7 +164,8 @@ feed; when the event ends, Beacon auto-posts the recording to the Commons as a r
   one when Stream cannot answer. 404 for a draft, live, or unrecorded event. Public, not rate-limited
   (a player seeks with several requests), reads one row by id.
 - `POST /api/beacon/[id]/chat-token` — mint a Stream Chat token for the live event chat. **Requires a
-  signed-in member** (this is the sign-in-to-chat gate). Anonymous callers get 401.
+  signed-in member** (this is the sign-in-to-chat gate). Anonymous callers get 401. Only a `live`
+  event's chat gets a token; a draft or ended event answers 409 (`beacon_conflict`).
 
 ### Admin routes (admin-gated)
 - `POST /api/beacon` — create an event (draft).
@@ -173,19 +174,26 @@ feed; when the event ends, Beacon auto-posts the recording to the Commons as a r
   Admin-only.
 - `POST /api/beacon/[id]/go-live` — flip the call out of backstage (`goLive` with an empty body, no
   HLS/recording yet); flips status to `live`; auto-posts to Commons. The host stage mounts after this
-  succeeds, so there is no publisher yet — HLS/recording start later via `start-broadcast`.
+  succeeds, so there is no publisher yet — HLS/recording start later via `start-broadcast`. Only a
+  `draft` can go live: a live or ended event, or a second event while one is live, answers 409 and
+  writes a deny audit row. The row moves to `live` before Stream is called (`status = 'draft'` in the
+  UPDATE), so of two simultaneous calls only one reaches Stream; a Stream failure puts it back to draft.
 - `POST /api/beacon/[id]/start-broadcast` — start the public HLS broadcast + recording once a host is
   publishing media to the call (called by the admin page when its camera and microphone or its screen
   share go live, retried up to four times three seconds apart while Stream waits for the first track).
   Admin-only,
-  idempotent. A failure is written to the event's log with Stream's message.
-- `POST /api/beacon/[id]/end` — end the call; flips status to `ended`.
+  idempotent. Only for a `live` event; otherwise 409 and a deny audit row. A failure is written to the
+  event's log with Stream's message.
+- `POST /api/beacon/[id]/end` — end the call; flips status to `ended`. Only a `live` event (also in the
+  UPDATE); a draft or ended event answers 409 and writes a deny audit row.
 - `GET /api/beacon/admin` — list events. For up to five ended events with no recording address, asks
   Stream for the recording, stores it and posts the replay, as the recording-ready webhook would.
   When none comes back, the event carries `recordingLookup`, what Stream answered. Every non-draft
   event carries `log`: up to its 12 most recent audit-trail rows (`atIso`, `command`, `ok`,
   `reason`), oldest first, which the history row shows as the event's Log.
-- `POST /api/beacon/[id]/moderate` — mute / ban / slow-mode actions on the event chat.
+- `POST /api/beacon/[id]/moderate` — mute / ban / slow-mode actions on the event chat. A mute is a
+  timed ban on the event channel (`BEACON_MUTE_MINUTES`, 10), so the member stops posting to everyone;
+  a ban lasts until lifted.
 - `DELETE /api/beacon/[id]` — delete a **draft** event. Refuses a `live` or `ended` event with a 409
   (`beacon_conflict`); the draft-only rule is enforced in the route and again in the SQL predicate of
   `deleteDraftBeaconEvent`. Both the deletion and a refused attempt are written to the audit trail.
@@ -223,7 +231,10 @@ feed; when the event ends, Beacon auto-posts the recording to the Commons as a r
   are skipped because their presence heartbeats already feed the meter (2026-09-19). A delivery
   Stream re-sends is recognized by its call, session and participant session ids
   (`stream_video_webhook_deliveries`) and credits nothing the second time (2026-10-14). Every other
-  event is acknowledged without acting so Stream stops retrying.
+  event is acknowledged without acting so Stream stops retrying. A stored recording writes an allow
+  `beacon.event.stream-webhook.ingest` audit row (actor `system`, metadata `commonsRecordingPostId`,
+  `recordingStored`); a missing or wrong signature writes a deny row before the 401, storing nothing
+  from the request.
 
 ## Data Model and Storage Contracts
 
@@ -488,6 +499,16 @@ stops. HLS is used for public viewers so scale does not multiply WebRTC cost.
   ended event with nothing found reads "no recording found", and Replay opens
   `/api/beacon/replays/[id]/recording`, which serves the archived copy or a current address rather
   than the stored signed one.
+- 2026-10-05: **Event state, chat and webhook checks (#2664, #2665, #2666, #2667).** Mute called
+  Stream's personal mute, so only the admin stopped seeing the member while every other viewer still
+  did; it is now a 10-minute ban on the event channel. Go-live, start-broadcast and end did not check
+  the event's status, so an ended event could go live again and a draft could be ended into a row
+  delete then refused; go-live now takes drafts only, the other two live events only, each enforced
+  in the route and the UPDATE, with a 409 and a deny audit row otherwise. Go-live moves the row before
+  calling Stream, so the loser of two simultaneous calls never takes a call out of backstage. The chat
+  token is minted only for a live event, as the access policy already said. The Stream webhook now
+  writes the `event.stream-webhook.ingest` audit row its contract asks for, allow on a stored
+  recording and deny on a rejected signature.
 - 2026-10-05: **A failed start-broadcast is shown to the admin (#2668).** The host stage sent
   `POST /api/beacon/[id]/start-broadcast` with only a network `.catch`, so a refusal (Stream, CSRF or
   origin) was dropped and the admin read "Your screen is live to the broadcast." while no public feed
