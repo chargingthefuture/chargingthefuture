@@ -410,6 +410,16 @@ Owner decision, 2026-09-26. The owner pays the running costs of Skills Economy a
   reason under the existing error heading, and a failed Android pull-to-refresh keeps the list on
   screen with the reason above it. The blocks contract now describes the one-profile join. No route
   or schema change.
+- 2026-10-12: **Failure reasons name the cause behind a failed fetch (issue #2955).** The rule 137
+  helpers built the reason from `error.message` alone. Node's built-in `fetch` rejects with
+  `fetch failed` and puts the real reason (refused connection, DNS failure, reset, certificate error)
+  in `error.cause`, so every operator message about a call to Clerk, Stream, Formance or another
+  upstream read only `fetch failed`. New `lib/errors/reason.ts` (`describeFailure`, with tests) is now
+  behind both `failureReason` in `lib/errors/failure.ts` and `reasonOf` in
+  `lib/errors/client-failure.ts`: it appends the cause's message (and its `code` when the message
+  does not already carry it), reads the first inner error of an `AggregateError` with an empty
+  message, and keeps the 300-character cap after joining. An error with no cause reads exactly as
+  before.
 - 2026-10-12: **Web shell: dead files removed, silent catches now leave a trace.** Deleted
   `packages/web/src/` (an unreachable second PeerProgramming cohorts route, placeholder helpers and an
   empty mood file; Next ignores `src/app` when a root `app/` exists and nothing imported the rest),
