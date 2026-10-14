@@ -367,6 +367,18 @@ GDP draws aggregated values from upstream plugin schemas; no dedicated seed scri
 
 ## 10) Change Log
 
+- 2026-10-14: **The dashboard contract and the metric registry describe what the code does (#2945,
+  #2947).** `dashboard.snapshot.get` (now v1.2.0) listed a required `year` input and GDP-total outputs
+  (`totalGDP`, `serviceGDP`, `goodsGDP`, `perCapita`, breakdowns, `rolloutProgress`) that
+  `GET /api/gdp/report/current` never took or returned. Its schema is now the live report shape
+  (`{ ok, report: { publication, metrics, sources, projection } }`, type `GdpLiveReport`), and its
+  `dataAccess` lists what the route reads: `foundation_quote_requests` and `socket_relay_requests`
+  as recognition sources, `directory_profiles` for the member count, and no longer the snapshot
+  history tables the live route does not touch. In `ctf/config/canonical_metrics.yaml`,
+  `gdp_value_index` now says the weights are the fixed `DEFAULT_CONTRIBUTION_WEIGHTS` in code rather
+  than owner-set `currency_usd_rates`, and lists every source table; a new `total_members` entry
+  states that the figure is the Directory roster and that a failed roster read falls back to the
+  accounts count, a different population. Documentation only: no code, route or schema change.
 - 2026-09-21: **The GDP header gained the admin↔member pair (owner report).** Every other plugin
   header carries an Admin pill for admins and a Member view pill on its admin side; GDP had
   neither, so the new admin page could only be reached from the admin index and there was no way
