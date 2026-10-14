@@ -677,6 +677,12 @@ async function getOrCreateConnectionThread(client: PoolClient, input: {
     return mapThreadRow(existing.rows[0]);
   }
 
+  // The cap limits how many connections a member opens, so it applies only when a new thread would be
+  // created. A member always reaches a provider they already connected with: nothing closes a thread
+  // today, so checking the cap before this lookup locked a member at the cap out of every provider,
+  // including the ones they had open.
+  await assertConnectionThreadCapacity(client, input.actorUserId);
+
   const threadId = randomUUID();
   const stream = await ensureFoundationStreamChannel({
     threadId,
@@ -732,8 +738,6 @@ export async function createConnectionThread(input: {
   streamToken: string | null;
 }> {
   return withDbTransaction(async (client) => {
-    await assertConnectionThreadCapacity(client, input.actorUserId);
-
     const provider = await getProviderForConnection(client, input.providerProfileId);
     const providerUserId = provider.claimed_by_user_id;
     if (providerUserId === input.actorUserId) {
