@@ -718,7 +718,7 @@ it in the Neon SQL Editor after `post/0055` and `ctf/scripts/sql/landing_page_lo
 4. Save a match on the landing page, then `SELECT code, people_at_save, created_at FROM directory_landing_match_codes ORDER BY created_at DESC LIMIT 1;`
 5. Connected as `landing_page` (its connection address), `SELECT * FROM directory_profiles LIMIT 1;`
 6. Pick two job titles from step 1 that some people share, then `SELECT directory_public_match_count(ARRAY['<id 1>', '<id 2>']);` and the same with each id alone.
-
+7. On the landing page, tap a need that 0 people match, then paste `ctf/scripts/sql/landing_unmet_needs_report.sql` into the Neon SQL Editor.
 **Expected:**
 - Step 1: the busiest titles, each with its exact count.
 - Step 2: one column, `total`, matching the Directory's profile count, less owners restricted with scope `all` or `contact`.
@@ -726,6 +726,7 @@ it in the Neon SQL Editor after `post/0055` and `ctf/scripts/sql/landing_page_lo
 - Step 4: the code shown on the page, with no name or contact detail anywhere in the row.
 - Step 5: refused with "permission denied for table directory_profiles".
 - Step 6: the pair is never more than the two single answers added together, and is less whenever somebody lists both.
+- Step 7: that need is listed with one more `times_asked` than before, and tapping it again on the same visit adds nothing.
 **Result:** web ☐ — notes:
 
 ---
