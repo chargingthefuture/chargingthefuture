@@ -1,6 +1,6 @@
 // Unlock mobile API client.
 // Mirrors web routes: GET /api/unlock/status, POST /api/unlock/submission.
-// No CSRF header needed — the web unlock shell does not set x-ctf-csrf.
+// Mutations send the x-ctf-csrf confirmation header both routes require.
 // All calls go through authedFetch so the Clerk bearer token is attached and the
 // base URL comes from runtime config (APP_URL).
 
@@ -70,7 +70,7 @@ export async function requestUnlockHelp(quoraHint: string, failed: string): Prom
 export async function submitUnlockUrl(quoraProfileUrl: string): Promise<void> {
   const res = await authedFetch('/api/unlock/submission', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
     body: JSON.stringify({ quoraProfileUrl }),
   });
   if (!res.ok) {
