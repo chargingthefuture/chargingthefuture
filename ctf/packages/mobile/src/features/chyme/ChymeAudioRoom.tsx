@@ -1,140 +1,70 @@
 /**
- * ChymeAudioRoom — the live audio room for the Chyme social-audio plugin on
- * Android (React Native). It mirrors the working web room
- * (ctf/packages/web/components/chyme/chyme-audio-room.tsx) one-to-one: it joins
- * the same Stream call, renders one tile per live participant with their
- * speaking/muted state, lets you mute or unmute yourself, raise your hand, and
- * leaves the call when you exit.
+ * ChymeAudioRoom — the live audio room, copied from the web room (web components/chyme/
+ * chyme-audio-room.tsx): it joins the room's Stream call muted, keeps the presence heartbeat going,
+ * and lays out the stage (one tile per member), the control row and, when open, the room chat.
  *
- * The audio is carried by the Stream Video React Native SDK over WebRTC. That
- * SDK needs native code, so this screen only works in an EAS dev/production
- * build — never in Expo Go (see app.config.ts for the config plugins).
+ * The audio is carried by the Stream Video React Native SDK over WebRTC, which needs native code,
+ * so this only works in an EAS dev or production build, never in Expo Go. While in a call the
+ * Android foreground service (App.tsx) keeps the app running in the background, so the heartbeat
+ * keeps firing and the member stays in the room.
  *
- * Real data only: the call id, the user id, and the token all come from the
- * real `POST /api/chyme/join` response. The SAME Stream user token serves both
- * Chyme text chat and this audio room, so we reuse the join credentials the
- * chat already fetches — no second token call, no mocked participants.
+ * The web also has a state for a browser without WebRTC (Safari Lockdown Mode). The app always has
+ * WebRTC, so that state cannot occur here.
  */
 import React, { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Hand, Lock, MessageSquare, Mic, MicOff, Phone } from 'lucide-react-native';
-import { useTheme, getAppAccent, type ThemeTokens } from '../../theme';
-import { interFamily } from '../../components/ui';
+import { StyleSheet, Text, View } from 'react-native';
 import {
+  CallingState,
   StreamVideo,
   StreamVideoClient,
   StreamCall,
   useCall,
   useCallStateHooks,
-  SfuModels,
   type Call,
   type StreamVideoParticipant,
 } from '@stream-io/video-react-native-sdk';
-import type { ChymeJoinResponse } from './ChymeApi';
-import { postChymeHeartbeat, postChymeHand, getChymeRoom, CHYME_HEARTBEAT_STOP_CODES } from './ChymeApi';
-import { ChymeTipButton } from './ChymeTipModal';
-import { useChymeBackChannel, type MobileBackChannelController } from './useChymeBackChannel';
-import { ChymeBackChannelInviteSheet } from './ChymeBackChannelInviteSheet';
-import { ChymeBackChannelCall } from './ChymeBackChannelCall';
-import { ChymeListeningNotice, ChymeModeratorActions, ChymeSpeakModeToggle, OPEN_MODERATION, type MobileModerationContext } from './ChymeModeration';
+import { interFamily } from '../../components/ui';
+import { postChymeHeartbeat, postChymeHand, CHYME_HEARTBEAT_STOP_CODES, type ChymeJoinResponse, type ChymeRoomScope } from './ChymeApi';
+import type { MobileBackChannelController } from './useChymeBackChannel';
+import type { MobileModerationContext } from './ChymeModeration';
+import type { ChymeConnectionState } from './useChymeRoomState';
+import { ChymeSpeakerTile } from './chyme-speaker-tile';
+import { ChymeAudioControls, ChymeLeaveButton } from './chyme-controls';
+import { useChymeTokens } from './chyme-tokens';
 import { reportError } from '../../observability/report';
 
-// Shared theme wiring for the live audio room. The accent is the Chyme plugin accent for
-// the active theme; both StyleSheets are memoized on the tokens/accent. Each component in
-// this file reads what it needs (the stage/controls use `styles`, the tile uses `tileStyles`).
-function useRoomStyles() {
-  const { tokens, theme } = useTheme();
-  const accent = getAppAccent('chyme', theme);
-  return useMemo(
-    () => ({
-      styles: makeStyles(tokens, accent),
-      tileStyles: makeTileStyles(tokens, accent),
-      accent,
-      tokens,
-    }),
-    [tokens, accent],
-  );
-}
+// Open social audio: everyone who joins may publish audio, so the plain "default" call type. Never
+// video. Matches the web room.
+export const CALL_TYPE = 'default';
 
-// Chyme is open social audio (early-Clubhouse style): everyone who joins can
-// speak, so the plain "default" call type — where members may publish audio
-// without a backstage/host grant — is the right primitive. We never publish
-// video; this is an audio-only room. Matches the web room exactly.
-const CALL_TYPE = 'default';
-
-// Stream call ids accept [0-9a-zA-Z_-]; coerce anything else so an arbitrary
-// room key can never produce an invalid id. Matches the web room exactly.
-function toCallId(raw: string): string {
+// Stream call ids accept [0-9a-zA-Z_-]; anything else is replaced. Matches the web room.
+export function toCallId(raw: string): string {
   const cleaned = raw.replace(/[^0-9a-zA-Z_-]/g, '-');
   return cleaned.length > 0 ? cleaned : 'chyme-main-room';
 }
 
-function isPublishingAudio(participant: StreamVideoParticipant): boolean {
-  return participant.publishedTracks.includes(SfuModels.TrackType.AUDIO);
-}
+type JoinStatus = 'connecting' | 'joined' | 'error';
 
-function initials(name: string): string {
-  return name
-    .split(/[\s@]+/)
-    .slice(0, 2)
-    .map((s) => s[0]?.toUpperCase() ?? '')
-    .join('');
-}
-
-type ChymeAudioRoomProps = {
-  joinInfo: ChymeJoinResponse;
-  displayName: string;
-  onOpenChat: () => void;
-  onLeave: () => void;
-};
-
-export const ChymeAudioRoom: React.FC<ChymeAudioRoomProps> = ({
-  joinInfo,
-  displayName,
-  onOpenChat,
-  onLeave,
-}) => {
-  const { styles, accent } = useRoomStyles();
+// Join the room's call with camera and microphone off (listen first; the microphone permission is
+// asked for only when the member presses Unmute). Unchanged from the earlier Android room.
+function useRoomCall(joinInfo: ChymeJoinResponse, displayName: string) {
   const [client, setClient] = useState<StreamVideoClient | null>(null);
   const [call, setCall] = useState<Call | null>(null);
-  const [status, setStatus] = useState<'connecting' | 'joined' | 'error'>('connecting');
+  const [status, setStatus] = useState<JoinStatus>('connecting');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  // Clerk user ids of members whose hand is raised per the server, refreshed by the room poll below.
-  // Drives the persistent raised-hand indicator for everyone except the local member (who is driven
-  // by their own instant local toggle). Starts empty until the first poll lands.
-  const [raisedHandUserIds, setRaisedHandUserIds] = useState<ReadonlySet<string>>(() => new Set());
-  // Speak mode, who is viewing, and every member's role, from the same room poll. Starts as an
-  // open room with no moderation rights until the first poll lands.
-  const [moderation, setModeration] = useState<MobileModerationContext>(OPEN_MODERATION);
-  // Back Channel (spec #1746): free 1:1 audio with another member in this room. Polls only while joined.
-  const backChannel = useChymeBackChannel(status === 'joined');
 
   useEffect(() => {
     let canceled = false;
-
     const videoClient = new StreamVideoClient({
       apiKey: joinInfo.streamApiKey,
       user: { id: joinInfo.streamUserId, name: displayName },
       token: joinInfo.streamToken,
     });
     const activeCall = videoClient.call(CALL_TYPE, toCallId(joinInfo.streamChannelId));
-
     void (async () => {
       try {
-        // Audio-only room: disable the camera BEFORE joining so the OS is never asked for camera
-        // permission (the SDK requests a video track during join otherwise, firing the prompt too
-        // early to suppress). Disable the mic before joining too, so we join muted and the mic
-        // permission is only requested when the member presses Unmute (listen-first).
-        try {
-          await activeCall.camera.disable();
-        } catch {
-          /* no-trace: there is no camera to disable on this device */
-        }
-        try {
-          await activeCall.microphone.disable();
-        } catch {
-          /* no-trace: the microphone is already muted */
-        }
+        try { await activeCall.camera.disable(); } catch { /* no-trace: there is no camera to disable on this device */ }
+        try { await activeCall.microphone.disable(); } catch { /* no-trace: the microphone is already muted */ }
         await activeCall.join({ create: true });
         if (canceled) return;
         setClient(videoClient);
@@ -143,56 +73,33 @@ export const ChymeAudioRoom: React.FC<ChymeAudioRoomProps> = ({
       } catch (error) {
         reportError(error, { area: 'chyme', op: 'audio_room_join', extra: { callType: CALL_TYPE, callId: toCallId(joinInfo.streamChannelId) } });
         if (canceled) return;
-        // Surface the real Stream error verbatim so a failed join is diagnosable
-        // without a repro.
         setErrorMessage(error instanceof Error ? error.message : 'Could not connect to the audio room.');
         setStatus('error');
       }
     })();
-
     return () => {
       canceled = true;
       void (async () => {
-        try {
-          await activeCall.leave();
-        } catch {
-          /* no-trace: the call was already left */
-        }
-        try {
-          await videoClient.disconnectUser();
-        } catch {
-          /* no-trace: the client is already disconnected */
-        }
+        try { await activeCall.leave(); } catch { /* no-trace: the call was already left */ }
+        try { await videoClient.disconnectUser(); } catch { /* no-trace: the client is already disconnected */ }
       })();
     };
-  }, [
-    joinInfo.streamApiKey,
-    joinInfo.streamToken,
-    joinInfo.streamUserId,
-    joinInfo.streamChannelId,
-    displayName,
-  ]);
+  }, [joinInfo.streamApiKey, joinInfo.streamToken, joinInfo.streamUserId, joinInfo.streamChannelId, displayName]);
 
-  // While joined, ping the presence heartbeat so this member keeps counting as in the call. 35s
-  // keeps the member comfortably inside the 45s presence window (CHYME_PRESENCE_TTL_SECONDS),
-  // matching the web room. Without this the mobile participant's presence row stops updating and they
-  // drop off the participant list after 45s even though they are still connected to Stream audio.
-  // While in a call the Android foreground service (androidKeepCallAlive + StreamVideoRN.updateConfig,
-  // see app.config.ts and App.tsx) keeps the JS runtime alive when the app is backgrounded, so this
-  // heartbeat keeps firing and the member stays present and connected instead of dropping after the
-  // presence window (owner requirement, 2026-07-20). No visibility guard is needed (the web equivalent
-  // guards on document.visibilityState, which has no React Native counterpart).
+  return { client, call, status, setStatus, errorMessage, setErrorMessage };
+}
+
+// While joined, ping the presence heartbeat every 35s (inside the server's 45s presence window). A
+// refusal that every later beat would share too (removed by an admin, or the room is now full)
+// stops the beat and shows its reason in place of the stage.
+function useHeartbeat(scope: ChymeRoomScope, joined: boolean, onStopped: (_message: string) => void) {
   useEffect(() => {
-    if (status !== 'joined') return;
+    if (!joined) return;
     const ping = () => {
-      void postChymeHeartbeat()
+      void postChymeHeartbeat(scope)
         .then((result) => {
-          // The server will not keep this member present (removed by an admin, or the room is at its
-          // cap after they dropped out of the count): every later beat would be refused too, so stop
-          // beating and show its reason in place of the stage (with Leave), where a join refusal is.
           if (!result.ok && result.code !== null && CHYME_HEARTBEAT_STOP_CODES.includes(result.code)) {
-            setErrorMessage(result.message ?? 'The room did not keep you in the call.');
-            setStatus('error');
+            onStopped(result.message ?? 'The room did not keep you in the call.');
           }
         })
         .catch(() => {
@@ -202,670 +109,202 @@ export const ChymeAudioRoom: React.FC<ChymeAudioRoomProps> = ({
     ping();
     const intervalId = setInterval(ping, 35000);
     return () => clearInterval(intervalId);
-  }, [status]);
+  }, [scope, joined, onStopped]);
+}
 
-  // While joined, poll the room state every 15s (matching the web live shell's cadence) so other
-  // members' server-persisted raised hands appear and disappear on their tiles without a manual
-  // refresh. Stream reactions are transient and auto-clear, so they can't carry this — the persistent
-  // set rides on each member's presence row (POST /api/chyme/hand). This reads the SAME
-  // GET /api/chyme/room the web room already polls, so it adds no Stream/GetStream quota: it is a
-  // database read, not a Stream call. The `canceled` flag stops any late response from setting state
-  // after unmount, and clearing the interval on unmount / when leaving the room prevents a tight loop
-  // and over-polling. While in a call the Android foreground service keeps the JS runtime alive when
-  // backgrounded (see the heartbeat note above), so this poll keeps refreshing other members' raised
-  // hands rather than going quiet when the member navigates away without closing.
-  useEffect(() => {
-    if (status !== 'joined') return;
-    let canceled = false;
-    const poll = () => {
-      void getChymeRoom()
-        .then((payload) => {
-          if (canceled) return;
-          setRaisedHandUserIds(
-            new Set((payload.participants ?? []).filter((p) => p.handRaised).map((p) => p.userId)),
-          );
-          setModeration({
-            speakMode: payload.speakMode ?? 'open',
-            viewer: payload.viewer ?? OPEN_MODERATION.viewer,
-            memberRoles: new Map((payload.participants ?? []).map((p) => [p.userId, p.role] as const)),
-          });
-        })
-        .catch(() => {
-          /* best-effort: a transient poll failure is ignored; the next tick retries */
-        });
-    };
-    poll();
-    const intervalId = setInterval(poll, 15000);
-    return () => {
-      canceled = true;
-      clearInterval(intervalId);
-    };
-  }, [status]);
+type RoomProps = {
+  joinInfo: ChymeJoinResponse;
+  displayName: string;
+  roomScope: ChymeRoomScope;
+  showChat: boolean;
+  chatPanel: React.ReactNode;
+  onLeave: () => void;
+  raisedHandUserIds: ReadonlySet<string>;
+  // Null where Back Channel is off: the private room, or while the quota policy has it paused.
+  backChannel: MobileBackChannelController | null;
+  onConnectionChange: (_state: ChymeConnectionState) => void;
+  moderation: MobileModerationContext;
+};
+
+export const ChymeAudioRoom: React.FC<RoomProps> = (props) => {
+  const t = useChymeTokens();
+  const { client, call, status, setStatus, errorMessage, setErrorMessage } = useRoomCall(props.joinInfo, props.displayName);
+  const onStopped = useMemo(() => (message: string) => {
+    setErrorMessage(message);
+    setStatus('error');
+  }, [setErrorMessage, setStatus]);
+  useHeartbeat(props.roomScope, status === 'joined', onStopped);
 
   if (status !== 'joined' || !client || !call) {
     return (
-      <>
-        <View style={styles.center}>
-          {status === 'error' ? (
-            <>
-              <Text style={styles.errorText}>{errorMessage ?? 'Could not connect to the audio room.'}</Text>
-              <TouchableOpacity style={styles.leaveBtn} onPress={onLeave}>
-                <Text style={styles.leaveBtnText}>Leave</Text>
-              </TouchableOpacity>
-            </>
-          ) : (
-            <>
-              <ActivityIndicator size="large" color={accent} />
-              <Text style={styles.connectingText}>Connecting to the audio room…</Text>
-            </>
-          )}
-        </View>
-        <ChymeBackChannelOverlay backChannel={backChannel} displayName={displayName} />
-      </>
+      <ChymeAudioFrame
+        showChat={props.showChat}
+        chatPanel={props.chatPanel}
+        stage={
+          <Text style={[styles.statusText, { color: status === 'error' ? '#F87171' : t.FAINT }]}>
+            {status === 'error' ? (errorMessage ?? 'Could not connect to the audio room.') : 'Connecting to the audio room…'}
+          </Text>
+        }
+        controls={
+          <View style={[styles.leaveRow, { borderTopColor: t.BORDER, borderBottomColor: t.BORDER, backgroundColor: t.HEADER }]}>
+            <ChymeLeaveButton onLeave={props.onLeave} />
+          </View>
+        }
+      />
     );
   }
 
   return (
-    <>
-      <StreamVideo client={client}>
-        <StreamCall call={call}>
-          <ChymeAudioRoomLive
-            onOpenChat={onOpenChat}
-            onLeave={onLeave}
-            raisedHandUserIds={raisedHandUserIds}
-            backChannel={backChannel}
-            moderation={moderation}
-          />
-        </StreamCall>
-      </StreamVideo>
-      <ChymeBackChannelOverlay backChannel={backChannel} displayName={displayName} />
-    </>
+    <StreamVideo client={client}>
+      <StreamCall call={call}>
+        <ChymeAudioRoomLive {...props} />
+      </StreamCall>
+    </StreamVideo>
   );
 };
 
-// The incoming-invite sheet and the full-screen active call are Modals, so they overlay whatever the
-// room is showing and persist across a room reconnect. Do not ring while already in a call. Rendered
-// in both the pre-join and joined branches of ChymeAudioRoom, so it lives as its own component.
-const ChymeBackChannelOverlay: React.FC<{
-  backChannel: MobileBackChannelController;
-  displayName: string;
-}> = ({ backChannel, displayName }) => {
-  const { incomingInvite, activeCall, joinCredentials } = backChannel;
-  const invite = activeCall ? null : incomingInvite;
-  const live = activeCall && joinCredentials && joinCredentials.callId === activeCall.callId ? { activeCall, credentials: joinCredentials } : null;
+// The SDK's calling state folded to the three states the Join pill shows.
+function toConnectionState(callingState: CallingState): ChymeConnectionState {
+  switch (callingState) {
+    case CallingState.RECONNECTING:
+    case CallingState.MIGRATING:
+      return 'reconnecting';
+    case CallingState.OFFLINE:
+    case CallingState.RECONNECTING_FAILED:
+    case CallingState.LEFT:
+      return 'lost';
+    default:
+      return 'joined';
+  }
+}
+
+function ConnectionNotice({ state }: { state: ChymeConnectionState }) {
+  const t = useChymeTokens();
+  if (state === 'joined') return null;
+  const lost = state === 'lost';
   return (
-    <>
-      {invite ? <ChymeBackChannelIncoming backChannel={backChannel} invite={invite} /> : null}
-      {live ? (
-        <ChymeBackChannelCall
-          credentials={live.credentials}
-          actionError={backChannel.error}
-          displayName={displayName}
-          otherName={live.activeCall.otherUsername ? '@' + live.activeCall.otherUsername : 'Member'}
-          onHangUp={() => void backChannel.hangUp(live.activeCall.callId)}
-        />
-      ) : null}
-      {/* A failed invite or /join has no sheet or call screen to sit in, so it gets its own notice. */}
-      <ChymeBackChannelErrorNotice message={invite || live ? null : backChannel.error} onDismiss={backChannel.clearError} />
-    </>
-  );
-};
-
-const ChymeBackChannelIncoming: React.FC<{
-  backChannel: MobileBackChannelController;
-  invite: NonNullable<MobileBackChannelController['incomingInvite']>;
-}> = ({ backChannel, invite }) => (
-  <ChymeBackChannelInviteSheet
-    visible
-    fromName={invite.fromUsername ? '@' + invite.fromUsername : 'A member'}
-    busy={backChannel.busy}
-    error={backChannel.error}
-    onAccept={() => void backChannel.accept(invite.callId)}
-    onDecline={() => void backChannel.decline(invite.callId)}
-  />
-);
-
-const ChymeBackChannelErrorNotice: React.FC<{ message: string | null; onDismiss: () => void }> = ({ message, onDismiss }) =>
-  message ? (
-    <View style={backChannelNoticeStyles.notice} accessibilityRole="alert">
-      <Text style={backChannelNoticeStyles.text}>{message}</Text>
-      <TouchableOpacity onPress={onDismiss} accessibilityRole="button">
-        <Text style={backChannelNoticeStyles.dismiss}>Dismiss</Text>
-      </TouchableOpacity>
+    <View
+      accessibilityRole="alert"
+      style={[
+        styles.notice,
+        {
+          borderRadius: t.radius(10),
+          backgroundColor: lost ? 'rgba(239,68,68,0.12)' : 'rgba(234,179,8,0.12)',
+          borderColor: lost ? 'rgba(239,68,68,0.35)' : 'rgba(234,179,8,0.35)',
+        },
+      ]}
+    >
+      <Text style={[styles.noticeText, { color: lost ? '#FCA5A5' : '#FDE68A' }]}>
+        {lost
+          ? 'The live connection dropped. Nobody can hear the room from this screen until you leave and join again.'
+          : 'Reconnecting to the live room… the room cannot hear you until this clears.'}
+      </Text>
     </View>
-  ) : null;
+  );
+}
 
-const backChannelNoticeStyles = StyleSheet.create({
-  notice: {
-    position: 'absolute',
-    top: 12,
-    left: 12,
-    right: 12,
-    zIndex: 10,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-    padding: 12,
-    borderRadius: 12,
-    backgroundColor: '#0d0f14',
-    borderWidth: 1,
-    borderColor: 'rgba(248,113,113,0.45)',
-  },
-  text: { flex: 1, color: '#F87171', fontSize: 13, fontFamily: interFamily('400') },
-  dismiss: { color: '#9ca3af', fontSize: 13, fontWeight: '600', fontFamily: interFamily('600') },
-});
+// The stage, then the controls, then the chat — the order the web room uses.
+function ChymeAudioFrame({ stage, controls, showChat, chatPanel }: { stage: React.ReactNode; controls: React.ReactNode; showChat: boolean; chatPanel: React.ReactNode }) {
+  return (
+    <View>
+      <View style={styles.stage}>{stage}</View>
+      {controls}
+      {showChat ? chatPanel : null}
+    </View>
+  );
+}
 
-const ChymeAudioRoomLive: React.FC<{
-  onOpenChat: () => void;
-  onLeave: () => void;
-  raisedHandUserIds: ReadonlySet<string>;
-  backChannel: MobileBackChannelController;
-  moderation: MobileModerationContext;
-}> = ({ onOpenChat, onLeave, raisedHandUserIds, backChannel, moderation }) => {
-  const { styles, tokens } = useRoomStyles();
-  const { useParticipants } = useCallStateHooks();
-  const participants = useParticipants();
+// One tile per member: a lingering second Stream session would otherwise show twice, so keep one
+// per user id, preferring the local session.
+function useUniqueParticipants(participants: StreamVideoParticipant[]): StreamVideoParticipant[] {
+  return useMemo(() => {
+    const byUser = new Map<string, StreamVideoParticipant>();
+    for (const participant of participants) {
+      const existing = byUser.get(participant.userId);
+      if (!existing || (participant.isLocalParticipant && !existing.isLocalParticipant)) {
+        byUser.set(participant.userId, participant);
+      }
+    }
+    return Array.from(byUser.values());
+  }, [participants]);
+}
+
+// Raise / lower hand: local state for the member's own tile, the Stream reaction as an instant cue,
+// and the server's record so everybody keeps seeing it until it is lowered.
+function useHandToggle(scope: ChymeRoomScope) {
   const call = useCall();
-  // Hand-raise is tracked locally so the toggle is reliable and instant for the person pressing it,
-  // AND persisted server-side (POST /api/chyme/hand) so it rides on the member's presence row and
-  // everyone else keeps seeing it until it's lowered or they leave — matching the web room. We still
-  // emit the Stream reaction so others get the live in-call cue. The old transient 2.5s auto-reset is
-  // gone: a raised hand now stays up until the member lowers it.
   const [handRaised, setHandRaised] = useState(false);
-
   const onToggleHand = () => {
     const next = !handRaised;
     setHandRaised(next);
-    void call?.sendReaction(
-      next
-        ? { type: 'raised_hand', emoji_code: ':raised_hand:' }
-        : { type: 'lower_hand', emoji_code: ':hand:' },
-    );
-    void postChymeHand(next).catch(() => {
-      /* best-effort: local state already reflects the toggle; the next room poll reconciles */
+    void call?.sendReaction(next ? { type: 'raised_hand', emoji_code: ':raised_hand:' } : { type: 'lower_hand', emoji_code: ':hand:' });
+    void postChymeHand(next, scope).catch(() => {
+      /* no-trace: best-effort, the next room poll reconciles */
     });
   };
-
-  return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <View style={styles.liveBadge}>
-            <View style={styles.liveDot} />
-            <Text style={styles.liveText}>Live</Text>
-          </View>
-          <View style={styles.roomLabelWrap}>
-            <Text style={styles.roomLabel}>Members Only</Text>
-            <Lock size={12} color={tokens.textMuted} strokeWidth={2} />
-          </View>
-          <TouchableOpacity style={styles.chatBtn} onPress={onOpenChat} accessibilityRole="button" accessibilityLabel="Open chat">
-            <MessageSquare size={18} color={tokens.textShell} strokeWidth={2} />
-          </TouchableOpacity>
-        </View>
-        <Text style={styles.sectionLabel}>
-          On Stage · {participants.length} {participants.length === 1 ? 'Participant' : 'Participants'}
-        </Text>
-      </View>
-
-      <View style={styles.stage}>
-        {participants.length === 0 ? (
-          <Text style={styles.emptyText}>No participants yet.</Text>
-        ) : (
-          <View style={styles.stageGrid}>
-            {participants.map((participant) => (
-              <ChymeSpeakerTile
-                key={participant.sessionId}
-                participant={participant}
-                localHandRaised={handRaised}
-                raisedHandUserIds={raisedHandUserIds}
-                backChannel={backChannel}
-                moderation={moderation}
-              />
-            ))}
-          </View>
-        )}
-      </View>
-
-      {moderation.speakMode === 'hand_raise' ? (
-        <Text style={styles.handRaiseNotice}>Hand-raise mode: everyone listens until an admin lets them speak. Raise your hand to ask.</Text>
-      ) : null}
-      <ChymeAudioControls onOpenChat={onOpenChat} onLeave={onLeave} handRaised={handRaised} onToggleHand={onToggleHand} moderation={moderation} />
-    </View>
-  );
+  return { handRaised, onToggleHand };
 }
 
-type TileStyles = ReturnType<typeof makeTileStyles>;
-
-type SpeakerTileState = {
-  isSelf: boolean;
-  speaking: boolean;
-  publishingAudio: boolean;
-  name: string;
-  isGuest: boolean;
-  clerkUserId: string;
-  handRaised: boolean;
-};
-
-// Derive everything a speaker tile renders from the raw participant, so the tile component itself
-// stays a flat presentational pass. Preserves the web room's rules exactly:
-// - Signed-out guests join as `chyme-guest-…` and have no wallet, so never show Tip on a guest. The
-//   clerk user id (the tip recipient) is the Stream id with the `chyme-` prefix stripped.
-// - The local member's raised hand is driven by their own toggle so it is reliable and instant.
-//   Everyone else's comes from the server-persisted set (keyed by clerk user id) that the room poll
-//   refreshes. The transient Stream reaction still gives an instant in-call cue before the next poll
-//   lands. Guests never publish and never raise a hand.
-function computeSpeakerTileState(
-  participant: StreamVideoParticipant,
-  localHandRaised: boolean,
-  raisedHandUserIds: ReadonlySet<string>,
-): SpeakerTileState {
-  const isSelf = participant.isLocalParticipant;
-  const isGuest = participant.userId.startsWith('chyme-guest-');
-  const clerkUserId = participant.userId.startsWith('chyme-')
-    ? participant.userId.slice('chyme-'.length)
-    : participant.userId;
-  const handRaised = isSelf
-    ? localHandRaised
-    : (!isGuest && raisedHandUserIds.has(clerkUserId)) || participant.reaction?.type === 'raised_hand';
-  return {
-    isSelf,
-    speaking: participant.isSpeaking,
-    publishingAudio: isPublishingAudio(participant),
-    name: participant.name || participant.userId,
-    isGuest,
-    clerkUserId,
-    handRaised,
-  };
-}
-
-// The avatar cluster: the initials disc (border reflects speaking/self/idle), the mic on/off badge,
-// and the raised-hand badge. Split out so the tile component's complexity stays flat.
-const ChymeTileAvatar: React.FC<{
-  tileStyles: TileStyles;
-  name: string;
-  speaking: boolean;
-  isSelf: boolean;
-  publishingAudio: boolean;
-  handRaised: boolean;
-}> = ({ tileStyles, name, speaking, isSelf, publishingAudio, handRaised }) => (
-  <View style={tileStyles.avatarWrap}>
-    <View
-      style={[
-        tileStyles.avatar,
-        speaking
-          ? tileStyles.avatarSpeaking
-          : isSelf
-            ? tileStyles.avatarSelf
-            : tileStyles.avatarIdle,
-      ]}
-    >
-      <Text style={tileStyles.initials}>{initials(name)}</Text>
-    </View>
-    <View style={[tileStyles.micBadge, publishingAudio ? tileStyles.micBadgeOn : tileStyles.micBadgeOff]}>
-      {publishingAudio ? (
-        <Mic size={12} color="#fff" strokeWidth={2} />
-      ) : (
-        <MicOff size={12} color="#fff" strokeWidth={2} />
-      )}
-    </View>
-    {handRaised && (
-      <View style={tileStyles.handBadge}>
-        <Text style={tileStyles.handIcon}>✋</Text>
-      </View>
-    )}
-  </View>
-);
-
-const ChymeSpeakerTile: React.FC<{
-  participant: StreamVideoParticipant;
-  localHandRaised: boolean;
-  raisedHandUserIds: ReadonlySet<string>;
-  backChannel: MobileBackChannelController;
-  moderation: MobileModerationContext;
-}> = ({ participant, localHandRaised, raisedHandUserIds, backChannel, moderation }) => {
-  const { tileStyles } = useRoomStyles();
-  const { isSelf, speaking, publishingAudio, name, isGuest, clerkUserId, handRaised } =
-    computeSpeakerTileState(participant, localHandRaised, raisedHandUserIds);
-
-  return (
-    <View style={tileStyles.wrapper}>
-      <ChymeTileAvatar
-        tileStyles={tileStyles}
-        name={name}
-        speaking={speaking}
-        isSelf={isSelf}
-        publishingAudio={publishingAudio}
-        handRaised={handRaised}
-      />
-      <Text style={tileStyles.name} numberOfLines={1}>
-        {name}
-      </Text>
-      <View style={[tileStyles.statusBadge, publishingAudio ? tileStyles.statusBadgeOn : tileStyles.statusBadgeOff]}>
-        <Text style={[tileStyles.statusText, publishingAudio ? tileStyles.statusTextOn : tileStyles.statusTextOff]}>
-          {publishingAudio ? 'speaking' : 'muted'}
-        </Text>
-      </View>
-      {!isSelf && !isGuest ? (
-        <View style={tileStyles.actionRow}>
-          <ChymeTipButton recipientUserId={clerkUserId} recipientName={name} />
-          <ChymeBackChannelTileButton recipientUserId={clerkUserId} backChannel={backChannel} />
-        </View>
-      ) : null}
-      {!isSelf && !isGuest && moderation.viewer.isAdmin ? (
-        <ChymeModeratorActions clerkUserId={clerkUserId} name={name} moderation={moderation} />
-      ) : null}
-    </View>
-  );
-}
-
-// Screen 1 of the handoff, mobile: the per-tile Back Channel affordance. Never on the local tile.
-// Three states: start pill, "Invite sent…" pending, and the "BC" active badge; hidden while in another
-// Back Channel call.
-const ChymeBackChannelTileButton: React.FC<{
-  recipientUserId: string;
-  backChannel: MobileBackChannelController;
-}> = ({ recipientUserId, backChannel }) => {
-  const { theme } = useTheme();
-  const accent = getAppAccent('chyme', theme);
-  const styles = makeBackChannelButtonStyles(accent);
-
-  const isActiveWithThis = backChannel.activeCall?.otherUserId === recipientUserId;
-  const isPendingToThis = backChannel.outgoingInvite?.toUserId === recipientUserId;
-  const inSomeCall = Boolean(backChannel.activeCall);
-
-  if (isActiveWithThis) {
-    return (
-      <View style={styles.badge} accessibilityLabel="Back Channel active">
-        <View style={styles.badgeDot} />
-        <Text style={styles.badgeText}>BC</Text>
-      </View>
-    );
-  }
-  if (isPendingToThis) {
-    return (
-      <View style={styles.pending} accessibilityLabel="Back Channel invite sent">
-        <View style={styles.badgeDot} />
-        <Text style={styles.pendingText}>Invite sent…</Text>
-      </View>
-    );
-  }
-  if (inSomeCall) {
-    return null;
-  }
-  return (
-    <TouchableOpacity
-      style={[styles.pill, backChannel.busy && styles.pillDisabled]}
-      onPress={() => void backChannel.sendInvite(recipientUserId)}
-      disabled={backChannel.busy}
-      accessibilityRole="button"
-      accessibilityLabel="Start a Back Channel"
-    >
-      <Phone size={11} color={accent} strokeWidth={2.5} />
-      <Text style={styles.pillText}>Back Channel</Text>
-    </TouchableOpacity>
-  );
-};
-
-function makeBackChannelButtonStyles(accent: string) {
-  return StyleSheet.create({
-    pill: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: 20,
-      backgroundColor: `${accent}1F`,
-      borderWidth: 1,
-      borderColor: `${accent}59`,
-    },
-    pillDisabled: { opacity: 0.6 },
-    pillText: { fontSize: 11, fontWeight: '700', fontFamily: interFamily('700'), color: accent },
-    badge: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: 20,
-      backgroundColor: `${accent}29`,
-      borderWidth: 1,
-      borderColor: `${accent}66`,
-    },
-    badgeDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: accent },
-    badgeText: { fontSize: 11, fontWeight: '700', fontFamily: interFamily('700'), color: accent },
-    pending: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-    pendingText: { fontSize: 11, fontWeight: '600', fontFamily: interFamily('600'), color: '#9ca3af' },
-  });
-}
-
-// A member listening in hand-raise mode cannot speak: the microphone control is replaced by the
-// notice, and the microphone is turned off the moment the role says listener, so the change takes
-// effect without waiting for a tap. Matches the web room.
-function isListeningOnly(moderation: MobileModerationContext): boolean {
-  return moderation.speakMode === 'hand_raise' && !moderation.viewer.isAdmin && moderation.viewer.role !== 'speaker';
-}
-
-const ChymeMicControl: React.FC<{ moderation: MobileModerationContext }> = ({ moderation }) => {
-  const { styles, accent, tokens } = useRoomStyles();
-  const { useMicrophoneState } = useCallStateHooks();
-  const { microphone, isMute } = useMicrophoneState();
-  const listening = isListeningOnly(moderation);
+function ChymeAudioRoomLive(props: RoomProps) {
+  const t = useChymeTokens();
+  const { useParticipants, useCallCallingState } = useCallStateHooks();
+  const participants = useParticipants();
+  const connection = toConnectionState(useCallCallingState());
+  const { onConnectionChange } = props;
   useEffect(() => {
-    if (!listening) return;
-    void microphone.disable().catch(() => {
-      /* no-trace: already off, or no microphone; the server-side role holds either way */
-    });
-  }, [listening, microphone]);
+    onConnectionChange(connection);
+  }, [connection, onConnectionChange]);
+  const { handRaised, onToggleHand } = useHandToggle(props.roomScope);
+  const unique = useUniqueParticipants(participants);
 
-  if (listening) {
-    return <ChymeListeningNotice labelColor={tokens.textSecondary} />;
-  }
-  return (
-    <TouchableOpacity style={styles.controlBtn} onPress={() => void microphone.toggle()}>
-      <View style={[styles.controlCircle, isMute ? styles.controlCircleMuted : styles.controlCircleActive]}>
-        {isMute ? <MicOff size={24} color="#F87171" strokeWidth={2} /> : <Mic size={24} color={accent} strokeWidth={2} />}
-      </View>
-      <Text style={[styles.controlLabel, isMute && styles.controlLabelMuted]}>{isMute ? 'Unmute' : 'Mute'}</Text>
-    </TouchableOpacity>
-  );
-};
-
-const ChymeAudioControls: React.FC<{
-  onOpenChat: () => void;
-  onLeave: () => void;
-  handRaised: boolean;
-  onToggleHand: () => void;
-  moderation: MobileModerationContext;
-}> = ({ onOpenChat, onLeave, handRaised, onToggleHand, moderation }) => {
-  const { styles, tokens } = useRoomStyles();
-
-  return (
-    <View style={styles.controls}>
-      <View style={styles.controlRow}>
-        <ChymeMicControl moderation={moderation} />
-
-        <TouchableOpacity style={styles.controlBtn} onPress={onToggleHand}>
-          <View
-            style={[
-              styles.controlCircle,
-              handRaised ? styles.controlCircleHand : styles.controlCircleNeutral,
-            ]}
-          >
-            <Hand size={24} color={handRaised ? '#FDE047' : tokens.textSecondary} strokeWidth={2} />
-          </View>
-          <Text style={[styles.controlLabel, handRaised && styles.controlLabelHand]}>
-            {handRaised ? 'Lower' : 'Hand'}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.controlBtn} onPress={onOpenChat}>
-          <View style={[styles.controlCircle, styles.controlCircleNeutral]}>
-            <MessageSquare size={24} color={tokens.textSecondary} strokeWidth={2} />
-          </View>
-          <Text style={styles.controlLabel}>Chat</Text>
-        </TouchableOpacity>
-
-        {moderation.viewer.isAdmin ? <ChymeSpeakModeToggle moderation={moderation} labelColor={tokens.textSecondary} /> : null}
-      </View>
-
-      <TouchableOpacity style={styles.leaveBtn} onPress={onLeave}>
-        <View style={styles.leaveBtnRow}>
-          <Phone size={16} color="#F87171" strokeWidth={2} />
-          <Text style={styles.leaveBtnText}>Leave Room</Text>
+  const stage = (
+    <>
+      <ConnectionNotice state={connection} />
+      <Text style={[styles.stageLabel, { color: t.FAINT }]}>
+        On Stage · {unique.length} {unique.length === 1 ? 'Participant' : 'Participants'}
+      </Text>
+      {unique.length === 0 ? (
+        <Text style={[styles.statusText, { color: t.FAINT }]}>No participants yet.</Text>
+      ) : (
+        <View style={styles.grid}>
+          {unique.map((participant) => (
+            <ChymeSpeakerTile
+              key={participant.userId}
+              participant={participant}
+              localHandRaised={handRaised}
+              raisedHandUserIds={props.raisedHandUserIds}
+              backChannel={props.backChannel}
+              moderation={props.moderation}
+            />
+          ))}
         </View>
-      </TouchableOpacity>
-    </View>
+      )}
+    </>
+  );
+
+  return (
+    <ChymeAudioFrame
+      showChat={props.showChat}
+      chatPanel={props.chatPanel}
+      stage={stage}
+      controls={<ChymeAudioControls onLeave={props.onLeave} handRaised={handRaised} onToggleHand={onToggleHand} moderation={props.moderation} />}
+    />
   );
 }
 
-function makeTileStyles(t: ThemeTokens, accent: string) {
-  const PRIMARY = accent;
-  return StyleSheet.create({
-  wrapper: { alignItems: 'center', width: 96, marginBottom: 20, marginHorizontal: 8 },
-  avatarWrap: { position: 'relative' },
-  avatar: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: `${PRIMARY}20`,
-    borderWidth: 3,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarSpeaking: { borderColor: PRIMARY },
-  avatarSelf: { borderColor: `${PRIMARY}80` },
-  avatarIdle: { borderColor: 'transparent' },
-  initials: { fontSize: 20, fontWeight: '800', fontFamily: interFamily('800'), color: PRIMARY },
-  micBadge: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: 24,
-    height: 24,
-    borderRadius: t.radius,
-    borderWidth: 2,
-    borderColor: '#021006',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  micBadgeOn: { backgroundColor: PRIMARY },
-  micBadgeOff: { backgroundColor: 'rgba(120,120,120,0.9)' },
-  micIcon: { fontSize: 10, fontFamily: interFamily('400') },
-  handBadge: { position: 'absolute', top: -6, right: -6 },
-  handIcon: { fontSize: 16, fontFamily: interFamily('400') },
-  name: { fontSize: 12, fontWeight: '600', fontFamily: interFamily('600'), color: t.textShell, textAlign: 'center', marginTop: 8 },
-  statusBadge: {
-    marginTop: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 1,
-    borderRadius: 20,
-    borderWidth: 1,
-  },
-  statusBadgeOn: { backgroundColor: `${PRIMARY}20`, borderColor: `${PRIMARY}35` },
-  statusBadgeOff: { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'transparent' },
-  statusText: { fontSize: 10, fontFamily: interFamily('400') },
-  statusTextOn: { color: PRIMARY },
-  statusTextOff: { color: t.textSecondary },
-  actionRow: { flexDirection: 'row', alignItems: 'center', gap: 4, flexWrap: 'wrap', justifyContent: 'center', marginTop: 4 },
-  });
-}
-
-function makeStyles(t: ThemeTokens, accent: string) {
-  const PRIMARY = accent;
-  return StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#04160A' },
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#04160A',
-    paddingHorizontal: 24,
-  },
-  connectingText: { color: t.textMuted, fontSize: 14, fontFamily: interFamily('400'), marginTop: 16 },
-  errorText: { color: '#F87171', fontSize: 14, fontFamily: interFamily('400'), textAlign: 'center', marginBottom: 20, lineHeight: 22 },
-  header: {
-    padding: 16,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#052e16',
-    backgroundColor: '#030d05',
-  },
-  headerTop: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
-  liveBadge: {
+const styles = StyleSheet.create({
+  stage: { paddingVertical: 20, paddingHorizontal: 24 },
+  statusText: { fontSize: 14, fontFamily: interFamily('400') },
+  leaveRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: `${PRIMARY}15`,
-    borderWidth: 1,
-    borderColor: `${PRIMARY}30`,
-    borderRadius: t.radius,
-    paddingHorizontal: 8,
-    paddingVertical: 1,
-  },
-  liveDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: PRIMARY },
-  liveText: { fontSize: 10, color: PRIMARY, fontWeight: '700', fontFamily: interFamily('700') },
-  roomLabelWrap: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 4 },
-  roomLabel: { fontSize: 11, color: t.textMuted, fontFamily: interFamily('400') },
-  chatBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  chatBtnIcon: { fontSize: 15, fontFamily: interFamily('400') },
-  sectionLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    fontFamily: interFamily('700'),
-    letterSpacing: 1.2,
-    color: t.textMuted,
-    textTransform: 'uppercase',
-  },
-  stage: { flex: 1, paddingHorizontal: 16, paddingTop: 20 },
-  stageGrid: { flexDirection: 'row', flexWrap: 'wrap' },
-  emptyText: { color: t.textMuted, fontSize: 14, fontFamily: interFamily('400') },
-  controls: {
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    justifyContent: 'flex-end',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
     borderTopWidth: 1,
-    borderTopColor: '#052e16',
-    backgroundColor: '#030d05',
+    borderBottomWidth: 1,
   },
-  controlRow: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 12 },
-  controlBtn: { alignItems: 'center', gap: 4 },
-  controlCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-  },
-  controlCircleActive: { backgroundColor: `${PRIMARY}18`, borderColor: `${PRIMARY}50` },
-  controlCircleMuted: { backgroundColor: 'rgba(239,68,68,0.15)', borderColor: 'rgba(239,68,68,0.5)' },
-  controlCircleHand: { backgroundColor: 'rgba(234,179,8,0.15)', borderColor: 'rgba(234,179,8,0.5)' },
-  controlCircleNeutral: { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)' },
-  controlIcon: { fontSize: 20, fontFamily: interFamily('400') },
-  controlLabel: { fontSize: 11, color: t.textSecondary, fontFamily: interFamily('400') },
-  controlLabelMuted: { color: '#F87171' },
-  controlLabelHand: { color: '#FDE047' },
-  handRaiseNotice: { marginHorizontal: 16, marginBottom: 8, padding: 10, borderRadius: 10, fontSize: 12, lineHeight: 18, color: '#FDE68A', backgroundColor: 'rgba(234,179,8,0.10)', borderWidth: 1, borderColor: 'rgba(234,179,8,0.3)', fontFamily: interFamily('400') },
-  leaveBtn: {
-    width: '100%',
-    paddingVertical: 13,
-    borderRadius: 14,
-    backgroundColor: 'rgba(239,68,68,0.12)',
-    borderWidth: 1,
-    borderColor: 'rgba(239,68,68,0.3)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  leaveBtnRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  leaveBtnText: { color: '#F87171', fontSize: 15, fontWeight: '700', fontFamily: interFamily('700') },
-  });
-}
+  notice: { marginBottom: 14, paddingVertical: 10, paddingHorizontal: 14, borderWidth: 1 },
+  noticeText: { fontSize: 13, lineHeight: 19.5, fontFamily: interFamily('400') },
+  stageLabel: { fontSize: 11, letterSpacing: 0.88, textTransform: 'uppercase', marginBottom: 16, fontFamily: interFamily('700') },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 20 },
+});

@@ -19,14 +19,19 @@ export function isBeaconEventId(value: string): boolean {
   return UUID_REGEX.test(value);
 }
 
-// Where the archive workflow puts this project's copy of each recording: one GitHub release in this
-// repository, one asset per broadcast named by event id. The recording route only trusts an address
-// under this prefix, so the write-back cannot be used to point listeners anywhere else.
-export const BEACON_ARCHIVE_URL_PREFIX =
-  'https://github.com/chargingthefuture/chargingthefuture/releases/download/beacon-recordings/';
+// Where the archive workflow puts this project's copy of each recording: one GitHub release per
+// broadcast in this repository, tagged `beacon-recording-<eventId>` and holding `<eventId>.mp4`. One
+// release each because this repository's releases are immutable: once published, a release takes no
+// new files, so a single shared release could only ever hold its first recording. The recording route
+// only trusts this exact address, so the write-back cannot be used to point listeners anywhere else.
+const BEACON_ARCHIVE_URL_PREFIX = 'https://github.com/chargingthefuture/chargingthefuture/releases/download/';
+
+export function beaconArchiveUrl(eventId: string): string {
+  return `${BEACON_ARCHIVE_URL_PREFIX}beacon-recording-${eventId}/${eventId}.mp4`;
+}
 
 export function isBeaconArchiveUrl(value: string, eventId: string): boolean {
-  return value === `${BEACON_ARCHIVE_URL_PREFIX}${eventId}.mp4`;
+  return value === beaconArchiveUrl(eventId);
 }
 
 export type PublicBeaconReplay = {
@@ -114,13 +119,13 @@ export function buildBeaconReplayFeedXml(replays: PublicBeaconReplay[], builtAt:
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" xmlns:atom="http://www.w3.org/2005/Atom">',
     '  <channel>',
-    '    <title>Charging The Future: recorded broadcasts</title>',
+    '    <title>Skills Economy: recorded broadcasts</title>',
     `    <link>${escapeXml(BLOG_STREAMS_PAGE_URL)}</link>`,
     `    <atom:link href="${escapeXml(BEACON_REPLAY_FEED_URL)}" rel="self" type="application/rss+xml" />`,
-    '    <description>Every live broadcast from the Charging The Future app, recorded and listed newest first. Each one can also be watched in the app with no sign-in.</description>',
+    '    <description>Every live broadcast from the Skills Economy app, recorded and listed newest first. Each one can also be watched in the app with no sign-in.</description>',
     '    <language>en-us</language>',
     `    <lastBuildDate>${builtAt.toUTCString()}</lastBuildDate>`,
-    '    <itunes:author>Charging The Future</itunes:author>',
+    '    <itunes:author>Skills Economy</itunes:author>',
     '    <itunes:explicit>false</itunes:explicit>',
     items,
     '  </channel>',

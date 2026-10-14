@@ -36,7 +36,7 @@ type ShellRightRailProps = {
   signInUrl?: string;
 };
 
-export function ShellRightRail({ currentUser, trust, isAuthenticated = false, signInUrl = '/sign-in' }: ShellRightRailProps) {
+export function ShellRightRail({ currentUser, trust, isAuthenticated = false, signInUrl = '/' }: ShellRightRailProps) {
   const initial = currentUser.initial;
   // Clerk photo when the member has uploaded one, so this card matches the avatar the icon-rail
   // UserButton shows for the same person (it was a gradient monogram here vs. a photo there).

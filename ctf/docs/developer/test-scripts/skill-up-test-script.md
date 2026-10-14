@@ -13,7 +13,7 @@
 | **Surfaces** | web (`/apps/skill-up`, `/admin/skill-up`) · android (SkillUp screen, Admin SkillUp screen) |
 | **Seed first** | `pnpm --dir ctf seed:skill-up` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-skill-up-feature-inventory.md` |
-| **Generated** | 2026-07-20 (commit eca128e5) · 2026-10-04 manual note: `SKILL_UP_PROFILE_AND_DELETION_CONTRACT.md` written (the registry entry stated: enrollments, counters, trainer profile and achievements deleted; the credit-movement record retained) — no test change; the deletion cases live in the account test script |
+| **Generated** | 2026-07-20 (commit eca128e5) · 2026-10-04 manual note: `SKILL_UP_PROFILE_AND_DELETION_CONTRACT.md` written (the registry entry stated: enrollments, counters, trainer profile and achievements deleted; the credit-movement record retained) — no test change; the deletion cases live in the account test script · 2026-10-05 manual update: LU-9b added (a failed section load says so; the Progress deposit step); LU-6 says what "Earned through SkillUp" counts |
 | **Inventory wording** | 2026-10-01: banned-term wording removed from the inventory prose; no step in this script changed |
 
 ---
@@ -363,6 +363,7 @@ Result: web ☐
 
 **Expected:**
 - Balance overview shows: current spendable balance, total earned through SkillUp, and escrow held.
+- "Earned through SkillUp" counts only grants (completion bonus, trainer credit grant, badges). A milestone release, which is your own deposit coming back, is listed under Escrow and is not added to it, so a learner whose only rows are releases sees 0 there.
 - Transaction history includes the enrollment deposit entry (grant or escrow hold visible).
 - Escrow filter tab shows the 300 SC held for the seed cohort enrollment.
 - No "Spend", "Transfer", or "Send credits" button appears anywhere on this screen — the wallet is read-only.
@@ -427,6 +428,26 @@ Result: web ☐
 - Filtering by `Tech` keeps the seed trainer visible.
 - Filtering by a track with no trainers shows an empty state.
 - No rating, handle, learners count, or SC-released figure appears (not backed; absence is correct).
+
+Result: web ☐
+
+---
+
+### LU-9b — A failed Trainers, Achievements or Wallet load says so
+
+**Role:** member · **Surfaces:** web
+**Precondition:** Signed in as seed trainee 1. Browser developer tools open (Network → block request URL), or the device offline.
+
+**Steps:**
+1. Block `/api/skill-up/trainers` and open the Trainers tab (press Refresh if it was already open).
+2. Do the same for the Achievements tab (`/api/skill-up/achievements`) and the Wallet tab (`/api/skill-up/wallet`).
+3. Unblock the requests and press Refresh.
+4. Open the My Progress tab and read the step list.
+
+**Expected:**
+- Each blocked tab shows a red message saying it could not load (the route's own sentence when it answered, or a connection message when offline), not "No trainers listed yet", an empty badge list, or "Wallet unavailable.".
+- After unblocking and refreshing, each tab shows its content again.
+- The second step reads "Hold a returnable deposit in escrow". No step says to pay credits.
 
 Result: web ☐
 

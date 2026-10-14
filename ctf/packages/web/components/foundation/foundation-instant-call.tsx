@@ -523,9 +523,16 @@ function computeHeadingSubline(side: ActiveSide, ringStatus: RingStatus): { head
 
 // The terminal message shown when a call has ended, or null while it is still live. Out-of-credits and
 // paid-time-elapsed take precedence over the plain ring-status endings.
+const ENDED_REASON_LABELS: Record<string, string> = {
+  caller_insufficient_funds: "Session ended — out of credits.",
+  paid_window_elapsed: "Session ended — paid time used up.",
+  provider_not_set_up: "This provider isn't set up to take calls right now.",
+  caller_cannot_send: "The call couldn't start: the caller's credits can't be sent right now.",
+};
+
 function computeTerminalLabel(billing: CallBilling, ringStatus: RingStatus): string | null {
-  if (billing.endedReason === "caller_insufficient_funds") return "Session ended — out of credits.";
-  if (billing.endedReason === "paid_window_elapsed") return "Session ended — paid time used up.";
+  const reasonLabel = billing.endedReason ? ENDED_REASON_LABELS[billing.endedReason] : undefined;
+  if (reasonLabel) return reasonLabel;
   if (ringStatus === "declined") return "Call declined.";
   if (ringStatus === "timed_out") return "No answer.";
   if (ringStatus === "ended") return "Call ended.";

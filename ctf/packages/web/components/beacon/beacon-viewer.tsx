@@ -13,6 +13,7 @@ import { StreamChatPanel } from '@/components/shared/stream-chat-panel';
 import { useTheme } from '@/hooks/useTheme';
 import { getBeaconTokens, type BeaconTokens } from './beacon-shared';
 import { BEACON_COLOR } from 'lib/beacon/constants';
+import { BLOG_STREAMS_PAGE_URL } from 'lib/beacon/replays';
 import { reportError } from 'lib/observability/report';
 import { failureText, responseFailureText } from 'lib/errors/client-failure';
 import { startVisibleInterval } from '../../lib/shared/visible-interval';
@@ -151,6 +152,9 @@ function BeaconIdleView({ replay }: { replay: BeaconEventLike | null }) {
       <Radio size={40} style={{ color: t.SUBTLE, display: 'block', margin: '0 auto 12px' }} />
       <div style={{ fontSize: 16, fontWeight: 600 }}>No live event right now</div>
       <p style={{ color: t.SUBTLE, fontSize: 14, marginTop: 6 }}>When Farah goes live, it will appear here.</p>
+      <a href={BLOG_STREAMS_PAGE_URL} target="_blank" rel="noopener noreferrer" style={{ ...ctaStyle(t), marginTop: 16 }}>
+        Missed it? Watch the recordings
+      </a>
       {replay?.recordingUrl ? (
         <div style={{ marginTop: 20, textAlign: 'left' }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: t.SUBTLE, marginBottom: 8 }}>Last replay</div>
@@ -288,7 +292,9 @@ export function BeaconViewer({ signInUrl, isMember }: { signInUrl: string; isMem
   }, [isMember, liveEvent, chat, joinChat]);
 
   return (
-    <main style={{ maxWidth: 1100, margin: '0 auto', padding: '32px 20px', color: t.TITLE }}>
+    // A signed-out visitor also gets the invite cards fixed to the bottom corner (InvitesPopup on the
+    // public plugin page), so the extra bottom padding lets every control here scroll clear of them.
+    <main style={{ maxWidth: 1100, margin: '0 auto', padding: isMember ? '32px 20px' : '32px 20px 260px', color: t.TITLE }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
         {!isMember && <PublicShellBackLink />}
         <Radio size={22} style={{ color: t.ACCENT }} />
