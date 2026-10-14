@@ -50,9 +50,6 @@ does them:
      unset when the host is private-network only. The web client attaches it as
      `Authorization: Bearer <token>` on every Ollama request (`lib/chatbot/ollama.ts`).
 
-Once `OLLAMA_BASE_URL` points at the GPU host, the Render `ctf-ollama` service can be removed from
-`render.yaml` and suspended in Render — it is no longer in the path.
-
 ## RunPod Serverless (pay-per-use GPU)
 
 RunPod Serverless is the chosen GPU host: it bills per second a worker actively

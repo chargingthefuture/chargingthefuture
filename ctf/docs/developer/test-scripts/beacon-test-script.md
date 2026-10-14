@@ -1,6 +1,6 @@
 # Beacon — Manual Test Script
 
-> **Android: not applicable.** This feature is web-only (rule 105 / PR #1742, 2026-07-20). Test on web only: desktop and the mobile-responsive (~390px) layout. Any `android` surface tags below are retained as history but no longer apply.
+> **Android: in scope again (owner decision, 2026-10-06, rule 105).** Test on web (the phone-width layout) and in the Android app; the Android host steps are AN-BN in `android-app-test-script.md`.
 
 > Walk these steps on a real device to confirm the plugin works end to end. This script is
 > generated from the plugin's feature inventory and contracts — those files are the source of
@@ -14,10 +14,10 @@
 | **Plugin** | Beacon (`beacon`) |
 | **Visibility** | Member-facing |
 | **Roles to test** | member, admin |
-| **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
+| **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-beacon-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-10-08 manual update: BN-AND checks the Android member and admin screens against the web |
 
 ## How to run this
 
@@ -60,8 +60,10 @@ recording URL.
 **Steps:**
 1. Open `/apps/beacon` with no live event.
 2. Open the last replay.
-**Expected:** The idle screen shows "No live event right now" plus the last replay. Opening the replay
-plays the recording. On android the HLS player runs only in an EAS dev/production build (not Expo Go).
+**Expected:** The idle screen shows "No live event right now", a "Missed it? Watch the recordings"
+button, and the last replay. The button opens the blog's streams page in a new tab. Signed out on a
+phone, scrolling to the bottom moves the button and the replay clear of the invite cards in the corner.
+Opening the replay plays the recording. On android the HLS player runs only in an EAS dev/production build (not Expo Go).
 Admins see the shared Admin pill in the member shell header, and the admin screen header shows a
 "Member view" pill opening `/apps/beacon`.
 **Result:** web ☐ mobile ☐ — notes:
@@ -114,8 +116,8 @@ by the reader and shows one item per replay, newest first, each with a playable 
 answers "No recorded broadcast has that id." with a 404. A draft or live event never appears in the
 list or the feed.
 5. After the next run of the Actions workflow "Beacon — Keep a copy of each recording" (or run it by
-   hand), open the `beacon-recordings` release in the repository and repeat step 2.
-**Expected (step 5):** the release holds `<eventId>.mp4` for each recorded broadcast, the run summary
+   hand), open the release tagged `beacon-recording-<eventId>` in the repository and repeat step 2.
+**Expected (step 5):** each recorded broadcast has its own release holding `<eventId>.mp4`, the run summary
 lists each one as copied, and the player plays it; the recording address now sends the player to
 the release file.
 **Result:** web ☐ — notes:
@@ -169,18 +171,48 @@ call `DELETE /api/beacon/<id>` directly against a `live` or `ended` event it mus
 there too, with `policy_status = 'allow'`.
 **Result:** web ☐ mobile ☐ — notes:
 
-### BCN-A2 · Go Live (both input paths)
+### BCN-A1c · Event history shows Eastern Time and recovers a missed recording
+**Role:** admin · **Surfaces:** web (admin surface)
+**Steps:**
+1. Open `/admin/beacon` and look at Event history.
+2. Find an `ended` event and read the line under its title.
+3. If it shows `recording ready`, press `Replay`.
+4. Find an `ended` event that showed no recording before, reload the page, and read its line again.
+**Expected:** Every row shows a time in Eastern Time after its status, e.g.
+`ended · Oct 6, 2026, 3:05 PM ET`: when the event went live, or when it was created for a draft.
+Step 3 opens `/api/beacon/replays/<id>/recording` and plays the recording. In step 4, if Stream holds
+a recording for that event, the row now reads `recording ready`, a `Replay` button appears, and the
+replay is posted to the Commons once (a second reload posts nothing more). If Stream holds none, the
+row reads `no recording found`.
+5. On that row, open `Log`, then press `Copy log` and paste it into a note.
+**Expected (step 5):** The Log's first line starts `Recording:` and says what Stream answered: no
+recording for the call, recordings with no file yet, or the error the lookup hit. Below it, each
+logged broadcast step with its time in ET (went live, the feed and recording asked to start, Stream
+started / stopped / failed the recording, recording file ready, ended); a failed step carries its
+reason after a dash. An event broadcast before this change may show `No broadcast steps were logged
+for this event.` The pasted text starts with the event title and matches what the Log shows.
+**Result:** web ☐ mobile ☐ — notes:
+
+### BCN-A2 · Go Live (every input path)
 **Role:** admin · **Surfaces:** web (admin surface)
 **Steps:**
 1. Press Go Live. The RTMP ingest URL + stream key do not exist before this press — they are minted
    by it, so there is nothing to copy until Go Live has succeeded.
-2. For a phone demo: copy the per-event RTMP ingest URL + stream key and push the phone screen from a
+2. On a phone or a computer: press "Use camera and microphone", allow both when the browser asks,
+   and talk for a minute. Press "Flip camera" once.
+3. For a desktop demo: use "Share screen" to capture a desktop screen/window in the browser. On a
+   phone the button is not shown.
+4. To show a phone's own screen: copy the per-event RTMP ingest URL + stream key and push from a
    mobile broadcaster app. Setup detail is in `ctf/docs/developer/BEACON_PHONE_STREAMING_GUIDE.md`.
-3. For a desktop demo: use "Share screen" to capture a desktop screen/window in the browser.
 **Expected:** Go Live flips the event out of backstage to `live` and auto-posts the "live now" notice
-to the Commons. The host stage mounts after go-live; HLS + recording start once a host is actually
-publishing — either the in-browser screen-share posting to `start-broadcast`, or Stream's
-`call.session_participant_joined` webhook when a phone's RTMP feed joins the call. Only the host can
+to the Commons. The admin page does not join the call until a button in step 2 or 3 is pressed: the
+event's Log shows no "Broadcaster joined" line before then. In step 2 a preview of the camera
+appears, the line under the buttons reads "Your camera and microphone are live to the broadcast.",
+the flip switches between front and back cameras, and a signed-out viewer on another device sees and
+hears you (the player starts muted; its speaker button turns sound on). HLS + recording start once a
+host is actually publishing — the admin page posting to `start-broadcast`, or Stream's
+`call.session_participant_joined` / `ingress.started` webhook when a phone's RTMP feed joins the
+call. After the event ends, the replay has picture and sound. Only the host can
 publish — viewers never can. On error, the underlying Stream message is surfaced, not a generic text.
 Opening the call must succeed on the first press: Beacon asks Stream to record at 720p, and a
 missing recording size is what previously made every Go Live come back with `(400)` and
@@ -222,10 +254,24 @@ during it.
 Stream's `call.session_participant_joined` webhook fires when the phone's RTMP feed joins, the route
 starts HLS and the recording for that `live` event, and `GET /api/beacon/current` begins returning an
 `hlsPlaybackUrl`. After the event ends, `call.recording_ready` arrives and the replay is posted to the
-Commons. An empty player after a minute means egress never started — check that the webhook is
-reaching the app and that `call.session_participant_joined` is enabled in the Stream dashboard, which
-is the setting this case is really testing. Before 2026-08-10 this case failed by design: only an
-in-browser screen-share started egress.
+Commons. If the webhook does not arrive, the live page starts them instead: within about 15 seconds
+of the phone connecting, while the admin page or any viewer page is open. The event's Log in Event
+history then shows `Live page asked to start the feed and recording` (with Stream's reason if it
+failed) instead of `Broadcaster joined; …`. An empty player after a minute means neither worked;
+open the event's Log for the reason. Before 2026-08-10 this case failed by design: only an in-browser
+screen-share started egress.
+**Result:** web ☐ mobile ☐ — notes:
+
+### BCN-A2c2 · A phone broadcast in demo mode still records
+**Role:** admin with demo mode on · **Surfaces:** web (admin surface)
+**Steps:**
+1. With demo mode on for your account, repeat BCN-A2c steps 1, 2 and 4.
+2. Wait a minute, reload `/admin/beacon`, and open the event's Log in Event history.
+**Expected:** The Log shows `Phone feed connected; feed and recording asked to start` or
+`Broadcaster joined; …` with `ok (staging Stream app)`, then `Stream started recording`, and after the
+end `Recording file ready`; the row reads `recording ready`. A `Stream message refused` line means a
+delivery's signature matched neither app's secret: the secret saved for that app differs from the
+one in the Stream dashboard.
 **Result:** web ☐ mobile ☐ — notes:
 
 ### BCN-A2d · A refused start-broadcast is shown on the host stage
@@ -239,6 +285,23 @@ forced (for example a Stream app whose recording or HLS is turned off).
 not start:" followed by the route's reason, in red, instead of "Your screen is live to the
 broadcast." Stopping and sharing again retries. When it succeeds the line reads "Your screen is live
 to the broadcast." as before.
+**Result:** web ☐ mobile ☐ — notes:
+
+### BCN-A2e · A screen-share broadcast produces a recording, and the event chat accepts messages
+**Role:** admin · **Surfaces:** web (admin surface, desktop)
+**Precondition:** a draft event, and the "Check — Stream Chat Settings" workflow last ran green.
+**Steps:**
+1. Press Go Live, then Share screen and pick a window. Leave it live for at least a minute.
+2. Type a message in the event chat and send it.
+3. Press End. Wait a few minutes, then reload the admin screen and read the event's line in Event
+   history.
+**Expected:** Step 1: the line next to Stop sharing reads "Your screen is live to the broadcast." Step
+2: the message posts. It must not show "Message Failed · Unauthorized" or "pending messages not
+enabled for this app"; that text means "Mark Messages Pending" is on again for the `livestream`
+channel type, and the workflow with fix ticked turns it off. Step 3: the line reads `recording ready`
+with a Replay button, and the replay is posted to the Commons once. `no recording found` minutes after
+the end means recording never started. Until 2026-10-06 every event ended that way, because
+recording was requested with a second go-live instead of Stream's start-recording request.
 **Result:** web ☐ mobile ☐ — notes:
 
 ### BCN-A3 · Moderate the chat
@@ -274,9 +337,10 @@ to `ended`. When the recording is ready, the replay auto-posts to the Commons (i
 For BCN-1, BCN-2, and BCN-3, the android viewer and the mobile-responsive web layout must behave the
 same: the same three states (live HLS player + "live and public" indicator, replay, idle), the same
 member-chat gate (signed-in posts; anonymous sees a sign-in-to-chat prompt and still watches), and the
-same 15-second poll of the current event. Admin broadcasting is **web-only** — there is no android
-admin surface by design (the admin pushes the phone screen through a third-party RTMP app). Note any
-viewer drift here rather than filing separate bugs.
+same 15-second poll of the current event. Admin broadcasting is on both: the web admin page and the
+Android app's **Go live** card (camera and microphone, flip camera, and on Android only, sharing the
+phone's screen). The Android host steps are AN-BN in `android-app-test-script.md`. Note any drift
+here rather than filing separate bugs.
 
 **Result:** matches ☐ — drift notes:
 
@@ -302,6 +366,19 @@ one of these, it is already tracked, not a new bug:
 - Whether anonymous viewers see the live chat read-only or just a "sign in to chat" panel — leaning
   read-only so the room feels alive.
 - Replay hosting links to Stream's recording URL rather than re-hosting, for now.
-- Android viewer parity shipped; android admin broadcasting is intentionally out of scope.
+- Android carries the member page and, for admins, Beacon Admin (create, go live, end, moderate, history), copied from the web (BN-AND).
+
+### BN-AND · Android Beacon matches the web at phone width
+**Role:** member, then admin · **Surfaces:** android, compared with web (~390px)
+**Steps:**
+1. Open Beacon in the Android app beside the web page: the header shows the Radio icon, and below
+   it the title, "Watch with just a link" line, idle or live view and **Missed it? Watch the
+   recordings** match the web in wording and colors, in both themes.
+2. As an admin, tap **Admin** in the header: Beacon Admin opens with the refresh control and
+   **Member view**. Create a draft, open it, and check **RTMP URL** and **Stream key** each copy.
+3. Tap the refresh control: the screen reloads. Press back: Beacon returns; back again: Apps.
+4. As a member who is not an admin, confirm no **Admin** button shows.
+**Expected:** Every part of the web member and admin pages is present, and nothing the web lacks.
+**Result:** android ☐ — notes:
 
 > _Terminology (2026-07-20): the source inventory's user-facing section is now titled **User Features** (was "Target User Features"), and its admin section **Admin Features**. Heading rename only — no test steps changed._
