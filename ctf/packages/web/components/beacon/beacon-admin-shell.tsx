@@ -3,8 +3,9 @@
 // Beacon admin broadcaster + controls. Dark admin design system (rule 131). One column, mobile
 // responsive. The admin can:
 //   - create an event (title + description)
-//   - go live: see the per-event RTMP url/key (for a phone broadcaster app) and a "Share screen"
-//     button (desktop in-browser screen-share), both feeding the same livestream call
+//   - go live: broadcast from this browser with the camera and microphone (phone or computer) or a
+//     shared screen, or push from a broadcaster app to the per-event RTMP url/key; all feed the same
+//     livestream call
 //   - read the live chat and moderate (mute / ban / slow-mode)
 //   - end the event (stops the broadcast and billing)
 //   - see event history with recordings
@@ -20,6 +21,8 @@ import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-but
 import { StreamChatPanel } from '@/components/shared/stream-chat-panel';
 import { BeaconHostStage, type BeaconHostCredentials } from './beacon-host-stage';
 import { getBeaconTokens, type BeaconTokens } from './beacon-shared';
+import { BeaconEventLog, type BeaconEventLogEntry } from './beacon-event-log';
+import { useBeaconLivePoll } from './use-beacon-live-poll';
 import { reportError } from 'lib/observability/report';
 
 type BeaconEvent = {
@@ -33,6 +36,9 @@ type BeaconEvent = {
   commonsLivePostId: string | null;
   commonsRecordingPostId: string | null;
   createdAtIso: string;
+  // Admin list only: what Stream said when asked for a missing recording, and the event's log.
+  recordingLookup?: string;
+  log?: BeaconEventLogEntry[];
 };
 
 type IngestResponse = {
@@ -114,18 +120,18 @@ function BroadcastSection({
         <button type="button" onClick={() => onEndEvent(activeEvent.id)} style={{ ...primaryButtonStyle(t), background: 'rgba(239,68,68,0.14)', border: '1px solid rgba(239,68,68,0.35)', color: '#F87171' }}>End broadcast</button>
       )}
 
-      {ingest ? (
+      {host ? (
         <div style={{ marginTop: 18 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: t.SUBTLE, marginBottom: 8 }}>Phone demo — push to this RTMP target from a broadcaster app</div>
-          <CopyRow label="RTMP URL" value={ingest.rtmpIngestUrl} copied={copied === 'RTMP URL'} onCopy={() => onCopy('RTMP URL', ingest.rtmpIngestUrl)} />
-          <CopyRow label="Stream key" value={ingest.streamKey} copied={copied === 'Stream key'} onCopy={() => onCopy('Stream key', ingest.streamKey)} masked />
+          <div style={{ fontSize: 13, fontWeight: 700, color: t.SUBTLE, marginBottom: 8 }}>Broadcast from this browser — camera and microphone, or a computer screen</div>
+          <BeaconHostStage credentials={host} eventId={activeEvent.id} />
         </div>
       ) : null}
 
-      {host ? (
+      {ingest ? (
         <div style={{ marginTop: 18 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: t.SUBTLE, marginBottom: 8 }}>Computer demo — share a screen or window from this browser</div>
-          <BeaconHostStage credentials={host} eventId={activeEvent.id} />
+          <div style={{ fontSize: 13, fontWeight: 700, color: t.SUBTLE, marginBottom: 8 }}>Or use a broadcaster app — push to this RTMP target</div>
+          <CopyRow label="RTMP URL" value={ingest.rtmpIngestUrl} copied={copied === 'RTMP URL'} onCopy={() => onCopy('RTMP URL', ingest.rtmpIngestUrl)} />
+          <CopyRow label="Stream key" value={ingest.streamKey} copied={copied === 'Stream key'} onCopy={() => onCopy('Stream key', ingest.streamKey)} masked />
         </div>
       ) : null}
 
@@ -157,6 +163,36 @@ function BroadcastSection({
   );
 }
 
+// When the event happened, in Eastern Time: when it went live for a broadcast event, when it was
+// created for a draft. "Oct 6, 2026, 3:05 PM ET".
+const EASTERN_TIME = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'America/New_York',
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric',
+  hour: 'numeric',
+  minute: '2-digit',
+});
+
+function formatEventTimeEt(event: BeaconEvent): string | null {
+  const iso = event.startedAtIso ?? event.createdAtIso;
+  const date = iso ? new Date(iso) : null;
+  if (!date || Number.isNaN(date.getTime())) {
+    return null;
+  }
+  return `${EASTERN_TIME.format(date)} ET`;
+}
+
+// The line under an event's title: status, time in ET, and whether its recording is ready.
+function eventStatusLine(event: BeaconEvent): string {
+  const time = formatEventTimeEt(event);
+  const parts: string[] = [event.status];
+  if (time) parts.push(time);
+  if (event.recordingUrl) parts.push('recording ready');
+  else if (event.status === 'ended') parts.push('no recording found');
+  return parts.join(' · ');
+}
+
 // One event row in the history list, with Replay / Open / two-step Delete controls.
 function EventHistoryRow({
   event,
@@ -181,14 +217,12 @@ function EventHistoryRow({
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
       <div style={{ minWidth: 0 }}>
         <div style={{ fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{event.title}</div>
-        <div style={{ fontSize: 12, color: t.SUBTLE }}>
-          {event.status}
-          {event.recordingUrl ? ' · recording ready' : ''}
-        </div>
+        <div style={{ fontSize: 12, color: t.SUBTLE }}>{eventStatusLine(event)}</div>
+        <BeaconEventLog title={event.title} recordingLookup={event.recordingLookup} log={event.log ?? []} t={t} />
       </div>
       <div style={{ display: 'flex', gap: 8 }}>
         {event.recordingUrl ? (
-          <a href={event.recordingUrl} target="_blank" rel="noreferrer" style={chipButtonStyle(t)}>Replay</a>
+          <a href={`/api/beacon/replays/${event.id}/recording`} target="_blank" rel="noreferrer" style={chipButtonStyle(t)}>Replay</a>
         ) : null}
         {event.status !== 'ended' ? (
           <button type="button" onClick={() => onOpen(event.id)} style={chipButtonStyle(t)}>Open</button>
@@ -328,6 +362,7 @@ function useBeaconAdmin() {
   }, [loadEvents]);
 
   const activeEvent = events.find((event) => event.id === activeEventId) ?? null;
+  useBeaconLivePoll(activeEvent?.status === 'live' ? activeEvent.id : null);
 
   // When an event is selected (Open in the history list, or Create draft), scroll the Broadcast
   // section into view. On mobile the Broadcast section renders above the Event history, so without

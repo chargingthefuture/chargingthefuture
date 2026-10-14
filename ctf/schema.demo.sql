@@ -654,12 +654,15 @@ CREATE TABLE IF NOT EXISTS skills_hunt_submissions (
   full_name TEXT NOT NULL,
   bio TEXT NOT NULL,
   quora_profile_url TEXT NOT NULL,
-  -- Canonical matching key, not free text: exactly what canonicalizeQuoraUrl
-  -- (packages/web/lib/shared/quora-url.ts) returns, which is https://www.quora.com + the lowercased
-  -- path with trailing slashes removed. The per-round "first match" bonus and every per-person read
-  -- compare this column, and Directory's takedown list keys on the same form, so a row written in
-  -- any other spelling makes one person look like two. Rows stored before 2026-09-18 were re-keyed by
-  -- ctf/db/migrations/post/0027_canonical_quora_urls_directory_skills_hunt.sql.
+  -- Canonical matching key, not free text: exactly what canonicalizeNominationUrl
+  -- (packages/web/lib/skills-hunt/nomination-url.ts) returns. It takes the link out of the pasted
+  -- text, cuts a profile tab such as /activity back to /profile/<name>, then applies
+  -- canonicalizeQuoraUrl (packages/web/lib/shared/quora-url.ts): https://www.quora.com + the
+  -- lowercased path with trailing slashes removed. The per-round "first match" bonus and every
+  -- per-person read compare this column, and Directory's takedown list keys on the same form, so a
+  -- row written in any other spelling makes one person look like two. Rows stored before 2026-09-18
+  -- were re-keyed by ctf/db/migrations/post/0027_canonical_quora_urls_directory_skills_hunt.sql, and
+  -- rows stored with a profile tab by post/0054_skills_hunt_quora_profile_tab_urls.sql.
   quora_profile_url_normalized TEXT NOT NULL,
   -- Nominee location. `country` is required at submit time (enforced in validateSubmissionInput);
   -- `state`/`city` are optional. Columns are nullable so legacy rows and the guarded ALTER are safe;
@@ -668,6 +671,11 @@ CREATE TABLE IF NOT EXISTS skills_hunt_submissions (
   country TEXT NULL,
   state TEXT NULL,
   city TEXT NULL,
+  -- The nominee's job title (skills_taxonomy_job_titles.id), picked from the Scout form's job title
+  -- list; optional. On accept it and its sector carry into the generated directory_profiles row. The
+  -- submit insert stores it only when it names an active job title, otherwise null. No hard FK,
+  -- mirroring directory_profiles.job_title_id (the taxonomy table is created later in this file).
+  job_title_id UUID NULL,
   skills JSONB NOT NULL DEFAULT '[]'::jsonb,
   proposed_skills JSONB NOT NULL DEFAULT '[]'::jsonb,
   signature_hash TEXT NOT NULL,
@@ -2292,29 +2300,6 @@ CREATE TABLE IF NOT EXISTS workforce_recruited_sync_cursor (
   singleton_key BOOLEAN PRIMARY KEY DEFAULT TRUE,
   last_cursor_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
--- Service-scoped deletion event log for DELETE /api/workforce/profile (deletion contract section 8).
-CREATE TABLE IF NOT EXISTS workforce_deletion_events (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id TEXT NOT NULL,
-  scope TEXT NOT NULL,
-  plugin_id TEXT NOT NULL,
-  requested_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  processed_at TIMESTAMPTZ,
-  result TEXT NOT NULL,
-  request_id TEXT,
-  trace_id TEXT,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-ALTER TABLE IF EXISTS workforce_deletion_events ADD COLUMN IF NOT EXISTS id UUID;
-ALTER TABLE IF EXISTS workforce_deletion_events ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS workforce_deletion_events ADD COLUMN IF NOT EXISTS scope TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS workforce_deletion_events ADD COLUMN IF NOT EXISTS plugin_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS workforce_deletion_events ADD COLUMN IF NOT EXISTS requested_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE IF EXISTS workforce_deletion_events ADD COLUMN IF NOT EXISTS processed_at TIMESTAMPTZ;
-ALTER TABLE IF EXISTS workforce_deletion_events ADD COLUMN IF NOT EXISTS result TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS workforce_deletion_events ADD COLUMN IF NOT EXISTS request_id TEXT;
-ALTER TABLE IF EXISTS workforce_deletion_events ADD COLUMN IF NOT EXISTS trace_id TEXT;
-ALTER TABLE IF EXISTS workforce_deletion_events ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
 -- === ServiceCredits tables ===
 CREATE TABLE IF NOT EXISTS service_credits_wallets (
@@ -5753,6 +5738,7 @@ ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS url_valid
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS edit_history JSONB NOT NULL DEFAULT '[]'::jsonb;
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS edited_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS job_title_id UUID;
 DO $skills_hunt_submissions_url_validation_check$
 BEGIN
   IF NOT EXISTS (
@@ -10872,6 +10858,18 @@ BEGIN
 END $$;
 
 
+-- ── post migration: 0052_drop_workforce_deletion_events.sql ──
+-- post/0052: Drop workforce_deletion_events.
+--
+-- The table was the event log of the in-plugin DELETE /api/workforce/profile, which was retired on
+-- 2026-10-05 because no screen called it. Its writer went with it, and nothing reads the table: the
+-- central deletion orchestrator records every Workforce service delete and full-account delete in
+-- account_deletion_events. The owner decided the table and the rows already in it, past deletion
+-- records included, are not kept. No other table references it. Guarded with IF EXISTS so it no-ops
+-- on a database that never had it, and re-runs do nothing.
+DROP TABLE IF EXISTS workforce_deletion_events;
+
+
 -- ── post migration: 0053_click_log_drop_metadata_hash_dedupe.sql ──
 -- post/0053: Let a member log a second ClickLog incident with the same note and location.
 --
@@ -10889,4 +10887,50 @@ END $$;
 --
 -- Safe to re-run: IF EXISTS makes every run after the first a no-op.
 ALTER TABLE IF EXISTS click_log_incidents DROP COLUMN IF EXISTS metadata_hash;
+
+
+-- ── post migration: 0054_skills_hunt_quora_profile_tab_urls.sql ──
+-- post/0054: Cut SkillsHunt nomination links that point at a profile tab back to the profile.
+--
+-- Why (owner report, 2026-10-13): a batch of nominations was pasted with a profile tab on the end of
+-- the link, as https://www.quora.com/profile/Swiftness-8/activity rather than
+-- https://www.quora.com/profile/Swiftness-8. The canonical form kept any quora.com path, so the tab
+-- was stored as part of the nomination's identity. That made the same person a different nomination
+-- from their plain profile link, so the one-nomination-per-person guard could not see a duplicate,
+-- and the link copied onto a Directory profile on acceptance opened the activity tab instead of the
+-- profile. lib/skills-hunt/nomination-url.ts now drops the tab before canonicalizing; this rewrites
+-- the rows saved before it did.
+--
+-- What it does: for every SkillsHunt nomination whose stored link is
+-- https://www.quora.com/profile/<name>/<anything>, keeps https://www.quora.com/profile/<name>. Then
+-- the same for a community-generated Directory profile whose link is exactly one of those nomination
+-- links, since accepting a nomination copies its link onto the profile it creates. A Directory link a
+-- member set themselves is left alone: Directory keeps any quora.com path on purpose.
+--
+-- Nothing else changes: no nomination is accepted, rejected or rescored, and no points move.
+-- signature_hash is left as it is; it is only read when a new nomination is inserted, as with 0027.
+--
+-- Safe to re-run: a rewritten link no longer has a tab, so a second run matches nothing. The Directory
+-- statement runs first because it finds its rows through the nomination links before they change.
+BEGIN;
+
+UPDATE directory_profiles AS dp
+   SET profile_url = regexp_replace(dp.profile_url, '^(https://www\.quora\.com/profile/[^/]+)/.*$', '\1')
+ WHERE dp.source = 'community-generated'
+   AND dp.profile_url ~ '^https://www\.quora\.com/profile/[^/]+/.+$'
+   AND EXISTS (
+     SELECT 1
+       FROM skills_hunt_submissions AS s
+      WHERE s.quora_profile_url = dp.profile_url
+   );
+
+UPDATE skills_hunt_submissions
+   SET quora_profile_url = regexp_replace(quora_profile_url, '^(https://www\.quora\.com/profile/[^/]+)/.*$', '\1')
+ WHERE quora_profile_url ~ '^https://www\.quora\.com/profile/[^/]+/.+$';
+
+UPDATE skills_hunt_submissions
+   SET quora_profile_url_normalized = regexp_replace(quora_profile_url_normalized, '^(https://www\.quora\.com/profile/[^/]+)/.*$', '\1')
+ WHERE quora_profile_url_normalized ~ '^https://www\.quora\.com/profile/[^/]+/.+$';
+
+COMMIT;
 
