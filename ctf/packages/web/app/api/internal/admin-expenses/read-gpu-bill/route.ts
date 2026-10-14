@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { readGpuBillConfig, readGpuBillNow } from 'lib/admin-expenses/gpu-bill';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
+import { bearerMatches } from 'lib/auth/internal-secret';
 
 // Cron-only: the daily read of the RunPod drafting bill (.github/workflows/runpod-gpu-bill-read.yml).
 // Guarded by CRON_SECRET (Bearer), like the other internal schedule routes. Safe to run any number of
@@ -11,7 +12,7 @@ function isAuthorized(request: Request): boolean {
   if (!cronSecret || cronSecret.trim().length === 0) {
     return false;
   }
-  return request.headers.get('authorization') === `Bearer ${cronSecret}`;
+  return bearerMatches(request, cronSecret);
 }
 
 export async function POST(request: Request) {

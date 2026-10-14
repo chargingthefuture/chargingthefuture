@@ -228,6 +228,14 @@ There is no `seedHub.mjs`; the Commons channel's data layer is seeded by the Fee
   and answers 403 without the `x-ctf-csrf: 1` header or with a foreign origin. The web client
   already sent the header; its comment, which said the route checked Origin, is corrected. No
   mobile client calls this route.
+- 2026-10-14: **The poll now refreshes messages already on screen (code-review #2632).** The web
+  stream's merge (`mergeMessages` in `components/community-shell/use-home-chat.ts`) only ever added:
+  a post already on screen kept the reactions, reply count, text and picture it had when it first
+  loaded, and a post its author deleted or a moderator hid elsewhere stayed until a reload. The merge
+  now replaces a loaded message with the incoming copy, and each history read drops loaded peer posts
+  that fall inside the returned page's time span, were sent before the read started, and are no
+  longer in it. Web only; no route or contract change.
+
 - 2026-10-06: **The admin picture button is a camera icon in the icon row (owner directive).** The
   "Share a picture (admins)" button sat on its own row under the chips. It is now a camera chip after
   the gift in the same row (`CommonsImageShareButton`), shown to admins only and hidden while

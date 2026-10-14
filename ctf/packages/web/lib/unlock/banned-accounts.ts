@@ -64,6 +64,17 @@ export async function addUnlockBannedAccount(input: {
   );
 }
 
+// The stored reason for an account's ban, or null when it is not on the list. A review decision reads
+// it so it only ever lifts or overwrites the bans it owns (spam, duplicate), never one placed from the
+// sign-up list.
+export async function getUnlockBannedReason(userId: string): Promise<string | null> {
+  const result = await queryDb<{ reason: string }>(
+    `SELECT reason FROM unlock_banned_accounts WHERE user_id = $1 LIMIT 1`,
+    [userId],
+  );
+  return result.rows[0]?.reason ?? null;
+}
+
 // Lift a ban. Idempotent: removing an account that was never banned is a no-op.
 export async function removeUnlockBannedAccount(userId: string): Promise<void> {
   await queryDb(`DELETE FROM unlock_banned_accounts WHERE user_id = $1`, [userId]);
