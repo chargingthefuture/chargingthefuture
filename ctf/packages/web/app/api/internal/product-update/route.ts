@@ -3,6 +3,7 @@ import { createAnnouncementDraft, publishAnnouncement } from 'lib/feed/repositor
 import { logFeedAudit } from 'lib/feed/audit';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
+import { secretsMatch } from 'lib/auth/internal-secret';
 
 const CI_ACTOR_ID = 'ci-product-update';
 
@@ -15,7 +16,7 @@ export async function POST(request: NextRequest) {
   }
 
   const auth = request.headers.get('authorization');
-  if (auth !== `Bearer ${secret}`) {
+  if (!secretsMatch(auth, `Bearer ${secret}`)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
