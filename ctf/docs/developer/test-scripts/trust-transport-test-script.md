@@ -67,6 +67,12 @@ web ☐
 
 **Expected:** The request is created and appears in your request list. The settlement badge shows "Free" (never a raw currency code or a fiat equivalent). No "all drivers background-checked" claim appears anywhere, and no per-request "🛡️ Background checked / ✅ ID verified" badge is shown on the Tracking list. The booking subtitle refers to drivers as community members, not vetted professionals. The post-submit confirmation says the request is now visible to community members who can offer to help — not that it is "being matched with nearby drivers" (there is no automated matching).
 
+**Retry does not duplicate (added 2026-10-14):** in the browser's network tab, the `POST /api/trust-transport/requests` body carries an `idempotencyKey`. Resending that exact request (copy as fetch, run it again) returns the same request id, and only one open request appears. A `POST` with no `idempotencyKey` is refused with 400 "idempotencyKey is required.".
+
+**Provider presence after the trip (added 2026-10-14):** once a trip is completed or canceled, the driver's member-presence entry "Offering rides" for that offer is gone.
+
+**Failed settlement is recorded (added 2026-10-14):** complete a ServiceCredits trip whose requester has less balance than the price. The trip still reads completed, and the admin audit trail has a `trust-transport.trip.settlement` row with status `deny` and reason `settlement_failed`.
+
 Result: web ☐
 
 ---
@@ -536,6 +542,8 @@ Result: web ☐
 5. Now click/tap **Restore** for the same user ID and confirm.
 
 **Expected:** Restrict succeeds and emits a restriction (the platform-wide `account_restrictions` signal is written). Restore succeeds. Both actions require explicit confirmation before sending. The restriction applies platform-wide (not just to TrustTransport).
+
+**Restricted provider's pending offer (added 2026-10-14):** before restoring, have the restricted member's earlier pending offer on another member's open request. Signed in as that requester, accept it. The accept is refused with "This offer is no longer available." (HTTP 409), no trip is created, and nothing on screen says the provider is restricted. After **Restore**, the same offer can be accepted.
 
 Result: web ☐
 
