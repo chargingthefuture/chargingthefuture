@@ -830,7 +830,7 @@ Result: web ☐
 3. Read the push on the provider's lock screen, then tap it.
 4. Turn discreet pings off in the provider's notification settings and ring again.
 
-**Expected:** Step 3: the push reads "Charging The Future" / "You have a new update." and names neither the caller nor Foundation; tapping it opens `/apps/foundation`, where the incoming-call overlay shows the caller's name with answer and decline. Step 4: the push reads "Incoming call" / "<caller> is calling you on Foundation". If the settings cannot be read, the push stays discreet.
+**Expected:** Step 3: the push reads "Skills Economy" / "You have a new update." and names neither the caller nor Foundation; tapping it opens `/apps/foundation`, where the incoming-call overlay shows the caller's name with answer and decline. Step 4: the push reads "Incoming call" / "<caller> is calling you on Foundation". If the settings cannot be read, the push stays discreet.
 
 Result: web ☐
 
