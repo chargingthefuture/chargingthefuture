@@ -20,7 +20,6 @@ import type {
   LighthousePropertyInput,
   LighthouseWantedPosting,
 } from './types';
-import { createLighthouseParticipantToken, ensureLighthouseMatchChannel } from './stream';
 import { isAllowedMatchTransition } from './match-transitions';
 import { clearMemberPresence, recordMemberPresence } from 'lib/presence/live';
 
@@ -728,6 +727,11 @@ export async function listProperties(input: {
   };
 }
 
+// The host and an admin read any listing, hidden ones included. Anyone else reads it on the same
+// terms as browse: an active listing whose host is not blocked in either direction. A seeker who
+// already has a match on the listing also keeps reading it after the host hides it (a filled place is
+// usually hidden), unless a block stands between them. Anything else answers as not found, so hiding a
+// listing for moderation also stops it being read by id.
 export async function getPropertyById(
   propertyId: string,
   viewer: { userId: string; isAdmin: boolean },
@@ -754,6 +758,22 @@ export async function getPropertyById(
         updated_at
       FROM lighthouse_properties
       WHERE id = $1::uuid
+        AND (
+          $3::boolean = TRUE
+          OR host_user_id = $2::text
+          OR (
+            (
+              is_active = TRUE
+              OR EXISTS (
+                SELECT 1
+                FROM lighthouse_matches m
+                WHERE m.property_id = lighthouse_properties.id
+                  AND m.seeker_user_id = $2::text
+              )
+            )
+            ${hideBlockedHostsSql('$2')}
+          )
+        )
       LIMIT 1
     `,
     [propertyId, viewer.userId, viewer.isAdmin],
@@ -924,11 +944,27 @@ export async function createProperty(actorUserId: string, input: LighthousePrope
   return property;
 }
 
+// photos and is_active as the update writes them: what the caller sent, or the stored value when the
+// body left the field out.
+function keepStoredWhenOmitted(
+  input: LighthousePropertyInput,
+  current: { is_active: boolean; photos: unknown },
+): { photosJson: string; isActive: boolean } {
+  const photos = input.photos === undefined ? current.photos : input.photos;
+  return {
+    photosJson: JSON.stringify(normalizeStringArray(parseJsonArray(photos))),
+    isActive: typeof input.isActive === 'boolean' ? input.isActive : current.is_active,
+  };
+}
+
 export async function updateProperty(actorUserId: string, propertyId: string, input: LighthousePropertyInput, isAdmin: boolean): Promise<LighthouseProperty> {
   const property = await withDbTransaction(async (client: PoolClient) => {
-    const existing = await client.query(
+    // is_active and photos are read so a field the caller left out keeps its stored value. The host's
+    // edit form sends neither: before this, every host edit wrote is_active = TRUE and photos = [], so
+    // fixing a typo put a listing an admin had hidden back into browse and cleared its photos.
+    const existing = await client.query<{ host_user_id: string; is_active: boolean; photos: unknown }>(
       `
-        SELECT host_user_id
+        SELECT host_user_id, is_active, photos
         FROM lighthouse_properties
         WHERE id = $1::uuid
         LIMIT 1
@@ -940,9 +976,11 @@ export async function updateProperty(actorUserId: string, propertyId: string, in
       throw new Error('property_not_found');
     }
 
-    if (!isAdmin && existing.rows[0].host_user_id !== actorUserId) {
+    const current = existing.rows[0];
+    if (!isAdmin && current.host_user_id !== actorUserId) {
       throw new Error('not_owner');
     }
+    const { photosJson, isActive } = keepStoredWhenOmitted(input, current);
 
     const updated = await client.query(
       `
@@ -1008,9 +1046,9 @@ export async function updateProperty(actorUserId: string, propertyId: string, in
         normalizeNullableText(input.availableFromIso),
         JSON.stringify(normalizeStringArray(parseJsonArray(input.amenities))),
         JSON.stringify(normalizeStringArray(parseJsonArray(input.houseRules))),
-        JSON.stringify(normalizeStringArray(parseJsonArray(input.photos))),
+        photosJson,
         normalizeNullableText(input.airbnbProfileUrl),
-        typeof input.isActive === 'boolean' ? input.isActive : true,
+        isActive,
         actorUserId,
         input.rentCurrency ?? null,
       ],
@@ -1086,28 +1124,23 @@ export async function deleteProperty(actorUserId: string, propertyId: string, is
   return result.deleted;
 }
 
-// Flatten a participant-token result into the three Stream fields returned to the caller, defaulting
-// each to null when no token was issued.
-function buildStreamTokenFields(
-  token: Awaited<ReturnType<typeof createLighthouseParticipantToken>>,
-): { streamApiKey: string | null; streamUserId: string | null; streamToken: string | null } {
-  return {
-    streamApiKey: token?.streamApiKey ?? null,
-    streamUserId: token?.streamUserId ?? null,
-    streamToken: token?.streamToken ?? null,
-  };
-}
-
 export async function createMatchRequest(input: {
   actorUserId: string;
-  actorDisplayName: string;
   propertyId: string;
   message?: string | null;
   desiredMoveInDateIso?: string | null;
   idempotencyKey: string;
-}): Promise<{ match: LighthouseMatch; streamApiKey: string | null; streamUserId: string | null; streamToken: string | null }> {
+}): Promise<{ match: LighthouseMatch }> {
   return withDbTransaction(async (client: PoolClient) => {
     void input.idempotencyKey;
+
+    // One open request per seeker and listing. The duplicate check below is a read, so two requests
+    // sent together (two tabs, or a retry after a slow answer) could both pass it; this lock makes the
+    // second wait for the first to commit and then see its row. Released when the transaction ends.
+    await client.query(`SELECT pg_advisory_xact_lock(hashtext('lighthouse_match_request:' || $1 || ':' || $2))`, [
+      input.propertyId,
+      input.actorUserId,
+    ]);
 
     // A member can be both a host and a seeker (owner decision). Requesting a stay only needs an
     // active LightHouse profile — it is NOT gated on profile_type = 'seeker', so a member who has
@@ -1195,22 +1228,12 @@ export async function createMatchRequest(input: {
       throw new Error('duplicate_match');
     }
 
-    // Generate the match id up front so the Stream channel can be provisioned before the row is
-    // inserted. This avoids the old two-step INSERT('pending') + UPDATE pattern, which could leave a
-    // committed row holding the literal placeholder 'pending' if the UPDATE failed, and could attempt
-    // a duplicate channel creation on a transaction retry. The channel id is now written in the single
-    // INSERT, so a committed match always carries its real channel id.
+    // No chat yet. A request is not consent from the host to be contacted, so the Stream channel, its
+    // members and the seeker's token are created only by the chat route, which answers for an accepted
+    // match alone. The row records the channel id that route will create (the same id
+    // ensureLighthouseMatchChannel uses), so nothing has to be written back later.
     const matchId = randomUUID();
-    const fallbackChannelId = `lighthouse-match-${matchId}`;
-    const seekerDisplayName = normalizeText(input.actorDisplayName || input.actorUserId);
-    const ensuredChannelId = await ensureLighthouseMatchChannel({
-      matchId,
-      seekerUserId: input.actorUserId,
-      seekerDisplayName,
-      hostUserId,
-      hostDisplayName: hostUserId,
-    });
-    const streamChannelId = ensuredChannelId ?? fallbackChannelId;
+    const streamChannelId = `lighthouse-match-${matchId}`;
 
     const created = await client.query(
       `
@@ -1242,11 +1265,8 @@ export async function createMatchRequest(input: {
       ],
     );
 
-    const token = await createLighthouseParticipantToken(input.actorUserId, seekerDisplayName);
-
     return {
       match: mapMatch(created.rows[0]),
-      ...buildStreamTokenFields(token),
     };
   });
 }

@@ -51,6 +51,9 @@ Access-gating plugin — these are the can't-ship-broken checks. Admin / reviewe
    and shows its new status; the decision did not silently revert. → web ☐
 4. **Denied action is readable.** Trigger a denied action (e.g. a non-admin review attempt). The
    message is plain-language, not a raw error code. → web ☐
+5. **Member submission needs the CSRF header.** `POST /api/unlock/submission` without
+   `x-ctf-csrf: 1` is refused with 403 "Missing CSRF confirmation header."; submitting from the
+   Unlock screen (web and Android) and the Commons verify banner still works. → web ☐ android ☐
 
 ---
 
@@ -358,6 +361,10 @@ own submission — nothing about this row is approved by adding it. Step 7: a me
 is never offered the control; changing one is the Edit control on their queue card (UNLOCK-A4), and the
 route refuses a second add with a message pointing there. Step 8: rejected with the same message the
 member's own submission gets. Audited as `unlock.admin.submission.create` — the refusal too, as a deny.
+Added 2026-10-14: add a URL that is on the spam denylist (UNLOCK-A2d lists them). The notice says the
+URL is on the spam denylist, it was marked spam and the account was blocked; the row reads spam, not
+pending; the member is shut out of the app as in UNLOCK-A2c; and the audit row is a `deny` with reason
+`spam_denylisted`.
 **Result:** web ☐ — notes:
 
 ### UNLOCK-A4c · One profile written two ways is one person
@@ -652,6 +659,9 @@ kept a working login to the provider and only lost this app's access, which is w
 so the share who finished Unlock is not dragged down by it. Step 4 lifts the ban as well as restoring
 the tier, so Step 5 signs in normally. The same holds for a **duplicate** decision, which bans that
 account and leaves the member's original untouched (UNLOCK-A2e).
+Added 2026-10-14: ban a different account from the Sign-ups list (UNLOCK-A9b) while it has a pending
+submission, then approve or reject that submission. The account stays on the Banned tab with reason
+`perp` and still cannot sign in; only **Lift this ban** on its row lifts it.
 **Result:** web ☐ — notes:
 
 ### UNLOCK-M4 · What gets an account banned, said on the Unlock screen
