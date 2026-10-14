@@ -117,21 +117,42 @@ export async function queryDb<T extends QueryResultRow>(
   return pool.query<T>(text, values as unknown[]);
 }
 
+// The reporter is loaded lazily for the same reason as the feature-flag layer above: plain-node
+// consumers of this module must not pull Sentry's Next.js package into their import graph.
+async function reportRollbackFailure(error: Error): Promise<void> {
+  try {
+    const { reportError } = await import('../observability/report');
+    reportError(error, { area: 'db', op: 'transaction_rollback' });
+  } catch (importError) {
+    console.error('[withDbTransaction] ROLLBACK failed and the error reporter could not load:', error, importError);
+  }
+}
+
 export async function withDbTransaction<T>(
   callback: (client: PoolClient) => Promise<T>,
 ): Promise<T> {
   const dbPool = await getActivePool();
   const client = await dbPool.connect();
 
+  // Set when ROLLBACK itself fails. Passed to release() so pg discards the client instead of
+  // returning it to the pool with a transaction that may never have ended.
+  let rollbackError: Error | undefined;
   try {
     await client.query('BEGIN');
     const result = await callback(client);
     await client.query('COMMIT');
     return result;
   } catch (error) {
-    await client.query('ROLLBACK');
+    try {
+      await client.query('ROLLBACK');
+    } catch (caught) {
+      // The error that started this is the one the caller needs; the rollback failure is reported
+      // on its own so it is not lost either.
+      rollbackError = caught instanceof Error ? caught : new Error(String(caught));
+      await reportRollbackFailure(rollbackError);
+    }
     throw error;
   } finally {
-    client.release();
+    client.release(rollbackError);
   }
 }
