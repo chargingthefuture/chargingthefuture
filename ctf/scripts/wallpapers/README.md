@@ -1,7 +1,7 @@
 # Wallpaper sources
 
 Each `.html` file here is the source for one phone wallpaper carrying the Skills Economy
-"Stack" logo (the three ascending bars, teal-to-purple gradient). The vector path and colors
+"Stack" logo (the three ascending bars, burgundy gradient; teal-to-purple until 2026-10-13). The vector path and colors
 are copied from the brand mark in
 `ctf/packages/web/components/shared/se-mark.tsx` — if the brand mark ever changes, update the
 path here to match and re-render.
