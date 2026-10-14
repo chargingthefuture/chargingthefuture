@@ -104,9 +104,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         '@config-plugins/react-native-webrtc',
         {
           microphonePermission:
-            'Charging the Future needs microphone access so you can speak in a live Chyme audio room.',
+            'Skills Economy needs microphone access so you can speak in a live Chyme audio room.',
           cameraPermission:
-            'Charging the Future uses the camera only when you go live on Beacon and turn your camera on.',
+            'Skills Economy uses the camera only when you go live on Beacon and turn your camera on.',
         },
       ],
       'expo-notifications',
