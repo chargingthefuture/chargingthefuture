@@ -6,6 +6,7 @@ import {
   getAccountDataTokens, FULL_ACCOUNT_CONFIRM_PHRASE,
 } from './account-data-shared';
 import { useTheme } from '@/hooks/useTheme';
+import { useAuth } from 'lib/auth/client-context';
 
 type ConfirmStatus = 'idle' | 'submitting' | 'done' | 'error';
 
@@ -54,9 +55,11 @@ function ConfirmDeleteActions({
 // Full-account deletion confirmation. Requires the user to type the exact phrase
 // ("delete my account") before the delete button is enabled — an intentional gesture, matching
 // AccountDataConfirmDelete.tsx / MobileAccountDataConfirmDelete.tsx. On success it shows the
-// "Deletion queued" acknowledgement; the parent decides where to send the user next.
+// "Deletion queued" acknowledgement with a Sign out button, so the member is not left on a screen
+// with no way off it while the browser still holds a session for the deleted account.
 export function AccountDataConfirmDelete({ serviceCount, onCancel, onConfirm }: ConfirmProps) {
   const { theme } = useTheme();
+  const { signOut } = useAuth();
   const { BRAND, BG, BORDER, TEXT, SUBTLE } = getAccountDataTokens(theme);
   const [input, setInput] = useState('');
   const [status, setStatus] = useState<ConfirmStatus>('idle');
@@ -90,6 +93,20 @@ export function AccountDataConfirmDelete({ serviceCount, onCancel, onConfirm }: 
           <div style={{ fontSize: 14, color: SUBTLE, lineHeight: 1.7 }}>
             Your request has been received. Your personal data is being removed across all services, and your sign-in is removed with it — you will not be able to sign back in. Your ServiceCredits are held for 7 days from now, then returned to the community treasury; if any are locked in an active escrow, the return waits until that escrow resolves. Some audit records are retained for platform integrity.
           </div>
+          <button
+            type="button"
+            onClick={() => {
+              // Signing out sends the browser to the configured after-sign-out page. The sign-in was
+              // already removed with the account, so the provider may refuse to end a session it no
+              // longer knows; then go to the home page directly.
+              void Promise.resolve()
+                .then(() => signOut())
+                .catch(() => window.location.assign('/'));
+            }}
+            style={{ marginTop: 24, padding: '13px 22px', borderRadius: 11, background: `${BRAND}12`, border: `1px solid ${BRAND}30`, color: BRAND, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+          >
+            Sign out
+          </button>
         </div>
       </div>
     );
