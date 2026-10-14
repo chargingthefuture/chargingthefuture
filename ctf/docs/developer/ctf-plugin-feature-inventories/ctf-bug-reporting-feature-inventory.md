@@ -188,6 +188,19 @@ No seed script. Reports are user-generated at runtime; there is no fixture data 
   Android build a report came from (the web app still sends none). When the 201 reply body fails to
   parse, the error is reported (`op: submit_parse`) before the screen falls back to the plain
   success line. No route, schema or contract change.
+- 2026-10-14: **Code-review fixes (#2685, #2686, #2693 items 1 to 3).** `createBugReportIssues.mjs`
+  now claims each report before publishing it (`SELECT ... FOR UPDATE` while still `new`, then the
+  issue, then `UPDATE ... AND status = 'new'`, in one transaction), so an admin who rejects a clean
+  report while a batch runs is no longer overwritten back to `issue_created`. Account deletion now
+  replaces the member's `raw_message` with its redacted copy and clears `raw_context` and
+  `user_agent`, alongside the existing `user_id` pseudonymization, so the raw words and browser
+  description no longer outlive the account. `POST /api/bug-reports` and the admin resolve route
+  answer a JSON body that is not an object (for example `null`) with 400 `invalid_payload` instead
+  of an unhandled 500. The submit rate limit counts and inserts in one transaction under a
+  per-member advisory lock, so reports sent together can no longer all pass the count. The 429
+  message now reads "We already have your recent reports. Please try again a little later." Item 4
+  of #2693 (nothing ever sets `resolved`) waits on an owner decision. No schema change.
+
 - 2026-10-08: **Android opens the report from the header.** The Android app's frame now matches the
   web (top bar on the Apps home, back-chevron header on every screen), and the bug icon in both opens
   the report modal, as the web header does. The separate "Report a problem" tab and its

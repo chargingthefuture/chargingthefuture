@@ -15,7 +15,7 @@
 | **Surfaces** | submit: web (desktop) · web (mobile-responsive, ~390px) · android — triage: web (internal admin surface) |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-bug-reporting-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-10-04 manual note: the four `BUG_REPORTING_*` contracts now exist (command, access policy, audit, profile and deletion), written from the routes this script already exercises — no test change; the audit event id in BUG-A5 is unchanged · 2026-10-04 manual note: CI job `contract-coverage-gate` now fails when any of the four contract files is missing, so the contracts this script relies on cannot disappear again — no test change |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-10-04 manual note: the four `BUG_REPORTING_*` contracts now exist (command, access policy, audit, profile and deletion), written from the routes this script already exercises — no test change; the audit event id in BUG-A5 is unchanged · 2026-10-04 manual note: CI job `contract-coverage-gate` now fails when any of the four contract files is missing, so the contracts this script relies on cannot disappear again — no test change · 2026-10-14 manual update: BUG-3 checks the new 429 wording and reports sent together, BUG-A2 checks a non-object body and a reject during a publish run, account deletion checks the raw text is redacted |
 
 ## How to run this
 
@@ -90,8 +90,12 @@ success, 429 → rate-limited, any other non-201 → error.
 **Steps:**
 1. Submit reports rapidly past the per-user limit (5 reports / 10 minutes).
 2. Try to paste an over-long message.
+3. Send several reports at the same moment (for example two browser tabs submitting together)
+   when one report is left in the window.
 **Expected:** The sixth report inside the window is rate-limited (429) and the modal shows the
-rate-limited state. Over-long input is length-capped. These are flood/abuse controls, not bugs.
+rate-limited state; the 429 message reads "We already have your recent reports. Please try again a
+little later." Reports sent together are counted in turn, so only one of them gets through in step 3.
+Over-long input is length-capped. These are flood/abuse controls, not bugs.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ---
@@ -122,7 +126,9 @@ plugin slug, and any triage-repo issue link are shown, and each card's date is l
 **Expected:** Release sends the report back to `new` so the create-issues job publishes the
 **redacted** copy to the private triage repo; reject drops it so it never publishes. Both require
 the `x-ctf-csrf: 1` header and a same-origin check. A non-resolvable state returns 409; a non-UUID
-id or unknown action returns 400. Returns `{ ok, id, status }`.
+id or unknown action returns 400, and so does a JSON body that is not an object (for example
+`null`), with `invalid_payload`. Returns `{ ok, id, status }`. Reject a `new` report while the
+create-issues job is running: it stays rejected and is never published.
 **Result:** web ☐ — notes:
 
 ### BUG-A3 · Reporter identity shows on each report card
@@ -180,7 +186,8 @@ arrives.
 ### Account deletion pseudonymizes the reporter
 
 **Expected:** After a member deletes their account, bug reports they filed remain available for
-triage, but the reporter reads as a deleted member — no raw id survives on the report.
+triage, but the reporter reads as a deleted member — no raw id survives on the report. The raw
+message is replaced by its redacted copy, and the raw context and browser description are cleared.
 
 ---
 
