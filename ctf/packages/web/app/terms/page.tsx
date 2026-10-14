@@ -15,9 +15,9 @@ import styles from './terms.module.css';
 // routes). Content lives in ./policy-content.ts so this file stays a small
 // renderer.
 export const metadata: Metadata = {
-  title: 'Terms & Privacy — Charging the Future',
+  title: 'Terms & Privacy — Skills Economy',
   description:
-    'Terms and Conditions and Privacy Policy for the Charging the Future community platform.',
+    'Terms and Conditions and Privacy Policy for the Skills Economy community platform.',
 };
 
 function renderBlock(block: PolicyBlock, key: number) {
@@ -67,7 +67,7 @@ export default function TermsPage() {
       <div className={styles.container}>
         <PublicPageNav />
         <header className={styles.header}>
-          <p className={styles.brand}>Charging the Future</p>
+          <p className={styles.brand}>Skills Economy</p>
           <h1 className={styles.title}>Terms &amp; Privacy Policy</h1>
           <p className={styles.updated}>Last updated: {EFFECTIVE_DATE}</p>
           <nav className={styles.toc} aria-label="On this page">

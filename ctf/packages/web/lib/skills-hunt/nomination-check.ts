@@ -1,7 +1,7 @@
 import type { PoolClient } from 'pg';
 import { withDbTransaction } from 'lib/db/postgres';
 import { isQuoraUrlSuppressed } from 'lib/shared/directory-interface';
-import { canonicalizeQuoraUrl } from 'lib/shared/quora-url';
+import { canonicalizeNominationUrl } from './nomination-url';
 
 // The nomination that already holds a Quora profile URL: any submission that is not rejected and
 // not deleted, in any round. One person is one Quora URL, so a second live nomination for the same
@@ -52,7 +52,7 @@ export type QuoraNominationCheck =
 // It does not check the link is reachable on Quora; submit still does that. A link that is not a
 // Quora profile yet answers not_a_profile_url, so the form stays quiet while the scout is typing.
 export async function checkQuoraUrlForNomination(value: string): Promise<QuoraNominationCheck> {
-  const normalized = canonicalizeQuoraUrl(value);
+  const normalized = canonicalizeNominationUrl(value);
   if (!normalized) return { state: 'not_a_profile_url' };
   try {
     const host = new URL(normalized).hostname.toLowerCase();
