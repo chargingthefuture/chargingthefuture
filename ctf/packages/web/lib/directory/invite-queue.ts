@@ -106,6 +106,7 @@ export const DIRECTORY_INVITE_ALREADY_WRITTEN = [
   'andre-kovacs-1',
   'ms-thompson-11',
   'dc-1341',
+  '00-661',
 ] as const;
 
 const DIRECTORY_PROFILE_BASE = 'https://app.chargingthefuture.com/apps/directory/profile/';
