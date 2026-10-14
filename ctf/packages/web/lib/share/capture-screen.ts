@@ -47,9 +47,11 @@ function appendFooter(cloned: HTMLElement, footer: CaptureFooter): void {
   const wrap = doc.createElement('div');
   wrap.style.cssText = `padding:18px 20px 22px;font-family:${FOOTER_FONT};line-height:1.5`;
 
+  // A link has no spaces to wrap at, so without break-all a long one runs past the right edge and
+  // the picture carries only the start of the address it exists to give.
   const line = doc.createElement('div');
   line.textContent = footer.line;
-  line.style.cssText = `font-size:15px;font-weight:700;color:${footer.accent}`;
+  line.style.cssText = `font-size:15px;font-weight:700;color:${footer.accent};word-break:break-all;overflow-wrap:anywhere`;
   wrap.appendChild(line);
 
   if (footer.note) {

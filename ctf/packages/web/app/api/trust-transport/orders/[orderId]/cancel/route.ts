@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireTrustTransportReadAccess, trustTransportErrorResponse } from 'lib/trust-transport/_lib';
-import { cancelOrder } from 'lib/trust-transport/repository';
+import { cancelOrder, insertTrustTransportAudit } from 'lib/trust-transport/repository';
 import { reportError } from 'lib/observability/report';
 
 type RouteProps = {
@@ -30,6 +30,17 @@ export async function POST(request: Request, { params }: RouteProps) {
 
   try {
     await cancelOrder(orderId, gate.auth.userId, gate.auth.isAdmin, reason);
+    // Canceling an order also cancels every unfinished trip on it, so it writes the same audit event as
+    // the status route. The target is the request: the trips canceled with it are found by request id.
+    await insertTrustTransportAudit({
+      actorId: gate.auth.userId,
+      command: 'trust-transport.trip.status.update',
+      policyStatus: 'allow',
+      reason: 'ok',
+      targetType: 'request',
+      targetId: orderId,
+      metadata: { nextStatus: 'canceled', requestId: orderId },
+    });
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'trust-transport', op: 'orders_orderid_cancel' });

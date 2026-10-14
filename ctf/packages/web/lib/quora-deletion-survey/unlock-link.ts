@@ -5,6 +5,7 @@ import {
   normalizeQuoraProfileUrl,
 } from 'lib/shared/unlock-interface';
 import { failureReason } from 'lib/errors/failure';
+import { reportError } from 'lib/observability/report';
 import { QUORA_SURVEY_UNLOCK_SOURCE } from './constants';
 
 // Carrying a survey answer into Unlock verification, when the person asks for it on the
@@ -43,9 +44,11 @@ export async function surveyRespondentNeedsUnlock(userId: string): Promise<boole
   try {
     const status = await getUnlockStatusForUser(userId);
     return !status.hasSubmission;
-  } catch {
+  } catch (error) {
     // On a failed check, do not offer. A missed offer costs one extra trip to the Unlock screen;
-    // a wrongly shown offer asks a verified member for a second URL.
+    // a wrongly shown offer asks a verified member for a second URL. Reported, because a broken
+    // Unlock read removes the offer from every confirmation screen and nothing on screen says so.
+    reportError(error, { area: 'quora-deletion-survey', op: 'needs-unlock' });
     return false;
   }
 }
@@ -87,6 +90,8 @@ export async function linkSurveyRespondentToUnlock(input: {
 
     return { status: 'submitted' };
   } catch (error) {
+    // The member sees the reason in a 503; this is the record an operator sees.
+    reportError(error, { area: 'quora-deletion-survey', op: 'unlock-link' });
     return { status: 'failed', reason: failureReason(error) };
   }
 }

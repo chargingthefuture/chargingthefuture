@@ -8,7 +8,7 @@ import { PluginAdminButton } from '@/components/shared/plugin-admin-button';
 import { BEACON_COLOR } from 'lib/beacon/constants';
 import { BeaconViewer } from './beacon-viewer';
 
-export function BeaconShell({ isAdmin }: { isAdmin?: boolean } = {}) {
+export function BeaconShell({ isAdmin, signInUrl }: { isAdmin?: boolean; signInUrl: string }) {
   return (
     <>
       <MobileScreenHeader
@@ -17,7 +17,7 @@ export function BeaconShell({ isAdmin }: { isAdmin?: boolean } = {}) {
         icon={<Radio size={18} color={BEACON_COLOR} />}
         actions={<PluginAdminButton href="/admin/beacon" isAdmin={isAdmin} accent={BEACON_COLOR} />}
       />
-      <BeaconViewer signInUrl="/sign-in" isMember />
+      <BeaconViewer signInUrl={signInUrl} isMember />
     </>
   );
 }

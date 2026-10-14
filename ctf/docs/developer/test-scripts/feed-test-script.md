@@ -326,7 +326,7 @@
 **Precondition:** Signed in as an admin, with a screenshot saved on the device. A second, non-admin member account to check from.
 
 **Steps:**
-1. As the admin, open the Commons. Above the message box, tap **Share a picture (admins)**.
+1. As the admin, open the Commons. In the icon row above the message box, tap the camera button after the 🎁 (screen readers read it as "Share a picture (admins)"). Tap it again and the panel closes.
 2. Choose the screenshot. A preview appears.
 3. Leave the description empty and fill in the message. Confirm **Share** stays disabled.
 4. Fill in the description ("What it shows") and tap **Share**.
@@ -346,7 +346,7 @@
 - The admin's own picture post shows both Delete and Edit (bug fix, 2026-09-26: Edit used to be
   hidden on any post with a picture, since the ordinary edit model deletes and reposts, which would
   have dropped the picture).
-- Step 7: the member sees the same picture and message. There is no Share a picture button for the
+- Step 7: the member sees the same picture and message. There is no camera button for the
   member.
 - Step 8: 403, "Only admins can share pictures in the Commons."
 - Step 9: the post and its picture are gone; the picture's address returns 404.
@@ -1085,7 +1085,8 @@ second browser window signed in as a different member (or signed out) so you can
 - Step 2: the row gains a "Hidden" pill and the Hidden-posts counter goes up by one.
 - Step 3: the post is **gone** from the member timeline — and so are its replies, since the entire item
   drops out. This is the check that matters: before this feature the status column was ignored, so a
-  hidden post stayed visible.
+  hidden post stayed visible. It must not reappear with its text under a generic `hub-system` handle
+  either; that is how a hidden post looked when only its detail was dropped (#2960).
 - Step 4: it is absent from the signed-out public list too, not just the member view.
 - Step 5: the hidden post is listed there — hiding must not be a one-way door.
 - Step 6/7: the post is back in the member timeline, replies and all. Nothing was deleted.

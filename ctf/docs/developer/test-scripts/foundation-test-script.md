@@ -7,7 +7,7 @@
 | **Plugin** | Foundation (`foundation`) |
 | **Visibility** | Member |
 | **Roles to test** | Member (survivor), Member (acting as provider), Admin |
-| **Surfaces** | Web (Next.js) — Android surface removed 2026-07-20 (rule 105, PR #1742); plugin is now web-only (PWA) |
+| **Surfaces** | Web (Next.js). Android: all of Foundation since 2026-10-08 (rule 105 keep-list item 2d; instant calls alone from 2026-10-06) — tested in `android-app-test-script.md`, section **AN-FD — Foundation** |
 | **Seed first** | `pnpm --dir ctf seed:foundation` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-foundation-feature-inventory.md` |
 | **Generated** | 2026-07-29 (commit 03bee30a) · 2026-09-20: the inventory's prose was swept for a banned word (CLAUDE.md); no step here changes, because nothing about what the plugin does or how it is tested moved · 2026-09-22 manual update: FDN-39 checks a quote can move through its lifecycle, after the transition update was refused by the database for the same reason · 2026-09-23 manual update: FDN-40 checks that marking the work done settles a quote and that the value reaches the community index, after nothing in the app was found to send the closing transition |
@@ -100,11 +100,15 @@ Result: web ☐
 1. As S, search providers with a query that would match P.
 2. As S, attempt to open a connection thread to P directly (`POST /api/foundation/connections/threads` with P's provider id).
 3. If a thread between S and P existed from before the block, try to start an instant call on it.
+4. On that same older thread, as S: open Direct Line (or the Quotes tab's chat), send a message, request a quote, and schedule a call.
+5. As S, open P's shared provider link (`/apps/foundation/provider/<P's profile id>`).
 
 **Expected:**
 - Step 1: P is absent from S's search results.
 - Step 2: 403 with the neutral message "This provider is not available to you." — never wording that names a block.
 - Step 3: the ring is refused with "This call is not available right now." — a block created after the thread existed still stops new calls.
+- Step 4: Direct Line shows "Could not open this Direct Line." (the route answers 403 "This conversation is not available right now."), a message send is refused with the same route message, the quote is refused ("This provider is not available to you."), and the call is refused ("This call is not available right now."). P gets no notification for any of them.
+- Step 5: the page shows the same "This provider's profile could not be found." as for an id that matches nobody.
 - Neither member gets any signal that a block exists.
 
 Result: web ☐
@@ -813,6 +817,25 @@ Result: web ☐
 
 ---
 
+### FDN-37b — Ring push on the lock screen follows discreet pings
+
+**Role:** Member (provider, to receive call alerts) and a second member to ring them
+**Surface:** Web
+
+**Precondition:** FDN-37 done, so call alerts are on for the provider's device. Discreet pings are on in the provider's notification settings (the default). VAPID keys are configured.
+
+**Steps:**
+1. Lock the provider's device, or put the browser in the background.
+2. As the second member, ring the provider.
+3. Read the push on the provider's lock screen, then tap it.
+4. Turn discreet pings off in the provider's notification settings and ring again.
+
+**Expected:** Step 3: the push reads "Skills Economy" / "You have a new update." and names neither the caller nor Foundation; tapping it opens `/apps/foundation`, where the incoming-call overlay shows the caller's name with answer and decline. Step 4: the push reads "Incoming call" / "<caller> is calling you on Foundation". If the settings cannot be read, the push stays discreet.
+
+Result: web ☐
+
+---
+
 ### FDN-38 — Admin: capacity policy change is versioned and audited
 
 **Role:** Admin
@@ -999,3 +1022,107 @@ table (fails the first). Do not do this against production.
   sentence (FDN-5, FDN-9), unchanged.
 
 Result: web ☐
+
+---
+
+### FDN-42 — Failed reads and refused quote moves say what went wrong (added 2026-10-05)
+
+**Role:** Member (survivor) + Member (provider)
+**Surface:** Web
+
+**Precondition:** Browser dev tools open (request blocking or offline mode).
+
+**Steps:**
+1. Block `/api/foundation/providers/search` and open Foundation (or refresh).
+2. Unblock it, then block `/api/foundation/quotes/history` and refresh.
+3. Open a shared provider link (`/apps/foundation/provider/<id>`) for an id that does not exist.
+4. As the provider, respond to a quote with a price while the quote's state route answers an error
+   (for example, have the survivor close the quote first in another tab, then send the price).
+5. On a quote row, open the Direct Line while
+   `/api/foundation/connections/threads/<threadId>/token` is blocked.
+6. Start an instant call in a browser where the microphone permission is denied.
+
+**Expected:**
+- Steps 1 and 2: a red message saying the search or the quotes could not be loaded, with the
+  route's reason and reference when it gave one. Never an empty browse list or an empty Quotes tab.
+- Step 3: Browse opens with "This provider link could not be opened." and the reason above the list.
+- Step 4: the form shows the route's own message (for a refused move, the refusal, not "Could not
+  send the quote. Try again.") and keeps the amount typed.
+- Step 5: "Could not open this Direct Line." The network failure appears in the error report.
+- Step 6: the call card says the microphone could not be turned on and the other person cannot hear
+  you. The message stays until the microphone is turned on.
+
+Result: web ☐
+
+---
+
+### FDN-43 — Instant call: a block is sent back when the call ended before the block was recorded (added 2026-10-06)
+
+**Role:** Member (survivor, caller) + Member (provider, callee)
+**Surface:** Web
+
+**Precondition:** Both accounts on separate devices. Note the caller's ServiceCredits before the call.
+
+**Steps:**
+1. Ring the provider. As the caller, tap **Cancel** at the same moment the provider taps **Answer**
+   (try a few times; the window is short).
+2. Start a new call and answer it. As the caller tap **Extend** while the provider taps **End call**
+   at the same moment.
+
+**Expected:**
+- Whenever the call did not open (step 1) or the added block was never recorded (step 2), the
+  caller's ServiceCredits come back to where they were before that block. The provider's history shows
+  a matching send back.
+- When the call did open or the block was recorded, nothing is sent back.
+- No call is left ringing or live on either side.
+
+Result: web ☐
+
+---
+
+### FDN-44 — Call alerts: one phone rings for one member (added 2026-10-06)
+
+**Role:** Two members on the same Android phone, one after the other
+**Surface:** Android (see `android-app-test-script.md`, AN-FD)
+
+**Steps:**
+1. Sign in as member A on the Android app and turn on **Call alerts on this device** in Foundation.
+2. Sign out, sign in as member B on the same phone and turn call alerts on.
+3. Ring member A from the web.
+
+**Expected:**
+- The phone does not ring for member A. It rings only for member B, the member who turned alerts on
+  last on that phone.
+
+Result: android ☐
+
+### FDN-45 — A ring the provider can't take ends at once (added 2026-10-06)
+
+**Role:** A member (caller) and a provider with instant calls turned on
+**Surface:** web and Android
+
+**Steps:**
+1. As the provider, turn instant calls on with a rate. As the caller, ring them with Connect now.
+2. While it rings, as the provider in another tab, turn instant calls off (or clear the rate), then
+   press **Answer** on the ring.
+
+**Expected:** The answer is refused, and the call ends at once for both people instead of ringing on
+until the timeout. Both screens read "This provider isn't set up to take calls right now." No credits
+moved.
+
+**Result:** web ☐ android ☐ — notes:
+
+### FDN-46 — A caller whose credits can't be sent (added 2026-10-06)
+
+**Role:** Admin, a member (caller) and a provider
+**Surface:** web and Android
+
+**Steps:**
+1. As an admin, put a `trading` restriction on the caller's account.
+2. As the caller, ring the provider; as the provider, press **Answer**.
+
+**Expected:** The call ends at once. The provider reads "The call couldn't start: the caller's credits
+can't be sent right now." Nothing on either screen says the account is restricted, and no credits
+moved. (Before this it was a generic error and the call kept ringing.) Lift the restriction after.
+
+**Result:** web ☐ android ☐ — notes:

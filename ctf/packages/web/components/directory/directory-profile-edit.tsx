@@ -5,11 +5,12 @@ import type { Dispatch, SetStateAction } from "react";
 import { X } from "lucide-react";
 import { getDirectoryTokens, type DirectoryTokens } from "./shared";
 import { DirectorySkillsPicker } from "./directory-skills-picker";
+import { groupJobTitlesBySector, type JobTitleGroup } from "./directory-job-title-fields";
 import { CountrySelect, StateField } from "@/components/shared/location-select";
 import { useTheme } from "@/hooks/useTheme";
 import { SurveyInviteNote } from "@/components/shared/survey-invite-note";
 import { DIRECTORY_MAX_PROPOSED_SKILL_LENGTH, DIRECTORY_MAX_PROPOSED_SKILLS } from "@/lib/directory/constants";
-import { failureText } from 'lib/errors/client-failure';
+import { failureText, responseFailureText } from 'lib/errors/client-failure';
 
 // The full editable shape of a directory profile. GET /api/directory/profile returns the
 // caller's own profile with the taxonomy IDs (sectorId, jobTitleId, skills[].id) needed to
@@ -42,8 +43,6 @@ type TaxonomyOption = { id: string; name: string };
 type JobTitleOption = { id: string; name: string; sectorId: string };
 type SkillOption = { id: string; name: string; jobTitleId: string };
 
-// One sector's group of job titles, used to build the job-title dropdown's <optgroup> list.
-type JobTitleGroup = { sectorId: string; sectorName: string; titles: JobTitleOption[] };
 
 // The form's working copy. Strings are used in the controlled inputs; on submit they are
 // converted back to the null/string[] shape the upsert expects.
@@ -79,6 +78,8 @@ type LoadedProfileData = {
   jobTitles: JobTitleOption[];
   skills: SkillOption[];
   profile: OwnProfile | null;
+  // What the profile route said when it refused, shown instead of the fixed sentence.
+  message?: string;
 };
 
 const LOAD_ERROR_MESSAGE = "Could not load your profile. Please try again.";
@@ -166,7 +167,8 @@ async function loadProfileData(signal: AbortSignal): Promise<LoadedProfileData |
   if (signal.aborted) return null;
 
   if (!profileRes.ok) {
-    return { ok: false, sectors: [], jobTitles: [], skills: [], profile: null };
+    const message = await responseFailureText(profileRes, LOAD_ERROR_MESSAGE, "member");
+    return { ok: false, sectors: [], jobTitles: [], skills: [], profile: null, message };
   }
 
   const profileData = (await profileRes.json()) as { profile?: OwnProfile | null };
@@ -198,28 +200,6 @@ function buildProfilePayload(form: FormState) {
     state: nullableTrim(form.state),
     country: nullableTrim(form.country),
   };
-}
-
-// Every job title, grouped by its sector, so the job-title dropdown lists them all (via <optgroup>)
-// without the member having to pick a sector first — the two selectors are independent.
-function groupJobTitlesBySector(
-  sectors: TaxonomyOption[],
-  jobTitles: JobTitleOption[],
-): JobTitleGroup[] {
-  const sectorNameById = new Map(sectors.map((s) => [s.id, s.name] as const));
-  const bySector = new Map<string, JobTitleOption[]>();
-  for (const j of jobTitles) {
-    const arr = bySector.get(j.sectorId) ?? [];
-    arr.push(j);
-    bySector.set(j.sectorId, arr);
-  }
-  return [...bySector.entries()]
-    .map(([sectorId, list]) => ({
-      sectorId,
-      sectorName: sectorNameById.get(sectorId) ?? "Other",
-      titles: [...list].sort((a, b) => a.name.localeCompare(b.name)),
-    }))
-    .sort((a, b) => a.sectorName.localeCompare(b.sectorName));
 }
 
 // At least one skill is required — a taxonomy skill or a free-text proposed one.
@@ -555,7 +535,7 @@ export function DirectoryProfileEdit({
         const data = await loadProfileData(controller.signal);
         if (!data || controller.signal.aborted) return;
         if (!data.ok) {
-          setLoadState({ kind: "error", message: LOAD_ERROR_MESSAGE });
+          setLoadState({ kind: "error", message: data.message ?? LOAD_ERROR_MESSAGE });
           return;
         }
         setSectors(data.sectors);
@@ -564,9 +544,9 @@ export function DirectoryProfileEdit({
         setHadProfile(Boolean(data.profile));
         setForm(profileToForm(data.profile));
         setLoadState({ kind: "ready" });
-      } catch {
+      } catch (caught) {
         if (!controller.signal.aborted) {
-          setLoadState({ kind: "error", message: LOAD_ERROR_MESSAGE });
+          setLoadState({ kind: "error", message: failureText(caught, { area: "directory", op: "load_own_profile", fallback: LOAD_ERROR_MESSAGE, audience: "member" }) });
         }
       }
     }

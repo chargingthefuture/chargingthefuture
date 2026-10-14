@@ -164,11 +164,12 @@ export async function claimCohortAsTrainer(input: {
   );
 
   // Backfill the trainer of record onto enrollments written while the cohort had none. Without this
-  // their milestone releases would have no trainer to grant to. Only rows not already assigned.
+  // their milestone releases would have no trainer to grant to. Only rows not already assigned, and
+  // never the claiming trainer's own enrollment: nobody is their own trainer of record.
   await queryDb(
     `UPDATE skill_up_enrollments
      SET assigned_trainer_id = $2, updated_at = NOW()
-     WHERE cohort_id = $1::uuid AND assigned_trainer_id IS NULL`,
+     WHERE cohort_id = $1::uuid AND assigned_trainer_id IS NULL AND user_id <> $2`,
     [input.cohortId, input.trainerUserId],
   );
 

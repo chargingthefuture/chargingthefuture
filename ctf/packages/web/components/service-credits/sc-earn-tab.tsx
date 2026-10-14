@@ -48,7 +48,7 @@ export function ServiceCreditsEarnTab() {
 
         <div style={{ fontSize: 20, fontWeight: 800, color: t.TITLE, marginBottom: 6 }}>Everything else is peer-to-peer</div>
         <div style={{ fontSize: 13, color: t.SUBTLE, lineHeight: 1.6, marginBottom: 14, maxWidth: 620 }}>
-          You earn the same way you spend — by trading with other members. When someone pays you for a place to stay, a ride, your skills, or fulfilling a request, you receive credits. When you pay them, you spend them.
+          You earn the same way you spend — by trading with other members. When someone sends you credits for a place to stay, a ride, your skills, or fulfilling a request, you receive them. When you send credits to someone, you spend them.
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 10 }}>
           {PEER_TO_PEER_AREAS.map((s) => (
