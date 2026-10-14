@@ -87,7 +87,9 @@ or if the fetch fails, the surface shows neutral wording rather than zeros.
 **Steps:**
 1. Open the browser against an empty taxonomy (or before data loads).
 **Expected:** Loading shows the skeleton/loading state. A genuinely empty taxonomy shows the empty
-state, not a spinner stuck forever or a raw error.
+state, not a spinner stuck forever or a raw error. On web, a failed read shows the route's own
+reason (the Unlock message for a member who has not finished Unlock, the outage text on a 503)
+rather than one fixed "Failed to load taxonomy." for every case (added 2026-10-14).
 **Result:** web ☐ mobile ☐ — notes:
 
 ### TAX-5 · Promoted skill appears under its occupation
