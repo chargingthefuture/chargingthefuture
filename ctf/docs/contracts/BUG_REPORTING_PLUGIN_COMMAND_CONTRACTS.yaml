@@ -22,7 +22,10 @@
 #     id, redacted_message, redacted_context, page_url, plugin_slug, app_version and created_at. Opens
 #     one issue per row in the private triage repo (BUG_REPORTS_TRIAGE_REPO, default
 #     chargingthefuture/bug-reports) labeled `user-report` and `needs-triage`, then sets the row to
-#     `issue_created` with triage_repo, issue_number and issue_url. The raw text, user_id and
+#     `issue_created` with triage_repo, issue_number and issue_url. Each row is claimed first (locked
+#     with FOR UPDATE while still `new`) and flipped in the same transaction, so a reject that lands
+#     during a batch waits and then answers 409 instead of being overwritten; a crash between the
+#     issue and the commit leaves the row `new`, so that report can be published twice. The raw text, user_id and
 #     user_agent are never selected, so they never reach the issue.
 #   - .github/workflows/bug-reports-triage.yml -> ctf/scripts/triageBugReportIssues.mjs reads the
 #     issue (already redacted) from the triage repo and sends its title and body to the Anthropic API
@@ -87,8 +90,8 @@ contracts:
         windowMinutes: 10
         rule: >-
           Counts this person's rows with created_at inside the last 10 minutes before inserting. At 5
-          or more the request is refused with 429. The count and the insert are separate statements,
-          so two requests arriving together can both pass the count.
+          or more the request is refused with 429. The count and the insert run in one transaction
+          under a per-person advisory lock, so requests arriving together are counted in turn.
     processing:
       redaction: >-
         lib/bug-reports/sanitize.ts runs on message and context before the insert. Card-like digit
@@ -110,13 +113,11 @@ contracts:
         enum: [new, held_for_review]
     statusCodes:
       201: Report stored.
-      400: bug_reports.invalid_payload — body is not valid JSON (message "Invalid JSON.", plus a `reason`), or message is missing or blank.
+      400: bug_reports.invalid_payload — body is not valid JSON (message "Invalid JSON.", plus a `reason`), body is not a JSON object (for example `null`), or message is missing or blank.
       401: AUTH_UNAUTHORIZED — not signed in (shared deny body).
       403: bug_reports.csrf_denied — x-ctf-csrf header missing or not "1", Origin unparseable, or Origin from another host.
-      429: bug_reports.rate_limited — 5 or more reports from this person in the last 10 minutes.
+      429: bug_reports.rate_limited — 5 or more reports from this person in the last 10 minutes. Message "We already have your recent reports. Please try again a little later."
       503: bug_reports.persistence_unavailable — the rate-limit count or the insert failed; the error goes to the observability channel (area bug-reports, op submit).
-    knownGaps:
-      - A body that parses as JSON but is not an object (for example `null`) is not caught; reading its message field throws outside the try block and the request ends as an unhandled 500.
     dataAccess:
       - bug_reports (select count by user_id and created_at; insert)
     purpose: product_problem_reporting
@@ -218,7 +219,7 @@ contracts:
         enum: [new, rejected]
     statusCodes:
       200: Status changed.
-      400: bug_reports.invalid_payload — "Invalid report id.", "Invalid JSON body.", or action not release or reject.
+      400: bug_reports.invalid_payload — "Invalid report id.", "Invalid JSON body.", a body that is not a JSON object (for example `null`), or action not release or reject.
       401: AUTH_UNAUTHORIZED — not signed in (shared deny body).
       403: AUTH_FORBIDDEN_ROLE (not an admin, shared deny body) or bug_reports.csrf_denied (header or origin check failed).
       409: bug_reports.forbidden — no row changed; the report does not exist or is already in a status the action cannot move. Message "Report is not in a state that can be resolved."
@@ -226,8 +227,6 @@ contracts:
     audit: >-
       Writes one bug_report_admin_audit_trail row on 200, 409 and 503. Nothing is written for 400,
       401 or 403. See BUG_REPORTING_PLUGIN_AUDIT_CONTRACTS.yaml.
-    knownGaps:
-      - A body that parses as JSON but is not an object (for example `null`) throws when its action field is read and ends as an unhandled 500.
     dataAccess:
       - bug_reports (update status and updated_at by id)
       - bug_report_admin_audit_trail (insert)
