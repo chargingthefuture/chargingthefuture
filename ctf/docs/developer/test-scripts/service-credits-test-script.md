@@ -13,7 +13,7 @@
 | **Surfaces** | web (`/service-credits`, `/admin/service-credits`) · android (`ServiceCredits.tsx`, `AdminServiceCredits.tsx`) |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-service-credits-feature-inventory.md` |
-| **Generated** | 2026-07-13 (commit 0aef7039) |
+| **Generated** | 2026-07-13 (commit 0aef7039) · 2026-10-12 manual update: SC-A disputes list and ledger status card show a failed read |
 | **Inventory wording** | 2026-10-01: banned-term wording removed from the inventory prose; no step in this script changed |
 
 ---
@@ -194,6 +194,27 @@ Result: web ☐
 4. Attempt to submit.
 
 **Expected:** On the web send panel the submit button is disabled or an inline error appears before submission ("Insufficient balance" or equivalent). On android the send attempt returns an error message. The transfer does not go through. The balance is unchanged.
+
+Result: web ☐
+
+---
+
+### SC-4a — A second press after a failed send does not send twice
+
+**Role:** member
+**Surfaces:** web
+**Precondition:** Signed in as Sender with at least 20 credits available, and a Recipient account. Browser developer tools open on the Network tab.
+
+**Steps:**
+1. Open the Send panel, enter Recipient and the amount 10.
+2. Set the Network tab to Offline, press Send, and note the error.
+3. Set the Network tab back to Online and press Send again without changing anything.
+4. Check Sender's Recent Transactions.
+5. Send another 5 to the same Recipient, but block the wallet request (right-click `/api/service-credits/wallet` in the Network tab and block it) before pressing Send.
+
+**Expected:**
+- Steps 2 and 3 send the same idempotency key in the request body; Recent Transactions shows one "Transfer out" of 10, not two.
+- Step 5 shows "Credits sent successfully!" and clears the form, with a gray note that the balance could not be refreshed. No red error appears.
 
 Result: web ☐
 
@@ -585,7 +606,7 @@ Result: web ☐
 4. Apply an adjustment for that case (as in SC-A7).
 
 **Expected:**
-- The "Open disputes" list shows each unadjusted dispute newest first — reason, who opened it (a resolved name or a short `member <id>` fallback), and time. With none it shows "No open disputes."
+- The "Open disputes" list shows each unadjusted dispute newest first — reason, who opened it (a resolved name or a short `member <id>` fallback), and time. With none it shows "No open disputes." If the list could not be read, it shows the reason in red instead, never "No open disputes."
 - "Resolve" fills the adjustment form's dispute case ID.
 - After an adjustment is applied, the resolved dispute drops off the open list (it now has an adjustment).
 - The admin-landing tile shows a "new to review" dot when an unresolved dispute arrived since you last opened the area; opening it clears the dot.
@@ -640,7 +661,7 @@ Result:
 3. Confirm it shows whether Formance is configured or not, the ledger name and asset identifier.
 4. If not configured, confirm a note appears that balances remain authoritative in the app DB and operations are queued for reconciliation.
 
-**Expected:** The ledger status card renders with configuration state clearly shown. If unconfigured, the reassurance note is visible. No sensitive credentials (API tokens, URLs) are exposed in the UI.
+**Expected:** The ledger status card renders with configuration state clearly shown. If unconfigured, the reassurance note is visible. If the status could not be read, the card still appears and shows the reason in red rather than disappearing. No sensitive credentials (API tokens, URLs) are exposed in the UI.
 
 Result: web ☐
 

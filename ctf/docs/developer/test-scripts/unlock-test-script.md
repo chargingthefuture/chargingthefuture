@@ -110,6 +110,20 @@ not see this banner. On android the client Unlock gate lets a treatment member t
 (instead of walling them) and the banner behaves the same. Inert when the flag is off everywhere.
 **Result:** web ☐ android ☐ — notes:
 
+### UNLOCK-M3 · Android Unlock screen matches the web, and the wall holds still
+**Role:** member (not yet verified), then an approved member · **Surfaces:** android, compared with web (~390px)
+**Steps:**
+1. As an unverified member with no submission, open the app: the Unlock wall shows the web's
+   heading, wording, the "Show me where to find it" steps with the picture, the optional hint box,
+   the account-removal survey note and the ban policy, plus Sign out (the one addition to the web).
+2. Wait on the wall for a minute: it stays put. It must not flash the loading screen again and again.
+3. Submit a valid Quora profile URL: the status view shows the pending state with the web's wording.
+4. As an approved member, open the gear, then Your account, then Verification: the same Unlock
+   screen opens with a back control, and back returns to Your account.
+**Expected:** The Android screens match the web screens line for line; only the first check after
+sign-in shows the loading screen.
+**Result:** android ☐ — notes:
+
 ### UNLOCK-M4 · The Commons is stripped back until approval (added 2026-09-26)
 **Role:** member not yet approved, then the same member approved; an approved member; admin · **Surfaces:** web + mobile-responsive
 **Steps:**
@@ -139,8 +153,9 @@ load after approval.
    "Hub" (terminology fix, 2026-08-03, owner-specified wording per the brand lexicon).
 3. On web, confirm the button reads "Continue to the Commons" and tapping it lands on the Commons
    home page (`/`), not the plugin navigator (`/apps`).
-4. On android, confirm the same "Welcome to Skills Economy (SE)" title (that card has no continue
-   button).
+4. On android, confirm the same "Welcome to Skills Economy (SE)" title and the same "Continue to the
+   Commons" button. Tapping it opens the web app's Commons home page (`/`) in the phone's browser,
+   because the Android app has no Commons (owner decision, 2026-10-09).
 5. Before approval, on the submission screen: confirm the explanation says "To unlock full access to
    Skills Economy" on web, and "Skills Economy uses Quora profile verification" on android — neither
    should say "Survivor Hub" (name retired 2026-08-09).
@@ -431,11 +446,16 @@ queue has at least one row.
 1. As a member, open the Unlock screen (submission form or status view) and drag the content down.
 2. Have the reviewer change the submission's status on web, then pull down again on the device.
 3. As an admin, open Unlock Admin, drag the queue down, and watch the list while it refreshes.
+4. (Added 2026-10-05.) As a member with a pending submission, turn on airplane mode and pull down on
+   the Android Unlock screen, then turn it off and pull down again.
 **Expected:** On both screens a refresh spinner appears at the top and the data re-pulls
 (`GET /api/unlock/status` for the member screen; `GET /api/unlock/admin/submissions` for the queue).
 The full-screen loading state does **not** flash — the current content stays visible until the fresh
 data lands, then the member screen reflects the new review status. The spinner stops when the pull
-completes, including on a failed request.
+completes, including on a failed request. Step 4: the failed pull keeps the "Pending Review" status
+view on screen (it does not switch to "Submit your Quora profile URL") and shows a red line under the
+header starting "Your verification status could not be read:" with the reason; the next successful
+pull removes the line.
 **Result:** android ☐ — notes:
 
 ---
@@ -499,8 +519,12 @@ case that was broken: a waiting member has a stored `pending_readonly` tier, whi
 screen** — that was the bug. The screen you are leaving is not repainted first, and you do not return
 to where you started. The verification banner sits above the chat, and your pending submission is
 untouched — asking for help never changes your place in the queue. Step 4: Android shows the same help
-card on a pending status screen and behaves the same. If the grant cannot be recorded, an error appears
-with a link onward rather than a button that silently did nothing.
+card on a pending status screen; pressing the button records the request and opens the web app's
+Commons home page in the phone's browser, and the app behind it moves on to the Apps list (owner
+decision, 2026-10-09). If the grant cannot be recorded, an error appears
+with a link onward rather than a button that silently did nothing. On Android that link, "Try opening
+the Commons anyway", opens the web app's Commons home page in the phone's browser (owner decision,
+2026-10-09).
 **Result:** web ☐ · android ☐ — notes:
 
 ### UNLOCK-A8b · Coming back a second day opens the Commons on its own
@@ -645,6 +669,23 @@ not have to guess whether silence means they are in trouble. The last paragraph 
 account rather than this app alone, and that it is not a deletion and can be lifted. Pressing again
 closes it.
 **Result:** web ☐ · android ☐ — notes:
+
+### UNLOCK-M5 · Sign out from the Unlock screen (Android)
+**Role:** member (signed in, not yet verified, held at the Unlock wall) · **Surfaces:** android
+**Precondition:** a signed-in account the Android app sends to the full-screen Unlock screen (no
+submission and no help request, or a pending or rejected submission).
+**Steps:**
+1. Open the app and land on the Unlock screen. Scroll to the bottom.
+2. Find **Signed in as** your username (or email) and a **Sign out** button below everything else on
+   the screen. Check that the rest of the screen reads and looks as before.
+3. Tap **Sign out**, then **Stay signed in**.
+4. Tap **Sign out** again, then **Sign out**.
+5. Close and reopen the app.
+**Expected:** Step 2: the button is the last thing on the screen, after "What gets unlocked". Step 3:
+the confirm closes and nothing changes. Step 4: the Unlock screen goes away and the app shell shows
+with the **You are not signed in** card and its **Sign in** button. Step 5: you are still signed out.
+Signing back in with the same account brings the Unlock screen back with your place unchanged.
+**Result:** android ☐ — notes:
 
 ---
 

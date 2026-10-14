@@ -61,7 +61,10 @@ contracts:
   - pluginId: skill-up
     command: enrollment.create
     version: 1.0.0
-    description: Enroll learner in cohort with optional escrow deposit.
+    description: >-
+      Enroll learner in cohort with optional escrow deposit. The trainer of record is always
+      derived from the cohort (the claiming trainer of an auto cohort, otherwise none) and is never
+      the learner; the request cannot name it.
     inputSchema:
       cohortId:
         type: string
@@ -110,7 +113,10 @@ contracts:
   - pluginId: skill-up
     command: milestone.validate
     version: 1.0.0
-    description: Record trainer/admin validation for milestone completion.
+    description: >-
+      Record trainer/admin validation for milestone completion. The cohort is read from the
+      enrollment, never from the request; the caller must be an admin or the trainer of that
+      cohort, the milestone must belong to it, and nobody signs off their own enrollment.
     inputSchema:
       enrollmentId:
         type: string
@@ -129,6 +135,8 @@ contracts:
     dataAccess:
       - skill_up_milestone_validations
       - skill_up_enrollments
+      - skill_up_milestones
+      - skill_up_cohorts
       - skill_up_rate_limit_counters
     purpose: milestone_assurance
     retentionClass: audit_long_lived
@@ -137,7 +145,10 @@ contracts:
   - pluginId: skill-up
     command: milestone.release
     version: 1.0.0
-    description: Release learner escrow to spendable credits and issue trainer split/completion bonus.
+    description: >-
+      Release learner escrow to spendable credits and issue trainer split/completion bonus. Same
+      sign-off rule as milestone.validate: cohort read from the enrollment, admin or that cohort's
+      trainer only, milestone must belong to the cohort, never on the caller's own enrollment.
     inputSchema:
       enrollmentId:
         type: string
@@ -158,6 +169,9 @@ contracts:
     dataAccess:
       - skill_up_enrollment_milestone_escrows
       - skill_up_milestone_validations
+      - skill_up_enrollments
+      - skill_up_milestones
+      - skill_up_cohorts
       - service_credits_escrow_holds
       - service_credits_governance_events
     purpose: milestone_settlement
@@ -224,7 +238,10 @@ contracts:
   - pluginId: skill-up
     command: dispute.resolve
     version: 1.0.0
-    description: Resolve dispute with optional credit adjustment transfer.
+    description: >-
+      Resolve dispute with optional credit adjustment transfer. Only an admin may attach an
+      adjustment, and its source and destination must be two different parties to the disputed
+      enrollment (its learner and its assigned trainer).
     inputSchema:
       disputeId:
         type: string
@@ -232,6 +249,9 @@ contracts:
       resolutionComment:
         type: string
         required: true
+      adjustment:
+        type: object
+        required: false
       idempotencyKey:
         type: string
         required: true
@@ -245,6 +265,7 @@ contracts:
     dataAccess:
       - skill_up_disputes
       - skill_up_dispute_comments
+      - skill_up_enrollments
       - service_credits_dispute_adjustments
     purpose: dispute_resolution
     retentionClass: audit_long_lived

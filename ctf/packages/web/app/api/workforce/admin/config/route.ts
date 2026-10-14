@@ -125,6 +125,9 @@ export async function PUT(request: Request) {
         workspaceId: WORKFORCE_AUDIT_WORKSPACE,
         configVersion,
       },
+      // The audit contract's evidence for this command. All three passed by the time this runs:
+      // the admin gate, the CSRF header check and validateConfigInput each return early otherwise.
+      metadata: { roleCheck: 'pass', csrfCheck: 'pass', configValidationCheck: 'pass' },
     });
 
     // Contract output schema is { config, updatedAt }; expose updatedAt at the top level too (it also

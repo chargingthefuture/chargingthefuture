@@ -274,16 +274,21 @@ Result: web ☐
 ### FS-10 — Deleting your account
 
 **Role:** member · **Surfaces:** web
-**Precondition:** A member with comments and reactions here.
+**Precondition:** A member with comments and reactions here, one of the comments answered by a
+reply from a second approved member.
 
 **Steps:**
 1. Open the account data screen and read what it says Fireside holds.
 2. Delete the account.
-3. Read a post they had commented on, signed out.
+3. Read a post they had commented on, signed out, and the post with the answered comment as the
+   second member.
 
 **Expected:**
 - Fireside is listed with the same rights as the Commons, and its summary names comments and reactions.
 - After deletion their comments and reactions are gone from the thread.
+- The second member's reply is still on the page, with its reactions, marked as answering a comment
+  that is no longer shown — the same as a reply under a comment its author took down. Nothing of the
+  deleted member's words or name is shown anywhere, the admin comment list included.
 - The threads themselves remain — a thread is a reference to a blog post, not anything about a person.
 - Anything already copied into the blog's published build is **not** recalled, which is why the export control says so before the choice is made and why an admin has to agree before a copy is ever made.
 
@@ -759,13 +764,17 @@ Result: web ☐
 2. Read the address bar, then copy the address and open it in a new tab.
 3. Press the browser's back button.
 4. Edit the address by hand to a page number past the end and load it.
+5. Press the browser's back button.
 
 **Expected:**
 - Page two shows the next 20 comments and the address carries `?page=2`.
 - The copied address opens on page two directly.
 - Back returns to page one, and the address has no page parameter on it — page one is the default
   and does not need saying.
-- A page past the end lands on the last page with its comments on it, not on an empty screen.
+- A page past the end lands on the last page with its comments on it, not on an empty screen, and
+  the address shows that last page in place of the number typed.
+- Back from there leaves for the page that was open before the typed address, rather than loading
+  the out-of-range page again.
 
 Result: web ☐
 

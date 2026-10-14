@@ -5,6 +5,7 @@ import type { Dispatch, SetStateAction } from "react";
 import { X } from "lucide-react";
 import { getDirectoryTokens, type DirectoryTokens } from "./shared";
 import { DirectorySkillsPicker } from "./directory-skills-picker";
+import { groupJobTitlesBySector, type JobTitleGroup } from "./directory-job-title-fields";
 import { CountrySelect, StateField } from "@/components/shared/location-select";
 import { useTheme } from "@/hooks/useTheme";
 import { SurveyInviteNote } from "@/components/shared/survey-invite-note";
@@ -42,8 +43,6 @@ type TaxonomyOption = { id: string; name: string };
 type JobTitleOption = { id: string; name: string; sectorId: string };
 type SkillOption = { id: string; name: string; jobTitleId: string };
 
-// One sector's group of job titles, used to build the job-title dropdown's <optgroup> list.
-type JobTitleGroup = { sectorId: string; sectorName: string; titles: JobTitleOption[] };
 
 // The form's working copy. Strings are used in the controlled inputs; on submit they are
 // converted back to the null/string[] shape the upsert expects.
@@ -201,28 +200,6 @@ function buildProfilePayload(form: FormState) {
     state: nullableTrim(form.state),
     country: nullableTrim(form.country),
   };
-}
-
-// Every job title, grouped by its sector, so the job-title dropdown lists them all (via <optgroup>)
-// without the member having to pick a sector first — the two selectors are independent.
-function groupJobTitlesBySector(
-  sectors: TaxonomyOption[],
-  jobTitles: JobTitleOption[],
-): JobTitleGroup[] {
-  const sectorNameById = new Map(sectors.map((s) => [s.id, s.name] as const));
-  const bySector = new Map<string, JobTitleOption[]>();
-  for (const j of jobTitles) {
-    const arr = bySector.get(j.sectorId) ?? [];
-    arr.push(j);
-    bySector.set(j.sectorId, arr);
-  }
-  return [...bySector.entries()]
-    .map(([sectorId, list]) => ({
-      sectorId,
-      sectorName: sectorNameById.get(sectorId) ?? "Other",
-      titles: [...list].sort((a, b) => a.name.localeCompare(b.name)),
-    }))
-    .sort((a, b) => a.sectorName.localeCompare(b.sectorName));
 }
 
 // At least one skill is required — a taxonomy skill or a free-text proposed one.
