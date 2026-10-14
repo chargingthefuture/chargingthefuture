@@ -154,12 +154,12 @@ export function isConfiguredAuthSignInExternal(): boolean {
 }
 
 /**
- * Reports whether a candidate redirect URL would bounce the browser back to a
- * `/sign-in` path on the app's own host.
+ * Reports whether a candidate redirect URL points at a `/sign-in` path on the
+ * app's own host.
  *
- * Sending someone to a `/sign-in` page that itself only redirects to a sign-in
- * URL produces an endless loop (`ERR_TOO_MANY_REDIRECTS`). Any URL flagged here
- * must be replaced with Clerk's hosted Account Portal (a different host) or the
+ * This app has no `/sign-in` page: sign-in happens on Clerk's hosted Account
+ * Portal, and a same-host `/sign-in` request is a 404. Any URL flagged here
+ * must be replaced with the hosted Account Portal (a different host) or the
  * home page before it is used as a redirect target.
  *
  * @param value - The candidate path or absolute URL.
@@ -266,8 +266,8 @@ export function getAccountPortalOrigin(): string | undefined {
  * 2. Clerk's hosted Account Portal derived from the publishable key
  *    (`https://accounts.<domain>/sign-in`).
  *
- * A same-host or relative `/sign-in` value is deliberately ignored: it is the
- * misconfiguration that causes the redirect loop, so we fall through to the
+ * A same-host or relative `/sign-in` value is deliberately ignored: this app has
+ * no `/sign-in` page, so such a value points at a 404, and we fall through to the
  * hosted portal instead. Returns `undefined` only when neither source yields a
  * usable URL, in which case callers fall back to the home page (never to
  * `/sign-in`).
@@ -302,9 +302,9 @@ export function getHostedSignUpUrl(): string | undefined {
 /**
  * Resolves where to send a user after they sign out.
  *
- * Honors a configured after-sign-out URL unless it would loop back into a
- * same-host `/sign-in` page; in that case it falls back to the app home page so
- * a freshly signed-out user is never trapped in a redirect loop.
+ * Honors a configured after-sign-out URL unless it points at a same-host
+ * `/sign-in` path, which this app does not have; in that case it falls back to
+ * the app home page so a freshly signed-out user never lands on a 404.
  *
  * @returns The after-sign-out URL.
  */

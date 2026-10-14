@@ -315,7 +315,7 @@ export function FiresideShell({
   // The page is in the address bar, so a place in the list can be linked and the back button steps
   // through the pages actually visited (rule 100). Every admin list here has done this since it
   // shipped; the member's own list predates them and was the last one paging without it.
-  const [page, setPage] = useUrlPage("page");
+  const { page, setPage, adoptPage, ready } = useUrlPage("page");
   const [lastPage, setLastPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -339,15 +339,18 @@ export function FiresideShell({
     setError(null);
     try {
       const res = await fetch(`/api/fireside/mine?page=${wanted}`);
-      if (!res.ok) {
-        const body = (await res.json()) as { message?: string };
-        throw new Error(body.message ?? "Could not load your comments.");
-      }
-      const data = (await res.json()) as { comments: OwnComment[]; page: number; lastPage: number; total: number };
+      // A host in front of the app can answer with an HTML page (a 502 while the service restarts),
+      // so a body that is not JSON falls through to this screen's own sentence and the status code
+      // rather than surfacing the parser's complaint.
+      const data = (await res.json().catch(() => null)) as
+        | { message?: string; comments: OwnComment[]; page: number; lastPage: number; total: number }
+        | null;
+      if (!res.ok || !data) throw new Error(data?.message ?? `Could not load your comments (${res.status}).`);
       setComments(data.comments);
       // The route clamps a page past the end and answers with the one it used, so a linked number
-      // that has since gone out of range lands on the last page rather than on nothing.
-      if (data.page !== wanted) setPage(data.page);
+      // that has since gone out of range lands on the last page rather than on nothing. It replaces
+      // the address-bar entry rather than adding one, so Back still leaves the list.
+      if (data.page !== wanted) adoptPage(data.page);
       setLastPage(data.lastPage);
       setTotal(data.total);
     } catch (e) {
@@ -355,9 +358,10 @@ export function FiresideShell({
     } finally {
       setLoading(false);
     }
-  }, [setPage]);
+  }, [adoptPage]);
 
-  useEffect(() => { void load(page); }, [load, page]);
+  // Waits for the address bar to be read, so a linked page is the only page asked for.
+  useEffect(() => { if (ready) void load(page); }, [load, page, ready]);
 
   async function send(id: string, init: RequestInit, failure: string) {
     setBusyId(id);

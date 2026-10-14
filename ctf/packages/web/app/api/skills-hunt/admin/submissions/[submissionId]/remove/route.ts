@@ -5,6 +5,7 @@ import { insertSkillsHuntAudit, rebuildLeaderboard } from 'lib/skills-hunt/repos
 import { recomputeMissionProgressForUser } from 'lib/skills-hunt/missions';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
 import { reportError } from 'lib/observability/report';
+import { withReason } from 'lib/errors/failure';
 
 // Admin-only soft-delete of a submission. This is the right way to void a
 // submission that should never have counted — a duplicate, spam, or a test row —
@@ -79,7 +80,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ sub
     }
     reportError(error, { area: 'skills-hunt', op: 'admin_submissions_submissionid_remove' });
     return NextResponse.json(
-      { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: 'Unable to remove submission.' },
+      { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: withReason('Unable to remove submission', error) },
       { status: 503 },
     );
   }

@@ -5,6 +5,7 @@ import { Loader2, ShieldOff, UserX } from 'lucide-react';
 import { BackChevronButton } from '@/lib/nav/back-history';
 import { useTheme } from '@/hooks/useTheme';
 import { getAccountDataTokens } from '@/components/account-data/account-data-shared';
+import { failureText, responseFailureText } from 'lib/errors/client-failure';
 import { deleteBlock, type BlockedMember, type BlocksListResponse } from './blocks-shared';
 
 // Loading and error states are intentionally NOT theme-aware (mirrors the Account & Data shell): the
@@ -12,6 +13,8 @@ import { deleteBlock, type BlockedMember, type BlocksListResponse } from './bloc
 const { BG: DEFAULT_BG, TEXT: DEFAULT_TEXT } = getAccountDataTokens('default');
 
 type LoadState = 'loading' | 'ready' | 'error';
+
+const LOAD_FAILED = 'We could not load your blocked members.';
 
 // "Blocked members" manage-list (issue #809, task 2). Lists who the signed-in member has blocked,
 // newest first, with the resolved display name and when each block was created, and an Unblock
@@ -24,6 +27,8 @@ export function BlockedMembersShell() {
   const { BG, SURFACE, BORDER, TEXT, SUBTLE, BRAND } = tokens;
 
   const [loadState, setLoadState] = useState<LoadState>('loading');
+  // Why the list did not load, shown under the error heading (rule 137).
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [blocks, setBlocks] = useState<BlockedMember[]>([]);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [rowError, setRowError] = useState<{ id: string; message: string } | null>(null);
@@ -34,14 +39,17 @@ export function BlockedMembersShell() {
       const res = await fetch('/api/account/blocks', { signal });
       if (signal?.aborted) return;
       if (!res.ok) {
+        setLoadError(await responseFailureText(res, LOAD_FAILED, 'member'));
         setLoadState('error');
         return;
       }
       const data = (await res.json()) as BlocksListResponse;
       setBlocks(data.blocks ?? []);
       setLoadState('ready');
-    } catch {
-      if (!signal?.aborted) setLoadState('error');
+    } catch (caught) {
+      if (signal?.aborted) return;
+      setLoadError(failureText(caught, { area: 'blocks', op: 'load_blocked_members', fallback: LOAD_FAILED, audience: 'member' }));
+      setLoadState('error');
     }
   }, []);
 
@@ -80,6 +88,7 @@ export function BlockedMembersShell() {
       <div style={{ display: 'flex', height: '100dvh', background: DEFAULT_BG, color: DEFAULT_TEXT, alignItems: 'center', justifyContent: 'center', fontFamily: "'Inter',system-ui", padding: '0 32px' }}>
         <div style={{ textAlign: 'center', maxWidth: 420 }}>
           <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 10 }}>We couldn&apos;t load your blocked members</div>
+          {loadError ? <div role="alert" style={{ fontSize: 14, color: '#F87171', lineHeight: 1.6, marginBottom: 6 }}>{loadError}</div> : null}
           <div style={{ fontSize: 14, color: '#9CA3AF', lineHeight: 1.6 }}>Please refresh the page to try again.</div>
         </div>
       </div>

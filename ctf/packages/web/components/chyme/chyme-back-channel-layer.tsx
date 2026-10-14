@@ -16,15 +16,17 @@ export function ChymeBackChannelLayer({
   currentUser: CurrentUser;
   isMobile: boolean;
 }) {
-  const { incomingInvite, activeCall, joinCredentials } = controller;
+  const { activeCall, joinCredentials, error } = controller;
+  // Do not ring while already in a call.
+  const incomingInvite = activeCall ? null : controller.incomingInvite;
   return (
     <>
-      {/* Do not ring while already in a call. */}
-      {incomingInvite && !activeCall ? (
+      {incomingInvite ? (
         <ChymeBackChannelInvite
           fromName={incomingInvite.fromUsername ? `@${incomingInvite.fromUsername}` : 'A member'}
           isMobile={true}
           busy={controller.busy}
+          error={error}
           onAccept={() => void controller.accept(incomingInvite.callId)}
           onDecline={() => void controller.decline(incomingInvite.callId)}
         />
@@ -39,7 +41,47 @@ export function ChymeBackChannelLayer({
           onHangUp={() => void controller.hangUp(activeCall.callId)}
         />
       ) : null}
+
+      {/* A failed invite, hang-up or /join has no prompt to sit in, so it gets its own notice. */}
+      <ChymeBackChannelErrorNotice message={incomingInvite ? null : error} onDismiss={controller.clearError} />
     </>
+  );
+}
+
+function ChymeBackChannelErrorNotice({ message, onDismiss }: { message: string | null; onDismiss: () => void }) {
+  if (!message) {
+    return null;
+  }
+  return (
+    <div
+      role="alert"
+      style={{
+        position: 'fixed',
+        zIndex: 61,
+        top: 12,
+        left: 12,
+        right: 12,
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: 10,
+        padding: '10px 12px',
+        borderRadius: 12,
+        background: '#0d0f14',
+        border: '1px solid rgba(248,113,113,0.45)',
+        boxShadow: '0 12px 32px rgba(0,0,0,0.5)',
+        color: '#f87171',
+        fontSize: 12,
+      }}
+    >
+      <span style={{ flex: 1, minWidth: 0 }}>{message}</span>
+      <button
+        type="button"
+        onClick={onDismiss}
+        style={{ background: 'none', border: 'none', color: '#9ca3af', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0 }}
+      >
+        Dismiss
+      </button>
+    </div>
   );
 }
 
