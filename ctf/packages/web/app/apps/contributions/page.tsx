@@ -21,7 +21,7 @@ export default async function ContributionsPage() {
   if (!decision.allowed) {
     // Anonymous visitor: show the public marketing shell with a real sign-in URL. Any other deny
     // (e.g. a role requirement) also lands here; the public shell is a safe, non-leaking fallback.
-    const signInUrl = getHostedSignInUrl() ?? '/sign-in';
+    const signInUrl = getHostedSignInUrl() ?? '/';
     return <ContributionsPublicShell pluginSlug="contributions" pluginName="Contributions" signInUrl={signInUrl} />;
   }
 

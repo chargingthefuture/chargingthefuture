@@ -113,8 +113,8 @@ contracts:
 
   - pluginId: service-credits
     command: transfer.create
-    version: 1.1.0
-    description: Create a credit transfer between source and destination wallets under plugin-path constraints. The optional rail selects whether the sender pays from balance or on mutual credit (going negative down to their credit limit).
+    version: 1.2.0
+    description: Create a credit transfer between source and destination wallets under plugin-path constraints. The optional rail selects whether the sender pays from balance or on mutual credit (going negative down to their credit limit). The destination is resolved to a real account before anything is written; a value no account holds is denied with recipient_not_found (404) and an unrunnable check with recipient_lookup_unavailable (503), and no wallet row is created for it.
     inputSchema:
       sourceWalletId:
         type: string
@@ -122,6 +122,7 @@ contracts:
       destinationWalletId:
         type: string
         required: true
+        description: Sent as recipientUserId. A member username (a leading @ is accepted) or an account id, checked against the account store (Clerk); the transfer is written against the resolved account id.
       amount:
         type: number
         required: true
@@ -594,8 +595,8 @@ contracts:
 
   - pluginId: service-credits
     command: wallet-status.set
-    version: 1.0.0
-    description: Admin-only. Freeze or unfreeze a member's wallet. While frozen, the wallet cannot spend ServiceCredits on either rail. Trust & safety lever for a risk-flagged account.
+    version: 1.1.0
+    description: Admin-only. Freeze or unfreeze a member's wallet. While frozen, the wallet cannot spend ServiceCredits on either rail. Trust & safety lever for a risk-flagged account. Backed by the platform-wide account restriction at scope trading, and it only ever writes or lifts a trading restriction. When the member already has an active restriction of scope all or contact, both freeze and unfreeze are denied with restriction_scope_conflict (409) and that restriction is left as it is.
     inputSchema:
       targetUserId:
         type: string
@@ -612,7 +613,8 @@ contracts:
       frozen:
         type: boolean
     dataAccess:
-      - service_credits_wallets
+      - account_restrictions
+      - account_restrictions_audit
       - service_credits_admin_audit_trail
     purpose: trust_and_safety
     retentionClass: audit_long_lived

@@ -46,6 +46,14 @@ async function readSendMessageInput(request: Request, threadId: string): Promise
 function mapSendMessageError(error: unknown): NextResponse {
   const code = error instanceof Error ? error.message : '';
 
+  // Neutral copy on purpose: a block made after this thread opened must not reveal itself.
+  if (code === 'blocked_pair') {
+    return NextResponse.json(
+      { ok: false, code: FOUNDATION_ERROR_CODE.policyDenied, message: 'This conversation is not available right now.' },
+      { status: 403 },
+    );
+  }
+
   if (code === 'thread_not_found') {
     return NextResponse.json(
       { ok: false, code: FOUNDATION_ERROR_CODE.threadNotFound, message: 'Thread not found or access denied.' },

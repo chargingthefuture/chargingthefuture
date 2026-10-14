@@ -20,7 +20,7 @@ const trustItems = (t: WhatWorksTokens): { icon: ReactNode; title: string; detai
   { icon: <Lock size={15} color={t.ACCENT} />, title: 'Anonymous', detail: 'Suggesting never reveals who you are.' },
 ];
 
-export function WhatWorksPublic() {
+export function WhatWorksPublic({ signInUrl, signUpUrl }: { signInUrl: string; signUpUrl: string }) {
   const { theme } = useTheme();
   const t = getWhatWorksTokens(theme);
   const TRUST = trustItems(t);
@@ -54,8 +54,8 @@ export function WhatWorksPublic() {
         <span style={{ fontSize: 16, fontWeight: 700 }}>What Works</span>
         <span style={{ fontSize: 12, color: t.MUTED, marginLeft: 4 }}>· survivor-verified tools</span>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-          <Link href="/sign-in" style={{ padding: '7px 16px', borderRadius: 8, background: t.BORDER, border: `1px solid ${t.BORDER_SOLID}`, color: t.TITLE, fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>Sign In</Link>
-          <Link href="/sign-up" style={{ padding: '7px 16px', borderRadius: 8, background: t.ACCENT, border: 'none', color: '#0A0E06', fontSize: 13, fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 5 }}>
+          <Link href={signInUrl} style={{ padding: '7px 16px', borderRadius: 8, background: t.BORDER, border: `1px solid ${t.BORDER_SOLID}`, color: t.TITLE, fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>Sign In</Link>
+          <Link href={signUpUrl} style={{ padding: '7px 16px', borderRadius: 8, background: t.ACCENT, border: 'none', color: '#0A0E06', fontSize: 13, fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 5 }}>
             <UserPlus size={13} /> Create Account
           </Link>
         </div>
@@ -74,7 +74,7 @@ export function WhatWorksPublic() {
               Pick a problem you&apos;re facing. Underneath it is a list of specific products a survivor here bought, used, and said helped — each with a direct link to get it. No ads. No affiliates. Nothing sold.
             </p>
             <div style={{ display: 'flex', gap: 12, marginTop: 4 }}>
-              <Link href="/sign-up" style={{ padding: '13px 28px', borderRadius: 10, background: t.ACCENT, border: 'none', color: '#0A0E06', fontSize: 15, fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Link href={signUpUrl} style={{ padding: '13px 28px', borderRadius: 10, background: t.ACCENT, border: 'none', color: '#0A0E06', fontSize: 15, fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 8 }}>
                 <UserPlus size={16} /> Join to suggest items
               </Link>
             </div>
@@ -144,7 +144,7 @@ export function WhatWorksPublic() {
               <div style={{ fontSize: 16, fontWeight: 700, color: t.TITLE, marginBottom: 4 }}>See every problem — and add what worked for you</div>
               <div style={{ fontSize: 13, color: t.MUTED, lineHeight: 1.6 }}>Create a free, verified account to view the full list and suggest the tools that helped you.</div>
             </div>
-            <Link href="/sign-up" style={{ padding: '13px 26px', borderRadius: 10, background: t.ACCENT, border: 'none', color: '#0A0E06', fontSize: 14, fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+            <Link href={signUpUrl} style={{ padding: '13px 26px', borderRadius: 10, background: t.ACCENT, border: 'none', color: '#0A0E06', fontSize: 14, fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
               Get started <ChevronRight size={15} />
             </Link>
           </div>

@@ -14,7 +14,8 @@ Issue #102 raises two concerns. The owner clarified (2026-05-25) how each is han
      exposes only title/category/city/status; owner id, details, contact are redacted. This IS
      the auth-gate pattern; no flag.
    - **Chyme, Hub** — fully authenticated; no public routes at all.
-   - **Landing `/`, `/sign-in`, `/sign-up`, `/plugin/unlock`** — permanently public by design;
+   - **Landing `/`, `/plugin/unlock`** — permanently public by design (the app has no `/sign-in`
+     or `/sign-up` page; sign-in and sign-up are on the hosted Account Portal);
      the sign-in CTA already lives on these pages (per the v3 design).
    The `public-surface` flag is therefore demoted to a *reserved* global kill-switch (incident /
    pre-launch lockdown), not the mechanism for per-plugin visibility. Not currently wired.
@@ -104,7 +105,7 @@ Issue #102 raises two concerns. The owner clarified (2026-05-25) how each is han
 - [ ] **Inventory file**: Create `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-public-surface-feature-inventory.md` or update existing plugin inventories to reflect flag-gating.
 
 ### UI Implementation (Blocked Until Design Pass)
-- [ ] **Design pass** for public screens: `/`, `/sign-in`, `/sign-up`, `/plugin/unlock`, `/apps/directory/[handle]`.
+- [ ] **Design pass** for public screens: `/`, `/plugin/unlock`, `/apps/directory/[handle]`.
   - Must cover all four states (Unauthenticated, Auth+Loading, Auth+Empty, Auth+Populated) per rule 126.
   - Design should show how demo mode changes data presentation (e.g., synthetic profile names instead of real names).
 - [ ] **Middleware flag check** (if not done in foundation).

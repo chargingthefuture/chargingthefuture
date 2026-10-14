@@ -83,25 +83,30 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     //     (StreamVideoRN.updateConfig).
     //   - @config-plugins/react-native-webrtc: the microphone/camera permission
     //     text shown to the user (iOS Info.plist usage strings + Android
-    //     RECORD_AUDIO). Chyme is audio-only, but the camera string is required
-    //     by the WebRTC layer even when video is never published.
-    //   - expo-notifications: the Foundation instant-call ring native push
-    //     (issue #884). expo-notifications needs native code (it cannot run in
-    //     Expo Go), so this config plugin must be present in the EAS build for a
-    //     device to be woken by an incoming call. Registering the plugin sets up
-    //     the Android notification channel/icon defaults; no per-user identity is
-    //     baked in — the device's Expo push token is fetched at runtime when the
-    //     member turns on "Call alerts on this device".
+    //     RECORD_AUDIO). Chyme is audio-only; Beacon's host uses the camera
+    //     when they go live with it turned on.
+    //   - expo-notifications: Foundation call alerts (issue #884). The app uses it
+    //     for the instant-call ring: src/features/foundation/callAlerts.ts creates
+    //     the `foundation-calls` channel the server's ring push targets, asks for
+    //     notification permission, and saves the device's Expo push token when the
+    //     member turns on "Call alerts on this device"; useCallPolls.ts opens the
+    //     incoming call when a ring push arrives or is tapped. It needs native code
+    //     (not Expo Go), so this plugin must be in the EAS build. No per-user
+    //     identity is baked in; the token is fetched at runtime and needs the EAS
+    //     project id (EXPO_MOBILE_PROJECT_ID → extra.eas.projectId).
     plugins: [
       ...(config.plugins ?? []),
-      ['@stream-io/video-react-native-sdk', { androidKeepCallAlive: true }],
+      // `enableScreenshare` lets Beacon's host share the phone's screen: it adds the
+      // FOREGROUND_SERVICE_MEDIA_PROJECTION permission and turns on the WebRTC media-projection
+      // service in MainActivity, which Android requires before it hands an app the screen.
+      ['@stream-io/video-react-native-sdk', { androidKeepCallAlive: true, enableScreenshare: true }],
       [
         '@config-plugins/react-native-webrtc',
         {
           microphonePermission:
-            'Charging the Future needs microphone access so you can speak in a live Chyme audio room.',
+            'Skills Economy needs microphone access so you can speak in a live Chyme audio room.',
           cameraPermission:
-            'Charging the Future does not record video; this permission is required by the audio engine and is never used to capture video.',
+            'Skills Economy uses the camera only when you go live on Beacon and turn your camera on.',
         },
       ],
       'expo-notifications',
@@ -116,6 +121,10 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       // the upload — it only makes stack traces in Sentry point at original source lines instead of
       // the bundled output. To turn the upload back on later, add SENTRY_ORG, SENTRY_PROJECT, and
       // SENTRY_AUTH_TOKEN to the build environment first, then drop this option.
+      //
+      // @sentry/react-native is pinned to the version Expo SDK 55 supports (~7.11). That version's
+      // config plugin ignores `disableAutoUpload`; its Gradle step reads SENTRY_DISABLE_AUTO_UPLOAD
+      // instead, which eas.json sets for both build profiles. Keep both until the upload is wanted.
       ['@sentry/react-native/expo', { disableAutoUpload: true }],
     ],
     updates: {

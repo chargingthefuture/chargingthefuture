@@ -77,8 +77,9 @@ export function FiresideAdminAudit({ t }: { t: PluginShellTokens }) {
     setError(null);
     try {
       const res = await fetch("/api/fireside/admin/audit-events?limit=200");
-      const data = (await res.json()) as { message?: string; events?: AuditEvent[] };
-      if (!res.ok) throw new Error(data.message ?? "Could not load the audit trail.");
+      // A body that is not JSON (a host's error page) falls through to this sentence and the status.
+      const data = (await res.json().catch(() => null)) as { message?: string; events?: AuditEvent[] } | null;
+      if (!res.ok || !data) throw new Error(data?.message ?? `Could not load the audit trail (${res.status}).`);
       setEvents(data.events ?? []);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not load the audit trail.");

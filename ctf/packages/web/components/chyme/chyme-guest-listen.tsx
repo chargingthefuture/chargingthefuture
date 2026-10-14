@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   StreamVideo,
   StreamVideoClient,
@@ -16,6 +16,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { getChymeTokens } from './chyme-shared';
 import { reportError } from 'lib/observability/report';
 import { chymeAttendanceLine } from 'lib/chyme/capacity-line';
+import { CHYME_ERROR_CODE } from 'lib/chyme/constants';
 import type { StreamJoinCredentials } from 'lib/chyme/stream';
 import {
   CHYME_CALL_TYPE,
@@ -86,12 +87,17 @@ async function isRoomStillLive(): Promise<boolean> {
 // header the route requires; the guest id rides in the httpOnly cookie the listen route set.
 const GUEST_HEARTBEAT_MS = 35_000;
 
-function postGuestHeartbeat(onCounts: (counts: GuestRoomCounts) => void): void {
+// `onRosterGone` runs when the server no longer has this listener on the roster (the row was pruned
+// while the tab sat in the background), so the page can re-admit itself through the listen route.
+function postGuestHeartbeat(onCounts: (counts: GuestRoomCounts) => void, onRosterGone: () => void): void {
   void fetch('/api/chyme/public/heartbeat', { method: 'POST', headers: { 'x-ctf-csrf': '1' } })
     .then(async (res) => {
-      if (!res.ok) return;
       const data: unknown = await res.json().catch(() => null);
       const body = typeof data === 'object' && data !== null ? (data as Record<string, unknown>) : {};
+      if (!res.ok) {
+        if (body.code === CHYME_ERROR_CODE.guestIdentityMissing) onRosterGone();
+        return;
+      }
       const counts = body.ok === true ? countsFrom(body) : null;
       if (counts) onCounts(counts);
     })
@@ -109,12 +115,16 @@ function postGuestLeave(): void {
 // While listening, keep the guest on the roster and the minute meter fed, and take the room's
 // fresh counts back from each beat. A tab in the background stops beating, like the member
 // heartbeat, and beats once more when it returns.
-function useGuestHeartbeat(listening: boolean, onCounts: (counts: GuestRoomCounts) => void): void {
+function useGuestHeartbeat(
+  listening: boolean,
+  onCounts: (counts: GuestRoomCounts) => void,
+  onRosterGone: () => void,
+): void {
   useEffect(() => {
     if (!listening) return;
     const beat = () => {
       if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
-      postGuestHeartbeat(onCounts);
+      postGuestHeartbeat(onCounts, onRosterGone);
     };
     beat();
     const intervalId = window.setInterval(beat, GUEST_HEARTBEAT_MS);
@@ -126,7 +136,7 @@ function useGuestHeartbeat(listening: boolean, onCounts: (counts: GuestRoomCount
       window.clearInterval(intervalId);
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, [listening, onCounts]);
+  }, [listening, onCounts, onRosterGone]);
 }
 
 // Ask the server for listen credentials. This is the tap: it takes one of the guest listening spots
@@ -220,6 +230,18 @@ export function ChymeGuestListen({
   // the guest path used to swallow it, so a visitor (and the person they report it to) had nothing
   // to go on but "try refreshing".
   const [errorDetail, setErrorDetail] = useState<string | null>(null);
+  // Set when a heartbeat says this listener is off the roster. Clearing the credentials then tears
+  // the call down and the tap-to-credentials effect re-admits through the listen route (or shows its
+  // refusal). The flag tells the teardown not to post a leave: the row is already gone, and a leave
+  // landing after the new admission would remove the listener again.
+  const rosterGoneRef = useRef(false);
+  const handleRosterGone = useCallback(() => {
+    rosterGoneRef.current = true;
+    setClient(null);
+    setCall(null);
+    setCredentials(null);
+    setStatus('connecting');
+  }, []);
 
   // Report the listening state upward without making the parent's callback a dependency of the
   // effect that reports it — a parent that rebuilt the callback each render would otherwise
@@ -363,12 +385,17 @@ export function ChymeGuestListen({
         try { await activeCall.leave(); } catch { /* already left */ }
         try { await videoClient.disconnectUser(); } catch { /* ignore */ }
       })();
-      // Free the listening spot at once rather than at the end of the presence window.
-      postGuestLeave();
+      // Free the listening spot at once rather than at the end of the presence window, unless the
+      // server already dropped it and the page is re-admitting itself (see handleRosterGone).
+      if (rosterGoneRef.current) {
+        rosterGoneRef.current = false;
+      } else {
+        postGuestLeave();
+      }
     };
   }, [armed, credentials, onRoomGone]);
 
-  useGuestHeartbeat(status === 'joined', setCounts);
+  useGuestHeartbeat(status === 'joined', setCounts, handleRosterGone);
 
   // While listening and the tab is foreground, hold a screen wake lock + Media Session presence so
   // the OS keeps the audio prioritized and the screen doesn't sleep out from under playback. This is
