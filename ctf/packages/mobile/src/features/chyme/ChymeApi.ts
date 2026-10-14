@@ -189,11 +189,23 @@ type ChymeTipResponse = {
 
 // Send ServiceCredits peer-to-peer to another room participant (origin_plugin 'chyme'). The transfer
 // delivers immediately; on failure the backend's message (e.g. insufficient balance) is surfaced.
-export async function postChymeTip(toUserId: string, amount: number, message?: string): Promise<ChymeTipResponse> {
+// `idempotencyKey` is one key per filled-in tip, so a retried press returns the first transfer
+// instead of sending the credits again.
+export async function postChymeTip(
+  toUserId: string,
+  amount: number,
+  message: string | undefined,
+  idempotencyKey: string,
+): Promise<ChymeTipResponse> {
   return authedFetchJson('/api/chyme/service-credits', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
-    body: JSON.stringify({ toUserId, amount, ...(message && message.trim().length > 0 ? { message: message.trim() } : {}) }),
+    body: JSON.stringify({
+      toUserId,
+      amount,
+      idempotencyKey,
+      ...(message && message.trim().length > 0 ? { message: message.trim() } : {}),
+    }),
   });
 }
 
