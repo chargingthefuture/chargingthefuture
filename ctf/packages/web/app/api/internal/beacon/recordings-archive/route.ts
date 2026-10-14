@@ -5,6 +5,7 @@ import { listUnarchivedBeaconReplays, setBeaconArchivedRecordingUrl } from 'lib/
 import { getFreshBeaconRecordingUrl } from 'lib/beacon/stream';
 import { failureReason } from 'lib/errors/failure';
 import { reportError } from 'lib/observability/report';
+import { bearerMatches } from 'lib/auth/internal-secret';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,7 +26,7 @@ function isAuthorized(request: Request): boolean {
   if (!cronSecret || cronSecret.trim().length === 0) {
     return false;
   }
-  return request.headers.get('authorization') === `Bearer ${cronSecret}`;
+  return bearerMatches(request, cronSecret);
 }
 
 function forbidden() {
