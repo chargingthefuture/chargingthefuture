@@ -123,7 +123,7 @@ function HostPreview({ t, participant, onCamera, isSharing }: {
   }
   return (
     <View style={[styles.preview, { borderRadius: radius(t, 12) }]}>
-      <ParticipantView participant={participant} trackType={isSharing ? 'screenShareTrack' : 'videoTrack'} />
+      <ParticipantView participant={participant} trackType={isSharing ? 'screenShareTrack' : 'videoTrack'} style={styles.fill} />
     </View>
   );
 }
@@ -176,6 +176,8 @@ function HostButton({ t, busy, active, onPress, icon: Icon, label }: {
 const styles = StyleSheet.create({
   stack: { gap: 12 },
   preview: { width: '100%', aspectRatio: 9 / 16, maxHeight: 420, overflow: 'hidden', backgroundColor: '#000' },
+  // The SDK view sizes to its content unless told to fill the preview.
+  fill: { flex: 1 },
   row: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 10 },
   button: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, paddingVertical: 10, paddingHorizontal: 16 },
   buttonText: { fontSize: 14, ...font('700') },

@@ -17,6 +17,8 @@ import { reportError } from '../../observability/report';
 
 type LoadState = 'loading' | 'ready' | 'error';
 
+const LOAD_FAILED = 'We could not load your blocked members. Please try again.';
+
 export function BlockedMembers({ onBack }: { onBack: () => void }) {
   const { tokens } = useTheme();
   const tok = getAccountTokens(tokens);
@@ -27,15 +29,28 @@ export function BlockedMembers({ onBack }: { onBack: () => void }) {
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [rowError, setRowError] = useState<{ id: string; message: string } | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  // Why the list did not load (shown under the error heading), and why a pull-to-refresh failed while
+  // a list was already on screen (shown above that list, which stays).
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [refreshError, setRefreshError] = useState<string | null>(null);
 
-  // `background` keeps the current screen up while a pull-to-refresh reloads the list.
-  const load = useCallback(async (background = false) => {
+  // `background` keeps the current screen up while a pull-to-refresh reloads the list. `keepList`
+  // means a list is on screen: a failed refresh then leaves it there and says why above it, instead
+  // of replacing it with the error screen.
+  const load = useCallback(async (background = false, keepList = false) => {
     if (!background) setLoadState('loading');
     try {
       setBlocks(await fetchBlockedMembers());
+      setRefreshError(null);
       setLoadState('ready');
     } catch (caught) {
       reportError(caught, { area: 'blocks', op: 'load_blocked_members' });
+      const message = caught instanceof Error && caught.message ? caught.message : LOAD_FAILED;
+      if (keepList) {
+        setRefreshError(message);
+        return;
+      }
+      setLoadError(message);
       setLoadState('error');
     }
   }, []);
@@ -47,11 +62,11 @@ export function BlockedMembers({ onBack }: { onBack: () => void }) {
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      await load(true);
+      await load(true, loadState === 'ready');
     } finally {
       setRefreshing(false);
     }
-  }, [load]);
+  }, [load, loadState]);
 
   const handleUnblock = useCallback(async (member: BlockedMember) => {
     setPendingId(member.blockedUserId);
@@ -83,6 +98,7 @@ export function BlockedMembers({ onBack }: { onBack: () => void }) {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         <Text style={s.errorTitle}>We couldn&apos;t load your blocked members</Text>
+        {loadError ? <Text style={[s.errorBody, s.errorReason]} accessibilityRole="alert">{loadError}</Text> : null}
         <Text style={s.errorBody}>Please refresh the page to try again.</Text>
       </ScrollView>
     );
@@ -106,6 +122,8 @@ export function BlockedMembers({ onBack }: { onBack: () => void }) {
         <Text style={s.intro}>
           People you&apos;ve blocked can&apos;t see or contact you, and they&apos;re never told. Unblock someone here to let them see and reach you again.
         </Text>
+
+        {refreshError ? <Text style={[s.rowMeta, s.rowMetaError, s.refreshError]} accessibilityRole="alert">{refreshError}</Text> : null}
 
         {blocks.length === 0 ? (
           <View style={s.empty}>
@@ -184,6 +202,8 @@ function makeStyles(t: ThemeTokens, tok: AccountTokens) {
     rowName: { fontSize: 14, fontFamily: interFamily('600'), color: tok.TEXT, marginBottom: 2 },
     rowMeta: { fontSize: 12, lineHeight: 16.8, fontFamily: interFamily('400'), color: tok.SUBTLE },
     rowMetaError: { color: '#F87171' },
+    errorReason: { color: '#F87171', marginBottom: 6 },
+    refreshError: { marginBottom: 12 },
     unblock: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 7, paddingHorizontal: 13, borderRadius: radius(t, 9), backgroundColor: `${tok.BRAND}12`, borderWidth: 1, borderColor: `${tok.BRAND}35` },
     unblockText: { fontSize: 13, fontFamily: interFamily('600'), color: tok.BRAND },
   });
