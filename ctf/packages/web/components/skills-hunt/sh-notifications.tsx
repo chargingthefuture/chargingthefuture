@@ -7,11 +7,14 @@ import { getSkillsHuntTokens } from './sh-shared';
 
 export function SkillsHuntNotifications({
   notifications,
+  error = null,
   onClose,
   onMarkRead,
   placement = "desktop",
 }: {
   notifications: SkillsHuntNotification[];
+  // A failed poll or mark-read, with the route's reason when it sent one.
+  error?: string | null;
   onClose: () => void;
   onMarkRead: (id: string) => void;
   // "desktop" anchors the panel absolutely beside the icon rail (left:80, inside the shell's
@@ -32,6 +35,9 @@ export function SkillsHuntNotifications({
         <span style={{ fontSize: 13, fontWeight: 700, color: t.TITLE }}>Status</span>
         <button type="button" aria-label="Close status" onClick={onClose} style={{ background: "none", border: "none", color: t.MUTED, cursor: "pointer", fontSize: 18, lineHeight: 1 }}>×</button>
       </div>
+      {error && (
+        <div role="alert" style={{ padding: "10px 16px", fontSize: 12, color: "#EF4444", lineHeight: 1.5, borderBottom: "1px solid rgba(255,255,255,0.06)" }}>{error}</div>
+      )}
       {notifications.length === 0 ? (
         <div style={{ padding: 24, fontSize: 13, color: t.MUTED, textAlign: "center" }}>No status updates yet.</div>
       ) : (

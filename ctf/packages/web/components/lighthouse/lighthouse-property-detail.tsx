@@ -6,6 +6,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { BlockMemberButton } from "@/components/blocks/block-member-button";
 import { acceptedCurrencyLabels, formatRentParts, getLighthouseTokens, listingAcceptsCredits, type CurrencyMap, type LighthouseTokens, type Property } from "./shared";
 import { failureText } from 'lib/errors/client-failure';
+import { LIGHTHOUSE_ERROR_CODE } from 'lib/lighthouse/constants';
 
 // The chips row under the title: property type, location, and a credits flag when accepted.
 function ListingBadges({ l, t }: { l: Property; t: LighthouseTokens }) {
@@ -180,8 +181,9 @@ type MatchResponseData = { ok?: boolean; code?: string; message?: string };
 function interpretMatchResponse(ok: boolean, data: MatchResponseData): "sent" | "needs-profile" | "duplicate" | "error" {
   if (ok && data.ok) return "sent";
   // No active seeker profile yet — the endpoint denies until they set one up.
-  if (data.code === "policy_denied" || data.code === "profile_not_found") return "needs-profile";
-  if (data.code === "duplicate_match") return "duplicate";
+  // The route answers with the LIGHTHOUSE_* codes, not the repository's internal error names.
+  if (data.code === LIGHTHOUSE_ERROR_CODE.policyDenied || data.code === LIGHTHOUSE_ERROR_CODE.profileNotFound) return "needs-profile";
+  if (data.code === LIGHTHOUSE_ERROR_CODE.duplicateMatch) return "duplicate";
   return "error";
 }
 

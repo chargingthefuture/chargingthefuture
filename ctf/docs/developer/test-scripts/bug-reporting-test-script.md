@@ -26,7 +26,9 @@
 - Run the **Core smoke** block every session. Run the full walkthrough when you changed this
   plugin or on a pre-release sweep.
 - The submit form is reached from the global Help control (the "?" item in the desktop icon rail
-  and the phone-width top bar) — it is a modal, not a plugin grid tile and not a page.
+  and the phone-width top bar) — it is a modal, not a plugin grid tile and not a page. In the
+  android app it opens from the bug icon in the top bar on the Apps home and in every screen
+  header, as on the web; there is no separate "Report a problem" tab or row any more.
 
 ---
 
@@ -34,7 +36,8 @@
 
 Member-reporting + private-triage plugin — these are the can't-ship-broken checks.
 
-1. **Report submits.** Open the Help control, choose "Report a problem", write one line, submit.
+1. **Report submits.** Open the Help control (android: the bug icon in the top bar or a screen
+   header), choose "Report a problem", write one line, submit.
    You get a calm confirmation, not a raw error. → web ☐ mobile ☐ android ☐
 2. **Raw text stays private.** Submitting stores the report in the app database; no raw text is
    sent to GitHub at submit time (the synchronous step does no external calls). → web ☐ mobile ☐ android ☐
@@ -51,7 +54,8 @@ Member-reporting + private-triage plugin — these are the can't-ship-broken che
 **Role:** member · **Surfaces:** web (desktop), web (mobile-responsive), android · **Seed:** `seed:demo`
 **Precondition:** signed in (a not-yet-verified member may also submit — `any_authenticated` tier).
 **Steps:**
-1. Open the global Help control and choose "Report a problem".
+1. Open the global Help control (android: the bug icon in the top bar or any screen header) and
+   choose "Report a problem".
 2. Read the intro line under the "Report a problem" title before typing anything.
 3. Fill "what went wrong" (required); leave "what you were trying to do" empty.
 4. Submit.
