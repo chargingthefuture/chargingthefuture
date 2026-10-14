@@ -273,6 +273,11 @@ this is not a plugin. The steps that matter:
    confirm the same data now reports a rate.
 9. Download the CSV. Every row carries the run date, scope, and method, and free text containing
    commas and quotes stays inside its own cell.
+10. The run list, the run heading, the CSV `observed_on` cells and the downloaded file name all show
+   the run date as `YYYY-MM-DD` (for example `quora-live-census-2026-08-19.csv`), never a timestamp
+   or a long date string.
+11. Code an account whose handle is `=1+1` and whose notes start with `@`. In the downloaded CSV both
+   cells start with a single quote, and a spreadsheet shows them as text rather than running them.
 
 ## Gaps & Known Technical Debt
 
@@ -288,6 +293,15 @@ this is not a plugin. The steps that matter:
 
 ## Change Log
 
+- 2026-10-12: **The run date reads as a date, and the CSV cannot run a formula (code review #2743,
+  #2747).** `observed_on` is a `DATE`, and the database driver turns a `DATE` into a JavaScript
+  `Date` unless it is cast. Every query that returns a run now also reads `observed_on::text`, so
+  the run list and heading show `2026-08-19` rather than an ISO timestamp, and the CSV cells and the
+  download's file name carry the same string rather than a long date. A handle, note or address
+  that starts with `=`, `+`, `-`, `@`, a tab or a carriage return is now written to the CSV with a
+  leading single quote, so a spreadsheet shows it as text; the same guard the deletion survey's
+  export uses. No schema, contract or API-shape change: the contract already declared the date a
+  string.
 - 2026-10-04: **The four contract files exist.** A contract coverage audit across every API surface
   found this tool had none. The `QUORA_LIVE_CENSUS_*` contracts are written from the routes, the
   repository and the deletion registry, and the audit paragraph above now says which routes log a
