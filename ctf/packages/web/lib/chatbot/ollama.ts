@@ -206,15 +206,21 @@ function describeHttpError(status: number): string {
   return `The engine returned HTTP ${Number.isFinite(status) ? status : 'error'}.`;
 }
 
+// The text for a request that ran out of time. A draft waits long enough to outlast a cold start,
+// so running out there points at the endpoint's worker setting instead of asking for a retry.
+function describeTimeout(timeoutMs: number): string {
+  if (timeoutMs >= OLLAMA_DRAFT_TIMEOUT_MS) {
+    const runpodHint = ollamaProviderIsRunpod()
+      ? ' The RunPod job was canceled. Check the endpoint has at least 1 max worker in the RunPod dashboard — RunPod sets it to 0 after about two weeks with no requests.'
+      : '';
+    return `The engine did not answer within ${Math.round(timeoutMs / 60_000)} minutes.${runpodHint}`;
+  }
+  return `The engine did not respond within ${Math.round(timeoutMs / 1000)}s — the model may still be loading (a cold start). Try again in a moment.`;
+}
+
 export function describeOllamaFailure(err: unknown, timeoutMs: number = OLLAMA_TIMEOUT_MS): string {
   if (err instanceof Error && err.name === 'AbortError') {
-    if (timeoutMs >= OLLAMA_DRAFT_TIMEOUT_MS) {
-      const runpodHint = ollamaProviderIsRunpod()
-        ? ' The RunPod job was canceled. Check the endpoint has at least 1 max worker in the RunPod dashboard — RunPod sets it to 0 after about two weeks with no requests.'
-        : '';
-      return `The engine did not answer within ${Math.round(timeoutMs / 60_000)} minutes.${runpodHint}`;
-    }
-    return `The engine did not respond within ${Math.round(timeoutMs / 1000)}s — the model may still be loading (a cold start). Try again in a moment.`;
+    return describeTimeout(timeoutMs);
   }
   const code = err instanceof Error ? err.message : '';
   if (code === 'ollama_not_configured') {
