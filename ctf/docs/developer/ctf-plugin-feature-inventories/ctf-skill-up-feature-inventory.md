@@ -365,6 +365,14 @@ that exist today.
 
 ## Change Log
 
+- 2026-10-14: **The SkillUp seed runs again, and post/0009 leaves later cohort titles alone (code
+  review #2768, #2770).** `seedSkillUp.mjs` still inserted the four stipend and microgrant columns
+  that post/0012 and post/0013 dropped, so `pnpm seed:skill-up` failed before writing a cohort; the
+  insert now lists only current columns and sets `trainer_credits_per_milestone` to 10 as the demo
+  seed does. post/0009 strips the `SkillUp: ` / `LevelUp: ` prefix only from cohorts created before
+  2026-08-30, since the file runs on every deploy that applies migrations and an admin may now give a
+  cohort a title that starts with either word.
+
 - 2026-10-05: **SkillUp transfers go through the canonical ServiceCredits transfer (code review
   #2875).** `transferCreditsForSkillUp` imported a second copy of `createTransfer` that skipped the
   wallet freeze check, the command idempotency record and the external ledger post. It now imports

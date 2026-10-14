@@ -3510,7 +3510,8 @@ CREATE TABLE IF NOT EXISTS skill_up_cohorts (
   -- "SkillUp: <occupation>" (and "LevelUp: <occupation>" before the 2026-08-29 rename), which
   -- repeated the name of the plugin the row is already inside on every card. It is the occupation on
   -- its own now; post/0009_skill_up_cohort_title_drop_plugin_prefix.sql strips the prefix from the
-  -- rows written under the old template. Do not reintroduce the prefix.
+  -- rows written under the old template (created before 2026-08-30 only, so a title an admin types
+  -- later is left as typed on every re-run). Do not reintroduce the prefix.
   title TEXT NOT NULL,
   description TEXT NOT NULL,
   track TEXT NOT NULL,
