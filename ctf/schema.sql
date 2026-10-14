@@ -7196,6 +7196,22 @@ AS $$
 $$;
 REVOKE ALL ON FUNCTION directory_public_match_count(TEXT[]) FROM PUBLIC;
 
+-- In-demand needs (owner decision, 2026-10-13): each time a visitor on the landing page picks a need
+-- and nobody in the Directory matches it, the page records it once per visit, so the owner can see
+-- which needs go unmet and look for somebody. One row per time asked: the need's label (or
+-- "skill:<job title>" for a single added skill), the job titles behind it, and when. Nothing about
+-- the visitor: no code, name, contact detail or IP address. The landing page login may only add rows.
+CREATE TABLE IF NOT EXISTS directory_unmet_needs (
+  id BIGSERIAL PRIMARY KEY,
+  need TEXT NOT NULL,
+  job_title_ids TEXT[] NOT NULL DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS directory_unmet_needs ADD COLUMN IF NOT EXISTS need TEXT;
+ALTER TABLE IF EXISTS directory_unmet_needs ADD COLUMN IF NOT EXISTS job_title_ids TEXT[] NOT NULL DEFAULT '{}';
+ALTER TABLE IF EXISTS directory_unmet_needs ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_directory_unmet_needs_need ON directory_unmet_needs (need, created_at DESC);
+
 -- === beacon-plugin ===
 -- Beacon: admin-only one-way livestream. An admin goes live ad hoc to broadcast a live demo
 -- (screen content), flagship use the "State of the Skills Economy" address. Watching is public

@@ -424,6 +424,12 @@ else; the views and the function do the counting, so the login never touches a m
 role `neon_superuser`. Its connection address is a secret like any other: Infisical first, then the
 Vercel project's `DATABASE_URL`.
 
+A need nobody matches is recorded (owner decision, 2026-10-13). When a visitor picks a need and the
+count is 0, the page adds a row to `directory_unmet_needs`, once per need per visit, so the owner
+can see which needs go unmet and look for somebody. The row holds the need and its job titles and
+nothing about the visitor; the login may add rows and never read them. The owner reads them with
+`ctf/scripts/sql/landing_unmet_needs_report.sql`.
+
 ## Feature freeze, and one message (owner decision, 2026-10-02)
 
 No new features in Skills Economy. Bug fixes and changes to shipped screens continue, and every
