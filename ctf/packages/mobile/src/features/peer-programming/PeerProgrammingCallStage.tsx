@@ -52,13 +52,14 @@ export function PeerProgrammingCallStage({ call, onLeave }: { call: Call; onLeav
       </Text>
       {sharer ? (
         <View style={[styles.screen, { borderRadius: t.r(12), borderColor: `${t.ACCENT}25` }]}>
-          <ParticipantView participant={sharer} trackType="screenShareTrack" objectFit="contain" />
+          <ParticipantView participant={sharer} trackType="screenShareTrack" objectFit="contain" style={styles.fill} />
         </View>
       ) : null}
       <View style={styles.grid} onLayout={(e) => setRowWidth(e.nativeEvent.layout.width)}>
         {rowWidth > 0 && members.map((participant) => (
-          <View key={participant.sessionId} style={[styles.tile, { width, borderRadius: t.r(12), borderColor: `${t.ACCENT}25` }]}>
-            <ParticipantView participant={participant} trackType="videoTrack" />
+          <View key={participant.sessionId} style={[styles.tile, { width, height: width * 0.75, borderRadius: t.r(12), borderColor: `${t.ACCENT}25` }]}>
+            {/* The SDK view sizes to its content unless told to fill, which drew the camera as a strip. */}
+            <ParticipantView participant={participant} trackType="videoTrack" style={styles.fill} />
           </View>
         ))}
       </View>
@@ -71,5 +72,6 @@ const styles = StyleSheet.create({
   count: { fontSize: 11, fontFamily: interFamily('700'), letterSpacing: 0.88, marginBottom: 14 },
   screen: { width: '100%', aspectRatio: 9 / 16, maxHeight: 460, borderWidth: 1, overflow: 'hidden', backgroundColor: '#000', marginBottom: GAP },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: GAP },
-  tile: { aspectRatio: 4 / 3, borderWidth: 1, overflow: 'hidden', backgroundColor: '#000' },
+  tile: { borderWidth: 1, overflow: 'hidden', backgroundColor: '#000' },
+  fill: { flex: 1 },
 });
