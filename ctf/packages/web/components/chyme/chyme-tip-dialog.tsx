@@ -5,6 +5,14 @@ import { Coins, X } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { getChymeTokens, requestJson } from "./chyme-shared";
 
+// A fresh idempotency key for one tip. Falls back for a non-secure context where
+// crypto.randomUUID is unavailable.
+function newTipKey(): string {
+  const cryptoObj = typeof globalThis !== "undefined" ? globalThis.crypto : undefined;
+  if (cryptoObj?.randomUUID) return cryptoObj.randomUUID();
+  return Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
+
 // A "Tip" action shown on another participant's tile in the Chyme room. It sends ServiceCredits
 // peer-to-peer to that participant via POST /api/chyme/service-credits (origin_plugin 'chyme'),
 // which delivers immediately. The caller renders this only for other members (never on the local
@@ -67,6 +75,10 @@ function ChymeTipDialog({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  // One idempotency key per filled-in tip, not per press. A second press after an error, or after a
+  // response that never arrived, carries the same key, so the server returns the first transfer
+  // instead of sending the credits again. Changing the amount makes it a different tip with a new key.
+  const [tipKey, setTipKey] = useState(newTipKey);
   const { theme } = useTheme();
   const t = getChymeTokens(theme);
 
@@ -95,6 +107,7 @@ function ChymeTipDialog({
           toUserId: recipientUserId,
           amount: numeric,
           message: message.trim() || undefined,
+          idempotencyKey: tipKey,
         }),
       });
       setSuccess(true);
@@ -150,7 +163,10 @@ function ChymeTipDialog({
         <input
           id="chyme-tip-amount"
           value={amount}
-          onChange={(e) => setAmount(e.target.value)}
+          onChange={(e) => {
+            setAmount(e.target.value);
+            setTipKey(newTipKey());
+          }}
           type="number"
           min="1"
           inputMode="numeric"
