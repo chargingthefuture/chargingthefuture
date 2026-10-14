@@ -113,6 +113,15 @@ phone bar's wordmark (Newsreader, a light burgundy) and the SE mark's burgundy g
 (`components/shared/se-mark.tsx`, `community-shell.module.css`) and Android
 (`components/shell/ShellChrome.tsx`). Change those together.
 
+The Skills Economy mark (the "Stack") is the logo on every site, in that site's color (owner
+decision, 2026-10-13); the heart Charging The Future logo is retired. In the app it is burgundy
+in the header, `public/brand/` and the web and Android icons. The wallpapers
+(`ctf/scripts/wallpapers/`) are a choice of colors rather than a brand color: the original
+teal-to-purple stays, with burgundy, coral and green beside it. The mission line is "Exit their
+economy, exit the psyop."; "Live,
+Work & Prevail" is retired, and older posts keep it. The domains stay as they are. No site loads
+anything from Google: fonts are self-hosted and video players load only when somebody taps play.
+
 # Monorepo Layout
 
 ```
