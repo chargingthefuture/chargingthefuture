@@ -41,8 +41,9 @@ Member-reporting + private-triage plugin — these are the can't-ship-broken che
    You get a calm confirmation, not a raw error. → web ☐ mobile ☐ android ☐
 2. **Raw text stays private.** Submitting stores the report in the app database; no raw text is
    sent to GitHub at submit time (the synchronous step does no external calls). → web ☐ mobile ☐ android ☐
-3. **Flagged report holds.** A report containing an email/phone (or abusive language) is born
-   `held_for_review` and does not auto-publish. → web ☐ mobile ☐ android ☐
+3. **Flagged report holds.** A report containing an email/phone (or abusive language, including a
+   listed word with a suffix or inside a longer word) is born `held_for_review` and does not
+   auto-publish. → web ☐ mobile ☐ android ☐
 4. **Admin queue is admin-only.** `/admin/bug-reports` (and `GET /api/bug-reports/admin`) loads for
    an admin and is denied for a plain member. → web ☐
 
@@ -66,6 +67,8 @@ reads "Not a bug? To talk to Farah about your work."; tapping "talk to Farah abo
 https://farahbrunache.com (a new tab on web, the device browser on android) and leaves the form
 as it was. At ~390px the line wraps with no sideways scroll. The form posts to `POST /api/bug-reports` with the `x-ctf-csrf: 1` header and
 same-origin cookies. Page URL and (on `/apps/<slug>`) the plugin slug are attached automatically;
+the stored page URL is the origin and path only — open the form on a page with `?x=1#y` in the
+address and the admin card shows the address without the `?` or `#` part;
 no technical detail is asked of the user. A 201 shows the calm success state; the report row is
 stored privately as `new` (or `held_for_review` if flagged). On phone width the modal renders as a
 bottom sheet; android mirrors the same five states.
