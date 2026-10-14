@@ -99,27 +99,28 @@ type AccountFields = Pick<VerifiedBearerIdentity, 'username' | 'firstName' | 'la
 // How long one account's Clerk record is reused, so a screen's burst of requests costs one lookup.
 // A role change reaches the Android app within this window.
 const ACCOUNT_CACHE_MS = 5 * 60 * 1000;
-const accountCache = new Map<string, { fields: AccountFields | null; expiresAt: number }>();
+const accountCache = new Map<string, { fields: AccountFields; expiresAt: number }>();
 
 async function readClerkAccount(userId: string, secretKey: string): Promise<AccountFields | null> {
   const cached = accountCache.get(userId);
   if (cached && cached.expiresAt > Date.now()) return cached.fields;
-  let fields: AccountFields | null = null;
   try {
     const user = await createClerkClient({ secretKey }).users.getUser(userId);
     const metadata = asRecord(user.publicMetadata);
-    fields = {
+    const fields: AccountFields = {
       username: claimString(user.username),
       firstName: claimString(user.firstName),
       lastName: claimString(user.lastName),
       role: claimString(metadata?.role)?.toLowerCase() ?? null,
     };
+    accountCache.set(userId, { fields, expiresAt: Date.now() + ACCOUNT_CACHE_MS });
+    return fields;
   } catch (caught) {
-    // The token is already verified, so the request goes on with what the token carried.
+    // The token is already verified, so the request goes on with what the token carried. A failed
+    // lookup is not cached: remembering it would treat an admin as a member for the next five minutes.
     reportError(caught, { area: 'auth', op: 'bearer_account_lookup' });
+    return null;
   }
-  accountCache.set(userId, { fields, expiresAt: Date.now() + ACCOUNT_CACHE_MS });
-  return fields;
 }
 
 // The Android app signs in through Clerk's OAuth flow, and that id_token carries neither the role nor
