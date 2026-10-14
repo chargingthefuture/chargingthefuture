@@ -78,7 +78,9 @@
     the data. Best-effort by design: the data deletion has already committed, so a provider outage
     reports itself in the response (`identityRemoved: false` plus `identityError`) and in the audit row
     rather than failing a deletion that did happen; the account can then be cleared through the operator
-    route. The provider's own `user.deleted` webhook fires on success and skips, because the
+    route. Both clients (web `account-data-shell.tsx`, Android `api.ts`) read that 200 body, and the
+    "Deletion queued" screen says the sign-in could not be removed, with the reason, instead of saying
+    it is gone. The provider's own `user.deleted` webhook fires on success and skips, because the
     `account_deletion_events` row written by this request already exists.
     Every deletion event records who asked, in its `summary.initiatedBy`: `member` for these two
     routes and for the provider webhook (the member deleted their own sign-in), `operator` for the
@@ -418,6 +420,7 @@ Owner decision, 2026-09-26. The owner pays the running costs of Skills Economy a
   error it could not report, instead of discarding both (#2763). `hooks/useTheme.tsx` reports a theme
   save or first-load read that fails with anything other than a 401, and a thrown fetch, as
   `account/theme_save` / `account/theme_load`; the local choice still applies (#2764).
+- 2026-10-12: **Account & Data no longer says the sign-in is gone when it was not removed, and the danger panel counts every service (code-review #2648, #2652).** `DELETE /api/account/full-account` answers 200 with `identityRemoved: false` and `identityError` when the auth provider call fails, but neither client read the body, so the "Deletion queued" screen always said the sign-in was removed and the member could not sign back in. The web shell and the Android `deleteFullAccount` now return `identityRemoved` / `identityError`, and when the server says false the screen says the data is being removed but the sign-in could not be, so the member can still sign in to an empty account, gives the reason, and points at Report a bug. Only an explicit `false` changes the wording. The danger panel on web and Android also said "across all N services" with only the deletable count while the confirm panel it opens used deletable plus retained; both now use deletable plus retained, since full-account deletion covers the retained services too. No route, schema or contract change.
 
 - 2026-10-12: **A failed ROLLBACK no longer hides the error that caused it (issue #2957).**
   `withDbTransaction` in `lib/db/postgres.ts` ran `ROLLBACK` bare in its catch, so when the rollback
