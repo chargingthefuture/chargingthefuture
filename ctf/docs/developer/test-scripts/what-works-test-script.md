@@ -236,11 +236,15 @@ rows.
 2. Read the newest entries.
 3. `DELETE /api/what-works/admin/products/<a uuid that does not exist>`, then reopen the panel.
 4. Edit an approved tool's link, then reopen the panel.
+5. `POST /api/what-works/admin/problems` with an empty title, then reopen the panel.
+6. As a signed-in member who is not an admin, `DELETE /api/what-works/admin/problems/<any problem id>` (with the `x-ctf-csrf: 1` header), then reopen the panel as the admin.
 
 **Expected:**
 - Step 2: entries newest first, at most 200, each naming the decision in plain words — "Added a problem", "Decided on a suggested product", "Removed a product" — with the admin's id, what it was done to, and the local date and time. A review shows its action (approve or reject) from the metadata.
 - Step 3: the 404 appears marked **Refused**, reading "Because the record was not there". An action that did not happen is recorded, not dropped.
 - Step 4: an "Edited a suggested product" row appears.
+- Step 5: a **Refused** row for adding a problem, reading "Because the details did not pass validation" (added 2026-10-14).
+- Step 6: the member gets 403, and a **Refused** row with the member's id reads "Because policy refused it" (added 2026-10-14). A database failure during any admin write shows as **Failed**, "Because the database write failed", and the screen gets a 503 that says the change could not be saved and why.
 - **No row names who suggested anything.** Every entry identifies the product or problem and the acting admin only. This is the check that matters here: the plugin's anonymity guarantee says `suggested_by` never reaches a projection, and the audit trail must not be the exception that reintroduces it.
 
 **Note:** the member-facing actions — reading, suggesting, endorsing — deliberately write no audit row. A row per endorsement would be volume, not accountability. Their absence here is correct, not a gap.
