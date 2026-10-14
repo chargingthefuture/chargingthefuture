@@ -3,7 +3,6 @@ import { ensureUnlockMutationCsrf, requireUnlockAdminAccess, resolveUnlockReques
 import { insertUnlockAudit, reviewUnlockSubmission } from 'lib/unlock/repository';
 import { grantUnlockRewardForSubmission } from 'lib/unlock/reconcile-rewards';
 import { insertServiceCreditsAudit } from 'lib/service-credits/repository';
-import { grantUnleashFlagForUser } from 'lib/feature-flags';
 import { getAccountRestrictionStatus, restrictAccount, unrestrictAccount } from 'lib/auth/account-restrictions';
 import {
   UNLOCK_DUPLICATE_RESTRICTION_REASON,
@@ -13,7 +12,6 @@ import {
 // Through the platform interface, never a plugin directly — this route must not learn which
 // plugins have catch-up work when somebody is approved (rule 112).
 import { runUnlockApprovalCatchUp } from 'lib/shared/unlock-approval-interface';
-import { UNLOCK_FLAGS } from '@ctf/shared';
 import type { ReviewUnlockSubmissionInput, UnlockSubmission } from 'lib/unlock/types';
 import { reportError } from 'lib/observability/report';
 
@@ -67,9 +65,9 @@ async function syncUnlockAccountRestriction(
   }
 }
 
-// Best-effort follow-ups after an approval decision (already committed). The Unleash flag grant and the
-// ServiceCredits reward must NOT fail the approval if a provider (Unleash admin API, Formance ledger) is
-// temporarily unavailable — the mint is idempotent, so a later retry won't double-grant. Returns whether
+// Best-effort follow-up after an approval decision (already committed). The ServiceCredits reward must
+// NOT fail the approval if the Formance ledger is temporarily unavailable — the mint is idempotent, so a
+// later retry won't double-grant. Returns whether
 // the reward was HELD by the duplicate-identity guard (another account holds this Quora identity's reward).
 async function grantApprovalRewardBestEffort(
   submission: UnlockSubmission,
@@ -81,10 +79,6 @@ async function grantApprovalRewardBestEffort(
     return false;
   }
   try {
-    // Grant the Unleash flag so flag-based evaluation returns true on subsequent requests without a DB
-    // lookup. Best-effort: if the Admin API is unavailable, the DB fallback in isUserUnlocked() is authoritative.
-    await grantUnleashFlagForUser(UNLOCK_FLAGS.QUORA_ONBOARDING, submission.userId);
-
     // Skip if this submission's reward already landed or was clawed back. Otherwise grant through the shared
     // duplicate-identity guard: if another account already holds this Quora identity's reward, the reward is
     // HELD for an admin determination instead of minting a second one for the same person.

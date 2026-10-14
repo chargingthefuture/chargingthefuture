@@ -95,6 +95,13 @@ jobs:
       - name: Check mobile env contract
         run: pnpm --dir ctf --filter @ctf/mobile run check:mobile-env
 
+      # Expo's build server re-reads app.config.ts without this job's environment, so the
+      # values Infisical loaded above must be handed over through the profile's env in eas.json.
+      # Without this the APK shipped with no API address and no sign-in keys.
+      - name: Hand app settings to the Expo build
+        working-directory: ctf/packages/mobile
+        run: node scripts/write-eas-build-env.mjs production
+
       # Informational only — a release is deliberate, so this never blocks it. It
       # prints this month's Android build count against the free-tier limits
       # (ctf/packages/mobile/expo-free-tier-quota.json) so an over-quota release

@@ -512,7 +512,16 @@ export async function approveCohortProposal(input: {
 
   // Read the current gaps so this cohort's trainer rate is scaled against the real spread rather
   // than a number picked in advance.
-  const gapReport = await fetchOccupationGapReport().catch(() => []);
+  // A failed read falls back to the flat base rate, which is then stamped on the cohort for good,
+  // so the failure is reported to leave a trace of why this cohort's rate was not scaled.
+  const gapReport = await fetchOccupationGapReport().catch((error: unknown) => {
+    reportError(error, {
+      area: 'skill-up',
+      op: 'admin_cohort_proposal_approve_gaps',
+      extra: { proposalId: input.proposalId },
+    });
+    return [];
+  });
   const trainerCreditsPerMilestone = trainerRateForGap(
     Number(proposal.gap_at_proposal),
     gapReport.map((item) => item.gap),

@@ -16,8 +16,9 @@
 ## Intent and Outcome
 
 Beacon lets an admin go live ad hoc — a one-way broadcast — so the community can watch and take part
-in real time. The broadcast is primarily a **live demo of the app**: the admin streams their **phone
-screen** (or a desktop screen/window) to show features live, not just a face cam. Its flagship use is
+in real time. The admin goes live **on camera from their phone**, talking to the community the way a
+Twitch or TikTok live works, and can also show a desktop screen/window, or the phone's own screen
+through a broadcaster app, to demo features live. Its flagship use is
 the **State of the Skills Economy** address (a "state of the union"-style update the owner gives
 whenever there is something to say, not on a fixed cadence).
 
@@ -44,7 +45,11 @@ feed; when the event ends, Beacon auto-posts the recording to the Commons as a r
 6. **Chyme is untouched.** Beacon is a separate plugin; it does not change Chyme's audio rooms.
 7. **Admin moderation + a clear "live and public" indicator are in scope from v1** (mute, ban,
    slow-mode; an unmistakable on-screen marker that the broadcast is public).
-8. **Broadcast input = RTMP ingest (for the phone) + in-browser desktop screen-share.** The broadcast
+8. **Broadcast input = in-browser camera and microphone + in-browser desktop screen-share + RTMP
+   ingest.** Owner decision, 2026-10-06: the intended use was always a live stream from the phone in
+   the way of a Twitch or TikTok live, the host on camera and talking, so the admin page publishes the
+   phone's (or computer's) camera and microphone straight from the browser, with no other app. The
+   original wording below, kept for history, covered only screen content. The broadcast
    is a live demo (screen content), and a phone's **web browser cannot capture the phone's screen**, so
    the admin streams the phone screen by pushing it through a third-party mobile broadcaster app (e.g.
    Larix Broadcaster) to a private RTMP URL + stream key that Beacon mints per event. For demos from a
@@ -54,13 +59,21 @@ feed; when the event ends, Beacon auto-posts the recording to the Commons as a r
 
 ## Architecture
 
-- **Video = Stream Video, `livestream` call type.** The admin is the only publisher, via two input
+- **Video = Stream Video, `livestream` call type.** The admin is the only publisher, via three input
   paths into the same call:
+  - **Camera and microphone → in-browser publish.** From `/admin/beacon` on a phone or a computer,
+    "Use camera and microphone" turns both on through the Stream web SDK, shows the host a muted
+    preview, then joins the call as the host. "Flip camera" switches front and back cameras.
   - **Phone demo → RTMP ingest.** Beacon requests Stream's per-call RTMP ingest URL + stream key and
     shows them to the admin; the admin pushes the phone screen from a mobile broadcaster app. Stream
     distributes it to viewers.
   - **Desktop demo → in-browser screen-share.** From `/admin/beacon`, the admin captures a desktop
     screen/window (browser `getDisplayMedia`) and publishes through the Stream web SDK as the host.
+    The button is shown only where the browser offers screen capture, so not on a phone.
+
+  The admin page joins the call only when one of the in-browser buttons is pressed. It used to join as
+  soon as Go Live succeeded, with nothing turned on, and Stream took that silent participant as the
+  broadcaster: the feed and recording started and recorded nothing (owner report, 2026-10-06).
 
   The call uses "backstage" until the admin presses Go Live (`goLive()`). The call type's role
   permissions forbid publishing for anyone who is not the host, enforced by server-minted tokens.
@@ -85,8 +98,10 @@ feed; when the event ends, Beacon auto-posts the recording to the Commons as a r
 ## User Features (viewer surface, `/apps/beacon`)
 
 1. **Watch publicly.** Anyone with the link watches the live broadcast (HLS), no sign-in.
-2. **Idle state.** When nothing is live, a calm "No live event right now" screen (with the last
-   replay, if any).
+2. **Idle state.** When nothing is live, a calm "No live event right now" screen with a "Missed it?
+   Watch the recordings" button that opens the blog's streams page in a new tab, plus the last replay,
+   if any. A signed-out visitor's page has extra space at the bottom so the invite cards fixed to the
+   bottom corner never cover the button or the replay.
 3. **Live chat (members).** Signed-in members post chat messages during the event; anonymous viewers
    see a "sign in to chat" prompt.
 4. **Live reactions (members).** Signed-in members send reactions during the event.
@@ -103,15 +118,23 @@ feed; when the event ends, Beacon auto-posts the recording to the Commons as a r
 ## Admin Features (admin surface, `/admin/beacon`)
 
 1. **Create an event** (title + description).
-2. **Go Live** — for a phone demo, Beacon shows the per-event RTMP URL + stream key to paste into a
-   mobile broadcaster app; for a desktop demo, a "Share screen" button captures a screen/window in the
-   browser. Either way Go Live flips the event to `live` and auto-posts the "live now" notice to the
+2. **Go Live** — then broadcast from the admin page itself: **Use camera and microphone** goes live
+   with the phone's or computer's camera and microphone, shows a preview of the shot, and offers
+   **Flip camera** (front and back); **Share screen** (computers only) captures a screen/window in the
+   browser. The per-event RTMP URL + stream key are shown below them for a mobile broadcaster app,
+   which is still how to show a phone's own screen. Any way Go Live flips the event to `live` and auto-posts the "live now" notice to the
    Commons. The host is the only publisher.
 3. **Read the live chat and respond** in real time.
 4. **Moderate** — mute a member, ban a member from the event chat, enable slow-mode.
 5. **End the event** — stops the broadcast and billing; on recording-ready, auto-posts the replay to
    the Commons.
-6. **See event history** (past events + their recordings).
+6. **See event history** (past events + their recordings). Each live or ended event has a **Log**
+   that opens under it: when there is still no recording, what Stream answered when asked for one
+   (no recording for the call, recordings with no file yet, or the lookup's own error), then each
+   broadcast step with its time in ET — went live, the screen share or a joining broadcaster asking
+   for the feed and recording to start, Stream starting, stopping or failing the recording, the
+   recording file ready, ended — and the reason for any step that failed. **Copy log** copies it as
+   plain text with the event title on top.
 7. **Delete a draft** — a draft that was mistyped or abandoned can be removed from the Event history
    list. Two clicks: `Delete` arms the row, `Confirm delete` does it. **Drafts only** — a live or
    ended event has no delete control, and the route refuses one with a 409, because an ended event is
@@ -121,7 +144,13 @@ feed; when the event ends, Beacon auto-posts the recording to the Commons as a r
 ## API Surface and Route Map
 
 ### Member / public routes
-- `GET /api/beacon/current` — the currently-live event (or null) + the public HLS playback URL.
+- `GET /api/beacon/current` — the currently-live event (or null) + the public HLS playback URL. When
+  an event is live and Stream has no playlist yet, it also tries to start the public feed and the
+  recording (`lib/beacon/egress-kick.ts`): at most once per 15 seconds per event per server instance,
+  never again once a start has worked, and each distinct outcome written once to the event's log as
+  `beacon.viewer.start-broadcast`. This is the fallback when Stream's join webhook never arrives. The
+  admin page reads this route every 15 seconds while the event it has open is live
+  (`use-beacon-live-poll.ts`), so a phone broadcast starts even with no other viewer.
 - `GET /api/beacon/replays?page=` — every ended event with a recording, newest first, 20 per page,
   page clamped into range. Public, per-IP rate-limited, open to any origin (the blog reads it from the
   browser). Returns title, description, start/end times, the app's recording address and the watch
@@ -140,15 +169,22 @@ feed; when the event ends, Beacon auto-posts the recording to the Commons as a r
 ### Admin routes (admin-gated)
 - `POST /api/beacon` — create an event (draft).
 - `GET /api/beacon/[id]/ingest` — return the per-event RTMP ingest URL + stream key (for the phone
-  broadcaster app) and a host token (for desktop in-browser screen-share). Admin-only.
+  broadcaster app) and a host token (for the in-browser camera, microphone and screen-share).
+  Admin-only.
 - `POST /api/beacon/[id]/go-live` — flip the call out of backstage (`goLive` with an empty body, no
   HLS/recording yet); flips status to `live`; auto-posts to Commons. The host stage mounts after this
   succeeds, so there is no publisher yet — HLS/recording start later via `start-broadcast`.
 - `POST /api/beacon/[id]/start-broadcast` — start the public HLS broadcast + recording once a host is
-  publishing media to the call (called by the in-browser screen-share when sharing begins). Admin-only,
-  idempotent.
+  publishing media to the call (called by the admin page when its camera and microphone or its screen
+  share go live, retried up to four times three seconds apart while Stream waits for the first track).
+  Admin-only,
+  idempotent. A failure is written to the event's log with Stream's message.
 - `POST /api/beacon/[id]/end` — end the call; flips status to `ended`.
-- `GET /api/beacon/admin` — list events.
+- `GET /api/beacon/admin` — list events. For up to five ended events with no recording address, asks
+  Stream for the recording, stores it and posts the replay, as the recording-ready webhook would.
+  When none comes back, the event carries `recordingLookup`, what Stream answered. Every non-draft
+  event carries `log`: up to its 12 most recent audit-trail rows (`atIso`, `command`, `ok`,
+  `reason`), oldest first, which the history row shows as the event's Log.
 - `POST /api/beacon/[id]/moderate` — mute / ban / slow-mode actions on the event chat.
 - `DELETE /api/beacon/[id]` — delete a **draft** event. Refuses a `live` or `ended` event with a 409
   (`beacon_conflict`); the draft-only rule is enforced in the route and again in the SQL predicate of
@@ -159,16 +195,26 @@ feed; when the event ends, Beacon auto-posts the recording to the Commons as a r
   each with a signed download address. `CRON_SECRET` Bearer.
 - `POST /api/internal/beacon/recordings-archive` — `{ eventId, archivedUrl }`; records where the kept
   copy lives. Accepts only
-  `https://github.com/chargingthefuture/chargingthefuture/releases/download/beacon-recordings/<eventId>.mp4`.
+  `https://github.com/chargingthefuture/chargingthefuture/releases/download/beacon-recording-<eventId>/<eventId>.mp4`.
   Both are called by `.github/workflows/beacon-recordings-archive.yml` (every six hours, and by hand),
   which downloads each recording, re-encodes it to 540p if it is 2 GB or more (the release asset
-  limit), uploads it to the `beacon-recordings` release, and reports back.
+  limit), creates a draft release tagged `beacon-recording-<eventId>`, uploads the file to it, publishes
+  it, and reports back. One release per recording because this repository's releases are immutable: a
+  published release takes no new files.
 
 ### Webhook
-- `POST /api/beacon/stream-webhook` — Stream call lifecycle events; verifies the Stream signature and
-  acts on three of them. On `call.session_participant_joined` it starts the public HLS feed and the
+- `POST /api/beacon/stream-webhook` — Stream call lifecycle events from **both** Stream apps
+  (production and the demo app send to this one address). The signature is checked against each
+  app's secret and the matching app is the one acted on; a delivery matching neither is refused with
+  a 401, and when it names an existing Beacon call it is written once to that event's log as
+  `beacon.stream.delivery-refused`. `ingress.started` (the phone's RTMP feed connected) starts the
+  feed and recording exactly as a participant join does; `ingress.stopped` and `ingress.error` are
+  logged. Acts on these. On `call.session_participant_joined` it starts the public HLS feed and the
   recording for the matching `live` event, which is what carries a phone-only RTMP broadcast. On
   `call.recording_ready` it stores `recording_url` and posts the replay to the Commons. On
+  `call.recording_started`, `call.recording_stopped` and `call.recording_failed` it only writes a
+  line to the event's log (with Stream's reason for a failure); the participant-joined start and the
+  recording-ready store are logged too, under actor `stream-webhook`. On
   `call.session_participant_left` — for **any** call, not only Beacon's, since this is the one URL
   Stream sends every call event to — it credits the participant's `duration_seconds` to the app's
   Stream Video minute meter (`stream_video_usage_daily`, via `lib/stream-quota/webhook-usage.ts`)
@@ -220,16 +266,41 @@ default on the ALTER (the `id` default lesson from the announcements fix). Regen
   with RTMP url/key plus desktop screen-share, live chat + moderation, end, history). Public viewer
   at `/apps/beacon` (HLS player, "live and public" indicator, member live chat, idle/replay state).
   Both are mobile-responsive.
-- Android (React Native): **surface removed 2026-07-20 (rule 105, PR #1742)** — this feature is now
-  web-only, served by the installable web app (PWA). Historical detail: a viewer was previously built
-  (issue #712). `src/features/beacon/` — `BeaconApi.ts` (the
-  public `GET /api/beacon/current` and the member `POST /api/beacon/[id]/chat-token`) and a `Beacon.tsx`
-  viewer screen registered in the mobile navigator (`App.tsx`). Same three states as web: live (HLS
-  player via `expo-video` + the "live and public" indicator + member live chat through the reused
-  `StreamChatView`; anonymous viewers see a sign-in-to-chat prompt and still watch), replay (plays the
-  recording URL when one is present), idle ("no live event right now"). Admin broadcasting is not on
-  mobile — the admin pushes the phone screen through a third-party RTMP app per the plan. The HLS player
-  is a native module (`expo-video`); it runs only in an EAS dev/production build, not Expo Go.
+- Android (React Native): **built (owner decision, 2026-10-06; rule 105 keep-list).** Beacon is back
+  in the Android app because an installed Android app can share the phone's screen and a web page
+  cannot. It opens from the app's **Apps** list (home) or its own pill. `src/features/beacon/`:
+  - `Beacon.tsx` — below the screen header, the same radio icon, "Beacon" title and description line
+    as the web member page; polls `GET /api/beacon/current` every 15 seconds; loading card, live
+    (`BeaconLiveView`: the "LIVE AND PUBLIC" badge, HLS player via `expo-video`, the public notice,
+    the **Live chat** panel with member chat through the shared `StreamChatView`, or the lock and
+    **Sign in to chat** when signed out), and idle (`BeaconIdleView`: "No live event right now",
+    **Missed it? Watch the recordings** opening the blog's recordings page, and the last replay).
+    Colors, sizes and corners copy the web viewer (`BeaconTheme.ts`), comic theme included.
+  - `BeaconAdmin.tsx` — the **Beacon Admin** screen, the web `/admin/beacon` page at phone width,
+    for admins only. The Beacon header shows admins an **Admin** button; Beacon Admin's header has
+    the admin refresh control and a **Member view** button, as on the web. Notice and error banners;
+    **Create an event** (title, description, **Create draft**); **Broadcast: <title>**
+    (`BeaconBroadcastSection.tsx`: **Go live** for a draft, **End broadcast** once live, the host's
+    camera and screen controls, the broadcaster-app **RTMP URL** and masked **Stream key** each with
+    **Copy**, and while live **Moderate the chat** with Mute, Ban, Slow-mode 10s, Slow-mode off and the
+    admin's own chat view); **Event history** (`BeaconEventHistory.tsx`: status line in Eastern Time,
+    the folding **Log** with **Copy log** from `BeaconEventLog.tsx`, **Replay**, **Open**, and the
+    two-step **Delete** for drafts). State and actions in `useBeaconAdmin.ts` and
+    `useBeaconAdminActions.ts`, with the web's steps, notices and error lines. While a live event is
+    open it reads `GET /api/beacon/current` every 15 seconds, as the web admin page does. One
+    addition: **Open** on a live event also fetches its broadcast details (`GET ingest`), so the host
+    can broadcast to it again from the phone after leaving the screen.
+  - `BeaconHostStage.tsx` / `BeaconHostControls.tsx` — a Stream Video client joined only when a button
+    is pressed: **Use camera and microphone** (preview, **Flip camera**) and **Share screen** (Android
+    asks first). `useBeaconEgressStart.ts` posts `start-broadcast` once anything is sent, retried.
+  - `BeaconApi.ts` (viewer, chat token, `start-broadcast`) and `BeaconAdminApi.ts` (admin list,
+    create, delete, ingest, go-live, end, moderate) — through `authedFetch` (Bearer token;
+    `x-ctf-csrf: 1` on every POST and DELETE). The stream key is never logged. Copying uses
+    `expo-clipboard`.
+  The app's build config sets `enableScreenshare: true` on the Stream plugin (media-projection
+  permission and service). Native modules: everything runs only in an EAS build, not Expo Go.
+  History: a viewer-only Android surface existed from 2026-06-23 (issue #712) and was removed on
+  2026-07-20 (rule 105, PR #1742) when the app was narrowed to Chyme.
 
 ## Seed Coverage Status
 
@@ -261,8 +332,8 @@ stops. HLS is used for public viewers so scale does not multiply WebRTC cost.
 - Replay hosting: link to Stream's recording URL vs. re-hosting; start with the Stream URL. Since
   2026-09-29 every public link goes through `/api/beacon/replays/[id]/recording`, which asks Stream
   for a fresh address, so an expired signature no longer breaks an old replay. Also since
-  2026-09-29 (owner decision: keep our own copies), every recording is copied to the
-  `beacon-recordings` GitHub release, which costs nothing, and played from there. A recording still
+  2026-09-29 (owner decision: keep our own copies), every recording is copied to its
+  own GitHub release (`beacon-recording-<eventId>`), which costs nothing, and played from there. A recording still
   2 GB or more after re-encoding to 540p stays on Stream's copy only, and the workflow says so in its
   summary. A copy has to happen before Stream deletes its file; the workflow runs every six hours.
 - ~~**A phone-only (RTMP) broadcast may never start the public HLS feed or the recording.**~~ Closed
@@ -303,6 +374,105 @@ stops. HLS is used for public viewers so scale does not multiply WebRTC cost.
 
 ## Change Log
 
+- 2026-10-08: **The Android Beacon screen looks like the web screen (owner directive).** Every color,
+  size, corner, icon and line of copy below the screen header now comes from the web member page
+  and, for admins, the web admin page. Added: the radio icon beside the title, the web's description
+  line ("Watch with just a link"), the **Missed it? Watch the recordings** button and radio icon on
+  the idle card, the lock on the signed-out chat panel, a "Loading…" card in place of a spinner, and
+  icons on the host buttons; the host status line now uses the web's wording. Under the owner's
+  1:1 parity decision of the same day, going live moved off the member screen to a new **Beacon
+  Admin** screen copied from the web admin page, reached from an **Admin** button in the Beacon
+  header, with the web's refresh control and **Member view** button. It carries everything the web
+  page has: banners, **Create an event** with a description, the **Broadcast** card with the
+  broadcaster-app RTMP address and masked stream key (**Copy**), chat moderation and the admin's
+  chat view, and **Event history** with the log, **Replay**, **Open** and two-step **Delete**. The
+  single "Go live" card and the "Broadcast to it from this phone" button are gone; **Open** on a
+  live event fetches its broadcast details instead. Left out: the web's "Broadcast from this
+  browser" heading, which would be untrue in the app, and the demo-mode banner the web admin layout
+  shows. New dependency: `expo-clipboard`, for the copy buttons. Watching, member chat, camera,
+  screen share and keeping the call running in the background work as they did. No route, server
+  or web change.
+
+- 2026-10-08: **Each recording gets its own release.** The archive workflow had never kept a copy:
+  this repository's releases are immutable, so once its first run published the shared
+  `beacon-recordings` release, every upload to it was refused (HTTP 422, "Cannot upload assets to an
+  immutable release"). Each recording now goes to its own release, tagged `beacon-recording-<eventId>`,
+  created as a draft, given its file, then published. A draft left by a failed run is finished on the
+  next one. The write-back route accepts only the new address. The empty `beacon-recordings` release
+  is no longer used.
+
+- 2026-10-06: **Beacon in the Android app, with screen share (owner decision).** The repeated ask was
+  sharing the phone's screen in a live broadcast, which only an installed app can do, so Beacon joins
+  the Android keep-list under the owner's test: the app carries any plugin that materially benefits
+  from being an installed mobile app (rule 105 rewritten to say so; there will never be an iOS app).
+  The app now opens on an **Apps** list (Chyme, Beacon). Beacon on Android: watch, member chat, and
+  for an admin go live with the camera and microphone or share the phone's screen, then end. The
+  viewer is the one removed on 2026-07-20, restored; the host side is new and joins the call only
+  when a button is pressed. Parity contract: `mobileFeatureDirs: ["beacon"]`,
+  `requiresMobileSurface: true`. No route, schema or contract change: the app calls the existing
+  routes with its Bearer token.
+- 2026-10-06: **Broadcast from the phone's camera and microphone (owner decision).** Beacon was meant
+  to be a live stream from the phone, the host on camera and talking, and the admin page offered only
+  a computer screen share, so a phone could broadcast only through a separate RTMP app. A test
+  broadcast from the phone was recorded with no picture or sound: the admin page joined the call the
+  moment Go Live succeeded, with nothing turned on, and Stream started the feed and recording on that
+  silent participant. The admin page now has **Use camera and microphone** (with a muted preview and
+  **Flip camera**) and shows **Share screen** only where the browser can capture a screen. It joins the
+  call only when one of them is pressed, so it is never a silent broadcaster. The start request is
+  retried while Stream waits for the first track. Files: `beacon-host-stage.tsx` (no join on mount),
+  `beacon-host-controls.tsx`, `use-beacon-egress-start.ts`. Web only; Android: out of scope
+  (web-only per rule 105).
+- 2026-10-06: **The Stream webhook accepts both Stream apps (owner report).** Both Stream apps send
+  webhooks to `/api/beacon/stream-webhook`, but a delivery has no signed-in user, so the route always
+  checked the production secret. An admin in demo mode broadcasts on the demo app, and every delivery
+  from it was refused, so a phone broadcast's feed and recording were never started. The route now
+  checks each app's secret and starts the feed and recording on the app that signed. It also starts
+  them on `ingress.started`, logs `ingress.stopped` and `ingress.error`, and writes a refused delivery
+  for an existing Beacon call to the event's log. Web only; Android: out of scope (web-only per rule
+  105).
+- 2026-10-06: **The live page starts a phone broadcast's recording (owner report).** Two phone
+  broadcasts after the event log shipped logged went live, then ended, with no start step between:
+  Stream's `call.session_participant_joined` webhook, the only trigger for a phone broadcast, never
+  arrived, so neither the public feed nor the recording started. `GET /api/beacon/current` now starts
+  them when the event is live and nothing is playing, throttled and logged, and the admin page reads
+  that route every 15 seconds while its open event is live. The webhook still starts them when it
+  arrives; whichever comes first wins and the other counts "already running" as success. Web only;
+  Android: out of scope (web-only per rule 105).
+- 2026-10-06: **A log for each broadcast (owner report).** Every ended event read "no recording
+  found", the same words whether Stream had no recording or the lookup itself failed, and a failed
+  recording start was only in the hosting logs. The history row now opens a Log: what Stream said
+  about the recording, and each broadcast step with its time and, for a failed one, the reason. The
+  start-broadcast route writes its failures to the audit trail, and the Stream webhook writes the
+  publisher-joined start, recording started/stopped/failed and recording ready. No new table: it reads
+  `beacon_events_admin_audit_trail`. Web only; Android: out of scope (web-only per rule 105).
+- 2026-10-06: **Recordings link on the idle screen (owner request).** A visitor who missed the live
+  broadcast had no way from Beacon to the past ones. The "No live event right now" card now carries a
+  "Missed it? Watch the recordings" button to the blog's streams page (`BLOG_STREAMS_PAGE_URL`). The
+  signed-out page gains 260px of bottom padding so the invite cards (`InvitesPopup`, fixed bottom-left
+  on public plugin pages) can be scrolled clear of everything on it. Web only; the Android app has no
+  Beacon surface (rule 105).
+- 2026-10-06: **Recording is started through Stream's own start-recording endpoint (owner report).**
+  Every ended event, including one ended minutes earlier, showed "no recording found": no recording was
+  ever made, so neither the recording-ready webhook nor the recovery lookup had anything to find.
+  `startBeaconBroadcastEgress` started HLS and recording by sending a second `go_live` to a call that
+  was already live. It now calls `POST .../start_broadcasting` and `POST .../start_recording`, the
+  paths Stream's own client uses, and attempts both even when one fails, so a broadcast already on
+  air still gets its recording. A refusal naming something as already running counts as success; any
+  other refusal is thrown with both messages, so the host stage and Sentry show the real reason. The
+  participant-joined webhook comment no longer describes every failure as "already running". Events
+  already ended have no recording to recover. The Beacon chat's "pending messages not enabled for this
+  app" refusal is a Stream setting on the `livestream` channel type, repaired by the
+  "Check — Stream Chat Settings" workflow with fix ticked, not by code. No schema, route or contract
+  change.
+- 2026-10-06: **Missed recordings are recovered, and the admin history shows Eastern Time (owner
+  report).** Two ended events showed no recording. An event only got its recording address from
+  Stream's recording-ready webhook, so a missed delivery left it with none: no replay post and nothing
+  for the archive workflow to copy. Loading the admin history now asks Stream for the recording of up
+  to five such events, stores it and posts the replay; both writes happen only while still empty. Each
+  history row shows when the event went live (when it was created, for a draft) in Eastern Time, an
+  ended event with nothing found reads "no recording found", and Replay opens
+  `/api/beacon/replays/[id]/recording`, which serves the archived copy or a current address rather
+  than the stored signed one.
 - 2026-10-05: **A failed start-broadcast is shown to the admin (#2668).** The host stage sent
   `POST /api/beacon/[id]/start-broadcast` with only a network `.catch`, so a refusal (Stream, CSRF or
   origin) was dropped and the admin read "Your screen is live to the broadcast." while no public feed

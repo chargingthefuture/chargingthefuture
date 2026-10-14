@@ -18,11 +18,8 @@ CREATE TABLE IF NOT EXISTS click_log_incidents (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id TEXT NOT NULL,
   metadata JSONB NOT NULL DEFAULT '{}',
-  metadata_hash TEXT GENERATED ALWAYS AS (md5(metadata::text)) STORED,
   -- Owner-share opt-in (2026-08-01): a member may mark an incident as shared with the owner for
-  -- aggregate trend tracking. Defaults FALSE — nothing is shared unless the member opts in. A real
-  -- column (not metadata) so it is excluded from the metadata_hash dedupe and toggling share state
-  -- never collides with the UNIQUE (user_id, metadata_hash) constraint.
+  -- aggregate trend tracking. Defaults FALSE — nothing is shared unless the member opts in.
   shared_with_owner BOOLEAN NOT NULL DEFAULT FALSE,
   -- Optional incident tags (2026-08-02; arrays since 2026-08-13): a member may say which of the
   -- 50+ known problems happened (problem_tags — slugs mirror the landing-page problems list)
@@ -30,8 +27,7 @@ CREATE TABLE IF NOT EXISTS click_log_incidents (
   -- gang stalker game" Discourse thread). Arrays because a real incident routinely chains
   -- several schemes at once (owner decision, 2026-08-13); the API caps each list at 10.
   -- Canonical slug lists live in packages/web/lib/click-log/tags.ts; the API validates against
-  -- them. Real columns (not metadata) so they are excluded from the metadata_hash dedupe —
-  -- mirroring shared_with_owner — and so the shared-trends aggregate can unnest them as coarse
+  -- them. Real columns (not metadata) so the shared-trends aggregate can unnest them as coarse
   -- categorical values without touching the metadata JSON. The singular problem_tag/scheme_tag
   -- columns are superseded: backfilled into the arrays below, kept for history, no longer
   -- read or written by the app.
@@ -39,9 +35,15 @@ CREATE TABLE IF NOT EXISTS click_log_incidents (
   scheme_tag TEXT,
   problem_tags TEXT[] NOT NULL DEFAULT '{}',
   scheme_tags TEXT[] NOT NULL DEFAULT '{}',
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  UNIQUE (user_id, metadata_hash)
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+-- Each logged incident is its own row (2026-10-05). The table used to carry a generated
+-- metadata_hash column with UNIQUE (user_id, metadata_hash), so a member's second incident with the
+-- same note and location as an earlier one (most often two incidents with no note and no location,
+-- both stored as '{}') was refused and the create failed. Dropping the column also drops that
+-- constraint, whichever name it carries (it was created before the clicklog_ -> click_log_ rename on
+-- older databases). Mirrored in db/migrations/post/0053_click_log_drop_metadata_hash_dedupe.sql.
+ALTER TABLE IF EXISTS click_log_incidents DROP COLUMN IF EXISTS metadata_hash;
 ALTER TABLE IF EXISTS click_log_incidents ADD COLUMN IF NOT EXISTS shared_with_owner BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE IF EXISTS click_log_incidents ADD COLUMN IF NOT EXISTS problem_tag TEXT;
 ALTER TABLE IF EXISTS click_log_incidents ADD COLUMN IF NOT EXISTS scheme_tag TEXT;
@@ -654,12 +656,15 @@ CREATE TABLE IF NOT EXISTS skills_hunt_submissions (
   full_name TEXT NOT NULL,
   bio TEXT NOT NULL,
   quora_profile_url TEXT NOT NULL,
-  -- Canonical matching key, not free text: exactly what canonicalizeQuoraUrl
-  -- (packages/web/lib/shared/quora-url.ts) returns, which is https://www.quora.com + the lowercased
-  -- path with trailing slashes removed. The per-round "first match" bonus and every per-person read
-  -- compare this column, and Directory's takedown list keys on the same form, so a row written in
-  -- any other spelling makes one person look like two. Rows stored before 2026-09-18 were re-keyed by
-  -- ctf/db/migrations/post/0027_canonical_quora_urls_directory_skills_hunt.sql.
+  -- Canonical matching key, not free text: exactly what canonicalizeNominationUrl
+  -- (packages/web/lib/skills-hunt/nomination-url.ts) returns. It takes the link out of the pasted
+  -- text, cuts a profile tab such as /activity back to /profile/<name>, then applies
+  -- canonicalizeQuoraUrl (packages/web/lib/shared/quora-url.ts): https://www.quora.com + the
+  -- lowercased path with trailing slashes removed. The per-round "first match" bonus and every
+  -- per-person read compare this column, and Directory's takedown list keys on the same form, so a
+  -- row written in any other spelling makes one person look like two. Rows stored before 2026-09-18
+  -- were re-keyed by ctf/db/migrations/post/0027_canonical_quora_urls_directory_skills_hunt.sql, and
+  -- rows stored with a profile tab by post/0054_skills_hunt_quora_profile_tab_urls.sql.
   quora_profile_url_normalized TEXT NOT NULL,
   -- Nominee location. `country` is required at submit time (enforced in validateSubmissionInput);
   -- `state`/`city` are optional. Columns are nullable so legacy rows and the guarded ALTER are safe;
@@ -668,6 +673,11 @@ CREATE TABLE IF NOT EXISTS skills_hunt_submissions (
   country TEXT NULL,
   state TEXT NULL,
   city TEXT NULL,
+  -- The nominee's job title (skills_taxonomy_job_titles.id), picked from the Scout form's job title
+  -- list; optional. On accept it and its sector carry into the generated directory_profiles row. The
+  -- submit insert stores it only when it names an active job title, otherwise null. No hard FK,
+  -- mirroring directory_profiles.job_title_id (the taxonomy table is created later in this file).
+  job_title_id UUID NULL,
   skills JSONB NOT NULL DEFAULT '[]'::jsonb,
   proposed_skills JSONB NOT NULL DEFAULT '[]'::jsonb,
   signature_hash TEXT NOT NULL,
@@ -2292,29 +2302,6 @@ CREATE TABLE IF NOT EXISTS workforce_recruited_sync_cursor (
   singleton_key BOOLEAN PRIMARY KEY DEFAULT TRUE,
   last_cursor_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
--- Service-scoped deletion event log for DELETE /api/workforce/profile (deletion contract section 8).
-CREATE TABLE IF NOT EXISTS workforce_deletion_events (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id TEXT NOT NULL,
-  scope TEXT NOT NULL,
-  plugin_id TEXT NOT NULL,
-  requested_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  processed_at TIMESTAMPTZ,
-  result TEXT NOT NULL,
-  request_id TEXT,
-  trace_id TEXT,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-ALTER TABLE IF EXISTS workforce_deletion_events ADD COLUMN IF NOT EXISTS id UUID;
-ALTER TABLE IF EXISTS workforce_deletion_events ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS workforce_deletion_events ADD COLUMN IF NOT EXISTS scope TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS workforce_deletion_events ADD COLUMN IF NOT EXISTS plugin_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS workforce_deletion_events ADD COLUMN IF NOT EXISTS requested_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE IF EXISTS workforce_deletion_events ADD COLUMN IF NOT EXISTS processed_at TIMESTAMPTZ;
-ALTER TABLE IF EXISTS workforce_deletion_events ADD COLUMN IF NOT EXISTS result TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS workforce_deletion_events ADD COLUMN IF NOT EXISTS request_id TEXT;
-ALTER TABLE IF EXISTS workforce_deletion_events ADD COLUMN IF NOT EXISTS trace_id TEXT;
-ALTER TABLE IF EXISTS workforce_deletion_events ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
 -- === ServiceCredits tables ===
 CREATE TABLE IF NOT EXISTS service_credits_wallets (
@@ -2492,6 +2479,8 @@ CREATE TABLE IF NOT EXISTS lighthouse_profiles (
   -- published is only the need itself (what they are looking for, where, when, budget range and the
   -- short intro) — never the phone number, never the Signal link, and never the member id.
   is_wanted_public BOOLEAN NOT NULL DEFAULT FALSE,
+  -- Account deletion now deletes this row outright, as the plugin's own delete does. Rows an older
+  -- account deletion only stamped here are removed by post/0050.
   service_deleted_at TIMESTAMPTZ NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -3884,6 +3873,11 @@ ALTER TABLE IF EXISTS skill_up_milestone_validations ADD COLUMN IF NOT EXISTS re
 ALTER TABLE IF EXISTS skill_up_milestone_validations ADD COLUMN IF NOT EXISTS validated_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS skill_up_milestone_validations ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS skill_up_milestone_validations ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- One validation row per enrollment and milestone. validateMilestone upserts with
+-- ON CONFLICT (enrollment_id, milestone_id), which Postgres refuses without this index. Existing
+-- duplicates are removed first by db/migrations/pre/0004_skill_up_milestone_validations_dedupe.sql.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_skill_up_milestone_validations_enrollment_milestone
+  ON skill_up_milestone_validations (enrollment_id, milestone_id);
 
 CREATE TABLE IF NOT EXISTS skill_up_disputes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -5746,6 +5740,7 @@ ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS url_valid
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS edit_history JSONB NOT NULL DEFAULT '[]'::jsonb;
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS edited_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS job_title_id UUID;
 DO $skills_hunt_submissions_url_validation_check$
 BEGIN
   IF NOT EXISTS (
@@ -5925,6 +5920,47 @@ $sc_cmd_idem_command_nullable$;
 -- service_credits_wallet_tombstones (2 missing)
 ALTER TABLE IF EXISTS service_credits_wallet_tombstones ADD COLUMN IF NOT EXISTS account_id TEXT;
 ALTER TABLE IF EXISTS service_credits_wallet_tombstones ADD COLUMN IF NOT EXISTS deletion_request_id UUID;
+
+-- The ServiceCredits ledger upserts three more tables on targets no index backed, so Postgres refused
+-- each statement ("no unique or exclusion constraint matching the ON CONFLICT specification"):
+-- every transfer insert (member send, plugin send, escrow release, fee collection, dispute
+-- adjustment, deletion reclaim) on (sender_user_id, idempotency_key); the deletion reclaim's wallet
+-- tombstone on (account_id, deletion_request_id); and its treasury event on (event_type, actor_id,
+-- idempotency_key). Any rows already sharing one of those keys are given distinct keys first by
+-- ctf/db/migrations/pre/0003_service_credits_unique_index_dedupe.sql, so these never fail on an
+-- existing database. The index on transfers is also what enforces per-sender replay protection.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_service_credits_transfers_sender_idem
+  ON service_credits_transfers (sender_user_id, idempotency_key);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_service_credits_wallet_tombstones_account_request
+  ON service_credits_wallet_tombstones (account_id, deletion_request_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_service_credits_treasury_events_type_actor_idem
+  ON service_credits_treasury_events (event_type, actor_id, idempotency_key);
+-- Legacy NOT NULL columns the v3 code never writes, which refused every insert into their tables:
+-- an escrow hold has no transfer until it is released (releaseEscrow sets transfer_id then), and a
+-- dispute adjustment records its case and amount in dispute_case_id and amount. Nothing reads
+-- dispute_id or adjustment_amount.
+DO $sc_legacy_not_null_relax$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = current_schema() AND table_name = 'service_credits_escrow_holds' AND column_name = 'transfer_id' AND is_nullable = 'NO'
+  ) THEN
+    ALTER TABLE service_credits_escrow_holds ALTER COLUMN transfer_id DROP NOT NULL;
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = current_schema() AND table_name = 'service_credits_dispute_adjustments' AND column_name = 'dispute_id' AND is_nullable = 'NO'
+  ) THEN
+    ALTER TABLE service_credits_dispute_adjustments ALTER COLUMN dispute_id DROP NOT NULL;
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = current_schema() AND table_name = 'service_credits_dispute_adjustments' AND column_name = 'adjustment_amount' AND is_nullable = 'NO'
+  ) THEN
+    ALTER TABLE service_credits_dispute_adjustments ALTER COLUMN adjustment_amount DROP NOT NULL;
+  END IF;
+END
+$sc_legacy_not_null_relax$;
 
 -- socket_relay_messages (1 missing)
 ALTER TABLE IF EXISTS socket_relay_messages ADD COLUMN IF NOT EXISTS client_message_id TEXT;
@@ -7066,6 +7102,129 @@ FROM service_credits_wallets
 WHERE is_frozen = TRUE
 ON CONFLICT (user_id) DO NOTHING;
 
+-- === directory public landing page (owner decision, 2026-10-13) ===
+-- The public match page (landing-page-v4, on Vercel) reads Directory counts per job title and saves
+-- the match a visitor asks to come back to. It connects with its own login, landing_page, which may
+-- read the two views below and read and add rows in directory_landing_match_codes, and nothing else
+-- (the grants are pasted in the Neon dashboard, not kept here, because the login is created there).
+-- Defined at the END so directory_profiles, the taxonomy tables and account_restrictions exist.
+--
+-- A saved match holds the code, the job title and the count when it was saved. No name, no contact
+-- details, no IP address: the code is the only way back to it, on purpose.
+CREATE TABLE IF NOT EXISTS directory_landing_match_codes (
+  code TEXT PRIMARY KEY,
+  job_title_id TEXT NOT NULL,
+  job_title_ids TEXT[],
+  people_at_save INTEGER,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  last_seen_at TIMESTAMPTZ
+);
+ALTER TABLE IF EXISTS directory_landing_match_codes ADD COLUMN IF NOT EXISTS job_title_id TEXT;
+ALTER TABLE IF EXISTS directory_landing_match_codes ADD COLUMN IF NOT EXISTS people_at_save INTEGER;
+ALTER TABLE IF EXISTS directory_landing_match_codes ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS directory_landing_match_codes ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ;
+-- The job titles behind the needs a visitor picked (job_title_id keeps the first, for older rows).
+ALTER TABLE IF EXISTS directory_landing_match_codes ADD COLUMN IF NOT EXISTS job_title_ids TEXT[];
+CREATE INDEX IF NOT EXISTS idx_directory_landing_match_codes_job_title ON directory_landing_match_codes (job_title_id);
+
+-- Who lists which job title, by their job title or any of their skills, claimed or unclaimed,
+-- leaving out owners restricted with scope all or contact. Not granted to the landing page: it
+-- holds profile ids. The two public views and directory_public_match_count read it. Ids are
+-- compared as text because some production id columns are VARCHAR.
+CREATE OR REPLACE VIEW directory_person_job_titles AS
+  WITH people AS (
+    SELECT p.id::text AS id, p.job_title_id::text AS job_title_id
+    FROM directory_profiles p
+    WHERE NOT EXISTS (
+      SELECT 1 FROM account_restrictions r
+      WHERE r.user_id::text = p.claimed_by_user_id::text
+        AND r.is_restricted
+        AND r.restriction_scope IN ('all', 'contact')
+    )
+  )
+  SELECT id AS person_id, job_title_id FROM people WHERE job_title_id IS NOT NULL
+  UNION
+  SELECT pp.id, sk.job_title_id::text
+  FROM people pp
+  JOIN directory_profile_skills ps ON ps.profile_id::text = pp.id
+  JOIN skills_taxonomy_skills sk ON sk.id::text = ps.skill_id::text;
+
+-- One row per active job title and how many people list it (0 when nobody does).
+CREATE OR REPLACE VIEW directory_public_skill_counts AS
+  WITH per_title AS (
+    SELECT job_title_id, COUNT(*)::integer AS n FROM directory_person_job_titles GROUP BY job_title_id
+  )
+  SELECT jt.id::text AS job_title_id,
+         s.name AS sector,
+         s.display_order AS sector_order,
+         jt.name AS title,
+         jt.display_order AS title_order,
+         COALESCE(pt.n, 0) AS people
+  FROM skills_taxonomy_job_titles jt
+  JOIN skills_taxonomy_sectors s ON s.id = jt.sector_id AND s.is_active
+  LEFT JOIN per_title pt ON pt.job_title_id = jt.id::text
+  WHERE jt.is_active;
+
+-- One row: everybody in the Directory, restriction rule as above.
+CREATE OR REPLACE VIEW directory_public_totals AS
+  WITH people AS (
+    SELECT p.id::text AS id
+    FROM directory_profiles p
+    WHERE NOT EXISTS (
+      SELECT 1 FROM account_restrictions r
+      WHERE r.user_id::text = p.claimed_by_user_id::text
+        AND r.is_restricted
+        AND r.restriction_scope IN ('all', 'contact')
+    )
+  )
+  SELECT (SELECT COUNT(*)::integer FROM people) AS total;
+
+-- One row: how many different active skills at least one Directory profile lists, and how many
+-- active skills there are. The same query as Workforce's Skills Coverage tile
+-- (lib/workforce/repository.ts getDashboard), so the landing page shows the same percentage.
+-- Counts of skills only; nothing about a person.
+CREATE OR REPLACE VIEW directory_public_skill_coverage AS
+  SELECT
+    (SELECT COUNT(DISTINCT dps.skill_id)::integer
+       FROM directory_profile_skills dps
+       JOIN directory_profiles p ON dps.profile_id::text = p.id::text
+       JOIN skills_taxonomy_skills s ON s.id = dps.skill_id
+      WHERE s.is_active = TRUE) AS covered,
+    (SELECT COUNT(*)::integer FROM skills_taxonomy_skills WHERE is_active = TRUE) AS catalog;
+
+-- How many people match a visitor: everyone who lists any of the given job titles, each counted
+-- once, as an exact number. Runs with its owner's rights so the landing page can call it
+-- without reading directory_person_job_titles itself; at most 60 titles per call.
+CREATE OR REPLACE FUNCTION directory_public_match_count(title_ids TEXT[])
+RETURNS INTEGER
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT n
+  FROM (
+    SELECT COUNT(DISTINCT person_id)::integer AS n
+    FROM directory_person_job_titles
+    WHERE job_title_id = ANY (title_ids[1:60])
+  ) x
+$$;
+REVOKE ALL ON FUNCTION directory_public_match_count(TEXT[]) FROM PUBLIC;
+
+-- In-demand needs (owner decision, 2026-10-13): each time a visitor on the landing page picks a need
+-- and nobody in the Directory matches it, the page records it once per visit, so the owner can see
+-- which needs go unmet and look for somebody. One row per time asked: the need's label (or
+-- "skill:<job title>" for a single added skill), the job titles behind it, and when. Nothing about
+-- the visitor: no code, name, contact detail or IP address. The landing page login may only add rows.
+CREATE TABLE IF NOT EXISTS directory_unmet_needs (
+  id BIGSERIAL PRIMARY KEY,
+  need TEXT NOT NULL,
+  job_title_ids TEXT[] NOT NULL DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS directory_unmet_needs ADD COLUMN IF NOT EXISTS need TEXT;
+ALTER TABLE IF EXISTS directory_unmet_needs ADD COLUMN IF NOT EXISTS job_title_ids TEXT[] NOT NULL DEFAULT '{}';
+ALTER TABLE IF EXISTS directory_unmet_needs ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_directory_unmet_needs_need ON directory_unmet_needs (need, created_at DESC);
+
 -- === beacon-plugin ===
 -- Beacon: admin-only one-way livestream. An admin goes live ad hoc to broadcast a live demo
 -- (screen content), flagship use the "State of the Skills Economy" address. Watching is public
@@ -7743,7 +7902,11 @@ CREATE TABLE IF NOT EXISTS fireside_comments (
   thread_id UUID NOT NULL REFERENCES fireside_threads(id) ON DELETE CASCADE,
   -- Threading is one level deep on purpose: a reply to a comment, and no reply to a reply. Deeper
   -- nesting is unreadable at phone width, which is the only width this app has.
-  parent_comment_id UUID REFERENCES fireside_comments(id) ON DELETE CASCADE,
+  -- SET NULL, not CASCADE: a reply another member wrote is theirs and outlives the comment it
+  -- answers. Account deletion empties and keeps a comment somebody answered, so its replies keep
+  -- their parent; this key is the backstop for any comment row that is deleted (post/0051 changed
+  -- an existing database).
+  parent_comment_id UUID REFERENCES fireside_comments(id) ON DELETE SET NULL,
   author_user_id TEXT NOT NULL,
   -- The name printed beside the comment, written at creation the way other tables here denormalize
   -- an author_username. Stored rather than joined: the public read must not touch an identity table

@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import { createTransfer } from 'lib/shared/service-credits/createTransfer';
+import { createTransfer } from 'lib/shared/credits-interface';
 import type { ChymeServiceCreditsTransaction } from './types';
 import { sendChymeStreamMessage } from './stream';
 import { deleteBackChannelForUser } from './back-channel';

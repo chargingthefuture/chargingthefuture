@@ -28,8 +28,11 @@ export async function GET(request: Request) {
       command: 'unlock.admin.quora.history.read',
       policyStatus: 'allow',
       reason: 'ok',
+      // The member whose history was read goes in target_user_id, as the audit contract names it, so a
+      // query for everything done to one member by target id finds these reads.
+      targetUserId: userId.trim(),
       requestId,
-      metadata: { targetUserId: userId.trim(), count: history.length },
+      metadata: { count: history.length },
     });
 
     return NextResponse.json({ ok: true, history });

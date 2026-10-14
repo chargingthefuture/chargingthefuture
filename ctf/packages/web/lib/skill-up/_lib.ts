@@ -51,6 +51,7 @@ export function ensureMutationCsrf(request: Request): NextResponse | null {
 // cases that also send the error to observability before responding.
 const SKILL_UP_ERROR_MAP: Record<string, { code: string; message: string; status: number; report?: boolean }> = {
   insufficient_balance: { code: 'skill_up_insufficient_balance', message: 'Insufficient balance.', status: 409 },
+  account_restricted: { code: 'skill_up_account_restricted', message: 'This account is restricted from sending credits.', status: 403 },
   invalid_payload: { code: 'skill_up_invalid_payload', message: 'Invalid SkillUp payload.', status: 400 },
   forbidden: { code: 'skill_up_forbidden', message: 'You do not have access to this resource.', status: 403 },
   not_found: { code: 'skill_up_not_found', message: 'Requested resource was not found.', status: 404 },
