@@ -360,6 +360,16 @@ fill on the first recompute / config save / member post.
 
 ## Change Log
 
+- 2026-10-12 — The admin screen shows the channel sync warning, and a malformed reply id answers
+  400 (issues #2983, #2984). Revoke, reinstate and opening the channel already answered 200 with
+  `channelSyncWarning` when the Stream membership sync failed, but the Weavers admin section threw
+  the body away, so an admin who revoked a member for cause saw no sign the member was still in the
+  channel until the next sync. The section now shows the warning in its status banner after the
+  list refreshes. Separately, `createGatedChannelPost` sent any `replyToPostId` straight to a
+  `WHERE id = $1` against the UUID column; a value that was not a UUID threw a cast error that the
+  route reported and answered as a 503. It is now checked against `UUID_PATTERN` first and treated
+  as `reply_target_not_found` (400), the same way the delete and reaction paths already treat a bad
+  post id.
 - 2026-10-06 — Contributions split into a money event and a non-money event (owner decision; issue
   #2982). Only real money counts toward a dollar figure. `value.contributions_confirmed_usd` summed
   `confirmed_amount_usd` over every confirmed submission, and for a Quora comment or GitHub star that
