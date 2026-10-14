@@ -94,6 +94,12 @@ When user deletes Feed usage only:
     copies, so the member's words stayed on the Commons under the fallback handle `user-hub-syst`.
     A Commons post is ordinary member content, not a ServiceCredits movement, so nothing requires
     keeping it.)
+- Delete outside the database (after the deletion commits, best-effort):
+  - the member's `feed-<userId>` Stream user, which is named with their @username and holds their
+    Commons and contributor-channel memberships (`deleteFeedStreamData`, registered under
+    `feed-announcements` in `lib/account/external-cleanup-registry.ts`). The Commons writes no chat
+    messages under that identity. A failure is reported and does not undo the deletion; a later
+    Commons visit creates a fresh Stream user.
 - Anonymize/pseudonymize:
   - nothing. Authored Commons content is hard-deleted, not renamed: replacing the author with a
     generic handle leaves the words in place and is not a deletion.
@@ -175,6 +181,9 @@ If user returns after service-scoped deletion:
 - [ ] Web and Android parity confirmed
 
 ## Change Log
+
+- 2026-10-14: Deletion (service-scoped and full-account) now also removes the member's
+  `feed-<userId>` Stream user, which carried their @username after the database rows were gone.
 
 - 2026-08-09: Account deletion now removes the Commons timeline copy (`feed_items`) of the member's
   own posts and questions, not only the source rows. Announcement copies stay. The
