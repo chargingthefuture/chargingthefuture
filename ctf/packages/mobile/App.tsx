@@ -19,6 +19,8 @@ import {
   Inter_800ExtraBold,
   Inter_900Black,
 } from '@expo-google-fonts/inter';
+// The wordmark's serif on the shell bar, shared with the project's websites (ShellChrome.tsx).
+import { Newsreader_500Medium } from '@expo-google-fonts/newsreader';
 import { AuthProvider, useAuth } from './src/auth/auth-context';
 import { ThemeProvider, useTheme } from './src/theme';
 import { LoadingScreen } from './src/components/shared/LoadingScreen';
@@ -69,6 +71,7 @@ export default function App() {
     Inter_700Bold,
     Inter_800ExtraBold,
     Inter_900Black,
+    Newsreader_500Medium,
   });
 
   if (!fontsLoaded) {
