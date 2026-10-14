@@ -302,6 +302,13 @@ ServiceCredits seeds wallets, transfers, escrow holds, and dispute fixtures via 
 
 ## 10) Change Log
 
+- 2026-10-12: **Admin load failures are shown, and the Earn tab no longer describes a send as paying
+  (code review #2913, #2915).** A failed read of the open disputes list now shows the route's
+  message in place of "No open disputes.", and a failed read of the external ledger status shows
+  its reason in the card instead of hiding it; both are reported. The Earn tab's peer-to-peer
+  paragraph now says members send and receive credits. Read-only screens and copy; no ledger,
+  route or schema change.
+
 - 2026-10-05: **Ledger inserts now fit the schema (code review #2898, #2900, #2902).** Six inserts
   into `service_credits_transfers` upsert on (`sender_user_id`, `idempotency_key`), the deletion
   reclaim's tombstone on (`account_id`, `deletion_request_id`) and its treasury event on

@@ -18,6 +18,7 @@
   "dependencies": {
     "@ctf/shared": "workspace:*",
     "@expo-google-fonts/inter": "^0.4.2",
+    "@expo-google-fonts/newsreader": "^0.4.1",
     "@expo/vector-icons": "^15.1.1",
     "@notifee/react-native": "9.1.8",
     "@react-native-community/datetimepicker": "8.6.0",
@@ -52,6 +53,7 @@
     "react-native-svg": "15.15.3",
     "react-native-vector-icons": "^10.3.0",
     "react-native-web": "^0.21.2",
+    "stream-chat": "^9.43.0",
     "stream-chat-react-native": "^8.12.4"
   },
   "devDependencies": {

@@ -97,6 +97,31 @@ Bypass keywords still work but are no longer required to build a new surface: `b
 
 Full policy, the deprecated stop-for-design machinery (history), and worked examples: see `.claude/rules/127-design-pass-gating-rules.mdc`.
 
+## One Design, One Color per Site (owner decision, 2026-10-14)
+
+The name shown everywhere is Skills Economy (owner decision, 2026-10-13). Charging The Future
+appears only in the domain names, never as a displayed name: page titles, headers, footers,
+notification titles, feed titles, generated text and the prompts that write it all say Skills
+Economy. Published posts keep the name they were written with. The legal operator name in
+`app/terms/policy-content.ts` (`OPERATOR_NAME`) is the owner's call and is not changed with the rest.
+
+The project's websites share one design, each in its own color, so a visitor can tell which part
+they are in: farahbrunache.com (One Percent, the paid tier) is forest green, chargingthefuture.com
+(the free tier) burgundy, and the blog black and white with coral. Titles are Newsreader and text
+DM Sans, self-hosted everywhere. The app keeps its own look; it carries the family only in the
+phone bar's wordmark (Newsreader, a light burgundy) and the SE mark's burgundy gradient, on web
+(`components/shared/se-mark.tsx`, `community-shell.module.css`) and Android
+(`components/shell/ShellChrome.tsx`). Change those together.
+
+The Skills Economy mark (the "Stack") is the logo on every site, in that site's color (owner
+decision, 2026-10-13); the heart Charging The Future logo is retired. In the app it is burgundy
+in the header, `public/brand/` and the web and Android icons. The wallpapers
+(`ctf/scripts/wallpapers/`) are a choice of colors rather than a brand color: the original
+teal-to-purple stays, with burgundy, coral and green beside it. The mission line is "Exit their
+economy, exit the psyop."; "Live,
+Work & Prevail" is retired, and older posts keep it. The domains stay as they are. No site loads
+anything from Google: fonts are self-hosted and video players load only when somebody taps play.
+
 # Monorepo Layout
 
 ```
@@ -388,6 +413,37 @@ order, with the same credential, fields and restriction rule as the by-id read, 
 of one page a second and sixty an hour per consumer. There's still no search and no filter. The
 audit names the page and never the profiles on it. It stays a pointer, not a copy: One Percent may
 hold a profile id on a suggestion and never the profile's fields.
+
+Public skill counts (owner decision, 2026-10-13): One Percent's public match page, where a blog
+reader picks a skill and sees how many people could help, shows real Directory counts per job
+title, with no sign-in. Counts only: no name, id, profile link or location finer than the job title
+ever reaches that page. Every count is exact, small ones included (owner decision, 2026-10-13): no
+name or location is attached to a count, so a small one says nothing about who is behind it. Unclaimed profiles count. Unclaimed does not mean somebody does not want
+to be listed: the Directory is the feature members ask for most, it was public once because its
+entries came from public Quora answers, and the sign-in in front of it exists because a public list
+of trafficking survivors would be wrong, not because the people on it asked to be hidden. Anyone
+can have their profile removed, and nobody has asked. Restricted owners (scope `all` or `contact`)
+are left out, the same rule as the reads above. Do not ask the owner again whether unclaimed
+profiles belong in a count or a read; they do.
+
+The page reads those counts live and saves matches (owner decision, 2026-10-13). A visitor picks
+what they need, and the page says how many people match them, each person counted once across the
+skills behind those needs. That count comes from `directory_public_match_count`. A
+reader can save what they picked as a 10-character code and come back with it to see who has been added, since
+the owner adds people most days. The code holds the job titles and the count when saved, never a
+name, contact detail or IP address. The page connects with its own login, `landing_page`, which can
+read `directory_public_skill_counts`, `directory_public_totals` and `directory_public_skill_coverage` (the Workforce skills coverage counts), call
+`directory_public_match_count`, read and add rows in `directory_landing_match_codes`, and nothing
+else; the views and the function do the counting, so the login never touches a member row. Create that login with SQL
+(`ctf/scripts/sql/landing_page_login_grants.sql`), never on Neon's Roles screen, which gives a new
+role `neon_superuser`. Its connection address is a secret like any other: Infisical first, then the
+Vercel project's `DATABASE_URL`.
+
+A need nobody matches is recorded (owner decision, 2026-10-13). When a visitor picks a need and the
+count is 0, the page adds a row to `directory_unmet_needs`, once per need per visit, so the owner
+can see which needs go unmet and look for somebody. The row holds the need and its job titles and
+nothing about the visitor; the login may add rows and never read them. The owner reads them with
+`ctf/scripts/sql/landing_unmet_needs_report.sql`.
 
 ## Feature freeze, and one message (owner decision, 2026-10-02)
 

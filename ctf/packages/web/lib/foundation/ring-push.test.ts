@@ -6,7 +6,7 @@ describe('buildRingPushPayload', () => {
 
   it('names neither the caller nor Foundation when discreet pings are on', () => {
     const payload = buildRingPushPayload({ ...base, discreet: true });
-    expect(payload.title).toBe('Charging The Future');
+    expect(payload.title).toBe('Skills Economy');
     expect(payload.body).toBe('You have a new update.');
     expect(`${payload.title} ${payload.body}`).not.toMatch(/river_m|Foundation|call/i);
   });
