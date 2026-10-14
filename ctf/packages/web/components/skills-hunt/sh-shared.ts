@@ -40,9 +40,21 @@ export function getSkillsHuntTokens(theme: ThemeName): SkillsHuntTokens {
 // skills" shortcut; the full row type lives in lib/skills-taxonomy/types.ts.
 export type TaxonomyFlattenedRow = {
   sectorName: string;
+  jobTitleId: string;
   jobTitleName: string;
   skillName: string;
 };
+
+// Job title name → id, so the job-title dropdown (keyed by name, like its skill lists) can save the
+// id of the job title the scout picked.
+export function jobTitleIdsByName(rows: TaxonomyFlattenedRow[]): Record<string, string> {
+  const result: Record<string, string> = {};
+  for (const row of rows) {
+    const name = row.jobTitleName?.trim();
+    if (name && row.jobTitleId && !(name in result)) result[name] = row.jobTitleId;
+  }
+  return result;
+}
 
 // Group flattened taxonomy rows by occupation (job title) → de-duped, sorted skill names. Powers the
 // optional "add a profession's skills" shortcut: picking a profession adds all of its skills at once.

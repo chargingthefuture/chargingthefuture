@@ -53,6 +53,18 @@ describe('describeSubmissionInputProblem', () => {
   });
 
   // Every refusal has to be usable on its own: a scout reading it should know what to change.
+  // The job title is optional (owner decision, 2026-10-08). When sent it must be an id, because the
+  // insert casts it to uuid and a bad value would otherwise fail as an unnamed database error.
+  it('accepts a nomination with a job title id or with none', () => {
+    expect(describeSubmissionInputProblem({ ...READY_TO_SUBMIT, jobTitleId: '22222222-2222-4222-8222-222222222222' })).toBeNull();
+    expect(describeSubmissionInputProblem({ ...READY_TO_SUBMIT, jobTitleId: null })).toBeNull();
+  });
+
+  it('names the job title rule when the job title is not an id', () => {
+    const problem = describeSubmissionInputProblem({ ...READY_TO_SUBMIT, jobTitleId: 'Graphic / Visual Designers' });
+    expect(problem).toContain('job title');
+  });
+
   it('never answers with a bare invalid-payload sentence', () => {
     const problem = describeSubmissionInputProblem({ ...READY_TO_SUBMIT, skills: [] });
     expect(problem).not.toBe('Invalid submission payload.');

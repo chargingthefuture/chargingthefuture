@@ -97,7 +97,6 @@ export type AdminEnrollment = {
 export type AdminValidation = {
   id: string;
   enrollmentId: string;
-  cohortId: string | null;
   milestoneId: string;
   validationNote: string | null;
   createdAtIso: string;

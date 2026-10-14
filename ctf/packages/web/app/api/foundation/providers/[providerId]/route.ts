@@ -7,7 +7,8 @@ import { reportError } from 'lib/observability/report';
 // One Foundation provider by directory-profile id, behind the same read gate as search. Backs the
 // auth-gated deep-link page (/apps/foundation/provider/[id]) so a shared link opens that provider
 // for a signed-in member; unauthenticated visitors never reach this (the gate denies, and the page
-// redirects them to the Foundation landing). 404 when the id matches no active provider.
+// redirects them to the Foundation landing). 404 when the id matches no active provider, or one
+// blocked either way relative to the reader, so the answer does not reveal the block.
 export async function GET(request: Request, context: { params: Promise<{ providerId: string }> }) {
   const gate = await requireFoundationReadAccess();
   if (!gate.allowed) {
@@ -17,7 +18,7 @@ export async function GET(request: Request, context: { params: Promise<{ provide
   const { providerId } = await context.params;
 
   try {
-    const provider = await getProviderById(providerId);
+    const provider = await getProviderById(providerId, gate.auth.userId);
 
     await insertFoundationAudit({
       actorId: gate.auth.userId,

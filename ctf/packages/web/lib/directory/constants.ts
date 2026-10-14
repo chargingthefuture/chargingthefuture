@@ -13,6 +13,8 @@ export const DIRECTORY_ERROR_CODE = {
   quoraUrlSuppressed: 'DIRECTORY_QUORA_URL_SUPPRESSED',
   // A machine read without a credential from DIRECTORY_SERVICE_TOKENS.
   serviceUnauthorized: 'DIRECTORY_SERVICE_UNAUTHORIZED',
+  // A machine read of the profile list past its per-consumer page rate.
+  serviceRateLimited: 'DIRECTORY_SERVICE_RATE_LIMITED',
 } as const;
 
 // Reason required when an admin takes down a profile at the person's request, or when lifting a

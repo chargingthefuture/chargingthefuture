@@ -207,6 +207,11 @@ async function insertAutoMission(
   config: AutoMissionConfig,
 ): Promise<string | null> {
   const gapRounded = Math.round(candidate.gap);
+  // Every caller runs this inside a transaction (withDbTransaction). A failed statement aborts the
+  // entire transaction in Postgres, so the duplicate guard below needs a savepoint to roll back to:
+  // without one the next INSERT fails with "current transaction is aborted", or COMMIT quietly
+  // rolls back the missions opened earlier in the same run.
+  await client.query('SAVEPOINT sh_auto_mission_insert');
   try {
     const result = await client.query<{ id: string }>(
       `INSERT INTO skills_hunt_missions
@@ -229,10 +234,12 @@ async function insertAutoMission(
         SKILLS_HUNT_AUTO_MISSION_ACTOR_ID,
       ],
     );
+    await client.query('RELEASE SAVEPOINT sh_auto_mission_insert');
     return result.rows[0]?.id ?? null;
   } catch (error) {
     if (isUniqueViolation(error)) {
       // A concurrent run opened this sector's mission first — the idempotency guard did its job.
+      await client.query('ROLLBACK TO SAVEPOINT sh_auto_mission_insert');
       return null;
     }
     throw error;

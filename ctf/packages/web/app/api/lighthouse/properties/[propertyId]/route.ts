@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireLighthouseReadAccess } from 'lib/lighthouse/_lib';
 import { LIGHTHOUSE_ERROR_CODE } from 'lib/lighthouse/constants';
+import { ensureLighthouseAdmin } from 'lib/lighthouse/policy';
 import {
   deleteProperty,
   getPropertyById,
@@ -98,7 +99,10 @@ export async function GET(_: Request, { params }: RouteParams) {
 
   const { propertyId } = await params;
   try {
-    const property = await getPropertyById(propertyId);
+    const property = await getPropertyById(propertyId, {
+      userId: gate.auth.userId,
+      isAdmin: ensureLighthouseAdmin(gate.auth) === null,
+    });
     if (!property) {
       return NextResponse.json(
         { ok: false, code: LIGHTHOUSE_ERROR_CODE.propertyNotFound, message: 'LightHouse property not found.' },
