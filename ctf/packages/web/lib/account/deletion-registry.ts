@@ -734,7 +734,7 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     serviceScopeSupported: false,
     tables: [
       retain('weekly_performance_weeks', 'Aggregate week records; selected_by is the admin audit of week selection.'),
-      retain('weekly_performance_audit_trail', 'Admin action audit log; retained for compliance.'),
+      retain('weekly_performance_audit_trail', 'Admin action audit log (actor_id is the admin or operations user who read or changed the dashboard); retained for compliance.'),
     ],
   },
   {

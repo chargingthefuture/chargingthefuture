@@ -254,6 +254,25 @@ Result: web ☐
 
 ---
 
+### FDN-9b — Connection cap: a provider you already connected with stays reachable (added 2026-10-14)
+
+**Role:** Admin, then member
+**Surface:** Web
+
+**Precondition:** A member who has already opened a Direct Line with at least two providers.
+
+**Steps:**
+1. As an admin, open Foundation Admin and set Max active threads per user to the number of providers that member has already connected with.
+2. As the member, open one of those providers and press Request Quote, then Connect now.
+3. As the member, open a provider they have never connected with and press Request Quote.
+4. As the admin, set the cap back to what it was.
+
+**Expected:** Step 2 opens the existing Direct Line and the call confirmation as usual: an existing connection never counts against the cap. Step 3 is refused with "You already have the maximum number of open connections." and no new thread is created.
+
+Result: web ☐ android ☐
+
+---
+
 ### FDN-10 — Direct Line: re-open from Quotes tab
 
 **Role:** Member (survivor)
