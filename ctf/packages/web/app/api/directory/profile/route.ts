@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireDirectoryReadAccess } from '../_lib';
-import { DIRECTORY_ERROR_CODE } from 'lib/directory/constants';
+import { DIRECTORY_ERROR_CODE, QUORA_URL_SUPPRESSED_MESSAGE } from 'lib/directory/constants';
 import { deleteOwnDirectoryProfile, getOwnProfile, upsertOwnProfile, validateProfileInput } from 'lib/directory/repository';
 import { logDirectoryAudit } from 'lib/directory/audit';
 import { reportError } from 'lib/observability/report';
@@ -40,6 +40,30 @@ function toProfileInput(body: ProfileBody): DirectoryProfileInput {
   };
 }
 
+// A Quora address on the takedown list: the person it belongs to asked to be removed, so this save
+// can never succeed until an admin lifts the block. An expected refusal, not a fault — audited as a
+// deny and not reported.
+function quoraUrlSuppressedResponse(userId: string): NextResponse {
+  logDirectoryAudit({
+    actorId: userId,
+    command: 'directory.profile.upsert',
+    status: 'deny',
+    reason: 'quora_url_suppressed',
+    targetType: 'profile',
+    targetId: userId,
+    result: 'failure',
+    errorCategory: 'policy',
+  });
+  return NextResponse.json(
+    {
+      ok: false,
+      code: DIRECTORY_ERROR_CODE.quoraUrlSuppressed,
+      message: QUORA_URL_SUPPRESSED_MESSAGE,
+    },
+    { status: 409 },
+  );
+}
+
 // Maps a failed upsert to its response, logging the matching audit entry and reporting unexpected
 // faults. Extracted from handleUpsert to keep that handler within the complexity budget; behavior is
 // unchanged from the inline handling.
@@ -67,6 +91,10 @@ function handleUpsertError(error: unknown, userId: string): NextResponse {
       },
       { status: 400 },
     );
+  }
+
+  if (message === 'directory_quora_url_suppressed') {
+    return quoraUrlSuppressedResponse(userId);
   }
 
   const isSelectorIssue = message.includes('directory_') && message.endsWith('_not_found');
