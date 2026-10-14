@@ -39,6 +39,12 @@ function mapExtendError(error: unknown): NextResponse {
       { status: 402 },
     );
   }
+  if (code === 'caller_cannot_send') {
+    return NextResponse.json(
+      { ok: false, code: FOUNDATION_ERROR_CODE.callCallerCannotSend, message: "Your credits can't be sent right now, so the call can't be extended. The current block keeps running." },
+      { status: 403 },
+    );
+  }
   if (code === 'billing_misconfigured') {
     return NextResponse.json(
       { ok: false, code: FOUNDATION_ERROR_CODE.callBillingMisconfigured, message: 'Paid calls are not set up for this call right now.' },

@@ -33,6 +33,14 @@ function mapAnswerError(error: unknown): NextResponse {
       { status: 402 },
     );
   }
+  if (code === 'caller_cannot_send') {
+    // Says the caller's credits can't be sent, never why: a restriction on somebody else's account is not
+    // the person answering's to know.
+    return NextResponse.json(
+      { ok: false, code: FOUNDATION_ERROR_CODE.callCallerCannotSend, message: "The call couldn't start: the caller's credits can't be sent right now." },
+      { status: 409 },
+    );
+  }
   if (code === 'billing_misconfigured') {
     return NextResponse.json(
       { ok: false, code: FOUNDATION_ERROR_CODE.callBillingMisconfigured, message: 'Paid calls are not set up for this call right now.' },

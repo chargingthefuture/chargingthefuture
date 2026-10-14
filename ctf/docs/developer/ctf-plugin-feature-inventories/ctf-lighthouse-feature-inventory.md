@@ -169,8 +169,18 @@ the host tab.
    the private match chat channel on host acceptance. The no-seeker-profile (`policy_denied`),
    duplicate (`duplicate_match`), and blocked-pair (`blocked_pair`) cases are surfaced inline.
 3. Role-specific match list views for seekers and hosts are preserved.
-4. Host accept/reject actions with host response are preserved.
-5. Seeker cancellation permissions remain policy-controlled.
+4. **Host accept/decline is on the Matches tab (web, 2026-10-05).** A pending request on a listing
+   the reader hosts shows **Accept** and **Decline**, which call `PUT /api/lighthouse/matches/:id`
+   with `x-ctf-csrf: 1` and re-read the list on success. Both buttons disable while one saves, and
+   the route's error message is shown under them. Accepting is what opens the match chat in Direct
+   Line. An accepted or completed match shows the green tick.
+5. **Allowed status moves (2026-10-05).** A host may move a match `pending → accepted | rejected`
+   and `accepted → completed`; a seeker may move `pending | accepted → canceled`. Anything else from
+   a host or seeker answers 409 `LIGHTHOUSE_INVALID_MATCH_TRANSITION`, so a withdrawn or declined
+   request cannot be reopened and a stay cannot be marked completed without being accepted. The row
+   is read `FOR UPDATE` so a cancel and an accept arriving together are decided in turn. Admins are
+   not limited by this table. The table is `lib/lighthouse/match-transitions.ts`. The seeker cancel
+   has no button yet; it is reachable through the route only.
 6. Status lifecycle parity target:
    - `pending`, `accepted`, `rejected`, `canceled`, `completed`.
 7. Duplicate active/pending request constraints remain required.
@@ -271,7 +281,7 @@ the model, the routes, and the manage-list. LightHouse's job is to honor it:
 
 - `GET /api/lighthouse/matches`
 - `POST /api/lighthouse/matches`
-- `PUT /api/lighthouse/matches/:id`
+- `PUT /api/lighthouse/matches/:id` — status change; 409 `LIGHTHOUSE_INVALID_MATCH_TRANSITION` for a move the table in §1.5 item 5 does not allow
 
 ### 3.4 Admin APIs
 
@@ -430,6 +440,14 @@ Android admin present (2026-06-06): `AdminLighthouse.tsx` + `admin-api.ts` added
   to everyone else (§5 item 10). City, state and country are unchanged for browsing. The host's edit
   form still prefills from the detail read, because the host is the owner. No schema or screen
   change; the access policy contract gains `exactAddressDisclosure` on `lighthouse.property.create`.
+- 2026-10-05: **A host can now answer a stay request (#2813), and a finished request cannot be
+  reopened (#2815).** No screen called the match update route, so every request stayed `pending`
+  and the match chat never opened for anyone. The Matches tab now shows Accept and Decline on a
+  pending request for the listing's host (§1.5 item 4). The route also checked only who was asking
+  and for which status, so a host could accept a request the seeker had withdrawn or mark a pending
+  one completed; it now allows only the moves in §1.5 item 5 and locks the row while deciding. The
+  status icon showed a red cross for an accepted match because it only knew the old `approved`
+  value; it now shows the green tick. No schema change. Test script step LH-4b added.
 - 2026-10-05: **Member screens tell a failed read from an empty one, and read the codes the routes
   really send (#2821, #2823, #2824, #2825, #2831).** No schema or contract change.
   - Request to stay compared the answer against `policy_denied`, `profile_not_found` and

@@ -302,6 +302,13 @@ ServiceCredits seeds wallets, transfers, escrow holds, and dispute fixtures via 
 
 ## 10) Change Log
 
+- 2026-10-12: **Admin load failures are shown, and the Earn tab no longer describes a send as paying
+  (code review #2913, #2915).** A failed read of the open disputes list now shows the route's
+  message in place of "No open disputes.", and a failed read of the external ledger status shows
+  its reason in the card instead of hiding it; both are reported. The Earn tab's peer-to-peer
+  paragraph now says members send and receive credits. Read-only screens and copy; no ledger,
+  route or schema change.
+
 - 2026-10-05: **Ledger inserts now fit the schema (code review #2898, #2900, #2902).** Six inserts
   into `service_credits_transfers` upsert on (`sender_user_id`, `idempotency_key`), the deletion
   reclaim's tombstone on (`account_id`, `deletion_request_id`) and its treasury event on
@@ -340,6 +347,16 @@ ServiceCredits seeds wallets, transfers, escrow holds, and dispute fixtures via 
   drive shows when one is actually running. Copy only: one string in
   `service-credits.constants.ts`, no schema, route, contract, transfer, or ledger change. The
   2026-06-19 entry below still quotes the old wording and is left as written, being a dated record.
+
+- 2026-10-05: **A second press of Send no longer sends twice (code review #2905).** The Send
+  panel made a new idempotency key on every press, so the server's replay protection never
+  covered a retry, and a balance refresh that failed after a completed send showed its error in
+  red with the form still filled in, which read as a failed send. The panel now keeps one key for
+  a filled-in send and reuses it on a retry, so a second press after an error or a lost response
+  returns the first transfer. Changing the recipient, amount or rail, or completing the send, makes
+  a new key. A completed send now always shows "Credits sent successfully!" and clears the form;
+  if the balance cannot be re-read afterwards, a separate gray note says the figure shown may be
+  out of date. Web only (`sc-send-panel.tsx`); no route, contract or ledger change.
 
 - 2026-08-27: **Saving the treasury policy did nothing on a database with no policy row yet.**
   `updateTreasuryConfig` ran a bare `UPDATE service_credits_treasury_config ... WHERE id = TRUE`, and

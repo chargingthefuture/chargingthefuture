@@ -469,13 +469,73 @@ export async function isTrainerForCohort(actorId: string, cohortId: string): Pro
   return cohort.rows[0]?.created_by_user_id === actorId;
 }
 
+// What the validate and release routes need to decide who may sign off a milestone. The cohort is
+// read from the enrollment itself, never from the request body: trusting a cohort id the caller
+// sends let a trainer of one cohort sign off an enrollment in another.
+export type MilestoneSignOffScope = {
+  cohortId: string;
+  learnerUserId: string;
+  milestoneInCohort: boolean;
+};
+
+export async function loadMilestoneSignOffScope(enrollmentId: string, milestoneId: string): Promise<MilestoneSignOffScope | null> {
+  const result = await queryDb<{ cohort_id: string; user_id: string; milestone_in_cohort: boolean }>(
+    `SELECT e.cohort_id::text AS cohort_id,
+            e.user_id,
+            EXISTS (
+              SELECT 1 FROM skill_up_milestones m
+              WHERE m.id = $2::uuid AND m.cohort_id = e.cohort_id
+            ) AS milestone_in_cohort
+     FROM skill_up_enrollments e
+     WHERE e.id = $1::uuid
+     LIMIT 1`,
+    [enrollmentId, milestoneId],
+  );
+  const row = result.rows[0];
+  if (!row) {
+    return null;
+  }
+  return { cohortId: row.cohort_id, learnerUserId: row.user_id, milestoneInCohort: row.milestone_in_cohort };
+}
+
+export type MilestoneSignOffDenial = { code: string; message: string; status: number };
+
+// Only an admin or the trainer of the enrollment's own cohort may sign off, the milestone has to
+// belong to that cohort, and nobody signs off their own enrollment: release returns the deposit and
+// mints trainer credits and the completion bonus, so a learner approving themselves would be
+// granting credits to their own account.
+export function milestoneSignOffDenial(input: {
+  actorId: string;
+  isAdmin: boolean;
+  trainerForCohort: boolean;
+  scope: MilestoneSignOffScope | null;
+  action: 'validation' | 'release';
+}): MilestoneSignOffDenial | null {
+  if (!input.scope) {
+    return { code: 'skill_up_not_found', message: 'Enrollment not found for this milestone.', status: 404 };
+  }
+  if (!input.isAdmin && !input.trainerForCohort) {
+    return {
+      code: 'skill_up_forbidden',
+      message: `Trainer of this enrollment's cohort or admin role required for milestone ${input.action}.`,
+      status: 403,
+    };
+  }
+  if (input.scope.learnerUserId === input.actorId) {
+    return { code: 'skill_up_forbidden', message: 'A milestone on your own enrollment has to be signed off by somebody else.', status: 403 };
+  }
+  if (!input.scope.milestoneInCohort) {
+    return { code: 'skill_up_not_found', message: "Milestone does not belong to this enrollment's cohort.", status: 404 };
+  }
+  return null;
+}
+
 type EnrollInCohortInput = {
   actorId: string;
   cohortId: string;
   idempotencyKey: string;
   depositCredits?: number;
   allowWithoutDeposit?: boolean;
-  assignedTrainerId?: string | null;
 };
 
 type EnrollmentCreateResponse = {
@@ -547,16 +607,17 @@ function resolveEnrollmentDeposit(cohort: EnrollableCohortRow, input: EnrollInCo
 }
 
 function resolveEnrollmentTrainerId(cohort: EnrollableCohortRow, input: EnrollInCohortInput): string | null {
-  // Trainer of record for the enrollment (drives the milestone-release payout). Prefer an explicitly
-  // supplied trainer; otherwise, for an auto-created cohort a trainer has claimed (its
-  // created_by_user_id is no longer the scheduler placeholder), default to that claiming trainer so
-  // their split actually settles on milestone release. Admin/human-built cohorts get null unless a
-  // trainer is passed in (created_by there may be an admin, not the trainer).
+  // Trainer of record for the enrollment (drives the milestone-release payout). Always derived from
+  // the cohort, never from the request: the learner used to be able to name it, and so choose who
+  // received the minted trainer credits. For an auto-created cohort a trainer has claimed (its
+  // created_by_user_id is no longer the scheduler placeholder) it is that claiming trainer.
+  // Admin/human-built cohorts get null (created_by there may be an admin, not the trainer). A trainer
+  // enrolling in their own cohort is never their own trainer of record.
   const claimedAutoTrainer =
     cohort.auto_created && cohort.created_by_user_id !== SKILL_UP_AUTO_COHORT_ACTOR_ID
       ? cohort.created_by_user_id
       : null;
-  return input.assignedTrainerId ?? claimedAutoTrainer;
+  return claimedAutoTrainer === input.actorId ? null : claimedAutoTrainer;
 }
 
 async function createEnrollmentDraftTx(client: PoolClient, input: EnrollInCohortInput): Promise<EnrollmentCreateResponse> {
@@ -734,19 +795,27 @@ export async function validateMilestone(input: {
       throw new Error('rate_limit_exceeded');
     }
 
-    const validationId = randomUUID();
-    await client.query(
-      `INSERT INTO skill_up_milestone_validations (id, enrollment_id, milestone_id, validated_by_user_id, validation_note, status)
-       VALUES ($1, $2::uuid, $3::uuid, $4, $5, 'validated')
+    // One row per enrollment and milestone (uq_skill_up_milestone_validations_enrollment_milestone).
+    // A row that is already released is the record that its credits moved, so a repeat validate
+    // leaves it alone and is refused rather than resetting it to validated.
+    const upserted = await client.query<{ id: string }>(
+      `INSERT INTO skill_up_milestone_validations (id, enrollment_id, milestone_id, validated_by_user_id, validation_note, status, validated_at)
+       VALUES ($1, $2::uuid, $3::uuid, $4, $5, 'validated', NOW())
        ON CONFLICT (enrollment_id, milestone_id)
        DO UPDATE SET
          validated_by_user_id = EXCLUDED.validated_by_user_id,
          validation_note = EXCLUDED.validation_note,
          status = 'validated',
          validated_at = NOW(),
-         released_at = NULL`,
-      [validationId, input.enrollmentId, input.milestoneId, input.actorId, input.validationNote ?? ''],
+         updated_at = NOW()
+       WHERE skill_up_milestone_validations.status <> 'released'
+       RETURNING id::text`,
+      [randomUUID(), input.enrollmentId, input.milestoneId, input.actorId, input.validationNote ?? ''],
     );
+    const validationId = upserted.rows[0]?.id;
+    if (!validationId) {
+      throw new Error('invalid_state');
+    }
 
     const response = { validationId, status: 'validated' as const };
     await writeCommandIdempotency(client, input.actorId, 'skill-up.milestone.validate', input.idempotencyKey, response);
@@ -1114,6 +1183,42 @@ export async function openDispute(input: {
   });
 }
 
+// A dispute adjustment may only move credits between the two people the dispute is about: the
+// enrollment's learner and its assigned trainer. Without this, the adjustment named any source and
+// any destination, so resolving a dispute could take credits from an unrelated member's wallet.
+async function assertAdjustmentBetweenDisputeParties(
+  disputeId: string,
+  adjustment: { sourceUserId: string; destinationUserId: string },
+) {
+  const parties = await queryDb<{ user_id: string; assigned_trainer_id: string | null }>(
+    `SELECT e.user_id, e.assigned_trainer_id
+     FROM skill_up_disputes d
+     JOIN skill_up_enrollments e ON e.id = d.enrollment_id
+     WHERE d.id = $1::uuid
+     LIMIT 1`,
+    [disputeId],
+  );
+  const row = parties.rows[0];
+  if (!row) {
+    throw new Error('not_found');
+  }
+  if (!isDisputeAdjustmentBetweenParties({ learnerUserId: row.user_id, trainerUserId: row.assigned_trainer_id }, adjustment)) {
+    throw new Error('invalid_payload');
+  }
+}
+
+export function isDisputeAdjustmentBetweenParties(
+  parties: { learnerUserId: string; trainerUserId: string | null },
+  adjustment: { sourceUserId: string; destinationUserId: string },
+): boolean {
+  const allowed = new Set([parties.learnerUserId, parties.trainerUserId].filter((id): id is string => Boolean(id)));
+  return (
+    adjustment.sourceUserId !== adjustment.destinationUserId &&
+    allowed.has(adjustment.sourceUserId) &&
+    allowed.has(adjustment.destinationUserId)
+  );
+}
+
 export async function resolveDispute(input: {
   actorId: string;
   disputeId: string;
@@ -1152,6 +1257,7 @@ export async function resolveDispute(input: {
   let adjustmentResult: Awaited<ReturnType<typeof applyDisputeAdjustment>> | null = null;
 
   if (input.adjustment && input.adjustment.amount > 0) {
+    await assertAdjustmentBetweenDisputeParties(input.disputeId, input.adjustment);
     adjustmentResult = await applyDisputeAdjustment({
       actorId: input.actorId,
       disputeCaseId: input.disputeId,
@@ -1475,7 +1581,6 @@ export type SkillUpAdminEnrollment = {
 export type SkillUpAdminValidation = {
   id: string;
   enrollmentId: string;
-  cohortId: string | null;
   milestoneId: string;
   validationNote: string | null;
   createdAtIso: string;
@@ -1503,7 +1608,6 @@ type AdminEnrollmentRow = {
 type AdminValidationRow = {
   id: string;
   enrollment_id: string;
-  cohort_id: string | null;
   milestone_id: string;
   validation_note: string | null;
   created_at: Date;
@@ -1540,9 +1644,8 @@ export async function listOpenDisputes(limit = 100): Promise<SkillUpAdminDispute
 export async function listPendingMilestoneValidations(limit = 100): Promise<SkillUpAdminValidation[]> {
   const pageSize = Math.min(Math.max(1, limit), 200);
   const result = await queryDb<AdminValidationRow>(
-    `SELECT v.id, v.enrollment_id, e.cohort_id, v.milestone_id, v.validation_note, v.created_at
+    `SELECT v.id, v.enrollment_id, v.milestone_id, v.validation_note, v.created_at
        FROM skill_up_milestone_validations v
-       LEFT JOIN skill_up_enrollments e ON e.id = v.enrollment_id
        WHERE v.status = 'pending'
        ORDER BY v.created_at DESC
        LIMIT $1`,
@@ -1551,7 +1654,6 @@ export async function listPendingMilestoneValidations(limit = 100): Promise<Skil
   return result.rows.map((row) => ({
     id: row.id,
     enrollmentId: row.enrollment_id,
-    cohortId: row.cohort_id,
     milestoneId: row.milestone_id,
     validationNote: row.validation_note,
     createdAtIso: row.created_at.toISOString(),
@@ -1792,7 +1894,11 @@ export async function getSkillUpWalletView(userId: string) {
     .filter((entry) => entry.amount > 0)
     .sort((a, b) => (a.earnedAtIso < b.earnedAtIso ? 1 : -1));
 
-  const totalEarned = roundCurrency(history.reduce((sum, entry) => sum + entry.amount, 0));
+  // A milestone_release row is the learner's own deposit coming back, not a grant, so it is left out
+  // of "Earned through SkillUp" (the wallet's Earned tab leaves it out the same way). Display only.
+  const totalEarned = roundCurrency(
+    history.filter((entry) => entry.kind !== 'milestone_release').reduce((sum, entry) => sum + entry.amount, 0),
+  );
 
   return {
     availableBalance: wallet.availableBalance,
@@ -1895,6 +2001,46 @@ export async function refundHeldEscrowForCohort(cohortId: string): Promise<numbe
       refundReason: 'skill_up_cohort_closed',
       originPlugin: SKILL_UP_PLUGIN_SLUG,
       idempotencyKey: `skill-up:cohort-close:${cohortId}:refund:${escrow.escrow_id}`,
+    });
+    await queryDb(
+      `UPDATE skill_up_enrollment_milestone_escrows
+       SET release_status = 'refunded', updated_at = NOW()
+       WHERE id = $1::uuid`,
+      [escrow.id],
+    );
+    refundedCredits = roundCurrency(refundedCredits + toNumber(escrow.held_amount));
+  }
+
+  return refundedCredits;
+}
+
+// Return every deposit a member still has held in SkillUp escrow, before their SkillUp data is
+// deleted (on its own or with the entire account). Deleting the enrollments removes the only rows
+// that lead back to these holds: leaving a cohort and a cohort closing both start from the
+// enrollment, so without this the credits would stay held in the member's wallet with no way back,
+// and a full-account reclaim would wait on holds that can never clear. Only holds ServiceCredits
+// still has as `held` are refunded, so a row the ledger already settled cannot block the deletion.
+// The idempotency key is fixed per escrow, so a retried deletion never refunds twice.
+export async function refundHeldDepositsBeforeDataDeletion(userId: string): Promise<number> {
+  const held = await queryDb<{ id: string; escrow_id: string; held_amount: string }>(
+    `SELECT me.id::text AS id,
+            me.escrow_id::text AS escrow_id,
+            me.held_amount::text AS held_amount
+       FROM skill_up_enrollment_milestone_escrows me
+       JOIN skill_up_enrollments e ON e.id = me.enrollment_id
+       JOIN service_credits_escrow_holds h ON h.id = me.escrow_id
+      WHERE e.user_id = $1 AND me.release_status = 'held' AND h.status = 'held'`,
+    [userId],
+  );
+
+  let refundedCredits = 0;
+  for (const escrow of held.rows) {
+    await refundEscrow({
+      actorId: userId,
+      escrowId: escrow.escrow_id,
+      refundReason: 'skill_up_data_deleted',
+      originPlugin: SKILL_UP_PLUGIN_SLUG,
+      idempotencyKey: `skill-up:data-deletion:refund:${escrow.escrow_id}`,
     });
     await queryDb(
       `UPDATE skill_up_enrollment_milestone_escrows
