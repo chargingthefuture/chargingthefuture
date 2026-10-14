@@ -6,10 +6,10 @@ import {
   parseJsonBody,
   readTrimmedString,
   requireWhatWorksAdminAccess,
+  runAuditedWhatWorksAdminMutation,
   whatWorksError,
 } from '../../_lib';
 import { logWhatWorksAudit, recordWhatWorksAdminAudit } from 'lib/what-works/audit';
-import { failureResponse } from 'lib/errors/failure';
 
 // The problem fields once required-field and length checks have passed.
 type ValidatedProblem = {
@@ -51,18 +51,7 @@ export async function GET() {
   if (!gate.allowed) {
     return gate.response;
   }
-  let problems: Awaited<ReturnType<typeof listAdminProblems>>;
-  try {
-    problems = await listAdminProblems();
-  } catch (error) {
-    return failureResponse({
-      summary: 'Could not load the problem list',
-      error,
-      code: 'what_works_admin_problem_list_failed',
-      area: 'what-works',
-      op: 'admin_problem_list',
-    });
-  }
+  const problems = await listAdminProblems();
   logWhatWorksAudit({
     actorId: gate.auth.userId,
     command: 'what-works.admin.problem.list',
@@ -81,11 +70,16 @@ export async function POST(request: Request) {
   if (csrf) {
     return csrf;
   }
-  const gate = await requireWhatWorksAdminAccess();
+  const target = { command: 'what-works.admin.problem.create', targetType: 'problem', targetId: 'new' };
+  const gate = await requireWhatWorksAdminAccess(target);
   if (!gate.allowed) {
     return gate.response;
   }
+  const actorId = gate.auth.userId;
+  return runAuditedWhatWorksAdminMutation(actorId, target, () => createProblemFromRequest(request, actorId));
+}
 
+async function createProblemFromRequest(request: Request, actorId: string): Promise<NextResponse> {
   const body = await parseJsonBody(request);
   if (!body) {
     return whatWorksError('Invalid JSON body.', 'what_works_invalid_body', 400);
@@ -97,26 +91,15 @@ export async function POST(request: Request) {
   }
   const { title, emoji, context, sortOrder } = validated.data;
 
-  let problem: Awaited<ReturnType<typeof createProblem>>;
-  try {
-    problem = await createProblem({
-      title,
-      emoji,
-      context,
-      sortOrder,
-      createdBy: gate.auth.userId,
-    });
-  } catch (error) {
-    return failureResponse({
-      summary: 'Could not create the problem',
-      error,
-      code: 'what_works_admin_problem_create_failed',
-      area: 'what-works',
-      op: 'admin_problem_create',
-    });
-  }
+  const problem = await createProblem({
+    title,
+    emoji,
+    context,
+    sortOrder,
+    createdBy: actorId,
+  });
   await recordWhatWorksAdminAudit({
-    actorId: gate.auth.userId,
+    actorId,
     command: 'what-works.admin.problem.create',
     status: 'allow',
     reason: 'admin_route_guard',
