@@ -258,7 +258,7 @@ async function anthropicMessage(system, user, maxTokens) {
 
 function buildSystemPrompt() {
   return [
-    'You write a MANUAL test script for one plugin of "Charging the Future", an open-source',
+    'You write a MANUAL test script for one plugin of "Skills Economy", an open-source',
     'Next.js (web) + React Native (android) app. The reader runs these steps by hand on a real',
     'device — usually a phone — to confirm the plugin works. Follow CLAUDE.md: plain language, no',
     'jargon, no pleasantries, no "phases".',

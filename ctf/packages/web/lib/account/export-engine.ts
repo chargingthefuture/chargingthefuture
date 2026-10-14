@@ -14,8 +14,11 @@
 // rows (e.g. the ServiceCredits ledger) is the follow-up once per-table export columns are
 // reviewed. The export envelope says this in its `notes` so the file is honest about what it holds.
 //
-//   - delete / soft-delete → SELECT * FROM <table> WHERE <userColumn> = $1
-//   - retain               → no operation
+//   - delete / soft-delete / pseudonymize → SELECT * FROM <table> WHERE <userColumn> = $1
+//   - an entry marked `exportable: false`  → no operation (rows written by someone else about the
+//     member, or another person's record the member is only named on; see `notExported` in the
+//     registry)
+//   - retain                                → no operation
 //
 // Identifiers (table / column names) come only from the registry, which is itself validated
 // against `schema.sql` by `check-deletion-registry.mjs`, so they are never user input. The user id
@@ -36,10 +39,11 @@ export type ExportStatement = {
 
 /**
  * Pure translation of one owned table into a SELECT statement, or `null` when the table has no
- * user column to scope by (`retain` tables — skipped in the MVP export scope).
+ * user column to scope by (`retain` tables — skipped in the MVP export scope) or the registry marks
+ * it `exportable: false` (the rows matched by the member's id are not the member's own).
  */
 export function planTableExport(owned: OwnedTable): ExportStatement | null {
-  if (!owned.userColumn) {
+  if (!owned.userColumn || owned.exportable === false) {
     return null;
   }
   return {

@@ -76,7 +76,12 @@ function mapRoom(data: RoomApiResponse): Room {
     cohortId: data.cohort?.id,
     name: data.cohort?.cohortLabel,
     topic: data.topic?.title,
-    participants: [],
+    // The cohort's members from the room route. This was a fixed empty list, so the Session tab read
+    // "0 participants" and showed no roster for every cohort (owner report).
+    participants: (data.members ?? []).map((member) => ({
+      id: member.userId,
+      name: member.username ?? `Member ${member.userId.slice(0, 6)}`,
+    })),
     ended: Boolean(data.ended),
   };
 }

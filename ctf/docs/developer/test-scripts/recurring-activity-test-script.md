@@ -1,6 +1,6 @@
 # Recurring Activity — Manual Test Script
 
-> **Android: not applicable.** This feature is web-only (rule 105 / PR #1742, 2026-07-20). Test on web only: desktop and the mobile-responsive (~390px) layout. Any `android` surface tags below are retained as history but no longer apply.
+> **Android: in the app again (2026-10-08).** The page is copied into the Android app (`ctf/packages/mobile/src/features/recurring-activity`). Open it from Your account (gear, then "Your ongoing activities") or from Foundation ("See your ongoing arrangements" after a quote is done); back returns to whichever opened it. Test on web desktop, the mobile-responsive (~390px) layout, and Android.
 
 > Generated from the feature inventory and declared contracts for `recurring-activity`; this is the runnable checklist a tester works through by hand on a real device. Regenerate with:
 > `pnpm --dir ctf test-script:generate -- recurring-activity`
@@ -28,7 +28,7 @@
 
 ## Core smoke (every session)
 
-**1.** Sign in as a seeded member and navigate to `/apps/recurring-activity` (web) or open Recurring Activity on Android. The hub loads and shows at least the two confirmed seeded activities (one fiat housing tie, one ServiceCredits service tie).
+**1.** Sign in as a seeded member and navigate to `/apps/recurring-activity` (web) or open Recurring Activity on Android (gear, Your account, "Your ongoing activities"). The hub loads and shows at least the two confirmed seeded activities (one fiat housing tie, one ServiceCredits service tie).
 web ☐
 
 **2.** The seeded ServiceCredits service activity shows `50 SC / month` — a declared value is visible. The seeded fiat housing activity shows a currency label and cadence but **no fiat amount anywhere on the row**.

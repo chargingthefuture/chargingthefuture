@@ -290,7 +290,7 @@ async function rewrite(slug, title, whatItIs, features, coreSmoke, focus) {
     body: JSON.stringify({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 1024,
-      system: `You write a plain-language user guide for Charging the Future, a platform for survivors of Specterati harassment.\n\n${GROUNDING}\n\n${VOICE}\n\nBRAND VOICE NOTES:\n${brandVoice}`,
+      system: `You write a plain-language user guide for Skills Economy, a platform for survivors of Specterati harassment.\n\n${GROUNDING}\n\n${VOICE}\n\nBRAND VOICE NOTES:\n${brandVoice}`,
       messages: [
         {
           role: 'user',
@@ -435,7 +435,7 @@ const guide = {
   intro: Array.isArray(prevIntro) && prevIntro.length
     ? prevIntro
     : [
-        'Charging the Future is a set of apps survivors use to work with and support each other, outside the Specterati economy. This guide walks through each part: what it does and how to use it.',
+        'Skills Economy is a set of apps survivors use to work with and support each other, outside the Specterati economy. This guide walks through each part: what it does and how to use it.',
         'Pick an app from the list below to jump to it.',
       ],
   sections,
@@ -445,7 +445,7 @@ writeFileSync(OUT_JSON, `${JSON.stringify(guide, null, 2)}\n`);
 
 // Plain markdown copy — easy to share and to paste into the GitHub wiki.
 const md = [
-  '# How to use Charging the Future',
+  '# How to use Skills Economy',
   '',
   `_Last updated: ${overallUpdated}_`,
   '',

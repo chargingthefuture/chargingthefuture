@@ -115,7 +115,7 @@ function gatherCodeContext(pluginSlug) {
 
 async function askClaude(issue, codeContext) {
   const system = [
-    'You are a senior engineer triaging a user-reported bug in "Charging the Future", an',
+    'You are a senior engineer triaging a user-reported bug in "Skills Economy", an',
     'open-source Next.js app (web code under ctf/packages/web). You are NOT writing code now —',
     'you are proposing a plan a human will read and approve.',
     '',

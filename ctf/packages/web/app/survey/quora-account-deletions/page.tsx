@@ -32,7 +32,7 @@ export default async function QuoraDeletionSurveyPage() {
   });
 
   if (!decision.allowed) {
-    return <QuoraSurveyLandingShell signInUrl={getHostedSignInUrl() ?? '/sign-in'} />;
+    return <QuoraSurveyLandingShell signInUrl={getHostedSignInUrl() ?? '/'} />;
   }
 
   // Checked here rather than in the browser so the offer on the confirmation screen is never shown
