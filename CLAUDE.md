@@ -99,6 +99,12 @@ Full policy, the deprecated stop-for-design machinery (history), and worked exam
 
 ## One Design, One Color per Site (owner decision, 2026-10-14)
 
+The name shown everywhere is Skills Economy (owner decision, 2026-10-13). Charging The Future
+appears only in the domain names, never as a displayed name: page titles, headers, footers,
+notification titles, feed titles, generated text and the prompts that write it all say Skills
+Economy. Published posts keep the name they were written with. The legal operator name in
+`app/terms/policy-content.ts` (`OPERATOR_NAME`) is the owner's call and is not changed with the rest.
+
 The project's websites share one design, each in its own color, so a visitor can tell which part
 they are in: farahbrunache.com (One Percent, the paid tier) is forest green, chargingthefuture.com
 (the free tier) burgundy, and the blog black and white with coral. Titles are Newsreader and text
