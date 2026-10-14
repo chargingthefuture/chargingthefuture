@@ -184,7 +184,7 @@
 ### 1.6 Member Blocking (cross-cutting safety control)
 
 1. Any signed-in member can block, unblock, and list who they have blocked — a baseline safety boundary gated by `requireAccountAccess` (the same `any_authenticated` gate as account deletion, never the unlock gate). A block is the member's own private boundary: never visible to the person blocked, and it carries no reason.
-2. `GET /api/account/blocks` lists the member's blocks newest-first (`listBlocksForUser`). `POST /api/account/blocks` creates a block (body `{ blockedUserId }`; CSRF-guarded; idempotent; a self-block or a blank target returns 400). `DELETE /api/account/blocks/[blockedUserId]` removes a block (CSRF-guarded; idempotent — unblocking a member who is not blocked still returns ok).
+2. `GET /api/account/blocks` lists the member's blocks newest-first (`listBlocksForUser`). Each row's name comes from the blocked member's claimed Directory profile only when the caller is Unlock-approved (or an admin); any other caller sees "Member" on every row, because the Directory is an approved-only surface and the account area is open to every signed-in account. `POST /api/account/blocks` creates a block (body `{ blockedUserId }`; CSRF-guarded; idempotent; a self-block or a blank target returns 400). `DELETE /api/account/blocks/[blockedUserId]` removes a block (CSRF-guarded; idempotent — unblocking a member who is not blocked still returns ok).
 3. Optional safety escalation (opt-in): a `POST` with `safetyConcern: true` and an optional short `safetyDetail` writes the block AND a `member_safety_reports` row in one transaction (they succeed or fail together) — the only path by which a member block reaches an admin. Without the flag, nothing is written to the reports table.
 
 **Web and Android delivery status: complete on both.** Web ships the manage-list (`components/blocks/blocked-members-shell.tsx`, mounted at `/account/blocks`) and the reusable block action (`components/blocks/block-member-button.tsx`, with the opt-in safety escalation). Android ships the matching surface in `packages/mobile/src/features/blocks/`: an API client (`api.ts` — `fetchBlockedMembers`, `blockMember`, `unblockMember`, all through the shared authenticated fetch with the `x-ctf-csrf: 1` header on mutations), the "Blocked members" manage screen (`BlockedMembers.tsx` — loading / empty / error / populated states with per-row Unblock, laid out as the web screen with its own back header, opened from the Your account hub), and the reusable `BlockMemberButton.tsx` (confirm dialog with the same opt-in safety escalation). The screen is mounted in the mobile navigator (`App.tsx`, feature key `blocked-members`). Both clients call the same three account routes; no backend, schema, or contract change.
@@ -243,7 +243,7 @@ The admin side of the member-blocking safety escalation (§1.6). When a member b
 
 Backend-only endpoints with no UI, each guarded by a dedicated bearer secret and called by a GitHub Actions workflow rather than a signed-in member.
 
-1. `POST /api/internal/account/delete` — operator-only; `Authorization: Bearer ${ACCOUNT_DELETE_SECRET}` (a dedicated secret, **not** the cron secret, because deletion is irreversible). Deletes ANY user's account by id (the admin counterpart to self-service `DELETE /api/account/full-account`): records the request + queues the ServiceCredits reclaim, then deletes every plugin's data via the deletion registry/orchestrator (`deleteAllAccountData`); optionally also deletes the Clerk identity (`deleteClerk` defaults true). Money is retained (wallets/ledgers are `retain` in the registry, settled by the reclaim flow). Returns 503 when the secret is unset, 403 on a wrong/absent secret, 400 when `userId` is missing; writes a chyme audit row. Called only by the manual `Delete Account (manual)` Actions workflow. Passes `initiatedBy: 'operator'` to the orchestrator, so the deletion event it writes is marked as a duplicate/test-account cleanup rather than a member choosing to leave (the Weekly Performance deleted-accounts row skips it).
+1. `POST /api/internal/account/delete` — operator-only; `Authorization: Bearer ${ACCOUNT_DELETE_SECRET}` (a dedicated secret, **not** the cron secret, because deletion is irreversible). Deletes ANY user's account by id (the admin counterpart to self-service `DELETE /api/account/full-account`): deletes every plugin's data via the deletion registry/orchestrator (`deleteAllAccountData`), then records the request + queues the ServiceCredits reclaim; optionally also deletes the Clerk identity (`deleteClerk` defaults true). Money is retained (wallets/ledgers are `retain` in the registry, settled by the reclaim flow). Returns 503 when the secret is unset, 403 on a wrong/absent secret, 400 when `userId` is missing; writes a chyme audit row. Called only by the manual `Delete Account (manual)` Actions workflow. Passes `initiatedBy: 'operator'` to the orchestrator, so the deletion event it writes is marked as a duplicate/test-account cleanup rather than a member choosing to leave (the Weekly Performance deleted-accounts row skips it).
 2. `POST /api/internal/product-update` — `Authorization: Bearer ${INTERNAL_SERVICE_SECRET}`. Creates and immediately publishes a feed announcement from `{ title, body }` under the synthetic actor `ci-product-update`, writing a feed audit row. Returns 503 when the secret is unset, 401 on a wrong secret, 400 on missing fields. Lets a release pipeline post a product-update announcement to the feed.
 
 ### 1.10 Operational Probes
@@ -375,6 +375,19 @@ Owner decision, 2026-09-26. The owner pays the running costs of Skills Economy a
 ---
 
 ## 5) Change Log
+
+- 2026-10-14: **Full-account deletion queues the credits reclaim only after the data is gone; the
+  blocks list stops naming members to unapproved callers (code-review #2642, #2696).** The
+  full-account route, the operator delete route and the Clerk `user.deleted` webhook queued the
+  ServiceCredits reclaim in its own transaction before the data deletion ran. A data deletion that
+  then failed left the member with their account and without their credits, and because every reclaim
+  call writes a new deletion event with its own idempotency key, each retry queued another reclaim.
+  All three now delete the data first and queue the reclaim after it commits; the webhook checks the
+  two halves separately so a redelivery finishes whichever is missing. The full-account route's 503
+  now carries `step` and says which step failed. `GET /api/account/blocks` resolved each blocked
+  member's Directory name for any signed-in account, so an account that had not finished Unlock could
+  block an id and read the Directory name back; names now resolve only for an approved caller or an
+  admin, and everyone else sees "Member".
 
 - 2026-10-14: **Android admin pages no longer go missing after one failed read (owner report).** The
   Chyme and Beacon admin pages (and Foundation's and PeerProgramming's) were already in the app behind

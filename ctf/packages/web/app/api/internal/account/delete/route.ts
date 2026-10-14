@@ -113,15 +113,19 @@ export async function POST(request: Request) {
 
   // Track which step is running so a failure response can say whether the ServiceCredits reclaim
   // request or the data deletion threw — the generic 503 alone was undiagnosable from the Actions log.
-  let step = 'reclaim_request';
+  let step = 'data_deletion';
   try {
     const deletion = await runWithForcedPool(target, async () => {
-      const reclaim = await markFullAccountDeletionRequested(userId);
-      step = 'data_deletion';
+      // Data first, reclaim second: the reclaim writes a new deletion event with its own idempotency
+      // key on every call, so queuing it ahead of a deletion that can still fail would leave a
+      // reclaim behind on failure and queue a second one on the retry.
       // Marked 'operator': this route clears a duplicate or a demo test account, so the deletion
       // event it writes must not be read later as a member choosing to leave (the Weekly Performance
       // deleted-accounts row counts only the member's own choice).
-      return deleteAllAccountData(userId, reclaim.requestedAtIso, 'operator');
+      const result = await deleteAllAccountData(userId, new Date().toISOString(), 'operator');
+      step = 'reclaim_request';
+      await markFullAccountDeletionRequested(userId);
+      return result;
     });
 
     const { clerkDeleted, clerkError } = await deleteClerkAccountIfRequested(userId, deleteClerk);
