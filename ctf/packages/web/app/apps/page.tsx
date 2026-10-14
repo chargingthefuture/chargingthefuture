@@ -6,6 +6,7 @@ import { getGdpShellStats } from '../../lib/gdp/repository';
 import { listPluginRegistry, filterPluginsForViewer } from '../../lib/plugins/repository';
 import { readTrustSelfExtensionOrStored } from '../../lib/trust/repository';
 import { getHostedSignInUrl } from '../../lib/auth/provider-env';
+import { reportError } from '../../lib/observability/report';
 
 function buildShellUser(userId: string, username: string | null): ShellCurrentUser {
   const safeUsername = username && username !== 'guest' ? username : null;
@@ -31,7 +32,11 @@ function buildFallbackTrust(userId: string): TrustUserExtension {
 export default async function AppsPage() {
   const pluginsPromise = listPluginRegistry();
   const shellStatsPromise = getGdpShellStats().catch(() => ({ memberCount: null, gdpValueUsd: null }));
-  const authDecisionPromise = evaluatePluginAccess({ requireUsername: false }).catch(() => null);
+  const authDecisionPromise = evaluatePluginAccess({ requireUsername: false }).catch((error: unknown) => {
+    // Renders the signed-out launcher; report it so an access-check outage is not silent.
+    reportError(error, { area: 'apps', op: 'access_check' });
+    return null;
+  });
 
   const [plugins, shellStats, authDecision] = await Promise.all([
     pluginsPromise,

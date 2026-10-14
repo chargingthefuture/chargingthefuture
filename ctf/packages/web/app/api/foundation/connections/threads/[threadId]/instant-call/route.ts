@@ -64,7 +64,7 @@ function mapRingError(error: unknown): NextResponse {
   }
   if (code === 'billing_misconfigured') {
     return NextResponse.json(
-      { ok: false, code: FOUNDATION_ERROR_CODE.callBillingMisconfigured, message: 'This provider is not set up for paid calls right now.' },
+      { ok: false, code: FOUNDATION_ERROR_CODE.callBillingMisconfigured, message: 'This provider is not set up to take calls for ServiceCredits right now.' },
       { status: 409 },
     );
   }

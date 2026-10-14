@@ -55,7 +55,7 @@ export async function POST(request: Request, context: { params: Promise<{ activi
       activityId,
       requestId,
       traceId,
-    });
+    }).catch((auditError) => reportError(auditError, { area: 'recurring-activity', op: 'confirm_audit' }));
     // Notify the owner (proposer) that the other member confirmed — best-effort, deduped on the
     // activity id. Only the counterparty can confirm, so the owner is never the actor here.
     if (result.activity.ownerUserId !== userId) {

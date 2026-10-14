@@ -12,6 +12,7 @@ import { NextResponse } from 'next/server';
 import { evaluatePluginAccess, type AllowDecision } from 'lib/auth/server-authz';
 import { checkMutationOrigin } from 'lib/auth/csrf';
 import { resolveRequestIdentity } from 'lib/auth/request-identity';
+import { reportError } from 'lib/observability/report';
 import { TI_RADIO_ERROR_CODE } from './constants';
 import { TiRadioError } from './errors';
 
@@ -29,7 +30,9 @@ export async function readerIdentity(): Promise<{ userId: string | null; isAdmin
       return { userId: null, isAdmin: false };
     }
     return { userId: identity.userId, isAdmin: Boolean(identity.isAdmin) };
-  } catch {
+  } catch (error) {
+    // Still render the public guide, as a signed-out reader, but leave a trace of why.
+    reportError(error, { area: 'ti-radio', op: 'reader_identity' });
     return { userId: null, isAdmin: false };
   }
 }

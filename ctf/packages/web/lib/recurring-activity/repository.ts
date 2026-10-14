@@ -1,5 +1,6 @@
 import { queryDb } from 'lib/db/postgres';
 import { getCurrency } from 'lib/currency/repository';
+import { reportError } from 'lib/observability/report';
 import type { Currency } from 'lib/currency/types';
 import { SERVICE_CREDITS_CODE } from './constants';
 import {
@@ -182,8 +183,12 @@ export async function createRecurringActivity(input: CreateRecurringActivityInpu
 
   // A failed lookup must not block a real member from recording an arrangement, so an unreadable
   // check is treated as "known" — the guard exists to refuse an invented id, not to add a new way for
-  // the feature to break.
-  const counterpartyKnown = await counterpartyIsAMember(counterpartyUserId).catch(() => true);
+  // the feature to break. The failure is still reported, so a broken member check is seen rather than
+  // silently letting every id through.
+  const counterpartyKnown = await counterpartyIsAMember(counterpartyUserId).catch((error) => {
+    reportError(error, { area: 'recurring-activity', op: 'counterparty_member_check' });
+    return true;
+  });
   if (!counterpartyKnown) {
     throw new RecurringActivityValidationError('That member could not be found.');
   }

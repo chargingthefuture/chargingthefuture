@@ -60,13 +60,12 @@ async function main() {
     await client.query(
       `INSERT INTO skill_up_cohorts
         (id, title, description, track, seats, start_date, end_date, required_credits, materials_cost, device_support,
-         status, allow_no_deposit, trainer_split_percent, completion_bonus_credits, stipend_mode, stipend_amount_per_payout,
-         microgrant_mode, microgrant_amount, refund_policy_json, payout_policy_json, policy_json, created_by_user_id)
+         status, allow_no_deposit, trainer_split_percent, completion_bonus_credits, trainer_credits_per_milestone,
+         refund_policy_json, payout_policy_json, policy_json, created_by_user_id)
        VALUES
         ($1::uuid, 'SkillUp Remote Dev Cohort', 'Seed cohort for SkillUp workflow validation.', 'Remote Dev', 30,
          CURRENT_DATE + INTERVAL '7 days', CURRENT_DATE + INTERVAL '97 days', 300, 120, true,
-         'open', false, 25, 250, 'milestone', 75,
-         'cohort_pool', 200,
+         'open', false, 25, 250, 10,
          '{"dropout":{"day7":75,"day21":50,"after":0}}'::jsonb,
          '{"trainerSplitPercent":25,"completionBonus":250}'::jsonb,
          '{"regionalBands":{"default":1.0},"starterCredits":500}'::jsonb,

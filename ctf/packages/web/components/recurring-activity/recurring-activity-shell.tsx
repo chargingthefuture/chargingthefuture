@@ -20,7 +20,7 @@ import {
 } from './recurring-activity-shared';
 import { RecurringActivityList } from './recurring-activity-list';
 import { RecurringActivityCreateForm, type CreateActivityInput } from './recurring-activity-create-form';
-import { responseFailureText } from 'lib/errors/client-failure';
+import { failureText, responseFailureText } from 'lib/errors/client-failure';
 
 type ActionKind = 'confirm' | 'decline' | 'end' | 'visibility';
 
@@ -28,7 +28,7 @@ type ActionKind = 'confirm' | 'decline' | 'end' | 'visibility';
 // response-shape branching does not inflate that callback's complexity.
 async function fetchRecurringActivityData(
   signal?: AbortSignal,
-): Promise<{ activities: Activity[]; currencies: Currency[] }> {
+): Promise<{ activities: Activity[]; currencies: Currency[]; currenciesError: string | null }> {
   const [activitiesRes, currenciesRes] = await Promise.all([
     fetch('/api/recurring-activity', { cache: 'no-store', signal }),
     fetch('/api/currencies', { cache: 'no-store', signal }),
@@ -37,12 +37,18 @@ async function fetchRecurringActivityData(
     throw new Error(await responseFailureText(activitiesRes, 'We could not load your ongoing activities. Try again in a moment.', 'member'));
   }
   const activitiesData = (await activitiesRes.json()) as ActivitiesResponse;
+  // A failed currency list does not block the activities, but it leaves the form with nothing to
+  // pick, so the reason is returned for the screen to show.
+  const currenciesError = currenciesRes.ok
+    ? null
+    : await responseFailureText(currenciesRes, 'The currency list could not be loaded, so a new activity cannot be recorded right now.', 'member');
   const currenciesData = currenciesRes.ok
     ? ((await currenciesRes.json()) as CurrenciesResponse)
     : { ok: false as const };
   return {
     activities: activitiesData.activities ?? [],
     currencies: currenciesData.currencies ?? [],
+    currenciesError,
   };
 }
 
@@ -66,6 +72,7 @@ export function RecurringActivityShell() {
   const [error, setError] = useState<string | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [currencies, setCurrencies] = useState<Currency[]>([]);
+  const [currenciesError, setCurrenciesError] = useState<string | null>(null);
 
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -84,6 +91,7 @@ export function RecurringActivityShell() {
       }
       setActivities(data.activities);
       setCurrencies(data.currencies);
+      setCurrenciesError(data.currenciesError);
     } catch (e) {
       const message = loadErrorMessage(e);
       if (message) {
@@ -131,6 +139,7 @@ export function RecurringActivityShell() {
   const runAction = useCallback(
     async (id: string, action: ActionKind, path: string, body?: Record<string, unknown>) => {
       setBusy({ id, action });
+      setError(null);
       try {
         const res = await fetch(`/api/recurring-activity/${id}/${path}`, {
           method: 'POST',
@@ -138,11 +147,20 @@ export function RecurringActivityShell() {
           body: JSON.stringify(body ?? {}),
         });
         if (!res.ok) {
-          throw new Error(await responseFailureText(res, 'That action did not go through. Try again in a moment.', 'member'));
+          setError(await responseFailureText(res, 'That action did not go through. Try again in a moment.', 'member'));
+          return;
         }
         await loadData();
       } catch (e) {
-        setError(e instanceof Error ? e.message : 'That action did not go through.');
+        // The request never answered: report the caught value and show the plain sentence.
+        setError(
+          failureText(e, {
+            area: 'recurring-activity',
+            op: `${action}_action`,
+            fallback: 'That action did not go through. Try again in a moment.',
+            audience: 'member',
+          }),
+        );
       } finally {
         setBusy(null);
       }
@@ -197,6 +215,10 @@ export function RecurringActivityShell() {
         </div>
       ) : null}
 
+      {currenciesError ? (
+        <div role="alert" style={{ fontSize: 12, color: t.SUBTLE, marginBottom: 10 }}>{currenciesError}</div>
+      ) : null}
+
       <div style={{ marginBottom: 24 }}>
         <RecurringActivityCreateForm
           currencies={currencies}
@@ -208,6 +230,11 @@ export function RecurringActivityShell() {
       </div>
 
       <div style={{ fontSize: 13, fontWeight: 600, color: t.TITLE, marginBottom: 12 }}>Your ongoing activities</div>
+      {/* A failed action or background refresh with activities already on screen: say what failed
+          above the list instead of dropping the message. */}
+      {error ? (
+        <div role="alert" style={{ fontSize: 12, color: t.SUBTLE, marginBottom: 10 }}>{error}</div>
+      ) : null}
       <RecurringActivityList
         activities={activities}
         currencies={currencies}

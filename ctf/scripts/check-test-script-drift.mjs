@@ -8,8 +8,9 @@
 // not merge with a test script that still describes the old behavior.
 //
 // This is diff-based (unlike the inventory gate, which scans the entire tree): it compares the PR
-// branch against its base. Outside a PR / with no resolvable base it does nothing, so it is safe to
-// run locally.
+// branch against its base. Locally, with no resolvable base, it does nothing, so it is safe to run.
+// In CI an unresolvable base fails the gate, and so does any failure of changed-files.mjs: reading
+// either as "nothing changed" would pass the gate having checked no files.
 //
 //   Base ref:  TEST_SCRIPT_DRIFT_BASE (default: origin/main)
 //   Run:       pnpm --dir ctf run check:test-script-drift
@@ -31,26 +32,47 @@ const BASE = (process.env.TEST_SCRIPT_DRIFT_BASE || 'origin/main').trim();
 // test-script edit for that would only produce a fabricated one. changed-files.mjs drops a file
 // whose entire diff disappears when both sides are rewritten to US English, and nothing else — a
 // real edit anywhere in the same file keeps it in the list.
+function baseResolves(base) {
+  try {
+    // `^{commit}` makes git check the object exists: a bare 40-character hash "verifies" without it.
+    execFileSync('git', ['rev-parse', '--verify', `${base}^{commit}`], { cwd: repoRoot, stdio: 'ignore' });
+    return true;
+  } catch {
+    // no-trace: a ref that does not resolve is the answer this probe asks for.
+    return false;
+  }
+}
+
 function changedFiles(base) {
   try {
     const out = execFileSync('node', [join(repoRoot, 'ctf/scripts/changed-files.mjs'), '--base', base], {
       cwd: repoRoot,
       encoding: 'utf8',
       maxBuffer: 64 * 1024 * 1024,
+      stdio: ['ignore', 'pipe', 'pipe'],
     });
     return new Set(out.split('\n').map((s) => s.trim()).filter(Boolean));
   } catch (error) {
-    return null; // base not resolvable (e.g. local checkout without the ref) -> skip cleanly
+    const reason = String(error?.stderr || error?.message || error).trim();
+    console.error(`check-test-script-drift: could not list the files this branch changed against '${base}': ${reason}`);
+    process.exit(1);
   }
 }
 
 function main() {
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
-  const changed = changedFiles(BASE);
-  if (changed === null) {
+  if (!baseResolves(BASE)) {
+    if (process.env.GITHUB_ACTIONS) {
+      console.error(
+        `check-test-script-drift: base ref '${BASE}' does not resolve in this checkout, so no files were checked. ` +
+          'Fetch the base branch before this step.',
+      );
+      process.exit(1);
+    }
     console.log(`check-test-script-drift: base ref '${BASE}' not resolvable; skipping (this is normal locally).`);
     return;
   }
+  const changed = changedFiles(BASE);
 
   const drifted = [];
   for (const plugin of manifest.plugins) {

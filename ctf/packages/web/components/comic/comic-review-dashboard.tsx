@@ -307,11 +307,14 @@ function useComicReview() {
 
   // Re-run the AI draft for the selected item — used after the engine (the RunPod/Ollama endpoint)
   // was down at ask time and is back up. On success the item now shows an AI draft; if the engine is
-  // still unreachable, show a note and leave it human-first.
+  // still unreachable, show a note and leave it human-first. The server waits out a cold start and
+  // saves the draft on the item, so the note says to wait rather than press again.
   const regenerateSelected = useCallback(async () => {
     if (!selected || regenerating) return;
     setRegenerating(true);
-    setRegenNote(null);
+    setRegenNote(
+      'Waiting for the model. If it was idle, starting up can take a few minutes. The draft is saved on this question when it is ready, even if you leave this screen.',
+    );
     setError(null);
     try {
       const result = await requestJson<{ ok: true; attached: boolean; reason: string | null }>(
@@ -319,6 +322,7 @@ function useComicReview() {
         { method: 'POST', headers: { 'content-type': 'application/json', 'x-ctf-csrf': '1' } },
       );
       if (result.attached) {
+        setRegenNote(null);
         await refresh();
       } else {
         // Show the real reason the draft failed (timeout, model-not-found, auth, network) rather than
@@ -326,6 +330,7 @@ function useComicReview() {
         setRegenNote(`${result.reason ?? 'No draft was generated.'} Or use Edit & approve to write the answer yourself.`);
       }
     } catch (regenError) {
+      setRegenNote(null);
       setError(regenError instanceof Error ? regenError.message : 'Unable to regenerate the draft.');
     } finally {
       setRegenerating(false);
