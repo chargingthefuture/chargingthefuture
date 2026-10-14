@@ -3,6 +3,7 @@ import { queryDb, withDbTransaction } from 'lib/db/postgres';
 import { getCurrency } from 'lib/currency/repository';
 import { createTransfer } from 'lib/shared/credits-interface';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 import {
   getAccountRestrictionStatus,
   restrictAccount as setSharedRestriction,
@@ -444,6 +445,11 @@ export async function createRequest(
   await ensureUserNotRestricted(actorUserId);
 
   const request = await withDbTransaction(async (client) => {
+    // Serialize sends that carry the same key, so two at once cannot both miss the lookup below and
+    // both insert. Released when the transaction ends.
+    await client.query(`SELECT pg_advisory_xact_lock(hashtext('trust_transport_requests.idempotency'), hashtext($1))`, [
+      `${actorUserId}:${idempotencyKey}`,
+    ]);
     const existing = await client.query<RequestRow>(
       `SELECT id, requester_user_id, mode, title, details, pickup_city, dropoff_city, pickup_geo_redacted, dropoff_geo_redacted, status, price_amount, price_currency, created_at, updated_at
        FROM trust_transport_requests
@@ -771,6 +777,14 @@ export async function acceptOffer(requestId: string, offerId: string, actorUserI
       throw new Error('blocked_pair');
     }
 
+    // A provider an admin restricted ('trading' scope) cannot make new offers; an offer they made
+    // before the restriction must not become a trip either, or accepting it hands them the pickup and
+    // drop-off. Mapped to neutral copy so the requester is not told about the restriction.
+    const providerRestriction = await getAccountRestrictionStatus(offer.provider_user_id, 'trading');
+    if (providerRestriction.isRestricted) {
+      throw new Error('offer_not_available');
+    }
+
     const existingTrip = await client.query<TripRow>(
       `SELECT id, request_id, offer_id, requester_user_id, provider_user_id, mode, status, stream_channel_id, canceled_reason, completed_at, requester_completion_confirmed_at, provider_completion_confirmed_at, created_at, updated_at
        FROM trust_transport_trips
@@ -1048,6 +1062,9 @@ export async function updateTripStatus(
     result.request.id,
     result.request.status,
   );
+  // The accepted offer stays `accepted` for good, so the provider's "Offering rides" presence follows
+  // the trip instead: a terminal trip clears it.
+  await syncTrustTransportOfferPresence(result.trip.providerUserId, result.trip.offerId, result.trip.status);
 
   // Settlement (owner decision): when a trip completes, ServiceCredits move requester -> provider, and
   // fiat/crypto settlement credits the provider's earnings ledger. Runs after the completion is committed.
@@ -1158,6 +1175,7 @@ export async function confirmTripCompletion(
       result.request.id,
       result.request.status,
     );
+    await syncTrustTransportOfferPresence(result.trip.providerUserId, result.trip.offerId, 'completed');
     await settleTripOnCompletion(result.trip, result.request, 'completed');
   }
 
@@ -1258,6 +1276,39 @@ async function settleTripOnCompletion(
     await settleTripViaEarningsLedger(trip, currency, amount);
   } catch (error) {
     reportError(error, { area: 'trust-transport', op: 'trip_settlement' });
+    await recordSettlementFailure(trip, request, currency, amount, error);
+  }
+}
+
+// The audit contract's trust-transport.trip.settlement event carries success or failure. A failed
+// settlement leaves the trip completed with nothing moved, so it gets a row too: an admin reading the
+// trail can find the trip and settle it, and a retry stays safe because the transfer key is the trip id.
+async function recordSettlementFailure(
+  trip: TrustTransportTrip,
+  request: TrustTransportRequest,
+  currency: string,
+  amount: number,
+  error: unknown,
+): Promise<void> {
+  try {
+    await insertTrustTransportAudit({
+      actorId: trip.providerUserId,
+      command: 'trust-transport.trip.settlement',
+      policyStatus: 'deny',
+      reason: 'settlement_failed',
+      targetType: 'trip',
+      targetId: trip.id,
+      metadata: {
+        rail: currency === 'SC' ? 'service_credits' : 'earnings_ledger',
+        currency,
+        amount,
+        fromUserId: currency === 'SC' ? request.requesterUserId : null,
+        toUserId: trip.providerUserId,
+        failure: failureReason(error),
+      },
+    });
+  } catch (auditError) {
+    reportError(auditError, { area: 'trust-transport', op: 'trip_settlement_failure_audit', extra: { tripId: trip.id } });
   }
 }
 
@@ -1322,12 +1373,13 @@ export async function cancelOrder(orderId: string, actorUserId: string, isAdmin:
     [orderId],
   );
 
-  await queryDb(
+  const canceledTrips = await queryDb<{ provider_user_id: string; offer_id: string; status: string }>(
     `UPDATE trust_transport_trips
      SET status = CASE WHEN status IN ('completed', 'canceled') THEN status ELSE 'canceled' END,
          canceled_reason = COALESCE($2, canceled_reason),
          updated_at = NOW()
-     WHERE request_id = $1::uuid`,
+     WHERE request_id = $1::uuid
+     RETURNING provider_user_id, offer_id, status`,
     [orderId, normalizeNullableText(reason)],
   );
 
@@ -1340,6 +1392,9 @@ export async function cancelOrder(orderId: string, actorUserId: string, isAdmin:
   // Best-effort presence clear after the request is durably set to canceled. The requester (rider)
   // owns the request regardless of whether an admin performed the cancel. Never breaks the cancel.
   await syncTrustTransportRequestPresence(request.requesterUserId, orderId, 'canceled');
+  for (const trip of canceledTrips.rows) {
+    await syncTrustTransportOfferPresence(trip.provider_user_id, trip.offer_id, trip.status);
+  }
 }
 
 // The caller's recorded earnings per currency: the total value of the trips they completed, grouped by
