@@ -11,7 +11,7 @@ import type {
 } from '../../lib/notifications/types';
 import styles from './community-shell.module.css';
 import { startVisibleInterval } from '../../lib/shared/visible-interval';
-import { reportError } from '../../lib/observability/report';
+import { failureText, responseFailureText } from 'lib/errors/client-failure';
 
 async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, { cache: 'no-store', ...init });
@@ -71,8 +71,10 @@ function sameServerKey(subscription: PushSubscription, key: Uint8Array): boolean
 
 // Send this device's subscription to the server. The save upserts on (user, endpoint), so sending a
 // subscription the server already holds is harmless, and sending it every time repairs a server copy
-// that went missing (pruned after a failed send, or an earlier save that failed).
-async function saveDeviceSubscription(subscription: PushSubscription): Promise<boolean> {
+// that went missing (pruned after a failed send, or an earlier save that failed). Returns null when the
+// server saved it, or the route's own reason when it did not (CSRF denial, bad payload, a failed save),
+// so the member is never told device alerts are on when nothing was stored.
+async function saveDeviceSubscription(subscription: PushSubscription): Promise<string | null> {
   const json = subscription.toJSON();
   const response = await fetch('/api/notifications/push/subscribe', {
     method: 'POST',
@@ -83,7 +85,12 @@ async function saveDeviceSubscription(subscription: PushSubscription): Promise<b
       userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
     }),
   });
-  return response.ok;
+  if (response.ok) return null;
+  return responseFailureText(
+    response,
+    'Couldn’t save device alerts for this device — the list below still updates in the app.',
+    'member',
+  );
 }
 
 // Ensure this device has a Web Push subscription the server knows about, so opted-in categories can
@@ -107,13 +114,14 @@ async function ensureDeviceSubscribed(fromTap: boolean): Promise<string | null> 
       return 'Device alerts aren’t available yet — the list below still updates in the app.';
     }
     const subscription = await currentSubscription(serverKey);
-    if (!(await saveDeviceSubscription(subscription))) {
-      return 'Couldn’t save device alerts for this device — the list below still updates in the app.';
-    }
-    return null;
-  } catch (error) {
-    reportError(error, { area: 'notifications', op: fromTap ? 'device_subscribe' : 'device_resync' });
-    return 'Couldn’t turn on device alerts on this device — the list below still updates in the app.';
+    return await saveDeviceSubscription(subscription);
+  } catch (caught) {
+    return failureText(caught, {
+      area: 'notifications',
+      op: fromTap ? 'device_subscribe' : 'device_resync',
+      fallback: 'Couldn’t turn on device alerts on this device — the list below still updates in the app.',
+      audience: 'member',
+    });
   }
 }
 
@@ -231,6 +239,7 @@ function NotificationsManage({
   prefs,
   savingPref,
   pushNote,
+  prefsError,
   manageOpen,
   setManageOpen,
   togglePref,
@@ -238,11 +247,14 @@ function NotificationsManage({
   prefs: NotificationPreferences | null;
   savingPref: string | null;
   pushNote: string | null;
+  prefsError: string | null;
   manageOpen: boolean;
   setManageOpen: Dispatch<SetStateAction<boolean>>;
   togglePref: (key: keyof NotificationPreferences) => void;
 }) {
-  if (!prefs) return null;
+  if (!prefs) {
+    return prefsError ? <p className={styles.notificationsNote} role="status">{prefsError}</p> : null;
+  }
   return (
     <div className={styles.notificationsManage}>
       <button
@@ -262,6 +274,9 @@ function NotificationsManage({
             Everything shows in this list either way. These switches only control whether your
             device also pings you. All are off unless you turn them on.
           </p>
+          {prefsError ? (
+            <p className={styles.notificationsManageNote} role="status">{prefsError}</p>
+          ) : null}
           {PUSH_TOGGLES.map((toggle) => (
             <label key={toggle.key} className={styles.notificationsPrefRow} aria-label={toggle.label}>
               <input
@@ -308,6 +323,9 @@ export function NotificationsPanel({ onOpenDeepLink }: { onOpenDeepLink?: (linkP
   // A short note shown when turning on a push category couldn't subscribe this device (unsupported
   // browser, blocked permission, or push not configured). The opt-in is still saved either way.
   const [pushNote, setPushNote] = useState<string | null>(null);
+  // Why the preferences could not be read or a switch could not be saved, shown instead of a switch
+  // that springs back with no reason or a Manage section that never appears.
+  const [prefsError, setPrefsError] = useState<string | null>(null);
 
   // True only while this panel is on screen. Clearing the interval stops new polls, but a poll already
   // in flight when the member closes the panel still resolves afterwards, and its result belongs to a
@@ -345,6 +363,7 @@ export function NotificationsPanel({ onOpenDeepLink }: { onOpenDeepLink?: (linkP
       .then((payload) => {
         if (!mountedRef.current) return;
         setPrefs(payload.preferences);
+        setPrefsError(null);
         // A member who already has pings on gets this device's subscription re-sent to the server
         // each time the panel opens, so a lost server copy repairs itself without toggling a switch.
         const { pushSafety, pushActivity, pushCommunity } = payload.preferences;
@@ -354,8 +373,12 @@ export function NotificationsPanel({ onOpenDeepLink }: { onOpenDeepLink?: (linkP
           });
         }
       })
-      .catch(() => {
-        /* preferences are best-effort; the panel still shows the feed */
+      .catch((loadError: unknown) => {
+        if (!mountedRef.current) return;
+        // The panel still shows the feed; say why the device-ping switches are missing.
+        setPrefsError(
+          loadError instanceof Error ? loadError.message : 'Unable to load your device alert settings.',
+        );
       });
   }, []);
 
@@ -383,6 +406,7 @@ export function NotificationsPanel({ onOpenDeepLink }: { onOpenDeepLink?: (linkP
       setPrefs(next);
       setSavingPref(key);
       setPushNote(null);
+      setPrefsError(null);
       // Turning ON any of the three push categories needs a device subscription for the ping to land;
       // make sure this device is subscribed (best-effort — the opt-in still saves either way).
       const turningOnPush =
@@ -396,7 +420,10 @@ export function NotificationsPanel({ onOpenDeepLink }: { onOpenDeepLink?: (linkP
         body: JSON.stringify({ [key]: next[key] }),
       })
         .then((payload) => setPrefs(payload.preferences))
-        .catch(() => setPrefs(prefs))
+        .catch((saveError: unknown) => {
+          setPrefs(prefs);
+          setPrefsError(saveError instanceof Error ? saveError.message : 'Unable to save that setting.');
+        })
         .finally(() => setSavingPref(null));
     },
     [prefs],
@@ -419,6 +446,7 @@ export function NotificationsPanel({ onOpenDeepLink }: { onOpenDeepLink?: (linkP
         prefs={prefs}
         savingPref={savingPref}
         pushNote={pushNote}
+        prefsError={prefsError}
         manageOpen={manageOpen}
         setManageOpen={setManageOpen}
         togglePref={togglePref}
