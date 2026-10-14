@@ -77,6 +77,11 @@ trains**. Every Skills Taxonomy skill belongs to exactly one job title and each 
   read access plus the skills match; a refusal names what the person would have to change.
 - **Any trainerless cohort can be claimed**, not only ones the retired auto-cohort run opened —
   claiming is how a trainer attaches to a cohort at all.
+- **One trainer per claim race (2026-10-05, #2946).** `claimCohortAsTrainer` reads the update's row
+  count. When two eligible people claim the same cohort at once, both pass the ownership read but
+  only the first update matches. The second now gets `already_claimed` (409, "This cohort already
+  has a trainer.") with no enrollment backfill and no `skill-up.cohort.claim_trainer` audit row.
+  Before this it was answered 200 and audited as a second trainer of the same cohort.
 - **The audit that makes it safe.** Removing the human also removes what a human would have noticed,
   so every add and remove on a *claimed* Directory profile is written to
   `skill_up_trainer_skill_audit`.
