@@ -47,8 +47,14 @@ contracts:
 
   - pluginId: lighthouse
     command: lighthouse.match.request.create
-    version: 1.0.0
-    description: Create a match request from seeker to host property with duplicate safeguards.
+    version: 1.1.0
+    description: >-
+      Create a match request from seeker to host property with duplicate safeguards. One open
+      (pending or accepted) request per seeker and listing: a transaction-scoped advisory lock on the
+      pair makes a concurrent repeat wait and then refuse with duplicate_match, so a retry never
+      creates a second request. Creates no chat: the Stream channel, its members and the seeker's
+      token are issued only by the chat route, for an accepted match. v1.1.0 states the response the
+      route has always sent ({ ok, match }) and drops the Stream credentials it used to return.
     inputSchema:
       propertyId:
         type: string
@@ -60,12 +66,13 @@ contracts:
         type: string
         required: false
     outputSchema:
-      matchId:
-        type: string
-      status:
-        type: string
-      createdAt:
-        type: string
+      ok:
+        type: boolean
+      # The created match: id, propertyId, seekerUserId, hostUserId, message, proposedMoveInDate,
+      # hostResponse, status ('pending'), createdAt, updatedAt, streamChannelId (the id the chat route
+      # will use once the host accepts).
+      match:
+        type: object
     dataAccess:
       - lighthouse_matches
       - lighthouse_properties

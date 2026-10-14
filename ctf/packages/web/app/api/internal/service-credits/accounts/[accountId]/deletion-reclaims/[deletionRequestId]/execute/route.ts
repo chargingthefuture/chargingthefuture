@@ -3,6 +3,7 @@ import { executeDeletionReclaim, insertServiceCreditsAudit } from 'lib/service-c
 import { serviceCreditsErrorResponse } from 'lib/service-credits/_lib';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
+import { secretsMatch } from 'lib/auth/internal-secret';
 
 type ReclaimBody = {
   treasuryUserId?: string;
@@ -20,7 +21,7 @@ type ReclaimParams = {
 // POST), so this only compares the supplied header against the known-non-empty token.
 function isAuthorized(request: Request, configuredToken: string): boolean {
   const providedToken = request.headers.get('x-service-credits-internal-token') ?? '';
-  return providedToken.length > 0 && providedToken === configuredToken;
+  return secretsMatch(providedToken, configuredToken);
 }
 
 // Presence + token gate. Distinguish "not configured" (503 — token missing in the app runtime) from
