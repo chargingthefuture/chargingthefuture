@@ -417,7 +417,10 @@ export async function getPluginBySlug(slug: string): Promise<PluginRegistryItem 
     }
 
     return mapPluginRegistryRow(result.rows[0]);
-  } catch {
+  } catch (caught) {
+    // Same drift as list_registry above: the page is served from the built-in entry instead of the
+    // database's, so the failed read is reported.
+    reportError(caught, { area: 'plugins', op: 'get_by_slug', extra: { slug: canonicalSlug } });
     return fallbackPluginRegistry.find((item) => item.slug === canonicalSlug) ?? null;
   }
 }
