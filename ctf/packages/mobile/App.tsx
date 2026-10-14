@@ -9,6 +9,7 @@ import { FoundationCallController } from './src/features/foundation';
 import { AppsList } from './src/features/apps';
 import { Unlock } from './src/features/unlock';
 import { fetchUnlockStatus, type UnlockAccessTier } from './src/features/unlock/api';
+import { reportError } from './src/observability/report';
 import {
   useFonts,
   Inter_400Regular,
@@ -18,6 +19,8 @@ import {
   Inter_800ExtraBold,
   Inter_900Black,
 } from '@expo-google-fonts/inter';
+// The wordmark's serif on the shell bar, shared with the project's websites (ShellChrome.tsx).
+import { Newsreader_500Medium } from '@expo-google-fonts/newsreader';
 import { AuthProvider, useAuth } from './src/auth/auth-context';
 import { ThemeProvider, useTheme } from './src/theme';
 import { LoadingScreen } from './src/components/shared/LoadingScreen';
@@ -68,6 +71,7 @@ export default function App() {
     Inter_700Bold,
     Inter_800ExtraBold,
     Inter_900Black,
+    Newsreader_500Medium,
   });
 
   if (!fontsLoaded) {
@@ -151,7 +155,9 @@ function useUnlockGate(isLoading: boolean, isAuthenticated: boolean, isAdmin: bo
     } catch (error) {
       // Fail open: never lock out an approved member because of a flaky status
       // call. The server-side gates still enforce real access.
-      console.error('[unlock] status fetch failed; failing open (not walling)', error);
+      // The reason still has to reach the operator: a status route failing for everyone lets every
+      // member through with nothing on record.
+      reportError(error, { area: 'unlock', op: 'status_gate' });
       if (seq !== fetchSeq.current) return;
       setUnlockGate({ loading: false, walled: false, checked: true });
     }

@@ -8,6 +8,9 @@ import '@fontsource/inter/600.css';
 import '@fontsource/inter/700.css';
 import '@fontsource/inter/800.css';
 import '@fontsource/inter/900.css';
+// The wordmark's serif, shared with chargingthefuture.com, farahbrunache.com and the blog so the app
+// reads as the same family. Only the phone bar's wordmark uses it.
+import '@fontsource-variable/newsreader/opsz.css';
 import { ClerkProvider } from '@clerk/nextjs';
 import { AuthProvider } from '@/hooks/useAuth';
 import { NavHistoryTracker } from '@/lib/nav/back-history';
