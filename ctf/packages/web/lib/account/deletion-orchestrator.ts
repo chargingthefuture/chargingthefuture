@@ -21,6 +21,7 @@ import { withDbTransaction } from 'lib/db/postgres';
 import { DIRECTORY_MEMBER_DELETION_REASON, removeClaimedDirectoryProfile } from 'lib/directory/repository';
 import { refundHeldDepositsBeforeDataDeletion } from 'lib/skill-up/repository';
 import { withdrawAnsweredCommentsForDeletion } from 'lib/fireside/repository';
+import { redactRawBugReportTextForDeletion } from 'lib/bug-reports/repository';
 import { logAccountAudit } from './audit';
 import {
   accountDeletionRegistry,
@@ -168,6 +169,11 @@ async function runInTransactionSteps(client: PoolClient, userId: string, slugs: 
   // comments; it has to run after this, or it would take the answered ones too.
   if (slugs.includes('fireside')) {
     await withdrawAnsweredCommentsForDeletion(client, userId, DELETED_MEMBER_PLACEHOLDER);
+  }
+  // A bug report keeps its row with the reporter's id overwritten; its NOT NULL raw text is
+  // replaced with the redacted copy first, while the rows can still be found by the member's id.
+  if (slugs.includes('bug-reports')) {
+    await redactRawBugReportTextForDeletion(client, userId);
   }
 }
 
