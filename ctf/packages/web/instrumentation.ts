@@ -27,8 +27,10 @@ async function initSentryForRuntime(runtime: 'nodejs' | 'edge'): Promise<void> {
       tracesSampleRate: 0,
       environment,
     });
-  } catch {
-    // Keep runtime startup resilient if telemetry initialization fails.
+  } catch (error) {
+    // Keep runtime startup resilient if telemetry initialization fails, but say so in the logs:
+    // without Sentry every later reportError reaches stdout only.
+    console.error(`[instrumentation] Sentry init failed for ${runtime}`, error);
   }
 }
 
@@ -51,8 +53,10 @@ export async function onRequestError(error: unknown, context: Record<string, unk
         },
       });
     });
-  } catch {
-    // Do not fail request handling when telemetry cannot initialize.
+  } catch (captureError) {
+    // Do not fail request handling when telemetry cannot initialize, but keep both the request error
+    // and the reason it could not be reported in the logs.
+    console.error('[instrumentation] Could not report request error to Sentry', captureError, error);
   }
 }
 
