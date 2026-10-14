@@ -90,6 +90,8 @@ directly).
 (the `chyme.message.send` contract requires 1 to 1000 characters after trimming). A message over
 1000 characters is rejected by the same bound, not silently cut. The long-URL message **wraps**
 inside the chat window — the window scrolls only up and down, never left/right (no horizontal scroll).
+Since 2026-10-05 a send still posts and persists when Stream Chat is unreachable or refuses the user
+or channel setup: chat is read from the database, so only the Stream copy is skipped (and reported).
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### CH-3 · Read chat history with a page size
@@ -140,11 +142,14 @@ the android tile keeps the ✋ up (and drops it within ~15s of them lowering it)
 2. Try to tip yourself.
 3. Try to tip an amount above the limit.
 4. Have an admin freeze your wallet (SC-A6 in the ServiceCredits script), then tip again.
+5. With the wallet unfrozen, open the Tip dialog, enter an amount, switch the connection off, press
+   Send, switch it back on and press Send again without changing the amount.
 **Expected:** The tip sends ServiceCredits from you to that participant and delivers immediately. The
 Tip action never appears on your own tile or on a listen-only guest. Self-tip is rejected (400). An
 amount that is not a finite number above 0, or above the maximum (10000), is rejected (400). A tip
 from a frozen wallet is refused with 403 `chyme_account_restricted` and moves no credits (added
-2026-10-05).
+2026-10-05). Step 5: the recipient receives the amount once, not twice; both presses carry the same
+idempotency key (added 2026-10-14).
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### CH-7 · Signed-out visitor can listen
