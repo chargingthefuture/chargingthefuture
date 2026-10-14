@@ -1,0 +1,90 @@
+name: Keep Auto-Merge PRs Moving
+
+# Merges the open auto-merge pull requests one after another, with nobody pressing anything.
+# The repo only merges a PR that is up to date with main, so each merge leaves every other PR
+# behind, and auto-merge then waits on somebody pressing "Update branch". Updating them all at
+# once wastes the CI run on all but one, since the first to merge puts the rest behind again.
+#
+# So this updates one PR at a time: when no auto-merge PR has checks running, it brings the
+# oldest one that is behind main up to date. Its checks run, auto-merge lands it, and that push to
+# main starts this workflow again for the next one.
+#
+# Left alone, and picked up by /pr instead: drafts, PRs without auto-merge (the owner-review lane),
+# PRs with a merge conflict, and PRs whose last checks failed.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    # Every 20 minutes as a fallback for a missed push, at :13/:33/:53 — off every other cron here.
+    - cron: "13,33,53 * * * *"
+
+# One run at a time, so two runs never pick two PRs.
+concurrency:
+  group: keep-auto-merge-prs-current
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  update-next:
+    name: Update the next auto-merge PR
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pick the next PR and update its branch
+        env:
+          # The PAT, not GITHUB_TOKEN: a push made with GITHUB_TOKEN does not start CI, and the
+          # update has to start CI for auto-merge to finish.
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::error::GH_PAT is not set, so no branch can be updated."
+            exit 1
+          fi
+
+          # GitHub recomputes each PR's merge state after main moves, and reports UNKNOWN until it
+          # has. Read the list until no auto-merge PR reads UNKNOWN, or give up after a few tries.
+          for attempt in 1 2 3 4 5; do
+            PRS=$(gh pr list --repo "$REPO" --state open --limit 200 \
+              --json number,isDraft,autoMergeRequest,mergeStateStatus,statusCheckRollup \
+              --jq '[.[] | select(.isDraft | not) | select(.autoMergeRequest != null) | {
+                  number,
+                  state: .mergeStateStatus,
+                  checks: (.statusCheckRollup | length),
+                  pending: ([.statusCheckRollup[] | select(
+                    (.status != null and .status != "COMPLETED") or
+                    (.state == "PENDING" or .state == "EXPECTED"))] | length),
+                  failed: ([.statusCheckRollup[] | select(
+                    (.conclusion // "" | IN("FAILURE", "TIMED_OUT", "CANCELLED", "STARTUP_FAILURE", "ACTION_REQUIRED")) or
+                    (.state // "" | IN("FAILURE", "ERROR")))] | length)
+                }]')
+            UNKNOWN=$(echo "$PRS" | jq '[.[] | select(.state == "UNKNOWN")] | length')
+            [ "$UNKNOWN" = "0" ] && break
+            echo "$UNKNOWN auto-merge PR(s) still read UNKNOWN; reading again in 20 seconds."
+            sleep 20
+          done
+
+          echo "Auto-merge PRs: $(echo "$PRS" | jq 'length')"
+
+          # In flight: up to date (not BEHIND, not DIRTY), nothing failed, and checks still running,
+          # not yet started, or the PR is clean and about to merge. One of these means wait.
+          IN_FLIGHT=$(echo "$PRS" | jq -r '[.[] | select(.state != "BEHIND" and .state != "DIRTY" and .failed == 0)
+            | select(.pending > 0 or .checks == 0 or .state == "CLEAN") | .number] | map("#" + tostring) | join(" ")')
+          if [ -n "$IN_FLIGHT" ]; then
+            echo "Waiting on $IN_FLIGHT; its merge will start the next run."
+            exit 0
+          fi
+
+          NEXT=$(echo "$PRS" | jq -r '[.[] | select(.state == "BEHIND" and .failed == 0)] | sort_by(.number) | .[0].number // empty')
+          if [ -z "$NEXT" ]; then
+            echo "No auto-merge PR is behind main with passing checks. Nothing to update."
+            exit 0
+          fi
+
+          echo "Updating #$NEXT with main."
+          if ! gh pr update-branch "$NEXT" --repo "$REPO"; then
+            echo "::warning::Could not update #$NEXT with main (most often a merge conflict that appeared since the read). /pr resolves conflicts."
+          fi
