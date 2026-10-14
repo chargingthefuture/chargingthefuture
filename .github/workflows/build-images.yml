@@ -36,7 +36,6 @@ name: Render — Build and push Docker images
 #       the image still reaches GHCR, but production keeps running the OLD image
 #       until someone deploys by hand (Manual Deploy → Deploy latest reference).
 #   RENDER_SERVICE_ID_CTF_WEB             — optional: explicit ctf-web id, skips the name lookup
-#   RENDER_SERVICE_ID_OLLAMA          — optional: explicit ctf-ollama id
 #   RENDER_SERVICE_ID_CTF_FORMANCE        — optional: explicit ctf-formance-ledger id
 
 on:

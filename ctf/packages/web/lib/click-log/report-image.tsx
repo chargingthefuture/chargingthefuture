@@ -178,7 +178,7 @@ export function buildReportImageElement(view: TrendReportView, generatedOn: stri
       }}
     >
       <div style={{ display: 'flex', fontSize: 16, color: ACCENT, marginBottom: 10 }}>
-        CHARGING THE FUTURE
+        SKILLS ECONOMY
       </div>
       <div style={{ display: 'flex', fontSize: 38, color: TEXT }}>{view.title}</div>
       <div style={{ display: 'flex', fontSize: 18, color: SUBTLE, marginTop: 10 }}>{view.windowLine}</div>
@@ -205,7 +205,7 @@ export function buildReportImageElement(view: TrendReportView, generatedOn: stri
         ))}
       </div>
       <div style={{ display: 'flex', fontSize: 15, color: SUBTLE, marginTop: 18 }}>
-        Charging The Future · chargingthefuture.com · report made {generatedOn}
+        Skills Economy · chargingthefuture.com · report made {generatedOn}
       </div>
     </div>
   );

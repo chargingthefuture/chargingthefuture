@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useTheme } from '@/hooks/useTheme';
 import { getServiceCreditsTokens } from './sc-shared';
+import { Feedback } from './sca-fields';
+import { failureText, responseFailureText } from 'lib/errors/client-failure';
 
 type FormanceStatus = {
   configured: boolean;
@@ -15,29 +17,59 @@ type FormanceStatus = {
 // Read-only status of the external ledger (Formance) so the operator can see, from this page,
 // whether the mirror is wired up. Balances are authoritative in the app database; Formance is the
 // external mirror, so "not configured" is safe — operations still commit locally and queue for
-// reconciliation. Best-effort: a failed fetch just hides the panel.
+// reconciliation. A failed read shows its reason in the card rather than hiding it, so the operator
+// can tell "the status route failed" from "nothing to show".
 export function ServiceCreditsLedgerStatus() {
   const { theme } = useTheme();
   const t = getServiceCreditsTokens(theme);
   const [status, setStatus] = useState<FormanceStatus | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     let canceled = false;
-    void fetch('/api/service-credits/admin/ledger-status', { cache: 'no-store' })
-      .then((res) => (res.ok ? (res.json() as Promise<{ formance: FormanceStatus }>) : Promise.reject(new Error('status_unavailable'))))
-      .then((data) => {
+    void (async () => {
+      try {
+        const res = await fetch('/api/service-credits/admin/ledger-status', { cache: 'no-store' });
+        if (!res.ok) {
+          const text = await responseFailureText(res, 'The external ledger status could not be loaded.');
+          if (!canceled) setLoadError(text);
+          return;
+        }
+        const data = (await res.json()) as { formance: FormanceStatus };
         if (!canceled) setStatus(data.formance);
-      })
-      .catch(() => {
-        /* best-effort status panel */
-      });
+      } catch (caught) {
+        const text = failureText(caught, {
+          area: 'service-credits',
+          op: 'admin_ledger_status_load',
+          fallback: 'The external ledger status could not be loaded.',
+        });
+        if (!canceled) setLoadError(text);
+      }
+    })();
     return () => {
       canceled = true;
     };
   }, []);
 
   if (!status) {
-    return null;
+    if (!loadError) {
+      return null;
+    }
+    return (
+      <section
+        style={{
+          borderRadius: 12,
+          border: `1px solid ${t.BORDER_SOLID}`,
+          background: t.SURFACE,
+          padding: 18,
+          marginBottom: 16,
+          fontSize: 13,
+        }}
+      >
+        <h2 style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, margin: '0 0 8px' }}>External ledger (Formance)</h2>
+        <Feedback error={loadError} notice={null} />
+      </section>
+    );
   }
 
   const dotColor = status.configured ? '#22C55E' : '#6B7280';
