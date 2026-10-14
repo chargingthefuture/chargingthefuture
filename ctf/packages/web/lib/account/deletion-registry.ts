@@ -895,11 +895,15 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     tables: [
       // A report is operational triage input the owner still needs after the reporter leaves (it may
       // already be mirrored into a GitHub issue), so the row stays and the reporter's id is
-      // overwritten instead of the report being destroyed.
+      // overwritten instead of the report being destroyed. The raw context and the browser
+      // description are cleared with it. `raw_message` is NOT NULL, so it cannot be cleared here:
+      // the orchestrator's in-transaction step (`redactRawBugReportTextForDeletion`) overwrites it
+      // with the redacted copy first, because the raw text is where an email, phone number or name
+      // ends up and the redacted copy is all triage ever reads.
       pseudo(
         'bug_reports',
         'user_id',
-        [],
+        ['raw_context', 'user_agent'],
         'Bug reports you filed — the report stays for triage, your identity does not.',
       ),
     ],
