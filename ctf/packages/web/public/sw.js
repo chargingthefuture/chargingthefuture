@@ -28,11 +28,11 @@ self.addEventListener('push', function (event) {
     try {
       payload = event.data.json();
     } catch (err) {
-      payload = { title: 'Charging The Future', body: event.data.text() };
+      payload = { title: 'Skills Economy', body: event.data.text() };
     }
   }
 
-  var title = payload.title || 'Charging The Future';
+  var title = payload.title || 'Skills Economy';
   var data = payload.data || {};
   var options = {
     body: payload.body || '',
