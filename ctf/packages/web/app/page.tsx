@@ -99,6 +99,33 @@ async function resolveTrust(
   return readTrustSelfExtensionOrStored(userId).catch(() => buildFallbackTrust(userId));
 }
 
+async function redirectIfAccountClosed(userId: string | null, isAdmin: boolean): Promise<void> {
+  if (!userId || isAdmin) {
+    return;
+  }
+  const restriction = await getAccountRestrictionStatus(userId, 'all').catch(() => ({ isRestricted: false }));
+  if (restriction.isRestricted) {
+    redirect('/account-closed');
+  }
+}
+
+// A failed tier read is not "no tier": treating it as one sent an approved member back into Unlock.
+// When the read fails, report it and render the Hub without the verification banner instead. Each
+// plugin route checks the tier again on its own, so this only decides what the Hub shows.
+async function readHubTier(
+  userId: string | null,
+): Promise<{ tier: UnlockAccessTier | null; failed: boolean }> {
+  if (!userId) {
+    return { tier: null, failed: false };
+  }
+  try {
+    return { tier: await getUnlockAccessTier(userId), failed: false };
+  } catch (error: unknown) {
+    reportError(error, { area: 'home', op: 'unlock_tier_read' });
+    return { tier: null, failed: true };
+  }
+}
+
 export default async function HomePage() {
   const pluginsPromise = listPluginRegistry();
   const shellStatsPromise = getGdpShellStats().catch(() => ({ memberCount: null, gdpValueUsd: null }));
@@ -135,24 +162,9 @@ export default async function HomePage() {
   // pass the tier branch below and land on a Commons where every call answers 403 — the app looking
   // broken instead of saying a decision was made. Send them to the page that explains it and offers the
   // one thing they can still do: sign in as their other account, or delete this identity.
-  if (userId && !isAdmin) {
-    const restriction = await getAccountRestrictionStatus(userId, 'all').catch(() => ({ isRestricted: false }));
-    if (restriction.isRestricted) {
-      redirect('/account-closed');
-    }
-  }
+  await redirectIfAccountClosed(userId, isAdmin);
 
-  // A failed tier read is not "no tier": treating it as one sent an approved member back into Unlock.
-  // When the read fails, report it and render the Hub without the verification banner instead. Each
-  // plugin route checks the tier again on its own, so this only decides what the Hub shows.
-  let tierReadFailed = false;
-  const tier = userId
-    ? await getUnlockAccessTier(userId).catch((error: unknown) => {
-        reportError(error, { area: 'home', op: 'unlock_tier_read' });
-        tierReadFailed = true;
-        return null;
-      })
-    : null;
+  const { tier, failed: tierReadFailed } = await readHubTier(userId);
 
   if (!tierReadFailed && shouldRedirectToUnlock({ userId, isAdmin, tier })) {
     redirect('/plugin/unlock');
