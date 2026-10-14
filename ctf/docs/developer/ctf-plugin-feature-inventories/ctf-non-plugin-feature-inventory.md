@@ -376,6 +376,14 @@ Owner decision, 2026-09-26. The owner pays the running costs of Skills Economy a
 
 ## 5) Change Log
 
+- 2026-10-14: **The "Deletion queued" screen has a Sign out button (code-review #2649).** After a
+  full-account delete, web and Android showed the acknowledgement with no control on it, and nothing
+  ended the session, so the member was left on a screen they could not leave. Both now carry a Sign
+  out button under the text, styled like the dialog's "Keep my data" button. On the web it signs out
+  through the auth provider (which sends the browser to the after-sign-out page) and goes to the home
+  page if the provider refuses because the sign-in is already gone; on Android it clears the local
+  session, which returns the app to its signed-out Apps screen. No route, schema or contract change.
+
 - 2026-10-14: **Android admin pages no longer go missing after one failed read (owner report).** The
   Chyme and Beacon admin pages (and Foundation's and PeerProgramming's) were already in the app behind
   the header's Admin pill, but the app asked `GET /api/account/identity` once per sign-in and never
