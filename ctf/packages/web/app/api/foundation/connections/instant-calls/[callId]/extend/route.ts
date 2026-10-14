@@ -47,7 +47,7 @@ function mapExtendError(error: unknown): NextResponse {
   }
   if (code === 'billing_misconfigured') {
     return NextResponse.json(
-      { ok: false, code: FOUNDATION_ERROR_CODE.callBillingMisconfigured, message: 'Paid calls are not set up for this call right now.' },
+      { ok: false, code: FOUNDATION_ERROR_CODE.callBillingMisconfigured, message: 'ServiceCredits are not set up for this call right now.' },
       { status: 409 },
     );
   }

@@ -20,7 +20,7 @@
 import { execFileSync } from 'node:child_process';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { anthropicApiError, reportIfRunBlocked } from './lib/anthropicRunBlocked.mjs';
+import { anthropicApiError, reportIfRunBlocked, reportRunBlocked } from './lib/anthropicRunBlocked.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(__dirname, '../..');
@@ -33,9 +33,16 @@ if (!process.env.GH_TOKEN) {
   console.log('triageBugReportIssues: GH_TOKEN not set; nothing to do.');
   process.exit(0);
 }
+// A missing key is an outside state (the key lives in Infisical). It is reported as paused and the
+// run is red, because a green run that triaged nothing would look healthy.
 if (!process.env.ANTHROPIC_API_KEY) {
-  console.log('triageBugReportIssues: ANTHROPIC_API_KEY not set; nothing to do.');
-  process.exit(0);
+  reportRunBlocked({
+    script: 'triageBugReportIssues',
+    reason: 'no_key',
+    manualRoute: '/triage-bug',
+    nothingLost: 'The issue keeps its needs-triage label, so the next run after this clears picks it up.',
+  });
+  process.exit(1);
 }
 
 function gh(args, options = {}) {

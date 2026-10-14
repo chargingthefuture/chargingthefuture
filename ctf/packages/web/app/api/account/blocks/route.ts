@@ -6,6 +6,7 @@ import { insertSafetyReportTx } from 'lib/safety/repository';
 import { SAFETY_REPORT_DETAIL_MAX_LENGTH } from 'lib/safety/constants';
 import { withDbTransaction } from 'lib/db/postgres';
 import { reportError } from 'lib/observability/report';
+import { logSafetyReportCreateAudit } from 'lib/blocks/audit';
 
 // Member blocking — the cross-cutting "block / unblock / see who you've blocked" API (issue #809,
 // task 2). Blocking is a baseline safety control available to ANY signed-in member, so these routes
@@ -82,6 +83,41 @@ async function parseBlockRequest(request: Request): Promise<{ error: NextRespons
   return { data: { blockedUserId, safetyConcern, safetyDetail } };
 }
 
+// The answer to a block that failed: a self-block is a 400, anything else is reported and a 503.
+// A failed safety escalation is audited either way, so a report the member meant to send is never
+// lost without a record.
+function blockFailureResponse(error: unknown, actorId: string, safetyConcern: boolean): NextResponse {
+  if (error instanceof SelfBlockError) {
+    if (safetyConcern) {
+      logSafetyReportCreateAudit({
+        actorId,
+        status: 'deny',
+        reason: 'self_block',
+        result: 'failure',
+        errorCategory: 'validation_error',
+      });
+    }
+    return badRequest('You cannot block yourself.');
+  }
+  reportError(error, { area: 'account', op: safetyConcern ? 'blocks_create_with_safety_report' : 'blocks_create' });
+  if (safetyConcern) {
+    logSafetyReportCreateAudit({
+      actorId,
+      status: 'allow',
+      reason: 'safety_report_not_recorded',
+      result: 'failure',
+      errorCategory: 'persistence_error',
+    });
+  }
+  const message = safetyConcern
+    ? 'We could not record your safety report, so this person was not blocked. Please try again.'
+    : 'Unable to block this member.';
+  return NextResponse.json(
+    { ok: false, code: ACCOUNT_ERROR_CODE.persistenceUnavailable, message },
+    { status: 503 },
+  );
+}
+
 // Create a block. CSRF-protected and idempotent (blocking the same person twice is a no-op). A
 // self-block and a missing/blank target both map to a clear 400.
 //
@@ -116,22 +152,19 @@ export async function POST(request: Request) {
         await blockUserTx(client, gate.auth.userId, blockedUserId);
         await insertSafetyReportTx(client, gate.auth.userId, blockedUserId, safetyDetail);
       });
+      logSafetyReportCreateAudit({
+        actorId: gate.auth.userId,
+        status: 'allow',
+        reason: 'safety_report_recorded',
+        result: 'success',
+        errorCategory: null,
+      });
       return NextResponse.json({ ok: true, safetyReported: true }, { status: 200 });
     }
 
     await blockUser(gate.auth.userId, blockedUserId);
     return NextResponse.json({ ok: true, safetyReported: false }, { status: 200 });
   } catch (error) {
-    if (error instanceof SelfBlockError) {
-      return badRequest('You cannot block yourself.');
-    }
-    reportError(error, { area: 'account', op: safetyConcern ? 'blocks_create_with_safety_report' : 'blocks_create' });
-    const message = safetyConcern
-      ? 'We could not record your safety report, so this person was not blocked. Please try again.'
-      : 'Unable to block this member.';
-    return NextResponse.json(
-      { ok: false, code: ACCOUNT_ERROR_CODE.persistenceUnavailable, message },
-      { status: 503 },
-    );
+    return blockFailureResponse(error, gate.auth.userId, safetyConcern);
   }
 }
