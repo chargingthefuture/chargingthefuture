@@ -131,7 +131,10 @@ export async function unblockUser(blockerUserId: string, blockedUserId: string):
 // List the blocks this member created, newest first, each with the blocked person's resolved display
 // label. The label is the blocked member's claimed Directory profile name (first + last); when there
 // is no claimed profile we fall back to a neutral "Member" so the row still names someone the viewer
-// can recognize and unblock. LEFT JOIN so a missing profile never drops the block from the list.
+// can recognize and unblock. LEFT JOIN so a missing profile never drops the block from the list, and
+// LATERAL ... LIMIT 1 because claimed_by_user_id is not unique: an account that claimed two profiles
+// would otherwise turn one block into two rows (two entries, duplicate keys on web and Android). The
+// oldest claimed profile names the row, so the label does not change between loads.
 export async function listBlocksForUser(blockerUserId: string): Promise<MemberBlockListItem[]> {
   const result = await queryDb<{
     blocked_user_id: string;
@@ -143,8 +146,13 @@ export async function listBlocksForUser(blockerUserId: string): Promise<MemberBl
        NULLIF(TRIM(COALESCE(dp.first_name, '') || ' ' || COALESCE(dp.last_name, '')), '') AS display_name,
        mb.created_at
      FROM member_blocks mb
-     LEFT JOIN directory_profiles dp
-       ON dp.claimed_by_user_id = mb.blocked_user_id
+     LEFT JOIN LATERAL (
+       SELECT p.first_name, p.last_name
+       FROM directory_profiles p
+       WHERE p.claimed_by_user_id = mb.blocked_user_id
+       ORDER BY p.created_at ASC, p.id ASC
+       LIMIT 1
+     ) dp ON TRUE
      WHERE mb.blocker_user_id = $1
      ORDER BY mb.created_at DESC`,
     [blockerUserId],

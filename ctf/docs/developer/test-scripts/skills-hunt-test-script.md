@@ -13,7 +13,7 @@
 | **Surfaces** | Web (`/apps/skills-hunt`, `/admin/skills-hunt`) · Android (`SkillsHunt.tsx`, `AdminSkillsHunt.tsx`) |
 | **Seed first** | `pnpm --dir ctf seed:skills-hunt` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-skills-hunt-feature-inventory.md` |
-| **Generated** | 2026-08-27 (hand-updated: team leaderboard removed — SH-8; report flow removed — SH-13, SH-A13; flag reversal + re-add after remove — SH-A6, SH-A6b; taken-down URL refused — SH-A6c; unflag — SH-A6; admin list hides nothing — SH-A6d; restore a removed row — SH-A6e) · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-09-17 manual update: SH-2 now checks that the nomination is really written, not only acknowledged on screen — the submission INSERT listed 18 columns against 19 values and Postgres refused every nomination · 2026-09-17 manual update: SH-A10b and SH-A10c cover the named-skill mission goal, the mission Edit control and Recompute progress; SH-9 now says how to read a count against its title · 2026-09-18 manual update: SH-9 expects a count capped at its target, and points the mis-pointed-mission check at the admin Missions tab · 2026-09-20 manual update: SH-9b covers the missions picture control, which moved to the admin Missions tab the same day and now shows the picture on that screen rather than handing the file off · 2026-09-20 manual update: SH-A4c covers the paged moderation queue (25 a page, Previous/Next, filter change returns to page 1) · 2026-09-22 manual update: SH-1c covers the round as a field the scout marks (nothing pre-marked with two rounds open, submit waits for a mark, the mark survives a refresh) and the round named on the confirmation; SH-1d covers a closed round leaving the field reachable; SH-A4d covers the round's purpose above the moderation controls and the second confirmation on accept · 2026-10-01 manual update: one open round and the end-of-round award — SH-1c, SH-1d, SH-10c, SH-A1, SH-A3, SH-A4d, SH-A8, SH-A9b rewritten; SH-A-award and SH-A10d added · 2026-10-02 manual update: CS-4, SH-A3, SH-A4c and SH-A4d — Moderation opens on the open round with no round chips |
+| **Generated** | 2026-08-27 (hand-updated: 2026-10-13 a pasted link is cut back to the profile — SH-6b; 2026-10-08 "profession" reads "job title" — SH-2; 2026-10-08 the nomination keeps its job title — SH-7b; team leaderboard removed — SH-8; report flow removed — SH-13, SH-A13; flag reversal + re-add after remove — SH-A6, SH-A6b; taken-down URL refused — SH-A6c; unflag — SH-A6; admin list hides nothing — SH-A6d; restore a removed row — SH-A6e) · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-09-17 manual update: SH-2 now checks that the nomination is really written, not only acknowledged on screen — the submission INSERT listed 18 columns against 19 values and Postgres refused every nomination · 2026-09-17 manual update: SH-A10b and SH-A10c cover the named-skill mission goal, the mission Edit control and Recompute progress; SH-9 now says how to read a count against its title · 2026-09-18 manual update: SH-9 expects a count capped at its target, and points the mis-pointed-mission check at the admin Missions tab · 2026-09-20 manual update: SH-9b covers the missions picture control, which moved to the admin Missions tab the same day and now shows the picture on that screen rather than handing the file off · 2026-09-20 manual update: SH-A4c covers the paged moderation queue (25 a page, Previous/Next, filter change returns to page 1) · 2026-09-22 manual update: SH-1c covers the round as a field the scout marks (nothing pre-marked with two rounds open, submit waits for a mark, the mark survives a refresh) and the round named on the confirmation; SH-1d covers a closed round leaving the field reachable; SH-A4d covers the round's purpose above the moderation controls and the second confirmation on accept · 2026-10-01 manual update: one open round and the end-of-round award — SH-1c, SH-1d, SH-10c, SH-A1, SH-A3, SH-A4d, SH-A8, SH-A9b rewritten; SH-A-award and SH-A10d added · 2026-10-02 manual update: CS-4, SH-A3, SH-A4c and SH-A4d — Moderation opens on the open round with no round chips · 2026-10-05 manual update: SH-11b added (a failed load or mark-read says so); SH-A2b covers a failed rebuild showing its reason |
 | **Inventory wording** | 2026-10-01: banned-term wording removed from the inventory prose; no step in this script changed |
 
 ---
@@ -36,7 +36,7 @@ Open `/apps/skills-hunt` (web) and the SkillsHunt screen (Android). Confirm at l
 web ☐
 
 **CS-2 — Scout tab / nomination form is reachable**
-From the rounds list, tap or click into the active round. Navigate to the Scout tab. The "Nominate a Survivor" form renders with fields: Full name, Bio, Quora URL (required — marked with *), a skills picker, and a location block (Country — required, State/region and City — optional). On web the Country field is a dropdown; on Android it is a button that opens a searchable country list.
+From the rounds list, tap or click into the active round. Navigate to the Scout tab. The "Nominate a Survivor" form renders with fields: Quora URL (required — marked with *, first), Full name, Bio, a skills picker, and a location block (Country — required, State/region and City — optional). On web the Country field is a dropdown; on Android it is a button that opens a searchable country list.
 web ☐
 
 **CS-3 — Leaderboard tab loads**
@@ -72,6 +72,41 @@ web ☐
 - At step 3 Submit stays live — a half-typed or malformed link does not disable it — and the refusal names the field and shows the expected shape of the link.
 - At step 4 the nomination is accepted.
 - A deleted or emptied Quora account is still a valid URL and is accepted. Being unbanned is not a condition; the link resolving is.
+
+Result: web ☐
+
+---
+
+### SH-0r — Pasting a Quora link fills in the full name
+
+**Role:** member (scout) · **Surfaces:** web
+**Precondition:** Signed in, a round is open and inside its dates.
+
+**Steps:**
+1. Open the Scout tab with Full name empty. Paste `https://www.quora.com/profile/farah-brunache` into the Quora Profile URL field.
+2. Replace the link with `https://www.quora.com/profile/TJW-38`.
+3. Clear both fields, type `Amara Williams` into Full name, then paste the first link again.
+
+**Expected:**
+- At step 1 Full name reads "Farah Brunache".
+- At step 2 Full name changes to "TJW" — the guess follows the link, and the number is dropped.
+- At step 3 Full name stays "Amara Williams": a typed name is never replaced.
+- The filled-in name can be edited before submitting.
+
+### SH-0s — An already-nominated link is flagged before the rest of the form
+
+**Role:** member (scout) · **Surfaces:** web
+**Precondition:** Signed in, a round is open and inside its dates, and some person already has a nomination that is pending, flagged or accepted.
+
+**Steps:**
+1. Open the Scout tab. Check the first field is Quora Profile URL, above Full name.
+2. Paste the Quora link of the person who is already nominated. Fill in nothing else.
+3. Replace it with the link of somebody not yet nominated.
+
+**Expected:**
+- At step 2, within a second, a red note under the Quora field reads "This person is already nominated in the round …, where that nomination …" naming the round and its status, and Full name is filled from the link. Submit stays off even after the other fields are filled.
+- At step 3 the note goes away and Submit comes on once the required fields are filled.
+- A link on the Directory takedown list shows "This person asked to be removed from the directory…" the same way.
 
 Result: web ☐
 
@@ -171,6 +206,7 @@ Result: web ☐
    - Quora URL: a valid-format Quora profile URL (e.g. `https://www.quora.com/profile/seed-test-user`)
    - Country: `United States` (required). State: `California`. City: `Oakland`.
    - Select 2 taxonomy skills from the accordion/picker.
+   - Above the accordion, confirm the optional list reads **"Know their job title?"** with the placeholder "Select a job title…" — the name Skills Taxonomy and the Directory use, never "profession". On the signed-out SkillsHunt page, the list of what a nomination includes reads First Name, Bio, Quora Profile URL, Skills, with no profession or job title entry.
 3. Also confirm the **keyword skill search** (web and android): type part of a skill name in the "Search skills by keyword…" box above the sector accordion. The accordion is replaced by a flat, cross-sector list of matching skills; selecting one adds it just like the accordion. Clear the search (✕) to restore the accordion. A no-match query shows the "add it as a free-text skill" hint.
 4. Submit.
 
@@ -366,6 +402,19 @@ Result: web ☐
 
 ---
 
+### SH-6b — A pasted link is cut back to the profile itself (added 2026-10-13)
+**Role:** member · **Surfaces:** web
+**Precondition:** an open round; a Quora profile (here `Swiftness-8`) with no active nomination.
+**Steps:**
+1. In the Quora field, paste `/br`, a line break, and `https://www.quora.com/profile/Swiftness-8/activity`.
+2. Fill in the rest of the form and submit.
+3. As an admin, open the nomination in Moderation and open its Quora link.
+4. As a member, start a second nomination and paste `https://www.quora.com/profile/Swiftness-8`.
+**Expected:** step 2 saves the nomination rather than refusing the link. The link in step 3 opens the
+profile, not its activity tab. Step 4 says the person is already nominated, because both pastes are the
+same person.
+**Result:** web ☐ mobile ☐ — notes:
+
 ### SH-7 — Proposed (free-text) skills can be added alongside taxonomy skills
 
 **Role:** member · **Surfaces:** web, android
@@ -380,6 +429,24 @@ Result: web ☐
 5. Submit the full form.
 
 **Expected:** Submission succeeds. The proposed skill is stored and visible in My Finds as a chip. The total skills + proposed skills count does not exceed 10. A proposed skill becomes a real taxonomy skill only after the owner approves it — an `addSkill` entry appended to the taxonomy change list (`ctf/scripts/lib/taxonomyChange.mjs`) and applied by the owner-run apply workflow.
+
+Result: web ☐
+
+---
+
+### SH-7b — The job title picked on a nomination reaches the Directory profile (added 2026-10-08)
+
+**Role:** member, then admin · **Surfaces:** web
+
+**Precondition:** Active round exists. Member is signed in. An admin account is available.
+
+**Steps:**
+1. On the Scout tab, open **Know their job title?** and pick a job title (e.g. Graphic / Visual Designers).
+2. Confirm the list now shows that job title, and its skills appear as separate chips. Remove one of them.
+3. Pick "Select a job title…" and confirm the list clears while the skill chips stay. Pick the job title again, fill in the rest of the form, and submit.
+4. As an admin, accept the nomination. Open the Directory profile it created.
+
+**Expected:** The profile shows the picked job title and its sector, and the skills exactly as submitted (the removed one is absent). A nomination submitted with no job title creates a profile with no job title.
 
 Result: web ☐
 
@@ -569,6 +636,27 @@ Result: web ☐
 
 ---
 
+### SH-11b — A failed load says so instead of showing an empty list
+
+**Role:** member · **Surfaces:** web
+
+**Precondition:** An open round with at least one of your nominations and one mission. Use the browser's developer tools to block requests (Network → block request URL), or go offline.
+
+**Steps:**
+1. Block `/api/skills-hunt/rounds/*/submissions`, open the My Finds tab, and press Refresh.
+2. Do the same for the Missions tab (`/missions`) and the Leaderboard tab (`/leaderboard`).
+3. Unblock the requests and press Refresh.
+4. Block `/api/skills-hunt/notifications/*/read`, open the Status panel, and tap an unread update.
+
+**Expected:**
+- Each blocked tab shows a red message saying it could not load (the route's own sentence when it answered, or a connection message when offline), not "No nominations yet", "No missions for this round yet" or "No entries yet".
+- After unblocking, each tab shows its list again.
+- A failed mark-read leaves the update unread and shows a red line at the top of the Status panel; it is not shown as read and then flipped back on the next poll.
+
+Result: web ☐
+
+---
+
 ### SH-12 — Feature reward card is visible on the Directory page
 
 **Role:** member · **Surfaces:** web
@@ -695,7 +783,7 @@ Result: web ☐
 1. In the admin Rounds tab (web) / on the admin screen with the round selected (Android), find the round's "Rebuild leaderboard" button and tap/click it; confirm the prompt.
 2. Open that round's Leaderboard tab and check the standings.
 
-**Expected:** The button shows a busy state, then a success notice ("Leaderboard rebuilt…" on Android). The Leaderboard reflects the current accepted submissions — a scout whose accepted submission was removed/rejected out-of-band no longer carries its points. A non-admin cannot reach this action. On Android the button sits in a "Leaderboard" card under the selected round and sends `x-ctf-csrf: '1'`.
+**Expected:** The button shows a busy state, then a success notice ("Leaderboard rebuilt…" on Android). The Leaderboard reflects the current accepted submissions — a scout whose accepted submission was removed/rejected out-of-band no longer carries its points. A non-admin cannot reach this action. On Android the button sits in a "Leaderboard" card under the selected round and sends `x-ctf-csrf: '1'`. If the rebuild fails (block `/leaderboard/rebuild` in the browser's developer tools to try it), the button reads "Failed — retry" and the route's reason appears in red under it.
 
 Result: web ☐
 
@@ -1286,7 +1374,7 @@ Result: web ☐
 - Step 4: no row carrying an `issue_number` for that skill. A leftover claim row (no issue number) does not block it: the next run re-claims it after 30 minutes.
 - Step 5: one `skill-proposal` issue is filed per distinct proposed skill, each with a suggested sector and occupation (or "needs manual mapping"), and the run succeeds. Nothing had to be re-entered by the member.
 - Step 6: `no new proposed skills to process` — no duplicate issue for a skill that already has one.
-- Step 7: the run **succeeds** without any Anthropic API call (the log says `SKIP_CLASSIFICATION is set`), and one `skill-proposal` issue is filed for the skill. Its "AI-suggested placement" section reads "Placement pending" with a line saying the run was started with `skip_classification`, and there is no "AI guess" caveat. The tracking row carries the issue number with `suggested_sector` and `suggested_occupation` null. The session that started the run then adds the suggested sector and occupation to the issue.
+- Step 7: the run **succeeds** without any Anthropic API call (the log says `SKIP_CLASSIFICATION is set`), and one `skill-proposal` issue is filed for the skill. Its "AI-suggested placement" section reads "Placement pending" with a line saying the run was started with `skip_classification`, and there is no "AI guess" caveat. The tracking row carries the issue number with `suggested_sector` and `suggested_occupation` null. The session that started the run then adds the suggested sector and occupation to the issue. The issue body also has a collapsed **Allowed placements** section listing every active occupation grouped by sector (or a note that the list was left out because it would exceed 40,000 characters). Running `/sp` in a chat session places every pending issue from that list and opens one owner-review PR with `addSkill` ops for the proposals worth promoting; it closes no issue itself.
 - Step 8: the scheduled workflow files no second issue for that skill (its row already carries an issue number). The scheduled workflow itself is unchanged: it still classifies with the API and still goes red while the account is unfunded. A label the admin dropped from the Directory's Pending skill proposals screen (tracker row `status = 'dropped'`, Directory DIR-A8) is likewise never filed again, even when its row carries no issue number.
 
 **Also check that a non-funding failure never reads as a funding one** (the point of the named states). With the API answering:
@@ -1349,6 +1437,20 @@ Result: web ☐
 Result: web ☐
 
 ---
+
+### SH-A19 — The seed and end-to-end smoke check run on an up-to-date database (added 2026-10-05)
+
+**Role:** operator · **Surfaces:** operational (scripts, no UI)
+
+**Precondition:** A scratch database built from the current `ctf/schema.sql` and post migrations.
+
+**Steps:**
+1. Run the Skills Hunt seed, then the Skills Hunt end-to-end smoke check against that database.
+
+**Expected:**
+- Step 1: every step passes, including the Directory profile step (source `community-generated`, the `@community-seed01` handle, the inviting username) and the one-row handle count. Before 2026-10-05 the smoke check stopped at the Directory profile step, because it selected two columns `directory_profiles` no longer has.
+
+**Result:** web ☐ mobile ☐ — notes:
 
 ## Parity check (web ↔ android)
 

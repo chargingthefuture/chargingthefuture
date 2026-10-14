@@ -14,7 +14,7 @@
 // this is idempotent and safe to run repeatedly:
 //   - 200            -> reclaimed (balance moved to treasury this run).
 //   - 409 window/escrow -> not due yet (or escrow held); left queued, retried next run. Not an error.
-//   - other non-200  -> a real failure; logged, left queued for the next run.
+//   - other non-200  -> a real failure; logged, left queued for the next run, and the run exits 1.
 //
 // Required env: DATABASE_URL, NEXT_PUBLIC_APP_URL (or APP_URL), SERVICE_CREDITS_INTERNAL_TOKEN.
 // Scheduled (daily) + manual. When unconfigured it skips with a warning rather than failing red.
@@ -113,6 +113,11 @@ async function main() {
   }
 
   console.log(`[reclaim-sweep] done: ${reclaimed} reclaimed, ${notDue} not due, ${failed} failed.`);
+  // A failed execute leaves the member's balance in their wallet, so the run must show red rather
+  // than pass with the failure only in the log.
+  if (failed > 0) {
+    process.exitCode = 1;
+  }
 }
 
 main()

@@ -61,7 +61,7 @@ export function UnlockStatusView({
           <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px" }}>
             <BackChevronButton accent={cfg.color} />
             <UnlockIcon size={18} color={cfg.color} style={{ flexShrink: 0 }} />
-            <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>Verification Status</span>
+            <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>Unlock</span>
             <PluginAdminButton href="/admin/unlock" isAdmin={isAdmin} accent={cfg.color} />
             <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 20, background: cfg.bg, border: `1px solid ${cfg.color}30`, fontSize: 11, fontWeight: 600, color: cfg.color, flexShrink: 0 }}>
               <Icon size={11} /> {cfg.label}

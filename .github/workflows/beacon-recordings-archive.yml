@@ -2,8 +2,8 @@ name: Beacon — Keep a copy of each recording
 
 # Recurring. Stream hosts each Beacon broadcast's recording, and its copy can
 # expire or be deleted. Every six hours this copies any recording not yet kept
-# here to the `beacon-recordings` release of this repository, then tells the
-# app, which plays the copy from then on on the blog's streams page and in the
+# here to its own release of this repository (tag beacon-recording-<eventId>),
+# then tells the app, which plays the copy from then on on the blog's streams page and in the
 # podcast feed. A release asset costs nothing to store or serve.
 #
 # Needs the NEXT_PUBLIC_APP_URL and CRON_SECRET secrets, the same ones the other

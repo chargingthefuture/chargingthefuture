@@ -41,7 +41,9 @@ export function classifyAlert(event) {
 
 // Assess one sample against active alert names and nearby road events. Returns
 // the level and the short reasons that drove it (already worded for speaking).
-export function assessHazard(sample, alerts = [], roadEvents = []) {
+// `alertsFailed` is true when the NWS alert lookup for this point failed: an
+// unchecked stop is never reported as a clean DRIVE, so it is at least CAUTION.
+export function assessHazard(sample, alerts = [], roadEvents = [], alertsFailed = false) {
   let level = 'DRIVE';
   const reasons = [];
   const bump = (candidate, reason) => {
@@ -73,6 +75,7 @@ export function assessHazard(sample, alerts = [], roadEvents = []) {
     const level = classifyAlert(event);
     if (level !== 'none') bump(level, event);
   }
+  if (alertsFailed) bump('CAUTION', 'hazard alerts unavailable');
 
   // A reported road closure is a hard HOLD; any other reported road event is at
   // least a CAUTION.
