@@ -388,6 +388,13 @@ Owner decision, 2026-09-26. The owner pays the running costs of Skills Economy a
   member's Directory name for any signed-in account, so an account that had not finished Unlock could
   block an id and read the Directory name back; names now resolve only for an approved caller or an
   admin, and everyone else sees "Member".
+- 2026-10-14: **The "Deletion queued" screen has a Sign out button (code-review #2649).** After a
+  full-account delete, web and Android showed the acknowledgement with no control on it, and nothing
+  ended the session, so the member was left on a screen they could not leave. Both now carry a Sign
+  out button under the text, styled like the dialog's "Keep my data" button. On the web it signs out
+  through the auth provider (which sends the browser to the after-sign-out page) and goes to the home
+  page if the provider refuses because the sign-in is already gone; on Android it clears the local
+  session, which returns the app to its signed-out Apps screen. No route, schema or contract change.
 
 - 2026-10-14: **Internal routes compare their secrets in constant time; a failed sign-in removal on an operator delete is reported (issues #2932, #2935).** All twelve routes under `app/api/internal` compared their shared secret (`CRON_SECRET`, `INTERNAL_SERVICE_SECRET`, `ACCOUNT_DELETE_SECRET`, `SERVICE_CREDITS_INTERNAL_TOKEN`) with `===`, which stops at the first differing character, so the time a refusal takes says how much of a guess was right. They now use `bearerMatches` / `secretsMatch` from the new `lib/auth/internal-secret.ts` (length check plus `crypto.timingSafeEqual`, as `lib/auth/service-consumer.ts` already did). Each route keeps its own presence check, status codes and error codes. On `POST /api/internal/account/delete`, a requested Clerk removal that fails is now reported to error tracking and the audit line reads `result: failure`, `errorCategory: clerk_delete_failed` instead of a clean success; the response is still 200 with `clerkDeleted: false` and `clerkError`, because the data deletion completed. Whether that case should answer a non-200 or fail the `delete-account.yml` step is left on #2935 for an owner decision. No schema or contract change.
 - 2026-10-14: **Android admin pages no longer go missing after one failed read (owner report).** The
