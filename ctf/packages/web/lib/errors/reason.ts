@@ -39,19 +39,23 @@ function causeOf(error: unknown): unknown {
   return error instanceof Error ? (error as { cause?: unknown }).cause : undefined;
 }
 
-export function describeFailure(error: unknown, maxLength: number): string {
-  let raw = (error instanceof Error ? error.message : String(error)).trim();
+// The error's own message, or, when it has none, its first inner error or its code.
+function ownMessage(error: unknown): string {
+  const raw = (error instanceof Error ? error.message : String(error)).trim();
+  if (raw.length > 0) return raw;
+  return describeOne(firstInner(error)) ?? codeOf(error) ?? '';
+}
 
-  if (raw.length === 0) {
-    raw = describeOne(firstInner(error)) ?? codeOf(error) ?? '';
-  }
-
+// The own message with the cause appended in brackets, when the cause says something new.
+function withCause(raw: string, error: unknown): string {
   const cause = causeOf(error);
   const causeText = describeOne(cause) ?? describeOne(firstInner(cause));
-  if (causeText && causeText !== raw) {
-    raw = raw.length > 0 ? `${raw} (${causeText})` : causeText;
-  }
+  if (!causeText || causeText === raw) return raw;
+  return raw.length > 0 ? `${raw} (${causeText})` : causeText;
+}
 
+export function describeFailure(error: unknown, maxLength: number): string {
+  const raw = withCause(ownMessage(error), error);
   if (raw.length === 0) {
     return error instanceof Error ? `${error.name} with no message` : 'unknown error';
   }
