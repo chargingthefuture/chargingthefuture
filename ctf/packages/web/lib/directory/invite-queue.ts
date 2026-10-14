@@ -105,6 +105,7 @@ export const DIRECTORY_INVITE_ALREADY_WRITTEN = [
   'tired-of-being-a-ti',
   'andre-kovacs-1',
   'ms-thompson-11',
+  'dc-1341',
 ] as const;
 
 const DIRECTORY_PROFILE_BASE = 'https://app.chargingthefuture.com/apps/directory/profile/';
