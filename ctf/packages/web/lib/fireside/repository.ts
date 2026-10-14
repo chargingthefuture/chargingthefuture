@@ -683,7 +683,11 @@ export async function withdrawOwnComment(userId: string, commentId: string): Pro
             withdrawn_body = COALESCE(NULLIF(body, ''), withdrawn_body),
             body = '',
             export_to_blog = FALSE,
-            export_review = 'not_requested', export_reviewed_by = NULL, export_reviewed_at = NULL,
+            -- A refusal is an admin's decision about this account and stays on the record the export
+            -- queue reads, the same as an admin removal keeps it. Anything else leaves the queue.
+            export_review = CASE WHEN export_review = 'refused' THEN 'refused' ELSE 'not_requested' END,
+            export_reviewed_by = CASE WHEN export_review = 'refused' THEN export_reviewed_by ELSE NULL END,
+            export_reviewed_at = CASE WHEN export_review = 'refused' THEN export_reviewed_at ELSE NULL END,
             updated_at = NOW()
       WHERE id = $1::uuid AND author_user_id = $2 AND status <> 'withdrawn'`,
     [commentId, userId],
