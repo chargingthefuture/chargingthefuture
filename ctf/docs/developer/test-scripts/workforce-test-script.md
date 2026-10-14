@@ -293,6 +293,19 @@ app asks for a sign-in rather than showing an empty card. Nothing on this screen
 numbers you type live in the browser only and are gone on reload, and everything else recomputes.
 **Result:** web ☐ mobile ☐ — notes:
 
+### WF-13 · A failed read says why (added 2026-10-05)
+**Role:** member · **Surfaces:** web
+**Steps:**
+1. Open Workforce, then let the session expire (or sign out in another tab) and open the Overview,
+   Community, a bucket drilldown, Occupations and What's your 1%? tabs in turn.
+2. With the browser's network tools, make one later page of the Occupations list fail.
+3. Read `GET /api/workforce/dashboard` directly.
+**Expected:** Each tab in step 1 shows the message the route sent, not a fixed "Request failed (N)."
+line; only a body with no message or reason falls back to the status code. In step 2 the Occupations
+list shows its error state instead of a short list with a wrong count. In step 3 the answer carries a
+top-level `generatedAt` equal to `dashboard.generatedAtIso`.
+**Result:** web ☐ — notes:
+
 ---
 
 ## Admin walkthrough
@@ -418,8 +431,11 @@ of these, it is already tracked, not a new bug:
   own script covers the consumers (SH-A17 and the rare-skill scoring cases).
 - The member-facing service-scoped delete lives on the Account & Data screen (`/account/data`), not
   inside the Workforce shell — that is by design, not a missing control (reclassified 2026-08-04).
-  The in-plugin `DELETE /api/workforce/profile` route stays because the deletion contract §9
-  mandates it.
+  The in-plugin `GET`/`DELETE /api/workforce/profile` route was retired 2026-10-05 (nothing
+  rendered the read and nothing called the delete); the deletion contract §9 now names
+  `DELETE /api/account/services/workforce`. Opening the Overview makes no request to
+  `/api/workforce/profile`, and a failed load never lists "your profile" among the sections that
+  could not be loaded.
 - The profile has no `region` field (dropped 2026-08-04 — it was always null with no upstream
   source). Seeing no region row anywhere is correct.
 - (2026-07-03 sweep) The unused summary report endpoint, an in-process sync cron that failed on

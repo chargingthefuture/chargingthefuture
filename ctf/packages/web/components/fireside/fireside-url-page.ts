@@ -21,13 +21,33 @@ function readPage(param: string): number {
   return Number.isFinite(raw) && raw > 0 ? raw : 1;
 }
 
-export function useUrlPage(param: string): [number, (next: number) => void] {
+export interface UrlPage {
+  page: number;
+  /** A page the member chose with the Pager or a new search. Adds a history entry. */
+  setPage: (next: number) => void;
+  /**
+   * The page the server clamped to. Overwrites the current history entry instead of adding one:
+   * pushing here stacked the corrected page on top of the out-of-range one, and Back then landed
+   * on the out-of-range page, which clamped and pushed again, so Back never got past it.
+   */
+  adoptPage: (next: number) => void;
+  /**
+   * False until the address bar has been read. A list waits on this before its first fetch, so a
+   * link to page 3 asks for page 3 once instead of asking for page 1 first, whose answer could land
+   * after page 3's and replace the rows the member asked for.
+   */
+  ready: boolean;
+}
+
+export function useUrlPage(param: string): UrlPage {
   const [page, setPageState] = useState(1);
+  const [ready, setReady] = useState(false);
 
   // The first read happens after mount, not during render: the server renders this shell too, and
   // reading the address bar during render would make the two disagree.
   useEffect(() => {
     setPageState(readPage(param));
+    setReady(true);
   }, [param]);
 
   // The back button steps through pages the member actually visited.
@@ -39,8 +59,8 @@ export function useUrlPage(param: string): [number, (next: number) => void] {
     return () => window.removeEventListener("popstate", onPop);
   }, [param]);
 
-  const setPage = useCallback(
-    (next: number) => {
+  const writePage = useCallback(
+    (next: number, mode: "push" | "replace") => {
       setPageState(next);
       if (typeof window === "undefined") return;
       const query = new URLSearchParams(window.location.search);
@@ -49,10 +69,15 @@ export function useUrlPage(param: string): [number, (next: number) => void] {
       if (next <= 1) query.delete(param);
       else query.set(param, String(next));
       const search = query.toString();
-      window.history.pushState(null, "", `${window.location.pathname}${search ? `?${search}` : ""}`);
+      const url = `${window.location.pathname}${search ? `?${search}` : ""}`;
+      if (mode === "replace") window.history.replaceState(window.history.state, "", url);
+      else window.history.pushState(null, "", url);
     },
     [param],
   );
 
-  return [page, setPage];
+  const setPage = useCallback((next: number) => writePage(next, "push"), [writePage]);
+  const adoptPage = useCallback((next: number) => writePage(next, "replace"), [writePage]);
+
+  return { page, setPage, adoptPage, ready };
 }
