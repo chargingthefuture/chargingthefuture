@@ -118,6 +118,35 @@ function mapProviderRow(row: FoundationProviderRow): FoundationProviderSearchIte
   };
 }
 
+// Mirrors the LightHouse browse filter: hide a provider who is blocked relative to the viewer. Used by
+// search and by the single-provider read, so a shared link cannot open a profile search would hide.
+function hideBlockedProvidersSql(viewer: string): string {
+  return `
+          AND (
+            ${viewer}::text IS NULL
+            OR NOT EXISTS (
+              SELECT 1
+              FROM member_blocks
+              WHERE (blocker_user_id = ${viewer} AND blocked_user_id = dp.claimed_by_user_id)
+                 OR (blocker_user_id = dp.claimed_by_user_id AND blocked_user_id = ${viewer})
+            )
+          )`;
+}
+
+// A block made after a thread was opened still stops new contact on it: a message, a Direct Line
+// token, a scheduled call or a quote request. The ring already checks this in instant-call.ts. The
+// routes map blocked_pair to neutral copy so the block never reveals itself.
+async function assertThreadPairNotBlockedTx(
+  client: PoolClient,
+  thread: { survivor_user_id: string; provider_user_id: string },
+  actorUserId: string,
+): Promise<void> {
+  const otherUserId = thread.survivor_user_id === actorUserId ? thread.provider_user_id : thread.survivor_user_id;
+  if (await isBlockedBetweenTx(client, actorUserId, otherUserId)) {
+    throw new Error('blocked_pair');
+  }
+}
+
 export async function searchProviders(input: {
   query: string;
   skillId?: string | null;
@@ -133,18 +162,6 @@ export async function searchProviders(input: {
   const searchPattern = searchValue.length > 0 ? `%${searchValue}%` : '%';
   const skillId = input.skillId && input.skillId.trim().length > 0 ? input.skillId.trim() : null;
   const viewerUserId = input.viewerUserId && input.viewerUserId.trim().length > 0 ? input.viewerUserId.trim() : null;
-
-  // Mirrors the LightHouse browse filter: hide a provider who is blocked relative to the viewer.
-  const hideBlockedProvidersSql = (viewer: string) => `
-          AND (
-            ${viewer}::text IS NULL
-            OR NOT EXISTS (
-              SELECT 1
-              FROM member_blocks
-              WHERE (blocker_user_id = ${viewer} AND blocked_user_id = dp.claimed_by_user_id)
-                 OR (blocker_user_id = dp.claimed_by_user_id AND blocked_user_id = ${viewer})
-            )
-          )`;
 
   // A Foundation provider is a claimed directory profile that has opted in to offer at least one
   // skill (a row in foundation_provider_skills). When a skill is given, restrict to providers who
@@ -233,7 +250,12 @@ export async function searchProviders(input: {
 // provider for a signed-in member. Returns null when the id matches no active provider (e.g. the
 // profile was deactivated, unclaimed, or has stopped offering any skill). Behind the same read
 // gate as search — never exposed to unauthenticated visitors.
-export async function getProviderById(profileId: string): Promise<FoundationProviderSearchItem | null> {
+// viewerUserId hides a provider blocked either way relative to the reader, answering null exactly as
+// for an id that matches nobody, so the 404 does not reveal the block.
+export async function getProviderById(
+  profileId: string,
+  viewerUserId: string | null,
+): Promise<FoundationProviderSearchItem | null> {
   const id = typeof profileId === 'string' ? profileId.trim() : '';
   if (id.length === 0) return null;
 
@@ -264,9 +286,10 @@ export async function getProviderById(profileId: string): Promise<FoundationProv
       WHERE dp.id::text = $1
         AND dp.claimed_by_user_id IS NOT NULL
         AND EXISTS (SELECT 1 FROM foundation_provider_skills fps WHERE fps.user_id = dp.claimed_by_user_id)
+        ${hideBlockedProvidersSql('$2')}
       LIMIT 1
     `,
-    [id],
+    [id, viewerUserId],
   );
 
   const row = result.rows[0];
@@ -773,6 +796,7 @@ export async function sendMessageToThread(input: {
     if (thread.rows.length === 0) {
       throw new Error('thread_not_found');
     }
+    await assertThreadPairNotBlockedTx(client, thread.rows[0], input.actorUserId);
 
     const rateLimit = await evaluateRateLimit(client, {
       userId: input.actorUserId,
@@ -856,9 +880,9 @@ export async function getThreadCredentialsForParticipant(input: {
   streamChannelId: string;
 }> {
   return withDbTransaction(async (client) => {
-    const thread = await client.query<{ stream_channel_id: string }>(
+    const thread = await client.query<{ stream_channel_id: string; survivor_user_id: string; provider_user_id: string }>(
       `
-        SELECT t.stream_channel_id
+        SELECT t.stream_channel_id, t.survivor_user_id, t.provider_user_id
         FROM foundation_connection_threads t
         JOIN foundation_thread_participants p ON p.thread_id = t.id
         WHERE t.id = $1::uuid
@@ -871,6 +895,7 @@ export async function getThreadCredentialsForParticipant(input: {
     if (thread.rows.length === 0) {
       throw new Error('thread_not_found');
     }
+    await assertThreadPairNotBlockedTx(client, thread.rows[0], input.actorUserId);
 
     const credentials = await createFoundationParticipantToken(input.actorUserId, input.actorDisplayName);
     if (!credentials) {
@@ -909,6 +934,7 @@ async function assertCallParticipantThread(client: PoolClient, threadId: string,
   if (thread.rows.length === 0) {
     throw new Error('thread_not_found');
   }
+  await assertThreadPairNotBlockedTx(client, thread.rows[0], actorUserId);
 }
 
 async function getCallDurationLimitOrThrow(client: PoolClient): Promise<number> {
@@ -1088,6 +1114,7 @@ export async function createQuoteRequest(input: {
     if (row.survivor_user_id !== input.actorUserId) {
       throw new Error('policy_denied');
     }
+    await assertThreadPairNotBlockedTx(client, row, input.actorUserId);
 
     const rateLimit = await evaluateRateLimit(client, {
       userId: input.actorUserId,

@@ -1,4 +1,5 @@
 import { queryDb } from 'lib/db/postgres';
+import { NOMINATED_PENDING_SKILLS_SQL } from './nominated-pending-skills';
 
 // Every profile still carrying a free-text skill as a "pending review" chip, and the admin's way
 // to drop one after deciding not to promote it.
@@ -7,8 +8,10 @@ import { queryDb } from 'lib/db/postgres';
 //   - 'directory'   the member typed it into the "skill not listed" box on their own profile;
 //                   one row per profile and label in directory_profile_proposed_skills.
 //   - 'skills-hunt' a scout proposed it on the nomination that generated the profile; the label
-//                   lives once per distinct skill in skills_hunt_proposed_skill_promotions and
-//                   reaches the profile through skills_hunt_directory_profiles.
+//                   lives on skills_hunt_submissions.proposed_skills and reaches the profile through
+//                   skills_hunt_directory_profiles (NOMINATED_PENDING_SKILLS_SQL). The decision on
+//                   it (promoted, dropped) lives once per distinct skill in
+//                   skills_hunt_proposed_skill_promotions.
 // Promotion clears both through the taxonomy apply run. Non-promotion cleared neither, so a closed
 // skill-proposal issue left the chip on the profile for good and the only way off was a statement
 // against the database. This is the screen-shaped answer: read-only list, one write per chip.
@@ -113,19 +116,14 @@ export async function listDirectoryPendingSkillProposals(viewerId: string): Prom
           AND btrim(d.skill_label) <> ''
         UNION ALL
         SELECT
-          shdp.directory_profile_id::text AS profile_id,
-          btrim(prom.skill_label) AS skill_label,
+          n.profile_id,
+          n.skill_label,
           'skills-hunt'::text AS source,
-          prom.created_at AS added_at,
+          n.added_at,
           'scout'::text AS added_by,
-          sub.submitter_user_id AS added_by_user_id,
-          sub.submitter_username AS added_by_username
-        FROM skills_hunt_directory_profiles shdp
-        JOIN skills_hunt_proposed_skill_promotions prom
-          ON prom.source_submission_id = shdp.submission_id
-        LEFT JOIN skills_hunt_submissions sub ON sub.id = shdp.submission_id
-        WHERE prom.status NOT IN ('promoted', 'dropped')
-          AND btrim(prom.skill_label) <> ''
+          n.submitter_user_id AS added_by_user_id,
+          n.submitter_username AS added_by_username
+        FROM (${NOMINATED_PENDING_SKILLS_SQL}) n
       ),
       held AS (
         SELECT
@@ -198,8 +196,11 @@ export type DropPendingSkillProposalResult =
 
 // A member-added row is deleted outright: the member's edit form reads only pending rows, so the
 // label leaves the form too and a later save does not put it back. A nominated proposal is marked
-// 'dropped' rather than deleted, because that row is also the intake's dedupe record — deleting it
-// would let the next scheduled run file a fresh issue for a skill the owner already decided against.
+// 'dropped' in the tracker rather than deleted, because that row is also the intake's dedupe record —
+// deleting it would let the next scheduled run file a fresh issue for a skill the owner already
+// decided against. A nominated skill the intake has not filed yet has no tracker row, so the drop
+// writes one already marked 'dropped'. The tracker holds one row per distinct skill, so the decision
+// covers every nominated profile carrying the same label.
 export async function dropDirectoryPendingSkillProposal(
   input: DropPendingSkillProposalInput,
 ): Promise<DropPendingSkillProposalResult> {
@@ -220,17 +221,31 @@ export async function dropDirectoryPendingSkillProposal(
 
   const result = await queryDb<{ previous_status: string }>(
     `
-      UPDATE skills_hunt_proposed_skill_promotions prom
-         SET status = 'dropped',
-             updated_at = NOW()
-        FROM skills_hunt_directory_profiles shdp
-       WHERE shdp.submission_id = prom.source_submission_id
-         AND shdp.directory_profile_id::text = $1
-         AND lower(btrim(prom.skill_label)) = lower(btrim($2))
-         AND prom.status NOT IN ('promoted', 'dropped')
-      RETURNING (
-        SELECT status FROM skills_hunt_proposed_skill_promotions old WHERE old.id = prom.id
-      ) AS previous_status
+      WITH target AS (
+        SELECT n.skill_label, n.submission_id
+        FROM (${NOMINATED_PENDING_SKILLS_SQL}) n
+        WHERE n.profile_id = $1::text
+          AND lower(n.skill_label) = lower(btrim($2))
+        LIMIT 1
+      ),
+      previous AS (
+        SELECT prom.status
+        FROM skills_hunt_proposed_skill_promotions prom
+        JOIN target t ON prom.normalized_skill = lower(t.skill_label)
+      ),
+      written AS (
+        INSERT INTO skills_hunt_proposed_skill_promotions
+          (normalized_skill, skill_label, source_submission_id, source, status)
+        SELECT lower(t.skill_label), t.skill_label, t.submission_id, 'skills-hunt', 'dropped'
+        FROM target t
+        ON CONFLICT (normalized_skill) DO UPDATE
+          SET status = 'dropped',
+              updated_at = NOW()
+          WHERE skills_hunt_proposed_skill_promotions.status NOT IN ('promoted', 'dropped')
+        RETURNING 1
+      )
+      SELECT COALESCE((SELECT status FROM previous), 'untracked') AS previous_status
+      FROM written
     `,
     [input.profileId, input.skillLabel],
   );

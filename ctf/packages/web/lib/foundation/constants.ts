@@ -50,4 +50,5 @@ export const FOUNDATION_ERROR_CODE = {
   callInsufficientFunds: 'FOUNDATION_CALL_INSUFFICIENT_FUNDS',
   callBlockCapReached: 'FOUNDATION_CALL_BLOCK_CAP_REACHED',
   callBillingMisconfigured: 'FOUNDATION_CALL_BILLING_MISCONFIGURED',
+  callCallerCannotSend: 'FOUNDATION_CALL_CALLER_CANNOT_SEND',
 } as const;

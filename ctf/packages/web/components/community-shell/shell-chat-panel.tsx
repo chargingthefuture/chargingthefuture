@@ -29,7 +29,7 @@ import { feedPostLength } from '../../lib/feed/normalize';
 import { FEED_ADMIN_MAX_COMMUNITY_POST_LENGTH, FEED_MAX_COMMUNITY_POST_LENGTH } from '../../lib/feed/constants';
 import { OFFICIAL_SENDER_LABEL } from '../../lib/commons/constants';
 import { ChatMessageImage } from './chat-message-image';
-import { CommonsImageShare } from './commons-image-share';
+import { CommonsImageShareButton, CommonsImageSharePanel } from './commons-image-share';
 import { motionAwareBehavior, useChatScrollPosition } from './chat-scroll';
 
 // Avatar glyph for a chat sender: the first letter of the sender's name, whoever they are. The
@@ -388,6 +388,20 @@ function useDeepLinkNavigation(messagesContainerRef: RefObject<HTMLDivElement | 
   return { jumpToQuotedPost, flashTarget };
 }
 
+// The admin picture panel, opened from the camera chip in the icon row. Both pieces are null when
+// the viewer is not an admin or the notifications feed is open.
+function useAdminPictureShare(
+  enabled: boolean,
+  onShared: Parameters<typeof CommonsImageSharePanel>[0]['onShared'],
+): { chip: ReactNode; panel: ReactNode } {
+  const [open, setOpen] = useState(false);
+  if (!enabled) return { chip: null, panel: null };
+  return {
+    chip: <CommonsImageShareButton open={open} onClick={() => setOpen((wasOpen) => !wasOpen)} />,
+    panel: open ? <CommonsImageSharePanel onShared={onShared} onClose={() => setOpen(false)} /> : null,
+  };
+}
+
 function AuthenticatedChatPanel({ currentUser, isAdmin = false }: AuthenticatedChatPanelProps) {
   // A member who hasn't set a username posts under a stable per-user handle
   // (matching the server's feedAuthorHandle and Chyme), so they stay recognizable
@@ -448,6 +462,7 @@ function AuthenticatedChatPanel({ currentUser, isAdmin = false }: AuthenticatedC
   // The 🔔 notifications center replaces the message stream + composer when open. It is a separate
   // feed (not a filter of the chat), so it is local UI state here rather than in the chat hook.
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const pictureShare = useAdminPictureShare(isAdmin && !notificationsOpen, addSavedMessage);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const { jumpToQuotedPost, flashTarget } = useDeepLinkNavigation(messagesContainerRef);
 
@@ -585,9 +600,10 @@ function AuthenticatedChatPanel({ currentUser, isAdmin = false }: AuthenticatedC
         onToggleNotifications={() => setNotificationsOpen((open) => !open)}
         onAsk={askComic}
         onAnswer={answerChip}
+        pictureShare={pictureShare.chip}
       />
 
-      {isAdmin && !notificationsOpen ? <CommonsImageShare onShared={addSavedMessage} /> : null}
+      {pictureShare.panel}
 
       {/* Composer + helpers hide while the notifications center is open — you read notifications
           there, you don't post into them. The chip row above stays so 🔔 can toggle back. */}
@@ -977,6 +993,8 @@ type ConciergeChipRailProps = {
   onToggleNotifications: () => void;
   onAsk: (question: string) => void;
   onAnswer: (chip: Extract<CommonsSuggestionChip, { kind: 'answer' }>) => void;
+  // The admin-only camera chip, placed after the gift; null for everyone else.
+  pictureShare: ReactNode;
 };
 
 // One-tap suggestion chips (#471) — persistent (shown whether or not the chat already has messages),
@@ -996,6 +1014,7 @@ function ConciergeChipRail({
   onToggleNotifications,
   onAsk,
   onAnswer,
+  pictureShare,
 }: ConciergeChipRailProps) {
   return (
     <div className={styles.conciergeChipRail} role="group" aria-label="Ask what you need">
@@ -1007,6 +1026,7 @@ function ConciergeChipRail({
           and the full banner is dismissed or snoozed, so most of the time this row is unchanged.
           It stays visible with the notifications feed open, like the three glyph chips before it. */}
       <ContributionsGiftTrigger className={styles.contributeGiftBtn} />
+      {pictureShare}
       {notificationsOpen ? null : <SuggestionChips chips={chips} onAsk={onAsk} onAnswer={onAnswer} />}
     </div>
   );
