@@ -22,6 +22,7 @@ import { deleteFoundationStreamData } from 'lib/foundation/stream';
 import { deleteLighthouseStreamData } from 'lib/lighthouse/stream';
 import { deleteSocketRelayStreamData } from 'lib/socket-relay/stream';
 import { deleteTrustTransportStreamData } from 'lib/trust-transport/stream';
+import { deleteFeedStreamData } from 'lib/feed/stream';
 
 export type ExternalCleanup = (userId: string) => Promise<void>;
 
@@ -45,6 +46,8 @@ export const externalCleanupRegistry: Readonly<Record<string, ExternalCleanup>> 
   lighthouse: fromBoolean('LightHouse', deleteLighthouseStreamData),
   'socket-relay': fromBoolean('SocketRelay', deleteSocketRelayStreamData),
   'trust-transport': fromBoolean('TrustTransport', deleteTrustTransportStreamData),
+  // The Commons' `feed-<userId>` Stream user (named with the member's @username).
+  'feed-announcements': fromBoolean('Commons', deleteFeedStreamData),
 };
 
 export function getExternalCleanup(slug: string): ExternalCleanup | undefined {
