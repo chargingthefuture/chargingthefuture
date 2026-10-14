@@ -188,6 +188,8 @@ triage, but the reporter reads as a deleted member — no raw id survives on the
 
 For BUG-1, BUG-2, and BUG-3, the android app and the mobile-responsive web layout must behave the
 same: same five modal states, same endpoint and CSRF wiring, same rate-limited and error handling.
+One intended difference: a report sent from the Android app shows its app version on the admin
+card (`appVersion`, from the installed build); a report sent from the web shows none.
 Note any drift here rather than filing three separate bugs. (The admin triage queue is web-only —
 no android surface to compare.)
 
