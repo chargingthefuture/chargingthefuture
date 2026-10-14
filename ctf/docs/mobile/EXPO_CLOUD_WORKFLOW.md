@@ -101,7 +101,7 @@ If `EXPO_PUBLIC_CLERK_OAUTH_CLIENT_ID` or the publishable key is missing, the ap
 
 ## Channels
 
-- `main` → `production` channel (over-the-air updates).
+- `main` → `production` and `preview` channels (over-the-air updates; test APKs listen to `preview`).
 - `mobile-v*` tag → signed `production` build attached to a GitHub Release.
 - Pull request touching `ctf/packages/mobile/**` → `preview` channel install APK (same production
   backend).
@@ -134,7 +134,9 @@ input enabled.
   - Fails fast when `EXPO_TOKEN` is missing.
 
 - `.github/workflows/expo-update.yml`
-  - Publishes an over-the-air EAS update to the `production` channel on pushes to `main`.
+  - Publishes an over-the-air EAS update to the `production` channel on pushes to `main`, and the
+    same update to the `preview` channel so an installed test APK picks up fixes on its next open
+    without a new build (owner decision, 2026-10-09).
   - Intended for JavaScript/asset-only updates.
   - Fails fast when `EXPO_TOKEN` is missing.
 
@@ -150,9 +152,11 @@ input enabled.
   - Checks the free-tier quota first and skips cleanly when this month's automated build budget is
     used up, so it never pushes you past the free allotment.
   - On success it writes install links to the run's summary: an Expo "internal distribution" install
-    page (the easy phone path) and the direct `.apk` URL. To install, open the completed run on your
-    Android phone (Actions tab → the run → Summary) and tap the install-page link. The APK itself is
-    hosted by Expo, not attached to the GitHub run.
+    page (the easy phone path) and the direct `.apk` URL. The GitHub phone app does not show a run's
+    summary, so the same links are also posted as a comment on the open issue titled "Android test
+    builds" (created on the first build), which shows on the phone and in the GitHub inbox. Open the
+    newest comment on the Android phone and tap the install-page link. The APK itself is hosted by
+    Expo, not attached to the GitHub run.
   - If the build **fails**, a Claude agent (`anthropics/claude-code-action`) diagnoses it, opens a
     descriptive `fix/expo-android-build-*` branch, and files a pull request with the smallest fix —
     low-risk fixes auto-merge after CI; risky ones wait for owner review (the two-lane rule in

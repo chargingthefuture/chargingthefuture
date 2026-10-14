@@ -9,6 +9,7 @@ import React, {
 } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import { authedFetch } from '../auth/authedFetch';
+import { reportError } from '../observability/report';
 import {
   DEFAULT_THEME,
   THEME_STORAGE_KEY,
@@ -70,12 +71,26 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (persistToServer) {
       // Best-effort sync to the signed-in user's profile so the choice follows the
       // account across devices and matches the web. The account routes require the
-      // same-origin CSRF confirmation header. Signed-out callers get a 401 we ignore.
+      // same-origin CSRF confirmation header. A signed-out caller's 401 is expected and ignored; any
+      // other refusal, or a request that never got an answer, is reported so a theme that stops
+      // following the account has a reason on record. The local choice stands either way.
       void authedFetch(PREFERENCES_PATH, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
         body: JSON.stringify({ theme: next }),
-      }).catch(() => undefined);
+      })
+        .then((res) => {
+          if (!res.ok && res.status !== 401) {
+            reportError(new Error(`PUT ${PREFERENCES_PATH} answered ${res.status}`), {
+              area: 'theme',
+              op: 'sync_preference',
+              extra: { status: res.status },
+            });
+          }
+        })
+        .catch((error: unknown) => {
+          reportError(error, { area: 'theme', op: 'sync_preference' });
+        });
     }
   }, []);
 

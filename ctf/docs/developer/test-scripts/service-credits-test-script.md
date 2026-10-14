@@ -13,7 +13,7 @@
 | **Surfaces** | web (`/service-credits`, `/admin/service-credits`) · android (`ServiceCredits.tsx`, `AdminServiceCredits.tsx`) |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-service-credits-feature-inventory.md` |
-| **Generated** | 2026-07-13 (commit 0aef7039) |
+| **Generated** | 2026-07-13 (commit 0aef7039) · 2026-10-12 manual update: SC-A disputes list and ledger status card show a failed read |
 | **Inventory wording** | 2026-10-01: banned-term wording removed from the inventory prose; no step in this script changed |
 
 ---
@@ -606,7 +606,7 @@ Result: web ☐
 4. Apply an adjustment for that case (as in SC-A7).
 
 **Expected:**
-- The "Open disputes" list shows each unadjusted dispute newest first — reason, who opened it (a resolved name or a short `member <id>` fallback), and time. With none it shows "No open disputes."
+- The "Open disputes" list shows each unadjusted dispute newest first — reason, who opened it (a resolved name or a short `member <id>` fallback), and time. With none it shows "No open disputes." If the list could not be read, it shows the reason in red instead, never "No open disputes."
 - "Resolve" fills the adjustment form's dispute case ID.
 - After an adjustment is applied, the resolved dispute drops off the open list (it now has an adjustment).
 - The admin-landing tile shows a "new to review" dot when an unresolved dispute arrived since you last opened the area; opening it clears the dot.
@@ -661,7 +661,7 @@ Result:
 3. Confirm it shows whether Formance is configured or not, the ledger name and asset identifier.
 4. If not configured, confirm a note appears that balances remain authoritative in the app DB and operations are queued for reconciliation.
 
-**Expected:** The ledger status card renders with configuration state clearly shown. If unconfigured, the reassurance note is visible. No sensitive credentials (API tokens, URLs) are exposed in the UI.
+**Expected:** The ledger status card renders with configuration state clearly shown. If unconfigured, the reassurance note is visible. If the status could not be read, the card still appears and shows the reason in red rather than disappearing. No sensitive credentials (API tokens, URLs) are exposed in the UI.
 
 Result: web ☐
 
