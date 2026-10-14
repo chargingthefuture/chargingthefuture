@@ -9,8 +9,9 @@ name: Keep Auto-Merge PRs Moving
 # oldest one that is behind main up to date. Its checks run, auto-merge lands it, and that push to
 # main starts this workflow again for the next one.
 #
-# Left alone, and picked up by /pr instead: drafts, PRs without auto-merge (the owner-review lane),
-# PRs with a merge conflict, and PRs whose last checks failed.
+# Left alone, and picked up by /pr instead: drafts, PRs without auto-merge (the owner-review lane)
+# and PRs with a merge conflict. A PR whose last checks failed still gets its turn, after the ones
+# that passed: not every check is required to merge, and the failure may come from an older main.
 on:
   push:
     branches: [main]
@@ -47,6 +48,7 @@ jobs:
 
           # GitHub recomputes each PR's merge state after main moves, and reports UNKNOWN until it
           # has. Read the list until no auto-merge PR reads UNKNOWN, or give up after a few tries.
+          # spelling:disable — GitHub's own check conclusion values (CANCELLED), which must match exactly.
           for attempt in 1 2 3 4 5; do
             PRS=$(gh pr list --repo "$REPO" --state open --limit 200 \
               --json number,isDraft,autoMergeRequest,mergeStateStatus,statusCheckRollup \
@@ -66,21 +68,25 @@ jobs:
             echo "$UNKNOWN auto-merge PR(s) still read UNKNOWN; reading again in 20 seconds."
             sleep 20
           done
+          # spelling:enable
 
           echo "Auto-merge PRs: $(echo "$PRS" | jq 'length')"
 
-          # In flight: up to date (not BEHIND, not DIRTY), nothing failed, and checks still running,
-          # not yet started, or the PR is clean and about to merge. One of these means wait.
-          IN_FLIGHT=$(echo "$PRS" | jq -r '[.[] | select(.state != "BEHIND" and .state != "DIRTY" and .failed == 0)
-            | select(.pending > 0 or .checks == 0 or .state == "CLEAN") | .number] | map("#" + tostring) | join(" ")')
+          # In flight: up to date (not BEHIND, not DIRTY) and either checks still running, checks not
+          # yet started, or ready for auto-merge (CLEAN, or UNSTABLE when only a check that is not
+          # required failed). One of these means wait.
+          IN_FLIGHT=$(echo "$PRS" | jq -r '[.[] | select(.state != "BEHIND" and .state != "DIRTY")
+            | select(.pending > 0 or .checks == 0 or .state == "CLEAN" or .state == "UNSTABLE") | .number]
+            | map("#" + tostring) | join(" ")')
           if [ -n "$IN_FLIGHT" ]; then
             echo "Waiting on $IN_FLIGHT; its merge will start the next run."
             exit 0
           fi
 
-          NEXT=$(echo "$PRS" | jq -r '[.[] | select(.state == "BEHIND" and .failed == 0)] | sort_by(.number) | .[0].number // empty')
+          # Oldest first, and the PRs whose last checks passed before the ones with a failure.
+          NEXT=$(echo "$PRS" | jq -r '[.[] | select(.state == "BEHIND")] | sort_by([(.failed > 0), .number]) | .[0].number // empty')
           if [ -z "$NEXT" ]; then
-            echo "No auto-merge PR is behind main with passing checks. Nothing to update."
+            echo "No auto-merge PR is behind main. Nothing to update."
             exit 0
           fi
 
