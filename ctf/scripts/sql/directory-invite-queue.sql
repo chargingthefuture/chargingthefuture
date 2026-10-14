@@ -60,7 +60,8 @@ WITH already_written AS (
     'indiko-1',         -- an-invitation-to-indiko.md
     'marilyn-1921',     -- an-invitation-to-marilyn.md
     'bev-419',          -- an-invitation-to-bev.md
-    'king-unique-4'     -- an-invitation-to-king-unique.md
+    'king-unique-4',    -- an-invitation-to-king-unique.md
+    'tired-of-being-a-ti' -- an-invitation-to-tired-of-being-a-ti.md
   ]) AS handle
 ),
 listed_skills AS (
