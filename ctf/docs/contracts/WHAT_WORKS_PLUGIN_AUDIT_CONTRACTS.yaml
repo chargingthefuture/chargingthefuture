@@ -3,7 +3,8 @@
 # console.info — a line in the server's log, which nothing can query, no screen can show, and which
 # ages out of the host's retention window. Every admin decision event here is now also a durable row
 # in what_works_admin_audit_trail, written by recordWhatWorksAdminAudit on every outcome including a
-# refusal. A row names the product or problem and the acting admin, never suggested_by, so the trail
+# refusal (not an admin, not found, a bad body) and a failed write. A request refused for a missing CSRF
+# header is turned away before the caller is identified, so it has no actor to record. A row names the product or problem and the acting admin, never suggested_by, so the trail
 # keeps the plugin's anonymity guarantee. The member-facing events keep the log line alone.
 auditEvents:
   - eventId: what-works.list.read

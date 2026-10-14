@@ -5,6 +5,8 @@ import { ChymeRemovedError, ChymeRoomFullError, chymeHandle, getRoomState, markR
 import { logChymeAudit } from 'lib/chyme/audit';
 import { reportError } from 'lib/observability/report';
 import { streamFailureMessage } from 'lib/shared/stream-error-text';
+import { setCallMemberRole } from 'lib/chyme/stream-moderation';
+import type { ChymeRoomResponse } from 'lib/chyme/types';
 import { requireChymeRoomAccess, ensureMutationCsrf } from '../_lib';
 
 export async function POST(request: Request) {
@@ -63,6 +65,7 @@ export async function POST(request: Request) {
     }
 
     const activeRoom = await markRoomCallJoined(gate.identity, gate.roomKey, gate.auth.isAdmin);
+    await applyJoinerCallRole(activeRoom, gate.auth.userId);
 
     logChymeAudit({
       pluginId: 'chyme',
@@ -126,6 +129,18 @@ export async function POST(request: Request) {
       { status: 500 },
     );
   }
+}
+
+// Hand-raise mode's server-side half for a member who joins after the switch: give them the role
+// the mode calls for on the call, so a client that ignores the mode still cannot publish as a
+// listener. In open mode (or once let speak) it puts them on the default role, which also clears a
+// listener role left on the call's membership from an earlier hand-raise session. Skipped without
+// a Stream call when no listener role is configured. A Stream failure is reported inside
+// setCallMemberRole and does not turn the join away: the apps still enforce the mode themselves.
+async function applyJoinerCallRole(room: ChymeRoomResponse, userId: string): Promise<void> {
+  const joiner = room.participants.find((participant) => participant.userId === userId);
+  const role = room.speakMode === 'hand_raise' && joiner?.role === 'listener' ? 'listener' : 'speaker';
+  await setCallMemberRole(room.roomKey, userId, role);
 }
 
 // 409 with the cap so the client can say "N of N" and offer a retry. Audited as a deny: a full room

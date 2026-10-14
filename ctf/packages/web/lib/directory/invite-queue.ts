@@ -103,6 +103,8 @@ export const DIRECTORY_INVITE_ALREADY_WRITTEN = [
   'bev-419',
   'king-unique-4',
   'tired-of-being-a-ti',
+  'andre-kovacs-1',
+  'ms-thompson-11',
 ] as const;
 
 const DIRECTORY_PROFILE_BASE = 'https://app.chargingthefuture.com/apps/directory/profile/';
