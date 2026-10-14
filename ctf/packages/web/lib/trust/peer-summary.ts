@@ -43,6 +43,7 @@ const PLUGIN_BY_EVIDENCE_TYPE: Record<string, string> = {
   'engagement-contributions': 'contributions',
   'engagement-foundation-provider': 'foundation',
   'engagement-recurring-activity': 'recurring-activity',
+  'engagement-ti-radio-hosted': 'ti-radio',
 };
 
 // Aggregate signals that are already a coarse count rather than a record of a specific event, so

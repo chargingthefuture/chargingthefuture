@@ -1172,6 +1172,26 @@ Step 3: rejected for CSRF. Step 4: 400 — a missing `hidden` field must be an e
 
 ---
 
+### FD-A16b — The moderation page names a failed read (added 2026-10-12)
+**Role:** admin | **Surface:** web
+
+**Precondition:** A local or preview environment where you can make the database unreachable (for
+example, point `DATABASE_URL` at a closed port and restart).
+
+**Steps:**
+1. With the database unreachable, open `/admin/commons` as admin.
+2. Restore the database and reload the page.
+
+**Expected:** Step 1: the page still renders, and the red banner at the top says it could not read from
+the database, naming each read that failed (the moderation queue, the hidden counts, the author list,
+the flagged answers, the pending flagged count) with its reason. It must not show a quiet empty queue
+with no message. The server log carries one `[reportError] area=feed-announcements` line per failed
+read. Step 2: no banner, and the queue loads as usual (#2712).
+
+**Result:** web ☐
+
+---
+
 ### FD-A11 — Membership event emit
 **Role:** admin | **Surface:** web
 
