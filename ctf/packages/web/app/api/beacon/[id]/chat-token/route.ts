@@ -34,6 +34,16 @@ export async function POST(request: Request, context: RouteContext) {
       );
     }
 
+    // Chat is open only while the event is live (access policy deny condition `event_not_live`).
+    // Ended event ids are public through the replay list, and nobody moderates a chat after the
+    // broadcast. Both callers ask for a token only while the event is live.
+    if (event.status !== 'live') {
+      return NextResponse.json(
+        { ok: false, code: BEACON_ERROR_CODE.conflict, message: 'Chat is open only while the event is live.' },
+        { status: 409 },
+      );
+    }
+
     const displayName = buildIdentityDisplayName(gate.auth.username, gate.auth.userId);
     const credentials = await createBeaconMemberChatCredentials({
       userId: gate.auth.userId,

@@ -2,7 +2,7 @@
 
 import { CalendarDays, MapPin, Search } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
-import { formatBudgetRange, getLighthouseTokens, type CurrencyMap, type LighthouseTokens, type WantedPosting } from "./shared";
+import { budgetLeadIn, formatBudgetRange, getLighthouseTokens, type CurrencyMap, type LighthouseTokens, type WantedPosting } from "./shared";
 
 // The demand side of LightHouse. A member deciding whether to offer a room otherwise sees only
 // other people's listings, which says nothing about whether anyone needs one — and on this product
@@ -45,6 +45,7 @@ function WantedCard({ posting, currencies, t }: { posting: WantedPosting; curren
   const needs = posting.housingNeeds?.trim() ?? "";
   const intro = posting.bio?.trim() ?? "";
   const budget = formatBudgetRange(posting, currencies);
+  const budgetVerb = budgetLeadIn(posting, currencies);
   return (
     <div style={{ borderRadius: 16, background: "rgba(255,255,255,0.02)", border: `1px solid ${t.ACCENT}20`, padding: 16 }}>
       <div style={{ fontSize: 13, fontWeight: 700, color: t.TITLE, marginBottom: 8, lineHeight: 1.45, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
@@ -56,7 +57,7 @@ function WantedCard({ posting, currencies, t }: { posting: WantedPosting; curren
       ) : null}
       {budget ? (
         <div style={{ fontSize: 12, color: t.ACCENT, fontWeight: 600, overflowWrap: "anywhere" }}>
-          Can pay {budget} <span style={{ color: t.MUTED, fontWeight: 400 }}>a month</span>
+          {budgetVerb} {budget} <span style={{ color: t.MUTED, fontWeight: 400 }}>a month</span>
         </div>
       ) : null}
     </div>

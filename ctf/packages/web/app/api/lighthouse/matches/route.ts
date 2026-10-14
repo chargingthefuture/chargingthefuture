@@ -145,7 +145,6 @@ export async function POST(request: Request) {
   try {
     const created = await createMatchRequest({
       actorUserId: gate.auth.userId,
-      actorDisplayName: gate.auth.username ?? gate.auth.userId,
       propertyId: input.propertyId,
       message: input.message,
       desiredMoveInDateIso: input.desiredMoveInDateIso,
