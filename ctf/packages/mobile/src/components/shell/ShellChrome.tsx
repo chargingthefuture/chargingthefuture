@@ -22,6 +22,9 @@ import { TopBarControls } from './TopBarControls';
 // The Skills Economy "Stack" mark (web components/shared/se-mark.tsx), always in its gradient. The
 // web .mobileBarLogo box is 30px, radius 9, with no fill; the comic theme gives it the raised ink
 // panel, a 1px cream border and the offset shadow.
+// The free tier's burgundy, lightened to read on the dark bar; the web uses the same value.
+const WORDMARK_ACCENT = '#e3a4b1';
+
 const SE_MARK_PATH =
   'm94 105.7h-26v-7.7h25.5c1.5-0.1 3.1-1.3 3.1-3.3v-11.7c0-1.5-1.2-2.9-2.8-2.9l-22.5-0.1c-1.7 0-3.3 1.4-3.3 3.1l0.1 9.7h-24.8c-1.6 0-3 1.3-3 2.9v12.9h-25.7c-1.6 0-3.1 1.3-3.1 2.9v8.1c0 1.4 1.2 2.7 2.6 2.7h79.9c1.5 0 2.8-1.3 2.9-2.7v-11.3c-0.2-1.3-1.4-2.6-2.9-2.6zm-0.2 21.2h-79.3c-1.4 0-2.9 1.2-2.9 2.8v8.3c0 1.4 1.2 3 2.8 3h79.6c1.6 0 2.8-1.3 2.8-2.8v-8c0-1.8-1.4-3.2-3-3.3z';
 
@@ -44,8 +47,8 @@ export function BrandMark({ size = 26 }: { size?: number }) {
       <Svg width={size} height={size} viewBox="4 67.9 100 85">
         <Defs>
           <LinearGradient id="brandmark" x1="11.51" y1="110.4" x2="96.71" y2="110.4" gradientUnits="userSpaceOnUse">
-            <Stop offset="0" stopColor="#006D72" />
-            <Stop offset="1" stopColor="#8F4BB2" />
+            <Stop offset="0" stopColor="#D8687F" />
+            <Stop offset="1" stopColor="#97304A" />
           </LinearGradient>
         </Defs>
         <Path d={SE_MARK_PATH} fill="url(#brandmark)" />
@@ -227,11 +230,6 @@ export function ScreenHeader({ title, emoji, icon, iconTile, accent, onBack, act
   );
 }
 
-// web --ctf-text-subtle; the comic theme has no separate subtle shade.
-function subtle(t: ThemeTokens): string {
-  return t.isComic ? t.textSecondary : '#6B7280';
-}
-
 function makeStyles(t: ThemeTokens) {
   const square = {
     width: 38,
@@ -258,7 +256,9 @@ function makeStyles(t: ThemeTokens) {
     // Both lockups are set at line-height 1 on the web.
     wordmark: { justifyContent: 'center', flexShrink: 1, overflow: 'hidden' },
     wordmarkStacked: { justifyContent: 'center', gap: 1, flexShrink: 1, overflow: 'hidden' },
-    initials: { fontSize: 17, lineHeight: 17, fontFamily: interFamily('800'), letterSpacing: 0.5, color: t.textShell },
+    // The wordmark matches the web bar: Newsreader with the free tier's burgundy, lightened for the
+    // dark bar (community-shell.module.css .mobileBarWordmark*).
+    initials: { fontSize: 19, lineHeight: 19, fontFamily: 'Newsreader_500Medium', letterSpacing: 0.3, color: t.textShell },
     lockupName: {
       marginTop: 2,
       fontSize: 7,
@@ -266,15 +266,13 @@ function makeStyles(t: ThemeTokens) {
       fontFamily: interFamily('600'),
       letterSpacing: 1.6,
       textTransform: 'uppercase',
-      color: subtle(t),
+      color: WORDMARK_ACCENT,
     },
     stackedLine: {
-      fontSize: 8,
-      lineHeight: 8,
-      fontFamily: interFamily('600'),
-      letterSpacing: 1.2,
-      textTransform: 'uppercase',
-      color: subtle(t),
+      fontSize: 12,
+      lineHeight: 12,
+      fontFamily: 'Newsreader_500Medium',
+      color: WORDMARK_ACCENT,
     },
     spacer: { flex: 1 },
     controls: { flexDirection: 'row', alignItems: 'center', gap: 5 },
