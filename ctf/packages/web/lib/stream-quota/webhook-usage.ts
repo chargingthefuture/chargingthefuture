@@ -47,10 +47,46 @@ export function participantLeftUsage(payload: Record<string, unknown>): { surfac
   return { surface, seconds };
 }
 
-// Credit the meter for a participant who left. Returns true when something was credited.
+// One participant leaving one session, as a key: the call, the session, and the participant's own
+// session id (a Stream-side id per join, not a member id). Stream re-sends a delivery it thinks
+// failed (a slow response), and the body carries no delivery id, so this is what tells a re-send
+// from a second participant leaving. Null when the payload lacks any part, in which case the
+// minutes are still credited, as before, with nothing to dedupe on.
+export function participantLeftDedupeKey(payload: Record<string, unknown>): string | null {
+  const participant =
+    typeof payload.participant === 'object' && payload.participant !== null
+      ? (payload.participant as Record<string, unknown>)
+      : null;
+  const parts = [payload.call_cid, payload.session_id, participant?.user_session_id];
+  if (!parts.every((part): part is string => typeof part === 'string' && part.length > 0)) return null;
+  return parts.join('|');
+}
+
+// How long a processed delivery is remembered. Stream's re-sends arrive within minutes, so a day is
+// ample, and pruning keeps the table to about a day of rows.
+const DELIVERY_MEMORY_HOURS = 24;
+
+// Credit the meter for a participant who left. Returns true when something was credited, false for
+// a payload that credits nothing or a re-sent delivery already counted.
 export async function recordParticipantLeftUsage(payload: Record<string, unknown>): Promise<boolean> {
   const usage = participantLeftUsage(payload);
   if (!usage) return false;
-  await withDbTransaction((client) => recordStreamVideoUsage(client, usage.surface, usage.seconds));
-  return true;
+  const dedupeKey = participantLeftDedupeKey(payload);
+  return withDbTransaction(async (client) => {
+    if (dedupeKey) {
+      await client.query(
+        `DELETE FROM stream_video_webhook_deliveries WHERE received_at < NOW() - ($1 || ' hours')::interval`,
+        [String(DELIVERY_MEMORY_HOURS)],
+      );
+      const fresh = await client.query(
+        `INSERT INTO stream_video_webhook_deliveries (dedupe_key) VALUES ($1)
+         ON CONFLICT (dedupe_key) DO NOTHING
+         RETURNING dedupe_key`,
+        [dedupeKey],
+      );
+      if (fresh.rows.length === 0) return false;
+    }
+    await recordStreamVideoUsage(client, usage.surface, usage.seconds);
+    return true;
+  });
 }
