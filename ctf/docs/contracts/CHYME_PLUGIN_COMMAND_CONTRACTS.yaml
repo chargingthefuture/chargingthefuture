@@ -80,8 +80,8 @@ contracts:
 
   - pluginId: chyme
     command: chyme.call.join
-    version: 1.1.0
-    description: Provision Stream token and channel membership for Chyme room join flow. Refused (409 CHYME_ROOM_FULL) when the room already holds as many members as the Stream quota policy's cap allows; checked before the Stream mint and again under a lock on the room row. Credits the presence gap to the Stream Video minute meter.
+    version: 1.2.0
+    description: Provision Stream token and channel membership for Chyme room join flow. Refused (409 CHYME_ROOM_FULL) when the room already holds as many members as the Stream quota policy's cap allows; checked before the Stream mint and again under a lock on the room row. Credits the presence gap to the Stream Video minute meter. When CHYME_GUEST_STREAM_ROLE is set, gives the joiner the Stream call role the room's speak mode calls for (the listener role in hand-raise mode unless let speak or an admin; the default role otherwise); a Stream failure there is reported and does not turn the join away.
     inputSchema: {}
     outputSchema:
       ok:
@@ -470,8 +470,8 @@ contracts:
 
   - pluginId: chyme
     command: chyme.admin.speak-mode
-    version: 1.0.0
-    description: Switch the room between open mic (every joiner may speak; the default) and hand-raise mode (a joiner listens until an admin lets them speak). Switching to hand-raise turns everyone present except the acting admin into a listener and mutes them in the call.
+    version: 1.1.0
+    description: Switch the room between open mic (every joiner may speak; the default) and hand-raise mode (a joiner listens until an admin lets them speak). Switching to hand-raise turns everyone present except the acting admin into a listener, mutes them in the call and gives them the listener Stream role; switching to open puts everyone present back on the default Stream role. The role steps are skipped when CHYME_GUEST_STREAM_ROLE is unset.
     inputSchema:
       mode:
         type: string

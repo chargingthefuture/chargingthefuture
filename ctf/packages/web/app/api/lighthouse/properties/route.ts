@@ -109,12 +109,15 @@ export async function GET(request: NextRequest) {
   const pageSize = parsePositiveInt(request.nextUrl.searchParams.get('pageSize'), 20);
   const country = request.nextUrl.searchParams.get('country') ?? undefined;
   const city = request.nextUrl.searchParams.get('city') ?? undefined;
-  const onlyActive = parseOnlyActive(request.nextUrl.searchParams.get('onlyActive'));
+  // Hidden listings are how an admin takes one down, so only an admin may ask for them here. A member's
+  // onlyActive=false is ignored; hosts read their own hidden listings through /api/lighthouse/my-properties.
+  const viewerIsAdmin = ensureLighthouseAdmin(gate.auth) === null;
+  const onlyActive = viewerIsAdmin ? parseOnlyActive(request.nextUrl.searchParams.get('onlyActive')) : true;
 
   try {
     // Pass the browsing member so listings from anyone they have blocked (or who blocked them) are
     // left out — a block hides the person as well as stopping contact.
-    const result = await listProperties({ page, pageSize, country, city, onlyActive, viewerUserId: gate.auth.userId, viewerIsAdmin: ensureLighthouseAdmin(gate.auth) === null });
+    const result = await listProperties({ page, pageSize, country, city, onlyActive, viewerUserId: gate.auth.userId, viewerIsAdmin });
     return NextResponse.json({ ok: true, ...result }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'lighthouse', op: 'properties' });
