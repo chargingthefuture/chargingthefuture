@@ -66,7 +66,7 @@ export function AccountDataView(props: AccountDataViewProps) {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={tok.BRAND} />}
       >
         {view === 'danger' ? (
-          <Danger s={s} serviceCount={deletable.length} onContinue={props.onOpenAccountDelete} />
+          <Danger s={s} serviceCount={deletable.length + retained.length} onContinue={props.onOpenAccountDelete} />
         ) : remaining.length === 0 ? (
           <Empty s={s} tok={tok} hasRetained={retained.length > 0} />
         ) : (

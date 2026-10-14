@@ -192,6 +192,10 @@ export async function bookSlot(
   const slotMs = Date.parse(slotStartIso);
 
   return withDbTransaction(async (client) => {
+    // One booking per host at a time. Without this lock two bookings sent together for different
+    // starts both read the same existing slots, both pass the ceiling, and both insert; the unique
+    // index only stops two bookings of the same start. The lock is released at commit or rollback.
+    await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`ti-radio-book:${host.userId}`]);
     const existing = await nearbyStartsMs(client, host.userId, slotMs);
     if (exceedsRollingCap(existing, slotMs)) {
       throw new TiRadioError(
