@@ -167,7 +167,9 @@ function VisibilityPicker({ activity, t, busy, onVisibility }: Pick<ItemProps, '
       <Text style={{ fontSize: 12, fontFamily: interFamily('400'), color: t.MUTED }}>Visible to</Text>
       <SelectField
         label="Who can see this activity"
-        value={visDraft}
+        // The draft only shows while its request is in flight; once it settles the saved value shows
+        // again, so a failed change does not leave a setting on screen that was not saved.
+        value={busy ? visDraft : activity.visibility}
         disabled={busy}
         fontSize={12}
         style={{ paddingVertical: 6, paddingHorizontal: 8, gap: 6 }}
