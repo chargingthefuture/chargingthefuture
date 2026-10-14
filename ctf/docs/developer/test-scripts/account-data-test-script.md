@@ -106,11 +106,12 @@ to lose permanently — this cannot be undone. Note its email before you start.
 **Steps:**
 1. Sign in as the throwaway account, open Account & Data, choose the full-account delete, type
    `delete my account`, and confirm.
-2. Read the "Deletion queued" screen.
+2. Read the "Deletion queued" screen, then press **Sign out** on it.
 3. Try to sign in again with that account's email.
 4. As an admin, open `/admin/unlock` and look at the "Sign-ups" panel.
 **Expected:** Step 2: the confirmation says the personal data is being removed across all services
-**and that the sign-in is removed with it**. Step 3: signing in is no longer possible — the account is
+**and that the sign-in is removed with it**, and Sign out leaves the screen: the web goes to the
+signed-out page, Android returns to the signed-out Apps screen. Step 3: signing in is no longer possible — the account is
 gone from the auth provider, not merely emptied. Step 4: the account is not in the sign-up list at all
 (it no longer exists), so it is not sitting in the "No Quora URL" tab as if it were someone who never
 verified. If the auth provider is unreachable at the moment of deletion, the data deletion still

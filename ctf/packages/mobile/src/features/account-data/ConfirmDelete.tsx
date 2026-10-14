@@ -1,7 +1,7 @@
 // Full-account deletion confirmation, copied from the web's AccountDataConfirmDelete
 // (components/account-data/account-data-confirm-delete.tsx): a panel over a dimmed screen that
 // asks the member to type the exact phrase before Delete permanently turns on, then the
-// "Deletion queued" acknowledgement.
+// "Deletion queued" acknowledgement with a Sign out button, as on the web.
 
 import React, { useMemo, useState } from 'react';
 import { Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -12,6 +12,7 @@ import { interFamily } from '../../components/ui';
 import { getAccountTokens, radius, Spinner, type AccountTokens } from '../account';
 import { FULL_ACCOUNT_CONFIRM_PHRASE } from './glyphs';
 import type { FullAccountDeletionResult } from './api';
+import { useAuth } from '../../auth/auth-context';
 
 type ConfirmStatus = 'idle' | 'submitting' | 'done' | 'error';
 
@@ -163,7 +164,6 @@ function DeleteButton({ s, ready, submitting, onPress }: { s: ReturnType<typeof 
   );
 }
 
-// The "Deletion queued" acknowledgement shown once the delete request is accepted.
 // The sentence about the sign-in, for either outcome — the same wording as the web's
 // signInRemovalSentence (components/account-data/account-data-shared.ts).
 function signInRemovalSentence(result: FullAccountDeletionResult): string {
@@ -174,7 +174,10 @@ function signInRemovalSentence(result: FullAccountDeletionResult): string {
   return `Your personal data is being removed across all services, but your sign-in could not be removed, so you can still sign in to an empty account.${reason} Use Report a bug to have the sign-in removed for you.`;
 }
 
+// The "Deletion queued" acknowledgement shown once the delete request is accepted. Sign out is the
+// way off it: the data is gone, so nothing else in the app is left to open.
 function DeletionQueued({ s, result }: { s: ReturnType<typeof makeStyles>; result: FullAccountDeletionResult }) {
+  const { signOut } = useAuth();
   return (
     <Modal visible animationType="none" onRequestClose={() => undefined}>
       <View style={s.doneRoot}>
@@ -185,6 +188,19 @@ function DeletionQueued({ s, result }: { s: ReturnType<typeof makeStyles>; resul
         <Text style={s.doneBody}>
           Your request has been received. {signInRemovalSentence(result)} Your ServiceCredits are held for 7 days from now, then returned to the community treasury; if any are locked in an active escrow, the return waits until that escrow resolves. Some audit records are retained for platform integrity.
         </Text>
+        <TouchableOpacity
+          onPress={() => {
+            // Clearing the local session is what takes the member off this screen, whether or not the
+            // sign-in was removed; a refusal from the provider changes nothing for the member.
+            void Promise.resolve()
+              .then(() => signOut())
+              .catch(() => undefined);
+          }}
+          accessibilityRole="button"
+          style={[s.keepBtn, s.doneSignOut]}
+        >
+          <Text style={s.keepText}>Sign out</Text>
+        </TouchableOpacity>
       </View>
     </Modal>
   );
@@ -196,6 +212,7 @@ function makeStyles(t: ThemeTokens, tok: AccountTokens) {
     doneRoot: { flex: 1, backgroundColor: tok.BG, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 },
     doneIcon: { width: 64, height: 64, borderRadius: radius(t, 32), backgroundColor: 'rgba(34,197,94,0.1)', borderWidth: 1, borderColor: 'rgba(34,197,94,0.25)', alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
     doneTitle: { fontSize: 22, fontFamily: interFamily('800'), color: tok.TEXT, marginBottom: 10, textAlign: 'center' },
+    doneSignOut: { marginTop: 24 },
     doneBody: { fontSize: 14, lineHeight: 23.8, fontFamily: interFamily('400'), color: tok.SUBTLE, textAlign: 'center' },
     overlay: { flex: 1, backgroundColor: 'rgba(9,11,15,0.78)' },
     overlayContent: { padding: 16 },
