@@ -720,6 +720,7 @@ it in the Neon SQL Editor after `post/0055` and `ctf/scripts/sql/landing_page_lo
 6. Pick two job titles from step 1 that some people share, then `SELECT directory_public_match_count(ARRAY['<id 1>', '<id 2>']);` and the same with each id alone.
 7. On the landing page, tap a need that 0 people match, then paste `ctf/scripts/sql/landing_unmet_needs_report.sql` into the Neon SQL Editor.
 8. `SELECT * FROM directory_public_skill_coverage;` then open Workforce → Overview.
+9. On the same phone as step 4, change the picks and tap Save this match again, then run step 4's query.
 **Expected:**
 - Step 1: the busiest titles, each with its exact count.
 - Step 2: one column, `total`, matching the Directory's profile count, less owners restricted with scope `all` or `contact`.
@@ -729,6 +730,7 @@ it in the Neon SQL Editor after `post/0055` and `ctf/scripts/sql/landing_page_lo
 - Step 6: the pair is never more than the two single answers added together, and is less whenever somebody lists both.
 - Step 7: that need is listed with one more `times_asked` than before, and tapping it again on the same visit adds nothing.
 - Step 8: `covered` and `catalog` equal the Skills Coverage tile's "X of Y skills", and the landing page's "…% of the skills" sentence shows the same rounded percentage.
+- Step 9: the page reads "Your code is the same. It now holds what you picked." and shows step 4's code; the newest row is still that code, with a new `created_at` and the new `people_at_save`, and no second row was added.
 **Result:** web ☐ — notes:
 
 ---

@@ -18,7 +18,8 @@ import { SkillsTaxonomyTitlesColumn } from "./st-titles-column";
 import { SkillsTaxonomySkillsDetail } from "./st-skills-detail";
 import { SkillsTaxonomyEmptyState } from "./st-empty-state";
 import { SkillsTaxonomyLoading } from "./st-loading";
-import { failureText } from 'lib/errors/client-failure';
+import { failureText, responseFailureText } from 'lib/errors/client-failure';
+import { reportError } from 'lib/observability/report';
 
 type StMobileView = "sectors" | "titles" | "skills";
 
@@ -126,7 +127,14 @@ export function SkillsTaxonomyBrowser() {
     setError(null);
     try {
       const res = await fetch("/api/skills-taxonomy/hierarchy", { cache: "no-store" });
-      if (!res.ok) throw new Error("Failed to load taxonomy.");
+      if (!res.ok) {
+        // Show the route's own reason (a 503 outage or an Unlock deny) and report it with the status,
+        // so a denied read and a database outage can be told apart.
+        const text = await responseFailureText(res, "Failed to load taxonomy.", 'member');
+        reportError(new Error(text), { area: 'skills-taxonomy', op: 'load', extra: { status: res.status } });
+        setError(text);
+        return;
+      }
       const data = (await res.json()) as { items: StSector[] };
       setSectors(data.items ?? []);
       setSelectedSectorId((prev) => prev ?? (data.items?.[0]?.id ?? null));

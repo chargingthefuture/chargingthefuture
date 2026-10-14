@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireWeeklyPerformanceReadAccess } from 'lib/weekly-performance/_lib';
+import { requireWeeklyPerformanceAdminAccess } from 'lib/weekly-performance/_lib';
 import { getWeekWindow, insertWeeklyPerformanceAudit } from 'lib/weekly-performance/repository';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
@@ -10,7 +10,7 @@ import { failureReason } from 'lib/errors/failure';
 const WEEK_START_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 export async function GET(request: NextRequest, context: { params: Promise<{ weekStart: string }> }) {
-  const gate = await requireWeeklyPerformanceReadAccess();
+  const gate = await requireWeeklyPerformanceAdminAccess();
   if (!gate.allowed) {
     return gate.response;
   }
