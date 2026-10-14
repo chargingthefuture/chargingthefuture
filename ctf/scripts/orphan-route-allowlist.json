@@ -74,6 +74,11 @@
       "reason": "Called by One Percent's server for the owner's desk, with a DIRECTORY_SERVICE_TOKENS credential. Reads one claimed profile by id (owner decision, 2026-10-02)."
     },
     {
+      "route": "/api/directory/service/profiles",
+      "kind": "external",
+      "reason": "Called by One Percent's server for Find matches on the owner's desk, with a DIRECTORY_SERVICE_TOKENS credential. Reads a page of profiles (owner decision, 2026-10-07)."
+    },
+    {
       "route": "/api/directory/service/accounts/[accountId]/profile",
       "kind": "external",
       "reason": "Called by One Percent's server for the owner's desk, with a DIRECTORY_SERVICE_TOKENS credential. Reads the claimed profile belonging to one signed-in client's account (owner decision, 2026-10-02)."

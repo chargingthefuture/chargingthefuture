@@ -17,7 +17,7 @@ type ChymeParticipant = {
 export type ChymeRole = 'speaker' | 'listener';
 export type ChymeSpeakMode = 'open' | 'hand_raise';
 
-type ChymeRoomResponse = {
+export type ChymeRoomResponse = {
   roomId: string;
   roomName: string;
   roomKey: string;
@@ -43,26 +43,22 @@ type ChymeRoomResponse = {
   };
 };
 
+export type ChymeMessage = {
+  id: string;
+  userId: string;
+  username: string | null;
+  text: string;
+  sentAtIso: string;
+};
+
 type ChymeMessagesResponse = {
   roomKey: string;
-  messages: Array<{
-    id: string;
-    userId: string;
-    username: string | null;
-    text: string;
-    sentAtIso: string;
-  }>;
+  messages: ChymeMessage[];
 };
 
 type ChymeSendResponse = {
   ok: true;
-  message: {
-    id: string;
-    userId: string;
-    username: string | null;
-    text: string;
-    sentAtIso: string;
-  };
+  message: ChymeMessage;
 };
 
 export type ChymeJoinResponse = {
@@ -86,16 +82,38 @@ type ChymeDeletionResponse = {
 // session token (Authorization: Bearer) resolves to on the backend. All requests
 // go through authedFetchJson, which attaches that token.
 
-export async function getChymeRoom(): Promise<ChymeRoomResponse> {
-  return authedFetchJson('/api/chyme/room');
+// Which room a call acts on: the main room, or the private Weavers of the Commons room, which the
+// server addresses with `?room=contributors` on every room, chat, presence and moderation route.
+export type ChymeRoomScope = 'main' | 'contributors';
+
+export function withRoom(path: string, scope: ChymeRoomScope): string {
+  if (scope !== 'contributors') return path;
+  return path.includes('?') ? `${path}&room=contributors` : `${path}?room=contributors`;
 }
 
-export async function getChymeMessages(): Promise<ChymeMessagesResponse> {
-  return authedFetchJson('/api/chyme/messages?limit=50');
+export async function getChymeRoom(scope: ChymeRoomScope = 'main'): Promise<ChymeRoomResponse> {
+  return authedFetchJson(withRoom('/api/chyme/room', scope));
 }
 
-export async function postChymeMessage(text: string): Promise<ChymeSendResponse> {
-  return authedFetchJson('/api/chyme/messages', {
+// The room read for the room switcher: the private room answers 404 to a member who has not earned
+// it (or while it is closed), which the screen shows as the "how it's earned" explainer.
+export async function readChymeRoom(scope: ChymeRoomScope): Promise<ChymeRoomResponse | 'locked'> {
+  if (scope !== 'contributors') return getChymeRoom(scope);
+  const response = await authedFetch(withRoom('/api/chyme/room', scope));
+  if (response.status === 404) return 'locked';
+  const payload = (await response.json().catch(() => null)) as (ChymeRoomResponse & { message?: unknown }) | null;
+  if (!response.ok || !payload) {
+    throw new Error(typeof payload?.message === 'string' ? payload.message : `Network request failed: ${response.status}`);
+  }
+  return payload;
+}
+
+export async function getChymeMessages(scope: ChymeRoomScope = 'main'): Promise<ChymeMessagesResponse> {
+  return authedFetchJson(withRoom('/api/chyme/messages?limit=50', scope));
+}
+
+export async function postChymeMessage(text: string, scope: ChymeRoomScope = 'main'): Promise<ChymeSendResponse> {
+  return authedFetchJson(withRoom('/api/chyme/messages', scope), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
     body: JSON.stringify({ text }),
@@ -106,15 +124,15 @@ export async function postChymeMessage(text: string): Promise<ChymeSendResponse>
 // (DELETE /api/chyme/messages/[messageId] → 403 for someone else's message, 404 for a missing id,
 // 400 for a non-UUID). CSRF-guarded. There is no in-place edit: the client's "Edit" loads the text
 // back into the composer and calls this delete, then the member sends a fresh message (new id/time).
-export async function deleteChymeMessage(messageId: string): Promise<{ ok: true }> {
-  return authedFetchJson(`/api/chyme/messages/${encodeURIComponent(messageId)}`, {
+export async function deleteChymeMessage(messageId: string, scope: ChymeRoomScope = 'main'): Promise<{ ok: true }> {
+  return authedFetchJson(withRoom(`/api/chyme/messages/${encodeURIComponent(messageId)}`, scope), {
     method: 'DELETE',
     headers: { 'x-ctf-csrf': '1' },
   });
 }
 
-export async function postChymeJoin(): Promise<ChymeJoinResponse> {
-  return authedFetchJson('/api/chyme/join', {
+export async function postChymeJoin(scope: ChymeRoomScope = 'main'): Promise<ChymeJoinResponse> {
+  return authedFetchJson(withRoom('/api/chyme/join', scope), {
     method: 'POST',
     headers: { 'x-ctf-csrf': '1' },
   });
@@ -122,8 +140,8 @@ export async function postChymeJoin(): Promise<ChymeJoinResponse> {
 
 // Explicit leave: drops the member's presence row so they stop counting as in the room at once,
 // instead of holding a spot until the 45s presence window lapses. Matches the web room's Leave.
-export async function postChymeLeave(): Promise<{ ok: true }> {
-  return authedFetchJson('/api/chyme/leave', {
+export async function postChymeLeave(scope: ChymeRoomScope = 'main'): Promise<{ ok: true }> {
+  return authedFetchJson(withRoom('/api/chyme/leave', scope), {
     method: 'POST',
     headers: { 'x-ctf-csrf': '1' },
   });
@@ -139,8 +157,8 @@ export const CHYME_HEARTBEAT_STOP_CODES: readonly string[] = ['CHYME_REMOVED_FRO
 
 export type ChymeHeartbeatResult = { ok: boolean; code: string | null; message: string | null };
 
-export async function postChymeHeartbeat(): Promise<ChymeHeartbeatResult> {
-  const response = await authedFetch('/api/chyme/heartbeat', {
+export async function postChymeHeartbeat(scope: ChymeRoomScope = 'main'): Promise<ChymeHeartbeatResult> {
+  const response = await authedFetch(withRoom('/api/chyme/heartbeat', scope), {
     method: 'POST',
     headers: { 'x-ctf-csrf': '1' },
   });
@@ -156,8 +174,8 @@ export async function postChymeHeartbeat(): Promise<ChymeHeartbeatResult> {
 // Persist the caller's raise/lower hand on their presence row so everyone in the room keeps seeing
 // it until it's lowered (or they leave). Stream reactions are transient and auto-clear, so they
 // cannot carry this state. Mirrors the web room's POST /api/chyme/hand call.
-export async function postChymeHand(raised: boolean): Promise<{ ok: true }> {
-  return authedFetchJson('/api/chyme/hand', {
+export async function postChymeHand(raised: boolean, scope: ChymeRoomScope = 'main'): Promise<{ ok: true }> {
+  return authedFetchJson(withRoom('/api/chyme/hand', scope), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
     body: JSON.stringify({ raised }),
@@ -272,28 +290,28 @@ export async function deleteFullAccount(): Promise<ChymeDeletionResponse> {
 
 export type ChymeModerationResponse = { ok: true; streamApplied: boolean; streamNotice?: string };
 
-function postModeration(path: string, body: Record<string, unknown>): Promise<ChymeModerationResponse> {
-  return authedFetchJson<ChymeModerationResponse>(path, {
+function postModeration(path: string, body: Record<string, unknown>, scope: ChymeRoomScope): Promise<ChymeModerationResponse> {
+  return authedFetchJson<ChymeModerationResponse>(withRoom(path, scope), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
     body: JSON.stringify(body),
   });
 }
 
-export function postChymeAdminMute(userId: string): Promise<ChymeModerationResponse> {
-  return postModeration('/api/chyme/admin/mute', { userId });
+export function postChymeAdminMute(userId: string, scope: ChymeRoomScope = 'main'): Promise<ChymeModerationResponse> {
+  return postModeration('/api/chyme/admin/mute', { userId }, scope);
 }
 
-export function postChymeAdminRemove(userId: string): Promise<ChymeModerationResponse> {
-  return postModeration('/api/chyme/admin/remove', { userId });
+export function postChymeAdminRemove(userId: string, scope: ChymeRoomScope = 'main'): Promise<ChymeModerationResponse> {
+  return postModeration('/api/chyme/admin/remove', { userId }, scope);
 }
 
-export function postChymeAdminRole(userId: string, role: ChymeRole): Promise<ChymeModerationResponse> {
-  return postModeration('/api/chyme/admin/role', { userId, role });
+export function postChymeAdminRole(userId: string, role: ChymeRole, scope: ChymeRoomScope = 'main'): Promise<ChymeModerationResponse> {
+  return postModeration('/api/chyme/admin/role', { userId, role }, scope);
 }
 
-export function postChymeAdminSpeakMode(mode: ChymeSpeakMode): Promise<ChymeModerationResponse> {
-  return postModeration('/api/chyme/admin/speak-mode', { mode });
+export function postChymeAdminSpeakMode(mode: ChymeSpeakMode, scope: ChymeRoomScope = 'main'): Promise<ChymeModerationResponse> {
+  return postModeration('/api/chyme/admin/speak-mode', { mode }, scope);
 }
 
 // --- Scheduled rooms, MVP (owner decision, 2026-09-19): what is coming up on the TI Radio guide ---

@@ -32,7 +32,7 @@ export default async function TiRadioPage() {
   return (
     <TiRadioGuideView
       initialGuide={guide}
-      signInUrl={getHostedSignInUrl() ?? '/sign-in'}
+      signInUrl={getHostedSignInUrl() ?? '/'}
       verifyUrl="/plugin/unlock"
     />
   );
