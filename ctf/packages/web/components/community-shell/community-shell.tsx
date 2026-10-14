@@ -26,7 +26,7 @@ import { SeMark } from '../shared/se-mark';
 import type { UnlockReviewStatus } from '../../lib/unlock/types';
 import styles from './community-shell.module.css';
 import { cycleFocusTrap, focusableWithin } from './dialog-focus';
-import { failureText } from 'lib/errors/client-failure';
+import { failureText, responseFailureText } from 'lib/errors/client-failure';
 
 // Verification state for a signed-in member who has not yet completed Quora verification but reaches
 // the Commons (notably the early-Commons A/B treatment bucket). Null/undefined when the member is
@@ -360,6 +360,12 @@ function ChatSection({ activeChannel, currentUser, isAdmin, shellStats, filtered
   return <ShellChatPanel stats={shellStats} plugins={filteredPlugins} currentUser={currentUser} isAuthenticated={isAuthenticated} isAdmin={isAdmin} />;
 }
 
+// A failed load's reason above the main content; nothing when there is no failure.
+function ShellAlert({ text }: { text: string | null }) {
+  if (!text) return null;
+  return <section className={styles.usernameAlert} role="alert">{text}</section>;
+}
+
 type ShellMainContentProps = {
   section: ShellSection;
   isAuthenticated: boolean;
@@ -367,6 +373,7 @@ type ShellMainContentProps = {
   verification: ShellVerification | null;
   unlockFocus: boolean;
   loadError: string | null;
+  channelsError: string | null;
   channels: CommonsChannelInfo[];
   activeChannel: string | null;
   onChannelSelect: (slug: string) => void;
@@ -390,6 +397,7 @@ function ShellMainContent({
   verification,
   unlockFocus,
   loadError,
+  channelsError,
   channels,
   activeChannel,
   onChannelSelect,
@@ -415,17 +423,18 @@ function ShellMainContent({
       {isAuthenticated && verification ? (
         <UnlockVerifyBanner hasSubmission={verification.hasSubmission} reviewStatus={verification.reviewStatus} />
       ) : null}
-      {loadError ? (
-        <section className={styles.usernameAlert} role="alert">{loadError}</section>
-      ) : null}
+      <ShellAlert text={loadError} />
       {section === 'chat' && isAuthenticated ? (
-        <ChannelSwitchRow
-          channels={channels}
-          activeChannel={activeChannel}
-          onChannelSelect={onChannelSelect}
-          onLockedChannelClick={onLockedChannelClick}
-          showLockedChannel={!unlockFocus}
-        />
+        <>
+          <ShellAlert text={channelsError} />
+          <ChannelSwitchRow
+            channels={channels}
+            activeChannel={activeChannel}
+            onChannelSelect={onChannelSelect}
+            onLockedChannelClick={onLockedChannelClick}
+            showLockedChannel={!unlockFocus}
+          />
+        </>
       ) : null}
       {section === 'chat' ? (
         <ChatSection
@@ -532,6 +541,7 @@ export function CommunityShell(props: CommunityShellProps) {
   const [channels, setChannels] = useState<CommonsChannelInfo[]>([]);
   const [activeChannel, setActiveChannel] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [channelsError, setChannelsError] = useState<string | null>(null);
   const [activeApp, setActiveApp] = useState<string | null>(null);
   const [sortMode, setSortMode] = useState<PluginSortMode>('recent');
   const [recentPluginSlugs, setRecentPluginSlugs] = useState<string[]>([]);
@@ -606,13 +616,21 @@ export function CommunityShell(props: CommunityShellProps) {
           if (!canceled) {
             const loadedChannels = channelsPayload.channels ?? [];
             setChannels(loadedChannels);
+            setChannelsError(null);
             // Default the open channel to the first one (general) so the sidebar
             // shows which channel the chat panel is already displaying.
             setActiveChannel((current) => current ?? loadedChannels[0]?.slug ?? null);
           }
+        } else if (channelsRes.status !== 401 && channelsRes.status !== 403) {
+          // A 401/403 is the access gate, and the chat panel below already says why the member is
+          // not in. Any other failure gets the route's own reason instead of an unexplained empty list.
+          const text = await responseFailureText(channelsRes, 'Unable to load the Commons channels.', 'member');
+          if (!canceled) setChannelsError(text);
         }
-      } catch {
-        // Silently fail; channels will remain empty.
+      } catch (caught) {
+        if (!canceled) {
+          setChannelsError(failureText(caught, { area: 'community-shell', op: 'load_channels', fallback: 'Unable to load the Commons channels.', audience: 'member' }));
+        }
       }
     }
 
@@ -713,6 +731,7 @@ export function CommunityShell(props: CommunityShellProps) {
             verification={verification}
             unlockFocus={unlockFocus}
             loadError={loadError}
+            channelsError={channelsError}
             channels={channels}
             activeChannel={activeChannel}
             onChannelSelect={handleChannelSelect}
