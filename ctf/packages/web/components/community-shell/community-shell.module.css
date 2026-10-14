@@ -2092,10 +2092,14 @@
   user-select: none;
 }
 
+/* The wordmark is set in Newsreader, the serif the project's other sites use, with the free tier's
+   burgundy as its accent (lightened to read on the dark bar). It is the one place the app carries
+   that family's look; everything else in the app keeps its own. */
 .mobileBarWordmarkInitials {
-  font-size: 17px;
-  font-weight: 800;
-  letter-spacing: 0.5px;
+  font-family: 'Newsreader Variable', Georgia, serif;
+  font-size: 19px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
   color: var(--ctf-text-shell);
   white-space: nowrap;
 }
@@ -2106,14 +2110,15 @@
   font-weight: 600;
   letter-spacing: 1.6px;
   text-transform: uppercase;
-  color: var(--ctf-text-subtle);
+  color: #e3a4b1;
   white-space: nowrap;
 }
 
 /* Compact wordmark for the signed-in bar. Turning the section tabs into icons freed room beside the
    mark, but not enough for the signed-out lockup: measured in Chromium at the app's own Inter, that
    lockup is 85px wide and an admin on a 375px phone has 65px to spare. Setting the two words on their
-   own lines instead of one is 50px, which fits every phone width with room left over — so the product
+   own lines instead of one is 50px (54px since the wordmark moved to 12px Newsreader on 2026-10-14,
+   measured the same way), which fits every phone width with room left over — so the product
    name reads on the bar for signed-in members too, without risking the avatar being clipped off the
    right edge again (the 2026-07-19 report). The single-line lockup is unchanged for signed-out
    visitors, whose bar carries no admin, help, settings or avatar and has the width for it. */
@@ -2129,11 +2134,10 @@
 }
 
 .mobileBarWordmarkStackedLine {
-  font-size: 8px;
-  font-weight: 600;
-  letter-spacing: 1.2px;
-  text-transform: uppercase;
-  color: var(--ctf-text-subtle);
+  font-family: 'Newsreader Variable', Georgia, serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: #e3a4b1;
   white-space: nowrap;
 }
 
@@ -2812,9 +2816,9 @@
 }
 
 .notificationsManage {
-  margin-top: 12px;
-  padding: 12px 8px 4px;
-  border-top: 1px solid var(--ctf-border-dim, rgba(255, 255, 255, 0.12));
+  margin-bottom: 12px;
+  padding: 4px 8px 12px;
+  border-bottom: 1px solid var(--ctf-border-dim, rgba(255, 255, 255, 0.12));
 }
 
 .notificationsManageToggle {
