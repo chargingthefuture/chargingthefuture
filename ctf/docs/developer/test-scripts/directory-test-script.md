@@ -703,6 +703,36 @@ id and an unclaimed one from the admin list.
 
 ---
 
+### DIR-A10 · The landing page's counts and saved matches (added 2026-10-13)
+
+**Role:** owner, in the Neon dashboard · **Surfaces:** none in the app (the public landing page reads these)
+
+Nothing a member does in the app changes. This checks the two views and the saved-match table the
+public landing page (`landing-page-v4`) reads, and that its own login can reach nothing else. Run
+it in the Neon SQL Editor after `post/0055` and `ctf/scripts/sql/landing_page_login_grants.sql`.
+
+**Steps:**
+1. `SELECT title, people FROM directory_public_skill_counts ORDER BY people DESC NULLS LAST LIMIT 5;`
+2. `SELECT * FROM directory_public_totals;`
+3. Pick a job title with 1 to 4 people in the admin Directory list and find it in step 1's view without the `LIMIT`.
+4. Save a match on the landing page, then `SELECT code, people_at_save, created_at FROM directory_landing_match_codes ORDER BY created_at DESC LIMIT 1;`
+5. Connected as `landing_page` (its connection address), `SELECT * FROM directory_profiles LIMIT 1;`
+6. Pick two job titles from step 1 that some people share, then `SELECT directory_public_match_count(ARRAY['<id 1>', '<id 2>']);` and the same with each id alone.
+7. On the landing page, tap a need that 0 people match, then paste `ctf/scripts/sql/landing_unmet_needs_report.sql` into the Neon SQL Editor.
+8. `SELECT * FROM directory_public_skill_coverage;` then open Workforce → Overview.
+**Expected:**
+- Step 1: the busiest titles, each with its exact count.
+- Step 2: one column, `total`, matching the Directory's profile count, less owners restricted with scope `all` or `contact`.
+- Step 3: `people` is that exact number.
+- Step 4: the code shown on the page, with no name or contact detail anywhere in the row.
+- Step 5: refused with "permission denied for table directory_profiles".
+- Step 6: the pair is never more than the two single answers added together, and is less whenever somebody lists both.
+- Step 7: that need is listed with one more `times_asked` than before, and tapping it again on the same visit adds nothing.
+- Step 8: `covered` and `catalog` equal the Skills Coverage tile's "X of Y skills", and the landing page's "…% of the skills" sentence shows the same rounded percentage.
+**Result:** web ☐ — notes:
+
+---
+
 ## Parity check (web ↔ android)
 
 For DIR-1, DIR-2, DIR-4, and DIR-A1 to DIR-A3, the android app and the mobile-responsive web layout
