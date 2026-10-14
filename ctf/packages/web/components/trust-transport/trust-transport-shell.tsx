@@ -37,6 +37,13 @@ function buildBookingBody(args: {
   };
 }
 
+type BookingKey = { key: string; fingerprint: string };
+
+// Keep the key while the booking is the same; a changed field is a new booking and gets a new key.
+function bookingKeyFor(current: BookingKey | null, fingerprint: string): BookingKey {
+  return current && current.fingerprint === fingerprint ? current : { key: crypto.randomUUID(), fingerprint };
+}
+
 export function TrustTransportShell({ isAdmin }: { isAdmin?: boolean } = {}) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -65,6 +72,7 @@ export function TrustTransportShell({ isAdmin }: { isAdmin?: boolean } = {}) {
   // Tracks the most recently requested chat trip so a slower earlier response
   // can't overwrite the credentials for a trip the user has since switched to.
   const activeChatReqRef = useRef<string | null>(null);
+  const bookingKeyRef = useRef<BookingKey | null>(null);
   const { theme } = useTheme();
   const t = getTrustTransportTokens(theme);
 
@@ -129,12 +137,18 @@ export function TrustTransportShell({ isAdmin }: { isAdmin?: boolean } = {}) {
     try {
       // Body building lives in buildBookingBody; send the x-ctf-csrf header every mutation requires
       // (without it the request is denied 403).
+      // One idempotency key per booking: a retry of the same booking (after a lost or timed-out
+      // response) resends the same key, so the server returns the first request instead of making a
+      // second. Changing any field starts a new booking with a new key.
+      const bookingBody = buildBookingBody({ rideType, pickup: from.trim(), dropoff: to.trim(), priceCurrency, priceAmount, acceptedCurrencies });
+      bookingKeyRef.current = bookingKeyFor(bookingKeyRef.current, JSON.stringify(bookingBody));
       const res = await fetch("/api/trust-transport/requests", {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
-        body: JSON.stringify(buildBookingBody({ rideType, pickup: from.trim(), dropoff: to.trim(), priceCurrency, priceAmount, acceptedCurrencies })),
+        body: JSON.stringify({ ...bookingBody, idempotencyKey: bookingKeyRef.current.key }),
       });
       if (!res.ok) throw new Error(await responseFailureText(res, "Failed to create request", "member"));
+      bookingKeyRef.current = null;
       setBooked(true);
       await fetchRequests();
     } catch (e: unknown) {
