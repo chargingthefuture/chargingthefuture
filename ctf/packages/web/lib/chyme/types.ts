@@ -29,6 +29,18 @@ export type ChymeMessage = {
   sentAtIso: string;
 };
 
+// One room message as a signed-out visitor receives it (GET /api/chyme/public/messages). It carries
+// the display handle the page shows and never the member's account id, which other routes accept
+// for blocks, tips and Back Channel invites. `username` stays so an app still running the earlier
+// screen, which built the handle itself, keeps working.
+export type ChymePublicMessage = {
+  id: string;
+  username: string | null;
+  handle: string;
+  text: string;
+  sentAtIso: string;
+};
+
 // How full the room is against the cap in force right now. `max` moves with the Stream quota band
 // (see lib/stream-quota/policy.ts), so a client shows "N of M" from this rather than a constant.
 export type ChymeRoomCapacity = {
@@ -162,6 +174,7 @@ export type ChymeAuditEvent = {
     | 'chyme.admin.role'
     | 'chyme.admin.speak-mode'
     | 'chyme.admin.readings.switch'
+    | 'chyme.transfer'
     | 'chyme.profile.delete.service'
     | 'account.profile.delete.full';
   actorId: string;

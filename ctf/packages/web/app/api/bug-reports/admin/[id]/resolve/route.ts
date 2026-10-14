@@ -34,6 +34,12 @@ async function parseResolveRequest(
     return { error: invalidPayload('Invalid JSON body.') };
   }
 
+  // `null` or a non-object parses as JSON; reading `action` off null would throw outside any
+  // try block and end as an unexplained 500.
+  if (!body || typeof body !== 'object') {
+    return { error: invalidPayload('The request body must be a JSON object with an action.') };
+  }
+
   if (body.action !== 'release' && body.action !== 'reject') {
     return { error: invalidPayload('action must be "release" or "reject".') };
   }
