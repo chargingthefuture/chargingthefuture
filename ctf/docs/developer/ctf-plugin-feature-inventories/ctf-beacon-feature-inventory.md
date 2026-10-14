@@ -228,7 +228,9 @@ feed; when the event ends, Beacon auto-posts the recording to the Commons as a r
   Stream Video minute meter (`stream_video_usage_daily`, via `lib/stream-quota/webhook-usage.ts`)
   under the surface the call id names: `beacon-*` → Beacon publishers, `pp-*` → PeerProgramming,
   `foundation-call-*` → Foundation, anything else → "other"; Chyme rooms and Back Channel calls
-  are skipped because their presence heartbeats already feed the meter (2026-09-19). Every other
+  are skipped because their presence heartbeats already feed the meter (2026-09-19). A delivery
+  Stream re-sends is recognized by its call, session and participant session ids
+  (`stream_video_webhook_deliveries`) and credits nothing the second time (2026-10-14). Every other
   event is acknowledged without acting so Stream stops retrying. A stored recording writes an allow
   `beacon.event.stream-webhook.ingest` audit row (actor `system`, metadata `commonsRecordingPostId`,
   `recordingStored`); a missing or wrong signature writes a deny row before the 401, storing nothing
@@ -245,6 +247,11 @@ feed; when the event ends, Beacon auto-posts the recording to the Commons as a r
    `recording_archived_at` (TIMESTAMPTZ, nullable) is when.
 2. `beacon_events_admin_audit_trail` — actor_id, command, policy_status, reason, target_type,
    target_id, metadata, created_at.
+3. `stream_video_webhook_deliveries` (2026-10-14) — `dedupe_key` TEXT primary key, `received_at`
+   TIMESTAMPTZ (indexed). One row per processed `call.session_participant_left` delivery to this
+   plugin's webhook, keyed `call_cid|session_id|participant.user_session_id` (Stream-side ids, no
+   member id). A re-sent delivery hits the key and credits nothing; rows older than a day are
+   pruned on each insert. No personal data, so no deletion-registry entry.
 
 Live chat and reactions are **not** stored (ephemeral, in Stream). Use the
 `CREATE TABLE IF NOT EXISTS` + `ALTER … ADD COLUMN IF NOT EXISTS` pattern, and give every column a
@@ -384,6 +391,14 @@ stops. HLS is used for public viewers so scale does not multiply WebRTC cost.
 12. **Android viewer parity** — deferred via a parity ticket on the build PR.
 
 ## Change Log
+
+- 2026-10-14: **A re-sent participant-left webhook no longer counts the same minutes twice
+  (code-review #2669).** `call.session_participant_left` added its seconds to the Stream Video meter
+  with no record of the delivery, so a delivery Stream re-sent after a slow response was counted
+  again and could trip the quota guards early. New table `stream_video_webhook_deliveries` holds one
+  row per processed delivery, keyed on the call, session and participant session ids, inserted in
+  the same transaction as the credit; a duplicate credits nothing. A payload missing any of those ids
+  is still credited, as before. `schema.demo.sql` was not regenerated in this change.
 
 - 2026-10-08: **The Android Beacon screen looks like the web screen (owner directive).** Every color,
   size, corner, icon and line of copy below the screen header now comes from the web member page
