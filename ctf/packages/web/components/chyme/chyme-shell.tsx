@@ -7,6 +7,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { ChymeLiveShell, type ChymeRoomScope } from '@/components/chyme/chyme-live-shell';
 import { ChymeUpcoming } from '@/components/chyme/chyme-upcoming';
 import { WeaversBadge } from '@/components/contributor-access/weavers-badge';
+import { PluginAdminButton } from '@/components/shared/plugin-admin-button';
 import { MobileTopActions } from '@/components/shared/mobile-top-actions';
 import { getChymeTokens, type ChymeTokens } from './chyme-shared';
 import { HOSTING_NOT_ENDORSEMENT_SHORT } from '@ctf/shared';
@@ -16,6 +17,8 @@ type ChymeShellProps = {
     userId: string;
     username: string | null;
   };
+  // Admins get an Admin button in the top bar that opens the Chyme admin screen (rule 131).
+  isAdmin?: boolean;
 };
 
 // Where the "Get the Android app" card links: the native app's APK is downloaded from the repo's
@@ -79,7 +82,7 @@ function ChymeRoomCard({
   );
 }
 
-export function ChymeShell({ currentUser }: ChymeShellProps) {
+export function ChymeShell({ currentUser, isAdmin }: ChymeShellProps) {
   const { theme } = useTheme();
   const t = getChymeTokens(theme);
   const isAndroid = useIsAndroid();
@@ -117,6 +120,9 @@ export function ChymeShell({ currentUser }: ChymeShellProps) {
           <Radio size={18} />
         </div>
         <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE }}>Chyme</span>
+        <div style={{ marginLeft: 'auto', flexShrink: 0 }}>
+          <PluginAdminButton href="/admin/chyme" isAdmin={isAdmin} accent={t.ACCENT} />
+        </div>
         <MobileTopActions />
       </div>
 

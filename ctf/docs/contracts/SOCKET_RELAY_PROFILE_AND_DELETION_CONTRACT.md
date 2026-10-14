@@ -96,11 +96,25 @@ transaction and is deterministic — the plugin's tables carry no `ON DELETE CAS
 the dependent rows itself instead of leaving orphans:
 
 - Deleted: the `socket_relay_requests` row, its `socket_relay_fulfillments`, their
-  `socket_relay_fulfillment_participants`, and the request's `socket_relay_request_events`.
+  `socket_relay_fulfillment_participants`, and the request's `socket_relay_request_events`. Its picture
+  in `socket_relay_request_images` goes with it through that table's `ON DELETE CASCADE`.
 - Retained: `socket_relay_messages` for those fulfillments — kept server-side as moderation/abuse
   evidence per the transaction-scoped messaging retention above (rule 100). Once the fulfillment row is
   gone they are unreachable through the participant-gated read path.
 - Audited: the removal writes a `socket-relay.admin.request.delete` row to `socket_relay_admin_audit_trail`.
+
+### Request pictures
+
+A request's one picture lives in `socket_relay_request_images`, keyed by the request and deleted with it
+(`ON DELETE CASCADE`). So whenever a request is deleted — by an admin, or with the owner's account or
+SocketRelay data — its picture is deleted in the same statement. The owner can also remove the picture
+alone and keep the request.
+
+An admin can remove a picture alone (`DELETE /api/socket-relay/admin/requests/:id/image`). With
+`ban=1` the member who uploaded it is also restricted at scope `all`, because an inappropriate picture is
+an automatic ban with no exceptions. Neither the picture nor its bytes are kept as evidence: the audit row
+(`socket-relay.admin.image.delete` or `socket-relay.admin.image.delete_and_ban`) records the request id
+and the uploader's id, and the restriction writes `account_restrictions_audit`.
 
 ### Rows you appear on but do not own (pseudonymized, not deleted)
 

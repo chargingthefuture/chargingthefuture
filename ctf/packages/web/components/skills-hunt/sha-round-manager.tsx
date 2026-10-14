@@ -3,12 +3,14 @@
 import { useState } from "react";
 import type { SkillsHuntRound, SkillsHuntRoundStatus } from "lib/skills-hunt/types";
 import { useTheme } from "@/hooks/useTheme";
+import { reportError } from "lib/observability/report";
 import { getSkillsHuntAdminTokens, type SkillsHuntAdminTokens } from "./sha-shared";
+import { SkillsHuntRoundAwards } from "./sha-round-awards";
 
-// Round management for the admin shell: create a round and edit an existing
-// one (lifecycle status, schedule, and the ServiceCredits reward config). The
-// reward fields are what turn a round into a paid round — both default to "no
-// reward", so a round pays nothing until an owner sets an amount here.
+// Round management for the admin shell: create a round and edit an existing one (lifecycle status,
+// schedule, and the end-of-round award). Only one round can be open at a time; the server refuses a
+// second and its message names the open one. A round is points only while it runs; the award fields
+// set the ServiceCredits pool and the points bar, and a closed round shows who would get what.
 function toLocalInputValue(source: string | Date): string {
   const date = typeof source === "string" ? new Date(source) : source;
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -27,26 +29,26 @@ const helpStyle = (t: SkillsHuntAdminTokens): React.CSSProperties => ({ fontSize
 
 type FormValues = {
   name: string; description: string; status: SkillsHuntRoundStatus;
-  startsAt: string; endsAt: string; rewardPerAccept: string; rewardCap: string;
+  startsAt: string; endsAt: string; awardPool: string; awardBar: string;
 };
 
 type SubmitPayload = {
   name: string; description: string | null; status: SkillsHuntRoundStatus;
-  startsAtIso: string; endsAtIso: string; rewardCreditsPerAccept: number; rewardPerUserRoundCap: number | null;
+  startsAtIso: string; endsAtIso: string; awardPoolCredits: number; awardPointsBar: number | null;
 };
 
 function emptyValues(): FormValues {
   const now = new Date();
   const inAWeek = new Date(now.getTime() + 7 * 86400000);
-  return { name: "", description: "", status: "draft", startsAt: toLocalInputValue(now), endsAt: toLocalInputValue(inAWeek), rewardPerAccept: "0", rewardCap: "" };
+  return { name: "", description: "", status: "draft", startsAt: toLocalInputValue(now), endsAt: toLocalInputValue(inAWeek), awardPool: "0", awardBar: "" };
 }
 
 function fromRound(r: SkillsHuntRound): FormValues {
   return {
     name: r.name, description: r.description ?? "", status: r.status,
     startsAt: toLocalInputValue(r.startsAtIso), endsAt: toLocalInputValue(r.endsAtIso),
-    rewardPerAccept: String(r.rewardCreditsPerAccept ?? 0),
-    rewardCap: r.rewardPerUserRoundCap === null || r.rewardPerUserRoundCap === undefined ? "" : String(r.rewardPerUserRoundCap),
+    awardPool: String(r.awardPoolCredits ?? 0),
+    awardBar: r.awardPointsBar === null || r.awardPointsBar === undefined ? "" : String(r.awardPointsBar),
   };
 }
 
@@ -68,13 +70,13 @@ function buildPayloadOrError(v: FormValues): { error: string } | { payload: Subm
   if (endDate <= startDate) return { error: "End must be after start." };
   const startIso = startDate.toISOString();
   const endIso = endDate.toISOString();
-  const perAccept = parseWholeNonNegative(v.rewardPerAccept) ?? 0;
-  const cap = parseWholeNonNegative(v.rewardCap);
-  if (Number.isNaN(perAccept) || Number.isNaN(cap)) return { error: "Reward amounts must be integers, and never negative." };
+  const pool = parseWholeNonNegative(v.awardPool) ?? 0;
+  const bar = parseWholeNonNegative(v.awardBar);
+  if (Number.isNaN(pool) || Number.isNaN(bar)) return { error: "The pool and the points bar must be numbers with no decimals, and never negative." };
   return {
     payload: {
       name: v.name.trim(), description: v.description.trim() || null, status: v.status,
-      startsAtIso: startIso, endsAtIso: endIso, rewardCreditsPerAccept: perAccept, rewardPerUserRoundCap: cap,
+      startsAtIso: startIso, endsAtIso: endIso, awardPoolCredits: pool, awardPointsBar: bar,
     },
   };
 }
@@ -140,14 +142,14 @@ function RoundForm({ initial, submitLabel, onSubmit, onCancel }: {
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr)", gap: 12, padding: "12px 14px", borderRadius: 10, background: `${t.ACCENT}08`, border: `1px solid ${t.ACCENT}25` }}>
         <div>
-          <label style={label} htmlFor="shr-reward">ServiceCredits per accepted nomination</label>
-          <input id="shr-reward" type="number" min={0} step={1} style={field} value={v.rewardPerAccept} onChange={(e) => set({ rewardPerAccept: e.target.value })} />
-          <div style={help}>0 = no ServiceCredits paid. Points and badges are still awarded.</div>
+          <label style={label} htmlFor="shr-bar">Points needed for an award</label>
+          <input id="shr-bar" type="number" min={0} step={1} style={field} value={v.awardBar} onChange={(e) => set({ awardBar: e.target.value })} placeholder="not set" />
+          <div style={help}>The round is points only. When it ends, every scout with at least this many points shares the pool.</div>
         </div>
         <div>
-          <label style={label} htmlFor="shr-cap">Per-scout cap this round (optional)</label>
-          <input id="shr-cap" type="number" min={0} step={1} style={field} value={v.rewardCap} onChange={(e) => set({ rewardCap: e.target.value })} placeholder="no cap" />
-          <div style={help}>Most ServiceCredits one scout can earn this round. Blank = no cap.</div>
+          <label style={label} htmlFor="shr-pool">ServiceCredits pool</label>
+          <input id="shr-pool" type="number" min={0} step={1} style={field} value={v.awardPool} onChange={(e) => set({ awardPool: e.target.value })} />
+          <div style={help}>Shared out by points among those scouts, after you review the list and press Send. 0 = no award.</div>
         </div>
       </div>
       {error && <div style={{ color: "#EF4444", fontSize: 13 }}>{error}</div>}
@@ -178,9 +180,9 @@ async function putRoundInput(url: string, method: "POST" | "PUT", payload: Submi
 }
 
 function rewardLabel(r: SkillsHuntRound): string {
-  if (!r.rewardCreditsPerAccept) return "No ServiceCredits reward";
-  const cap = r.rewardPerUserRoundCap === null ? "" : ` · cap ${r.rewardPerUserRoundCap}/scout`;
-  return `${r.rewardCreditsPerAccept} ServiceCredits / accept${cap}`;
+  if (!r.awardPoolCredits) return "Points only · no end-of-round award set";
+  const bar = r.awardPointsBar === null ? "points bar not set" : `${r.awardPointsBar}+ points`;
+  return `${r.awardPoolCredits} ServiceCredits pool · ${bar}${r.awardsSentAtIso ? " · sent" : ""}`;
 }
 
 // Manual leaderboard rebuild for a round. The leaderboard is a cached table that
@@ -189,10 +191,12 @@ function rewardLabel(r: SkillsHuntRound): string {
 // already-accepted submission) without waiting for the next review.
 function RebuildLeaderboardButton({ round, t }: { round: SkillsHuntRound; t: SkillsHuntAdminTokens }) {
   const [state, setState] = useState<"idle" | "working" | "done" | "error">("idle");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   async function rebuild() {
     if (!window.confirm(`Rebuild the leaderboard for “${round.name}” from its current accepted submissions?`)) return;
     setState("working");
+    setErrorMessage(null);
     try {
       const res = await fetch(`/api/skills-hunt/admin/rounds/${round.id}/leaderboard/rebuild`, {
         method: "POST",
@@ -203,17 +207,25 @@ function RebuildLeaderboardButton({ round, t }: { round: SkillsHuntRound; t: Ski
         throw new Error(body?.message ?? "Unable to rebuild leaderboard.");
       }
       setState("done");
-    } catch {
+    } catch (err) {
+      reportError(err, { area: "skills-hunt", op: "admin_round_leaderboard_rebuild" });
+      // The route's own reason (a 503's cause, or the gate's refusal) is what the admin can act on.
+      setErrorMessage(err instanceof Error ? err.message : "Unable to rebuild leaderboard.");
       setState("error");
     }
   }
 
   const label = state === "working" ? "Rebuilding…" : state === "done" ? "Rebuilt ✓" : state === "error" ? "Failed — retry" : "Rebuild leaderboard";
   return (
-    <button type="button" onClick={() => void rebuild()} disabled={state === "working"}
-      style={{ padding: "6px 14px", borderRadius: 8, background: "transparent", border: "1px solid rgba(255,255,255,0.16)", color: state === "error" ? "#EF4444" : t.SUBTLE, fontSize: 12, fontWeight: 600, cursor: state === "working" ? "not-allowed" : "pointer", opacity: state === "working" ? 0.6 : 1 }}>
-      {label}
-    </button>
+    <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 0 }}>
+      <button type="button" onClick={() => void rebuild()} disabled={state === "working"}
+        style={{ padding: "6px 14px", borderRadius: 8, background: "transparent", border: "1px solid rgba(255,255,255,0.16)", color: state === "error" ? "#EF4444" : t.SUBTLE, fontSize: 12, fontWeight: 600, cursor: state === "working" ? "not-allowed" : "pointer", opacity: state === "working" ? 0.6 : 1 }}>
+        {label}
+      </button>
+      {state === "error" && errorMessage && (
+        <div role="alert" style={{ color: "#EF4444", fontSize: 12, maxWidth: 260, overflowWrap: "anywhere" }}>{errorMessage}</div>
+      )}
+    </div>
   );
 }
 
@@ -267,6 +279,7 @@ export function SkillsHuntRoundManager({ rounds }: { rounds: SkillsHuntRound[] }
                   </button>
                 </div>
               </div>
+              {r.status === "closed" && <SkillsHuntRoundAwards roundId={r.id} t={t} />}
               {editingId === r.id && (
                 <div style={{ marginTop: 14, paddingTop: 14, borderTop: `1px solid ${t.BORDER}` }}>
                   <RoundForm

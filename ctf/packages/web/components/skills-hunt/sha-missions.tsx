@@ -197,7 +197,7 @@ function MissionPosterCard({ roundId }: { roundId: string }) {
   const today = new Date().toISOString().slice(0, 10);
   return (
     <SharePicture
-      url={`/api/skills-hunt/admin/rounds/${roundId}/missions/image`}
+      url={`/api/skills-hunt/admin/rounds/${roundId}/missions/image?tz=${encodeURIComponent(Intl.DateTimeFormat().resolvedOptions().timeZone)}`}
       filename={`skillshunt-missions-${today}.png`}
       label="Show these missions as one picture"
       accent={t.ACCENT}

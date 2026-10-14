@@ -26,6 +26,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { Pool } from 'pg';
 import { PROJECTION_SOURCES, RECOGNITION_SOURCES, computeValueIndex } from './lib/gdpValueIndex.mjs';
+import { anthropicApiError, reportIfRunBlocked } from './lib/anthropicRunBlocked.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(__dirname, '../..');
@@ -40,7 +41,12 @@ function requireEnv(name) {
 }
 
 const databaseUrl = requireEnv('DATABASE_URL');
-requireEnv('ANTHROPIC_API_KEY');
+
+// STATS_ONLY=1 is the no-credit route (generate-community-stats-manual.yml): collect the same
+// aggregate counts, print them as `{ statsMarkdown }`, and make no model call. The workflow files
+// the numbers as a `draft-needed` issue and the `/community-stats` command writes the post from it.
+const STATS_ONLY = process.env.STATS_ONLY === '1';
+if (!STATS_ONLY) requireEnv('ANTHROPIC_API_KEY');
 
 // The number of documented skills a functioning economy needs — the point at which the community can
 // meet its own needs. Any economy can be any size; covering all 650 skills is what makes it
@@ -95,9 +101,9 @@ const STAT_PROVIDERS = [
       // directory_profiles.id is varchar on the production (v2-cloned) database
       // while directory_profile_skills.profile_id is uuid, so every join across
       // the two must cast both sides to text (see repository.ts, PR #534).
+      // A row that exists is a listed person: every way a listing goes away is a hard delete.
       const profiles = await client.query(
-        `SELECT COUNT(*)::int AS n FROM directory_profiles
-         WHERE deleted_at IS NULL`,
+        `SELECT COUNT(*)::int AS n FROM directory_profiles`,
       );
       // Skills at least one active member has listed. Joined to the taxonomy and filtered to
       // is_active so this counts the same population as the catalog total below — otherwise a skill
@@ -270,6 +276,11 @@ if (statsForPrompt.trim().length === 0) {
   process.exit(1);
 }
 
+if (STATS_ONLY) {
+  process.stdout.write(JSON.stringify({ statsMarkdown }) + '\n');
+  process.exit(0);
+}
+
 const brandVoice = readFileSync(
   join(repoRoot, 'ctf/docs/BRAND_VOICE_LEXICON.md'),
   'utf-8',
@@ -288,7 +299,7 @@ const response = await fetch('https://api.anthropic.com/v1/messages', {
   body: JSON.stringify({
     model: 'claude-haiku-4-5-20251001',
     max_tokens: 2048,
-    system: `You write short weekly community notes for Charging the Future, an open-source platform built for survivors of Specterati harassment. Follow the brand voice guide carefully.\n\nBRAND VOICE:\n${brandVoice}\n\nWHAT THIS POST IS:\nA plain, honest weekly snapshot of how much is happening on the platform, using only community-wide totals. The goal is to show real activity and real need so someone reading sees a reason to join: open requests are waiting for help, people have listed skills, a skill they have is needed. Never describe any single person, post, or profile — only the totals you are given.\n\nWRITING RULES (these override any instinct toward marketing copy):\n- Write at about a 6th-grade reading level. Short sentences. Everyday words. If a 12-year-old would stumble on a word, pick a simpler one.\n- Sound like one person talking to a friend, not a company announcing. First person ("this week", "you can") over corporate "we are proud".\n- Use ONLY the numbers given below. Never invent, round up, or guess a number. If a number is 0, say it plainly.\n- A count of posts, requests, or items is a count of THINGS, not people. The same person can create several posts, so these totals are cumulative activity, not a headcount. Never say or imply how many people are behind them (do not turn "2 open posts" into "2 people"). Only call a number people or members when the fact is explicitly labeled "people" or "members".\n- Each app is given with its exact direct link ("direct link: https://app.chargingthefuture.com/apps/..."). The FIRST time you mention an app by name, put its full link right after the name, in parentheses, copied EXACTLY as given. Never invent, shorten, or guess a link, and never link an app you have no link for.\n- Never sell the importance of the numbers. State what they are and what someone can do, then stop. Banned: "matters deeply", "build trust", "deserve", "we're committed", "game-changer", "powerful", "seamless", "thriving", "vibrant", and any sentence about what the numbers "say about us".\n- The Community Value Index and its "value waiting to happen" figure are relative index numbers, NOT money. Never put a currency symbol on them, never call them dollars or credits, never present them as a price, a worth, or something anyone can cash out. Say them as plain numbers with their plain meaning: what has been exchanged so far, and what the open posts would add if they all closed (most never close).
+    system: `You write short weekly community notes for Skills Economy, an open-source platform built for survivors of Specterati harassment. Follow the brand voice guide carefully.\n\nBRAND VOICE:\n${brandVoice}\n\nWHAT THIS POST IS:\nA plain, honest weekly snapshot of how much is happening on the platform, using only community-wide totals. The goal is to show real activity and real need so someone reading sees a reason to join: open requests are waiting for help, people have listed skills, a skill they have is needed. Never describe any single person, post, or profile — only the totals you are given.\n\nWRITING RULES (these override any instinct toward marketing copy):\n- Write at about a 6th-grade reading level. Short sentences. Everyday words. If a 12-year-old would stumble on a word, pick a simpler one.\n- Sound like one person talking to a friend, not a company announcing. First person ("this week", "you can") over corporate "we are proud".\n- Use ONLY the numbers given below. Never invent, round up, or guess a number. If a number is 0, say it plainly.\n- A count of posts, requests, or items is a count of THINGS, not people. The same person can create several posts, so these totals are cumulative activity, not a headcount. Never say or imply how many people are behind them (do not turn "2 open posts" into "2 people"). Only call a number people or members when the fact is explicitly labeled "people" or "members".\n- Each app is given with its exact direct link ("direct link: https://app.chargingthefuture.com/apps/..."). The FIRST time you mention an app by name, put its full link right after the name, in parentheses, copied EXACTLY as given. Never invent, shorten, or guess a link, and never link an app you have no link for.\n- Never sell the importance of the numbers. State what they are and what someone can do, then stop. Banned: "matters deeply", "build trust", "deserve", "we're committed", "game-changer", "powerful", "seamless", "thriving", "vibrant", and any sentence about what the numbers "say about us".\n- The Community Value Index and its "value waiting to happen" figure are relative index numbers, NOT money. Never put a currency symbol on them, never call them dollars or credits, never present them as a price, a worth, or something anyone can cash out. Say them as plain numbers with their plain meaning: what has been exchanged so far, and what the open posts would add if they all closed (most never close).
 - No negative framing. Don't shame low numbers or hype high ones. A small number is fine to read small.\n- No rhetorical questions. No applause lines. No closing flourish.\n- Don't perform kindness or guess at anyone's feelings. Warmth comes from being useful and plain.\n- The project's code lives at exactly this URL: ${repoUrl} — use it verbatim when mentioning where to find the project.\n\nToday: ${today}`,
     messages: [
       {
@@ -300,7 +311,17 @@ const response = await fetch('https://api.anthropic.com/v1/messages', {
 });
 
 if (!response.ok) {
-  console.error('Anthropic API error:', response.status, await response.text());
+  const error = await anthropicApiError(response);
+  if (
+    !reportIfRunBlocked({
+      script: 'generate-community-stats',
+      error,
+      manualRoute: '/community-stats',
+      nothingLost: 'The counts are read fresh on every run, so the next run after this clears drafts the post.',
+    })
+  ) {
+    console.error(error.message);
+  }
   process.exit(1);
 }
 

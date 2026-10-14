@@ -18,11 +18,8 @@ CREATE TABLE IF NOT EXISTS click_log_incidents (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id TEXT NOT NULL,
   metadata JSONB NOT NULL DEFAULT '{}',
-  metadata_hash TEXT GENERATED ALWAYS AS (md5(metadata::text)) STORED,
   -- Owner-share opt-in (2026-08-01): a member may mark an incident as shared with the owner for
-  -- aggregate trend tracking. Defaults FALSE — nothing is shared unless the member opts in. A real
-  -- column (not metadata) so it is excluded from the metadata_hash dedupe and toggling share state
-  -- never collides with the UNIQUE (user_id, metadata_hash) constraint.
+  -- aggregate trend tracking. Defaults FALSE — nothing is shared unless the member opts in.
   shared_with_owner BOOLEAN NOT NULL DEFAULT FALSE,
   -- Optional incident tags (2026-08-02; arrays since 2026-08-13): a member may say which of the
   -- 50+ known problems happened (problem_tags — slugs mirror the landing-page problems list)
@@ -30,8 +27,7 @@ CREATE TABLE IF NOT EXISTS click_log_incidents (
   -- gang stalker game" Discourse thread). Arrays because a real incident routinely chains
   -- several schemes at once (owner decision, 2026-08-13); the API caps each list at 10.
   -- Canonical slug lists live in packages/web/lib/click-log/tags.ts; the API validates against
-  -- them. Real columns (not metadata) so they are excluded from the metadata_hash dedupe —
-  -- mirroring shared_with_owner — and so the shared-trends aggregate can unnest them as coarse
+  -- them. Real columns (not metadata) so the shared-trends aggregate can unnest them as coarse
   -- categorical values without touching the metadata JSON. The singular problem_tag/scheme_tag
   -- columns are superseded: backfilled into the arrays below, kept for history, no longer
   -- read or written by the app.
@@ -39,9 +35,15 @@ CREATE TABLE IF NOT EXISTS click_log_incidents (
   scheme_tag TEXT,
   problem_tags TEXT[] NOT NULL DEFAULT '{}',
   scheme_tags TEXT[] NOT NULL DEFAULT '{}',
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  UNIQUE (user_id, metadata_hash)
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+-- Each logged incident is its own row (2026-10-05). The table used to carry a generated
+-- metadata_hash column with UNIQUE (user_id, metadata_hash), so a member's second incident with the
+-- same note and location as an earlier one (most often two incidents with no note and no location,
+-- both stored as '{}') was refused and the create failed. Dropping the column also drops that
+-- constraint, whichever name it carries (it was created before the clicklog_ -> click_log_ rename on
+-- older databases). Mirrored in db/migrations/post/0053_click_log_drop_metadata_hash_dedupe.sql.
+ALTER TABLE IF EXISTS click_log_incidents DROP COLUMN IF EXISTS metadata_hash;
 ALTER TABLE IF EXISTS click_log_incidents ADD COLUMN IF NOT EXISTS shared_with_owner BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE IF EXISTS click_log_incidents ADD COLUMN IF NOT EXISTS problem_tag TEXT;
 ALTER TABLE IF EXISTS click_log_incidents ADD COLUMN IF NOT EXISTS scheme_tag TEXT;
@@ -531,6 +533,23 @@ ALTER TABLE IF EXISTS chyme_admin_audit_trail ADD COLUMN IF NOT EXISTS error_cat
 ALTER TABLE IF EXISTS chyme_admin_audit_trail ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
 CREATE INDEX IF NOT EXISTS idx_chyme_admin_audit_trail_lookup
   ON chyme_admin_audit_trail (created_at DESC, actor_id, command);
+-- Chyme readings loop: recorded readings of the blog posts, played on the Chyme page while nobody is
+-- live. A temporary module (owner decision, 2026-09-28): switched off once people start showing up,
+-- then deleted. To remove it, drop chyme_readings_config in a later migration.
+--
+-- chyme_readings_config: one row, the on/off switch. No row means off.
+CREATE TABLE IF NOT EXISTS chyme_readings_config (
+  singleton_id BOOLEAN PRIMARY KEY DEFAULT TRUE CHECK (singleton_id),
+  enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  updated_by TEXT NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS chyme_readings_config ADD COLUMN IF NOT EXISTS enabled BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS chyme_readings_config ADD COLUMN IF NOT EXISTS updated_by TEXT NULL;
+ALTER TABLE IF EXISTS chyme_readings_config ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- The loop's playlist is the list the blog publishes (readings.json), not a table here; the table
+-- that held admin-entered links was dropped on 2026-09-29 (migration 0043).
+DROP TABLE IF EXISTS chyme_readings_tracks;
 -- Chyme does not maintain its own service_credits_transactions table.
 -- Service credit accounting for Chyme is managed through the service-credits plugin if needed.
 COMMIT;
@@ -617,10 +636,12 @@ CREATE TABLE IF NOT EXISTS skills_hunt_rounds (
   starts_at TIMESTAMPTZ NOT NULL,
   ends_at TIMESTAMPTZ NOT NULL,
   scoring_config JSONB NOT NULL DEFAULT '{}'::jsonb,
-  -- ServiceCredits reward config (owner-set per round; defaults make a round pay nothing).
-  -- An integer-credit reward minted to the scout when a nomination is accepted, capped per scout.
-  reward_credits_per_accept INTEGER NOT NULL DEFAULT 0 CHECK (reward_credits_per_accept >= 0),
-  reward_per_user_round_cap INTEGER NULL CHECK (reward_per_user_round_cap IS NULL OR reward_per_user_round_cap >= 0),
+  -- End-of-round award (owner decision, 2026-10-01): when the round closes, every scout whose
+  -- score reached award_points_bar shares award_pool_credits ServiceCredits in proportion to their
+  -- points, sent once when an admin presses Send. 0 / NULL = no award set.
+  award_pool_credits INTEGER NOT NULL DEFAULT 0 CHECK (award_pool_credits >= 0),
+  award_points_bar INTEGER NULL CHECK (award_points_bar IS NULL OR award_points_bar >= 0),
+  awards_sent_at TIMESTAMPTZ NULL,
   created_by_user_id TEXT NOT NULL,
   updated_by_user_id TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -635,12 +656,15 @@ CREATE TABLE IF NOT EXISTS skills_hunt_submissions (
   full_name TEXT NOT NULL,
   bio TEXT NOT NULL,
   quora_profile_url TEXT NOT NULL,
-  -- Canonical matching key, not free text: exactly what canonicalizeQuoraUrl
-  -- (packages/web/lib/shared/quora-url.ts) returns, which is https://www.quora.com + the lowercased
-  -- path with trailing slashes removed. The per-round "first match" bonus and every per-person read
-  -- compare this column, and Directory's takedown list keys on the same form, so a row written in
-  -- any other spelling makes one person look like two. Rows stored before 2026-09-18 were re-keyed by
-  -- ctf/db/migrations/post/0027_canonical_quora_urls_directory_skills_hunt.sql.
+  -- Canonical matching key, not free text: exactly what canonicalizeNominationUrl
+  -- (packages/web/lib/skills-hunt/nomination-url.ts) returns. It takes the link out of the pasted
+  -- text, cuts a profile tab such as /activity back to /profile/<name>, then applies
+  -- canonicalizeQuoraUrl (packages/web/lib/shared/quora-url.ts): https://www.quora.com + the
+  -- lowercased path with trailing slashes removed. The per-round "first match" bonus and every
+  -- per-person read compare this column, and Directory's takedown list keys on the same form, so a
+  -- row written in any other spelling makes one person look like two. Rows stored before 2026-09-18
+  -- were re-keyed by ctf/db/migrations/post/0027_canonical_quora_urls_directory_skills_hunt.sql, and
+  -- rows stored with a profile tab by post/0054_skills_hunt_quora_profile_tab_urls.sql.
   quora_profile_url_normalized TEXT NOT NULL,
   -- Nominee location. `country` is required at submit time (enforced in validateSubmissionInput);
   -- `state`/`city` are optional. Columns are nullable so legacy rows and the guarded ALTER are safe;
@@ -649,6 +673,11 @@ CREATE TABLE IF NOT EXISTS skills_hunt_submissions (
   country TEXT NULL,
   state TEXT NULL,
   city TEXT NULL,
+  -- The nominee's job title (skills_taxonomy_job_titles.id), picked from the Scout form's job title
+  -- list; optional. On accept it and its sector carry into the generated directory_profiles row. The
+  -- submit insert stores it only when it names an active job title, otherwise null. No hard FK,
+  -- mirroring directory_profiles.job_title_id (the taxonomy table is created later in this file).
+  job_title_id UUID NULL,
   skills JSONB NOT NULL DEFAULT '[]'::jsonb,
   proposed_skills JSONB NOT NULL DEFAULT '[]'::jsonb,
   signature_hash TEXT NOT NULL,
@@ -2273,29 +2302,6 @@ CREATE TABLE IF NOT EXISTS workforce_recruited_sync_cursor (
   singleton_key BOOLEAN PRIMARY KEY DEFAULT TRUE,
   last_cursor_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
--- Service-scoped deletion event log for DELETE /api/workforce/profile (deletion contract section 8).
-CREATE TABLE IF NOT EXISTS workforce_deletion_events (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id TEXT NOT NULL,
-  scope TEXT NOT NULL,
-  plugin_id TEXT NOT NULL,
-  requested_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  processed_at TIMESTAMPTZ,
-  result TEXT NOT NULL,
-  request_id TEXT,
-  trace_id TEXT,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-ALTER TABLE IF EXISTS workforce_deletion_events ADD COLUMN IF NOT EXISTS id UUID;
-ALTER TABLE IF EXISTS workforce_deletion_events ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS workforce_deletion_events ADD COLUMN IF NOT EXISTS scope TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS workforce_deletion_events ADD COLUMN IF NOT EXISTS plugin_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS workforce_deletion_events ADD COLUMN IF NOT EXISTS requested_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE IF EXISTS workforce_deletion_events ADD COLUMN IF NOT EXISTS processed_at TIMESTAMPTZ;
-ALTER TABLE IF EXISTS workforce_deletion_events ADD COLUMN IF NOT EXISTS result TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS workforce_deletion_events ADD COLUMN IF NOT EXISTS request_id TEXT;
-ALTER TABLE IF EXISTS workforce_deletion_events ADD COLUMN IF NOT EXISTS trace_id TEXT;
-ALTER TABLE IF EXISTS workforce_deletion_events ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
 -- === ServiceCredits tables ===
 CREATE TABLE IF NOT EXISTS service_credits_wallets (
@@ -2473,6 +2479,8 @@ CREATE TABLE IF NOT EXISTS lighthouse_profiles (
   -- published is only the need itself (what they are looking for, where, when, budget range and the
   -- short intro) — never the phone number, never the Signal link, and never the member id.
   is_wanted_public BOOLEAN NOT NULL DEFAULT FALSE,
+  -- Account deletion now deletes this row outright, as the plugin's own delete does. Rows an older
+  -- account deletion only stamped here are removed by post/0050.
   service_deleted_at TIMESTAMPTZ NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -3222,6 +3230,13 @@ $directory_profiles_source_check$;
 --     CHECK (is_active = false OR (country IS NOT NULL AND btrim(country) <> ''));
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS invited_by_username TEXT;
 ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS unclaimed_handle TEXT;
+-- Who brought this person into the Directory: the Skills Hunt nominator, or the admin who added
+-- the profile. Survives a claim (the "Community-generated" line drops, the nomination does not).
+-- NULL for a profile a member made for themselves. Read by the Skills Hunt "Your totals" card.
+-- Backfilled by post/0044, which joins to directory_profile_change_events.target_id as text: the
+-- two id columns differ in type on production, and a bare = stopped the migration run (2026-10-01).
+ALTER TABLE IF EXISTS directory_profiles ADD COLUMN IF NOT EXISTS nominated_by_user_id TEXT;
+CREATE INDEX IF NOT EXISTS idx_directory_profiles_nominated_by ON directory_profiles (nominated_by_user_id) WHERE nominated_by_user_id IS NOT NULL;
 -- Case-insensitive uniqueness on unclaimed_handle so "Community-7F3A2B" and
 -- "community-7f3a2b" can't both exist. Idempotent: drops the old case-
 -- sensitive index if it exists, then recreates on lower(unclaimed_handle).
@@ -3858,6 +3873,11 @@ ALTER TABLE IF EXISTS skill_up_milestone_validations ADD COLUMN IF NOT EXISTS re
 ALTER TABLE IF EXISTS skill_up_milestone_validations ADD COLUMN IF NOT EXISTS validated_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS skill_up_milestone_validations ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS skill_up_milestone_validations ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- One validation row per enrollment and milestone. validateMilestone upserts with
+-- ON CONFLICT (enrollment_id, milestone_id), which Postgres refuses without this index. Existing
+-- duplicates are removed first by db/migrations/pre/0004_skill_up_milestone_validations_dedupe.sql.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_skill_up_milestone_validations_enrollment_milestone
+  ON skill_up_milestone_validations (enrollment_id, milestone_id);
 
 CREATE TABLE IF NOT EXISTS skill_up_disputes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -4419,6 +4439,33 @@ ALTER TABLE IF EXISTS socket_relay_request_accepted_currencies ADD COLUMN IF NOT
 ALTER TABLE IF EXISTS socket_relay_request_accepted_currencies ADD COLUMN IF NOT EXISTS currency_code TEXT;
 CREATE INDEX IF NOT EXISTS idx_socket_relay_request_accepted_currencies_request ON socket_relay_request_accepted_currencies(request_id);
 
+-- One picture per SocketRelay request, so a listing can show the thing being offered or asked for.
+-- The bytes live here, like feed_community_post_images, because this project has no image store.
+-- Deleted with the request. rules_acknowledged_at records that the uploader ticked the warning that
+-- an inappropriate picture is an automatic ban, with no exceptions; the upload route refuses without it.
+CREATE TABLE IF NOT EXISTS socket_relay_request_images (
+  request_id UUID PRIMARY KEY REFERENCES socket_relay_requests(id) ON DELETE CASCADE,
+  uploaded_by_user_id TEXT NOT NULL,
+  content_type TEXT NOT NULL CHECK (content_type IN ('image/png', 'image/jpeg', 'image/webp')),
+  bytes BYTEA NOT NULL,
+  byte_size INTEGER NOT NULL CHECK (byte_size > 0),
+  width INTEGER NOT NULL CHECK (width > 0),
+  height INTEGER NOT NULL CHECK (height > 0),
+  alt_text TEXT NOT NULL,
+  rules_acknowledged_at TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS socket_relay_request_images ADD COLUMN IF NOT EXISTS uploaded_by_user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS socket_relay_request_images ADD COLUMN IF NOT EXISTS content_type TEXT NOT NULL DEFAULT 'image/webp';
+ALTER TABLE IF EXISTS socket_relay_request_images ADD COLUMN IF NOT EXISTS bytes BYTEA NOT NULL DEFAULT ''::bytea;
+ALTER TABLE IF EXISTS socket_relay_request_images ADD COLUMN IF NOT EXISTS byte_size INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE IF EXISTS socket_relay_request_images ADD COLUMN IF NOT EXISTS width INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE IF EXISTS socket_relay_request_images ADD COLUMN IF NOT EXISTS height INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE IF EXISTS socket_relay_request_images ADD COLUMN IF NOT EXISTS alt_text TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS socket_relay_request_images ADD COLUMN IF NOT EXISTS rules_acknowledged_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS socket_relay_request_images ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_socket_relay_request_images_uploader ON socket_relay_request_images(uploaded_by_user_id);
+
 CREATE TABLE IF NOT EXISTS socket_relay_request_events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   request_id UUID NOT NULL,
@@ -4870,11 +4917,11 @@ ALTER TABLE IF EXISTS peer_programming_feedback ADD COLUMN IF NOT EXISTS release
 ALTER TABLE IF EXISTS peer_programming_feedback ADD COLUMN IF NOT EXISTS note TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS peer_programming_feedback ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
--- The goal board in a cohort (owner decision, 2026-09-25). A member posts one goal with a finish
--- line, breaks it into small tasks another member can do from a phone, and other members take a
+-- The goal board in a cohort (owner decision, 2026-09-25). A member posts goals, each with a finish
+-- line, breaks each into small tasks another member can do from a phone, and other members take a
 -- task, do it, and post the result. There is no conversation on the board: a goal, its tasks, and
--- their results are the only things anyone can write. At most one open goal per member, enforced by
--- the partial-unique index below.
+-- their results are the only things anyone can write. A member can hold up to 10 open goals at once
+-- (owner decision, 2026-10-02; PEER_PROGRAMMING_MAX_OPEN_GOALS), counted by createGoal on insert.
 CREATE TABLE IF NOT EXISTS peer_programming_goals (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   cohort_id UUID NOT NULL,
@@ -4895,8 +4942,9 @@ ALTER TABLE IF EXISTS peer_programming_goals ADD COLUMN IF NOT EXISTS status TEX
 ALTER TABLE IF EXISTS peer_programming_goals ADD COLUMN IF NOT EXISTS closed_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS peer_programming_goals ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS peer_programming_goals ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
--- One open goal per member.
-CREATE UNIQUE INDEX IF NOT EXISTS uq_peer_programming_goals_one_open
+-- A member's open goals, counted against the cap when they post another. Replaced the one-open-goal
+-- unique index, which post/0049 drops from an existing database.
+CREATE INDEX IF NOT EXISTS idx_peer_programming_goals_owner_open
   ON peer_programming_goals (owner_user_id)
   WHERE status = 'open';
 -- The board lists one cohort's goals, newest first.
@@ -5168,6 +5216,22 @@ CREATE INDEX IF NOT EXISTS idx_feed_admin_audit_trail_lookup
 -- a line in the server's log, which nothing can query, no screen can show, and which ages out of the
 -- host's retention window. These are decisions about other people's contributions: accepting one,
 -- declining it with a reason, editing a knowledge entry, regenerating or resolving a review turn.
+-- Comic (@comic assistant) runtime settings an admin can change from the app. One row.
+--
+-- unlock_help_without_review: when true, an @comic answer to an Unlock question from a member not yet
+-- approved is sent straight to them instead of waiting in the review queue (owner decision,
+-- 2026-09-26). Every other @comic answer is held for review regardless. Switched from the Unlock help
+-- log (/admin/comic/unlock-help). No row means the default, true; turning it off writes the row.
+CREATE TABLE IF NOT EXISTS comic_runtime_config (
+  singleton_id BOOLEAN PRIMARY KEY DEFAULT TRUE CHECK (singleton_id),
+  unlock_help_without_review BOOLEAN NOT NULL DEFAULT TRUE,
+  updated_by_user_id TEXT NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS comic_runtime_config ADD COLUMN IF NOT EXISTS unlock_help_without_review BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE IF EXISTS comic_runtime_config ADD COLUMN IF NOT EXISTS updated_by_user_id TEXT NULL;
+ALTER TABLE IF EXISTS comic_runtime_config ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
 CREATE TABLE IF NOT EXISTS comic_admin_audit_trail (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   actor_id TEXT NOT NULL,
@@ -5231,6 +5295,103 @@ ALTER TABLE IF EXISTS what_works_admin_audit_trail ADD COLUMN IF NOT EXISTS crea
 -- kind of decision without a sequential scan.
 CREATE INDEX IF NOT EXISTS idx_what_works_admin_audit_trail_lookup
   ON what_works_admin_audit_trail (created_at DESC, actor_id, command);
+
+-- Running costs (added 2026-09-26), read and edited on /admin/expenses. The owner pays every bill
+-- personally and decides what to cut from this list, so each row is a real amount of money a person
+-- pays, entered by hand: most providers do not report billing through an API.
+--   kind            'recurring' (amount is per month) or 'one_off' (amount is the one payment).
+--   billing         'fixed' (the same every month) or 'usage' (moves with use).
+--   amount_cents    NULL means the amount is not known yet — kept apart from zero, which is a
+--                   checked, free line. For a range ("$10-15") this is the low end.
+--   amount_max_cents  the high end of a range; NULL when the amount is a single figure.
+--   paid_on         the date of a one-off payment.
+--   last_checked_on the day somebody last looked at the provider's bill for this line.
+--   stopped_on      the day a recurring cost was canceled. The row stays, marked, so a cut is on
+--                   the record (an admin list hides nothing, rule 131); it leaves the monthly total.
+-- Starting rows come from db/migrations/post/0041 (one per service) and post/0045 (ElevenLabs);
+-- neither writes an amount. post/0047 removes 0041's ntfy line, which nothing uses.
+CREATE TABLE IF NOT EXISTS admin_expenses (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  provider TEXT NOT NULL,
+  purpose TEXT NOT NULL DEFAULT '',
+  kind TEXT NOT NULL DEFAULT 'recurring' CHECK (kind IN ('recurring', 'one_off')),
+  billing TEXT NOT NULL DEFAULT 'fixed' CHECK (billing IN ('fixed', 'usage')),
+  amount_cents INTEGER CHECK (amount_cents IS NULL OR amount_cents >= 0),
+  amount_max_cents INTEGER CHECK (amount_max_cents IS NULL OR amount_max_cents >= 0),
+  paid_on DATE,
+  last_checked_on DATE,
+  stopped_on DATE,
+  notes TEXT NOT NULL DEFAULT '',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS admin_expenses ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS admin_expenses ADD COLUMN IF NOT EXISTS provider TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS admin_expenses ADD COLUMN IF NOT EXISTS purpose TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS admin_expenses ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'recurring';
+ALTER TABLE IF EXISTS admin_expenses ADD COLUMN IF NOT EXISTS billing TEXT NOT NULL DEFAULT 'fixed';
+ALTER TABLE IF EXISTS admin_expenses ADD COLUMN IF NOT EXISTS amount_cents INTEGER;
+ALTER TABLE IF EXISTS admin_expenses ADD COLUMN IF NOT EXISTS amount_max_cents INTEGER;
+ALTER TABLE IF EXISTS admin_expenses ADD COLUMN IF NOT EXISTS paid_on DATE;
+ALTER TABLE IF EXISTS admin_expenses ADD COLUMN IF NOT EXISTS last_checked_on DATE;
+ALTER TABLE IF EXISTS admin_expenses ADD COLUMN IF NOT EXISTS stopped_on DATE;
+ALTER TABLE IF EXISTS admin_expenses ADD COLUMN IF NOT EXISTS notes TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS admin_expenses ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS admin_expenses ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+-- Every add, edit and removal on /admin/expenses (rule 131: every admin action is recorded). The
+-- metadata carries the row before and after, so a changed amount can be read back.
+CREATE TABLE IF NOT EXISTS admin_expenses_audit_trail (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  actor_id TEXT NOT NULL,
+  command TEXT NOT NULL,
+  policy_status TEXT NOT NULL,
+  reason TEXT NOT NULL,
+  target_type TEXT NOT NULL,
+  target_id TEXT NOT NULL,
+  result TEXT NOT NULL DEFAULT 'success',
+  error_category TEXT,
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS admin_expenses_audit_trail ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS admin_expenses_audit_trail ADD COLUMN IF NOT EXISTS actor_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS admin_expenses_audit_trail ADD COLUMN IF NOT EXISTS command TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS admin_expenses_audit_trail ADD COLUMN IF NOT EXISTS policy_status TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS admin_expenses_audit_trail ADD COLUMN IF NOT EXISTS reason TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS admin_expenses_audit_trail ADD COLUMN IF NOT EXISTS target_type TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS admin_expenses_audit_trail ADD COLUMN IF NOT EXISTS target_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS admin_expenses_audit_trail ADD COLUMN IF NOT EXISTS result TEXT NOT NULL DEFAULT 'success';
+ALTER TABLE IF EXISTS admin_expenses_audit_trail ADD COLUMN IF NOT EXISTS error_category TEXT;
+ALTER TABLE IF EXISTS admin_expenses_audit_trail ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS admin_expenses_audit_trail ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_admin_expenses_audit_trail_lookup
+  ON admin_expenses_audit_trail (created_at DESC, actor_id, command);
+
+-- The RunPod drafting bill, one row per endpoint per UTC day (added 2026-10-01), read from
+-- rest.runpod.io/v1/billing/endpoints by lib/admin-expenses/gpu-bill.ts on a daily schedule and from
+-- the "Read the bill now" control on /admin/expenses. Only this product's own endpoints are read (the
+-- ids come from OLLAMA_BASE_URL); the RunPod account is shared with One Percent, whose spending must
+-- never land here. These are real US dollar amounts the owner pays.
+--   amount_usd      RunPod's figure for the day, kept to the fraction of a cent it reports.
+--   time_billed_ms  GPU time RunPod billed that day.
+--   settled         FALSE while RunPod may still add to the day (it reports about an hour behind, and
+--                   today keeps growing): every read rewrites the row. TRUE once the day was read at
+--                   least three hours after it ended; the row is then written once and never changed.
+--   read_at         when the row was last written.
+CREATE TABLE IF NOT EXISTS admin_expense_gpu_bill_days (
+  endpoint_id TEXT NOT NULL,
+  bill_date DATE NOT NULL,
+  amount_usd NUMERIC(14, 6) NOT NULL DEFAULT 0,
+  time_billed_ms BIGINT NOT NULL DEFAULT 0,
+  settled BOOLEAN NOT NULL DEFAULT FALSE,
+  read_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (endpoint_id, bill_date)
+);
+ALTER TABLE IF EXISTS admin_expense_gpu_bill_days ADD COLUMN IF NOT EXISTS amount_usd NUMERIC(14, 6) NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS admin_expense_gpu_bill_days ADD COLUMN IF NOT EXISTS time_billed_ms BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS admin_expense_gpu_bill_days ADD COLUMN IF NOT EXISTS settled BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS admin_expense_gpu_bill_days ADD COLUMN IF NOT EXISTS read_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
 -- Mutual Time admin audit trail (added 2026-08-28). Owner directive: every admin action is recorded,
 -- on every surface. lib/mutual-time/audit.ts builds the entire contract-shaped event and ends in
@@ -5346,6 +5507,11 @@ ALTER TABLE IF EXISTS foundation_quote_requests ADD COLUMN IF NOT EXISTS service
 ALTER TABLE IF EXISTS foundation_quote_requests ADD COLUMN IF NOT EXISTS thread_id UUID REFERENCES foundation_connection_threads(id);
 ALTER TABLE IF EXISTS foundation_quote_requests ADD COLUMN IF NOT EXISTS lifecycle_state TEXT NOT NULL DEFAULT 'open';
 ALTER TABLE IF EXISTS foundation_quote_requests ADD COLUMN IF NOT EXISTS last_transitioned_at TIMESTAMPTZ;
+-- request_details is written by every quote create (createQuoteRequest, always a JSON object, '{}'
+-- when the member supplied none) but was never declared here, so a database built from this file
+-- alone refused the second step of Request Quote with "column request_details does not exist". A
+-- no-op where the column already exists.
+ALTER TABLE IF EXISTS foundation_quote_requests ADD COLUMN IF NOT EXISTS request_details JSONB NOT NULL DEFAULT '{}'::jsonb;
 -- Priced quote (issue #420/#425). This is the one-off engagement path only: when a provider responds
 -- they attach an amount + currency, and on close that value is the settled value (settled_at stamped),
 -- which the GDP recognition layer reads per currency. Foundation 1:1 instant calls are
@@ -5439,8 +5605,34 @@ ALTER TABLE IF EXISTS skills_hunt_rounds ADD COLUMN IF NOT EXISTS created_by_use
 -- ServiceCredits reward config (per-round; defaults pay nothing so legacy rounds are unaffected).
 -- Brand-new columns, so the CHECK constraints match the CREATE TABLE and add cleanly on a
 -- drift-repaired database (the column does not pre-exist, so IF NOT EXISTS adds it with the check).
-ALTER TABLE IF EXISTS skills_hunt_rounds ADD COLUMN IF NOT EXISTS reward_credits_per_accept INTEGER NOT NULL DEFAULT 0 CHECK (reward_credits_per_accept >= 0);
-ALTER TABLE IF EXISTS skills_hunt_rounds ADD COLUMN IF NOT EXISTS reward_per_user_round_cap INTEGER CHECK (reward_per_user_round_cap IS NULL OR reward_per_user_round_cap >= 0);
+-- The per-accept reward columns are gone (2026-10-02, post/0048): an accept has sent no credits
+-- since 2026-10-01, and nothing reads them. Dropped here too so a database built from this file
+-- matches one brought forward by the migrations.
+ALTER TABLE IF EXISTS skills_hunt_rounds DROP COLUMN IF EXISTS reward_credits_per_accept;
+ALTER TABLE IF EXISTS skills_hunt_rounds DROP COLUMN IF EXISTS reward_per_user_round_cap;
+ALTER TABLE IF EXISTS skills_hunt_rounds ADD COLUMN IF NOT EXISTS award_pool_credits INTEGER NOT NULL DEFAULT 0 CHECK (award_pool_credits >= 0);
+ALTER TABLE IF EXISTS skills_hunt_rounds ADD COLUMN IF NOT EXISTS award_points_bar INTEGER CHECK (award_points_bar IS NULL OR award_points_bar >= 0);
+ALTER TABLE IF EXISTS skills_hunt_rounds ADD COLUMN IF NOT EXISTS awards_sent_at TIMESTAMPTZ;
+-- One row per scout awarded at the end of a round. Written before any credits move, so the split is
+-- fixed at the first Send and a retry only sends the rows still unsent (sent_at NULL); the ledger
+-- idempotency key makes a repeated send of one row a no-op.
+CREATE TABLE IF NOT EXISTS skills_hunt_round_awards (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  round_id UUID NOT NULL REFERENCES skills_hunt_rounds(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL,
+  username_snapshot TEXT NULL,
+  score INTEGER NOT NULL CHECK (score >= 0),
+  amount INTEGER NOT NULL CHECK (amount > 0),
+  governance_event_id TEXT NULL,
+  sent_at TIMESTAMPTZ NULL,
+  created_by_user_id TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (round_id, user_id)
+);
+ALTER TABLE IF EXISTS skills_hunt_round_awards ADD COLUMN IF NOT EXISTS username_snapshot TEXT NULL;
+ALTER TABLE IF EXISTS skills_hunt_round_awards ADD COLUMN IF NOT EXISTS governance_event_id TEXT NULL;
+ALTER TABLE IF EXISTS skills_hunt_round_awards ADD COLUMN IF NOT EXISTS sent_at TIMESTAMPTZ NULL;
+CREATE INDEX IF NOT EXISTS idx_skills_hunt_round_awards_user ON skills_hunt_round_awards (user_id);
 
 -- skills_hunt_proposed_skill_promotions — companion ALTERs for every column so a
 -- legacy copy of the table is healed (the CREATE TABLE IF NOT EXISTS above is skipped
@@ -5548,6 +5740,7 @@ ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS url_valid
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS edit_history JSONB NOT NULL DEFAULT '[]'::jsonb;
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS edited_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS skills_hunt_submissions ADD COLUMN IF NOT EXISTS job_title_id UUID;
 DO $skills_hunt_submissions_url_validation_check$
 BEGIN
   IF NOT EXISTS (
@@ -5727,6 +5920,47 @@ $sc_cmd_idem_command_nullable$;
 -- service_credits_wallet_tombstones (2 missing)
 ALTER TABLE IF EXISTS service_credits_wallet_tombstones ADD COLUMN IF NOT EXISTS account_id TEXT;
 ALTER TABLE IF EXISTS service_credits_wallet_tombstones ADD COLUMN IF NOT EXISTS deletion_request_id UUID;
+
+-- The ServiceCredits ledger upserts three more tables on targets no index backed, so Postgres refused
+-- each statement ("no unique or exclusion constraint matching the ON CONFLICT specification"):
+-- every transfer insert (member send, plugin send, escrow release, fee collection, dispute
+-- adjustment, deletion reclaim) on (sender_user_id, idempotency_key); the deletion reclaim's wallet
+-- tombstone on (account_id, deletion_request_id); and its treasury event on (event_type, actor_id,
+-- idempotency_key). Any rows already sharing one of those keys are given distinct keys first by
+-- ctf/db/migrations/pre/0003_service_credits_unique_index_dedupe.sql, so these never fail on an
+-- existing database. The index on transfers is also what enforces per-sender replay protection.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_service_credits_transfers_sender_idem
+  ON service_credits_transfers (sender_user_id, idempotency_key);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_service_credits_wallet_tombstones_account_request
+  ON service_credits_wallet_tombstones (account_id, deletion_request_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_service_credits_treasury_events_type_actor_idem
+  ON service_credits_treasury_events (event_type, actor_id, idempotency_key);
+-- Legacy NOT NULL columns the v3 code never writes, which refused every insert into their tables:
+-- an escrow hold has no transfer until it is released (releaseEscrow sets transfer_id then), and a
+-- dispute adjustment records its case and amount in dispute_case_id and amount. Nothing reads
+-- dispute_id or adjustment_amount.
+DO $sc_legacy_not_null_relax$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = current_schema() AND table_name = 'service_credits_escrow_holds' AND column_name = 'transfer_id' AND is_nullable = 'NO'
+  ) THEN
+    ALTER TABLE service_credits_escrow_holds ALTER COLUMN transfer_id DROP NOT NULL;
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = current_schema() AND table_name = 'service_credits_dispute_adjustments' AND column_name = 'dispute_id' AND is_nullable = 'NO'
+  ) THEN
+    ALTER TABLE service_credits_dispute_adjustments ALTER COLUMN dispute_id DROP NOT NULL;
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = current_schema() AND table_name = 'service_credits_dispute_adjustments' AND column_name = 'adjustment_amount' AND is_nullable = 'NO'
+  ) THEN
+    ALTER TABLE service_credits_dispute_adjustments ALTER COLUMN adjustment_amount DROP NOT NULL;
+  END IF;
+END
+$sc_legacy_not_null_relax$;
 
 -- socket_relay_messages (1 missing)
 ALTER TABLE IF EXISTS socket_relay_messages ADD COLUMN IF NOT EXISTS client_message_id TEXT;
@@ -6868,6 +7102,129 @@ FROM service_credits_wallets
 WHERE is_frozen = TRUE
 ON CONFLICT (user_id) DO NOTHING;
 
+-- === directory public landing page (owner decision, 2026-10-13) ===
+-- The public match page (landing-page-v4, on Vercel) reads Directory counts per job title and saves
+-- the match a visitor asks to come back to. It connects with its own login, landing_page, which may
+-- read the two views below and read and add rows in directory_landing_match_codes, and nothing else
+-- (the grants are pasted in the Neon dashboard, not kept here, because the login is created there).
+-- Defined at the END so directory_profiles, the taxonomy tables and account_restrictions exist.
+--
+-- A saved match holds the code, the job title and the count when it was saved. No name, no contact
+-- details, no IP address: the code is the only way back to it, on purpose.
+CREATE TABLE IF NOT EXISTS directory_landing_match_codes (
+  code TEXT PRIMARY KEY,
+  job_title_id TEXT NOT NULL,
+  job_title_ids TEXT[],
+  people_at_save INTEGER,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  last_seen_at TIMESTAMPTZ
+);
+ALTER TABLE IF EXISTS directory_landing_match_codes ADD COLUMN IF NOT EXISTS job_title_id TEXT;
+ALTER TABLE IF EXISTS directory_landing_match_codes ADD COLUMN IF NOT EXISTS people_at_save INTEGER;
+ALTER TABLE IF EXISTS directory_landing_match_codes ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS directory_landing_match_codes ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ;
+-- The job titles behind the needs a visitor picked (job_title_id keeps the first, for older rows).
+ALTER TABLE IF EXISTS directory_landing_match_codes ADD COLUMN IF NOT EXISTS job_title_ids TEXT[];
+CREATE INDEX IF NOT EXISTS idx_directory_landing_match_codes_job_title ON directory_landing_match_codes (job_title_id);
+
+-- Who lists which job title, by their job title or any of their skills, claimed or unclaimed,
+-- leaving out owners restricted with scope all or contact. Not granted to the landing page: it
+-- holds profile ids. The two public views and directory_public_match_count read it. Ids are
+-- compared as text because some production id columns are VARCHAR.
+CREATE OR REPLACE VIEW directory_person_job_titles AS
+  WITH people AS (
+    SELECT p.id::text AS id, p.job_title_id::text AS job_title_id
+    FROM directory_profiles p
+    WHERE NOT EXISTS (
+      SELECT 1 FROM account_restrictions r
+      WHERE r.user_id::text = p.claimed_by_user_id::text
+        AND r.is_restricted
+        AND r.restriction_scope IN ('all', 'contact')
+    )
+  )
+  SELECT id AS person_id, job_title_id FROM people WHERE job_title_id IS NOT NULL
+  UNION
+  SELECT pp.id, sk.job_title_id::text
+  FROM people pp
+  JOIN directory_profile_skills ps ON ps.profile_id::text = pp.id
+  JOIN skills_taxonomy_skills sk ON sk.id::text = ps.skill_id::text;
+
+-- One row per active job title and how many people list it (0 when nobody does).
+CREATE OR REPLACE VIEW directory_public_skill_counts AS
+  WITH per_title AS (
+    SELECT job_title_id, COUNT(*)::integer AS n FROM directory_person_job_titles GROUP BY job_title_id
+  )
+  SELECT jt.id::text AS job_title_id,
+         s.name AS sector,
+         s.display_order AS sector_order,
+         jt.name AS title,
+         jt.display_order AS title_order,
+         COALESCE(pt.n, 0) AS people
+  FROM skills_taxonomy_job_titles jt
+  JOIN skills_taxonomy_sectors s ON s.id = jt.sector_id AND s.is_active
+  LEFT JOIN per_title pt ON pt.job_title_id = jt.id::text
+  WHERE jt.is_active;
+
+-- One row: everybody in the Directory, restriction rule as above.
+CREATE OR REPLACE VIEW directory_public_totals AS
+  WITH people AS (
+    SELECT p.id::text AS id
+    FROM directory_profiles p
+    WHERE NOT EXISTS (
+      SELECT 1 FROM account_restrictions r
+      WHERE r.user_id::text = p.claimed_by_user_id::text
+        AND r.is_restricted
+        AND r.restriction_scope IN ('all', 'contact')
+    )
+  )
+  SELECT (SELECT COUNT(*)::integer FROM people) AS total;
+
+-- One row: how many different active skills at least one Directory profile lists, and how many
+-- active skills there are. The same query as Workforce's Skills Coverage tile
+-- (lib/workforce/repository.ts getDashboard), so the landing page shows the same percentage.
+-- Counts of skills only; nothing about a person.
+CREATE OR REPLACE VIEW directory_public_skill_coverage AS
+  SELECT
+    (SELECT COUNT(DISTINCT dps.skill_id)::integer
+       FROM directory_profile_skills dps
+       JOIN directory_profiles p ON dps.profile_id::text = p.id::text
+       JOIN skills_taxonomy_skills s ON s.id = dps.skill_id
+      WHERE s.is_active = TRUE) AS covered,
+    (SELECT COUNT(*)::integer FROM skills_taxonomy_skills WHERE is_active = TRUE) AS catalog;
+
+-- How many people match a visitor: everyone who lists any of the given job titles, each counted
+-- once, as an exact number. Runs with its owner's rights so the landing page can call it
+-- without reading directory_person_job_titles itself; at most 60 titles per call.
+CREATE OR REPLACE FUNCTION directory_public_match_count(title_ids TEXT[])
+RETURNS INTEGER
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT n
+  FROM (
+    SELECT COUNT(DISTINCT person_id)::integer AS n
+    FROM directory_person_job_titles
+    WHERE job_title_id = ANY (title_ids[1:60])
+  ) x
+$$;
+REVOKE ALL ON FUNCTION directory_public_match_count(TEXT[]) FROM PUBLIC;
+
+-- In-demand needs (owner decision, 2026-10-13): each time a visitor on the landing page picks a need
+-- and nobody in the Directory matches it, the page records it once per visit, so the owner can see
+-- which needs go unmet and look for somebody. One row per time asked: the need's label (or
+-- "skill:<job title>" for a single added skill), the job titles behind it, and when. Nothing about
+-- the visitor: no code, name, contact detail or IP address. The landing page login may only add rows.
+CREATE TABLE IF NOT EXISTS directory_unmet_needs (
+  id BIGSERIAL PRIMARY KEY,
+  need TEXT NOT NULL,
+  job_title_ids TEXT[] NOT NULL DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS directory_unmet_needs ADD COLUMN IF NOT EXISTS need TEXT;
+ALTER TABLE IF EXISTS directory_unmet_needs ADD COLUMN IF NOT EXISTS job_title_ids TEXT[] NOT NULL DEFAULT '{}';
+ALTER TABLE IF EXISTS directory_unmet_needs ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_directory_unmet_needs_need ON directory_unmet_needs (need, created_at DESC);
+
 -- === beacon-plugin ===
 -- Beacon: admin-only one-way livestream. An admin goes live ad hoc to broadcast a live demo
 -- (screen content), flagship use the "State of the Skills Economy" address. Watching is public
@@ -6889,6 +7246,10 @@ CREATE TABLE IF NOT EXISTS beacon_events (
   recording_ready_at TIMESTAMPTZ,
   commons_live_post_id UUID,
   commons_recording_post_id UUID,
+  -- This project's own copy of the recording (a GitHub release asset), written by the
+  -- beacon-recordings-archive workflow. Stream's copy can expire or be deleted; this one is kept.
+  archived_recording_url TEXT,
+  recording_archived_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -6908,6 +7269,8 @@ ALTER TABLE IF EXISTS beacon_events ADD COLUMN IF NOT EXISTS recording_url TEXT;
 ALTER TABLE IF EXISTS beacon_events ADD COLUMN IF NOT EXISTS recording_ready_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS beacon_events ADD COLUMN IF NOT EXISTS commons_live_post_id UUID;
 ALTER TABLE IF EXISTS beacon_events ADD COLUMN IF NOT EXISTS commons_recording_post_id UUID;
+ALTER TABLE IF EXISTS beacon_events ADD COLUMN IF NOT EXISTS archived_recording_url TEXT;
+ALTER TABLE IF EXISTS beacon_events ADD COLUMN IF NOT EXISTS recording_archived_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS beacon_events ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS beacon_events ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
@@ -7539,7 +7902,11 @@ CREATE TABLE IF NOT EXISTS fireside_comments (
   thread_id UUID NOT NULL REFERENCES fireside_threads(id) ON DELETE CASCADE,
   -- Threading is one level deep on purpose: a reply to a comment, and no reply to a reply. Deeper
   -- nesting is unreadable at phone width, which is the only width this app has.
-  parent_comment_id UUID REFERENCES fireside_comments(id) ON DELETE CASCADE,
+  -- SET NULL, not CASCADE: a reply another member wrote is theirs and outlives the comment it
+  -- answers. Account deletion empties and keeps a comment somebody answered, so its replies keep
+  -- their parent; this key is the backstop for any comment row that is deleted (post/0051 changed
+  -- an existing database).
+  parent_comment_id UUID REFERENCES fireside_comments(id) ON DELETE SET NULL,
   author_user_id TEXT NOT NULL,
   -- The name printed beside the comment, written at creation the way other tables here denormalize
   -- an author_username. Stored rather than joined: the public read must not touch an identity table

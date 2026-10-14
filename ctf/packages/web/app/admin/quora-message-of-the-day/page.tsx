@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { evaluatePluginAccess } from 'lib/auth/server-authz';
 import { QuoraMotdShell, type QuoraMotdDay } from '@/components/quora-motd/quora-motd-shell';
 import { motdToday, quoraMotdSchedule, quoraMotdAll } from 'lib/quora-motd/select';
+import { motdDayLine } from 'lib/quora-motd/types';
 
 // Admin-only, and deliberately not public. Every message here is written to be pasted into the
 // Skills Economy space before it appears anywhere else, and a page listing the pool in advance
@@ -33,6 +34,8 @@ export default async function QuoraMessageOfTheDayPage() {
   const days: QuoraMotdDay[] = schedule.map((pick) => ({
     date: pick.date,
     label: label(pick.date),
+    day: Math.max(1, pick.dayIndex),
+    dayLine: motdDayLine(pick.dayIndex),
     message: pick.message,
   }));
 

@@ -5,6 +5,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
 import { getFoundationTokens } from './foundation-ui';
+import { PublicShellWorldwide } from '@/components/plugins/public-shell-worldwide';
 
 // Layout from the FoundationPublic / MobileFoundationPublic design mockups; chrome colors come from
 // the shared Foundation theme tokens (default theme returns the exact shipped hex).
@@ -22,6 +23,7 @@ function MobileFoundationPublic({ signInUrl, verifyUrl }: { signInUrl: string; v
           <span style={{ fontSize: 20, fontWeight: 800 }}>Foundation</span>
         </div>
         <p style={{ margin: 0, fontSize: 14, color: t.SUBTLE, lineHeight: 1.5 }}>Electricians, plumbers, carpenters, and more — fellow community members. Pay with ServiceCredits.</p>
+        <PublicShellWorldwide color={t.MUTED} />
         <a href={verifyUrl ?? signInUrl} style={{ padding: '14px', borderRadius: 12, background: t.ACCENT, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', textAlign: 'center', textDecoration: 'none' }}>{verifyUrl ? 'Finish verifying' : 'Join Skills Economy — Free'}</a>
       </div>
 

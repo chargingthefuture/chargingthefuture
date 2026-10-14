@@ -10,6 +10,7 @@
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-feed-feature-inventory.md` |
 | **Generated** | 2026-07-25 (commit 95cb98b2) |
+| **Inventory wording** | 2026-10-01: banned-term wording removed from the inventory prose; no step in this script changed |
 
 ---
 
@@ -325,7 +326,7 @@
 **Precondition:** Signed in as an admin, with a screenshot saved on the device. A second, non-admin member account to check from.
 
 **Steps:**
-1. As the admin, open the Commons. Above the message box, tap **Share a picture (admins)**.
+1. As the admin, open the Commons. In the icon row above the message box, tap the camera button after the 🎁 (screen readers read it as "Share a picture (admins)"). Tap it again and the panel closes.
 2. Choose the screenshot. A preview appears.
 3. Leave the description empty and fill in the message. Confirm **Share** stays disabled.
 4. Fill in the description ("What it shows") and tap **Share**.
@@ -345,7 +346,7 @@
 - The admin's own picture post shows both Delete and Edit (bug fix, 2026-09-26: Edit used to be
   hidden on any post with a picture, since the ordinary edit model deletes and reposts, which would
   have dropped the picture).
-- Step 7: the member sees the same picture and message. There is no Share a picture button for the
+- Step 7: the member sees the same picture and message. There is no camera button for the
   member.
 - Step 8: 403, "Only admins can share pictures in the Commons."
 - Step 9: the post and its picture are gone; the picture's address returns 404.
@@ -461,8 +462,28 @@ FD-12b), with at least one reaction on it.
 
 **Expected:**
 - A single "New messages" divider appears before the first post newer than the last-seen marker.
+- The chat opens already scrolled to that divider (or to the latest message when there is nothing new), with no scrolling animation.
+- With the device's reduce-motion setting on, no scroll in the chat animates.
 - After viewing, the divider does not reappear on the next open (the marker has advanced).
 - If the divider fails to render, the chat still loads and functions normally (best-effort).
+
+**Result:** web ☐
+
+---
+
+### FD-16b — A background tab catches up when shown (added 2026-09-30)
+**Role:** member | **Surface:** web
+
+**Precondition:** Two members, A and B, each signed in on their own device.
+
+**Steps:**
+1. As A, open the Commons hub home chat, then switch to another browser tab (or lock the phone) for at least a minute.
+2. As B, post a community message.
+3. As A, switch back to the Commons tab.
+
+**Expected:**
+- B's message appears in A's chat right away on returning, without a manual refresh.
+- While nothing new has been posted, the chat stays exactly as it was across several minutes of leaving it open (no flicker, no duplicated messages).
 
 **Result:** web ☐
 
@@ -1064,7 +1085,8 @@ second browser window signed in as a different member (or signed out) so you can
 - Step 2: the row gains a "Hidden" pill and the Hidden-posts counter goes up by one.
 - Step 3: the post is **gone** from the member timeline — and so are its replies, since the entire item
   drops out. This is the check that matters: before this feature the status column was ignored, so a
-  hidden post stayed visible.
+  hidden post stayed visible. It must not reappear with its text under a generic `hub-system` handle
+  either; that is how a hidden post looked when only its detail was dropped (#2960).
 - Step 4: it is absent from the signed-out public list too, not just the member view.
 - Step 5: the hidden post is listed there — hiding must not be a one-way door.
 - Step 6/7: the post is back in the member timeline, replies and all. Nothing was deleted.

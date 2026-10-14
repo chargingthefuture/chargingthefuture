@@ -10,6 +10,7 @@ import { FormField } from "@/components/shared/form-field";
 import type { Currency } from "lib/currency/types";
 import { useTheme } from '@/hooks/useTheme';
 import { getSocketRelayTokens, type SocketRelayTokens } from './sr-shared';
+import { SocketRelayImageField, type PostImageDraft } from './sr-image-field';
 
 export type PostDraft = {
   title: string;
@@ -33,6 +34,9 @@ export type PostDraft = {
   // LightHouse listing form, independent of the single listed price above. A post settled part in
   // ServiceCredits and part in dollars checks both.
   acceptedCurrencies: string[];
+  // The request's one picture: a newly chosen file, or the existing one when editing. Uploaded after
+  // the request itself is saved.
+  image: PostImageDraft;
 };
 
 type FieldA11y = { id: string; "aria-describedby"?: string; "aria-invalid"?: boolean };
@@ -206,6 +210,7 @@ export function SocketRelayPost({
             )}
           </FormField>
         )}
+        <SocketRelayImageField image={draft.image} onChange={(patch) => onChange({ image: { ...draft.image, ...patch } })} t={t} fieldStyle={fieldStyle} />
         <AcceptedCurrencyPicker
           accepted={draft.acceptedCurrencies}
           onToggle={(code) =>

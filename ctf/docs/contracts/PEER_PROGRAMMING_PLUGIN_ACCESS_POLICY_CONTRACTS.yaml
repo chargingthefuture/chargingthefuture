@@ -432,7 +432,7 @@ policies:
     denyConditions:
       - not_in_cohort
       - cohort_ended
-      - goal_already_open
+      - open_goal_limit
       - insufficient_role
 
   - pluginId: peer-programming

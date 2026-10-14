@@ -1,9 +1,11 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { ClipboardCopy, Gauge, RefreshCw } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
+import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-button';
 import { getPluginShellTokens } from '@/components/shared/plugin-shell-theme';
 import { getAppAccent } from 'lib/theme/theme-tokens';
 import type { StreamVideoUsageDay, StreamVideoUsageSummary } from 'lib/stream-quota/usage';
@@ -418,7 +420,7 @@ export function ChymeStreamUsageShell() {
 
   return (
     <div style={{ background: t.BG, minHeight: '100vh', color: t.TEXT }}>
-      <MobileScreenHeader title="Live audio usage" accent={t.ACCENT} icon={<Gauge size={18} color={t.ACCENT} />} backHref="/admin" />
+      <MobileScreenHeader title="Live audio usage" accent={t.ACCENT} icon={<Gauge size={18} color={t.ACCENT} />} backHref="/admin" actions={<PluginUserShellButton href="/apps/chyme" accent={t.ACCENT} />} />
       <div style={{ maxWidth: 780, margin: '0 auto', padding: '16px 20px 40px' }}>
         <p style={{ fontSize: 13, color: t.SUBTLE, margin: '0 0 14px', lineHeight: 1.5 }}>
           How much of the month&apos;s Stream Video allowance the app has used: the Chyme rooms from
@@ -426,6 +428,12 @@ export function ChymeStreamUsageShell() {
           participant-left events as people leave a call. The Stream dashboard is the bill of record;
           this is the number the app acts on.
         </p>
+
+        {/* The member page's Admin button lands here, so the readings loop's switch is one tap away
+            rather than only on the admin index. */}
+        <Link href="/admin/chyme/readings" style={{ display: 'inline-block', fontSize: 13, fontWeight: 600, color: t.ACCENT, margin: '0 0 14px', textDecoration: 'none' }}>
+          Readings loop (the switch and what it plays) →
+        </Link>
 
         <UsageActions loading={loading} canCopy={payload !== null} copied={copied} onRefresh={() => void load()} onCopy={() => void onCopy()} t={t} />
 

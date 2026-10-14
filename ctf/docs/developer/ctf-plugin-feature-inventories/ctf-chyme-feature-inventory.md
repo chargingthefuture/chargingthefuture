@@ -25,10 +25,10 @@ Lifecycle/governance references applied:
 4. Service-scoped deletion request via `DELETE /api/account/chyme-profile`.
 5. Full-account deletion request initiation via `DELETE /api/account/full-account`, including ServiceCredits reclaim dependency queueing in existing reclaim/outbox tables.
 6. ServiceCredits peer tipping: a **Tip** action on every other participant's tile sends ServiceCredits from the signed-in member to that participant via `POST /api/chyme/service-credits` (origin_plugin `chyme`). The transfer delivers immediately and is recognized in GDP as Chyme peer tips. The action never appears on the local member's own tile or on a listen-only guest (no wallet).
-7. Back Channel (spec #1746): start a free, private 1:1 audio call with another member who is in the same live room right now, using the **Back Channel** action on their participant tile. They get an invite they can accept or decline — nobody is cold-called. Once accepted, you talk one-to-one in a small call panel while the room stays open behind you; hanging up ends it with no history kept. It is always free — a note points you to Foundation if you want a call with ServiceCredits attached. You can't Back Channel someone you've blocked (or who blocked you), and it never appears on your own tile.
+7. Back Channel (spec #1746): start a free, private 1:1 audio call with another member who is in the same live room right now, using the **Back Channel** action on their participant tile. They get an invite they can accept or decline — nobody is cold-called. Once accepted, you talk one-to-one in a small call panel while the room stays open behind you; hanging up ends it with no history kept. It is always free — a note points you to Foundation if you want a call with ServiceCredits attached. You can't Back Channel someone you've blocked (or who blocked you), and it never appears on your own tile. If an invite, accept, decline, hang-up or join is refused (blocked, the room is not live, the invite lapsed, Back Channel paused), the screen says "Could not <what failed>: <the reason>" in the invite prompt, the call screen, or a notice at the top, on web and Android.
 8. Web UI surface includes participant list, join-call action, chat panel, the per-participant tip action (`chyme-tip-dialog.tsx`), the per-participant Back Channel action (`chyme-back-channel-layer.tsx`), and deletion actions.
-9. Android UI surface includes room summary, participant roster, chat send/read, join action, the per-participant tip action (`ChymeTipModal.tsx`), the per-participant Back Channel action with a bottom-sheet invite and full-screen call (`ChymeBackChannelInviteSheet.tsx` / `ChymeBackChannelCall.tsx`), and deletion actions using runtime-configured provider-neutral identity headers.
-10. **Private "Weavers of the Commons" room (web, contributor-gated).** A second Chyme room, `chyme-contributors-room`, reachable from an in-shell room switcher next to the main room. It is the Chyme counterpart to the gated Commons chat channel: only contributor-eligible members (and admins) may join, gated exactly like the Commons channel — the contributor-access channel-open switch **and** the member's eligibility flag, or admin. A member who fails either gets a bare 404 from the room read, and the switcher tab shows the "how it's earned" explainer (`WeaversBadge` + a link to `/apps/directory/weavers-of-the-commons`) — the same no-shaming pattern; non-eligible members never see a locked/absence state. It is an **audio + room-chat MVP**: live audio (join/speak/listen/presence/hand-raise) and its own room text chat. ServiceCredits tips and Back Channel 1:1 calls are intentionally **not** offered in the private room yet (Back Channel invites are scoped to the main room's presence). The room is addressed by a `?room=contributors` query param threaded through the client (`ChymeShell` → `ChymeLiveShell` → `ChymeRoomView` → `ChymeAudioRoom`). Each opened room stays **mounted** (hidden with `display:none` when it is not the active one) rather than being remounted on switch, so switching rooms never tears down a live audio call. Android: out of scope (Commons/contributor surfaces are web-only per rule 105; the native app is narrowed to the main Chyme room).
+9. Android UI surface (redrawn 2026-10-08 to match the web Chyme page at phone width) carries the same rooms rail (Main Room and Weavers of the Commons), hosting statement, "Coming up on TI Radio" row, Join Room row with refresh, room header with the Chat button, quota and hand-raise notices, pre-join stage, readings loop, live stage, control row, room chat panel, the per-participant tip action (`ChymeTipModal.tsx`), and the per-participant Back Channel action with the web's bottom invite card and floating call card (`chyme-back-channel-invite.tsx` / `chyme-back-channel-panel.tsx`). Leave posts `POST /api/chyme/leave` (2026-10-05), so the member stops counting at once, as on the web.
+10. **Private "Weavers of the Commons" room (web, contributor-gated).** A second Chyme room, `chyme-contributors-room`, reachable from an in-shell room switcher next to the main room. It is the Chyme counterpart to the gated Commons chat channel: only contributor-eligible members (and admins) may join, gated exactly like the Commons channel — the contributor-access channel-open switch **and** the member's eligibility flag, or admin. A member who fails either gets a bare 404 from the room read, and the switcher tab shows the "how it's earned" explainer (`WeaversBadge` + a link to `/apps/directory/weavers-of-the-commons`) — the same no-shaming pattern; non-eligible members never see a locked/absence state. It is an **audio + room-chat MVP**: live audio (join/speak/listen/presence/hand-raise) and its own room text chat. ServiceCredits tips and Back Channel 1:1 calls are intentionally **not** offered in the private room yet (Back Channel invites are scoped to the main room's presence). The room is addressed by a `?room=contributors` query param threaded through the client (`ChymeShell` → `ChymeLiveShell` → `ChymeRoomView` → `ChymeAudioRoom`). Each opened room stays **mounted** (hidden with `display:none` when it is not the active one) rather than being remounted on switch, so switching rooms never tears down a live audio call. Android: delivered 2026-10-08 (the rail, the explainer and the room, with `?room=contributors` threaded through `ChymeApi.ts`).
 11. **Rooms rail + in-room layout (web, owner request 2026-07-23).** The room switcher at the top of the shell is a horizontal, left-to-right scroller of room cards (the open Main Room and the private Weavers of the Commons room), so it stays one compact row instead of a full-height card that repeated the room title and wasted vertical space on phones. Selecting a card switches the room shown below without disconnecting any room already joined (see feature 10). A **"Get the Android app"** card appears in the rail on non-Android browsers and links to the repo's GitHub Releases page filtered to the mobile releases (`https://github.com/chargingthefuture/chargingthefuture/releases?q=mobile`), where the APK is downloaded (owner decision 2026-07-23 — APK is distributed via GitHub releases only, not an app store; filter added 2026-08-18 so the newest APK sits at the top now that wallpaper releases share the page); on an Android device the card is hidden and the rail is just the list of rooms. Inside a room, the audio controls (mute / raise hand / leave) sit directly **below** the participant avatars and **above** the room chat, so a member can mute/unmute while talking without hunting past the avatars or scrolling the chat.
 
 12. **Room capacity and the Stream quota notice (2026-09-19).** Every room read carries `capacity`
@@ -60,13 +60,16 @@ Lifecycle/governance references applied:
     credited from it) and posts `POST /api/chyme/public/leave` on close or when the listener
     presses **Leave** (2026-09-20 — the control beside refresh in the **Live Rooms** row, shown
     only while sound is on). A refusal shows the server's own reason with a "Try again" control.
+    A heartbeat that answers the listener is off the roster (`CHYME_GUEST_IDENTITY_MISSING`, the
+    row pruned while the tab was hidden) re-admits the page through the listen route, or shows the
+    refusal, rather than playing on uncounted (2026-10-05).
 
 15. **Scheduled rooms, MVP: what is coming up on the TI Radio guide (owner decision, 2026-09-19).**
     Chyme now reads the TI Radio schedule and shows the next five booked slots that have not ended
     — day and time in the reader's own timezone ("Today · 2:00 PM – 3:30 PM"), the title, "Hosted
     by @handle", and an "On air now" mark on the slot happening this minute — with a link to the
-    full guide. Web: under the rooms rail on the member view (`chyme-upcoming.tsx`) and under the
-    room list on the signed-out page (both re-read on the page's refresh control), as a sideways
+    full guide. Web: under the rooms rail on the member view (`chyme-upcoming.tsx`) and above the
+    room list on the signed-out page, the same place as the member view (owner directive, 2026-09-30) (both re-read on the page's refresh control), as a sideways
     rail of cards in the shape of the rooms rail above it (owner directive, 2026-09-20 — stacked,
     five booked slots were a phone screen on their own). Android: the Upcoming tab of the room
     list, which used to be a placeholder sentence; it keeps its stacked list, since it has a tab
@@ -88,9 +91,41 @@ Lifecycle/governance references applied:
     the call and the count at once, and a later Join answers "An admin removed you from this room.
     You can come back once an admin lets you back in." (403) in place of the stage; the heartbeat
     answers the same, so a still-open page cannot keep a presence row alive. Lifted only from the
-    Chyme admin screen.
+    Chyme admin screen. Both apps read that heartbeat answer (2026-10-05): a removed member still on
+    the room screen stops beating and sees the same sentence in place of the stage, with Leave.
+18. **Readings loop while nobody is live (temporary, 2026-09-28).** While the owner has it switched
+    on and no room is live, the Chyme page shows a "While you wait for someone to go live" card: computer-voice
+    (text-to-speech) readings of posts from the blog, on a loop, with a **Play readings**
+    button, the title of the reading playing and a **Read this post** button under it. It says
+    plainly that it is a recording, not a live host. Every listener joins at the same point in the loop, worked out from the clock, like a radio
+    station. It stops by itself when someone goes live (checked every minute while it plays; the
+    signed-out page then shows the live room). Shown to signed-out visitors under "No public rooms
+    right now" and to members on the idle main room's screen (above "On stage", where members land,
+    since the main room opens by itself) and on the "Join a Room" screen. The playlist is every blog post with a
+    recording, oldest first: the blog publishes that list at build time
+    (`https://chargingthefuture.github.io/chargingthefuture/readings.json`, from the files in the blog's
+    `content/audio`), and the browser reads it directly. Uploading `content/audio/<post-slug>.mp3` to
+    the blog is the only step — the post gets its "Listen to this post" player and this loop gets the
+    reading (owner decision, 2026-09-29). Each entry in the list carries the recording's length, read from the file by the blog's
+    build, so the tap starts the sound at once; until it does, "Audio will begin playing in a few
+    seconds." shows under the button. A listener who joins partway in gets the file opened at that
+    point (`#t=` on its address) rather than a seek after loading, and the readings follow each
+    other in order, wrapping to the first (Safari refuses audio that starts after a network
+    wait); an entry without a length is left out. A reading the browser will not load is tried once
+    more from its start without the `#t=` mark, then the loop moves to the next reading; the card
+    shows the browser's reason only when every reading has failed in a row. The sound plays in the visitor's own browser; nothing touches
+    Stream, so it costs no Stream minutes. Web only. This is a module meant to be deleted once the
+    room has people in it: everything it owns sits in `lib/chyme/readings`,
+    `components/chyme/readings`, `app/api/chyme/readings`, `app/admin/chyme/readings`, the
+    `chyme_readings_config` table, and one mount line in each of `chyme-public-shell.tsx` and
+    `chyme-live-shell.tsx`.
 
 ## Admin Features
+
+Admin and member views link to each other (rule 131): the Chyme member page's top bar shows an
+**Admin** button to admins only, opening `/admin/chyme`; both Chyme admin screens (`/admin/chyme`
+and `/admin/chyme/readings`) carry a **Member view** button back to `/apps/chyme`, and the usage
+screen links to the readings loop screen.
 
 1. **Live Audio Usage screen (`/admin/chyme`, 2026-09-19).** The Stream Video minute meter:
    month-to-date participant-minutes against the budget, the percent and the band, today's
@@ -125,6 +160,12 @@ Lifecycle/governance references applied:
 4. **Removed members, on the Live Audio Usage screen (`/admin/chyme`).** Every live removal across
    both rooms, newest first, with the reason and one control, **Let back in**, which lifts the
    removal (the row stays as the record) and unblocks the member from the call.
+5. **Readings loop (`/admin/chyme/readings`, temporary, 2026-09-28).** Admin index entry "Chyme:
+   Readings Loop". An **On/Off** switch (off until first switched on; every change writes a row in
+   `chyme_admin_audit_trail`) and, read-only, the blog's list of recorded posts, each linking to its
+   post, with how to add one (upload `content/audio/<post-slug>.mp3` to the blog) and take one out
+   (delete the file). A list that cannot be read is shown with the reason. Nothing is added or
+   removed from this screen (owner decision, 2026-09-29: uploading the file is the only step).
 
 ## API Surface and Route Map (Target)
 
@@ -144,14 +185,14 @@ Chyme plugin routes:
 - `DELETE /api/chyme/messages/[messageId]` — delete the caller's OWN room chat message. Author-only: the repository (`deleteRoomMessage`) checks ownership and deletes only when `user_id` matches; a message that is not the caller's returns **403** (`CHYME_NOT_MESSAGE_OWNER`), an unknown/already-gone id returns **404** (`CHYME_MESSAGE_NOT_FOUND`), a malformed (non-UUID) id returns **400**. Room-scoped via `?room=` like the sibling message routes. Audit `chyme.message.delete`. CSRF-guarded. There is no in-place edit — the client's **Edit** loads the message text into the composer and calls this delete, so a corrected message is a fresh row with a new id/timestamp (matching the Commons home chat).
 - `POST /api/chyme/join` — load/bootstrap the room and mint Stream join credentials; marks the member joined (an admin as a speaker; in hand-raise mode a member as a listener). CSRF-guarded. **403** `CHYME_REMOVED_FROM_ROOM` while an admin's removal stands. **409** (`CHYME_ROOM_FULL`, with `capacity`) when the room already holds as many members as the quota policy's cap allows — checked before the Stream mint (a turned-away member costs no Stream call) and again under a lock on the room row inside `markRoomCallJoined`, so two members racing for the last spot cannot both take it. A member already inside the presence window is never turned away by their own row. Audited as a deny with reason `room_full`.
 - `POST /api/chyme/heartbeat` — presence keepalive (403 `CHYME_REMOVED_FROM_ROOM` while a removal stands, so a still-open page cannot keep a removed member present); refreshes the member's `last_seen_at` while in the call and credits the seconds since the previous heartbeat (capped at the 45s window) to the Stream Video minute meter (`stream_video_usage_daily`, surface `chyme:<roomKey>`). CSRF-guarded.
-- `POST /api/chyme/hand` — persists the caller's raise/lower hand on their presence row (`{ raised: boolean }`); returns `{ ok, room }` with refreshed participants. The raised hand stays visible to everyone until lowered, the member leaves, or their presence goes stale. Audit command `chyme.hand`. CSRF-guarded.
+- `POST /api/chyme/hand` — persists the caller's raise/lower hand on their presence row (`{ raised: boolean }`); returns `{ ok, room }` with refreshed participants. The raised hand stays visible to everyone until lowered, the member leaves, or their presence stops updating. Audit command `chyme.hand`. CSRF-guarded.
 - `POST /api/chyme/leave` — drops the member's presence row on exit (which also clears any raised hand). CSRF-guarded.
 - `GET /api/chyme/public/room` — **public, unauthenticated, read-only.** Returns the one default room's live status (`isLive`, `participantCount`, `guestCount`) and, when live, `guestListenAllowed` — false, with `listenUnavailable` carrying the plain reason, while the Stream quota policy has guest listening paused (Orange band and above). Since 2026-09-19 this route touches nothing on Stream: the guest identity is minted by the listen route below on the visitor's tap, so a page load is no longer a Stream user. Only a failed database read returns 503, with the reason. Per-IP rate limit (30 a minute).
 - `POST /api/chyme/public/listen` — **public, unauthenticated; the tap.** Admits one signed-out listener and returns their listen-only Stream credentials. Requires the same-origin `x-ctf-csrf: '1'` header (it mints a billable identity and takes a spot), per-IP rate limited like the room read. Reads the browser's `ctf_chyme_guest` cookie (httpOnly, `SameSite=Lax`, `Secure` in production, path `/api/chyme/public`, one year) or sets one carrying a fresh random UUID; the Stream user is `chyme-guest-<id>`, so one browser is one Stream user across page loads. Refusals, each with the plain reason in `message`: **409** `CHYME_GUEST_LISTEN_FULL` when every guest spot is taken (`CHYME_MAX_GUEST_LISTENERS`, default 100), **409** with `isLive: false` when the room went quiet between the read and the tap, **503** `CHYME_GUEST_LISTEN_PAUSED` while the quota policy has guests paused, **503** `CHYME_STREAM_UNAVAILABLE` when Stream is not configured or rejected the guest upsert (Stream's own reason, api key redacted). The admission (live check, policy, cap, roster insert) runs in one transaction under a lock on the room row so two taps cannot both take the last spot. Guests are listen-only: the client joins muted with no speak controls, and when `CHYME_GUEST_STREAM_ROLE` is set the guest Stream user is created with that restricted role so Stream blocks publish server-side (the owner removes `send-audio`/`send-video`/`screenshare` from that role on the `default` call type — see `ctf/docs/plugins/chyme/guest-listener-stream-role.md`; the owner has applied it as of 2026-09-18). The guest token expires after one hour.
 - `POST /api/chyme/public/heartbeat` — **public, unauthenticated.** The listener's presence keepalive, every 35s while listening (visible tab only, like the member heartbeat). Identified by the guest cookie: **400** `CHYME_GUEST_IDENTITY_MISSING` without it, **404** with the same code when the guest's roster row is gone (the page then re-admits itself through the listen route). Refreshes `chyme_guest_listeners.last_seen_at` and credits the gap to the minute meter (surface `chyme:guest`). Answers with the room's current `participantCount` and `guestCount`, which is what keeps the listener's own attendance line right as people arrive and leave — the beat is already a round trip every 35s, so the counts cost no extra request. CSRF header required; per-IP rate limited.
 - `POST /api/chyme/public/leave` — **public, unauthenticated.** Drops the guest's roster row so the spot frees at once rather than at the end of the presence window; the cookie stays so the browser keeps its one Stream identity. Always `ok` when there is no cookie. CSRF header required; per-IP rate limited.
 - `GET /api/chyme/public/messages` — **public, unauthenticated, read-only** (owner directive, 2026-09-18: a signed-out visitor can read the room chat and signs in to write). Returns the one default room's recent messages (`ok`, `isLive`, `messages`; optional `?limit` clamped to 1–100, default 50) only while the room is live; when nobody is in the call it answers `isLive: false` with an empty list. Per-IP rate limit like the room route (the page polls every ten seconds). A failed database read returns 503 with the reason. There is no POST: writing still needs a signed-in, approved member via `POST /api/chyme/messages`.
-- `POST /api/chyme/service-credits` ← `{ toUserId, amount, message?, idempotencyKey? }` → `{ ok, transaction }` — send ServiceCredits from the signed-in member to `toUserId` from the Chyme room (e.g. tipping a speaker). Gated by `requireChymeAccess`. Validation (all 400 on failure): `amount` must be a finite number greater than 0 and at most `CHYME_MAX_TIP_AMOUNT` (10000); `toUserId` must not equal the sender (no self-tip). Optional `idempotencyKey` is a client nonce, namespaced under the sender (`chyme-<senderUserId>-<nonce>`) so a retried tip deduplicates; absent it, `sendServiceCredits` mints a per-request UUID. Delegates to `sendServiceCredits` (`lib/chyme/repository.ts`), which uses the shared ServiceCredits transfer primitive — Chyme owns no credits ledger. CSRF-guarded: the handler calls `ensureMutationCsrf` (requires the `x-ctf-csrf: '1'` header + same-origin), matching the sibling plugin service-credits routes (lighthouse / foundation / skills-hunt).
+- `POST /api/chyme/service-credits` ← `{ toUserId, amount, message?, idempotencyKey? }` → `{ ok, transaction }` — send ServiceCredits from the signed-in member to `toUserId` from the Chyme room (e.g. tipping a speaker). Gated by `requireChymeAccess`. Validation (all 400 on failure): `amount` must be a finite number greater than 0 and at most `CHYME_MAX_TIP_AMOUNT` (10000); `toUserId` must not equal the sender (no self-tip). Optional `idempotencyKey` is a client nonce, namespaced under the sender (`chyme-<senderUserId>-<nonce>`) so a retried tip deduplicates; absent it, `sendServiceCredits` mints a per-request UUID. Delegates to `sendServiceCredits` (`lib/chyme/repository.ts`), which calls the canonical `createTransfer` from `lib/shared/credits-interface.ts` — Chyme owns no credits ledger. A sender whose wallet is frozen or whose account is restricted from trading is refused with 403 `chyme_account_restricted`. CSRF-guarded: the handler calls `ensureMutationCsrf` (requires the `x-ctf-csrf: '1'` header + same-origin), matching the sibling plugin service-credits routes (lighthouse / foundation / skills-hunt).
 
 Admin routes (2026-09-19). All `requireChymeAdminAccess` (`requiredRoles: ['admin']`); the mutations
 take the same-origin `x-ctf-csrf: '1'` header and accept `?room=contributors`; every mutation writes a
@@ -164,12 +205,15 @@ side did not apply (the decision is recorded and enforced by this app either way
 - `POST /api/chyme/admin/lift-removal` ← `{ userId }` — let a removed member back in: the removal row is lifted (kept as the record) and the member unblocked from the call. **409** `CHYME_MEMBER_NOT_IN_ROOM` when there was no live removal. Audit `chyme.admin.lift-removal`.
 - `POST /api/chyme/admin/role` ← `{ userId, role: 'speaker' | 'listener' }` — hand-raise mode: let a present member speak, or move them back to listening (which also mutes them). Sets `chyme_room_members.role` and, when `CHYME_GUEST_STREAM_ROLE` is set, the member's role on the call. **409** `CHYME_MEMBER_NOT_IN_ROOM` when they are not present. Audit `chyme.admin.role`.
 - `POST /api/chyme/admin/speak-mode` ← `{ mode: 'open' | 'hand_raise' }` — switch the room's mode. Switching to hand-raise turns everyone present except the acting admin into a listener and mutes them in the call (`demoted` in the answer). Audit `chyme.admin.speak-mode`.
+- `GET /api/chyme/readings` — **public, unauthenticated, read-only** (command `chyme.readings.read`). Returns `enabled`. The playlist is not served by the app: the browser reads the blog's `readings.json`. Per-IP public read rate limit. A failed read answers 503 with the reason; the player then shows nothing.
+- `GET /api/chyme/readings/admin` — **admin-only** (`requireChymeAdminAccess`), read-only. The switch (`setting`: `enabled`, `updatedBy`, `updatedAtIso`), for the readings loop admin screen.
+- `POST /api/chyme/readings/admin` ← `{ enabled: boolean }` — turn the readings loop on or off. CSRF-guarded. Audit `chyme.admin.readings.switch`.
 - `GET /api/chyme/admin/removals` — every live removal across both rooms, newest first, for the admin screen. Read-only.
 - `GET /api/chyme/admin/stream-usage` — **admin-only** (`requireChymeAdminAccess`, `requiredRoles: ['admin']`), read-only. Returns `usage` (the `StreamVideoUsageSummary`: month start, day of month, budget, used minutes, percent, band, today, straight-line projection, per-surface rows, one row for every day the meter has ever recorded — zero-filled so there are no gaps — and `earliestDateIso`, the first of those days), `policy` (the `ChymeQuotaPolicy` in force), `room` (the main room's live state, member count, guest count), and `config` (the four settings). Feeds the Live Audio Usage screen. A failed read answers 503 with the reason. No mutation, so no audit row (the admin audit coverage gate covers mutating handlers).
 
 Back Channel routes (free 1:1 audio sidebar between two members in the same live room, spec #1746). All under `/api/chyme/back-channel/`; all require `requireChymeAccess` (signed-in + approved_full); all mutations CSRF-guarded:
 
-- `GET /api/chyme/back-channel/state` — poll-driven state for the caller: `{ incomingInvite, outgoingInvite, activeCall }`. Reaps stale rows on every read (a pending invite lapses after ~45s or when either party leaves the room; a live call whose heartbeats stopped ends after ~90s). Read-only, not audited (high-frequency poll).
+- `GET /api/chyme/back-channel/state` — poll-driven state for the caller: `{ incomingInvite, outgoingInvite, activeCall }`. Reaps expired rows on every read (a pending invite lapses after ~45s or when either party leaves the room; a live call whose heartbeats stopped ends after ~90s). Read-only, not audited (high-frequency poll).
 - `POST /api/chyme/back-channel/invite` ← `{ recipientUserId }` → `{ ok, callId }` — invite another member who is in the same room right now. Block-aware: `403` (`CHYME_BACK_CHANNEL_BLOCKED`) if a `member_blocks` row exists in either direction; `409` (`CHYME_BACK_CHANNEL_NOT_IN_ROOM`) if either party is not freshly present; `503` (`CHYME_BACK_CHANNEL_PAUSED`) while the Stream quota policy has Back Channel paused (Orange band and above — the tile action is hidden by then via the room's `quota.backChannelAllowed`; this is the check behind it). Audit `chyme.back-channel.invite`.
 - `POST /api/chyme/back-channel/accept` ← `{ callId }` → `{ ok, callId, streamCallId, streamApiKey, streamUserId, streamToken }` — recipient accepts; the call goes live and the recipient's Stream 1:1 audio join credentials are returned. Audit `chyme.back-channel.accept`.
 - `POST /api/chyme/back-channel/join` ← `{ callId }` → same credentials shape — mints join credentials for a member already in an active call (the initiator, once accepted). Audit `chyme.back-channel.join`.
@@ -245,6 +289,12 @@ Canonical schema target: Chyme core tables are defined in `ctf/schema.sql`, alig
       `(created_at DESC, actor_id, command)`. Written by `recordChymeAdminAudit`
       (`lib/chyme/admin-audit.ts`), which never throws. Retained on account deletion (deletion
       registry), as every plugin's admin trail is. Same migration.
+13. `chyme_readings_config` (2026-09-28, migration `0042_chyme_readings.sql`) — the temporary
+    readings loop's switch. One row (`singleton_id` BOOLEAN primary key, CHECK true): `enabled`
+    (default false; no row means off), `updated_by`, `updated_at`. No member data, so it is not in the
+    deletion registry. To retire the module, drop it in a later migration. The playlist table that
+    shipped beside it, `chyme_readings_tracks`, was dropped on 2026-09-29
+    (`0043_drop_chyme_readings_tracks.sql`) when the loop moved to the blog's own list.
 8. `chyme_back_channel_calls`
    - Back Channel 1:1 call lifecycle (spec #1746). One row per call, keyed by `id`, referencing `chyme_rooms(id)` (`ON DELETE CASCADE`). Columns: `initiator_user_id`, `recipient_user_id`, `initiator_username`, `recipient_username`, `status` (`inviting|active|declined|ended|lapsed`), `stream_call_id`, `created_at`, `answered_at`, `ended_at`, `ended_by_user_id`, `last_heartbeat_at`. A CHECK forbids self-calls; a partial unique index (`status IN ('inviting','active')`) allows only one live call per initiator→recipient direction. Indexed by recipient+status, initiator+status, and room. Holds no chat/history — a row exists only to run one call and is removed on the member's Chyme service deletion (and account deletion). Never surfaced as Trust evidence or in any public feed (rule 132).
 
@@ -284,8 +334,8 @@ Canonical schema target: Chyme core tables are defined in `ctf/schema.sql`, alig
 2. Android implementation is delivered for room/chat/join workflows using runtime-configured request identity and the same protected API surface, including the **live audio room** (Stream Video React Native SDK) at parity with the web room. The deletion buttons were likewise removed from `ChymeRoom.tsx`. Room-chat **Delete + Edit** (delete + repost) is at parity with web as of #1858: `chyme-chat-view.tsx` shows Edit/Delete on the member's own messages only, calling the same author-only `DELETE /api/chyme/messages/[messageId]`.
 3. Current feature-parity status is web+android complete (both platforms are at the same single-room feature level).
 4. Web pixel pass: `chyme-live-shell` is aligned to `design/.../survivor-hub/Chyme.tsx`, using lucide-react iconography in place of emoji glyphs. Loading and empty states render inline. The signed-out visitor state is now delivered: `components/chyme/chyme-public-shell.tsx` renders the public view aligned to `design/.../survivor-hub/ChymePublic.tsx` (desktop) and `MobileChymePublic.tsx` (phone width), and the plugin route shows it to anonymous visitors instead of the access-denied wall. The public view is marketing/empty-state content only — it shows no private or per-user data, and because there is no public room-listing endpoint, the room list renders an honest empty state rather than the mockup's placeholder rooms. Its sign-in and join affordances point at the hosted sign-in URL.
-5. Android pixel pass: `ChymeRoom.tsx` (and sub-components `chyme-loading`, `chyme-empty`, `chyme-room-list`, `chyme-chat-view`, plus the live `ChymeAudioRoom.tsx`) is aligned to `design/.../survivor-hub/MobileChyme.tsx`, `MobileChymeEmpty.tsx`, `MobileChymeLoading.tsx`. A canonical `api.ts` entry-point was added. All data is bound to real `/api/chyme/*` endpoints. The static in-room stage (`chyme-active-room.tsx`) was replaced by the live `ChymeAudioRoom.tsx` (Stream Video) on 2026-06-08. The public state (`MobileChymePublic.tsx`) is not applicable — Chyme is auth-only per the #102 visibility decision. Delivered 2026-05-31; live audio added 2026-06-08.
-7. **Back Channel** (spec #1746) is delivered on **web and Android in the same change** (Chyme is on the native keep-list, rule 105). Web: a "Back Channel" action on each other member's participant tile (next to Tip), an incoming-invite toast, and a floating active-call mini-panel that keeps the room usable behind it (`components/chyme/chyme-back-channel*.tsx`, driven by the `useBackChannel` poll hook). Android: the same tile action, a bottom-sheet incoming invite (`ChymeBackChannelInviteSheet.tsx`), and a full-screen active call (`ChymeBackChannelCall.tsx`, driven by `useChymeBackChannel`) that reuses the Chyme Android foreground service so a backgrounded call keeps playing. Both platforms mint a Stream Video 1:1 audio call (`default` call type, audio-only) via `createChymeBackChannelCredentials`. **On-device verification (real EAS build, not Expo Go) that a backgrounded Back Channel keeps audio is a required release gate** — see the Android app test script (step AN-BC) and the Chyme test-script Back Channel section.
+5. Android pass (2026-10-08): the Android Chyme screen is a copy of the web Chyme page at phone width, not of the old design mockups. `ChymeRoom.tsx` draws the rail, hosting statement and TI Radio row and keeps each opened room mounted; `chyme-live-room.tsx`, `chyme-join-bar.tsx`, `chyme-room-view.tsx`, `chyme-stage.tsx`, `chyme-chat-panel.tsx`, `ChymeAudioRoom.tsx`, `chyme-speaker-tile.tsx`, `chyme-controls.tsx` and `chyme-readings-player.tsx` copy their web counterparts, with colors from `chyme-tokens.ts` (a copy of the web Chyme tokens). The admin screens (`ChymeStreamUsage.tsx`, `ChymeReadingsAdmin.tsx`) are reached from an Admin button in the Chyme header. Earlier history: the first Android pass (2026-05-31) followed `design/.../survivor-hub/MobileChyme.tsx`, `MobileChymeEmpty.tsx`, `MobileChymeLoading.tsx`. A canonical `api.ts` entry-point was added. All data is bound to real `/api/chyme/*` endpoints. The static in-room stage (`chyme-active-room.tsx`) was replaced by the live `ChymeAudioRoom.tsx` (Stream Video) on 2026-06-08. The public state (`MobileChymePublic.tsx`) is not applicable — Chyme is auth-only per the #102 visibility decision. Delivered 2026-05-31; live audio added 2026-06-08.
+7. **Back Channel** (spec #1746) is delivered on **web and Android in the same change** (Chyme is on the native keep-list, rule 105). Web: a "Back Channel" action on each other member's participant tile (next to Tip), an incoming-invite toast, and a floating active-call mini-panel that keeps the room usable behind it (`components/chyme/chyme-back-channel*.tsx`, driven by the `useBackChannel` poll hook). Android: the same tile action, the same bottom invite card (`chyme-back-channel-invite.tsx`), and the same floating call card (`chyme-back-channel-panel.tsx`, driven by `useChymeBackChannel`; a full-screen call until 2026-10-08) that reuses the Chyme Android foreground service so a backgrounded call keeps playing. Both platforms mint a Stream Video 1:1 audio call (`default` call type, audio-only) via `createChymeBackChannelCredentials`. **On-device verification (real EAS build, not Expo Go) that a backgrounded Back Channel keeps audio is a required release gate** — see the Android app test script (step AN-BC) and the Chyme test-script Back Channel section.
 
 9. **Moderation controls (2026-09-19)** are delivered on **web and Android in the same change**:
    the tile actions (Mute, Remove, Let speak / Listening), the speak-mode switch, the listener's
@@ -297,6 +347,14 @@ Canonical schema target: Chyme core tables are defined in `ctf/schema.sql`, alig
    nature: the signed-out listener path (guest identity, heartbeat, leave, refusal reasons), the
    connection-aware Join pill (Android's foreground service already keeps the call alive), and the
    admin usage screen (admin surfaces are web-only).
+10. **Android sign-in and sign-out (2026-10-05).** The Android shell (`packages/mobile/App.tsx`) shows
+    a "You are not signed in" card with a **Sign in** button above the content while nobody is
+    signed in, wired to the Clerk sign-in flow in `src/auth/auth-context.tsx`; a signed-out member
+    can still listen to a room as a guest. The Account & Data screen carries a **Sign out** button
+    (with a confirm) that clears the stored session from the device keychain. The shell's content
+    view is keyed on the signed-in member's id, so signing out or in unmounts every Chyme screen
+    holding a Stream client, and each one leaves its call and disconnects. Controls live in
+    `packages/mobile/src/components/shared/SessionControls.tsx`.
 6. Scope (MVP): the shipped product is a single shared room (`CHYME_MAIN_ROOM_KEY` / "Chyme Main Room") plus the hardcoded contributor room (`CHYME_CONTRIBUTORS_ROOM_KEY`, 2026-07-23). The full-featured `Chyme.tsx` design — multiple rooms, room creation ("Start a Room"), discovery, upcoming/scheduled rooms, search, reactions, and speaker-vs-audience promotion with raise-hand — is the accepted design target and is **not yet built**. The pixel passes above aligned the single-room view's styling and iconography to the mockup; they did not implement the mockup's multi-room feature set. See "Gaps and Known Technical Debt".
 
 ## Seed Coverage Status
@@ -380,6 +438,155 @@ decision the owner has not made, or owned elsewhere. Nothing here is code work l
 
 ## Change Log
 
+- 2026-10-08: **The Android Chyme screen matches the web Chyme page (owner directive).** The Android
+  screen was redrawn as a copy of the web page at phone width, in the web's colors, sizes, copy and
+  states, in both themes. Removed because the web does not have them: the branded loading splash,
+  the "No rooms live yet" screen with its "Start a Room" and "Schedule for Later" buttons, the room
+  list with its stats boxes and Live / Upcoming tabs, the separate full-screen chat view, the round
+  control buttons and the "Leave Room" bar. Added from the web: the rooms rail, the hosting
+  statement under it, the sideways "Coming up on TI Radio" row, the Join Room row with its
+  connection-aware label and refresh, the room header with the Chat button, the pre-join stage, the
+  inline room chat, the reconnecting / connection-lost notice, the "Audio" label in the control row,
+  moderation notices shown under the control instead of in a pop-up, and the readings loop (played
+  with the app's existing expo-video player). Back Channel's invite and live call are now the web's
+  cards at the bottom of the screen, so the room stays usable behind them, and the tile action only
+  shows while the quota policy allows Back Channel, as on the web. Also added, for 1:1 parity: the
+  private Weavers of the Commons room with its "how it's earned" explainer, and, for admins, the
+  Admin button opening the live audio usage screen (meter, by surface, by day, settings, removed
+  members with "Let back in", whose "Copy as text" copies to the clipboard through the new
+  `expo-clipboard` dependency) and the readings loop switch. A signed-out visitor now gets the web's
+  public Chyme page (`ChymePublicScreen.tsx`): its own green header, the invitation card with Sign
+  In, the TI Radio row, the Live Rooms row with Leave and refresh, listening without an account
+  (`chyme-guest-listen.tsx`, the same guest listen, heartbeat and leave routes and the same retries)
+  and the read-only room chat (`chyme-guest-chat.tsx`). The speaking and own-tile glows and the card
+  shadows use React Native's `boxShadow`. The call join, the presence heartbeat, the foreground
+  keep-alive and the moderation requests are unchanged. Differences that remain: the Foundation note
+  on a Back Channel call is plain text rather than a link, since leaving the screen would end both
+  calls; the admin screens' back control goes to the screen that opened them (Live audio usage to Chyme,
+  the readings loop to Live audio usage), since the app has no admin index; their header carries the
+  admin refresh control every web admin header has, beside the usage screen's own Refresh; the glow appears without the web's
+  short fade; the browser-only cases (no WebRTC, the autoplay unlock) cannot occur in the app; the
+  blog invite cards the web floats on signed-out pages are not part of Chyme and are not shown.
+  No route, schema or contract change.
+
+- 2026-10-05: **Tips go through the canonical ServiceCredits transfer (code review #2875).**
+  `sendServiceCredits` imported a second copy of `createTransfer` that skipped the wallet freeze
+  check, the command idempotency record and the external ledger post, so a member whose wallet an
+  admin had frozen could still tip. It now imports `createTransfer` from
+  `lib/shared/credits-interface.ts` like every other plugin, and the copy is deleted. The tip route
+  answers a refused sender with 403 `chyme_account_restricted` instead of a 500.
+
+- 2026-10-05: **Android app can sign in and sign out (code review #2737).** The auth context built
+  the Clerk sign-in flow and a sign-out, but no screen called either, so a fresh install could only
+  listen as a guest and a signed-in member could never sign out. The shell now shows a sign-in card
+  while signed out and Account & Data has a Sign out button; signing out clears the stored session,
+  and keying the content view on the member's id tears down every Stream client the Chyme screens
+  hold. No route, schema, or contract change. Android app test script AN-1 and AN-7 updated.
+
+- 2026-09-30: **A reading that will not load no longer ends the loop (owner report).** On an iPhone
+  the card showed "The recording could not be loaded (the file or its address is not playable, code
+  4)." for a reading a laptop played. The file is on the blog and is an ordinary MP3; what differs
+  is the address, which carries a `#t=` mark so the phone opens it partway in, a path only tested in
+  Chromium. The player used to stop at the first failed load. Now a failed load is tried once more
+  from the start of the same reading, without the mark, then the loop moves to the next reading, and
+  the error shows only when every reading has failed in a row. A failed load's `play()` rejection
+  ("NotSupportedError") is left to the error handler, so it no longer shows an error or stops the
+  player while the retry runs. Checked in Chromium with the component on its own and the blog's list
+  and files stood in for: a first load that fails then plays from the start; a reading that always
+  fails hands over to the next; three failing readings show the error. Not checked in Safari: no
+  Safari engine was available. Test script CH-24 updated.
+- 2026-10-05: **Refused room and Back Channel actions now say why, and Android Leave frees the spot
+  (code review #2720, #2721, #2722, #2724, #2725).** The Back Channel invite, accept, decline,
+  hang-up and join calls on web and Android had no catch, so a refusal (blocked, room not live,
+  invite lapsed, Back Channel paused) left the screen unchanged; each controller now keeps the
+  route's reason and shows it in the invite prompt, the call screen, or a notice at the top. The
+  Back Channel heartbeat effect depended on the `activeCall` object, which every 3-second poll
+  replaces, so it beat every poll instead of every 30 seconds; it now keys on the call id. Android
+  Leave never posted `/api/chyme/leave`, so the member held a spot for the 45-second presence
+  window; it now posts it and refreshes the room. A removed member still on the room screen got
+  every heartbeat refused in silence (web showed the wrong "connection dropped" advice); both apps
+  now read `CHYME_REMOVED_FROM_ROOM` (and `CHYME_ROOM_FULL`, for the heartbeat cap check of #2727),
+  stop beating, and show the server's sentence in place of the stage. The signed-out listener page ignored the public heartbeat's `CHYME_GUEST_IDENTITY_MISSING`
+  answer and played on uncounted after its row was pruned; it now re-admits itself through the
+  listen route. No route, schema, or contract change. Test script CH-4, CH-7, CH-12 and CH-23
+  updated.
+- 2026-09-30: **The signed-in idle room no longer repeats the participant count (owner directive).**
+  With nobody in the room, an "On Stage · 0 Participants" block and "No participants yet." sat
+  under the readings card, repeating the header's "0 participants · Signed in as …" line.
+  `ChymeStage` (the pre-join preview) now renders nothing when the room is empty; with people in
+  the room it shows their tiles as before. The signed-out page was not affected. Test script
+  readings step 4 updated.
+- 2026-09-30: **The signed-out page puts the TI Radio guide above the room (owner directive).** It
+  sat under the room list, at the bottom of the page; the signed-in page has it above the room. The
+  "Coming up on TI Radio" rail now opens the signed-out room section, above the **Live Rooms** row,
+  and the empty-room line reads "The TI Radio guide above says when the next one is." Test script
+  CH-22 step 2 and the one-screen check updated.
+- 2026-09-30: **The signed-in room opens with chat closed (owner directive).** Chat is a utility,
+  not the reason to open Chyme, and open by default it pushed the stage and controls below the fold
+  on a phone. `ChymeLiveShell` now starts `showChat` as `false`; the room header's existing **Chat**
+  button opens and closes it. The signed-out view already started closed (2026-09-20), so both now
+  open to one view. Android is unchanged: its chat was already a separate view behind a button.
+  Test script core smoke step 1 updated.
+- 2026-09-30: **The readings card heading reads "While you wait for someone to go live" (owner
+  directive).** It read "While the room is empty", which put the page's first words on what is
+  missing. "Join" was not used because on this page it means signing in. Inventory and test script
+  updated to the new heading.
+- 2026-09-29: **The loop moves through every reading, and says the sound is coming (owner report).**
+  With two recordings on the blog, an iPhone played one of them on repeat, and the first tap gave a
+  silent pause that read as broken. The end-of-file handler now reads the current reading from a
+  ref rather than React state (a handler holding an out-of-date index picked the same "next"
+  reading every time), and a listener joining partway in gets the file opened at that point with a
+  `#t=` fragment instead of a seek made as the header arrived, which an iPhone could take as the
+  end of the file. Checked in Chromium with two short files: A, B, A, B. "Audio will begin
+  playing in a few seconds." shows from the tap until the sound starts.
+- 2026-09-29: **One sign-in button on the signed-out page (owner directive).** The invitation card
+  carried **Join Free to Listen** and **Sign In**, both linking the same hosted sign-in page. Only
+  **Sign In** stays, as the full-width green button: listening on this page needs no account, so a
+  button promising a join in order to listen described a step nobody needs. The unused `UserPlus`
+  icon import and `SURFACE` color went with it.
+- 2026-09-29: **Play readings works on the phone, and the card names the blog (owner report).** On
+  the signed-out page the player answered "The recording did not start: The operation was
+  aborted." It read every recording's length in the browser after the tap, and Safari refuses audio
+  that starts after that wait; starting it muted and then switching the file got canceled
+  instead. The blog's `readings.json` now carries each length (`durationSeconds`, read by the
+  build), so the tap starts the sound directly and entries without a length are dropped. A
+  superseded `play()` (the next file loading) no longer shows as an error. The card now says
+  "Computer-voice readings of posts from the blog", linking the blog, instead of naming Peace
+  Battle 2, since the readings are several posts.
+- 2026-09-29: **Admin and member views link to each other (owner report).** The Chyme admin screen
+  had no way back to the room, and the room had no way to the admin screen; every other plugin
+  carries both. The member page's top bar now shows an **Admin** button to admins
+  (`PluginAdminButton`, `isAdmin` passed from the plugin route), both Chyme admin screens carry
+  **Member view** (`PluginUserShellButton`), and the usage screen links to the readings loop screen.
+- 2026-09-29: **Readings card shows where members actually land (owner report).** The card sat only
+  on the "Join a Room" screen, which members rarely see: the main room opens by itself, so a member
+  lands on the room screen, idle, and the card never appeared. It now also shows there, above "On
+  stage", while the main room is idle and the member has not joined; joining the call removes it
+  and stops the sound.
+- 2026-09-29: **Readings are a computer voice, and the post is one tap away (owner decision).** The
+  owner makes the readings with text to speech rather than recording them, so the card now says
+  "Computer-voice readings" instead of "Recorded readings". The post link under the title became a
+  **Read this post** button, because the audio does not say where the post is (reading an address
+  aloud is noise) and a small text link was easy to miss while listening.
+- 2026-09-29: **The readings loop plays the blog's own list (owner decision).** Adding a reading
+  took two steps: upload the file to the blog, then paste its link and the post's link into the
+  admin screen. Now the blog publishes `readings.json` at build time (every post with a file in its
+  `content/audio`, oldest first) and the Chyme page reads that list directly, so uploading the file
+  is the only step. Removed with it: the `chyme_readings_tracks` table (migration 0043), the
+  `POST`/`DELETE /api/chyme/readings/admin/tracks` routes, their two audit commands, and the add
+  form; the public route now answers only whether the loop is on. Every entry in the blog's list
+  carries its post link, so each recording still has its text version (WCAG 1.2.1).
+- 2026-09-28: **Readings loop while nobody is live (owner decision).** The owner cannot host the
+  room around the clock until people are there, so while nobody is live the Chyme page now offers
+  recorded readings of the Peace Battle 2 blog posts, played on a loop and switched on and off from
+  `/admin/chyme/readings`. The blog posts were chosen over the Quora message-of-the-day text because
+  they are copy-edited and approved before publishing. It plays in the visitor's browser rather
+  than inside the Stream room: a recording published into the room would need a server-side
+  participant in the call around the clock, which bills Stream minutes every hour of the day and
+  would keep the room "live" so the empty-room state never showed. Built as a separate module
+  (User Features 18, Admin Features 5, the five routes, the two tables) so it can be switched off
+  and then deleted in one piece. Web only; Android is out of scope per rule 105 (the Chyme screen
+  on Android does not carry it).
 - 2026-09-20: **The main room is named for the room, not for one topic.** It shipped as "Chyme
   Main Room: Exit the Gauntlet", a name from before the TI Radio guide existed, when one standing
   subject was the only way to say what the room was for. Hosts now book their own slots and name
@@ -753,7 +960,7 @@ decision the owner has not made, or owned elsewhere. Nothing here is code work l
 - 2026-06-25: **Added CSRF guards to the remaining chyme mutation routes** (`hand` / `messages` POST / `leave` / `heartbeat`) — owner-approved follow-up to the service-credits fix. Each now calls `ensureMutationCsrf` after the access gate (`leave` and `heartbeat` gained a `request` parameter). Because these routes have **live clients** (unlike the service-credits route), their callers were updated to send `x-ctf-csrf: '1'`: the web `requestJson` helper (`components/chyme/chyme-shared.ts`) now attaches it on every non-GET request (covers messages + leave), the two raw `fetch` calls in `chyme-audio-room.tsx` (heartbeat, hand) add it inline, and the mobile `postChymeMessage` (`ChymeApi.ts`) adds it. Verified: `@ctf/web` + `@ctf/mobile` typecheck clean and web eslint clean. `POST /api/chyme/join` was the one chyme mutation still without the guard at the time of this pass; it is closed by the follow-up entry above.
 - 2026-06-25: **Added the missing CSRF guard to `POST /api/chyme/service-credits`** (security hardening — owner-approved). The money-moving send route was gated by `requireChymeAccess` only; it now also calls `ensureMutationCsrf` (requires `x-ctf-csrf: '1'` + same-origin host), matching every sibling plugin's service-credits route (lighthouse / foundation / skills-hunt / socket-relay). Added a chyme `ensureMutationCsrf` helper to `app/api/chyme/_lib.ts` (mirroring the socket-relay/foundation implementation, using the shared `checkMutationOrigin`) and a `csrfDenied: 'CHYME_CSRF_DENIED'` code to `CHYME_ERROR_CODE`. No client currently calls this route (it is an unwired backend endpoint — `sendServiceCredits` has no caller outside the handler), so nothing breaks; whenever a UI is wired up it sends the same `x-ctf-csrf: '1'` header as all other mutations. Resolves the Gaps item recorded earlier today; the remaining non-money chyme mutations are tracked as the new Gaps item 6. Web typecheck clean (`pnpm --dir ctf --filter @ctf/web run typecheck`).
 - 2026-06-25: **Documented the service-credits route** (inventory-debt burn-down — documentation catch-up, no code change). Added `POST /api/chyme/service-credits` (send credits caller→`toUserId` via `sendServiceCredits` / the shared transfer primitive; gated by `requireChymeAccess`) to the route map. While verifying the handler, recorded a real finding in Gaps (item 6): this money-moving route has no `ensureMutationCsrf` check, unlike its sibling plugin service-credits routes — a CSRF guard for parity is a follow-up code change. Removed the route from `ctf/scripts/inventory-drift-allowlist.json`.
-- 2026-06-20: Made the raise/lower hand **persistent**. Previously a raised hand rode on Stream's transient reaction (`participant.reaction`), which the SDK auto-clears after a few seconds, so other members never saw it stay up. The state is now stored server-side: new `hand_raised BOOLEAN NOT NULL DEFAULT FALSE` column on `chyme_room_members` (guarded `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` for legacy DBs), new `setRoomMemberHandRaised(identity, raised)` repository function (updates the caller's presence row and returns refreshed room state), and new `POST /api/chyme/hand` route (`{ raised: boolean }` → `{ ok, room }`, gated by `requireChymeAccess`, audit command `chyme.hand`). `ChymeParticipant` and `listRoomParticipants` carry `handRaised`. In the web stage, `chyme-room-view` derives a set of clerk user ids with a raised hand from `room.participants` and threads it through `ChymeAudioRoom` → `ChymeAudioRoomLive` → `ChymeSpeakerTile`; each non-self, non-guest tile shows the ✋ when its `chyme-<clerkUserId>` (prefix stripped) is in the set. The local member stays driven by their own instant local toggle (which now also POSTs to persist). `chyme-live-shell` adds a light room poll every 15s (only while the tab is visible, mirroring the heartbeat's visibility guard; updates only `room`, leaving chat/draft untouched) so other members' hands appear/disappear without a manual refresh. Leaving deletes the presence row (clearing the hand), and stale presence drops the member from `listRoomParticipants` via the freshness window — so a departed member never lingers with a hand up. Command and audit contracts updated. No Android change in this pass (web + mobile-responsive).
+- 2026-06-20: Made the raise/lower hand **persistent**. Previously a raised hand rode on Stream's transient reaction (`participant.reaction`), which the SDK auto-clears after a few seconds, so other members never saw it stay up. The state is now stored server-side: new `hand_raised BOOLEAN NOT NULL DEFAULT FALSE` column on `chyme_room_members` (guarded `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` for legacy DBs), new `setRoomMemberHandRaised(identity, raised)` repository function (updates the caller's presence row and returns refreshed room state), and new `POST /api/chyme/hand` route (`{ raised: boolean }` → `{ ok, room }`, gated by `requireChymeAccess`, audit command `chyme.hand`). `ChymeParticipant` and `listRoomParticipants` carry `handRaised`. In the web stage, `chyme-room-view` derives a set of clerk user ids with a raised hand from `room.participants` and threads it through `ChymeAudioRoom` → `ChymeAudioRoomLive` → `ChymeSpeakerTile`; each non-self, non-guest tile shows the ✋ when its `chyme-<clerkUserId>` (prefix stripped) is in the set. The local member stays driven by their own instant local toggle (which now also POSTs to persist). `chyme-live-shell` adds a light room poll every 15s (only while the tab is visible, mirroring the heartbeat's visibility guard; updates only `room`, leaving chat/draft untouched) so other members' hands appear/disappear without a manual refresh. Leaving deletes the presence row (clearing the hand), and presence that stops updating drops the member from `listRoomParticipants` via the freshness window — so a departed member never lingers with a hand up. Command and audit contracts updated. No Android change in this pass (web + mobile-responsive).
 - 2026-06-19: Let signed-out visitors **listen** to the one default room when it is live, resolving the contradiction between the "free to listen" guest banner and the members-only reality. New public `GET /api/chyme/public/room` returns the default room's live status and, only when live, an ephemeral guest Stream identity (`createChymeGuestListenCredentials`); new `getPublicRoomLiveState()` reads the room with no identity (a guest is not a member). New `components/chyme/chyme-guest-listen.tsx` connects that guest to the same `default` call and plays its audio receive-only (camera + microphone disabled, no speak/raise-hand controls); `components/chyme/chyme-public-shell.tsx` fetches the endpoint and renders the listener when live. Speaking still requires sign-in. Listen-only is enforced client-side; server-side publish restriction would need Stream call-type roles (flagged in the quota note). Stream Quota Impact Note added (`docs/quota-impact/2026-06-19-chyme-guest-listen.md`) — guests accrue Stream Video participant-minutes while listening, only when a room is live. No schema change (the default room is the public one by its existing `chyme-main-room` key).
 - 2026-06-13: Tuned the presence heartbeat to cut idle database cost. The audio room now pings `/api/chyme/heartbeat` every **35s** (was 20s) and **only while the browser tab is visible** (Page Visibility API); a backgrounded/forgotten tab stops pinging, so it stops writing `last_seen_at` and drops out of presence after the 45s window — and the database compute is no longer pinned awake by an open tab. Returning to the tab pings immediately so the member reappears without waiting. 35s stays comfortably inside `CHYME_PRESENCE_TTL_SECONDS` (45s). No schema, route, or contract change.
 - 2026-06-13: Fixed room presence so a member can actually leave, is removed on disconnect, and is never shown twice. Presence now means "joined the call," not "viewing the page": `upsertMember` was removed from `getRoomState`, `listRoomMessages`, and `sendRoomMessage` (merely opening Chyme or chatting no longer lists you on stage). `listRoomParticipants` now only returns members seen within `CHYME_PRESENCE_TTL_SECONDS` (45s), so a disconnected member drops off automatically. New `POST /api/chyme/heartbeat` (refreshes `last_seen_at` every 20s while in the audio room) and `POST /api/chyme/leave` (deletes the member row on Leave, called from the live shell). `callActive`/"Live" is now derived from fresh presence (`participants.length > 0`) instead of a stored flag nothing turned off. The web audio room de-dupes stage tiles by `userId` (a lingering extra Stream session no longer renders the same user twice). New audit command `chyme.call.leave`. No schema change (`chyme_room_members.last_seen_at` already existed).

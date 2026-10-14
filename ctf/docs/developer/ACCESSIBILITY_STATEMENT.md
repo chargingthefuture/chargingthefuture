@@ -56,7 +56,7 @@ Filled in from audit findings.
     (Chyme tip, directory profile edit, Foundation connect-now) gained close-on-Escape and dropped an
     unneeded inner click handler; a redundant `role="region"` was removed; and a listbox option got
     its required `aria-selected`.
-  - Remaining (13), each with a rationale:
+  - Remaining (14), each with a rationale:
     - 5 modal backdrops still show a click-to-close handler on the dialog element
       (`click-events-have-key-events` + `no-noninteractive-element-interactions`): Chyme tip,
       directory profile edit, Foundation connect-now, comic-consent, bug-report. Each has a real
@@ -68,6 +68,10 @@ Filled in from audit findings.
     - 1 recorded video in the Beacon replay view has no captions track
       (`jsx-a11y/media-has-caption`). This is a genuine WCAG 1.2.2 gap: captions are not produced for
       recorded broadcasts yet, so a captions pipeline is needed rather than an empty track.
+    - 1 audio player for the Chyme readings loop has no captions track (`jsx-a11y/media-has-caption`).
+      Not a gap: each recording reads a published blog post, the player links that post, and every
+      entry in the blog's list of recordings carries its post link, so every recording has a full
+      text version (WCAG 1.2.1, prerecorded audio only).
   - Not yet measured (needs the runtime audit): contrast, focus order, keyboard traps, and
     screen-reader announcements.
 - Android: no completed AA audit; a meaningful share of screens still lack accessibility props, and

@@ -19,6 +19,7 @@ import {
   type TokenResponse,
 } from "expo-auth-session";
 import { registerAuthTokenGetter } from "./authedFetch";
+import { runSignOutTasks } from "./signOutTasks";
 import { getClerkOAuthClientId, getClerkOAuthEndpoints } from "./clerkOAuth";
 import {
   clearStoredSession,
@@ -28,6 +29,7 @@ import {
 } from "./sessionStore";
 import { decodeJwtClaims } from "./jwt";
 import { reportError } from '../observability/report';
+import { useServerIdentity } from "./serverIdentity";
 
 // Lets the OAuth browser tab hand control back to the app.
 WebBrowser.maybeCompleteAuthSession();
@@ -41,6 +43,8 @@ export interface AuthUser {
   isAdmin?: boolean;
   isApproved?: boolean;
   provider?: string | null;
+  /** Profile image address from the token's standard `picture` claim, or null. */
+  imageUrl?: string | null;
 }
 
 export interface AuthContextType {
@@ -94,7 +98,9 @@ function resolveUsername(
 ): string | null {
   return (
     (typeof claims.username === "string" ? claims.username : null) ??
-    (typeof metadata.username === "string" ? (metadata.username as string) : null)
+    (typeof metadata.username === "string" ? (metadata.username as string) : null) ??
+    // The standard OpenID Connect name for the handle, which Clerk's OAuth id_token uses.
+    (typeof claims.preferred_username === "string" ? claims.preferred_username : null)
   );
 }
 
@@ -122,6 +128,7 @@ function deriveUserFromClaims(claims: Record<string, unknown> | null): AuthUser 
     isAdmin: role === "admin",
     isApproved: resolveApproved(claims, metadata),
     provider: getRuntimeConfig().authProvider ?? "clerk",
+    imageUrl: typeof claims.picture === "string" ? claims.picture : null,
   };
 }
 
@@ -232,7 +239,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (stillValid) return current.idToken;
 
     if (!current.refreshToken || !discovery || !clientId) {
-      // No way to refresh — drop the stale session so the UI shows signed-out.
+      // No way to refresh — drop the expired session so the UI shows signed-out.
       await persistSession(null);
       return null;
     }
@@ -258,16 +265,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => registerAuthTokenGetter(null);
   }, [session, getToken]);
 
-  const user = useMemo<AuthUser | null>(() => {
+  const tokenUser = useMemo<AuthUser | null>(() => {
     if (!session) return null;
     return deriveUserFromClaims(decodeJwtClaims(session.idToken));
   }, [session]);
 
+  // The id_token carries no role and often no username, so the server's answer fills them in.
+  const serverIdentity = useServerIdentity(tokenUser?.id ?? null);
+  const user = useMemo<AuthUser | null>(() => {
+    if (!tokenUser || !serverIdentity) return tokenUser;
+    return {
+      ...tokenUser,
+      username: serverIdentity.username ?? tokenUser.username ?? null,
+      isAdmin: serverIdentity.isAdmin,
+      role: serverIdentity.isAdmin ? "admin" : tokenUser.role,
+    };
+  }, [tokenUser, serverIdentity]);
+
   const handleSignIn = useCallback(async () => {
     if (!discovery || !clientId || !request) {
       Alert.alert(
-        "Sign in not configured",
-        "Set NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY and EXPO_PUBLIC_CLERK_OAUTH_CLIENT_ID, and register the Clerk OAuth application, to enable sign-in.",
+        // Shown to members, so it names no setting. The cause (missing publishable key or OAuth
+        // client id in the build) is a build problem a member cannot fix.
+        "Sign-in isn't available",
+        "This copy of the app can't sign you in. Install the latest version, or sign in on the web at app.chargingthefuture.com.",
       );
       return;
     }
@@ -297,6 +318,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [clientId, discovery, persistSession, promptAsync, redirectUri, request]);
 
   const handleSignOut = useCallback(async () => {
+    // Still signed in here, so a task can reach the server (e.g. removing this phone's call alerts).
+    await runSignOutTasks();
     await persistSession(null);
     registerAuthTokenGetter(null);
   }, [persistSession]);

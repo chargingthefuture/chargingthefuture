@@ -120,7 +120,7 @@ export function buildMissionPosterElement(view: MissionPosterView, generatedOn: 
       }}
     >
       <div style={{ display: 'flex', fontSize: 16, color: ACCENT, marginBottom: 10 }}>
-        CHARGING THE FUTURE · SKILLSHUNT
+        SKILLS ECONOMY · SKILLSHUNT
       </div>
       <div style={{ display: 'flex', fontSize: 40, fontWeight: 700, color: TEXT }}>{view.title}</div>
       <div style={{ display: 'flex', width: CONTENT_WIDTH, fontSize: 19, color: SUBTLE, marginTop: 12 }}>

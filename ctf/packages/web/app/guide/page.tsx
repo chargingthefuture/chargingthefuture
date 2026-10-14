@@ -12,9 +12,9 @@ import { ScrollToHash } from './scroll-to-hash';
 // own "Last updated" date, and a "Back to top" return after each section. Content lives in the
 // generated guide-content.json (see ctf/scripts/generate-user-guide.mjs); this file only renders it.
 export const metadata: Metadata = {
-  title: 'How to use it — Charging the Future',
+  title: 'How to use it — Skills Economy',
   description:
-    'A plain-language guide to every part of the Charging the Future community platform: what each app does and how to use it.',
+    'A plain-language guide to every part of the Skills Economy community platform: what each app does and how to use it.',
 };
 
 const guide = guideData as UserGuide;
@@ -40,7 +40,7 @@ export default function GuidePage() {
         <ScrollToHash />
         <PublicPageNav />
         <header className={styles.header}>
-          <p className={styles.brand}>Charging the Future</p>
+          <p className={styles.brand}>Skills Economy</p>
           <h1 className={styles.title}>How to use it</h1>
           <p className={styles.updated}>Last updated: {formatDate(guide.updated)}</p>
           {guide.intro.map((para, i) => (

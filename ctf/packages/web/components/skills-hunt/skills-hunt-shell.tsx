@@ -11,7 +11,7 @@ import { RefreshButton } from "@/components/shared/refresh-button";
 import {
   getSkillsHuntTokens, TABS, type SkillsHuntTokens, type Tab,
   type SkillsHuntRound, type SkillsHuntLeaderboardItem, type SkillsHuntAchievement,
-  type SkillsHuntNotification, type SkillsHuntSubmission, type SkillsHuntMissionWithCommunityProgress,
+  type SkillsHuntSubmission, type SkillsHuntMissionWithCommunityProgress,
 } from "./sh-shared";
 import { SkillsHuntNotifications } from "./sh-notifications";
 import { SkillsHuntScoutTab, type ScoutFormModel } from "./sh-scout-tab";
@@ -19,6 +19,8 @@ import { SkillsHuntLeaderboardTab } from "./sh-leaderboard-tab";
 import { SkillsHuntMissionsTab } from "./sh-missions-tab";
 import { SkillsHuntMyFindsTab } from "./sh-my-finds-tab";
 import { useNominationForm } from "./sh-use-nomination-form";
+import { routeFailureMessage, useRoundTabReads, useSkillsHuntNotifications } from "./sh-use-member-reads";
+import { reportError } from "lib/observability/report";
 
 function CenteredNote({ t, color, children }: { t: SkillsHuntTokens; color: string; children: React.ReactNode }) {
   return (
@@ -33,22 +35,32 @@ interface ShellData {
   setTab: (t: Tab) => void;
   noActiveRound: boolean;
   activeRound: SkillsHuntRound | null;
-  rounds: SkillsHuntRound[];
-  onSelectRound: (id: string) => void;
   submitted: boolean;
   form: ScoutFormModel;
   resetForm: () => void;
   loadingLeaderboard: boolean;
   leaderboard: SkillsHuntLeaderboardItem[];
+  leaderboardError: string | null;
   userId?: string;
   loadingMissions: boolean;
   missions: SkillsHuntMissionWithCommunityProgress[];
+  missionsError: string | null;
   loadingFinds: boolean;
   myFinds: SkillsHuntSubmission[];
+  findsError: string | null;
+  refreshKey: number;
 }
 
+// A refused or failed rounds read carries the route's own message (thrown below); a network failure
+// has no route message, so it gets a plain sentence instead.
+class RoundsReadError extends Error {}
+
 function roundsLoadErrorMessage(e: unknown): string {
-  return e instanceof Error && e.message === "rounds" ? "Unable to load rounds." : "Something went wrong.";
+  return e instanceof RoundsReadError ? e.message : "Unable to load rounds. Check your connection and try again.";
+}
+
+async function roundsReadError(res: Response): Promise<RoundsReadError> {
+  return new RoundsReadError(await routeFailureMessage(res, `Unable to load rounds (HTTP ${res.status}).`));
 }
 
 function deriveShellState(args: {
@@ -65,15 +77,15 @@ function deriveShellState(args: {
 
 function ShellContent(d: ShellData) {
   if (d.tab === "scout") {
-    return <SkillsHuntScoutTab noActiveRound={d.noActiveRound} activeRound={d.activeRound} rounds={d.rounds} onSelectRound={d.onSelectRound} submitted={d.submitted} form={d.form} onReset={d.resetForm} onNavTab={d.setTab} />;
+    return <SkillsHuntScoutTab noActiveRound={d.noActiveRound} activeRound={d.activeRound} submitted={d.submitted} form={d.form} onReset={d.resetForm} onNavTab={d.setTab} />;
   }
   if (d.tab === "leaderboard") {
-    return <SkillsHuntLeaderboardTab loading={d.loadingLeaderboard} leaderboard={d.leaderboard} userId={d.userId} />;
+    return <SkillsHuntLeaderboardTab loading={d.loadingLeaderboard} leaderboard={d.leaderboard} error={d.leaderboardError} userId={d.userId} />;
   }
   if (d.tab === "missions") {
-    return <SkillsHuntMissionsTab noActiveRound={d.noActiveRound} loading={d.loadingMissions} missions={d.missions} onNavTab={d.setTab} />;
+    return <SkillsHuntMissionsTab noActiveRound={d.noActiveRound} loading={d.loadingMissions} missions={d.missions} error={d.missionsError} onNavTab={d.setTab} />;
   }
-  return <SkillsHuntMyFindsTab noActiveRound={d.noActiveRound} loading={d.loadingFinds} myFinds={d.myFinds} onNavTab={d.setTab} />;
+  return <SkillsHuntMyFindsTab noActiveRound={d.noActiveRound} loading={d.loadingFinds} myFinds={d.myFinds} error={d.findsError} refreshKey={d.refreshKey} onNavTab={d.setTab} />;
 }
 
 export function SkillsHuntShell({
@@ -88,17 +100,9 @@ export function SkillsHuntShell({
   const [tab, setTab] = useState<Tab>("scout");
   const [rounds, setRounds] = useState<SkillsHuntRound[]>([]);
   const [activeRound, setActiveRound] = useState<SkillsHuntRound | null>(null);
-  const [leaderboard, setLeaderboard] = useState<SkillsHuntLeaderboardItem[]>([]);
-  const [serverCurrentUserEntry, setServerCurrentUserEntry] = useState<SkillsHuntLeaderboardItem | null>(null);
-  const [missions, setMissions] = useState<SkillsHuntMissionWithCommunityProgress[]>([]);
-  const [loadingMissions, setLoadingMissions] = useState(false);
-  const [notifications, setNotifications] = useState<SkillsHuntNotification[]>([]);
   const [notifOpen, setNotifOpen] = useState(false);
   const [, setAchievements] = useState<SkillsHuntAchievement[]>([]);
-  const [myFinds, setMyFinds] = useState<SkillsHuntSubmission[]>([]);
   const [loadingRounds, setLoadingRounds] = useState(true);
-  const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
-  const [loadingFinds, setLoadingFinds] = useState(false);
   const [globalError, setGlobalError] = useState<string | null>(null);
   // Bumped by the header refresh button; the data effects below re-run without the full-screen
   // loading state (only the initial load, refreshKey 0, shows AppLoading).
@@ -107,6 +111,7 @@ export function SkillsHuntShell({
   const t = getSkillsHuntTokens(theme);
 
   const { form, submitted, resetForm } = useNominationForm(activeRound);
+  const roundKey = activeRound?.id ?? null;
 
   const initialTabRead = useRef(false);
   useEffect(() => {
@@ -129,26 +134,21 @@ export function SkillsHuntShell({
           fetch("/api/skills-hunt/achievements", { signal: controller.signal }),
         ]);
         if (controller.signal.aborted) return;
-        if (!roundsRes.ok) throw new Error("rounds");
+        if (!roundsRes.ok) throw await roundsReadError(roundsRes);
         const roundsData = (await roundsRes.json()) as { rounds: SkillsHuntRound[] };
         setRounds(roundsData.rounds);
-        // The round is the scout's to choose, and this effect re-runs on every refresh. Seeding it
-        // from rounds[0] moved a half-filled nomination to a different round without saying so
-        // (owner report: a nomination was filed under a round it was not meant for), so the choice
-        // is kept and the row re-read to keep its window, status and reward current. With more
-        // than one round open nothing is chosen until the scout marks one in the form; a single
-        // open round is the round, since there is nothing to choose between. A chosen round that
-        // has left the active list clears the choice rather than sliding to its neighbour.
-        setActiveRound((current) => {
-          if (current) return roundsData.rounds.find((r) => r.id === current.id) ?? null;
-          return roundsData.rounds.length === 1 ? roundsData.rounds[0] : null;
-        });
+        // Only one round is open at a time (owner decision, 2026-10-01; the server refuses a
+        // second), so the open round is the round: every tab reads it and a nomination goes into it.
+        // If more than one is somehow open, none is picked and the screen says so, rather than
+        // guessing and filing a nomination under a round the scout never saw.
+        setActiveRound(roundsData.rounds.length === 1 ? roundsData.rounds[0] : null);
         if (achRes.ok) {
           const achData = (await achRes.json()) as { achievements: SkillsHuntAchievement[] };
           setAchievements(achData.achievements);
         }
       } catch (e) {
         if (controller.signal.aborted) return;
+        reportError(e, { area: "skills-hunt", op: "member_rounds_load" });
         setGlobalError(roundsLoadErrorMessage(e));
       } finally {
         if (!controller.signal.aborted) setLoadingRounds(false);
@@ -158,86 +158,13 @@ export function SkillsHuntShell({
     return () => controller.abort();
   }, [refreshKey]);
 
-  useEffect(() => {
-    if (!activeRound) return;
-    const controller = new AbortController();
-    async function load() {
-      setLoadingLeaderboard(true);
-      try {
-        const res = await fetch(`/api/skills-hunt/rounds/${activeRound!.id}/leaderboard`, { signal: controller.signal });
-        if (controller.signal.aborted || !res.ok) return;
-        const data = (await res.json()) as { items: SkillsHuntLeaderboardItem[]; currentUserEntry?: SkillsHuntLeaderboardItem | null };
-        setLeaderboard(data.items);
-        setServerCurrentUserEntry(data.currentUserEntry ?? null);
-      } finally {
-        if (!controller.signal.aborted) setLoadingLeaderboard(false);
-      }
-    }
-    void load();
-    return () => controller.abort();
-  }, [activeRound, refreshKey]);
-
-  useEffect(() => {
-    if (tab !== "my-finds" || !activeRound) return;
-    const controller = new AbortController();
-    async function load() {
-      setLoadingFinds(true);
-      try {
-        const res = await fetch(`/api/skills-hunt/rounds/${activeRound!.id}/submissions`, { signal: controller.signal });
-        if (controller.signal.aborted || !res.ok) return;
-        const data = (await res.json()) as { items: SkillsHuntSubmission[] };
-        setMyFinds(data.items);
-      } finally {
-        if (!controller.signal.aborted) setLoadingFinds(false);
-      }
-    }
-    void load();
-    return () => controller.abort();
-  }, [tab, activeRound, refreshKey]);
-
-  useEffect(() => {
-    if (tab !== "missions" || !activeRound) return;
-    const controller = new AbortController();
-    async function load() {
-      setLoadingMissions(true);
-      try {
-        const res = await fetch(`/api/skills-hunt/rounds/${activeRound!.id}/missions`, { signal: controller.signal });
-        if (controller.signal.aborted || !res.ok) return;
-        const data = (await res.json()) as { items: SkillsHuntMissionWithCommunityProgress[] };
-        setMissions(data.items);
-      } finally {
-        if (!controller.signal.aborted) setLoadingMissions(false);
-      }
-    }
-    void load();
-    return () => controller.abort();
-  }, [tab, activeRound, refreshKey]);
-
-  // Notifications: poll every 30s for unread (GetStream is out of scope; continuity §2.11).
-  useEffect(() => {
-    let canceled = false;
-    async function load() {
-      try {
-        const res = await fetch("/api/skills-hunt/notifications");
-        if (canceled || !res.ok) return;
-        const data = (await res.json()) as { notifications: SkillsHuntNotification[] };
-        setNotifications(data.notifications);
-      } catch { /* ignore polling errors */ }
-    }
-    void load();
-    const timer = setInterval(load, 30_000);
-    return () => { canceled = true; clearInterval(timer); };
-  }, []);
-
-  async function markRead(notificationId: string) {
-    try {
-      await fetch(`/api/skills-hunt/notifications/${notificationId}/read`, { method: "POST", headers: { "x-ctf-csrf": "1" } });
-      setNotifications((prev) => prev.map((n) => (n.id === notificationId ? { ...n, isRead: true } : n)));
-    } catch { /* swallow — UX falls through to next poll */ }
-  }
+  const lists = useRoundTabReads(roundKey, tab, refreshKey);
+  const { leaderboard, serverCurrentUserEntry } = lists;
+  const notif = useSkillsHuntNotifications();
 
   if (loadingRounds) return <AppLoading />;
   if (globalError) return <CenteredNote t={t} color="#EF4444">{globalError}</CenteredNote>;
+  if (rounds.length > 1) return <CenteredNote t={t} color={t.MUTED}>More than one round is open, and only one can be. An admin needs to close the others before nominations can continue.</CenteredNote>;
 
   const { noActiveRound } = deriveShellState({ leaderboard, serverCurrentUserEntry, userId, rounds });
   const showModeratorTools = isAdmin || isModerator;
@@ -245,11 +172,10 @@ export function SkillsHuntShell({
   const content = (
     <ShellContent
       tab={tab} setTab={setTab} noActiveRound={noActiveRound} submitted={submitted} form={form} resetForm={resetForm}
-      activeRound={activeRound} rounds={rounds}
-      onSelectRound={(id) => setActiveRound(rounds.find((r) => r.id === id) ?? null)}
-      loadingLeaderboard={loadingLeaderboard} leaderboard={leaderboard} userId={userId}
-      loadingMissions={loadingMissions} missions={missions}
-      loadingFinds={loadingFinds} myFinds={myFinds}
+      activeRound={activeRound}
+      loadingLeaderboard={lists.loadingLeaderboard} leaderboard={leaderboard} leaderboardError={lists.leaderboardError} userId={userId}
+      loadingMissions={lists.loadingMissions} missions={lists.missions} missionsError={lists.missionsError}
+      loadingFinds={lists.loadingFinds} myFinds={lists.myFinds} findsError={lists.findsError} refreshKey={refreshKey}
     />
   );
 
@@ -279,7 +205,7 @@ export function SkillsHuntShell({
           </div>
         </div>
         {notifOpen && (
-          <SkillsHuntNotifications placement="mobile" notifications={notifications} onClose={() => setNotifOpen(false)} onMarkRead={(id) => void markRead(id)} />
+          <SkillsHuntNotifications placement="mobile" notifications={notif.notifications} error={notif.error} onClose={() => setNotifOpen(false)} onMarkRead={(id) => void notif.markRead(id)} />
         )}
         <div style={{ padding: 16 }}>{content}</div>
       </div>

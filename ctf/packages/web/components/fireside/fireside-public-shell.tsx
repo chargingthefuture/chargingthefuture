@@ -7,6 +7,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { getPluginShellTokens } from '@/components/shared/plugin-shell-theme';
 import { getAppAccent } from '@/lib/theme/theme-tokens';
 import { FIRESIDE_BLOG_BASE } from '@/lib/fireside/constants';
+import { PublicShellWorldwide } from '@/components/plugins/public-shell-worldwide';
 
 const FONT_FAMILY = "'Inter', system-ui, sans-serif";
 
@@ -128,6 +129,7 @@ export function FiresidePublicShell({ signInUrl, verifyUrl }: PublicVisitorShell
           being targeted, about the ordinary work of rebuilding. Read the entire thread with no
           account. Sign in when you want to answer somebody.
         </p>
+        <PublicShellWorldwide color={t.MUTED} style={{ marginTop: 12 }} />
 
         <a
           href={FIRESIDE_BLOG_BASE}

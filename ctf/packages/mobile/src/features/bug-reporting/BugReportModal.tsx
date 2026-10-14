@@ -8,6 +8,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  Linking,
   Modal,
   Pressable,
   ScrollView,
@@ -18,12 +19,16 @@ import {
   View,
 } from 'react-native';
 import { CheckCircle, AlertCircle, Clock, X, type LucideIcon } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme, type ThemeTokens } from '../../theme';
 import { interFamily } from '../../components/ui';
 import { submitBugReport, type BugReportSubmitResult } from './api';
 
 // The message and context fields share the server's 5000-character cap.
 const FIELD_MAX_LENGTH = 5000;
+
+// One Percent, the paid tier, for members who use this form to reach the owner about their own work.
+const ONE_PERCENT_PAID_TIER_URL = 'https://farahbrunache.com';
 
 type ViewState = 'form' | 'success' | 'error' | 'rate_limited';
 
@@ -37,6 +42,7 @@ type BugReportModalProps = {
 export function BugReportModal({ visible, onClose, pluginSlug }: BugReportModalProps) {
   const { tokens } = useTheme();
   const s = useMemo(() => makeStyles(tokens), [tokens]);
+  const insets = useSafeAreaInsets();
 
   const [message, setMessage] = useState('');
   const [context, setContext] = useState('');
@@ -98,7 +104,8 @@ export function BugReportModal({ visible, onClose, pluginSlug }: BugReportModalP
     <Modal visible={visible} transparent animationType="slide" onRequestClose={closeIfIdle}>
       <Pressable style={s.overlay} onPress={closeIfIdle}>
         {/* Stop taps inside the sheet from closing it. */}
-        <Pressable style={s.sheet} onPress={() => undefined}>
+        {/* Pad by the system button bar: the sheet is drawn behind it, which covered Cancel. */}
+        <Pressable style={[s.sheet, { paddingBottom: insets.bottom }]} onPress={() => undefined}>
           <View style={s.handle} />
           <ScrollView contentContainerStyle={s.sheetContent} keyboardShouldPersistTaps="handled">
             {view === 'form' ? (
@@ -212,6 +219,19 @@ function FormBody({
         Use this when something in the app isn&apos;t working. Reports are one-way — you
         won&apos;t get a reply here. Have a question? Ask in the Commons on the home screen,
         where members can answer.
+      </Text>
+      <Text style={s.signpost}>
+        Not a bug? To{' '}
+        <Text
+          style={s.signpostLink}
+          accessibilityRole="link"
+          onPress={() => {
+            void Linking.openURL(ONE_PERCENT_PAID_TIER_URL);
+          }}
+        >
+          talk to Farah about your work
+        </Text>
+        .
       </Text>
 
       <View style={s.field}>
@@ -369,7 +389,9 @@ function makeStylesSheet(t: ThemeTokens) {
     sheetContent: { paddingHorizontal: 20, paddingBottom: 28 },
     headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     title: { fontSize: 17, fontWeight: '800', fontFamily: interFamily('800'), color: t.textPrimary, letterSpacing: t.isComic ? 0.5 : 0, textTransform: t.isComic ? 'uppercase' : 'none' },
-    subtitle: { fontSize: 13, color: t.textSecondary, marginTop: 4, marginBottom: 18, fontFamily: interFamily('400') },
+    subtitle: { fontSize: 13, color: t.textSecondary, marginTop: 4, fontFamily: interFamily('400') },
+    signpost: { fontSize: 13, color: t.textSecondary, marginTop: 4, marginBottom: 18, fontFamily: interFamily('400') },
+    signpostLink: { textDecorationLine: 'underline' },
     close: { width: 30, height: 30, borderRadius: rChip, backgroundColor: t.isComic ? t.surface : 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: t.border, alignItems: 'center', justifyContent: 'center' },
     closeText: { color: t.textSecondary, fontSize: 14, fontFamily: interFamily('400') },
   });

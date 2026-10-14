@@ -64,6 +64,10 @@ policies:
       selfServiceHosting: enabled
       hostProfileAutoProvisioned: true
       profileOwnershipOrAdmin: required
+      # The street address and postal code a host enters are returned by the listing reads only to
+      # the host, an admin or operations reader, and a seeker whose match on that listing is
+      # accepted. Every other reader gets null for both and still sees city, state and country.
+      exactAddressDisclosure: host_admin_and_accepted_seeker_only
     consentRequirements:
       scopes:
         - lighthouse_property_management

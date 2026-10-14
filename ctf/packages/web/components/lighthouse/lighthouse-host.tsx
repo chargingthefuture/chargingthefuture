@@ -11,7 +11,7 @@ import type { Currency } from "@/lib/currency/types";
 import { SERVICE_CREDITS_LABEL } from "@/lib/currency/types";
 import { sortPreferred } from "@/lib/currency/format";
 import { formatRent, getLighthouseTokens, LIGHTHOUSE_PROPERTY_TYPES, type CurrencyMap, type LighthouseTokens, type Property } from "./shared";
-import { failureText } from 'lib/errors/client-failure';
+import { failureText, responseFailureText } from 'lib/errors/client-failure';
 
 // Member self-service hosting. A member lists their own place here; there is NO separate "host
 // profile" form — the host identity shown on a listing is composed from data we already have
@@ -418,6 +418,8 @@ function MyListings({
   );
 }
 
+const MY_LISTINGS_READ_FAILURE = "Could not load your listings.";
+
 export function LighthouseHost({
   username,
   editPropertyId,
@@ -439,18 +441,25 @@ export function LighthouseHost({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currencies, setCurrencies] = useState<Currency[]>([]);
+  // Set when the host's own listings could not be read, so a failure never reads as "0 listings".
+  const [loadError, setLoadError] = useState<string | null>(null);
   const formRef = useRef<HTMLDivElement | null>(null);
 
+  // A failed read keeps whatever list was already showing and says what failed; the create form
+  // still works without the list.
   async function loadMine() {
     try {
       const res = await fetch("/api/lighthouse/my-properties");
-      if (res.ok) {
-        const data = await res.json() as { items?: Property[]; host?: { quoraProfileUrl?: string | null } };
-        setMyProperties(data.items ?? []);
-        setQuoraUrl(data.host?.quoraProfileUrl ?? null);
+      if (!res.ok) {
+        setLoadError(await responseFailureText(res, MY_LISTINGS_READ_FAILURE, "member"));
+        return;
       }
-    } catch {
-      // Best-effort; the create form still works without the list.
+      const data = await res.json() as { items?: Property[]; host?: { quoraProfileUrl?: string | null } };
+      setMyProperties(data.items ?? []);
+      setQuoraUrl(data.host?.quoraProfileUrl ?? null);
+      setLoadError(null);
+    } catch (caught) {
+      setLoadError(failureText(caught, { area: 'lighthouse', op: 'load_my_listings', fallback: MY_LISTINGS_READ_FAILURE, audience: 'member' }));
     }
   }
 
@@ -564,7 +573,7 @@ export function LighthouseHost({
       <HostIdentityCard t={t} username={username} quoraUrl={quoraUrl} trust={trust} />
 
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, gap: 12 }}>
-        <div style={{ fontSize: 16, fontWeight: 700, color: t.TITLE }}>Your listings ({myProperties.length})</div>
+        <div style={{ fontSize: 16, fontWeight: 700, color: t.TITLE }}>Your listings{loadError ? "" : ` (${myProperties.length})`}</div>
         <button type="button" onClick={() => { setShowForm((v) => !v); setEditingId(null); setForm(EMPTY_FORM); setError(null); }} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, background: `${t.ACCENT}1A`, border: `1px solid ${t.ACCENT}40`, color: t.ACCENT, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
           <Plus size={16} /> {showForm ? "Close" : "List your place"}
         </button>
@@ -585,7 +594,10 @@ export function LighthouseHost({
         />
       ) : null}
 
-      <MyListings t={t} myProperties={myProperties} currencyMap={currencyMap} onEdit={(id) => void beginEdit(id)} />
+      {loadError ? <div role="alert" style={{ color: "#EF4444", fontSize: 13, marginBottom: 12 }}>{loadError}</div> : null}
+      {loadError && myProperties.length === 0 ? null : (
+        <MyListings t={t} myProperties={myProperties} currencyMap={currencyMap} onEdit={(id) => void beginEdit(id)} />
+      )}
     </div>
   );
 }

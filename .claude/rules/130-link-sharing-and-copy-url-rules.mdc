@@ -55,6 +55,30 @@ counterpart of `ShareLink` and is built the same way: one control, used everywhe
 means scrolling, several screenshots and a stitch that loses rows at the seams and leaves the
 phone's own clock and battery in the middle of something meant to be seen in public.
 
+### Where the control goes (owner directive, 2026-10-03)
+
+**A picture control only goes on a member page if members get it too.** An admin-only picture
+belongs on that plugin's admin page, not on the member page behind an `isAdmin` check.
+
+The failed version is worth naming, because it looks reasonable while you are writing it: the
+Community Planning picture was first built onto the member Community tab and hidden from everybody
+but an admin. That puts a control in the member UI that most of the people looking at that UI can
+never see, which makes the screen two different screens depending on who opened it, and it buries
+an admin tool where an admin has to go and find it among member screens.
+
+So decide which page the control belongs to by who it is for:
+
+- **Members get it** → it goes on the member screen, visible to everybody there. What's Your 1% is
+  the worked example: the member shares their own card, so every member has the control.
+- **Admins only** → the admin page renders the member-facing view and puts the control under it.
+  The Workforce admin page is the worked example, carrying the Overview headline figures and the
+  Community Planning teams with a picture each.
+
+Rendering the member view on the admin page is the point rather than a cost: the picture has to be
+of the real screen (see one to one, below), so the admin page shows that screen and pictures it.
+Pass the component a prop that says the control is wanted — `showPicture` — rather than one that
+says who is looking, so the call site carries the decision and the component stays reusable.
+
 ### One to one, with exactly two exceptions (owner directive, 2026-09-20)
 
 The picture **is** the screen. Not a version of it, not a summary of it, not a cleaner layout of

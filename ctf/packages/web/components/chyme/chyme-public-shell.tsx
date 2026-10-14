@@ -1,6 +1,6 @@
 'use client';
 
-import { Radio, LogIn, LogOut, UserPlus, RefreshCw } from 'lucide-react';
+import { Radio, LogIn, LogOut, RefreshCw } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
 import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link';
@@ -9,6 +9,7 @@ import { getChymeTokens } from './chyme-shared';
 import { ChymeGuestListen, GuestNote } from '@/components/chyme/chyme-guest-listen';
 import { ChymeGuestChat } from '@/components/chyme/chyme-guest-chat';
 import { ChymeUpcoming } from '@/components/chyme/chyme-upcoming';
+import { ChymeReadingsPlayer } from '@/components/chyme/readings/chyme-readings-player';
 import { HOSTING_NOT_ENDORSEMENT_SHORT } from '@ctf/shared';
 
 // Live state for the one default public Chyme room, fetched client-side from
@@ -45,8 +46,7 @@ type GuestListenControl = {
 // card #041a0b, divider #052e16, mint-white title) and the green accent. The old purple/cyan accent
 // made the guest view look like a separate app.
 // Chrome tokens come from getChymeTokens(theme) (t.BG page, t.BORDER divider, t.TITLE bright
-// text, t.MUTED gray, t.ACCENT green). Two values have no token slot and stay static:
-const SURFACE = '#041a0b'; // card surface — no getter field matches this hex
+// text, t.MUTED gray, t.ACCENT green). One value has no token slot and stays static:
 const ACCENT_CYAN = '#16A34A'; // deep-green gradient partner — no getter field matches
 
 const FONT_FAMILY = "'Inter', system-ui, sans-serif";
@@ -103,7 +103,9 @@ function ChymePublicRoomList({ live, onRoomGone, signInUrl, refreshKey, listen }
     return (
       <div style={{ borderRadius: 10, border: `1px dashed ${t.BORDER}`, padding: '20px 14px', textAlign: 'center' }}>
         <div style={{ fontSize: 13, fontWeight: 600, color: t.TITLE, marginBottom: 4 }}>No public rooms right now</div>
-        <div style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.5 }}>Public rooms show up here when hosts go live. The TI Radio guide below says when the next one is.</div>
+        <div style={{ fontSize: 12, color: t.MUTED, lineHeight: 1.5 }}>Public rooms show up here when hosts go live. The TI Radio guide above says when the next one is.</div>
+        {/* The readings loop, only while it is switched on (temporary module, 2026-09-28). */}
+        <ChymeReadingsPlayer onRoomLive={onRoomGone} />
       </div>
     );
   }
@@ -220,14 +222,11 @@ function ChymePublicView({
               Finish verifying
             </a>
           ) : (
-            <>
-              <a href={signInUrl} style={{ flex: 1, padding: '9px', borderRadius: 9, background: t.ACCENT, border: 'none', color: '#fff', fontWeight: 700, fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, textDecoration: 'none' }}>
-                <UserPlus size={13} /> Join Free to Listen
-              </a>
-              <a href={signInUrl} style={{ padding: '9px 14px', borderRadius: 9, background: SURFACE, border: `1px solid ${t.BORDER}`, color: t.MUTED, fontSize: 12, display: 'flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}>
-                <LogIn size={13} /> Sign In
-              </a>
-            </>
+            // One button (owner directive, 2026-09-29): "Join Free to Listen" and "Sign In" led to the
+            // same page, and listening here needs no account at all, so only Sign In stays.
+            <a href={signInUrl} style={{ flex: 1, padding: '9px', borderRadius: 9, background: t.ACCENT, border: 'none', color: '#fff', fontWeight: 700, fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, textDecoration: 'none' }}>
+              <LogIn size={13} /> Sign In
+            </a>
           )}
         </div>
       </div>
@@ -239,6 +238,12 @@ function ChymePublicView({
           it, a visitor listening in had no way to stop short of closing the tab or reloading a long
           page (owner report, 2026-09-20). It shows only while there is a call to leave. */}
       <div style={{ flex: 1, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {/* What is coming up on the TI Radio guide, so a visitor at a quiet room knows when to come
+            back (scheduled rooms MVP, 2026-09-19). Same refresh control as the room and the chat.
+            Above the room, where the signed-in page has it (owner directive, 2026-09-30). */}
+        <div style={{ borderRadius: 10, border: `1px solid ${t.BORDER}`, overflow: 'hidden' }}>
+          <ChymeUpcoming refreshKey={refreshKey} compact />
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: t.MUTED, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Live Rooms</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
@@ -266,11 +271,6 @@ function ChymePublicView({
           </div>
         </div>
         <ChymePublicRoomList live={live} onRoomGone={onRoomGone} signInUrl={signInUrl} refreshKey={refreshKey} listen={listen} />
-        {/* What is coming up on the TI Radio guide, so a visitor at a quiet room knows when to come
-            back (scheduled rooms MVP, 2026-09-19). Same refresh control as the room and the chat. */}
-        <div style={{ borderRadius: 10, border: `1px solid ${t.BORDER}`, overflow: 'hidden' }}>
-          <ChymeUpcoming refreshKey={refreshKey} compact />
-        </div>
       </div>
 
       {/* No bottom bar. A grayed, locked "Start a Room" sat here until 2026-09-18 as the statement

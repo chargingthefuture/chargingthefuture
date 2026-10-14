@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireComicReadAccess } from '../_lib';
 import { COMIC_ERROR_CODE } from 'lib/comic/constants';
 import { logComicAudit } from 'lib/comic/audit';
+import { UNLOCK_HELP_SENT_REASON } from 'lib/comic/unlock-help-script';
 import { routeComicMessage, validateComicMessageInput } from 'lib/comic/repository';
 import type { ComicMessageInput } from 'lib/comic/types';
 import { reportError } from 'lib/observability/report';
@@ -60,6 +61,15 @@ function mapKnownMessageError(code: string): NextResponse | null {
 
 type RoutedMessageResult = Awaited<ReturnType<typeof routeComicMessage>>;
 
+const ROUTED_AUDIT_REASON: Record<string, string> = {
+  human_first: 'safety_human_first',
+  answered: UNLOCK_HELP_SENT_REASON,
+};
+
+function routedAuditReason(outcome: string): string {
+  return ROUTED_AUDIT_REASON[outcome] ?? 'interim_review_pending';
+}
+
 // Turn a successful routing result into its response and audit entry.
 function respondToRoutedMessage(result: RoutedMessageResult, userId: string): NextResponse {
   // No @comic mention → peer-to-peer message, the assistant does nothing.
@@ -83,7 +93,7 @@ function respondToRoutedMessage(result: RoutedMessageResult, userId: string): Ne
     pluginId: 'comic',
     command: 'comic.message.route',
     status: 'allow',
-    reason: result.outcome === 'human_first' ? 'safety_human_first' : 'interim_review_pending',
+    reason: routedAuditReason(result.outcome),
     targetType: 'comic_turn',
     targetId: result.userTurnId,
     result: 'success',
@@ -96,7 +106,9 @@ function respondToRoutedMessage(result: RoutedMessageResult, userId: string): Ne
     },
   });
 
-  // The unreviewed draft is NEVER returned to the asker; only the safe holding response is.
+  // An unreviewed draft is never returned here; the asker gets the holding response. The one answer
+  // that skips review (outcome `answered`, a scripted Unlock answer) reaches them through the comic
+  // stream, which the client reloads right after this call.
   return NextResponse.json(
     {
       ok: true,

@@ -17,7 +17,8 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:workforce` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-workforce-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-07-16 manual update: added WF-10 Community Planning · 2026-07-17 manual update: WF-10 gap figure removed (team + per-occupation), team sector names corrected to live taxonomy names, member names link to Directory profile (web) · 2026-08-04 manual updates: WF-A2 now tests the shipped Audit trail panel; WF-7 points at the real `/account/data` delete control; region row removed (field dropped) · 2026-08-16 manual update: Skills Coverage hero card added (fourth tile — percent of the live active-skill catalog, "{listed} of {catalog} skills", all values dynamic) · 2026-08-24 manual update: added WF-11 — the page itself scrolls, so Safari's "Full Page" screenshot captures the entire screen · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-08-29 manual update: WF-10 now lists thirteen teams — Water & Sanitation, Education & Childcare and Making & Repair added so the model covers a community running without outside services · 2026-09-14 manual update: added WF-A4 — per-occupation demand weighting · 2026-09-14 manual update: added WF-12 — the What's your 1%? tab (own card, per-trade weight, own-numbers inputs, reference ladder, five routes) · 2026-09-15 manual update: WF-12 step 1a — any tab opens straight from `?view=`, and an unknown or missing value falls back to Overview |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-07-16 manual update: added WF-10 Community Planning · 2026-07-17 manual update: WF-10 gap figure removed (team + per-occupation), team sector names corrected to live taxonomy names, member names link to Directory profile (web) · 2026-08-04 manual updates: WF-A2 now tests the shipped Audit trail panel; WF-7 points at the real `/account/data` delete control; region row removed (field dropped) · 2026-08-16 manual update: Skills Coverage hero card added (fourth tile — percent of the live active-skill catalog, "{listed} of {catalog} skills", all values dynamic) · 2026-08-24 manual update: added WF-11 — the page itself scrolls, so Safari's "Full Page" screenshot captures the entire screen · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-08-29 manual update: WF-10 now lists thirteen teams — Water & Sanitation, Education & Childcare and Making & Repair added so the model covers a community running without outside services · 2026-09-14 manual update: added WF-A4 — per-occupation demand weighting · 2026-09-14 manual update: added WF-12 — the What's your 1%? tab (own card, per-trade weight, own-numbers inputs, reference ladder, five routes) · 2026-09-15 manual update: WF-12 step 1a — any tab opens straight from `?view=`, and an unknown or missing value falls back to Overview · 2026-10-03 manual update: WF-12 — each route has a "Go to <name> ›" button · 2026-10-03 manual update: WF-12 step 8a — the tab shares as one picture, and the picture carries the member's typed numbers rather than the field placeholders · 2026-10-03 manual update: WF-10 step 6 — the member Community tab carries no picture control for anybody; added WF-A5 — the admin page's Pictures to post block (Overview and Community Planning), where no member name may reach a picture |
+| **Inventory wording** | 2026-10-01: banned-term wording removed from the inventory prose; no step in this script changed |
 
 ## How to run this
 
@@ -52,7 +53,7 @@ Workforce is a read-only live tracker — these are the can't-ship-broken checks
    card with your initials, your name, and the skills from your Directory listing; a line reading
    50,000 people; a "What your trade normally carries" block naming your occupation and how many
    people one of you serves; two inputs for your own rate and frequency; a reference table whose
-   first row is $5 → $250,000; and five routes, each a link to a part of the app. Nobody else's
+   first row is $5 → $250,000; and five routes, each with a "Go to <name> ›" button. Nobody else's
    card is anywhere on the screen. → web ☐ mobile ☐
 
 ---
@@ -199,6 +200,10 @@ directly), and the admin screen header shows a "Member view" pill opening `/apps
    profile.
 5. Cross-check one team against the underlying sector drilldown (WF-6): the team's roster is the
    de-duplicated union of its mapped sectors' matched members.
+6. **No picture control on this tab, for anybody.** Confirm there is no picture or capture control
+   anywhere on the member Community tab — as a plain member **and** as an admin. An admin-only
+   control belongs on the admin page, not here (rule 130, "Where the control goes"). The pictures
+   are covered by WF-A5.
 **Expected:** Each team shows its matched-member count and lists the sectors it draws from; when
 expanded, the matched members by name (same match reasons as the sector drilldown — job title, skill,
 or sector). A member matched through two of a team's sectors appears once. There is **no** "N to fill"
@@ -249,8 +254,9 @@ with a second account that has no claimed listing.
 4. Read the rate table. Confirm the rows are $5 / $20 / $50 / $100 / $250 per person per year, that
    the middle column reads $250,000 / $1,000,000 / $2,500,000 / $5,000,000 / $12,500,000, and that
    the first row's third column reads 3.5×.
-5. Click each of the five route links in turn (Foundation, Foundation, PeerProgramming, SkillUp,
-   Knowledge Library). Each one opens that part of the app — none 404s.
+5. Press each of the five route buttons in turn (Go to Foundation, Go to Foundation, Go to
+   PeerProgramming, Go to SkillUp, Go to Knowledge Library). Each one opens that part of the app —
+   none 404s.
 6. Read the "What your trade normally carries" block. Note the occupation it names and the
    people-served figure. Sign in as a second account whose Directory listing carries an occupation
    in a **different sector**, open the same tab, and compare — the figures must differ. Two
@@ -260,6 +266,19 @@ with a second account that has no claimed listing.
    showing $125 per person per year and $6,250,000. Clear either field; the box disappears. Enter
    0 or a negative number in either; no box appears and nothing errors.
 8. Reload the page. The two numbers you typed are gone — they are not saved anywhere.
+8a. **One picture of the tab.** Type 250 and 0.5 into "Your own numbers" again, then press **Show
+   this page as one picture**. Read the note under the button first — it must say the picture
+   carries your name, your trade, your listed skills and the numbers you typed. The picture appears
+   on this screen rather than replacing it, and nothing navigates away. Check it against the tab
+   behind it: same card, same trade block, same ladder, same routes, same closing paragraph about
+   the figures being speculative, and the deep link
+   `https://app.chargingthefuture.com/apps/workforce?view=one-percent` underneath. **Read the two
+   "Your own numbers" fields in the picture: they must show 250 and 0.5 in normal text, not the
+   grayed-out example figures** — a picture showing numbers the member did not type is the failure
+   this step exists to catch. Now clear both fields and take a second picture: the fields read as
+   empty or as their faint examples, never as the numbers from the first picture. Press Share and
+   confirm the phone's share sheet opens with the image; press and hold the picture and confirm the
+   phone offers to save it. Neither the app header nor the button itself appears in either picture.
 9. Sign in as an account with no claimed Directory listing and open the same tab.
 10. Sign out entirely and try to reach the tab.
 **Expected:** The card is yours and only yours — no other member's name, initials or skills appear
@@ -273,6 +292,19 @@ absent entirely rather than showing a stand-in figure, and the inputs, table and
 app asks for a sign-in rather than showing an empty card. Nothing on this screen is saved: the two
 numbers you type live in the browser only and are gone on reload, and everything else recomputes.
 **Result:** web ☐ mobile ☐ — notes:
+
+### WF-13 · A failed read says why (added 2026-10-05)
+**Role:** member · **Surfaces:** web
+**Steps:**
+1. Open Workforce, then let the session expire (or sign out in another tab) and open the Overview,
+   Community, a bucket drilldown, Occupations and What's your 1%? tabs in turn.
+2. With the browser's network tools, make one later page of the Occupations list fail.
+3. Read `GET /api/workforce/dashboard` directly.
+**Expected:** Each tab in step 1 shows the message the route sent, not a fixed "Request failed (N)."
+line; only a body with no message or reason falls back to the status code. In step 2 the Occupations
+list shows its error state instead of a short list with a wrong count. In step 3 the answer carries a
+top-level `generatedAt` equal to `dashboard.generatedAtIso`.
+**Result:** web ☐ — notes:
 
 ---
 
@@ -312,6 +344,35 @@ read it.
 recompute, sync, or export, and occupations are read from Skills Taxonomy (no occupation write
 surface). The only admin write is the config save.
 **Result:** web ☐ mobile ☐ — notes:
+
+### WF-A5 · Pictures to post (admin page)
+**Role:** admin · **Surfaces:** web (mobile-responsive)
+**Steps:**
+1. Open `/admin/workforce` and scroll to **Pictures to post**.
+2. Read the Overview block: the four headline tiles (Population, Workforce Total, Recruited, Skills
+   Coverage) and the Skills Economy Summary, the same figures the member Overview shows.
+3. Press **Show the Overview as one picture**. Compare it against the member Overview at
+   `/apps/workforce` side by side.
+4. Scroll on to the Community Planning teams. Expand at least two teams so their rosters are on
+   screen, then press **Show this page as one picture**.
+5. Press Share on each picture in turn.
+6. Open `/apps/workforce` as a plain member and look for any picture control on the Overview and on
+   the Community tab.
+**Expected:** Step 3's picture carries the four tiles and the summary exactly as the member Overview
+renders them — same numbers, same wording, same order — with
+`https://app.chargingthefuture.com/apps/workforce` underneath. Step 4's carries the intro, every
+team with its responsibilities, sectors and member count, and
+`…/apps/workforce?view=community-planning` underneath; **no member name appears anywhere in it,
+including in the teams expanded in step 4** — the counts stay, the people do not. That is what this
+case exists to catch: a picture leaves the app's read gate behind, so a name in one is a name
+published. Step 5 opens the phone's share sheet with the image, and the picture stays on screen
+rather than the app navigating anywhere. Neither the app header nor the controls themselves appear
+in either picture. Step 6 finds **no** picture control on either member screen — the Workforce
+pictures are made from the admin page only. (What's Your 1% does carry one, for every member; that
+is WF-12 step 8a and is the deliberate exception, because there the member shares their own card.)
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
+---
 
 ### WF-A4 · Per-occupation demand follows the weight, and is still even without one (added 2026-09-14)
 **Role:** admin · **Surfaces:** web
@@ -370,8 +431,11 @@ of these, it is already tracked, not a new bug:
   own script covers the consumers (SH-A17 and the rare-skill scoring cases).
 - The member-facing service-scoped delete lives on the Account & Data screen (`/account/data`), not
   inside the Workforce shell — that is by design, not a missing control (reclassified 2026-08-04).
-  The in-plugin `DELETE /api/workforce/profile` route stays because the deletion contract §9
-  mandates it.
+  The in-plugin `GET`/`DELETE /api/workforce/profile` route was retired 2026-10-05 (nothing
+  rendered the read and nothing called the delete); the deletion contract §9 now names
+  `DELETE /api/account/services/workforce`. Opening the Overview makes no request to
+  `/api/workforce/profile`, and a failed load never lists "your profile" among the sections that
+  could not be loaded.
 - The profile has no `region` field (dropped 2026-08-04 — it was always null with no upstream
   source). Seeing no region row anywhere is correct.
 - (2026-07-03 sweep) The unused summary report endpoint, an in-process sync cron that failed on

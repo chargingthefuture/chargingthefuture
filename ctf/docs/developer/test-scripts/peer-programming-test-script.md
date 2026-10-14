@@ -1,6 +1,6 @@
 # PeerProgramming — Manual Test Script
 
-> **Android: not applicable.** This feature is web-only (rule 105 / PR #1742, 2026-07-20). The React Native screens were deleted and there is nothing to install; the Android app carries only Clerk sign-in, Chyme, bug reporting, and settings. Test on web only: desktop and the phone-width (~390px) layout. The `android` surface tags and steps that used to sit throughout this script were removed on 2026-08-18 because they kept being read as work still to do.
+> **Android: in scope (owner decision, 2026-10-06).** The native Android app carries PeerProgramming again, the same as the web page at phone width since 2026-10-08: the goal board, the Cohorts tab, the Direct Line, the live Session call (including sharing the phone's screen and keeping the call running in the background) and the admin screen. The Android steps live in one place, **AN-PP** in `android-app-test-script.md`, on a real device build (not Expo Go). The cases in this script are the web steps: desktop and the phone-width (~390px) layout.
 
 > Generated from the feature inventory and command contracts for `peer-programming`; this is the runnable checklist for a human tester on a real device. Regenerate with: `pnpm --dir ctf test-script:generate -- peer-programming`
 
@@ -9,7 +9,7 @@
 | **Plugin** | PeerProgramming |
 | **Visibility** | member |
 | **Roles to test** | member, admin |
-| **Surfaces** | web only (`/apps/peer-programming`, `/admin/peer-programming`) — no Android surface |
+| **Surfaces** | web (`/apps/peer-programming`, `/admin/peer-programming`); Android app (member and admin screens; see AN-PP in `android-app-test-script.md`) |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-peer-programming-feature-inventory.md` |
 | **Generated** | 2026-07-18 (commit 34badcbb) · 2026-09-20: the inventory's prose was swept for a banned word (CLAUDE.md); no step here changes, because nothing about what the plugin does or how it is tested moved |
@@ -66,7 +66,9 @@ After the seed, the admin cohort list shows at least one cohort and the topic fo
 web ☐
 
 **5. The cohort's video call opens**
-Signed in as a cohort member, open the Session tab and press "Join Session." The call opens with your
+Signed in as a cohort member, open the Session tab. Before joining, the line under the title reads
+"<cohort label> · N participants" with N the cohort's member count (never 0 for a cohort you are in),
+and the roster shows one tile per member by name. Press "Join Session." The call opens with your
 own camera tile, and mute, camera, and leave controls are visible; leaving returns to the Session tab
 without an error. If live video is not configured in this environment, the readable "live video
 unavailable" notice counts as a pass here — the full walkthrough covers both paths in PP-10 and
@@ -75,10 +77,11 @@ web ☐
 
 **6. The goal board opens and takes a goal**
 Signed in as a cohort member with no open goal, open `/apps/peer-programming`. The Goals tab is
-selected, the top line shows how many cards were done in the last 24 hours, and a "+ Add your goal"
-button is visible above the Up for grabs, Doing and Done columns. Press it, write a goal and two
-cards, one per line, and press "Post goal". A "Your goal" panel appears reading "0 of 2 cards done",
-the button is gone, and both cards sit in Up for grabs marked "Your goal".
+selected, the top line shows how many cards were done in the last 24 hours, and a row of goals
+starting with "All goals" and ending with "+ Add your goal" sits above the Up for grabs, Doing and
+Done columns. Press "+ Add your goal", write a goal and two cards, one per line, and press "Post
+goal". The new goal is selected in the row, a "Your goal" panel appears reading "0 of 2 cards done",
+and both cards sit in Up for grabs marked "Your goal".
 web ☐
 
 ---
@@ -113,6 +116,24 @@ Result: web ☐
 3. Tap/click Send.
 
 **Expected:** The message appears in the message list attributed to your username (e.g. `@alice` or a short member label). The composer clears after sending. No error message is shown. Each message's stamp shows **both a date and a time** (e.g. "Jul 21, 09:21 PM"), not a time alone, so messages from different days can be told apart. Posting requires already being a member of the cohort — placement comes only from the weekly assignment run (cron or admin manual run), never from opening the room or the live session.
+
+Result: web ☐
+
+---
+
+### PP-2a — Message box grows with a long message (added 2026-10-03)
+
+**Role:** member · **Surfaces:** web (phone width, and iOS Safari if available)
+
+**Precondition:** Signed in as a cohort member with the composer showing (as in PP-2).
+
+**Steps:**
+1. Tap the message box. On iOS Safari, check whether the page zooms in.
+2. Type a sentence long enough to pass the right edge of the box.
+3. Keep typing, adding line breaks with Shift+Enter, until the text is about ten lines long.
+4. Press Send.
+
+**Expected:** The page does not zoom on focus. The text wraps onto new lines instead of scrolling sideways. The box grows one line at a time up to six lines, then stops growing and scrolls inside itself. The send button stays at the bottom right of the box as it grows. After sending, the box clears and shrinks back to one line.
 
 Result: web ☐
 
@@ -391,18 +412,28 @@ Result: web ☐
 
 ---
 
-### PP-17 — One open goal per member
+### PP-17 — Several goals, switched from the row above the board
 
-**Role:** member · **Surfaces:** web
+**Role:** member · **Surfaces:** web (phone width)
 
 **Steps:**
-1. With an open goal, look for the "+ Add your goal" button.
-2. Press "Reached it" on your goal.
+1. With one open goal, press "+ Add your goal" at the end of the goal row, post a second goal with
+   one card, and press "All goals".
+2. Swipe the goal row sideways, then press the first goal, then the second.
+3. With the second goal selected, press "Reached it".
 
-**Expected:** While the goal is open there is no button to post a second one, only the "Your goal"
-panel. After "Reached it" the panel and the goal's unfinished cards leave the board, its done cards
-stay in Done with no controls, and "+ Add your goal" is back. "Take it down" instead removes the goal
-and all its cards from the board.
+**Expected:** Both goals show in the row, yours first, each with "Yours · 0 of N done" and the same
+colored edge as its cards. "All goals" shows every card; pressing a goal narrows Up for grabs, Doing
+and Done to that goal's cards and shows its "Your goal" panel. After "Reached it" the row goes back
+to "All goals", that goal leaves the row, its unfinished cards leave the board, and its done cards
+stay in Done with no controls. "Take it down" instead removes the goal and all its cards. With 10
+open goals, "+ Add your goal" is not in the row.
+
+**Also (added 2026-10-06):** with single standing cohort mode off, leave some goals open on one
+cohort, then end that cohort from `/admin/peer-programming` (or wait for the week to roll over) so the
+member lands in a new cohort. Those old goals are not on the new board and do not count: the member
+can post 10 open goals in the new cohort. The old goals are still in the database with status
+`open`; nothing closes or removes them.
 
 Result: web ☐
 
@@ -497,6 +528,26 @@ back". After step 2 the buttons are gone and A sees "Done by @B · it helped". B
 it helped". C sees "Done by @B" with no mark. B appears in Delivering today. "Keep" instead leaves the
 card done with no mark for anyone and B is not credited for it. A fourth "It helped" from A to B in
 the same week keeps the card but adds nothing to B's count.
+
+Result: web ☐
+
+---
+
+### PP-22 — Signed-out page (added 2026-10-04)
+
+**Role:** signed-out visitor · **Surfaces:** web (phone width)
+
+**Precondition:** Signed out.
+
+**Steps:**
+1. Open `/apps/peer-programming`.
+2. Read the description under the title.
+3. Count the buttons that lead to sign-in.
+
+**Expected:** The description opens with "A global mastermind with a goal board: each member posts
+their goals, and everyone helps each other reach them." and then the weekly cohort sentence. "Open
+to members worldwide" shows under it. There is one sign-in button, "Join Skills Economy — Free";
+the lock area below shows "Sign in to get matched" with no button of its own.
 
 Result: web ☐
 
@@ -702,11 +753,12 @@ Result: web ☐
 
 ---
 
-## Parity check — not applicable
+## Parity check — web and Android
 
-There is no second surface to compare against: PeerProgramming is web-only (rule 105). The cases
-below are kept as the list of behavior that matters most, and should be checked on both a desktop
-browser and the phone-width layout — but a missing Android result is never a bug.
+The Android app carries the member screen since 2026-10-06 and, since 2026-10-08, matches the web
+page at phone width: Goals, Cohorts, Session and Direct Line, plus the admin screen. The cases below
+are the behavior that matters most: check them on a desktop browser and the phone-width layout, and
+on Android through AN-PP in `android-app-test-script.md`.
 
 | Case | What must match |
 |---|---|
@@ -722,7 +774,7 @@ browser and the phone-width layout — but a missing Android result is never a b
 | PP-14 | Weekly assignment (not merely opening the page) places an active member into standing Cohort 1 |
 | PP-15 | Another member takes a task, posts a result, and the owner is notified |
 | PP-16 | Keep holds a result with the helper's name; Send back reopens the task and drops the count |
-| PP-17 | One open goal at a time; the form returns after the goal is closed |
+| PP-17 | Several goals switched from the row above the board; up to 10 open at once |
 | PP-21 | "It helped" shows to the goal's owner and the helper only; the helper is credited |
 | PP-A3 | Admin can run weekly assignment and see the result count |
 | PP-A5 | Admin cohort list shows cross-week cohorts with week labels |
@@ -738,8 +790,10 @@ browser and the phone-width layout — but a missing Android result is never a b
 
 3. **Weekly cron requires `CRON_SECRET` to be configured.** The `PeerProgramming — Weekly Cohort Assignment` GitHub Actions workflow skips with a visible warning rather than failing when `CRON_SECRET` or `NEXT_PUBLIC_APP_URL` is not set in repository Actions secrets. Admins form cohorts manually from the admin screen until those secrets are configured. Do not file this as a bug.
 
-4. **No automated test harness exists for live Stream calls.** Live video cases (PP-10, PP-11) are verified by hand in the browser. There is no Android build to test — that surface was removed on 2026-07-20 — so an EAS dev build is no longer a precondition for any case here.
+4. **No automated test harness exists for live Stream calls.** Live video cases (PP-10, PP-11) are verified by hand in the browser, and on Android by AN-PP on a real device build.
 
 > _Terminology (2026-07-20): the source inventory's user-facing section is now titled **User Features** (was "Target User Features"), and its admin section **Admin Features**. Heading rename only — no test steps changed._
 >
 > _Android removal (2026-08-18): every `android` surface tag, step, and precondition was removed from this script to match the inventory. The Android screens were deleted on 2026-07-20 and testers kept treating the leftover tags as untested work. No web step changed._
+>
+> _Android back in scope (2026-10-06, owner decision): the header, Surfaces row, parity check and known gap 4 now point to AN-PP in `android-app-test-script.md` for the Android steps. No web step changed._

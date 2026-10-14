@@ -32,11 +32,10 @@ export const PLATFORM_EARN_METHODS: {
   },
   {
     title: 'Take part in SkillsHunt',
-    // Credits are granted per accepted nomination, not per round: the round configures
-    // reward_credits_per_accept and an optional per-scout round cap, and the mint runs on accept.
-    // "Per round" read as one payout at the end of a round, which is not what happens.
-    detail: 'Nominate a survivor. Credits are granted when the nomination is accepted.',
-    credits: 'Per acceptance',
+    // A round is points only; credits are sent once it ends (owner decision, 2026-10-01). Every
+    // scout whose score reached the round's points bar shares its pool, split by points.
+    detail: 'Nominate survivors to earn points. When a round ends, scouts above its points bar share its ServiceCredits.',
+    credits: 'End of round',
     note: 'ongoing',
     color: '#FBBF24',
     href: '/apps/skills-hunt',

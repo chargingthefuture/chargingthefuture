@@ -210,6 +210,13 @@ Trust has no dedicated seed script, and none is required. Trust is a derived plu
 
 ## Change Log
 
+- 2026-10-05: **Another member's trust card loads again.** `GET /api/trust/user/[userId]` read the
+  path value synchronously, but this Next.js version hands route handlers their params as a Promise,
+  so the id was always `undefined`. The read found no row, every member saw an empty card on every
+  other member's Directory profile, and the `trust.summary.read` audit row carried a null
+  `target_user_id`. The route now awaits `context.params` like its sibling
+  `GET /api/presence/user/[userId]`, and answers 400 `TRUST_INVALID_PAYLOAD` for a missing or empty
+  id. Who may read the panel and what they see are unchanged.
 - 2026-08-27: **Trust counts a sign-in day the same way the rest of the app does — owner decision:
   "active just means logged in via clerk", one definition everywhere.** `loginDays` counted distinct
   days with `date_trunc('day', created_at)`, which truncates in the database session's timezone,

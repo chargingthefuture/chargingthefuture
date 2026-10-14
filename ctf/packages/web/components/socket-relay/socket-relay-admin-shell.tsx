@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Radio, Trash2 } from 'lucide-react';
+import { Ban, ImageOff, Radio, Trash2 } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-button';
@@ -45,6 +45,8 @@ function StatBlock({ label, value, accent }: { label: string; value: number; acc
   );
 }
 
+const dangerButton = { display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', color: '#EF4444', fontSize: 13, fontWeight: 600 } as const;
+
 async function adminMutate(url: string, method: 'POST' | 'DELETE', body?: unknown): Promise<{ ok: boolean; message?: string }> {
   try {
     const res = await fetch(url, {
@@ -71,6 +73,52 @@ function memberLabel(name: string | null | undefined, username: string | null, u
   // of overwriting the id was that nobody has to decipher a token.
   if (userId === DELETED_MEMBER_PLACEHOLDER) return 'Deleted member';
   return userId;
+}
+
+// One request in the admin list, with its picture and the remove buttons.
+function AdminRequestRow({
+  request: r,
+  busy,
+  onRemove,
+  onRemoveImage,
+}: {
+  request: SocketRelayRequest;
+  busy: boolean;
+  onRemove: (id: string) => Promise<void>;
+  onRemoveImage: (id: string, ban: boolean) => Promise<void>;
+}) {
+  const { theme } = useTheme();
+  const t = getSocketRelayTokens(theme);
+  const buttonState = { cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 } as const;
+  return (
+    <div style={{ marginBottom: 12, padding: '14px 16px', borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+        <span style={{ fontSize: 14, fontWeight: 600, flex: 1 }}>{r.title}</span>
+        <Pill label={r.status} color={REQUEST_STATUS_COLOR[r.status] ?? t.MUTED} />
+      </div>
+      <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 8 }}>
+        {[r.ownerUsername ? `@${r.ownerUsername}` : r.ownerUserId, r.city, r.tags.join(', ') || null].filter(Boolean).join(' · ')}
+      </div>
+      {r.image ? (
+        <img src={r.image.url} alt={r.image.alt} width={r.image.width} height={r.image.height} loading="lazy" style={{ display: 'block', width: '100%', maxWidth: 320, height: 'auto', borderRadius: 8, marginBottom: 8, border: `1px solid ${t.BORDER_SOLID}` }} />
+      ) : null}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        <button type="button" disabled={busy} onClick={() => void onRemove(r.id)} style={{ ...dangerButton, ...buttonState }}>
+          <Trash2 size={13} /> Remove
+        </button>
+        {r.image ? (
+          <>
+            <button type="button" disabled={busy} onClick={() => void onRemoveImage(r.id, false)} style={{ ...dangerButton, ...buttonState }}>
+              <ImageOff size={13} /> Remove picture
+            </button>
+            <button type="button" disabled={busy} onClick={() => void onRemoveImage(r.id, true)} style={{ ...dangerButton, background: '#EF4444', color: '#fff', ...buttonState }}>
+              <Ban size={13} /> Remove picture and ban
+            </button>
+          </>
+        ) : null}
+      </div>
+    </div>
+  );
 }
 
 export function SocketRelayAdminShell({
@@ -109,6 +157,28 @@ export function SocketRelayAdminShell({
       router.refresh();
     } else {
       setError(res.message ?? 'Could not remove the request.');
+    }
+    setBusy(false);
+  }
+
+  // An inappropriate picture is an automatic ban with no exceptions (owner decision, 2026-10-02), so
+  // that button removes the picture and restricts the uploader at scope `all` in one step. Plain
+  // removal is for a picture that is fine but does not fit the listing.
+  async function removeImage(id: string, ban: boolean) {
+    if (busy) return;
+    const prompt = ban
+      ? 'Remove this picture and ban the member who uploaded it? The ban applies to the entire app and can only be lifted from the account restrictions screen.'
+      : 'Remove this picture? The request stays up.';
+    if (typeof window !== 'undefined' && !window.confirm(prompt)) return;
+    setBusy(true);
+    setError(null);
+    setMessage(null);
+    const res = await adminMutate(`/api/socket-relay/admin/requests/${id}/image${ban ? '?ban=1' : ''}`, 'DELETE');
+    if (res.ok) {
+      setMessage(ban ? 'Picture removed and uploader banned.' : 'Picture removed.');
+      router.refresh();
+    } else {
+      setError(res.message ?? 'Could not remove the picture.');
     }
     setBusy(false);
   }
@@ -160,18 +230,7 @@ export function SocketRelayAdminShell({
             <div style={{ padding: '32px 16px', textAlign: 'center', color: t.MUTED, fontSize: 14, borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>No requests yet.</div>
           ) : (
             requests.map((r) => (
-              <div key={r.id} style={{ marginBottom: 12, padding: '14px 16px', borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                  <span style={{ fontSize: 14, fontWeight: 600, flex: 1 }}>{r.title}</span>
-                  <Pill label={r.status} color={REQUEST_STATUS_COLOR[r.status] ?? t.MUTED} />
-                </div>
-                <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 8 }}>
-                  {[r.ownerUsername ? `@${r.ownerUsername}` : r.ownerUserId, r.city, r.tags.join(', ') || null].filter(Boolean).join(' · ')}
-                </div>
-                <button type="button" disabled={busy} onClick={() => void deleteRequest(r.id)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', color: '#EF4444', fontSize: 13, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}>
-                  <Trash2 size={13} /> Remove
-                </button>
-              </div>
+              <AdminRequestRow key={r.id} request={r} busy={busy} onRemove={deleteRequest} onRemoveImage={removeImage} />
             ))
           )
         ) : (

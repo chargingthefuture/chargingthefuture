@@ -32,7 +32,7 @@ one live room, one live call per pair per direction).
 ## Budget Threshold Risk
 
 Low. Usage is gated by live-room co-presence and self-limiting (one live call per pair per direction;
-server-side reaping of stale invites at ~45s and stale calls at ~90s). There is no mechanism for a
+server-side reaping of invites older than ~45s and calls older than ~90s). There is no mechanism for a
 single member to open many concurrent Back Channel calls. If Chyme room usage grows substantially,
 revisit this note with real Stream Video dashboards.
 

@@ -80,13 +80,22 @@ function targetLine(mission: SkillsHuntMission): string {
   }
 }
 
-function dayOf(iso: string): string {
-  const day = iso.slice(0, 10);
-  return /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : iso;
+// The picture is drawn on the server, which runs in UTC, so a round ending late on 31 December in
+// the admin's time zone printed as 1 January — a different day from the one the Rounds tab shows.
+// The admin's own time zone is passed in and used for every date in the picture; an unknown or
+// missing zone falls back to UTC.
+export function dayOf(iso: string, timeZone?: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  try {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: timeZone || 'UTC', year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
+  } catch {
+    return date.toISOString().slice(0, 10);
+  }
 }
 
-function roundLine(round: SkillsHuntRound): string {
-  return `${round.name} · ${dayOf(round.startsAtIso)} to ${dayOf(round.endsAtIso)}`;
+function roundLine(round: SkillsHuntRound, timeZone?: string): string {
+  return `${round.name} · ${dayOf(round.startsAtIso, timeZone)} to ${dayOf(round.endsAtIso, timeZone)}`;
 }
 
 // No progress anywhere in the picture (deliberate). The Missions tab draws one member's own bar,
@@ -99,6 +108,7 @@ function roundLine(round: SkillsHuntRound): string {
 export function buildMissionPosterView(
   round: SkillsHuntRound,
   missions: SkillsHuntMission[],
+  timeZone?: string,
 ): MissionPosterView {
   const rows = missions
     .filter((mission) => mission.status === 'active')
@@ -114,7 +124,7 @@ export function buildMissionPosterView(
   return {
     title: 'Active Missions',
     subtitle: SUBTITLE,
-    roundLine: roundLine(round),
+    roundLine: roundLine(round, timeZone),
     missions: rows,
     emptyLine: rows.length === 0 ? 'This round has no open missions right now.' : null,
     joinLine: 'Join SkillsHunt at chargingthefuture.com — nominate people with the skills a sector is short of.',

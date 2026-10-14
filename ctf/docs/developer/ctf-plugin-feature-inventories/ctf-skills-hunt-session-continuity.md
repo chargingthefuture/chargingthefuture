@@ -289,7 +289,7 @@ These should be resolved before the corresponding Wave 2 work begins.
 5. Update the checklist as you go.
 6. Commit with a message that names the item finished and links the session URL.
 
-If something in this file seems wrong or stale, **update this file first, get owner sign-off in the same PR, then update code**. Never let code and this doc diverge silently.
+If something in this file seems wrong or out of date, **update this file first, get owner sign-off in the same PR, then update code**. Never let code and this doc diverge silently.
 
 ---
 

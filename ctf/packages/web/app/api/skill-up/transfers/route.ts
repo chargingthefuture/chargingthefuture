@@ -53,7 +53,7 @@ export async function POST(request: Request) {
       reason: 'ok',
       targetType: 'transfer',
       targetId: transfer.id,
-      metadata: { amount: transfer.amount, recipientUserId: transfer.recipient_user_id },
+      metadata: { amount: transfer.amount, recipientUserId: transfer.recipientUserId },
     });
 
     return NextResponse.json({ ok: true, transfer }, { status: 201 });

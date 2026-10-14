@@ -9,6 +9,7 @@ import { getChymeTokens, type CurrentUser, requestJson } from './chyme-shared';
 import { ChymeHeader } from './chyme-header';
 import { ChymeSidebar } from './chyme-sidebar';
 import { ChymeRoomView } from './chyme-room-view';
+import { ChymeReadingsPlayer } from '@/components/chyme/readings/chyme-readings-player';
 import type { ChymeConnectionState } from './chyme-audio-room';
 import { responseFailureText } from 'lib/errors/client-failure';
 import type {
@@ -37,7 +38,10 @@ function useChymeShellState(roomScope: ChymeRoomScope) {
   const [connection, setConnection] = useState<ChymeConnectionState>('joined');
   const [joinInfo, setJoinInfo] = useState<ChymeJoinResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [showChat, setShowChat] = useState(true);
+  // Closed until the member presses Chat (owner directive, 2026-09-30): chat is a utility, not the
+  // reason to open Chyme, and open it pushed the stage and controls below the fold. Matches the
+  // signed-out view, which already starts closed (chyme-guest-chat.tsx).
+  const [showChat, setShowChat] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   // Only the private contributors room can be "locked": a member who is not eligible (or the channel
   // is not open yet) gets a 404 from the room read, and we show the "how it's earned" explainer
@@ -292,6 +296,10 @@ function ChymeJoinRoomPrompt({ t }: { t: ChymeTokens }) {
       <div style={{ fontSize: 24, fontWeight: 800, color: t.TITLE }}>Join a Room</div>
       <div style={{ fontSize: 15, color: t.FAINT, textAlign: 'center', maxWidth: 400, lineHeight: 1.6 }}>
         Select a live room to listen, speak, and connect with survivors worldwide. All rooms are members-only.
+      </div>
+      {/* The readings loop, only while it is switched on and nobody is live (temporary module, 2026-09-28). */}
+      <div style={{ width: '100%', maxWidth: 400 }}>
+        <ChymeReadingsPlayer />
       </div>
     </div>
   );

@@ -28,7 +28,7 @@ asks for a plain restatement.
 
 The Stop hook `.claude/hooks/check-no-pleasantries.mjs` holds the canonical list and is the source of
 truth; if this copy and the hook ever differ, the hook wins. Keep the two in sync — when you change
-one, change the other. The hook scans the whole reply and matches the term even inside quotes, so do
+one, change the other. The hook scans the entire reply and matches the term even inside quotes, so do
 not reach for a banned word even to talk about it; use the replacement below instead.
 
 **Pleasantries, feelings, and sign-offs — never use any of these (in any reply):**
@@ -89,13 +89,38 @@ start so no rewrite is ever needed (owner directive, 2026-08-04).
 **Production-era policy (owner-directed, 2026-06-17): production is the single source of truth; the design gate is loosened; the design repo and Replit design agent are deprecated.** We no longer maintain two design versions. Do **not** stop for a design pass, do **not** require a mockup in the `design/` submodule before building UI, and do **not** announce `DESIGN PASS REQUIRED`. The `design/` submodule and `ctf/agents/design.agent.md` are **reference/inspiration only** (design guide, tokens, component patterns) — not authoritative, not synced.
 
 - **New surface?** Build it yourself, following (in order): the design guide / design system, the look and structure of already-shipped sibling screens, and the plugin inventory. Cover the real states (loading/empty/error/populated) and the mobile-responsive layout; keep it consistent with shipped screens.
-- **Hard guardrail (critical): never overwrite approved production design or copy without explicit owner approval.** When a task is to add or fix something, be additive/surgical — change only what the task requires and leave surrounding shipped copy/layout exactly as it ships. Production wins over any old `design/` mockup; never "restore" a screen to a stale mockup. If you think shipped copy/design is wrong, surface it to the owner and get approval before changing it.
+- **Hard guardrail (critical): never overwrite approved production design or copy without explicit owner approval.** When a task is to add or fix something, be additive/surgical — change only what the task requires and leave surrounding shipped copy/layout exactly as it ships. Production wins over any old `design/` mockup; never "restore" a screen to an old mockup. If you think shipped copy/design is wrong, surface it to the owner and get approval before changing it.
 
 Iterate in code (NOT gated): any change to an already-shipped screen — copy, color, spacing, reordering, an empty/loading/error state, the mobile-responsive layout, bug fixes — within the guardrail above. Never gated: changes with no rendered surface — schema, libraries, server-only API routes, infra/CI, refactors, type/lint/test changes.
 
 Bypass keywords still work but are no longer required to build a new surface: `bypass design`, `design done`, `hotfix`.
 
 Full policy, the deprecated stop-for-design machinery (history), and worked examples: see `.claude/rules/127-design-pass-gating-rules.mdc`.
+
+## One Design, One Color per Site (owner decision, 2026-10-14)
+
+The name shown everywhere is Skills Economy (owner decision, 2026-10-13). Charging The Future
+appears only in the domain names, never as a displayed name: page titles, headers, footers,
+notification titles, feed titles, generated text and the prompts that write it all say Skills
+Economy. Published posts keep the name they were written with. The legal operator name in
+`app/terms/policy-content.ts` (`OPERATOR_NAME`) is the owner's call and is not changed with the rest.
+
+The project's websites share one design, each in its own color, so a visitor can tell which part
+they are in: farahbrunache.com (One Percent, the paid tier) is forest green, chargingthefuture.com
+(the free tier) burgundy, and the blog black and white with coral. Titles are Newsreader and text
+DM Sans, self-hosted everywhere. The app keeps its own look; it carries the family only in the
+phone bar's wordmark (Newsreader, a light burgundy) and the SE mark's burgundy gradient, on web
+(`components/shared/se-mark.tsx`, `community-shell.module.css`) and Android
+(`components/shell/ShellChrome.tsx`). Change those together.
+
+The Skills Economy mark (the "Stack") is the logo on every site, in that site's color (owner
+decision, 2026-10-13); the heart Charging The Future logo is retired. In the app it is burgundy
+in the header, `public/brand/` and the web and Android icons. The wallpapers
+(`ctf/scripts/wallpapers/`) are a choice of colors rather than a brand color: the original
+teal-to-purple stays, with burgundy, coral and green beside it. The mission line is "Exit their
+economy, exit the psyop."; "Live,
+Work & Prevail" is retired, and older posts keep it. The domains stay as they are. No site loads
+anything from Google: fonts are self-hosted and video players load only when somebody taps play.
 
 # Monorepo Layout
 
@@ -237,7 +262,7 @@ read directly (verified against `secrets.*` references in `.github/workflows/`):
 | GitHub Actions — database (Neon) | `DATABASE_URL`, `DATABASE_URL_DIRECT`, `NEON_API_KEY`, `NEON_PROJECT_ID` |
 | GitHub Actions — backups (Formance) | `BACKUP_REPO`, `FORMANCE_DATABASE_URL`, `FORMANCE_RESTORE_TARGET_DATABASE_URL` |
 | GitHub Actions — app/cron calls | `CRON_SECRET`, `SERVICE_CREDITS_INTERNAL_TOKEN`, `ACCOUNT_DELETE_SECRET` |
-| GitHub Actions — other services | `EXPO_TOKEN`, `GITLEAKS_LICENSE`, `NTFY_TOPIC` |
+| GitHub Actions — other services | `EXPO_TOKEN`, `GITLEAKS_LICENSE` |
 | GitHub Actions — Stream fallback (read only when Infisical set nothing; `stream-guest-listener-setup.yml`) | `STREAM_API_KEY`, `STREAM_API_SECRET`, `STREAM_API_KEY_STAGING`, `STREAM_API_SECRET_STAGING` |
 
 Some of these (e.g. `NEXT_PUBLIC_APP_URL`, `CRON_SECRET`, the database URLs) are deliberate
@@ -253,6 +278,212 @@ infisical run --token="$INFISICAL_TOKEN" --projectId="$INFISICAL_PROJECT_ID" --e
 
 Infisical is the single source of truth for secrets; the bootstrap secrets above are all that is
 needed to authenticate `infisical run`.
+
+### The instance also hosts One Percent, in its own project
+
+One Percent is the paid tier of Skills Economy — the owner's own paid consultation work — run as a
+separate product with its own repositories, its own settings and its own books, and its settings
+live in a separate project inside this same Infisical instance. It was
+given a project rather than an instance of its own because a project is the access boundary:
+machine identities are scoped to one, so this project's credentials cannot read One Percent's
+secrets, and its credentials cannot read these.
+
+**Never read, write, or copy a value across that line.** An agent working in this repository has
+no reason to touch that project, and a value both products need is two secrets with two lifetimes,
+each rotated on its own. Copying one across makes a later change in one place silently wrong in the
+other.
+
+The instance is this project's infrastructure and its cost stays in this project's figures. One
+Percent counts its expenses separately and includes no share of it. Its own hosting bill is counted
+there the same way, so neither product's numbers carry the other's.
+
+If One Percent ever needs separate ownership, the instance is the thing that would be split and it
+gets its own then. Until that is a real question, a second instance is a second server, database
+and cache to patch, back up and keep online, for a boundary a project already draws.
+
+## One Percent reads the skills taxonomy, and nothing else (owner decision, 2026-09-27)
+
+One Percent — the paid tier, the owner's own consultation work — gets read access to the Skills
+Taxonomy over an authenticated route, so its peer graph can speak the same vocabulary this app
+does: the same sectors, the same job titles, the same skill names.
+
+**What crosses is the taxonomy and only the taxonomy.** The `skills_taxonomy_*` tables are
+reference data: sectors, job titles, skills, aliases, display order, the active flag. The join
+between a person and a skill does not live there — `directory_profile_skills` and
+`directory_profiles.job_title_id` are Directory's tables — so a route reading this plugin alone
+touches nothing about a member. That is the boundary, and it is a property of which tables are
+read rather than a promise about how they are used. Any future route that would join across it
+is not covered by this and needs its own decision. One such decision has been made, for claimed
+Directory profiles, and it is the next section.
+
+**It is exclusive, and nobody else may request it.** The reason belongs next to the rule, or it
+gets argued every time somebody asks. Both products are run and paid for by one person, so this
+is an integration between two things under one operator rather than a service offered to
+anybody. Opening it would mean maintaining a public interface, versioning it, and answering for
+it when it changes, and this app is not funded to do any of that.
+
+**It is not a privilege over members.** Every approved member already has this data through the
+app, free, at `/apps/skills-taxonomy`. The route is a machine-readable way to the same thing.
+Nobody is denied anything and no member loses access to anything, and that sentence stays in
+whatever is written about this — "exclusive access" read on its own says something false about a
+free community product.
+
+**The credential is this app's to issue and to revoke.** It is scoped to taxonomy reads and is
+stored in One Percent's own Infisical project, never copied from this project's values, per the
+rule above. If it ever becomes a general-purpose key, the integration has become a hole in the
+boundary rather than a door through it.
+
+**One Percent holds a copy rather than reading live.** Row ids are stable across renames — a
+rename keeps the id and moves the old label into `aliases` — and changes arrive in a few batches
+a month, so a cached copy is correct rather than a compromise. It also keeps the free product
+from becoming a runtime dependency of the paid one: an outage here must not stop paid work
+there.
+
+**No cost is apportioned.** Keeping the taxonomy current is this product's own work and its cost
+stays here. What One Percent counts is what appears on a bill because One Percent exists, and
+this integration adds nothing to one.
+
+The access policy contract names a `service` role on `skills-taxonomy.hierarchy.get` and
+`.flattened.get`, and that role is load-bearing now rather than decorative. The path behind it is
+`ctf/packages/web/lib/auth/service-consumer.ts` (who a credential belongs to) and
+`ctf/packages/web/lib/skills-taxonomy/read-gate.ts` (the branch in front of the two read routes).
+That credential is read by those two routes alone, because they are the only ones that hand the
+request to the gate. The one other machine caller is the claimed-profile read in the next section,
+on a credential of its own.
+
+The credential itself is `TAXONOMY_SERVICE_TOKENS`, one `name:secret` entry per consumer, and
+removing an entry revokes it. Rule 123 carries the detail. It is optional, so an environment
+without one simply has no machine reader rather than no app.
+
+## One Percent is the paid tier, and reads Directory profiles (owner decisions, 2026-10-02, 2026-10-06 and 2026-10-07)
+
+Skills Economy stays as it is: free and self-service, every plugin. One Percent is its paid tier,
+the owner's time and judgment on top of what members can already do themselves. It keeps its own
+name, repositories, Infisical project and books, so spinning it out later stays a matter of
+revoking credentials rather than untangling data. Self-service stays complete without it, and
+anything written about the paid tier says so.
+
+The reason for a tier rather than two silos is the owner's labor. People the owner already
+entered in the Directory were being entered a second time in One Percent to make introductions.
+So One Percent reads them, under these limits:
+
+- **Claimed or not, and it says which** (owner decision, 2026-10-06). It began as claimed
+  profiles only, on the reasoning that an unclaimed one has no contact details. That was wrong: a
+  profile can't be created empty, so a community-generated one still has a name, skills, a location
+  and usually a profile link, and that it's unclaimed is itself worth knowing. So the read answers
+  for both and carries `claimed`. A deleted profile stops resolving. So does a claimed one whose
+  owner is restricted with scope `all` or `contact`: an introduction is a connection, and those
+  scopes already block one here. `trading` alone doesn't hide a profile, and One Percent is never
+  told that somebody is restricted.
+- **A pointer, not a copy.** One Percent stores the Directory profile id and nothing else about
+  the person. A takedown here takes effect there with nothing to clean up, and cutting the
+  integration off is revoking the credential.
+- **One direction.** Directory into One Percent, nothing back. No transcript, sheet, payment or
+  client detail ever enters this app. The one link the other way is a client signing in to One
+  Percent with their own Skills Economy account, which they do themselves.
+- **The owner's desk only.** The route serves One Percent's operator screen, never a client's
+  screen. The Directory is behind Unlock so that only vetted members see it; One Percent's buyers
+  are not vetted, so the owner looking at the profile and deciding on the introduction is the
+  vetting.
+- **Never in the request path of paid work.** A Directory outage leaves an id on the desk with no
+  details beside it. It never stops a payment, a call or a sheet.
+
+The credential is this app's to issue and revoke, scoped to this read, and separate from the
+taxonomy one so either can be cut without the other. It is `DIRECTORY_SERVICE_TOKENS`, read only
+by `GET /api/directory/service/profiles/[id]` through `ctf/packages/web/lib/directory/service-read.ts`,
+with the access policy entry `directory.profile.service.get`. The route answers one profile by id,
+claimed or not, with whether it's claimed, name, headline, job title, sector, skill names, profile
+address and location. The owner pastes the link of somebody they already know about.
+
+One second read, for one case (owner decision, 2026-10-02): a One Percent client's own profile.
+Clients sign in to One Percent with their Skills Economy account, so One Percent already holds the
+account id, and `GET /api/directory/service/accounts/[accountId]/profile`
+(`directory.profile.service.by-account.get`) answers which claimed profile that account owns, so the
+owner doesn't look it up and paste it. The same credential, rate limit, fields and restriction rule.
+It answers for one account the caller already has, never a list or a search, and a 404 never says
+whether the account exists. The audit names the profile it found and never the account id.
+
+A third read, for Find matches (owner decision, 2026-10-07): a page of profiles. Find matches is a
+button on One Percent's desk, and only there. It reads the owner's own notes in One Percent beside
+Directory profiles and asks a self-hosted drafting model to suggest introductions, which the owner
+then decides on. Before it, the owner did this themselves by recalling conversations and scanning
+profiles one at a time. `GET /api/directory/service/profiles` (`directory.profile.service.list`,
+`ctf/packages/web/lib/directory/service-list.ts`) answers up to 100 profiles a page in a fixed
+order, with the same credential, fields and restriction rule as the by-id read, and its own limit
+of one page a second and sixty an hour per consumer. There's still no search and no filter. The
+audit names the page and never the profiles on it. It stays a pointer, not a copy: One Percent may
+hold a profile id on a suggestion and never the profile's fields.
+
+Public skill counts (owner decision, 2026-10-13): One Percent's public match page, where a blog
+reader picks a skill and sees how many people could help, shows real Directory counts per job
+title, with no sign-in. Counts only: no name, id, profile link or location finer than the job title
+ever reaches that page. Every count is exact, small ones included (owner decision, 2026-10-13): no
+name or location is attached to a count, so a small one says nothing about who is behind it. Unclaimed profiles count. Unclaimed does not mean somebody does not want
+to be listed: the Directory is the feature members ask for most, it was public once because its
+entries came from public Quora answers, and the sign-in in front of it exists because a public list
+of trafficking survivors would be wrong, not because the people on it asked to be hidden. Anyone
+can have their profile removed, and nobody has asked. Restricted owners (scope `all` or `contact`)
+are left out, the same rule as the reads above. Do not ask the owner again whether unclaimed
+profiles belong in a count or a read; they do.
+
+The page reads those counts live and saves matches (owner decision, 2026-10-13). A visitor picks
+what they need, and the page says how many people match them, each person counted once across the
+skills behind those needs. That count comes from `directory_public_match_count`. A
+reader can save what they picked as a 10-character code and come back with it to see who has been added, since
+the owner adds people most days. The code holds the job titles and the count when saved, never a
+name, contact detail or IP address. The page connects with its own login, `landing_page`, which can
+read `directory_public_skill_counts`, `directory_public_totals` and `directory_public_skill_coverage` (the Workforce skills coverage counts), call
+`directory_public_match_count`, read and add rows in `directory_landing_match_codes`, and nothing
+else; the views and the function do the counting, so the login never touches a member row. Create that login with SQL
+(`ctf/scripts/sql/landing_page_login_grants.sql`), never on Neon's Roles screen, which gives a new
+role `neon_superuser`. Its connection address is a secret like any other: Infisical first, then the
+Vercel project's `DATABASE_URL`.
+
+A need nobody matches is recorded (owner decision, 2026-10-13). When a visitor picks a need and the
+count is 0, the page adds a row to `directory_unmet_needs`, once per need per visit, so the owner
+can see which needs go unmet and look for somebody. The row holds the need and its job titles and
+nothing about the visitor; the login may add rows and never read them. The owner reads them with
+`ctf/scripts/sql/landing_unmet_needs_report.sql`.
+
+## Feature freeze, and one message (owner decision, 2026-10-02)
+
+No new features in Skills Economy. Bug fixes and changes to shipped screens continue, and every
+plugin stays live and maintained. A new capability is the owner's call and is asked about first,
+never built and offered afterwards. The One Percent read of Directory profiles, in the section
+above, was decided before the freeze and is not caught by it; widening it to unclaimed profiles was
+the owner's own ask on 2026-10-06 and changes nothing a member sees. The by-account read beside it was asked
+for by the owner after the freeze, on the same day, and changes nothing a member sees. So was the
+page read for Find matches on 2026-10-07, and it changes nothing a member sees either.
+
+One exception for the bill (owner decision, 2026-10-05): a twice-yearly "Contribute if you can"
+Commons post, written as a draft on 5 April and 5 October with the current sign-ups, approved
+members and hosting cost filled in, for the owner to check and publish. The Feed & Announcements tile on
+the admin landing carries a dot until it is published. Hosting is paid out of
+pocket, and without help the app goes offline, which is not a freeze. Signing up costs nothing;
+each approved member is somebody the hosting bill is paid for, so the post counts both and the cost
+per person is the monthly total divided by approved members, the owner's own time excluded.
+The route is `POST /api/internal/admin-expenses/contributions-call-draft`; the workflow is
+`contributions-call-draft.yml`.
+
+The reason is the message rather than the code. Twenty-five member-facing plugins is too much for
+a newcomer to take in, and a plugin built as a two-sided marketplace looks empty while only one
+side has arrived: somebody looking for a room who opens LightHouse finds no listings. So what is
+said outward narrows to three things that cover the rest between them:
+
+1. **PeerProgramming's goal board.** Put the 1% of the day that is left into small tasks toward
+   somebody else's goal, and post your own. It works before the marketplace exists, because a
+   post like "help me find a room" can be answered by anybody, and its chat and calls carry a
+   small part of what the other plugins do.
+2. **The Peace Battle 2 page** on the blog. It is the pitch and the lead link in comments, in
+   Commons posts and on Quora, ahead of chargingthefuture.com. Its Enact section points at
+   Workforce, the goal board and One Percent and at nothing else.
+3. **One Percent**, the paid tier, for somebody who wants more than self-service.
+
+Posts about any plugin still get written and still tie back to these three. The sign-up line at
+the end of a blog post is unchanged.
+
+The board is judged by what is on it the day somebody arrives. The owner keeps their own small
+tasks and replies on it while the traffic builds, so it is never empty.
 
 ## Key Rules (pointers to full detail)
 
@@ -302,16 +533,67 @@ next run. The test is whether it has one.
 
 ## Agent Slash Commands (Critical — all agents, every repo)
 
-Owner directive, 2026-08-17, extended 2026-09-22. Four routines live in `.claude/commands/`. Each one is the standing way to do its kind of work, and the owner does not have to type the slash command for it to apply — the request itself is the trigger.
+Owner directive, 2026-08-17, extended 2026-09-22; `/bpr` renamed `/br` on 2026-09-26. Five routines live in `.claude/commands/`. Each one is the standing way to do its kind of work, and the owner does not have to type the slash command for it to apply — the request itself is the trigger.
 
 | Command | File | Applies when |
 |---|---|---|
-| `/bpr` | [`.claude/commands/bpr.md`](.claude/commands/bpr.md) | The owner asks for any change to files. |
+| `/br` | [`.claude/commands/br.md`](.claude/commands/br.md) | The owner asks for any change to files. |
 | `/pr` | [`.claude/commands/pr.md`](.claude/commands/pr.md) | Open pull requests are blocked, behind, conflicted, or failing checks. |
 | `/cr` | [`.claude/commands/cr.md`](.claude/commands/cr.md) | Open code-review findings need working. |
 | `/fix` | [`.claude/commands/fix.md`](.claude/commands/fix.md) | The owner points at a sentence that does not read right. |
+| `/fl` | [`.claude/commands/fl.md`](.claude/commands/fl.md) | The owner asks whether this chat can be archived. |
 
-### /bpr — every executed change
+Eight more do by hand what a scheduled workflow does with the Anthropic API, for the months the
+account has no credit (owner decision, 2026-10-03). The workflows stay as they are and go red on
+purpose while unfunded; the product does not wait on the bill, because the owner has a chat agent
+even then. Each command names the workflow it stands in for and files the same output in the same
+shape, so a later funded run picks up where the hand-done one left off.
+
+| Command | File | Stands in for |
+|---|---|---|
+| `/triage-bug` | [`.claude/commands/triage-bug.md`](.claude/commands/triage-bug.md) | `bug-reports-triage.yml` — root cause and fix plan on the oldest `needs-triage` issue. |
+| `/build-bug` | [`.claude/commands/build-bug.md`](.claude/commands/build-bug.md) | `bug-reports-build.yml` — the PR for an `approved-to-build` issue. |
+| `/rs` | [`.claude/commands/rs.md`](.claude/commands/rs.md) | `code-review-sweep.yml` — review one slice and file `code-review` issues (`/cr` then works them). |
+| `/community-stats` | [`.claude/commands/community-stats.md`](.claude/commands/community-stats.md) | `generate-community-stats.yml` — the post, from numbers filed by `generate-community-stats-manual.yml`. |
+| `/product-update` | [`.claude/commands/product-update.md`](.claude/commands/product-update.md) | `generate-product-update.yml` — the update JSON, published through the workflow's `update_json` input. |
+| `/user-guide` | [`.claude/commands/user-guide.md`](.claude/commands/user-guide.md) | `generate-user-guide.yml` — the guide sections, rendered with `USER_GUIDE_RENDER_ONLY=1`. |
+| `/test-script` | [`.claude/commands/test-script.md`](.claude/commands/test-script.md) | `manual-test-script.yml` — one plugin's manual test script. |
+| `/sp` | [`.claude/commands/sp.md`](.claude/commands/sp.md) | `skills-proposal-issues.yml` — runs `skills-proposal-issues-manual.yml`, places every pending `skill-proposal` issue, and opens one owner-review PR with the skills worth adding. |
+
+### Every API-funded workflow ships with its slash command (owner directive, 2026-10-03)
+
+A workflow that depends on API credit is not finished until the slash command that does the same
+job by hand exists beside it, in the same PR. No exceptions and no follow-up: the command is part
+of the workflow, the way the inventory update is part of a route. A workflow that only works while
+the account is funded is a feature the product loses for months at a time, and the owner found
+that out one job at a time.
+
+What "the same job" means, concretely:
+
+- The command reads the same inputs the workflow reads and files the same output in the same shape
+  (same labels, same issue or PR body, same ledger or tag), so a later funded run carries on from
+  the hand-done work and never duplicates it.
+- Where the chat session lacks something the workflow has (the database, an app secret), the
+  workflow gains a no-model path for that part: a dispatch-only twin that files the raw inputs
+  (`generate-community-stats-manual.yml`), or a dispatch input that accepts hand-written content
+  (`update_json` on `generate-product-update.yml`). The command then uses that path. The chat
+  session never gets the secret.
+- The script reports an unfunded, revoked or unavailable API as
+  `CTF_RUN_BLOCKED_EXTERNAL:<reason>` through `ctf/scripts/lib/anthropicRunBlocked.mjs`, naming
+  the command in the annotation, so the health check lists the run as paused rather than broken.
+  A `claude-code-action` workflow has no script of its own and still needs the command.
+- The command is listed in the table above and in `.github/workflows/README.md` beside its
+  workflow.
+- The owner's phone cheat sheet is updated too. Any slash command added, renamed or removed in
+  `.claude/commands/` gets its card changed in `ctf/docs/developer/slash-commands-wallpaper/`
+  and the image re-rendered and sent in the reply, in the same PR. The README there carries the
+  render command and the layout rules.
+
+The workflows themselves keep their schedule and their API call; automation is the normal state
+and the command is the fallback, not a replacement. A one-off that never needs a schedule is a
+command only, not a workflow.
+
+### /br — every executed change
 
 Any request that changes files runs this routine, in this repo and in every other repo the session has attached (`wiki-site`, `quora`, any repo added later). There is no separate mode for small changes.
 
@@ -321,6 +603,23 @@ In short: descriptive branch off the latest `main` before any edit, do the work 
 
 Agents open pull requests and abandon them. They do not merge themselves once a branch falls behind or a check goes red, so a PR left alone is work that never shipped. Sweep every open PR that is blocked, behind, conflicted, or failing, and drive each one to merge: resolve conflicts by understanding both sides, read the actual failure log before touching anything, update branches that fell behind. Do not report that a PR needs something — do it. Leave alone only a draft someone is actively working, or a risky-lane PR sitting green and waiting on the owner's review, and say which those are.
 
+### No PR watching (owner directive, 2026-09-26)
+
+Never watch a pull request, in any repo. After opening one, do not subscribe to its activity, do not schedule a check-in, and do not wait for its checks to finish. Report once and stop. The harness's default of subscribing to every PR it opens does not apply here.
+
+Watching fills the session with GitHub notices and full check lists, which brings on compaction sooner, and a compacted session loses what the owner said earlier. The owner merges from their phone and sees the checks there. The local checks run before every push are what keep a PR from going red; when the owner wants to know where open PRs stand, they run `/pr`, which is one pass over them, not a watch.
+
+### Keep sessions from filling up (owner directive, 2026-09-26)
+
+Everything an agent reads stays in the session until compaction, and compaction swaps the earlier conversation for a summary. So spend the session on the owner's words, not on raw output.
+
+- Hand broad searches to a helper agent that returns only its conclusion. Anything that means reading across several files or directories to answer one question goes to a helper; a single lookup in a known file is done directly.
+- Read only the part of a file the task needs, by line range or search, not entire files.
+- Read only failed checks and the failing part of a log. Never pull a full list of passing checks or a full log to confirm something is green.
+- Take a screenshot only when a visual change has to be checked, and look at it once.
+
+The owner can also compact on their own terms: typing `/compact` followed by what to keep (for example, `/compact keep the open PR list and today's rules`) compacts at a moment they choose, with their instructions shaping the summary. `/clear` starts the session over. Rules that must outlive any session go in this file, not in chat.
+
 ### /fix — rewrite the sentence, do not explain it
 
 The owner sends a screenshot with a sentence highlighted and a short remark. It means the sentence reads badly. Rewrite it, push it, and reply in two lines with the new wording.
@@ -328,6 +627,18 @@ The owner sends a screenshot with a sentence highlighted and a short remark. It 
 The argument is not in question: a `/fix` is about how a sentence reads, never about whether the claim is right. Keep every fact, figure, name and link exactly as it was, fix the same wording wherever else it appears (the post, its excerpt and teaser, the paste sheet entry), regenerate rather than hand-edit the generated files, and do not move the date or publish a dated correction — nothing a reader acted on was wrong.
 
 What this replaces: the paragraph explaining what was wrong with the old sentence. The owner could see it was wrong, which is why they sent it. They read and type on a phone on limited usage, so that paragraph costs them the thing they are short of.
+
+### /fl — is anything still in flight?
+
+The owner asks this before archiving a chat, and it is only about **open tasks**: work that exists
+nowhere but in the session. An open pull request is not one — it is committed, pushed and carried
+by its branch, so archiving loses nothing and the state of the PR is reported rather than waited
+on.
+
+Check the four things that can strand work, in every attached repo: uncommitted changes, unpushed
+commits, a pushed branch with no PR, and a scheduled check-in still armed. Then look back over the
+session for anything asked and never started, which no command can detect. Finish what is found
+rather than reporting it, then answer in a few lines.
 
 ### /cr — verify every finding before acting on it
 
@@ -524,14 +835,32 @@ below). The line keeps its three-part wording only so the CI gate and older PRs 
 older `Parity Status: web+android complete` is still accepted by the gate so older PRs don't break,
 but new PRs should use the three-part line.)
 
-**Android app is narrowed to Chyme (owner decision, 2026-07-20 — see rule 105).** The native Android
-app now carries only Clerk auth, Chyme (and any feature the Chyme plugin links to), bug reporting, and
-settings / account; everything else is served by the installable web app (PWA). So for a **web-only**
+**Android carries the plugins that benefit from being an installed app (owner decisions, 2026-07-20,
+2026-10-06 and 2026-10-08 — see rule 105).** The test: a plugin goes in the Android app when it materially
+benefits from being an installed mobile app (live audio or video that keeps running in the
+background, a call that rings the phone with the app closed, or sharing the phone's screen), plus
+whatever it needs to run. Today that is Chyme, Beacon, PeerProgramming and Foundation, each carried
+in full with its admin screens (Foundation in full since 2026-10-08, owner decision; it was its
+instant calls alone before that), opened from the app's Apps list, with Clerk auth, bug reporting,
+and settings / account.
+There will never be an iOS app. Adding a plugin is
+the owner's call; propose it with the reason. Everything else is served by the installable web app
+(PWA).
+
+**A carried plugin matches its web plugin one to one, design included (owner decision, 2026-10-08 —
+standing rule for all agents).** Which plugins are in the Android app is the owner's call. How much of
+a carried plugin is there is not: every screen, feature, piece of copy and state the web plugin has,
+its admin screens included, plus whatever else the app needs for that plugin to work (sign-in, account, bug reporting, the feeds
+its screens read). Carrying one feature of a plugin is not an option. The Android screens copy the web
+design exactly — layout, copy, colors, sizes, spacing, icons and states — and nothing is invented: no
+copy, layout, row, note, color or state the web does not have. The only allowed differences are
+something React Native genuinely cannot do (say what and why), and the native call behavior an
+installed app exists for (ringing, background audio and video, screen share). So for a **web-only**
 change to any feature outside that keep-list — the common case now — the "android" part of the line is
 satisfied because the app intentionally has no Android surface for that feature. Use the same
 `Parity Status: web + mobile-responsive + android complete` line and add a one-liner in the body:
 `Android: out of scope (web-only per rule 105)`. Only a change to a keep-list surface (Clerk, Chyme,
-bug reporting, settings) still needs its Android side built in the same PR. **Do not** add React
+Beacon, PeerProgramming, Foundation, bug reporting, settings) still needs its Android side built in the same PR. **Do not** add React
 Native screens for non-keep-list features.
 
 ```
@@ -574,7 +903,7 @@ issues) and `code-review-implement.yml` (turns an actionable finding into a PR).
 repo files does not uninstall the CodeRabbit GitHub App — if it is still installed at the org/UI
 level, uninstall it there so it cannot resume reviewing with default settings.
 
-**Working the findings by hand: `/cr`.** The owner asks for this most days, so the whole routine —
+**Working the findings by hand: `/cr`.** The owner asks for this most days, so the routine —
 find the open findings, verify each one against the code before acting, fix the real ones on a
 descriptive branch, open the PR with the title and `Parity Status:` line set at creation, pick the
 auto-merge or owner-review lane, then keep the branch up to date until it merges — lives in
@@ -595,7 +924,7 @@ shipped screens, rule-116 decompositions, docs, refactors, type/lint/test change
 
 **Owner-review lane (risky).** Anything that touches money / ServiceCredits ledger, auth/authz, CSRF,
 data deletion, schema / migrations, new or changed API contracts, or brand-new stateful logic / a
-whole new plugin. For these:
+new plugin. For these:
 
 - Open the PR **ready for review** (not a draft), with the title and `Parity Status:` line set at
   creation, but do **not** enable auto-merge — leave it for the owner to review with their tool and
@@ -695,7 +1024,7 @@ This applies to all development: deploy scripts, CI/CD workflows, seed scripts, 
 ## Remove What Nothing Uses, In the Same Change (Critical — all agents)
 
 Owner directive, 2026-09-21. When a change leaves something with no users — a database column, a
-function, a query parameter, a flag, a toggle, a whole screen — delete it as part of that change. Do
+function, a query parameter, a flag, a toggle, an entire screen — delete it as part of that change. Do
 not describe it as a follow-up, do not open an issue for it, and do not end the work by asking whether
 the owner would like it removed.
 

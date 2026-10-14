@@ -6,7 +6,7 @@ export const PEER_PROGRAMMING_ERROR_CODE = {
   persistenceUnavailable: 'peer_programming_persistence_unavailable',
   streamUnavailable: 'peer_programming_stream_unavailable',
   cohortEnded: 'peer_programming_cohort_ended',
-  goalAlreadyOpen: 'peer_programming_goal_already_open',
+  openGoalLimit: 'peer_programming_open_goal_limit',
   taskUnavailable: 'peer_programming_task_unavailable',
 } as const;
 
@@ -19,6 +19,10 @@ export const PEER_PROGRAMMING_MAX_GOAL_TITLE_LENGTH = 200;
 export const PEER_PROGRAMMING_MAX_TASK_LENGTH = 300;
 export const PEER_PROGRAMMING_MAX_TASK_RESULT_LENGTH = 1000;
 export const PEER_PROGRAMMING_MAX_TASKS_PER_GOAL = 30;
+// How many goals one member can have open at once. A member keeps separate goals for separate needs
+// (a job, a week's groceries, a place to live) and switches between them on the board; the cap keeps
+// one member's goals from crowding out everyone else's.
+export const PEER_PROGRAMMING_MAX_OPEN_GOALS = 10;
 // A task somebody took and has not finished opens again for anyone after this many hours, so one
 // person who took it and then had a bad week does not hold it indefinitely.
 export const PEER_PROGRAMMING_TASK_HOLD_HOURS = 24;

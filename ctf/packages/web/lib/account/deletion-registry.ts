@@ -51,6 +51,14 @@ export type OwnedTable = {
    * otherwise keep naming them after their id is gone.
    */
   readonly clearColumns?: readonly string[];
+  /**
+   * Set to `false` when the data export must NOT read this table by its user column, although the
+   * deletion engine still acts on it. The export reads every other user-scoped entry as rows the
+   * member owns; this marks the entries where that is untrue, because the rows matched by the user
+   * column were written by someone else about the member (a block another member placed) or are
+   * another person's record (a profile the member nominated). Use `notExported(...)` to set it.
+   */
+  readonly exportable?: false;
   /** Plain-language note for reviewers / audit. */
   readonly note?: string;
   /** Set when a human decision is still needed before this table's handling is final. */
@@ -103,6 +111,19 @@ const soft = (table: string, userColumn: string, softDeleteColumn: string, note?
   softDeleteColumn,
   note,
 });
+
+/**
+ * Keep an entry out of the member's data export while the deletion engine still acts on it.
+ *
+ * The export reads `SELECT * FROM <table> WHERE <userColumn> = $1` for every user-scoped entry, on
+ * the premise that a row matched by the member's id is the member's own. Two kinds of entry break
+ * that premise: a row another member wrote ABOUT this member (a block, with its free-text reason,
+ * which is the blocker's private boundary), and another person's record the member is only named
+ * on (a Directory profile they nominated, which after a claim holds the claimant's bio, payment
+ * addresses and location). Deleting or pseudonymizing those rows is right; handing them to the
+ * member in a file is not.
+ */
+const notExported = (owned: OwnedTable): OwnedTable => ({ ...owned, exportable: false });
 
 /**
  * The value written over a departed member's id when a row is pseudonymized. A single constant, not a
@@ -227,6 +248,18 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       // so it matches nothing — it stays here because this registry is the statement of record for
       // what happens to the table, and "deleted" is what happens.
       del('directory_profiles', 'claimed_by_user_id', 'The directory listing you claimed.'),
+      // A profile you nominated belongs to the person it is about: it stays, and your id and handle
+      // on it are overwritten, so the Directory stops naming you as its nominator. Not exported: the
+      // row is that person's profile, and once claimed it holds their bio, payment addresses and
+      // location, none of which is the nominator's data.
+      notExported(
+        pseudo(
+          'directory_profiles',
+          'nominated_by_user_id',
+          ['invited_by_username'],
+          'Profiles you nominated for other people — the profile stays, your identity on it does not.',
+        ),
+      ),
       soft('directory_user_extension', 'user_id', 'service_deleted_at', 'Your directory plugin extension record.'),
       retain('directory_deletion_events', 'Deletion accountability trail.'),
       // Burn-down batch 4: admin content and abuse-prevention trails, retained.
@@ -395,8 +428,14 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       // blocked ids to the shared placeholder would break the table's UNIQUE (blocker, blocked) the
       // moment one blocker had blocked two departed members. Abuse EVIDENCE lives in
       // member_safety_reports, not here.
-      del('lighthouse_blocks', 'blocked_user_id', 'Blocks other members placed on the account being deleted.'),
-      soft('lighthouse_profiles', 'user_id', 'service_deleted_at', 'Your LightHouse profile.'),
+      // Not exported: these rows were written by the blocker, and who blocked the member and why is
+      // the blocker's to keep, the same as member_blocks, which is keyed on the blocker only.
+      notExported(
+        del('lighthouse_blocks', 'blocked_user_id', 'Blocks other members placed on the account being deleted.'),
+      ),
+      // A hard delete, the same as the plugin's own delete (`deleteProfile`): the row holds the phone
+      // number and Signal link, and the rejoin marker lives on lighthouse_user_extension below.
+      del('lighthouse_profiles', 'user_id', 'Your LightHouse profile.'),
       soft('lighthouse_user_extension', 'user_id', 'service_deleted_at', 'Your LightHouse plugin extension record.'),
       retain(
         'lighthouse_properties',
@@ -424,6 +463,9 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
         ['fulfiller_username'],
         'Requests you offered to help on — the record stays with its owner, your identity does not.',
       ),
+      // A request's picture also cascades with the request; listed so a picture an admin added to a
+      // member's request, or one whose request outlives this delete, is still named and removed.
+      del('socket_relay_request_images', 'uploaded_by_user_id', 'Pictures you added to relay requests.'),
       del('socket_relay_requests', 'owner_user_id', 'Your relay requests.'),
       // Lifecycle events belong to the request they narrate (posted/claimed/canceled/closed), which
       // may be another member's surviving record — so the event stays and the actor's id is
@@ -541,7 +583,6 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       del('workforce_profiles', 'user_id', 'Your workforce profile.'),
       soft('workforce_user_extension', 'user_id', 'service_deleted_at', 'Your workforce plugin extension record.'),
       retain('workforce_admin_audit_trail', 'Admin action audit log; retained for compliance.'),
-      retain('workforce_deletion_events', 'Deletion accountability trail.'),
       retain('workforce_occupations', 'Shared occupation catalog; authorship columns are the admin audit.'),
       retain('workforce_export_jobs', 'Admin report-export jobs; the admin audit of who exported what.'),
       retain('workforce_config', 'Global settings and the admin audit of who changed them.'),
@@ -550,13 +591,14 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
   {
     slug: 'skills-hunt',
     name: 'SkillsHunt',
-    dataSummary: 'Your submissions, achievements, notifications, leaderboard entries, and mission progress.',
+    dataSummary: 'Your submissions, achievements, notifications, leaderboard entries, mission progress, and end-of-round awards.',
     serviceScopeSupported: true,
     tables: [
       del('skills_hunt_notifications', 'user_id', 'Your notifications.'),
       del('skills_hunt_mission_progress', 'user_id', 'Your mission progress.'),
       del('skills_hunt_achievements', 'user_id', 'Your achievements.'),
       del('skills_hunt_leaderboard', 'user_id', 'Your leaderboard entries.'),
+      del('skills_hunt_round_awards', 'user_id', 'Your end-of-round awards (credits already sent are handled by ServiceCredits).'),
       soft('skills_hunt_submissions', 'submitter_user_id', 'deleted_at', 'Your submissions (soft-deleted; audit log retained).'),
       retain('skills_hunt_audit_log', 'Compliance audit log; retained.'),
       retain('skills_hunt_rounds', 'Shared rounds; authorship columns are the admin audit.'),
@@ -617,6 +659,10 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       del('skill_up_enrollments', 'user_id', 'Your cohort enrollments.'),
       del('skill_up_rate_limit_counters', 'user_id', 'Your rate-limit counters.'),
       retain('skill_up_audit_events', 'Audit log; retained for compliance.'),
+      // Any deposit still held is returned to the member's wallet before this entry runs
+      // (deletion-orchestrator.ts → refundHeldDepositsBeforeDataDeletion), and the row is marked
+      // refunded. The rows stay as the record of what each deposit did.
+      retain('skill_up_enrollment_milestone_escrows', 'Per-milestone deposit holds; any still held are returned to your wallet first, then kept as the ledger record.'),
       // Burn-down batch 3 (ledger/disputes): credit disbursements and the disputes over them are the
       // record of why cohort escrow balances moved — retained for ledger integrity, like the
       // ServiceCredits ledger they feed.
@@ -667,6 +713,7 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       // words. The cascade is a foreign key rather than a step here so it cannot be forgotten.
       del('comic_contributions', 'user_id', 'Writing you contributed to the assistant.'),
       retain('comic_review_queue', 'Answer review queue; reviewer_user_id is the admin review audit.'),
+      retain('comic_runtime_config', 'Global settings and the admin audit of who changed them.'),
       // comic_turns / training_examples are shared/model data.
     ],
   },
@@ -685,6 +732,10 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     dataSummary: 'Everything you wrote under a blog post, and every reaction you left.',
     serviceScopeSupported: true,
     tables: [
+      // Replies other members wrote under these comments stay. A comment somebody else answered is
+      // emptied and kept before this runs (`runInTransactionSteps` in the orchestrator), so it no
+      // longer carries this member's id and the delete skips it; and parent_comment_id is ON DELETE
+      // SET NULL (post/0051), so no deleted comment can take a reply with it.
       del('fireside_comments', 'author_user_id', 'Your comments, including any still waiting on approval.'),
       del('fireside_reactions', 'reactor_user_id', 'Your reactions.'),
       // A thread is a reference to a blog post, not anything about a person; an empty one holds

@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import { ScrollText } from "lucide-react";
 import { COLOR } from "./shared";
+import { failureText } from "lib/errors/client-failure";
 
 const BORDER = "#1E2A3A";
 const TEXT = "#D5D9E2";
@@ -109,8 +110,8 @@ export function DirectoryAuditPanel() {
       }
       const data = (await res.json()) as { events?: AuditEvent[] };
       setEvents(data.events ?? []);
-    } catch {
-      setErr("Could not load the audit trail.");
+    } catch (caught) {
+      setErr(failureText(caught, { area: "directory", op: "admin_load_audit_events", fallback: "Could not load the audit trail." }));
     } finally {
       setLoading(false);
     }

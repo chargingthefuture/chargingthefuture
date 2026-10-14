@@ -49,6 +49,89 @@ policies:
       - actor_not_authenticated
       - cross_workspace_access
 
+  # One Percent's desk reads one profile by id (owner decisions, 2026-10-02 and 2026-10-06). Machine
+  # only: the caller is a consumer in DIRECTORY_SERVICE_TOKENS, never a member. The read answers for
+  # a profile claimed or not and says which.
+  - pluginId: directory
+    command: directory.profile.service.get
+    version: 1.0.0
+    requiredRoles:
+      - service
+    attributePolicies:
+      tenancy: same_workspace
+      directoryReadScope: approved_consumers_only
+      claimedProfilesOnly: required
+      contactRestrictedOwnersExcluded: required
+    consentRequirements:
+      scopes: []
+      fallbackLawfulBasis: legitimate_interest_safety_support
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - unauthorized_consumer_binding
+      - unclaimed_profile
+      - owner_restricted_from_contact
+
+  - pluginId: directory
+    command: directory.profile.service.by-account.get
+    version: 1.0.0
+    requiredRoles:
+      - service
+    attributePolicies:
+      tenancy: same_workspace
+      directoryReadScope: approved_consumers_only
+      claimedProfilesOnly: required
+      contactRestrictedOwnersExcluded: required
+    consentRequirements:
+      scopes: []
+      fallbackLawfulBasis: legitimate_interest_safety_support
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - unauthorized_consumer_binding
+      - unclaimed_profile
+      - owner_restricted_from_contact
+
+  # One Percent's Find matches reads a page of profiles (owner decision, 2026-10-07). Machine only,
+  # the same DIRECTORY_SERVICE_TOKENS consumer as the two reads above, with per-consumer page limits
+  # on top. Claimed or not and says which; no search and no filters.
+  - pluginId: directory
+    command: directory.profile.service.list
+    version: 1.0.0
+    requiredRoles:
+      - service
+    attributePolicies:
+      tenancy: same_workspace
+      directoryReadScope: approved_consumers_only
+      contactRestrictedOwnersExcluded: required
+      pageSizeMax: 100
+      perConsumerRateLimit: one_page_per_second_and_sixty_per_hour
+    consentRequirements:
+      scopes: []
+      fallbackLawfulBasis: legitimate_interest_safety_support
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - unauthorized_consumer_binding
+      - owner_restricted_from_contact
+      - consumer_rate_limit_exceeded
+      - invalid_page_cursor
+
   - pluginId: directory
     command: directory.profile.get
     version: 1.0.0
@@ -143,6 +226,8 @@ policies:
       - actor_not_admin
       - csrf_validation_failed
       - cross_workspace_access
+      - invalid_claimed_unclaimed_transition
+      - account_already_owns_profile
 
   - pluginId: directory
     command: directory.admin.profile.delete
@@ -219,7 +304,7 @@ policies:
     denyConditions:
       - insufficient_role
       - csrf_denied
-      - profile_already_claimed
+      - invalid_claimed_unclaimed_transition
       - profile_not_community_generated
       - profile_has_no_quora_url
       - not_found

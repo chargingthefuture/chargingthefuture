@@ -13,7 +13,8 @@
 | **Surfaces** | Web (`/apps/skills-hunt`, `/admin/skills-hunt`) · Android (`SkillsHunt.tsx`, `AdminSkillsHunt.tsx`) |
 | **Seed first** | `pnpm --dir ctf seed:skills-hunt` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-skills-hunt-feature-inventory.md` |
-| **Generated** | 2026-08-27 (hand-updated: team leaderboard removed — SH-8; report flow removed — SH-13, SH-A13; flag reversal + re-add after remove — SH-A6, SH-A6b; taken-down URL refused — SH-A6c; unflag — SH-A6; admin list hides nothing — SH-A6d; restore a removed row — SH-A6e) · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-09-17 manual update: SH-2 now checks that the nomination is really written, not only acknowledged on screen — the submission INSERT listed 18 columns against 19 values and Postgres refused every nomination · 2026-09-17 manual update: SH-A10b and SH-A10c cover the named-skill mission goal, the mission Edit control and Recompute progress; SH-9 now says how to read a count against its title · 2026-09-18 manual update: SH-9 expects a count capped at its target, and points the mis-pointed-mission check at the admin Missions tab · 2026-09-20 manual update: SH-9b covers the missions picture control, which moved to the admin Missions tab the same day and now shows the picture on that screen rather than handing the file off · 2026-09-20 manual update: SH-A4c covers the paged moderation queue (25 a page, Previous/Next, filter change returns to page 1) · 2026-09-22 manual update: SH-1c covers the round as a field the scout marks (nothing pre-marked with two rounds open, submit waits for a mark, the mark survives a refresh) and the round named on the confirmation; SH-1d covers a closed round leaving the field reachable; SH-A4d covers the round's purpose above the moderation controls and the second confirmation on accept |
+| **Generated** | 2026-08-27 (hand-updated: 2026-10-13 a pasted link is cut back to the profile — SH-6b; 2026-10-08 "profession" reads "job title" — SH-2; 2026-10-08 the nomination keeps its job title — SH-7b; team leaderboard removed — SH-8; report flow removed — SH-13, SH-A13; flag reversal + re-add after remove — SH-A6, SH-A6b; taken-down URL refused — SH-A6c; unflag — SH-A6; admin list hides nothing — SH-A6d; restore a removed row — SH-A6e) · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-09-17 manual update: SH-2 now checks that the nomination is really written, not only acknowledged on screen — the submission INSERT listed 18 columns against 19 values and Postgres refused every nomination · 2026-09-17 manual update: SH-A10b and SH-A10c cover the named-skill mission goal, the mission Edit control and Recompute progress; SH-9 now says how to read a count against its title · 2026-09-18 manual update: SH-9 expects a count capped at its target, and points the mis-pointed-mission check at the admin Missions tab · 2026-09-20 manual update: SH-9b covers the missions picture control, which moved to the admin Missions tab the same day and now shows the picture on that screen rather than handing the file off · 2026-09-20 manual update: SH-A4c covers the paged moderation queue (25 a page, Previous/Next, filter change returns to page 1) · 2026-09-22 manual update: SH-1c covers the round as a field the scout marks (nothing pre-marked with two rounds open, submit waits for a mark, the mark survives a refresh) and the round named on the confirmation; SH-1d covers a closed round leaving the field reachable; SH-A4d covers the round's purpose above the moderation controls and the second confirmation on accept · 2026-10-01 manual update: one open round and the end-of-round award — SH-1c, SH-1d, SH-10c, SH-A1, SH-A3, SH-A4d, SH-A8, SH-A9b rewritten; SH-A-award and SH-A10d added · 2026-10-02 manual update: CS-4, SH-A3, SH-A4c and SH-A4d — Moderation opens on the open round with no round chips · 2026-10-05 manual update: SH-11b added (a failed load or mark-read says so); SH-A2b covers a failed rebuild showing its reason |
+| **Inventory wording** | 2026-10-01: banned-term wording removed from the inventory prose; no step in this script changed |
 
 ---
 
@@ -35,7 +36,7 @@ Open `/apps/skills-hunt` (web) and the SkillsHunt screen (Android). Confirm at l
 web ☐
 
 **CS-2 — Scout tab / nomination form is reachable**
-From the rounds list, tap or click into the active round. Navigate to the Scout tab. The "Nominate a Survivor" form renders with fields: Full name, Bio, Quora URL (required — marked with *), a skills picker, and a location block (Country — required, State/region and City — optional). On web the Country field is a dropdown; on Android it is a button that opens a searchable country list.
+From the rounds list, tap or click into the active round. Navigate to the Scout tab. The "Nominate a Survivor" form renders with fields: Quora URL (required — marked with *, first), Full name, Bio, a skills picker, and a location block (Country — required, State/region and City — optional). On web the Country field is a dropdown; on Android it is a button that opens a searchable country list.
 web ☐
 
 **CS-3 — Leaderboard tab loads**
@@ -43,7 +44,7 @@ Switch to the Leaderboard tab on the same round. A ranked list appears (seeded d
 web ☐
 
 **CS-4 — Admin moderation shell is reachable by an admin**
-Sign in as an admin. Navigate to `/admin/skills-hunt` (web) and the `skills-hunt-admin` screen (Android). A submissions table or list renders; a round selector is visible.
+Sign in as an admin. Navigate to `/admin/skills-hunt` (web) and the `skills-hunt-admin` screen (Android). A submissions table or list renders. On web it opens on the open round with no round chips above the status filters.
 web ☐
 
 **CS-5 — A non-admin is blocked from the admin surface**
@@ -71,6 +72,41 @@ web ☐
 - At step 3 Submit stays live — a half-typed or malformed link does not disable it — and the refusal names the field and shows the expected shape of the link.
 - At step 4 the nomination is accepted.
 - A deleted or emptied Quora account is still a valid URL and is accepted. Being unbanned is not a condition; the link resolving is.
+
+Result: web ☐
+
+---
+
+### SH-0r — Pasting a Quora link fills in the full name
+
+**Role:** member (scout) · **Surfaces:** web
+**Precondition:** Signed in, a round is open and inside its dates.
+
+**Steps:**
+1. Open the Scout tab with Full name empty. Paste `https://www.quora.com/profile/farah-brunache` into the Quora Profile URL field.
+2. Replace the link with `https://www.quora.com/profile/TJW-38`.
+3. Clear both fields, type `Amara Williams` into Full name, then paste the first link again.
+
+**Expected:**
+- At step 1 Full name reads "Farah Brunache".
+- At step 2 Full name changes to "TJW" — the guess follows the link, and the number is dropped.
+- At step 3 Full name stays "Amara Williams": a typed name is never replaced.
+- The filled-in name can be edited before submitting.
+
+### SH-0s — An already-nominated link is flagged before the rest of the form
+
+**Role:** member (scout) · **Surfaces:** web
+**Precondition:** Signed in, a round is open and inside its dates, and some person already has a nomination that is pending, flagged or accepted.
+
+**Steps:**
+1. Open the Scout tab. Check the first field is Quora Profile URL, above Full name.
+2. Paste the Quora link of the person who is already nominated. Fill in nothing else.
+3. Replace it with the link of somebody not yet nominated.
+
+**Expected:**
+- At step 2, within a second, a red note under the Quora field reads "This person is already nominated in the round …, where that nomination …" naming the round and its status, and Full name is filled from the link. Submit stays off even after the other fields are filled.
+- At step 3 the note goes away and Submit comes on once the required fields are filled.
+- A link on the Directory takedown list shows "This person asked to be removed from the directory…" the same way.
 
 Result: web ☐
 
@@ -113,59 +149,44 @@ Result: web ☐
 
 ---
 
-### SH-1c — The round is a field the scout marks, and each round says what it wants
+### SH-1c — The Scout form names the one open round and what it wants
 
 **Role:** member · **Surfaces:** web · web (mobile-responsive, ~390px)
 
-**Precondition:** Two rounds open at once — both `status = 'active'`, both inside their dates, with
-different `starts_at` values — and a description on each, written in the admin Rounds tab under
-"What this round is about". Make them obviously different (for example "Doctors, nurses and
-paramedics" against a general round).
+**Precondition:** Exactly one round open (`status = 'active'`, inside its dates), with a description
+written in the admin Rounds tab under "What this round is about".
 
 **Steps:**
 1. Sign in as a member and open `/apps/skills-hunt` on the Scout tab.
-2. Before marking anything, read the top of the nomination form and try to submit.
-3. Fill in a nominee name, a Quora URL, a country and one skill. Try to submit again.
-4. Mark the round that is *not* first in the list. Read its row.
-5. Press the Refresh control in the header bar, then read the form again.
-6. Submit, read the confirmation, then open My finds.
+2. Read the top of the nomination form.
+3. Fill in a nominee name, a Quora URL, a country and one skill, and submit.
+4. Read the confirmation, then open My finds.
 
-**Expected:** Step 2 — a field reading "Which round is this for? *" with one row per open round,
-each showing its name, its dates and its own description, and **no row marked**. The submit button
-is inactive. Step 3 — still inactive with every other field filled: the round is what is missing.
-Step 4 — that row alone carries the check mark. Step 5 — the same round is still marked; the
-refresh did not move it, and the form still holds what was typed. Step 6 — the confirmation reads
-"Submitted to *round name*" for the round marked in step 4, and My finds lists it under that round.
-With only one round open, that single row is marked already and the button behaves as it always did.
+**Expected:** Step 2 — a read-only note reading "Nominating for *round name*" with that round's
+description under it. There is no "Which round is this for?" field and nothing to mark. Step 3 —
+the submit button becomes active once the other fields are filled. Step 4 — the confirmation reads
+"Submitted to *round name*" and My finds lists the nomination under that round.
 
-**Regression guard:** this replaced a dropdown in a header above the form (2026-09-22). That picker
-set itself from whichever round sorts first and re-set itself every time the data loaded, so the
-refresh in step 5 moved a part-filled nomination to another round in silence. A round pre-marked in
-step 2 while two are open, or a marked round that changes on refresh, means that behavior is back.
+**Regression guard:** before 2026-10-01 two rounds could be open at once and the scout had to mark
+one. A round field or round chips on this tab mean that behavior is back.
 
 Result: web ☐
 
 ---
 
-### SH-1d — A round whose dates have run out does not strand the scout
+### SH-1d — A round whose dates have run out does not show a form
 
 **Role:** member · **Surfaces:** web
 
-**Precondition:** Two rounds with `status = 'active'`: one inside its dates, one whose `ends_at` has
-passed (`UPDATE skills_hunt_rounds SET ends_at = NOW() - INTERVAL '1 day' WHERE id = '<round>';`).
+**Precondition:** The one open round (`status = 'active'`) has an `ends_at` in the past
+(`UPDATE skills_hunt_rounds SET ends_at = NOW() - INTERVAL '1 day' WHERE id = '<round>';`).
 
 **Steps:**
 1. Open `/apps/skills-hunt` on the Scout tab.
-2. Mark the round whose dates have passed.
-3. Read what replaces the rest of the form, and check the round field is still there.
-4. Mark the round that is still inside its dates and submit a nomination.
+2. Read what sits where the nomination fields would be.
 
-**Expected:** Step 3 — the "Nominations for *round name* have closed" notice sits where the fields
-were, naming the date it ran until, and the round field stays on screen with every round still
-markable. Step 4 — the fields come back and the nomination submits against the open round.
-
-**Regression guard:** before 2026-09-22 a closed round replaced the entire Scout tab, picker and
-all, so a member who landed on one had no way to reach another round from that screen.
+**Expected:** The "Nominations for *round name* have closed" notice sits where the fields were,
+naming the date it ran until. Leaderboard, Missions and My finds still show that round.
 
 Result: web ☐
 
@@ -185,6 +206,7 @@ Result: web ☐
    - Quora URL: a valid-format Quora profile URL (e.g. `https://www.quora.com/profile/seed-test-user`)
    - Country: `United States` (required). State: `California`. City: `Oakland`.
    - Select 2 taxonomy skills from the accordion/picker.
+   - Above the accordion, confirm the optional list reads **"Know their job title?"** with the placeholder "Select a job title…" — the name Skills Taxonomy and the Directory use, never "profession". On the signed-out SkillsHunt page, the list of what a nomination includes reads First Name, Bio, Quora Profile URL, Skills, with no profession or job title entry.
 3. Also confirm the **keyword skill search** (web and android): type part of a skill name in the "Search skills by keyword…" box above the sector accordion. The accordion is replaced by a flat, cross-sector list of matching skills; selecting one adds it just like the accordion. Clear the search (✕) to restore the accordion. A no-match query shows the "add it as a free-text skill" hint.
 4. Submit.
 
@@ -380,6 +402,19 @@ Result: web ☐
 
 ---
 
+### SH-6b — A pasted link is cut back to the profile itself (added 2026-10-13)
+**Role:** member · **Surfaces:** web
+**Precondition:** an open round; a Quora profile (here `Swiftness-8`) with no active nomination.
+**Steps:**
+1. In the Quora field, paste `/br`, a line break, and `https://www.quora.com/profile/Swiftness-8/activity`.
+2. Fill in the rest of the form and submit.
+3. As an admin, open the nomination in Moderation and open its Quora link.
+4. As a member, start a second nomination and paste `https://www.quora.com/profile/Swiftness-8`.
+**Expected:** step 2 saves the nomination rather than refusing the link. The link in step 3 opens the
+profile, not its activity tab. Step 4 says the person is already nominated, because both pastes are the
+same person.
+**Result:** web ☐ mobile ☐ — notes:
+
 ### SH-7 — Proposed (free-text) skills can be added alongside taxonomy skills
 
 **Role:** member · **Surfaces:** web, android
@@ -394,6 +429,24 @@ Result: web ☐
 5. Submit the full form.
 
 **Expected:** Submission succeeds. The proposed skill is stored and visible in My Finds as a chip. The total skills + proposed skills count does not exceed 10. A proposed skill becomes a real taxonomy skill only after the owner approves it — an `addSkill` entry appended to the taxonomy change list (`ctf/scripts/lib/taxonomyChange.mjs`) and applied by the owner-run apply workflow.
+
+Result: web ☐
+
+---
+
+### SH-7b — The job title picked on a nomination reaches the Directory profile (added 2026-10-08)
+
+**Role:** member, then admin · **Surfaces:** web
+
+**Precondition:** Active round exists. Member is signed in. An admin account is available.
+
+**Steps:**
+1. On the Scout tab, open **Know their job title?** and pick a job title (e.g. Graphic / Visual Designers).
+2. Confirm the list now shows that job title, and its skills appear as separate chips. Remove one of them.
+3. Pick "Select a job title…" and confirm the list clears while the skill chips stay. Pick the job title again, fill in the rest of the form, and submit.
+4. As an admin, accept the nomination. Open the Directory profile it created.
+
+**Expected:** The profile shows the picked job title and its sector, and the skills exactly as submitted (the removed one is absent). A nomination submitted with no job title creates a profile with no job title.
 
 Result: web ☐
 
@@ -524,6 +577,44 @@ Result: web ☐
 
 ---
 
+### SH-10c — Only one round can be open, and every tab shows it
+
+**Role:** admin, then member · **Surfaces:** web
+
+**Precondition:** One round is `active`. A second round exists as `draft`.
+
+**Steps:**
+1. As an admin, open `/admin/skills-hunt` → **Rounds** and set the draft round's status to `active`. Save.
+2. Try again by creating a new round with status `active`.
+3. As a member, open `/apps/skills-hunt` and go through Scout, Leaderboard, Missions and My Finds.
+
+**Expected:** Steps 1 and 2 — both saves are refused with a message naming the round that is already
+open; the draft round stays `draft` and no new active round appears. Step 3 — every tab shows the
+same single open round; there are no round chips above Leaderboard, Missions or My Finds, and no
+round field on Scout. If two rounds are open from before this rule (set one by hand in the
+database), the member screen shows a note saying an admin needs to close the others.
+
+Result: web ☐
+
+---
+
+### SH-10b — My Finds shows your own totals across all rounds
+
+**Role:** member · **Surfaces:** web
+
+**Precondition:** Member has at least one nomination (from SH-2), ideally one accepted in SH-A2 so a Directory profile was created.
+
+**Steps:**
+1. Open the My Finds tab.
+2. Read the "Your totals, all rounds" card at the top.
+3. Have an admin accept one of the member's pending nominations, then press refresh.
+
+**Expected:** The card reads "Only you can see these." and shows Profiles created, Accepted, Pending, and Submitted. The numbers cover every round, not only the selected one. After the acceptance and refresh, Pending drops by one and Accepted and Profiles created each rise by one. Signed in as a different member, the card shows that member's own numbers, never the first member's. A removed nomination is not counted.
+
+Result: web ☐
+
+---
+
 ### SH-11 — Status panel (notifications): unread entries are accented, mark-read works
 
 **Role:** member · **Surfaces:** web, android
@@ -540,6 +631,27 @@ Result: web ☐
 - The notification is marked as read (accent removed or style changes).
 - No numeric dot/count badge appears on the bell icon at any point.
 - The panel polls automatically; waiting ~30 seconds and then triggering a new notification (from admin review) should surface it without a page reload.
+
+Result: web ☐
+
+---
+
+### SH-11b — A failed load says so instead of showing an empty list
+
+**Role:** member · **Surfaces:** web
+
+**Precondition:** An open round with at least one of your nominations and one mission. Use the browser's developer tools to block requests (Network → block request URL), or go offline.
+
+**Steps:**
+1. Block `/api/skills-hunt/rounds/*/submissions`, open the My Finds tab, and press Refresh.
+2. Do the same for the Missions tab (`/missions`) and the Leaderboard tab (`/leaderboard`).
+3. Unblock the requests and press Refresh.
+4. Block `/api/skills-hunt/notifications/*/read`, open the Status panel, and tap an unread update.
+
+**Expected:**
+- Each blocked tab shows a red message saying it could not load (the route's own sentence when it answered, or a connection message when offline), not "No nominations yet", "No missions for this round yet" or "No entries yet".
+- After unblocking, each tab shows its list again.
+- A failed mark-read leaves the update unread and shows a red line at the top of the Status panel; it is not shown as read and then flipped back on the next poll.
 
 Result: web ☐
 
@@ -635,10 +747,10 @@ Result: web ☐
 **Steps:**
 1. Navigate to the Rounds tab of the admin shell.
 2. Fill in: Name (e.g. `Test Round Alpha`), start date (today), end date (7 days from now), status `active`.
-3. Set `rewardCreditsPerAccept` to `5` and `rewardPerUserRoundCap` to `20`.
+3. Set "Points needed for an award" to `10` and "ServiceCredits pool" to `100`. (Close any other open round first: only one can be open.)
 4. Save.
 
-**Expected:** The new round appears in the admin rounds list with status `active` and the configured reward values. The member-facing `/apps/skills-hunt` rounds list also shows the new round.
+**Expected:** The new round appears in the admin rounds list with status `active` and the line "100 ServiceCredits pool · 10+ points". A round saved with no pool reads "Points only · no end-of-round award set". The member-facing `/apps/skills-hunt` rounds list also shows the new round.
 
 Result: web ☐
 
@@ -655,7 +767,7 @@ Result: web ☐
 2. Change only the name to `Test Round Alpha — Updated`. Leave all other fields blank/untouched in the form.
 3. Save.
 
-**Expected:** The round name changes to the new value. The start date, end date, status, and reward config remain exactly as set in SH-A1 — they are not reset to defaults.
+**Expected:** The round name changes to the new value. The start date, end date, status, and award settings remain exactly as set in SH-A1 — they are not reset to defaults.
 
 Result: web ☐
 
@@ -671,7 +783,7 @@ Result: web ☐
 1. In the admin Rounds tab (web) / on the admin screen with the round selected (Android), find the round's "Rebuild leaderboard" button and tap/click it; confirm the prompt.
 2. Open that round's Leaderboard tab and check the standings.
 
-**Expected:** The button shows a busy state, then a success notice ("Leaderboard rebuilt…" on Android). The Leaderboard reflects the current accepted submissions — a scout whose accepted submission was removed/rejected out-of-band no longer carries its points. A non-admin cannot reach this action. On Android the button sits in a "Leaderboard" card under the selected round and sends `x-ctf-csrf: '1'`.
+**Expected:** The button shows a busy state, then a success notice ("Leaderboard rebuilt…" on Android). The Leaderboard reflects the current accepted submissions — a scout whose accepted submission was removed/rejected out-of-band no longer carries its points. A non-admin cannot reach this action. On Android the button sits in a "Leaderboard" card under the selected round and sends `x-ctf-csrf: '1'`. If the rebuild fails (block `/leaderboard/rebuild` in the browser's developer tools to try it), the button reads "Failed — retry" and the route's reason appears in red under it.
 
 Result: web ☐
 
@@ -681,18 +793,17 @@ Result: web ☐
 
 **Role:** admin/moderator · **Surfaces:** web, android
 
-**Precondition:** At least one pending submission exists (created in SH-2 or from seed). The round has `rewardCreditsPerAccept > 0` (set in SH-A1 or use a seeded paid round).
+**Precondition:** At least one pending submission exists (created in SH-2 or from seed).
 
 **Steps:**
-1. On the admin shell (web: Moderation tab; Android: moderation screen), select the active round.
+1. On the admin shell (web: Moderation tab, which opens on the active round; Android: moderation screen, select the active round).
 2. Filter to "pending" submissions.
 3. Accept one submission.
-4. On web, observe the Reward column on that row.
-5. On Android, observe the accepted submission card.
+4. Check the scout's ServiceCredits balance.
 
 **Expected:**
 - The submission status changes to "accepted".
-- The row shows a "✓ Paid N ServiceCredits" indicator (where N = rewardCreditsPerAccept).
+- No ServiceCredits are sent: the scout's balance is unchanged. Credits come only from the end-of-round award (SH-A-award).
 - The leaderboard for that round rebuilds — navigate to the Leaderboard tab and verify the submitter's score increased.
 - The submitter receives a `submission-accepted` notification (check the Status panel as the member, waiting up to 30s for the next poll).
 
@@ -744,7 +855,7 @@ Result: web ☐
 add them, or pick the round that has them on a real environment.
 
 **Steps:**
-1. Open `/admin/skills-hunt` → **Moderation** and pick that round. Scroll to the bottom of the list.
+1. Open `/admin/skills-hunt` → **Moderation** (it opens on the open round). Scroll to the bottom of the list.
 2. Count the nominations on screen, and read the line between the two controls under them.
 3. Press **Next**, then **Previous**.
 4. With a multi-page list showing, move to page 2 or later, then change the status filter.
@@ -770,33 +881,31 @@ Result: web ☐ mobile ☐
 
 **Role:** admin/moderator · **Surfaces:** web · web (mobile-responsive, ~390px)
 
-**Precondition:** Two rounds — one with a description and a reward above zero
-(`reward_credits_per_accept`), one with the description left empty. At least one pending nomination
-in each.
+**Precondition:** One open round with a description, and a closed round with the description left
+empty. At least one pending nomination in each.
 
 **Steps:**
-1. Open `/admin/skills-hunt` → **Moderation** and pick the round with a description.
-2. Read what sits between the round tabs and the reward banner, before touching a nomination.
+1. Make sure the open round has a description, then open `/admin/skills-hunt` → **Moderation**.
+2. Read what sits between the status filters and the queue, before touching a nomination.
 3. Press **Accept** on a nomination and read the dialog without confirming. Cancel it.
-4. Check the nomination's status and the "Paid so far" figure in the reward banner.
+4. Check the nomination's status.
 5. Press **Accept** again and confirm this time.
 6. Press **Reject** on a different nomination, and **Flag** on another.
 7. Switch to the round with no description and read the same place, then press Accept and read the
    dialog.
 
 **Expected:** Step 2 — a panel reading "*round name* is looking for: …" with that round's own
-description, above the Accept and Reject controls. Step 3 — a confirmation naming the nominee and
-the round, repeating what the round is looking for, and saying how many ServiceCredits go to which
-scout and that it cannot be undone from the app. Step 4 — the cancel changed nothing: the
-nomination is still pending and "Paid so far" has not moved. Step 5 — the accept goes through
-normally. Step 6 — reject and flag still act on one press; only accept asks twice, because only
-accept pays. Step 7 — no purpose panel for a round with no description, and the dialog still names
-the nominee, the round and the reward without an empty "is looking for" line.
+description, above the Accept and Reject controls. There is no "Reward: N ServiceCredits per
+accepted nomination" or "Paid so far" banner. Step 3 — a confirmation naming the nominee and the
+round and repeating what the round is looking for. It says nothing about ServiceCredits. Step 4 —
+the cancel changed nothing: the nomination is still pending. Step 5 — the accept goes through
+normally. Step 6 — reject and flag still act on one press. Step 7 — no purpose panel for a round
+with no description, and the dialog still names the nominee and the round without an empty "is
+looking for" line.
 
-**Regression guard:** before 2026-09-22 this screen showed the round's name on a filter pill and its
-reward in a banner, said nothing about what the round wanted, and paid the reward on a single press
-of Accept with no confirmation. That is how a nomination unrelated to a round's subject was accepted
-and paid.
+**Regression guard:** before 2026-09-22 this screen said nothing about what the round wanted and
+accepted on a single press. Before 2026-10-01 accept also sent ServiceCredits; a credits line in the
+dialog or a reward banner means that is back.
 
 Result: web ☐
 
@@ -971,20 +1080,54 @@ Result: web ☐
 
 ---
 
-### SH-A8 — Reward banner and summary visible in admin submissions view
+### SH-A8 — The moderation screen shows no per-accept reward
 
-**Role:** admin/moderator · **Surfaces:** web, android
+**Role:** admin/moderator · **Surfaces:** web
 
-**Precondition:** A round with `rewardCreditsPerAccept > 0` exists and has at least one accepted submission that was paid.
+**Precondition:** A round with at least one accepted nomination, including one accepted before
+2026-10-01 that was sent a per-accept reward.
 
 **Steps:**
-1. Open the admin submissions view for the paid round.
-2. Observe the reward banner/summary area.
+1. Open the admin Moderation view for that round.
+2. Look above the queue and along the rows.
 
 **Expected:**
-- Banner shows: `N ServiceCredits per accepted nomination` and the optional per-scout cap.
-- Summary shows: "Paid so far: X ServiceCredits across Y nominations" (from `totalCreditsPaid` / `rewardedSubmissionCount`).
-- Amounts are shown in full words ("ServiceCredits"), never as a fiat equivalent or bare "SC".
+- No reward banner and no "Paid so far" summary.
+- The scout who was sent credits for an older accept still holds them; nothing was taken back.
+
+Result: web ☐
+
+---
+
+### SH-A-award — End-of-round award
+
+**Role:** admin, then member · **Surfaces:** web · web (mobile-responsive, ~390px)
+
+**Precondition:** The round from SH-A1, with "Points needed for an award" `10` and "ServiceCredits
+pool" `100`, and accepted nominations giving at least two scouts 10 points or more and one scout
+fewer than 10. Note each scout's ServiceCredits balance.
+
+**Steps:**
+1. While the round is still `active`, open `/admin/skills-hunt` → **Rounds** and look at the round.
+2. Set the round to `closed`. Save.
+3. Read the "End-of-round award" panel on the closed round.
+4. Press **Send awards**, read the confirm, and confirm.
+5. As each listed scout, check their ServiceCredits balance.
+6. As the admin, press **Send awards** again and confirm.
+7. On another closed round with no points bar set, or a pool of 0, read the panel.
+
+**Note (2026-10-02):** the round form has no per-accept credit fields at all, and the database no
+longer has the columns behind them (`post/0048`). A form or screen that still mentions "ServiceCredits
+per accepted nomination" or a per-scout cap is out of date.
+
+**Expected:** Step 1 — no Send control; an open round has no award to send yet. Step 3 — one line
+per scout at or above 10 points, reading @user · points · amount, with the scout under 10 left out.
+The amounts are shares of the pool in proportion to points, rounded down; they add up to 100 or
+less, and the status line shows the leftover as a remainder that will not be sent. Step 4 — the
+confirm says how many ServiceCredits go to how many scouts; after it, each line shows as sent.
+Step 5 — each balance went up by exactly its line's amount, once. Step 6 — nothing more is sent and
+no balance moves. Step 7 — no Send control, and the panel says in plain words what is missing
+(close the round, set the points bar, or set the pool).
 
 Result: web ☐
 
@@ -1038,12 +1181,12 @@ Result: web ☐
 
 **Steps:**
 1. On the admin Missions tab, press **+ New mission**. Read the Goal type list: each option is a sentence saying what it counts, not a bare identifier, and the identifier it stores is shown underneath.
-2. Choose **Accepted nominations carrying one named skill**. A Skill name box appears. Leave it empty and press Create mission.
-3. Fill in the Skill name with the exact taxonomy skill one of the accepted nominations carries. Set Goal target to 1. Create.
+2. Choose **Accepted nominations carrying one named skill**. A Sector dropdown and a Skill dropdown appear — no text boxes. Leave the skill unchosen and press Create mission.
+3. Choose the sector, then the taxonomy skill one of the accepted nominations carries, from the dropdowns. Set Goal target to 1. Create.
 4. Read the new row in the admin list.
 5. Open the member Missions tab.
 
-**Expected:** Step 2 refuses with a sentence naming the skill rule, not a generic failure — an unnamed skill would count nothing and could never be completed. After step 3 the row reads "Accepted nominations carrying one named skill — <the skill>", so the list says what the mission counts without opening it. On the member tab the mission shows 1 of 1, not the scout's entire accepted total.
+**Expected:** Both dropdowns list only real taxonomy entries, sorted by name; the Skill dropdown lists the chosen sector's skills and reads "Choose a sector first" until one is picked. Choosing **Accepted nominations carrying any skill in one sector** instead shows a single Sector dropdown, with no separate sector id field (2026-10-01: the sector, skill and their ids were typed by hand, and a misspelled name counted nothing). Step 2 refuses with "Choose the skill this mission counts.", not a generic failure — an unnamed skill would count nothing and could never be completed. After step 3 the row reads "Accepted nominations carrying one named skill — <the skill>", so the list says what the mission counts without opening it. On the member tab the mission shows 1 of 1, not the scout's entire accepted total.
 
 **Why this exists:** until 2026-09-17 there was no goal type about a single trade, so a mission titled "Find a mechanic" was stored as "every accepted nomination, whatever the skill" and read "82/1 complete" for a scout who had nominated no mechanic (owner report).
 
@@ -1060,8 +1203,8 @@ Result: web ☐
 **Steps:**
 1. On the member Missions tab, note the number the mission shows — it is the scout's entire accepted total over a target of 1, and reads Complete.
 2. On the admin Missions tab, press **Edit** on that row.
-3. Change Goal type to **Accepted nominations carrying one named skill**, clear the Skill name, and press Save mission.
-4. Put the correct skill in and save.
+3. Change Goal type to **Accepted nominations carrying one named skill**, leave the skill unchosen, and press Save mission.
+4. Choose the correct sector and skill from the dropdowns and save.
 5. Re-check the member Missions tab **without** pressing anything else.
 6. Back on the admin Missions tab, press **Recompute progress**.
 7. Re-check the member Missions tab.
@@ -1082,7 +1225,7 @@ Result: web ☐
 
 **Steps:**
 1. On a phone (or a narrow window), scroll the round edit form top to bottom.
-2. Look at Status, Starts and Ends, and at the two ServiceCredits fields below them.
+2. Look at Status, Starts and Ends, and at "Points needed for an award" and "ServiceCredits pool" below them.
 
 **Expected:** Every field sits fully inside the column — nothing is cut off at the right edge and the page never scrolls sideways. The date fields each take a full row rather than sharing one. (Starts used to run off-screen: `datetime-local` reports a wide intrinsic size on iOS Safari and grew its grid track.)
 ### SH-A10b — Completing a mission moves the scout up the leaderboard
@@ -1102,6 +1245,27 @@ Result: web ☐
 - Step 3: the score has risen by exactly the mission's bonus points, in the round leaderboard **and** the all-time view, and the rank reflects it — a scout on fewer submission points can now sit above one with more. The rise shows on the same review that completed the mission, not the next one.
 - Step 5: the score does **not** change. Earned is earned — the leaderboard reports a round, so archiving closes a mission to new completions but never takes back points already earned. (A member starts a fresh points count in a new round.)
 - **No ServiceCredits move at any point.** Points are a ranking figure and have no connection to credits.
+
+Result: web ☐
+
+---
+
+### SH-A10d — The missions picture's dates match the Rounds tab
+
+**Role:** admin · **Surfaces:** web
+
+**Precondition:** An open round with at least one active mission. The admin's device is set to a
+time zone well away from UTC (for example Pacific time), and the round starts or ends close to
+midnight UTC.
+
+**Steps:**
+1. Open `/admin/skills-hunt` → **Rounds** and note the round's start and end dates.
+2. Open **Missions**, press "Save these missions as one picture", and read the dates on the picture.
+
+**Expected:** The dates on the picture are the same calendar days the Rounds tab shows. Before
+2026-10-01 the picture used UTC and could read a day off. The small label at the top of the picture
+reads "SKILLS ECONOMY · SKILLSHUNT" (not "Charging the Future"), and the web address at the bottom
+still reads chargingthefuture.com.
 
 Result: web ☐
 
@@ -1210,7 +1374,7 @@ Result: web ☐
 - Step 4: no row carrying an `issue_number` for that skill. A leftover claim row (no issue number) does not block it: the next run re-claims it after 30 minutes.
 - Step 5: one `skill-proposal` issue is filed per distinct proposed skill, each with a suggested sector and occupation (or "needs manual mapping"), and the run succeeds. Nothing had to be re-entered by the member.
 - Step 6: `no new proposed skills to process` — no duplicate issue for a skill that already has one.
-- Step 7: the run **succeeds** without any Anthropic API call (the log says `SKIP_CLASSIFICATION is set`), and one `skill-proposal` issue is filed for the skill. Its "AI-suggested placement" section reads "Placement pending" with a line saying the run was started with `skip_classification`, and there is no "AI guess" caveat. The tracking row carries the issue number with `suggested_sector` and `suggested_occupation` null. The session that started the run then adds the suggested sector and occupation to the issue.
+- Step 7: the run **succeeds** without any Anthropic API call (the log says `SKIP_CLASSIFICATION is set`), and one `skill-proposal` issue is filed for the skill. Its "AI-suggested placement" section reads "Placement pending" with a line saying the run was started with `skip_classification`, and there is no "AI guess" caveat. The tracking row carries the issue number with `suggested_sector` and `suggested_occupation` null. The session that started the run then adds the suggested sector and occupation to the issue. The issue body also has a collapsed **Allowed placements** section listing every active occupation grouped by sector (or a note that the list was left out because it would exceed 40,000 characters). Running `/sp` in a chat session places every pending issue from that list and opens one owner-review PR with `addSkill` ops for the proposals worth promoting; it closes no issue itself.
 - Step 8: the scheduled workflow files no second issue for that skill (its row already carries an issue number). The scheduled workflow itself is unchanged: it still classifies with the API and still goes red while the account is unfunded. A label the admin dropped from the Directory's Pending skill proposals screen (tracker row `status = 'dropped'`, Directory DIR-A8) is likewise never filed again, even when its row carries no issue number.
 
 **Also check that a non-funding failure never reads as a funding one** (the point of the named states). With the API answering:
@@ -1274,6 +1438,20 @@ Result: web ☐
 
 ---
 
+### SH-A19 — The seed and end-to-end smoke check run on an up-to-date database (added 2026-10-05)
+
+**Role:** operator · **Surfaces:** operational (scripts, no UI)
+
+**Precondition:** A scratch database built from the current `ctf/schema.sql` and post migrations.
+
+**Steps:**
+1. Run the Skills Hunt seed, then the Skills Hunt end-to-end smoke check against that database.
+
+**Expected:**
+- Step 1: every step passes, including the Directory profile step (source `community-generated`, the `@community-seed01` handle, the inviting username) and the one-row handle count. Before 2026-10-05 the smoke check stopped at the Directory profile step, because it selected two columns `directory_profiles` no longer has.
+
+**Result:** web ☐ mobile ☐ — notes:
+
 ## Parity check (web ↔ android)
 
 The following cases must produce identical behavior on both surfaces. Rerun them back-to-back on web and Android and confirm they match.
@@ -1292,7 +1470,7 @@ The following cases must produce identical behavior on both surfaces. Rerun them
 | SH-A3 | Accept action changes status and triggers notification on both |
 | SH-A4 | Reject action changes status and triggers notification on both |
 | SH-A6 | Flag action changes status on both |
-| SH-A8 | Reward banner and per-submission paid indicator visible on both |
+| SH-A8 | No per-accept reward banner or credits-sent indicator (web-only now) |
 
 **Android-only behavior that intentionally differs from web:**
 - Round creation and editing is web-only (SH-A9).

@@ -4,6 +4,7 @@ import { Plus } from "lucide-react";
 import { initials, submissionStatusStyle, type SkillsHuntSubmission, type Tab } from "./sh-shared";
 import { useTheme } from '@/hooks/useTheme';
 import { getSkillsHuntTokens } from './sh-shared';
+import { SkillsHuntMyTotalsCard } from './sh-my-totals-card';
 
 function FindCard({ find }: { find: SkillsHuntSubmission }) {
   const { theme } = useTheme();
@@ -41,11 +42,16 @@ export function SkillsHuntMyFindsTab({
   noActiveRound,
   loading,
   myFinds,
+  error = null,
+  refreshKey,
   onNavTab,
 }: {
   noActiveRound: boolean;
   loading: boolean;
   myFinds: SkillsHuntSubmission[];
+  // A failed load, shown in place of the empty state so an outage does not read as "no nominations".
+  error?: string | null;
+  refreshKey: number;
   onNavTab: (tab: Tab) => void;
 }) {
   const { theme } = useTheme();
@@ -54,10 +60,13 @@ export function SkillsHuntMyFindsTab({
     <>
       <div style={{ fontSize: 22, fontWeight: 800, color: t.TITLE, marginBottom: 4 }}>My Finds</div>
       <div style={{ fontSize: 14, color: t.MUTED, marginBottom: 20 }}>People you&apos;ve nominated · full names only for privacy</div>
+      <SkillsHuntMyTotalsCard refreshKey={refreshKey} />
       {noActiveRound ? (
         <div style={{ fontSize: 14, color: t.MUTED }}>No active round — no finds to display.</div>
       ) : loading ? (
         <div style={{ fontSize: 14, color: t.MUTED }}>Loading your finds…</div>
+      ) : error ? (
+        <div role="alert" style={{ fontSize: 14, color: "#EF4444", lineHeight: 1.6 }}>{error}</div>
       ) : myFinds.length === 0 ? (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "40px 24px", gap: 16, textAlign: "center" }}>
           <div style={{ fontSize: 16, fontWeight: 700, color: t.TITLE }}>No nominations yet</div>

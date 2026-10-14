@@ -3,6 +3,7 @@ import { ensureMutationCsrf, peerProgrammingErrorResponse, requirePeerProgrammin
 import {
   PEER_PROGRAMMING_ERROR_CODE,
   PEER_PROGRAMMING_MAX_GOAL_TITLE_LENGTH,
+  PEER_PROGRAMMING_MAX_OPEN_GOALS,
   PEER_PROGRAMMING_MAX_TASK_LENGTH,
   PEER_PROGRAMMING_MAX_TASKS_PER_GOAL,
   PEER_PROGRAMMING_TASK_HOLD_HOURS,
@@ -31,6 +32,7 @@ export async function GET() {
         finishedLastDay: 0,
         viewerUserId: gate.auth.userId,
         taskHoldHours: PEER_PROGRAMMING_TASK_HOLD_HOURS,
+        maxOpenGoals: PEER_PROGRAMMING_MAX_OPEN_GOALS,
       });
     }
     const [goals, finishedLastDay] = await Promise.all([listCohortGoals(cohort.id), countTasksFinishedLastDay(cohort.id)]);
@@ -44,6 +46,7 @@ export async function GET() {
       finishedLastDay,
       viewerUserId: gate.auth.userId,
       taskHoldHours: PEER_PROGRAMMING_TASK_HOLD_HOURS,
+      maxOpenGoals: PEER_PROGRAMMING_MAX_OPEN_GOALS,
     });
   } catch (error) {
     reportError(error, { area: 'peer-programming', op: 'goals_list' });
@@ -70,7 +73,7 @@ function parseGoal(body: Record<string, unknown>): ParsedGoal {
   return { ok: true, title: title.text, tasks };
 }
 
-// Post a goal, with its first tasks. One open goal per member.
+// Post a goal, with its first tasks. A member can have up to PEER_PROGRAMMING_MAX_OPEN_GOALS open.
 export async function POST(request: Request) {
   const csrfDeny = ensureMutationCsrf(request);
   if (csrfDeny) return csrfDeny;
@@ -102,8 +105,11 @@ export async function POST(request: Request) {
     });
     return NextResponse.json({ ok: true, goalId }, { status: 201 });
   } catch (error) {
-    if (error instanceof Error && error.message === 'goal_already_open') {
-      return conflict(PEER_PROGRAMMING_ERROR_CODE.goalAlreadyOpen, 'You already have an open goal. Close it as reached or withdrawn before posting another.');
+    if (error instanceof Error && error.message === 'open_goal_limit') {
+      return conflict(
+        PEER_PROGRAMMING_ERROR_CODE.openGoalLimit,
+        `You already have ${PEER_PROGRAMMING_MAX_OPEN_GOALS} open goals, which is the most one member can have. Close one as reached or take it down before posting another.`,
+      );
     }
     reportError(error, { area: 'peer-programming', op: 'goal_create' });
     return peerProgrammingErrorResponse(error, 'The goal could not be saved.');

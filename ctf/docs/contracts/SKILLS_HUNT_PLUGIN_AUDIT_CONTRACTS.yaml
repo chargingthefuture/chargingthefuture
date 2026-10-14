@@ -4,7 +4,7 @@ auditEvents:
     actorId: principal
     pluginId: skills-hunt
     command: skills-hunt.round.create
-    commandVersion: 1.1.0
+    commandVersion: 2.0.0
     purpose: campaign_governance
     policyDecision:
       status: allow_or_deny
@@ -26,7 +26,7 @@ auditEvents:
     actorId: principal
     pluginId: skills-hunt
     command: skills-hunt.round.update
-    commandVersion: 1.1.0
+    commandVersion: 2.0.0
     purpose: campaign_governance
     policyDecision:
       status: allow_or_deny
@@ -206,7 +206,7 @@ auditEvents:
     actorId: principal
     pluginId: skills-hunt
     command: skills-hunt.submission.review
-    commandVersion: 1.1.0
+    commandVersion: 2.0.0
     purpose: moderation_and_scoring
     policyDecision:
       status: allow_or_deny
@@ -234,21 +234,23 @@ auditEvents:
       status: success_or_failure
       errorCategory: none_or_error_class
 
-  # ServiceCredits reward minted to a scout on an accepted nomination. Triggered
-  # by skills-hunt.submission.review (accept) and recorded in the ServiceCredits
-  # admin audit trail; mirrors the Unlock approval reward audit.
+  # ServiceCredits end-of-round award minted to a scout (since 2026-10-01). Triggered by
+  # skills-hunt.round.award.send, once per scout per round, and recorded in the ServiceCredits
+  # admin audit trail with reason skills_hunt_round_award. Until 2026-10-01 this event fired for
+  # the per-accept reward from skills-hunt.submission.review; rows from then carry
+  # skillsHuntSubmissionId instead of score.
   - eventId: uuid
     timestamp: rfc3339
     actorId: principal
     pluginId: skills-hunt
     command: service-credits.governance.mint.grant.skills-hunt
-    commandVersion: 1.0.0
+    commandVersion: 2.0.0
     purpose: contribution_reward
     policyDecision:
       status: allow_or_deny
-      reason: policy_reason_code
+      reason: skills_hunt_round_award
     dataClassesAccessed:
-      - skills_hunt_submissions
+      - skills_hunt_round_awards
       - service_credits_governance_events
       - service_credits_admin_audit_trail
     # Recorded via insertServiceCreditsAudit into service_credits_admin_audit_trail,
@@ -257,11 +259,39 @@ auditEvents:
     targetType: governance_event
     targetId: governance_event_identifier
     metadata:
-      skillsHuntSubmissionId: submission_identifier
       roundId: round_identifier
       targetUserId: scout_identifier
       amount: credit_amount
-      idempotencyKey: idempotency_key
+      score: final_round_score
+      idempotencyKey: skills-hunt-round-award-<roundId>-<userId>
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: skills-hunt
+    command: skills-hunt.round.award.send
+    commandVersion: 1.0.0
+    purpose: campaign_governance
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - skills_hunt_rounds
+      - skills_hunt_round_awards
+      - skills_hunt_leaderboard
+    targetType: round
+    targetId: round_identifier
+    # One row per press of Send. The per-scout mints are recorded separately by
+    # service-credits.governance.mint.grant.skills-hunt.
+    metadata:
+      sentNow: rows_sent_by_this_press
+      failed: rows_that_failed_this_press
+      plannedCredits: total_credits_in_the_fixed_split
+    requestId: request_identifier
+    traceId: trace_identifier
     result:
       status: success_or_failure
       errorCategory: none_or_error_class
@@ -282,6 +312,28 @@ auditEvents:
       workspaceId: workspace_identifier
       roundId: round_identifier
       mode: leaderboard_mode
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: skills-hunt
+    command: skills-hunt.my-totals.get
+    commandVersion: 1.0.0
+    purpose: reward_visibility
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - skills_hunt_submissions
+      - directory_profiles
+    targetContext:
+      workspaceId: workspace_identifier
+      userId: user_identifier
     requestId: request_identifier
     traceId: trace_identifier
     result:
@@ -627,3 +679,11 @@ changelog:
       auto-mission run, the auto-mission settings change and the mission create/update/archive
       events now write a durable row in skills_hunt_audit_log as well as an observability log line,
       so the readable trail is the entire set of admin mutations rather than a subset.
+  - date: 2026-10-01
+    change: >-
+      Added the skills-hunt.round.award.send event (one row per press of Send, with how many rows
+      were sent and failed and the total in the fixed split). service-credits.governance.mint.grant.skills-hunt
+      now fires for the end-of-round award, once per scout per round, with reason
+      skills_hunt_round_award; an accepted nomination no longer mints. Bumped commandVersion to
+      2.0.0 for skills-hunt.round.create, skills-hunt.round.update and skills-hunt.submission.review
+      to match the command contracts.

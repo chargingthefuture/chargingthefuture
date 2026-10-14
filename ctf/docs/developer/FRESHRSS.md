@@ -2,7 +2,7 @@
 
 A feed reader at `rss.chargingthefuture.com`, on Render, for members who would rather not run one
 themselves. Signing in goes through the app's own auth provider, so nobody sets a second password
-and a ban at the provider closes both at once.
+and a ban at the provider closes the reader too, within the sign-in length below.
 
 This file is the record of how it is set up. The app's own tile and page are described in
 `ctf-plugin-feature-inventories/ctf-reader-feature-inventory.md`; this is the service underneath.
@@ -48,16 +48,47 @@ A start command that ends by exiting rather than serving is reported by Render a
 That is expected for a step whose job is to change something on the disk; the work lands on the
 disk, which outlives the container, and a following step hands the start command back.
 
+## How long a sign-in lasts
+
+Sign-in is FreshRSS's OpenID Connect module (`mod_auth_openidc` inside the image's web server)
+asking the auth provider. On the image's defaults that module forgot a sign-in after 5 minutes
+without a page load, kept it in a cookie that was dropped when the phone closed the browser or the
+home-screen app, and held it in the server's memory, so every restart signed everybody out.
+Together that read as a sign-in on nearly every reload. It was the defaults, not a fault in
+FreshRSS or the provider.
+
+The settings now live in [`ctf/ops/freshrss/sign-in.env`](../../ops/freshrss/sign-in.env):
+
+| Variable | Value | Meaning |
+|---|---|---|
+| `OIDC_SESSION_INACTIVITY_TIMEOUT` | 604800 | Seven days without opening the reader before it asks again. |
+| `OIDC_SESSION_MAX_DURATION` | 604800 | Seven days at most, however often it is opened. |
+| `OIDC_SESSION_TYPE` | `client-cookie:persistent` | The sign-in sits in a cookie on the device, encrypted with `OIDC_CLIENT_CRYPTO_KEY`, and survives the browser closing and the reader restarting. |
+
+The longest of these is also how long a ban at the provider can take to reach somebody already
+signed in to the reader. To sign everybody out at once, change `OIDC_CLIENT_CRYPTO_KEY` on the
+service: every cookie made with the old key stops working.
+
+The same workflow turns off the provider's consent screen for the reader's OAuth application. The
+reader is this project's own service, and a screen asking the member to approve it on each sign-in
+has nothing for them to decide.
+
+To change a number: edit the file in a pull request, then run the workflow
+`FreshRSS — Set how long a reader sign-in lasts`. Everybody signs in once more after that run.
+
 ## What is on the disk
 
 `data/config.php` (the instance settings, including the sign-in method), `data/users/<name>/` per
 account with that account's own SQLite database and settings, `data/opml.xml`, and the caches.
 
 `data/opml.xml` is what a brand-new account is given instead of the FreshRSS project's own default
-list. It holds two feeds and nothing else: this blog, and the owner's demo-video channel (the
+list. It holds three feeds and nothing else: this blog, the owner's demo-video channel (the
 feed collected by `chargingthefuture/rss-feeds` at
 `https://chargingthefuture.github.io/rss-feeds/youtube/mutilpe.xml`, added 2026-09-23; the
-collected feeds moved out of the blog repository on 2026-09-24).
+collected feeds moved out of the blog repository on 2026-09-24), and the recorded broadcasts
+(`https://app.chargingthefuture.com/api/beacon/replays/feed`, added 2026-09-29, listed on the blog at
+`/streams`). The workflow `FreshRSS — Give new accounts the default feeds` writes all three, because
+the file it writes replaces the one on the disk.
 
 ## What is not backed up
 

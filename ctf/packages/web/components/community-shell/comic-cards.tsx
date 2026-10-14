@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { ArrowRight, Flag, ShieldCheck, Sparkles, ThumbsDown, ThumbsUp } from 'lucide-react';
 import type { ComicAnswerRating, ComicStreamItem } from './shell-types';
 import styles from './community-shell.module.css';
+import { useCommonsUnlockFocus } from './commons-unlock-focus';
 
 type ComicAnswerCardProps = {
   item: ComicStreamItem;
@@ -44,6 +45,8 @@ function formatRelativeAndExact(iso: string): string {
 // badge, Q/A layout, and a helpful/not-helpful/flag rating row. Matches the locked Desktop mockup.
 export function ComicAnswerCard({ item, askedByLabel, onRate }: ComicAnswerCardProps) {
   const ratable = item.answerTurnId !== null && !item.optimistic;
+  // Every plugin is closed to a member not yet approved, so the links would each lead to a wall.
+  const showPluginLinks = !useCommonsUnlockFocus() && item.linkedPlugins.length > 0;
 
   return (
     <article className={styles.comicCard} aria-label="AI Assistant answer">
@@ -70,7 +73,7 @@ export function ComicAnswerCard({ item, askedByLabel, onRate }: ComicAnswerCardP
         {item.answer}
       </p>
 
-      {item.linkedPlugins.length > 0 ? (
+      {showPluginLinks ? (
         <div className={styles.comicPluginLinks} aria-label="Applicable plugins">
           <span className={styles.comicPluginLinksLabel}>Explore:</span>
           {item.linkedPlugins.map((plugin) => (

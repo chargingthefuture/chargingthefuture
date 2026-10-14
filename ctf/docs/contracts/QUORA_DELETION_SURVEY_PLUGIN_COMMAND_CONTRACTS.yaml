@@ -1,0 +1,353 @@
+# Quora account deletion survey — self-reports from people whose Quora accounts were removed, kept
+# so blog posts can cite a record instead of an impression.
+#
+# Read this before changing anything here. The rows are research about people outside this app:
+# a Quora handle somebody typed on purpose, what Quora did to it, when, and what the account wrote
+# about. Nothing here is verified against Quora, and the sample only ever includes people who found
+# another platform. Publication is governed by the three consent flags on the response row and by
+# nothing else; knowing who answered is not permission to print it.
+#
+# Two commands take a member's input and two read the table. The two writes run at the lowest
+# sign-in tier, which is one of the four recorded Unlock exceptions (owner decision, 2026-08-19).
+# The two reads are admin-only. There is no member-facing read and no public projection of this
+# data anywhere in the app.
+#
+# Never stored on any of the three tables: an IP address, a user agent, an email, or any contact
+# detail. The rate limiter reads the address for its in-memory counter and it stops there. The
+# live Quora profile link a respondent names on the confirmation screen is never written to the
+# survey either; it goes to the Unlock queue through the verification command below.
+commands:
+  - pluginId: quora-deletion-survey
+    command: quora-deletion-survey.response.submit
+    version: 1.0.0
+    # POST /api/quora-deletion-survey/responses
+    #
+    # The body is parsed by lib/quora-deletion-survey/parse.ts. Unknown values fall back to the
+    # safe default rather than being rejected; only three things refuse the response outright:
+    # the first question left unanswered, "yes, accounts were removed" with no account named, and
+    # more than 500 accounts in one body (refused, never trimmed). Free text is trimmed and cut at
+    # 5000 characters; a handle is trimmed and cut at 200. An account row with an empty handle is
+    # dropped. Accounts listed under a "no" answer are dropped, because the explicit answer wins.
+    inputSchema:
+      type: object
+      required: [targetedIndividual]
+      properties:
+        targetedIndividual:
+          type: string
+          enum: [yes, no]
+          description: Q1. No third option and no default; a missing or unknown value refuses the response.
+        anyAccountRemoved:
+          type: boolean
+          description: Q2. Anything other than true is stored as false.
+        hasCurrentProfile:
+          type: [boolean, 'null']
+          description: Q13, optional. Null is "did not say" and is kept distinct from false.
+        evidenceNote:
+          type: [string, 'null']
+          maxLength: 5000
+        otherNotes:
+          type: [string, 'null']
+          maxLength: 5000
+        consentPublishHandles:
+          type: boolean
+          description: Defaults to false. Anything other than true is false.
+        consentQuote:
+          type: boolean
+          description: Defaults to false.
+        consentAttributeQuote:
+          type: boolean
+          description: Defaults to false.
+        accounts:
+          type: array
+          maxItems: 500
+          description: One entry per removed account. Over 500 the response is refused with nothing stored.
+          items:
+            type: object
+            required: [handle]
+            properties:
+              handle:
+                type: string
+                minLength: 1
+                maxLength: 200
+              action:
+                type: string
+                enum: [account_deleted, account_suspended, answers_removed, space_removed, posting_blocked]
+                description: Defaults to account_deleted.
+              removedMonth:
+                type: [integer, 'null']
+                minimum: 1
+                maximum: 12
+                description: Out-of-range values become null, not an error.
+              removedYear:
+                type: [integer, 'null']
+                minimum: 2010
+                maximum: 2110
+                description: Out-of-range values become null, not an error.
+              statedReason:
+                type: string
+                enum: [none_given, spam, harassment, misinformation, impersonation, adult_content, ban_evasion, other, do_not_recall]
+                description: Defaults to none_given, which is an answer in its own right.
+              appealed:
+                type: boolean
+              reinstated:
+                type: boolean
+              topics:
+                type: array
+                items:
+                  type: string
+                description: Coded against the shared subject list in lib/shared/quora-research-subjects.ts; unknown entries are dropped and duplicates collapsed.
+              approxPostCount:
+                type: [integer, 'null']
+                minimum: 0
+                maximum: 1000000
+              approxActiveMonths:
+                type: [integer, 'null']
+                minimum: 0
+                maximum: 600
+    outputSchema:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        responseId:
+          type: string
+          description: The new response id. Returned with HTTP 201.
+        accountCount:
+          type: integer
+          description: How many account rows were stored, counted from rows rather than from anything typed.
+        code:
+          type: string
+          enum:
+            - quora_deletion_survey.csrf_denied
+            - quora_deletion_survey.invalid_payload
+            - quora_deletion_survey.rate_limited
+            - quora_deletion_survey.persistence_unavailable
+          description: Present only on a refusal, with a plain message beside it.
+        message:
+          type: string
+        reason:
+          type: string
+          description: The underlying failure text on an unreadable body or a storage failure.
+    dataAccess:
+      - quora_deletion_survey_responses (insert)
+      - quora_deletion_survey_accounts (insert, one row per account, in the same transaction as the response)
+      - quora_deletion_survey_audit_log (insert, on every outcome including each refusal)
+      - directory_quora_url_history (select, insert; through lib/shared/directory-interface.ts, one marker row per reported handle not already on the member's history)
+    purpose: research_self_report
+    retentionClass: research_record
+    idempotency: false
+    notes: >-
+      The member id comes from the checked session, never from the body. The response and its
+      account rows are written in one transaction, so a half-saved response cannot exist. After the
+      response is stored, each reported handle is appended to the member's own Directory account
+      history as the marker string removed-quora-account:<handle>, best-effort and never as a URL;
+      a failure there is logged and does not undo the saved answer. A per-IP brake of 5 submissions
+      an hour sits in front of the parse, on top of the sign-in check and the same-origin CSRF
+      header. Sending twice stores two responses; the admin totals count that as a repeat
+      respondent rather than hiding it.
+  - pluginId: quora-deletion-survey
+    command: quora-deletion-survey.verification.link
+    version: 1.0.0
+    # POST /api/quora-deletion-survey/verification
+    #
+    # Started by a button on the confirmation screen, after the answer is already stored, so a
+    # failure here can never lose it. It creates a pending Unlock submission from the live account
+    # the member named and approves nobody. It does nothing for a member who already has a
+    # submission on file, re-checked immediately before the write.
+    inputSchema:
+      type: object
+      required: [quoraProfileUrl]
+      properties:
+        quoraProfileUrl:
+          type: string
+          minLength: 1
+          description: Trimmed. An empty value is refused before anything is read; a value that does not normalize to a Quora profile link is refused as invalid.
+    outputSchema:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        status:
+          type: string
+          enum: [submitted, already_on_file]
+          description: Present on success. already_on_file means nothing was written.
+        code:
+          type: string
+          enum:
+            - quora_deletion_survey.csrf_denied
+            - quora_deletion_survey.invalid_payload
+            - quora_deletion_survey.rate_limited
+            - quora_deletion_survey.persistence_unavailable
+          description: Present only on a refusal.
+        message:
+          type: string
+        reason:
+          type: string
+    dataAccess:
+      - unlock_verification_submissions (select, insert or update; through lib/shared/unlock-interface.ts)
+      - unlock_audit_log (insert, as an ordinary unlock.verification.submit with metadata.source = quora_deletion_survey)
+      - quora_deletion_survey_audit_log (insert, on the outcomes listed in the audit contract)
+    purpose: verification_handoff
+    retentionClass: verification_record
+    idempotency: true
+    notes: >-
+      The profile link is the one piece of identifying data a respondent types that the survey
+      does not keep. It is carried to the Unlock queue, where a reviewer acts on it, and is never
+      written to any quora_deletion_survey_* table. Same sign-in tier, CSRF header and per-IP brake
+      as the submit command. The accounts reported as closed are not handled here; they were
+      written to the member's history on submission.
+  - pluginId: quora-deletion-survey
+    command: quora-deletion-survey.admin.response.list
+    version: 1.0.0
+    # GET /api/quora-deletion-survey/admin/responses
+    #
+    # The newest 500 responses, each with its account rows, plus the three totals a blog post would
+    # quote. Rows are returned as stored, member id included: the admin is the one reader, and the
+    # consent flags on each row say what may leave it.
+    inputSchema:
+      type: object
+      properties: {}
+    outputSchema:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        responses:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              user_id:
+                type: [string, 'null']
+                description: The member who sent it. Overwritten with the deletion placeholder when that account is deleted; never null because the answer was anonymous.
+              targeted_individual:
+                type: string
+                enum: [yes, no]
+              any_account_removed:
+                type: boolean
+              has_current_profile:
+                type: [boolean, 'null']
+              evidence_note:
+                type: [string, 'null']
+              other_notes:
+                type: [string, 'null']
+              consent_publish_handles:
+                type: boolean
+              consent_quote:
+                type: boolean
+              consent_attribute_quote:
+                type: boolean
+              created_at:
+                type: string
+              accounts:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    response_id:
+                      type: string
+                    position:
+                      type: integer
+                    handle:
+                      type: string
+                    action:
+                      type: string
+                    removed_month:
+                      type: [integer, 'null']
+                    removed_year:
+                      type: [integer, 'null']
+                    stated_reason:
+                      type: string
+                    appealed:
+                      type: boolean
+                    reinstated:
+                      type: boolean
+                    topics:
+                      type: array
+                      items:
+                        type: string
+                    approx_post_count:
+                      type: [integer, 'null']
+                    approx_active_months:
+                      type: [integer, 'null']
+                    created_at:
+                      type: string
+        totals:
+          type: object
+          properties:
+            responses:
+              type: integer
+            reportedRemovals:
+              type: integer
+              description: A count of account rows, so "removals described with a handle", not "removals claimed".
+            responsesConsentingToPublishHandles:
+              type: integer
+            repeatRespondents:
+              type: integer
+              description: Members with more than one response. Above zero, the response count is larger than the number of people behind it.
+        limit:
+          type: integer
+          description: Always 500. The CSV export is the path to anything larger.
+        code:
+          type: string
+          enum: [quora_deletion_survey.persistence_unavailable]
+          description: Present only when the read failed.
+        message:
+          type: string
+        reason:
+          type: string
+    dataAccess:
+      - quora_deletion_survey_responses (select)
+      - quora_deletion_survey_accounts (select)
+      - quora_deletion_survey_audit_log (insert, naming the admin and the row count, never a response's contents)
+    purpose: research_review
+    retentionClass: research_record
+    idempotency: true
+  - pluginId: quora-deletion-survey
+    command: quora-deletion-survey.admin.response.export
+    version: 1.0.0
+    # GET /api/quora-deletion-survey/admin/export
+    #
+    # The entire table as CSV, up to 100000 responses, one row per reported account rather than
+    # per response. A response that reported nothing removed still gets one row with the account
+    # columns empty, so the denominator stays visible. The consent columns come immediately after
+    # the id, before any handle, so the answer to "may I" is on screen before the thing it governs.
+    inputSchema:
+      type: object
+      properties: {}
+    outputSchema:
+      type: object
+      description: >-
+        On success the body is text/csv (attachment quora-account-deletion-survey.csv, Cache-Control
+        no-store), not JSON. Columns, in order: response_id, member_id, submitted_at,
+        consent_publish_handles, consent_quote, consent_attribute_quote, targeted_individual,
+        any_account_removed, has_current_profile, account_number, handle, what_happened,
+        removed_month, removed_year, reason_quora_gave, appealed, reinstated, topics,
+        approx_post_count, approx_active_months, evidence_note, other_notes. Option values are
+        written as their labels. On failure the body is the JSON shape below.
+      properties:
+        ok:
+          type: boolean
+        code:
+          type: string
+          enum: [quora_deletion_survey.persistence_unavailable]
+        message:
+          type: string
+        reason:
+          type: string
+    dataAccess:
+      - quora_deletion_survey_responses (select)
+      - quora_deletion_survey_accounts (select)
+      - quora_deletion_survey_audit_log (insert, written before the file is handed over)
+    purpose: research_export
+    retentionClass: research_record
+    idempotency: true
+    notes: >-
+      Once the file leaves the app it is a copy of the table on somebody's disk, outside anything
+      this code can see. That is why the audit row is written first and carries who took it and how
+      many responses it held, which is what a later question about where a published number came
+      from needs.

@@ -19,7 +19,7 @@ describe('sniffCommunityImageType', () => {
 });
 
 describe('parseCommunityImageDimension', () => {
-  it('accepts whole numbers from 1 to 4096', () => {
+  it('accepts integers from 1 to 4096', () => {
     expect(parseCommunityImageDimension('1600')).toBe(1600);
     expect(parseCommunityImageDimension('1')).toBe(1);
     expect(parseCommunityImageDimension('4096')).toBe(4096);

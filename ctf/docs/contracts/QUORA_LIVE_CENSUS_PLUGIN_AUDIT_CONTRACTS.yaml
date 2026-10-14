@@ -1,0 +1,169 @@
+# Quora live census audit events.
+#
+# The durable store is `quora_live_census_audit_log` (actor_user_id, command, policy_status,
+# reason, run_id, row_count, metadata, created_at), written through `insertCensusAudit` in
+# `ctf/packages/web/lib/quora-live-census/repository.ts`. The writer is best-effort: a failed
+# insert is logged and the action it describes still completes.
+#
+# Which rows the code actually writes, so this file never claims more than it does:
+#
+# - A `deny` row for every refused request, from the shared gate `requireCensusAdminAccess`, with
+#   actor_user_id null and the gate's own reason. This covers all seven commands.
+# - An `allow` row for exactly two commands: `census.run.read` (reason `admin_read`) and
+#   `census.run.export` (reason `csv_download`). Those are the two actions that return handles.
+# - No `allow` row for list, create, update, entry create or entry delete. The runs and entries
+#   tables are the record of what was written; the per-run `created_by_user_id` is the only
+#   provenance stamp. Each such entry below says so.
+#
+# The `eventId` on each entry is the exact string the code passes as `command` to
+# `insertCensusAudit`. Note the list command is spelled `census.runs.list` in code, plural.
+auditEvents:
+  - eventId: census.runs.list
+    timestamp: rfc3339
+    actorId: principal_or_null
+    pluginId: quora-live-census
+    command: quora-live-census.run.list
+    commandVersion: 1.0.0
+    purpose: research_record_read
+    policyDecision:
+      status: deny
+      reason: access_gate_reason
+    result: refused
+    dataClassesAccessed:
+      - run_metadata
+      - entry_counts
+    targetContext: {}
+    requestId: request_identifier
+    traceId: trace_identifier
+    notes: >-
+      Written on refusal only, by the shared gate. A successful list writes no row: it returns run
+      metadata and counts, no handles.
+  - eventId: census.run.create
+    timestamp: rfc3339
+    actorId: principal_or_null
+    pluginId: quora-live-census
+    command: quora-live-census.run.create
+    commandVersion: 1.0.0
+    purpose: research_record_write
+    policyDecision:
+      status: deny
+      reason: access_gate_reason
+    result: refused
+    dataClassesAccessed:
+      - run_metadata
+    targetContext: {}
+    requestId: request_identifier
+    traceId: trace_identifier
+    notes: >-
+      Written on refusal only. A successful create writes no audit row; the run row itself carries
+      `created_by_user_id` and `created_at` as the record of who started it and when.
+  - eventId: census.run.read
+    timestamp: rfc3339
+    actorId: principal_or_null
+    pluginId: quora-live-census
+    command: quora-live-census.run.read
+    commandVersion: 1.0.0
+    purpose: research_record_read
+    policyDecision:
+      status: allow_or_deny
+      reason: admin_read_or_access_gate_reason
+    result: read
+    dataClassesAccessed:
+      - run_metadata
+      - third_party_account_handles
+      - account_coding
+    targetContext:
+      runId: run_identifier
+      rowCount: entries_returned
+    requestId: request_identifier
+    traceId: trace_identifier
+    notes: >-
+      Durable on both outcomes. On success the row holds the admin's id, `allow`, reason
+      `admin_read`, the run id and the number of entries returned.
+  - eventId: census.run.set_status
+    timestamp: rfc3339
+    actorId: principal_or_null
+    pluginId: quora-live-census
+    command: quora-live-census.run.update
+    commandVersion: 1.0.0
+    purpose: research_record_write
+    policyDecision:
+      status: deny
+      reason: access_gate_reason
+    result: refused
+    dataClassesAccessed:
+      - run_status
+    targetContext:
+      runId: run_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    notes: >-
+      Written on refusal only. A successful close or reopen writes no audit row; the run's
+      `updated_at` is the only trace of it.
+  - eventId: census.run.export
+    timestamp: rfc3339
+    actorId: principal_or_null
+    pluginId: quora-live-census
+    command: quora-live-census.run.export
+    commandVersion: 1.0.0
+    purpose: research_record_export
+    policyDecision:
+      status: allow_or_deny
+      reason: csv_download_or_access_gate_reason
+    result: exported
+    dataClassesAccessed:
+      - run_metadata
+      - third_party_account_handles
+      - account_coding
+    targetContext:
+      runId: run_identifier
+      rowCount: entries_exported
+      metadata: observedOn_frameKind_runStatus
+    requestId: request_identifier
+    traceId: trace_identifier
+    notes: >-
+      Durable on both outcomes, and on success written before the file is returned. This is the
+      action the audit table exists for: a list of named third parties leaving the app with a coding
+      on each.
+  - eventId: census.entry.create
+    timestamp: rfc3339
+    actorId: principal_or_null
+    pluginId: quora-live-census
+    command: quora-live-census.entry.create
+    commandVersion: 1.0.0
+    purpose: research_record_write
+    policyDecision:
+      status: deny
+      reason: access_gate_reason
+    result: refused
+    dataClassesAccessed:
+      - third_party_account_handles
+      - account_coding
+    targetContext:
+      runId: run_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    notes: >-
+      Written on refusal only. A successful entry write records no actor: the entry row has no user
+      column, and the run's `created_by_user_id` is the nearest provenance.
+  - eventId: census.entry.delete
+    timestamp: rfc3339
+    actorId: principal_or_null
+    pluginId: quora-live-census
+    command: quora-live-census.entry.delete
+    commandVersion: 1.0.0
+    purpose: research_record_write
+    policyDecision:
+      status: deny
+      reason: access_gate_reason
+    result: refused
+    dataClassesAccessed:
+      - third_party_account_handles
+    targetContext:
+      runId: run_identifier
+      entryId: entry_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    notes: >-
+      Written on refusal only. A successful delete writes no audit row and leaves no trace of the
+      removed handle anywhere.

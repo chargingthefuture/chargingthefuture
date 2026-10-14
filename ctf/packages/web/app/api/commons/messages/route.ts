@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { reportError } from 'lib/observability/report';
+import { jsonWithEtag } from 'lib/http/json-with-etag';
 import type { CommonsMessagesResponse, CommonsMessage } from 'lib/commons/types';
 import { OFFICIAL_SENDER_LABEL } from 'lib/commons/constants';
 import { toCommonsMessageImage } from 'lib/commons/message-image';
@@ -191,7 +192,8 @@ export async function GET(request: Request) {
       messages,
     };
 
-    return NextResponse.json(response, { status: 200 });
+    // The home chat polls this every 10-30s; an unchanged page is answered with a bodiless 304.
+    return jsonWithEtag(request, response);
   } catch (error) {
     // Caught errors do not reach Sentry on their own (only unhandled ones do via
     // the Next.js onRequestError hook), so report explicitly.

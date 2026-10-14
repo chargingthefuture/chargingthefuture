@@ -4,7 +4,7 @@ import { queryDb, withDbTransaction } from 'lib/db/postgres';
 // Directory owns the takedown list. This is the sanctioned crossing point; SkillsHunt only asks
 // whether a Quora URL is on it (rule 112 plugin isolation).
 import { isQuoraUrlSuppressed } from 'lib/shared/directory-interface';
-import { canonicalizeQuoraUrl } from 'lib/shared/quora-url';
+import { canonicalizeNominationUrl } from './nomination-url';
 import {
   SKILLS_HUNT_DEFAULT_PAGE,
   SKILLS_HUNT_DEFAULT_PAGE_SIZE,
@@ -46,6 +46,7 @@ import type {
 } from './types';
 import { isRoundAcceptingSubmissions } from './round-window';
 import { checkUrlLiveness } from './url-validation';
+import { findNominationBlocker } from './nomination-check';
 import { reportError } from 'lib/observability/report';
 import { recomputeMissionProgressForUser } from './missions';
 import {
@@ -59,6 +60,7 @@ import {
 } from './notifications';
 import { snapshotRareSkillsForRound } from './rare-skill-snapshot';
 import { generateAutoMissionsForNewRound } from './auto-missions';
+import { assertNoOtherOpenRound } from './one-open-round';
 
 type CountRow = { total: string };
 
@@ -70,8 +72,9 @@ type SkillsHuntRoundRow = {
   starts_at: Date;
   ends_at: Date;
   scoring_config: Record<string, unknown>;
-  reward_credits_per_accept?: number | null;
-  reward_per_user_round_cap?: number | null;
+  award_pool_credits?: number | null;
+  award_points_bar?: number | null;
+  awards_sent_at?: Date | null;
   created_by_user_id: string;
   updated_by_user_id: string;
   created_at: Date;
@@ -237,8 +240,9 @@ function containsUnsafeText(value: string): boolean {
 // list calls too — a URL suppressed there has to match the string a nomination was deduped on, and
 // two copies of the same rules drifted apart is exactly how that stops being true. This wrapper adds
 // only the throw: SkillsHunt refuses a bad URL at submission time, where Directory tolerates one.
+// nomination-url.ts first finds the link in what was pasted and drops a profile tab like /activity.
 function normalizeQuoraProfileUrl(value: string): string {
-  const canonical = canonicalizeQuoraUrl(value);
+  const canonical = canonicalizeNominationUrl(value);
   if (!canonical) {
     throw new Error('skills_hunt_invalid_quora_url');
   }
@@ -273,11 +277,12 @@ function mapRound(row: SkillsHuntRoundRow): SkillsHuntRound {
     startsAtIso: toIso(row.starts_at),
     endsAtIso: toIso(row.ends_at),
     scoringConfig: normalizeJsonObject(row.scoring_config),
-    rewardCreditsPerAccept: Number(row.reward_credits_per_accept ?? 0),
-    rewardPerUserRoundCap:
-      row.reward_per_user_round_cap === null || row.reward_per_user_round_cap === undefined
+    awardPoolCredits: Number(row.award_pool_credits ?? 0),
+    awardPointsBar:
+      row.award_points_bar === null || row.award_points_bar === undefined
         ? null
-        : Number(row.reward_per_user_round_cap),
+        : Number(row.award_points_bar),
+    awardsSentAtIso: row.awards_sent_at ? toIso(row.awards_sent_at) : null,
     createdByUserId: row.created_by_user_id,
     updatedByUserId: row.updated_by_user_id,
     createdAtIso: toIso(row.created_at),
@@ -402,15 +407,15 @@ export function parsePaginationParams(url: string): SkillsHuntPagination {
   };
 }
 
-// Reward config is entire, non-negative ServiceCredits. Coerce defensively so a
-// stray float/NaN/negative from the client never reaches the ledger: floor to a
-// non-negative integer, and treat absent/blank as the safe default (0 / no cap).
-function normalizeRewardPerAccept(value: number | undefined): number {
+// Award config: the round's ServiceCredits pool and the points a scout needs to share in it, both
+// non-negative integers. Coerce defensively so a stray float/NaN/negative from the client never
+// reaches the ledger: floor, and treat absent/blank as the safe default (no pool / no bar set).
+function normalizeAwardPool(value: number | undefined): number {
   if (typeof value !== 'number' || !Number.isFinite(value)) return 0;
   return Math.max(0, Math.floor(value));
 }
 
-function normalizeRewardCap(value: number | null | undefined): number | null {
+function normalizeAwardBar(value: number | null | undefined): number | null {
   if (value === null || value === undefined) return null;
   if (typeof value !== 'number' || !Number.isFinite(value)) return null;
   return Math.max(0, Math.floor(value));
@@ -423,7 +428,7 @@ function isValidRewardField(value: number | null | undefined): boolean {
 }
 
 function hasValidRewardConfig(input: SkillsHuntRoundInput): boolean {
-  return isValidRewardField(input.rewardCreditsPerAccept) && isValidRewardField(input.rewardPerUserRoundCap);
+  return isValidRewardField(input.awardPoolCredits) && isValidRewardField(input.awardPointsBar);
 }
 
 export function validateRoundInput(input: SkillsHuntRoundInput): boolean {
@@ -473,6 +478,14 @@ function normalizeSubmissionFields(input: SkillsHuntSubmissionInput): Normalized
     state: normalizeNullableText(input.state),
     city: normalizeNullableText(input.city),
   };
+}
+
+// The job title is optional; when sent it must be an id, so the insert's uuid cast cannot fail.
+// Whether it names a live job title is settled by the insert itself, which stores null otherwise.
+const JOB_TITLE_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function hasValidSubmissionJobTitleId(input: SkillsHuntSubmissionInput): boolean {
+  return input.jobTitleId == null || JOB_TITLE_ID_PATTERN.test(input.jobTitleId);
 }
 
 function hasValidSubmissionRoundId(input: SkillsHuntSubmissionInput): boolean {
@@ -569,6 +582,10 @@ const SUBMISSION_INPUT_RULES: ReadonlyArray<{
     problem: `Pick at least one skill, and no more than ${SKILLS_HUNT_MAX_SKILLS_PER_SUBMISSION} in total.`,
   },
   {
+    ok: (input) => hasValidSubmissionJobTitleId(input),
+    problem: 'That job title is not one the list offers. Pick it again from the job title list, or leave it unset.',
+  },
+  {
     ok: (_input, fields) => hasValidSubmissionLocation(fields),
     problem: `Country is required, and no location field may be longer than ${SKILLS_HUNT_MAX_LOCATION_LENGTH} characters.`,
   },
@@ -621,8 +638,9 @@ async function getRoundById(client: PoolClient, roundId: string): Promise<Skills
         starts_at,
         ends_at,
         scoring_config,
-        reward_credits_per_accept,
-        reward_per_user_round_cap,
+        award_pool_credits,
+        award_points_bar,
+        awards_sent_at,
         created_by_user_id,
         updated_by_user_id,
         created_at,
@@ -1285,6 +1303,7 @@ async function maybeAutoGenerateDirectoryProfile(
 
   const submissionResult = await client.query<{
     id: string;
+    submitter_user_id: string;
     full_name: string;
     bio: string;
     quora_profile_url: string;
@@ -1293,12 +1312,16 @@ async function maybeAutoGenerateDirectoryProfile(
     country: string | null;
     state: string | null;
     city: string | null;
+    job_title_id: string | null;
+    sector_id: string | null;
   }>(
     `
-      SELECT id, full_name, bio, quora_profile_url, skills, proposed_skills, country, state, city
-      FROM skills_hunt_submissions
-      WHERE id = $1::uuid
-        AND status = 'accepted'
+      SELECT s.id, s.submitter_user_id, s.full_name, s.bio, s.quora_profile_url, s.skills, s.proposed_skills,
+             s.country, s.state, s.city, jt.id AS job_title_id, jt.sector_id
+      FROM skills_hunt_submissions s
+      LEFT JOIN skills_taxonomy_job_titles jt ON jt.id = s.job_title_id AND jt.is_active = TRUE
+      WHERE s.id = $1::uuid
+        AND s.status = 'accepted'
       LIMIT 1
     `,
     [submissionId],
@@ -1336,12 +1359,12 @@ async function maybeAutoGenerateDirectoryProfile(
   const insertedDirectoryProfile = await client.query<{ id: string }>(
     `
       INSERT INTO directory_profiles
-        (claimed_by_user_id, first_name, headline, bio, profile_url, sector_id, job_title_id, source, invited_by_username, unclaimed_handle, country, state, city)
+        (claimed_by_user_id, first_name, headline, bio, profile_url, sector_id, job_title_id, source, invited_by_username, nominated_by_user_id, unclaimed_handle, country, state, city)
       VALUES
-        (NULL, $1, $2, $3, $4, NULL, NULL, 'community-generated', $5, $6, $7, $8, $9)
+        (NULL, $1, $2, $3, $4, $11, $12, 'community-generated', $5, $6, $7, $8, $9, $10)
       RETURNING id
     `,
-    [submission.full_name, headline, submission.bio, submission.quora_profile_url, invitedByUsername, unclaimedHandle, submission.country, submission.state, submission.city],
+    [submission.full_name, headline, submission.bio, submission.quora_profile_url, invitedByUsername, submission.submitter_user_id, unclaimedHandle, submission.country, submission.state, submission.city, submission.sector_id, submission.job_title_id],
   );
 
   const directoryProfileId = insertedDirectoryProfile.rows[0].id;
@@ -1420,8 +1443,9 @@ export async function listRounds(status: SkillsHuntRoundStatus | null): Promise<
         starts_at,
         ends_at,
         scoring_config,
-        reward_credits_per_accept,
-        reward_per_user_round_cap,
+        award_pool_credits,
+        award_points_bar,
+        awards_sent_at,
         created_by_user_id,
         updated_by_user_id,
         created_at,
@@ -1438,10 +1462,13 @@ export async function listRounds(status: SkillsHuntRoundStatus | null): Promise<
 
 export async function createRound(actorId: string, input: SkillsHuntRoundInput): Promise<SkillsHuntRound> {
   const round = await withDbTransaction(async (client) => {
+    if (input.status === 'active') {
+      await assertNoOtherOpenRound(client, null);
+    }
     const row = await client.query<SkillsHuntRoundRow>(
       `
         INSERT INTO skills_hunt_rounds
-          (name, description, status, starts_at, ends_at, scoring_config, reward_credits_per_accept, reward_per_user_round_cap, created_by_user_id, updated_by_user_id)
+          (name, description, status, starts_at, ends_at, scoring_config, award_pool_credits, award_points_bar, created_by_user_id, updated_by_user_id)
         VALUES
           ($1, $2, $3, $4::timestamptz, $5::timestamptz, $6::jsonb, $7, $8, $9, $9)
         RETURNING
@@ -1452,8 +1479,9 @@ export async function createRound(actorId: string, input: SkillsHuntRoundInput):
           starts_at,
           ends_at,
           scoring_config,
-          reward_credits_per_accept,
-          reward_per_user_round_cap,
+          award_pool_credits,
+          award_points_bar,
+          awards_sent_at,
           created_by_user_id,
           updated_by_user_id,
           created_at,
@@ -1466,8 +1494,8 @@ export async function createRound(actorId: string, input: SkillsHuntRoundInput):
         input.startsAtIso,
         input.endsAtIso,
         JSON.stringify(input.scoringConfig ?? {}),
-        normalizeRewardPerAccept(input.rewardCreditsPerAccept),
-        normalizeRewardCap(input.rewardPerUserRoundCap),
+        normalizeAwardPool(input.awardPoolCredits),
+        normalizeAwardBar(input.awardPointsBar),
         actorId,
       ],
     );
@@ -1496,6 +1524,9 @@ export async function updateRound(actorId: string, roundId: string, input: Skill
     if (!existing) {
       return null;
     }
+    if (input.status === 'active' && existing.status !== 'active') {
+      await assertNoOtherOpenRound(client, roundId);
+    }
 
     const updated = await client.query<SkillsHuntRoundRow>(
       `
@@ -1507,8 +1538,8 @@ export async function updateRound(actorId: string, roundId: string, input: Skill
           starts_at = $5::timestamptz,
           ends_at = $6::timestamptz,
           scoring_config = $7::jsonb,
-          reward_credits_per_accept = $8,
-          reward_per_user_round_cap = $9,
+          award_pool_credits = $8,
+          award_points_bar = $9,
           updated_by_user_id = $10,
           updated_at = NOW()
         WHERE id = $1::uuid
@@ -1520,8 +1551,9 @@ export async function updateRound(actorId: string, roundId: string, input: Skill
           starts_at,
           ends_at,
           scoring_config,
-          reward_credits_per_accept,
-          reward_per_user_round_cap,
+          award_pool_credits,
+          award_points_bar,
+          awards_sent_at,
           created_by_user_id,
           updated_by_user_id,
           created_at,
@@ -1535,8 +1567,8 @@ export async function updateRound(actorId: string, roundId: string, input: Skill
         input.startsAtIso,
         input.endsAtIso,
         JSON.stringify(input.scoringConfig ?? {}),
-        normalizeRewardPerAccept(input.rewardCreditsPerAccept),
-        normalizeRewardCap(input.rewardPerUserRoundCap),
+        normalizeAwardPool(input.awardPoolCredits),
+        normalizeAwardBar(input.awardPointsBar),
         actorId,
       ],
     );
@@ -1588,8 +1620,9 @@ export async function getRound(roundId: string): Promise<SkillsHuntRound | null>
         starts_at,
         ends_at,
         scoring_config,
-        reward_credits_per_accept,
-        reward_per_user_round_cap,
+        award_pool_credits,
+        award_points_bar,
+        awards_sent_at,
         created_by_user_id,
         updated_by_user_id,
         created_at,
@@ -1651,99 +1684,12 @@ export async function getSubmissionById(submissionId: string): Promise<SkillsHun
   return row ? mapSubmission(row) : null;
 }
 
-// Atomically claim the accept reward for a submission under the per-scout,
-// per-round cap. A transaction-scoped advisory lock keyed on (round, scout)
-// serializes concurrent accepts for the same scout so two of them cannot both
-// pass the cap and overpay. On success the submission is marked credited inside
-// the lock (claim-then-mint); the caller mints next and reverts the claim if the
-// mint is rejected. Returns false when already granted or the cap would be crossed.
-export async function claimSkillsHuntRewardUnderCap(input: {
-  submissionId: string;
-  roundId: string;
-  submitterUserId: string;
-  amount: number;
-  cap: number | null;
-}): Promise<boolean> {
-  return withDbTransaction(async (client) => {
-    await client.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [`sh-reward:${input.roundId}:${input.submitterUserId}`]);
-
-    const current = await client.query<{ credit_granted: boolean | null; status: string }>(
-      `SELECT credit_granted, status
-       FROM skills_hunt_submissions
-       WHERE id = $1::uuid AND round_id = $2::uuid AND submitter_user_id = $3
-       FOR UPDATE`,
-      [input.submissionId, input.roundId, input.submitterUserId],
-    );
-    const row = current.rows[0];
-    // Re-check inside the lock: the submission must still belong to this
-    // round+scout, still be accepted (a concurrent reject/flag could have moved
-    // it after the route's in-memory check), and not already credited.
-    if (!row || row.status !== 'accepted' || row.credit_granted) {
-      return false;
-    }
-
-    if (input.cap !== null) {
-      const sum = await client.query<{ total: string | null }>(
-        `SELECT COALESCE(SUM(credit_amount), 0)::text AS total
-         FROM skills_hunt_submissions
-         WHERE round_id = $1::uuid AND submitter_user_id = $2 AND credit_granted = TRUE`,
-        [input.roundId, input.submitterUserId],
-      );
-      if (Number(sum.rows[0]?.total ?? 0) + input.amount > input.cap) {
-        return false;
-      }
-    }
-
-    await client.query(
-      `UPDATE skills_hunt_submissions
-       SET credit_granted = TRUE, credit_amount = $2, credit_granted_at = NOW(), updated_at = NOW()
-       WHERE id = $1::uuid`,
-      [input.submissionId, Math.max(0, Math.floor(input.amount))],
-    );
-    return true;
-  });
-}
-
-// Release a reward claim when the mint that should follow it is rejected, so the
-// per-scout cap and the paid flag stay accurate (the mint is transactional, so a
-// rejection means no credits moved).
-export async function revertSkillsHuntCreditClaim(submissionId: string): Promise<void> {
-  await queryDb(
-    `UPDATE skills_hunt_submissions
-     SET credit_granted = FALSE, credit_amount = 0, credit_granted_at = NULL, updated_at = NOW()
-     WHERE id = $1::uuid AND credit_granted = TRUE`,
-    [submissionId],
-  );
-}
-
-// Round-level reward rollup for the admin shell: how many scouts were paid and
-// how many credits in total this round has minted.
-export async function getRoundRewardSummary(
-  roundId: string,
-): Promise<{ totalCreditsPaid: number; rewardedSubmissionCount: number }> {
-  const result = await queryDb<{ total: string | null; count: string | null }>(
-    `
-      SELECT
-        COALESCE(SUM(credit_amount), 0)::text AS total,
-        COUNT(*)::text AS count
-      FROM skills_hunt_submissions
-      WHERE round_id = $1::uuid
-        AND credit_granted = TRUE
-    `,
-    [roundId],
-  );
-  return {
-    totalCreditsPaid: Number(result.rows[0]?.total ?? 0),
-    rewardedSubmissionCount: Number(result.rows[0]?.count ?? 0),
-  };
-}
-
 // A person who asked to have their community-generated Directory profile taken down should not be
 // nominated back into the directory. Directory holds that list; SkillsHunt refuses to take or accept
 // a nomination for a URL on it. Checked at submit (so the scout learns immediately and nobody
 // reviews it) and again at accept (so a takedown that lands while the nomination sits in the queue
-// still stops it). Refusing at accept matters most: an accept awards points and can mint the round's
-// ServiceCredits reward, and before 2026-08-27 it paid both while quietly generating no profile.
+// still stops it). Refusing at accept matters most: an accept awards points toward the round's
+// end-of-round award, and before 2026-08-27 it paid while quietly generating no profile.
 async function assertQuoraUrlNotTakenDown(client: PoolClient, quoraProfileUrl: string | null): Promise<void> {
   if (await isQuoraUrlSuppressed(client, quoraProfileUrl)) {
     throw new Error('skills_hunt_quora_url_taken_down');
@@ -1836,18 +1782,7 @@ export async function createSubmission(
     // Read back WHICH row blocks, not just that one does. The blocker can sit in a round the
     // admin is not looking at, or in a status their current filter hides, so a bare "already
     // nominated" leaves them hunting for something they cannot see (owner bug report 2026-08-28).
-    const existingActive = await client.query<{ status: string; round_name: string }>(
-      `SELECT s.status, r.name AS round_name
-         FROM skills_hunt_submissions s
-         JOIN skills_hunt_rounds r ON r.id = s.round_id
-        WHERE s.quora_profile_url_normalized = $1
-          AND s.status <> 'rejected'
-          AND s.deleted_at IS NULL
-        ORDER BY s.created_at DESC
-        LIMIT 1`,
-      [normalizedUrl],
-    );
-    const blocker = existingActive.rows[0];
+    const blocker = await findNominationBlocker(client, normalizedUrl);
     if (blocker) {
       throw new Error(
         `skills_hunt_duplicate_submission:${JSON.stringify({ status: blocker.status, round: blocker.round_name })}`,
@@ -1877,6 +1812,7 @@ export async function createSubmission(
             country,
             state,
             city,
+            job_title_id,
             status,
             points_awarded,
             score_breakdown,
@@ -1884,7 +1820,9 @@ export async function createSubmission(
             url_validation_checked_at
           )
         VALUES
-          ($1::uuid, $2, $3, $4, $5, $6, $7, $8::jsonb, $12::jsonb, $9, $13, $14, $15, 'pending', 0, '{}'::jsonb, $10, $11::timestamptz)
+          ($1::uuid, $2, $3, $4, $5, $6, $7, $8::jsonb, $12::jsonb, $9, $13, $14, $15,
+           (SELECT id FROM skills_taxonomy_job_titles WHERE id = $16::uuid AND is_active = TRUE),
+           'pending', 0, '{}'::jsonb, $10, $11::timestamptz)
         RETURNING
           id,
           round_id,
@@ -1928,6 +1866,7 @@ export async function createSubmission(
         normalizeText(input.country),
         normalizeNullableText(input.state),
         normalizeNullableText(input.city),
+        input.jobTitleId ?? null,
       ],
     );
 

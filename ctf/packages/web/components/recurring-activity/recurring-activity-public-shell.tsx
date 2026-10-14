@@ -10,6 +10,7 @@ import {
   getRecurringActivityTokens,
   type RecurringActivityTokens,
 } from './recurring-activity-shared';
+import { PublicShellWorldwide } from '@/components/plugins/public-shell-worldwide';
 
 // Signed-out visitor view for Recurring Activity. Marketing copy only — per rule 126 it shows no
 // private or per-user data (the visitor has no session). The three feature tiles are static; the
@@ -146,6 +147,7 @@ function MobilePublic({ signInUrl, verifyUrl, t }: { signInUrl: string; verifyUr
           <div style={{ fontSize: 22, fontWeight: 800, color: t.TITLE, marginBottom: 8 }}>Recognize the ties you keep</div>
           <div style={{ fontSize: 13, color: t.MUTED, lineHeight: 1.6, maxWidth: 300 }}>{INTRO}</div>
         </div>
+        <PublicShellWorldwide color={t.MUTED} style={{ justifyContent: 'center' }} />
         <a
           href={verifyUrl ?? signInUrl}
           style={{ width: '100%', padding: 14, borderRadius: 12, background: t.ACCENT, border: 'none', color: '#04211D', fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxSizing: 'border-box', textDecoration: 'none' }}

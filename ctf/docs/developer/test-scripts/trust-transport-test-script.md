@@ -13,7 +13,7 @@
 | **Surfaces** | web (`/apps/trust-transport`, `/admin/trust-transport`) · android (`TrustTransport.tsx`, `AdminTrustTransport.tsx`) |
 | **Seed first** | `pnpm --dir ctf seed:trust-transport` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-trust-transport-feature-inventory.md` |
-| **Generated** | 2026-06-30 (commit 6f320290; manually updated to remove the rating case — ratings were deleted from the plugin; 2026-07-02: Android trip progression, proof capture, chat, and earnings/payouts shipped — issue #1250 closed; TT-8/TT-9/TT-13/TT-14 added to the parity table, the stale "service delete endpoint not live" gap removed, and the "Android deferred" earnings gap note removed; 2026-07-08: mutual completion confirmation — TT-8 reworded (no unilateral complete) and TT-8b added; 2026-07-08: fiat payout flow removed — TT-13 reworded to a read-only earnings record and TT-14 (payout validation) dropped; 2026-08-04: driver offers now write Member Presence live — TT-18 expectation extended) |
+| **Generated** | 2026-06-30 (commit 6f320290; manually updated to remove the rating case — ratings were deleted from the plugin; 2026-07-02: Android trip progression, proof capture, chat, and earnings/payouts shipped — issue #1250 closed; TT-8/TT-9/TT-13/TT-14 added to the parity table, the out-of-date "service delete endpoint not live" gap removed, and the "Android deferred" earnings gap note removed; 2026-07-08: mutual completion confirmation — TT-8 reworded (no unilateral complete) and TT-8b added; 2026-07-08: fiat payout flow removed — TT-13 reworded to a read-only earnings record and TT-14 (payout validation) dropped; 2026-08-04: driver offers now write Member Presence live — TT-18 expectation extended) |
 
 ---
 
@@ -148,6 +148,8 @@ Result: web ☐
 3. Accept one offer.
 
 **Expected:** The offer is accepted and a trip is created. The request moves to an accepted state. Per model B, the pickup/drop-off is now available to the accepted provider through the trip. The trip ID is visible (the sidebar/detail shows it, not "— → —"). A "Chat" control opens the trip's Direct Line on both web and android.
+
+Since 2026-10-05: with Stream Chat unreachable or refusing the channel setup, the accept still succeeds and answers with the trip; the failure is reported, and opening Direct Line afterwards sets the channel up.
 
 Result: web ☐
 
@@ -564,6 +566,8 @@ Result: web ☐
 2. Look for audit entries for `trust-transport.request.create`, `trust-transport.offer.accept`, `trust-transport.trip.status.update`, and `trust-transport.payout.request`.
 
 **Expected:** All four member-facing command types appear as audit rows. Each row has a timestamp, actor ID, command name, and result status.
+
+Since 2026-10-05: an emergency stop (TT-10) and an order cancel (TT-11) also appear, as `trust-transport.trip.status.update` rows with `nextStatus` `emergency_frozen` or `canceled`.
 
 Result: web ☐
 

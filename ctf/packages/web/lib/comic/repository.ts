@@ -24,6 +24,8 @@ import {
   stripComicMention,
 } from './policy';
 import { listPluginRegistry } from 'lib/plugins/repository';
+import { planUnlockHelp, type UnlockHelpPlan } from './unlock-help-plan';
+import { UNLOCK_HELP_INTENT_PREFIX, UNLOCK_HELP_MODEL_FACTS, UNLOCK_HELP_MODEL_FALLBACK, UNLOCK_HELP_SENT_REASON } from './unlock-help-script';
 import type {
   ComicAnswerRatingValue,
   ComicAskerStreamItem,
@@ -365,7 +367,9 @@ function buildGroundingPrompt(entries: ComicGroundingEntry[]): string {
 
 // Draft an answer via Ollama, reusing the shared survivor guidance. The draft is captured but,
 // under the interim policy, NEVER returned to the asker — it is enqueued for human review.
-async function generateComicDraft(questionBody: string): Promise<OllamaDraft> {
+// `systemAddendum` is extra instruction text for one kind of question — today the Unlock facts for a
+// member stuck at Unlock (lib/comic/unlock-help-script.ts). Empty for everything else.
+async function generateComicDraft(questionBody: string, systemAddendum = ''): Promise<OllamaDraft> {
   const startedAt = Date.now();
 
   // Captured on failure so the caller can report WHY drafting fell back to the template (timeout,
@@ -378,8 +382,8 @@ async function generateComicDraft(questionBody: string): Promise<OllamaDraft> {
       // data instead of the base model's generic training. Best-effort — an empty result means the
       // draft simply runs ungrounded.
       const grounding = await retrieveComicGrounding(questionBody);
-      const systemPrompt =
-        grounding.length > 0 ? SURVIVOR_SYSTEM_PROMPT + buildGroundingPrompt(grounding) : SURVIVOR_SYSTEM_PROMPT;
+      const groundingPrompt = grounding.length > 0 ? buildGroundingPrompt(grounding) : '';
+      const systemPrompt = SURVIVOR_SYSTEM_PROMPT + systemAddendum + groundingPrompt;
 
       const result = await callOllamaChat([
         { role: 'system', content: systemPrompt },
@@ -530,22 +534,28 @@ export async function routeComicMessage(
   // Capture the question and enqueue it for human review IMMEDIATELY — before any AI draft work, in
   // one short transaction. This guarantees every question reaches the review queue and lets the
   // asker's submit return without waiting on the model. A slow model call (a serverless GPU cold
-  // start can take tens of seconds) no longer blocks the request. No NLU label is attached; the
-  // intent/confidence columns stay null (kept for historical data only). Every answer still goes to
-  // human review — see #504 for the future confidence-gated auto-publish.
+  // start can take tens of seconds) no longer blocks the request. No NLU label is attached: confidence
+  // stays null, and intent is set only for an Unlock question (`unlock_help:<case>`, see
+  // unlock-help-plan.ts). Every answer still goes to human review — see #504 for the future
+  // confidence-gated auto-publish.
   const reason = deriveReviewReason(safety);
-  const { conversationId, userTurnId, reviewId } = await withDbTransaction(async (client) => {
+  // A member still waiting on Unlock who asks about it: tag the turn so the Unlock help log can find
+  // it, and for the profile-link question attach the scripted answer as the draft. While the Unlock
+  // switch is on (runtime-config.ts) that draft is sent at once; otherwise it waits for review.
+  const unlockHelp = await planUnlockHelp(actorId, questionBody, safety.flagged);
+  const { conversationId, userTurnId, reviewId, sent } = await withDbTransaction(async (client) => {
     const resolvedConversationId = await resolveConversation(client, actorId, actorUsername, channel, input.conversationId ?? null);
     const insertedUserTurnId = await insertTurn(client, {
       conversationId: resolvedConversationId,
       role: 'user',
       body: questionBody,
-      intent: null,
+      intent: unlockHelp ? unlockHelp.intent : null,
       nluConfidence: null,
       engine: 'human',
     });
     const insertedReviewId = await enqueueReview(client, insertedUserTurnId, reason);
-    return { conversationId: resolvedConversationId, userTurnId: insertedUserTurnId, reviewId: insertedReviewId };
+    const sent = await attachScriptedDraft(client, { conversationId: resolvedConversationId, reviewId: insertedReviewId, unlockHelp });
+    return { conversationId: resolvedConversationId, userTurnId: insertedUserTurnId, reviewId: insertedReviewId, sent };
   });
 
   // For non-safety-flagged questions, generate the AI draft in the BACKGROUND and attach it to the
@@ -553,11 +563,62 @@ export async function routeComicMessage(
   // model. On the persistent Node server this promise runs after the response is sent; if it never
   // finishes (process restart, model down) the question simply stays a human-answered review, so the
   // human-review guarantee is unaffected. Safety-flagged questions skip the draft (human-first).
-  if (!safety.flagged && isOllamaConfigured()) {
-    void generateAndAttachDraft({ actorId, conversationId, reviewId, questionBody });
+  // A scripted Unlock answer is already the draft, so the model is not asked for one.
+  if (needsModelDraft(safety.flagged, unlockHelp)) {
+    const systemAddendum = unlockHelp ? UNLOCK_HELP_MODEL_FACTS : '';
+    void generateAndAttachDraft({ actorId, conversationId, reviewId, questionBody, systemAddendum, unlockHelp });
   }
 
+  if (sent) {
+    return { ...buildRoutedResult(safety, { conversationId, userTurnId, reviewId }), outcome: 'answered', holdingResponse: '' };
+  }
   return buildRoutedResult(safety, { conversationId, userTurnId, reviewId });
+}
+
+function needsModelDraft(safetyFlagged: boolean, unlockHelp: UnlockHelpPlan | null): boolean {
+  if (safetyFlagged || !isOllamaConfigured()) return false;
+  return !unlockHelp || unlockHelp.scriptedAnswer === null;
+}
+
+// Record a draft on its review row and, when the Unlock switch says so, publish it in the same step:
+// the row is marked approved with the draft as the answer and no reviewer. Only an Unlock plan with
+// sendWithoutReview reaches the publish branch; every other draft stays pending for a person.
+// Returns whether the answer was published.
+async function recordDraftOnReview(
+  client: PoolClient,
+  input: { reviewId: string; draftTurnId: string; publish: boolean },
+): Promise<boolean> {
+  if (!input.publish) {
+    await client.query(`UPDATE comic_review_queue SET draft_turn_id = $2::uuid WHERE id = $1::uuid AND status = 'pending'`, [input.reviewId, input.draftTurnId]);
+    return false;
+  }
+  await client.query(
+    `UPDATE comic_review_queue
+        SET draft_turn_id = $2::uuid, answer_turn_id = $2::uuid, status = 'approved', reason = $3, decided_at = NOW()
+      WHERE id = $1::uuid AND status = 'pending'`,
+    [input.reviewId, input.draftTurnId, UNLOCK_HELP_SENT_REASON],
+  );
+  return true;
+}
+
+// Attach the scripted Unlock answer as the review row's draft, in the same transaction that queued
+// the question — and send it, while the Unlock switch is on. No-op for every other question. Engine
+// `template`, because it is fixed text and not a model draft; the intent carries which case it is.
+async function attachScriptedDraft(
+  client: PoolClient,
+  input: { conversationId: string; reviewId: string; unlockHelp: UnlockHelpPlan | null },
+): Promise<boolean> {
+  const scripted = input.unlockHelp?.scriptedAnswer;
+  if (!input.unlockHelp || !scripted) return false;
+  const draftTurnId = await insertTurn(client, {
+    conversationId: input.conversationId,
+    role: 'bot',
+    body: scripted,
+    intent: input.unlockHelp.intent,
+    nluConfidence: null,
+    engine: 'template',
+  });
+  return recordDraftOnReview(client, { reviewId: input.reviewId, draftTurnId, publish: input.unlockHelp.sendWithoutReview });
 }
 
 // Background draft generation. Called detached (not awaited) from routeComicMessage after the
@@ -566,47 +627,72 @@ export async function routeComicMessage(
 // `draft_turn_id`. The review's `turn_id` is NEVER repointed: it stays the asker's question turn so
 // the question is inferred stably even if the asker sends another message before the draft lands.
 // Never throws: any failure leaves the question as a human-first review for a person to answer.
-async function generateAndAttachDraft(input: {
+type BackgroundDraftInput = {
   actorId: string;
   conversationId: string;
   reviewId: string;
   questionBody: string;
-}): Promise<void> {
+  systemAddendum: string;
+  unlockHelp: UnlockHelpPlan | null;
+};
+
+type AttachableDraft = { body: string; engine: ComicTurnEngine; groundingEntryIds: string[] };
+
+// While the Unlock switch is on, a model draft that failed is replaced by the fixed Unlock fallback and
+// sent, so an Unlock question never waits in the review queue for a person. Null otherwise: the item
+// stays a human-first review, exactly as before.
+function fallbackDraftFor(unlockHelp: UnlockHelpPlan | null): AttachableDraft | null {
+  if (!unlockHelp?.sendWithoutReview) return null;
+  return { body: UNLOCK_HELP_MODEL_FALLBACK, engine: 'template', groundingEntryIds: [] };
+}
+
+async function generateAndAttachDraft(input: BackgroundDraftInput): Promise<void> {
   try {
-    const draft = await generateComicDraft(input.questionBody);
+    const draft = await generateComicDraft(input.questionBody, input.systemAddendum);
     // A `template` engine means Ollama was unavailable and generateComicDraft fell back to the
     // placeholder. That is a failed generation, not a real draft — leave the item as a human-first
-    // review rather than flipping it into draft-review mode with a useless placeholder.
+    // review rather than flipping it into draft-review mode with a useless placeholder (unless it is
+    // an Unlock answer going out unreviewed, which gets the fixed fallback instead).
     if (draft.engine === 'template') {
+      const fallback = fallbackDraftFor(input.unlockHelp);
+      if (fallback) await attachBackgroundDraft(input, fallback);
       return;
     }
     await logComicInference({ actorId: input.actorId, draft });
-    await withDbTransaction(async (client) => {
-      const pending = await client.query<{ id: string }>(
-        `SELECT id FROM comic_review_queue WHERE id = $1::uuid AND status = 'pending' FOR UPDATE`,
-        [input.reviewId],
-      );
-      if (pending.rows.length === 0) {
-        // Resolved by a reviewer (or removed) while the draft was generating — leave it alone.
-        return;
-      }
-      const draftTurnId = await insertTurn(client, {
-        conversationId: input.conversationId,
-        role: 'bot',
-        body: draft.body,
-        intent: null,
-        nluConfidence: null,
-        engine: draft.engine,
-        groundingEntryIds: draft.groundingEntryIds,
-      });
-      await client.query(
-        `UPDATE comic_review_queue SET draft_turn_id = $2::uuid WHERE id = $1::uuid AND status = 'pending'`,
-        [input.reviewId, draftTurnId],
-      );
-    });
+    await attachBackgroundDraft(input, draft);
   } catch (err) {
     console.error('[comic/repository] background draft generation/attach failed', err);
   }
+}
+
+// Insert the draft turn and record it on the review row — only if a reviewer has not already resolved
+// the question while it was generating. An Unlock answer with the switch on is published in the same
+// step (recordDraftOnReview).
+async function attachBackgroundDraft(input: BackgroundDraftInput, draft: AttachableDraft): Promise<void> {
+  await withDbTransaction(async (client) => {
+    const pending = await client.query<{ id: string }>(
+      `SELECT id FROM comic_review_queue WHERE id = $1::uuid AND status = 'pending' FOR UPDATE`,
+      [input.reviewId],
+    );
+    if (pending.rows.length === 0) {
+      // Resolved by a reviewer (or removed) while the draft was generating — leave it alone.
+      return;
+    }
+    const draftTurnId = await insertTurn(client, {
+      conversationId: input.conversationId,
+      role: 'bot',
+      body: draft.body,
+      intent: input.unlockHelp?.intent ?? null,
+      nluConfidence: null,
+      engine: draft.engine,
+      groundingEntryIds: draft.groundingEntryIds,
+    });
+    await recordDraftOnReview(client, {
+      reviewId: input.reviewId,
+      draftTurnId,
+      publish: input.unlockHelp?.sendWithoutReview === true,
+    });
+  });
 }
 
 // Admin "Regenerate draft": re-run the model for a still-pending review and (re)attach its draft.
@@ -631,8 +717,8 @@ export async function regenerateComicDraft(
     throw new Error('review_already_resolved');
   }
 
-  const turnRes = await queryDb<{ conversation_id: string; body: string }>(
-    `SELECT conversation_id, body FROM comic_turns WHERE id = $1::uuid LIMIT 1`,
+  const turnRes = await queryDb<{ conversation_id: string; body: string; intent: string | null }>(
+    `SELECT conversation_id, body, intent FROM comic_turns WHERE id = $1::uuid LIMIT 1`,
     [review.turn_id],
   );
   const turn = turnRes.rows[0];
@@ -640,7 +726,9 @@ export async function regenerateComicDraft(
     throw new Error('review_not_found');
   }
 
-  const draft = await generateComicDraft(turn.body);
+  // An Unlock question drafted again gets the same Unlock facts it was first drafted with.
+  const isUnlockHelp = (turn.intent ?? '').startsWith(UNLOCK_HELP_INTENT_PREFIX);
+  const draft = await generateComicDraft(turn.body, isUnlockHelp ? UNLOCK_HELP_MODEL_FACTS : '');
   // Drafting failed -> template fallback. Leave the item human-first rather than attaching a
   // placeholder, exactly as the background path does, but pass back the real reason it failed.
   if (draft.engine === 'template') {

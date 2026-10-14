@@ -63,6 +63,16 @@ export function recurringActivityMutationError(
   );
 }
 
+// `recurring_activities.id` is a UUID column. A path value that is not a UUID cannot name a row, and
+// passing it to Postgres would throw (invalid input syntax for type uuid) and surface as a 503. The
+// confirm/decline/end/visibility routes answer it with the same 404 the repository gives for an id
+// that names no row.
+const ACTIVITY_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function isRecurringActivityId(value: string | undefined): value is string {
+  return typeof value === 'string' && ACTIVITY_ID_PATTERN.test(value);
+}
+
 export function recurringActivityErrorResponse(fallbackMessage: string) {
   return NextResponse.json(
     { ok: false, code: RECURRING_ACTIVITY_ERROR_CODE.persistenceUnavailable, message: fallbackMessage },

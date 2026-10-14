@@ -26,6 +26,8 @@ export type Tab = "feed" | "post" | "chat";
 
 export type SrRequestStatus = "open" | "claimed" | "closed" | "canceled";
 
+export type SrRequestImage = { url: string; alt: string; width: number; height: number };
+
 export type SrRequest = {
   id: string;
   ownerUserId: string;
@@ -46,6 +48,8 @@ export type SrRequest = {
   // Every currency the poster accepts for settling (split settlements), ServiceCredits first.
   // Optional so older cached payloads without the field keep rendering.
   acceptedCurrencies?: string[];
+  // The request's one picture, or null. Optional so older cached payloads without the field keep rendering.
+  image?: SrRequestImage | null;
   createdAtIso: string;
   updatedAtIso: string;
   // When the post auto-expires (28 days after posting/re-posting); `isExpired` is true only while it is

@@ -36,7 +36,6 @@ name: Render — Build and push Docker images
 #       the image still reaches GHCR, but production keeps running the OLD image
 #       until someone deploys by hand (Manual Deploy → Deploy latest reference).
 #   RENDER_SERVICE_ID_CTF_WEB             — optional: explicit ctf-web id, skips the name lookup
-#   RENDER_SERVICE_ID_OLLAMA          — optional: explicit ctf-ollama id
 #   RENDER_SERVICE_ID_CTF_FORMANCE        — optional: explicit ctf-formance-ledger id
 
 on:
@@ -74,7 +73,7 @@ jobs:
               - 'ctf/tsconfig.base.json'
               - 'ctf/pnpm-workspace.yaml'
             formance:
-              # Whole dir, not just the Dockerfile: formance-entrypoint.sh is COPYd
+              # Entire dir, not just the Dockerfile: formance-entrypoint.sh is COPYd
               # into the image, so a change to it must rebuild ctf-formance-ledger too.
               - 'ctf/ops/formance/**'
             routeweather:

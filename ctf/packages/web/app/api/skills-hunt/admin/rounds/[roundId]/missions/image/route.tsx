@@ -3,7 +3,7 @@ import { ImageResponse } from 'next/og';
 import { withDbTransaction } from 'lib/db/postgres';
 import { listMissionsForAdmin } from 'lib/skills-hunt/missions';
 import { getRound, insertSkillsHuntAudit } from 'lib/skills-hunt/repository';
-import { buildMissionPosterView } from 'lib/skills-hunt/mission-poster-view';
+import { buildMissionPosterView, dayOf } from 'lib/skills-hunt/mission-poster-view';
 import {
   MISSION_POSTER_WIDTH,
   buildMissionPosterElement,
@@ -11,6 +11,7 @@ import {
 } from 'lib/skills-hunt/mission-poster-image';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
 import { reportError } from 'lib/observability/report';
+import { withReason } from 'lib/errors/failure';
 import { requireSkillsHuntAdminAccess } from '../../../../../_lib';
 
 // A round's active missions drawn as one tall PNG, for posting somewhere that takes a picture.
@@ -32,7 +33,7 @@ import { requireSkillsHuntAdminAccess } from '../../../../../_lib';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export async function GET(_request: Request, { params }: { params: Promise<{ roundId: string }> }) {
+export async function GET(request: Request, { params }: { params: Promise<{ roundId: string }> }) {
   const gate = await requireSkillsHuntAdminAccess();
   if (!gate.allowed) {
     return gate.response;
@@ -50,8 +51,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ rou
     }
 
     const missions = await withDbTransaction((client) => listMissionsForAdmin(client, roundId));
-    const view = buildMissionPosterView(round, missions);
-    const generatedOn = new Date().toISOString().slice(0, 10);
+    // The admin's time zone (sent by the Missions tab), so the dates match the Rounds tab.
+    const timeZone = new URL(request.url).searchParams.get('tz') ?? undefined;
+    const view = buildMissionPosterView(round, missions, timeZone);
+    const generatedOn = dayOf(new Date().toISOString(), timeZone);
 
     await insertSkillsHuntAudit({
       actorId: gate.auth.userId,
@@ -74,7 +77,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ rou
   } catch (error) {
     reportError(error, { area: 'skills-hunt', op: 'admin_rounds_roundid_missions_image' });
     return NextResponse.json(
-      { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: 'Unable to draw the missions picture.' },
+      { ok: false, code: SKILLS_HUNT_ERROR_CODE.persistenceUnavailable, message: withReason('Unable to draw the missions picture', error) },
       { status: 503 },
     );
   }

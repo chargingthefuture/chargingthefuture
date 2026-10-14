@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ImageResponse } from 'next/og';
-import { buildMissionPosterView } from './mission-poster-view';
+import { buildMissionPosterView, dayOf } from './mission-poster-view';
 import {
   MISSION_POSTER_WIDTH,
   buildMissionPosterElement,
@@ -21,8 +21,9 @@ const round: SkillsHuntRound = {
   startsAtIso: '2026-09-01T00:00:00.000Z',
   endsAtIso: '2026-09-30T23:59:59.000Z',
   scoringConfig: {},
-  rewardCreditsPerAccept: 0,
-  rewardPerUserRoundCap: null,
+  awardPoolCredits: 0,
+  awardPointsBar: null,
+  awardsSentAtIso: null,
   createdByUserId: 'user_admin',
   updatedByUserId: 'user_admin',
   createdAtIso: '2026-08-31T00:00:00.000Z',
@@ -131,4 +132,13 @@ describe('buildMissionPosterElement', () => {
     // PNG magic number — proves a real image came back, not an error page.
     expect(Array.from(bytes.slice(0, 4))).toEqual([0x89, 0x50, 0x4e, 0x47]);
   }, 30000);
+});
+
+describe('dayOf', () => {
+  it('prints the day in the admin time zone, not the server one', () => {
+    // 05:59 UTC on 1 January is still 31 December in Chicago.
+    expect(dayOf('2028-01-01T05:59:00.000Z', 'America/Chicago')).toBe('2027-12-31');
+    expect(dayOf('2028-01-01T05:59:00.000Z')).toBe('2028-01-01');
+    expect(dayOf('2028-01-01T05:59:00.000Z', 'Not/AZone')).toBe('2028-01-01');
+  });
 });

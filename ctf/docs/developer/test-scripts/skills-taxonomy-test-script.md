@@ -13,11 +13,11 @@
 |---|---|
 | **Plugin** | Skills Taxonomy (`skills-taxonomy`) |
 | **Visibility** | Member-facing |
-| **Roles to test** | member, admin |
+| **Roles to test** | member, admin, and one machine consumer (TAX-A7, needs a credential) |
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:skills-taxonomy` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-skills-taxonomy-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit); manually updated 2026-07-15 (browser made read-only — dead admin "add" buttons removed); 2026-08-04 (admin write surface recorded as retired — admin walkthrough marked API-only); 2026-08-29 (TAX-5 extended for changes 58–67 — the Childcare Workers and Tutors occupations under Education); 2026-08-29 (TAX-5 extended for changes 68–78 — the Photographer merge and the two plural renames); 2026-08-29 (TAX-5 extended for change 79 — the surviving label of the lighting pair); 2026-08-29 (TAX-5b added — the apply-time plural-twin guard); 2026-09-14 (TAX-5c added — the per-occupation demand weight and its mandatory rationale) |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit); manually updated 2026-07-15 (browser made read-only — dead admin "add" buttons removed); 2026-08-04 (admin write surface recorded as retired — admin walkthrough marked API-only); 2026-08-29 (TAX-5 extended for changes 58–67 — the Childcare Workers and Tutors occupations under Education); 2026-08-29 (TAX-5 extended for changes 68–78 — the Photographer merge and the two plural renames); 2026-08-29 (TAX-5 extended for change 79 — the surviving label of the lighting pair); 2026-08-29 (TAX-5b added — the apply-time plural-twin guard); 2026-09-14 (TAX-5c added — the per-occupation demand weight and its mandatory rationale); 2026-10-01 (TAX-A7 added — the machine reader, its bound credential, and the routes it cannot reach); 2026-10-08 (TAX-5g added — change 143, Laboratory testing (basic) moved under Lab Technicians); 2026-10-13 (TAX-5h added — changes 144–149, Life coaching, Mechanical design and drafting (CAD) and the Taxi Drivers occupation from skill proposals #3144, #3145 and #3088) |
 
 ## How to run this
 
@@ -325,6 +325,39 @@ education** must be present and must not be folded into `Physical education teac
 cannot do ordinary PE needs a teacher who can say so.
 **Result:** web ☐ mobile ☐ — notes:
 
+### TAX-5g · Laboratory testing sits with lab technicians, and its holders keep it (added 2026-10-08)
+**Role:** member · **Surfaces:** all
+**Precondition:** change 143 has been applied by the owner-run
+`Skills Taxonomy — Apply Changes (production)` workflow.
+**Steps:**
+1. Browse to **R&D & High-Tech** and open **Lab Technicians**.
+2. Browse to **Water & Sanitation** and open **Treatment-Plant Operators**.
+3. Search the keyword box for `Laboratory testing (basic)` and read the results.
+4. Open a Directory profile that lists **Laboratory testing (basic)** and read its specializations.
+**Expected:** **Lab Technicians** carries `Laboratory testing (basic)` beside `Laboratory safety and
+SOP adherence`. **Treatment-Plant Operators** no longer carries it. The search returns one row, under
+Lab Technicians in R&D & High-Tech. The profile still lists the skill: the move keeps the row id, so
+nobody who held it loses it.
+**Result:** web ☐ mobile ☐ — notes:
+
+### TAX-5h · Three job-title proposals arrive, two as skills and one as an occupation (added 2026-10-13)
+**Role:** member · **Surfaces:** all
+**Precondition:** changes 144–149 have been applied by the owner-run
+`Skills Taxonomy — Apply Changes (production)` workflow.
+**Steps:**
+1. Browse to **Health** and open **Mental Health Counselors**.
+2. Browse to **R&D & High-Tech** and open **Systems / Hardware Engineers**.
+3. Search the keyword box for `Life coaching`, then for `Mechanical design`.
+4. Browse to **Transport & Logistics** and open **Taxi Drivers**.
+5. Open the Directory profile of a member who proposed "Life Coach", "Mechanical Designer & Drafter" or
+   "Taxi Driver" and read its specializations.
+**Expected:** **Mental Health Counselors** lists `Life coaching`. **Systems / Hardware Engineers** lists
+`Mechanical design and drafting (CAD)`. **Taxi Drivers** sits beside **Truck Drivers** and
+**Bus/Train Operators** and lists `Taxi driving`, `Local route knowledge and navigation` and
+`Passenger safety and service`. Each search returns one row, under that occupation. The
+proposing member's profile lists the new skill, and the proposal chip is gone from it.
+**Result:** web ☐ mobile ☐ — notes:
+
 ### TAX-6 · Refresh re-pulls the hierarchy without reopening the app
 **Role:** member · **Surfaces:** all
 **Steps:**
@@ -385,6 +418,43 @@ directly).
 are required and validated. This route is a read and survived task 7; it now informs a change-list
 entry (what a `deactivateSkill` would affect) rather than gating an in-app delete that no longer
 exists.
+
+**Result:** web ☐ mobile ☐ — notes:
+
+### TAX-A7 · The machine reader gets the taxonomy and nothing else (added 2026-10-01)
+**Role:** none — a service credential, not a person · **Surfaces:** web (API only — no UI)
+
+This is the One Percent read. It needs `TAXONOMY_SERVICE_TOKENS` set to at least one
+`name:secret` entry, and it cannot be run from a phone: every step is a request with a header on
+it. Skip the case on any environment where that setting is empty, which is the normal state.
+
+**Steps:**
+1. `GET /api/skills-taxonomy/hierarchy` with `Authorization: Bearer <name>.<secret>`, signed out.
+2. The same, with the secret correct and the name changed to one that is not configured.
+3. The same, with the name correct and one character of the secret changed.
+4. `GET /api/skills-taxonomy/flattened` with a working credential and `includeAliases=true`.
+5. `GET /api/skills-taxonomy/admin/hierarchy` with that same working credential.
+6. `POST /api/skills-taxonomy/admin/sectors` with that same working credential.
+7. Open the taxonomy browser signed in as an approved member, with no header at all.
+8. Repeat step 1 many times in quick succession.
+
+**Expected:**
+- Step 1: **200**, the hierarchy, as a member would get it. No account and no Unlock tier were
+  involved.
+- Steps 2 and 3: **401**. The credential is bound to one consumer, so a correct secret under
+  another name authenticates nothing, and a near-miss secret is not close enough. These two are
+  the case — a token that is merely valid is not the bar.
+- Step 4: **200**, with the aliases, which is what lets the consumer keep a cached copy correct
+  across a rename.
+- Steps 5 and 6: refused as they would be for anybody signed out. Those routes never look at this
+  header, so the credential reaches the two read commands and nothing else.
+- Step 7: unchanged. The member path still works, and so does the mobile app, whose Clerk session
+  token arrives on this same header and falls through rather than being treated as a failed
+  service credential.
+- Step 8: eventually **429**. The consumer refreshes a cached copy a few times a month, so the
+  brake is invisible in normal use.
+- Across all of it, the audit lines for steps 1 and 4 carry `service:<name>` as the actor and
+  `approved_consumer` as the reason — never a member user id.
 
 **Result:** web ☐ mobile ☐ — notes:
 

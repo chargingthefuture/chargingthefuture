@@ -17,6 +17,8 @@ import {
 } from './constants';
 import { recordTrainerSkillChanges, type TrainerSkillChange } from 'lib/shared/skill-up-interface';
 import { normalizeQuoraProfileUrl } from './quora-url';
+import { lockAccountProfileClaim, OWNED_PROFILE_ORDER_SQL } from './profile-claim';
+import { NOMINATED_PENDING_SKILLS_SQL } from './nominated-pending-skills';
 import type {
   DirectoryAnnouncement,
   DirectoryAnnouncementInput,
@@ -142,24 +144,16 @@ async function loadProfileSkills(client: PoolClient, profileId: string): Promise
 }
 
 // Free-text skills nominated for this profile through SkillsHunt that are not yet in
-// the canonical taxonomy. Join chain: the profile links to its originating SkillsHunt
-// submission via skills_hunt_directory_profiles.directory_profile_id, and the submission's
-// proposed (not-yet-promoted) skills live in skills_hunt_proposed_skill_promotions keyed by
-// source_submission_id. Surfaced as muted "pending review" chips so a community-generated
-// profile is never empty just because its nominated skill has not been promoted yet.
+// the canonical taxonomy, read from the nomination itself (see NOMINATED_PENDING_SKILLS_SQL).
+// Surfaced as muted "pending review" chips so a community-generated profile is never empty
+// just because its nominated skill has not been promoted yet.
 async function loadProfilePendingSkills(client: PoolClient, profileId: string): Promise<string[]> {
   const result = await client.query<{ skill_label: string }>(
     `
-      SELECT DISTINCT prom.skill_label
-      FROM skills_hunt_directory_profiles shdp
-      JOIN skills_hunt_proposed_skill_promotions prom
-        ON prom.source_submission_id = shdp.submission_id
-      WHERE shdp.directory_profile_id = $1
-        -- 'dropped' is the admin's decision not to promote (lib/directory/pending-skill-proposals.ts);
-        -- the chip goes with it, or a non-promotion would leave it on the profile for good.
-        AND prom.status NOT IN ('promoted', 'dropped')
-        AND btrim(prom.skill_label) <> ''
-      ORDER BY prom.skill_label ASC
+      SELECT n.skill_label
+      FROM (${NOMINATED_PENDING_SKILLS_SQL}) n
+      WHERE n.profile_id = $1::text
+      ORDER BY n.skill_label ASC
     `,
     [profileId],
   );
@@ -310,14 +304,10 @@ async function loadSkillsForProfiles(
 async function loadPendingSkillsForProfiles(client: PoolClient, profileIds: string[]): Promise<Map<string, string[]>> {
   const result = await client.query<{ profile_id: string; skill_label: string }>(
     `
-      SELECT DISTINCT shdp.directory_profile_id::text AS profile_id, prom.skill_label
-      FROM skills_hunt_directory_profiles shdp
-      JOIN skills_hunt_proposed_skill_promotions prom
-        ON prom.source_submission_id = shdp.submission_id
-      WHERE shdp.directory_profile_id::text = ANY($1::text[])
-        AND prom.status NOT IN ('promoted', 'dropped')
-        AND btrim(prom.skill_label) <> ''
-      ORDER BY prom.skill_label ASC
+      SELECT n.profile_id, n.skill_label
+      FROM (${NOMINATED_PENDING_SKILLS_SQL}) n
+      WHERE n.profile_id = ANY($1::text[])
+      ORDER BY n.skill_label ASC
     `,
     [profileIds],
   );
@@ -690,6 +680,7 @@ async function loadProfileByUser(client: PoolClient, userId: string): Promise<Di
       LEFT JOIN skills_taxonomy_sectors s ON s.id = p.sector_id
       LEFT JOIN skills_taxonomy_job_titles jt ON jt.id = p.job_title_id
       WHERE p.claimed_by_user_id = $1
+      ORDER BY ${OWNED_PROFILE_ORDER_SQL}
       LIMIT 1
     `,
     [userId],
@@ -940,8 +931,11 @@ export async function upsertOwnProfile(userId: string, input: DirectoryProfileIn
 
     await ensureTaxonomySelectors(client, sectorId, jobTitleId, skillIds);
 
+    // Two saves landing together would both find nothing and both insert, leaving the account with
+    // two listings; the lock makes the second wait and then find the first one's row.
+    await lockAccountProfileClaim(client, userId);
     const existing = await client.query<{ id: string; profile_url: string | null }>(
-      'SELECT id, profile_url FROM directory_profiles WHERE claimed_by_user_id = $1 LIMIT 1',
+      `SELECT id, profile_url FROM directory_profiles p WHERE claimed_by_user_id = $1 ORDER BY ${OWNED_PROFILE_ORDER_SQL} LIMIT 1`,
       [userId],
     );
 
@@ -1458,7 +1452,7 @@ export async function listDirectoryAnnouncements(publicOnly = true): Promise<Dir
  * an ordinary delete and is suppressed only when the admin uses the takedown control and says why.
  *
  * Runs on a caller-owned client so it commits or rolls back with the rest of the member's deletion.
- * Returns the deleted profile's id, or null when the member had claimed nothing.
+ * Returns the deleted profiles' ids, empty when the member had claimed nothing.
  */
 /**
  * Recorded against the suppression a member's own removal creates, so an admin reading the
@@ -1470,19 +1464,31 @@ export async function removeClaimedDirectoryProfile(
   client: PoolClient,
   userId: string,
   reason: string,
-): Promise<string | null> {
+): Promise<string[]> {
+  // Every listing the account owns, not just one. An account should own at most one, and the claim
+  // writers now refuse a second, but accounts given a second listing before that check keep both
+  // until an admin resolves them; removing only one left the other live and claimed after the member
+  // asked for their data to go.
   const existing = await client.query<{ id: string; profile_url: string | null }>(
-    'SELECT id, profile_url FROM directory_profiles WHERE claimed_by_user_id = $1 LIMIT 1',
+    `SELECT id, profile_url FROM directory_profiles p WHERE claimed_by_user_id = $1 ORDER BY ${OWNED_PROFILE_ORDER_SQL}`,
     [userId],
   );
 
-  if (existing.rows.length === 0) {
-    return null;
+  const removedIds: string[] = [];
+  for (const row of existing.rows) {
+    await removeOneClaimedProfile(client, userId, reason, row.id, row.profile_url);
+    removedIds.push(row.id);
   }
+  return removedIds;
+}
 
-  const profileId = existing.rows[0].id;
-  const profileUrl = existing.rows[0].profile_url;
-
+async function removeOneClaimedProfile(
+  client: PoolClient,
+  userId: string,
+  reason: string,
+  profileId: string,
+  profileUrl: string | null,
+): Promise<void> {
   // Record the skills as removed before they go: otherwise a trainer could clear the credential they
   // claimed a cohort on and leave no trace. Written while the profile row still exists, matching the
   // order the other delete paths use.
@@ -1509,7 +1515,6 @@ export async function removeClaimedDirectoryProfile(
     );
   }
 
-  return profileId;
 }
 
 export async function deleteOwnDirectoryProfile(userId: string): Promise<{ requestedAtIso: string }> {
@@ -1735,12 +1740,14 @@ export async function createAdminProfile(actorId: string, input: DirectoryProfil
     const inserted = await client.query<{ id: string }>(
       `
         INSERT INTO directory_profiles
-          (claimed_by_user_id, first_name, last_name, headline, bio, profile_url, sector_id, job_title_id, city, state, country)
+          (claimed_by_user_id, first_name, last_name, headline, bio, profile_url, sector_id, job_title_id, city, state, country, nominated_by_user_id)
         VALUES
-          (NULL, $1, $2, $3, $4, $5, $6::uuid, $7::uuid, $8, $9, $10)
+          (NULL, $1, $2, $3, $4, $5, $6::uuid, $7::uuid, $8, $9, $10, $11)
         RETURNING id
       `,
-      [firstName, lastName, headline, bio, profileUrl, sectorId, jobTitleId, city, state, country],
+      // The admin who adds a person's profile is the one who brought them in, so they are recorded
+      // as its nominator; a later claim leaves this in place.
+      [firstName, lastName, headline, bio, profileUrl, sectorId, jobTitleId, city, state, country, actorId],
     );
 
     const profileId = inserted.rows[0].id;
@@ -1766,7 +1773,9 @@ export async function createAdminProfile(actorId: string, input: DirectoryProfil
           p.headline,
           p.bio,
           p.profile_url,
-
+          p.source,
+          p.invited_by_username,
+          p.unclaimed_handle,
           p.sector_id,
           s.name AS sector_name,
           p.job_title_id,
@@ -1930,7 +1939,9 @@ export async function updateAdminProfile(
           p.headline,
           p.bio,
           p.profile_url,
-
+          p.source,
+          p.invited_by_username,
+          p.unclaimed_handle,
           p.sector_id,
           s.name AS sector_name,
           p.job_title_id,
@@ -1960,8 +1971,12 @@ export async function assignAdminProfile(
   actorId: string,
   profileId: string,
   userId: string,
-): Promise<DirectoryProfile | 'already_claimed' | null> {
+): Promise<DirectoryProfile | 'already_claimed' | 'account_has_profile' | null> {
   return withDbTransaction(async (client) => {
+    // Held to the end of the transaction, so a member's own first save cannot slip in between the
+    // check below and the claim.
+    await lockAccountProfileClaim(client, userId);
+
     // Compare ids as text: directory_profiles.id carried over from v2 as varchar,
     // so casting the bind param to ::uuid against a varchar column fails to plan
     // (and throws "invalid input syntax for type uuid" for non-uuid v2 ids). Cast
@@ -1995,6 +2010,28 @@ export async function assignAdminProfile(
       );
 
       return 'already_claimed';
+    }
+
+    // One listing per account. Every reader of "the member's profile" takes one row, so a second
+    // claimed listing would be edited, shown to One Percent, or removed on deletion depending on which
+    // row a read happened to return. The admin deletes or merges one listing first.
+    const owned = await client.query<{ id: string }>(
+      'SELECT id::text AS id FROM directory_profiles WHERE claimed_by_user_id = $1 LIMIT 1',
+      [userId],
+    );
+    if (owned.rows.length > 0) {
+      await client.query(
+        `
+          INSERT INTO directory_profile_change_events
+            (actor_id, command, policy_status, reason, target_type, target_id, metadata)
+          VALUES
+            ($1, 'directory.admin.profile.assign', 'deny', 'account_already_owns_profile', 'profile', $2,
+             jsonb_build_object('assignedUserId', $3::text, 'ownedProfileId', $4::text))
+        `,
+        [actorId, profileId, userId, owned.rows[0].id],
+      );
+
+      return 'account_has_profile';
     }
 
     await client.query(
@@ -2038,7 +2075,9 @@ export async function assignAdminProfile(
           p.headline,
           p.bio,
           p.profile_url,
-
+          p.source,
+          p.invited_by_username,
+          p.unclaimed_handle,
           p.sector_id,
           s.name AS sector_name,
           p.job_title_id,

@@ -29,7 +29,7 @@ export async function GET() {
   }
 
   try {
-    const announcements = await listAnnouncements(true);
+    const announcements = await listAnnouncements();
     return NextResponse.json({ items: announcements }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'feed', op: 'admin_announcements' });

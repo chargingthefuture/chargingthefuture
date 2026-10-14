@@ -12,15 +12,27 @@ import { queryDb } from 'lib/db/postgres';
 
 export type DirectoryInviteKind = 'skill-specific' | 'advocacy-only' | 'no-skill';
 
+// Where a listed skill sits in the taxonomy. An invite post states how thin that skill's sector is
+// ("4 of its 24 skills are held by anybody"), and a person's two skills can sit in two different
+// sectors, so the sector is read per skill rather than from the profile's single sector field.
+export type DirectoryInviteSkillPlace = {
+  skill: string;
+  jobTitle: string | null;
+  sector: string | null;
+};
+
 export type DirectoryInviteQueueRow = {
   profileId: string;
   name: string | null;
   quoraUrl: string;
   quoraHandle: string;
+  // The Directory profile address. The post prints it beside the listing's screenshot.
+  directoryUrl: string;
   location: string | null;
   sector: string | null;
   jobTitle: string | null;
   skills: string[];
+  skillPlaces: DirectoryInviteSkillPlace[];
   pendingSkills: string[];
   headline: string | null;
   bio: string | null;
@@ -37,6 +49,7 @@ type QueueDbRow = {
   sector: string | null;
   job_title: string | null;
   skills: string[] | null;
+  skill_places: DirectoryInviteSkillPlace[] | null;
   pending_skills: string[] | null;
   headline: string | null;
   bio: string | null;
@@ -47,14 +60,20 @@ type QueueDbRow = {
   pending_count: string;
 };
 
-// Handles that already have a dedicated invite post on the blog, plus the owner's own listing,
-// which is not an invitation to anybody. Lower case, no /profile/ prefix.
+// Handles that already have a dedicated invite post on the blog. Lower case, no /profile/ prefix.
 //
 // This list grows every time an invite post ships. The blog repository tracks the queue in
 // wiki-site/INVITE_QUEUE.md and its Published table is the companion to this array — change both
 // in the same piece of work or the person gets invited twice.
+//
+// The owner's own handle sat here from the start, on the reasoning that their listing is not an
+// invitation to anybody and that everybody already knows them. Both stopped being true: there is
+// something to invite people to now, and the community keeps admitting people who have never
+// heard of anybody. So the owner queues like everybody else, gets one invite post in the same
+// format, and joins this array when it ships. One post is all of the endorsement, and the
+// listing is displayed on the same footing as every other — same fields, same ordering, no
+// placement nobody else can have.
 export const DIRECTORY_INVITE_ALREADY_WRITTEN = [
-  'farah-brunache',
   'janie-spears-7',
   'j-h-b-7',
   'steph-wo-1',
@@ -65,7 +84,28 @@ export const DIRECTORY_INVITE_ALREADY_WRITTEN = [
   'tommy-gumbert',
   'alphelus-allen',
   'lorraine-valente',
+  'krissyy-2',
+  'jessica-goodwin-229',
+  'zack-tom-4',
+  'jerrod-fredrick',
+  'eli-paniagua-1',
+  'brecht-corbeel',
+  'matthew-a-davis-1',
+  'sherri-jenkins-12',
+  'wheeler-aaron',
+  'jane-doe-11966',
+  'julie-6645',
+  'holly-d-192',
+  'nikki-martindale-9',
+  'no-name-individual',
+  'indiko-1',
+  'marilyn-1921',
+  'bev-419',
+  'king-unique-4',
+  'tired-of-being-a-ti',
 ] as const;
+
+const DIRECTORY_PROFILE_BASE = 'https://app.chargingthefuture.com/apps/directory/profile/';
 
 // Advocacy is a placeholder skill. It was applied to people whose public writing showed only that
 // they speak up for Targeted Individuals, with no trade stated anywhere, so it stands in for a
@@ -109,10 +149,16 @@ export async function listDirectoryInviteQueue(): Promise<DirectoryInviteQueueRo
         SELECT
           ps.profile_id::text AS profile_id,
           array_agg(s.name ORDER BY ps.display_order, s.name) AS skills,
+          json_agg(
+            json_build_object('skill', s.name, 'jobTitle', sjt.name, 'sector', ssec.name)
+            ORDER BY ps.display_order, s.name
+          ) AS skill_places,
           count(*) AS skill_count,
           count(*) FILTER (WHERE s.name ILIKE $1) AS advocacy_count
         FROM directory_profile_skills ps
         JOIN skills_taxonomy_skills s ON s.id::text = ps.skill_id::text
+        LEFT JOIN skills_taxonomy_job_titles sjt ON sjt.id::text = s.job_title_id::text
+        LEFT JOIN skills_taxonomy_sectors ssec ON ssec.id::text = sjt.sector_id::text
         WHERE s.is_active
         GROUP BY ps.profile_id::text
       ),
@@ -122,6 +168,9 @@ export async function listDirectoryInviteQueue(): Promise<DirectoryInviteQueueRo
           array_agg(skill_label ORDER BY skill_label) AS pending_skills,
           count(*) AS pending_count
         FROM directory_profile_proposed_skills
+        -- Only labels still awaiting review: the taxonomy apply run marks a promoted label
+        -- status = 'promoted' and keeps the row, and every other reader filters on 'pending'.
+        WHERE status = 'pending' AND btrim(skill_label) <> ''
         GROUP BY profile_id::text
       )
       SELECT
@@ -132,6 +181,7 @@ export async function listDirectoryInviteQueue(): Promise<DirectoryInviteQueueRo
         sec.name AS sector,
         jt.name AS job_title,
         ls.skills,
+        ls.skill_places,
         pn.pending_skills,
         p.headline,
         p.bio,
@@ -164,10 +214,12 @@ export async function listDirectoryInviteQueue(): Promise<DirectoryInviteQueueRo
       name: row.name,
       quoraUrl: row.quora_url,
       quoraHandle: handleFromUrl(row.quora_url),
+      directoryUrl: `${DIRECTORY_PROFILE_BASE}${row.profile_id}`,
       location: row.location,
       sector: row.sector,
       jobTitle: row.job_title,
       skills: row.skills ?? [],
+      skillPlaces: row.skill_places ?? [],
       pendingSkills: row.pending_skills ?? [],
       headline: row.headline,
       bio: row.bio,

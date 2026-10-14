@@ -28,6 +28,9 @@ const ADMIN_AREAS: { href: string; name: string }[] = [
   // The Stream Video minute meter: how much of the month's live-audio allowance the Chyme rooms
   // have used, the band it puts the room under, and what the policy is pausing because of it.
   { href: '/admin/chyme', name: 'Chyme: Live Audio Usage' },
+  // Recorded blog readings played on the Chyme page while nobody is live, and the switch that turns
+  // them off. Temporary: removed once the room has people in it (owner decision, 2026-09-28).
+  { href: '/admin/chyme/readings', name: 'Chyme: Readings Loop' },
   { href: '/admin/click-log', name: 'ClickLog Trends' },
   { href: '/admin/contributions', name: 'Contributions' },
   // How many members traded with another member on a day, against the 384 target. Counts people
@@ -45,6 +48,10 @@ const ADMIN_AREAS: { href: string; name: string }[] = [
   // control to drop the chip. A non-promotion used to leave the chip on the profile for good, with
   // no way to clear it short of a statement against the database.
   { href: '/admin/directory/pending-skill-proposals', name: 'Directory: Pending Skill Proposals' },
+  // What Skills Economy costs to run each month: every provider, the monthly total, each line's
+  // share of it, and the cost per approved member. Entered by hand, since most providers do not
+  // report billing through an API.
+  { href: '/admin/expenses', name: 'Expenses' },
   // Moderating member-authored Commons posts and replies (hide / put back). Kept separate from the
   // announcements area below, which is an authoring tool for the owner's own announcements — this
   // one carries a different power, over someone else's words.
@@ -58,6 +65,9 @@ const ADMIN_AREAS: { href: string; name: string }[] = [
   { href: '/admin/comic/contributions', name: 'Contributed Writing' },
   // Curation of the assistant's grounding library: switch what the assistant can quote off/on.
   { href: '/admin/comic/knowledge', name: 'AI Knowledge Base' },
+  // Read-only: each @comic question about Unlock from a member not yet approved, and whether that
+  // member was approved afterward. What tells a working help path from one to rewrite.
+  { href: '/admin/comic/unlock-help', name: 'Unlock Help Log' },
   // Moderating the conversation under the blog posts: the blog-export queue, every comment, the
   // conversations themselves, and the audit trail.
   { href: '/admin/fireside', name: 'Fireside' },

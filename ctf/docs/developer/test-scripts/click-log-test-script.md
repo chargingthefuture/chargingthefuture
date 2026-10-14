@@ -17,7 +17,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-click-log-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-09-20 manual update: CL-A5 now runs in the installed iOS app, checks that the picture appears on the dashboard, that nothing ever navigates away from it, and that Share and press-and-hold are the only ways offered |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-09-20 manual update: CL-A5 now runs in the installed iOS app, checks that the picture appears on the dashboard, that nothing ever navigates away from it, and that Share and press-and-hold are the only ways offered · 2026-10-04 manual note: `CLICK_LOG_PROFILE_AND_DELETION_CONTRACT.md` written (suggestions, incidents and the preferences row deleted with the service or the account) — no test change |
 
 ## How to run this
 
@@ -56,6 +56,15 @@ member. Member role unless noted.
 **Expected:** The incident is created and appears at the top of the recent list. The interaction is
 logged (the new row is the member-visible result of that log). Notes and location are stored as
 optional metadata; logging still works when location is declined.
+**Result:** web ☐ mobile ☐ — notes:
+
+### CL-1b · Log two incidents with no note and no location
+**Role:** member · **Surfaces:** all
+**Steps:**
+1. Log an incident without writing a note and without adding a location.
+2. Log a second one the same way.
+**Expected:** Both incidents are created and both appear in the recent list; the headline total goes
+up by two. Neither attempt shows an error.
 **Result:** web ☐ mobile ☐ — notes:
 
 ### CL-2 · Count and history are real
@@ -168,8 +177,7 @@ pickers at all and explains that tags need a location and the location can't be 
 logging; only the note is editable. The scheme picker never offers "Not listed" unless the
 incident already carries it (keeping or removing it is allowed). The server enforces all of it:
 a tag on a location-less incident, or newly picking "Not listed", is rejected with a specific
-message, and an edit that duplicates another incident's exact note returns a readable
-"change the note slightly" error.
+message. Two incidents may carry the same note, so an edit never fails for matching another one.
 **Result:** web ☐ mobile ☐ — notes:
 
 ### CL-10 · Open the full problems / schemes list from the tag pickers

@@ -53,6 +53,11 @@
   margin: 4px 0 0;
 }
 
+.subtitleLink {
+  color: inherit;
+  text-decoration: underline;
+}
+
 .close {
   width: 32px;
   height: 32px;

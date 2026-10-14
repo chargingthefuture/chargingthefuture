@@ -43,6 +43,14 @@ the tests worth running slowly.
   so two conflicting URLs cannot reach one account by this route.
 - Step 6 → the writing is still kept and the receipt says verification did not start. Losing
   someone's writing over a malformed link would be the wrong trade.
+- If the Unlock submission cannot be opened at all (database unreachable at that moment), the
+  receipt says the writing was received but verification could not be started from here, and to
+  finish it on the Unlock screen. It never shows "Received" with no word about verification.
+- A fresh account that gives a Quora profile URL already on the Unlock spam denylist is blocked
+  app-wide, exactly as if it had used the Unlock screen, and the Unlock audit row reads
+  `deny` / `spam_denylisted` (added 2026-10-05).
+- If "What you have sent" cannot be loaded, a red line says so and that Withdraw is unavailable
+  until the page is reloaded, rather than the section disappearing silently.
 
 **Result:** web ☐
 
@@ -259,8 +267,10 @@ wrong, not Quora.
 **Steps:** Have two members contribute the exact same passage of text. Accept both.
 
 **Expected:** One `comic_knowledge_entries` row, not two — `content_hash` uses the same formula as the
-seed importer with ON CONFLICT DO NOTHING. Both contributions' entries point at that one row, so a
-withdrawal by either still reaches it.
+seed importer with ON CONFLICT DO NOTHING. Both contributions' entries point at that one row. The row
+belongs to the contribution that put it there first: withdrawing that one switches it off, and
+withdrawing the second leaves it on (changed 2026-10-05 — before, either withdrawal switched it off, so
+sending a copy of somebody else's entry and withdrawing it took their writing out of the library).
 
 **Result:** web ☐
 
@@ -308,7 +318,11 @@ rather than two copies to keep in step. The admin landing also lists **Contribut
 **Expected:**
 - Step 2: entries list newest-first with source, type, title/question, a content snippet, active state, and an "N of M entries active" summary; the pills filter and the counts follow.
 - Step 3: the toggle saves without a page reload (the row shows "off" and dims); the assistant's draft for that question no longer quotes the switched-off entry (retrieval skips inactive rows). The row is NOT deleted.
-- Step 4: the entry is active again and retrievable — off/on is reversible.
+- Step 4: the entry is active again and retrievable — off/on is reversible. The exception: an entry
+  from a contribution its member withdrew (CMC-C5) cannot be switched back on. The screen shows "This
+  entry came from a contribution its member withdrew, so it cannot be switched back on.", the entry
+  stays off, and the Audit log shows the attempt as **Refused**, "Because its member withdrew the
+  contribution."
 - Step 5: the page redirects the non-admin away, and the direct PUT is denied server-side (401/403); the PUT also requires the same-origin CSRF header.
 
 **Result:** web ☐
@@ -359,6 +373,47 @@ rather than two copies to keep in step. The admin landing also lists **Contribut
 **Result:** web ☐
 
 ---
+
+## CMC-U1 · Unlock questions are answered without review (added 2026-09-26)
+**Role:** member not yet approved; approved member; admin
+**Precondition:** the **Send without review** switch on `/admin/comic/unlock-help` is on (the default).
+**Steps:**
+1. As a member not yet approved, send in the Commons: `@comic I can't find my Quora profile URL`.
+2. Then send `@comic I'm on the Quora app, where is my profile link?`, then
+   `@comic my quora link was rejected`, then `@comic I can't log in to quora`.
+3. Then send `@comic how long does verification take?`.
+4. As admin, open `/admin/comic`.
+5. As an approved member, send `@comic where is my quora profile url?`, and any member send
+   `@comic what is the GDP tracker showing this week?`.
+6. As admin, turn the switch **off** on `/admin/comic/unlock-help`, then repeat step 1 as the
+   unapproved member. Turn it back on.
+**Expected:**
+- Steps 1–2 → each answer card appears within a second or two, with no wait on a person: browser
+  steps (plus the one-line app version), app steps, the wrong-link steps, and the can't-sign-in steps
+  pointing at the hint box. Each can be rated.
+- Step 3 → the pending card first, then a model answer once it is drafted (or the fixed fallback if
+  the model is down). It does not claim the assistant can approve anybody or promise a review time.
+- Step 4 → none of the step 1–3 questions is in the review queue.
+- Step 5 → both are ordinary questions, held for review as always, with no scripted draft.
+- Step 6 → with the switch off, the question waits in `/admin/comic` with the scripted draft already
+  attached, and the member sees the pending card until it is approved. The audit log on
+  `/admin/comic/knowledge` records the switch both ways.
+- A safety-flagged question from an unapproved member gets no draft of any kind (human-first).
+
+## CMC-A9 · Unlock help log (added 2026-09-26)
+**Role:** admin
+**Steps:**
+1. After CMC-U1, open `/admin` and tap **Unlock Help Log**.
+2. As the CMC-U1 member, rate one answer **Not helpful**; reload the log.
+3. Approve the CMC-U1 member in `/admin/unlock` and reload the log.
+4. Tap **Copy as text** and paste into a note.
+**Expected:** The switch shows at the top with its current state. One row per CMC-U1 question from the
+unapproved member (not step 5's), tagged `browser`, `quora_app`, `wrong_link`, `cannot_sign_in`,
+`model`, each marked "sent without review" except the one asked with the switch off. After step 2 that
+row says "rated not helpful" and the table's "Not helpful" column counts it. After step 3 every row
+for that member reads "approved the same day" and counts under "Approved after". The pasted text has
+the per-case lines and each question, answer, delivery and outcome. A non-admin opening the URL is sent
+to `/`.
 
 ## CMC-C5 · Withdrawal actually stops the assistant quoting you
 **Role:** signed-in member (plus an admin to promote an entry, once the review surface ships)

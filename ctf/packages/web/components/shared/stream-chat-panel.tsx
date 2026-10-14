@@ -40,6 +40,10 @@ const MESSAGE_ACTIONS_NO_EDIT: MessageActionsArray = [
   'reply',
 ];
 
+// Composer sizing for the channel and thread inputs: start at one line, grow with the text up to six,
+// then scroll inside the box. Stream ignores maxRows unless grow is set.
+const COMPOSER_GROW_PROPS = { grow: true, maxRows: 6 } as const;
+
 // The logged-in author's own messages are always gray; everyone else's use the plugin accent.
 const OWN_BUBBLE_BG = 'rgba(255, 255, 255, 0.07)';
 
@@ -392,13 +396,16 @@ const ConversationBody: React.FC<{
               {sendFailureNotice ? (
                 <div className="ctf-chat-send-error" role="alert">{sendFailureNotice}</div>
               ) : null}
-              <MessageInput />
+              {/* grow + maxRows: without grow, Stream pins the textarea to one row and long text
+                  scrolls sideways out of view. With it the box wraps and grows to six lines, then
+                  scrolls inside itself. The Thread composer below gets the same props. */}
+              <MessageInput {...COMPOSER_GROW_PROPS} />
             </>
           )}
         </Window>
         {toast}
       </div>
-      <Thread />
+      <Thread additionalMessageInputProps={COMPOSER_GROW_PROPS} />
     </>
   );
 };
@@ -542,7 +549,7 @@ export const StreamChatPanel: React.FC<StreamChatPanelProps> = ({
 
   return (
     <div
-      className={`str-chat__theme-dark${accentColor ? ' ctf-chat-accented' : ''}`}
+      className={`ctf-stream-chat str-chat__theme-dark${accentColor ? ' ctf-chat-accented' : ''}`}
       style={{ height: '100%', display: 'flex', flexDirection: 'column', ...themeVars }}
     >
       <Chat client={client} theme="str-chat__theme-dark">

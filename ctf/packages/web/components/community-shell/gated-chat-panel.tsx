@@ -12,6 +12,7 @@ import type { ShellCurrentUser } from './shell-types';
 import { ChatReactionRow } from './chat-reaction-row';
 import { useGatedChat, type GatedChatMessage } from './use-gated-chat';
 import styles from './community-shell.module.css';
+import { motionAwareBehavior, useChatScrollPosition } from './chat-scroll';
 
 // Gated contributor channel panel. Reuses the Commons chat design (same CSS module, same row and
 // reaction components) with the gated differences: the moderator-read disclosure in the header,
@@ -244,7 +245,6 @@ export function GatedChatPanel({ currentUser, isAdmin = false }: GatedChatPanelP
   } = useGatedChat(currentUser);
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   // Tapping a quoted-reply block jumps to the original message (same behavior as the Commons):
@@ -254,7 +254,7 @@ export function GatedChatPanel({ currentUser, isAdmin = false }: GatedChatPanelP
     const container = messagesContainerRef.current;
     const target = container?.querySelector<HTMLElement>(`[data-post-id="${postId}"]`);
     if (!target) return;
-    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    target.scrollIntoView({ behavior: motionAwareBehavior(), block: 'center' });
     target.classList.add(styles.chatBubbleFlash);
     window.setTimeout(() => target.classList.remove(styles.chatBubbleFlash), 1600);
   }, []);
@@ -267,9 +267,14 @@ export function GatedChatPanel({ currentUser, isAdmin = false }: GatedChatPanelP
     el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
   }, [input]);
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  }, [messages.length]);
+  // Open at the latest message with no animation, then follow new ones only while the member is at
+  // the bottom or has just posted (same behavior as the Commons).
+  useChatScrollPosition({
+    containerRef: messagesContainerRef,
+    entryCount: messages.length,
+    isReady: !isLoading,
+    lastEntryIsOwn: messages[messages.length - 1]?.from === 'user',
+  });
 
   const typingLabel = useMemo<string | null>(() => {
     if (typingUsers.length === 0) return null;
@@ -315,7 +320,6 @@ export function GatedChatPanel({ currentUser, isAdmin = false }: GatedChatPanelP
             onJumpToQuoted={jumpToQuotedPost}
           />
         ))}
-        <div ref={messagesEndRef} />
       </div>
 
       {replyTarget ? (

@@ -177,3 +177,112 @@ contracts:
     purpose: value_transfer
     retentionClass: transactional_long_lived
     idempotency: true
+
+  - pluginId: socket-relay
+    command: socket-relay.request.image.put
+    version: 1.0.0
+    description: >-
+      Owner (or admin) uploads or replaces the one picture on a relay request
+      (PUT /api/socket-relay/requests/:id/image, multipart). PNG, JPEG or WebP, checked from
+      the file's own first bytes, at most 3 MB after the browser scales it to 1600 pixels on
+      its long side. A description (alt text, up to 300 chars) is required. The form shows the
+      rule that an inappropriate picture is an automatic ban with no exceptions, and the member
+      ticks it before the file picker opens; the route refuses an upload without
+      acknowledged=1 and stores rules_acknowledged_at on every picture.
+    inputSchema:
+      requestId:
+        type: string
+        required: true
+      image:
+        type: file
+        required: true
+      alt:
+        type: string
+        required: true
+      width:
+        type: integer
+        required: true
+      height:
+        type: integer
+        required: true
+      acknowledged:
+        type: string
+        required: true
+    outputSchema:
+      image:
+        type: object
+    dataAccess:
+      - socket_relay_requests
+      - socket_relay_request_images
+    purpose: request_lifecycle
+    retentionClass: transactional_long_lived
+    idempotency: true
+
+  - pluginId: socket-relay
+    command: socket-relay.request.image.get
+    version: 1.0.0
+    description: >-
+      Serve a request's picture bytes (GET /api/socket-relay/requests/:id/image) to any member
+      past the SocketRelay read gate, the same members who can open the request. nosniff, private
+      cache only.
+    inputSchema:
+      requestId:
+        type: string
+        required: true
+    outputSchema:
+      bytes:
+        type: binary
+    dataAccess:
+      - socket_relay_request_images
+    purpose: request_lifecycle
+    retentionClass: transactional_long_lived
+    idempotency: true
+
+  - pluginId: socket-relay
+    command: socket-relay.request.image.delete
+    version: 1.0.0
+    description: >-
+      Owner (or admin) removes a request's picture (DELETE /api/socket-relay/requests/:id/image).
+      The request stays up.
+    inputSchema:
+      requestId:
+        type: string
+        required: true
+    outputSchema:
+      ok:
+        type: boolean
+    dataAccess:
+      - socket_relay_requests
+      - socket_relay_request_images
+    purpose: request_lifecycle
+    retentionClass: transactional_long_lived
+    idempotency: true
+
+  - pluginId: socket-relay
+    command: socket-relay.admin.image.delete
+    version: 1.0.0
+    description: >-
+      Admin removes a request's picture (DELETE /api/socket-relay/admin/requests/:id/image).
+      With ban=1 it also restricts the member who uploaded it at scope `all`: an inappropriate
+      picture is an automatic ban with no exceptions. Audited as
+      socket-relay.admin.image.delete or socket-relay.admin.image.delete_and_ban, with the
+      uploader's id in metadata; the restriction also writes account_restrictions_audit.
+    inputSchema:
+      requestId:
+        type: string
+        required: true
+      ban:
+        type: boolean
+        required: false
+    outputSchema:
+      banned:
+        type: boolean
+    dataAccess:
+      - socket_relay_requests
+      - socket_relay_request_images
+      - socket_relay_admin_audit_trail
+      - account_restrictions
+      - account_restrictions_audit
+    purpose: moderation
+    retentionClass: compliance_long_lived
+    idempotency: false

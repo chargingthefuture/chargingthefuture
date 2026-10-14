@@ -1,12 +1,13 @@
 'use client';
 
-import { useMemo, type RefObject } from 'react';
+import { useMemo, type ReactNode, type RefObject } from 'react';
 import dynamic from 'next/dynamic';
 import { Lock, MessageSquare } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { getChymeTokens, chymeHandle, type CurrentUser } from './chyme-shared';
 import { ChymeStage } from './chyme-stage';
 import { ChymeChatPanel } from './chyme-chat-panel';
+import { ChymeReadingsPlayer } from '@/components/chyme/readings/chyme-readings-player';
 import type { ChymeJoinResponse, ChymeMessage, ChymeRoomResponse } from 'lib/chyme/types';
 import type { ChymeConnectionState } from './chyme-audio-room';
 import type { ChymeModerationContext } from './chyme-moderation';
@@ -60,6 +61,24 @@ function ChymeQuotaNotice({ notice, band }: { notice: string | null; band: Chyme
       }}
     >
       {notice}
+    </div>
+  );
+}
+
+// The room before the member joins the call: the stage, and the readings loop while it is switched
+// on and the main room is idle (temporary module, 2026-09-28). The main room opens by itself, so this
+// is where members land; joining the call unmounts it, which stops the sound.
+function ChymeIdleStage({ room, currentUserId, roomScope, children }: { room: ChymeRoomResponse; currentUserId: string; roomScope: ChymeRoomViewProps['roomScope']; children: ReactNode }) {
+  const showReadings = roomScope === 'main' && !room.callActive;
+  return (
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+      {showReadings ? (
+        <div style={{ padding: '0 24px' }}>
+          <ChymeReadingsPlayer />
+        </div>
+      ) : null}
+      <ChymeStage room={room} currentUserId={currentUserId} />
+      {children}
     </div>
   );
 }
@@ -154,10 +173,9 @@ export function ChymeRoomView(props: ChymeRoomViewProps) {
           moderation={moderation}
         />
       ) : (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-          <ChymeStage room={room} currentUserId={currentUser.userId} />
+        <ChymeIdleStage room={room} currentUserId={currentUser.userId} roomScope={props.roomScope}>
           {showChat && chatPanel}
-        </div>
+        </ChymeIdleStage>
       )}
     </>
   );

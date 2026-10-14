@@ -5,6 +5,7 @@ import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
 import { useTheme } from '@/hooks/useTheme';
 import { getClickLogTokens } from './click-log-shared';
+import { PublicShellWorldwide } from '@/components/plugins/public-shell-worldwide';
 
 // Palette from the ClickLogPublic / MobileClickLogPublic design mockups, now sourced from the
 // theme-aware ClickLog tokens (default theme keeps the shipped hex values).
@@ -61,6 +62,7 @@ function MobileClickLogPublic({ signInUrl, verifyUrl }: { signInUrl: string; ver
             Sign in to start logging personal safety incidents — one tap, private.
           </div>
         </div>
+        <PublicShellWorldwide color={t.MUTED} style={{ justifyContent: 'center' }} />
 
         <a href={verifyUrl ?? signInUrl} style={{ width: '100%', padding: '14px', borderRadius: 12, background: t.ACCENT, border: 'none', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxSizing: 'border-box', textDecoration: 'none' }}>
           {verifyUrl ? 'Finish verifying' : <><UserPlus size={15} /> Create free account</>}

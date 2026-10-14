@@ -7,6 +7,7 @@ import { FEED_MAX_COMMUNITY_REPLY_LENGTH } from '../../lib/feed/constants';
 import type { ChatReactionSummary } from './shell-types';
 import { ChatReactionRow } from './chat-reaction-row';
 import styles from './community-shell.module.css';
+import { useCommonsUnlockFocus } from './commons-unlock-focus';
 import { NoticeParagraphs } from './notice-paragraphs';
 import { useAnnouncementReplies, type AnnouncementRepliesState } from './use-announcement-replies';
 
@@ -51,7 +52,9 @@ function formatReplyLabel(count: number): string {
 // The clickable "Open <Plugin>" chips below the body. Nothing to show when the announcement links to
 // no plugins.
 function AnnouncementLinkedPlugins({ linkedPlugins }: { linkedPlugins?: Array<{ slug: string; name: string }> }) {
-  if (!linkedPlugins || linkedPlugins.length === 0) return null;
+  // Hidden from a member not yet approved: every plugin is closed to them, so each chip leads to a wall.
+  const unlockFocus = useCommonsUnlockFocus();
+  if (unlockFocus || !linkedPlugins || linkedPlugins.length === 0) return null;
   return (
     <div className={styles.announcementChipRow}>
       {linkedPlugins.map((plugin) => (

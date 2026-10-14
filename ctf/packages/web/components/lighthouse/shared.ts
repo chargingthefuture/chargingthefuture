@@ -165,7 +165,7 @@ export interface RentParts {
   perMonth: boolean;
 }
 
-export function formatRentParts(property: Property, currencies: CurrencyMap): RentParts | null {
+export function formatRentParts(property: Pick<Property, "monthlyRent" | "rentCurrency">, currencies: CurrencyMap): RentParts | null {
   const amount = property.monthlyRent;
   if (!Number.isFinite(amount)) return null;
   if (amount === 0) return { primary: "Free", unit: null, perMonth: false };

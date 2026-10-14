@@ -1,0 +1,208 @@
+# Quora live census access policy.
+#
+# One posture for all seven commands: admin only, read and write alike. The gate is
+# `requireCensusAdminAccess` in `ctf/packages/web/app/api/quora-live-census/_lib.ts`, which calls
+# `evaluatePluginAccess({ requiredRoles: ['admin'] })` and writes a deny row to
+# `quora_live_census_audit_log` on every refusal, whichever endpoint was hit.
+#
+# The rows describe public Quora accounts belonging to people outside this app, who never asked to
+# be cataloged. That is why there is no member tier and no public read: the only thing that ever
+# reaches anybody else is a count an admin writes by hand into a post.
+#
+# Consent: none is collected and none can be, because the subjects are not users of this app. The
+# basis is the operator's own research record, and the controls that stand in for consent are the
+# ones listed here — admin only, every read and export logged, no publication by any code path,
+# and no coding of how the person behind an account seems to be doing (owner decision, 2026-08-19).
+policies:
+  - pluginId: quora-live-census
+    command: quora-live-census.run.list
+    version: 1.0.0
+    requiredRoles: [admin]
+    minUnlockTier: approved_full
+    requiresAuthentication: true
+    attributePolicies:
+      tenancy: operator_only
+      approvalGate: admin_role
+      csrfSameOriginRequired: false
+      resultLimit: 200
+    consentRequirements:
+      scopes: []
+      fallbackLawfulBasis: operator_research_record
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - not_admin
+    notes: >-
+      Read only. Returns run metadata and two counts per run; no handles. A refused request is
+      logged with command `census.runs.list`.
+  - pluginId: quora-live-census
+    command: quora-live-census.run.create
+    version: 1.0.0
+    requiredRoles: [admin]
+    minUnlockTier: approved_full
+    requiresAuthentication: true
+    attributePolicies:
+      tenancy: operator_only
+      approvalGate: admin_role
+      csrfSameOriginRequired: true
+      requiredFields: [observedOn, frameKind, topicScope, samplingMethod]
+    consentRequirements:
+      scopes: []
+      fallbackLawfulBasis: operator_research_record
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - not_admin
+      - csrf_header_missing_or_cross_origin
+      - invalid_payload
+    notes: >-
+      The calling admin's id is stamped on the run as `created_by_user_id`. That is provenance for
+      the observation, not member data, and it is retained on account deletion.
+  - pluginId: quora-live-census
+    command: quora-live-census.run.read
+    version: 1.0.0
+    requiredRoles: [admin]
+    minUnlockTier: approved_full
+    requiresAuthentication: true
+    attributePolicies:
+      tenancy: operator_only
+      approvalGate: admin_role
+      csrfSameOriginRequired: false
+      auditEveryRead: true
+    consentRequirements:
+      scopes: []
+      fallbackLawfulBasis: operator_research_record
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - not_admin
+      - run_not_found
+    notes: >-
+      Returns every handle in the run, so each successful read writes an audit row naming the admin,
+      the run and the number of entries returned.
+  - pluginId: quora-live-census
+    command: quora-live-census.run.update
+    version: 1.0.0
+    requiredRoles: [admin]
+    minUnlockTier: approved_full
+    requiresAuthentication: true
+    attributePolicies:
+      tenancy: operator_only
+      approvalGate: admin_role
+      csrfSameOriginRequired: true
+      allowedStatusValues: [open, closed]
+    consentRequirements:
+      scopes: []
+      fallbackLawfulBasis: operator_research_record
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - not_admin
+      - csrf_header_missing_or_cross_origin
+      - invalid_status
+      - run_not_found
+    notes: Changes only the status column. Closing is what makes a run quotable; reopening is how a closed run is corrected.
+  - pluginId: quora-live-census
+    command: quora-live-census.run.export
+    version: 1.0.0
+    requiredRoles: [admin]
+    minUnlockTier: approved_full
+    requiresAuthentication: true
+    attributePolicies:
+      tenancy: operator_only
+      approvalGate: admin_role
+      csrfSameOriginRequired: false
+      auditBeforeResponse: true
+      cacheControl: no-store
+    consentRequirements:
+      scopes: []
+      fallbackLawfulBasis: operator_research_record
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - not_admin
+      - run_not_found
+    notes: >-
+      The moment a file naming third parties leaves the app. The audit row is written before the
+      CSV is returned, with the admin's id, the run, the row count, and the run's date, frame kind
+      and status. Nothing in the file is published by the app; what an admin does with it is a
+      decision made outside this tool.
+  - pluginId: quora-live-census
+    command: quora-live-census.entry.create
+    version: 1.0.0
+    requiredRoles: [admin]
+    minUnlockTier: approved_full
+    requiresAuthentication: true
+    attributePolicies:
+      tenancy: operator_only
+      approvalGate: admin_role
+      csrfSameOriginRequired: true
+      runMustBeOpen: true
+      uniqueHandlePerRun: true
+      stanceVocabulary: what_the_account_does_only
+    consentRequirements:
+      scopes: []
+      fallbackLawfulBasis: operator_research_record
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - not_admin
+      - csrf_header_missing_or_cross_origin
+      - invalid_payload
+      - run_not_found
+      - run_closed
+      - duplicate_handle
+    notes: >-
+      The stance list is limited to what an account does (practical help, organizing, personal
+      account, unclear, unrelated). Values that judged how the person seemed to be doing were removed
+      on 2026-08-19 and must not come back: they were a verdict on an identifiable person who was
+      never asked, stored against their handle and exportable.
+  - pluginId: quora-live-census
+    command: quora-live-census.entry.delete
+    version: 1.0.0
+    requiredRoles: [admin]
+    minUnlockTier: approved_full
+    requiresAuthentication: true
+    attributePolicies:
+      tenancy: operator_only
+      approvalGate: admin_role
+      csrfSameOriginRequired: true
+      scopedToRun: true
+    consentRequirements:
+      scopes: []
+      fallbackLawfulBasis: operator_research_record
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - not_admin
+      - csrf_header_missing_or_cross_origin
+      - entry_not_found_in_run
+    notes: The delete is matched on entry id and run id together, so an id from another run removes nothing.

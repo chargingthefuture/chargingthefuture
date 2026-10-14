@@ -176,9 +176,19 @@ requires the same-origin CSRF header (`x-ctf-csrf: 1`) and writes an audit row.
 
 ## Web and Android Delivery Status
 
-Delivery: **web + mobile-responsive complete**. **Android (React Native) surface removed 2026-07-20 (rule 105, PR #1742)** — this feature is now web-only, served by the installable web app (PWA). Web hub at
-`/apps/recurring-activity`. Historical detail: a former Android feature lived at
-`packages/mobile/src/features/recurring-activity` (now removed). The web surface enforces the no-amount-for-fiat rule.
+Delivery: **web + mobile-responsive + Android complete**. The Android surface was removed 2026-07-20
+(rule 105, PR #1742) and rebuilt 2026-10-08 as a copy of the web page, because the web account hub
+links to it and the Android account hub now carries every hub section (owner decision, 2026-10-08).
+Web hub at `/apps/recurring-activity`; Android at `packages/mobile/src/features/recurring-activity`
+(feature key `recurring-activity` in `src/navigation/screens.ts`). It opens from Your account's "Your
+ongoing activities" row and from Foundation's "See your ongoing arrangements", and back returns to
+whichever opened it (`src/navigation/useAppNavigation.ts`). This is the only Android copy of the page. It calls the same routes (`GET/POST /api/recurring-activity`,
+`POST /api/recurring-activity/[activityId]/{confirm,decline,end,visibility}`, `GET /api/currencies`,
+`GET /api/directory/list?q=`). A member who has not finished Unlock gets the web's "Finish verifying"
+view, which opens the app's Unlock screen. Differences: the form's choices open in a list over the
+screen (React Native has no select element), and the faded mark on the "Finish verifying" view is not
+blurred (React Native cannot blur a view without an extra native module). Parity contract:
+`mobileFeatureDirs: ["recurring-activity"]`. Both surfaces enforce the no-amount-for-fiat rule.
 
 A signed-out visitor (or a signed-in member not verified yet) now sees the marketing landing shell
 (`recurring-activity-public-shell.tsx`) at `/apps/recurring-activity` instead of being redirected to
@@ -221,6 +231,17 @@ flow, the Trust signal, and both GDP recognition branches. RACT's contribution w
 
 ## Change Log
 
+- 2026-10-08: **Recurring Activity is back on Android, copied from the web page.** Owner decision: the Android account hub carries every section of the web one, and the web hub links here. The new screen has the web's header, intro, refresh button, the "Acknowledge an ongoing activity" form with the member search, the list with Confirm, Decline, End activity and "Visible to", the empty and error states, and the "Finish verifying" view for a member who has not finished Unlock. It calls the existing routes only. No API, schema or contract change; the parity contract entry now lists the Android directory.
+- 2026-10-08: The Foundation port had made a second Android copy of this page (`features/foundation/recurring/`), opened from Foundation's "See your ongoing arrangements". It was removed when the branches were combined: the account copy is closer to the web page (it has the "Finish verifying" view and the web header), and Foundation's link now opens it, with back returning to Foundation.
+- 2026-10-05: **Confirm, decline, end and visibility work again.** The four
+  `POST /api/recurring-activity/[activityId]/*` routes read the path value synchronously, but this
+  Next.js version hands route handlers their params as a Promise, so `activityId` was always
+  `undefined`. Every call found no row and answered 404 `Activity not found.` with a deny audit row
+  whose `activity_id` was null, so no activity could leave `pending`, none could be ended, and no
+  visibility change was saved. The routes now await `context.params`. A value that is not a UUID is
+  answered with the same 404 before the database is touched (`isRecurringActivityId` in
+  `lib/recurring-activity/_lib.ts`), where before it would have made Postgres throw and the route
+  answer 503. Who may call each route is unchanged.
 - 2026-08-03 (third pass): **Closed the last two inventory gaps.** (1) **Cadence normalization**
   (Gaps #2): a declared ServiceCredits value is now scaled to a monthly figure by the line's cadence
   before it is counted — weekly 52/12, biweekly 26/12, monthly 1, quarterly 1/3 — in the live

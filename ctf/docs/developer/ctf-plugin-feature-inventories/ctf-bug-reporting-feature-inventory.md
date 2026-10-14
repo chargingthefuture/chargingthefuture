@@ -31,6 +31,10 @@ and does no external calls.
 - One short form: what went wrong (required), what you were trying to do (optional). Page and
   plugin are attached automatically; the browser is read server-side. (No app-version constant
   exists in the app yet, so `appVersion` is not sent.)
+- Under the intro line, above the first text box: "Not a bug? To talk to Farah about your
+  work." — "talk to Farah about your work" opens One Percent (https://farahbrunache.com), the paid tier, in a new
+  tab (web) or the device browser (android). It is a pointer only: the form, its fields and the
+  submit button work exactly as before, and the link carries no tracking.
 - Immediate, private storage of the report with a calm confirmation. No technical detail is
   ever asked of the user.
 
@@ -96,6 +100,14 @@ Library modules: `lib/bug-reports/constants.ts`, `lib/bug-reports/sanitize.ts`,
 
 ## Security, Privacy, and Compliance Controls
 
+Contracts (written from the code on 2026-10-04; where a contract and this inventory differ, the
+contract follows the code):
+
+- Commands: `ctf/docs/contracts/BUG_REPORTING_PLUGIN_COMMAND_CONTRACTS.yaml`
+- Access policy: `ctf/docs/contracts/BUG_REPORTING_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml`
+- Audit events: `ctf/docs/contracts/BUG_REPORTING_PLUGIN_AUDIT_CONTRACTS.yaml`
+- Profile, deletion and export: `ctf/docs/contracts/BUG_REPORTING_PROFILE_AND_DELETION_CONTRACT.md`
+
 - **Raw text never leaves the database.** Only redacted text is published, and only into a
   private repo.
 - **Fail closed.** Anything the gate flags becomes `held_for_review` and is never
@@ -139,13 +151,15 @@ Library modules: `lib/bug-reports/constants.ts`, `lib/bug-reports/sanitize.ts`,
 - **mobile-responsive:** complete — the same web modal renders as a bottom sheet at phone width
   and the Help control sits on the top bar.
 - **android:** complete — `packages/mobile/src/features/bug-reporting/` (`BugReportModal.tsx`,
-  `ReportAProblemEntry.tsx`, `api.ts`) mirrors the web surface one-to-one with the same five states
-  and the same endpoint + CSRF wiring.
+  `api.ts`) mirrors the web surface one-to-one with the same five states and the same endpoint +
+  CSRF wiring. As on the web, the modal opens from the bug icon in the top bar and in every screen
+  header (`packages/mobile/src/components/shell/ShellChrome.tsx`); the old "Report a problem" tab
+  and its `ReportAProblemEntry.tsx` row were removed when the app's frame was matched to the web.
 
 The plugin is registered as `bug-reporting` (`implemented_shell`, hidden) — it stays hidden
 because it is a Help-menu modal, not a grid tile. Its `ctf/config/plugin-parity-contracts.json`
 entry declares `mobileFeatureDirs: ["bug-reporting"]` with `requiresMobileSurface: false`
-(the mobile entry is a help/settings row, not a required full plugin surface).
+(the mobile entry is a header control, not a required full plugin surface).
 
 ## Seed Coverage Status
 
@@ -167,6 +181,32 @@ No seed script. Reports are user-generated at runtime; there is no fixture data 
 
 ## Change Log
 
+- 2026-10-08: **Android opens the report from the header.** The Android app's frame now matches the
+  web (top bar on the Apps home, back-chevron header on every screen), and the bug icon in both opens
+  the report modal, as the web header does. The separate "Report a problem" tab and its
+  `ReportAProblemEntry.tsx` row are gone.
+- 2026-10-04: **Contract coverage is enforced.** CI job `contract-coverage-gate`
+  (`ctf/scripts/check-contract-coverage.mjs`) now fails on any API surface missing one of the four
+  contract files without a recorded reason, so this plugin cannot drift back to having none.
+- 2026-10-04: **Contracts written for this plugin.** The command, access policy, audit and
+  profile-and-deletion contracts did not exist; all four are now in `ctf/docs/contracts/`
+  (`BUG_REPORTING_*`), written from the current code, and linked from the Security section above.
+  The code-review sweep now maps the `bug-reports` slice to these files
+  (`ctf/config/code-review-slice-manifest.json`), and the profile-and-deletion index lists them.
+  Docs only: no code, schema or behavior changed.
+- 2026-10-04: **The One Percent line drops the price.** Owner directive: the line now reads "Not
+  a bug? To talk to Farah about your work.", and the link moves from "here" to "talk to Farah
+  about your work", on web and android. Same address, styling and behavior. Test script BUG-1
+  updated.
+- 2026-10-04: **A line above the form points people who aren't reporting a bug to One Percent.**
+  Owner report: members use the form to reach the owner about their own work, because it's the
+  only channel that feels like a direct message. A second line under the intro, on web
+  (`bug-report-form.tsx`) and android (`BugReportModal.tsx`), reads "Not a bug? To talk to Farah
+  about your work, it's $7 here.", with "here" linking to https://farahbrunache.com (web reuses
+  `ONE_PERCENT_PAID_TIER_URL`). Same type and color as the intro line. Nothing is blocked or
+  redirected; fields, submit, routes, schema and contracts are unchanged. No click counting or
+  third-party service: the owner reads the effect from bug reports and One Percent's own records.
+  Test script BUG-1 extended to assert the line and the link.
 - 2026-08-28: **Resolving a held report is recorded, and the record is readable.** Owner directive: every admin action is recorded, on every surface, from the day the surface ships. This plugin was the one surface with **no audit machinery at all** — no table, no helper, not even a `console.info` line — so `POST /api/bug-reports/admin/:id/resolve` decided a member's report and left nothing behind. That decision is not a small one: `release` sends the redacted report on to the private triage repo, `reject` drops it so it never goes anywhere, and the member who filed it is never told which happened. New table `bug_report_admin_audit_trail` and a new `lib/bug-reports/audit.ts` written durable-first — there was no console-only predecessor to stay compatible with, so the row is the record and the log line rides along for debugging. Every outcome is recorded: the resolve with its action and resulting status, the 409 when the report was already resolved or absent, and a persistence failure. It never throws, so a failed audit write cannot turn a completed resolve into a 503 and have an admin repeat a reject they had already made. **The trail records the decision, not the report**: no message, no context, no reporter id — the body is redacted before it leaves this app and the trail must not be the one place it sits in the clear. Stated at the type in `audit.ts`, in the schema comment, in the security controls above, and in BUG-A5, because a later reader will find "which member reported this" tempting to add. New `GET /api/bug-reports/admin/audit-events` and an **Audit log** panel at the bottom of `/admin/bug-reports`, reading the most recent 200 in plain words ("Sent it on to triage", "Dropped it", "Refused · Because it had already been resolved, or was not there"). Verified against a scratch Postgres running the shipped `schema.sql` verbatim: the table and its index are created, the migration re-runs clean, and the shipped INSERT and SELECT round-trip a release, a reject, and a resolve refused as a conflict — with no column able to hold report text. This was the last surface on the admin-audit-coverage burn-down list that needed machinery built.
 - 2026-08-18: **Reports now announce themselves, and reach triage within half an hour (owner
   report).** Five reports had been sitting on `/admin/bug-reports` for days, the oldest from a month

@@ -6,6 +6,7 @@ import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link
 import { PLATFORM_EARN_METHODS, PEER_TO_PEER_AREAS } from './service-credits.constants';
 import { useTheme } from '@/hooks/useTheme';
 import { getServiceCreditsTokens } from './sc-shared';
+import { PublicShellWorldwide } from '@/components/plugins/public-shell-worldwide';
 
 // Palette from the ServiceCreditsPublic / MobileServiceCreditsPublic design mockups.
 // Chrome colors come from getServiceCreditsTokens; the earn green stays a raw status swatch.
@@ -38,6 +39,7 @@ function MobileServiceCreditsPublic({ signInUrl, verifyUrl }: { signInUrl: strin
           Earn credits by participating.<br /><span style={{ color: t.ACCENT }}>Spend them on real services.</span>
         </h2>
         <p style={{ margin: 0, fontSize: 14, color: t.SUBTLE, lineHeight: 1.5 }}>A few rewards come from the platform — the rest you earn by trading with other members. Use credits across housing, transport, services, and more.</p>
+        <PublicShellWorldwide color={t.MUTED} />
 
         <div style={{ borderRadius: 14, border: `1px solid ${t.BORDER_STRONG}`, padding: '16px', background: 'rgba(255,255,255,0.02)' }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: EARN_GREEN, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>Ways to Earn</div>

@@ -8,7 +8,8 @@ The reader itself is a separate service — FreshRSS, on its own address at
 rss.chargingthefuture.com, on a server this project pays for. It has its own database, its own
 accounts and its own admin screens, and this repository holds none of them. Signing in there goes
 through the same auth provider this app uses, so a member needs no second password and a ban at the
-provider closes both at once.
+provider closes the reader too, within the reader's sign-in length (seven days; see
+`ctf/docs/developer/FRESHRSS.md`).
 
 What lives here is the page a member reaches from the apps list: what the reader is, what it cannot
 do, what a place on it costs, and a link to it. Nothing about their reading — what they subscribe
@@ -26,8 +27,9 @@ already have.
 - A tile in the apps list called Reader, opening a page that explains the reader in plain words.
 - An "Open the reader" button that goes to rss.chargingthefuture.com in a new tab, with a line
   underneath naming the address it opens and saying the sign-in is this same account.
-- A statement of what a new reader account starts with: this blog and the owner's demo-video
-  channel, and nothing else added for you (the channel joined the default list 2026-09-23).
+- A statement of what a new reader account starts with: this blog, the owner's demo-video
+  channel and the recorded broadcasts, and nothing else added for you (the channel joined the
+  default list 2026-09-23, the recorded broadcasts 2026-09-29).
 - A statement of what the reader cannot do: it collects only from the day a feed is added, and it
   never notifies anybody.
 - A statement of what a place on the reader costs, and that losing one is not a ban: the account in
@@ -61,7 +63,8 @@ list. No tables of its own, no columns added to anything, and nothing written at
   stored here. An account on the reader is separate and is closed on the reader.
 - The link carries `rel="noopener noreferrer"`, so the opened page gets no handle on this one.
 - A ban at the auth provider (see the Unlock inventory) closes the reader too, because the reader
-  asks the same provider.
+  asks the same provider. It reaches somebody already signed in to the reader when their sign-in
+  there ends, at most seven days later; the settings are in `ctf/ops/freshrss/sign-in.env`.
 
 ## Web and Android Delivery Status
 
@@ -99,9 +102,21 @@ somebody reads is not evidence anybody should be publishing.
 
 ## Change Log
 
+- 2026-10-03 — The "What you get" card named two default feeds after the recorded broadcasts
+  became the third on 2026-09-29 (owner report). The card, the user guide step and the test
+  script now name all three. The cards also sat almost touching: the page column is a direct
+  child of the app viewport, whose fallback rule forces it to `display: block` and so drops its
+  14px gap. The column now carries `ctf-self-responsive`, so the gap applies again. The gap between items is now 16px, and the
+  line under the button sits 8px below it, grouped with the button rather than spaced like a card.
 - 2026-09-23 — Created. The reader went live at rss.chargingthefuture.com earlier the same day;
   this adds the tile and the page that explains it, so the apps list carries it rather than members
   finding the address in a blog post. The page exists at all because the apps list has no way to
   hold an external address — every tile links to `/apps/<slug>` — and because a tile that dropped
   somebody onto another domain and a sign-in prompt would tell them nothing about what it is or
   what a place on it costs.
+- 2026-09-26 — The reader asked for a sign-in on nearly every reload (owner report). Its sign-in ran
+  on the image's defaults: forgotten after 5 minutes idle, dropped when the phone closed the
+  browser, and wiped by every restart. The reader now keeps a sign-in for seven days in an
+  encrypted cookie on the device, and the provider's consent screen for the reader is turned off.
+  Applied by the workflow `FreshRSS — Set how long a reader sign-in lasts` from
+  `ctf/ops/freshrss/sign-in.env`. Nothing in this app's tile or page changed.

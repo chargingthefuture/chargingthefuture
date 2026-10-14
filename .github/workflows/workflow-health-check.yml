@@ -214,7 +214,7 @@ jobs:
                 if (reason) {
                   blocked.push({ ...entry, reason });
                 } else {
-                  // Only for real failures — a paused run's reason is already the whole story.
+                  // Only for real failures — a paused run's reason already says everything.
                   entry.detail = latest.conclusion === 'failure' ? await failureDetailFor(latest.id) : null;
                   failing.push(entry);
                 }

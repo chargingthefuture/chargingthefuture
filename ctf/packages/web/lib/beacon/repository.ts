@@ -21,6 +21,8 @@ export type BeaconEvent = {
   recordingReadyAtIso: string | null;
   commonsLivePostId: string | null;
   commonsRecordingPostId: string | null;
+  archivedRecordingUrl: string | null;
+  recordingArchivedAtIso: string | null;
   createdAtIso: string;
   updatedAtIso: string;
 };
@@ -39,6 +41,8 @@ type BeaconEventRow = {
   recording_ready_at: Date | null;
   commons_live_post_id: string | null;
   commons_recording_post_id: string | null;
+  archived_recording_url: string | null;
+  recording_archived_at: Date | null;
   created_at: Date;
   updated_at: Date;
 };
@@ -62,6 +66,8 @@ function mapEventRow(row: BeaconEventRow): BeaconEvent {
     recordingReadyAtIso: toIso(row.recording_ready_at),
     commonsLivePostId: row.commons_live_post_id,
     commonsRecordingPostId: row.commons_recording_post_id,
+    archivedRecordingUrl: row.archived_recording_url,
+    recordingArchivedAtIso: toIso(row.recording_archived_at),
     createdAtIso: new Date(row.created_at).toISOString(),
     updatedAtIso: new Date(row.updated_at).toISOString(),
   };
@@ -69,7 +75,7 @@ function mapEventRow(row: BeaconEventRow): BeaconEvent {
 
 const EVENT_COLUMNS = `id, title, description, status, host_user_id, stream_call_type, stream_call_id,
   started_at, ended_at, recording_url, recording_ready_at, commons_live_post_id,
-  commons_recording_post_id, created_at, updated_at`;
+  commons_recording_post_id, archived_recording_url, recording_archived_at, created_at, updated_at`;
 
 export async function createBeaconEvent(input: {
   hostUserId: string;
@@ -112,6 +118,55 @@ export async function getLatestReplayBeaconEvent(): Promise<BeaconEvent | null> 
      ORDER BY ended_at DESC NULLS LAST LIMIT 1`,
   );
   return result.rows[0] ? mapEventRow(result.rows[0]) : null;
+}
+
+// Every ended event with a recording, newest first: the public replay list the blog's streams page
+// and the podcast feed read. Paged by offset so the list can grow without one request carrying it all.
+export async function listBeaconReplays(limit: number, offset: number): Promise<BeaconEvent[]> {
+  const result = await queryDb<BeaconEventRow>(
+    `SELECT ${EVENT_COLUMNS} FROM beacon_events
+     WHERE status = 'ended' AND recording_url IS NOT NULL
+     ORDER BY ended_at DESC NULLS LAST, id DESC
+     LIMIT $1 OFFSET $2`,
+    [limit, offset],
+  );
+  return result.rows.map(mapEventRow);
+}
+
+// Recorded events this project has not kept its own copy of yet, oldest first, for the archive
+// workflow. Bounded so one run never takes on more than it can download.
+export async function listUnarchivedBeaconReplays(limit: number): Promise<BeaconEvent[]> {
+  const result = await queryDb<BeaconEventRow>(
+    `SELECT ${EVENT_COLUMNS} FROM beacon_events
+     WHERE status = 'ended' AND recording_url IS NOT NULL AND archived_recording_url IS NULL
+     ORDER BY ended_at ASC NULLS LAST, id ASC
+     LIMIT $1`,
+    [limit],
+  );
+  return result.rows.map(mapEventRow);
+}
+
+// Record where this project's own copy of a recording lives. Only an ended, recorded event can take
+// one, and a second call replaces the first, so re-running the workflow after a failed write is safe.
+export async function setBeaconArchivedRecordingUrl(
+  eventId: string,
+  archivedUrl: string,
+): Promise<BeaconEvent | null> {
+  const result = await queryDb<BeaconEventRow>(
+    `UPDATE beacon_events
+     SET archived_recording_url = $2, recording_archived_at = NOW(), updated_at = NOW()
+     WHERE id = $1::uuid AND status = 'ended' AND recording_url IS NOT NULL
+     RETURNING ${EVENT_COLUMNS}`,
+    [eventId, archivedUrl],
+  );
+  return result.rows[0] ? mapEventRow(result.rows[0]) : null;
+}
+
+export async function countBeaconReplays(): Promise<number> {
+  const result = await queryDb<{ total: string }>(
+    `SELECT COUNT(*)::text AS total FROM beacon_events WHERE status = 'ended' AND recording_url IS NOT NULL`,
+  );
+  return Number(result.rows[0]?.total ?? 0);
 }
 
 export async function listBeaconEvents(limit = 50): Promise<BeaconEvent[]> {
@@ -222,6 +277,59 @@ export async function insertBeaconAudit(input: {
       JSON.stringify(input.metadata ?? {}),
     ],
   );
+}
+
+// One line of an event's history as the admin sees it: each lifecycle step the app took or Stream
+// reported, whether it worked, and the reason when it did not. Read from the audit trail, which the
+// routes and the Stream webhook write, so the history page can say why an event has no recording
+// without anybody opening the hosting logs.
+export type BeaconEventLogEntry = {
+  atIso: string;
+  command: string;
+  ok: boolean;
+  reason: string;
+};
+
+type BeaconEventLogRow = {
+  target_id: string;
+  created_at: Date;
+  command: string;
+  policy_status: string;
+  reason: string;
+};
+
+// The most recent log entries for each event, oldest first within an event. Capped per event so a
+// long list stays a short read.
+export async function listBeaconEventLogs(
+  eventIds: string[],
+  perEvent = 12,
+): Promise<Map<string, BeaconEventLogEntry[]>> {
+  const logs = new Map<string, BeaconEventLogEntry[]>();
+  if (eventIds.length === 0) {
+    return logs;
+  }
+  const result = await queryDb<BeaconEventLogRow>(
+    `SELECT target_id, created_at, command, policy_status, reason FROM (
+       SELECT target_id, created_at, command, policy_status, reason,
+              ROW_NUMBER() OVER (PARTITION BY target_id ORDER BY created_at DESC) AS rn
+         FROM beacon_events_admin_audit_trail
+        WHERE target_type = 'event' AND target_id = ANY($1::text[])
+     ) recent
+     WHERE rn <= $2
+     ORDER BY target_id, created_at ASC`,
+    [eventIds, perEvent],
+  );
+  for (const row of result.rows) {
+    const entries = logs.get(row.target_id) ?? [];
+    entries.push({
+      atIso: toIso(row.created_at) ?? '',
+      command: row.command,
+      ok: row.policy_status === 'allow',
+      reason: row.reason,
+    });
+    logs.set(row.target_id, entries);
+  }
+  return logs;
 }
 
 // Commons notices carry the full web address, not a bare `/apps/beacon` path. A member reading the

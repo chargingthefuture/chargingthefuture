@@ -1,0 +1,56 @@
+{
+  "_comment": "Surfaces under ctf/packages/web/app/api/ that deliberately lack one or more of the four contract files (command, access-policy, audit, deletion), each with the reason. Read by ctf/scripts/check-contract-coverage.mjs. The gate fails on any surface missing a contract that is not listed here, and on any listed kind whose file has since been written, so this list only shrinks. A surface whose contracts live under another plugin's prefix is NOT listed here: it gets a contractPrefix in ctf/config/code-review-slice-manifest.json instead. The answer for a new plugin is four files, never an entry here.",
+  "version": 1,
+  "surfaces": [
+    {
+      "surface": "account",
+      "missing": ["command", "access-policy", "audit", "deletion"],
+      "reason": "Platform machinery, not a plugin: the member's own account area. The block routes under it are declared in the MEMBER_BLOCKS_* contracts. The full-account and per-service delete and export routes are the deletion engine itself, whose behavior per plugin is each plugin's PROFILE_AND_DELETION contract and ctf/packages/web/lib/account/deletion-registry.ts (validated by check-deletion-registry.mjs and check-deletion-engine.mjs). The ui-preferences routes hold one row of display settings. Documented in ctf-non-plugin-feature-inventory.md."
+    },
+    {
+      "surface": "admin",
+      "missing": ["command", "access-policy", "audit", "deletion"],
+      "reason": "Admin-only operator tools (account restrictions, expenses, the daily exchange figure, the area-seen marker) documented in ctf-non-plugin-feature-inventory.md. They hold no member content; audit coverage of their mutations is enforced by check-admin-audit-coverage.mjs, and account_restrictions rows are retained on deletion under the platform-account registry entry."
+    },
+    {
+      "surface": "currencies",
+      "missing": ["command", "access-policy", "audit", "deletion"],
+      "reason": "One read of a global currency catalog with no member data; consumed by LightHouse, SocketRelay and TrustTransport, whose contracts describe the reads."
+    },
+    {
+      "surface": "health",
+      "missing": ["command", "access-policy", "audit", "deletion"],
+      "reason": "Unauthenticated liveness probe for the host; no data."
+    },
+    {
+      "surface": "internal",
+      "missing": ["command", "access-policy", "audit", "deletion"],
+      "reason": "Secret-gated endpoints called by GitHub Actions, never by a member. Each one writes its owning plugin's tables under that plugin's contracts; the operator account delete is the deletion engine. Documented in ctf-non-plugin-feature-inventory.md section 1.9."
+    },
+    {
+      "surface": "notifications",
+      "missing": ["audit"],
+      "reason": "Recorded decision in ctf-notifications-feature-inventory.md: self-service reads and marks of a member's own rows, with no admin governance action, so nothing is audited. The push subscribe, unsubscribe and public-key routes under it are declared as foundation.push.* in the FOUNDATION_* contracts, which also own the push_subscriptions table."
+    },
+    {
+      "surface": "plugin",
+      "missing": ["command", "access-policy", "audit", "deletion"],
+      "reason": "The policy-probe diagnostic that exercises the access gate; no data."
+    },
+    {
+      "surface": "plugins",
+      "missing": ["command", "access-policy", "audit", "deletion"],
+      "reason": "Read of the plugin registry (ctf_plugin_registry), a global catalog with no member data; its seed is enforced by check-plugin-registry-seed.mjs."
+    },
+    {
+      "surface": "presence",
+      "missing": ["command", "access-policy", "audit", "deletion"],
+      "reason": "Recorded decision in ctf-member-presence-feature-inventory.md: a read-only cross-plugin index that mirrors rows the source plugins already own under their own contracts. Its one table, member_plugin_presence, is deleted with the account under the presence registry entry."
+    },
+    {
+      "surface": "webhooks",
+      "missing": ["command", "access-policy", "audit", "deletion"],
+      "reason": "The Clerk webhook, authenticated by signature. On user.deleted it triggers the deletion engine; it holds nothing itself. Documented in ctf-non-plugin-feature-inventory.md section 1.13."
+    }
+  ]
+}

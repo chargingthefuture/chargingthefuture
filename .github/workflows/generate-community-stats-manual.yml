@@ -1,0 +1,90 @@
+name: Generate — Community Stats Numbers (no AI, manual)
+
+# The no-credit companion to generate-community-stats.yml. That scheduled workflow turns the
+# week's aggregate counts into a Quora draft with the Anthropic API and goes red, on purpose, for
+# as long as the account is unfunded. This one is for those months: an agent session starts it,
+# it collects the same privacy-safe totals (no model call, no key needed) and files them as a
+# `community-stats` issue labeled `draft-needed`, and that session then runs `/community-stats`,
+# which reads the numbers off the issue and writes the post into it. The owner reviews and posts
+# from the issue as before.
+#
+# Same script, same queries: STATS_ONLY=1 stops it before the model call. Manual only — it has no
+# schedule and must not get one, or the scheduled workflow's red run would stop meaning what it
+# means. Recurring (it has a next run whenever the account is unfunded), so it stays.
+on:
+  workflow_dispatch: {}
+
+jobs:
+  collect-and-file:
+    name: Collect community stats and file the numbers
+    runs-on: ubuntu-latest
+    # Stamp the date in US Eastern rather than the runner's UTC so it matches the project's local day.
+    env:
+      TZ: America/New_York
+    permissions:
+      issues: write # create the community-stats numbers issue
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install pg (DB client for the stats queries)
+        run: npm install pg@^8.16.3 --no-save
+
+      # DATABASE_URL comes from Infisical, the single source of truth for runtime secrets.
+      # env-slug is the environment slug (prod), not its display name.
+      - name: Inject secrets from Infisical
+        uses: Infisical/secrets-action@v1.0.16
+        with:
+          client-id: ${{ secrets.INFISICAL_CLIENT_ID }}
+          client-secret: ${{ secrets.INFISICAL_CLIENT_SECRET }}
+          project-slug: ${{ secrets.INFISICAL_PROJECT_SLUG }}
+          env-slug: prod
+          domain: ${{ secrets.INFISICAL_URL }}
+          secret-path: /
+          recursive: true
+
+      - name: Collect the aggregate counts (no model call)
+        id: content
+        env:
+          STATS_ONLY: '1'
+        run: |
+          OUTPUT=$(node ctf/scripts/generate-community-stats.mjs)
+          echo "json<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$OUTPUT" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      - name: File the numbers as a draft-needed issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          STATS_JSON: ${{ steps.content.outputs.json }}
+        run: |
+          set -euo pipefail
+          TODAY=$(date +%Y-%m-%d)
+
+          {
+            echo "_No post yet: the account had no API credit when these numbers were collected._"
+            echo "_Run \`/community-stats\` in a Claude Code session to write the post into this issue._"
+            echo
+            echo "---"
+            echo "## Source numbers (community-wide totals)"
+            echo
+            echo "$STATS_JSON" | jq -r '.statsMarkdown'
+          } > /tmp/community-stats-numbers.md
+
+          gh label create "community-stats" \
+            --color "5319e7" \
+            --description "Auto-generated weekly community activity draft" \
+            --force 2>/dev/null || true
+
+          gh label create "draft-needed" \
+            --color "fbca04" \
+            --description "Numbers filed without a post; an agent session writes the draft" \
+            --force 2>/dev/null || true
+
+          gh issue create \
+            --title "Community Stats Draft: ${TODAY} — draft needed" \
+            --body-file /tmp/community-stats-numbers.md \
+            --label "community-stats" \
+            --label "draft-needed"

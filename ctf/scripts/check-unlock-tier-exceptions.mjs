@@ -87,7 +87,7 @@ for (const file of walk(webRoot)) {
   if (!allowed.has(rel)) offenders.push(rel);
 }
 
-const stale = [...allowed.keys()].filter((file) => !seen.has(file));
+const stale = [...allowed.keys()].filter((file) => !seen.has(file)); // banned-words:allow (variable name, left as is)
 
 // An exception with no named feature and no decision date reads as policy while being nobody's
 // decision. Machinery entries are exempt: they have no owner decision to cite because the gate
@@ -113,9 +113,9 @@ if (offenders.length > 0) {
 
 // A dead entry is worse than a missing one: it makes the list look longer and more permissive than
 // the code actually is, which is exactly the impression this gate exists to prevent.
-if (stale.length > 0) {
+if (stale.length > 0) { // banned-words:allow
   console.error('Unlock tier check failed: these allowlist entries no longer use the bypass:\n');
-  for (const file of stale) console.error(`  • ${file}`);
+  for (const file of stale) console.error(`  • ${file}`); // banned-words:allow
   console.error('\nRemove them. The list should only ever shrink on its own.');
   process.exit(1);
 }

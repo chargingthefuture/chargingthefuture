@@ -42,17 +42,44 @@ WITH already_written AS (
     'gn0b0dy-pneuma',   -- an-invitation-to-gn0b0dy-pneuma.md
     'tommy-gumbert',    -- an-invitation-to-tommy.md
     'alphelus-allen',   -- an-invitation-to-alphelus.md
-    'lorraine-valente'  -- an-invitation-to-lorraine.md
+    'lorraine-valente', -- an-invitation-to-lorraine.md
+    'krissyy-2',        -- an-invitation-to-krissyy.md
+    'jessica-goodwin-229', -- an-invitation-to-jessica.md
+    'zack-tom-4',       -- an-invitation-to-zack.md
+    'jerrod-fredrick',  -- an-invitation-to-jerrod.md
+    'eli-paniagua-1',   -- an-invitation-to-eli.md
+    'brecht-corbeel',   -- an-invitation-to-brecht.md
+    'matthew-a-davis-1', -- an-invitation-to-matthew-a-davis.md
+    'sherri-jenkins-12', -- an-invitation-to-sherri.md
+    'wheeler-aaron',    -- an-invitation-to-aaron.md
+    'jane-doe-11966',   -- an-invitation-to-jane.md
+    'julie-6645',       -- an-invitation-to-julie.md
+    'holly-d-192',      -- an-invitation-to-holly.md
+    'nikki-martindale-9', -- an-invitation-to-nikki.md
+    'no-name-individual', -- an-invitation-to-no-name-individual.md
+    'indiko-1',         -- an-invitation-to-indiko.md
+    'marilyn-1921',     -- an-invitation-to-marilyn.md
+    'bev-419',          -- an-invitation-to-bev.md
+    'king-unique-4',    -- an-invitation-to-king-unique.md
+    'tired-of-being-a-ti' -- an-invitation-to-tired-of-being-a-ti.md
   ]) AS handle
 ),
 listed_skills AS (
   SELECT
     ps.profile_id::text AS profile_id,
     string_agg(s.name, '; ' ORDER BY ps.display_order, s.name) AS skills,
+    -- Each skill with the job title and sector it sits under. An invite post states how thin the
+    -- skill's own sector is, and two skills on one listing can sit in two sectors.
+    string_agg(
+      s.name || ' — ' || coalesce(sjt.name, 'no job title') || ' (' || coalesce(ssec.name, 'no sector') || ')',
+      '; ' ORDER BY ps.display_order, s.name
+    ) AS skill_places,
     count(*) AS skill_count,
     count(*) FILTER (WHERE s.name ILIKE '%advocacy%') AS advocacy_count
   FROM directory_profile_skills ps
   JOIN skills_taxonomy_skills s ON s.id::text = ps.skill_id::text
+  LEFT JOIN skills_taxonomy_job_titles sjt ON sjt.id::text = s.job_title_id::text
+  LEFT JOIN skills_taxonomy_sectors ssec ON ssec.id::text = sjt.sector_id::text
   WHERE s.is_active
   GROUP BY ps.profile_id::text
 ),
@@ -72,10 +99,12 @@ SELECT
   p.id AS profile_id,
   nullif(trim(concat_ws(' ', p.first_name, p.last_name)), '') AS name,
   p.profile_url AS quora_url,
+  'https://app.chargingthefuture.com/apps/directory/profile/' || p.id::text AS directory_url,
   nullif(concat_ws(', ', nullif(p.city, ''), nullif(p.state, ''), nullif(p.country, '')), '') AS location,
   sec.name AS sector,
   jt.name AS job_title,
   coalesce(ls.skills, '') AS skills,
+  coalesce(ls.skill_places, '') AS skill_places,
   coalesce(pn.proposed_skills, '') AS pending_skills,
   p.headline,
   p.bio,
@@ -93,8 +122,7 @@ LEFT JOIN listed_skills ls ON ls.profile_id = p.id::text
 LEFT JOIN pending_skills pn ON pn.profile_id = p.id::text
 LEFT JOIN skills_taxonomy_sectors sec ON sec.id::text = p.sector_id::text
 LEFT JOIN skills_taxonomy_job_titles jt ON jt.id::text = p.job_title_id::text
-  AND p.is_active
-  AND coalesce(p.profile_url, '') <> ''
+WHERE coalesce(p.profile_url, '') <> ''
   -- Strip any query string, the /profile/ prefix and a trailing slash before comparing.
   AND lower(trim(BOTH '/' FROM regexp_replace(split_part(p.profile_url, '?', 1), '^.*/profile/', '')))
       NOT IN (SELECT handle FROM already_written)

@@ -3,22 +3,15 @@
 import { useState } from "react";
 import { Target } from "lucide-react";
 import { CardControls, NewGoalForm, SmallButton, YourGoalPanel, nameOf, useTokens } from "./pp-goals-parts";
+import { ALL_GOALS, GoalChips, NEW_GOAL, chipGoals, goalColor } from "./pp-goals-chips";
 import type { Board, BoardGoal, BoardTask, TaskAction } from "./pp-goals-api";
 
-// The board is laid out as three columns of cards, one card per task, across every goal at once. A
-// member picks any single card; nothing on the screen suggests taking on somebody's goal as a unit.
+// The board is laid out as three columns of cards, one card per task. A row of goals above it narrows
+// the columns to one goal, or shows every goal at once. A member picks any single card; nothing on the
+// screen suggests taking on somebody's goal as a unit.
 
 type Card = { task: BoardTask; goal: BoardGoal };
 type Columns = { grabs: Card[]; doing: Card[]; done: Card[] };
-
-// Each goal gets a color so its cards can be told apart across columns.
-const GOAL_COLORS = ["#8B5CF6", "#F59E0B", "#10B981", "#3B82F6", "#EC4899", "#14B8A6"];
-
-function goalColor(goalId: string): string {
-  let sum = 0;
-  for (const ch of goalId) sum = (sum * 31 + ch.charCodeAt(0)) >>> 0;
-  return GOAL_COLORS[sum % GOAL_COLORS.length];
-}
 
 // Open and held cards come only from open goals: a reached goal's leftover cards are no longer
 // wanted. Done cards come from every goal on the board, newest first.
@@ -137,9 +130,28 @@ export type GoalsBoardViewProps = {
   onPost: (title: string, tasks: string[]) => Promise<boolean>;
 };
 
+// Which goal the row has selected, kept valid as the board reloads: a goal that closes or is taken
+// down falls back to every goal, and a goal the viewer just posted becomes the selection.
+function useSelectedGoal(board: Board, chips: BoardGoal[], canAdd: boolean) {
+  const [selected, setSelected] = useState<string>(ALL_GOALS);
+  const [knownOwnIds, setKnownOwnIds] = useState<string[] | null>(null);
+  const ownIds = chips.filter((goal) => goal.ownerUserId === board.viewerUserId).map((goal) => goal.id);
+  if (knownOwnIds === null || ownIds.join() !== knownOwnIds.join()) {
+    const posted = knownOwnIds === null ? undefined : ownIds.find((id) => !knownOwnIds.includes(id));
+    setKnownOwnIds(ownIds);
+    if (posted) setSelected(posted);
+  }
+  const valid = selected === ALL_GOALS || (selected === NEW_GOAL && canAdd) || chips.some((goal) => goal.id === selected);
+  return [valid ? selected : ALL_GOALS, setSelected] as const;
+}
+
 export function GoalsBoardView({ board, busy, onAction, onEditTask, onAddTask, onClose, onPost }: GoalsBoardViewProps) {
-  const myGoal = board.goals.find((goal) => goal.ownerUserId === board.viewerUserId && goal.status === "open");
-  const columns = sortIntoColumns(board.goals);
+  const chips = chipGoals(board.goals, board.viewerUserId);
+  const myOpenCount = chips.filter((goal) => goal.ownerUserId === board.viewerUserId).length;
+  const canAdd = !board.ended && myOpenCount < board.maxOpenGoals;
+  const [selected, setSelected] = useSelectedGoal(board, chips, canAdd);
+  const selectedGoal = chips.find((goal) => goal.id === selected);
+  const columns = sortIntoColumns(selectedGoal ? [selectedGoal] : board.goals);
   const props: BoardProps = {
     viewerUserId: board.viewerUserId,
     names: board.names,
@@ -152,8 +164,11 @@ export function GoalsBoardView({ board, busy, onAction, onEditTask, onAddTask, o
   return (
     <div style={{ display: "grid", gap: 12 }}>
       <BoardIntro finishedLastDay={board.finishedLastDay} />
-      {!board.ended && myGoal && <YourGoalPanel goal={myGoal} busy={busy} onAddTask={onAddTask} onClose={onClose} />}
-      {!board.ended && !myGoal && <NewGoalForm busy={busy} onPost={onPost} />}
+      <GoalChips goals={chips} selected={selected} viewerUserId={board.viewerUserId} names={board.names} canAdd={canAdd} onSelect={setSelected} />
+      {selected === NEW_GOAL && <NewGoalForm busy={busy} onPost={onPost} onCancel={() => setSelected(ALL_GOALS)} />}
+      {!board.ended && selectedGoal && selectedGoal.ownerUserId === board.viewerUserId && (
+        <YourGoalPanel key={selectedGoal.id} goal={selectedGoal} busy={busy} onAddTask={onAddTask} onClose={onClose} />
+      )}
       <div style={{ display: "flex", gap: 10, overflowX: "auto", scrollSnapType: "x mandatory", paddingBottom: 6, alignItems: "flex-start" }}>
         <Column title="Up for grabs" empty="Nothing open right now. Add your goal and its cards." cards={columns.grabs} {...props} />
         <Column title="Doing" empty="Nobody is holding a card." cards={columns.doing} {...props} />

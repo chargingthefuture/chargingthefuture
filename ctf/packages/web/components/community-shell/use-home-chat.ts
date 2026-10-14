@@ -12,10 +12,11 @@ import {
 } from 'react';
 import type { CommonsJoinResponse, CommonsLastSeenResponse, CommonsMessage, CommonsMessagesResponse } from '../../lib/commons/types';
 import { connectCommonsLive, type CommonsLiveConnection, type CommonsTypingUser } from '../../lib/commons/live-stream';
-import { resolveConcierge, conciergeStarterPrompts } from '../../lib/concierge/resolver';
 import { commonsSuggestionChips, type CommonsSuggestionChip } from '../../lib/concierge/commons-suggestions';
 import type { ChatMessage, ChatQuotedMessage, ChatReactionSummary, ComicAnswerRating, ComicLinkedPlugin, ComicStreamItem, ShellCurrentUser } from './shell-types';
 import { FEED_REACTION_EMOJIS } from '../../lib/feed/constants';
+import { useCommonsUnlockFocus } from './commons-unlock-focus';
+import { startVisibleInterval } from '../../lib/shared/visible-interval';
 
 // Poll cadence: the 10s poll is the only refresh path when the live Stream connection is absent or
 // degraded. When the live connection is healthy, real-time events drive refreshes and the poll is a
@@ -110,8 +111,8 @@ function formatTimeLabel(value: string | Date | null | undefined): string {
 // action button: a peer community post must never carry a plugin link the author did not add, and
 // members cannot attach one. (The old keyword inference here wrongly decorated any post containing
 // words like "economy"/"housing" with an "Open GDP"/"Open LightHouse" button, making it look as if
-// the poster had linked a plugin.) Action buttons come only from an explicit source — the local
-// concierge reply and an answer chip set their own `actions` — never from message text.
+// the poster had linked a plugin.) Action buttons come only from an explicit source — an answer
+// chip sets its own `actions` — never from message text.
 function buildChatMessage(
   id: string,
   from: 'commons' | 'user',
@@ -188,7 +189,7 @@ function getMessageDedupKey(message: ChatMessage): string {
   // with its published time. Keying on the stable community post id keeps those two copies from
   // rendering as a temporary duplicate whenever their timestamps straddle a minute boundary (the
   // composite key below folds the formatted time label in, so "9:32 PM" vs "9:33 PM" defeated
-  // it). Non-post lines (AI answers, concierge, announcement rows) keep the composite key.
+  // it). Non-post lines (AI answers, answer chips, announcement rows) keep the composite key.
   if (message.communityPostId) {
     return `post|${message.communityPostId}`;
   }
@@ -282,7 +283,7 @@ type ComicConversationResponse = {
 type ComicMessageResponse = {
   ok: true;
   routedToAssistant: boolean;
-  status?: 'review_pending' | 'human_first';
+  status?: 'review_pending' | 'human_first' | 'answered';
   conversationId?: string;
   holdingResponse?: string;
 };
@@ -311,7 +312,8 @@ async function fetchHistoryIntoState(
   currentUserId: string,
   setMessages: Dispatch<SetStateAction<ChatMessage[]>>,
 ): Promise<void> {
-  const payload = await requestJson<CommonsMessagesResponse>(`/api/commons/messages?limit=50${extraParam}`);
+  // `no-cache` lets the browser revalidate its copy, so an unchanged page comes back as a 304.
+  const payload = await requestJson<CommonsMessagesResponse>(`/api/commons/messages?limit=50${extraParam}`, { cache: 'no-cache' });
   if (readFilterKey() !== expectedKey) {
     return;
   }
@@ -321,7 +323,8 @@ async function fetchHistoryIntoState(
 
 // Read the comic conversation stream and merge it over the local (optimistic) items.
 async function readComicInto(setters: ChatSetters): Promise<void> {
-  const payload = await requestJson<ComicConversationResponse>('/api/comic/conversation?limit=30');
+  // `no-cache` lets the browser revalidate its copy, so an unchanged stream comes back as a 304.
+  const payload = await requestJson<ComicConversationResponse>('/api/comic/conversation?limit=30', { cache: 'no-cache' });
   const serverItems: ComicStreamItem[] = payload.items.map((item) => ({ ...item }));
   setters.setComicItems((previous) => mergeComicItems(serverItems, previous));
 }
@@ -452,7 +455,7 @@ function useCommonsStreamFilters(userId: string, settersRef: RefObject<ChatSette
 }
 
 // The composer's "replying to …" target for a peer message, or null when the message is not a peer
-// post (only peer posts carry a communityPostId, so AI answers / concierge lines cannot be replied to).
+// post (only peer posts carry a communityPostId, so AI answers / answer-chip lines cannot be replied to).
 function buildReplyTarget(message: ChatMessage): ReplyTarget | null {
   if (!message.communityPostId) return null;
   const author = message.senderLabel ?? 'Community member';
@@ -765,49 +768,9 @@ async function runRateComicAnswer(turnId: string, rating: ComicAnswerRating, set
   }
 }
 
-// Build the member's question message plus the instant local concierge reply for a concierge ask.
-// Purely local — points at the best-matching feature (with an "Open X" button), or a gentle
-// fall-back when nothing matches. Returns an empty array for empty input.
-function buildConciergeMessages(promptText: string): ChatMessage[] {
-  const text = promptText.trim();
-  if (!text) {
-    return [];
-  }
-  const now = new Date();
-  const time = formatTimeLabel(now);
-  // Stamp a real sentAtIso: the home stream sorts by epoch(sentAtIso) and falls back to the array
-  // index when it is missing — without this, concierge messages got a tiny fallback epoch and sorted
-  // to the TOP of the chat instead of the bottom. A real timestamp keeps them newest-last.
-  const sentAtIso = now.toISOString();
-  const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-  const matches = resolveConcierge(text);
-  const userMsg: ChatMessage = { id: `concierge-q-${stamp}`, from: 'user', text, time, sentAtIso };
-
-  const top = matches[0];
-  const second = matches[1];
-  const reply: ChatMessage = top
-    ? {
-      id: `concierge-a-${stamp}`,
-      from: 'commons',
-      text: second ? `${top.blurb} (Or try ${second.name}.)` : top.blurb,
-      time,
-      sentAtIso,
-      actions: [{ label: `Open ${top.name} →`, href: `/apps/${top.slug}` }],
-    }
-    : {
-      id: `concierge-a-${stamp}`,
-      from: 'commons',
-      text: 'I’m not sure which feature fits that yet — type @comic to ask the AI Assistant, or share it with the community below.',
-      time,
-      sentAtIso,
-    };
-
-  return [userMsg, reply];
-}
-
 // An answer chip: the member's question as their own message, then the chip's fixed reply with its
-// buttons, both local. Nothing is sent anywhere. Same timestamp handling as the concierge above, for
-// the same reason: the stream sorts by sentAtIso.
+// buttons, both local. Nothing is sent anywhere. Both carry a real sentAtIso: the stream sorts by it,
+// and a message without one falls back to its array index and sorts to the top of the chat.
 function applyAnswerChip(chip: Extract<CommonsSuggestionChip, { kind: 'answer' }>, setters: ChatSetters): void {
   const now = new Date();
   const time = formatTimeLabel(now);
@@ -819,15 +782,6 @@ function applyAnswerChip(chip: Extract<CommonsSuggestionChip, { kind: 'answer' }
       { id: `answer-a-${stamp}`, from: 'commons', text: chip.reply, time, sentAtIso, actions: [...chip.actions] },
     ]),
   );
-}
-
-// Run a concierge ask: append the member's question plus the instant local reply. No-op for empty input.
-function applyConciergeAsk(promptText: string, setters: ChatSetters): void {
-  const next = buildConciergeMessages(promptText);
-  if (next.length === 0) {
-    return;
-  }
-  setters.setMessages((previous) => mergeMessages(previous, next));
 }
 
 // One-tap "ask @comic" for a suggestion chip (issue #471): route a fixed question straight to the AI
@@ -889,9 +843,9 @@ async function runConfirmConsent(ctx: ConfirmConsentContext): Promise<void> {
   }
 }
 
-// A single mount's bootstrap lifecycle flags: `active` guards against work after unmount, `pollId`
-// holds the running poll so cleanup can clear it.
-type BootstrapController = { active: boolean; pollId: number | undefined };
+// A single mount's bootstrap lifecycle flags: `active` guards against work after unmount, `stopPoll`
+// stops the running poll so cleanup can end it.
+type BootstrapController = { active: boolean; stopPoll: (() => void) | undefined };
 
 // Everything the bootstrap needs from the hook: refresh callbacks, the refs the live handler and
 // cleanup reach through, and the state setters.
@@ -917,9 +871,11 @@ function resetChatForMount(setters: ChatSetters, markedSeenRef: RefObject<boolea
 }
 
 // Both the live path and the polling-only path keep a poll running. `intervalMs` is short when we
-// are polling-only and long when a healthy live connection is the primary refresh path.
+// are polling-only and long when a healthy live connection is the primary refresh path. The poll skips
+// its ticks while the tab is in the background and catches up the moment it is visible again.
 function startChatPoll(ctx: ChatBootstrapContext, intervalMs: number): void {
-  ctx.controller.pollId = window.setInterval(() => {
+  ctx.controller.stopPoll?.();
+  ctx.controller.stopPoll = startVisibleInterval(() => {
     void ctx.refreshHistory().catch(() => {
       // Keep polling while the shell is mounted.
     });
@@ -1024,9 +980,7 @@ async function runChatBootstrap(ctx: ChatBootstrapContext): Promise<void> {
 // Unmount cleanup: stop the poll and disconnect the live Stream client so we never leak a connection.
 function teardownBootstrap(controller: BootstrapController, liveConnectionRef: RefObject<CommonsLiveConnection | null>): void {
   controller.active = false;
-  if (controller.pollId) {
-    window.clearInterval(controller.pollId);
-  }
+  controller.stopPoll?.();
   const live = liveConnectionRef.current;
   liveConnectionRef.current = null;
   if (live) {
@@ -1062,7 +1016,7 @@ function useChatBootstrapEffect(params: {
   } = params;
 
   useEffect(() => {
-    const controller: BootstrapController = { active: true, pollId: undefined };
+    const controller: BootstrapController = { active: true, stopPoll: undefined };
     resetChatForMount(settersRef.current, markedSeenRef);
     void runChatBootstrap({
       controller,
@@ -1081,7 +1035,7 @@ function useChatBootstrapEffect(params: {
   }, [userId, refreshHistory, refreshComic, refreshLastSeen, loadAroundDeepLink]);
 }
 
-// A message posted outside the composer (an admin's picture, from CommonsImageShare) joins the stream
+// A message posted outside the composer (an admin's picture, from CommonsImageSharePanel) joins the stream
 // straight away rather than on the next poll.
 function useAddSavedMessage(setMessages: Dispatch<SetStateAction<ChatMessage[]>>, currentUserId: string) {
   return useCallback(
@@ -1290,17 +1244,9 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
 
   // The curated one-tap suggestion chips shown under the composer (#471): navigation chips open a
   // plugin; ask chips route to @comic. Each chip's behavior is explicit (see commons-suggestions).
-  const suggestionChips = useMemo(() => commonsSuggestionChips(), []);
-
-  // Concierge starter prompts (real questions from the landing page) for the empty home chat — a
-  // one-tap way to "ask what you need" and get pointed at the right feature. Retained for the local
-  // concierge path (`sendConciergeAsk`); the visible chip row now uses `suggestionChips`.
-  const starterPrompts = useMemo(() => conciergeStarterPrompts(5), []);
-
-  // Run a concierge ask: show the question as the member's own message, then an instant local reply
-  // that points at the best-matching feature. Purely local — it does not post to the community and
-  // does not touch the @comic or peer-post paths.
-  const sendConciergeAsk = useCallback((promptText: string) => applyConciergeAsk(promptText, settersRef.current), []);
+  // A member not yet approved gets only the chips that help them finish Unlock.
+  const unlockFocus = useCommonsUnlockFocus();
+  const suggestionChips = useMemo(() => commonsSuggestionChips({ unlockFocus }), [unlockFocus]);
 
   return {
     messages,
@@ -1310,12 +1256,10 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
     notifyTyping,
     typingUsers,
     sendMessage,
-    sendConciergeAsk,
     // Called unconditionally, as every hook here is; it only builds a stable callback.
     addSavedMessage: useAddSavedMessage(setMessages, currentUser.userId),
     askComic,
     answerChip,
-    starterPrompts,
     suggestionChips,
     rateComicAnswer,
     composerMentionsComic,

@@ -6,7 +6,7 @@ import { reportError } from 'lib/observability/report';
 
 // Remove a block (unblock). Same baseline auth as the rest of the blocks API — any signed-in member,
 // never unlock-gated. CSRF-protected and idempotent: unblocking someone who is not blocked still
-// returns ok, so the manage-list never errors on a double-unblock or a stale row.
+// returns ok, so the manage-list never errors on a double-unblock or a row that is already gone.
 //
 // DELETE /api/account/blocks/:blockedUserId
 export async function DELETE(request: Request, context: { params: Promise<{ blockedUserId: string }> }) {

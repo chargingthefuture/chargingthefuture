@@ -5,13 +5,14 @@ import { useTheme } from '@/hooks/useTheme';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
 import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link';
 import { getSkillsHuntTokens } from './sh-shared';
+import { PublicShellWorldwide } from '@/components/plugins/public-shell-worldwide';
 
 // Palette from the SkillsHuntPublic / MobileSkillsHuntPublic design mockups, served via the
 // shared theme tokens (default theme keeps the shipped hex: bg #0F1117, accent #FACC15,
 // text #D5D9E2).
 const FONT_FAMILY = "'Inter', system-ui, sans-serif";
 
-const NOMINATE_FIELDS = ['First Name', 'Bio', 'Quora Profile URL', 'Skills', 'Claimed Professions'];
+const NOMINATE_FIELDS = ['First Name', 'Bio', 'Quora Profile URL', 'Skills'];
 
 function MobileSkillsHuntPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
   const { theme } = useTheme();
@@ -33,8 +34,9 @@ function MobileSkillsHuntPublic({ signInUrl, verifyUrl }: { signInUrl: string; v
           <span style={{ color: t.ACCENT }}>&amp; map their skills</span>
         </h2>
         <p style={{ margin: 0, fontSize: 13, color: t.SUBTLE, lineHeight: 1.6 }}>
-          This is not a referral button. You nominate someone you believe may be a survivor — first name, bio, Quora profile, skills, and professions. Their profile seeds the Directory so we can trade and stop depending on traffickers.
+          This is not a referral button. You nominate someone you believe may be a survivor — first name, bio, Quora profile, and skills. Their profile seeds the Directory so we can trade and stop depending on traffickers.
         </p>
+        <PublicShellWorldwide color={t.MUTED} />
 
         <a href={verifyUrl ?? signInUrl} style={{ padding: '14px', borderRadius: 12, background: t.ACCENT, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', textAlign: 'center', textDecoration: 'none' }}>{verifyUrl ? 'Finish verifying' : 'Join Skills Economy — Free'}</a>
       </div>

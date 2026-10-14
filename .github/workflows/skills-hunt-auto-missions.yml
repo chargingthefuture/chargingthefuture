@@ -6,7 +6,7 @@ name: SkillsHunt — Auto Missions from Workforce Gaps
 # round's gap missions inline — this run only covers rounds that were active when the gaps or the
 # admin config changed. The run is idempotent (at most one live auto mission per round and sector,
 # enforced in the database), so re-runs open nothing new. Admins can force the same run any time
-# with "Run now" on the SkillsHunt admin missions tab, and the config kill switch turns the whole
+# with "Run now" on the SkillsHunt admin missions tab, and the config kill switch turns the entire
 # mechanism off.
 #
 # What it needs (Settings → Secrets and variables → Actions):

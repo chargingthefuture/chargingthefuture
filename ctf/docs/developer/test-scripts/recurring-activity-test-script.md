@@ -1,6 +1,6 @@
 # Recurring Activity — Manual Test Script
 
-> **Android: not applicable.** This feature is web-only (rule 105 / PR #1742, 2026-07-20). Test on web only: desktop and the mobile-responsive (~390px) layout. Any `android` surface tags below are retained as history but no longer apply.
+> **Android: in the app again (2026-10-08).** The page is copied into the Android app (`ctf/packages/mobile/src/features/recurring-activity`). Open it from Your account (gear, then "Your ongoing activities") or from Foundation ("See your ongoing arrangements" after a quote is done); back returns to whichever opened it. Test on web desktop, the mobile-responsive (~390px) layout, and Android.
 
 > Generated from the feature inventory and declared contracts for `recurring-activity`; this is the runnable checklist a tester works through by hand on a real device. Regenerate with:
 > `pnpm --dir ctf test-script:generate -- recurring-activity`
@@ -13,7 +13,7 @@
 | **Surfaces** | web (`/apps/recurring-activity`) · android (`RecurringActivity.tsx`) |
 | **Seed first** | `pnpm --dir ctf seed:recurring-activity` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-recurring-activity-feature-inventory.md` |
-| **Generated** | 2026-07-14 (commit 453b14fe) · 2026-09-20: the inventory's prose was swept for a banned word (CLAUDE.md); no step here changes, because nothing about what the plugin does or how it is tested moved |
+| **Generated** | 2026-07-14 (commit 453b14fe) · 2026-09-20: the inventory's prose was swept for a banned word (CLAUDE.md); no step here changes, because nothing about what the plugin does or how it is tested moved · 2026-10-05 manual update: RA-7 notes the #2881 regression for all four actions, and RA-13b checks a malformed id answers 404 |
 
 ---
 
@@ -28,7 +28,7 @@
 
 ## Core smoke (every session)
 
-**1.** Sign in as a seeded member and navigate to `/apps/recurring-activity` (web) or open Recurring Activity on Android. The hub loads and shows at least the two confirmed seeded activities (one fiat housing tie, one ServiceCredits service tie).
+**1.** Sign in as a seeded member and navigate to `/apps/recurring-activity` (web) or open Recurring Activity on Android (gear, Your account, "Your ongoing activities"). The hub loads and shows at least the two confirmed seeded activities (one fiat housing tie, one ServiceCredits service tie).
 web ☐
 
 **2.** The seeded ServiceCredits service activity shows `50 SC / month` — a declared value is visible. The seeded fiat housing activity shows a currency label and cadence but **no fiat amount anywhere on the row**.
@@ -163,6 +163,8 @@ Result: web ☐
 
 **Expected:** The activity status changes to **active**. It remains visible in both parties' hub lists. (Only active activities count toward Trust and GDP — the status label changing to "active" is the observable signal.)
 
+A "Activity not found." error on **Confirm** for an activity that is plainly listed is the regression from #2881 (the confirm, decline, end and visibility routes read the activity id before the route params resolved), and must be filed. The same applies to **Decline** (RA-8), **End** (RA-10) and the visibility change (RA-12).
+
 Result: web ☐
 
 ---
@@ -268,6 +270,22 @@ Result: web ☐
 3. Look for a visibility control on that row.
 
 **Expected:** No visibility selector is available to the counterparty on an activity they did not declare. If attempted via API, the server returns an error.
+
+Result: web ☐
+
+---
+
+### RA-13b — A malformed activity id answers 404 without reaching the database
+
+**Role:** member
+**Surfaces:** web API
+**Precondition:** Signed in.
+
+**Steps:**
+1. Call `POST /api/recurring-activity/not-a-uuid/confirm` with the `x-ctf-csrf: 1` header.
+2. Repeat for `/decline`, `/end` and `/visibility`.
+
+**Expected:** Each answers HTTP 404 with the message "Activity not found.", the same answer an unknown id gets. None answers 503, and no database error is reported for the call.
 
 Result: web ☐
 

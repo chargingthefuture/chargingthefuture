@@ -83,7 +83,7 @@
     - Delete and assign confirmations prevent accidental destructive actions.
 - [ ] Build admin announcements UX.
   - Acceptance criteria:
-    - Create/edit/deactivate flows update list state without stale data.
+    - Create/edit/deactivate flows update list state without out-of-date data.
 - [ ] Preserve post-create public URL operator workflow.
   - Acceptance criteria:
     - If profile is public, operator sees clear next action with generated URL.

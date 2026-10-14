@@ -20,9 +20,11 @@ be right before somebody goes, not to prove the reader works, which its own serv
    mark, and it is not painted in the fallback gray every unknown plugin gets.
 2. Press it. The page opens at `/apps/reader` with a Reader header and a short paragraph saying a
    feed reader collects what sites publish, in the order they published it.
-3. Read the three cards. One says the blog and the demo-video channel are already in a new account
+3. Read the three cards. One says the blog, the demo-video channel and the recorded broadcasts are already in a new account
    and nothing else is added for you. One says the reader cannot reach back before you start and does not notify you. One says
    what a place on it costs.
+   The intro, the button and each card have clear space between them, and the line naming
+   rss.chargingthefuture.com sits just under the button. If the cards touch, stop.
 4. Read the cost card to the end. It says losing a place is not a ban, that the account in this app
    is untouched, and that not finishing the check never costs anybody their account. If any of those
    three is missing, stop — that is the line the product cannot get wrong.
@@ -95,3 +97,21 @@ unchanged.
 
 **Expect:** The Unlock nudge, not the page. Reader is not on the exception list and must not read as
 though it were.
+
+---
+
+### RD-5 — The reader keeps its sign-in
+
+**Role:** approved member · **Surfaces:** the reader at rss.chargingthefuture.com, on a phone
+**Precondition:** The workflow `FreshRSS — Set how long a reader sign-in lasts` has run since the
+last change to `ctf/ops/freshrss/sign-in.env`.
+
+**Steps:**
+
+1. Open the reader and sign in.
+2. Reload the page. Wait ten minutes and reload again.
+3. Close the browser (or the home-screen app) and open the reader again.
+
+**Expect:** One sign-in at step 1 and none after it. No screen from the auth provider asking to
+allow "FreshRSS reader" appears at any step. If either shows up again, the service is back on the
+image's default sign-in settings; see `ctf/docs/developer/FRESHRSS.md`.

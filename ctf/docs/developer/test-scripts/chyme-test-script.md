@@ -15,7 +15,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-chyme-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-08-04 manual note: inventory scope line corrected to the real constant names (`CHYME_MAIN_ROOM_KEY`, `CHYME_CONTRIBUTORS_ROOM_KEY`) — no test change; the two-room cases below already match the shipped product · 2026-08-24 manual update: CH-7 now also checks that the signed-out view scrolls as a page (pinned header, Safari Full Page reaches the bottom) and ships one layout at every width · 2026-09-20 manual update: CH-7 now also checks the **Leave** control beside refresh, which a signed-out listener uses to stop listening without closing the page · 2026-09-20 manual update: CH-1 room name no longer carries a fixed topic · 2026-09-21 manual update: CH-A2 now also checks the day-by-day range control (7 days / 30 days / This month / All of it) and that "Copy as text" pastes the selected range |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-08-04 manual note: inventory scope line corrected to the real constant names (`CHYME_MAIN_ROOM_KEY`, `CHYME_CONTRIBUTORS_ROOM_KEY`) — no test change; the two-room cases below already match the shipped product · 2026-08-24 manual update: CH-7 now also checks that the signed-out view scrolls as a page (pinned header, Safari Full Page reaches the bottom) and ships one layout at every width · 2026-09-20 manual update: CH-7 now also checks the **Leave** control beside refresh, which a signed-out listener uses to stop listening without closing the page · 2026-09-20 manual update: CH-1 room name no longer carries a fixed topic · 2026-09-21 manual update: CH-A2 now also checks the day-by-day range control (7 days / 30 days / This month / All of it) and that "Copy as text" pastes the selected range · 2026-10-05 manual update: CH-4 Android leave drops the row at once; CH-7 step 7 re-admits a listener pruned while the tab was hidden; CH-12 refused Back Channel actions show their reason; CH-23 step 5 a removed member already in the room sees the reason · 2026-10-08 manual update: CH-AND checks the Android screen against the web page at phone width (signed in, signed out, admin screens) |
 
 ## How to run this
 
@@ -34,7 +34,9 @@ The one shared audio room — these are the can't-ship-broken checks. Member rol
 
 1. **Room loads.** Open Chyme as a signed-in member. The room ("Chyme Main Room" — the name says
    the room, never a topic; what is being discussed comes from the booked TI Radio slot), the
-   participant list, and the chat panel render — not a spinner or an error. → web ☐ mobile ☐ android ☐
+   participant list, and the **Chat** button render — not a spinner or an error. The chat panel
+   starts closed (since 2026-09-30); press **Chat** and it opens, press it again and it closes.
+   → web ☐ mobile ☐ android ☐
 2. **Join the call.** Press join. You connect to the live audio room, start muted, and can mute
    and unmute your own microphone. → web ☐ mobile ☐ android ☐
 3. **Chat send/read.** Type a message and send it. It appears in the list and persists on
@@ -71,7 +73,7 @@ The one shared audio room — these are the can't-ship-broken checks. Member rol
 2. Note who is shown and how each name renders.
 **Expected:** The single shared room loads with its name. Each participant is shown by their handle
 as `@username`, falling back to `user-<first 8 of the id>` when there is no username. Only members
-seen recently (within the 45-second presence window) appear; a stale member drops off.
+seen recently (within the 45-second presence window) appear; a member not seen within that window drops off.
 The header back chevron returns to the page you came from (falling back to All Apps when opened
 directly).
 **Result:** web ☐ mobile ☐ android ☐ — notes:
@@ -110,8 +112,10 @@ unbounded dump or an error from an odd `limit`.
 disabled before the call joins, so no camera prompt fires on any surface, including the iOS PWA). You
 join muted; the **microphone** permission is only requested when you press Unmute (not on join). While
 in the call you keep counting as present (the heartbeat refreshes your row every 35 seconds). On leave,
-your row is dropped and you disappear from the participant list — and any raised hand clears. The room
-shows "Live" only while at least one fresh member is present.
+your row is dropped and you disappear from the participant list — and any raised hand clears (on
+Android too since 2026-10-05: its Leave posts `/api/chyme/leave` like the web, instead of holding
+the spot for the 45-second presence window). The room shows "Live" only while at least one fresh
+member is present.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### CH-5 · Raise and lower hand (persistent)
@@ -119,9 +123,9 @@ shows "Live" only while at least one fresh member is present.
 **Precondition:** a second test member in the same room to observe.
 **Steps:**
 1. Raise your hand. Have the second member look at your tile.
-2. Lower your hand, leave, or go stale.
+2. Lower your hand, leave, or let your presence lapse (no heartbeat for 45 seconds).
 **Expected:** The raised hand stays visible to everyone until you lower it, leave, or your presence
-goes stale — not just for a couple of seconds. On web AND android the other member's tile shows the
+lapses — not just for a couple of seconds. On web AND android the other member's tile shows the
 persistent hand: android polls `GET /api/chyme/room` every 15s while in the room and renders every
 other member's server-persisted raised hand, so the hand stays up after the short-lived Stream
 reaction clears (#1599). Verify from an android device: with a second member's hand raised on web,
@@ -135,9 +139,12 @@ the android tile keeps the ✋ up (and drops it within ~15s of them lowering it)
 1. Open the Tip action on another participant's tile, enter an amount, send.
 2. Try to tip yourself.
 3. Try to tip an amount above the limit.
+4. Have an admin freeze your wallet (SC-A6 in the ServiceCredits script), then tip again.
 **Expected:** The tip sends ServiceCredits from you to that participant and delivers immediately. The
 Tip action never appears on your own tile or on a listen-only guest. Self-tip is rejected (400). An
-amount that is not a finite number above 0, or above the maximum (10000), is rejected (400).
+amount that is not a finite number above 0, or above the maximum (10000), is rejected (400). A tip
+from a frozen wallet is refused with 403 `chyme_account_restricted` and moves no credits (added
+2026-10-05).
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### CH-7 · Signed-out visitor can listen
@@ -153,6 +160,8 @@ amount that is not a finite number above 0, or above the maximum (10000), is rej
    45 seconds (inside the presence window, so the server still reports the room as live).
 6. Listen again, then press **Leave** in the **Live Rooms** row. Watch what a signed-in member in
    the room sees on their stage.
+7. Listen again on a desktop browser, then switch to another tab for over three minutes while a
+   second signed-out browser taps to listen. Come back to the first tab.
 **Expected:** Before the tap the room heading shows, under it the line "The room is live. Tap below
 to listen; sign in to speak." (never "You're listening live" before the tap), and a single **Tap to
 listen** button with the attendance line and the line "Phones only play sound after a tap. You will hear the room and
@@ -192,17 +201,17 @@ itself scrolls: the green header stays pinned at the top while the content moves
 Safari's **Full Page** screenshot reaches the bottom of the content rather than stopping at one
 screenful.
 
-In step 1, on a phone, the first screen carries the header, the invitation card, the **Live Rooms**
-row with its refresh button, the room name and the **Tap to listen** control, the closed **Room
-Chat** row and the **Coming up on TI Radio** rail — nothing of the page's own content needs a scroll
+In step 1, on a phone, the first screen carries the header, the invitation card, the **Coming up
+on TI Radio** rail, the **Live Rooms** row with its refresh button, the room name and the **Tap to
+listen** control, and the closed **Room Chat** row — nothing of the page's own content needs a scroll
 to be found (owner directive, 2026-09-20). What scrolls is the stage when the room holds many
 people, and the chat once you open it. The invitations card is not part of this page at all: it
 floats in the bottom-left corner over whatever is under it, with a **×** that closes it for the rest
 of the browser session; it is described in the non-plugin feature inventory, section 1.15.
 
-In step 4 you find **exactly one** place to sign in or join — the invitation card, whose **Join Free
-to Listen** and **Sign In** both point at the hosted sign-in URL (or a single **Finish verifying**
-link when the visitor has an account part-way through Unlock). The green header carries the back
+In step 4 you find **exactly one** place to sign in — the invitation card, whose single **Sign In**
+button points at the hosted sign-in URL (or a single **Finish verifying** link when the visitor has
+an account part-way through Unlock); there is no separate **Join Free to Listen** button. The green header carries the back
 control and the title only, with no sign-in or join button. There is **no bottom bar** at all: the
 grayed, locked **Start a Room** that sat there is gone (owner directive, 2026-09-18). The **Live
 Rooms** label row carries the same 44-px **refresh** button the signed-in page has beside Join Room,
@@ -222,6 +231,14 @@ is gone again the moment you press it. Pressing it stops the audio, drops you of
 member in the room sees your "You (listening)" tile disappear), and returns the view to the **Tap to
 listen** button with one fewer guest in the attendance line. No page reload and no tab close is
 needed, and tapping **Tap to listen** again puts you back in the room.
+
+In step 7 the hidden tab stopped beating, and the second browser's tap pruned the first one's
+listener row (rows not seen for three minutes are dropped on the next admission). Since 2026-10-05
+the first tab's next heartbeat, as soon as it is visible again, answers that it is off the roster:
+the page shows "Connecting to the live room…" for a moment, re-admits itself through
+`/api/chyme/public/listen`, and returns to "Listening live" with the attendance line counting it
+again. If no guest spot is free by then, the note shows the server's refusal with **Try again**
+instead of playing on uncounted.
 
 "No public rooms right now" appears **only** when the server said the room is not live. If the live
 check itself fails (for example the per-IP limit, 30 loads a minute, answers 429), the card reads
@@ -359,7 +376,13 @@ If the call cannot connect, the panel reads "Could not connect to the call: <Str
 and Android, since 2026-09-18) rather than a bare sentence; and if the accept or join route itself
 fails, its message reads "Unable to accept Back Channel: <reason>" / "Unable to join Back Channel:
 <reason>". "Stream service is not configured" now appears only when Stream credentials are absent,
-never for a Stream refusal.
+never for a Stream refusal. Since 2026-10-05 a refused invite, accept, decline, hang-up or join is
+never silent: the screen shows "Could not <what failed>: <the route's reason>" (for example "Could
+not accept the Back Channel: This Back Channel invite is no longer available."). An accept or
+decline failure shows inside the incoming prompt, a hang-up failure in the call panel (Android) or
+a notice at the top (web), and an invite or join failure in a notice at the top with **Dismiss**.
+The next action clears it. While a call is live each side posts the Back Channel heartbeat every 30
+seconds, not on every 3-second state poll.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### CH-13 · Decline sends nothing back
@@ -540,7 +563,8 @@ phone read "Joined" after the call had dropped.
 days, and one slot booked for the current 90 minutes if the "On air now" mark is to be checked.
 **Steps:**
 1. As a member, open Chyme and read under the rooms rail. Drag the schedule sideways.
-2. Sign out and open the Chyme route; read under the room list. Drag the schedule sideways.
+2. Sign out and open the Chyme route; read above the **Live Rooms** row (the same place as the
+   member view since 2026-09-30). Drag the schedule sideways.
 3. In the Android app, open Chyme and tap the **Upcoming** tab.
 4. Release every booked slot on the guide, then refresh each of the three screens.
 5. Open the app with the network off (or point it at a stopped server) and read the same places.
@@ -583,11 +607,46 @@ for A and B now read **Let speak**. Step 4: within one room poll (15s) A's micro
 returns and A can unmute; after **Listening** A's microphone is off again and the notice is back.
 Step 5: B drops from the call and from the count at once; B's Join answers "An admin removed you
 from this room. You can come back once an admin lets you back in." in place of the stage (web
-error banner; android alert); the admin screen lists B with the room and time; after **Let back
+error banner; android alert). If B stays on the room screen instead, B's next heartbeat (within 35
+seconds) shows that same sentence in place of the stage with **Leave**, on web and Android, rather
+than "The live connection dropped…" or a silent stage; the admin screen lists B with the room and time; after **Let back
 in** B's Join works. Step 6: everyone's microphone control is back and A can unmute. Step 7: the
 action is recorded and the control shows one amber line beginning "Recorded, but Stream did not
 apply it in the call:" with Stream's reason — never a silent failure and never a 500. Every step
 writes a row in `chyme_admin_audit_trail`.
+**Result:** web ☐ mobile ☐ android ☐ — notes:
+
+---
+
+### CH-24 · Readings loop while nobody is live (web)
+**Role:** admin, then a signed-out visitor and a member · **Surfaces:** web
+**Precondition:** nobody in the main room; at least one post in the blog with a recording in
+`content/audio` (so `https://chargingthefuture.github.io/chargingthefuture/readings.json` lists it).
+**Steps:**
+1. As the admin, open Chyme and tap **Admin** in the top bar; on the usage screen tap **Readings
+   loop**, and check each admin screen's **Member view** returns to Chyme. Stay on
+   `/admin/chyme/readings`.
+2. Tap **Turn on**.
+3. Signed out, open `/apps/chyme`. Tap **Play readings**. In a second browser, do the same.
+4. As a member, open Chyme and do not press Join Room. Then press Join Room.
+5. As another member, join the main room while the signed-out visitor is still listening. Wait a
+   minute.
+6. As the admin, tap **Turn off**, then reload `/apps/chyme` signed out.
+**Expected:** Step 1: **Admin** shows for the admin only (a member without the admin role does
+not see it), each link lands where it says, and the readings screen lists the blog's recorded posts by title, each linking to its post,
+with how to add one (upload the file to the blog) and no add or remove controls. Step 2: the
+switch reads **On**. Step 3: under "No public rooms right now" a "While you wait for someone to go live" card
+says they are computer-voice readings of posts from the blog and a recording, not a live host; on
+an iPhone in Safari as well as on Android, **Play readings** shows "Audio will begin playing in a
+few seconds." until the sound starts, and with two or more recordings on the blog the readings
+follow each other in order, each title changing as its reading starts, then wrap to the first (lock
+the phone and let it run through two readings); if a reading will not load, the player tries it
+again from its start and then moves to the next one, and "The recording could not be loaded (…)"
+shows only when no reading will load; the reading plays
+with its title and a **Read this post** button that opens the post; both browsers are at the same point in the reading. Step 4: the same card shows on
+the idle Main Room screen; with nobody in the room there is no "On Stage" block under it (the header
+already reads "0 participants"), and with someone in the room their tiles sit under the card; after Join Room it is gone and its sound stops. Step 5: within about a minute the recording stops and the page shows the
+live room. Step 6: the card is gone. Steps 2 and 6 each write a row in `chyme_admin_audit_trail`.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ---
@@ -598,6 +657,19 @@ writes a row in `chyme_admin_audit_trail`.
 calls they started and calls they received. The call log is ephemeral and has no history screen, so
 there is nothing member-facing to re-check afterward; this is verified by the deletion engine's
 registry entries.
+
+### CH-25 · Sign in, and sign out leaves the room (android)
+**Role:** signed out, then member · **Surfaces:** android
+**Steps:**
+1. On a fresh install (or after signing out), open the app on the **Chyme** pill.
+2. Tap **Sign in** on the **You are not signed in** card above the room list and sign in.
+3. Join the room, then open **Account & Data**, scroll down, tap **Sign out** and confirm.
+4. Go back to the **Chyme** pill.
+**Expected:** Step 1: the sign-in card shows above the room list, and listening as a guest still
+works. Step 2: the card goes away and you can speak, react and tip as yourself. Step 4: you are no
+longer in the room as a member, the Android "Chyme live audio" notification is gone, and the sign-in
+card is back. The same steps are in the Android app test script (AN-1, AN-7).
+**Result:** android ☐ — notes:
 
 ---
 
@@ -704,3 +776,18 @@ hit one of these, it is already tracked, not a new bug:
   page. The pill says so now; the Android app's foreground service is the answer for a long sit.
 
 > _Terminology (2026-07-20): the source inventory's user-facing section is now titled **User Features** (was "Target User Features"), and its admin section **Admin Features**. Heading rename only — no test steps changed._
+
+### CH-AND · Android Chyme matches the web page at phone width
+**Role:** member, then signed out, then admin · **Surfaces:** android, compared with web (~390px)
+**Steps:**
+1. Signed in, open Chyme in the Android app beside the web page at phone width. The rooms rail
+   (Main Room, Weavers of the Commons), the hosting statement, "Coming up on TI Radio", the Join Room
+   row with refresh, the room header with Chat, the stage and the control row match the web in
+   wording, order and colors, in both themes.
+2. Signed out, open Chyme: the web's public page shows with its own green header and Sign In, and
+   no second app header above it. Listen without an account, then tap Leave.
+3. As an admin, tap **Admin** in the Chyme header: Live audio usage opens with the Gauge icon, the
+   refresh control and **Member view**. Open the readings loop from it; back returns to Live audio
+   usage, and back again returns to Chyme.
+**Expected:** Every part of the web page is present and nothing the web lacks is added.
+**Result:** android ☐ — notes:

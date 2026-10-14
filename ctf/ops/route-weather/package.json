@@ -8,7 +8,6 @@
     "node": ">=20"
   },
   "scripts": {
-    "start": "node src/server.mjs",
-    "briefing": "node src/briefing.mjs"
+    "start": "node src/server.mjs"
   }
 }

@@ -29,7 +29,8 @@ import { feedPostLength } from '../../lib/feed/normalize';
 import { FEED_ADMIN_MAX_COMMUNITY_POST_LENGTH, FEED_MAX_COMMUNITY_POST_LENGTH } from '../../lib/feed/constants';
 import { OFFICIAL_SENDER_LABEL } from '../../lib/commons/constants';
 import { ChatMessageImage } from './chat-message-image';
-import { CommonsImageShare } from './commons-image-share';
+import { CommonsImageShareButton, CommonsImageSharePanel } from './commons-image-share';
+import { motionAwareBehavior, useChatScrollPosition } from './chat-scroll';
 
 // Avatar glyph for a chat sender: the first letter of the sender's name, whoever they are. The
 // official house account used to get a hardcoded "SH" here; now that official posts are signed with
@@ -254,6 +255,13 @@ function computeTypingLabel(typingUsers: CommonsTypingUser[]): string | null {
   return `${typingUsers[0].name} and ${typingUsers.length - 1} others are typing…`;
 }
 
+// True when the page opened on /?post=<id> or /?announcement=<id>; that jump positions the list.
+function hasDeepLinkInUrl(): boolean {
+  if (typeof window === 'undefined') return false;
+  const params = new URLSearchParams(window.location.search);
+  return params.has('post') || params.has('announcement');
+}
+
 function selectorForDeepLink(postId: string | null, announcementId: string | null): string | null {
   if (postId) return `[data-post-id="${postId}"]`;
   if (announcementId) return `[data-announcement-id="${announcementId}"]`;
@@ -263,7 +271,7 @@ function selectorForDeepLink(postId: string | null, announcementId: string | nul
 // Scroll a target element into view and flash it, so the eye lands on it. Shared by the quoted-reply
 // jump and the deep-link jump.
 function scrollAndFlash(target: HTMLElement): void {
-  target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  target.scrollIntoView({ behavior: motionAwareBehavior(), block: 'center' });
   target.classList.add(styles.chatBubbleFlash);
   window.setTimeout(() => target.classList.remove(styles.chatBubbleFlash), 1600);
 }
@@ -312,6 +320,12 @@ function computeUnreadDividerIndex(streamEntries: StreamEntry[], lastSeenAtIso: 
   const lastSeenEpoch = new Date(lastSeenAtIso).getTime();
   if (Number.isNaN(lastSeenEpoch)) return -1;
   return streamEntries.findIndex((entry) => entry.epoch > lastSeenEpoch);
+}
+
+// True when the entry is the member's own: a post they sent, or an @comic question they asked.
+function isOwnEntry(entry: StreamEntry | undefined): boolean {
+  if (!entry) return false;
+  return entry.kind === 'comic' || entry.message.from === 'user';
 }
 
 // The React key for a stream entry, matching the per-branch keys the entries used to carry inline.
@@ -374,6 +388,20 @@ function useDeepLinkNavigation(messagesContainerRef: RefObject<HTMLDivElement | 
   return { jumpToQuotedPost, flashTarget };
 }
 
+// The admin picture panel, opened from the camera chip in the icon row. Both pieces are null when
+// the viewer is not an admin or the notifications feed is open.
+function useAdminPictureShare(
+  enabled: boolean,
+  onShared: Parameters<typeof CommonsImageSharePanel>[0]['onShared'],
+): { chip: ReactNode; panel: ReactNode } {
+  const [open, setOpen] = useState(false);
+  if (!enabled) return { chip: null, panel: null };
+  return {
+    chip: <CommonsImageShareButton open={open} onClick={() => setOpen((wasOpen) => !wasOpen)} />,
+    panel: open ? <CommonsImageSharePanel onShared={onShared} onClose={() => setOpen(false)} /> : null,
+  };
+}
+
 function AuthenticatedChatPanel({ currentUser, isAdmin = false }: AuthenticatedChatPanelProps) {
   // A member who hasn't set a username posts under a stable per-user handle
   // (matching the server's feedAuthorHandle and Chyme), so they stay recognizable
@@ -431,10 +459,10 @@ function AuthenticatedChatPanel({ currentUser, isAdmin = false }: AuthenticatedC
   const ownMentionLabel = mentionLabel(ownHandle);
   const typingLabel = useMemo<string | null>(() => computeTypingLabel(typingUsers), [typingUsers]);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   // The 🔔 notifications center replaces the message stream + composer when open. It is a separate
   // feed (not a filter of the chat), so it is local UI state here rather than in the chat hook.
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const pictureShare = useAdminPictureShare(isAdmin && !notificationsOpen, addSavedMessage);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const { jumpToQuotedPost, flashTarget } = useDeepLinkNavigation(messagesContainerRef);
 
@@ -501,11 +529,16 @@ function AuthenticatedChatPanel({ currentUser, isAdmin = false }: AuthenticatedC
   // does not creep down as the member reads or as best-effort "mark seen" runs.
   const unreadDividerIndex = useMemo<number>(() => computeUnreadDividerIndex(streamEntries, lastSeenAtIso), [streamEntries, lastSeenAtIso]);
 
-  // Auto-scroll the chat to the latest entry when the stream grows (a sent message, a concierge
-  // reply, or new polled history), so members always land on what they saw last — like a normal chat.
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  }, [streamEntries.length]);
+  // Open on the "New messages" divider (or the latest message) with no animation, then follow new
+  // entries only while the member is at the bottom or has just posted. A deep link positions itself.
+  useChatScrollPosition({
+    containerRef: messagesContainerRef,
+    entryCount: streamEntries.length,
+    isReady: !isLoading,
+    dividerSelector: unreadDividerIndex >= 0 ? '[data-unread-divider]' : null,
+    lastEntryIsOwn: isOwnEntry(streamEntries[streamEntries.length - 1]),
+    skipInitial: hasDeepLinkInUrl(),
+  });
 
   // Once the chat has content on screen, mark the channel as seen (best-effort, once per mount)
   // so the next visit's "New messages" divider reflects where the member left off.
@@ -536,7 +569,6 @@ function AuthenticatedChatPanel({ currentUser, isAdmin = false }: AuthenticatedC
       ) : (
         <MessageStream
           messagesContainerRef={messagesContainerRef}
-          messagesEndRef={messagesEndRef}
           inputRef={inputRef}
           isLoading={isLoading}
           isFilterRefreshing={isFilterRefreshing}
@@ -568,9 +600,10 @@ function AuthenticatedChatPanel({ currentUser, isAdmin = false }: AuthenticatedC
         onToggleNotifications={() => setNotificationsOpen((open) => !open)}
         onAsk={askComic}
         onAnswer={answerChip}
+        pictureShare={pictureShare.chip}
       />
 
-      {isAdmin && !notificationsOpen ? <CommonsImageShare onShared={addSavedMessage} /> : null}
+      {pictureShare.panel}
 
       {/* Composer + helpers hide while the notifications center is open — you read notifications
           there, you don't post into them. The chip row above stays so 🔔 can toggle back. */}
@@ -613,7 +646,6 @@ type StreamCallbacks = {
 
 type MessageStreamProps = StreamCallbacks & {
   messagesContainerRef: RefObject<HTMLDivElement | null>;
-  messagesEndRef: RefObject<HTMLDivElement | null>;
   inputRef: RefObject<HTMLTextAreaElement | null>;
   isLoading: boolean;
   isFilterRefreshing: boolean;
@@ -629,7 +661,6 @@ type MessageStreamProps = StreamCallbacks & {
 
 function MessageStream({
   messagesContainerRef,
-  messagesEndRef,
   inputRef,
   isLoading,
   isFilterRefreshing,
@@ -664,7 +695,6 @@ function MessageStream({
           {...callbacks}
         />
       ))}
-      <div ref={messagesEndRef} />
     </div>
   );
 }
@@ -694,7 +724,7 @@ function StreamEmptyState({ mentionsOnly, announcementsOnly, ownMentionLabel }: 
 // last-seen marker. Rendered ahead of whichever entry follows it.
 function UnreadDivider() {
   return (
-    <div className={styles.unreadDivider} role="separator" aria-label="New messages">
+    <div className={styles.unreadDivider} role="separator" aria-label="New messages" data-unread-divider="">
       <span className={styles.unreadDividerLabel}>New messages</span>
     </div>
   );
@@ -963,6 +993,8 @@ type ConciergeChipRailProps = {
   onToggleNotifications: () => void;
   onAsk: (question: string) => void;
   onAnswer: (chip: Extract<CommonsSuggestionChip, { kind: 'answer' }>) => void;
+  // The admin-only camera chip, placed after the gift; null for everyone else.
+  pictureShare: ReactNode;
 };
 
 // One-tap suggestion chips (#471) — persistent (shown whether or not the chat already has messages),
@@ -982,6 +1014,7 @@ function ConciergeChipRail({
   onToggleNotifications,
   onAsk,
   onAnswer,
+  pictureShare,
 }: ConciergeChipRailProps) {
   return (
     <div className={styles.conciergeChipRail} role="group" aria-label="Ask what you need">
@@ -993,6 +1026,7 @@ function ConciergeChipRail({
           and the full banner is dismissed or snoozed, so most of the time this row is unchanged.
           It stays visible with the notifications feed open, like the three glyph chips before it. */}
       <ContributionsGiftTrigger className={styles.contributeGiftBtn} />
+      {pictureShare}
       {notificationsOpen ? null : <SuggestionChips chips={chips} onAsk={onAsk} onAnswer={onAnswer} />}
     </div>
   );

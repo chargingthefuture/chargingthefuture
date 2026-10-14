@@ -1,6 +1,7 @@
 import { LogIn } from 'lucide-react';
 import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
+import { PublicShellWorldwide } from '@/components/plugins/public-shell-worldwide';
 
 // Chrome colors via theme CSS variables (fallback = the exact shipped default hex, so the
 // default theme is pixel-identical). This is a server component, so CSS vars — not useTheme().
@@ -75,6 +76,7 @@ export function GenericPublicShell({ pluginName, signInUrl, verifyUrl }: PublicV
             ? `You're signed in — finish verifying your account to use ${pluginName}.`
             : `Sign in to join the survivor community and use ${pluginName}. This app does not have a public view yet; a free account is all it takes.`}
         </p>
+        <PublicShellWorldwide color={SUBTLE} style={{ margin: '-12px 0 24px' }} />
         <a
           href={verifyUrl ?? signInUrl}
           style={{

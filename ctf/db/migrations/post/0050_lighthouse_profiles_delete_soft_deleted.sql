@@ -1,0 +1,12 @@
+-- post/0050: Remove LightHouse profile rows that account deletion only soft-deleted.
+--
+-- Until this change, deleting an account (or only its LightHouse data) from the account area
+-- stamped lighthouse_profiles.service_deleted_at and kept the row, phone number and Signal link
+-- included, while the plugin's own delete removed the row outright. The account deletion registry
+-- now deletes the row too. This removes the rows the old path left behind.
+--
+-- Safe: a row with service_deleted_at set belongs to a member who deleted their LightHouse data
+-- and has not come back (saving a profile again clears the column), nothing references
+-- lighthouse_profiles by foreign key, and the rejoin marker LightHouse reads is on
+-- lighthouse_user_extension, which this does not touch. Re-running deletes nothing new.
+DELETE FROM lighthouse_profiles WHERE service_deleted_at IS NOT NULL;

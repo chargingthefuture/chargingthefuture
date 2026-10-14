@@ -50,9 +50,6 @@ does them:
      unset when the host is private-network only. The web client attaches it as
      `Authorization: Bearer <token>` on every Ollama request (`lib/chatbot/ollama.ts`).
 
-Once `OLLAMA_BASE_URL` points at the GPU host, the Render `ctf-ollama` service can be removed from
-`render.yaml` and suspended in Render — it is no longer in the path.
-
 ## RunPod Serverless (pay-per-use GPU)
 
 RunPod Serverless is the chosen GPU host: it bills per second a worker actively
@@ -89,6 +86,9 @@ low-volume chat; serverless only bills while a worker is actually running.
 - `OLLAMA_BASE_URL` → the endpoint URL, `https://api.runpod.ai/v2/<endpoint-id>`.
 - `OLLAMA_API_KEY` → the RunPod API key (sent as the bearer token).
 - `OLLAMA_MODEL` → the model baked into the worker (e.g. `qwen2.5:32b`).
+- `RUNPOD_BILLING_API_KEY` → optional, a RunPod key that can read billing. `/admin/expenses` uses it to
+  read this endpoint's daily bill; the endpoint id is taken from `OLLAMA_BASE_URL`, so it is not set
+  twice. See rule 123, "Admin expenses: RunPod billing key".
 
 ## Retired: the Render CPU image
 
