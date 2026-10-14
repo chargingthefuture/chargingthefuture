@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react';
 import { ChevronDown, ChevronRight, Hash, LogIn } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
-import { getChymeTokens, chymeHandle } from './chyme-shared';
-import type { ChymeMessage } from 'lib/chyme/types';
+import { getChymeTokens } from './chyme-shared';
+import type { ChymePublicMessage } from 'lib/chyme/types';
 import { startVisibleInterval } from '../../lib/shared/visible-interval';
 
 // How often the signed-out page re-reads the room chat. The member room polls its own chat too; a
@@ -13,10 +13,10 @@ const POLL_MS = 10_000;
 
 type ChatState =
   | { kind: 'loading' }
-  | { kind: 'ready'; messages: ChymeMessage[] }
+  | { kind: 'ready'; messages: ChymePublicMessage[] }
   | { kind: 'error'; message: string };
 
-function isMessageList(value: unknown): value is ChymeMessage[] {
+function isMessageList(value: unknown): value is ChymePublicMessage[] {
   return Array.isArray(value);
 }
 
@@ -127,7 +127,7 @@ function GuestChatBody({ state }: { state: ChatState }) {
       {state.messages.map((message) => (
         <div key={message.id} style={{ marginBottom: 14 }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 2 }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: '#A7F3D0' }}>{chymeHandle(message.username, message.userId)}</span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: '#A7F3D0' }}>{message.handle}</span>
             <span style={{ fontSize: 11, color: '#374151' }}>{new Date(message.sentAtIso).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
           </div>
           <div style={{ fontSize: 13, color: t.SUBTLE, lineHeight: 1.5, overflowWrap: 'anywhere', wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>{message.text}</div>
