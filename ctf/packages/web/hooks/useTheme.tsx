@@ -8,6 +8,7 @@ import {
   THEME_STORAGE_KEY,
   type ThemeName,
 } from '@/lib/theme/theme-tokens';
+import { reportError } from '@/lib/observability/report';
 
 type ThemeContextValue = {
   theme: ThemeName;
@@ -54,12 +55,26 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     if (persistToServer) {
       // Best-effort sync to the signed-in user's profile so the choice follows the
       // account across devices. Unauthenticated callers get a 401 we quietly ignore.
+      // Any other failure keeps the local choice but is reported, so a theme that does not follow
+      // the member to their next device leaves a trace.
       void fetch('/api/account/ui-preferences', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
         credentials: 'same-origin',
         body: JSON.stringify({ theme: next }),
-      }).catch(() => undefined);
+      })
+        .then((res) => {
+          if (!res.ok && res.status !== 401) {
+            reportError(new Error(`Theme save answered HTTP ${res.status}`), {
+              area: 'account',
+              op: 'theme_save',
+              extra: { status: res.status },
+            });
+          }
+        })
+        .catch((error: unknown) => {
+          reportError(error, { area: 'account', op: 'theme_save' });
+        });
     }
   }, []);
 
@@ -85,15 +100,26 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     void (async () => {
       try {
         const res = await fetch('/api/account/ui-preferences', { credentials: 'same-origin' });
-        if (!res.ok) return;
+        if (!res.ok) {
+          // 401 is a signed-out reader, the expected case; anything else is reported.
+          if (res.status !== 401) {
+            reportError(new Error(`Theme read answered HTTP ${res.status}`), {
+              area: 'account',
+              op: 'theme_load',
+              extra: { status: res.status },
+            });
+          }
+          return;
+        }
         const data: { ok?: boolean; theme?: unknown } = await res.json();
         if (!data?.ok) return;
         const serverTheme = normalizeTheme(data.theme);
         if (serverTheme !== local) {
           applyTheme(serverTheme, false);
         }
-      } catch {
-        // Offline or not signed in — keep the local choice.
+      } catch (error) {
+        // Offline or an unreadable answer: keep the local choice and report it.
+        reportError(error, { area: 'account', op: 'theme_load' });
       }
     })();
   }, [applyTheme]);

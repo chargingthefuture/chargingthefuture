@@ -124,7 +124,7 @@ function notes(report: SharedIncidentReport): ReportNote[] {
     {
       heading: 'Where these numbers come from',
       body:
-        'Members of Charging The Future log incidents in the app, one entry at a time, and choose per incident whether to share it. Only shared incidents are counted here. Sharing is off unless the member turns it on; tagging an incident requires sharing it, and the app says so before the member saves.',
+        'Members of Skills Economy log incidents in the app, one entry at a time, and choose per incident whether to share it. Only shared incidents are counted here. Sharing is off unless the member turns it on; tagging an incident requires sharing it, and the app says so before the member saves.',
     },
     {
       heading: 'What is counted, and what never leaves the member',
