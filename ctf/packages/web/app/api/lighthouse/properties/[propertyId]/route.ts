@@ -31,10 +31,6 @@ function asNumber(value: unknown): number | null {
   return typeof value === 'number' ? value : null;
 }
 
-function asBoolean(value: unknown, fallback: boolean): boolean {
-  return typeof value === 'boolean' ? value : fallback;
-}
-
 function asStringArray(value: unknown): string[] | null {
   return Array.isArray(value)
     ? value.filter((code): code is string => typeof code === 'string')
@@ -61,7 +57,9 @@ function parsePropertyInput(body: PropertyBody): LighthousePropertyInput {
     houseRules: body.houseRules,
     photos: body.photos,
     airbnbProfileUrl: asString(body.airbnbProfileUrl),
-    isActive: asBoolean(body.isActive, true),
+    // Left undefined when the body does not carry it, so updateProperty keeps the stored value: the
+    // host's edit form sends no isActive, and a host edit must not undo an admin hiding the listing.
+    isActive: typeof body.isActive === 'boolean' ? body.isActive : undefined,
   };
 }
 
