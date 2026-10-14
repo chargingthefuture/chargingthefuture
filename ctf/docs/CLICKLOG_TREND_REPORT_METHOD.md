@@ -12,7 +12,7 @@ posted anywhere carries its own provenance. This file is the long version.
 
 ## 1. What the report is
 
-Members of Charging The Future record incidents in a feature called ClickLog — one entry at a time,
+Members of Skills Economy record incidents in a feature called ClickLog — one entry at a time,
 on the day it happens. Each entry can carry a written note, a location, and tags chosen from two
 fixed lists: known problems ("what happened to you") and named schemes ("what was used on you").
 
