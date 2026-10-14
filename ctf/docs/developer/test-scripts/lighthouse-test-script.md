@@ -132,6 +132,40 @@ a duplicate, shown inline. If you and the host have blocked each other, the requ
 action never appears on your own listing.
 **Result:** web ☐ mobile ☐ — notes:
 
+### LH-4c · A listing's street address stays private until a stay is agreed (added 2026-10-05)
+**Role:** host, seeker, another member, admin · **Surfaces:** api/data
+**Precondition:** a host listing with a street address and postal code; a seeker with a pending
+request on it.
+**Steps:**
+1. As another member, read the listing (`GET /api/lighthouse/properties` and the listing's detail read).
+2. As the seeker with the pending request, read the same listing.
+3. As the host, accept the request, then read the listing again as the seeker.
+4. Read the listing as the host and as an admin.
+**Expected:** In steps 1 and 2 the street address and postal code are `null`; city, state and country
+are present. After the host accepts in step 3, the seeker gets both fields. The host and the admin
+always get them, and the host's edit form still prefills the address.
+**Result:** web ☐ — notes:
+
+### LH-4b · Host accepts or declines a stay request
+**Role:** member (host) · **Surfaces:** web
+**Precondition:** two pending requests on a listing you own (LH-4, sent by other members), and a third
+request the seeker has since withdrawn.
+**Steps:**
+1. As the host, open the Matches tab. Each pending request on your listing shows **Accept** and
+   **Decline**; a request you sent on somebody else's listing does not.
+2. Press **Accept** on the first request. While it saves, both buttons are disabled and the pressed
+   one reads "Accepting…".
+3. Press **Decline** on the second request.
+4. Open the Direct Line tab and pick the accepted match.
+5. Send the route a host accept for the withdrawn request (for example from the browser's network
+   tools, `PUT /api/lighthouse/matches/:matchId` with `{"status":"accepted"}` and `x-ctf-csrf: 1`).
+**Expected:** The first card reads "Match: Accepted" with a green tick and the buttons are gone; the
+second reads "Match: Rejected". The accepted match opens a chat in Direct Line. The withdrawn request
+is refused with status 409 and "This request can no longer be changed that way. It may have been
+withdrawn or already answered." If a save fails, the route's message shows in red under the buttons
+and the request stays pending.
+**Result:** web ☐ — notes:
+
 ### LH-5 · List your own place (self-service hosting)
 **Role:** member · **Surfaces:** web, mobile (android host tab where present)
 **Steps:**
@@ -360,6 +394,21 @@ never shown to an admin unless they also filed a safety report.
 the seeker) and their block list, plus any blocks other members had placed on that account. Matches
 other members sent to the departed member's listings remain visible to those seekers, but the host
 now reads as a deleted member rather than showing the old account.
+
+### LH-DEL2 · Deleting LightHouse data removes the profile row; the export leaves out blocks placed on you (added 2026-10-05)
+
+**Role:** two members, A and B · **Surfaces:** web, api/data
+**Steps:**
+1. As member B, block member A from one of B's listings and write a reason.
+2. As member A, download the data export from the account area.
+3. As member A, fill in seeker details with a phone number and Signal link, then delete only the
+   LightHouse data from the account area.
+4. Open LightHouse again as member A.
+**Expected:** The export in step 2 holds A's own LightHouse rows and nothing about B's block: no
+blocker id and no reason. After step 3 the `lighthouse_profiles` row for A is gone, not just stamped
+with `service_deleted_at`, so the phone number and Signal link are no longer stored. In step 4 A sees
+the empty seeker setup, as after the plugin's own delete.
+**Result:** web ☐ — notes:
 
 ---
 

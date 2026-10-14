@@ -10,8 +10,8 @@ import type {
   WorkforceDashboard,
   WorkforceGroupedReportItem,
   WorkforceOccupationGapItem,
-  WorkforceProfile,
 } from '../../lib/workforce/types';
+import { responseFailureText } from 'lib/errors/client-failure';
 import { WorkforceHeroStats } from './workforce-hero-stats';
 import { WorkforceSkillDistribution } from './workforce-skill-distribution';
 import { WorkforceSectorGaps } from './workforce-sector-gaps';
@@ -31,7 +31,6 @@ interface WorkforceData {
   sectorItems: WorkforceGroupedReportItem[];
   skillItems: WorkforceGroupedReportItem[];
   occupationItems: WorkforceOccupationGapItem[];
-  profile: WorkforceProfile | null;
 }
 
 function WorkforceLoadingState() {
@@ -267,49 +266,39 @@ async function readItems<T>(res: Response): Promise<T[]> {
   return json.items ?? [];
 }
 
-// A 404 on the profile is normal (the member has not claimed a Directory profile); any other
-// non-OK profile status yields null too, and is noted separately in failedSectionsMessage.
-async function readProfile(res: Response): Promise<WorkforceProfile | null> {
-  if (!res.ok) return null;
-  const json = (await res.json()) as { profile?: WorkforceProfile };
-  return json.profile ?? null;
-}
-
 // Surface a non-blocking notice if a secondary panel failed to load, instead of silently showing it
 // empty (which reads as "no data").
 function failedSectionsMessage(
   sectorRes: Response,
   skillRes: Response,
   occRes: Response,
-  profileRes: Response,
 ): string | null {
   const failed: string[] = [];
   if (!sectorRes.ok) failed.push('sector gaps');
   if (!skillRes.ok) failed.push('skill levels');
   if (!occRes.ok) failed.push('training gaps');
-  if (!profileRes.ok && profileRes.status !== 404) failed.push('your profile');
   return failed.length > 0 ? `Some sections could not be loaded: ${failed.join(', ')}.` : null;
 }
 
 async function loadWorkforceData(
   signal?: AbortSignal,
 ): Promise<{ data: WorkforceData; warning: string | null }> {
-  const [dashRes, sectorRes, skillRes, occRes, profileRes] = await Promise.all([
+  const [dashRes, sectorRes, skillRes, occRes] = await Promise.all([
     fetch('/api/workforce/dashboard', { signal }),
     fetch('/api/workforce/reports/sector/all', { signal }),
     fetch('/api/workforce/reports/skill-level/all', { signal }),
     fetch('/api/workforce/reports/occupations?limit=10', { signal }),
-    fetch('/api/workforce/profile', { signal }),
   ]);
 
-  if (anyAuthFailure([dashRes, sectorRes, skillRes, occRes, profileRes])) {
+  if (anyAuthFailure([dashRes, sectorRes, skillRes, occRes])) {
     throw new Error('Your session has expired. Please sign in again.');
   }
 
   // The dashboard is the core of the page; if it fails there is nothing meaningful to show, so
   // surface the error state rather than silently falling through to the empty state.
   if (!dashRes.ok) {
-    throw new Error(`Dashboard request failed (${dashRes.status}).`);
+    // Show what the route said; the status is the fallback only when its body carries no message.
+    throw new Error(await responseFailureText(dashRes, 'Dashboard request failed'));
   }
 
   const dashJson = (await dashRes.json()) as { dashboard?: WorkforceDashboard };
@@ -318,9 +307,8 @@ async function loadWorkforceData(
     sectorItems: await readItems<WorkforceGroupedReportItem>(sectorRes),
     skillItems: await readItems<WorkforceGroupedReportItem>(skillRes),
     occupationItems: await readItems<WorkforceOccupationGapItem>(occRes),
-    profile: await readProfile(profileRes),
   };
-  return { data, warning: failedSectionsMessage(sectorRes, skillRes, occRes, profileRes) };
+  return { data, warning: failedSectionsMessage(sectorRes, skillRes, occRes) };
 }
 
 // The tab rail, and the set of names a link may open. One list, because a link that names a tab the
@@ -362,7 +350,6 @@ export function WorkforceShell({ isAdmin }: { isAdmin?: boolean }) {
     sectorItems: [],
     skillItems: [],
     occupationItems: [],
-    profile: null,
   });
   const { theme } = useTheme();
   const t = getWorkforceTokens(theme);
