@@ -47,6 +47,7 @@ jobs:
 
           # GitHub recomputes each PR's merge state after main moves, and reports UNKNOWN until it
           # has. Read the list until no auto-merge PR reads UNKNOWN, or give up after a few tries.
+          # spelling:disable — GitHub's own check conclusion values (CANCELLED), which must match exactly.
           for attempt in 1 2 3 4 5; do
             PRS=$(gh pr list --repo "$REPO" --state open --limit 200 \
               --json number,isDraft,autoMergeRequest,mergeStateStatus,statusCheckRollup \
@@ -66,6 +67,7 @@ jobs:
             echo "$UNKNOWN auto-merge PR(s) still read UNKNOWN; reading again in 20 seconds."
             sleep 20
           done
+          # spelling:enable
 
           echo "Auto-merge PRs: $(echo "$PRS" | jq 'length')"
 
