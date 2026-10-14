@@ -86,6 +86,36 @@ export async function ensureLighthouseMatchChannel(input: {
   }
 }
 
+// Take both members off a match's chat channel when the request is declined or withdrawn, so a
+// seeker whose request did not go ahead cannot keep messaging the host on a channel they joined
+// earlier (requests made before 2026-10-14 joined both members at request time). Best-effort: the
+// status change has already committed. A channel that was never created (the usual case now, since
+// the chat route creates it only for an accepted match) is not an error.
+export async function removeLighthouseMatchMembers(input: {
+  matchId: string;
+  seekerUserId: string;
+  hostUserId: string;
+}): Promise<void> {
+  const config = await resolveStreamCredentials();
+  if (!config) {
+    return;
+  }
+  const streamClient = new StreamChat(config.apiKey, config.apiSecret);
+  const streamChannelId = `lighthouse-match-${input.matchId}`;
+  try {
+    await streamClient
+      .channel('messaging', streamChannelId)
+      .removeMembers([toStreamUserId(input.seekerUserId), toStreamUserId(input.hostUserId)]);
+  } catch (error) {
+    // Stream answers code 16 when the channel does not exist.
+    if ((error as { code?: unknown } | null)?.code !== 16) {
+      reportError(error, { area: 'lighthouse', op: 'stream_remove_match_members', extra: { streamChannelId } });
+    }
+  } finally {
+    await streamClient.disconnectUser();
+  }
+}
+
 export async function createLighthouseParticipantToken(userId: string, displayName: string): Promise<LighthouseStreamParticipantCredentials | null> {
   const config = await resolveStreamCredentials();
   if (!config) {

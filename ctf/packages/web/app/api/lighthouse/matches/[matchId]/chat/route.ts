@@ -1,12 +1,19 @@
 import { NextResponse } from 'next/server';
 import { ensureLighthouseMatchChannel, createLighthouseParticipantToken } from 'lib/lighthouse/stream';
-import { requireLighthouseReadAccess } from 'lib/lighthouse/_lib';
+import { ensureMutationCsrf, requireLighthouseReadAccess } from 'lib/lighthouse/_lib';
 import { listMatches } from 'lib/lighthouse/repository';
 import { buildIdentityDisplayName } from 'lib/auth/request-identity';
 import { reportError } from 'lib/observability/report';
 import { streamFailureMessage } from 'lib/shared/stream-error-text';
 
-export async function POST(_request: Request, { params }: { params: Promise<{ matchId: string }> }) {
+export async function POST(request: Request, { params }: { params: Promise<{ matchId: string }> }) {
+  // This POST writes to Stream (both members' users, the channel and its membership) before it mints
+  // the token, so it takes the same CSRF check as every other LightHouse write.
+  const csrfDeny = ensureMutationCsrf(request);
+  if (csrfDeny) {
+    return csrfDeny;
+  }
+
   const { matchId } = await params;
   if (!matchId) {
     return NextResponse.json({ ok: false, message: 'Missing matchId' }, { status: 400 });
