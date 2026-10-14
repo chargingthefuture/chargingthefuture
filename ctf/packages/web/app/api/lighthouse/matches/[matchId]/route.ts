@@ -4,6 +4,7 @@ import { LIGHTHOUSE_ERROR_CODE } from 'lib/lighthouse/constants';
 import { insertLighthouseAudit, updateMatch, validateMatchUpdateInput } from 'lib/lighthouse/repository';
 import type { LighthouseMatchUpdateInput } from 'lib/lighthouse/types';
 import { reportError } from 'lib/observability/report';
+import { removeLighthouseMatchMembers } from 'lib/lighthouse/stream';
 import { failureReason } from 'lib/errors/failure';
 
 type RouteParams = {
@@ -103,6 +104,11 @@ export async function PUT(request: Request, { params }: RouteParams) {
       targetId: match.id,
       metadata: { status: match.status },
     });
+
+    // A declined or withdrawn request ends the conversation it might have had.
+    if (match.status === 'rejected' || match.status === 'canceled') {
+      await removeLighthouseMatchMembers({ matchId: match.id, seekerUserId: match.seekerUserId, hostUserId: match.hostUserId });
+    }
 
     return NextResponse.json({ ok: true, match }, { status: 200 });
   } catch (error) {

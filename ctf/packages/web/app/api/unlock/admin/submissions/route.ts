@@ -8,6 +8,7 @@ import {
 } from 'lib/unlock/_lib';
 import { createOrUpdateUnlockSubmission, getUnlockSubmissionByUserId, insertUnlockAudit, listUnlockSubmissions } from 'lib/unlock/repository';
 import { withMemberIdentities } from 'lib/unlock/member-identity';
+import { applyDenylistBlockIfSpam } from 'lib/unlock/denylist-block';
 import type { UnlockAccessTier, UnlockReviewStatus } from 'lib/unlock/types';
 import { reportError } from 'lib/observability/report';
 
@@ -199,11 +200,16 @@ export async function POST(request: Request) {
       addedByAdminUserId: gate.auth.userId,
     });
 
+    // A URL on the spam denylist comes back marked spam. Apply the same block the member's own route
+    // applies, and audit it as the refusal it is, so an admin-entered denylisted URL is not a way around it.
+    await applyDenylistBlockIfSpam(submission.reviewStatus, userId);
+    const denylisted = submission.reviewStatus === 'spam';
+
     await insertUnlockAudit({
       actorUserId: gate.auth.userId,
       command: 'unlock.admin.submission.create',
-      policyStatus: 'allow',
-      reason: 'ok',
+      policyStatus: denylisted ? 'deny' : 'allow',
+      reason: denylisted ? 'spam_denylisted' : 'ok',
       targetUserId: userId,
       requestId,
       metadata: {

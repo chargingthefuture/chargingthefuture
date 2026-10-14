@@ -196,21 +196,52 @@ function getMessageDedupKey(message: ChatMessage): string {
   return [message.from, message.senderLabel ?? '', message.text.trim().toLowerCase(), message.time].join('|');
 }
 
+// Merge incoming messages into the stream. A message already on screen is replaced in place by the
+// incoming copy, so a poll or live refresh carries the server's current reactions, reply count, text
+// and picture onto posts that are already loaded; a new one is appended.
 function mergeMessages(existing: ChatMessage[], next: ChatMessage[]): ChatMessage[] {
   const merged = [...existing];
-  const seen = new Set(existing.map(getMessageDedupKey));
+  const indexByKey = new Map(existing.map((message, index) => [getMessageDedupKey(message), index]));
 
   for (const message of next) {
     const key = getMessageDedupKey(message);
-    if (seen.has(key)) {
+    const index = indexByKey.get(key);
+    if (index !== undefined) {
+      merged[index] = message;
       continue;
     }
 
+    indexByKey.set(key, merged.length);
     merged.push(message);
-    seen.add(key);
   }
 
   return merged;
+}
+
+// Drop loaded peer posts the server no longer returns: removed by their author or hidden by a
+// moderator in another session. Only posts inside the returned page's time span are judged, and only
+// ones sent before the read started, so an older page never removes newer posts and a post that
+// landed while the read was in flight is not dropped and re-added.
+function dropPostsMissingFromPage(
+  existing: ChatMessage[],
+  page: ChatMessage[],
+  readStartedAtMs: number,
+): ChatMessage[] {
+  const pageTimes = page
+    .map((message) => (message.sentAtIso ? Date.parse(message.sentAtIso) : Number.NaN))
+    .filter((time) => Number.isFinite(time));
+  if (pageTimes.length === 0) {
+    return existing;
+  }
+  const oldest = Math.min(...pageTimes);
+  const returned = new Set(page.map(getMessageDedupKey));
+  const kept = existing.filter((message) => {
+    if (!message.communityPostId || !message.sentAtIso) return true;
+    const time = Date.parse(message.sentAtIso);
+    if (!Number.isFinite(time) || time < oldest || time >= readStartedAtMs) return true;
+    return returned.has(getMessageDedupKey(message));
+  });
+  return kept.length === existing.length ? existing : kept;
 }
 
 function normalizeQuestion(value: string): string {
@@ -312,13 +343,14 @@ async function fetchHistoryIntoState(
   currentUserId: string,
   setMessages: Dispatch<SetStateAction<ChatMessage[]>>,
 ): Promise<void> {
+  const readStartedAtMs = Date.now();
   // `no-cache` lets the browser revalidate its copy, so an unchanged page comes back as a 304.
   const payload = await requestJson<CommonsMessagesResponse>(`/api/commons/messages?limit=50${extraParam}`, { cache: 'no-cache' });
   if (readFilterKey() !== expectedKey) {
     return;
   }
   const nextMessages = payload.messages.map((message) => mapStoredMessage(message, currentUserId));
-  setMessages((previous) => mergeMessages(previous, nextMessages));
+  setMessages((previous) => mergeMessages(dropPostsMissingFromPage(previous, nextMessages, readStartedAtMs), nextMessages));
 }
 
 // Read the comic conversation stream and merge it over the local (optimistic) items.
