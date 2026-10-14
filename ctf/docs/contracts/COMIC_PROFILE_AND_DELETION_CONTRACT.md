@@ -83,8 +83,10 @@ fields.
     reads the submission, so the contributor is not relied upon to strip them.
   - Right to erasure: deliverable in practice, not just on paper, because the assistant **retrieves**
     from `comic_knowledge_entries` at answer time rather than being trained on the text. Withdrawal
-    deactivates those rows; account deletion removes them outright via
-    `comic_knowledge_entries.contribution_id` ON DELETE CASCADE. Words absorbed into model weights
+    deactivates the rows whose `contribution_id` is that contribution, and curation cannot switch
+    them back on; account deletion removes the same rows outright via
+    `comic_knowledge_entries.contribution_id` ON DELETE CASCADE. A row the contribution only pointed
+    at, because the same text was already in the library from someone else, is theirs and stays. Words absorbed into model weights
     could not be withdrawn, which is why the design does not absorb them.
 
 ## 5) Service-Scoped Deletion Contract
@@ -173,6 +175,9 @@ If user returns after service-scoped deletion:
 
 ## Change Log
 
+- 2026-10-05: Withdrawal deactivates only the rows the contribution created (`contribution_id`),
+  matching the account-deletion cascade, and an admin can no longer switch a withdrawn
+  contribution's row back on.
 - 2026-05-31: Added `comic_answer_ratings` (helpful/not_helpful/flagged quality signal, CASCADE
   off `comic_turns`) to owned data + deletion scope alongside the web UI delivery (design
   `9a4a1af`). Updated rollout stage to web UI delivered.

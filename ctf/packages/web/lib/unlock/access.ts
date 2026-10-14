@@ -7,28 +7,31 @@ import type { UnlockAccessTier } from './types';
 // Resolves the user's effective Unlock access tier — the single source of truth for
 // how much of the app a signed-in person can reach.
 // Evaluation order:
-//  1. Unleash flag — if ON for this user (via userWithId targeting), they have full access.
-//  2. DB fallback — for users approved before flag-driven gating was deployed, or when
-//     Unleash is not configured (local / CI); returns the stored tier (with lazy expiry
-//     applied by getEffectiveUnlockAccessTier), or null when the user has no submission.
-//
-// The DB fallback ensures no regression for existing approved users.
+//  1. Stored submission row — read first, with lazy expiry applied by getEffectiveUnlockAccessTier.
+//     When a row exists it decides: an approval stores `approved_full`, and a rejection, a reward
+//     revoke or a re-submission stores a lower tier that nothing else may override.
+//  2. Unleash flag — consulted only when the member has no row at all, so a member added to the
+//     flag by hand in the Unleash dashboard still gets full access. Approval used to add members to
+//     the flag and nothing took them out again, so a flag-first order let a rejected or revoked
+//     member keep full access; the row now always wins.
+//  3. No row and no flag — the Commons fallback below, or null.
 export async function getUnlockAccessTier(userId: string): Promise<UnlockAccessTier | null> {
-	try {
-		const flagEnabled = await evaluateBooleanFlag(UNLOCK_FLAGS.QUORA_ONBOARDING, false, {
-			targetingKey: userId,
-		});
-		if (flagEnabled) return 'approved_full';
-	} catch (error) {
-		// A flag-backend failure must never lock out approved users; fall through to the DB tier.
-		console.error('[unlock] flag evaluation failed; falling back to DB access tier', error);
+	const storedTier = await getEffectiveUnlockAccessTier(userId);
+	if (storedTier === 'approved_full') return storedTier;
+
+	if (storedTier === null) {
+		try {
+			const flagEnabled = await evaluateBooleanFlag(UNLOCK_FLAGS.QUORA_ONBOARDING, false, {
+				targetingKey: userId,
+			});
+			if (flagEnabled) return 'approved_full';
+		} catch (error) {
+			// A flag-backend failure must never lock out approved users; fall through to the DB tier.
+			console.error('[unlock] flag evaluation failed; falling back to DB access tier', error);
+		}
 	}
 
-	// Fall back to DB for users approved before Unleash targeting was set, or when Unleash
-	// is unconfigured. The flag client returns the default (false) in both cases, so we
-	// consult the DB to avoid locking out previously approved users.
-	const storedTier = await getEffectiveUnlockAccessTier(userId);
-	if (storedTier === 'approved_full' || storedTier === 'locked_support_only') return storedTier;
+	if (storedTier === 'locked_support_only') return storedTier;
 
 	// Everything below is a member who cannot reach the Commons on their stored tier: either no
 	// submission at all (null) or one waiting in the review queue (`pending_readonly`). Both used to

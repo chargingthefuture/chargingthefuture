@@ -326,7 +326,7 @@
 **Precondition:** Signed in as an admin, with a screenshot saved on the device. A second, non-admin member account to check from.
 
 **Steps:**
-1. As the admin, open the Commons. Above the message box, tap **Share a picture (admins)**.
+1. As the admin, open the Commons. In the icon row above the message box, tap the camera button after the 🎁 (screen readers read it as "Share a picture (admins)"). Tap it again and the panel closes.
 2. Choose the screenshot. A preview appears.
 3. Leave the description empty and fill in the message. Confirm **Share** stays disabled.
 4. Fill in the description ("What it shows") and tap **Share**.
@@ -346,7 +346,7 @@
 - The admin's own picture post shows both Delete and Edit (bug fix, 2026-09-26: Edit used to be
   hidden on any post with a picture, since the ordinary edit model deletes and reposts, which would
   have dropped the picture).
-- Step 7: the member sees the same picture and message. There is no Share a picture button for the
+- Step 7: the member sees the same picture and message. There is no camera button for the
   member.
 - Step 8: 403, "Only admins can share pictures in the Commons."
 - Step 9: the post and its picture are gone; the picture's address returns 404.

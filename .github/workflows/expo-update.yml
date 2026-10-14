@@ -92,3 +92,8 @@ jobs:
         run: |
           set -euo pipefail
           eas update --channel production --message "${GITHUB_SHA}: ${HEAD_COMMIT_MESSAGE}" --non-interactive
+          # Test APKs (the "preview" build profile) listen to the preview channel. Publishing the same
+          # code there lets a test APK pick up fixes on its next open, without spending a new build
+          # (owner decision, 2026-10-09). Same runtime version rule: an update only reaches an APK
+          # whose app version matches, so a change that adds a native module still needs a new APK.
+          eas update --channel preview --message "${GITHUB_SHA}: ${HEAD_COMMIT_MESSAGE}" --non-interactive

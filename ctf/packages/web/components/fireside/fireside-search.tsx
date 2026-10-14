@@ -119,7 +119,7 @@ export function FiresideSearch({
   onOpenThread: (post: { repo: string; slug: string; title: string }) => void;
 }) {
   // The page is in the address bar, so a search can be linked and the back button steps through it.
-  const [page, setPage] = useUrlPage("found");
+  const { page, setPage, adoptPage, ready } = useUrlPage("found");
   // `draft` is what is typed; `query` is what was actually searched for. Keeping them apart is why
   // typing does not fire a query against every comment on each keystroke.
   const [draft, setDraft] = useState("");
@@ -139,8 +139,9 @@ export function FiresideSearch({
       const res = await fetch(`/api/fireside/search?q=${encodeURIComponent(search)}&page=${wanted}`);
       const body = (await res.json().catch(() => ({}))) as SearchAnswer & { message?: string };
       if (!res.ok) throw new Error(body.message ?? "Could not search the conversation.");
-      // The route clamps a page past the end and answers with the one it used.
-      if (body.page !== wanted) setPage(body.page);
+      // The route clamps a page past the end and answers with the one it used. It replaces the
+      // address-bar entry rather than adding one, so Back still leaves the search.
+      if (body.page !== wanted) adoptPage(body.page);
       setAnswer(body);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not search the conversation.");
@@ -148,9 +149,10 @@ export function FiresideSearch({
     } finally {
       setLoading(false);
     }
-  }, [setPage]);
+  }, [adoptPage]);
 
-  useEffect(() => { void load(page, query); }, [load, page, query]);
+  // Waits for the address bar to be read, so a linked page is the only page asked for.
+  useEffect(() => { if (ready) void load(page, query); }, [load, page, query, ready]);
 
   return (
     <div style={{ marginBottom: 24 }}>

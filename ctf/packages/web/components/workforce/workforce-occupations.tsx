@@ -6,6 +6,7 @@ import { WORKFORCE_SKILL_LEVELS } from '../../lib/workforce/skill-level';
 import type { WorkforceOccupation } from '../../lib/workforce/types';
 import { useTheme } from '@/hooks/useTheme';
 import { getWorkforceTokens } from './workforce-shared';
+import { responseFailureText } from 'lib/errors/client-failure';
 
 const PAGE_SIZE = 20;
 const FETCH_PAGE_SIZE = 100; // API max; we page through to load the full list for client-side filtering.
@@ -19,7 +20,7 @@ const SKILL_BADGE: Record<string, string> = {
 async function fetchAllOccupations(signal: AbortSignal): Promise<WorkforceOccupation[]> {
   const first = await fetch(`/api/workforce/occupations?page=1&pageSize=${FETCH_PAGE_SIZE}`, { signal });
   if (!first.ok) {
-    throw new Error(`Request failed (${first.status}).`);
+    throw new Error(await responseFailureText(first, 'Request failed'));
   }
   const firstJson = (await first.json()) as {
     items?: WorkforceOccupation[];
@@ -31,12 +32,18 @@ async function fetchAllOccupations(signal: AbortSignal): Promise<WorkforceOccupa
   if (pages <= 1) {
     return items;
   }
+  // A later page that fails fails the list, the same as the first page. Treating it as empty would
+  // show a shorter list, a wrong count and "no match" for an occupation that exists.
   const rest = await Promise.all(
-    Array.from({ length: pages - 1 }, (_, i) =>
-      fetch(`/api/workforce/occupations?page=${i + 2}&pageSize=${FETCH_PAGE_SIZE}`, { signal })
-        .then((r) => (r.ok ? r.json() : { items: [] }))
-        .then((j: { items?: WorkforceOccupation[] }) => j.items ?? []),
-    ),
+    Array.from({ length: pages - 1 }, async (_, i) => {
+      const page = i + 2;
+      const r = await fetch(`/api/workforce/occupations?page=${page}&pageSize=${FETCH_PAGE_SIZE}`, { signal });
+      if (!r.ok) {
+        throw new Error(await responseFailureText(r, `Page ${page} of the occupation list failed to load`));
+      }
+      const j = (await r.json()) as { items?: WorkforceOccupation[] };
+      return j.items ?? [];
+    }),
   );
   return items.concat(...rest);
 }
@@ -71,9 +78,9 @@ function OccupationDetail({ id, onBack }: { id: string; onBack: () => void }) {
     setLoading(true);
     setError(null);
     fetch(`/api/workforce/occupations/${encodeURIComponent(id)}`, { signal: controller.signal })
-      .then((r) => {
+      .then(async (r) => {
         if (r.status === 404) return null;
-        if (!r.ok) throw new Error(`Request failed (${r.status}).`);
+        if (!r.ok) throw new Error(await responseFailureText(r, 'Request failed'));
         return r.json();
       })
       .then((j: { occupation?: WorkforceOccupation } | null) => setOcc(j?.occupation ?? null))
