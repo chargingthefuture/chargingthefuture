@@ -7116,7 +7116,7 @@ ON CONFLICT (user_id) DO NOTHING;
 -- === directory public landing page (owner decision, 2026-10-13) ===
 -- The public match page (landing-page-v4, on Vercel) reads Directory counts per job title and saves
 -- the match a visitor asks to come back to. It connects with its own login, landing_page, which may
--- read the two views below and read and add rows in directory_landing_match_codes, and nothing else
+-- read the two views below and read, add and update rows in directory_landing_match_codes, and nothing else
 -- (the grants are pasted in the Neon dashboard, not kept here, because the login is created there).
 -- Defined at the END so directory_profiles, the taxonomy tables and account_restrictions exist.
 --
