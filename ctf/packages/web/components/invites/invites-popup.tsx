@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import styles from './invites-popup.module.css';
 
-// One of the blog's published invite posts at a time, in a small card that floats in the corner of
+// One invitation to somebody listed in the Directory at a time, in a small card that floats in the corner of
 // every signed-out plugin page. It replaces the reviews popup (owner decision, 2026-09-19): the one
 // review on that list linked to a Quora post that no longer exists, and a card for somebody already
 // listed in the Directory says more about what this is than a quote about it does.
@@ -14,20 +14,20 @@ import styles from './invites-popup.module.css';
 // fixed corner card is read as an aside, the way the reviews popup it replaced was, and it takes no
 // vertical space from the plugin under it.
 //
-// The list is the blog's own build output, invites.json, written from the invite posts themselves
-// and served by GitHub Pages with an open CORS header. Nothing here decides what an invite is; the
-// blog does. Renders nothing when the file cannot be read or is empty.
+// The list comes from the app's own public invite route (owner decision, 2026-10-15): the invites
+// moved off the public blog, and a signed-out visitor sees only each person's name and the invite's
+// opening words. The link opens that invitation in the Directory, where reading it in full needs a
+// sign-in. Renders nothing when the list cannot be read or is empty.
 //
 // Nothing moves on its own. The visitor advances with the two buttons or the keyboard, dismisses it
 // for the session with the close control, and the card stays in the page for a screen reader.
 
-const INVITES_URL = 'https://chargingthefuture.github.io/chargingthefuture/invites.json';
+const INVITES_URL = '/api/directory/invites/public';
 const DISMISS_KEY = 'ctf-invites-popup-dismissed';
 const APPEAR_DELAY_MS = 2500;
 
 type InviteCard = {
   name: string;
-  title: string;
   url: string;
   date: string;
   opening: string;
@@ -39,7 +39,7 @@ function formatDate(iso: string): string {
   return at.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
 }
 
-// The blog's file, unless the visitor closed the card earlier in this session. The dismissal check
+// The newest invites, unless the visitor closed the card earlier in this session. The dismissal check
 // sits at the top of the effect so a later `endpoint` change cannot re-open a closed card.
 function useInvites(endpoint: string): { invites: InviteCard[]; visible: boolean; hide: () => void } {
   const [invites, setInvites] = useState<InviteCard[]>([]);
@@ -110,11 +110,11 @@ export function InvitesPopup({ endpoint = INVITES_URL }: { endpoint?: string }) 
         <span className={styles.eyebrow}>People already on the list</span>
         <div aria-live="polite">
           <span className={styles.date}>{formatDate(invite.date)}</span>
-          <h2 className={styles.title}>{invite.title}</h2>
+          <h2 className={styles.title}>An invitation to {invite.name}</h2>
           <p className={styles.opening}>{invite.opening}</p>
         </div>
         <div className={styles.foot}>
-          <a className={styles.link} href={invite.url} rel="noopener noreferrer">
+          <a className={styles.link} href={invite.url}>
             Read the invitation →
           </a>
           {invites.length > 1 ? (

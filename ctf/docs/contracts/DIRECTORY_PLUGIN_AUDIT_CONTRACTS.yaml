@@ -402,3 +402,54 @@ auditEvents:
     result:
       status: success_or_failure
       errorCategory: none_or_error_class
+
+  # The private invite repository's job writing one invitation (owner decision, 2026-10-15). A durable
+  # row in directory_admin_audit_trail on every outcome, a refused handle included.
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: ci-directory-invites
+    pluginId: directory
+    command: directory.invite.upsert
+    commandVersion: 1.0.0
+    purpose: profile_management
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+      evidence:
+        internalSecretCheck: pass_or_fail
+    dataClassesAccessed:
+      - directory_invite_content
+    targetContext:
+      workspaceId: workspace_identifier
+      targetType: invite
+      targetId: invite_slug
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  # The same job removing one invitation by slug. Durable row, including when no invite had the slug.
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: ci-directory-invites
+    pluginId: directory
+    command: directory.invite.delete
+    commandVersion: 1.0.0
+    purpose: profile_management
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+      evidence:
+        internalSecretCheck: pass_or_fail
+    dataClassesAccessed:
+      - directory_invite_content
+    targetContext:
+      workspaceId: workspace_identifier
+      targetType: invite
+      targetId: invite_slug
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class

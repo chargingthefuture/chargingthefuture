@@ -31,17 +31,18 @@ contracts:
     command: directory.admin.invite_queue.fetch
     version: 1.0.0
     description: >-
-      Admin-only read of everybody listed in the Directory who does not yet have a dedicated invite
-      post on the blog, with their Quora address and their skills. Returns an inviteKind per row:
+      Admin-only read of everybody listed in the Directory who does not yet have an invitation in
+      directory_invites, with their Quora address and their skills. Returns an inviteKind per row:
       skill-specific when a skill other than the Advocacy placeholder is present, advocacy-only when
       every listed skill is that placeholder, and no-skill when nothing is recorded. The owner's own
-      listing and the handles already written about are filtered out in the library rather than in
-      the query, so the exclusion list lives beside the code that uses it.
+      listing is queued like every other. The handles that already have an invitation are read from
+      directory_invites and filtered out in the library.
     inputSchema: {}
     outputSchema:
       rows:
         type: array
     dataAccess:
+      - directory_invites
       - directory_profiles
       - directory_profile_skills
       - directory_profile_proposed_skills
@@ -490,4 +491,186 @@ contracts:
       - directory_admin_audit_trail
     purpose: governance_transparency
     retentionClass: audit_long_lived
+    idempotency: true
+
+  - pluginId: directory
+    command: directory.invite.upsert
+    version: 1.0.0
+    description: >-
+      Machine write from the private invite repository's job (POST /api/internal/directory/invites,
+      Bearer INTERNAL_SERVICE_SECRET). Creates or replaces one invitation, keyed by slug; every field
+      is replaced, the picture included. A Quora handle already held by another slug is refused with
+      409. Each refusal names the field. The picture is base64 PNG, JPEG or WebP, at most 3 MB, its
+      type read from its own bytes, with alt text required. public (default false) marks an invite
+      already published on the blog before 2026-10-15, readable by anybody; blogUrl (also accepted
+      as blog_url) is its post's address and is required when public is true.
+    inputSchema:
+      slug:
+        type: string
+        required: true
+      quoraHandle:
+        type: string
+        required: true
+      quoraUrl:
+        type: string
+        required: true
+      name:
+        type: string
+        required: true
+      title:
+        type: string
+        required: true
+      opening:
+        type: string
+        required: true
+      bodyMarkdown:
+        type: string
+        required: true
+      publishedOn:
+        type: string
+        required: true
+      directoryProfileId:
+        type: string
+        required: false
+      image:
+        type: object
+        required: false
+      public:
+        type: boolean
+        required: false
+      blogUrl:
+        type: string
+        required: false
+    outputSchema:
+      id:
+        type: string
+      slug:
+        type: string
+      status:
+        type: string
+    dataAccess:
+      - directory_invites
+      - directory_admin_audit_trail
+    purpose: profile_management
+    retentionClass: transactional_long_lived
+    idempotency: true
+
+  - pluginId: directory
+    command: directory.invite.delete
+    version: 1.0.0
+    description: >-
+      Machine delete from the private invite repository's job (DELETE
+      /api/internal/directory/invites?slug=, Bearer INTERNAL_SERVICE_SECRET). Removes one invitation
+      by slug; 404 when none has it.
+    inputSchema:
+      slug:
+        type: string
+        required: true
+    outputSchema:
+      slug:
+        type: string
+      status:
+        type: string
+    dataAccess:
+      - directory_invites
+      - directory_admin_audit_trail
+    purpose: profile_management
+    retentionClass: transactional_long_lived
+    idempotency: true
+
+  - pluginId: directory
+    command: directory.invites.public.fetch
+    version: 1.0.0
+    description: >-
+      Public read (GET /api/directory/invites/public), rate limited per address. The newest ten
+      invitations as cards (name, opening words, date, the app address that opens one) and how many
+      people the Directory lists (directory_public_totals, restricted owners left out). ?invite=<handle>
+      adds that one person's card. A card on a public invite (one already on the blog) also carries
+      blogUrl. Nothing else about a private invite: no skills, location, picture, Quora address or
+      title. openWall is one page (?page=, ten a page, clamped) of the public invites with their
+      picture addresses; lockedCount and lockedTeasers (name and opening only, newest ten) are the
+      private invites the signed-out page shows blurred. Readable from the browser by the landing
+      site and the blog.
+    inputSchema:
+      invite:
+        type: string
+        required: false
+      page:
+        type: integer
+        required: false
+    outputSchema:
+      listed:
+        type: integer
+      invites:
+        type: array
+      invite:
+        type: object
+        required: false
+      openWall:
+        type: object
+      lockedCount:
+        type: integer
+      lockedTeasers:
+        type: array
+    dataAccess:
+      - directory_invites
+      - directory_public_totals
+    purpose: public_projection
+    retentionClass: derived_short_lived
+    idempotency: true
+
+  - pluginId: directory
+    command: directory.invites.fetch
+    version: 1.0.0
+    description: >-
+      Signed-in read of the invite wall (GET /api/directory/invites), for any account, approved in
+      Unlock or not (owner decision, 2026-10-15). One page of ten, newest first, ?page= clamped into
+      range: each invitation's title, text, date, Quora address, Directory listing link and picture
+      address. ?invite=<handle> adds that invitation on top. Picture bytes are served separately.
+    inputSchema:
+      page:
+        type: integer
+        required: false
+      invite:
+        type: string
+        required: false
+    outputSchema:
+      listed:
+        type: integer
+      total:
+        type: integer
+      page:
+        type: integer
+      pageCount:
+        type: integer
+      invites:
+        type: array
+      invite:
+        type: object
+        required: false
+    dataAccess:
+      - directory_invites
+      - directory_public_totals
+    purpose: profile_management
+    retentionClass: derived_short_lived
+    idempotency: true
+
+  - pluginId: directory
+    command: directory.invite.image.fetch
+    version: 1.0.0
+    description: >-
+      One invitation's picture (GET /api/directory/invites/[slug]/image). A signed-in account of any
+      tier gets any picture; a signed-out caller only a public invite's, rate limited, and a private
+      one answers 401. Served with nosniff and a private cache header.
+    inputSchema:
+      slug:
+        type: string
+        required: true
+    outputSchema:
+      image:
+        type: binary
+    dataAccess:
+      - directory_invites
+    purpose: profile_management
+    retentionClass: derived_short_lived
     idempotency: true
