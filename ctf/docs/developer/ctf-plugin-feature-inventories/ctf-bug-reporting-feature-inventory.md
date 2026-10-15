@@ -61,7 +61,7 @@ and does no external calls.
 |---|---|---|---|
 | POST | `/api/bug-reports` | any authenticated user | Submit a problem report. Validates and length-caps input, enforces a per-user rate limit, runs the redaction/risk gate, and stores the row. Returns `{ ok, reportId, status }`. |
 | GET | `/api/bug-reports/admin` | admin only (`requireBugReportAdminAccess`) | List bug reports for the `/admin/bug-reports` review page, held reports first (`listReportsForAdmin`). Returns `{ ok, items }` with **redacted** message/context only (raw text never leaves the DB, rule 129), plus status, reporter identity (`reporterUsername`, nullable, and `reporterHandle`, always set — admin surface only, never on the triage issue), risk flags/level, page URL, plugin slug, app version, and any triage-repo issue link. |
-| POST | `/api/bug-reports/admin/:id/resolve` | admin only, CSRF (`x-ctf-csrf: 1`) | Resolve a held (or new) report. Body `{ action: 'release' \| 'reject' }`: `release` sends it back to `new` so the create-issues job publishes the redacted copy to the triage repo (`releaseHeldReport`); `reject` drops it so it never publishes (`rejectReport`). 409 when the report is not in a resolvable state, 400 on a non-UUID id or an unknown action. Returns `{ ok, id, status }`. |
+| POST | `/api/bug-reports/admin/:id/resolve` | admin only, CSRF (`x-ctf-csrf: 1`) | Resolve a held (or new) report. Body `{ action: 'release' \| 'reject' }`: `release` sends it back to `new` so the create-issues job publishes the redacted copy to the triage repo (`releaseHeldReport`); `reject` drops it so it never publishes (`rejectReport`). 409 (`bug_reports.conflict`) when the report is not in a resolvable state, 400 on a non-UUID id, an unknown action, or a body that is not JSON (with `reason`). Returns `{ ok, id, status }`. |
 
 | GET | `/api/bug-reports/admin/audit-events` | admin only (`requireBugReportAdminAccess`) | Read of `bug_report_admin_audit_trail`, newest first. Optional `?limit=` (default 100, capped at 200). Returns `{ events }`. Names which report was decided and by whom, never the report content. Backs the Audit log panel. |
 
@@ -86,7 +86,8 @@ Table `bug_reports` (in `ctf/schema.sql`):
   auto-advances.
 - `raw_message` TEXT, `raw_context` TEXT — the user's words. **Private source of truth;
   never published.**
-- `page_url`, `plugin_slug`, `app_version`, `user_agent` TEXT — auto-attached context.
+- `page_url`, `plugin_slug`, `app_version`, `user_agent` TEXT — auto-attached context. `page_url` is
+  stored as origin and path only; the query string and `#` part are dropped (`pageAddressOnly`).
 - `redacted_message`, `redacted_context` TEXT — the user's text with emails, phone numbers,
   card-like and token-like strings removed. This is the only text that may leave the app.
 - `risk_flags` TEXT[] — which signals tripped (e.g. `pii_email`, `abusive_language`).
@@ -182,6 +183,19 @@ No seed script. Reports are user-generated at runtime; there is no fixture data 
 
 ## Change Log
 
+- 2026-10-12: **Abusive-language check holds suffixed and compound forms, the page address loses its
+  query string, and caught errors say what failed.** (1) `ABUSIVE_PATTERN` in
+  `lib/bug-reports/sanitize.ts` no longer requires a word boundary on either side, so a listed word
+  with a suffix or inside a compound holds the report for review instead of passing it as clean;
+  tests in `sanitize.test.ts`. (2) The page address is published to the triage issue without passing
+  the redaction step, and the modal sent `window.location.href`, query string and `#` part included.
+  The modal now sends origin and path only; `POST /api/bug-reports` drops any query or `#` part
+  before storing (`pageAddressOnly`); `scripts/createBugReportIssues.mjs` drops it again when
+  building the issue, for rows stored before this change. (3) The web submit client reports a
+  network failure (`op: submit-network`), as the Android client already did. The admin audit panel
+  shows the reason a load failed. The resolve route's 400 for a body that is not JSON carries
+  `reason`, and its 409 now answers `bug_reports.conflict` instead of `bug_reports.forbidden`
+  (contracts updated; no client read that code). No schema change.
 - 2026-10-12: **Android reports carry the app version, and a reply that cannot be read is
   reported.** `submitBugReport` in `packages/mobile/src/features/bug-reporting/api.ts` now sends
   `appVersion` from `Constants.expoConfig.version` when it is set, so the admin page shows which
