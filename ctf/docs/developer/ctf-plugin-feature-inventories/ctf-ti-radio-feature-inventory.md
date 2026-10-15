@@ -142,6 +142,8 @@ becomes a removal is only readable if the booking was recorded too.
   description. No user ids, no contact details, and nothing whatsoever about who is listening.
 - **Audit**: `TI_RADIO_PLUGIN_AUDIT_CONTRACTS.yaml`. Durable rows, not log lines — a log line is not
   queryable, no screen can read it, and it ages out of the host's retention window.
+  The first named target is stored as `target_type`/`target_id`; any further target (the host's id on
+  an admin removal) is kept in `metadata` beside the evidence string.
 - **Deletion**: `TI_RADIO_PROFILE_AND_DELETION_CONTRACT.md`. Slots are deleted on account or service
   deletion (`host_user_id`); audit rows are retained because they record that a command ran, not what
   was said.
@@ -207,6 +209,16 @@ only here would be invisible on their own trust card.
    was withdrawn on 2026-09-20, and the exception stands without it.
 
 ## Change Log
+
+- 2026-10-12: **Review findings #2745, #2750, #2755.** A failed identity or Unlock read on the guide
+  page and `GET /api/ti-radio/guide` still renders the guide without hosting controls, and is now
+  reported (`ti-radio/reader_identity`, `page_unlock_read`, `guide_unlock_read`) instead of dropped.
+  `POST /api/ti-radio/slots/[slotId]/remove` answers 400 `ti_radio_invalid_payload` for a body that
+  does not parse, as the booking route does, rather than removing the slot with no reason. Booking
+  takes a per-host transaction lock before reading the member's nearby slots, so two bookings sent
+  together cannot both pass the three-in-24-hours ceiling. An audit row now keeps every named target
+  after the first in `metadata`, so a removal row still names the host (`hostUserId`) after their
+  slot rows are deleted.
 
 - 2026-09-20: **The page says what it is for: getting people into Chyme.** Owner directive, the
   same day as the link removal below and the reason it went further. Saying the guide exists

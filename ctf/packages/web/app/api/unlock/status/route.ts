@@ -19,7 +19,12 @@ export async function GET(request: Request) {
     // how a member ends up bounced back to the Unlock screen by a button that said it would let them
     // in. `accessTier` above still means strictly "what the submission says"; this is the effective
     // answer, which for a waiting or unsubmitted member who asked for help is more generous.
-    const effectiveTier = await getUnlockAccessTier(gate.auth.userId).catch(() => null);
+    // A failure here falls back to commonsAccess false, as before, but is reported first: without the
+    // report a member who may enter the Commons is shown the Unlock wall and nothing records why.
+    const effectiveTier = await getUnlockAccessTier(gate.auth.userId).catch((error: unknown) => {
+      reportError(error, { area: 'unlock', op: 'status_access_tier' });
+      return null;
+    });
     const commonsAccess = effectiveTier === 'approved_full' || effectiveTier === 'locked_support_only';
     const status = { ...baseStatus, commonsAccess };
 
