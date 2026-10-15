@@ -105,6 +105,23 @@ function UnlockSubmitForm({ url, submitting, error, wasRejected, onUrlChange, on
   );
 }
 
+// POST the profile address and return the review status the route saved it with. The submission
+// route requires the CSRF header (and checks the origin), like the rest of the Commons POSTs.
+async function postSubmission(quoraProfileUrl: string): Promise<UnlockReviewStatus> {
+  const res = await fetch('/api/unlock/submission', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
+    body: JSON.stringify({ quoraProfileUrl }),
+  });
+  const payload = (await res.json().catch(() => null)) as
+    | { message?: string; submission?: { reviewStatus?: UnlockReviewStatus } }
+    | null;
+  if (!res.ok) {
+    throw new Error(payload?.message ?? 'Submission failed. Try again.');
+  }
+  return payload?.submission?.reviewStatus ?? 'pending';
+}
+
 // Shown at the top of the Commons for any signed-in member who has not yet completed Quora
 // verification — including someone who got here by pressing "ask for help" on the Unlock screen, or by
 // coming back a second day. Without it they see the chat with no indication that verification is still
@@ -143,21 +160,9 @@ export function UnlockVerifyBanner({
     setSubmitting(true);
     setError(null);
     try {
-      // The submission route requires this header (and checks the origin), like the rest of the
-      // Commons POSTs.
-      const res = await fetch('/api/unlock/submission', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
-        body: JSON.stringify({ quoraProfileUrl: trimmed }),
-      });
-      const payload = (await res.json().catch(() => null)) as
-        | { message?: string; submission?: { reviewStatus?: UnlockReviewStatus } }
-        | null;
-      if (!res.ok) {
-        throw new Error(payload?.message ?? 'Submission failed. Try again.');
-      }
+      const status = await postSubmission(trimmed);
       setUrl('');
-      setSubmittedStatus(payload?.submission?.reviewStatus ?? 'pending');
+      setSubmittedStatus(status);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Submission failed. Try again.');
     } finally {
