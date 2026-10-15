@@ -66,7 +66,17 @@ WITH already_written AS (
     'ms-thompson-11',   -- an-invitation-to-ms-thompson.md
     'dc-1341',          -- an-invitation-to-dc.md
     '00-661',           -- an-invitation-to-00.md
-    'ric-vaughn'        -- an-invitation-to-ric.md
+    'ric-vaughn',       -- an-invitation-to-ric.md
+    'aaron-rasco-5',    -- an-invitation-to-aaron-rasco.md
+    'adored-orange',    -- an-invitation-to-adored-orange.md
+    'alani-57',         -- an-invitation-to-alani.md
+    'alex-dunican',     -- an-invitation-to-alex.md
+    'alicia-macchione-4', -- an-invitation-to-alicia.md
+    'altehexer',        -- an-invitation-to-altehexer.md
+    'andrea-r-453',     -- an-invitation-to-andrea.md
+    'andrew-maze-5',    -- an-invitation-to-andrew.md
+    'angela-womer-2',   -- an-invitation-to-angela.md
+    'anita-steyn-13'    -- an-invitation-to-anita.md
   ]) AS handle
 ),
 listed_skills AS (

@@ -108,6 +108,16 @@ export const DIRECTORY_INVITE_ALREADY_WRITTEN = [
   'dc-1341',
   '00-661',
   'ric-vaughn',
+  'aaron-rasco-5',
+  'adored-orange',
+  'alani-57',
+  'alex-dunican',
+  'alicia-macchione-4',
+  'altehexer',
+  'andrea-r-453',
+  'andrew-maze-5',
+  'angela-womer-2',
+  'anita-steyn-13',
 ] as const;
 
 const DIRECTORY_PROFILE_BASE = 'https://app.chargingthefuture.com/apps/directory/profile/';
