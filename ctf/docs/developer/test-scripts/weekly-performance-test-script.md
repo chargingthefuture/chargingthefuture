@@ -49,7 +49,9 @@ Admin-only analytics plugin — these are the can't-ship-broken checks. Admin / 
    upstream tables for any window, so past weeks recalculate when data changes. (Exception: the two
    Goal rows are state totals snapshotted weekly — captured daily by the scheduled
    goal-snapshot workflow, so a week has its reading even if nobody opened the dashboard; a week from
-   before the capture workflow existed reads 0.) → web ☐ mobile ☐
+   before the capture workflow existed reads 0. If a capture could not store a goal reading, the
+   workflow run is red and its log shows `goal_snapshot_not_stored` with each goal and the reason;
+   a green run means both readings were stored.) → web ☐ mobile ☐
 3. **One surface only — the admin page serves the full dashboard.** Open `/admin/weekly-performance`
    as an admin: it renders the full dashboard (desktop: week-history sidebar + grouped metric cards; phone: week selector in the sticky header). There is no Export control anywhere
    (the export feature was removed 2026-07-19). Opening

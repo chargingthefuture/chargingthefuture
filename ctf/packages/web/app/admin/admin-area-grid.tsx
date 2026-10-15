@@ -6,8 +6,9 @@ import styles from './admin-landing.module.css';
 export type AdminAreaTile = {
   href: string;
   name: string;
-  // The area's stable slug (the last path segment). Used to mark the area seen; also the key the
-  // server keys the "new to review" signal on. Areas with no review queue simply never set hasNew.
+  // The area's stable slug (the last path segment, unless the area names its own). Used to mark the
+  // area seen; also the key the server keys the "new to review" signal on. Areas with no review
+  // queue simply never set hasNew.
   slug: string;
   hasNew: boolean;
 };
