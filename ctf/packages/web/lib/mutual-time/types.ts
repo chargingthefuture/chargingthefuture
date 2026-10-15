@@ -60,7 +60,8 @@ export type MutualTimeAuditEvent = {
   command:
     | 'mutual-time.event.create'
     | 'mutual-time.event.close'
-    | 'mutual-time.vote.save';
+    | 'mutual-time.vote.save'
+    | 'mutual-time.admin.audit.list';
   actorId: string;
   status: 'allow' | 'deny';
   reason: string;

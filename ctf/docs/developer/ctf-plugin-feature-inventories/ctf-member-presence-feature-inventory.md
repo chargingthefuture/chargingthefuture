@@ -124,7 +124,9 @@ Notes on sources:
 - `GET /api/presence/user/[userId]` — returns `{ presence: Array<{ pluginSlug, refType, refId, label,
   deepLink }> }` for the member, active rows only, ordered by plugin then label. Gated to any
   authenticated member (`requireTrustMemberAccess`). Read-only; reads the shared index as written by
-  the live hooks. Used when a member views **another** member's profile.
+  the live hooks. Used when a member views **another** member's profile. Across a block in either
+  direction (`isBlockedBetween`) it returns an empty list, the same answer as a member with no
+  listings; an admin and the member themselves are not filtered.
 - `GET /api/presence/user/self` — re-derives the **caller's** presence from the live source tables
   (`lib/presence/derive.refreshOwnPresence`), self-healing any index row a best-effort write dropped
   or that predates the live hooks, then returns the active list in the same shape. Gated to any
@@ -170,7 +172,10 @@ Created with the `CREATE TABLE IF NOT EXISTS` + `ALTER TABLE IF EXISTS ... ADD C
   plugins already own. No command, access-policy, deletion, or audit contract is added here. When live
   per-plugin write hooks are built, they should be covered by the source plugin's own contracts (a
   write hook is part of that plugin's listing lifecycle), and presence rows should be removed in that
-  plugin's deletion scope.
+  plugin's deletion scope. They are: deleting one service from Account & Data
+  (`deleteServiceScopeData`) also deletes the member's `member_plugin_presence` rows whose
+  `plugin_slug` is that service's slug, in the same transaction. Full account deletion removes every
+  row through the `presence` registry entry.
 
 ## Web and Android Delivery Status
 
@@ -281,3 +286,12 @@ Deferred follow-ups (not yet done):
   "Offering rides") after the offer commits, and `acceptOffer` clears presence for the drivers whose
   offers were rejected while keeping the accepted driver active. Best-effort like every other hook;
   `refreshOwnPresence` remains the self-healing fallback. No schema, route, or contract change.
+- 2026-10-15: Code-review fixes #2877 and #2876. (1) `GET /api/presence/user/[userId]` now returns an
+  empty list across a block in either direction, so a blocked or blocking member no longer sees the
+  LightHouse and SocketRelay listings those plugins already hide from them in browse. An admin and the
+  member themselves are not filtered. (2) Deleting one service from Account & Data now also deletes
+  that member's presence rows for the same plugin, in the deletion transaction. Before, the registry
+  removed the SocketRelay, Foundation, TrustTransport or LightHouse rows by generated SQL, the plugin
+  hooks that clear presence never ran, and other members kept seeing "Help post", "Provider
+  offering", "Ride request" or "Offering rides" for data the member had deleted. No schema or
+  contract file change.

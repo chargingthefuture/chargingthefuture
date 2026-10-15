@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { applyDisputeAdjustment, insertServiceCreditsAudit } from 'lib/service-credits/repository';
-import { ensureMutationCsrf, requireServiceCreditsAdminAccess, serviceCreditsErrorResponse } from 'lib/service-credits/_lib';
+import { ensureMutationCsrf, requireServiceCreditsAdminAccess, serviceCreditsErrorResponse, auditServiceCreditsFailure } from 'lib/service-credits/_lib';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
 
@@ -61,7 +61,7 @@ export async function POST(request: Request) {
     return csrfDeny;
   }
 
-  const gate = await requireServiceCreditsAdminAccess();
+  const gate = await requireServiceCreditsAdminAccess({ command: 'service-credits.dispute.adjustment.apply' });
   if (!gate.allowed) {
     return gate.response;
   }
@@ -107,6 +107,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, adjustment }, { status: 201 });
   } catch (error) {
     reportError(error, { area: 'service-credits', op: 'admin_disputes_adjustments' });
+    await auditServiceCreditsFailure({ actorId: gate.auth.userId, command: 'service-credits.dispute.adjustment.apply', targetType: 'dispute', targetId: input.disputeCaseId, error });
     return serviceCreditsErrorResponse(error, 'Dispute adjustment unavailable.');
   }
 }

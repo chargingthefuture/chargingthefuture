@@ -3,18 +3,65 @@ import { evaluatePluginAccess, type AllowDecision } from 'lib/auth/server-authz'
 import { checkMutationOrigin } from 'lib/auth/csrf';
 import { MUTUAL_TIME_ERROR_CODE } from 'lib/mutual-time/constants';
 import { MutualTimeError } from 'lib/mutual-time/repository';
+import { recordMutualTimeAdminAudit } from 'lib/mutual-time/audit';
+import { resolveRequestIdentity } from 'lib/auth/request-identity';
+import type { MutualTimeAuditEvent } from 'lib/mutual-time/types';
 
 export type MutualTimeGate =
   | { allowed: true; auth: AllowDecision }
   | { allowed: false; response: NextResponse };
 
+export type MutualTimeAdminCommand = Exclude<MutualTimeAuditEvent['command'], 'mutual-time.vote.save'>;
+
 // Tier (a): admin-only (create an event, close a survey). The platform owner is an admin.
-export async function requireMutualTimeAdmin(): Promise<MutualTimeGate> {
+// When a command is named, a refusal is written to the audit trail as a deny row, so the Audit log
+// panel shows refused attempts as well as completed ones. The admin list read passes no command:
+// it is a high-frequency dashboard read the audit contract does not cover.
+export async function requireMutualTimeAdmin(
+  command?: MutualTimeAdminCommand,
+  target: MutualTimeAuditEvent['target'] = {},
+): Promise<MutualTimeGate> {
   const decision = await evaluatePluginAccess({ requiredRoles: ['admin'] });
   if (!decision.allowed) {
+    if (command) {
+      // The deny decision does not carry the caller's id; look it up separately so a signed-in
+      // member who was refused is named in the row. A failed lookup records the attempt as anonymous.
+      const identity = await resolveRequestIdentity().catch(() => null);
+      await recordMutualTimeAdminAudit({
+        pluginId: 'mutual-time',
+        command,
+        actorId: identity?.userId ?? 'anonymous',
+        status: 'deny',
+        reason: decision.reason,
+        target: { ...target, route: command },
+        result: 'failure',
+        errorCategory: 'policy',
+      });
+    }
     return { allowed: false, response: NextResponse.json(decision, { status: decision.status }) };
   }
   return { allowed: true, auth: decision };
+}
+
+// The error category written on a failed admin action, using the codes the Audit log panel explains.
+export function mutualTimeErrorCategory(error: unknown): string {
+  if (!(error instanceof MutualTimeError)) {
+    return 'internal_error';
+  }
+  switch (error.code) {
+    case MUTUAL_TIME_ERROR_CODE.notFound:
+      return 'not_found';
+    case MUTUAL_TIME_ERROR_CODE.notOpen:
+      return 'not_open';
+    case MUTUAL_TIME_ERROR_CODE.invalidPayload:
+    case MUTUAL_TIME_ERROR_CODE.invalidSlot:
+    case MUTUAL_TIME_ERROR_CODE.tooManyPicks:
+      return 'validation';
+    case MUTUAL_TIME_ERROR_CODE.persistenceUnavailable:
+      return 'persistence_error';
+    default:
+      return 'internal_error';
+  }
 }
 
 // Tier (b): a signed-in AND Unlock-approved member (cast a vote). Admins pass too.

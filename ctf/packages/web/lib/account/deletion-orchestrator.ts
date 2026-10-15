@@ -227,6 +227,16 @@ export async function deleteServiceScopeData(
     const { result, tables } = await withDbTransaction(async (client) => {
       await runInTransactionSteps(client, userId, [entry.slug]);
       const tableResults = await executeEntry(client, entry, userId);
+      // The plugin's own rows are gone, so its "Also active in" entries on the member's Directory
+      // profile go with them. The plugin's clearMemberPresence hooks never run here, because the
+      // registry deletes by generated SQL rather than through the plugin, and the index is read as
+      // stored by anyone viewing the profile. Presence rows carry the registry slug as plugin_slug;
+      // a plugin that writes no presence matches no rows. A full account deletion already removes
+      // every presence row through the `presence` entry.
+      await client.query('DELETE FROM member_plugin_presence WHERE user_id = $1 AND plugin_slug = $2', [
+        userId,
+        entry.slug,
+      ]);
       const recorded = await recordEvent(client, userId, 'service', entry.slug, tableResults, 'member');
       return { result: recorded, tables: tableResults };
     });
