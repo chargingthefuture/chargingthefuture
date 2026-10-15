@@ -110,9 +110,14 @@ When user deletes Foundation plugin usage only:
   - `foundation_provider_skills` rows for the requester (the skills they opted in to offer)
   - participant links and plugin-owned thread linkage rows for the requester
   - plugin-scoped notification preference and pending delivery records owned by requester
-- Anonymize/pseudonymize:
-  - `foundation_message_metadata` and `foundation_call_sessions` user linkage for retained continuity records where hard delete is not required by policy
-  - quote history actor identifiers where retention obligation allows pseudonymization
+  - the requester's own message metadata (`foundation_message_metadata` rows they sent)
+  - unanswered calls still ringing to or from the requester (`foundation_call_sessions` rows with no `answered_at` and no `ended_at`); nothing has been charged on them
+- Anonymize/pseudonymize (owner decision, 2026-10-15 — the row stays with the other party, and the requester's id on it is overwritten with `deleted_member`, the same placeholder SocketRelay, TrustTransport and LightHouse use):
+  - `foundation_connection_threads`: `created_by_user_id`, `survivor_user_id` and `provider_user_id`; when the requester is the provider, `provider_directory_profile_id` is cleared too, since it points at them
+  - `foundation_quote_requests`: `survivor_user_id` and `provider_user_id`; the quote keeps its link to its thread
+  - `foundation_quote_status_events`: `actor_user_id`, with the `reason` they wrote cleared; the state history stays with the quote
+  - `foundation_call_sessions`: `created_by_user_id`, `caller_user_id`, `callee_user_id` and `ended_by_user_id`
+  - No notification is written for the placeholder when the remaining party sends a message or moves a quote on such a thread
 - Retain for compliance/fraud/finance:
   - immutable quote lifecycle events required for service/dispute accountability
   - `foundation_deletion_events` for deletion evidence
@@ -131,7 +136,7 @@ When user requests full account deletion:
 
 - Additional records removed vs service-scoped deletion:
   - remaining Foundation thread/message/call/quote/notification linkage tied to deleted account
-  - Foundation pseudonymized remnants removed where policy allows hard delete
+  - the pseudonymized threads, quotes, quote events and calls above stay as they are: they hold the placeholder, not the deleted identity
 - Cross-service dependencies:
   - full-account orchestrator must sequence canonical identity deletion with all plugin contracts
   - ServiceCredits reclaim/finalization is required before account deletion can be marked `completed`
@@ -200,3 +205,4 @@ If user returns to Foundation after service-scoped deletion:
 - 2026-06-25: Added `push_subscriptions` (issue #808 task 5 Web Push for the instant-call ring) as Foundation-owned domain data. Documented it in section 4 and as a "delete immediately" entry in section 5; the deletion is wired in `lib/account/deletion-registry.ts` under the `foundation` entry (hard delete on `user_id`), so service-scoped and full-account deletion both remove a member's device subscriptions. Only the subscription endpoint and the subscription's own public encryption keys are stored; the server VAPID private key lives only in env and is never persisted.
 - 2026-10-05: Moved the `push_subscriptions` deletion from the `foundation` registry entry to `notifications`. Notification pushes had started writing and reading the same rows, so a Foundation-only deletion was removing the devices a member turned notification pushes on for. The rows now clear only with the account. The two entries below describe the earlier wiring.
 - 2026-06-26: Extended `push_subscriptions` to also hold `kind = 'expo'` rows for Android native push (issue #884): the device's Expo push token in the endpoint column, no encryption keys. No new table or deletion entry was needed — the existing `lib/account/deletion-registry.ts` `foundation` entry deletes by `user_id` regardless of `kind`, so service-scoped and full-account deletion already remove expo rows. The send-side `EXPO_ACCESS_TOKEN` is a server-only secret read from env, never persisted in any table.
+- 2026-10-15: Threads, quotes, quote events and calls are kept with the departing member's id replaced by `deleted_member` (owner decision), on both sides of the record (#2641, #2702). Before, the registry deleted quote requests by the legacy `user_id` column, which nothing writes, and then deleted the member's threads; for any member who had started a thread with a quote on it, the quote's link to the thread made both full-account and Foundation-only deletion fail. The other party's copies also kept the deleted member's id. Section 5 lists the columns.
