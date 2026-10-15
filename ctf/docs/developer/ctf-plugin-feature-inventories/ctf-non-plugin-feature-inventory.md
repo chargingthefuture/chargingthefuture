@@ -378,6 +378,16 @@ Owner decision, 2026-09-26. The owner pays the running costs of Skills Economy a
 
 ## 5) Change Log
 
+- 2026-10-15: **Clearing the blocked list no longer deletes the safety reports a member filed
+  (§1.6, code-review #2672, owner decision).** The `member-blocks` deletion registry entry is
+  service-scoped and listed `member_safety_reports` (by `reporter_user_id`) beside `member_blocks`,
+  so `DELETE /api/account/services/member-blocks` also removed every report the member had filed,
+  while the screen said only that their blocked list would go. The reports and the retained
+  `safety_admin_audit_trail` moved to a new `member-safety-reports` entry with
+  `serviceScopeSupported: false`: they are removed only with the account. Account & Data on web and
+  Android shows it under "Always retained" from the registry, with no screen code change. Updated
+  `MEMBER_BLOCKS_PROFILE_AND_DELETION_CONTRACT.md` and added test case AD-5b.
+
 - 2026-10-15: **The Terms describe ServiceCredits without money words (§1.12, code-review #2771,
   owner-approved).** Section 5 of the Terms in `app/terms/policy-content.ts` was headed
   "ServiceCredits and payments" and said credits were used to pay for member-to-member activity and

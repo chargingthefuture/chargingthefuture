@@ -601,17 +601,30 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     // gone); cleaning those up is a noted follow-up, not done here, so service-scope deletion never
     // touches another member's blocks.
     //
-    // Safety reports (issue #809, task 3) follow the same reporter-owns-their-row rule: a report this
-    // member FILED (reporter_user_id) is their own action and is deleted with their account. A report
-    // ABOUT this member (reported_user_id) is the ADMIN'S safety evidence raised by another member —
-    // it is NOT deleted here, the same way audit/accountability records are retained for compliance.
-    // Removing it would erase the owner's record of a predator/trafficker concern and would also let
-    // someone delete-and-rejoin to clear reports against them. Reverse-direction reports about a
-    // now-deleted account simply point at a gone user, which is harmless evidence.
+    // Safety reports the member filed are a separate entry below, so clearing the blocked list never
+    // removes them.
     serviceScopeSupported: true,
     tables: [
-      del('member_safety_reports', 'reporter_user_id', 'Safety reports you filed about another member.'),
       del('member_blocks', 'blocker_user_id', 'The blocks you created.'),
+    ],
+  },
+  {
+    slug: 'member-safety-reports',
+    name: 'Safety reports you filed',
+    dataSummary: 'Safety reports you filed about another member. Kept for the owner to review until you delete your account.',
+    // Safety reports (issue #809, task 3) follow the reporter-owns-their-row rule: a report this
+    // member FILED (reporter_user_id) is their own action and is deleted with their account. It has
+    // no service scope of its own (issue #2672): it used to sit in the member-blocks entry, so a
+    // member who cleared their blocked list also deleted every open report they had filed, and the
+    // owner lost them. A report ABOUT this member (reported_user_id) is the ADMIN'S safety evidence
+    // raised by another member — it is NOT deleted here, the same way audit/accountability records
+    // are retained for compliance. Removing it would erase the owner's record of a
+    // predator/trafficker concern and would also let someone delete-and-rejoin to clear reports
+    // against them. Reverse-direction reports about a now-deleted account simply point at a gone
+    // user, which is harmless evidence.
+    serviceScopeSupported: false,
+    tables: [
+      del('member_safety_reports', 'reporter_user_id', 'Safety reports you filed about another member.'),
       // The admin review trail of safety reports: actor_id is the reviewing admin, and the rows
       // must outlive either member's account (MEMBER_BLOCKS_PLUGIN_AUDIT_CONTRACTS.yaml).
       retain('safety_admin_audit_trail', 'The admin review trail of safety reports; retained for compliance.'),
