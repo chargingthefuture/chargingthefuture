@@ -96,7 +96,7 @@ The plugin ships on web (desktop + mobile-responsive). The former native Android
 
 ### 1.6 Earnings and Completion History
 
-1. ServiceCredits earned on a completed trip are paid straight to the member's ServiceCredits wallet (a real on-platform transfer requester → provider).
+1. ServiceCredits earned on a completed trip are sent straight to the member's ServiceCredits wallet (a real on-platform transfer requester → provider).
 2. For any other settlement (fiat/crypto/barter), the platform has **no payment processing** — the payment is arranged peer-to-peer, off-platform, directly between the two people. There is no platform payout. The Earnings tab shows a **read-only record** of what completed trips were worth, per currency; the same figures are recognized by the GDP layer (`lib/gdp/recognition.ts`) as community economic activity. (Owner decision, 2026-07-08: the fiat/crypto "withdrawable balance + payout request" flow was removed — it implied a platform-issued payout that cannot exist.)
 3. Reputation is transparent completion history only — the record of whether each trip was successfully completed or not, and a count of completed trips. There are no ratings, reviews, star scores, written feedback, or reliability badges of any kind. (Owner directive: rating of people is not allowed.)
 
@@ -312,6 +312,35 @@ Admin parity (2026-06-06): the Android admin screen `AdminTrustTransport.tsx` (e
 
 ## Change Log
 
+
+- 2026-10-05: **Member screens show the route's reason, and credits wording corrected.** Every
+  member fetch in the shell, Tracking, Help and Earnings tabs now shows the `message` the route
+  returned (through the shared `responseFailureText` helper) instead of a fixed sentence, falling
+  back to the old sentence only when the body carries none. A failed `GET /requests` no longer leaves
+  Tracking and Direct Line reading "No active trips": the reason is shown and the old list is kept.
+  A failed `GET /modes` is reported (booking still works from the built-in ride types). The
+  provider's "Trips you're helping with" section now renders its load error instead of disappearing.
+  Both admin `adminMutate` helpers report a thrown failure and name it, instead of calling it a
+  network error. The signed-out page now says "Settle with ServiceCredits." and the Earnings intro
+  says ServiceCredits are sent to the wallet and anything else agreed is arranged between the two
+  people, so credits are no longer described as a payment. No schema, route, or contract change.
+- 2026-10-14: **Restricted providers, repeat bookings, failed settlements and finished-trip presence
+  (code review #2859, #2860, #2866, #2867).** (1) `acceptOffer` now reads the provider's `trading`
+  restriction and refuses with `offer_not_available` (409, "This offer is no longer available."), so a
+  pending offer from an account an admin restricted cannot become a trip that hands them the pickup and
+  drop-off; the copy is neutral so the requester is not told about the restriction. This is the
+  `offer_not_eligible` deny condition the access policy already names. (2) `POST
+  /api/trust-transport/requests` now requires `idempotencyKey`, as the command contract says, and
+  answers 400 without it instead of making one up per call. The Book tab sends one key per booking and
+  reuses it on a retry of the same booking, and `createRequest` takes a transaction advisory lock on the
+  member and key before its replay lookup, so two sends with one key create one request. (3) A trip
+  settlement that throws now writes a `trust-transport.trip.settlement` audit row with `policy_status`
+  `deny`, reason `settlement_failed`, the rail, currency, amount and failure reason, so a completed trip
+  that moved nothing can be found in the trail. Whether to tell the provider, and whether to check the
+  requester's balance before acceptance, are open owner decisions on #2866. (4) The accepted offer keeps
+  status `accepted`; the provider's "Offering rides" presence now follows the trip instead: a trip
+  reaching a terminal status (status update, both-party completion, or order cancel) clears it, and the
+  presence derive path skips an offer whose trip is terminal.
 
 - 2026-10-05: **An offer accept no longer fails on a Stream error, and emergency stop and order cancel
   are audited.** `acceptOffer` set up the trip's Stream channel after the transaction committed with

@@ -122,7 +122,7 @@ export function AccountData({ onBack }: { onBack: () => void }) {
 
   const handleConfirmFullAccount = useCallback(async () => {
     try {
-      await deleteFullAccount();
+      return await deleteFullAccount();
     } catch (error) {
       if (error instanceof AccountRequestError) throw error;
       throw new Error('Unable to complete full-account deletion. Please try again.');

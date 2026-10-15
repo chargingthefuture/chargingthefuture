@@ -108,7 +108,9 @@ commands:
     notes: >-
       First come, first served, settled by a partial unique index on slot_start_utc rather than by a
       read-then-write, so two members pressing at the same moment produce one booking and one honest
-      refusal. The rolling ceiling of three slots in any 24 hours is checked in the same transaction.
+      refusal. The rolling ceiling of three slots in any 24 hours is checked in the same transaction,
+      after a per-host advisory lock (pg_advisory_xact_lock), so two bookings by one host for
+      different starts wait on each other instead of both passing the ceiling.
   - pluginId: ti-radio
     command: ti-radio.slot.release
     version: 1.0.0
@@ -150,3 +152,6 @@ commands:
       - ti_radio_admin_audit_trail (insert)
     purpose: An admin takes a booked slot off the public schedule
     retentionClass: community_content
+    notes: >-
+      A body that is not valid JSON is refused with 400 ti_radio_invalid_payload, as the booking
+      route does, rather than read as a removal with no reason.

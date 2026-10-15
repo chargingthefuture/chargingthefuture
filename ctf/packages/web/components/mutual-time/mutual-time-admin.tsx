@@ -30,7 +30,9 @@ function ClosedResult({ ev, t, tz }: { ev: MutualTimeEvent; t: Tokens; tz: strin
         </span>
       )}
       {ev.effectiveState === 'closed' && !ev.resultSlotStartIso && (
-        <span style={{ fontSize: 12, color: t.SUBTLE, alignSelf: 'center' }}>No time chosen (no votes)</span>
+        <span style={{ fontSize: 12, color: t.SUBTLE, alignSelf: 'center' }}>
+          {ev.voterCount > 0 ? 'No time chosen (the picked times had already passed)' : 'No time chosen (no votes)'}
+        </span>
       )}
     </>
   );
@@ -167,7 +169,13 @@ export function MutualTimeAdmin() {
         body: JSON.stringify({}),
       });
       setEvents((prev) => prev.map((e) => (e.id === id ? data.event : e)));
-      setNotice(data.event.resultSlotStartIso ? 'Survey closed. Winning time chosen.' : 'Survey closed. No votes were cast, so no time was chosen.');
+      setNotice(
+        data.event.resultSlotStartIso
+          ? 'Survey closed. Winning time chosen.'
+          : data.event.voterCount > 0
+            ? 'Survey closed. The times members picked had already passed, so no time was chosen.'
+            : 'Survey closed. No votes were cast, so no time was chosen.',
+      );
     } catch (error) {
       setFormError(error instanceof Error ? error.message : 'Could not close the event.');
     } finally {
