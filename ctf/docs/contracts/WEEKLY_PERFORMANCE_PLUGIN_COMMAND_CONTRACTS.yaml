@@ -168,9 +168,11 @@ contracts:
       current week. Goal metrics are state totals - past weeks cannot be recomputed - so each week
       needs at least one stored reading; the daily workflow calling this command makes goal history
       independent of anyone opening the dashboard. Guarded by INTERNAL_SERVICE_SECRET (bearer);
-      never member or browser callable. Computing the current week's metrics performs the snapshot
-      upsert (last capture of the week wins). The GDP reading comes from the GDP plugin's live
-      report - see the GDP contracts for that command's own reads.
+      never member or browser callable. Each goal is read live and its snapshot row upserted (last
+      capture of the week wins). A goal that was not stored answers 503 with code
+      goal_snapshot_not_stored and each goal's reason, so the scheduled run fails visibly. The GDP
+      reading comes from the GDP plugin's live report - see the GDP contracts for that command's own
+      reads.
     inputSchema: {}
     outputSchema:
       ok:
