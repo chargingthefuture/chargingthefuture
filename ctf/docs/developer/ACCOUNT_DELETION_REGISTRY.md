@@ -59,6 +59,11 @@ and every column in it must exist on that table. It runs in the Schema Drift Gat
 `.github/workflows/ci.yml`, so the registry cannot drift from the schema again. It is plain Node (no
 TypeScript import), so it runs on any Node version, including the Node 20 runners.
 
+It also checks the other way: every table in `schema.sql` with a member column must appear in the
+registry or on the burn-down list `ctf/scripts/deletion-coverage-allowlist.json`. A member column is
+one whose name ends in `user_id` or `actor_id`; `actor_id` was added on 2026-10-05, after the two
+command-idempotency tables and the admin audit trails were found outside the registry.
+
 To run locally:
 
 ```sh
