@@ -27,8 +27,7 @@ import { getUnlockTokens, type UnlockTokens } from "./unlock-shared";
 // id and a date, so the people who most needed a manual approval were the only ones with nothing on
 // file to approve. Optional on the Unlock screen, where the button works with it empty.
 //
-// The "Show me where to find it" steps are the same text the scripted @comic answer is built from
-// (lib/unlock/quora-url-help-steps.ts).
+// The "Show me where to find it" steps live in lib/unlock/quora-url-help-steps.ts.
 
 type HelpWhere = "unlock" | "commons";
 

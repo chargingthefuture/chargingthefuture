@@ -140,7 +140,9 @@ sign-in shows the loading screen.
 3. Open an announcement or an @comic answer that carries plugin links. Confirm the "Explore:" / plugin
    chips are not shown.
 4. Leave the page open for a minute with the browser's network panel open. Confirm no request to
-   `/api/comic/conversation` is made.
+   `/api/comic/conversation` is made. Then send `@comic where is my quora profile url?` and confirm
+   the error line reads "This needs Unlock approval first." with no answer card (there is no
+   scripted @comic answer for members not yet approved).
 5. As admin, approve the member in `/admin/unlock`. As the member, reload the home page.
 6. Confirm everything from step 2 is back: Apps tab, grid, sort and search, the locked chip, the full
    chip row, plugin links under answers and announcements.

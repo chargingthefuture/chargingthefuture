@@ -1,8 +1,5 @@
-// How to find a Quora profile URL, written once and used in two places: the "Show me where to find
-// it" steps inside the help box (components/unlock/unlock-quora-help.tsx, on the Unlock screen and in
-// the Commons banner) and the scripted @comic answer (lib/comic/unlock-help-script.ts). The member
-// reading the box and the member asking @comic must be told the same thing, so neither keeps its own
-// copy.
+// How to find a Quora profile URL: the "Show me where to find it" steps inside the help box
+// (components/unlock/unlock-quora-help.tsx, on the Unlock screen and in the Commons banner).
 //
 // Each case is one way members actually get stuck: they are on the Quora app, which has no address
 // bar; they are in a browser and do not know which page is "the profile"; they pasted a link to an
