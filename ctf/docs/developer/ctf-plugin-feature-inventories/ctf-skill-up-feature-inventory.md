@@ -374,6 +374,7 @@ that exist today.
 
 ## Change Log
 
+- 2026-10-15: **The apps list tile says what milestones do (owner-approved copy fix, #2888).** The registry summary said learners earn credits as they reach each milestone, and opened with "Paid". A milestone release returns the learner's own held deposit (`releaseEscrow`) and mints new credits only to the trainer. It now reads "Skills-training cohorts with a trainer. Your credit deposit is held and comes back to you as you reach each milestone." in `schema.sql`, `schema.demo.sql`, the fallback array in `lib/plugins/repository.ts` and `lib/plugins/plugin-catalog.ts`; `post/0059_plugin_registry_gdp_skill_up_summaries.sql` sets it on existing databases.
 - 2026-10-15: **A dispute can be resolved once, and a released milestone stays released (code
   review #2928, #2940).** `resolveDispute` never read the dispute's status, and its credit
   adjustment ran before anything else, so a second resolve under a new idempotency key moved credits

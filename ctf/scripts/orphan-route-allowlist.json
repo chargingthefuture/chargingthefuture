@@ -19,11 +19,6 @@
   ],
   "routes": [
     {
-      "route": "/api/account/skills-hunt-profile",
-      "kind": "baseline",
-      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
-    },
-    {
       "route": "/api/admin/account-restrictions/audit",
       "kind": "baseline",
       "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."

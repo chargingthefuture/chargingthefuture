@@ -642,30 +642,6 @@ contracts:
     idempotency: true
 
   - pluginId: chyme
-    command: chyme.profile.delete.service
-    version: 1.0.0
-    description: Execute service-scoped Chyme deletion and record compliance event.
-    inputSchema: {}
-    outputSchema:
-      ok:
-        type: boolean
-      scope:
-        type: string
-      status:
-        type: string
-      requestedAtIso:
-        type: string
-    dataAccess:
-      - chyme_service_profiles
-      - chyme_room_members
-      - chyme_messages
-      - chyme_back_channel_calls
-      - chyme_deletion_events
-    purpose: service_scoped_deletion
-    retentionClass: compliance_long_lived
-    idempotency: true
-
-  - pluginId: chyme
     command: account.profile.delete.full
     version: 1.0.0
     description: Record full-account deletion request for global orchestrator processing.

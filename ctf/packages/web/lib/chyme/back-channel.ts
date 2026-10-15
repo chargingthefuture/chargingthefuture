@@ -385,12 +385,3 @@ export async function getBackChannelForJoin(userId: string, callId: string): Pro
     return row;
   });
 }
-
-// Delete every Back Channel row this member is part of. Called from the Chyme service-deletion and
-// full-account-deletion paths so no trace of their calls remains (there is no history to keep).
-export async function deleteBackChannelForUser(client: PoolClient, userId: string): Promise<void> {
-  await client.query(
-    `DELETE FROM chyme_back_channel_calls WHERE initiator_user_id = $1 OR recipient_user_id = $1`,
-    [userId],
-  );
-}

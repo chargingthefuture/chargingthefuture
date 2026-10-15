@@ -39,6 +39,7 @@
 5. **No currency symbol on the Community Value Index.** The hero figure on the dashboard has no `$`, `€`, or other currency prefix. web ☐
 
 6. **Projected figure stays out of the index.** In the `GET /api/gdp/report/current` body, any projected value appears only inside the `projection` object; the `metrics` array contains no projected row. If the community has open posts, a "Value waiting to happen" panel renders below the hero, visually apart from it. web ☐
+7. **The apps list tile carries no dollar figure.** Open the apps list and read the GDP tile. It reads "Real time global survivor economic tracker. Your contributions counted, recorded, visible." with no $300B or other dollar amount. web ☐
 
 ---
 
