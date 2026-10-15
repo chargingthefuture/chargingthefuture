@@ -152,6 +152,7 @@ No seed yet. A follow-up seed can insert a couple of sample notifications for a 
   notification because the worker read `data.url` while this feed sends `data.path`; it now reads
   both. "Manage what pings your device" moved from below the feed to above it, and its notes now say
   "the list below". No route, schema, or contract change.
+- 2026-10-05: `push_subscriptions` is now deleted under this plugin's registry entry instead of `foundation`'s (#2701), so it clears only with the account and a Foundation-only deletion no longer removes the devices a member turned notification pushes on for. Added to `NOTIFICATIONS_PROFILE_AND_DELETION_CONTRACT.md`.
 - 2026-10-05: **Device alerts and switch saves say why they did not work (#2633, #2635).** Merged
   after the 2026-10-12 change above, which already checks the subscribe answer and re-sends an existing
   subscription. A refused or failed save now shows the route's own reason (CSRF denial, bad payload, a

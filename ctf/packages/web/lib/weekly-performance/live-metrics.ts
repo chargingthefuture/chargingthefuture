@@ -1,5 +1,6 @@
 import { queryDb } from 'lib/db/postgres';
 import { failureReason } from 'lib/errors/failure';
+import { reportError } from 'lib/observability/report';
 import { buildLiveGdpReport } from 'lib/shared/gdp-interface';
 import { VALUE_EVENT_SOURCES, occurrencesExpression, type ValueEventSource } from 'lib/contributor-access/value-events';
 import { EVENT_SOURCE_PLUGIN, type ContributorValueEventKey } from 'lib/contributor-access/weights';
@@ -296,21 +297,78 @@ async function goalMetricForWeek(metricKey: string, weekStartDate: string, live:
   const value = await live();
   // The snapshot write is this week's memory for next week's comparison, not this reading. If it
   // fails, report it and still return the value we actually read — throwing here used to turn a
-  // good reading into a 0 on screen because a write to a different table did not land.
+  // good reading into a 0 on screen because a write to a different table did not land. The
+  // scheduled capture route does not go through here: it uses captureCurrentWeekGoalSnapshots,
+  // which fails the request instead, so a write that did not land shows as a red run.
   try {
-    await queryDb(
-      `INSERT INTO weekly_performance_goal_snapshots (metric_key, week_start_date, metric_value, captured_at)
-       VALUES ($1, $2::date, $3, NOW())
-       ON CONFLICT (metric_key, week_start_date)
-       DO UPDATE SET metric_value = EXCLUDED.metric_value, captured_at = NOW()`,
-      [metricKey, weekStartDate, value],
-    );
+    await writeGoalSnapshot(metricKey, weekStartDate, value);
   } catch (error) {
-    console.error(
-      `[weekly-performance.live-metrics] could not record this week's ${metricKey} snapshot, so next week's comparison will have no prior value to read: ${failureReason(error)}`,
-    );
+    // Next week's comparison will have no prior value to read for this goal.
+    reportError(error, {
+      area: 'weekly-performance',
+      op: 'goal_snapshot_write',
+      extra: { metricKey, weekStartDate },
+    });
   }
   return value;
+}
+
+async function writeGoalSnapshot(metricKey: string, weekStartDate: string, value: number): Promise<void> {
+  await queryDb(
+    `INSERT INTO weekly_performance_goal_snapshots (metric_key, week_start_date, metric_value, captured_at)
+     VALUES ($1, $2::date, $3, NOW())
+     ON CONFLICT (metric_key, week_start_date)
+     DO UPDATE SET metric_value = EXCLUDED.metric_value, captured_at = NOW()`,
+    [metricKey, weekStartDate, value],
+  );
+}
+
+// The live reading behind each goal row, keyed the same as GOAL_METRIC_KEYS.
+const GOAL_LIVE_READERS: Record<(typeof GOAL_METRIC_KEYS)[number], (weekStart: string) => Promise<number>> = {
+  'goal.gdp_value_index': () => liveGdpValueIndex(),
+  'goal.workforce_recruited': (weekStart) => liveWorkforceRecruited(weekStart),
+};
+
+export type GoalSnapshotCapture = {
+  weekStartDate: string;
+  goals: Array<{ metricKey: string; metricValue: number }>;
+  // One line per goal whose reading was not stored, naming the goal and the reason. Empty on success.
+  failures: string[];
+};
+
+// Record this week's goal readings for the scheduled capture route. Unlike the dashboard read, a
+// reading or a write that fails is returned as a failure rather than swallowed: past weeks cannot be
+// recomputed, so the schedule's safety net (the next day's run covers a missed day) only works when a
+// missed day shows as a failed run.
+export async function captureCurrentWeekGoalSnapshots(): Promise<GoalSnapshotCapture> {
+  const weekStartDate = currentWeekStart();
+  if (!(await tableExists('weekly_performance_goal_snapshots'))) {
+    return {
+      weekStartDate,
+      goals: [],
+      failures: ['this database has no weekly_performance_goal_snapshots table, so no goal reading can be stored'],
+    };
+  }
+
+  const results = await Promise.all(
+    GOAL_METRIC_KEYS.map(async (metricKey) => {
+      try {
+        const metricValue = await GOAL_LIVE_READERS[metricKey](weekStartDate);
+        await writeGoalSnapshot(metricKey, weekStartDate, metricValue);
+        return { metricKey, metricValue, failure: null };
+      } catch (error) {
+        return { metricKey, metricValue: null, failure: `${metricKey}: ${failureReason(error)}` };
+      }
+    }),
+  );
+
+  return {
+    weekStartDate,
+    goals: results
+      .filter((r): r is { metricKey: (typeof GOAL_METRIC_KEYS)[number]; metricValue: number; failure: null } => r.metricValue !== null)
+      .map((r) => ({ metricKey: r.metricKey, metricValue: r.metricValue })),
+    failures: results.flatMap((r) => (r.failure ? [r.failure] : [])),
+  };
 }
 
 type MetricSpec = {

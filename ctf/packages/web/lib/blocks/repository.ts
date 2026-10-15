@@ -135,7 +135,15 @@ export async function unblockUser(blockerUserId: string, blockedUserId: string):
 // LATERAL ... LIMIT 1 because claimed_by_user_id is not unique: an account that claimed two profiles
 // would otherwise turn one block into two rows (two entries, duplicate keys on web and Android). The
 // oldest claimed profile names the row, so the label does not change between loads.
-export async function listBlocksForUser(blockerUserId: string): Promise<MemberBlockListItem[]> {
+//
+// `resolveNames` is false for a caller who is not Unlock-approved. The Directory sits behind
+// `approved_full`, while this list is reachable from the account area by any signed-in account, so
+// without the check an unapproved account could block any id it held and read that member's
+// Directory name back here. Those callers see the neutral "Member" label on every row instead.
+export async function listBlocksForUser(
+  blockerUserId: string,
+  options: { resolveNames: boolean },
+): Promise<MemberBlockListItem[]> {
   const result = await queryDb<{
     blocked_user_id: string;
     display_name: string | null;
@@ -160,7 +168,7 @@ export async function listBlocksForUser(blockerUserId: string): Promise<MemberBl
 
   return result.rows.map((row) => ({
     blockedUserId: row.blocked_user_id,
-    displayName: row.display_name?.trim() ? row.display_name.trim() : 'Member',
+    displayName: options.resolveNames && row.display_name?.trim() ? row.display_name.trim() : 'Member',
     createdAtIso: new Date(row.created_at).toISOString(),
   }));
 }
