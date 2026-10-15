@@ -44,12 +44,16 @@ neutral word "Member" so every row still names someone the viewer can recognize 
 
 ## 4) Deletion behavior
 
-On full-account deletion, the member's own blocks are removed. This is wired into the account
-deletion registry (`ctf/packages/web/lib/account/deletion-registry.ts`) as the `member-blocks` entry:
+On full-account deletion, the member's own blocks and the safety reports they filed are removed.
+This is wired into the account deletion registry (`ctf/packages/web/lib/account/deletion-registry.ts`)
+as two entries:
 
-- `member_blocks` — `delete` where `blocker_user_id = <user>` (the blocks the member created).
-- `member_safety_reports` — `delete` where `reporter_user_id = <user>` (the safety reports the member
-  filed about others). Reports ABOUT the member (`reported_user_id = <user>`) are the admin's safety
+- `member-blocks`: `member_blocks` — `delete` where `blocker_user_id = <user>` (the blocks the member
+  created).
+- `member-safety-reports`: `member_safety_reports` — `delete` where `reporter_user_id = <user>` (the
+  safety reports the member filed about others), and `safety_admin_audit_trail` retained. This entry
+  has `serviceScopeSupported: false`, so the reports go only with the account, never when the member
+  clears their blocked list (issue #2672). Reports ABOUT the member (`reported_user_id = <user>`) are the admin's safety
   evidence raised by someone else and are **NOT** deleted: retained like an audit/accountability
   record, because erasing them would destroy the owner's record of a predator/trafficker concern and
   would let a flagged member delete-and-rejoin to clear reports against them. A retained report that
@@ -58,7 +62,10 @@ deletion registry (`ctf/packages/web/lib/account/deletion-registry.ts`) as the `
 Scope notes:
 
 - The member may also clear all their own blocks on their own via the standard service-scope delete
-  (`DELETE /api/account/services/member-blocks`), since `serviceScopeSupported` is `true`.
+  (`DELETE /api/account/services/member-blocks`), since `serviceScopeSupported` is `true`. That
+  removes `member_blocks` rows only; an open safety report the member filed stays for the owner to
+  review. `DELETE /api/account/services/member-safety-reports` is refused, because that entry has no
+  service scope.
 - Rows where someone ELSE blocked this member (`blocked_user_id = <user>`) are that other member's
   private boundary and are NOT cleared by this member's deletion — they are removed when the other
   member deletes their account (their own `blocker_user_id` rows). A leftover reverse-direction row
