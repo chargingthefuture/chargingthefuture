@@ -94,6 +94,15 @@ is keyed on the pseudonym, so a second device for the same member shares the one
 be bypassed by switching devices.
 **Result:** web ☐ mobile ☐ — notes:
 
+### MD-4a · Two submits sent together store one check-in
+**Role:** member · **Surfaces:** web
+**Precondition:** the member has not checked in within the last 7 days.
+**Steps:**
+1. Open Mood in two tabs, pick a mood in both, and press submit in both as close together as you can.
+**Expected:** One tab shows the check-in as saved; the other shows the cooldown message. The community
+pulse count goes up by one, not two.
+**Result:** web ☐ mobile ☐ — notes:
+
 ### MD-5 · Anonymous community pulse
 **Role:** member · **Surfaces:** all
 **Steps:**
@@ -136,6 +145,19 @@ reopening the app. Refreshing never clears the current screen to the full-screen
 The header back chevron returns to the page you came from (falling back to All Apps when opened
 directly).
 **Result:** web ☐ mobile ☐ — notes:
+
+---
+
+### MD-8 · Failed loads say why (web)
+**Role:** member · **Surfaces:** web
+**Steps:**
+1. Open Mood in a private window that blocks site storage (or with site data blocked in the browser).
+2. In a normal window, open the community pulse tab with the network turned off in developer tools.
+**Expected:** In step 1 the check-in screen reads "Check-ins need browser storage, which is blocked in
+this window." and Submit Privately shows the same line rather than doing nothing. In step 2 the pulse
+reads "The community pulse could not be loaded right now. Please try again shortly." followed by the
+reason (the network error); a refusal from the server shows the server's own message there instead.
+**Result:** web ☐ — notes:
 
 ---
 

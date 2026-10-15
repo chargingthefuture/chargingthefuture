@@ -68,6 +68,10 @@ export function releaseStreamChatClient(apiKey: string, userId: string): void {
     connections.delete(keyOf(apiKey, userId));
     // Wait for the connect to settle before tearing down, so a quick mount/unmount never leaves a
     // half-open connection behind. The instance is never reused after this.
-    void entry.ready.then((client) => client.disconnectUser()).catch(() => {});
+    void entry.ready
+      .then((client) => client.disconnectUser())
+      // no-trace: a connect that never succeeded has nothing to tear down, and the connect failure is
+      // already reported where it was awaited; the instance is discarded either way.
+      .catch(() => {});
   }
 }
