@@ -114,6 +114,12 @@ for file in "${files[@]}"; do
   if [[ "$file" =~ ^ctf/docs/ ]] || [[ "$file" =~ ^ctf/scripts/ ]] || [[ "$file" =~ ^ctf/packages/mobile/ ]] || [[ "$file" =~ ^ctf/packages/web/ ]]; then
     keyword_db_eligible=false
   fi
+  # ctf/schema.demo.sql is generated from ctf/schema.sql by ctf/scripts/generateDemoSchema.mjs, and
+  # every workflow that applies it regenerates it first. A change to schema.sql is caught above; a
+  # change to the generator alone (what it copies into the demo schema) changes no table shape.
+  if [[ "$file" == "ctf/schema.demo.sql" ]]; then
+    keyword_db_eligible=false
+  fi
 
   if [[ "$file" == "ctf/schema.sql" ]]; then
     db_impacting_changed=true
