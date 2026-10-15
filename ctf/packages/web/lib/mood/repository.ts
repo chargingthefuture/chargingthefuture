@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto';
-import { queryDb } from 'lib/db/postgres';
+import type { PoolClient } from 'pg';
+import { queryDb, withDbTransaction } from 'lib/db/postgres';
 import { MOOD_COOLDOWN_DAYS, MOOD_PULSE_MIN_SAMPLE, MOOD_PULSE_WINDOW_DAYS } from './constants';
 
 // One bucket of the community pulse: a single day in the trailing window with
@@ -143,21 +144,13 @@ export async function getOrCreateMoodPseudonym(userId: string): Promise<string> 
 // cooldown on it would let a member bypass the 7-day window by rotating it; the
 // pseudonym is stable per account and cannot be rotated by the member, and the
 // check-in rows carry no user_id.
-export async function getMoodEligibility(input: { pseudonym: string }): Promise<{ eligible: boolean; cooldownUntilIso: string | null; lastSubmissionAtIso: string | null }> {
-  const result = await queryDb<{ submitted_at: Date }>(
-    `SELECT submitted_at
-     FROM mood_submissions
-     WHERE pseudonym = $1
-     ORDER BY submitted_at DESC
-     LIMIT 1`,
-    [input.pseudonym],
-  );
+type MoodEligibility = { eligible: boolean; cooldownUntilIso: string | null; lastSubmissionAtIso: string | null };
 
-  if (result.rows.length === 0) {
+function eligibilityFromLastSubmission(lastSubmission: Date | undefined): MoodEligibility {
+  if (!lastSubmission) {
     return { eligible: true, cooldownUntilIso: null, lastSubmissionAtIso: null };
   }
 
-  const lastSubmission = result.rows[0].submitted_at;
   const cooldownUntil = new Date(lastSubmission.getTime() + MOOD_COOLDOWN_DAYS * 24 * 60 * 60 * 1000);
   const now = new Date();
 
@@ -168,24 +161,41 @@ export async function getMoodEligibility(input: { pseudonym: string }): Promise<
   };
 }
 
+const LAST_SUBMISSION_SQL = `SELECT submitted_at
+     FROM mood_submissions
+     WHERE pseudonym = $1
+     ORDER BY submitted_at DESC
+     LIMIT 1`;
+
+export async function getMoodEligibility(input: { pseudonym: string }): Promise<MoodEligibility> {
+  const result = await queryDb<{ submitted_at: Date }>(LAST_SUBMISSION_SQL, [input.pseudonym]);
+  return eligibilityFromLastSubmission(result.rows[0]?.submitted_at);
+}
+
 export async function createMoodSubmission(input: { pseudonym: string; clientId: string; moodValue: number; note: string | null }) {
   if (!Number.isInteger(input.moodValue) || input.moodValue < 1 || input.moodValue > 5) {
     throw new Error('invalid_payload');
   }
 
-  const eligibility = await getMoodEligibility({ pseudonym: input.pseudonym });
-  if (!eligibility.eligible) {
-    throw new Error('cooldown_active');
-  }
+  // The cooldown read and the insert run in one transaction behind a lock on the
+  // pseudonym. Without it, two submits sent together (a double tap, two tabs)
+  // both read "no check-in this week" and both insert.
+  const inserted = await withDbTransaction(async (client: PoolClient) => {
+    await client.query(`SELECT pg_advisory_xact_lock(hashtext('mood_submissions:' || $1))`, [input.pseudonym]);
+    const last = await client.query<{ submitted_at: Date }>(LAST_SUBMISSION_SQL, [input.pseudonym]);
+    if (!eligibilityFromLastSubmission(last.rows[0]?.submitted_at).eligible) {
+      throw new Error('cooldown_active');
+    }
 
-  // user_id is stored empty on purpose: the check-in row is decoupled from the
-  // account. The link lives only in mood_client_identities, keyed by pseudonym.
-  const inserted = await queryDb<{ id: string; submitted_at: Date }>(
-    `INSERT INTO mood_submissions (id, user_id, client_id, mood_value, note, pseudonym)
-     VALUES ($1, '', $2, $3, $4, $5)
-     RETURNING id, submitted_at`,
-    [randomUUID(), input.clientId, input.moodValue, input.note, input.pseudonym],
-  );
+    // user_id is stored empty on purpose: the check-in row is decoupled from the
+    // account. The link lives only in mood_client_identities, keyed by pseudonym.
+    return client.query<{ id: string; submitted_at: Date }>(
+      `INSERT INTO mood_submissions (id, user_id, client_id, mood_value, note, pseudonym)
+       VALUES ($1, '', $2, $3, $4, $5)
+       RETURNING id, submitted_at`,
+      [randomUUID(), input.clientId, input.moodValue, input.note, input.pseudonym],
+    );
+  });
 
   // Field names match the mood.check.submit command contract outputSchema
   // (checkId / submittedAt).
