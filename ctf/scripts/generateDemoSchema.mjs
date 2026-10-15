@@ -22,6 +22,8 @@
  *   H4:    public.users unique-index DO block suppressed
  *   H5:    table_schema = 'public' → table_schema = 'demo'
  *   H6:    public.socket_relay_user_extension → unqualified (post migration 0003)
+ *   H7:    a post migration that still reads or writes a public.* table after H1–H6 is left
+ *          out (production data repairs; see PRODUCTION_TABLE_ACCESS)
  */
 
 import fs from 'node:fs/promises';
@@ -49,6 +51,15 @@ function applyDemoTransforms(sql, targetSchema) {
   return sql;
 }
 
+// A post migration that still reads or writes a `public.` table after the transforms above is a
+// repair of production data (the login_events backfills, the Unlock spam list restore). The demo
+// file is run against the production database by seed-demo.yml, so keeping such a migration in it
+// would make a demo reseed read member tables and write production rows. Those files are left out,
+// and any later migration written the same way is left out too, rather than relying on somebody to
+// add its table to the transforms. `to_regclass('public.…')` existence checks do not match.
+const PRODUCTION_TABLE_ACCESS =
+  /\b(?:INSERT\s+INTO|UPDATE|DELETE\s+FROM|ALTER\s+TABLE(?:\s+IF\s+EXISTS)?|FROM|JOIN)\s+public\./i;
+
 // Post migrations run after the canonical schema in production (update-neon-db.yml).
 // Mirror that here so the demo schema gets the same renames/drops. Files run in
 // name order; every one is written to be idempotent.
@@ -69,6 +80,10 @@ async function readPostMigrations() {
   let combined = '';
   for (const name of files) {
     const sql = await fs.readFile(path.join(postMigrationsDir, name), 'utf8');
+    if (PRODUCTION_TABLE_ACCESS.test(applyDemoTransforms(sql, 'demo'))) {
+      combined += `\n-- ── post migration: ${name} ──\n-- [demo-skip: names production (public.) tables directly; it repairs production data and has no meaning here]\n`;
+      continue;
+    }
     combined += `\n-- ── post migration: ${name} ──\n${sql}\n`;
   }
   return combined;
