@@ -4,6 +4,7 @@ import { getAccountRestrictionStatus, type AccountRestrictionStatus } from '../.
 import { getAccountPortalOrigin, getHostedSignInUrl } from '../../lib/auth/provider-env';
 import { UNLOCK_DUPLICATE_RESTRICTION_REASON } from '../../lib/unlock/spam-denylist';
 import { AccountClosedNotice } from '../../components/account-closed/account-closed-notice';
+import { reportError } from '../../lib/observability/report';
 
 // Where a member goes when their account has been closed platform-wide.
 //
@@ -18,14 +19,20 @@ import { AccountClosedNotice } from '../../components/account-closed/account-clo
 export const dynamic = 'force-dynamic';
 
 export default async function AccountClosedPage() {
-  const identity = await resolveRequestIdentity().catch(() => null);
+  const identity = await resolveRequestIdentity().catch((error: unknown) => {
+    reportError(error, { area: 'account-closed', op: 'resolve_identity' });
+    return null;
+  });
   const userId = identity?.isAuthenticated ? identity.userId : null;
   if (!userId) {
     redirect('/');
   }
 
   const restriction: AccountRestrictionStatus = await getAccountRestrictionStatus(userId, 'all').catch(
-    () => ({ isRestricted: false }),
+    (error: unknown) => {
+      reportError(error, { area: 'account-closed', op: 'restriction_check' });
+      return { isRestricted: false };
+    },
   );
   // Not closed (or the check failed, which must not strand a member here) — send them back to the app,
   // where the ordinary gates decide as usual.
@@ -40,7 +47,8 @@ export default async function AccountClosedPage() {
     <AccountClosedNotice
       isDuplicate={isDuplicate}
       // Their own identity is the one thing they can still act on: sign in as the other account, or
-      // delete this one. Both live on the provider's hosted portal, outside anything we gate.
+      // delete this one. Both live on the provider's hosted portal, outside anything we gate. The sign-in
+      // button signs this session out first, then lands on this URL.
       signInUrl={getHostedSignInUrl() ?? '/'}
       manageAccountUrl={portalOrigin ? `${portalOrigin}/user` : null}
     />
