@@ -4,7 +4,7 @@
 // lately first, Most Used the ones opened most often, and both fall back to A-Z for apps never opened.
 // Only a tap on "Open plugin →" counts as a use; tapping the card just highlights it.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import * as SecureStore from 'expo-secure-store';
 
 export type AppSortMode = 'recent' | 'alpha' | 'most-used';
@@ -87,40 +87,61 @@ export function sortApps<T extends { key: string; name: string }>(
   });
 }
 
+type StoredOrder = { recent: string[]; counts: Record<string, number> };
+
 export function useAppsOrder() {
   const [sortMode, setSortModeState] = useState<AppSortMode>('recent');
   const [recent, setRecent] = useState<string[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
+  // The stored lists, kept outside state so an open recorded before the read finishes waits for
+  // it and adds to what was stored instead of writing over it from the empty starting state. The
+  // read is not instant on Android (it goes through the keystore), and this screen mounts afresh
+  // each time the member comes back to it.
+  const stored = useRef<StoredOrder>({ recent: [], counts: {} });
+  const loaded = useRef<Promise<void> | null>(null);
+  const sortModeChosen = useRef(false);
+  const mounted = useRef(true);
+
+  if (loaded.current === null) {
+    loaded.current = Promise.all([read(RECENT_KEY), read(SORT_MODE_KEY), read(USAGE_COUNTS_KEY)]).then(
+      ([r, m, c]) => {
+        stored.current = { recent: parseRecent(r), counts: parseUsageCounts(c) };
+        if (!mounted.current) return;
+        setRecent(stored.current.recent);
+        setCounts(stored.current.counts);
+        // A choice made before the read finished is already saved; keep it on screen too.
+        if (!sortModeChosen.current) setSortModeState(parseSortMode(m));
+      },
+    );
+  }
 
   useEffect(() => {
-    let canceled = false;
-    void Promise.all([read(RECENT_KEY), read(SORT_MODE_KEY), read(USAGE_COUNTS_KEY)]).then(([r, m, c]) => {
-      if (canceled) return;
-      setRecent(parseRecent(r));
-      setSortModeState(parseSortMode(m));
-      setCounts(parseUsageCounts(c));
-    });
+    mounted.current = true;
     return () => {
-      canceled = true;
+      mounted.current = false;
     };
   }, []);
 
   const setSortMode = useCallback((mode: AppSortMode) => {
+    sortModeChosen.current = true;
     setSortModeState(mode);
     write(SORT_MODE_KEY, mode);
   }, []);
 
-  const recordOpen = useCallback(
-    (slug: string) => {
-      const nextRecent = [slug, ...recent.filter((item) => item !== slug)].slice(0, MAX_RECENT);
-      setRecent(nextRecent);
+  const recordOpen = useCallback((slug: string) => {
+    // Opening an app moves away from this screen, so the write must still happen after unmount.
+    void loaded.current?.then(() => {
+      const prev = stored.current;
+      const nextRecent = [slug, ...prev.recent.filter((item) => item !== slug)].slice(0, MAX_RECENT);
+      const nextCounts = { ...prev.counts, [slug]: (prev.counts[slug] ?? 0) + 1 };
+      stored.current = { recent: nextRecent, counts: nextCounts };
       write(RECENT_KEY, JSON.stringify(nextRecent));
-      const nextCounts = { ...counts, [slug]: (counts[slug] ?? 0) + 1 };
-      setCounts(nextCounts);
       write(USAGE_COUNTS_KEY, JSON.stringify(nextCounts));
-    },
-    [recent, counts],
-  );
+      if (!mounted.current) return;
+      setRecent(nextRecent);
+      setCounts(nextCounts);
+    });
+  }, []);
 
   return { sortMode, setSortMode, recent, counts, recordOpen };
 }
