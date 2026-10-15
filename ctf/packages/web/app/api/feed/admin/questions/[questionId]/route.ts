@@ -67,7 +67,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ qu
       );
     }
     return NextResponse.json(
-      { ok: false, code: FEED_ERROR_CODE.persistenceUnavailable, message: 'Unable to relabel question.' },
+      { ok: false, code: FEED_ERROR_CODE.persistenceUnavailable, message: `Unable to relabel question: ${failureReason(error)}` },
       { status: 503 },
     );
   }
