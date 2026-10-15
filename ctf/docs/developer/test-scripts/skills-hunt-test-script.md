@@ -206,7 +206,7 @@ Result: web ☐
    - Quora URL: a valid-format Quora profile URL (e.g. `https://www.quora.com/profile/seed-test-user`)
    - Country: `United States` (required). State: `California`. City: `Oakland`.
    - Select 2 taxonomy skills from the accordion/picker.
-   - Above the accordion, confirm the optional list reads **"Know their job title?"** with the placeholder "Select a job title…" — the name Skills Taxonomy and the Directory use, never "profession". On the signed-out SkillsHunt page, the list of what a nomination includes reads First Name, Bio, Quora Profile URL, Skills, with no profession or job title entry.
+   - Above the accordion, confirm the optional list reads **"Know their job title?"** with the placeholder "Select a job title…" — the name Skills Taxonomy and the Directory use, never "profession". On the signed-out SkillsHunt page, the list of what a nomination includes reads Quora Profile URL, Full Name, Bio, Country, Skills, and the sentence above it names a Quora profile, full name, bio, country, and skills, with no first name, profession or job title entry.
 3. Also confirm the **keyword skill search** (web and android): type part of a skill name in the "Search skills by keyword…" box above the sector accordion. The accordion is replaced by a flat, cross-sector list of matching skills; selecting one adds it just like the accordion. Clear the search (✕) to restore the accordion. A no-match query shows the "add it as a free-text skill" hint.
 4. Submit.
 

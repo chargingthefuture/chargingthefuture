@@ -74,7 +74,7 @@ export function GenericPublicShell({ pluginName, signInUrl, verifyUrl }: PublicV
         <p style={{ fontSize: 14, color: SUBTLE, margin: '0 0 24px', lineHeight: 1.6 }}>
           {verifyUrl
             ? `You're signed in — finish verifying your account to use ${pluginName}.`
-            : `Sign in to join the survivor community and use ${pluginName}. This app does not have a public view yet; a free account is all it takes.`}
+            : `Sign in to join the survivor community and use ${pluginName}. This app does not have a public view yet; it opens once you have an account and finish verifying it.`}
         </p>
         <PublicShellWorldwide color={SUBTLE} style={{ margin: '-12px 0 24px' }} />
         <a
