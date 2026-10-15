@@ -55,6 +55,18 @@ export function addDays(day: string, days: number): string {
   return isoDay(date);
 }
 
+// How many of the BILL_WINDOW_FULL_DAYS full days before `today` lack a saved row for every endpoint.
+// Every read writes a row for every day in its window, a quiet day included, so a day with no row (or
+// with rows for only some endpoints) was never read. Summing what is there would understate the month
+// while still being labeled as measured, so the screen keeps the typed figure while this is above 0.
+export function missingBillDays(days: { billDate: string; endpointsRead: number }[], today: string, endpointCount: number): number {
+  const from = addDays(today, -BILL_WINDOW_FULL_DAYS);
+  const complete = new Set(
+    days.filter((day) => day.billDate >= from && day.billDate < today && day.endpointsRead >= endpointCount).map((day) => day.billDate),
+  );
+  return BILL_WINDOW_FULL_DAYS - complete.size;
+}
+
 export function billWindow(now: Date): BillWindow {
   const endDate = isoDay(now);
   const startDate = addDays(endDate, -BILL_WINDOW_FULL_DAYS);

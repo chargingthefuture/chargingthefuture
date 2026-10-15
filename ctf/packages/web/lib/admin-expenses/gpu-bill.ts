@@ -1,5 +1,5 @@
 import { queryDb } from 'lib/db/postgres';
-import { addDays, billWindow, fetchEndpointBill, isDaySettled, runpodEndpointIdsFromEnv, type BillDay, type FetchLike } from './runpod-billing';
+import { addDays, BILL_WINDOW_FULL_DAYS, billWindow, missingBillDays, fetchEndpointBill, isDaySettled, runpodEndpointIdsFromEnv, type BillDay, type FetchLike } from './runpod-billing';
 import type { GpuBillDay, GpuBillState } from './gpu-bill-shared';
 
 // The RunPod key that reads billing. Kept in this project's Infisical, never copied from One Percent's
@@ -52,7 +52,20 @@ export async function readGpuBillNow(fetchImpl: FetchLike = fetch as unknown as 
   return { endpointIds: config.endpointIds, daysRead: days.length, readAt: now.toISOString() };
 }
 
-type DayRow = { bill_date: string; amount_cents: string; settled: boolean };
+// The 30 full days added together, or null while some of them were never read.
+function measuredTotalCents(fullDays: GpuBillDay[], incompleteReason: string | null): number | null {
+  if (incompleteReason !== null) return null;
+  return fullDays.reduce((total, day) => total + day.amountCents, 0);
+}
+
+// Why the 30-day figure is held back, or null when every day in the window was read.
+function incompleteBillReason(missingDays: number, lastReadAt: string): string | null {
+  if (missingDays === 0) return null;
+  const verb = missingDays === 1 ? 'has' : 'have';
+  return `${missingDays} of the last ${BILL_WINDOW_FULL_DAYS} full days ${verb} not been read (last read ${lastReadAt.slice(0, 16).replace('T', ' ')} UTC), so the 30-day figure would come out short. The RunPod line shows the figure typed by hand until the bill is read again.`;
+}
+
+type DayRow = { bill_date: string; amount_cents: string; settled: boolean; endpoints_read: string };
 
 // The screen's view of the bill, for the configured endpoints only. `today` is the UTC day.
 export async function loadGpuBillState(today: string = new Date().toISOString().slice(0, 10)): Promise<GpuBillState> {
@@ -64,6 +77,7 @@ export async function loadGpuBillState(today: string = new Date().toISOString().
     last30DaysCents: null,
     last30DaysFrom: null,
     last30DaysTo: null,
+    incompleteReason: null,
     todayCents: null,
     recentDays: [],
   };
@@ -75,7 +89,8 @@ export async function loadGpuBillState(today: string = new Date().toISOString().
       `
         SELECT to_char(bill_date, 'YYYY-MM-DD') AS bill_date,
                ROUND(SUM(amount_usd) * 100)::text AS amount_cents,
-               BOOL_AND(settled) AS settled
+               BOOL_AND(settled) AS settled,
+               COUNT(DISTINCT endpoint_id)::text AS endpoints_read
         FROM admin_expense_gpu_bill_days
         WHERE endpoint_id = ANY($1::text[]) AND bill_date BETWEEN $2::date AND $3::date
         GROUP BY bill_date
@@ -94,10 +109,18 @@ export async function loadGpuBillState(today: string = new Date().toISOString().
   const days: GpuBillDay[] = daysResult.rows.map((row) => ({ billDate: row.bill_date, amountCents: Number(row.amount_cents) || 0, settled: row.settled }));
   const fullDays = days.filter((day) => day.billDate < today);
   const todayRow = days.find((day) => day.billDate === today);
+  const lastReadAt = lastRead instanceof Date ? lastRead.toISOString() : String(lastRead);
+  const missing = missingBillDays(
+    daysResult.rows.map((row) => ({ billDate: row.bill_date, endpointsRead: Number(row.endpoints_read) })),
+    today,
+    config.endpointIds.length,
+  );
+  const incompleteReason = incompleteBillReason(missing, lastReadAt);
   return {
     ...empty,
-    lastReadAt: lastRead instanceof Date ? lastRead.toISOString() : String(lastRead),
-    last30DaysCents: fullDays.reduce((total, day) => total + day.amountCents, 0),
+    lastReadAt,
+    last30DaysCents: measuredTotalCents(fullDays, incompleteReason),
+    incompleteReason,
     last30DaysFrom: from,
     last30DaysTo: addDays(today, -1),
     todayCents: todayRow ? todayRow.amountCents : null,
