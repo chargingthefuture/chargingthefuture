@@ -81,8 +81,8 @@ describe('Unlock help log summary', () => {
 });
 
 describe('commonsSuggestionChips', () => {
-  it('gives a member not yet approved only the Unlock chips', () => {
-    expect(commonsSuggestionChips({ unlockFocus: true }).map((chip) => chip.id)).toEqual(['quora-url', 'new-here']);
+  it('gives a member not yet approved only the "I\'m new" chip', () => {
+    expect(commonsSuggestionChips({ unlockFocus: true }).map((chip) => chip.id)).toEqual(['new-here']);
     expect(commonsSuggestionChips().length).toBeGreaterThan(2);
   });
 });

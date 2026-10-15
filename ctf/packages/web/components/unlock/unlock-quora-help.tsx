@@ -40,7 +40,7 @@ const COPY: Record<HelpWhere, { body: string; idle: string; busy: string; failed
     failed: "Could not open the Commons just now. Try again.",
   },
   commons: {
-    body: "Ask in the chat just below — start your message with @comic, or tap “I can’t find my Quora profile URL” under the chat. Nothing here expires while you wait.",
+    body: "Ask in the chat just below. Nothing here expires while you wait.",
     idle: "Send this to the team",
     busy: "Sending…",
     failed: "Could not send that just now. Try again.",

@@ -70,7 +70,8 @@ Access-gating plugin — these are the can't-ship-broken checks. Admin / reviewe
    Quora app, if your link was not accepted, if you cannot get into your Quora account.
 4. Type a name in the hint box and press the button. Confirm you land on the Commons.
 5. On the Commons, confirm the banner shows the **same** box (same steps and picture, same hint box),
-   with copy that points at @comic and the "I can’t find my Quora profile URL" chip. The button reads
+   with copy that reads "Ask in the chat just below. Nothing here expires while you wait." (no
+   mention of @comic or of an "I can’t find my Quora profile URL" chip). The button reads
    "Send this to the team" and stays disabled until the hint box has text.
 6. Type a name and press it. Confirm "Saved. A person will use it to look you up." and that the page
    does not move. As admin, confirm the hint shows on that member's row in `/admin/unlock`.
@@ -134,11 +135,12 @@ sign-in shows the loading screen.
    a later day), open the home page.
 2. Confirm: the verification banner and the chat are what is on screen. There is no Apps tab in the
    top bar, no Apps button in the icon rail, no locked `#weavers` chip in the channel row, and the
-   chips under the chat are only "I can’t find my Quora profile URL" and "I'm new. What do I do first?".
+   only chip under the chat is "I'm new. What do I do first?". There is no "I can’t find my Quora
+   profile URL" chip.
 3. Open an announcement or an @comic answer that carries plugin links. Confirm the "Explore:" / plugin
    chips are not shown.
-4. Tap "I can’t find my Quora profile URL". Confirm the consent step (first time), then an @comic
-   answer card with the browser steps within a second or two (sent without review; see CMC-U1).
+4. Leave the page open for a minute with the browser's network panel open. Confirm no request to
+   `/api/comic/conversation` is made.
 5. As admin, approve the member in `/admin/unlock`. As the member, reload the home page.
 6. Confirm everything from step 2 is back: Apps tab, grid, sort and search, the locked chip, the full
    chip row, plugin links under answers and announcements.

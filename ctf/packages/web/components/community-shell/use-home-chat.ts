@@ -1184,7 +1184,13 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
     refreshHistoryRef.current = refreshHistory;
   }, [refreshHistory]);
 
-  const refreshComic = useCallback(() => readComicInto(settersRef.current), []);
+  // @comic needs Unlock approval, so for a member not yet approved its conversation read is always
+  // refused. Skip it rather than poll a route that can only say no (owner decision, 2026-10-15).
+  const unlockFocus = useCommonsUnlockFocus();
+  const refreshComic = useCallback(
+    () => (unlockFocus ? Promise.resolve() : readComicInto(settersRef.current)),
+    [unlockFocus],
+  );
 
   const refreshLastSeen = useCallback(() => readLastSeenInto(settersRef.current), []);
 
@@ -1312,7 +1318,6 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
   // The curated one-tap suggestion chips shown under the composer (#471): navigation chips open a
   // plugin; ask chips route to @comic. Each chip's behavior is explicit (see commons-suggestions).
   // A member not yet approved gets only the chips that help them finish Unlock.
-  const unlockFocus = useCommonsUnlockFocus();
   const suggestionChips = useMemo(() => commonsSuggestionChips({ unlockFocus }), [unlockFocus]);
 
   return {
