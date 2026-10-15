@@ -99,7 +99,7 @@ export type FoundationThread = {
   id: string;
   survivorUserId: string;
   providerUserId: string;
-  providerDirectoryProfileId: string;
+  providerDirectoryProfileId: string | null;
   streamChannelId: string;
   status: 'active' | 'closed';
   createdAtIso: string;
