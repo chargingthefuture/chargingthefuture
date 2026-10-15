@@ -211,36 +211,12 @@
       "updatedAt": "2026-10-05T12:23:38.257Z"
     },
     {
-      "name": "economic-models-package",
-      "type": "module",
-      "lastReviewedAt": "2026-10-04T23:53:41.070Z",
-      "lastRunIssues": 2,
-      "partial": false,
-      "updatedAt": "2026-10-04T23:53:41.070Z"
-    },
-    {
-      "name": "education-package",
-      "type": "module",
-      "lastReviewedAt": "2026-10-04T23:52:34.787Z",
-      "lastRunIssues": 1,
-      "partial": false,
-      "updatedAt": "2026-10-04T23:52:34.787Z"
-    },
-    {
       "name": "engagement",
       "type": "plugin",
       "lastReviewedAt": "2026-10-05T12:39:44.632Z",
       "lastRunIssues": 2,
       "partial": false,
       "updatedAt": "2026-10-05T12:39:44.632Z"
-    },
-    {
-      "name": "eol-package",
-      "type": "module",
-      "lastReviewedAt": "2026-10-04T23:52:36.907Z",
-      "lastRunIssues": 1,
-      "partial": false,
-      "updatedAt": "2026-10-04T23:52:36.907Z"
     },
     {
       "name": "errors",

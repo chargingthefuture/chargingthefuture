@@ -1,9 +1,6 @@
 packages:
   - "ctf/packages/agent-mcp-server"
-  - "ctf/packages/economic-models"
-  - "ctf/packages/eol"
   - "ctf/packages/mobile"
-  - "ctf/packages/education"
   - "ctf/packages/shared"
   - "ctf/packages/web"
   - "landing-page"

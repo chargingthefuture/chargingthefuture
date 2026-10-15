@@ -450,29 +450,6 @@ auditEvents:
     timestamp: rfc3339
     actorId: principal
     pluginId: skills-hunt
-    command: skills-hunt.profile.delete
-    commandVersion: 1.0.0
-    purpose: gdpr_self_delete
-    policyDecision:
-      status: allow_or_deny
-      reason: policy_reason_code
-    dataClassesAccessed:
-      - skills_hunt_submissions
-      - skills_hunt_audit_log
-    targetContext:
-      workspaceId: workspace_identifier
-      userId: caller_identifier
-      softDeletedSubmissions: count
-    requestId: request_identifier
-    traceId: trace_identifier
-    result:
-      status: success_or_failure
-      errorCategory: none_or_error_class
-
-  - eventId: uuid
-    timestamp: rfc3339
-    actorId: principal
-    pluginId: skills-hunt
     command: skills-hunt.mission.create
     commandVersion: 1.0.0
     purpose: campaign_governance
@@ -687,3 +664,7 @@ changelog:
       skills_hunt_round_award; an accepted nomination no longer mints. Bumped commandVersion to
       2.0.0 for skills-hunt.round.create, skills-hunt.round.update and skills-hunt.submission.review
       to match the command contracts.
+  - date: 2026-10-15
+    change: >-
+      Removed the skills-hunt.profile.delete event with its route, DELETE /api/account/skills-hunt-
+      profile, which had no caller. Rows already written keep their label on the admin audit screen.
