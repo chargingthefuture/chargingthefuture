@@ -27,6 +27,7 @@ const COMMAND_LABELS: Record<string, string> = {
   "mutual-time.event.create": "Opened an event",
   "mutual-time.event.close": "Closed an event",
   "mutual-time.vote.save": "Saved a member's picks",
+  "mutual-time.admin.audit.list": "Read the audit log",
 };
 
 // The reason codes carried on a denied or failed action, said plainly. These are the lines that
@@ -37,6 +38,7 @@ const REASON_LABELS: Record<string, string> = {
   validation: "the details did not pass validation",
   invalid_payload: "the details did not pass validation",
   persistence_error: "the database write failed",
+  internal_error: "the server hit an unexpected error",
   policy: "policy refused it",
 };
 

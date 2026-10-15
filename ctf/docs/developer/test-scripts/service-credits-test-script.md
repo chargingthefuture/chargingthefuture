@@ -13,7 +13,7 @@
 | **Surfaces** | web (`/service-credits`, `/admin/service-credits`) · android (`ServiceCredits.tsx`, `AdminServiceCredits.tsx`) |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-service-credits-feature-inventory.md` |
-| **Generated** | 2026-07-13 (commit 0aef7039) · 2026-10-12 manual update: SC-A disputes list and ledger status card show a failed read |
+| **Generated** | 2026-07-13 (commit 0aef7039) · 2026-10-12 manual update: SC-A disputes list and ledger status card show a failed read · 2026-10-15 manual update: SC-3b self-send refused, SC-A7a adjustment checks |
 | **Inventory wording** | 2026-10-01: banned-term wording removed from the inventory prose; no step in this script changed |
 
 ---
@@ -176,6 +176,25 @@ Result: web ☐
 **Expected:**
 - Step 2 shows "No member has that username or ID. Check the recipient and try again; nothing was sent." The balance is unchanged and no "Transfer out" row appears.
 - Step 3 completes like SC-3: the `@` is accepted and the credits reach Recipient's wallet.
+
+Result: web ☐
+
+---
+
+### SC-3b — A send to yourself is refused
+
+**Role:** member
+**Surfaces:** web
+**Precondition:** Signed in as Sender with at least 5 credits available.
+
+**Steps:**
+1. Open the Send panel and note the available balance.
+2. Enter your own username and the amount 5, then send.
+3. Open Wallet and read Recent Transactions.
+
+**Expected:**
+- Step 2 shows "You cannot send ServiceCredits to yourself. Choose another member." (400 `service_credits_self_transfer`).
+- The balance is unchanged and no new transfer row appears, so the send adds nothing to the public transfer volume.
 
 Result: web ☐
 
@@ -588,6 +607,27 @@ Result: web ☐
 6. Check the source member's balance has decreased by 5 and the destination member's has increased by 5.
 
 **Expected:** Adjustment is applied. Both balances change correctly. An adjustment ID and transfer ID are returned. No fiat figure appears.
+
+Result: web ☐
+
+---
+
+### SC-A7a — A dispute adjustment with a wrong case ID or wrong members is refused
+
+**Role:** admin
+**Surfaces:** web
+**Precondition:** An open dispute from SC-9, with its transfer's sender and recipient known, and a third member who was not part of that transfer.
+
+**Steps:**
+1. In the Disputes panel, enter a case ID that no dispute has (change one character of the real one), the transfer's sender and recipient, amount 5, a reason and a new idempotency key, then submit.
+2. Enter the real case ID with the third member as the source, then submit.
+3. Check all three members' balances.
+
+**Expected:**
+- Step 1 is refused with "No dispute has that id. Nothing was moved." (404 `service_credits_dispute_case_not_found`).
+- Step 2 is refused with "The source and destination must be the sender and recipient of the disputed transfer. Nothing was moved." (409 `service_credits_dispute_parties_mismatch`).
+- No balance changed, and the dispute is still on the open list.
+- `service_credits_admin_audit_trail` holds a `deny` row for `service-credits.dispute.adjustment.apply` for each refusal, with the code as its reason.
 
 Result: web ☐
 

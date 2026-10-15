@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { ensureMutationCsrf, requireServiceCreditsAdminAccess, serviceCreditsErrorResponse } from 'lib/service-credits/_lib';
+import { ensureMutationCsrf, requireServiceCreditsAdminAccess, serviceCreditsErrorResponse, auditServiceCreditsFailure } from 'lib/service-credits/_lib';
 import { getTreasuryConfig, insertServiceCreditsAudit, updateTreasuryConfig } from 'lib/service-credits/repository';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
@@ -29,7 +29,7 @@ export async function PUT(request: Request) {
     return csrfDeny;
   }
 
-  const gate = await requireServiceCreditsAdminAccess();
+  const gate = await requireServiceCreditsAdminAccess({ command: 'service-credits.treasury.update' });
   if (!gate.allowed) {
     return gate.response;
   }
@@ -59,6 +59,7 @@ export async function PUT(request: Request) {
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'service-credits', op: 'admin_treasury_put' });
+    await auditServiceCreditsFailure({ actorId: gate.auth.userId, command: 'service-credits.treasury.update', targetType: 'treasury', targetId: '1', error });
     return serviceCreditsErrorResponse(error, 'Could not save treasury policy.');
   }
 }

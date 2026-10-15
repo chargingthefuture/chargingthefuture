@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createEscrowHold, insertServiceCreditsAudit } from 'lib/service-credits/repository';
-import { ensureMutationCsrf, requireServiceCreditsServiceAccess, serviceCreditsErrorResponse } from 'lib/service-credits/_lib';
+import { ensureMutationCsrf, requireServiceCreditsServiceAccess, serviceCreditsErrorResponse, auditServiceCreditsFailure } from 'lib/service-credits/_lib';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
 
@@ -60,7 +60,7 @@ export async function POST(request: Request) {
     return csrfDeny;
   }
 
-  const gate = await requireServiceCreditsServiceAccess();
+  const gate = await requireServiceCreditsServiceAccess({ command: 'service-credits.escrow.hold.create' });
   if (!gate.allowed) {
     return gate.response;
   }
@@ -101,6 +101,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, escrow }, { status: 201 });
   } catch (error) {
     reportError(error, { area: 'service-credits', op: 'escrows' });
+    await auditServiceCreditsFailure({ actorId: gate.auth.userId, command: 'service-credits.escrow.hold.create', targetType: 'wallet', targetId: parsed.data.sourceUserId, error });
     return serviceCreditsErrorResponse(error, 'Escrow hold unavailable.');
   }
 }
