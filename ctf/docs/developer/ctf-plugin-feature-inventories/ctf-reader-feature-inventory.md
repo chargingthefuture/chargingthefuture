@@ -102,6 +102,7 @@ somebody reads is not evidence anybody should be publishing.
 
 ## Change Log
 
+- 2026-10-15 — The generic public preview, which is what a signed-out visitor to `/apps/reader` sees, said a free account is all it takes. Reader needs Unlock approval like every plugin but Fireside (`pluginPageMinUnlockTier`), so the sentence in `generic-public-shell.tsx` now says the app opens once you have an account and finish verifying it (owner-approved copy fix, #2889).
 - 2026-10-03 — The "What you get" card named two default feeds after the recorded broadcasts
   became the third on 2026-09-29 (owner report). The card, the user guide step and the test
   script now name all three. The cards also sat almost touching: the page column is a direct
