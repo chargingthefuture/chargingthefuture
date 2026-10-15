@@ -110,6 +110,7 @@ policies:
       - cross_plugin_path_missing
       - disallowed_cross_plugin_path
       - fiat_redemption_requested
+      - self_transfer
       - insufficient_role
 
   - pluginId: service-credits
@@ -315,6 +316,7 @@ policies:
       requiresAdditionalAudit: true
     denyConditions:
       - dispute_case_not_found
+      - dispute_parties_mismatch
       - adjustment_limit_exceeded
       - fiat_redemption_requested
       - insufficient_role

@@ -1,12 +1,19 @@
 import { NextResponse } from 'next/server';
 import { createDispute, getTransferParties, insertServiceCreditsAudit } from 'lib/service-credits/repository';
-import { ensureMutationCsrf, requireServiceCreditsReadAccess } from 'lib/service-credits/_lib';
+import { auditServiceCreditsFailure, ensureMutationCsrf, requireServiceCreditsReadAccess, serviceCreditsErrorResponse } from 'lib/service-credits/_lib';
+import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
 
 type DisputeBody = {
-  transferId?: string;
-  reason?: string;
+  transferId?: unknown;
+  reason?: unknown;
 };
+
+// Transfer ids are UUIDs. Checking the shape first keeps a malformed id from reaching Postgres,
+// where it would fail the query instead of answering "not found".
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const DISPUTE_COMMAND = 'service-credits.dispute.create';
 
 export async function POST(request: Request) {
   const csrfDeny = ensureMutationCsrf(request);
@@ -26,32 +33,42 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, code: 'service_credits_invalid_json', message: 'Invalid JSON body.', reason: failureReason(error) }, { status: 400 });
   }
 
-  if (!body.transferId || !body.reason) {
+  if (typeof body.transferId !== 'string' || typeof body.reason !== 'string' || !body.transferId || !body.reason.trim()) {
     return NextResponse.json({ ok: false, code: 'service_credits_invalid_payload', message: 'transferId and reason are required.' }, { status: 400 });
   }
-
-  // Ownership check: only a party to the transfer (its sender or recipient) may open a dispute on it.
-  // Without this any authenticated member could dispute a transfer they were never part of.
-  const parties = await getTransferParties(body.transferId);
-  if (!parties) {
+  if (!UUID_PATTERN.test(body.transferId)) {
     return NextResponse.json({ ok: false, code: 'service_credits_transfer_not_found', message: 'Transfer not found.' }, { status: 404 });
   }
-  if (parties.senderUserId !== gate.auth.userId && parties.recipientUserId !== gate.auth.userId) {
-    return NextResponse.json(
-      { ok: false, code: 'service_credits_dispute_forbidden', message: 'You can only dispute a transfer you were a party to.' },
-      { status: 403 },
-    );
+  const transferId = body.transferId;
+  const reason = body.reason;
+
+  try {
+    // Ownership check: only a party to the transfer (its sender or recipient) may open a dispute on it.
+    // Without this any authenticated member could dispute a transfer they were never part of.
+    const parties = await getTransferParties(transferId);
+    if (!parties) {
+      return NextResponse.json({ ok: false, code: 'service_credits_transfer_not_found', message: 'Transfer not found.' }, { status: 404 });
+    }
+    if (parties.senderUserId !== gate.auth.userId && parties.recipientUserId !== gate.auth.userId) {
+      const forbidden = new Error('dispute_forbidden');
+      await auditServiceCreditsFailure({ actorId: gate.auth.userId, command: DISPUTE_COMMAND, targetType: 'transfer', targetId: transferId, error: forbidden });
+      return serviceCreditsErrorResponse(forbidden, 'Dispute unavailable.');
+    }
+
+    const disputeId = await createDispute({ transferId, openedByUserId: gate.auth.userId, reason });
+    await insertServiceCreditsAudit({
+      actorId: gate.auth.userId,
+      command: DISPUTE_COMMAND,
+      policyStatus: 'allow',
+      reason: 'ok',
+      targetType: 'dispute',
+      targetId: disputeId,
+    });
+
+    return NextResponse.json({ ok: true, disputeId }, { status: 201 });
+  } catch (error) {
+    reportError(error, { area: 'service-credits', op: 'disputes_create' });
+    await auditServiceCreditsFailure({ actorId: gate.auth.userId, command: DISPUTE_COMMAND, targetType: 'transfer', targetId: transferId, error });
+    return serviceCreditsErrorResponse(error, 'The dispute could not be opened right now. Nothing was recorded; try again in a moment.');
   }
-
-  const disputeId = await createDispute({ transferId: body.transferId, openedByUserId: gate.auth.userId, reason: body.reason });
-  await insertServiceCreditsAudit({
-    actorId: gate.auth.userId,
-    command: 'service-credits.dispute.create',
-    policyStatus: 'allow',
-    reason: 'ok',
-    targetType: 'dispute',
-    targetId: disputeId,
-  });
-
-  return NextResponse.json({ ok: true, disputeId }, { status: 201 });
 }

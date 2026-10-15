@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { collectTreasuryFee, insertServiceCreditsAudit } from 'lib/service-credits/repository';
-import { ensureMutationCsrf, requireServiceCreditsAdminAccess, serviceCreditsErrorResponse } from 'lib/service-credits/_lib';
+import { ensureMutationCsrf, requireServiceCreditsAdminAccess, serviceCreditsErrorResponse, auditServiceCreditsFailure } from 'lib/service-credits/_lib';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
 
@@ -61,7 +61,7 @@ export async function POST(request: Request) {
     return csrfDeny;
   }
 
-  const gate = await requireServiceCreditsAdminAccess();
+  const gate = await requireServiceCreditsAdminAccess({ command: 'service-credits.treasury.fee.collect' });
   if (!gate.allowed) {
     return gate.response;
   }
@@ -108,6 +108,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, collection }, { status: 201 });
   } catch (error) {
     reportError(error, { area: 'service-credits', op: 'admin_treasury_fees_collect' });
+    await auditServiceCreditsFailure({ actorId: gate.auth.userId, command: 'service-credits.treasury.fee.collect', targetType: 'wallet', targetId: input.sourceUserId, error });
     return serviceCreditsErrorResponse(error, 'Treasury fee collection unavailable.');
   }
 }
