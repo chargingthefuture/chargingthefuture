@@ -17,7 +17,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-click-log-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-09-20 manual update: CL-A5 now runs in the installed iOS app, checks that the picture appears on the dashboard, that nothing ever navigates away from it, and that Share and press-and-hold are the only ways offered · 2026-10-04 manual note: `CLICK_LOG_PROFILE_AND_DELETION_CONTRACT.md` written (suggestions, incidents and the preferences row deleted with the service or the account) — no test change |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-09-20 manual update: CL-A5 now runs in the installed iOS app, checks that the picture appears on the dashboard, that nothing ever navigates away from it, and that Share and press-and-hold are the only ways offered · 2026-10-04 manual note: `CLICK_LOG_PROFILE_AND_DELETION_CONTRACT.md` written (suggestions, incidents and the preferences row deleted with the service or the account) — no test change · 2026-10-12 manual update: CL-6b added (a sharing default that fails to load or save shows a message) |
 
 ## How to run this
 
@@ -114,6 +114,19 @@ share-off call on a tagged incident with the same explanation. The copy names
 what is shared in plain words — the global default says "only trend data — never your notes" and
 the per-incident checkbox says "only the date, rough area, and tags"; the word "coarse" appears
 nowhere on screen.
+**Result:** web ☐ mobile ☐ — notes:
+
+### CL-6b · A sharing default that fails to load or save says so
+**Role:** member · **Surfaces:** web
+**Steps:**
+1. Turn on the global sharing default. In the browser's developer tools, block requests to
+   `/api/click-log/preferences` and reload ClickLog.
+2. Read the area under the sharing default.
+3. Unblock the load, reload, then block only the save and flip the default.
+**Expected:** Step 2 shows a message that the sharing default could not be loaded and that new
+incidents are not shared unless the member turns sharing on (with the route's error text when it
+sent one); the screen does not silently show the default as off. Step 3 shows the route's error
+text for the failed save rather than a fixed sentence.
 **Result:** web ☐ mobile ☐ — notes:
 
 ### CL-7 · Tag an incident with a problem and a scheme (location and sharing required)

@@ -1,4 +1,5 @@
 import { reportError } from 'lib/observability/report';
+import { describeFailure } from './reason';
 
 // The client half of rule 137. A route that explains itself is worth nothing if the screen replaces
 // the explanation with its own fallback sentence — that is where the reason used to disappear a second
@@ -18,12 +19,9 @@ import { reportError } from 'lib/observability/report';
 // Matches the cap the server helper uses, so a long upstream message reads the same in both places.
 const MAX_REASON_LENGTH = 300;
 
+// Same reading as the server half, cause included (see `reason.ts`).
 function reasonOf(error: unknown): string {
-  const raw = (error instanceof Error ? error.message : String(error)).trim();
-  if (raw.length === 0) {
-    return error instanceof Error ? `${error.name} with no message` : 'unknown error';
-  }
-  return raw.length > MAX_REASON_LENGTH ? `${raw.slice(0, MAX_REASON_LENGTH)}…` : raw;
+  return describeFailure(error, MAX_REASON_LENGTH);
 }
 
 // The readable reason behind a caught value, with nothing reported. For a local failure that is the

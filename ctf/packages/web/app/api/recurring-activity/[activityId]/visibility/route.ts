@@ -87,7 +87,7 @@ export async function POST(request: Request, context: { params: Promise<{ activi
       requestId,
       traceId,
       metadata: { visibility },
-    });
+    }).catch((auditError) => reportError(auditError, { area: 'recurring-activity', op: 'visibility_audit' }));
     return NextResponse.json(
       {
         ok: true,

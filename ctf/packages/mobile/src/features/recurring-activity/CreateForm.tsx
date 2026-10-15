@@ -8,6 +8,7 @@ import { useTheme, type ThemeTokens } from '../../theme';
 import { interFamily } from '../../components/ui';
 import { SelectField } from './SelectField';
 import { searchMembers, type CreateActivityInput } from './api';
+import { reportError } from '../../observability/report';
 import {
   CADENCE_LABEL,
   SECTOR_LABEL,
@@ -120,6 +121,7 @@ function CounterpartyPicker({ t, tokens, selected, onSelect, onClear }: {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<MemberOption[]>([]);
   const [loading, setLoading] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
 
   useEffect(() => {
     if (selected) return undefined;
@@ -127,15 +129,21 @@ function CounterpartyPicker({ t, tokens, selected, onSelect, onClear }: {
     if (term.length < 2) {
       setResults([]);
       setLoading(false);
+      setSearchError(null);
       return undefined;
     }
     const controller = new AbortController();
     const timer = setTimeout(async () => {
       setLoading(true);
+      setSearchError(null);
       try {
         setResults(await searchMembers(term, controller.signal));
-      } catch {
-        // no-trace: aborted when the member types again, or a transient miss; the picker simply shows no new results.
+      } catch (error) {
+        // An abort is the next keystroke replacing this search, not a failure.
+        if (controller.signal.aborted) return;
+        reportError(error, { area: 'recurring-activity', op: 'member_search' });
+        setResults([]);
+        setSearchError(error instanceof Error && error.message ? error.message : 'The member search did not work. Try again in a moment.');
       } finally {
         if (!controller.signal.aborted) setLoading(false);
       }
@@ -181,6 +189,9 @@ function CounterpartyPicker({ t, tokens, selected, onSelect, onClear }: {
       </View>
       {loading && results.length === 0 ? (
         <Text style={{ fontSize: 12, fontFamily: interFamily('400'), color: t.MUTED, paddingVertical: 4, paddingHorizontal: 2 }}>Searching…</Text>
+      ) : null}
+      {!loading && searchError ? (
+        <Text accessibilityRole="alert" style={{ fontSize: 12, fontFamily: interFamily('400'), color: t.SUBTLE, paddingVertical: 4, paddingHorizontal: 2 }}>{searchError}</Text>
       ) : null}
       {results.length > 0 ? (
         <View style={{ borderWidth: 1, borderColor: t.BORDER_SOLID, borderRadius: rr(tokens, 8), overflow: 'hidden' }}>
