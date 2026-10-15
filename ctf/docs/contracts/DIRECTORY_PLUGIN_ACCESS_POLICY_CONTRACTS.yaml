@@ -413,6 +413,7 @@ policies:
       internalServiceSecret: required
       fieldValidation: enforced
       imageTypeFromBytes: required
+      inviteCodeRequired: lowercase_letters_and_digits_exactly_10
     consentRequirements:
       scopes: []
       fallbackLawfulBasis: legitimate_interest_safety_support
@@ -424,6 +425,7 @@ policies:
       - internal_secret_mismatch
       - invalid_payload
       - quora_handle_taken
+      - invite_code_taken
 
   - pluginId: directory
     command: directory.invite.delete
@@ -451,6 +453,9 @@ policies:
       publicProjectionOnly: required
       publicFields: name_opening_date_link_only_for_private_invites
       publicInvitesReadable: blog_published_only
+      directLinkLookup: invite_code_only
+      quoraHandleInResponse: never
+      privateInvitesBeyondNewestTen: count_only
       contactRestrictedOwnersExcludedFromCount: required
       antiScrapingThreshold: enforced
       corsOrigins: chargingthefuture.com_www_and_github_pages_only
@@ -474,6 +479,7 @@ policies:
       signedInAnyUnlockTier: required
       unlockTierExceptionDecision: 2026-10-15
       pageSizeMax: 10
+      directLinkLookup: invite_code_then_quora_handle
     consentRequirements:
       scopes:
         - directory_discovery

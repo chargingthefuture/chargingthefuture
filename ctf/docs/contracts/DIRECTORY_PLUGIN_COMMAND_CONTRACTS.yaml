@@ -499,8 +499,10 @@ contracts:
     description: >-
       Machine write from the private invite repository's job (POST /api/internal/directory/invites,
       Bearer INTERNAL_SERVICE_SECRET). Creates or replaces one invitation, keyed by slug; every field
-      is replaced, the picture included. A Quora handle already held by another slug is refused with
-      409. Each refusal names the field. The picture is base64 PNG, JPEG or WebP, at most 3 MB, its
+      is replaced, the picture included. inviteCode is required: exactly 10 characters, lower-case
+      letters and digits only (/^[a-z0-9]{10}$/), made at random by the private repository; it is the
+      only value that opens the invitation from a signed-out link. A Quora handle or an invite code
+      already held by another slug is refused with 409. Each refusal names the field. The picture is base64 PNG, JPEG or WebP, at most 3 MB, its
       type read from its own bytes, with alt text required. public (default false) marks an invite
       already published on the blog before 2026-10-15, readable by anybody; blogUrl (also accepted
       as blog_url) is its post's address and is required when public is true.
@@ -508,6 +510,10 @@ contracts:
       slug:
         type: string
         required: true
+      inviteCode:
+        type: string
+        required: true
+        pattern: '^[a-z0-9]{10}$'
       quoraHandle:
         type: string
         required: true
@@ -584,12 +590,16 @@ contracts:
     description: >-
       Public read (GET /api/directory/invites/public), rate limited per address. The newest ten
       invitations as cards (name, opening words, date, the app address that opens one) and how many
-      people the Directory lists (directory_public_totals, restricted owners left out). ?invite=<handle>
-      adds that one person's card. A card on a public invite (one already on the blog) also carries
+      people the Directory lists (directory_public_totals, restricted owners left out). ?invite=<code>
+      adds that one person's card; the value is looked up only as an invite code, never as a Quora
+      handle, so a value that is not a code answers invite null and nobody can confirm who has an
+      invitation by guessing handles. A card's address opens it by code, and no card carries a
+      handle. A card on a public invite (one already on the blog) also carries
       blogUrl. Nothing else about a private invite: no skills, location, picture, Quora address or
       title. openWall is one page (?page=, ten a page, clamped) of the public invites as cards with
-      their blog addresses and no picture; lockedCount and lockedTeasers (name and opening only, newest ten) are the
-      private invites the signed-out page shows blurred. Readable from the browser by the landing
+      their blog addresses and no picture; lockedCount is how many private invites there are, and
+      nothing else about them is returned (the signed-out page draws its blurred cards as
+      placeholders). Readable from the browser by the landing
       site and the blog.
     inputSchema:
       invite:
@@ -610,8 +620,6 @@ contracts:
         type: object
       lockedCount:
         type: integer
-      lockedTeasers:
-        type: array
     dataAccess:
       - directory_invites
       - directory_public_totals
@@ -626,7 +634,8 @@ contracts:
       Signed-in read of the invite wall (GET /api/directory/invites), for any account, approved in
       Unlock or not (owner decision, 2026-10-15). One page of ten, newest first, ?page= clamped into
       range: each invitation's title, text, date, Quora address, Directory listing link and picture
-      address. ?invite=<handle> adds that invitation on top. Picture bytes are served separately.
+      address. ?invite=<code or handle> adds that invitation on top, read as an invite code first,
+      then as a Quora handle. Picture bytes are served separately.
     inputSchema:
       page:
         type: integer

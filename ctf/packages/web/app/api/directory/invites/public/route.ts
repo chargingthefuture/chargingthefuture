@@ -1,13 +1,12 @@
 import { NextResponse } from 'next/server';
 import { DIRECTORY_ERROR_CODE } from 'lib/directory/constants';
-import { normalizeInviteHandle } from 'lib/directory/invite-input';
+import { normalizeInviteCode } from 'lib/directory/invite-input';
 import {
   clampInvitePage,
   countDirectoryInvitesByVisibility,
   countDirectoryListedPeople,
-  getDirectoryInviteCardByHandle,
+  getDirectoryInviteCardByCode,
   listLatestDirectoryInviteCards,
-  listLockedDirectoryInviteTeasers,
   listOpenDirectoryInviteCards,
 } from 'lib/directory/invites';
 import { failureResponse } from 'lib/errors/failure';
@@ -22,12 +21,15 @@ export const dynamic = 'force-dynamic';
 // those already published on the blog. Nothing else about a private invite leaves here: no skills,
 // location, picture or Quora address, and no line naming anybody as a Targeted Individual.
 //
-// `?invite=<handle>` also answers that one person's card, for a direct link.
+// `?invite=<code>` also answers that one person's card, for a direct link. The value is looked up only
+// as an invite's random code, never as a Quora handle: a value that is not a code answers
+// `invite: null`, so nobody can confirm who has an invitation by guessing handles. No card carries a
+// handle either; each card's address opens it by code.
 //
 // For the signed-out Directory page it also answers `openWall`, one page (`?page=`, ten a page,
-// clamped) of the public invites as cards, which are already public on the blog, and
-// `lockedCount` with `lockedTeasers`, the newest private invites as name and opening only, which
-// the page shows blurred.
+// clamped) of the public invites as cards, which are already public on the blog, and `lockedCount`,
+// how many private invites there are. Nothing else about the private invites: the page draws its
+// blurred cards as placeholders, with no names in them.
 
 // The landing site and the blog read this from the browser, so only those origins are named.
 const ALLOWED_ORIGINS = new Set([
@@ -58,16 +60,14 @@ export async function GET(request: Request) {
   }
 
   const params = new URL(request.url).searchParams;
-  const rawHandle = params.get('invite');
-  const handle = rawHandle === null ? null : normalizeInviteHandle(rawHandle);
+  const code = normalizeInviteCode(params.get('invite'));
 
   try {
-    const [invites, listed, invite, counts, lockedTeasers] = await Promise.all([
+    const [invites, listed, invite, counts] = await Promise.all([
       listLatestDirectoryInviteCards(),
       countDirectoryListedPeople(),
-      handle ? getDirectoryInviteCardByHandle(handle) : Promise.resolve(null),
+      code ? getDirectoryInviteCardByCode(code) : Promise.resolve(null),
       countDirectoryInvitesByVisibility(),
-      listLockedDirectoryInviteTeasers(),
     ]);
     const paging = clampInvitePage(params.get('page') ?? '1', counts.open);
     const openInvites = await listOpenDirectoryInviteCards(paging.pageSize, paging.offset);
@@ -81,7 +81,7 @@ export async function GET(request: Request) {
       invites: openInvites,
     };
     return NextResponse.json(
-      { ok: true, listed, invites, invite, openWall, lockedCount: counts.locked, lockedTeasers },
+      { ok: true, listed, invites, invite, openWall, lockedCount: counts.locked },
       { status: 200, headers: corsHeaders(request) },
     );
   } catch (error) {

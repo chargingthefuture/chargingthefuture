@@ -11,13 +11,13 @@ import styles from './directory-invite-card.module.css';
 export const INVITE_LINK_CLASS = styles.link;
 
 /**
- * Letters from the name on a gradient picked from the seed (lib/directory/invite-avatar.ts). Purely
+ * Letters from the name on a gradient picked from the name (lib/directory/invite-avatar.ts). Purely
  * decorative: hidden from screen readers, which read the name beside it. The comic theme carries no
  * gradients, so there it is the gradient's darker color, flat.
  */
-export function InviteAvatar({ name, seed, size = 44 }: { name: string; seed: string; size?: number }) {
+export function InviteAvatar({ name, size = 44 }: { name: string; size?: number }) {
   const comic = useTheme().theme === 'comic';
-  const { from, to, angle } = inviteAvatarGradient(seed);
+  const { from, to, angle } = inviteAvatarGradient(name);
   return (
     <span
       aria-hidden="true"
@@ -46,8 +46,6 @@ export function InviteAvatar({ name, seed, size = 44 }: { name: string; seed: st
 type InviteCardViewProps = {
   name: string;
   opening: string;
-  // The Quora handle where the card carries one, otherwise the name: it picks the avatar's colors.
-  seed: string;
   date?: string;
   t: DirectoryTokens;
   headingLevel?: 2 | 3;
@@ -61,9 +59,9 @@ type InviteCardViewProps = {
  * words set as a pull quote, and an edge in the avatar's color. No picture: a picture shows only
  * inside the full invitation.
  */
-export function InviteCardView({ name, opening, seed, date, t, headingLevel = 3, highlighted = false, children }: InviteCardViewProps) {
+export function InviteCardView({ name, opening, date, t, headingLevel = 3, highlighted = false, children }: InviteCardViewProps) {
   const comic = useTheme().theme === 'comic';
-  const { from } = inviteAvatarGradient(seed);
+  const { from } = inviteAvatarGradient(name);
   const Heading = headingLevel === 2 ? 'h2' : 'h3';
   const edge = highlighted ? `${t.ACCENT}70` : t.BORDER_HI;
   return (
@@ -81,7 +79,7 @@ export function InviteCardView({ name, opening, seed, date, t, headingLevel = 3,
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <InviteAvatar name={name} seed={seed} />
+        <InviteAvatar name={name} />
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
           <Heading style={{ margin: 0, fontSize: 15, fontWeight: 700, color: t.TITLE, overflowWrap: 'anywhere' }}>An invitation to {name}</Heading>
           {date ? <time dateTime={date} style={{ fontSize: 12, color: t.SUBTLE }}>{formatInviteDate(date)}</time> : null}

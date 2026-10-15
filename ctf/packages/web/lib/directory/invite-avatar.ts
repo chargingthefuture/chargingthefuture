@@ -1,8 +1,8 @@
 // The decorative avatar on each invite card (owner decision, 2026-10-15): letters from the person's
 // name on a gradient picked from a seed, so the same person gets the same avatar on every visit. The
-// seed is the Quora handle where the card carries one, and the name where it does not (the blurred
-// cards a signed-out visitor sees carry the name and opening words only). Nothing is fetched; it is
-// drawn from the name alone and hidden from screen readers, which read the name in text beside it.
+// seed is the name, the one thing every card carries signed in or out: a public card carries no Quora
+// handle. Nothing is fetched; it is drawn from the name alone and hidden from screen readers, which
+// read the name in text beside it.
 
 export type InviteAvatarGradient = { from: string; to: string; angle: number };
 

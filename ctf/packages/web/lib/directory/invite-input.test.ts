@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { INVITE_MAX, normalizeInviteHandle, parseDirectoryInviteInput, quoraHandleFromUrl } from './invite-input';
+import { INVITE_MAX, normalizeInviteCode, normalizeInviteHandle, normalizeInviteLink, parseDirectoryInviteInput, quoraHandleFromUrl } from './invite-input';
 
 // The checks on what the private invite repository's job sends. Each refusal must name the field,
 // because the job's log is the only place anybody reads it.
@@ -10,6 +10,7 @@ const JPEG = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0, 0]).toString('base64');
 function body(overrides: Record<string, unknown> = {}) {
   return {
     slug: 'an-invitation-to-sam',
+    inviteCode: 'k3m9x2q7ab',
     quoraHandle: 'Sam-Example-1',
     quoraUrl: 'https://www.quora.com/profile/Sam-Example-1',
     name: 'Sam',
@@ -27,6 +28,7 @@ describe('parseDirectoryInviteInput', () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.value.quoraHandle).toBe('sam-example-1');
+      expect(result.value.inviteCode).toBe('k3m9x2q7ab');
       expect(result.value.quoraUrl).toBe('https://www.quora.com/profile/Sam-Example-1');
       expect(result.value.directoryProfileId).toBeNull();
       expect(result.value.image).toBeNull();
@@ -35,6 +37,13 @@ describe('parseDirectoryInviteInput', () => {
 
   it.each([
     ['slug', { slug: 'Has Spaces' }],
+    ['inviteCode', { inviteCode: undefined }],
+    ['inviteCode', { inviteCode: 'k3m9x2q7a' }],
+    ['inviteCode', { inviteCode: 'k3m9x2q7abc' }],
+    ['inviteCode', { inviteCode: 'K3M9X2Q7AB' }],
+    ['inviteCode', { inviteCode: 'k3m9-2q7ab' }],
+    ['inviteCode', { inviteCode: ' k3m9x2q7a' }],
+    ['inviteCode', { inviteCode: 1234567890 }],
     ['quoraHandle', { quoraHandle: '' }],
     ['quoraUrl', { quoraUrl: 'http://www.quora.com/profile/Sam-Example-1' }],
     ['quoraUrl', { quoraUrl: 'https://example.com/profile/Sam-Example-1' }],
@@ -112,7 +121,22 @@ describe('handles', () => {
     expect(quoraHandleFromUrl('https://www.quora.com/profile/Sam-Example-1?ch=10')).toBe('sam-example-1');
   });
 
-  it('normalizes the ?invite= value and refuses what could not be a handle', () => {
+  it('accepts an invite code only as exactly ten lower-case letters and digits', () => {
+    expect(normalizeInviteCode('k3m9x2q7ab')).toBe('k3m9x2q7ab');
+    expect(normalizeInviteCode(' k3m9x2q7ab ')).toBe('k3m9x2q7ab');
+    expect(normalizeInviteCode('K3M9X2Q7AB')).toBeNull();
+    expect(normalizeInviteCode('sam-example-1')).toBeNull();
+    expect(normalizeInviteCode('k3m9x2q7a')).toBeNull();
+    expect(normalizeInviteCode(undefined)).toBeNull();
+  });
+
+  it('reads a signed-in link as a code first, then as a handle', () => {
+    expect(normalizeInviteLink('k3m9x2q7ab')).toBe('k3m9x2q7ab');
+    expect(normalizeInviteLink(' Sam-Example-1 ')).toBe('sam-example-1');
+    expect(normalizeInviteLink('a/b')).toBeNull();
+  });
+
+  it('normalizes a handle and refuses what could not be one', () => {
     expect(normalizeInviteHandle(' Farah-Brunache ')).toBe('farah-brunache');
     expect(normalizeInviteHandle('a/b')).toBeNull();
     expect(normalizeInviteHandle(undefined)).toBeNull();

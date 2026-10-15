@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
 import type { PluginAuthDecision } from 'lib/auth/server-authz';
 import { getHostedSignInUrl, withSignInReturn } from 'lib/auth/provider-env';
-import { normalizeInviteHandle } from 'lib/directory/invite-input';
+import { normalizeInviteCode, normalizeInviteLink } from 'lib/directory/invite-input';
 import { DirectoryPublicShell } from './directory-public-shell';
 import { DirectoryInviteWall } from './directory-invite-wall';
 
@@ -13,6 +13,8 @@ import { DirectoryInviteWall } from './directory-invite-wall';
 //  - signed in but not approved: the invitations in full (their gate is lib/directory/invite-access.ts,
 //    and the API routes enforce it) with the ask to finish the check;
 //  - approved, following a link to one invitation: that invitation on the wall.
+// A link to one invitation is ?invite=<code>. A signed-in reader may also follow an older link by
+// Quora handle; a signed-out visitor's value is read as a code only, so a guessed handle shows nothing.
 // Returns null when the normal path applies: an approved member with no ?invite=, or a denial of
 // another kind, which keeps the shared access-denied handling.
 export function renderDirectoryEntry(
@@ -20,11 +22,11 @@ export function renderDirectoryEntry(
   query: { invite?: string; page?: string },
   returnPath: string,
 ): ReactNode | null {
-  const handle = normalizeInviteHandle(query.invite) ?? undefined;
+  const link = normalizeInviteLink(query.invite) ?? undefined;
 
   if (decision.allowed) {
-    if (handle) {
-      redirect(`/apps/directory/invites?invite=${encodeURIComponent(handle)}`);
+    if (link) {
+      redirect(`/apps/directory/invites?invite=${encodeURIComponent(link)}`);
     }
     return null;
   }
@@ -39,14 +41,14 @@ export function renderDirectoryEntry(
         pluginSlug="directory"
         pluginName="Directory"
         signInUrl={signInUrl}
-        inviteHandle={handle}
+        inviteCode={normalizeInviteCode(query.invite) ?? undefined}
         page={page}
       />
     );
   }
 
   if (decision.reason === 'unlock_required') {
-    return <DirectoryInviteWall page={page} inviteHandle={handle} verifyUrl="/plugin/unlock" />;
+    return <DirectoryInviteWall page={page} inviteLink={link} verifyUrl="/plugin/unlock" />;
   }
 
   return null;

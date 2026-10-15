@@ -26,6 +26,9 @@ export type DirectoryInviteImageInput = {
 
 export type DirectoryInviteInput = {
   slug: string;
+  // A random code made by the private invite repository: the only value that opens one invitation
+  // for a signed-out visitor (?invite=<code>), so nobody can confirm who has one by guessing handles.
+  inviteCode: string;
   quoraHandle: string;
   quoraUrl: string;
   name: string;
@@ -46,6 +49,8 @@ export type InviteInputResult =
   | { ok: false; field: string; message: string };
 
 const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
+// Exactly ten lower-case letters and digits.
+export const INVITE_CODE_RE = /^[a-z0-9]{10}$/;
 // A Quora handle as it sits after /profile/ in the address, lower-cased for lookups. The address
 // itself is kept exactly as sent.
 const HANDLE_RE = /^[a-z0-9][a-z0-9._-]*$/;
@@ -80,12 +85,27 @@ export function quoraHandleFromUrl(url: string): string {
   return afterPrefix.replace(/\/+$/, '').toLowerCase();
 }
 
-/** Lower-cased handle, or null when it could not be one. Used for the ?invite= parameter too. */
+/** Lower-cased handle, or null when it could not be one. */
 export function normalizeInviteHandle(raw: unknown): string | null {
   if (typeof raw !== 'string') return null;
   const value = raw.trim().toLowerCase();
   if (value === '' || value.length > INVITE_MAX.quoraHandle || !HANDLE_RE.test(value)) return null;
   return value;
+}
+
+/** An invite code as stored, or null when it could not be one. Never lower-cased: a code is exact. */
+export function normalizeInviteCode(raw: unknown): string | null {
+  if (typeof raw !== 'string') return null;
+  const value = raw.trim();
+  return INVITE_CODE_RE.test(value) ? value : null;
+}
+
+/**
+ * The ?invite= value a signed-in reader may follow: an invite code, or else a Quora handle. A
+ * signed-out visitor's value is read with normalizeInviteCode alone.
+ */
+export function normalizeInviteLink(raw: unknown): string | null {
+  return normalizeInviteCode(raw) ?? normalizeInviteHandle(raw);
 }
 
 /** A slug as stored, or null when it could not be one. */
@@ -211,7 +231,7 @@ const TEXT_FIELDS = [
   ['bodyMarkdown', INVITE_MAX.bodyMarkdown],
 ] as const;
 
-type Identity = Pick<DirectoryInviteInput, 'slug' | 'quoraHandle' | 'quoraUrl'>;
+type Identity = Pick<DirectoryInviteInput, 'slug' | 'inviteCode' | 'quoraHandle' | 'quoraUrl'>;
 type Text = Pick<DirectoryInviteInput, 'name' | 'title' | 'opening' | 'bodyMarkdown'>;
 type Extras = Pick<DirectoryInviteInput, 'publishedOn' | 'directoryProfileId' | 'image' | 'isPublic' | 'blogUrl'>;
 
@@ -219,6 +239,10 @@ function checkIdentity(raw: Record<string, unknown>): Identity | Refusal {
   const slug = normalizeInviteSlug(raw.slug);
   if (!slug) {
     return refuse('slug', `required: lower-case letters, digits and hyphens, at most ${INVITE_MAX.slug} characters.`);
+  }
+  const inviteCode = typeof raw.inviteCode === 'string' && INVITE_CODE_RE.test(raw.inviteCode) ? raw.inviteCode : null;
+  if (!inviteCode) {
+    return refuse('inviteCode', 'required: exactly 10 characters, lower-case letters and digits only.');
   }
   const quoraHandle = normalizeInviteHandle(raw.quoraHandle);
   if (!quoraHandle) {
@@ -229,7 +253,7 @@ function checkIdentity(raw: Record<string, unknown>): Identity | Refusal {
   if (quoraHandleFromUrl(quoraUrl) !== quoraHandle) {
     return refuse('quoraHandle', `does not match the handle in quoraUrl (${quoraHandleFromUrl(quoraUrl)}).`);
   }
-  return { slug, quoraHandle, quoraUrl };
+  return { slug, inviteCode, quoraHandle, quoraUrl };
 }
 
 function checkText(raw: Record<string, unknown>): Text | Refusal {
