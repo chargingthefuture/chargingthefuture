@@ -54,7 +54,8 @@ services:
         value: production
       - key: NEXT_TELEMETRY_DISABLED
         value: "1"
-      # Observability — enables Sentry cron check-ins for workforce-incremental-sync
+      # Observability — the shared provider switch. `sentry` (or unset) reports to Sentry when
+      # SENTRY_DSN is set; any other value turns web error reporting off.
       - key: OBSERVABILITY_PROVIDER
         value: sentry
       # Server-side (runtime) secrets are synced automatically by Infisical →
