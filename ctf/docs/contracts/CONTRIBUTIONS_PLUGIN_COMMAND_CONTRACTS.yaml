@@ -184,6 +184,13 @@ contracts:
       submission:
         type: object
         note: Admin projection of the reviewed submission (includes signalContact), with status confirmed|rejected, confirmedAmountUsd, creditsGranted, creditGovernanceEventId, cycleId, reviewedByUserId, reviewedAt, reviewNote populated.
+      refusals:
+        type: object
+        note: >-
+          409 contributions_already_reviewed when the claim is no longer pending. 409
+          contributions_mint_budget_exceeded when the ServiceCredits per-period mint budget is on and
+          this confirm's credit grant would go over it; the review rolls back, so the claim stays
+          pending and can be confirmed once the period resets or the budget is raised.
     dataAccess:
       - contributions_submissions
       - contributions_cycles

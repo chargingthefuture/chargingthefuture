@@ -76,9 +76,13 @@
 2. As A, open a post that B replied to.
 3. As B, open the Commons and look for A's posts.
 4. As an admin, open the Commons moderation admin and check the full post list.
+5. As B, reply to an official announcement. As A, open that announcement's replies.
+6. As B, post a message that mentions `@A`. As A, open notifications.
 
 **Expected:**
 - Steps 1–3: B's posts and replies do not render for A, and A's do not render for B (both directions). Announcements and AI answers always show — they have no member author.
+- Step 5: B's reply does not appear in A's list of announcement replies, and the reply count A sees on that announcement does not count it (added 2026-10-14).
+- Step 6: A gets no "Someone mentioned you" from B's post (added 2026-10-14).
 - A post's reply counter may read higher than the replies shown to a member with a block — accepted, not a bug.
 - Step 4: admin/moderation views are never filtered.
 - Neither member gets any signal that a block exists.
@@ -780,7 +784,10 @@ FD-12b), with at least one reaction on it.
 4. Try with a non-UUID question ID.
 
 **Expected:**
-- Valid relabel returns 200 and writes a `feed.question.category.relabel` audit row.
+- Valid relabel returns 200 and writes a `feed.question.category.relabel` audit row. The question's
+  category and its Hub item title both change. (Before 2026-10-12 every relabel failed with a 503,
+  because the route also wrote an `llm_inference_log` row with no answer id, which that table forbids.)
+- A 503 names the reason after "Unable to relabel question:" rather than stopping at the sentence.
 - Invalid category returns 400.
 - Non-UUID ID returns 400.
 - Unknown but valid-format UUID returns 404.
@@ -878,6 +885,11 @@ FD-12b), with at least one reaction on it.
 - Step 4: no repeats. Every post that day computes the same period and loses the claim.
 - Step 5: rows are keyed by `notice_key` — the three notices never share a period row and never block
   each other.
+- A notice that fails to publish never takes the member's post with it. The notice step runs under a
+  savepoint, so a failed notice rolls back only its own writes; without it, the failed statement
+  aborted the post's transaction and the post vanished while the screen said it was sent. To check on a
+  local build, make a notice insert fail (for example rename the `announcements` table) and post once:
+  the post appears in the Commons and the failure is reported as `commons_guidance_autopost`.
 - Read the signal notice and confirm it says **Skills Economy**, never "TI Skills Economy (TSE)", and
   uses "Target" rather than "TI" as a label.
 
@@ -1267,12 +1279,16 @@ read. Step 2: no banner, and the queue loads as usual (#2712).
 3. Try to re-label the category of a question id that does not exist, then reopen the panel.
 4. Publish an announcement draft, then reopen the panel.
 5. Emit a membership event, then reopen the panel.
+6. Send a hide request for a post without the `x-ctf-csrf: 1` header (for example from the browser's developer tools), then reopen the panel.
+7. As a signed-in member who is not an admin, send `PUT /api/feed/admin/config`, then as the admin reopen the panel.
 
 **Expected:**
 - Step 2: entries newest first, at most 200, each naming the action in plain words ("Published an announcement", "Hid a Commons post", "Changed the feed settings"), with the admin's id, what it was done to, and the local date and time. Every row carries a chip reading `feed` or `announcements` saying which surface the action came from.
 - Step 3: the failure appears, marked **Refused** or **Failed**, with a reason line reading "Because the record was not there". An action that did not happen is recorded, not dropped.
 - Step 4: a "Published an announcement" row appears with the `feed` chip; publishing from the Announcements side shows the same action with the `announcements` chip.
 - Step 5: a "Recorded a membership change" row appears.
+- Step 6: a "Hid or restored a Commons post" row marked **Refused**, "Because policy refused it" (added 2026-10-14).
+- Step 7: a "Changed the feed settings" row marked **Refused** with the member's id (added 2026-10-14). A bad payload, a missing record or a database failure on any of the seven admin actions is also a row.
 - Nothing an admin did in this session is missing from the list.
 
 **Note:** `POST /api/announcements/admin/targeting/validate` deliberately writes no audit row — it validates a targeting expression and changes nothing, so there is no action to record. Its absence from this list is correct, not a gap.

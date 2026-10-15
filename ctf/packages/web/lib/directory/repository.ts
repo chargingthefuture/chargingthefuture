@@ -17,6 +17,7 @@ import {
 } from './constants';
 import { recordTrainerSkillChanges, type TrainerSkillChange } from 'lib/shared/skill-up-interface';
 import { normalizeQuoraProfileUrl } from './quora-url';
+import { QUORA_PROFILE_ROOT_SQL_PATTERN, quoraProfileRoot } from 'lib/shared/quora-url';
 import { lockAccountProfileClaim, OWNED_PROFILE_ORDER_SQL } from './profile-claim';
 import { NOMINATED_PENDING_SKILLS_SQL } from './nominated-pending-skills';
 import type {
@@ -1861,6 +1862,13 @@ export async function updateAdminProfile(
     const country = preserveIfUndefined(input.country, current.country);
 
     await ensureTaxonomySelectors(client, sectorId, jobTitleId, skillIds);
+    // Same block as the admin create and member save: a Quora URL taken down at the person's request
+    // cannot be put onto an existing profile until the block is lifted. Checked only when the address
+    // changes, so editing other fields of a profile is never refused over its own stored address.
+    // Throws 'directory_quora_url_suppressed', which the PUT route maps to a 409.
+    if (normalizeQuoraProfileUrl(profileUrl) !== normalizeQuoraProfileUrl(current.profile_url)) {
+      await assertQuoraUrlNotSuppressed(client, profileUrl);
+    }
 
     await client.query(
       `
@@ -2161,15 +2169,7 @@ export async function deleteAdminProfile(actorId: string, profileId: string): Pr
 // suppressed. Used inside a transaction by the create/upsert write paths. A URL that isn't a Quora
 // URL (normalizes to null) is never suppressed, so those profiles are unaffected.
 async function assertQuoraUrlNotSuppressed(client: PoolClient, profileUrl: string | null): Promise<void> {
-  const normalized = normalizeQuoraProfileUrl(profileUrl);
-  if (!normalized) {
-    return;
-  }
-  const blocked = await client.query<{ id: string }>(
-    'SELECT id FROM directory_suppressed_quora_urls WHERE normalized_url = $1 AND is_overridden = false LIMIT 1',
-    [normalized],
-  );
-  if (blocked.rows.length > 0) {
+  if (await isQuoraUrlSuppressed(client, profileUrl)) {
     throw new Error('directory_quora_url_suppressed');
   }
 }
@@ -2179,14 +2179,22 @@ async function assertQuoraUrlNotSuppressed(client: PoolClient, profileUrl: strin
 // nomination of a taken-down profile instead of accepting it, paying the scout, and then silently
 // generating nothing. Reached through lib/shared/directory-interface.ts — Directory owns the
 // takedown and this list; a plugin only asks whether a URL is on it.
+//
+// A profile and its tabs (`/profile/<name>/answers`, `/activity`, …) are one person, so when either
+// side is a profile link the match is on the bare profile: a takedown stored at the profile blocks a
+// link to one of its tabs, and the reverse. Other links (an answer, a question) still match exactly.
 export async function isQuoraUrlSuppressed(client: PoolClient, profileUrl: string | null): Promise<boolean> {
   const normalized = normalizeQuoraProfileUrl(profileUrl);
   if (!normalized) {
     return false;
   }
   const blocked = await client.query<{ id: string }>(
-    'SELECT id FROM directory_suppressed_quora_urls WHERE normalized_url = $1 AND is_overridden = false LIMIT 1',
-    [normalized],
+    `SELECT id FROM directory_suppressed_quora_urls
+      WHERE is_overridden = false
+        AND (normalized_url = $1
+             OR ($2::text IS NOT NULL AND normalized_url ~ $3 AND regexp_replace(normalized_url, $3, '\\1') = $2))
+      LIMIT 1`,
+    [normalized, quoraProfileRoot(normalized), QUORA_PROFILE_ROOT_SQL_PATTERN],
   );
   return blocked.rows.length > 0;
 }

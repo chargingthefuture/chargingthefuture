@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createTransfer, insertServiceCreditsAudit } from 'lib/service-credits/repository';
 import { resolveTransferRecipient } from 'lib/service-credits/recipient';
-import { ensureMutationCsrf, requireServiceCreditsReadAccess, serviceCreditsErrorResponse } from 'lib/service-credits/_lib';
+import { ensureMutationCsrf, requireServiceCreditsReadAccess, serviceCreditsErrorResponse, auditServiceCreditsFailure } from 'lib/service-credits/_lib';
 import { isRegisteredPluginSlug } from 'lib/plugins/repository';
 import { notifySafe } from 'lib/notifications/repository';
 import { reportError } from 'lib/observability/report';
@@ -123,6 +123,14 @@ export async function POST(request: Request) {
     return serviceCreditsErrorResponse(new Error(code), 'Transfer unavailable.');
   }
 
+  // A send to yourself leaves the balance unchanged but writes a completed transfer, which the GDP
+  // source and the public 30-day transfer volume both count. Refuse it before anything is written.
+  if (recipient.userId === gate.auth.userId) {
+    const selfTransfer = new Error('self_transfer');
+    await auditServiceCreditsFailure({ actorId: gate.auth.userId, command: 'service-credits.transfer.create', targetType: 'wallet', targetId: recipient.userId, error: selfTransfer });
+    return serviceCreditsErrorResponse(selfTransfer, 'Transfer unavailable.');
+  }
+
   try {
     const transfer = await createTransfer({
       senderUserId: gate.auth.userId,
@@ -149,10 +157,10 @@ export async function POST(request: Request) {
       },
     });
 
-    // Notify the recipient that credits landed — best-effort, only for a completed transfer to
-    // someone other than the sender. Deduped on the transfer id, so an idempotent retry never
-    // double-notifies. Neutral summary; ServiceCredits are a non-fiat internal unit, not money.
-    if (transfer.status === 'completed' && transfer.recipientUserId !== gate.auth.userId) {
+    // Notify the recipient that credits landed — best-effort, only for a completed transfer. Deduped
+    // on the transfer id, so an idempotent retry never double-notifies. Neutral summary;
+    // ServiceCredits are a non-fiat internal unit, not money.
+    if (transfer.status === 'completed') {
       await notifySafe({
         userId: transfer.recipientUserId,
         sourcePlugin: 'service-credits',
@@ -167,6 +175,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, transfer }, { status: 201 });
   } catch (error) {
     reportError(error, { area: 'service-credits', op: 'transfers' });
+    await auditServiceCreditsFailure({ actorId: gate.auth.userId, command: 'service-credits.transfer.create', targetType: 'wallet', targetId: recipient.userId, error });
     return serviceCreditsErrorResponse(error, 'Transfer unavailable.');
   }
 }

@@ -115,7 +115,7 @@ export async function readCommunityPostImage(
               AND f.is_active = TRUE
               AND f.published_at <= NOW()
               AND (f.expires_at IS NULL OR f.expires_at > NOW())
-              AND t.target_role IN ('member', 'admin', 'all')
+              AND t.target_role IN ('member', 'all')
           )
         )
       LIMIT 1

@@ -10,6 +10,7 @@ export const BUG_REPORT_ERROR_CODE = {
   rateLimited: 'bug_reports.rate_limited',
   persistenceUnavailable: 'bug_reports.persistence_unavailable',
   forbidden: 'bug_reports.forbidden',
+  conflict: 'bug_reports.conflict',
 } as const;
 
 export type BugReportErrorCode =

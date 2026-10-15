@@ -370,6 +370,19 @@ that exist today.
 
 ## Change Log
 
+- 2026-10-15: **Enrolling again after leaving now really enrolls, and a failed setup refund is
+  reported (code review #2930, #2943).** The database had allowed re-enrolling since 2026-09-14,
+  but `createEnrollmentDraftTx` still looked for any earlier row for the member and cohort with no
+  status filter. It found the dropped row and answered success with no deposit held, so the screen
+  showed Enrolled until the next load. The lookup now skips `dropped` rows, so a member who left
+  gets a new enrollment and a new deposit hold. Separately, when a deposit hold failed partway
+  through enrolling, the rollback refunded the holds already made but dropped any refund that
+  failed without a word, and never marked the refunded escrow rows `refunded`, so the wallet kept
+  counting them as held. Each refunded row is now marked `refunded`, and a refund that fails is
+  reported with the enrollment and escrow ids; its row stays `held`, so a cohort close or a data
+  deletion still returns it. LU-3f in the test script now checks the second enroll holds a deposit
+  and survives a reload.
+
 - 2026-10-14: **The SkillUp seed runs again, and post/0009 leaves later cohort titles alone (code
   review #2768, #2770).** `seedSkillUp.mjs` still inserted the four stipend and microgrant columns
   that post/0012 and post/0013 dropped, so `pnpm seed:skill-up` failed before writing a cohort; the

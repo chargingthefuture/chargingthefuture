@@ -15,12 +15,18 @@ name: Keep Auto-Merge PRs Moving
 on:
   push:
     branches: [main]
+  # When a PR's CI finishes. A PR whose checks fail does not merge, so no push to main follows;
+  # without this the queue sat until the next timer run, and GitHub skips many of those.
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
   workflow_dispatch:
   schedule:
-    # Every 20 minutes as a fallback for a missed push, at :13/:33/:53 — off every other cron here.
+    # Every 20 minutes as a fallback for a missed event, at :13/:33/:53 — off every other cron here.
     - cron: "13,33,53 * * * *"
 
-# One run at a time, so two runs never pick two PRs.
+# One run at a time, so two runs never pick two PRs. GitHub keeps at most one run waiting behind the
+# running one, so a burst of CI completions collapses into a single extra run.
 concurrency:
   group: keep-auto-merge-prs-current
   cancel-in-progress: false
