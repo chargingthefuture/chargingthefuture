@@ -121,15 +121,21 @@ export function UnlockVerifyBanner({
   const [url, setUrl] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Flip to a "pending review" state after a successful inline submission without a full reload.
-  const [justSubmitted, setJustSubmitted] = useState(false);
+  // The status of a submission just made here, read from the route's answer, so the banner changes
+  // without a full reload. It is not always pending: a denylisted profile address is saved as spam
+  // straight away, and the banner then shows what it shows for any spam submission rather than
+  // "under review" (which the Unlock screen would contradict).
+  const [submittedStatus, setSubmittedStatus] = useState<UnlockReviewStatus | null>(null);
+  const effectiveHasSubmission = hasSubmission || submittedStatus !== null;
+  const effectiveStatus = submittedStatus ?? reviewStatus;
 
   // Awaiting review — either a prior pending submission or one just made here. Show a calm status note
   // rather than the input, so the member knows they are in the queue and still have Commons access.
-  const isPending = justSubmitted || (hasSubmission && reviewStatus === 'pending');
+  const isPending = effectiveHasSubmission && effectiveStatus === 'pending';
   // A rejected/spam prior submission should re-prompt for a corrected URL.
   const wasRejected =
-    hasSubmission && (reviewStatus === 'rejected' || reviewStatus === 'spam' || reviewStatus === 'duplicate');
+    effectiveHasSubmission &&
+    (effectiveStatus === 'rejected' || effectiveStatus === 'spam' || effectiveStatus === 'duplicate');
 
   async function submit() {
     const trimmed = url.trim();
@@ -144,12 +150,14 @@ export function UnlockVerifyBanner({
         headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
         body: JSON.stringify({ quoraProfileUrl: trimmed }),
       });
+      const payload = (await res.json().catch(() => null)) as
+        | { message?: string; submission?: { reviewStatus?: UnlockReviewStatus } }
+        | null;
       if (!res.ok) {
-        const payload = (await res.json().catch(() => null)) as { message?: string } | null;
         throw new Error(payload?.message ?? 'Submission failed. Try again.');
       }
       setUrl('');
-      setJustSubmitted(true);
+      setSubmittedStatus(payload?.submission?.reviewStatus ?? 'pending');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Submission failed. Try again.');
     } finally {

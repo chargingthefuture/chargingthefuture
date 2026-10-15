@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from 'react';
 import type { CommonsAnnouncementReply, CommonsAnnouncementRepliesResponse } from '../../lib/commons/types';
+import { failedRequestText } from './request-failure';
 
 // The reply thread's state and network calls for one announcement card: opening the thread, loading
 // it on demand, posting a reply, and — for the member's own replies — rewriting or removing one.
@@ -14,8 +15,7 @@ async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, { cache: 'no-store', ...init });
   const payload = (await response.json().catch(() => null)) as T | { message?: string } | null;
   if (!response.ok) {
-    const message = payload && typeof payload === 'object' && 'message' in payload ? payload.message : 'Request failed.';
-    throw new Error(typeof message === 'string' ? message : 'Request failed.');
+    throw new Error(failedRequestText(payload, response.status));
   }
   return payload as T;
 }
@@ -99,7 +99,9 @@ export function useAnnouncementReplies(
   const sendReply = useCallback(async () => {
     if (!announcementId) return;
     const text = replyInput.trim();
-    if (!text || sending) return;
+    // Not while the first load is running: that load could finish after the post and replace the
+    // list without the new reply.
+    if (!text || sending || loading) return;
 
     setSending(true);
     setError(null);
@@ -108,16 +110,21 @@ export function useAnnouncementReplies(
         `/api/announcements/${encodeURIComponent(announcementId)}/replies`,
         { method: 'POST', headers: CSRF_HEADERS, body: JSON.stringify({ body: text }) },
       );
-      setReplies((previous) => [...previous, payload.reply]);
-      setLocalCount((previous) => previous + 1);
-      setLoaded(true);
       setReplyInput('');
+      if (loaded) {
+        setReplies((previous) => [...previous, payload.reply]);
+        setLocalCount((previous) => previous + 1);
+      } else {
+        // The first load failed, so the list on screen is empty rather than complete. Fetch the
+        // thread now instead of showing the member's own reply as if it were the only one.
+        void loadReplies(announcementId);
+      }
     } catch (sendError) {
       setError(messageOf(sendError, 'Unable to post your reply right now.'));
     } finally {
       setSending(false);
     }
-  }, [announcementId, replyInput, sending]);
+  }, [announcementId, replyInput, sending, loading, loaded, loadReplies]);
 
   const startEdit = useCallback((reply: CommonsAnnouncementReply) => {
     setEditingId(reply.id);

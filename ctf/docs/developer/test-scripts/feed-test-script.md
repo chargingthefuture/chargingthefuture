@@ -383,6 +383,8 @@ no picture attached.
 - The composer is pre-filled with the original text.
 - Submitting creates a new post (new timestamp, no inherited reactions or replies).
 - Any active quote/reply target is cleared when Edit is activated.
+- With a different unsent draft in the composer, Edit shows "Send or clear your draft before
+  editing." and changes nothing: the draft stays and the post is not deleted.
 
 **Result:** web ☐
 
@@ -588,6 +590,30 @@ FD-12b), with at least one reaction on it.
 - Official announcements from the operator are untouched and still read normally.
 - Replies and reactions that hung off those messages are gone with them.
 - The second deletion finds nothing left to remove and changes nothing on screen.
+
+**Result:** web ☐
+
+### FD-26 — Commons failures keep the member's work and say why (added 2026-10-15)
+
+**Role:** member, plus a member not yet approved | **Surface:** web
+
+**Steps:**
+1. As an approved member, type `@comic` and a question while offline (turn off the network) and send.
+2. Turn the network back on. Type half a post in the composer, then tap an @comic suggestion chip
+   for the first time on this account and confirm the consent modal.
+3. Sign out in another tab, then react to a Commons post in the first tab.
+4. In a browser with all site data blocked, open the Commons, change the apps sort, and tap
+   **Open plugin →** on a card.
+5. As a member not yet approved, open the Commons and look at an announcement card.
+6. In the contributor channel, type a draft, then tap **Edit** on one of your own messages.
+
+**Expected:**
+- Step 1: the error line shows and the question is back in the composer.
+- Step 2: the half-written post is still in the composer after the chip's question is sent.
+- Step 3: the error line reads "You are signed out. Sign in again." rather than "Request failed."
+- Step 4: the Commons renders, the sort changes for this visit, and the plugin opens.
+- Step 5: reactions show as counts only, with no add-reaction button and no replies toggle.
+- Step 6: "Send or clear your draft before editing." shows; the draft and the message both stay.
 
 **Result:** web ☐
 

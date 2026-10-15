@@ -12,13 +12,13 @@ import type {
 import styles from './community-shell.module.css';
 import { startVisibleInterval } from '../../lib/shared/visible-interval';
 import { failureText, responseFailureText } from 'lib/errors/client-failure';
+import { failedRequestText } from './request-failure';
 
 async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, { cache: 'no-store', ...init });
   const payload = (await response.json().catch(() => null)) as T | { message?: string } | null;
   if (!response.ok) {
-    const message = payload && typeof payload === 'object' && 'message' in payload ? payload.message : 'Request failed.';
-    throw new Error(typeof message === 'string' ? message : 'Request failed.');
+    throw new Error(failedRequestText(payload, response.status));
   }
   return payload as T;
 }
