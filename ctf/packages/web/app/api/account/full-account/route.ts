@@ -21,18 +21,23 @@ export async function DELETE(request: Request) {
     return csrfDeny;
   }
 
+  // Which step is running, so a failure says whether the data deletion or the credits reclaim
+  // request failed instead of one generic message for both (rule 137).
+  let step: 'data_deletion' | 'reclaim_request' = 'data_deletion';
   try {
-    // First record the request and queue the ServiceCredits reclaim (money settlement runs through
-    // the existing adapter outbox; wallets/ledgers are retained, not deleted). This stays in place
-    // exactly as before so the financial flow is unchanged. The reclaim insert is idempotent on its
-    // deletion-request key, so a client retry re-queues the same reclaim rather than double-settling.
-    const reclaim = await markFullAccountDeletionRequested(userId);
+    // Delete the member's data across every plugin first, driven by the deletion registry. Runs in
+    // its own transaction; money tables are `retain` in the registry so this never touches the
+    // ledger. If it fails, nothing has been queued yet, so a member whose deletion did not happen
+    // keeps their account and their credits, and a retry starts clean.
+    const requestedAtIso = new Date().toISOString();
+    const deletion = await deleteAllAccountData(userId, requestedAtIso);
 
-    // Then actually delete the user's data across every plugin, driven by the deletion registry.
-    // Runs in its own transaction; money tables are `retain` in the registry so this never touches
-    // the ledger. The request timestamp from above is the canonical "requested at"; the orchestrator
-    // stamps completion separately.
-    const deletion = await deleteAllAccountData(userId, reclaim.requestedAtIso);
+    // Only after the data deletion has committed, record the request and queue the ServiceCredits
+    // reclaim through the adapter outbox (wallets and ledgers are retained, not deleted). Each call
+    // writes a new deletion event with its own idempotency key, so this must not run ahead of a
+    // deletion that can still fail: a retry would queue a second reclaim.
+    step = 'reclaim_request';
+    await markFullAccountDeletionRequested(userId);
 
     // Finally remove the sign-in itself. Deleting the data does not delete the account — the auth
     // provider holds that — so without this a member who asked to be forgotten stays an account they
@@ -74,7 +79,7 @@ export async function DELETE(request: Request) {
       { status: 200 },
     );
   } catch (error) {
-    reportError(error, { area: 'account', op: 'full_account' });
+    reportError(error, { area: 'account', op: 'full_account', extra: { step } });
     logChymeAudit({
       pluginId: 'chyme',
       command: 'account.profile.delete.full',
@@ -83,6 +88,7 @@ export async function DELETE(request: Request) {
       reason: 'account_deletion_requested',
       target: {
         scope: 'account',
+        step,
       },
       result: 'failure',
       errorCategory: 'persistence_error',
@@ -92,7 +98,11 @@ export async function DELETE(request: Request) {
       {
         ok: false,
         code: CHYME_ERROR_CODE.persistenceUnavailable,
-        message: 'Unable to complete full-account deletion.',
+        step,
+        message:
+          step === 'data_deletion'
+            ? 'Unable to complete full-account deletion: deleting your data failed, so nothing was removed.'
+            : 'Unable to complete full-account deletion: your data was deleted, but the credits reclaim could not be queued.',
       },
       { status: 503 },
     );

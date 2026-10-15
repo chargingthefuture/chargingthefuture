@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireComicAdminAccess } from '../../../_lib';
 import { COMIC_ERROR_CODE } from 'lib/comic/constants';
-import { recordComicAdminAudit } from 'lib/comic/audit';
+import { recordComicAdminAudit, reviewActionFailure } from 'lib/comic/audit';
 import { resolveComicReview } from 'lib/comic/repository';
 import type { ComicReviewResolveInput } from 'lib/comic/types';
 import { reportError } from 'lib/observability/report';
@@ -144,6 +144,20 @@ export async function POST(request: Request, { params }: { params: Promise<{ tur
   } catch (error) {
     reportError(error, { area: 'comic', op: 'review_turnid_resolve' });
     const code = error instanceof Error ? error.message : 'unknown_error';
+    // Written on a refusal too: an Approve on an item somebody else just resolved belongs in the trail.
+    const failure = reviewActionFailure(code, INVALID_RESOLUTION_CODES);
+    await recordComicAdminAudit({
+      actorId: gate.auth.userId,
+      pluginId: 'comic',
+      command: 'comic.review.resolve',
+      status: failure.status,
+      reason: code,
+      targetType: 'comic_review_queue',
+      targetId: reviewId,
+      result: 'failure',
+      errorCategory: failure.errorCategory,
+      metadata: { resolution: input.resolution },
+    });
     return mapResolveError(code);
   }
 }

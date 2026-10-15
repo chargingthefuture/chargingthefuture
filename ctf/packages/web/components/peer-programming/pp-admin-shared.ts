@@ -1,4 +1,5 @@
 import type { PeerProgrammingCohort, PeerProgrammingTopic } from 'lib/peer-programming/types';
+import { failureText } from 'lib/errors/client-failure';
 
 export type { PeerProgrammingCohort, PeerProgrammingTopic };
 
@@ -63,7 +64,12 @@ export async function ppAdminMutate<T = unknown>(
       return { ok: true, data: (data ?? {}) as T };
     }
     return { ok: false, message: ppResolveErrorMessage(data, res.status) };
-  } catch {
-    return { ok: false, message: 'Network error. Try again.' };
+  } catch (caught) {
+    // The request never answered (or its body did not parse). Report it and name the reason, so the
+    // admin sees why rather than a fixed sentence.
+    return {
+      ok: false,
+      message: failureText(caught, { area: 'peer-programming', op: 'admin_mutate', fallback: 'Network error. Try again.', extra: { url, method } }),
+    };
   }
 }
