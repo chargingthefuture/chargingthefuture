@@ -80,11 +80,11 @@ Run from `ctf/`:
 
 ### Service delete
 
-- Trigger `DELETE /api/account/chyme-profile`.
+- Trigger `DELETE /api/account/services/chyme` (Account & Data, delete the Chyme service).
 - Expected:
-  - `chyme_service_profiles.status='deleted'`,
+  - `chyme_service_profiles.deleted_at` is set,
   - current user member/message rows are removed,
-  - service deletion event is recorded.
+  - an `account_deletion_events` row is recorded.
 
 ### Full-account delete
 

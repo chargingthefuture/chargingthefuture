@@ -5,9 +5,8 @@ import { ACCOUNT_ERROR_CODE } from 'lib/account/constants';
 
 // Shared helpers for the account-level deletion routes under `/api/account/**`.
 //
-// Auth posture matches the existing account routes (full-account, chyme-profile, skills-hunt-
-// profile): any signed-in identity may delete their own data, including unlock-pending users, so a
-// user can always exercise their right to be forgotten. There is no role requirement — deletion is
+// Auth posture matches the full-account route: any signed-in identity may delete their own data,
+// including unlock-pending users, so a user can always exercise their right to be forgotten. There is no role requirement — deletion is
 // strictly self-service and only ever touches the caller's own rows.
 
 export async function requireAccountAccess() {

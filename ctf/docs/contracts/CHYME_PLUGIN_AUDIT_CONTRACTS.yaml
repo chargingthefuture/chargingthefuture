@@ -189,33 +189,6 @@ auditEvents:
     timestamp: rfc3339
     actorId: principal
     pluginId: chyme
-    command: chyme.profile.delete.service
-    commandVersion: 1.0.0
-    purpose: service_scoped_deletion
-    policyDecision:
-      status: allow_or_deny
-      reason: policy_reason_code
-      evidence:
-        authenticationCheck: pass_or_fail
-        ownershipCheck: pass_or_fail
-        deletionScopeCheck: pass_or_fail
-    dataClassesAccessed:
-      - service_profile_lifecycle_metadata
-      - deletion_event_metadata
-    targetContext:
-      workspaceId: workspace_identifier
-      userId: principal_identifier
-      scope: service
-    requestId: request_identifier
-    traceId: trace_identifier
-    result:
-      status: success_or_failure
-      errorCategory: none_or_error_class
-
-  - eventId: uuid
-    timestamp: rfc3339
-    actorId: principal
-    pluginId: chyme
     command: account.profile.delete.full
     commandVersion: 1.0.0
     purpose: account_scoped_deletion_request

@@ -7,10 +7,8 @@ Enable provider-neutral error monitoring so Sentry can be used now and Signoz ca
 - All error capture must flow through the shared helper `reportError` in
   `ctf/packages/web/lib/observability/report.ts`. Today that helper is Sentry-specific behind the
   shared entry point: it calls `@sentry/nextjs` directly and falls back to stdout logging when
-  Sentry is off. Only cron check-ins go through the provider-agnostic `ObservabilityReporter`
-  interface (`lib/observability/types.ts`) with provider routing (sentry / noop).
-- Feature modules must never call vendor SDKs directly — call `reportError` (errors) or the
-  reporter interface (cron check-ins).
+  Sentry is off.
+- Feature modules must never call vendor SDKs directly — call `reportError`.
 - Use normalized event shape (`message`, `level`, `tags`, `context`, `fingerprint`, `timestamp`).
 
 ## Migration Safety Rules

@@ -171,7 +171,7 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
   {
     slug: 'gdp',
     name: 'GDP',
-    summary: 'Real time $300B global survivor economic tracker. Your contributions counted, recorded, visible.',
+    summary: 'Real time global survivor economic tracker. Your contributions counted, recorded, visible.',
     availabilityState: 'implemented_shell',
     navRank: 150,
     isVisible: true,
@@ -187,7 +187,7 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
   {
     slug: 'skill-up',
     name: 'SkillUp',
-    summary: 'Paid skills-training cohorts — learn a skill with a trainer and earn credits as you reach each milestone.',
+    summary: 'Skills-training cohorts with a trainer. Your credit deposit is held and comes back to you as you reach each milestone.',
     availabilityState: 'implemented_shell',
     navRank: 170,
     isVisible: true,

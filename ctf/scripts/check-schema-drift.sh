@@ -168,8 +168,8 @@ for file in "${files[@]}"; do
   # class of false positive the content-aware DB rule above was written to remove.
   #
   # What is still caught, deliberately: the audit writers (ctf/packages/web/lib/<plugin>/audit.ts),
-  # the routes that serve audit events, and real schema modules such as
-  # ctf/packages/economic-models/schemas.ts. Only the rendering layer is let go.
+  # the routes that serve audit events, and real schema modules under ctf/packages/. Only the
+  # rendering layer is let go.
   if [[ "$file" =~ ^ctf/packages/ ]] \
     && [[ ! "$file" =~ \.tsx$ ]] \
     && [[ "$file_lc" =~ contract|schema|command|access-policy|audit ]]; then

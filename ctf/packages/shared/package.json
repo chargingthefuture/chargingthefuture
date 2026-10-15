@@ -5,12 +5,7 @@
   "type": "module",
   "main": "dist/index.js",
   "module": "dist/index.js",
-  "types": "dist/types/index.d.ts",
-  "dependencies": {
-    "jwt-decode": "^4.0.0",
-    "react": "^19.1.0",
-    "stream-chat": "^8.60.0"
-  },
+  "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "lint": "pnpm exec eslint --config eslint.config.mjs src --max-warnings 0",
@@ -18,8 +13,6 @@
     "test": "echo \"@ctf/shared test ok\""
   },
   "devDependencies": {
-    "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0",
     "@types/node": "^22.0.0"
   }
 }

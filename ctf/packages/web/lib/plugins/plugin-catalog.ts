@@ -125,7 +125,7 @@ export const pluginCatalog: PluginCatalogItem[] = [
     id: 'gdp',
     name: 'GDP',
     kind: 'plugin',
-    summary: 'Real time $300B global survivor economic tracker. Your contributions counted, recorded, visible.',
+    summary: 'Real time global survivor economic tracker. Your contributions counted, recorded, visible.',
   },
   {
     id: 'service-credits',
@@ -137,7 +137,7 @@ export const pluginCatalog: PluginCatalogItem[] = [
     id: 'skill-up',
     name: 'SkillUp',
     kind: 'plugin',
-    summary: 'Paid skills-training cohorts — learn a skill with a trainer and earn credits as you reach each milestone.',
+    summary: 'Skills-training cohorts with a trainer. Your credit deposit is held and comes back to you as you reach each milestone.',
   },
   {
     id: 'click-log',

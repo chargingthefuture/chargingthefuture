@@ -26,7 +26,7 @@ Runs the scoped test suites, reviews release and CI/CD rules, and reports failin
 
 ## Repo reality (2026-08)
 - Automated testing is deferred during MVP (rule 118): the scoped unit suites (ServiceCredits
-  amounts, economic-models, trust evidence, web feed tests) run post-merge and on a daily
+  amounts, trust evidence, web feed tests) run post-merge and on a daily
   schedule via `.github/workflows/unit-tests.yml`; a failure files a `test-failure` issue and
   never gates a merge.
 - The blocking PR gates live in `.github/workflows/ci.yml`: formatting-eof, modularity

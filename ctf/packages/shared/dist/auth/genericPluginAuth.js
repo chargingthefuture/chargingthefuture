@@ -1,3 +1,9 @@
+// Canonical generic plugin authentication logic
+// This module provides a generic, provider-agnostic authentication handler for plugin auth consistency.
+//
+// Usage: Import and use `authenticatePluginUser` in plugin routes or services to enforce consistent auth logic.
+//
+// This is the single source of truth for plugin authentication logic. Do not reimplement provider-specific logic in plugins.
 /**
  * Generic plugin authentication handler.
  *

@@ -69,22 +69,24 @@ Chyme handle contract decision:
 
 ## 5) Service-Scoped Deletion Contract
 
-When user deletes Chyme usage only (`DELETE /api/account/chyme-profile`):
+When user deletes Chyme usage only (`DELETE /api/account/services/chyme`, driven by the Chyme entry in
+`lib/account/deletion-registry.ts`):
 
 - Delete immediately:
-  - `chyme_room_members` row for `(room_id = chyme-main-room, user_id)`
-  - `chyme_messages` rows for `(room_id = chyme-main-room, user_id)`
+  - `chyme_room_members` rows for the member, in every room
+  - `chyme_messages` rows for the member, in every room
+  - `chyme_room_removals` rows for the member
   - `chyme_back_channel_calls` rows where the member is the initiator OR the recipient. Both sides are
     deleted, not pseudonymized: a back-channel call row (invite → active → ended, ~60s timeouts) has
     no history surface either party revisits, and the table's `CHECK (initiator_user_id <>
     recipient_user_id)` would be violated the moment both parties of one call delete their accounts
     and each id collapsed to the shared `deleted_member` placeholder. `ended_by_user_id` is always one
     of the two parties, so these two deletes clear every row naming the member in any column.
-  - Stream copy: the member's Stream user `chyme-<user_id>` is hard-deleted with `mark_messages_deleted` (`deleteChymeStreamData`), so the chat messages fanned out to Stream are removed too. Called directly by this bespoke route; best-effort after the Postgres delete, a Stream outage is logged and never blocks the deletion.
+  - Stream copy: the member's Stream user `chyme-<user_id>` is hard-deleted with `mark_messages_deleted` (`deleteChymeStreamData`), so the chat messages fanned out to Stream are removed too. Run by the shared account-deletion orchestrator's external-cleanup hook; best-effort after the Postgres delete, a Stream outage is logged and never blocks the deletion.
 - Anonymize/pseudonymize:
   - none currently (hard delete for user-owned member/message rows, on Postgres and Stream)
 - Retain for compliance/fraud/finance:
-  - `chyme_deletion_events` service-scope record
+  - the `account_deletion_events` row the shared delete writes, and existing `chyme_deletion_events` rows
   - `chyme_admin_audit_trail` (the admin's moderation actions, naming the member by id only)
 - Never touch (must remain):
   - canonical account identity and non-Chyme services
@@ -97,9 +99,7 @@ When user deletes Chyme usage only (`DELETE /api/account/chyme-profile`):
 When user requests full account deletion (`DELETE /api/account/full-account`):
 
 - Additional records removed vs service-scoped deletion:
-  - `chyme_room_removals` rows for the member (deletion registry, account scope): a deleted account
-    cannot come back, so a removal has nothing left to enforce
-  - otherwise none immediately; request is recorded and downstream reclaim dependency is queued
+  - none immediately; request is recorded and downstream reclaim dependency is queued
   - Stream copy: the member's Stream user `chyme-<user_id>` is hard-deleted (`deleteChymeStreamData`) via the shared account-deletion orchestrator's external-cleanup hook (`lib/account/external-cleanup-registry.ts`), run best-effort after the registry-driven Postgres delete. Because the hook lives in the orchestrator, it also runs on the internal-delete route and the Clerk webhook, not just this route.
 - Cross-service dependencies:
   - requires global account deletion orchestrator across all plugin domains
@@ -133,7 +133,9 @@ If user returns to Chyme after service-scoped deletion:
 ## 9) API and UX Surface
 
 - Service delete endpoint:
-  - `DELETE /api/account/chyme-profile`
+  - `DELETE /api/account/services/chyme` (the shared per-service delete; the older
+    `DELETE /api/account/chyme-profile` was removed on 2026-10-15 because it had no caller and removed
+    less than the registry)
 - Full account delete endpoint (or orchestrator):
   - `DELETE /api/account/full-account` (records request and queues ServiceCredits reclaim dependency)
 - Status model (`requested`, `processing`, `completed`, `failed`):
