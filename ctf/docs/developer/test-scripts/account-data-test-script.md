@@ -82,6 +82,21 @@ leaves the list and a fresh full export shows zero rows for that service. Full-a
 still requires typing `delete my account` (do not run this casually).
 **Result:** web ☐ — notes:
 
+## AD-5b · Clearing the blocked list keeps the safety reports you filed
+
+**Role:** member (throwaway account) and admin · **Precondition:** the member has blocked someone
+with the safety concern box ticked, so one safety report is open in `/admin/safety`.
+**Steps:**
+1. Open `/account/data` as the member. Find **Blocked members** under "Personal data" and **Safety
+   reports you filed** under "Always retained".
+2. Delete **Blocked members** and confirm.
+3. As the admin, open `/admin/safety`.
+4. Delete the member's entire account (throwaway only), then reload `/admin/safety`.
+**Expected:** After step 2 the blocked list is empty, and the report is still open in
+`/admin/safety`. **Safety reports you filed** shows a lock and has no Delete button. After step 4
+the report the member filed is gone. Reports other members filed about them stay.
+**Result:** web ☐ — notes:
+
 ## AD-6 · Deleting Commons data removes the posts, not just the author's name
 
 **Role:** member (or admin on a throwaway account) · **Precondition:** the account has posted at
