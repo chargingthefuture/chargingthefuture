@@ -1,11 +1,18 @@
 import { NextResponse } from 'next/server';
 import { ensureTrustTransportTripChannel, createTrustTransportParticipantToken } from 'lib/trust-transport/stream';
-import { requireTrustTransportReadAccess } from 'lib/trust-transport/_lib';
+import { ensureMutationCsrf, requireTrustTransportReadAccess } from 'lib/trust-transport/_lib';
 import { getTripById } from 'lib/trust-transport/repository';
 import { reportError } from 'lib/observability/report';
 import { streamFailureMessage } from 'lib/shared/stream-error-text';
 
-export async function POST(_request: Request, { params }: { params: Promise<{ tripId: string }> }) {
+export async function POST(request: Request, { params }: { params: Promise<{ tripId: string }> }) {
+  // This POST changes state on Stream (upserts both members, creates the channel, adds members) and
+  // mints a token, so it takes the same CSRF check as every other mutation in this plugin.
+  const csrfDeny = ensureMutationCsrf(request);
+  if (csrfDeny) {
+    return csrfDeny;
+  }
+
   const { tripId } = await params;
   if (!tripId) {
     return NextResponse.json({ ok: false, message: 'Missing tripId' }, { status: 400 });
