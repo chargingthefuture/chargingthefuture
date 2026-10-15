@@ -489,8 +489,8 @@ policies:
     version: 1.0.0
     requiredRoles: []
     attributePolicies:
-      signedInAnyUnlockTier: required_for_private_invites
-      signedOutReads: public_invites_only_rate_limited
+      signedInAnyUnlockTier: required
+      signedOutReads: none
       unlockTierExceptionDecision: 2026-10-15
       nosniff: required
       privateCacheOnly: required

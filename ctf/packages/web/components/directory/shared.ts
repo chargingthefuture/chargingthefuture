@@ -14,6 +14,12 @@ export const BG = "#0F1117";
 // stays #93C5FD); comic uses the shared comic surface tokens plus the Directory comic-ink accent.
 export type DirectoryTokens = PluginShellTokens;
 
+// Text on a button filled with the accent: dark on the standard light blue, where white was hard to
+// read, and white on the comic theme's dark blue.
+export function onAccentText(t: DirectoryTokens): string {
+  return t.ACCENT === COLOR ? BG : '#FFFFFF';
+}
+
 export function getDirectoryTokens(theme: ThemeName): DirectoryTokens {
   const accent = theme === "comic" ? getAppAccent("directory", "comic") : COLOR;
   return getPluginShellTokens(accent, theme);

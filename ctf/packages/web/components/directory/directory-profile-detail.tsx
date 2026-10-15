@@ -6,7 +6,7 @@ import { ChevronLeft, ExternalLink, MapPin, Pencil, Sparkles } from "lucide-reac
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useTheme } from "@/hooks/useTheme";
-import { getDirectoryTokens, initials, type DirectoryTokens, type Member } from "./shared";
+import { getDirectoryTokens, initials, onAccentText, type DirectoryTokens, type Member } from "./shared";
 import { DirectoryProfileEdit } from "./directory-profile-edit";
 import { TrustWidgetCard } from "@/lib/shared/trust-interface";
 import { BlockMemberButton } from "@/components/blocks/block-member-button";
@@ -488,7 +488,7 @@ function AttachActions({
           type="button"
           onClick={onAttachClick}
           disabled={attachDisabled}
-          style={{ padding: "9px 18px", borderRadius: 8, background: t.ACCENT, border: "none", color: "#fff", fontWeight: 700, fontSize: 13, cursor: attachDisabled ? "not-allowed" : "pointer", opacity: attachDisabled ? 0.5 : 1 }}
+          style={{ padding: "9px 18px", borderRadius: 8, background: t.ACCENT, border: "none", color: onAccentText(t), fontWeight: 700, fontSize: 13, cursor: attachDisabled ? "not-allowed" : "pointer", opacity: attachDisabled ? 0.5 : 1 }}
         >
           {attaching ? "Attaching…" : "Attach"}
         </button>

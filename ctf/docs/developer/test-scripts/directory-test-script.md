@@ -17,7 +17,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:directory` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-directory-feature-inventory.md` |
-| **Generated** | 2026-07-16 (hand-updated: `country` is now required on every profile — see DIR-4, DIR-4b, DIR-A1; plus the unified skills picker and ported v2 location fields — see DIR-2; 2026-07-17: android member self-edit (#1325) and android admin editable skills (#1335) now ship — see DIR-4, DIR-4b, DIR-A1; 2026-07-18: "Weavers of the Commons" contributor badge on claimed profiles — see DIR-8; 2026-07-19: android badge parity (#1680) ships — DIR-8 gains android; 2026-09-21: the tombstone-column drop's leftover readers are fixed — no step here changes, but a SkillsHunt accept and a Foundation connect must both succeed again; regenerate via CI to stamp the commit) · 2026-10-08 manual update: core smoke step 4 checks the signed-out landing has no SkillsHunt card · 2026-10-08 manual update: DIR-A1f checks the admin edit drawer's new Sector and Job title selects · 2026-09-22 manual update: DIR-A1d checks the admin list loads at all, after its page query was refused by the database for a gap in its placeholder numbering |
+| **Generated** | 2026-07-16 (hand-updated: `country` is now required on every profile — see DIR-4, DIR-4b, DIR-A1; plus the unified skills picker and ported v2 location fields — see DIR-2; 2026-07-17: android member self-edit (#1325) and android admin editable skills (#1335) now ship — see DIR-4, DIR-4b, DIR-A1; 2026-07-18: "Weavers of the Commons" contributor badge on claimed profiles — see DIR-8; 2026-07-19: android badge parity (#1680) ships — DIR-8 gains android; 2026-09-21: the tombstone-column drop's leftover readers are fixed — no step here changes, but a SkillsHunt accept and a Foundation connect must both succeed again; regenerate via CI to stamp the commit) · 2026-10-08 manual update: core smoke step 4 checks the signed-out landing has no SkillsHunt card · 2026-10-08 manual update: DIR-A1f checks the admin edit drawer's new Sector and Job title selects · 2026-09-22 manual update: DIR-A1d checks the admin list loads at all, after its page query was refused by the database for a gap in its placeholder numbering · 2026-10-15 manual update: DIR-12 checks the invite cards' avatars, that no card carries a picture, that a signed-out picture read is refused, and See the live listing |
 | **Inventory wording** | 2026-10-01: banned-term wording removed from the inventory prose; no step in this script changed |
 
 ## How to run this
@@ -422,25 +422,30 @@ recorded only through the takedown control with a reason.
 already on the blog, `public: true` with its blog address) and at least one private one, each for a
 listing that exists. Note one private invitation's Quora handle.
 **Steps:**
-1. Signed out, open `/apps/directory`. The page shows how many people are listed, **Sign in** and
-   **Create a free account**, then the public invitations: date, "An invitation to <name>", the
-   screenshot, the opening words and **Read the invitation**, which opens the blog post.
+1. Signed out, open `/apps/directory`. The page shows how many people are listed, one button,
+   **Sign in or create a free account**, then the public invitations as cards: a round avatar with the person's
+   initials (one character for a one-word name), "An invitation to <name>", the date, the opening
+   words as a quote, a colored edge, and **Read the invitation**, which opens the blog post. No card
+   shows a screenshot. Reload: each person's avatar keeps its colors.
 2. Below them, a line reads "<N> more invitations are visible once you sign in, free." over blurred
-   cards. Inspect one: it holds only the name and the opening words, and is hidden from a screen
-   reader. No skills, location, Quora address or screenshot of a private invitation is anywhere on the
+   cards. Inspect one: it holds only the avatar, the name and the opening words, and is hidden from a
+   screen reader. No skills, location, Quora address or screenshot of a private invitation is anywhere on the
    page or in `GET /api/directory/invites/public`.
 3. With more than ten public invitations, **Next** moves to `?page=2` and the line reads which ones are
    on screen. Type `?page=999`: the last page shows.
 4. Signed out, open `/apps/directory?invite=<the private handle>`. That person's name and opening words
    show clearly at the top, with "Sign in to read the full invitation." A public one's handle shows
    the blog link too. An unknown handle says the invitation could not be found.
-5. Signed out, open a private invitation's picture address directly: 401. A public one's opens.
-6. Sign in with an account not yet approved in Unlock. `/apps/directory` shows every invitation in
-   full (title, picture, text, Quora address written out, a link to the listing), ten a page, with
-   **Finish verifying**. `/apps/directory/invites?page=2` works the same.
+5. Signed out, open any invitation's picture address directly (copy one while signed in): 401.
+6. Sign in with an account not yet approved in Unlock. `/apps/directory` shows every invitation as a
+   card like step 1, ten a page, with **Finish verifying**. With a screen reader, the avatar is not
+   announced and the name is. Tab through: each link shows a focus ring. **Read the invitation** opens
+   that invitation in full at the top (title, the screenshot only if an older invitation has one,
+   text, Quora address written out, **See the live listing**, which opens the person's Directory
+   listing). `/apps/directory/invites?page=2` works the same.
 7. As an approved member, open `/apps/directory`. The Directory shows as before, with **Read the
    invitations** under the profile button. `/apps/directory?invite=<handle>` opens the wall with that
-   invitation first.
+   invitation in full, first, and **See the live listing** opens the listing.
 8. As an admin, delete or take down the listing one invitation is about. The invitation is gone from
    both walls and from the public route.
 9. On `/admin/directory/invite-queue`, the people who have an invitation are not in the queue.

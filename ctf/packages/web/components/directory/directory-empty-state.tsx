@@ -6,7 +6,7 @@
 // filter.
 import { Globe, UserPlus, Users } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
-import { getDirectoryTokens } from "./shared";
+import { getDirectoryTokens, onAccentText } from "./shared";
 
 export function DirectoryEmptyState({
   filtered,
@@ -41,13 +41,13 @@ export function DirectoryEmptyState({
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center" }}>
         {/* Only offer "clear the filter" when a filter/search is actually active. */}
         {filtered && (
-          <button onClick={onClearFilters} style={{ padding: "12px 24px", borderRadius: 12, background: t.ACCENT, border: "none", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>
+          <button onClick={onClearFilters} style={{ padding: "12px 24px", borderRadius: 12, background: t.ACCENT, border: "none", color: onAccentText(t), fontSize: 14, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>
             <Globe size={16} /> Browse all profiles
           </button>
         )}
         {/* A member without a profile can create one straight from the empty state. */}
         {!filtered && !hasOwnProfile && (
-          <button onClick={onCreateProfile} style={{ padding: "12px 24px", borderRadius: 12, background: t.ACCENT, border: "none", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>
+          <button onClick={onCreateProfile} style={{ padding: "12px 24px", borderRadius: 12, background: t.ACCENT, border: "none", color: onAccentText(t), fontSize: 14, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>
             <UserPlus size={16} /> Add my profile
           </button>
         )}
