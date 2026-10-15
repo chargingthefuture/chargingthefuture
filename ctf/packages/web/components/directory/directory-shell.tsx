@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { BackChevronButton } from "@/lib/nav/back-history";
-import { BookOpen, Pencil, Search, UserPlus } from "lucide-react";
+import Link from "next/link";
+import { BookOpen, Mail, Pencil, Search, UserPlus } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { BG, getDirectoryTokens, type DirectoryTokens, type Member, type Sector, type SkillsHuntRewardCard } from "./shared";
 import { DirectoryProfileDetail } from "./directory-profile-detail";
@@ -165,6 +166,10 @@ function DirectoryHeader({
         <button onClick={onOpenProfileEditor} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "8px 12px", borderRadius: 8, background: `${t.ACCENT}14`, border: `1px solid ${t.ACCENT}40`, color: t.ACCENT, fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
           {hasOwnProfile ? <Pencil size={14} /> : <UserPlus size={14} />} {profileButtonLabel}
         </button>
+        {/* The invitations to people in the Directory (owner decision, 2026-10-15). */}
+        <Link href="/apps/directory/invites" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "6px 12px", fontSize: 13, fontWeight: 600, color: t.ACCENT, textDecoration: "none" }}>
+          <Mail size={14} /> Read the invitations
+        </Link>
       </div>
     </div>
   );

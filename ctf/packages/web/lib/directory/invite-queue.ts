@@ -1,8 +1,10 @@
 import { queryDb } from 'lib/db/postgres';
+import { quoraHandleFromUrl } from './invite-input';
+import { listInvitedQuoraHandles } from './invites';
 
 // The invite queue. One row per listed person, with their Quora address and what they can do.
 //
-// Invite posts on the blog are written for one person at a time and name the thing that person
+// Invitations are written for one person at a time and name the thing that person
 // actually does, so this returns the skills themselves rather than a count. It is read-only and
 // admin-only: gathered and sorted this way, the Directory is a different object from the public
 // sources it was built from, which is why viewing it needs a sign-in at all.
@@ -60,55 +62,12 @@ type QueueDbRow = {
   pending_count: string;
 };
 
-// Handles that already have a dedicated invite post on the blog. Lower case, no /profile/ prefix.
+// Who already has an invitation is read from directory_invites (owner decision, 2026-10-15), where
+// the private invite repository's job writes each one. It used to be a list of Quora handles typed
+// into this file, which was itself a public list of the people invited.
 //
-// This list grows every time an invite post ships. The blog repository tracks the queue in
-// wiki-site/INVITE_QUEUE.md and its Published table is the companion to this array — change both
-// in the same piece of work or the person gets invited twice.
-//
-// The owner's own handle sat here from the start, on the reasoning that their listing is not an
-// invitation to anybody and that everybody already knows them. Both stopped being true: there is
-// something to invite people to now, and the community keeps admitting people who have never
-// heard of anybody. So the owner queues like everybody else, gets one invite post in the same
-// format, and joins this array when it ships. One post is all of the endorsement, and the
-// listing is displayed on the same footing as every other — same fields, same ordering, no
-// placement nobody else can have.
-export const DIRECTORY_INVITE_ALREADY_WRITTEN = [
-  'janie-spears-7',
-  'j-h-b-7',
-  'steph-wo-1',
-  'none-ya-970',
-  'espada-18',
-  'syah-neal-adoretm',
-  'gn0b0dy-pneuma',
-  'tommy-gumbert',
-  'alphelus-allen',
-  'lorraine-valente',
-  'krissyy-2',
-  'jessica-goodwin-229',
-  'zack-tom-4',
-  'jerrod-fredrick',
-  'eli-paniagua-1',
-  'brecht-corbeel',
-  'matthew-a-davis-1',
-  'sherri-jenkins-12',
-  'wheeler-aaron',
-  'jane-doe-11966',
-  'julie-6645',
-  'holly-d-192',
-  'nikki-martindale-9',
-  'no-name-individual',
-  'indiko-1',
-  'marilyn-1921',
-  'bev-419',
-  'king-unique-4',
-  'tired-of-being-a-ti',
-  'andre-kovacs-1',
-  'ms-thompson-11',
-  'dc-1341',
-  '00-661',
-  'ric-vaughn',
-] as const;
+// The owner queues like everybody else: their listing gets one invitation in the same format and
+// leaves the queue when it is written, on the same footing as every other listing.
 
 const DIRECTORY_PROFILE_BASE = 'https://app.chargingthefuture.com/apps/directory/profile/';
 
@@ -133,14 +92,6 @@ function inviteKind(row: QueueDbRow): DirectoryInviteKind {
   }
 
   return 'skill-specific';
-}
-
-// Strips the query string, the /profile/ prefix and any trailing slash, so a stored address in
-// either shape compares against the already-written list.
-function handleFromUrl(url: string): string {
-  const withoutQuery = url.split('?')[0] ?? url;
-  const afterPrefix = withoutQuery.replace(/^.*\/profile\//, '');
-  return afterPrefix.replace(/\/+$/, '').toLowerCase();
 }
 
 export async function listDirectoryInviteQueue(): Promise<DirectoryInviteQueueRow[]> {
@@ -206,7 +157,7 @@ export async function listDirectoryInviteQueue(): Promise<DirectoryInviteQueueRo
     [ADVOCACY_MATCH],
   );
 
-  const alreadyWritten = new Set<string>(DIRECTORY_INVITE_ALREADY_WRITTEN);
+  const alreadyWritten = await listInvitedQuoraHandles();
   const kindRank: Record<DirectoryInviteKind, number> = {
     'skill-specific': 1,
     'advocacy-only': 2,
@@ -218,7 +169,7 @@ export async function listDirectoryInviteQueue(): Promise<DirectoryInviteQueueRo
       profileId: row.profile_id,
       name: row.name,
       quoraUrl: row.quora_url,
-      quoraHandle: handleFromUrl(row.quora_url),
+      quoraHandle: quoraHandleFromUrl(row.quora_url),
       directoryUrl: `${DIRECTORY_PROFILE_BASE}${row.profile_id}`,
       location: row.location,
       sector: row.sector,

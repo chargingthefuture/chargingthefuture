@@ -403,3 +403,104 @@ policies:
       requiresAdditionalAudit: false
     denyConditions:
       - insufficient_role
+
+  - pluginId: directory
+    command: directory.invite.upsert
+    version: 1.0.0
+    requiredRoles:
+      - service
+    attributePolicies:
+      internalServiceSecret: required
+      fieldValidation: enforced
+      imageTypeFromBytes: required
+    consentRequirements:
+      scopes: []
+      fallbackLawfulBasis: legitimate_interest_safety_support
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - internal_secret_not_configured
+      - internal_secret_mismatch
+      - invalid_payload
+      - quora_handle_taken
+
+  - pluginId: directory
+    command: directory.invite.delete
+    version: 1.0.0
+    requiredRoles:
+      - service
+    attributePolicies:
+      internalServiceSecret: required
+    consentRequirements:
+      scopes: []
+      fallbackLawfulBasis: legitimate_interest_safety_support
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - internal_secret_not_configured
+      - internal_secret_mismatch
+      - invalid_payload
+
+  - pluginId: directory
+    command: directory.invites.public.fetch
+    version: 1.0.0
+    requiredRoles: []
+    attributePolicies:
+      publicProjectionOnly: required
+      publicFields: name_opening_date_link_only_for_private_invites
+      publicInvitesReadable: blog_published_only
+      contactRestrictedOwnersExcludedFromCount: required
+      antiScrapingThreshold: enforced
+      corsOrigins: chargingthefuture.com_www_and_github_pages_only
+    consentRequirements:
+      scopes:
+        - directory_public_projection
+      fallbackLawfulBasis: legitimate_interest_safety_support
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - anti_scraping_threshold_exceeded
+
+  - pluginId: directory
+    command: directory.invites.fetch
+    version: 1.0.0
+    requiredRoles:
+      - member
+      - admin
+    attributePolicies:
+      signedInAnyUnlockTier: required
+      unlockTierExceptionDecision: 2026-10-15
+      pageSizeMax: 10
+    consentRequirements:
+      scopes:
+        - directory_discovery
+      fallbackLawfulBasis: legitimate_interest_safety_support
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - no_active_session
+
+  - pluginId: directory
+    command: directory.invite.image.fetch
+    version: 1.0.0
+    requiredRoles: []
+    attributePolicies:
+      signedInAnyUnlockTier: required_for_private_invites
+      signedOutReads: public_invites_only_rate_limited
+      unlockTierExceptionDecision: 2026-10-15
+      nosniff: required
+      privateCacheOnly: required
+    consentRequirements:
+      scopes:
+        - directory_discovery
+      fallbackLawfulBasis: legitimate_interest_safety_support
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - no_active_session
+      - invalid_payload
