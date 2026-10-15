@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canonicalizeQuoraUrl } from './quora-url';
+import { canonicalizeQuoraUrl, QUORA_PROFILE_ROOT_SQL_PATTERN, quoraProfileRoot } from './quora-url';
 
 const PROFILE = 'https://www.quora.com/profile/mary-t-i-1';
 
@@ -52,5 +52,24 @@ describe('canonicalizeQuoraUrl', () => {
 
   it('is stable: canonicalizing a canonical URL changes nothing', () => {
     expect(canonicalizeQuoraUrl(PROFILE)).toBe(PROFILE);
+  });
+});
+
+describe('quoraProfileRoot', () => {
+  it('maps a profile and each of its tabs to the bare profile', () => {
+    expect(quoraProfileRoot(PROFILE)).toBe(PROFILE);
+    expect(quoraProfileRoot(canonicalizeQuoraUrl('https://www.quora.com/profile/Mary-T-I-1/answers'))).toBe(PROFILE);
+    expect(quoraProfileRoot(`${PROFILE}/activity`)).toBe(PROFILE);
+  });
+
+  it('returns null for a link that is not a profile', () => {
+    expect(quoraProfileRoot('https://www.quora.com/why-is-the-sky-blue/answer/mary-t-i-1')).toBeNull();
+    expect(quoraProfileRoot(null)).toBeNull();
+  });
+
+  it('agrees with the SQL pattern the takedown lookup uses', () => {
+    const pattern = new RegExp(QUORA_PROFILE_ROOT_SQL_PATTERN);
+    expect(`${PROFILE}/answers`.replace(pattern, '$1')).toBe(PROFILE);
+    expect(PROFILE.replace(pattern, '$1')).toBe(PROFILE);
   });
 });
