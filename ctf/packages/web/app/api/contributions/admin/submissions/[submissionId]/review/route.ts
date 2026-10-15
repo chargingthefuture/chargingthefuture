@@ -19,6 +19,7 @@ type ReviewBody = {
   action?: 'confirm' | 'reject';
   confirmedAmountUsd?: number;
   reviewNote?: string;
+  url?: string;
 };
 
 export async function POST(request: Request, { params }: RouteParams) {
@@ -57,6 +58,7 @@ export async function POST(request: Request, { params }: RouteParams) {
       action: body.action,
       confirmedAmountUsd: body.confirmedAmountUsd,
       reviewNote: body.reviewNote,
+      url: body.url,
     });
 
     if (!submission) {
