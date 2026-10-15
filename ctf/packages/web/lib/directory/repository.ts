@@ -28,6 +28,7 @@ import type {
   DirectoryProfileInput,
   DirectorySuppressedUrl,
 } from './types';
+import { deleteInvitesForListing } from './invites';
 
 type DirectoryProfileRow = {
   id: string;
@@ -1498,6 +1499,7 @@ async function removeOneClaimedProfile(
   await client.query('DELETE FROM directory_profile_tags WHERE profile_id = $1', [profileId]);
   await client.query('DELETE FROM directory_profile_proposed_skills WHERE profile_id::text = $1', [profileId]);
   await recordProfileSkillAudit(client, profileId, previousSkillIds, [], 'profile_deleted', userId);
+  await deleteInvitesForListing(client, profileId, profileUrl);
   await client.query('DELETE FROM directory_profiles WHERE id::text = $1', [profileId]);
 
   // A listing with no Quora address has nothing to suppress — the block is keyed on that address, and
@@ -2115,8 +2117,8 @@ export async function deleteAdminProfile(actorId: string, profileId: string): Pr
   return withDbTransaction(async (client) => {
     // Compare ids as text — directory_profiles.id is varchar in the carried-over v2
     // database, so a ::uuid cast fails to plan / throws on non-uuid ids. See #534.
-    const existing = await client.query<{ claimed_by_user_id: string | null }>(
-      'SELECT claimed_by_user_id FROM directory_profiles WHERE id::text = $1',
+    const existing = await client.query<{ claimed_by_user_id: string | null; profile_url: string | null }>(
+      'SELECT claimed_by_user_id, profile_url FROM directory_profiles WHERE id::text = $1',
       [profileId],
     );
 
@@ -2138,6 +2140,8 @@ export async function deleteAdminProfile(actorId: string, profileId: string): Pr
       return 'claimed_guard';
     }
 
+    // An invitation never outlives the listing it introduces (owner decision, 2026-10-15).
+    await deleteInvitesForListing(client, profileId, existing.rows[0].profile_url);
     await client.query('DELETE FROM directory_profiles WHERE id::text = $1', [profileId]);
 
     await client.query(
@@ -2235,6 +2239,7 @@ export async function takedownAdminProfile(
     // Delete the profile and its dependent rows (mirrors the ordinary delete's cascade set).
     await client.query('DELETE FROM directory_profile_skills WHERE profile_id = $1', [profileId]);
     await client.query('DELETE FROM directory_profile_proposed_skills WHERE profile_id::text = $1', [profileId]);
+    await deleteInvitesForListing(client, profileId, row.profile_url);
     await client.query('DELETE FROM directory_profiles WHERE id::text = $1', [profileId]);
 
     // Record the suppression. If this URL already has an ACTIVE block (partial unique index), keep the

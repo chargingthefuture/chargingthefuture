@@ -72,6 +72,10 @@ Rule 114 baseline: Directory extends the canonical profile by `user_id` and avoi
   - Contains personal data? minimal (the acting admin's id, and the id of what was acted on)
   - Retention period: compliance retention window
   - Legal/compliance note: the durable record of every admin action, added 2026-08-28. Append-only and **never** removed by a member's service-scoped or full-account deletion — the record of what an admin did has to outlive the record they did it to, or a takedown erases its own evidence. Holds no member-authored content.
+- Table/entity: `directory_invites`
+  - Contains personal data? yes (a listed person's name, Quora address, an invitation written about them, optionally a screenshot of what they wrote, and their Directory profile id). Keyed by the invitation's slug and the Quora handle, never by an account: the person it is about usually has no account.
+  - Retention period: while the listing it introduces exists
+  - Legal/compliance note: added 2026-10-15 (owner decision), when the invitations moved off the public blog into the app. An invitation is about a listing, so it goes when the listing goes: every path that removes a listing (a member deleting their Directory data or their account, an admin deleting an unclaimed profile, and the takedown at the person's request) deletes the invitations whose `directory_profile_id` is that listing or whose `quora_handle` is the handle in its Quora address, in the same transaction (`deleteInvitesForListing` in `lib/directory/invites.ts`). The private invite repository can also remove one by slug. A signed-out visitor only ever sees the person's name and the invitation's opening words, except on an invitation marked `public`, one already published on the blog before 2026-10-15, which anybody can read with its picture and blog address. Removing such a row here does not remove the blog post.
 - Table/entity: `directory_deletion_events`
   - Contains personal data? minimal (`user_id`, scope, timestamps)
   - Retention period: compliance retention window
@@ -85,7 +89,7 @@ When user deletes Directory usage only:
   - `directory_user_extension` and optional discoverability preferences
   - `directory_profile_skills` and `directory_profile_proposed_skills` for the user's profile (profile_id-keyed child rows)
 - Remove and block from re-listing:
-  - every claimed `directory_profiles` row the account owns (one in the normal case; an account given a second listing before the one-listing check keeps both until then), each with its skills, tags and proposed skills, and each Quora address recorded on the takedown list
+  - every claimed `directory_profiles` row the account owns (one in the normal case; an account given a second listing before the one-listing check keeps both until then), each with its skills, tags and proposed skills, and each Quora address recorded on the takedown list, and any invitation about that listing (`directory_invites`)
 - Retain for compliance/fraud/finance:
   - `directory_profile_change_events`
   - `directory_deletion_events`

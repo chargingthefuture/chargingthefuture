@@ -74,6 +74,11 @@
       "reason": "Called by One Percent's server for Find matches on the owner's desk, with a DIRECTORY_SERVICE_TOKENS credential. Reads a page of profiles (owner decision, 2026-10-07)."
     },
     {
+      "route": "/api/directory/invites/public",
+      "kind": "external",
+      "reason": "Read from the browser by the landing site and the blog to show the newest invitation cards and the listed count (owner decision, 2026-10-15). Also read inside the app by the signed-out Directory page and the floating invite card."
+    },
+    {
       "route": "/api/directory/service/accounts/[accountId]/profile",
       "kind": "external",
       "reason": "Called by One Percent's server for the owner's desk, with a DIRECTORY_SERVICE_TOKENS credential. Reads the claimed profile belonging to one signed-in client's account (owner decision, 2026-10-02)."

@@ -1,12 +1,10 @@
 -- Directory invite queue: one row per listed person, with their Quora address and what they can do.
 --
--- Feeds the invite posts on the blog (wiki-site/INVITE_QUEUE.md). Each post is written for one
--- person and names the thing they actually do, so the query returns the skills rather than a count.
+-- Feeds the invitations shown on the Directory's invite wall. Each one is written for one person
+-- and names the thing they actually do, so the query returns the skills rather than a count.
 --
--- Two kinds of exclusion, and they are different:
---   * The owner's own listing. It is not an invitation to anybody.
---   * Anybody who already has a dedicated invite post. Those handles are listed below and the
---     list grows every time a post ships — update it in the same commit as the post.
+-- Anybody who already has an invitation is left out, read from directory_invites. The owner's own
+-- listing is queued like everybody else's, the same rule as the screen.
 --
 -- invite_kind is the one judgment the query makes, and it exists because Advocacy is a placeholder.
 -- It was put on people whose public writing showed only that they speak up for Targeted Individuals,
@@ -30,44 +28,9 @@
 -- varying". The app's own queries cast for the same reason.
 
 WITH already_written AS (
-  -- Quora handles, lower case, no /profile/ prefix. Add a handle here when its post merges.
-  SELECT unnest(ARRAY[
-    'farah-brunache',   -- the owner
-    'janie-spears-7',   -- an-invitation-to-janie.md
-    'j-h-b-7',          -- an-invitation-to-jhb.md
-    'steph-wo-1',       -- an-invitation-to-steph-wo.md
-    'none-ya-970',      -- an-invitation-to-christy.md
-    'espada-18',        -- an-invitation-to-espada.md
-    'syah-neal-adoretm', -- an-invitation-to-syah.md
-    'gn0b0dy-pneuma',   -- an-invitation-to-gn0b0dy-pneuma.md
-    'tommy-gumbert',    -- an-invitation-to-tommy.md
-    'alphelus-allen',   -- an-invitation-to-alphelus.md
-    'lorraine-valente', -- an-invitation-to-lorraine.md
-    'krissyy-2',        -- an-invitation-to-krissyy.md
-    'jessica-goodwin-229', -- an-invitation-to-jessica.md
-    'zack-tom-4',       -- an-invitation-to-zack.md
-    'jerrod-fredrick',  -- an-invitation-to-jerrod.md
-    'eli-paniagua-1',   -- an-invitation-to-eli.md
-    'brecht-corbeel',   -- an-invitation-to-brecht.md
-    'matthew-a-davis-1', -- an-invitation-to-matthew-a-davis.md
-    'sherri-jenkins-12', -- an-invitation-to-sherri.md
-    'wheeler-aaron',    -- an-invitation-to-aaron.md
-    'jane-doe-11966',   -- an-invitation-to-jane.md
-    'julie-6645',       -- an-invitation-to-julie.md
-    'holly-d-192',      -- an-invitation-to-holly.md
-    'nikki-martindale-9', -- an-invitation-to-nikki.md
-    'no-name-individual', -- an-invitation-to-no-name-individual.md
-    'indiko-1',         -- an-invitation-to-indiko.md
-    'marilyn-1921',     -- an-invitation-to-marilyn.md
-    'bev-419',          -- an-invitation-to-bev.md
-    'king-unique-4',    -- an-invitation-to-king-unique.md
-    'tired-of-being-a-ti', -- an-invitation-to-tired-of-being-a-ti.md
-    'andre-kovacs-1',   -- an-invitation-to-andre.md
-    'ms-thompson-11',   -- an-invitation-to-ms-thompson.md
-    'dc-1341',          -- an-invitation-to-dc.md
-    '00-661',           -- an-invitation-to-00.md
-    'ric-vaughn'        -- an-invitation-to-ric.md
-  ]) AS handle
+  -- Everybody who already has an invitation. The private invite repository's job writes each one
+  -- into directory_invites; the handle there is lower case, with no /profile/ prefix.
+  SELECT quora_handle AS handle FROM directory_invites
 ),
 listed_skills AS (
   SELECT
