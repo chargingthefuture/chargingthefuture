@@ -133,6 +133,7 @@ Seed script requirement: Provide a deterministic plugin seed script with dummy d
 
 ## 9) Change Log
 
+- 2026-10-15: **Cooldown holds when two submits arrive together; eligibility contract matches the route** (#2775, #2777). `createMoodSubmission` (`lib/mood/repository.ts`) now reads the last check-in and inserts the new one in one transaction behind `pg_advisory_xact_lock` on the pseudonym, so a double tap or two open tabs store one check-in and the second gets `cooldown_active` (409) instead of both passing the read and both inserting. The `mood.check.eligibility.fetch` contract output now names the fields the route has always returned, `cooldownUntilIso` and `lastSubmissionAtIso` (both nullable), in place of a `nextEligibleAt` field nothing produced. Test script case MD-4a added.
 - 2026-08-18: **Intent and Outcome statement added — it now ships to the public user guide.** As of
   2026-08-18 the guide generator (`ctf/scripts/generate-user-guide.mjs`) reads each inventory's
   "Intent and Outcome" section as its framing block; Mood had no such heading, so its `/guide`
