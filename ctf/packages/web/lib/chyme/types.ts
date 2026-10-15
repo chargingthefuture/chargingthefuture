@@ -175,7 +175,6 @@ export type ChymeAuditEvent = {
     | 'chyme.admin.speak-mode'
     | 'chyme.admin.readings.switch'
     | 'chyme.transfer'
-    | 'chyme.profile.delete.service'
     | 'account.profile.delete.full';
   actorId: string;
   status: 'allow' | 'deny';

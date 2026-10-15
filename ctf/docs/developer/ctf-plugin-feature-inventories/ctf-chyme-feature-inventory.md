@@ -22,7 +22,7 @@ Lifecycle/governance references applied:
 1. Authenticated room bootstrap via `GET /api/chyme/room` with deterministic room provisioning (`chyme-main-room`) and participant upsert.
 2. Companion text chat read/send via `GET /api/chyme/messages` and `POST /api/chyme/messages`, with DB persistence and Stream message fan-out through shared adapters. The row is stored first and the Stream copy is sent after the write commits; a Stream failure at any step is reported and never fails the send (2026-10-05). A member can **delete** their own room chat message (`DELETE /api/chyme/messages/[messageId]`, author-only) and **Edit** it — edit is delete + repost (loads the text into the composer, deletes the original, member sends a fresh message), matching the Commons home chat. Edit/Delete show on the member's own messages only. (The displayed room chat is DB-backed; the Stream fan-out copy has no per-message id stored, so a single-message delete removes the DB row shown in the panel — full Stream purge still happens on Chyme service/account deletion.)
 3. Stream-backed room join/token flow via `POST /api/chyme/join`, using shared Stream wrappers in `packages/shared`.
-4. Service-scoped deletion request via `DELETE /api/account/chyme-profile`.
+4. Service-scoped deletion through the account area's shared per-service delete, `DELETE /api/account/services/chyme`.
 5. Full-account deletion request initiation via `DELETE /api/account/full-account`, including ServiceCredits reclaim dependency queueing in existing reclaim/outbox tables.
 6. ServiceCredits peer tipping: a **Tip** action on every other participant's tile sends ServiceCredits from the signed-in member to that participant via `POST /api/chyme/service-credits` (origin_plugin `chyme`). The transfer delivers immediately and is recognized in GDP as Chyme peer tips. The action never appears on the local member's own tile or on a listen-only guest (no wallet).
 7. Back Channel (spec #1746): start a free, private 1:1 audio call with another member who is in the same live room right now, using the **Back Channel** action on their participant tile. They get an invite they can accept or decline — nobody is cold-called. Once accepted, you talk one-to-one in a small call panel while the room stays open behind you; hanging up ends it with no history kept. It is always free — a note points you to Foundation if you want a call with ServiceCredits attached. You can't Back Channel someone you've blocked (or who blocked you), and it never appears on your own tile. If an invite, accept, decline, hang-up or join is refused (blocked, the room is not live, the invite lapsed, Back Channel paused), the screen says "Could not <what failed>: <the reason>" in the invite prompt, the call screen, or a notice at the top, on web and Android.
@@ -223,7 +223,7 @@ Back Channel routes (free 1:1 audio sidebar between two members in the same live
 
 Deletion/account routes (API retained; no longer surfaced in the Chyme UI as of 2026-06-01 — see Delivery Status):
 
-- `DELETE /api/account/chyme-profile`
+- `DELETE /api/account/services/chyme` (shared per-service delete, driven by the deletion registry)
 - `DELETE /api/account/full-account`
 
 Current command-contract note:
@@ -304,7 +304,7 @@ Canonical schema target: Chyme core tables are defined in `ctf/schema.sql`, alig
 2. Access gate enforces approved-user or admin eligibility (`403` for non-approved non-admin users).
 3. Identity handle source is the canonical auth-provider username/handle for username/`@mention` semantics, aligned to `ctf/docs/contracts/PLUGIN_IDENTITY_HANDLE_BASELINE.md`.
 4. Message payloads are trimmed server-side and rejected when empty.
-5. Service deletion runs in transaction and records deletion event for audit trail. Chyme fans each chat message out to Stream (`sendChymeStreamMessage`), so Stream keeps an independent copy; deletion also removes it via `deleteChymeStreamData(userId)` (hard delete of the member's Stream user `chyme-<userId>` with `mark_messages_deleted`). This is wired the systemic way: the shared account-deletion orchestrator runs a per-plugin external-cleanup hook (`lib/account/external-cleanup-registry.ts`) **after** the DB transaction commits, so every full-account entry point (full-account route, internal delete route, Clerk webhook) clears the Stream copy. The bespoke `DELETE /api/account/chyme-profile` route (which uses `markServiceDeletion`, not the orchestrator) calls `deleteChymeStreamData` directly for the same effect. All best-effort after the DB delete: a Stream outage is logged (`reportError`), never blocks or rolls back the deletion.
+5. Service deletion runs in transaction and records deletion event for audit trail. Chyme fans each chat message out to Stream (`sendChymeStreamMessage`), so Stream keeps an independent copy; deletion also removes it via `deleteChymeStreamData(userId)` (hard delete of the member's Stream user `chyme-<userId>` with `mark_messages_deleted`). This is wired the systemic way: the shared account-deletion orchestrator runs a per-plugin external-cleanup hook (`lib/account/external-cleanup-registry.ts`) **after** the DB transaction commits, so every full-account entry point (full-account route, internal delete route, Clerk webhook) clears the Stream copy. A service-only delete (`DELETE /api/account/services/chyme`) goes through the same orchestrator, so it clears the Stream copy the same way. All best-effort after the DB delete: a Stream outage is logged (`reportError`), never blocks or rolls back the deletion.
 6. Full-account endpoint records the Chyme deletion request and queues the downstream ServiceCredits reclaim dependency.
 7. Stream integration is routed through shared wrappers/adapters in `ctf/packages/shared`.
 9. **Stream quota caps and the minute meter (2026-09-19).** The room cap (`CHYME_MAX_PARTICIPANTS`,
@@ -416,8 +416,8 @@ decision the owner has not made, or owned elsewhere. Nothing here is code work l
    `implemented_shell`.
 9. **Closed by design (2026-09-19) — no in-app deletion entry point inside Chyme.** The Chyme
    buttons were removed on 2026-06-01 on purpose; the account area's Account & Data screen is the one
-   place a member deletes a service or the entire account, and `DELETE /api/account/chyme-profile`
-   remains wired there. Chyme does not need its own control.
+   place a member deletes a service or the entire account, and `DELETE /api/account/services/chyme`
+   is the route behind it. Chyme does not need its own control.
 10. **Owner's Stream configuration, done — guest listen-only server-side enforcement.** The code
     assigns `CHYME_GUEST_STREAM_ROLE` when set (2026-06-26); the owner applied the role and the
     call-type grants on 2026-09-18 (`ctf/docs/quota-impact/2026-09-18-stream-guest-listener-setup.md`).
@@ -438,6 +438,13 @@ decision the owner has not made, or owned elsewhere. Nothing here is code work l
 
 ## Change Log
 
+- 2026-10-15: **The older `DELETE /api/account/chyme-profile` route is removed (code-review #2645).**
+  It had no web caller, removed less than the deletion registry's Chyme entry (it left
+  `chyme_room_removals` behind) and wrote no `account_deletion_events` row. The account area's
+  `DELETE /api/account/services/chyme` is the only service-only delete. Removed with it: its command,
+  access-policy and audit contract entries (`chyme.profile.delete.service`), `markServiceDeletion` and
+  `deleteBackChannelForUser` (only that route used them), the unused Android helpers
+  `deleteChymeProfile` and the Chyme copy of `deleteFullAccount`, and its Unlock exception entry.
 - 2026-10-09: **The Back Channel note no longer links to Foundation (owner decision).** The line "For calls with ServiceCredits attached, use Foundation instead." stays on the web and Android Back Channel card, but "Foundation" is no longer a link to `/apps/foundation` on the web. Foundation is in both apps, and each plugin stays self-contained. Android already showed it as plain text.
 - 2026-10-14: **Tips carry an idempotency key, the tip route has contracts and an audit event, and the
   public chat stops returning account ids (code-review #2723, #2734, #2736).** Neither tip dialog
@@ -1062,7 +1069,7 @@ decision the owner has not made, or owned elsewhere. Nothing here is code work l
 
 - [x] Implement service-scoped deletion flow.
   - Acceptance criteria:
-    - `DELETE /api/account/chyme-profile` marks service profile deleted and records service deletion event.
+    - `DELETE /api/account/services/chyme` deletes the member's Chyme rows per the deletion registry and records an `account_deletion_events` row.
 - [x] Implement full-account request behavior.
   - Acceptance criteria:
     - `DELETE /api/account/full-account` records account-scope deletion request and enqueues downstream reclaim dependency.

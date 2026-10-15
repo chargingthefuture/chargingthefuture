@@ -71,13 +71,6 @@ export type ChymeJoinResponse = {
   streamToken: string;
 };
 
-type ChymeDeletionResponse = {
-  ok: true;
-  scope: 'service' | 'account';
-  status: 'requested' | 'processing' | 'completed' | 'failed';
-  requestedAtIso: string;
-};
-
 // Identity is no longer passed in: the user is whoever the verified Clerk
 // session token (Authorization: Bearer) resolves to on the backend. All requests
 // go through authedFetchJson, which attaches that token.
@@ -285,14 +278,6 @@ export async function postBackChannelHeartbeat(callId: string): Promise<{ ok: tr
     headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
     body: JSON.stringify({ callId }),
   });
-}
-
-export async function deleteChymeProfile(): Promise<ChymeDeletionResponse> {
-  return authedFetchJson('/api/account/chyme-profile', { method: 'DELETE' });
-}
-
-export async function deleteFullAccount(): Promise<ChymeDeletionResponse> {
-  return authedFetchJson('/api/account/full-account', { method: 'DELETE' });
 }
 
 // --- Moderation (owner decision, 2026-09-19): admin-only, mirrors the web room's controls ---
