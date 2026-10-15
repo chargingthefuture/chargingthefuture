@@ -87,7 +87,7 @@ export function AccountDataMobile({
             />
           )
         ) : (
-          <MobileDanger serviceCount={deletable.length} onOpenAccountDelete={onOpenAccountDelete} tokens={tokens} />
+          <MobileDanger serviceCount={deletable.length + retained.length} onOpenAccountDelete={onOpenAccountDelete} tokens={tokens} />
         )}
       </div>
     </div>

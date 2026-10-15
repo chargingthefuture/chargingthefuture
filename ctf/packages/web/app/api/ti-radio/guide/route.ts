@@ -17,7 +17,11 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   try {
     const reader = await readerIdentity();
-    const canHost = reader.userId ? await isUserUnlocked(reader.userId).catch(() => false) : false;
+    const canHost = reader.userId ? await isUserUnlocked(reader.userId).catch((error: unknown) => {
+          // Answer the guide without hosting controls rather than a 503, and report it.
+          reportError(error, { area: 'ti-radio', op: 'guide_unlock_read' });
+          return false;
+        }) : false;
     const guide = await getGuide({ userId: reader.userId, canHost: canHost || reader.isAdmin, isAdmin: reader.isAdmin });
     return NextResponse.json({ ok: true, guide }, { status: 200 });
   } catch (error) {

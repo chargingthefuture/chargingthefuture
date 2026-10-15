@@ -620,8 +620,14 @@ FD-12b), with at least one reaction on it.
 **Expected:**
 - Draft is created and listed with status `draft`.
 - If a linked plugin was selected, it is shown in the list row.
+- The picker never offers Weekly Performance, Mutual Time, or a hidden plugin. The server drops those
+  on save, so offering them produced a link that vanished with no explanation.
+- If the plugin list cannot load, a red line under the picker says why (the route's message, or the
+  HTTP status) instead of the picker just being empty.
 - No 503 or CSRF error.
 - The form does **not** reset on a failed submit — it retains the typed content.
+- A save, publish or archive that never got an answer shows "Request did not complete. Try again."
+  followed by the reason in brackets, not a bare "Network error".
 
 **Result:** web ☐
 
@@ -1161,6 +1167,26 @@ render. Hiding a reply must not take the post or its siblings with it.
 **Expected:** Step 1: redirected away, no moderation UI. Step 2: rejected, and the post stays visible.
 Step 3: rejected for CSRF. Step 4: 400 — a missing `hidden` field must be an error, never a silent
 "restore", so a malformed request can never put hidden content back in front of members.
+
+**Result:** web ☐
+
+---
+
+### FD-A16b — The moderation page names a failed read (added 2026-10-12)
+**Role:** admin | **Surface:** web
+
+**Precondition:** A local or preview environment where you can make the database unreachable (for
+example, point `DATABASE_URL` at a closed port and restart).
+
+**Steps:**
+1. With the database unreachable, open `/admin/commons` as admin.
+2. Restore the database and reload the page.
+
+**Expected:** Step 1: the page still renders, and the red banner at the top says it could not read from
+the database, naming each read that failed (the moderation queue, the hidden counts, the author list,
+the flagged answers, the pending flagged count) with its reason. It must not show a quiet empty queue
+with no message. The server log carries one `[reportError] area=feed-announcements` line per failed
+read. Step 2: no banner, and the queue loads as usual (#2712).
 
 **Result:** web ☐
 

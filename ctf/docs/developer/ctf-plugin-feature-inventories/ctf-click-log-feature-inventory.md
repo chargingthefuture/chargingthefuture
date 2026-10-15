@@ -323,6 +323,13 @@ Android pixel pass to `MobileClickLog.tsx` remains tracked in `PRODUCTION_READIN
 
 ## Change Log
 
+- 2026-10-12: **A sharing default that fails to load says so.** The preferences hook dropped a
+  failed `GET /api/click-log/preferences` without a word, leaving the toggle off. Every new incident
+  is sent with an explicit `sharedWithOwner`, so the server never falls back to the stored default:
+  a member who had turned it on saved untagged incidents private for the rest of the visit. The
+  screen now shows that the default could not be loaded (with the route's `error` when it sent one),
+  and a thrown load is reported under `click-log` / `preferences.load`. A failed save of the default
+  now shows the route's `error` text instead of a fixed sentence (rule 137). Closes #2796.
 - 2026-10-05: **A second incident with no note and no location saves.** `click_log_incidents`
   carried a generated `metadata_hash` (an md5 of the metadata JSON) and
   `UNIQUE (user_id, metadata_hash)`. The date, tags and share flag sit outside the metadata, so two

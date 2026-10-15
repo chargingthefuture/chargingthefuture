@@ -46,9 +46,14 @@ export function logTiRadioAudit(event: TiRadioAuditEvent): void {
  */
 export async function recordTiRadioAudit(event: TiRadioAuditEvent): Promise<void> {
   logTiRadioAudit(event);
-  const [targetType, targetId] = Object.entries(event.target).find(
-    ([, value]) => typeof value === 'string' && value.length > 0,
-  ) ?? ['ti_radio_slot', ''];
+  // The first named target becomes target_type/target_id; every other one is kept in metadata, so a
+  // removal row still says whose slot it was after the slot row itself has been deleted.
+  const targets = Object.entries(buildTargetContext(event.target));
+  const [targetType, targetId] = targets[0] ?? ['ti_radio_slot', ''];
+  const metadata: Record<string, string> = Object.fromEntries(targets.slice(1));
+  if (event.evidence) {
+    metadata.evidence = event.evidence;
+  }
   try {
     await queryDb(
       `
@@ -66,7 +71,7 @@ export async function recordTiRadioAudit(event: TiRadioAuditEvent): Promise<void
         String(targetId ?? ''),
         event.result,
         event.errorCategory,
-        JSON.stringify(event.evidence ? { evidence: event.evidence } : {}),
+        JSON.stringify(metadata),
       ],
     );
   } catch (error) {
