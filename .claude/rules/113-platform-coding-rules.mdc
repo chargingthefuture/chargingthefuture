@@ -96,7 +96,7 @@ instead; compliance constraints take precedence.
 
 - The use of `any`, `as any`, and `any[]` type annotations is strictly prohibited in all TypeScript code.
 - If a type is truly unknown, use `unknown` and always add type guards or narrowing logic before using the value.
-- All API responses and state must have explicit interfaces or types, either inferred or defined. Define these in a `types.ts` file within the feature or package, and import shared types from `@ctf/shared/types` where possible.
+- All API responses and state must have explicit interfaces or types, either inferred or defined. Define these in a `types.ts` file within the feature or package, and import a type from the module that owns it. `@ctf/shared` exports only the few types web and Android both need (feature flags and plugin sign-in); there is no `@ctf/shared/types`.
 - For error handling, always use `catch (e: unknown)` and apply type guard utilities, e.g.:
 
 ```ts
