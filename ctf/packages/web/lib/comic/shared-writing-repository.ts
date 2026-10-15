@@ -5,7 +5,7 @@ import type { ContributedEntry } from "./quora-export-intake";
 // entries sit in comic_contribution_entries until a human accepts them, at which point they are
 // copied into comic_knowledge_entries. The gap between the two tables IS the human review step.
 
-export type ContributionSummary = {
+export type SharedWritingSummary = {
   id: string;
   kind: "links" | "export";
   status: "pending_review" | "accepted" | "declined" | "withdrawn";
@@ -15,17 +15,17 @@ export type ContributionSummary = {
   createdAtIso: string;
 };
 
-type ContributionRow = {
+type SharedWritingRow = {
   id: string;
   kind: "links" | "export";
-  status: ContributionSummary["status"];
+  status: SharedWritingSummary["status"];
   entry_count: number;
   discarded_sections: unknown;
   decline_reason: string;
   created_at: Date;
 };
 
-function mapRow(row: ContributionRow): ContributionSummary {
+function mapRow(row: SharedWritingRow): SharedWritingSummary {
   return {
     id: row.id,
     kind: row.kind,
@@ -49,16 +49,16 @@ function parseAuthoredAt(raw: string | null): string | null {
 
 // Record one contribution and its surviving entries in a single transaction, so a submission can
 // never end up stored without its consent row, or counted with entries that failed to write.
-export async function createContribution(input: {
+export async function createSharedWriting(input: {
   userId: string;
   kind: "links" | "export";
   consentVersion: string;
   thirdPartyNote: string;
   discardedSections: string[];
   entries: ContributedEntry[];
-}): Promise<ContributionSummary> {
+}): Promise<SharedWritingSummary> {
   return withDbTransaction(async (client) => {
-    const inserted = await client.query<ContributionRow>(
+    const inserted = await client.query<SharedWritingRow>(
       `INSERT INTO comic_contributions
          (user_id, kind, status, consent_version, third_party_note, entry_count, discarded_sections)
        VALUES ($1, $2, 'pending_review', $3, $4, $5, $6::jsonb)
@@ -95,8 +95,8 @@ export async function createContribution(input: {
 }
 
 // A member's own contribution history, for the page's "what you have sent" list.
-export async function listContributionsForUser(userId: string): Promise<ContributionSummary[]> {
-  const result = await queryDb<ContributionRow>(
+export async function listSharedWritingForUser(userId: string): Promise<SharedWritingSummary[]> {
+  const result = await queryDb<SharedWritingRow>(
     `SELECT id, kind, status, entry_count, discarded_sections, decline_reason, created_at
      FROM comic_contributions
      WHERE user_id = $1
@@ -110,7 +110,7 @@ export async function listContributionsForUser(userId: string): Promise<Contribu
 // How many contributions this member has sent recently. The upload route uses this as its own rate
 // limit — parsing an archive is expensive, and a signed-in account should not be able to spend the
 // server's memory in a loop.
-export async function countRecentContributions(
+export async function countRecentSharedWriting(
   userId: string,
   withinHours: number,
 ): Promise<number> {
@@ -133,7 +133,7 @@ export async function countRecentContributions(
 // row somebody else put there (another member's contribution, or the owner's own import), and that
 // row stays on: their consent still covers it. Without this, submitting a copy of an existing entry
 // and withdrawing it would switch off writing the member has no say over.
-export async function withdrawContribution(
+export async function withdrawSharedWriting(
   userId: string,
   contributionId: string,
 ): Promise<boolean> {
@@ -168,7 +168,7 @@ export async function withdrawContribution(
 // comic_knowledge_entries it cannot reach a member, so everything below is the human step the
 // contributor was promised on the knowledge page.
 
-export type ContributionEntryForReview = {
+export type SharedWritingEntryForReview = {
   id: string;
   entryType: string;
   question: string | null;
@@ -178,16 +178,16 @@ export type ContributionEntryForReview = {
   promoted: boolean;
 };
 
-export type ContributionForReview = ContributionSummary & {
+export type SharedWritingForReview = SharedWritingSummary & {
   userId: string;
   consentVersion: string;
   thirdPartyNote: string;
-  entries: ContributionEntryForReview[];
+  entries: SharedWritingEntryForReview[];
 };
 
-export async function listContributionsForReview(status: string): Promise<ContributionForReview[]> {
+export async function listSharedWritingForReview(status: string): Promise<SharedWritingForReview[]> {
   const contributions = await queryDb<
-    ContributionRow & {
+    SharedWritingRow & {
       user_id: string;
       consent_version: string;
       third_party_note: string;
@@ -221,9 +221,9 @@ export async function listContributionsForReview(status: string): Promise<Contri
     [ids],
   );
 
-  const byContribution = new Map<string, ContributionEntryForReview[]>();
+  const bySharedWriting = new Map<string, SharedWritingEntryForReview[]>();
   for (const row of entries.rows) {
-    const list = byContribution.get(row.contribution_id) ?? [];
+    const list = bySharedWriting.get(row.contribution_id) ?? [];
     list.push({
       id: row.id,
       entryType: row.entry_type,
@@ -233,7 +233,7 @@ export async function listContributionsForReview(status: string): Promise<Contri
       excluded: row.excluded,
       promoted: row.knowledge_entry_id !== null,
     });
-    byContribution.set(row.contribution_id, list);
+    bySharedWriting.set(row.contribution_id, list);
   }
 
   return contributions.rows.map((row) => ({
@@ -241,7 +241,7 @@ export async function listContributionsForReview(status: string): Promise<Contri
     userId: row.user_id,
     consentVersion: row.consent_version,
     thirdPartyNote: row.third_party_note,
-    entries: byContribution.get(row.id) ?? [],
+    entries: bySharedWriting.get(row.id) ?? [],
   }));
 }
 
@@ -266,7 +266,7 @@ export type AcceptResult = {
 //     rows imported from the edited Quora Markdown repo carry a `source_ref` and are a separate
 //     identity space, so a Markdown row and a contributed row may share `content_hash` without
 //     colliding — the backfill lookup below is likewise scoped to `source_ref IS NULL`.
-export async function acceptContribution(input: {
+export async function acceptSharedWriting(input: {
   contributionId: string;
   reviewerId: string;
   excludedEntryIds: string[];
@@ -335,7 +335,7 @@ export async function acceptContribution(input: {
         alreadyPresent++;
         // Point at the row that already carries this text, so the entry records where it went. That
         // row belongs to whoever put the text there first, so withdrawing THIS contribution leaves it
-        // on (see withdrawContribution).
+        // on (see withdrawSharedWriting).
         await client.query(
           `UPDATE comic_contribution_entries
            SET knowledge_entry_id = (SELECT id FROM comic_knowledge_entries WHERE content_hash = $2 AND source_ref IS NULL LIMIT 1)
@@ -358,7 +358,7 @@ export async function acceptContribution(input: {
 
 // Decline a contribution. Nothing is promoted; the entries stay for the record, and the reason is
 // shown to the contributor on their own page so a decline is never silent.
-export async function declineContribution(input: {
+export async function declineSharedWriting(input: {
   contributionId: string;
   reviewerId: string;
   reason: string;
@@ -375,11 +375,34 @@ export async function declineContribution(input: {
 
 // Stamp the recognition grant so a re-review can never mint a second one. Returns false when it was
 // already stamped, which the caller treats as "already granted" rather than an error.
-export async function markContributionGranted(contributionId: string): Promise<boolean> {
+export async function markSharedWritingGranted(contributionId: string): Promise<boolean> {
   const result = await queryDb(
     `UPDATE comic_contributions SET granted_at = NOW(), updated_at = NOW()
      WHERE id = $1::uuid AND granted_at IS NULL`,
     [contributionId],
   );
   return (result.rowCount ?? 0) > 0;
+}
+
+// Undo the stamp after a mint that threw, so the grant can be tried again. Safe because the mint
+// carries a per-contribution idempotency key: a retry after a mint that did land returns the first
+// grant rather than making a second one.
+export async function clearSharedWritingGranted(contributionId: string): Promise<void> {
+  await queryDb(
+    `UPDATE comic_contributions SET granted_at = NULL, updated_at = NOW()
+     WHERE id = $1::uuid`,
+    [contributionId],
+  );
+}
+
+// The accepted contributions of one member that have not had their credits yet: accepted while the
+// member was not verified, or whose grant failed. Withdrawn and declined ones are left out.
+export async function listUngrantedAcceptedSharedWritingIds(userId: string): Promise<string[]> {
+  const result = await queryDb<{ id: string }>(
+    `SELECT id::text AS id FROM comic_contributions
+     WHERE user_id = $1 AND status = 'accepted' AND granted_at IS NULL
+     ORDER BY created_at ASC`,
+    [userId],
+  );
+  return result.rows.map((row) => row.id);
 }

@@ -11,14 +11,17 @@
 //    part that requires full Unlock access. It is also the part a bad actor would want: paying for
 //    contributions is an invitation to submit poisoned material, and requiring verification puts a
 //    real cost in front of that. An accepted contribution from a not-yet-verified member stays
-//    accepted and ungranted; nothing is lost, and the grant can be made later once they verify.
+//    accepted and ungranted; nothing is lost, and the grant is made when Unlock approves them
+//    (lib/comic/approval-catch-up.ts, run through lib/shared/unlock-approval-interface.ts).
 //
 // 2. NEVER GRANT TWICE. `granted_at` is stamped in the database before the mint is attempted, and
 //    the mint itself carries a per-contribution idempotency key, so a retried review, a double-click,
-//    or a crash between the two cannot mint a second grant.
+//    or a crash between the two cannot mint a second grant. A mint that throws clears the stamp, so
+//    the grant can be tried again; the idempotency key is what keeps that retry from minting twice.
 import { mintGrant } from 'lib/shared/credits-interface';
 import { isUserUnlocked } from 'lib/shared/unlock-interface';
-import { markContributionGranted } from './contribution-repository';
+import { reportError } from 'lib/observability/report';
+import { clearSharedWritingGranted, markSharedWritingGranted } from './shared-writing-repository';
 
 // Recognition for one accepted contribution, whatever its size. Deliberately flat rather than
 // per-post: paying by volume would reward padding a submission, and the reviewer would then be
@@ -31,7 +34,7 @@ export type GrantOutcome =
   | { status: 'skipped_not_unlocked' }
   | { status: 'failed'; reason: string };
 
-export async function grantContributionRecognition(input: {
+export async function grantSharedWritingCredits(input: {
   contributionId: string;
   contributorUserId: string;
   reviewerId: string;
@@ -40,9 +43,8 @@ export async function grantContributionRecognition(input: {
     return { status: 'skipped_not_unlocked' };
   }
 
-  // Stamp first. If the mint then fails, the contribution reads as granted and no credits landed —
-  // which is recoverable by hand and is the safer failure. The reverse order risks minting twice.
-  const stamped = await markContributionGranted(input.contributionId);
+  // Stamp first, so two attempts at once cannot both mint. The reverse order risks minting twice.
+  const stamped = await markSharedWritingGranted(input.contributionId);
   if (!stamped) {
     return { status: 'already_granted' };
   }
@@ -58,6 +60,13 @@ export async function grantContributionRecognition(input: {
     });
     return { status: 'granted', amount: CONTRIBUTION_GRANT_AMOUNT };
   } catch (error) {
+    // Left stamped, the contribution would read as granted with no credits behind it, and nothing
+    // would ever try again.
+    try {
+      await clearSharedWritingGranted(input.contributionId);
+    } catch (clearError) {
+      reportError(clearError, { area: 'comic', op: 'contribution_grant_unstamp', extra: { contributionId: input.contributionId } });
+    }
     return { status: 'failed', reason: error instanceof Error ? error.message : 'mint_failed' };
   }
 }

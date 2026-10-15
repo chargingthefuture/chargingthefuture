@@ -50,7 +50,7 @@ export async function needsQuoraProfileUrl(userId: string): Promise<boolean> {
 // Best-effort by design: the contribution has already been stored by the time this runs, and a
 // failure here must not lose the member's writing. The worst case is that they verify the ordinary
 // way afterwards.
-export async function linkContributionToUnlock(input: {
+export async function linkSharedWritingToUnlock(input: {
   userId: string;
   quoraProfileUrl: string | null;
   contributionId: string;

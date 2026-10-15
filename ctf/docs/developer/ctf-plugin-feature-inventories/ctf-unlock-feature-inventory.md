@@ -157,6 +157,11 @@ to guess which group a wall of silence puts them in.
 1. On approval, issue a one-time 100 service-credit reward.
 2. Enforce deterministic idempotency for reward grants.
 3. Persist grant timestamp on unlock submission state.
+4. After an approval, run the plugin catch-up (`runUnlockApprovalCatchUp` in
+   `lib/shared/unlock-approval-interface.ts`), best-effort: Fireside tells people a held reply
+   answered them, and the knowledge library grants the credits for writing accepted before the
+   member was verified. The audit row `unlock.admin.submission.approval_catch_up` records
+   `firesidePeopleTold` and `comicSharedWritingGranted`.
 
 ### 2.3 Auditability and Operations
 
@@ -482,6 +487,12 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
 
 ## 9) Change Log
 
+- 2026-10-15: **Approval also grants credits the knowledge library held back (code-review #2678,
+  owner decision).** `runUnlockApprovalCatchUp` now takes the approving admin and runs the comic
+  plugin's `grantHeldSharedWritingCredits` after Fireside's catch-up, so writing accepted into the
+  knowledge library while the member was not verified gets its 100 credits per contribution on
+  approval. The approval catch-up audit row gains `comicSharedWritingGranted`. See the comic
+  inventory change log.
 - 2026-10-15: **The "I can’t find my Quora profile URL" chip is removed from the Commons (#3221, owner decision).** The chip sent the question to `POST /api/comic/message`, which needs Unlock approval, so it was refused for every member it was shown to. The owner chose to remove the chip rather than open @comic to members not yet approved. The Commons help box now reads "Ask in the chat just below. Nothing here expires while you wait." and the Commons no longer polls the @comic conversation for those members, since that read was refused every time.
 - 2026-10-12: **"Sign in to your other account" on `/account-closed` signs this session out first (code-review #2706, #2707).** The button was a plain link to the hosted sign-in page, but a member reaches `/account-closed` only while signed in to the closed duplicate. The sign-in page saw that session, skipped its form, and sent them to the home page, which sent them straight back to `/account-closed`. The button now signs the closed session out with the sign-in page as the redirect target, so the form appears; if the sign-out fails it is reported and the page says so. The identity and restriction checks on `/account-closed`, and the restriction check on the home page, now report a failure (area `account-closed`) before falling back instead of dropping it. The fallback itself is unchanged: a failed check still sends the member to the app. No route, schema or contract change; web only.
 - 2026-10-14: **A review decision leaves a sign-up-list ban alone, an admin-entered denylisted URL is blocked, and the member submission needs the CSRF header (code review #2781, #2783, #2785).** (1) `syncProviderBanForDecision` lifted the provider ban and deleted the `unlock_banned_accounts` row on every approve or reject, and overwrote the reason on spam or duplicate, without reading the stored reason, so any decision on a perp-banned account's submission undid the ban. It now reads the reason first (`getUnlockBannedReason`) and leaves a `perp` row and its provider ban untouched; only the ban route's own unban lifts it. (2) `POST /api/unlock/admin/submissions` (Add Quora URL) ignored a `spam` result from the denylist: it now applies the same `all`-scope block the member route applies (`applyDenylistBlockIfSpam`), audits `deny` / `spam_denylisted`, and the Sign-ups panel shows the stored status with a notice that names the denylist instead of assuming pending. (3) `POST /api/unlock/submission` now runs `ensureUnlockMutationCsrf` like the help-request route; the Unlock screen, the Commons verify banner and the Android client send `x-ctf-csrf: 1`, and the access policy for `unlock.verification.submit` lists `csrfConfirmationRequired`.

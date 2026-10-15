@@ -325,6 +325,21 @@ and is idempotent — a second retry never grants a second reward (the reconcile
 `{ scanned, granted, alreadyGranted, failed }`).
 **Result:** web ☐ — notes:
 
+### UNLOCK-A3b · Approval grants knowledge library credits held back before verification
+**Role:** admin / reviewer · **Surfaces:** web (admin surface)
+**Precondition:** a member who is not verified yet has writing accepted in the knowledge library
+(`/admin/comic/shared-writing`), so it shows no credits.
+**Steps:**
+1. Approve that member's Unlock submission.
+2. Read the member's ServiceCredits balance and the newest `unlock.admin.submission.approval_catch_up`
+   audit row.
+3. Reject and then approve the same member again.
+**Expected:** On top of the Unlock reward, the member gets 100 credits for each such accepted
+contribution, and the audit row carries `comicSharedWritingGranted` with that count. The second
+approval grants nothing more (`comicSharedWritingGranted: 0`). The approval succeeds even if a grant
+fails; a failed grant is reported. See CMC-A1b in the comic test script.
+**Result:** web ☐ — notes:
+
 ### UNLOCK-A4 · Edit a submission's Quora URL
 **Role:** admin / reviewer · **Surfaces:** web (admin surface)
 **Steps:**

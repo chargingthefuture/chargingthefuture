@@ -1,6 +1,6 @@
 import { evaluatePluginAccess } from 'lib/auth/server-authz';
 import { getHostedSignInUrl } from 'lib/auth/provider-env';
-import { needsQuoraProfileUrl } from 'lib/comic/contribution-unlock-link';
+import { needsQuoraProfileUrl } from 'lib/comic/shared-writing-unlock-link';
 import { ComicKnowledgeShell } from '@/components/comic/comic-knowledge-shell';
 import { ComicKnowledgePublicShell } from '@/components/comic/comic-knowledge-public-shell';
 
