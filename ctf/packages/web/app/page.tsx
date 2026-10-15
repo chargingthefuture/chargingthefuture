@@ -5,13 +5,13 @@ import type { TrustUserExtension } from '../lib/trust/types';
 import { resolveRequestIdentity, type RequestIdentity } from '../lib/auth/request-identity';
 import { getUnlockAccessTier } from '../lib/unlock/access';
 import { getAccountRestrictionStatus } from '../lib/auth/account-restrictions';
+import { reportError } from '../lib/observability/report';
 import { getUnlockStatusForUser } from '../lib/unlock/repository';
 import type { UnlockAccessTier } from '../lib/unlock/types';
 import { getGdpShellStats } from '../lib/gdp/repository';
 import { listPluginRegistry, filterPluginsForViewer } from '../lib/plugins/repository';
 import { readTrustSelfExtensionOrStored } from '../lib/trust/repository';
 import { getHostedSignInUrl } from '../lib/auth/provider-env';
-import { reportError } from '../lib/observability/report';
 
 function buildShellUser(userId: string, username: string | null): ShellCurrentUser {
   const safeUsername = username && username !== 'guest' ? username : null;
@@ -103,7 +103,10 @@ async function redirectIfAccountClosed(userId: string | null, isAdmin: boolean):
   if (!userId || isAdmin) {
     return;
   }
-  const restriction = await getAccountRestrictionStatus(userId, 'all').catch(() => ({ isRestricted: false }));
+  const restriction = await getAccountRestrictionStatus(userId, 'all').catch((error: unknown) => {
+    reportError(error, { area: 'account-closed', op: 'home_restriction_check' });
+    return { isRestricted: false };
+  });
   if (restriction.isRestricted) {
     redirect('/account-closed');
   }

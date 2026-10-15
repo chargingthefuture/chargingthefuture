@@ -30,7 +30,9 @@ export interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   signIn: () => Promise<void> | void;
-  signOut: () => Promise<void> | void;
+  // `redirectUrl` is where the browser goes once the session is gone. Without it the provider's own
+  // after-sign-out setting applies.
+  signOut: (options?: { redirectUrl?: string }) => Promise<void> | void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -68,8 +70,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
-  const handleSignOut = async () => {
-    await clerkSignOut();
+  const handleSignOut = async (options?: { redirectUrl?: string }) => {
+    await clerkSignOut(options?.redirectUrl ? { redirectUrl: options.redirectUrl } : undefined);
   };
 
   return (
