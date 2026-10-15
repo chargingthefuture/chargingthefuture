@@ -88,6 +88,7 @@ const ChannelSearchBar: React.FC = () => {
   const [searching, setSearching] = useState(false);
   const [hits, setHits] = useState<SearchHit[]>([]);
   const [searched, setSearched] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const runSearch = useCallback(async () => {
@@ -95,9 +96,11 @@ const ChannelSearchBar: React.FC = () => {
     if (!term) {
       setHits([]);
       setSearched(false);
+      setSearchError(null);
       return;
     }
     setSearching(true);
+    setSearchError(null);
     try {
       const response = await channel.search(term, { limit: 25, sort: { created_at: -1 } });
       // channel.search returns SearchAPIResponse: { results: [{ message }] }. The channel value is
@@ -111,8 +114,12 @@ const ChannelSearchBar: React.FC = () => {
       });
       setHits(next);
       setSearched(true);
-    } catch {
+    } catch (searchFailure) {
+      // A refused or unanswered search is not an empty result, so it is shown as a failure rather
+      // than as "No messages found."
+      reportError(searchFailure, { area: 'chat', op: 'channel_search', extra: { channelId: channel.id } });
       setHits([]);
+      setSearchError(streamFailureMessage('Search failed', searchFailure));
       setSearched(true);
     } finally {
       setSearching(false);
@@ -171,6 +178,7 @@ const ChannelSearchBar: React.FC = () => {
             setQuery('');
             setHits([]);
             setSearched(false);
+            setSearchError(null);
           }}
           aria-label="Close search"
         >
@@ -179,7 +187,11 @@ const ChannelSearchBar: React.FC = () => {
       </form>
       {searched && (
         <div className="ctf-chat-search__results" role="listbox">
-          {hits.length === 0 ? (
+          {searchError ? (
+            <div className="ctf-chat-search__empty" role="alert">
+              {searchError}
+            </div>
+          ) : hits.length === 0 ? (
             <div className="ctf-chat-search__empty">No messages found.</div>
           ) : (
             hits.map((hit) => (
