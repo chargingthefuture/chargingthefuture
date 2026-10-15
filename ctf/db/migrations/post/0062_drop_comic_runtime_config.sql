@@ -1,0 +1,11 @@
+-- post/0062: Drop comic_runtime_config.
+--
+-- The table held one setting: whether an @comic answer to an Unlock question from a member not yet
+-- approved was sent without review. No member could ever reach that path, because the @comic message
+-- route needs Unlock approval and the path answered only members without it. The owner decided on
+-- 2026-10-15 that code no member can reach is deleted, so the scripted Unlock-help path, its admin log
+-- and switch (/admin/comic/unlock-help, POST /api/comic/admin/unlock-help-setting) and this table are
+-- removed together. Nothing else reads or writes the table and no other table references it. The
+-- switch's past changes stay in comic_admin_audit_trail. Guarded with IF EXISTS so it no-ops on a
+-- database that never had it, and re-runs do nothing.
+DROP TABLE IF EXISTS comic_runtime_config;

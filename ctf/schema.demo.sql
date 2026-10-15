@@ -5224,22 +5224,6 @@ CREATE INDEX IF NOT EXISTS idx_feed_admin_audit_trail_lookup
 -- a line in the server's log, which nothing can query, no screen can show, and which ages out of the
 -- host's retention window. These are decisions about other people's contributions: accepting one,
 -- declining it with a reason, editing a knowledge entry, regenerating or resolving a review turn.
--- Comic (@comic assistant) runtime settings an admin can change from the app. One row.
---
--- unlock_help_without_review: when true, an @comic answer to an Unlock question from a member not yet
--- approved is sent straight to them instead of waiting in the review queue (owner decision,
--- 2026-09-26). Every other @comic answer is held for review regardless. Switched from the Unlock help
--- log (/admin/comic/unlock-help). No row means the default, true; turning it off writes the row.
-CREATE TABLE IF NOT EXISTS comic_runtime_config (
-  singleton_id BOOLEAN PRIMARY KEY DEFAULT TRUE CHECK (singleton_id),
-  unlock_help_without_review BOOLEAN NOT NULL DEFAULT TRUE,
-  updated_by_user_id TEXT NULL,
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-ALTER TABLE IF EXISTS comic_runtime_config ADD COLUMN IF NOT EXISTS unlock_help_without_review BOOLEAN NOT NULL DEFAULT TRUE;
-ALTER TABLE IF EXISTS comic_runtime_config ADD COLUMN IF NOT EXISTS updated_by_user_id TEXT NULL;
-ALTER TABLE IF EXISTS comic_runtime_config ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-
 CREATE TABLE IF NOT EXISTS comic_admin_audit_trail (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   actor_id TEXT NOT NULL,
@@ -10504,4 +10488,18 @@ ALTER TABLE IF EXISTS service_credits_dispute_adjustments
 ALTER TABLE IF EXISTS demo.service_credits_dispute_adjustments
   DROP COLUMN IF EXISTS dispute_id,
   DROP COLUMN IF EXISTS adjustment_amount;
+
+
+-- ── post migration: 0062_drop_comic_runtime_config.sql ──
+-- post/0062: Drop comic_runtime_config.
+--
+-- The table held one setting: whether an @comic answer to an Unlock question from a member not yet
+-- approved was sent without review. No member could ever reach that path, because the @comic message
+-- route needs Unlock approval and the path answered only members without it. The owner decided on
+-- 2026-10-15 that code no member can reach is deleted, so the scripted Unlock-help path, its admin log
+-- and switch (/admin/comic/unlock-help, POST /api/comic/admin/unlock-help-setting) and this table are
+-- removed together. Nothing else reads or writes the table and no other table references it. The
+-- switch's past changes stay in comic_admin_audit_trail. Guarded with IF EXISTS so it no-ops on a
+-- database that never had it, and re-runs do nothing.
+DROP TABLE IF EXISTS comic_runtime_config;
 

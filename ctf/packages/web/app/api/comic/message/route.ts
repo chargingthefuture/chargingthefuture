@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireComicReadAccess } from '../_lib';
 import { COMIC_ERROR_CODE } from 'lib/comic/constants';
 import { logComicAudit } from 'lib/comic/audit';
-import { UNLOCK_HELP_SENT_REASON } from 'lib/comic/unlock-help-script';
 import { routeComicMessage, validateComicMessageInput } from 'lib/comic/repository';
 import type { ComicMessageInput } from 'lib/comic/types';
 import { reportError } from 'lib/observability/report';
@@ -63,7 +62,6 @@ type RoutedMessageResult = Awaited<ReturnType<typeof routeComicMessage>>;
 
 const ROUTED_AUDIT_REASON: Record<string, string> = {
   human_first: 'safety_human_first',
-  answered: UNLOCK_HELP_SENT_REASON,
 };
 
 function routedAuditReason(outcome: string): string {
@@ -106,9 +104,7 @@ function respondToRoutedMessage(result: RoutedMessageResult, userId: string): Ne
     },
   });
 
-  // An unreviewed draft is never returned here; the asker gets the holding response. The one answer
-  // that skips review (outcome `answered`, a scripted Unlock answer) reaches them through the comic
-  // stream, which the client reloads right after this call.
+  // An unreviewed draft is never returned here; the asker gets the holding response.
   return NextResponse.json(
     {
       ok: true,

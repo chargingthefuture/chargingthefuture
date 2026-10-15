@@ -169,22 +169,6 @@ its plugin-routing role (today's hardcoded `getActionForText`) becomes Rasa-back
 ## User Features
 
 1. Reach the assistant with `@comic <question>`; reply renders inline.
-   - **Unlock questions from a member not yet approved (2026-09-26).** A question that names Quora
-     plus a word for the link ("profile", "URL", "link", "address"), or says "profile URL", gets a
-     **scripted draft** built from `lib/unlock/quora-url-help-steps.ts`, picked by which way the
-     member is stuck: can't get into the account, a link that was refused, on the Quora app, or the
-     plain browser steps (which also carry the one-line app version). Any other question naming
-     Quora, verifying, Unlock or approval goes to the model as usual, with a short list of true facts
-     about Unlock added to its instructions (a person reviews every submission; the assistant cannot
-     approve anyone; not finishing never costs the account; the hint box is the way in when the URL
-     cannot be found). **These answers are sent without review** (owner decision, 2026-09-26: volume
-     is low, the assistant cannot approve anybody, and the decision is reversible). This is the only
-     @comic path that skips review; everything else is held exactly as before. A scripted answer is
-     on screen as soon as the question is sent; a model answer appears when it is drafted, and if
-     the model fails a fixed fallback is sent instead, so an Unlock question never waits in the
-     review queue. The switch is on the Unlock help log page; off puts these answers back in the
-     queue with the draft attached. The assistant has no tool that approves anybody. A member not yet approved also sees an "I can’t find my Quora profile URL" chip under
-     the chat that sends that question to @comic in one tap.
 2. Peer-to-peer messages (no `@`) are never sent to the bot.
 3. When unsure, the bot shows a clear pre-approved holding response and hands the question
    to a human — the user is never shown speculative content.
@@ -238,22 +222,6 @@ its plugin-routing role (today's hardcoded `getActionForText`) becomes Rasa-back
 
 ## Target Admin / Owner Features
 
-### Unlock help log (shipped 2026-09-26)
-
-`/admin/comic/unlock-help` (admin-only, linked from `/admin` as **Unlock Help Log**). At the top, the
-**Send without review** switch (on by default; see User Features 1) — the one control on the page,
-writing `comic_runtime_config` through `POST /api/comic/admin/unlock-help-setting` and recorded in
-the audit log. Below it, read-only, the page lists every @comic question about Unlock asked by a member who was not yet approved, newest first
-(most recent 500): the case it was tagged with, the question, the answer actually sent (or the review
-status when none was), whether it was sent without review, the member's own rating of it, and the
-outcome read live from `unlock_verification_submissions` — approved
-(with how many days after asking), submitted and waiting, submitted and not approved, or no
-submission yet. A table on top counts, per case, how often it was asked, answered, corrected by a
-reviewer, rated not helpful (or flagged) by the member, and followed by approval — the evidence for
-keeping the switch on or turning it off. **Copy as text** puts all of it on the clipboard for pasting from
-a phone. Rendered on the server from `lib/comic/unlock-help-log.ts`. Nothing on it can change a
-review or a member's Unlock status.
-
 ### Audit log (shipped 2026-08-28)
 
 A collapsible **Audit log** panel at the bottom of `/admin/comic/knowledge` lists every admin
@@ -304,14 +272,6 @@ ones that were refused, and why**. Most recent 200, loaded lazily on first expan
   **Rasa NLU YAML export**.
 - Client-side home-chat routing in `use-home-chat.ts` (no dedicated server route;
   `POST /api/commons/messages` is a stub).
-- `POST /api/comic/admin/unlock-help-setting` — admin, CSRF-guarded (command
-  `comic.admin.unlock-help.set-review`). Body `{ withoutReview: boolean }`; writes
-  `comic_runtime_config.unlock_help_without_review` and an audit row on success and failure. Returns
-  the saved setting.
-- `GET /admin/comic/unlock-help` — admin page (server-rendered) for the Unlock help log and the
-  switch above. Reads `comic_turns` (user turns whose `intent` starts `unlock_help:`), `comic_conversations`,
-  `comic_review_queue`, the answer turn, and `unlock_verification_submissions`. Read-only.
-
 ### Implemented (backend foundation, server-only — `comic.*`)
 Built on `feat/comic-ai-assistant`; all server-only routes (no rendered surface), under
 `ctf/packages/web/app/api/comic/`. Each route gates auth via `lib/auth/server-authz`
@@ -558,17 +518,6 @@ comic generation is **not** forced into that feed-shaped table; comic captures r
 its own `comic_turns` and emits a structured `[comic.inference]` console audit for parity (revisit
 if a comic-native inference log is needed). The feed `feed_answer_ratings` table is **not** reused
 for comic answers (its FK targets `feed_answers`); comic ratings live in `comic_answer_ratings`.
-
-**Runtime setting (added 2026-09-26).**
-
-- `comic_runtime_config` — one row (`singleton_id` boolean pk, CHECK true), `unlock_help_without_review`
-  boolean NOT NULL default true, `updated_by_user_id` text null, `updated_at`. No row means the
-  default (on). Read on every Unlock question by `isUnlockHelpSentWithoutReview` in
-  `lib/comic/runtime-config.ts`, which holds the answer for review if the read fails. Holds no member
-  data. Created by `schema.sql` and `db/migrations/post/0041_comic_runtime_config.sql`.
-- An Unlock answer sent without review is an ordinary `comic_review_queue` row with `status`
-  `approved`, `answer_turn_id` = `draft_turn_id`, no `reviewer_user_id`, and `reason`
-  `unlock_help_sent_without_review`.
 
 **Admin audit trail (added 2026-08-28).**
 
@@ -831,6 +780,7 @@ buckets are not reproduced — only real provenance (engine / intent / safety ca
 
 ## Change Log
 
+- 2026-10-15: **The scripted Unlock-help path, its log and its switch are removed (owner decision).** The path answered @comic questions about Unlock only for members not yet approved, but `POST /api/comic/message` needs Unlock approval, so no member could ever reach it. The owner decided code no member can reach is deleted. Removed: `lib/comic/unlock-help-plan.ts`, `unlock-help-script.ts`, `unlock-help-log.ts`, `unlock-help-log-format.ts`, `runtime-config.ts` and their test; the admin page `/admin/comic/unlock-help` with its `/admin` link and `components/comic/comic-unlock-help-log.tsx`; `POST /api/comic/admin/unlock-help-setting` with its command and access-policy entries (`comic.admin.unlock-help.set-review`); the `answered` outcome of `comic.message.route` (now 1.3.0, which also no longer lists `comic_runtime_config` or `unlock_verification_submissions`); and the `comic_runtime_config` table (`db/migrations/post/0062_drop_comic_runtime_config.sql`, no longer created in `schema.sql`). Every @comic answer is held for review, with no exception. `routeComicMessage` and the draft paths keep working without the Unlock branch, and a turn's `intent` is always null. The audit panel keeps its label for `comic.admin.unlock-help.set-review` so past switch changes in `comic_admin_audit_trail` still read in words. The "Show me where to find it" steps in the Unlock help box are unchanged.
 - 2026-10-12: **AI drafts wait out a RunPod cold start instead of giving up at 30s, and a second press no longer sends a second billed job.** (Owner report: a "Generate draft" press timed out at 30s, RunPod finished the job anyway, and a second press sent another job, so one answer was billed twice.) (1) `lib/chatbot/ollama.ts`: `callOllamaChat` takes an optional `{ timeoutMs }`; review drafts (`generateComicDraft`, used by the ask-time background draft and by "Generate draft") pass the new `OLLAMA_DRAFT_TIMEOUT_MS` (5 minutes). The Feed assisted answer keeps the 30s default. (2) When a RunPod job runs out of time it is now canceled (`POST /cancel/<id>`, best-effort) so it does not start later and get billed for an answer nobody keeps. The timeout reason now says the job was canceled and to check the endpoint has at least 1 max worker, since RunPod sets it to 0 after about two weeks with no requests. (3) New `lib/comic/draft-in-flight.ts` (`runDraftOnce`): one draft per review item at a time, process-local. A "Generate draft" press while that item's draft is already running — from an earlier press or from ask time — joins it and gets the same result instead of sending a new job. The draft is saved on the review row whether or not the reviewer is still on the screen, and nothing reaches the asker until the owner approves. (4) Dashboard: while a draft is generating, the note under the actions says the model may take a few minutes to start and the draft is saved on the question when ready. No schema, route or contract change.
 
 - 2026-10-05: **Contributing no longer gets round the Unlock spam denylist, and a failed link to Unlock is said out loud.** `linkContributionToUnlock` opened the Unlock submission but ignored the status it came back with, so a Quora URL on the spam denylist was marked spam with no app-wide block and audited as `allow`/`ok`. It now applies the same block as the Unlock screen's own route — the helper moved from that route into `lib/unlock/denylist-block.ts` and is shared through `lib/shared/unlock-interface.ts` — and audits `deny`/`spam_denylisted`, with the submission id in the audit metadata. Both catches in `lib/comic/contribution-unlock-link.ts` now report the error (`contribution_unlock_status_check`, `contribution_unlock_link`). On `/knowledge`, the receipt has a line for the `failed` outcome (writing received, verification could not be started from here, finish it on the Unlock screen), and a failed load of "What you have sent" shows a line saying so instead of the section vanishing with its Withdraw buttons. The review dashboard reports a failed training-count or plugin-list load and shows the reason where the counter or picker would be. No schema, route-shape or contract change.

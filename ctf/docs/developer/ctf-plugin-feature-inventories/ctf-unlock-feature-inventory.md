@@ -56,8 +56,8 @@ This plugin must:
    carry a **"Show me where to find it"** section: a picture of where the address is (in a browser,
    and in the Quora app's ⋯ → Share → Copy link menu) and numbered steps for four cases — in a web
    browser, in the Quora app, a link that was not accepted, and an account the member cannot get
-   into. The steps are the same text the scripted @comic answer is built from
-   (`lib/unlock/quora-url-help-steps.ts`). On the Unlock screen the button still records the request
+   into. The steps live in `lib/unlock/quora-url-help-steps.ts` (the scripted @comic answer
+   that also used them was removed on 2026-10-15). On the Unlock screen the button still records the request
    and opens the Commons; in the Commons the button reads "Send this to the team", is enabled once
    the hint box has text, and saves the hint without leaving the page. The Commons copy points at
    the chat just below. It no longer points at @comic or an "I can’t find my Quora profile URL" chip:
