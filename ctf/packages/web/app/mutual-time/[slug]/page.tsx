@@ -4,6 +4,8 @@ import { getUnlockAccessTier } from 'lib/unlock/access';
 import { getHostedSignInUrl } from 'lib/auth/provider-env';
 import { getPublicEvent, getViewerPicks } from 'lib/mutual-time/repository';
 import { MutualTimePublic } from '@/components/mutual-time/mutual-time-public';
+import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,7 +21,12 @@ export default async function MutualTimePublicPage({ params }: { params: Promise
     notFound();
   }
 
-  const identity = await resolveRequestIdentity().catch(() => null);
+  // The link is public, so a failed sign-in lookup still renders the event, as a signed-out view.
+  // It is reported so the failure is not invisible.
+  const identity = await resolveRequestIdentity().catch((error: unknown) => {
+    reportError(error, { area: 'mutual-time', op: 'public_page_identity', extra: { slug } });
+    return null;
+  });
   const userId = identity?.isAuthenticated ? identity.userId : null;
   const isSignedIn = Boolean(userId);
 
@@ -27,9 +34,16 @@ export default async function MutualTimePublicPage({ params }: { params: Promise
   let picks: string[] = [];
   let expiredPicks = 0;
   if (userId) {
-    const tier = await getUnlockAccessTier(userId).catch(() => null);
+    // A failed approval or picks lookup must not fall back to the not-approved or no-picks view: an
+    // approved member would be sent to verification, or think their vote was lost. Throw instead,
+    // so the page error screen shows and the member can retry.
+    const failLookup = (lookup: string) => (error: unknown): never => {
+      reportError(error, { area: 'mutual-time', op: 'public_page_viewer', extra: { slug, lookup } });
+      throw new Error(`Mutual Time event ${slug}: the ${lookup} lookup failed: ${failureReason(error)}`);
+    };
+    const tier = await getUnlockAccessTier(userId).catch(failLookup('approval'));
     canVote = tier === 'approved_full' || Boolean(identity?.isAdmin);
-    const viewerPicks = await getViewerPicks(slug, userId).catch(() => ({ picks: [], expiredCount: 0 }));
+    const viewerPicks = await getViewerPicks(slug, userId).catch(failLookup('saved picks'));
     picks = viewerPicks.picks;
     expiredPicks = viewerPicks.expiredCount;
   }

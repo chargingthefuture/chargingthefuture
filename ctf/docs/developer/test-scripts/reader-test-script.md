@@ -98,6 +98,17 @@ unchanged.
 **Expect:** The Unlock nudge, not the page. Reader is not on the exception list and must not read as
 though it were.
 
+### RD-4b — Signed out, the page does not promise an account is enough
+
+**Role:** signed-out visitor · **Surfaces:** web (phone-width)
+
+**Steps:**
+
+1. Sign out and open `/apps/reader`.
+
+**Expect:** The public preview says Reader has no public view yet and opens once you have an account
+and finish verifying it. Nothing on it says a free account is all it takes.
+
 ---
 
 ### RD-5 — The reader keeps its sign-in

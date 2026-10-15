@@ -323,6 +323,7 @@ Android pixel pass to `MobileClickLog.tsx` remains tracked in `PRODUCTION_READIN
 
 ## Change Log
 
+- 2026-10-15: **The empty state says what is shared (owner-approved copy fix, #2798).** It ended with "All data is only visible to you.", while a tagged incident is always shared with the owner, an untagged one can be shared by choice, and grouped totals may be published (`share-copy.ts`). The sentence now says notes stay private, that tagged incidents and any the member chooses to share send the owner only the date, rough area, and tags, and that grouped totals may be published.
 - 2026-10-12: **A sharing default that fails to load says so.** The preferences hook dropped a
   failed `GET /api/click-log/preferences` without a word, leaving the toggle off. Every new incident
   is sent with an explicit `sharedWithOwner`, so the server never falls back to the stored default:
