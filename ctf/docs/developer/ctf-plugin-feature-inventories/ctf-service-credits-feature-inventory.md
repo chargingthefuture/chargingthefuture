@@ -223,7 +223,7 @@ Domain tables:
 3. `service_credits_escrow_holds` — `transfer_id` is nullable: a hold has no transfer until `releaseEscrow` sets it.
 4. `service_credits_governance_events` — `governance_ticket_id` is **TEXT** (a free-text ticket reference such as `unlock:submission:5`, `skill-up:<cohort>:completion:<id>`, `contribution-<id>`, or an operator-typed ticket), not a UUID. A legacy UUID-typed column is converted to TEXT by a guarded block in `schema.sql`.
 5. `service_credits_treasury_events` — unique on (`event_type`, `actor_id`, `idempotency_key`), the deletion reclaim's replay target.
-6. `service_credits_dispute_adjustments` — the case and amount live in `dispute_case_id` and `amount`; the legacy `dispute_id` and `adjustment_amount` columns are nullable and unread.
+6. `service_credits_dispute_adjustments` — the case and amount live in `dispute_case_id` and `amount`. The legacy `dispute_id` and `adjustment_amount` columns are dropped by `db/migrations/post/0061_drop_service_credits_dispute_adjustment_legacy_columns.sql`.
 7. `service_credits_command_idempotency`
 8. `service_credits_adapter_outbox`
 9. `service_credits_account_deletion_reclaims`
@@ -302,6 +302,13 @@ ServiceCredits seeds wallets, transfers, escrow holds, and dispute fixtures via 
 
 ## 10) Change Log
 
+- 2026-10-15: **Dropped the legacy dispute adjustment columns (owner directive: unused columns go with a migration).**
+  `service_credits_dispute_adjustments.dispute_id` and `adjustment_amount` came over from the v2
+  database; the code records an adjustment's case and amount in `dispute_case_id` and `amount` and
+  never read or wrote them. `schema.sql` no longer creates them, and
+  `db/migrations/post/0061_drop_service_credits_dispute_adjustment_legacy_columns.sql` drops them
+  from the production table and from the demo schema's copy, where they were still NOT NULL and
+  refused every demo dispute adjustment. No route or contract change.
 - 2026-10-15: **Ledger checks and error answers (code review #2909, #2910, #2911, #2912, #2914).**
   A send to yourself is refused with 400 `service_credits_self_transfer`, so it no longer counts
   toward GDP or the public transfer volume (#2909). A dispute adjustment now loads the dispute
