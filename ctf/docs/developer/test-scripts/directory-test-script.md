@@ -422,8 +422,8 @@ recorded only through the takedown control with a reason.
 already on the blog, `public: true` with its blog address) and at least one private one, each for a
 listing that exists. Note one private invitation's Quora handle.
 **Steps:**
-1. Signed out, open `/apps/directory`. The page shows how many people are listed, **Sign in** and
-   **Create a free account**, then the public invitations as cards: a round avatar with the person's
+1. Signed out, open `/apps/directory`. The page shows how many people are listed, one button,
+   **Sign in or create a free account**, then the public invitations as cards: a round avatar with the person's
    initials (one character for a one-word name), "An invitation to <name>", the date, the opening
    words as a quote, a colored edge, and **Read the invitation**, which opens the blog post. No card
    shows a screenshot. Reload: each person's avatar keeps its colors.

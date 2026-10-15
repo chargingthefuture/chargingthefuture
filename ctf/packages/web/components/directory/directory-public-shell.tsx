@@ -18,7 +18,6 @@ const LOAD_ERROR = 'Could not load the invitations.';
 type DirectoryPublicShellProps = PublicVisitorShellProps & {
   // The Quora handle from a direct link (/apps/directory?invite=<handle>): that person's card shows on top.
   inviteHandle?: string;
-  signUpUrl?: string;
   // The page of the open (already public) invitations, from ?page= in the address.
   page?: number;
 };
@@ -61,7 +60,7 @@ function CondensedCard({ card, t }: { card: InviteCard | InviteTeaser; t: Direct
   );
 }
 
-function Pitch({ t, signInUrl, signUpUrl, verifyUrl }: { t: DirectoryTokens; signInUrl: string; signUpUrl?: string; verifyUrl?: string }) {
+function Pitch({ t, signInUrl, verifyUrl }: { t: DirectoryTokens; signInUrl: string; verifyUrl?: string }) {
   if (verifyUrl) {
     return (
       <a href={verifyUrl} style={{ padding: '14px', borderRadius: 12, background: t.ACCENT, color: '#fff', fontSize: 15, fontWeight: 700, textAlign: 'center', textDecoration: 'none' }}>Finish verifying</a>
@@ -72,10 +71,7 @@ function Pitch({ t, signInUrl, signUpUrl, verifyUrl }: { t: DirectoryTokens; sig
       <p style={{ margin: 0, fontSize: 13, color: t.SUBTLE, lineHeight: 1.55 }}>
         Sign in free to read every invitation. Listed already? Make an account and your listing can be attached to it. Not listed yet? Make an account, finish the check, and add yourself.
       </p>
-      <div style={{ display: 'flex', gap: 8 }}>
-        <a href={signInUrl} style={{ flex: 1, padding: '12px', borderRadius: 12, background: t.ACCENT, color: '#fff', fontSize: 14, fontWeight: 700, textAlign: 'center', textDecoration: 'none' }}>Sign in</a>
-        <a href={signUpUrl ?? signInUrl} style={{ flex: 1, padding: '12px', borderRadius: 12, border: `1px solid ${t.ACCENT}60`, color: t.ACCENT, fontSize: 14, fontWeight: 700, textAlign: 'center', textDecoration: 'none' }}>Create a free account</a>
-      </div>
+      <a href={signInUrl} style={{ padding: '12px', borderRadius: 12, background: t.ACCENT, color: '#fff', fontSize: 14, fontWeight: 700, textAlign: 'center', textDecoration: 'none' }}>Sign in or create a free account</a>
     </div>
   );
 }
@@ -159,7 +155,7 @@ function Invitations({ data, error, t, signInUrl, verifyUrl, handle }: { data: P
  * words. Everything comes from
  * GET /api/directory/invites/public.
  */
-export function DirectoryPublicShell({ signInUrl, verifyUrl, inviteHandle, signUpUrl, page = 1 }: DirectoryPublicShellProps) {
+export function DirectoryPublicShell({ signInUrl, verifyUrl, inviteHandle, page = 1 }: DirectoryPublicShellProps) {
   const { theme } = useTheme();
   const t = getDirectoryTokens(theme);
   const { data, error } = usePublicInvites(inviteHandle, page);
@@ -175,7 +171,7 @@ export function DirectoryPublicShell({ signInUrl, verifyUrl, inviteHandle, signU
         <p style={{ margin: 0, fontSize: 14, color: t.SUBTLE, lineHeight: 1.5 }}>Therapists, housing navigators, legal advocates, and more — searchable by location and specialty.</p>
         {data ? <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: t.TITLE }}>{data.listed.toLocaleString('en-US')} {data.listed === 1 ? 'person' : 'people'} listed</p> : null}
         <PublicShellWorldwide color={t.MUTED} />
-        <Pitch t={t} signInUrl={signInUrl} signUpUrl={signUpUrl} verifyUrl={verifyUrl} />
+        <Pitch t={t} signInUrl={signInUrl} verifyUrl={verifyUrl} />
         <FeaturedInvite handle={inviteHandle} data={data} t={t} />
       </div>
       <div style={{ flex: 1, padding: '0 16px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>

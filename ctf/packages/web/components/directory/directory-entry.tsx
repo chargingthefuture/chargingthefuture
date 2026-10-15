@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
 import type { PluginAuthDecision } from 'lib/auth/server-authz';
-import { getHostedSignInUrl, getHostedSignUpUrl, withSignInReturn } from 'lib/auth/provider-env';
+import { getHostedSignInUrl, withSignInReturn } from 'lib/auth/provider-env';
 import { normalizeInviteHandle } from 'lib/directory/invite-input';
 import { DirectoryPublicShell } from './directory-public-shell';
 import { DirectoryInviteWall } from './directory-invite-wall';
@@ -39,7 +39,6 @@ export function renderDirectoryEntry(
         pluginSlug="directory"
         pluginName="Directory"
         signInUrl={signInUrl}
-        signUpUrl={getHostedSignUpUrl()}
         inviteHandle={handle}
         page={page}
       />
