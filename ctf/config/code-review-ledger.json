@@ -142,9 +142,10 @@
     {
       "name": "community-shell",
       "type": "module",
-      "lastReviewedAt": "2026-10-03T21:25:13.011Z",
-      "lastRunIssues": 6,
-      "partial": false
+      "lastReviewedAt": "2026-10-15T08:24:59.630Z",
+      "lastRunIssues": 9,
+      "partial": false,
+      "updatedAt": "2026-10-15T08:24:59.637Z"
     },
     {
       "name": "concierge",
