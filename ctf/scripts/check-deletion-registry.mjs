@@ -160,7 +160,8 @@ function main() {
   const referenced = new Set(refs.map((r) => r.table));
   const uncovered = [];
   for (const [table, cols] of schemaTables.entries()) {
-    const userColumns = [...cols].filter((c) => /user_id$/.test(c)).sort();
+    // actor_id is the member column on the command-idempotency tables and the admin audit trails.
+    const userColumns = [...cols].filter((c) => /(user_id|actor_id)$/.test(c)).sort();
     if (userColumns.length === 0 || referenced.has(table)) continue;
     if (coverage.has(table)) continue;
     uncovered.push({ table, userColumns });

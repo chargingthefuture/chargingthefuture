@@ -16,8 +16,13 @@ export type GpuBillState = {
   unavailableReason: string | null;
   endpointIds: string[];
   lastReadAt: string | null;
-  // The 30 full days before today, every endpoint added together. null until the first read.
+  // The 30 full days before today, every endpoint added together. null until the first read, and
+  // null while any of those days has not been read for every endpoint (see incompleteReason).
   last30DaysCents: number | null;
+  // Why the 30-day figure is not shown although the bill has been read: some days in the window were
+  // never read, so a sum would come out short. null when every day is there. The read button stays
+  // available, because one read fills the entire window.
+  incompleteReason: string | null;
   last30DaysFrom: string | null;
   last30DaysTo: string | null;
   // Today so far (UTC). Still growing, so it is never part of the monthly figure.
