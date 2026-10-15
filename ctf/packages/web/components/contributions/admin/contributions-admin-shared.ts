@@ -31,7 +31,7 @@ export async function fetchSubmissions(filter: QueueFilter): Promise<Contributio
 
 export async function reviewSubmission(
   submissionId: string,
-  body: { action: 'confirm' | 'reject'; confirmedAmountUsd?: number; reviewNote?: string },
+  body: { action: 'confirm' | 'reject'; confirmedAmountUsd?: number; reviewNote?: string; url?: string },
 ): Promise<ContributionSubmissionAdminView> {
   const res = await fetch(`/api/contributions/admin/submissions/${submissionId}/review`, {
     method: 'POST',

@@ -19,7 +19,7 @@ const FILTERS: { key: QueueFilter; label: string }[] = [
   { key: 'rejected', label: 'Rejected' },
 ];
 
-type ReviewInput = { action: 'confirm' | 'reject'; confirmedAmountUsd?: number; reviewNote?: string };
+type ReviewInput = { action: 'confirm' | 'reject'; confirmedAmountUsd?: number; reviewNote?: string; url?: string };
 
 export type QueueProps = {
   t: ContributionsTokens;
@@ -216,17 +216,24 @@ function ReviewPanel({
   const resultingSc = resultingCredits(confirmedValue, config);
   const isPending = row.status === 'pending';
 
+  // Sent only when the admin changed it, so an untouched field never rewrites the member's link.
+  function editedUrl(): string | undefined {
+    const trimmed = urlField.trim();
+    return isUrlKind && trimmed && trimmed !== initialUrl(row) ? trimmed : undefined;
+  }
+
   function confirm() {
     const amount = Number(confirmedValue);
     onReview(row.id, {
       action: 'confirm',
       confirmedAmountUsd: Number.isFinite(amount) ? amount : undefined,
       reviewNote: note.trim() ? note.trim() : undefined,
+      url: editedUrl(),
     });
   }
 
   function reject() {
-    onReview(row.id, { action: 'reject', reviewNote: note.trim() ? note.trim() : undefined });
+    onReview(row.id, { action: 'reject', reviewNote: note.trim() ? note.trim() : undefined, url: editedUrl() });
   }
 
   return (

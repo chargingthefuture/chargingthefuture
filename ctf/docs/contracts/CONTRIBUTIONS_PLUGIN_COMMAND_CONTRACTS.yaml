@@ -178,6 +178,15 @@ contracts:
       reviewNote:
         type: string
         required: false
+      url:
+        type: string
+        required: false
+        note: >-
+          The Quora post link (quora_comment) or GitHub profile link (github_star) as the admin found
+          it, saved into quoraPostUrl or githubProfileUrl on confirm or reject and replacing what the
+          member sent. Must be an http(s) link (400 contributions_invalid_url otherwise). Omitted or
+          blank keeps the member's link. Refused with 400 contributions_invalid_payload on a
+          gift_card claim, which has no link.
     outputSchema:
       ok:
         type: boolean
