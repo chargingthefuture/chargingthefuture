@@ -33,16 +33,6 @@
       "reason": "Account, profile, and deletion routes behind the account area."
     },
     {
-      "file": "ctf/packages/web/app/api/account/chyme-profile/route.ts",
-      "kind": "machinery",
-      "reason": "Your own Chyme profile record, reachable from the account area."
-    },
-    {
-      "file": "ctf/packages/web/app/api/account/skills-hunt-profile/route.ts",
-      "kind": "machinery",
-      "reason": "Your own SkillsHunt profile record, reachable from the account area."
-    },
-    {
       "file": "ctf/packages/web/app/api/bug-reports/_lib.ts",
       "kind": "machinery",
       "reason": "Filing a problem report. The member most likely to hit a bug is the one stuck in onboarding, and gating this would silence exactly them."

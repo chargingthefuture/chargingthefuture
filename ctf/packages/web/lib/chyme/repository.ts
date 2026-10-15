@@ -2,7 +2,6 @@ import { randomUUID } from 'crypto';
 import { createTransfer } from 'lib/shared/credits-interface';
 import type { ChymeServiceCreditsTransaction } from './types';
 import { sendChymeStreamMessage } from './stream';
-import { deleteBackChannelForUser } from './back-channel';
 
 export async function sendServiceCredits(
   fromUserId: string,
@@ -894,47 +893,6 @@ export async function leaveRoom(
       await setRoomCallActive(client, room.id, false);
     }
   });
-}
-
-export async function markServiceDeletion(userId: string): Promise<ChymeDeletionResponse> {
-  const requestedAtIso = await withDbTransaction(async (client) => {
-    await client.query(
-      `
-        UPDATE chyme_service_profiles
-        SET status = 'deleted', updated_at = NOW(), deleted_at = NOW()
-        WHERE user_id = $1
-      `,
-      [userId],
-    );
-
-    // Remove the member's messages and presence rows from EVERY room (the open main room and the
-    // private Weavers room), keyed on user_id alone — deletion must not leave their content behind in
-    // a room the old main-room-scoped delete never touched.
-    await client.query(`DELETE FROM chyme_messages WHERE user_id = $1`, [userId]);
-    await client.query(`DELETE FROM chyme_room_members WHERE user_id = $1`, [userId]);
-
-    // Back Channel calls hold no history worth keeping, so remove every row this member was part of
-    // (as initiator or recipient) — not scoped to the current room. See lib/chyme/back-channel.ts.
-    await deleteBackChannelForUser(client, userId);
-
-    const inserted = await client.query<{ requested_at: Date }>(
-      `
-        INSERT INTO chyme_deletion_events (user_id, scope, service_name, requested_at, status)
-        VALUES ($1, 'service', 'chyme', NOW(), 'completed')
-        RETURNING requested_at
-      `,
-      [userId],
-    );
-
-    return inserted.rows[0].requested_at.toISOString();
-  });
-
-  return {
-    ok: true,
-    scope: 'service',
-    status: 'completed',
-    requestedAtIso,
-  };
 }
 
 export async function markFullAccountDeletionRequested(userId: string): Promise<ChymeDeletionResponse> {

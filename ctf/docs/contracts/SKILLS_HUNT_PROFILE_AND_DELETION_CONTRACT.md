@@ -137,7 +137,8 @@ If user returns after service-scoped deletion:
 ## 9) API and UX Surface
 
 - Service delete endpoint:
-  - `DELETE /api/account/skills-hunt-profile` (planned)
+  - `DELETE /api/account/services/skills-hunt` (the shared per-service delete, driven by the SkillsHunt
+    entry in `lib/account/deletion-registry.ts`)
 - Full account delete endpoint (or orchestrator):
   - `DELETE /api/account/full-account` (platform orchestrator)
 - Status model (`requested`, `processing`, `completed`, `failed`):

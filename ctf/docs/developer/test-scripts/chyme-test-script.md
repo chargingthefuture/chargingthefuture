@@ -340,20 +340,20 @@ phone is locked — that is Android-only (CH-10).
 ---
 
 ### CH-11 · Deletion also clears the Stream copy (privacy)
-**Role:** member · **Surfaces:** api/data (no in-app button — call the endpoint directly)
+**Role:** member · **Surfaces:** web (Account & Data) + api/data
 **Precondition:** a test member who has sent at least one chat message (so there is a Stream copy).
 Access to the Stream dashboard for the app behind `STREAM_API_KEY`.
 **Steps:**
-1. As that member, send a chat message, then delete: call `DELETE /api/account/chyme-profile`
-   (service scope) OR `DELETE /api/account/full-account` (entire account). Also worth checking the
+1. As that member, send a chat message, then delete: on Account & Data, delete the Chyme service
+   (`DELETE /api/account/services/chyme`) OR the entire account (`DELETE /api/account/full-account`). Also worth checking the
    Clerk-webhook path (delete the user in Clerk) since that also runs the orchestrator hook.
 2. In the Stream dashboard, look up the member's Stream user `chyme-<userId>` and their messages in the
    `messaging:chyme-main-room` channel.
 **Expected:** After the delete, the member's rows are gone from Postgres (`chyme_messages`,
 `chyme_room_members`) **and** their Stream user `chyme-<userId>` is hard-deleted with messages marked
-deleted — the Stream copy no longer lingers, on any deletion path (service route directly; full-account
-/ internal / Clerk webhook via the orchestrator's external-cleanup hook). The audit line records
-`streamCleared: yes`. If Stream is down at delete time, the deletion still succeeds and the failure is
+deleted — the Stream copy no longer lingers, on any deletion path (service delete, full-account,
+internal delete and Clerk webhook all run the orchestrator's external-cleanup hook). If Stream is
+down at delete time, the deletion still succeeds and the failure is
 logged for retry/backfill — the account is still deleted. Since 2026-09-18 that log line carries
 Stream's own reason (Sentry op `stream_delete_user`, area `chyme`), so "unconfigured" and "refused"
 are distinguishable in the record.
