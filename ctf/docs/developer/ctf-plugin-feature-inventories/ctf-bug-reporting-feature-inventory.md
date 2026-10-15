@@ -29,8 +29,9 @@ and does no external calls.
   shell's icon rail on the desktop layout, and the top bar on the phone-width layout). It is
   **not** a plugin grid tile and **not** a standalone page — it opens a modal.
 - One short form: what went wrong (required), what you were trying to do (optional). Page and
-  plugin are attached automatically; the browser is read server-side. (No app-version constant
-  exists in the app yet, so `appVersion` is not sent.)
+  plugin are attached automatically; the browser is read server-side. The Android app also sends
+  its installed version (`appVersion`, from `Constants.expoConfig.version`); the web app has no
+  app-version constant and sends none.
 - Under the intro line, above the first text box: "Not a bug? To talk to Farah about your
   work." — "talk to Farah about your work" opens One Percent (https://farahbrunache.com), the paid tier, in a new
   tab (web) or the device browser (android). It is a pointer only: the form, its fields and the
@@ -195,6 +196,12 @@ No seed script. Reports are user-generated at runtime; there is no fixture data 
   shows the reason a load failed. The resolve route's 400 for a body that is not JSON carries
   `reason`, and its 409 now answers `bug_reports.conflict` instead of `bug_reports.forbidden`
   (contracts updated; no client read that code). No schema change.
+- 2026-10-12: **Android reports carry the app version, and a reply that cannot be read is
+  reported.** `submitBugReport` in `packages/mobile/src/features/bug-reporting/api.ts` now sends
+  `appVersion` from `Constants.expoConfig.version` when it is set, so the admin page shows which
+  Android build a report came from (the web app still sends none). When the 201 reply body fails to
+  parse, the error is reported (`op: submit_parse`) before the screen falls back to the plain
+  success line. No route, schema or contract change.
 - 2026-10-14: **Code-review fixes (#2685, #2686, #2693 items 1 to 3).** `createBugReportIssues.mjs`
   now claims each report before publishing it (`SELECT ... FOR UPDATE` while still `new`, then the
   issue, then `UPDATE ... AND status = 'new'`, in one transaction), so an admin who rejects a clean

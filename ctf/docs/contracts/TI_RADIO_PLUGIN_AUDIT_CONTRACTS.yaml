@@ -65,3 +65,5 @@ auditEvents:
     notes: >-
       Admin only. The reason is kept on the row as well as here, because taking somebody's slot off a
       public schedule is the action in this plugin that most needs to be answerable for afterwards.
+      The durable row stores slotId as target_type/target_id and hostUserId in metadata, so it still
+      names whose slot it was after the host's slot rows are deleted.

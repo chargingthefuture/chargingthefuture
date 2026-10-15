@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { reportError } from "lib/observability/report";
 import { getMutualTimeTokens } from "./mutual-time-shared";
 
 type Tokens = ReturnType<typeof getMutualTimeTokens>;
@@ -106,8 +107,10 @@ export function MutualTimeAuditPanel({ t }: { t: Tokens }) {
       }
       const data = (await res.json()) as { events?: AuditEvent[] };
       setEvents(data.events ?? []);
-    } catch {
-      setErr("Could not load the audit trail.");
+    } catch (caught) {
+      reportError(caught, { area: "mutual-time", op: "audit_panel_load" });
+      const reason = caught instanceof Error && caught.message ? caught.message : String(caught);
+      setErr(`Could not load the audit trail: ${reason}`);
     } finally {
       setLoading(false);
     }
