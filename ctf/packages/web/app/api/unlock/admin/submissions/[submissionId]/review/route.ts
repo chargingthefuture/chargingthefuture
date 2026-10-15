@@ -131,7 +131,7 @@ async function catchUpPluginsOnApproval(input: {
     return;
   }
 
-  const catchUp = await runUnlockApprovalCatchUp(input.targetUserId);
+  const catchUp = await runUnlockApprovalCatchUp(input.targetUserId, input.actorUserId);
 
   // Recorded because it happened to somebody else's account, and because a notice nobody can see a
   // record of is not a thing anybody can check afterwards.

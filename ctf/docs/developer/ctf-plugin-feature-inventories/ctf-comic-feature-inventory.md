@@ -249,9 +249,14 @@ ones that were refused, and why**. Most recent 200, loaded lazily on first expan
    about counts with people already having a hard week). **Only a member who has finished Unlock
    receives credits** (owner decision, 2026-07-29); anyone signed in may contribute. `granted_at` is
    stamped before the mint and the mint carries a per-contribution idempotency key, so a retried
-   review, a double-click, or a crash between the two cannot mint twice. The admin screen states which
-   of granted / not-yet-verified / already-granted / failed happened, so a skipped grant never looks
-   like a silent no-op.
+   review, a double-click, or a crash between the two cannot mint twice. A mint that throws clears
+   `granted_at` again, so the contribution never reads as granted with no credits behind it. The admin
+   screen states which of granted / not-yet-verified / already-granted / failed happened, so a skipped
+   grant never looks like a silent no-op. **Writing accepted before the member was verified gets its
+   credits when Unlock approves them** (owner decision, 2026-10-15): the Unlock approval runs
+   `grantHeldContributionCredits` (`lib/comic/approval-catch-up.ts`) through
+   `lib/shared/unlock-approval-interface.ts`, which grants each of the member's accepted contributions
+   with no `granted_at`, with the approving admin as the grant's actor.
 
 1. **Review & correction dashboard** — queue of bot turns awaiting review; approve, edit, or
    reject; corrections become training examples. **[Web UI delivered — design `9a4a1af`; at
@@ -779,6 +784,21 @@ buckets are not reproduced — only real provenance (engine / intent / safety ca
 `nlu_confidence`, surfaced as "Not yet scored" when null) is shown.
 
 ## Change Log
+
+- 2026-10-15: **Credits held back for an unverified contributor are granted on Unlock approval
+  (owner decision; code-review #2678).** An accepted contribution from a member not yet verified got
+  no credits, and the admin screen said the grant could be made once they finished Unlock, but
+  nothing ever made it: the accept route was the only caller and it acts only on writing still
+  waiting for review. The Unlock approval catch-up (`runUnlockApprovalCatchUp`, now also taking the
+  approving admin) runs `grantHeldContributionCredits`, which grants each accepted contribution of
+  that member with `granted_at IS NULL` through `grantContributionRecognition`. Safe to run twice:
+  the stamp and the per-contribution idempotency key both stop a second grant. A failed grant used
+  to leave `granted_at` stamped with no credits behind it; the stamp is now cleared when the mint
+  throws. The audit row `unlock.admin.submission.approval_catch_up` records
+  `comicContributionsGranted`. Admin wording on the review screen: the not-verified line now says the
+  credits are granted when the member finishes Unlock, and the failure line no longer tells the admin
+  to retry by hand, since there is no screen for that. New test case CMC-A1b and
+  `lib/comic/approval-catch-up.test.ts`.
 
 - 2026-10-15: **The scripted Unlock-help path, its log and its switch are removed (owner decision).** The path answered @comic questions about Unlock only for members not yet approved, but `POST /api/comic/message` needs Unlock approval, so no member could ever reach it. The owner decided code no member can reach is deleted. Removed: `lib/comic/unlock-help-plan.ts`, `unlock-help-script.ts`, `unlock-help-log.ts`, `unlock-help-log-format.ts`, `runtime-config.ts` and their test; the admin page `/admin/comic/unlock-help` with its `/admin` link and `components/comic/comic-unlock-help-log.tsx`; `POST /api/comic/admin/unlock-help-setting` with its command and access-policy entries (`comic.admin.unlock-help.set-review`); the `answered` outcome of `comic.message.route` (now 1.3.0, which also no longer lists `comic_runtime_config` or `unlock_verification_submissions`); and the `comic_runtime_config` table (`db/migrations/post/0062_drop_comic_runtime_config.sql`, no longer created in `schema.sql`). Every @comic answer is held for review, with no exception. `routeComicMessage` and the draft paths keep working without the Unlock branch, and a turn's `intent` is always null. The audit panel keeps its label for `comic.admin.unlock-help.set-review` so past switch changes in `comic_admin_audit_trail` still read in words. The "Show me where to find it" steps in the Unlock help box are unchanged.
 - 2026-10-12: **AI drafts wait out a RunPod cold start instead of giving up at 30s, and a second press no longer sends a second billed job.** (Owner report: a "Generate draft" press timed out at 30s, RunPod finished the job anyway, and a second press sent another job, so one answer was billed twice.) (1) `lib/chatbot/ollama.ts`: `callOllamaChat` takes an optional `{ timeoutMs }`; review drafts (`generateComicDraft`, used by the ask-time background draft and by "Generate draft") pass the new `OLLAMA_DRAFT_TIMEOUT_MS` (5 minutes). The Feed assisted answer keeps the 30s default. (2) When a RunPod job runs out of time it is now canceled (`POST /cancel/<id>`, best-effort) so it does not start later and get billed for an answer nobody keeps. The timeout reason now says the job was canceled and to check the endpoint has at least 1 max worker, since RunPod sets it to 0 after about two weeks with no requests. (3) New `lib/comic/draft-in-flight.ts` (`runDraftOnce`): one draft per review item at a time, process-local. A "Generate draft" press while that item's draft is already running — from an earlier press or from ask time — joins it and gets the same result instead of sending a new job. The draft is saved on the review row whether or not the reviewer is still on the screen, and nothing reaches the asker until the owner approves. (4) Dashboard: while a draft is generating, the note under the actions says the model may take a few minutes to start and the draft is saved on the question when ready. No schema, route or contract change.

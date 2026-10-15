@@ -17,6 +17,7 @@
 import { reportError } from 'lib/observability/report';
 // Only a top-level *-interface.ts in this folder may import a plugin's lib, which is what
 // check-plugin-boundaries.mjs enforces. That is why this file is the one doing it.
+import { grantHeldContributionCredits } from 'lib/comic/approval-catch-up';
 import { announceHeldReplies } from 'lib/fireside/approval-catch-up';
 
 /** What each plugin did about the approval, for the audit row the caller writes. */
@@ -29,6 +30,11 @@ export type UnlockApprovalCatchUp = {
    * from this approval.
    */
   firesidePeopleTold: number;
+  /**
+   * How many of this member's knowledge library contributions had their ServiceCredits granted:
+   * writing accepted while they were not verified yet, which the grant passed over at the time.
+   */
+  comicContributionsGranted: number;
 };
 
 /**
@@ -42,8 +48,9 @@ export type UnlockApprovalCatchUp = {
  * Idempotent, because it has to be. An account can be re-reviewed, and each plugin's catch-up is
  * written so a second run tells nobody a second time.
  */
-export async function runUnlockApprovalCatchUp(userId: string): Promise<UnlockApprovalCatchUp> {
+export async function runUnlockApprovalCatchUp(userId: string, approvedByUserId: string): Promise<UnlockApprovalCatchUp> {
   let firesidePeopleTold = 0;
+  let comicContributionsGranted = 0;
 
   try {
     firesidePeopleTold = await announceHeldReplies(userId);
@@ -51,5 +58,12 @@ export async function runUnlockApprovalCatchUp(userId: string): Promise<UnlockAp
     reportError(error, { area: 'unlock-approval-catch-up', op: 'fireside_held_replies' });
   }
 
-  return { firesidePeopleTold };
+  // The approving admin is recorded as the grant's actor, the way the reviewer is on accept.
+  try {
+    comicContributionsGranted = await grantHeldContributionCredits(userId, approvedByUserId);
+  } catch (error) {
+    reportError(error, { area: 'unlock-approval-catch-up', op: 'comic_held_contribution_credits' });
+  }
+
+  return { firesidePeopleTold, comicContributionsGranted };
 }

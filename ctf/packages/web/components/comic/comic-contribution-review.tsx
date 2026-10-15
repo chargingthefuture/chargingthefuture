@@ -64,10 +64,10 @@ function buildReviewPayload(
 function grantLine(grant: ReviewResult['grant']): string {
   if (grant?.status === 'granted') return `${grant.amount} ServiceCredits granted.`;
   if (grant?.status === 'skipped_not_unlocked') {
-    return 'No credits: this member is not verified yet. The writing is in the library; the grant can be made once they finish Unlock.';
+    return 'No credits yet: this member is not verified. The writing is in the library; the credits are granted when they finish Unlock.';
   }
   if (grant?.status === 'already_granted') return 'Credits were already granted for this contribution.';
-  return `The credits grant did not go through (${grant?.reason ?? 'no reason given'}) — retry it by hand.`;
+  return `The credits grant did not go through (${grant?.reason ?? 'no reason given'}). Nothing was granted.`;
 }
 
 function acceptNotice(data: ReviewResult | null): string {

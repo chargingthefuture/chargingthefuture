@@ -383,3 +383,26 @@ export async function markContributionGranted(contributionId: string): Promise<b
   );
   return (result.rowCount ?? 0) > 0;
 }
+
+// Undo the stamp after a mint that threw, so the grant can be tried again. Safe because the mint
+// carries a per-contribution idempotency key: a retry after a mint that did land returns the first
+// grant rather than making a second one.
+export async function clearContributionGranted(contributionId: string): Promise<void> {
+  await queryDb(
+    `UPDATE comic_contributions SET granted_at = NULL, updated_at = NOW()
+     WHERE id = $1::uuid`,
+    [contributionId],
+  );
+}
+
+// The accepted contributions of one member that have not had their credits yet: accepted while the
+// member was not verified, or whose grant failed. Withdrawn and declined ones are left out.
+export async function listUngrantedAcceptedContributionIds(userId: string): Promise<string[]> {
+  const result = await queryDb<{ id: string }>(
+    `SELECT id::text AS id FROM comic_contributions
+     WHERE user_id = $1 AND status = 'accepted' AND granted_at IS NULL
+     ORDER BY created_at ASC`,
+    [userId],
+  );
+  return result.rows.map((row) => row.id);
+}

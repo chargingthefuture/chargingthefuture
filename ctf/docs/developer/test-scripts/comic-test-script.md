@@ -235,9 +235,31 @@ wrong, not Quora.
 - After step 4: the left-out entry is **not** in `comic_knowledge_entries`; the kept ones are, each
   carrying `contribution_id`. The screen says how many were added and that the credits were granted.
 - After step 5: the writing is in the library, and the screen says **no credits, because that member
-  is not verified yet**, and that the grant can be made once they finish Unlock. This is a decision,
-  not a failure — it must never look like a silent no-op.
+  is not verified yet**, and that the credits are granted when they finish Unlock. This is a
+  decision, not a failure — it must never look like a silent no-op.
 - `granted_at` is set only on the verified member's row.
+
+**Result:** web ☐
+
+---
+
+## CMC-A1b · Writing accepted before Unlock gets its credits when the member is approved
+**Role:** admin · **Precondition:** a contribution from a member who is not verified yet was accepted
+(step 5 above), so it is in the library with no credits.
+**Steps:**
+1. Note the member's ServiceCredits balance.
+2. Approve the member in `/admin/unlock`.
+3. Check the member's balance and the contribution's `granted_at`.
+4. Reject and then approve the same member again in `/admin/unlock`.
+**Expected:**
+- After step 2 the member has 100 more credits for each such accepted contribution (on top of the
+  Unlock reward), and `granted_at` is set on each.
+- The Unlock audit row `unlock.admin.submission.approval_catch_up` carries
+  `comicContributionsGranted` with that count.
+- A withdrawn or declined contribution is never granted.
+- Step 4 grants nothing more: `comicContributionsGranted` is 0 and the balance is unchanged.
+- The approval itself never fails because a grant did; a failed grant is reported and its
+  `granted_at` is left empty.
 
 **Result:** web ☐
 
