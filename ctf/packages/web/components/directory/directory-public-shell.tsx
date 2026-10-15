@@ -7,7 +7,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
 import { failureText, responseFailureText } from 'lib/errors/client-failure';
-import { getDirectoryTokens, type DirectoryTokens } from './shared';
+import { getDirectoryTokens, onAccentText, type DirectoryTokens } from './shared';
 import { PublicShellWorldwide } from '@/components/plugins/public-shell-worldwide';
 import { inviteCardSeed, type InviteCard, type InviteTeaser, type PublicInvites } from './directory-invite-format';
 import { INVITE_LINK_CLASS, InviteCardView } from './directory-invite-card';
@@ -63,7 +63,7 @@ function CondensedCard({ card, t }: { card: InviteCard | InviteTeaser; t: Direct
 function Pitch({ t, signInUrl, verifyUrl }: { t: DirectoryTokens; signInUrl: string; verifyUrl?: string }) {
   if (verifyUrl) {
     return (
-      <a href={verifyUrl} style={{ padding: '14px', borderRadius: 12, background: t.ACCENT, color: '#fff', fontSize: 15, fontWeight: 700, textAlign: 'center', textDecoration: 'none' }}>Finish verifying</a>
+      <a href={verifyUrl} style={{ padding: '14px', borderRadius: 12, background: t.ACCENT, color: onAccentText(t), fontSize: 15, fontWeight: 700, textAlign: 'center', textDecoration: 'none' }}>Finish verifying</a>
     );
   }
   return (
@@ -71,7 +71,7 @@ function Pitch({ t, signInUrl, verifyUrl }: { t: DirectoryTokens; signInUrl: str
       <p style={{ margin: 0, fontSize: 13, color: t.SUBTLE, lineHeight: 1.55 }}>
         Sign in free to read every invitation. Listed already? Make an account and your listing can be attached to it. Not listed yet? Make an account, finish the check, and add yourself.
       </p>
-      <a href={signInUrl} style={{ padding: '12px', borderRadius: 12, background: t.ACCENT, color: '#fff', fontSize: 14, fontWeight: 700, textAlign: 'center', textDecoration: 'none' }}>Sign in or create a free account</a>
+      <a href={signInUrl} style={{ padding: '12px', borderRadius: 12, background: t.ACCENT, color: onAccentText(t), fontSize: 14, fontWeight: 700, textAlign: 'center', textDecoration: 'none' }}>Sign in or create a free account</a>
     </div>
   );
 }
@@ -128,7 +128,7 @@ function LockedWall({ data, t, signInUrl, verifyUrl }: { data: PublicInvites; t:
         <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', paddingTop: 48, gap: 12 }}>
           <div style={{ width: 48, height: 48, borderRadius: 24, border: `2px solid ${t.ACCENT}50`, background: t.BG, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Lock size={20} color={t.ACCENT} /></div>
           <div style={{ fontSize: 15, fontWeight: 700, textAlign: 'center', color: t.TITLE }}>Sign in to read the invitations</div>
-          <a href={verifyUrl ?? signInUrl} style={{ padding: '10px 24px', borderRadius: 9, background: t.ACCENT, color: '#fff', fontSize: 13, fontWeight: 700, textDecoration: 'none' }}>{verifyUrl ? 'Finish verifying' : 'Sign in'}</a>
+          <a href={verifyUrl ?? signInUrl} style={{ padding: '10px 24px', borderRadius: 9, background: t.ACCENT, color: onAccentText(t), fontSize: 13, fontWeight: 700, textDecoration: 'none' }}>{verifyUrl ? 'Finish verifying' : 'Sign in'}</a>
         </div>
       </div>
     </section>

@@ -7,7 +7,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { BackChevronButton } from '@/lib/nav/back-history';
 import { SimpleMarkdown } from '@/components/shared/simple-markdown';
 import { failureText, responseFailureText } from 'lib/errors/client-failure';
-import { getDirectoryTokens, type DirectoryTokens } from './shared';
+import { getDirectoryTokens, onAccentText, type DirectoryTokens } from './shared';
 import { formatInviteDate, type FullInvite, type InvitePage } from './directory-invite-format';
 import { INVITE_LINK_CLASS, InviteAvatar, InviteCardView } from './directory-invite-card';
 
@@ -149,7 +149,7 @@ export function DirectoryInviteWall({ page, inviteHandle, verifyUrl }: { page: n
         {verifyUrl ? (
           <div style={{ borderRadius: 12, border: `1px solid ${t.ACCENT}40`, background: `${t.ACCENT}10`, padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
             <span style={{ fontSize: 13, color: t.TEXT, lineHeight: 1.5 }}>Finish the check to open the Directory itself: every listing, search by skill and location, and your own listing.</span>
-            <a href={verifyUrl} style={{ padding: '10px', borderRadius: 10, background: t.ACCENT, color: '#fff', fontSize: 14, fontWeight: 700, textAlign: 'center', textDecoration: 'none' }}>Finish verifying</a>
+            <a href={verifyUrl} style={{ padding: '10px', borderRadius: 10, background: t.ACCENT, color: onAccentText(t), fontSize: 14, fontWeight: 700, textAlign: 'center', textDecoration: 'none' }}>Finish verifying</a>
           </div>
         ) : (
           <Link href="/apps/directory" style={{ fontSize: 13, color: t.ACCENT, fontWeight: 600 }}>Open the Directory</Link>
