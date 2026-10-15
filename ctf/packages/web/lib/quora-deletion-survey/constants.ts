@@ -129,6 +129,11 @@ export const QUORA_SURVEY_MAX_ACCOUNTS = 500;
 // removal before that is a typing mistake rather than an event.
 export const QUORA_SURVEY_EARLIEST_YEAR = 2010;
 
+// The latest year the form offers and the parser keeps. It is the upper bound of the
+// `removed_year` CHECK on quora_deletion_survey_accounts in schema.sql: a later year would pass
+// the parser and then fail the insert, losing the entire response. Change both together.
+export const QUORA_SURVEY_LATEST_YEAR = 2100;
+
 // Per-IP write brake. Far tighter than the shared public READ limit, because one person filing
 // one considered response is the expected shape of legitimate traffic here.
 export const QUORA_SURVEY_SUBMIT_RATE_LIMIT = 5;

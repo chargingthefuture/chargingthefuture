@@ -1,4 +1,5 @@
 import { queryDb } from 'lib/db/postgres';
+import { resolveMemberIdentities } from 'lib/identity/resolve-usernames';
 import { getContributorAccessConfig } from 'lib/contributor-access/repository';
 import {
   DELIVERING_VALUE_EVENT_SOURCES,
@@ -98,7 +99,7 @@ export function listWeightedValueEvents(weights: Record<string, unknown>): Weigh
 }
 
 type DayRow = { day: string; members: string };
-type RosterRow = { member_id: string; username: string | null; score: string };
+type RosterRow = { member_id: string; score: string };
 
 function count(value: string | null | undefined): number {
   const parsed = Number.parseInt(value ?? '0', 10);
@@ -116,18 +117,16 @@ async function tableExists(table: string): Promise<boolean> {
 }
 
 // Only the events whose tables this database actually has. A plugin that has not shipped here
-// contributes nothing rather than failing the reading.
+// contributes nothing rather than failing the reading. A probe that fails (a dropped connection, a
+// timeout) is not a missing table: it propagates so the route answers 503 with the reason, instead
+// of a reading that leaves the source out and shows lower figures as if they were real.
 async function availableSources() {
   const checks = await Promise.all(
     DELIVERING_VALUE_EVENT_SOURCES.map(async (source) => {
-      try {
-        for (const table of source.tables) {
-          if (!(await tableExists(table))) return null;
-        }
-        return source;
-      } catch {
-        return null;
+      for (const table of source.tables) {
+        if (!(await tableExists(table))) return null;
       }
+      return source;
     }),
   );
   return checks.filter((source): source is (typeof DELIVERING_VALUE_EVENT_SOURCES)[number] => source !== null);
@@ -261,14 +260,18 @@ export async function readDailyExchangeActivity(days = 30): Promise<ExchangeActi
 
   const roster = await queryDb<RosterRow>(
     `
-      SELECT member_days.member_id, u.username, member_days.score::text AS score
+      SELECT member_days.member_id, member_days.score::text AS score
         FROM (${memberDays}) AS member_days
-        LEFT JOIN users u ON u.id::text = member_days.member_id
        WHERE member_days.day = (NOW() AT TIME ZONE 'UTC')::date
        ORDER BY member_days.score DESC, member_days.member_id
        LIMIT 500
     `,
   );
+
+  // Handles come from Clerk, the v3 source. The v2 `users` mirror this used to join is never written
+  // by v3, so every member who joined since read as having no handle. Best-effort: an id Clerk cannot
+  // resolve keeps a null handle and the screen shows the id under it as before.
+  const identities = await resolveMemberIdentities(roster.rows.map((row) => row.member_id));
 
   const counted = recent.rows.map((row) => ({ day: row.day, members: count(row.members) }));
   const yearDays = fillGaps(counted, YEAR);
@@ -288,7 +291,7 @@ export async function readDailyExchangeActivity(days = 30): Promise<ExchangeActi
     days: allDays,
     todayRoster: roster.rows.map((row) => ({
       memberId: row.member_id,
-      username: row.username,
+      username: identities.get(row.member_id)?.username ?? null,
       score: numeric(row.score),
     })),
     events: listWeightedValueEvents(config.weights),
