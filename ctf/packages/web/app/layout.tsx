@@ -23,7 +23,7 @@ import {
   getHostedAfterSignOutUrl,
   getAppUrl,
 } from '@/lib/auth/clerk-env';
-import { SENTRY_DSN_GLOBAL } from '@/lib/observability/sentry-config';
+import { SENTRY_DSN_GLOBAL, resolveWebSentryDsn } from '@/lib/observability/sentry-config';
 import './globals.css';
 
 // No sharing-preview metadata (owner decision, 2026-08-25). We used to publish og:title and a
@@ -93,7 +93,7 @@ export default function RootLayout({
         */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `window[${JSON.stringify(SENTRY_DSN_GLOBAL)}]=${JSON.stringify(process.env.SENTRY_DSN ?? '')};`,
+            __html: `window[${JSON.stringify(SENTRY_DSN_GLOBAL)}]=${JSON.stringify(resolveWebSentryDsn())};`,
           }}
         />
         {/*

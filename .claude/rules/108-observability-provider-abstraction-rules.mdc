@@ -22,7 +22,9 @@ Enable provider-neutral error monitoring so Sentry can be used now and Signoz ca
 - Track provider health and dropped-event metrics.
 - Use v3-specific DSNs/config and keep them isolated from legacy project telemetry.
 - Configure by the environment variables the code actually reads:
-	- Web: `OBSERVABILITY_PROVIDER` (`lib/observability/provider.ts`), `SENTRY_DSN` (server, edge,
+	- Web: `OBSERVABILITY_PROVIDER` (read by `resolveWebSentryDsn` in
+	  `lib/observability/sentry-config.ts`; unset or `sentry` keeps Sentry on, any other value turns
+	  it off), `SENTRY_DSN` (server, edge,
 	  and browser), and `CTF_SKIP_SENTRY_NEXTJS` (set to `1` to skip Sentry entirely, e.g. in CI
 	  builds). The browser gets the value of `SENTRY_DSN` from the root layout, which renders it into
 	  the page as a global (`SENTRY_DSN_GLOBAL` in `lib/observability/sentry-config.ts`) — Next.js
