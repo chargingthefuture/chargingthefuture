@@ -126,17 +126,18 @@ export const TERMS_DOCUMENT: PolicyDocument = {
     },
     {
       id: 'service-credits',
-      heading: '5. ServiceCredits and payments',
+      heading: '5. ServiceCredits and real-money payments',
       blocks: [
         {
           type: 'p',
           text:
             'The Platform uses an in-platform unit called "ServiceCredits" to recognize ' +
-            'participation and to pay for member-to-member activity. ServiceCredits are not ' +
+            'participation and to exchange for member-to-member activity. ServiceCredits are not ' +
             'money, are not legal tender, and have no cash value. You cannot withdraw them, ' +
             'convert them to cash, or redeem them for currency. They may be transferred ' +
             'between members inside the Platform and may be held in escrow for a transaction ' +
-            'and released or refunded within that flow. We may issue, hold, or reallocate ' +
+            'and then released to the other member or returned to the sender\'s balance within ' +
+            'that flow. We may issue, hold, or reallocate ' +
             'ServiceCredits as part of running the community.',
         },
         {
