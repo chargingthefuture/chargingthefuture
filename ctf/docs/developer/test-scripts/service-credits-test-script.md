@@ -607,6 +607,7 @@ Result: web ☐
 6. Check the source member's balance has decreased by 5 and the destination member's has increased by 5.
 
 **Expected:** Adjustment is applied. Both balances change correctly. An adjustment ID and transfer ID are returned. No fiat figure appears.
+Run it once in demo mode as well: the adjustment is applied there too, with no database error about a missing `dispute_id` or `adjustment_amount` (both columns were dropped on 2026-10-15).
 
 Result: web ☐
 

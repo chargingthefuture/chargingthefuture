@@ -2404,8 +2404,6 @@ CREATE TABLE IF NOT EXISTS service_credits_account_deletion_reclaims (
 );
 CREATE TABLE IF NOT EXISTS service_credits_dispute_adjustments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  dispute_id UUID NOT NULL,
-  adjustment_amount NUMERIC NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE TABLE IF NOT EXISTS service_credits_admin_audit_trail (
@@ -5945,10 +5943,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_service_credits_wallet_tombstones_account_r
   ON service_credits_wallet_tombstones (account_id, deletion_request_id);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_service_credits_treasury_events_type_actor_idem
   ON service_credits_treasury_events (event_type, actor_id, idempotency_key);
--- Legacy NOT NULL columns the v3 code never writes, which refused every insert into their tables:
--- an escrow hold has no transfer until it is released (releaseEscrow sets transfer_id then), and a
--- dispute adjustment records its case and amount in dispute_case_id and amount. Nothing reads
--- dispute_id or adjustment_amount.
+-- A legacy NOT NULL column the v3 code does not write at insert, which refused every new escrow
+-- hold: a hold has no transfer until it is released (releaseEscrow sets transfer_id then). The
+-- dispute adjustment table's unused dispute_id and adjustment_amount columns are dropped by
+-- db/migrations/post/0060_drop_service_credits_dispute_adjustment_legacy_columns.sql.
 DO $sc_legacy_not_null_relax$
 BEGIN
   IF EXISTS (
@@ -5956,18 +5954,6 @@ BEGIN
     WHERE table_schema = current_schema() AND table_name = 'service_credits_escrow_holds' AND column_name = 'transfer_id' AND is_nullable = 'NO'
   ) THEN
     ALTER TABLE service_credits_escrow_holds ALTER COLUMN transfer_id DROP NOT NULL;
-  END IF;
-  IF EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_schema = current_schema() AND table_name = 'service_credits_dispute_adjustments' AND column_name = 'dispute_id' AND is_nullable = 'NO'
-  ) THEN
-    ALTER TABLE service_credits_dispute_adjustments ALTER COLUMN dispute_id DROP NOT NULL;
-  END IF;
-  IF EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_schema = current_schema() AND table_name = 'service_credits_dispute_adjustments' AND column_name = 'adjustment_amount' AND is_nullable = 'NO'
-  ) THEN
-    ALTER TABLE service_credits_dispute_adjustments ALTER COLUMN adjustment_amount DROP NOT NULL;
   END IF;
 END
 $sc_legacy_not_null_relax$;
@@ -10359,4 +10345,26 @@ BEGIN
   END IF;
 END $$;
 COMMIT;
+
+
+-- ── post migration: 0060_drop_service_credits_dispute_adjustment_legacy_columns.sql ──
+-- Drop the two legacy columns of service_credits_dispute_adjustments that nothing reads or writes.
+--
+-- Why: the table came over from the v2 database with dispute_id UUID NOT NULL and
+-- adjustment_amount NUMERIC NOT NULL. The v3 code records an adjustment's case in dispute_case_id
+-- and its amount in amount, and never touches the two old columns. schema.sql relaxed them to
+-- nullable so inserts stopped failing; this removes them so nothing is left to drift. A copy of the
+-- table in the demo schema still had them as NOT NULL, which refuses every demo dispute adjustment,
+-- so that copy is dropped here too.
+--
+-- Safe to re-run: DROP COLUMN IF EXISTS on a table guarded by IF EXISTS is a no-op once the
+-- columns are gone, and on a database without a demo schema. No index, constraint or view is
+-- defined on either column.
+ALTER TABLE IF EXISTS service_credits_dispute_adjustments
+  DROP COLUMN IF EXISTS dispute_id,
+  DROP COLUMN IF EXISTS adjustment_amount;
+
+ALTER TABLE IF EXISTS demo.service_credits_dispute_adjustments
+  DROP COLUMN IF EXISTS dispute_id,
+  DROP COLUMN IF EXISTS adjustment_amount;
 

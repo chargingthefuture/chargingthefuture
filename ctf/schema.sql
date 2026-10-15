@@ -2406,8 +2406,6 @@ CREATE TABLE IF NOT EXISTS service_credits_account_deletion_reclaims (
 );
 CREATE TABLE IF NOT EXISTS service_credits_dispute_adjustments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  dispute_id UUID NOT NULL,
-  adjustment_amount NUMERIC NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE TABLE IF NOT EXISTS service_credits_admin_audit_trail (
@@ -5947,10 +5945,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_service_credits_wallet_tombstones_account_r
   ON service_credits_wallet_tombstones (account_id, deletion_request_id);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_service_credits_treasury_events_type_actor_idem
   ON service_credits_treasury_events (event_type, actor_id, idempotency_key);
--- Legacy NOT NULL columns the v3 code never writes, which refused every insert into their tables:
--- an escrow hold has no transfer until it is released (releaseEscrow sets transfer_id then), and a
--- dispute adjustment records its case and amount in dispute_case_id and amount. Nothing reads
--- dispute_id or adjustment_amount.
+-- A legacy NOT NULL column the v3 code does not write at insert, which refused every new escrow
+-- hold: a hold has no transfer until it is released (releaseEscrow sets transfer_id then). The
+-- dispute adjustment table's unused dispute_id and adjustment_amount columns are dropped by
+-- db/migrations/post/0060_drop_service_credits_dispute_adjustment_legacy_columns.sql.
 DO $sc_legacy_not_null_relax$
 BEGIN
   IF EXISTS (
@@ -5958,18 +5956,6 @@ BEGIN
     WHERE table_schema = current_schema() AND table_name = 'service_credits_escrow_holds' AND column_name = 'transfer_id' AND is_nullable = 'NO'
   ) THEN
     ALTER TABLE service_credits_escrow_holds ALTER COLUMN transfer_id DROP NOT NULL;
-  END IF;
-  IF EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_schema = current_schema() AND table_name = 'service_credits_dispute_adjustments' AND column_name = 'dispute_id' AND is_nullable = 'NO'
-  ) THEN
-    ALTER TABLE service_credits_dispute_adjustments ALTER COLUMN dispute_id DROP NOT NULL;
-  END IF;
-  IF EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_schema = current_schema() AND table_name = 'service_credits_dispute_adjustments' AND column_name = 'adjustment_amount' AND is_nullable = 'NO'
-  ) THEN
-    ALTER TABLE service_credits_dispute_adjustments ALTER COLUMN adjustment_amount DROP NOT NULL;
   END IF;
 END
 $sc_legacy_not_null_relax$;

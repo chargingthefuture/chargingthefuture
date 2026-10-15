@@ -1037,6 +1037,11 @@ make is what stranded the thing, so removing it is part of finishing that change
 Something already unused before you arrived is a different matter — mention it, and leave it alone
 unless told otherwise.
 
+A database column nothing reads or writes is dropped with a migration under
+`ctf/db/migrations/post/`, and `schema.sql` stops creating it, in the same change (owner directive,
+2026-10-15). Making it nullable so inserts stop failing is not the fix; it leaves the column to
+drift. The migration also covers the demo schema's copy of the table.
+
 Verify before deleting, every time. Search the entire repository for readers and writers, including
 seed scripts, migrations, generated schemas, SQL files kept for the owner to paste, and the other
 plugins that join to the same table. Check what an index or a constraint is defined on, because
