@@ -30,6 +30,28 @@ function hashOf(entryType: string, question: string | null, content: string): st
     .digest('hex');
 }
 
+// The review decision that did not happen — the contribution was not waiting for review (already
+// decided, or withdrawn by its member), or the write failed — recorded like the ones that did.
+async function auditReviewFailure(
+  id: string,
+  reviewerId: string,
+  action: string,
+  failure: { status: 'allow' | 'deny'; errorCategory: string },
+): Promise<void> {
+  await recordComicAdminAudit({
+    actorId: reviewerId,
+    pluginId: 'comic',
+    command: 'comic.contribution.review',
+    status: failure.status,
+    reason: failure.status === 'deny' ? 'not_pending_review' : 'admin_route_guard',
+    targetType: 'contribution',
+    targetId: id,
+    result: 'failure',
+    errorCategory: failure.errorCategory,
+    metadata: { action },
+  });
+}
+
 // DECLINE: flip the contribution to declined with a reason the contributor will see.
 async function handleDecline(id: string, reviewerId: string, rawReason: unknown): Promise<NextResponse> {
   const reason = typeof rawReason === 'string' ? rawReason.trim() : '';
@@ -44,6 +66,7 @@ async function handleDecline(id: string, reviewerId: string, rawReason: unknown)
 
   const declined = await declineContribution({ contributionId: id, reviewerId, reason });
   if (!declined) {
+    await auditReviewFailure(id, reviewerId, 'decline', { status: 'deny', errorCategory: 'not_found' });
     return NextResponse.json(
       { ok: false, code: COMIC_ERROR_CODE.notFound, message: 'That contribution is not waiting for review.' },
       { status: 404 },
@@ -78,6 +101,7 @@ async function handleAccept(id: string, reviewerId: string, rawExcluded: unknown
     hashOf,
   });
   if (!accepted) {
+    await auditReviewFailure(id, reviewerId, 'accept', { status: 'deny', errorCategory: 'not_found' });
     return NextResponse.json(
       { ok: false, code: COMIC_ERROR_CODE.notFound, message: 'That contribution is not waiting for review.' },
       { status: 404 },
@@ -174,6 +198,7 @@ export async function POST(request: Request, context: RouteContext) {
     return await handleAccept(id, gate.auth.userId, body.excludedEntryIds);
   } catch (error) {
     reportError(error, { area: 'comic', op: 'contribution_review', extra: { contributionId: id } });
+    await auditReviewFailure(id, gate.auth.userId, body.action, { status: 'allow', errorCategory: 'persistence_error' });
     return NextResponse.json(
       { ok: false, code: COMIC_ERROR_CODE.persistenceUnavailable, message: `Could not record that review: ${failureReason(error)}` },
       { status: 503 },

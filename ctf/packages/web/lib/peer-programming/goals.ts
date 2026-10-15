@@ -6,7 +6,7 @@
 // purpose: a goal, its tasks and their results are the only things anyone can write, so the board
 // cannot turn into a thread, and nobody reaches another member through it.
 import { randomUUID } from 'crypto';
-import { queryDb } from 'lib/db/postgres';
+import { queryDb, withDbTransaction } from 'lib/db/postgres';
 import {
   PEER_PROGRAMMING_MAX_OPEN_GOALS,
   PEER_PROGRAMMING_REACHED_GOAL_VISIBLE_DAYS,
@@ -208,6 +208,10 @@ export async function getTaskWithGoal(taskId: string): Promise<TaskWithGoal | nu
 // left on an ended or earlier cohort are read-only and off the member's board, so they do not count;
 // they are kept unchanged on purpose, because the stats read them. Two submits at once could still
 // pass one goal over the cap, which costs nothing worse than one extra goal.
+//
+// The goal and its tasks are written in one transaction, so a failed task insert leaves nothing on
+// the board. Without it the goal stayed saved behind a "could not be saved" answer, and pressing
+// Post goal again put a second copy up and took a second slot under the cap.
 export async function createGoal(input: {
   cohortId: string;
   ownerUserId: string;
@@ -215,20 +219,26 @@ export async function createGoal(input: {
   tasks: string[];
 }): Promise<string> {
   const goalId = randomUUID();
-  const inserted = await queryDb<{ id: string }>(
-    `INSERT INTO peer_programming_goals (id, cohort_id, owner_user_id, title)
-     SELECT $1, $2, $3, $4
-     WHERE (SELECT COUNT(*) FROM peer_programming_goals WHERE owner_user_id = $3 AND cohort_id = $2 AND status = 'open') < $5
-     RETURNING id`,
-    [goalId, input.cohortId, input.ownerUserId, input.title, PEER_PROGRAMMING_MAX_OPEN_GOALS],
-  );
-  if (inserted.rows.length === 0) {
-    throw new Error('open_goal_limit');
-  }
-  for (const description of input.tasks) {
-    await addTask({ goalId, description });
-  }
-  return goalId;
+  return withDbTransaction(async (client) => {
+    const inserted = await client.query<{ id: string }>(
+      `INSERT INTO peer_programming_goals (id, cohort_id, owner_user_id, title)
+       SELECT $1, $2, $3, $4
+       WHERE (SELECT COUNT(*) FROM peer_programming_goals WHERE owner_user_id = $3 AND cohort_id = $2 AND status = 'open') < $5
+       RETURNING id`,
+      [goalId, input.cohortId, input.ownerUserId, input.title, PEER_PROGRAMMING_MAX_OPEN_GOALS],
+    );
+    if (inserted.rows.length === 0) {
+      throw new Error('open_goal_limit');
+    }
+    for (const description of input.tasks) {
+      await client.query(
+        `INSERT INTO peer_programming_goal_tasks (id, goal_id, description)
+         VALUES ($1, $2, $3)`,
+        [randomUUID(), goalId, description],
+      );
+    }
+    return goalId;
+  });
 }
 
 export async function addTask(input: { goalId: string; description: string }): Promise<string> {
