@@ -210,6 +210,13 @@ Trust has no dedicated seed script, and none is required. Trust is a derived plu
 
 ## Change Log
 
+- 2026-10-14: **The snapshot refresh audit row no longer copies the metric bundle (code review
+  #2847).** `POST /api/trust/signal/snapshot` wrote the full `metrics` object (last sign-in time,
+  sign-in counts, every per-plugin participation count) into `trust_admin_audit_trail`, which account
+  deletion retains, so a copy of each deleted snapshot outlived it. The row now carries only
+  `snapshotId`, `snapshotGeneratedAt` and `evidenceCount`, matching the audit contract's
+  `targetContext`. Rows written before this change still hold the bundle; clearing them is an open
+  owner decision on #2847.
 - 2026-10-12: **TI Radio hosting counts toward the summary breadth line, and the self read says when
   it fails.** `engagement-ti-radio-hosted` was emitted by `buildTrustEvidence` but missing from
   `PLUGIN_BY_EVIDENCE_TYPE` in `lib/trust/peer-summary.ts`, so the summary view dropped it and a

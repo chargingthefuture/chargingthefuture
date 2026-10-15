@@ -31,10 +31,12 @@ export async function POST(request: Request) {
       policyStatus: 'allow',
       reason: 'self_snapshot_refresh',
       requestId,
+      // Only the fields the audit contract names. The metric bundle stays out: it is the snapshot's
+      // own content, and the audit trail is retained after the member deletes their Trust data.
       metadata: {
         snapshotId: result.snapshotId,
+        snapshotGeneratedAt: result.generatedAt,
         evidenceCount: result.evidence.length,
-        metrics: result.metrics,
       },
     });
     return NextResponse.json(
