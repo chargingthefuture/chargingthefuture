@@ -1311,6 +1311,38 @@ export async function collectTreasuryFee(input: {
   });
 }
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// The admin types the dispute id and both members by hand. Lock the dispute row and read its
+// transfer, so a mistyped id is refused with 'dispute_case_not_found' (the access policy's deny
+// condition) instead of moving credits under a dispute that does not exist, and so the two members
+// must be the disputed transfer's sender and recipient, in either direction.
+async function assertDisputeAdjustmentParties(
+  client: PoolClient,
+  input: { disputeCaseId: string; sourceUserId: string; destinationUserId: string },
+): Promise<void> {
+  if (!UUID_PATTERN.test(input.disputeCaseId)) {
+    throw new Error('dispute_case_not_found');
+  }
+  const dispute = await client.query<{ sender_user_id: string; recipient_user_id: string }>(
+    `SELECT t.sender_user_id, t.recipient_user_id
+       FROM service_credits_disputes d
+       JOIN service_credits_transfers t ON t.id = d.transfer_id
+      WHERE d.id = $1
+      FOR UPDATE OF d`,
+    [input.disputeCaseId],
+  );
+  const parties = dispute.rows[0];
+  if (!parties) {
+    throw new Error('dispute_case_not_found');
+  }
+  const forward = input.sourceUserId === parties.sender_user_id && input.destinationUserId === parties.recipient_user_id;
+  const reverse = input.sourceUserId === parties.recipient_user_id && input.destinationUserId === parties.sender_user_id;
+  if (!forward && !reverse) {
+    throw new Error('dispute_parties_mismatch');
+  }
+}
+
 export async function applyDisputeAdjustment(input: {
   actorId: string;
   disputeCaseId: string;
@@ -1333,6 +1365,8 @@ export async function applyDisputeAdjustment(input: {
     if (existing) {
       return existing;
     }
+
+    await assertDisputeAdjustmentParties(client, input);
 
     await client.query(
       `INSERT INTO service_credits_wallets (user_id)

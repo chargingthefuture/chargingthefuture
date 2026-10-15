@@ -4,7 +4,7 @@ import { createEvent, listEventsForAdmin } from 'lib/mutual-time/repository';
 import { recordMutualTimeAdminAudit } from 'lib/mutual-time/audit';
 import { reportError } from 'lib/observability/report';
 import { checkMutationOrigin } from 'lib/auth/csrf';
-import { requireMutualTimeAdmin, ensureMutationCsrf, mutualTimeErrorResponse } from '../_lib';
+import { requireMutualTimeAdmin, ensureMutationCsrf, mutualTimeErrorResponse, mutualTimeErrorCategory } from '../_lib';
 import { failureReason } from 'lib/errors/failure';
 
 // Route convention (deliberate): admin surfaces are keyed by event id under the plural
@@ -45,15 +45,28 @@ export async function POST(request: Request) {
   if (csrfDeny) {
     return csrfDeny;
   }
-  const gate = await requireMutualTimeAdmin();
+  const gate = await requireMutualTimeAdmin('mutual-time.event.create');
   if (!gate.allowed) {
     return gate.response;
   }
+  const auditFailure = (errorCategory: string) =>
+    recordMutualTimeAdminAudit({
+      pluginId: 'mutual-time',
+      command: 'mutual-time.event.create',
+      actorId: gate.auth.userId,
+      status: 'allow',
+      reason: 'admin',
+      evidence: 'role=admin',
+      target: { route: 'mutual-time.event.create' },
+      result: 'failure',
+      errorCategory,
+    });
 
   let body: Record<string, unknown>;
   try {
     body = (await request.json()) as Record<string, unknown>;
   } catch (error) {
+    await auditFailure('validation');
     return NextResponse.json(
       { ok: false, code: MUTUAL_TIME_ERROR_CODE.invalidPayload, message: 'Invalid request body.', reason: failureReason(error) },
       { status: 400 },
@@ -81,6 +94,7 @@ export async function POST(request: Request) {
     });
     return NextResponse.json({ ok: true, event }, { status: 200 });
   } catch (error) {
+    await auditFailure(mutualTimeErrorCategory(error));
     const mapped = mutualTimeErrorResponse(error);
     if (mapped) {
       return mapped;
