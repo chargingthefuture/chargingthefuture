@@ -149,9 +149,10 @@
     {
       "name": "concierge",
       "type": "module",
-      "lastReviewedAt": "2026-10-03T20:06:36.000Z",
-      "lastRunIssues": 1,
-      "partial": false
+      "lastReviewedAt": "2026-10-15T07:13:48.515Z",
+      "lastRunIssues": 0,
+      "partial": false,
+      "updatedAt": "2026-10-15T07:13:48.521Z"
     },
     {
       "name": "contributions",
