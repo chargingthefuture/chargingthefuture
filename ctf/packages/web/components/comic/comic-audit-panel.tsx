@@ -27,6 +27,7 @@ const COMMAND_LABELS: Record<string, string> = {
   "comic.review.resolve": "Resolved a review turn",
   "comic.admin.knowledge.set-active": "Switched a knowledge entry on or off",
   "comic.admin.unlock-help.set-review": "Switched sending Unlock answers without review",
+  "comic.training.export": "Exported the training data",
 };
 
 // The reason codes carried on a denied or failed action, said plainly. These are the lines that
@@ -48,6 +49,8 @@ const METADATA_PHRASES: ReadonlyArray<(meta: Record<string, unknown>) => string 
   (meta) => (typeof meta.decision === "string" ? meta.decision : null),
   (meta) => (typeof meta.resolution === "string" ? meta.resolution : null),
   (meta) => (typeof meta.declineReason === "string" ? `reason: ${meta.declineReason}` : null),
+  (meta) => (meta.preview === true ? "preview only" : null),
+  (meta) => (typeof meta.markedExported === "number" ? `${meta.markedExported} marked exported` : null),
 ];
 
 function describeMetadata(event: AuditEvent): string | null {

@@ -8,6 +8,8 @@ import {
 } from 'lib/comic/repository';
 import type { ComicRatedAnswerExample } from 'lib/comic/types';
 import { reportError } from 'lib/observability/report';
+import { recordComicAdminAudit } from 'lib/comic/audit';
+import { failureReason } from 'lib/errors/failure';
 
 // Exports the accumulated @comic training data, which now has two parts:
 //   1. Owner corrections — asker questions grouped by the owner-assigned intent label (the
@@ -92,6 +94,28 @@ async function markExportedRows(pendingIds: string[], preview: boolean): Promise
   }
 }
 
+// Every export run is an admin action over member text, so it writes a durable audit row
+// (comic.training.export) on success and on failure. recordComicAdminAudit never throws.
+async function auditExport(
+  actorId: string,
+  format: string,
+  outcome: { markedExported: number; preview: boolean } | { error: string },
+): Promise<void> {
+  const failed = 'error' in outcome;
+  await recordComicAdminAudit({
+    actorId,
+    pluginId: 'comic',
+    command: 'comic.training.export',
+    status: 'allow',
+    reason: 'admin_route_guard',
+    targetType: 'comic_training_examples',
+    targetId: 'export',
+    result: failed ? 'failure' : 'success',
+    errorCategory: failed ? 'persistence_error' : null,
+    metadata: failed ? { format, error: outcome.error } : { format, ...outcome },
+  });
+}
+
 export async function GET(request: Request) {
   const gate = await requireComicAdminAccess();
   if (!gate.allowed) {
@@ -110,6 +134,7 @@ export async function GET(request: Request) {
     const grouped = examples.byIntent;
     const totalExamples = Object.values(grouped).reduce((sum, arr) => sum + arr.length, 0);
     const mark = await markExportedRows(examples.pendingIds, preview);
+    await auditExport(gate.auth.userId, format, { markedExported: mark.marked, preview });
 
     if (format === 'json') {
       return NextResponse.json(
@@ -138,6 +163,7 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     reportError(error, { area: 'comic', op: 'training_export' });
+    await auditExport(gate.auth.userId, format, { error: failureReason(error) });
     return NextResponse.json(
       { ok: false, code: COMIC_ERROR_CODE.persistenceUnavailable, message: 'Unable to export training examples.' },
       { status: 503 },

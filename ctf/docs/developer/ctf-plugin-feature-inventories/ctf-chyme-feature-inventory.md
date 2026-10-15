@@ -438,6 +438,7 @@ decision the owner has not made, or owned elsewhere. Nothing here is code work l
 
 ## Change Log
 
+- 2026-10-09: **The Back Channel note no longer links to Foundation (owner decision).** The line "For calls with ServiceCredits attached, use Foundation instead." stays on the web and Android Back Channel card, but "Foundation" is no longer a link to `/apps/foundation` on the web. Foundation is in both apps, and each plugin stays self-contained. Android already showed it as plain text.
 - 2026-10-14: **Tips carry an idempotency key, the tip route has contracts and an audit event, and the
   public chat stops returning account ids (code-review #2723, #2734, #2736).** Neither tip dialog
   sent an `idempotencyKey`, so a press after a lost response sent the credits a second time. Web and
