@@ -68,7 +68,7 @@ deposit in money terms, is a bug (inventory Intent and Outcome, added 2026-08-18
 
 **Expected:**
 - Without filters, at least the seed cohort card appears.
-- Nothing on this screen, or on the Apps list entry that led here, promises a "stipend" or a "microgrant" — the catalog summary reads "earn credits as you reach each milestone". SkillUp moves credits on milestone release, trainer grant, and completion bonus only.
+- Nothing on this screen, or on the Apps list entry that led here, promises a "stipend" or a "microgrant" — the catalog summary reads "Skills-training cohorts with a trainer. Your credit deposit is held and comes back to you as you reach each milestone." It does not say "Paid" and does not say the learner earns credits at each milestone. SkillUp moves credits on milestone release, trainer grant, and completion bonus only.
 - Filtering by matching track narrows the list to include the seed cohort; filtering by a track that matches nothing shows an empty state (no error).
 - Filtering by `status: open` shows the seed cohort (seeded as open).
 - Clearing filters restores the original count.
