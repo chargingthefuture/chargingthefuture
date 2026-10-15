@@ -1,6 +1,7 @@
 import { queryDb } from 'lib/db/postgres';
 import { reportError } from 'lib/observability/report';
 import { sendWebPushToUser } from './push';
+import { DELETED_MEMBER_PLACEHOLDER } from 'lib/account/deletion-registry';
 import {
   isNotificationCategory,
   NOTIFICATIONS_MAX_PAGE_SIZE,
@@ -90,6 +91,11 @@ export async function createNotification(input: NotificationInput): Promise<stri
 // notification write) break the underlying action that triggered it. Every per-plugin emit point
 // should call this — ideally after its own transaction has committed — and ignore the result.
 export async function notifySafe(input: NotificationInput): Promise<void> {
+  // A record whose member deleted their account carries the placeholder in their place. There is
+  // nobody behind it to notify, and a row written for it would be readable by no one.
+  if (input.userId.trim() === DELETED_MEMBER_PLACEHOLDER) {
+    return;
+  }
   let createdId: string | null = null;
   try {
     createdId = await createNotification(input);
