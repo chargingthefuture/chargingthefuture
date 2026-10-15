@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { ensureMutationCsrf, requireFeedAdminAccess } from '../../_lib';
+import { requireFeedAdminAccess, recordFeedAdminFailure, requireFeedAdminMutation } from '../../_lib';
 import { FEED_ERROR_CODE } from 'lib/feed/constants';
 import { createAnnouncementDraft, listAnnouncements, validateAnnouncementDraftInput } from 'lib/feed/repository';
 import { recordFeedAdminAudit } from 'lib/feed/audit';
@@ -41,20 +41,17 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const gate = await requireFeedAdminAccess();
+  const audit = { command: 'feed.announcement.draft.create', targetType: 'announcement', targetId: 'pending' };
+  const gate = await requireFeedAdminMutation(request, audit);
   if (!gate.allowed) {
     return gate.response;
-  }
-
-  const csrfDeny = ensureMutationCsrf(request);
-  if (csrfDeny) {
-    return csrfDeny;
   }
 
   let body: AnnouncementBody;
   try {
     body = (await request.json()) as AnnouncementBody;
   } catch (error) {
+    await recordFeedAdminFailure(gate.auth.userId, audit, { status: 'allow', reason: 'invalid_payload', errorCategory: 'invalid_payload' });
     return NextResponse.json(
       { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: `Invalid JSON body: ${failureReason(error)}` },
       { status: 400 },
@@ -63,6 +60,7 @@ export async function POST(request: Request) {
 
   const input = parseBody(body);
   if (!validateAnnouncementDraftInput(input)) {
+    await recordFeedAdminFailure(gate.auth.userId, audit, { status: 'allow', reason: 'invalid_payload', errorCategory: 'invalid_payload' });
     return NextResponse.json(
       { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: 'Invalid announcement draft payload.' },
       { status: 400 },
@@ -85,6 +83,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, announcement }, { status: 201 });
   } catch (error) {
     reportError(error, { area: 'feed', op: 'admin_announcements' });
+    await recordFeedAdminFailure(gate.auth.userId, audit, { status: 'allow', reason: 'persistence_error', errorCategory: 'persistence_error' });
     return NextResponse.json(
       { ok: false, code: FEED_ERROR_CODE.persistenceUnavailable, message: `Unable to create announcement draft: ${failureReason(error)}` },
       { status: 503 },

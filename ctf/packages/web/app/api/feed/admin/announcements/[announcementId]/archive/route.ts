@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { ensureMutationCsrf, requireFeedAdminAccess } from '../../../../_lib';
+import { recordFeedAdminFailure, requireFeedAdminMutation } from '../../../../_lib';
 import { FEED_ERROR_CODE } from 'lib/feed/constants';
 import { recordFeedAdminAudit } from 'lib/feed/audit';
 import { archiveAnnouncement } from 'lib/feed/repository';
@@ -11,17 +11,12 @@ type RouteParams = {
 };
 
 export async function POST(request: Request, { params }: RouteParams) {
-  const gate = await requireFeedAdminAccess();
+  const { announcementId } = await params;
+  const audit = { command: 'feed.announcement.archive', targetType: 'announcement', targetId: announcementId };
+  const gate = await requireFeedAdminMutation(request, audit);
   if (!gate.allowed) {
     return gate.response;
   }
-
-  const csrfDeny = ensureMutationCsrf(request);
-  if (csrfDeny) {
-    return csrfDeny;
-  }
-
-  const { announcementId } = await params;
 
   try {
     const announcement = await archiveAnnouncement(gate.auth.userId, announcementId);
@@ -41,6 +36,11 @@ export async function POST(request: Request, { params }: RouteParams) {
     reportError(error, { area: 'feed', op: 'admin_announcements_announcementid_archive' });
     const message = error instanceof Error ? error.message : 'error';
     const status = message === 'announcement_not_found' ? 404 : 503;
+    await recordFeedAdminFailure(gate.auth.userId, audit, {
+      status: 'allow',
+      reason: status === 404 ? 'announcement_not_found' : 'persistence_error',
+      errorCategory: status === 404 ? 'not_found' : 'persistence_error',
+    });
     const code = message === 'announcement_not_found' ? FEED_ERROR_CODE.notFound : FEED_ERROR_CODE.persistenceUnavailable;
 
     return NextResponse.json(

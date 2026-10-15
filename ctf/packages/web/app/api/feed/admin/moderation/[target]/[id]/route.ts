@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { ensureMutationCsrf, requireFeedAdminAccess } from '../../../../_lib';
+import { recordFeedAdminFailure, requireFeedAdminMutation } from '../../../../_lib';
 import {
   FEED_ERROR_CODE,
   FEED_MODERATION_REASON,
@@ -75,18 +75,16 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ target: string; id: string }> },
 ) {
-  const gate = await requireFeedAdminAccess();
+  const { target, id } = await params;
+  // The body says whether this is a hide or a restore, so a refusal before it is read is recorded
+  // under the generic moderation command.
+  const audit = { command: 'feed.community.moderation.set', targetType: `feed_${target}`, targetId: id };
+  const gate = await requireFeedAdminMutation(request, audit);
   if (!gate.allowed) {
     return gate.response;
   }
-
-  const csrfDeny = ensureMutationCsrf(request);
-  if (csrfDeny) {
-    return csrfDeny;
-  }
-
-  const { target, id } = await params;
   if (!isFeedModerationTarget(target)) {
+    await recordFeedAdminFailure(gate.auth.userId, audit, { status: 'allow', reason: 'invalid_payload', errorCategory: 'invalid_payload' });
     return NextResponse.json(
       {
         ok: false,
@@ -99,9 +97,11 @@ export async function POST(
 
   const parsed = await parseModerationBody(request);
   if ('error' in parsed) {
+    await recordFeedAdminFailure(gate.auth.userId, audit, { status: 'allow', reason: 'invalid_payload', errorCategory: 'invalid_payload' });
     return parsed.error;
   }
   const { hidden, next, reason } = parsed.data;
+  audit.command = hidden ? 'feed.community.moderation.hide' : 'feed.community.moderation.restore';
 
   try {
     const outcome = await setCommunityModerationStatus({
@@ -113,6 +113,7 @@ export async function POST(
     });
 
     if (outcome.status === 'not_found') {
+      await recordFeedAdminFailure(gate.auth.userId, audit, { status: 'allow', reason: 'not_found', errorCategory: 'not_found' });
       return NextResponse.json(
         { ok: false, code: FEED_ERROR_CODE.notFound, message: 'That content no longer exists.' },
         { status: 404 },
@@ -144,6 +145,7 @@ export async function POST(
     return NextResponse.json({ ok: true, changed: true, moderationStatus: outcome.next }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'feed', op: 'admin_moderation_set' });
+    await recordFeedAdminFailure(gate.auth.userId, audit, { status: 'allow', reason: 'persistence_error', errorCategory: 'persistence_error' });
     return NextResponse.json(
       {
         ok: false,
