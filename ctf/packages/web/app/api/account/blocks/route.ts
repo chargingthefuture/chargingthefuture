@@ -6,6 +6,7 @@ import { insertSafetyReportTx } from 'lib/safety/repository';
 import { SAFETY_REPORT_DETAIL_MAX_LENGTH } from 'lib/safety/constants';
 import { withDbTransaction } from 'lib/db/postgres';
 import { reportError } from 'lib/observability/report';
+import { getUnlockAccessTier } from 'lib/unlock/access';
 import { logSafetyReportCreateAudit } from 'lib/blocks/audit';
 
 // Member blocking — the cross-cutting "block / unblock / see who you've blocked" API (issue #809,
@@ -25,7 +26,10 @@ export async function GET() {
   }
 
   try {
-    const blocks = await listBlocksForUser(gate.auth.userId);
+    // Directory names are an approved-only surface; the account area is open to every signed-in
+    // account, so names resolve only for an approved caller (or an admin).
+    const resolveNames = gate.auth.isAdmin || (await getUnlockAccessTier(gate.auth.userId)) === 'approved_full';
+    const blocks = await listBlocksForUser(gate.auth.userId, { resolveNames });
     return NextResponse.json({ ok: true, blocks }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'account', op: 'blocks_list' });
