@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { getAccountDataTokens } from './account-data-shared';
+import { getAccountDataTokens, readFullAccountDeletionResult } from './account-data-shared';
 import type { AccountDataView, AccountService, AccountServicesResponse } from './account-data-shared';
 
 // Loading and error states are intentionally NOT theme-aware: per COMIC_THEME_TOKENS.md §11 loading
@@ -156,6 +156,7 @@ export function AccountDataShell() {
       }
       throw new Error(message);
     }
+    return readFullAccountDeletionResult(await res.json().catch(() => null));
   }, []);
 
   if (loadState === 'loading') {

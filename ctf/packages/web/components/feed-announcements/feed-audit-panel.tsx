@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import type { FeedAnnouncementsTokens } from "./feed-announcements-shared";
+import { failureText, responseFailureText } from "lib/errors/client-failure";
 
 // One row of feed_admin_audit_trail, as the admin route returns it. Feed and Announcements share one
 // trail because they share the audit helper; plugin_id says which surface the action was taken on.
@@ -104,14 +105,13 @@ export function FeedAuditPanel({ tokens: t }: { tokens: FeedAnnouncementsTokens 
     try {
       const res = await fetch("/api/feed/admin/audit-events?limit=200");
       if (!res.ok) {
-        const body = (await res.json().catch(() => null)) as { message?: string } | null;
-        setErr(body?.message ?? "Could not load the audit trail.");
+        setErr(await responseFailureText(res, "Could not load the audit trail."));
         return;
       }
       const data = (await res.json()) as { events?: AuditEvent[] };
       setEvents(data.events ?? []);
-    } catch {
-      setErr("Could not load the audit trail.");
+    } catch (caught) {
+      setErr(failureText(caught, { area: "feed-announcements", op: "load_audit_trail", fallback: "Could not load the audit trail." }));
     } finally {
       setLoading(false);
     }

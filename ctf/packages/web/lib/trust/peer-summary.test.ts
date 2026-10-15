@@ -50,6 +50,14 @@ describe('summarizeTrustEvidenceForPeer', () => {
     expect(text).not.toMatch(/SkillsHunt|Foundation|24|submissions/);
   });
 
+  it('counts TI Radio hosting toward breadth', () => {
+    const summary = summarizeTrustEvidenceForPeer([
+      item('engagement-ti-radio-hosted', 'Hosted 2 TI Radio discussions'),
+      item('engagement-chyme-rooms', 'Joined 1 Chyme room'),
+    ]);
+    expect(summary).toEqual([{ type: TRUST_SUMMARY_BREADTH_TYPE, summary: 'Took part in 2 plugins' }]);
+  });
+
   it('uses the singular for a single plugin', () => {
     const summary = summarizeTrustEvidenceForPeer([item('engagement-chyme-rooms', 'Joined 1 Chyme room')]);
     expect(summary).toEqual([{ type: TRUST_SUMMARY_BREADTH_TYPE, summary: 'Took part in 1 plugin' }]);
