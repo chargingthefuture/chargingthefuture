@@ -53,9 +53,11 @@ describe('nothing is granted twice', () => {
 
   it('clears the stamp only when the mint throws, so the grant can be tried again', () => {
     const grant = functionBody(grantSource, 'export async function grantSharedWritingCredits');
-    const catchAt = grant.indexOf('} catch (error) {');
-    expect(catchAt).toBeGreaterThan(grant.indexOf('mintGrant('));
-    expect(grant.slice(catchAt)).toContain('clearSharedWritingGranted(input.contributionId)');
+    // The clear sits after the mint, in the branch that handles its failure, and nowhere before it.
+    const clearAt = grant.indexOf('clearSharedWritingGranted(input.contributionId)');
+    expect(clearAt).toBeGreaterThan(grant.indexOf('mintGrant('));
+    expect(grant.lastIndexOf('clearSharedWritingGranted(')).toBe(clearAt);
+    expect(grant.slice(0, clearAt)).toMatch(/\bcatch\b/);
   });
 });
 
