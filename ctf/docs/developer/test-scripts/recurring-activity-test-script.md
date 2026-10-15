@@ -13,7 +13,7 @@
 | **Surfaces** | web (`/apps/recurring-activity`) · android (`RecurringActivity.tsx`) |
 | **Seed first** | `pnpm --dir ctf seed:recurring-activity` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-recurring-activity-feature-inventory.md` |
-| **Generated** | 2026-07-14 (commit 453b14fe) · 2026-09-20: the inventory's prose was swept for a banned word (CLAUDE.md); no step here changes, because nothing about what the plugin does or how it is tested moved · 2026-10-05 manual update: RA-7 notes the #2881 regression for all four actions, and RA-13b checks a malformed id answers 404 |
+| **Generated** | 2026-07-14 (commit 453b14fe) · 2026-09-20: the inventory's prose was swept for a banned word (CLAUDE.md); no step here changes, because nothing about what the plugin does or how it is tested moved · 2026-10-05 manual update: RA-7 notes the #2881 regression for all four actions, and RA-13b checks a malformed id answers 404 · 2026-10-12 manual update: RA-12 checks a failed visibility change is shown and reverted, RA-A1 notes the names-unavailable line |
 
 ---
 
@@ -252,7 +252,7 @@ Result: web ☐
 5. Change it again to **restricted**.
 6. Save/confirm.
 
-**Expected:** Each save succeeds and the displayed visibility label updates to match: first `public`, then `restricted`. No fiat amount or counterparty identity is shown on any public-facing surface as a result of this change. The visibility control is shown only while the activity is **active** — it is absent on ended and declined activities on both web and android, and a visibility change attempted on an ended/declined activity via the API is rejected.
+**Expected:** Each save succeeds and the displayed visibility label updates to match: first `public`, then `restricted`. If a change fails (for example, with the network off), a line above "Your ongoing activities" says what failed and the select goes back to the saved value. No fiat amount or counterparty identity is shown on any public-facing surface as a result of this change. The visibility control is shown only while the activity is **active** — it is absent on ended and declined activities on both web and android, and a visibility change attempted on an ended/declined activity via the API is rejected.
 
 Result: web ☐
 
@@ -467,7 +467,7 @@ There is still no admin power to create, confirm, decline, end, or edit anyone's
 **Expected:**
 - The reciprocal pair appears under "Each declared one with the other", the quick one under "Confirmed within a minute" with the seconds shown, and the three-member loop under "Small groups pointing at each other".
 - A section with nothing in it reads "Nothing to look at here" rather than showing an empty list.
-- Members are named where a name is available, and shown as a shortened id where it is not — never blank.
+- Members are named where a name is available, and shown as a shortened id where it is not — never blank. If the name lookup failed, a line under the count says names could not be loaded.
 - There is no button anywhere to void, edit, end, or annotate anyone's arrangement. The page only reads.
 - The refresh control re-pulls the data without a full page reload.
 - The non-admin is redirected away from the page, and the API call returns 403.

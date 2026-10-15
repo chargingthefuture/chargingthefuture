@@ -43,6 +43,7 @@ export function RecurringActivity(nav: Nav) {
   const [needsUnlock, setNeedsUnlock] = useState(false);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [currencies, setCurrencies] = useState<Currency[]>([]);
+  const [currenciesError, setCurrenciesError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [justCreated, setJustCreated] = useState(false);
@@ -56,6 +57,7 @@ export function RecurringActivity(nav: Nav) {
       const data = await fetchRecurringActivityData();
       setActivities(data.activities);
       setCurrencies(data.currencies);
+      setCurrenciesError(data.currenciesError);
     } catch (e) {
       if (e instanceof UnlockRequiredError) setNeedsUnlock(true);
       else setError(e instanceof Error ? e.message : 'We could not load your ongoing activities.');
@@ -85,6 +87,7 @@ export function RecurringActivity(nav: Nav) {
 
   const runAction = useCallback(async (id: string, action: ActionKind, path: string, body?: Record<string, unknown>) => {
     setBusy({ id, action });
+    setError(null);
     try {
       await runActivityAction(id, path, body);
       await loadData();
@@ -133,11 +136,20 @@ export function RecurringActivity(nav: Nav) {
           </View>
         ) : null}
 
+        {currenciesError ? (
+          <Text accessibilityRole="alert" style={{ fontSize: 12, fontFamily: interFamily('400'), color: t.SUBTLE, marginBottom: 10 }}>{currenciesError}</Text>
+        ) : null}
+
         <View style={{ marginBottom: 24 }}>
           <CreateForm currencies={currencies} submitting={submitting} error={submitError} onSubmit={(input) => void create(input)} />
         </View>
 
         <Text style={{ fontSize: 13, fontFamily: interFamily('600'), color: t.TITLE, marginBottom: 12 }}>Your ongoing activities</Text>
+        {/* A failed action or background refresh with activities already on screen: say what failed
+            above the list instead of dropping the message. */}
+        {error ? (
+          <Text accessibilityRole="alert" style={{ fontSize: 12, fontFamily: interFamily('400'), color: t.SUBTLE, marginBottom: 10 }}>{error}</Text>
+        ) : null}
         <ActivityList
           activities={activities}
           currencies={currencies}

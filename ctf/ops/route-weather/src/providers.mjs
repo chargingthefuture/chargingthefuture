@@ -44,8 +44,13 @@ export function inUS(lat, lon) {
   return lat >= 24 && lat <= 50 && lon >= -125 && lon <= -66;
 }
 
+// Without a time limit a silent upstream holds the reply for minutes: the phone gives up first with
+// a generic timeout, and the NWS to Open-Meteo fallback in sampleAt never runs because a hung call
+// never throws. Ten seconds turns a slow source into an error the existing paths report.
+const UPSTREAM_TIMEOUT_MS = 10_000;
+
 async function getJson(url, headers) {
-  const res = await fetch(url, { headers });
+  const res = await fetch(url, { headers, signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS) });
   if (!res.ok) throw new Error(`${url} → HTTP ${res.status}`);
   return res.json();
 }
