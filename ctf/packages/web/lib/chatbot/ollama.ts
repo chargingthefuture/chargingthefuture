@@ -271,6 +271,27 @@ function runpodModelInput(): Record<string, string> {
   return process.env.OLLAMA_MODEL ? { model: process.env.OLLAMA_MODEL } : {};
 }
 
+// Wait between polls, ending at once when the budget runs out so a timed-out call returns on time
+// rather than up to one poll interval late. Rejects with the same AbortError a fetch would.
+function abortableSleep(ms: number, signal: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const abortError = () => new DOMException('The operation was aborted.', 'AbortError');
+    if (signal.aborted) {
+      reject(abortError());
+      return;
+    }
+    const timer = setTimeout(() => {
+      signal.removeEventListener('abort', onAbort);
+      resolve();
+    }, ms);
+    function onAbort() {
+      clearTimeout(timer);
+      reject(abortError());
+    }
+    signal.addEventListener('abort', onAbort, { once: true });
+  });
+}
+
 // Poll a submitted RunPod job until it reaches a terminal status, returning the final job payload.
 // Shares the caller's abort controller and timeout budget so a slow cold start aborts identically.
 async function pollRunpodJob(
@@ -284,7 +305,7 @@ async function pollRunpodJob(
     if (!job.id) {
       throw new Error('ollama_runpod_no_job_id');
     }
-    await new Promise((resolve) => setTimeout(resolve, RUNPOD_POLL_INTERVAL_MS));
+    await abortableSleep(RUNPOD_POLL_INTERVAL_MS, controller.signal);
     const statusResponse = await fetch(`${base}/status/${job.id}`, {
       method: 'GET',
       headers: ollamaHeaders(),
@@ -334,8 +355,10 @@ async function callRunpodChat(messages: OllamaMessage[], timeoutMs: number): Pro
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-  // Set once RunPod accepts the job, so a timeout can cancel it.
+  // Set once RunPod accepts the job, so giving up on it can cancel it.
   let jobId: string | null = null;
+  // Set once the job reaches a terminal status; RunPod has nothing left to run or bill after that.
+  let jobFinished = false;
 
   try {
     const runResponse = await fetch(`${base}/run`, {
@@ -362,6 +385,7 @@ async function callRunpodChat(messages: OllamaMessage[], timeoutMs: number): Pro
     const initialJob = (await runResponse.json()) as RunpodJobResponse;
     jobId = initialJob.id ?? null;
     const job = await pollRunpodJob(base, initialJob, controller, startedAt);
+    jobFinished = true;
     const content = runpodJobContent(job, startedAt);
 
     return {
@@ -370,7 +394,9 @@ async function callRunpodChat(messages: OllamaMessage[], timeoutMs: number): Pro
     };
   } catch (err) {
     logAbortTimeout(err, '[ollama/runpod]', timeoutMs);
-    if (jobId && err instanceof Error && err.name === 'AbortError') {
+    // Any way out of the poll before the job finished leaves it running on RunPod: the timeout, and
+    // also a status request that failed. Either way the app has stopped waiting, so cancel it.
+    if (jobId && !jobFinished) {
       await cancelRunpodJob(base, jobId);
     }
     throw err;
