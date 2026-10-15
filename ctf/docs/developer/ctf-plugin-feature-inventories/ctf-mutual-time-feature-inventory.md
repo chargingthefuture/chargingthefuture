@@ -90,7 +90,9 @@ All routes under `ctf/packages/web/app/api/mutual-time/`:
 - `GET /api/mutual-time/event/[slug]` — **public** read of one event (title, description, status,
   candidate slots, result). Rate-limited per IP. A signed-in approved member also gets `viewer.canVote`,
   their own upcoming picks, and `viewer.expiredPicks` (how many of their picks were for times that have
-  since passed); never returns anyone else's votes.
+  since passed); never returns anyone else's votes. When the sign-in, approval or saved-picks lookup
+  fails it answers 503 `MUTUAL_TIME_PERSISTENCE_UNAVAILABLE` naming the lookup, and reports it, rather
+  than a not-approved / no-picks viewer.
 - `POST /api/mutual-time/event/[slug]/vote` — save (replace) the signed-in, Unlock-approved member's
   picks (up to 3 half-hour-snapped one-hour windows). CSRF-guarded. Rejected if the event is not open or
   a pick is not a valid candidate slot — which now includes a pick whose time passed while the form sat
@@ -330,6 +332,7 @@ keeps that half reproducible; its stamped result stands.
   ways a survey ends can be told apart — an admin who pressed Close does not need telling.
   `schema.demo.sql` regenerated. No contract or API-shape change.
 - 2026-10-12: **Closing a survey waits for a vote in flight, and the admin screen says why no time was chosen (code review #2918, #2919, #2920).** `closeAndComputeTx` now re-reads the event `FOR UPDATE` before counting votes. `saveVote` already took that lock, but none of the three close paths (admin Close, the auto-close on the public read, the auto-close on the admin list) did, so a close could count votes before an in-flight vote committed and stamp a result without it, and an admin close racing an auto-close could both write. Now the close waits for the vote and the second close sees `closed` and returns. The admin dashboard used to say "No time chosen (no votes)" on a row that also read "2 voters" when every pick had already passed; the row and the close notice now say the picked times had already passed when the survey has voters, matching the public page, and keep "no votes" for a survey nobody voted on. The post-save re-read on the vote screen and the Audit log panel's network-error path now report the caught error, and the panel names the reason in its message. No schema, contract or API-shape change.
+- 2026-10-15: **A failed approval or saved-picks lookup on the event page is reported and no longer reads as "not approved" (code review #2916).** The shareable page and its public read route caught the sign-in, approval and saved-picks lookups and fell back to signed out, not approved and no picks, reporting nothing. An approved member was then shown "Approved members can vote" with a "Go to verification" button, or saw no saved picks and could think their vote was lost; the vote screen's re-read after a save could flip it the same way. Now every caught error is reported with the slug. On the page, a failed sign-in lookup still renders the event as a signed-out view (the link is public), while a failed approval or picks lookup throws to the page error screen, which offers a retry. The read route answers 503 naming which lookup failed, and the vote screen keeps its current state when that re-read fails. No schema or contract change.
 
 Ordered, dependency-based (no phases). Each item done in this initial build.
 

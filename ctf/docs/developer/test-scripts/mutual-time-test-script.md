@@ -333,6 +333,23 @@ Result: web ☐ mobile ☐
 
 ---
 
+### MT-15 — A failed approval lookup is not shown as "not approved" (added 2026-10-15)
+
+**Role:** Member (`approved_full`)
+**Surfaces:** Web
+**Precondition:** An open event. You need the approval lookup to fail, which needs a test environment where the Unlock tables can be made unreachable (for example, revoking read access to them for the app's database user). Do this only on a scratch database.
+
+**Steps:**
+1. Make the approval lookup fail, then open `/mutual-time/<open-event-slug>` signed in.
+2. In the browser's address bar, open `/api/mutual-time/event/<open-event-slug>`.
+3. Restore access and reload the page.
+
+**Expected:** Step 1 shows the page error screen with a retry, not "Approved members can vote" with a "Go to verification" button. Step 2 answers 503 with a message naming the approval lookup. Both failures appear in error tracking with the event slug. Step 3 shows the vote grid with your saved picks.
+
+Result: web ☐
+
+---
+
 ## Admin walkthrough
 
 ### MT-A1 — Create an event (Chyme, no close date)

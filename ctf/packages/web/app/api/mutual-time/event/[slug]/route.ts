@@ -5,6 +5,7 @@ import { resolveRequestIdentity } from 'lib/auth/request-identity';
 import { getUnlockAccessTier } from 'lib/unlock/access';
 import { enforcePublicReadRateLimit } from 'lib/security/rate-limit';
 import { reportError } from 'lib/observability/report';
+import { failureReason } from 'lib/errors/failure';
 
 // GET /api/mutual-time/event/[slug] — PUBLIC read of one event by its shareable slug. Anyone (even
 // signed-out) may read the event's public fields (title/description/status/result). If the caller is a
@@ -26,21 +27,38 @@ export async function GET(request: Request, context: { params: Promise<{ slug: s
       );
     }
 
-    // Optionally enrich with the viewer's own vote state — without collapsing to allow/deny.
-    const identity = await resolveRequestIdentity().catch(() => null);
-    const userId = identity?.isAuthenticated ? identity.userId : null;
-    let canVote = false;
-    let picks: string[] = [];
-    let expiredPicks = 0;
-    if (userId) {
-      const tier = await getUnlockAccessTier(userId).catch(() => null);
-      canVote = tier === 'approved_full' || Boolean(identity?.isAdmin);
-      const viewerPicks = await getViewerPicks(slug, userId).catch(() => ({ picks: [], expiredCount: 0 }));
-      picks = viewerPicks.picks;
-      expiredPicks = viewerPicks.expiredCount;
+    // Optionally enrich with the viewer's own vote state — without collapsing to allow/deny. A failed
+    // lookup answers 503 naming which one failed, rather than a not-approved / no-picks viewer the
+    // vote screen would believe: the screen re-reads this route after a save and keeps its current
+    // state when the re-read fails.
+    let lookup = 'sign-in';
+    try {
+      const identity = await resolveRequestIdentity();
+      const userId = identity.isAuthenticated ? identity.userId : null;
+      let canVote = false;
+      let picks: string[] = [];
+      let expiredPicks = 0;
+      if (userId) {
+        lookup = 'approval';
+        const tier = await getUnlockAccessTier(userId);
+        canVote = tier === 'approved_full' || Boolean(identity.isAdmin);
+        lookup = 'saved picks';
+        const viewerPicks = await getViewerPicks(slug, userId);
+        picks = viewerPicks.picks;
+        expiredPicks = viewerPicks.expiredCount;
+      }
+      return NextResponse.json({ ok: true, event, viewer: { canVote, picks, expiredPicks } }, { status: 200 });
+    } catch (error) {
+      reportError(error, { area: 'mutual-time', op: 'public_event_viewer', extra: { slug, lookup } });
+      return NextResponse.json(
+        {
+          ok: false,
+          code: MUTUAL_TIME_ERROR_CODE.persistenceUnavailable,
+          message: `Unable to load your voting status: the ${lookup} lookup failed: ${failureReason(error)}`,
+        },
+        { status: 503 },
+      );
     }
-
-    return NextResponse.json({ ok: true, event, viewer: { canVote, picks, expiredPicks } }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'mutual-time', op: 'public_event', extra: { slug } });
     return NextResponse.json(
