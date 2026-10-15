@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Wallet, Loader2 } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
+import { responseFailureText } from "@/lib/errors/client-failure";
 import { getTrustTransportTokens } from "./tt-shared";
 
 interface RecordedEarning {
@@ -27,7 +28,7 @@ export function TrustTransportEarningsTab() {
     setError(null);
     try {
       const res = await fetch("/api/trust-transport/earnings");
-      if (!res.ok) throw new Error("Could not load your earnings record.");
+      if (!res.ok) throw new Error(await responseFailureText(res, "Could not load your earnings record.", "member"));
       const data = (await res.json()) as { earnings?: RecordedEarning[] };
       setEarnings(Array.isArray(data.earnings) ? data.earnings : []);
     } catch (e: unknown) {
@@ -43,8 +44,8 @@ export function TrustTransportEarningsTab() {
     <div style={{ flex: 1, padding: "24px", overflowY: "auto", minHeight: 0 }}>
       <div style={{ fontSize: 22, fontWeight: 800, color: t.TITLE, marginBottom: 6 }}>Earnings</div>
       <div style={{ fontSize: 13, color: t.SUBTLE, marginBottom: 20, lineHeight: 1.5, maxWidth: 560 }}>
-        A record of what you&apos;ve earned by completing trips. ServiceCredits are paid straight to your
-        ServiceCredits wallet when a trip completes. Any other payment (cash, transfer, crypto) is arranged
+        A record of what you&apos;ve earned by completing trips. ServiceCredits are sent straight to your
+        ServiceCredits wallet when a trip completes. Anything else you agreed (cash, a bank transfer, crypto) is arranged
         directly between you and the other person — the platform doesn&apos;t hold or pay out that money —
         so this is a record, not a withdrawable balance. These amounts count toward the community&apos;s
         economic activity.

@@ -62,12 +62,19 @@ export type CreateCensusEntryInput = {
   notes: string | null;
 };
 
+// `observed_on` is a DATE, and the driver turns a DATE into a JavaScript Date unless it is cast.
+// A Date reaches the screen as an ISO timestamp and the CSV and its file name as a long date string,
+// so every query that returns a run reads it a second time as text. The cast column comes after
+// `*`, and the driver keeps the last column of a name, so the row carries the `YYYY-MM-DD` string
+// the type, the command contract, the screen and the CSV expect.
+const OBSERVED_ON_TEXT = 'observed_on::text AS observed_on';
+
 export async function createCensusRun(input: CreateCensusRunInput): Promise<CensusRunRow> {
   const result = await queryDb<CensusRunRow>(
     `INSERT INTO quora_live_census_runs (
        observed_on, frame_kind, topic_scope, sampling_method, notes, created_by_user_id
      ) VALUES ($1, $2, $3, $4, $5, $6)
-     RETURNING *`,
+     RETURNING *, ${OBSERVED_ON_TEXT}`,
     [
       input.observedOn,
       input.frameKind,
@@ -91,6 +98,7 @@ export async function createCensusRun(input: CreateCensusRunInput): Promise<Cens
 export async function listCensusRuns(limit: number): Promise<CensusRunSummary[]> {
   const result = await queryDb<CensusRunSummary>(
     `SELECT r.*,
+            r.${OBSERVED_ON_TEXT},
             COALESCE(counts.entry_count, 0)::int AS entry_count,
             COALESCE(counts.live_count, 0)::int AS live_count
        FROM quora_live_census_runs r
@@ -110,7 +118,7 @@ export async function listCensusRuns(limit: number): Promise<CensusRunSummary[]>
 
 export async function getCensusRun(runId: string): Promise<CensusRunRow | null> {
   const result = await queryDb<CensusRunRow>(
-    'SELECT * FROM quora_live_census_runs WHERE id = $1',
+    `SELECT *, ${OBSERVED_ON_TEXT} FROM quora_live_census_runs WHERE id = $1`,
     [runId],
   );
   return result.rows[0] ?? null;
@@ -170,7 +178,7 @@ export async function setCensusRunStatus(
     `UPDATE quora_live_census_runs
         SET status = $2, updated_at = NOW()
       WHERE id = $1
-      RETURNING *`,
+      RETURNING *, ${OBSERVED_ON_TEXT}`,
     [runId, status],
   );
   return result.rows[0] ?? null;

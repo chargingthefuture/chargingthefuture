@@ -145,13 +145,25 @@ describe('listExportableComments', () => {
 });
 
 describe('isReadableExportCursor', () => {
+  const ID = '3f1c2ac4-1dcf-44f5-9a2b-0c6d7e8f9a0b';
+
   it('accepts a cursor this feed issued', () => {
-    expect(isReadableExportCursor('2026-09-14 10:00:00.000000+00|comment-1')).toBe(true);
+    expect(isReadableExportCursor(`2026-09-14 10:00:00.000000+00|${ID}`)).toBe(true);
+    expect(isReadableExportCursor(`2026-09-14 10:00:00.123456+05:30|${ID}`)).toBe(true);
   });
 
   it('refuses one with nothing on either side of the separator, or no separator at all', () => {
     expect(isReadableExportCursor('nonsense')).toBe(false);
-    expect(isReadableExportCursor('|comment-1')).toBe(false);
+    expect(isReadableExportCursor(`|${ID}`)).toBe(false);
     expect(isReadableExportCursor('2026-09-14 10:00:00.000000+00|')).toBe(false);
+  });
+
+  it('refuses one whose halves are not a timestamp and a comment id, rather than letting the database fail the cast', () => {
+    // These reached the SQL casts and came back as a 503 "feed unavailable", which a build retries
+    // forever; they are a wrong cursor, and the route says so with a 400.
+    expect(isReadableExportCursor('abc|def')).toBe(false);
+    expect(isReadableExportCursor(`yesterday|${ID}`)).toBe(false);
+    expect(isReadableExportCursor('2026-09-14 10:00:00.000000+00|comment-1')).toBe(false);
+    expect(isReadableExportCursor(`2026-13-45 99:99:99+00|${ID}`)).toBe(false);
   });
 });
