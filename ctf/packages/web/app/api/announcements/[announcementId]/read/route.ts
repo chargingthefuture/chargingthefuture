@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireFeedReadAccess } from '../../../feed/_lib';
 import { FEED_ERROR_CODE } from 'lib/feed/constants';
 import { logFeedAudit } from 'lib/feed/audit';
-import { markAnnouncementRead } from 'lib/feed/repository';
+import { markAnnouncementRead, normalizeUuid } from 'lib/feed/repository';
 import { reportError } from 'lib/observability/report';
 
 type RouteParams = {
@@ -22,7 +22,13 @@ export async function POST(request: Request, { params }: RouteParams) {
     return csrfDeny;
   }
 
-  const { announcementId } = await params;
+  const announcementId = normalizeUuid((await params).announcementId);
+  if (!announcementId) {
+    return NextResponse.json(
+      { ok: false, code: FEED_ERROR_CODE.invalidPayload, message: 'Invalid announcement id.' },
+      { status: 400 },
+    );
+  }
 
   try {
     const { readAtIso: readAt } = await markAnnouncementRead(gate.auth.userId, announcementId);
@@ -41,6 +47,12 @@ export async function POST(request: Request, { params }: RouteParams) {
     // The command contract (announcements.read.mark) declares { announcementId, readAt } as output.
     return NextResponse.json({ ok: true, announcementId, readAt }, { status: 200 });
   } catch (error) {
+    if (error instanceof Error && error.message === 'announcement_not_found') {
+      return NextResponse.json(
+        { ok: false, code: FEED_ERROR_CODE.notFound, message: 'That announcement is no longer available.' },
+        { status: 404 },
+      );
+    }
     reportError(error, { area: 'announcements', op: 'announcementid_read' });
     return NextResponse.json(
       { ok: false, code: FEED_ERROR_CODE.persistenceUnavailable, message: 'Unable to mark announcement as read.' },
