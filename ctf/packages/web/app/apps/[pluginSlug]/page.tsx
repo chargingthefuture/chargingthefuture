@@ -199,6 +199,24 @@ function renderAccessDenied(decision: DenyDecision, selectedPlugin: SelectedPlug
   );
 }
 
+// What the gate shows instead of the plugin, or null to render the plugin (always set for a denial). Directory decides for
+// itself what a viewer it turns away sees: the invitations (owner decision, 2026-10-15; see
+// components/directory/directory-entry.tsx). Every other denial gets the shared handling.
+function renderGate(
+  decision: PluginAuthDecision,
+  selectedPlugin: SelectedPlugin,
+  returnPath: string,
+  query: PluginSearchParams,
+): ReactNode | null {
+  if (selectedPlugin.slug === 'directory') {
+    const directoryEntry = renderDirectoryEntry(decision, query, returnPath);
+    if (directoryEntry) {
+      return directoryEntry;
+    }
+  }
+  return decision.allowed ? null : renderAccessDenied(decision, selectedPlugin, returnPath);
+}
+
 // The shell dispatch is split across three small helpers purely to keep each function under the
 // rule-116 complexity limit; each keeps the `selectedPlugin.slug === '<slug>'` idiom that
 // check-web-android-parity.mjs scans for, so the parity gate still detects every explicit web shell.
@@ -422,17 +440,10 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
     notFound();
   }
 
-  // Directory decides for itself what a viewer it turns away sees: the invitations (owner decision,
-  // 2026-10-15). See components/directory/directory-entry.tsx.
-  if (selectedPlugin.slug === 'directory') {
-    const directoryEntry = renderDirectoryEntry(decision, resolvedSearchParams, returnPath);
-    if (directoryEntry) {
-      return directoryEntry;
-    }
-  }
-
+  // For an approved member this is null, or a redirect to one invitation (which throws).
+  const gated = renderGate(decision, selectedPlugin, returnPath, resolvedSearchParams);
   if (!decision.allowed) {
-    return renderAccessDenied(decision, selectedPlugin, returnPath);
+    return gated;
   }
 
   const shell =

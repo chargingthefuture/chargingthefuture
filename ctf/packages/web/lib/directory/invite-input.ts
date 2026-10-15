@@ -163,12 +163,8 @@ function decodeBase64(data: string): Uint8Array | null {
   return new Uint8Array(Buffer.from(compact, 'base64'));
 }
 
-function checkImage(raw: unknown): DirectoryInviteImageInput | null | Refusal {
-  if (raw === undefined || raw === null) return null;
-  if (typeof raw !== 'object') {
-    return refuse('image', 'must be an object with data, type and alt, or left out.');
-  }
-  const { data, type, alt } = raw as { data?: unknown; type?: unknown; alt?: unknown };
+// The picture's bytes from base64, within the size limit, or the refusal naming image.data.
+function decodeImageBytes(data: unknown): Uint8Array | Refusal {
   if (typeof data !== 'string') {
     return refuse('image.data', 'required, as the picture encoded in base64.');
   }
@@ -183,6 +179,17 @@ function checkImage(raw: unknown): DirectoryInviteImageInput | null | Refusal {
   if (bytes.byteLength > INVITE_MAX.imageBytes) {
     return refuse('image.data', `${bytes.byteLength} bytes is over the ${INVITE_MAX.imageBytes} byte limit.`);
   }
+  return bytes;
+}
+
+function checkImage(raw: unknown): DirectoryInviteImageInput | null | Refusal {
+  if (raw === undefined || raw === null) return null;
+  if (typeof raw !== 'object') {
+    return refuse('image', 'must be an object with data, type and alt, or left out.');
+  }
+  const { data, type, alt } = raw as { data?: unknown; type?: unknown; alt?: unknown };
+  const bytes = decodeImageBytes(data);
+  if (isRefusal(bytes)) return bytes;
   // The type is read from the picture's own bytes; the declared one has to agree with it.
   const sniffed = sniffCommunityImageType(bytes);
   if (!sniffed) {
@@ -204,12 +211,11 @@ const TEXT_FIELDS = [
   ['bodyMarkdown', INVITE_MAX.bodyMarkdown],
 ] as const;
 
-export function parseDirectoryInviteInput(body: unknown): InviteInputResult {
-  if (typeof body !== 'object' || body === null || Array.isArray(body)) {
-    return refuse('body', 'must be a JSON object.');
-  }
-  const raw = body as Record<string, unknown>;
+type Identity = Pick<DirectoryInviteInput, 'slug' | 'quoraHandle' | 'quoraUrl'>;
+type Text = Pick<DirectoryInviteInput, 'name' | 'title' | 'opening' | 'bodyMarkdown'>;
+type Extras = Pick<DirectoryInviteInput, 'publishedOn' | 'directoryProfileId' | 'image' | 'isPublic' | 'blogUrl'>;
 
+function checkIdentity(raw: Record<string, unknown>): Identity | Refusal {
   const slug = normalizeInviteSlug(raw.slug);
   if (!slug) {
     return refuse('slug', `required: lower-case letters, digits and hyphens, at most ${INVITE_MAX.slug} characters.`);
@@ -223,14 +229,20 @@ export function parseDirectoryInviteInput(body: unknown): InviteInputResult {
   if (quoraHandleFromUrl(quoraUrl) !== quoraHandle) {
     return refuse('quoraHandle', `does not match the handle in quoraUrl (${quoraHandleFromUrl(quoraUrl)}).`);
   }
+  return { slug, quoraHandle, quoraUrl };
+}
 
+function checkText(raw: Record<string, unknown>): Text | Refusal {
   const text: Record<string, string> = {};
   for (const [field, max] of TEXT_FIELDS) {
     const value = requiredText(raw[field], field, max);
     if (isRefusal(value)) return value;
     text[field] = value;
   }
+  return { name: text.name, title: text.title, opening: text.opening, bodyMarkdown: text.bodyMarkdown };
+}
 
+function checkExtras(raw: Record<string, unknown>): Extras | Refusal {
   const publishedOn = checkDate(raw.publishedOn);
   if (isRefusal(publishedOn)) return publishedOn;
   const directoryProfileId = checkProfileId(raw.directoryProfileId);
@@ -241,22 +253,19 @@ export function parseDirectoryInviteInput(body: unknown): InviteInputResult {
   if (isRefusal(isPublic)) return isPublic;
   const blogUrl = checkBlogUrl(raw.blogUrl ?? raw.blog_url, isPublic);
   if (isRefusal(blogUrl)) return blogUrl;
+  return { publishedOn, directoryProfileId, image, isPublic, blogUrl };
+}
 
-  return {
-    ok: true,
-    value: {
-      slug,
-      quoraHandle,
-      quoraUrl,
-      name: text.name,
-      title: text.title,
-      opening: text.opening,
-      bodyMarkdown: text.bodyMarkdown,
-      publishedOn,
-      directoryProfileId,
-      image,
-      isPublic,
-      blogUrl,
-    },
-  };
+export function parseDirectoryInviteInput(body: unknown): InviteInputResult {
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+    return refuse('body', 'must be a JSON object.');
+  }
+  const raw = body as Record<string, unknown>;
+  const identity = checkIdentity(raw);
+  if (isRefusal(identity)) return identity;
+  const text = checkText(raw);
+  if (isRefusal(text)) return text;
+  const extras = checkExtras(raw);
+  if (isRefusal(extras)) return extras;
+  return { ok: true, value: { ...identity, ...text, ...extras } };
 }

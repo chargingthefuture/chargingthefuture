@@ -109,48 +109,67 @@ function startsBlock(line: string): boolean {
   return HEADING_RE.test(line) || BULLET_RE.test(line) || NUMBERED_RE.test(line) || QUOTE_RE.test(line) || RULE_RE.test(line) || FENCE_RE.test(line);
 }
 
+type Read = { block: MdBlock; next: number } | null;
+
+function readHeading(lines: string[], i: number): Read {
+  const heading = HEADING_RE.exec(lines[i]);
+  return heading ? { block: { type: 'heading', level: headingLevel(heading[1].length), children: parseInline(heading[2]) }, next: i + 1 } : null;
+}
+
+function readRule(lines: string[], i: number): Read {
+  return RULE_RE.test(lines[i]) ? { block: { type: 'rule' }, next: i + 1 } : null;
+}
+
+// A fenced block is shown as its plain text.
+function readFence(lines: string[], i: number): Read {
+  if (!FENCE_RE.test(lines[i])) return null;
+  const body: string[] = [];
+  let j = i + 1;
+  while (j < lines.length && !FENCE_RE.test(lines[j])) { body.push(lines[j]); j += 1; }
+  return { block: { type: 'paragraph', children: [{ type: 'code', text: body.join('\n') }] }, next: j + 1 };
+}
+
+function readAnyList(lines: string[], i: number): Read {
+  const bullet = BULLET_RE.test(lines[i]);
+  if (!bullet && !NUMBERED_RE.test(lines[i])) return null;
+  const { items, next } = readList(lines, i, bullet ? BULLET_RE : NUMBERED_RE);
+  return { block: { type: 'list', ordered: !bullet, items }, next };
+}
+
+function readQuote(lines: string[], i: number): Read {
+  if (!QUOTE_RE.test(lines[i])) return null;
+  const parts: string[] = [];
+  let j = i;
+  while (j < lines.length && QUOTE_RE.test(lines[j])) { parts.push(QUOTE_RE.exec(lines[j])?.[1] ?? ''); j += 1; }
+  return { block: { type: 'quote', children: parseInline(parts.join(' ').trim()) }, next: j };
+}
+
+function readParagraph(lines: string[], i: number): { block: MdBlock; next: number } {
+  const parts: string[] = [];
+  let j = i;
+  while (j < lines.length && lines[j].trim() !== '' && (parts.length === 0 || !startsBlock(lines[j]))) {
+    parts.push(lines[j].trim());
+    j += 1;
+  }
+  return { block: { type: 'paragraph', children: parseInline(parts.join(' ')) }, next: j };
+}
+
+const BLOCK_READERS = [readHeading, readRule, readFence, readAnyList, readQuote];
+
 export function parseMarkdown(source: string): MdBlock[] {
   const lines = source.replace(/\r\n?/g, '\n').split('\n');
   const blocks: MdBlock[] = [];
   let i = 0;
   while (i < lines.length) {
-    const line = lines[i];
-    if (line.trim() === '') { i += 1; continue; }
-    const heading = HEADING_RE.exec(line);
-    if (heading) {
-      blocks.push({ type: 'heading', level: headingLevel(heading[1].length), children: parseInline(heading[2]) });
-      i += 1;
-      continue;
+    if (lines[i].trim() === '') { i += 1; continue; }
+    let read: Read = null;
+    for (const reader of BLOCK_READERS) {
+      read = reader(lines, i);
+      if (read) break;
     }
-    if (RULE_RE.test(line)) { blocks.push({ type: 'rule' }); i += 1; continue; }
-    if (FENCE_RE.test(line)) {
-      // A fenced block is shown as its plain text.
-      const body: string[] = [];
-      i += 1;
-      while (i < lines.length && !FENCE_RE.test(lines[i])) { body.push(lines[i]); i += 1; }
-      i += 1;
-      blocks.push({ type: 'paragraph', children: [{ type: 'code', text: body.join('\n') }] });
-      continue;
-    }
-    if (BULLET_RE.test(line) || NUMBERED_RE.test(line)) {
-      const ordered = !BULLET_RE.test(line);
-      const { items, next } = readList(lines, i, ordered ? NUMBERED_RE : BULLET_RE);
-      blocks.push({ type: 'list', ordered, items });
-      i = next;
-      continue;
-    }
-    if (QUOTE_RE.test(line)) {
-      const parts: string[] = [];
-      while (i < lines.length && QUOTE_RE.test(lines[i])) { parts.push(QUOTE_RE.exec(lines[i])?.[1] ?? ''); i += 1; }
-      blocks.push({ type: 'quote', children: parseInline(parts.join(' ').trim()) });
-      continue;
-    }
-    const parts: string[] = [];
-    while (i < lines.length && lines[i].trim() !== '' && (parts.length === 0 || !startsBlock(lines[i]))) {
-      parts.push(lines[i].trim());
-      i += 1;
-    }
-    blocks.push({ type: 'paragraph', children: parseInline(parts.join(' ')) });
+    const { block, next } = read ?? readParagraph(lines, i);
+    blocks.push(block);
+    i = next;
   }
   return blocks;
 }
