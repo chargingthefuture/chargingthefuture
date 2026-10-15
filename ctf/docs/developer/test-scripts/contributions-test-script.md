@@ -471,6 +471,28 @@ The server returns 400 or 422 (missing required field). The claim stays pending.
 
 ---
 
+### CONT-A5a — A link edited on review is saved with the claim
+
+**Role:** Admin
+**Surfaces:** Web (`/admin/contributions`)
+**Precondition:** A pending Quora comment claim exists.
+
+**Steps:**
+1. Open the pending Quora comment claim in the queue.
+2. Replace the text in "Quora post URL (editable — paste from notifications)" with `https://qr.ae/edited`.
+3. Confirm the claim, then reload the queue and open it again.
+4. Send `POST /api/contributions/admin/submissions/<id>/review` with header `x-ctf-csrf: 1` and body `{"action":"confirm","url":"not a link"}` for another pending Quora or GitHub claim.
+5. Send the same request with body `{"action":"confirm","confirmedAmountUsd":10,"url":"https://qr.ae/x"}` for a pending gift-card claim.
+
+**Expected:**
+- After step 3 the claim shows `https://qr.ae/edited` as its Quora post link.
+- Step 4 returns 400 `contributions_invalid_url` and the claim stays pending.
+- Step 5 returns 400 `contributions_invalid_payload` and the claim stays pending.
+
+**Result:** web ☐
+
+---
+
 ### CONT-A5b — A confirmed comment or star never counts as money given
 
 **Role:** Admin

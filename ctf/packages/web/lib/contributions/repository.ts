@@ -790,6 +790,33 @@ async function applyConfirmReview(
 }
 
 /**
+ * Save the link the admin entered on review into the column for this claim's kind. An omitted or
+ * blank link keeps what the member sent. A gift card has no link, so one sent for it is refused.
+ */
+async function applyReviewUrl(client: PoolClient, row: SubmissionRow, url: string | undefined): Promise<void> {
+  if (url === undefined) {
+    return;
+  }
+  if (typeof url !== 'string' || row.kind === 'gift_card') {
+    throw new Error('invalid_payload');
+  }
+
+  const trimmed = url.trim();
+  if (!trimmed) {
+    return;
+  }
+  if (!isHttpUrl(trimmed)) {
+    throw new Error('invalid_url');
+  }
+
+  const column = row.kind === 'quora_comment' ? 'quora_post_url' : 'github_profile_url';
+  await client.query(
+    `UPDATE contributions_submissions SET ${column} = $2, updated_at = NOW() WHERE id = $1`,
+    [row.id, trimmed],
+  );
+}
+
+/**
  * Confirm or reject a pending contribution claim. Exactly-once: the row is locked and must
  * still be 'pending'. On confirm, credits = confirmedAmountUsd x credits_per_usd, clamped by
  * the per-user-per-cycle cap; a positive grant goes through the canonical service-credits
@@ -814,6 +841,8 @@ export async function reviewSubmission(input: ReviewContributionSubmissionInput)
     if (row.status !== 'pending') {
       throw new Error('already_reviewed');
     }
+
+    await applyReviewUrl(client, row, input.url);
 
     if (input.action === 'reject') {
       const updated = await applyReviewUpdate(client, {

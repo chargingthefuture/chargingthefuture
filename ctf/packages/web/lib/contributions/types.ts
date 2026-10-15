@@ -46,6 +46,9 @@ export type ReviewContributionSubmissionInput = {
   action: 'confirm' | 'reject';
   confirmedAmountUsd?: number;
   reviewNote?: string;
+  // The Quora post or GitHub profile link as the admin found it. Replaces the member's link on
+  // quora_comment and github_star claims; refused on gift_card claims, which have no link.
+  url?: string;
 };
 
 export type ContributionsCycle = {
