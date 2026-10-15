@@ -877,7 +877,8 @@ Result: web ☐
 ### Account deletion clears accepted currencies
 
 **Expected:** Deleting the account removes the provider's accepted-currencies rows along with their
-skills and threads (existing behavior) — no currency preference survives the account.
+skills — no currency preference survives the account. Their threads stay with the other party under
+the placeholder (next section).
 
 Result: web ☐
 
@@ -893,6 +894,23 @@ notification push in step 3 still reaches the device. Deleting the entire accoun
 
 Result: web ☐
 
+
+### Deleting an account keeps shared threads, quotes and calls under a placeholder (added 2026-10-15)
+
+**Steps:**
+1. As member A (survivor), open a thread with provider B, request a quote, and have B respond.
+2. Place a Connect now call between A and B, answer it, and end it.
+3. Delete A's entire account. Then, on a second pair, delete only the Foundation data of a provider
+   who has a thread with a quote on it.
+4. Sign in as B and open Foundation.
+
+**Expected:** Both deletions finish; neither fails with a 503. B still sees the thread, the quote and
+its history, and the call record. Wherever A's id was stored (thread, quote, quote history, call),
+the database now holds `deleted_member`, and the reason A wrote on a quote change is cleared. For the
+provider in step 3, the thread's Directory profile link is cleared as well. A message or quote update B
+sends on that thread writes no notification for `deleted_member`. A's own messages are gone.
+
+Result: web ☐
 
 ### FN-R1 — Record a closed quote as ongoing work
 

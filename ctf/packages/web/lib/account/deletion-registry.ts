@@ -337,12 +337,53 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     tables: [
       del('foundation_notification_events', 'user_id', 'Your Foundation notifications.'),
       del('foundation_rate_limit_counters', 'user_id', 'Your rate-limit counters.'),
-      del('foundation_quote_status_events', 'actor_user_id', 'Quote state changes you made.'),
-      del('foundation_quote_requests', 'user_id', 'Your quote requests.'),
+      // Threads, quotes and calls are shared records between a survivor and a provider, and quotes
+      // are the accountability record for an engagement (FOUNDATION_PROFILE_AND_DELETION_CONTRACT.md
+      // §4). Owner decision, 2026-10-15: they stay, and the departing member's id on them, on either
+      // side, is overwritten with the placeholder. Deleting the threads instead broke the quote's
+      // link to its thread and rolled back the entire account deletion for any member who had
+      // started a thread with a quote on it.
+      pseudo(
+        'foundation_quote_status_events',
+        'actor_user_id',
+        ['reason'],
+        'Quote state changes you made — the history stays with the quote; your identity and the reason you wrote do not.',
+      ),
+      pseudo('foundation_quote_requests', 'survivor_user_id', [], 'Quotes you requested — the record stays; your identity does not.'),
+      pseudo('foundation_quote_requests', 'provider_user_id', [], 'Quotes requested from you — the record stays with the survivor; your identity does not.'),
       del('foundation_message_metadata', 'sender_user_id', 'Metadata for messages you sent.'),
-      del('foundation_call_sessions', 'created_by_user_id', 'Call sessions you started.'),
+      // A ring that was never answered or ended has no charge on it. It goes, rather than being
+      // pseudonymized, because the one-ringing-call-per-callee index would refuse a second departed
+      // callee's open ring once both read as the placeholder, and the lazy ring timeout only runs
+      // when a real member reads the row.
+      delWhere(
+        'foundation_call_sessions',
+        'callee_user_id',
+        'answered_at IS NULL AND ended_at IS NULL',
+        'Unanswered calls ringing you when you left.',
+      ),
+      delWhere(
+        'foundation_call_sessions',
+        'caller_user_id',
+        'answered_at IS NULL AND ended_at IS NULL',
+        'Unanswered calls you were placing when you left.',
+      ),
+      pseudo('foundation_call_sessions', 'created_by_user_id', [], 'Call sessions you started — the record stays; your identity does not.'),
+      pseudo('foundation_call_sessions', 'caller_user_id', [], 'Calls you placed — the record stays with the other party; your identity does not.'),
+      pseudo('foundation_call_sessions', 'callee_user_id', [], 'Calls placed to you — the record stays with the other party; your identity does not.'),
+      pseudo('foundation_call_sessions', 'ended_by_user_id', [], 'Calls you ended — the record stays; your identity does not.'),
+      // Participation is what lets a member open a thread, and the table's key is (thread, member):
+      // two departed members on one thread would collide as the placeholder, so these rows go.
       del('foundation_thread_participants', 'user_id', 'Your participation in connection threads.'),
-      del('foundation_connection_threads', 'created_by_user_id', 'Connection threads you started.'),
+      pseudo('foundation_connection_threads', 'created_by_user_id', [], 'Connection threads you started — the thread stays with the other party; your identity does not.'),
+      pseudo('foundation_connection_threads', 'survivor_user_id', [], 'Connection threads you opened as a survivor — the thread stays with the provider; your identity does not.'),
+      // The Directory profile pointer names the provider as surely as their id does, so it is cleared.
+      pseudo(
+        'foundation_connection_threads',
+        'provider_user_id',
+        ['provider_directory_profile_id'],
+        'Connection threads opened with you as a provider — the thread stays with the survivor; your identity does not.',
+      ),
       del('foundation_provider_skills', 'user_id', 'The skills you opted in to offer.'),
       // The FK to foundation_user_extension is ON DELETE CASCADE, but the extension row is
       // SOFT-deleted (below), so the cascade never fires — this explicit delete is required.
