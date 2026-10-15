@@ -94,6 +94,15 @@ is keyed on the pseudonym, so a second device for the same member shares the one
 be bypassed by switching devices.
 **Result:** web ☐ mobile ☐ — notes:
 
+### MD-4a · Two submits sent together store one check-in
+**Role:** member · **Surfaces:** web
+**Precondition:** the member has not checked in within the last 7 days.
+**Steps:**
+1. Open Mood in two tabs, pick a mood in both, and press submit in both as close together as you can.
+**Expected:** One tab shows the check-in as saved; the other shows the cooldown message. The community
+pulse count goes up by one, not two.
+**Result:** web ☐ mobile ☐ — notes:
+
 ### MD-5 · Anonymous community pulse
 **Role:** member · **Surfaces:** all
 **Steps:**
