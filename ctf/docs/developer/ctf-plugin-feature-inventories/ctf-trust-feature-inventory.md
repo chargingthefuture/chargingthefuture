@@ -58,7 +58,7 @@ Trust still writes `trust_admin_audit_trail` rows for panel reads and snapshot r
   route uses. They must never call `getTrustUserExtension` directly: that is a plain read of the last
   written row, and using it froze the card at whatever some other surface last recomputed (see the
   2026-08-13 change-log entry). One recompute per throttle window per member covers all of them.
-- `GET /api/trust/user/self` — Implemented. Recomputes the caller's trust signals before returning, so the panel reflects their current participation instead of a frozen snapshot that nothing refreshed. Calls `refreshTrustSignalSnapshot(userId)` (the same logic as `POST /api/trust/signal/snapshot`), persists a snapshot row, refreshes derived evidence, and returns the fresh `trust_user_extension`. Resilient: if the recompute throws, it falls back to the last stored extension so the member's own read never errors. Gated by server-side plugin authz (`evaluatePluginAccess`). The cross-user route stays a plain read (no recompute).
+- `GET /api/trust/user/self` — Implemented. Recomputes the caller's trust signals before returning, so the panel reflects their current participation instead of a frozen snapshot that nothing refreshed. Calls `refreshTrustSignalSnapshot(userId)` (the same logic as `POST /api/trust/signal/snapshot`), persists a snapshot row, refreshes derived evidence, and returns the fresh `trust_user_extension`. Resilient: if the recompute throws, it falls back to the last stored extension; if that stored read fails too, it reports the failure and answers 503 `TRUST_PERSISTENCE_UNAVAILABLE`, the same body as the by-id route. Gated by server-side plugin authz (`evaluatePluginAccess`). The cross-user route stays a plain read (no recompute).
 - `GET /api/trust/user/[userId]` — Implemented. Returns another member's trust panel at one of two disclosure levels, reported on the response as `trustDisclosure`, and the level is decided here in code rather than by any member setting: the owner (self) and admins receive `full`; **every other member receives `summary`** — headline counts only, with every timestamp and supporting detail dropped and the per-plugin participation items collapsed to a single "Took part in N plugins" breadth line (`lib/trust/peer-summary.ts`). No read is refused; there is no `403` visibility path, because hiding a member's participation from other members would defeat the point of the panel.
 - `POST /api/trust/signal/snapshot` — Implemented. Recomputes the caller's trust signal (model `cross_plugin_engagement_v6`) from real cross-plugin engagement — sign-in history from `login_events` (all-time days plus the member's current unbroken run of days); SocketRelay trades/requests; ServiceCredits received (distinct payers + undisputed completed transfers); per-plugin participation COUNTs across LightHouse, TrustTransport, SkillsHunt, SkillUp, Chyme, Directory, WhatWorks, PeerProgramming, Contributions, and Foundation (provider side); and the count of DISTINCT members with a confirmed recurring activity (`recurring_activities`, either side). Coarse COUNTs only; privacy-sensitive plugins (ClickLog, Mood, GentlePulse, Unlock, and the Foundation seeker side) are excluded — see the Trust Signal Model section. Persists a `trust_signal_snapshot` row and refreshes the caller's derived evidence. CSRF-guarded; writes an audit row.
 
@@ -217,6 +217,14 @@ Trust has no dedicated seed script, and none is required. Trust is a derived plu
   `snapshotId`, `snapshotGeneratedAt` and `evidenceCount`, matching the audit contract's
   `targetContext`. Rows written before this change still hold the bundle; clearing them is an open
   owner decision on #2847.
+- 2026-10-12: **TI Radio hosting counts toward the summary breadth line, and the self read says when
+  it fails.** `engagement-ti-radio-hosted` was emitted by `buildTrustEvidence` but missing from
+  `PLUGIN_BY_EVIDENCE_TYPE` in `lib/trust/peer-summary.ts`, so the summary view dropped it and a
+  member who only hosts TI Radio slots showed no breadth line to other members (#2850). It now maps to
+  `ti-radio`; the breadth line still names no plugin. `GET /api/trust/user/self` answered the
+  framework's bare 500 when the recompute and the stored-evidence fallback both failed; it now
+  reports `trust/self_stored_read` and answers 503 `TRUST_PERSISTENCE_UNAVAILABLE` with "Trust data
+  unavailable.", the same body as the by-id route (#2851).
 
 - 2026-10-05: **Another member's trust card loads again.** `GET /api/trust/user/[userId]` read the
   path value synchronously, but this Next.js version hands route handlers their params as a Promise,
