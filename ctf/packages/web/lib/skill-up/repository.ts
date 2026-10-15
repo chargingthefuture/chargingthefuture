@@ -1118,6 +1118,46 @@ export async function transferCreditsForSkillUp(input: {
   });
 }
 
+// Throws not_found, forbidden or invalid_payload unless the actor may open a dispute on this
+// enrollment (and, when one is named, on this milestone). Kept out of openDispute to hold its
+// complexity down.
+async function assertDisputeOpenable(
+  client: PoolClient,
+  input: { actorId: string; isAdmin?: boolean; enrollmentId: string; milestoneId?: string },
+): Promise<void> {
+  // Ownership guard (per the dispute.open access policy: `enrollment_not_visible` is a deny
+  // condition). Only the enrollment's learner, its assigned trainer, or an admin may open a
+  // dispute on it — otherwise any authenticated member who guessed an enrollment UUID could
+  // file a dispute against someone else's enrollment and flip its milestone validations to
+  // 'disputed'. Enforced here at the repository so every caller is covered.
+  const enrollment = await client.query<{ user_id: string; assigned_trainer_id: string | null; cohort_id: string }>(
+    `SELECT user_id, assigned_trainer_id, cohort_id::text AS cohort_id
+     FROM skill_up_enrollments
+     WHERE id = $1::uuid`,
+    [input.enrollmentId],
+  );
+  if (!enrollment.rows[0]) {
+    throw new Error('not_found');
+  }
+  const isParty =
+    enrollment.rows[0].user_id === input.actorId ||
+    enrollment.rows[0].assigned_trainer_id === input.actorId;
+  if (!input.isAdmin && !isParty) {
+    throw new Error('forbidden');
+  }
+
+  // A dispute about a milestone must name one of this enrollment's own cohort milestones.
+  if (input.milestoneId) {
+    const milestone = await client.query(
+      `SELECT 1 FROM skill_up_milestones WHERE id = $1::uuid AND cohort_id = $2::uuid`,
+      [input.milestoneId, enrollment.rows[0].cohort_id],
+    );
+    if (!milestone.rows[0]) {
+      throw new Error('invalid_payload');
+    }
+  }
+}
+
 export async function openDispute(input: {
   actorId: string;
   isAdmin?: boolean;
@@ -1134,37 +1174,7 @@ export async function openDispute(input: {
       return existing;
     }
 
-    // Ownership guard (per the dispute.open access policy: `enrollment_not_visible` is a deny
-    // condition). Only the enrollment's learner, its assigned trainer, or an admin may open a
-    // dispute on it — otherwise any authenticated member who guessed an enrollment UUID could
-    // file a dispute against someone else's enrollment and flip its milestone validations to
-    // 'disputed'. Enforced here at the repository so every caller is covered.
-    const enrollment = await client.query<{ user_id: string; assigned_trainer_id: string | null; cohort_id: string }>(
-      `SELECT user_id, assigned_trainer_id, cohort_id::text AS cohort_id
-       FROM skill_up_enrollments
-       WHERE id = $1::uuid`,
-      [input.enrollmentId],
-    );
-    if (!enrollment.rows[0]) {
-      throw new Error('not_found');
-    }
-    const isParty =
-      enrollment.rows[0].user_id === input.actorId ||
-      enrollment.rows[0].assigned_trainer_id === input.actorId;
-    if (!input.isAdmin && !isParty) {
-      throw new Error('forbidden');
-    }
-
-    // A dispute about a milestone must name one of this enrollment's own cohort milestones.
-    if (input.milestoneId) {
-      const milestone = await client.query(
-        `SELECT 1 FROM skill_up_milestones WHERE id = $1::uuid AND cohort_id = $2::uuid`,
-        [input.milestoneId, enrollment.rows[0].cohort_id],
-      );
-      if (!milestone.rows[0]) {
-        throw new Error('invalid_payload');
-      }
-    }
+    await assertDisputeOpenable(client, input);
 
     const disputeId = randomUUID();
     await client.query(
@@ -1239,6 +1249,48 @@ export function isDisputeAdjustmentBetweenParties(
 // Statuses a dispute can be resolved from (the policy's `dispute_not_open` covers the rest).
 const DISPUTE_RESOLVABLE_STATUSES = new Set(['open', 'under_review']);
 
+// Locks the dispute row and throws not_found or invalid_state unless it can still be resolved. Kept
+// out of resolveDispute to hold its complexity down.
+async function lockOpenDispute(client: PoolClient, disputeId: string): Promise<void> {
+  // The access policy denies resolving a dispute that is not open (`dispute_not_open`). The row
+  // is locked first, so a second resolve under a different key (another admin, another tab)
+  // waits here, then sees `resolved` and is refused before it can move credits again or
+  // overwrite who decided the dispute.
+  const current = await client.query<{ status: string }>(
+    `SELECT status FROM skill_up_disputes WHERE id = $1::uuid FOR UPDATE`,
+    [disputeId],
+  );
+  if (!current.rows[0]) {
+    throw new Error('not_found');
+  }
+  if (!DISPUTE_RESOLVABLE_STATUSES.has(current.rows[0].status)) {
+    throw new Error('invalid_state');
+  }
+}
+
+// Moves the credits a resolution asks for, between the dispute's own parties only. Returns null when
+// the resolution moves nothing.
+async function applyResolveAdjustment(input: {
+  actorId: string;
+  disputeId: string;
+  adjustment?: { sourceUserId: string; destinationUserId: string; amount: number; reason: string };
+  idempotencyKey: string;
+}): Promise<Awaited<ReturnType<typeof applyDisputeAdjustment>> | null> {
+  if (!(input.adjustment && input.adjustment.amount > 0)) {
+    return null;
+  }
+  await assertAdjustmentBetweenDisputeParties(input.disputeId, input.adjustment);
+  return applyDisputeAdjustment({
+    actorId: input.actorId,
+    disputeCaseId: input.disputeId,
+    sourceUserId: input.adjustment.sourceUserId,
+    destinationUserId: input.adjustment.destinationUserId,
+    amount: input.adjustment.amount,
+    adjustmentReason: input.adjustment.reason,
+    idempotencyKey: `${input.idempotencyKey}:adjustment`,
+  });
+}
+
 export async function resolveDispute(input: {
   actorId: string;
   disputeId: string;
@@ -1285,34 +1337,8 @@ export async function resolveDispute(input: {
       return existing;
     }
 
-    // The access policy denies resolving a dispute that is not open (`dispute_not_open`). The row
-    // is locked first, so a second resolve under a different key (another admin, another tab)
-    // waits here, then sees `resolved` and is refused before it can move credits again or
-    // overwrite who decided the dispute.
-    const current = await client.query<{ status: string }>(
-      `SELECT status FROM skill_up_disputes WHERE id = $1::uuid FOR UPDATE`,
-      [input.disputeId],
-    );
-    if (!current.rows[0]) {
-      throw new Error('not_found');
-    }
-    if (!DISPUTE_RESOLVABLE_STATUSES.has(current.rows[0].status)) {
-      throw new Error('invalid_state');
-    }
-
-    let adjustmentResult: Awaited<ReturnType<typeof applyDisputeAdjustment>> | null = null;
-    if (input.adjustment && input.adjustment.amount > 0) {
-      await assertAdjustmentBetweenDisputeParties(input.disputeId, input.adjustment);
-      adjustmentResult = await applyDisputeAdjustment({
-        actorId: input.actorId,
-        disputeCaseId: input.disputeId,
-        sourceUserId: input.adjustment.sourceUserId,
-        destinationUserId: input.adjustment.destinationUserId,
-        amount: input.adjustment.amount,
-        adjustmentReason: input.adjustment.reason,
-        idempotencyKey: `${input.idempotencyKey}:adjustment`,
-      });
-    }
+    await lockOpenDispute(client, input.disputeId);
+    const adjustmentResult = await applyResolveAdjustment(input);
 
     const dispute = await client.query(
       `UPDATE skill_up_disputes
