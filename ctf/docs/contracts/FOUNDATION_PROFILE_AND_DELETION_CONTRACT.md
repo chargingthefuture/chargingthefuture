@@ -87,7 +87,7 @@ Foundation uses canonical profile for identity continuity, safety defaults, and 
 - Table/entity: `push_subscriptions`
   - Contains personal data? yes (the device's push identity, linked to `user_id`) — for a `kind = 'web'` row that is the Web Push endpoint plus the subscription's own public encryption keys; for a `kind = 'expo'` row (issue #884) that is the Android device's Expo push token, stored in the endpoint column with no encryption keys
   - Retention period: kept while a device has call alerts on; removed when the member turns alerts off, when the push service reports the subscription/token is gone (a web 404/410 or an Expo `DeviceNotRegistered` receipt), or on deletion
-  - Legal/compliance note: user-global table, but Foundation's instant-call ring (issue #808 task 5 for web; issue #884 for Android/Expo) is its only consumer today, so Foundation owns its deletion. The deletion is keyed on `user_id` and so removes every row regardless of `kind` — both web and expo subscriptions go on account/service deletion. It stores only the subscription endpoint/token and (web only) the subscription's own public encryption keys (never the server VAPID private key or the EXPO_ACCESS_TOKEN, both of which live only in env). No message or call content is stored here.
+  - Legal/compliance note: user-global table shared by Foundation's instant-call ring (issue #808 task 5 for web; issue #884 for Android/Expo) and the notification pushes in `lib/notifications/push.ts` and `expo-push.ts`. Because notification pushes send to the same rows, Foundation does not own its deletion: it is wired under the `notifications` registry entry, which has no per-service scope, so the rows clear with the account and a Foundation-only deletion keeps them. The deletion is keyed on `user_id` and so removes every row regardless of `kind`. It stores only the subscription endpoint/token and (web only) the subscription's own public encryption keys (never the server VAPID private key or the EXPO_ACCESS_TOKEN, both of which live only in env). No message or call content is stored here.
 - Table/entity: `foundation_deletion_events`
   - Contains personal data? minimal (`user_id`, scope, timestamps, result metadata)
   - Retention period: compliance retention window
@@ -110,13 +110,14 @@ When user deletes Foundation plugin usage only:
   - `foundation_provider_skills` rows for the requester (the skills they opted in to offer)
   - participant links and plugin-owned thread linkage rows for the requester
   - plugin-scoped notification preference and pending delivery records owned by requester
-  - `push_subscriptions` rows for the requester (the devices they turned call alerts on for) — wired in `lib/account/deletion-registry.ts` under the `foundation` entry as a hard delete on `user_id`, so account/profile deletion removes them
 - Anonymize/pseudonymize:
   - `foundation_message_metadata` and `foundation_call_sessions` user linkage for retained continuity records where hard delete is not required by policy
   - quote history actor identifiers where retention obligation allows pseudonymization
 - Retain for compliance/fraud/finance:
   - immutable quote lifecycle events required for service/dispute accountability
   - `foundation_deletion_events` for deletion evidence
+- Not touched by a Foundation-only deletion:
+  - `push_subscriptions` rows (the member's push devices). Notification pushes send to the same rows, so they are deleted only with the account, under the `notifications` registry entry.
 - Never touch (must remain):
   - canonical profile identity
   - Directory records and Directory behavior/data
@@ -197,4 +198,5 @@ If user returns to Foundation after service-scoped deletion:
 - 2026-05-31: Added transaction-scoped messaging retention (per rule 100): 1:1 text/voice/video channel closes on connection/quote terminal state (read-only window), retained server-side for moderation/abuse evidence; bodies hard-deleted/pseudonymized on deletion with minimal evidence/audit metadata retained per policy.
 - 2026-06-25: Documented the instant-call per-block billing columns on `foundation_call_sessions` (`rate_credits_locked`, `interval_minutes_locked`, `authorized_blocks`, `blocks_charged`, `paid_through_at`, `last_transfer_id`, `ended_reason`; issue #808 task 4). Clarified that the credits are held in the canonical `service_credits_*` tables (financial-record retention, governed by the ServiceCredits reclaim policy), NOT on the Foundation call row, and that disputes/refunds for a block are a deferred follow-up handled through the existing ServiceCredits dispute path.
 - 2026-06-25: Added `push_subscriptions` (issue #808 task 5 Web Push for the instant-call ring) as Foundation-owned domain data. Documented it in section 4 and as a "delete immediately" entry in section 5; the deletion is wired in `lib/account/deletion-registry.ts` under the `foundation` entry (hard delete on `user_id`), so service-scoped and full-account deletion both remove a member's device subscriptions. Only the subscription endpoint and the subscription's own public encryption keys are stored; the server VAPID private key lives only in env and is never persisted.
+- 2026-10-05: Moved the `push_subscriptions` deletion from the `foundation` registry entry to `notifications`. Notification pushes had started writing and reading the same rows, so a Foundation-only deletion was removing the devices a member turned notification pushes on for. The rows now clear only with the account. The two entries below describe the earlier wiring.
 - 2026-06-26: Extended `push_subscriptions` to also hold `kind = 'expo'` rows for Android native push (issue #884): the device's Expo push token in the endpoint column, no encryption keys. No new table or deletion entry was needed — the existing `lib/account/deletion-registry.ts` `foundation` entry deletes by `user_id` regardless of `kind`, so service-scoped and full-account deletion already remove expo rows. The send-side `EXPO_ACCESS_TOKEN` is a server-only secret read from env, never persisted in any table.

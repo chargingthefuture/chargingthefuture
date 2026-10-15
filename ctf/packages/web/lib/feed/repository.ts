@@ -2030,16 +2030,24 @@ export async function markAnnouncementRead(
   userId: string,
   announcementId: string,
 ): Promise<{ readAtIso: string }> {
+  // announcement_user_state has no foreign key to announcements, so the insert reads from
+  // announcements: an id with no announcement writes nothing and is reported as not found, the same
+  // as dismissAnnouncement, instead of storing read state for something that does not exist.
   const result = await queryDb<{ read_at: string }>(
     `
       INSERT INTO announcement_user_state (user_id, announcement_id, read_at, acknowledged_at, updated_at)
-      VALUES ($1, $2::uuid, NOW(), NOW(), NOW())
+      SELECT $1, a.id, NOW(), NOW(), NOW()
+      FROM announcements a
+      WHERE a.id = $2::uuid
       ON CONFLICT (user_id, announcement_id)
       DO UPDATE SET read_at = NOW(), acknowledged_at = NOW(), updated_at = NOW()
       RETURNING read_at
     `,
     [userId, announcementId],
   );
+  if (result.rows.length === 0) {
+    throw new Error('announcement_not_found');
+  }
   return { readAtIso: new Date(result.rows[0].read_at).toISOString() };
 }
 

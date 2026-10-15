@@ -12,6 +12,7 @@
     "verify:pre-push": "pnpm run verify:web && pnpm run verify:mobile",
     "test": "pnpm -r --if-present run test",
     "report:ghost-unlock-rewards": "node ./scripts/reportGhostUnlockRewards.mjs",
+    "dedupe:clerk-waitlist-invitations": "node ./scripts/dedupeClerkWaitlistInvitations.mjs",
     "seed:currencies": "node ./scripts/seedCurrenciesPhase0.mjs",
     "gdp:recognize": "node ./scripts/recognizeGdp.mjs",
     "seed:skills-taxonomy": "node ./scripts/seedSkillsTaxonomy.mjs",
