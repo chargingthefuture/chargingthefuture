@@ -35,6 +35,7 @@ import { generateFeedAssistedAnswer, inferFeedQuestionCategory } from './inferen
 import { emitFeedMembershipEventToStream } from './stream';
 import { getPluginBySlug, getPluginRoute, isAdminOnlyPlugin } from 'lib/plugins/repository';
 import { notifySafe } from 'lib/notifications/repository';
+import { isBlockedBetween } from 'lib/blocks/repository';
 import { resolveMentionUserIds } from 'lib/identity/resolve-mention-user-ids';
 import { reportError } from 'lib/observability/report';
 
@@ -883,7 +884,7 @@ export async function listPublicCommunityPosts(
           SELECT 1
           FROM feed_item_targets t
           WHERE t.item_id = f.id
-            AND t.target_role IN ('member', 'admin', 'all')
+            AND t.target_role IN ('member', 'all')
         )
       ORDER BY f.published_at DESC, f.id DESC
       LIMIT $1
@@ -964,6 +965,10 @@ async function loadFeedTimelineConfig(client: PoolClient): Promise<FeedConfig | 
 // channel/plugin/mention filters. Channel names are plural; feed_items.item_type is singular, so the
 // requested channels are mapped to item types. Mentions become LIKE-escaped `%@handle%` patterns
 // matched with ILIKE ANY; null disables the filter entirely.
+// Role targeting: every signed-in viewer is a member, so items targeted at 'member' or 'all' reach
+// everyone, and an item targeted at 'admin' reaches only a viewer whose role is admin (the role is
+// $1 in the timeline queries). The 'admin' literal used to sit in that list as well, which matched
+// every caller and made admin-only targeting reach all members.
 function resolveFeedTimelineQueryParams(
   role: string | null,
   filters: {
@@ -1006,6 +1011,19 @@ function hideBlockedCommunityAuthorsSql(viewer: string): string {
               WHERE p.id = f.source_community_post_id
             )
           )`;
+}
+
+// The same either-direction block rule for a row whose author column is named directly (announcement
+// replies, quoted posts). `viewer` is the placeholder holding the viewer id and `authorColumn` the
+// qualified author column; both are fixed strings from this file, never input.
+function notBlockedWithViewerSql(viewer: string, authorColumn: string): string {
+  return `
+              AND NOT EXISTS (
+                SELECT 1
+                FROM member_blocks mb
+                WHERE (mb.blocker_user_id = ${viewer} AND mb.blocked_user_id = ${authorColumn})
+                   OR (mb.blocker_user_id = ${authorColumn} AND mb.blocked_user_id = ${viewer})
+              )`;
 }
 
 // Hide a Commons post or AI Q&A card whose source row is gone, or hidden by a moderator.
@@ -1054,7 +1072,7 @@ async function countFeedTimeline(client: PoolClient, params: FeedTimelineQueryPa
             SELECT 1
             FROM feed_item_targets t
             WHERE t.item_id = f.id
-              AND t.target_role IN ($1, 'member', 'admin', 'all')
+              AND t.target_role IN ($1, 'member', 'all')
               AND ($2::text IS NULL OR t.target_plugin IS NULL OR t.target_plugin = $2)
           )${hideBlockedCommunityAuthorsSql('$5')}${HIDE_MISSING_OR_HIDDEN_SOURCE_ROWS_SQL}
       `,
@@ -1135,7 +1153,7 @@ async function resolveEffectiveOffset(
                 SELECT 1
                 FROM feed_item_targets t
                 WHERE t.item_id = f.id
-                  AND t.target_role IN ($1, 'member', 'admin', 'all')
+                  AND t.target_role IN ($1, 'member', 'all')
                   AND ($2::text IS NULL OR t.target_plugin IS NULL OR t.target_plugin = $2)
               )
               AND (f.published_at > $5 OR (f.published_at = $5 AND f.id > $6::uuid))${hideBlockedCommunityAuthorsSql('$7')}${HIDE_MISSING_OR_HIDDEN_SOURCE_ROWS_SQL}
@@ -1186,7 +1204,7 @@ async function queryFeedTimelineRows(
             SELECT 1
             FROM feed_item_targets t
             WHERE t.item_id = f.id
-              AND t.target_role IN ($1, 'member', 'admin', 'all')
+              AND t.target_role IN ($1, 'member', 'all')
               AND ($2::text IS NULL OR t.target_plugin IS NULL OR t.target_plugin = $2)
           )${hideBlockedCommunityAuthorsSql('$4')}${HIDE_MISSING_OR_HIDDEN_SOURCE_ROWS_SQL}
         ORDER BY f.published_at DESC, f.id DESC
@@ -1491,10 +1509,10 @@ async function loadAnnouncementDetails(
             SELECT announcement_id, COUNT(*)::text AS count
             FROM announcement_replies
             WHERE announcement_id = ANY($1::uuid[])
-              AND moderation_status = 'accepted'
+              AND moderation_status = 'accepted'${notBlockedWithViewerSql('$2', 'announcement_replies.author_user_id')}
             GROUP BY announcement_id
           `,
-      [announcementIds],
+      [announcementIds, userId],
     ),
   ]);
 
@@ -2386,6 +2404,11 @@ async function notifyMentionedMembers(
       if (userId === actorId || userId === replyParentAuthorId) {
         continue;
       }
+      // A block in either direction means the poster cannot reach this member, by mention or any
+      // other way, so no notification is sent.
+      if (await isBlockedBetween(actorId, userId)) {
+        continue;
+      }
       await notifySafe({
         userId,
         sourcePlugin: 'commons',
@@ -2756,8 +2779,9 @@ export async function replyToAnnouncement(
 
 // List the accepted replies on an official announcement, oldest-first (thread order). Returns an
 // empty array when the announcement has none. The announcement id is normalized so a malformed id
-// simply yields no replies rather than throwing.
-export async function listAnnouncementReplies(announcementId: string): Promise<FeedAnnouncementReply[]> {
+// simply yields no replies rather than throwing. Replies by a member blocked in either direction with
+// the viewer are left out, the same rule the Commons applies to post replies.
+export async function listAnnouncementReplies(announcementId: string, viewerId: string): Promise<FeedAnnouncementReply[]> {
   const normalizedId = normalizeUuid(announcementId);
   if (normalizedId === null) {
     return [];
@@ -2768,10 +2792,10 @@ export async function listAnnouncementReplies(announcementId: string): Promise<F
       SELECT id, announcement_id, author_user_id, author_username, body, edited_at, created_at
       FROM announcement_replies
       WHERE announcement_id = $1::uuid
-        AND moderation_status = 'accepted'
+        AND moderation_status = 'accepted'${notBlockedWithViewerSql('$2', 'announcement_replies.author_user_id')}
       ORDER BY created_at ASC
     `,
-    [normalizedId],
+    [normalizedId, viewerId],
   );
 
   return result.rows.map((row) => ({
