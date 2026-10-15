@@ -13,9 +13,16 @@ import PluginRoutePage from '../[pluginSlug]/page';
 // (unlock, public-visitor, admin) stays defined in exactly one place.
 export const dynamic = 'force-dynamic';
 
-export default async function DirectoryRoutePage() {
+// The query is passed through, because a direct link to one invitation (?invite=<handle>) and the
+// invite wall's page number (?page=) are read by the catch-all.
+export default async function DirectoryRoutePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ invite?: string; page?: string }>;
+}) {
+  const query = await searchParams;
   return PluginRoutePage({
     params: Promise.resolve({ pluginSlug: 'directory' }),
-    searchParams: Promise.resolve({}),
+    searchParams: Promise.resolve({ invite: query.invite, page: query.page }),
   });
 }

@@ -11,6 +11,7 @@ import { InvitesPopup } from '@/components/invites/invites-popup';
 import { BeaconShell } from '@/components/beacon/beacon-shell';
 import { ChymeShell } from '@/components/chyme/chyme-shell';
 import { DirectoryShell } from '@/components/directory/directory-shell';
+import { renderDirectoryEntry } from '@/components/directory/directory-entry';
 import { FoundationShell } from '@/components/foundation/foundation-shell';
 import GdpShell from '@/components/gdp/gdp-shell';
 import { LighthouseShell } from '@/components/lighthouse/lighthouse-shell';
@@ -44,6 +45,9 @@ type PluginRoutePageProps = {
     repo?: string;
     slug?: string;
     title?: string;
+    // Directory deep link to one invitation (the person's Quora handle), and the invite wall's page.
+    invite?: string;
+    page?: string;
   }>;
 };
 
@@ -416,6 +420,15 @@ export default async function PluginRoutePage({ params, searchParams }: PluginRo
   // through to the normal render below.
   if (isAdminOnlyPlugin(selectedPlugin.slug) && !(decision.allowed && decision.isAdmin)) {
     notFound();
+  }
+
+  // Directory decides for itself what a viewer it turns away sees: the invitations (owner decision,
+  // 2026-10-15). See components/directory/directory-entry.tsx.
+  if (selectedPlugin.slug === 'directory') {
+    const directoryEntry = renderDirectoryEntry(decision, resolvedSearchParams, returnPath);
+    if (directoryEntry) {
+      return directoryEntry;
+    }
   }
 
   if (!decision.allowed) {
