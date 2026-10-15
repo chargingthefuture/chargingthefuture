@@ -319,6 +319,16 @@ member active only in Fireside is seen by being read, which is what the plugin i
   host shows the screen's own sentence with the status code instead of the parser's message
   (#2738). Tests: `lib/fireside/paged-lists.test.ts`.
 
+- 2026-10-05: **A reaction from somebody not yet approved no longer moves the public count.**
+  The access policy for `fireside.reaction.toggle` and user features 2 and 5 have always said a reaction
+  counts in public once its author is approved, but `readReactions` in `lib/fireside/repository.ts`
+  added every row to the totals, so an account that never finished Unlock could change the number
+  every reader sees (#2742). It now asks `listUnlockedUserIds` about the reactors and counts a row
+  only when its reactor is approved, or when the reactor is the person reading, so a waiting member
+  sees their own press counted beside a pressed button while nobody else does. Nothing is stored
+  differently, so approval makes everything they left count at once. The four reads that use it
+  (the public thread, the member's own list, and the two admin lists) all follow the same rule.
+  Tests: `lib/fireside/reaction-counts.test.ts`; test script FS-3 checks the count before approval.
 - 2026-10-05: **The export feed refuses a cursor of the wrong shape instead of reporting the
   database down.** `parseExportCursor` (`lib/fireside/export-review.ts`) checked only that a `|` had
   text on both sides, so a cursor such as `abc|def` reached the query, failed the `timestamptz` and

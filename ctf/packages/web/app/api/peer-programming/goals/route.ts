@@ -73,6 +73,24 @@ function parseGoal(body: Record<string, unknown>): ParsedGoal {
   return { ok: true, title: title.text, tasks };
 }
 
+// The goal is saved by the time this runs. A failed audit write is recorded, not turned into a 503:
+// that answer would tell the member to post again and put a second copy of the goal on the board.
+async function auditGoalCreate(actorId: string, goalId: string, taskCount: number): Promise<void> {
+  try {
+    await insertPeerProgrammingAudit({
+      actorId,
+      command: 'peer-programming.goal.create',
+      policyStatus: 'allow',
+      reason: 'ok',
+      targetType: 'goal',
+      targetId: goalId,
+      metadata: { taskCount },
+    });
+  } catch (auditError) {
+    reportError(auditError, { area: 'peer-programming', op: 'goal_create_audit' });
+  }
+}
+
 // Post a goal, with its first tasks. A member can have up to PEER_PROGRAMMING_MAX_OPEN_GOALS open.
 export async function POST(request: Request) {
   const csrfDeny = ensureMutationCsrf(request);
@@ -94,15 +112,7 @@ export async function POST(request: Request) {
       return conflict(PEER_PROGRAMMING_ERROR_CODE.cohortEnded, 'This cohort has ended, so its board is read-only.');
     }
     const goalId = await createGoal({ cohortId: cohort.id, ownerUserId: gate.auth.userId, title: parsed.title, tasks: parsed.tasks });
-    await insertPeerProgrammingAudit({
-      actorId: gate.auth.userId,
-      command: 'peer-programming.goal.create',
-      policyStatus: 'allow',
-      reason: 'ok',
-      targetType: 'goal',
-      targetId: goalId,
-      metadata: { taskCount: parsed.tasks.length },
-    });
+    await auditGoalCreate(gate.auth.userId, goalId, parsed.tasks.length);
     return NextResponse.json({ ok: true, goalId }, { status: 201 });
   } catch (error) {
     if (error instanceof Error && error.message === 'open_goal_limit') {
