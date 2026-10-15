@@ -13,7 +13,6 @@ what code does not.
 ## Architecture
 
 - [AUTH_ARCHITECTURE.md](AUTH_ARCHITECTURE.md) — authentication architecture.
-- [economic-models-plugin-plan.md](economic-models-plugin-plan.md) — economic models plugin design.
 - [EXTERNAL_LINK_FEATURE.md](EXTERNAL_LINK_FEATURE.md) — external link feature.
 
 ## Performance

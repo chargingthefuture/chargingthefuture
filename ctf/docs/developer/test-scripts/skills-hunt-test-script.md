@@ -702,15 +702,14 @@ Result: web ☐
 **Precondition:** Member has at least one submission (from SH-2).
 
 **Steps:**
-1. While signed in as the member, send a DELETE request to `/api/account/skills-hunt-profile` (or use the UI affordance if present).
+1. While signed in as the member, open Account & Data and delete the SkillsHunt service (`DELETE /api/account/services/skills-hunt`).
 2. Navigate to My Finds tab.
 3. Sign in as an admin and check `/admin/skills-hunt` submissions table.
 
 **Expected:**
-- The DELETE returns a JSON body with `deleted: N` where N ≥ 1.
 - My Finds shows no submissions for the deleted member.
 - The admin table no longer shows the deleted member's submissions.
-- The audit log retains a `skills-hunt.profile.delete` entry (verifiable via the admin audit-events endpoint).
+- The audit log rows the member's submissions wrote are still there (`skills_hunt_audit_log` is retained).
 
 Result: web ☐
 

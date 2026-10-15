@@ -1,4 +1,3 @@
-import type { ClerkTokenVerifier } from './clerkAuth';
 export type AuthProvider = 'clerk' | 'supabase' | 'firebase' | 'custom';
 export interface PluginAuthContext {
     provider: AuthProvider;
@@ -11,7 +10,7 @@ export interface PluginAuthContext {
      * shared package free of any server-only SDK while still refusing to
      * authenticate on an unverified (forgeable) token.
      */
-    verifier?: ClerkTokenVerifier;
+    verifier?: (token: string) => Promise<string | null> | string | null;
 }
 export interface PluginAuthResult {
     isAuthenticated: boolean;

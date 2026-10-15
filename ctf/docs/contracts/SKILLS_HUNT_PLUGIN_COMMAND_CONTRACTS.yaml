@@ -598,22 +598,6 @@ contracts:
     idempotency: true
 
   - pluginId: skills-hunt
-    command: skills-hunt.profile.delete
-    version: 1.0.0
-    description: GDPR-style soft-delete of every submission authored by the caller. Audit log retained.
-    inputSchema: {}
-    outputSchema:
-      deleted:
-        type: number
-        description: Count of submissions soft-deleted.
-    dataAccess:
-      - skills_hunt_submissions
-      - skills_hunt_audit_log
-    purpose: gdpr_self_delete
-    retentionClass: gdpr_soft_delete
-    idempotency: true
-
-  - pluginId: skills-hunt
     command: skills-hunt.mission.list
     version: 2.0.0
     description: >-
@@ -1006,3 +990,8 @@ changelog:
       pasted, so a scout learns the person is already nominated before filling in the rest.
   - date: 2026-10-08
     change: Bumped skills-hunt.submission.create to v1.2.0 — new optional jobTitleId input, stored on skills_hunt_submissions.job_title_id only when it names an active job title. An accept (skills-hunt.submission.review) copies it and its sector onto the generated directory profile; both commands now list skills_taxonomy_job_titles as a read.
+  - date: 2026-10-15
+    change: >-
+      Removed skills-hunt.profile.delete. Its route, DELETE /api/account/skills-hunt-profile, had no
+      caller and removed less than the account deletion registry does; DELETE
+      /api/account/services/skills-hunt is the only per-service delete.

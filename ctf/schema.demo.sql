@@ -2940,9 +2940,9 @@ INSERT INTO ctf_plugin_registry (plugin_slug, display_name, summary, availabilit
   ('peer-programming',   'PeerProgramming',     'Weekly global mastermind sessions.',                            'implemented_shell', 110, TRUE),
   ('mood',               'Mood',                 'Anonymous mood tracking and pattern awareness. Know yourself. See patterns. Take back control.',                        'implemented_shell', 120, TRUE),
   ('weekly-performance', 'Weekly Performance',   'Week selection/guardrails with metrics, comparisons, and export gate checks.',                    'implemented_shell', 140, TRUE),
-  ('gdp',                'GDP',                  'Real time $300B global survivor economic tracker. Your contributions counted, recorded, visible.',                        'implemented_shell', 150, TRUE),
+  ('gdp',                'GDP',                  'Real time global survivor economic tracker. Your contributions counted, recorded, visible.',                        'implemented_shell', 150, TRUE),
   ('service-credits',    'ServiceCredits',      'Alternative economy and credits exchange. Trade value inside the network — no outside systems needed.',                             'implemented_shell', 160, TRUE),
-  ('skill-up',           'SkillUp',              'Paid skills-training cohorts — learn a skill with a trainer and earn credits as you reach each milestone.','implemented_shell', 170, TRUE),
+  ('skill-up',           'SkillUp',              'Skills-training cohorts with a trainer. Your credit deposit is held and comes back to you as you reach each milestone.','implemented_shell', 170, TRUE),
   ('click-log',          'ClickLog',             'Safety check-in and incident logging — location optional. Log what happened, check in when you''re safe.','implemented_shell', 180, TRUE),
   ('trust',              'Trust',                'Community reputation and verification. Trust signals built through real participation — your credibility, visible and portable.','implemented_shell', 190, TRUE),
   ('what-works',          'WhatWorks',            'One shared, survivor-verified list of tools — organized by the exact problems survivors face. No ads, no affiliates.','implemented_shell', 200, TRUE),
@@ -10345,6 +10345,30 @@ BEGIN
   END IF;
 END $$;
 COMMIT;
+
+
+-- ── post migration: 0059_plugin_registry_gdp_skill_up_summaries.sql ──
+-- New wording on the GDP and SkillUp tiles in the apps list.
+--
+-- The GDP tile stated a $300B dollar figure. GDP is a unitless index in the app, and the only place a
+-- dollar figure for it may appear is the Workforce overview's Skills Economy Summary card. The
+-- SkillUp tile said learners earn credits at each milestone. A learner's own held deposit comes back
+-- at each milestone; new credits go to the trainer, not the learner.
+--
+-- schema.sql carries the same text in its registry seed. This sets it on an existing database too.
+-- It changes only these two summaries, and only while they still differ, so a second run changes
+-- nothing.
+UPDATE ctf_plugin_registry
+SET summary = 'Real time global survivor economic tracker. Your contributions counted, recorded, visible.',
+    updated_at = NOW()
+WHERE plugin_slug = 'gdp'
+  AND summary IS DISTINCT FROM 'Real time global survivor economic tracker. Your contributions counted, recorded, visible.';
+
+UPDATE ctf_plugin_registry
+SET summary = 'Skills-training cohorts with a trainer. Your credit deposit is held and comes back to you as you reach each milestone.',
+    updated_at = NOW()
+WHERE plugin_slug = 'skill-up'
+  AND summary IS DISTINCT FROM 'Skills-training cohorts with a trainer. Your credit deposit is held and comes back to you as you reach each milestone.';
 
 
 -- ── post migration: 0060_drop_service_credits_dispute_adjustment_legacy_columns.sql ──

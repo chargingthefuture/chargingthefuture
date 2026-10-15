@@ -130,10 +130,7 @@ chargingthefuture/          ← repo root
 │   ├── packages/
 │   │   ├── web/            ← Next.js app (@ctf/web)
 │   │   ├── mobile/         ← React Native / Expo app (@ctf/mobile)
-│   │   ├── shared/         ← shared types, contracts, utilities
-│   │   ├── education/
-│   │   ├── economic-models/
-│   │   └── eol/
+│   │   └── shared/         ← shared types, contracts, utilities
 │   ├── scripts/            ← operational helpers (migrations, audits, seeds)
 │   ├── docs/               ← architecture docs, quota impact notes, setup guides
 │   └── package.json        ← workspace root (pnpm)
