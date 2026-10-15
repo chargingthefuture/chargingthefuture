@@ -14,6 +14,9 @@ function Row({ tokens: t, label, value, strong }: { tokens: PluginShellTokens; l
 }
 
 function BillRows({ tokens: t, bill }: { tokens: PluginShellTokens; bill: GpuBillState }) {
+  if (bill.incompleteReason && bill.lastReadAt) {
+    return <div style={{ fontSize: 13, color: '#F59E0B', lineHeight: 1.5 }}>{bill.incompleteReason}</div>;
+  }
   if (bill.last30DaysCents === null || !bill.lastReadAt) {
     return <div style={{ fontSize: 13, color: t.SUBTLE }}>Not read yet. The RunPod line shows the figure typed by hand until the first read.</div>;
   }

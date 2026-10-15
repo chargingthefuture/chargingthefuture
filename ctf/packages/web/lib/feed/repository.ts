@@ -586,7 +586,13 @@ async function refreshPublishedGuidanceNotices(client: PoolClient): Promise<void
 // Never throws: a failure here must not lose the member's post. A notice is a reminder, and missing one
 // is a smaller harm than a rejected post — but the claim and the notice do share the post's transaction,
 // so the two can never disagree about whether a period was served.
+//
+// The savepoint is load-bearing. Once any statement fails, Postgres aborts the entire transaction, and a
+// later COMMIT on an aborted transaction is answered with a rollback and no error. Without the savepoint a
+// failed notice would silently discard the member's post while the caller reported success. Rolling back
+// to the savepoint undoes only the notice's own writes, so the post still commits.
 async function maybePostCommonsGuidance(client: PoolClient): Promise<void> {
+  await client.query('SAVEPOINT commons_guidance');
   try {
     // Counts every community post, hidden ones included. A milestone means "the Commons has seen this
     // much traffic", and moderation after the fact should not shift where the next notice falls.
@@ -653,7 +659,11 @@ async function maybePostCommonsGuidance(client: PoolClient): Promise<void> {
 
       await stampGuidanceAnnouncement(client, milestone, announcementId, notice.key);
     }
+    await client.query('RELEASE SAVEPOINT commons_guidance');
   } catch (error) {
+    // If this rollback itself fails it throws, the post's transaction rolls back, and the route answers
+    // with an error rather than a success for a post that was not stored.
+    await client.query('ROLLBACK TO SAVEPOINT commons_guidance');
     reportError(error, { area: 'feed', op: 'commons_guidance_autopost' });
   }
 }
@@ -3101,21 +3111,6 @@ export async function relabelQuestionCategory(
                  fq.location_context, fq.llm_consent_granted, fq.created_at
       `,
       [questionId],
-    );
-
-    await client.query(
-      `
-        INSERT INTO llm_inference_log
-          (actor_user_id, question_id, answer_id, model_id, request_payload, response_payload, sources, confidence, latency_ms, prompt_token_count, completion_token_count, total_token_count, status)
-        VALUES
-          ($1, $2::uuid, NULL, 'admin-relabel', $3::jsonb, $4::jsonb, '[]'::jsonb, NULL, 0, 0, 0, 0, 'completed')
-      `,
-      [
-        actorId,
-        questionId,
-        JSON.stringify({ action: 'relabel', newCategory: category }),
-        JSON.stringify({ result: 'category_updated' }),
-      ],
     );
 
     return mapAdminQuestion(result.rows[0]);

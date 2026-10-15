@@ -67,7 +67,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ qu
     }
     await recordFeedAdminFailure(gate.auth.userId, audit, { status: 'allow', reason: 'persistence_error', errorCategory: 'persistence_error' });
     return NextResponse.json(
-      { ok: false, code: FEED_ERROR_CODE.persistenceUnavailable, message: 'Unable to relabel question.' },
+      { ok: false, code: FEED_ERROR_CODE.persistenceUnavailable, message: `Unable to relabel question: ${failureReason(error)}` },
       { status: 503 },
     );
   }

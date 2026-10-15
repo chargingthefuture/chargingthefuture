@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
   RUNPOD_BILLING_URL,
+  addDays,
   billWindow,
   buildBillingRequestUrl,
   fetchEndpointBill,
   isDaySettled,
+  missingBillDays,
   parseBillingResponse,
   runpodEndpointIdFromUrl,
   runpodEndpointIdsFromEnv,
@@ -98,5 +100,30 @@ describe('when a day is final', () => {
     expect(isDaySettled('2026-10-01', NOW)).toBe(false);
     expect(isDaySettled('2026-09-30', new Date('2026-10-01T01:00:00Z'))).toBe(false);
     expect(isDaySettled('2026-09-30', new Date('2026-10-01T06:23:00Z'))).toBe(true);
+  });
+});
+
+describe('the 30-day figure is only used when every day was read', () => {
+  const TODAY = '2026-10-01';
+  const fullWindow = (endpointsRead: number) =>
+    Array.from({ length: 30 }, (_, index) => ({ billDate: addDays(TODAY, -(index + 1)), endpointsRead }));
+
+  it('finds nothing missing when every full day has a row for every endpoint', () => {
+    expect(missingBillDays([...fullWindow(2), { billDate: TODAY, endpointsRead: 2 }], TODAY, 2)).toBe(0);
+  });
+
+  it('counts the days a lapse in the daily read left out', () => {
+    const lapsed = fullWindow(1).filter((day) => day.billDate < addDays(TODAY, -4));
+    expect(missingBillDays(lapsed, TODAY, 1)).toBe(4);
+  });
+
+  it('counts a day read for only some endpoints as missing', () => {
+    const days = fullWindow(2);
+    days[0] = { ...days[0], endpointsRead: 1 };
+    expect(missingBillDays(days, TODAY, 2)).toBe(1);
+  });
+
+  it('ignores today and days outside the window', () => {
+    expect(missingBillDays([{ billDate: TODAY, endpointsRead: 1 }, { billDate: addDays(TODAY, -31), endpointsRead: 1 }], TODAY, 1)).toBe(30);
   });
 });
