@@ -68,3 +68,19 @@ export function canonicalizeQuoraUrl(value: string | null | undefined): string |
 
   return `https://www.quora.com${path}`;
 }
+
+// The profile a canonical link belongs to, when it is a page of a profile: a profile tab
+// (`/profile/<name>/answers`, `/activity`, `/followers`, …) is the same person as the bare profile.
+// Returns the bare profile link for a profile or any of its tabs, and null for any other link (an
+// answer, a question). Directory's takedown list matches on this as well as on the full link, so a
+// person taken down at their profile cannot be listed again through one of its tabs, and the
+// reverse. Directory still stores the link as given; only the takedown match widens.
+export function quoraProfileRoot(canonical: string | null | undefined): string | null {
+  if (typeof canonical !== 'string') return null;
+  const match = /^https:\/\/www\.quora\.com\/profile\/([^/]+)(?:\/.*)?$/.exec(canonical);
+  return match ? `https://www.quora.com/profile/${match[1]}` : null;
+}
+
+// The same rule as a Postgres regular expression, for a stored canonical column: replacing a match
+// with `\1` gives the bare profile. Keep the two in step.
+export const QUORA_PROFILE_ROOT_SQL_PATTERN = '^(https://www\\.quora\\.com/profile/[^/]+)(/.*)?$';
