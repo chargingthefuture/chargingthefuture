@@ -612,11 +612,13 @@ Result: web ☐
 2. Read the newest entries.
 3. Close an event that is already closed (repeat the close on the same event), then reopen the panel.
 4. Open a new event, then reopen the panel.
+5. Collapse and expand the panel once more.
 
 **Expected:**
 - Step 2: entries newest first, at most 200, each naming the action in plain words — "Opened an event", "Closed an event" — with the admin's id, the event acted on, and the local date and time.
 - Step 3: the refusal appears marked **Refused**, reading "Because the event was already closed". An action that did not happen is recorded, not dropped.
 - Step 4: an "Opened an event" row appears.
+- Step 5: a "Read the audit log" row appears for the earlier opening of the panel. Reading the trail is an admin action too, so it is recorded (since 2026-10-15). A member who is not an admin and calls an admin route is recorded as **Refused**, "Because policy refused it", named by their id.
 - **No row names a voter.** Saving picks is a member's action, not an admin's, and writes no audit row — its absence here is correct, not a gap. Together with MT-A11 (individual votes never exposed in the public read), this is the check that the trail did not become a back door to who voted for what.
 
 **Result:** web ☐ mobile ☐ — notes:
