@@ -30,9 +30,17 @@ export const CENSUS_CSV_HEADERS = [
   'notes',
 ] as const;
 
-function csvCell(value: string | number | boolean | null): string {
+// A spreadsheet runs a cell as a formula when it starts with one of these, quoted or not.
+const FORMULA_LEAD = /^[=+\-@\t\r]/;
+
+// Text that would start a formula gets a leading single quote, which a spreadsheet reads as "this
+// is text". Handles and notes are often copied from a public account's own text, so they are not
+// always something the admin composed, and the export is opened in a spreadsheet by design. Only
+// strings are guarded: the numeric columns are never negative.
+export function csvCell(value: string | number | boolean | null): string {
   if (value === null) return '""';
-  return `"${String(value).replace(/"/g, '""')}"`;
+  const text = typeof value === 'string' && FORMULA_LEAD.test(value) ? `'${value}` : String(value);
+  return `"${text.replace(/"/g, '""')}"`;
 }
 
 function topicLabels(topics: QuoraCensusTopic[]): string {

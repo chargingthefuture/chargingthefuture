@@ -12,6 +12,7 @@ import { getGdpShellStats } from '../lib/gdp/repository';
 import { listPluginRegistry, filterPluginsForViewer } from '../lib/plugins/repository';
 import { readTrustSelfExtensionOrStored } from '../lib/trust/repository';
 import { getHostedSignInUrl } from '../lib/auth/provider-env';
+import { reportError } from '../lib/observability/report';
 
 function buildShellUser(userId: string, username: string | null): ShellCurrentUser {
   const safeUsername = username && username !== 'guest' ? username : null;
@@ -73,7 +74,11 @@ async function resolveVerification(
   if (!userId || tier === 'approved_full') {
     return null;
   }
-  const unlockStatus = await getUnlockStatusForUser(userId).catch(() => null);
+  const unlockStatus = await getUnlockStatusForUser(userId).catch((error: unknown) => {
+    // Without the status the banner cannot say what is pending, so it is left out; report why.
+    reportError(error, { area: 'home', op: 'unlock_status_read' });
+    return null;
+  });
   if (!unlockStatus) {
     return null;
   }
@@ -95,10 +100,44 @@ async function resolveTrust(
   return readTrustSelfExtensionOrStored(userId).catch(() => buildFallbackTrust(userId));
 }
 
+async function redirectIfAccountClosed(userId: string | null, isAdmin: boolean): Promise<void> {
+  if (!userId || isAdmin) {
+    return;
+  }
+  const restriction = await getAccountRestrictionStatus(userId, 'all').catch((error: unknown) => {
+    reportError(error, { area: 'account-closed', op: 'home_restriction_check' });
+    return { isRestricted: false };
+  });
+  if (restriction.isRestricted) {
+    redirect('/account-closed');
+  }
+}
+
+// A failed tier read is not "no tier": treating it as one sent an approved member back into Unlock.
+// When the read fails, report it and render the Hub without the verification banner instead. Each
+// plugin route checks the tier again on its own, so this only decides what the Hub shows.
+async function readHubTier(
+  userId: string | null,
+): Promise<{ tier: UnlockAccessTier | null; failed: boolean }> {
+  if (!userId) {
+    return { tier: null, failed: false };
+  }
+  try {
+    return { tier: await getUnlockAccessTier(userId), failed: false };
+  } catch (error: unknown) {
+    reportError(error, { area: 'home', op: 'unlock_tier_read' });
+    return { tier: null, failed: true };
+  }
+}
+
 export default async function HomePage() {
   const pluginsPromise = listPluginRegistry();
   const shellStatsPromise = getGdpShellStats().catch(() => ({ memberCount: null, gdpValueUsd: null }));
-  const identityPromise = resolveRequestIdentity().catch(() => null);
+  const identityPromise = resolveRequestIdentity().catch((error: unknown) => {
+    // Renders the signed-out Hub; report it so a sign-in outage is not silent.
+    reportError(error, { area: 'home', op: 'identity_read' });
+    return null;
+  });
 
   const [plugins, shellStats, identity] = await Promise.all([
     pluginsPromise,
@@ -127,23 +166,15 @@ export default async function HomePage() {
   // pass the tier branch below and land on a Commons where every call answers 403 — the app looking
   // broken instead of saying a decision was made. Send them to the page that explains it and offers the
   // one thing they can still do: sign in as their other account, or delete this identity.
-  if (userId && !isAdmin) {
-    const restriction = await getAccountRestrictionStatus(userId, 'all').catch((error: unknown) => {
-      reportError(error, { area: 'account-closed', op: 'home_restriction_check' });
-      return { isRestricted: false };
-    });
-    if (restriction.isRestricted) {
-      redirect('/account-closed');
-    }
-  }
+  await redirectIfAccountClosed(userId, isAdmin);
 
-  const tier = userId ? await getUnlockAccessTier(userId).catch(() => null) : null;
+  const { tier, failed: tierReadFailed } = await readHubTier(userId);
 
-  if (shouldRedirectToUnlock({ userId, isAdmin, tier })) {
+  if (!tierReadFailed && shouldRedirectToUnlock({ userId, isAdmin, tier })) {
     redirect('/plugin/unlock');
   }
 
-  const verification = await resolveVerification(tier, userId);
+  const verification = tierReadFailed ? null : await resolveVerification(tier, userId);
 
   const isAuthenticated = Boolean(userId);
 

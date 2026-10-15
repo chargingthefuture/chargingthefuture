@@ -36,7 +36,7 @@ and released as each is validated, and the member's credits view here is read-on
 transfer action. Any screen that offers to spend, transfer, or cash out credits, or that describes a
 deposit in money terms, is a bug (inventory Intent and Outcome, added 2026-08-18).
 
-**Seed before starting:** `pnpm --dir ctf seed:skill-up`
+**Seed before starting:** `pnpm --dir ctf seed:skill-up` (it finishes without a `column ... does not exist` error; the stipend and microgrant columns it used to write were dropped)
 
 1. Sign in as the seed **member** (trainee 1). Open the SkillUp app. The cohort browse screen loads without error and shows at least one cohort card.
    web ☐
@@ -127,6 +127,7 @@ Result: web ☐
 - At step 2 the claim is refused and the card shows the server's own sentence, which names what to change — that the profile carries no skill for this occupation and adding one you actually have will let you claim it. It is not a generic failure.
 - At step 4 the claim succeeds, the card says you are the trainer for this cohort, and the list reloads so the cohort no longer offers the control. The cohort's trainer name is now yours on reload.
 - At step 5 the refusal says to claim your Directory profile first.
+- If two eligible members press **Claim as trainer** on the same cohort at the same moment (two devices, pressed together), only one becomes the trainer. The other is refused with "This cohort already has a trainer." and is not shown as the trainer on reload.
 - None of this needs an admin. The entire flow works for a signed-in member with read access.
 - A cohort whose occupation was never set refuses with the sentence about no occupation to match against, which names an admin as the person who can fix it.
 - At phone width the control and any refusal wrap rather than overflowing, and the page does not scroll sideways.
@@ -699,7 +700,7 @@ Result: web ☐
 - The refresh banner reports how many proposals were ranked / superseded / cohorts closed. If the pre-flight guard fires (no positive `workforce_share`), it shows `skipped: no_workforce_share` — not a blank screen or error.
 - The list is **sector-diverse**: the top rows span different sectors rather than all coming from one sector (no single sector dominates the top of the queue).
 - Approving opens a real cohort: a success banner names the occupation and end date, the proposal leaves the queue, and the cohort overview shows a new cohort with an `auto` badge (and `needs trainer` until a trainer claims it). Its end date is ~3 months out.
-- The new cohort's title is the occupation on its own — "Journalists / Reporters", not "SkillUp: Journalists / Reporters" and not "LevelUp: …". No cohort row anywhere in the plugin (browse, admin overview, progress) shows a plugin-name prefix on its title; the older cohorts had theirs stripped by `post/0009`.
+- The new cohort's title is the occupation on its own — "Journalists / Reporters", not "SkillUp: Journalists / Reporters" and not "LevelUp: …". No cohort row anywhere in the plugin (browse, admin overview, progress) shows a plugin-name prefix on its title; the older cohorts had theirs stripped by `post/0009`. That migration only touches cohorts created before 2026-08-30, so a cohort an admin creates now with a title such as "SkillUp: Welding basics" keeps that title after the next deploy (added 2026-10-14).
 - Dismissing removes that proposal from the queue with no cohort created.
 
 Result: web ☐

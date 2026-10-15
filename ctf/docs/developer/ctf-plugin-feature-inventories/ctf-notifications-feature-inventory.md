@@ -152,6 +152,13 @@ No seed yet. A follow-up seed can insert a couple of sample notifications for a 
   notification because the worker read `data.url` while this feed sends `data.path`; it now reads
   both. "Manage what pings your device" moved from below the feed to above it, and its notes now say
   "the list below". No route, schema, or contract change.
+- 2026-10-05: **Device alerts and switch saves say why they did not work (#2633, #2635).** Merged
+  after the 2026-10-12 change above, which already checks the subscribe answer and re-sends an existing
+  subscription. A refused or failed save now shows the route's own reason (CSRF denial, bad payload, a
+  failed save) instead of a fixed sentence, and a thrown failure is reported through `failureText`. A
+  preference save that fails now shows the route's reason as well as putting the switch back, and a
+  failed first read of the preferences shows a note where the Manage section would be. No route,
+  contract or schema change.
 - 2026-07-23: PeerProgramming cohort-message producer. `POST /api/peer-programming/messages` now emits
   `peer-programming.cohort.message` (category `community`) via `notifySafe` to every other cohort member
   after a message is stored — deduped per (member, message), never the sender, deep-linked to the room.
