@@ -3,6 +3,7 @@
 import { Repeat } from 'lucide-react';
 import { useCallback, useEffect, useState, type CSSProperties } from 'react';
 import { failureText, responseFailureText } from 'lib/errors/client-failure';
+import { SERVICE_CREDITS_LABEL } from 'lib/currency/types';
 
 /**
  * "Is this ongoing?" — the inline way to record an ongoing arrangement with the member you are already
@@ -34,9 +35,18 @@ const CADENCE_LABEL: Record<Cadence, string> = {
   quarterly: 'Every three months',
 };
 
-type Currency = { code: string; name?: string; isServiceCredits?: boolean };
+// The fields of a `GET /api/currencies` row (lib/currency/types.ts) this control reads.
+type Currency = { code: string; label?: string; symbol?: string | null; isServiceCredits?: boolean };
 
 const SERVICE_CREDITS_CODE = 'SC';
+
+// Same wording as the shared CurrencySelect: ServiceCredits always by its label, never the bare
+// code; anything else by its catalog label, with its symbol when it has one.
+function currencyOptionLabel(currency: Currency): string {
+  if (currency.isServiceCredits || currency.code === SERVICE_CREDITS_CODE) return SERVICE_CREDITS_LABEL;
+  const label = currency.label || currency.code;
+  return currency.symbol ? `${label} (${currency.symbol})` : label;
+}
 
 function isServiceCredits(currencies: Currency[], code: string): boolean {
   const currency = currencies.find((c) => c.code === code);
@@ -48,12 +58,12 @@ function isServiceCredits(currencies: Currency[], code: string): boolean {
 async function loadCurrencies(): Promise<Currency[]> {
   try {
     const res = await fetch('/api/currencies', { cache: 'no-store' });
-    if (!res.ok) return [{ code: SERVICE_CREDITS_CODE, name: 'ServiceCredits', isServiceCredits: true }];
+    if (!res.ok) return [{ code: SERVICE_CREDITS_CODE, label: SERVICE_CREDITS_LABEL, isServiceCredits: true }];
     const data = (await res.json()) as { currencies?: Currency[] };
     const list = data.currencies ?? [];
-    return list.length > 0 ? list : [{ code: SERVICE_CREDITS_CODE, name: 'ServiceCredits', isServiceCredits: true }];
+    return list.length > 0 ? list : [{ code: SERVICE_CREDITS_CODE, label: SERVICE_CREDITS_LABEL, isServiceCredits: true }];
   } catch {
-    return [{ code: SERVICE_CREDITS_CODE, name: 'ServiceCredits', isServiceCredits: true }];
+    return [{ code: SERVICE_CREDITS_CODE, label: SERVICE_CREDITS_LABEL, isServiceCredits: true }];
   }
 }
 
@@ -314,7 +324,7 @@ function RecurringDetailsForm({
         Settled in
         <select value={currencyCode} onChange={(e) => onCurrencyCode(e.target.value)} style={{ ...fieldStyle, marginTop: 5 }}>
           {currencies.map((c) => (
-            <option key={c.code} value={c.code}>{c.name ? `${c.name} (${c.code})` : c.code}</option>
+            <option key={c.code} value={c.code}>{currencyOptionLabel(c)}</option>
           ))}
         </select>
       </label>
