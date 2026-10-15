@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireGdpReadAccess } from 'lib/gdp/_lib';
 import { listMemberCountsByCountry } from 'lib/gdp/repository';
 import { countActiveDirectoryProfiles } from 'lib/directory/repository';
+import { failureResponse } from 'lib/errors/failure';
 
 // Per-country member distribution for the GDP dashboard's "All Countries" panel. Location is read from
 // members' directory profiles (the shared member profile); this is a people-count per country, never an
@@ -14,7 +15,19 @@ export async function GET() {
     return gate.response;
   }
 
-  const countries = await listMemberCountsByCountry();
+  let countries: Awaited<ReturnType<typeof listMemberCountsByCountry>>;
+  try {
+    countries = await listMemberCountsByCountry();
+  } catch (error) {
+    return failureResponse({
+      summary: 'Could not load the member count by country just now. Try again.',
+      error,
+      code: 'gdp_countries_unavailable',
+      area: 'gdp',
+      op: 'countries',
+      audience: 'member',
+    });
+  }
   const located = countries.reduce((sum, c) => sum + c.members, 0);
   // Reconcile to the full member roster (active, non-deleted directory profiles — the same population
   // getGdpShellStats/buildLiveGdpReport count). Anyone active but without a country falls into unspecified.
