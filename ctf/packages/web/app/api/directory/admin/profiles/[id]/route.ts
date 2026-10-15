@@ -135,30 +135,35 @@ export async function PUT(request: Request, { params }: RouteParams) {
     await recordUpdateAudit(gate.auth.userId, id, { status: 'allow', reason: 'admin_route_guard', result: 'success', errorCategory: null });
     return NextResponse.json({ ok: true, profile }, { status: 200 });
   } catch (error) {
-    // The submitted Quora address is on the takedown list (the person asked to be removed). The edit
-    // cannot succeed until an admin lifts that block, so answer 409, audit it as a deny like the admin
-    // create does, and keep the expected refusal out of error tracking.
-    if (error instanceof Error && error.message === 'directory_quora_url_suppressed') {
-      await recordUpdateAudit(gate.auth.userId, id, { status: 'deny', reason: 'quora_url_suppressed', result: 'failure', errorCategory: 'policy' });
-      return NextResponse.json(
-        {
-          ok: false,
-          code: DIRECTORY_ERROR_CODE.quoraUrlSuppressed,
-          message: QUORA_URL_SUPPRESSED_MESSAGE,
-        },
-        { status: 409 },
-      );
-    }
-    reportError(error, { area: 'directory', op: 'admin_profiles_id' });
-    const isValidation = error instanceof Error && error.message.includes('_not_found');
-    await recordUpdateAudit(gate.auth.userId, id, {
-      status: 'allow',
-      reason: 'admin_route_guard',
-      result: 'failure',
-      errorCategory: isValidation ? 'validation' : 'persistence_error',
-    });
-    return mapSelectorError(error);
+    return updateFailureResponse(gate.auth.userId, id, error);
   }
+}
+
+// The response and audit row for an update that threw; kept out of PUT to hold its complexity down.
+async function updateFailureResponse(actorId: string, id: string, error: unknown): Promise<NextResponse> {
+  // The submitted Quora address is on the takedown list (the person asked to be removed). The edit
+  // cannot succeed until an admin lifts that block, so answer 409, audit it as a deny like the admin
+  // create does, and keep the expected refusal out of error tracking.
+  if (error instanceof Error && error.message === 'directory_quora_url_suppressed') {
+    await recordUpdateAudit(actorId, id, { status: 'deny', reason: 'quora_url_suppressed', result: 'failure', errorCategory: 'policy' });
+    return NextResponse.json(
+      {
+        ok: false,
+        code: DIRECTORY_ERROR_CODE.quoraUrlSuppressed,
+        message: QUORA_URL_SUPPRESSED_MESSAGE,
+      },
+      { status: 409 },
+    );
+  }
+  reportError(error, { area: 'directory', op: 'admin_profiles_id' });
+  const isValidation = error instanceof Error && error.message.includes('_not_found');
+  await recordUpdateAudit(actorId, id, {
+    status: 'allow',
+    reason: 'admin_route_guard',
+    result: 'failure',
+    errorCategory: isValidation ? 'validation' : 'persistence_error',
+  });
+  return mapSelectorError(error);
 }
 
 export async function DELETE(request: Request, { params }: RouteParams) {
