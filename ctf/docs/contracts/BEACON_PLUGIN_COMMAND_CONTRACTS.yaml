@@ -149,6 +149,9 @@ contracts:
         type: string
       streamKey:
         type: string
+        note: >-
+          The host token. Expires 4 hours after it is minted (BEACON_HOST_TOKEN_TTL_SECONDS) and is
+          minted fresh on every request; Stream has no separate credential for RTMP ingest.
       streamApiKey:
         type: string
       streamCallType:
@@ -159,6 +162,10 @@ contracts:
         type: string
       hostToken:
         type: string
+        note: >-
+          Expires 4 hours after it is minted. The host gets no app-wide Stream role: publishing comes
+          from the `host` role on this event's call, and chat moderation from being a moderator of this
+          event's chat channel.
     dataAccess:
       - beacon_events
       - beacon_events_admin_audit_trail

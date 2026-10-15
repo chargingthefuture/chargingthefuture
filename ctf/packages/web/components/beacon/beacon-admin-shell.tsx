@@ -132,6 +132,7 @@ function BroadcastSection({
           <div style={{ fontSize: 13, fontWeight: 700, color: t.SUBTLE, marginBottom: 8 }}>Or use a broadcaster app — push to this RTMP target</div>
           <CopyRow label="RTMP URL" value={ingest.rtmpIngestUrl} copied={copied === 'RTMP URL'} onCopy={() => onCopy('RTMP URL', ingest.rtmpIngestUrl)} />
           <CopyRow label="Stream key" value={ingest.streamKey} copied={copied === 'Stream key'} onCopy={() => onCopy('Stream key', ingest.streamKey)} masked />
+          <div style={{ fontSize: 12, color: t.SUBTLE }}>The stream key works for 4 hours from when this page opened. Paste a fresh one for each broadcast.</div>
         </div>
       ) : null}
 

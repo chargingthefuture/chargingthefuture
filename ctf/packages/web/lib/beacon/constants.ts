@@ -31,3 +31,9 @@ export const BEACON_DEFAULT_SLOW_MODE_SECONDS = 10;
 // How long a chat mute lasts. A mute is a timed ban on the event's chat channel, so the member
 // cannot post there for this many minutes; a ban lasts until it is lifted.
 export const BEACON_MUTE_MINUTES = 10;
+
+// How long a host token lives. The same token is the RTMP stream key, which leaves the app (it is
+// pasted into a broadcaster app), so it must expire. Four hours covers the longest broadcast from
+// when the admin opens the broadcast panel; each open mints a fresh one, so a key saved in a
+// broadcaster app stops working after that and is pasted again for the next broadcast.
+export const BEACON_HOST_TOKEN_TTL_SECONDS = 4 * 60 * 60;

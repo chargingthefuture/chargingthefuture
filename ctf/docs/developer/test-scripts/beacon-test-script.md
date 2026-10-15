@@ -262,6 +262,23 @@ open the event's Log for the reason. Before 2026-08-10 this case failed by desig
 screen-share started egress.
 **Result:** web ☐ mobile ☐ — notes:
 
+### BCN-A2c1 · The stream key expires and is new each time
+
+**Steps:**
+1. Open a draft event in `/admin/beacon` and copy the **Stream key**.
+2. Reload the page, open the same event, and copy the **Stream key** again.
+3. Paste each key into a JWT reader that runs locally (or decode the middle part as base64) and look
+   at `exp` and `iat`.
+4. Go live, push from a broadcaster app with the second key, then send a message in the event chat
+   from the admin's own chat view and mute a test member.
+**Expected:** The line under the stream key reads "The stream key works for 4 hours from when this
+page opened. Paste a fresh one for each broadcast." on web and Android. The two keys differ. `exp` is
+4 hours after `iat`. The broadcast reaches viewers, the admin's message posts, and the mute works:
+publishing comes from the host role on the call and moderation from the event channel, not an
+app-wide role. A key copied more than 4 hours earlier is refused by Stream when a broadcaster app
+connects with it.
+**Result:** web ☐ mobile ☐ — notes:
+
 ### BCN-A2c2 · A phone broadcast in demo mode still records
 **Role:** admin with demo mode on · **Surfaces:** web (admin surface)
 **Steps:**
