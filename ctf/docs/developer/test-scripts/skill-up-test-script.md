@@ -847,6 +847,13 @@ Result: web ☐
 - The API replay with the same idempotency key returns the same stored response and does **not** apply the credit adjustment a second time (the recipient's balance moves once, not twice).
 - Step 4: the trainer's request is refused with 403, and the admin's is refused with 400; no credits move in either case.
 - Attempting to resolve the same dispute a second time returns an error indicating the dispute is no longer open (not a second resolution).
+- Second resolve with a **new** idempotency key (another admin, another tab): refused with 409 `skill_up_invalid_state`. No credit adjustment runs, and the first resolution comment and resolver stay on the record (code review #2928).
+
+**Released milestones stay released (code review #2940).** Release a milestone (LU-A7), then open a
+dispute naming that milestone and resolve it. Check the validation row and the wallet history.
+Expected: the dispute is created and resolved, but the validation row reads `released` throughout,
+never `disputed` or `validated`, and the release still shows in the wallet history. A dispute naming a
+milestone from a different cohort than the enrollment's is refused with 400 and creates no row.
 
 Result: web ☐
 

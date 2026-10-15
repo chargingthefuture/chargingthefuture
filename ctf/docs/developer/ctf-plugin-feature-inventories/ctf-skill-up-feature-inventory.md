@@ -270,7 +270,11 @@ External value movement dependencies:
 6. Enrollment and milestone validate rate-limit counters persisted in DB.
 7. Enrollment-party check on `dispute.open`: only the enrollment's learner, its assigned trainer,
    or an admin may open a dispute on it (enforced in `openDispute`), per the access policy's
-   `enrollment_not_visible` deny condition.
+   `enrollment_not_visible` deny condition. A named milestone must belong to the enrollment's
+   cohort (`milestone_outside_enrollment_cohort`, 400), and only a `validated` sign-off is flipped
+   to `disputed`; a `released` one stays released.
+   `dispute.resolve` locks the dispute row and refuses with 409 unless it is `open` or
+   `under_review` (`dispute_not_open`), before any credit adjustment runs.
 8. Contracts: `ctf/docs/contracts/SKILL_UP_PLUGIN_COMMAND_CONTRACTS.yaml`,
    `SKILL_UP_PLUGIN_ACCESS_POLICY_CONTRACTS.yaml`, `SKILL_UP_PLUGIN_AUDIT_CONTRACTS.yaml` and
    `SKILL_UP_PROFILE_AND_DELETION_CONTRACT.md` (the last added 2026-10-04). The deletion contract
@@ -369,6 +373,19 @@ that exist today.
 5. ~~Auto cohorts' trainer payout did not fire because enrollments had no `assigned_trainer_id`.~~ **Resolved (2026-06-29):** enrolling in a claimed auto cohort now sets `assigned_trainer_id` to the claiming trainer (the cohort's `created_by_user_id` once it is no longer the scheduler placeholder), and `claim-trainer` backfills that trainer onto any enrollments made before the claim. So a milestone release now settles the trainer split for auto cohorts. (Admin/human-built cohorts get no assigned trainer at enrollment, since their `created_by_user_id` may be an admin, not the trainer. Since 2026-10-05 the request can no longer name one.)
 
 ## Change Log
+
+- 2026-10-15: **A dispute can be resolved once, and a released milestone stays released (code
+  review #2928, #2940).** `resolveDispute` never read the dispute's status, and its credit
+  adjustment ran before anything else, so a second resolve under a new idempotency key moved credits
+  again and overwrote who decided it. It now locks the dispute row first and refuses with
+  `invalid_state` (409) unless the dispute is `open` or `under_review`, before any adjustment runs;
+  the access policy already listed `dispute_not_open`. `openDispute` set any validation for the
+  named milestone to `disputed`, released ones included, and resolve then rewrote it to `validated`,
+  which hid the release from the wallet history, made a later release fail, and stopped the last
+  release from completing the enrollment. Only a `validated` row now becomes `disputed`, so resolve
+  restores exactly what was there. A dispute must also name a milestone of the enrollment's own
+  cohort, or it is refused with `invalid_payload` (400); `milestone_outside_enrollment_cohort` is
+  added to the `dispute.open` deny conditions. LU-A9 in the test script covers both.
 
 - 2026-10-14: **The SkillUp seed runs again, and post/0009 leaves later cohort titles alone (code
   review #2768, #2770).** `seedSkillUp.mjs` still inserted the four stipend and microgrant columns

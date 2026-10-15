@@ -1139,8 +1139,8 @@ export async function openDispute(input: {
     // dispute on it — otherwise any authenticated member who guessed an enrollment UUID could
     // file a dispute against someone else's enrollment and flip its milestone validations to
     // 'disputed'. Enforced here at the repository so every caller is covered.
-    const enrollment = await client.query<{ user_id: string; assigned_trainer_id: string | null }>(
-      `SELECT user_id, assigned_trainer_id
+    const enrollment = await client.query<{ user_id: string; assigned_trainer_id: string | null; cohort_id: string }>(
+      `SELECT user_id, assigned_trainer_id, cohort_id::text AS cohort_id
        FROM skill_up_enrollments
        WHERE id = $1::uuid`,
       [input.enrollmentId],
@@ -1153,6 +1153,17 @@ export async function openDispute(input: {
       enrollment.rows[0].assigned_trainer_id === input.actorId;
     if (!input.isAdmin && !isParty) {
       throw new Error('forbidden');
+    }
+
+    // A dispute about a milestone must name one of this enrollment's own cohort milestones.
+    if (input.milestoneId) {
+      const milestone = await client.query(
+        `SELECT 1 FROM skill_up_milestones WHERE id = $1::uuid AND cohort_id = $2::uuid`,
+        [input.milestoneId, enrollment.rows[0].cohort_id],
+      );
+      if (!milestone.rows[0]) {
+        throw new Error('invalid_payload');
+      }
     }
 
     const disputeId = randomUUID();
@@ -1170,9 +1181,15 @@ export async function openDispute(input: {
 
     if (input.milestoneId) {
       await client.query(
+        // Only a validated sign-off is held back by a dispute. A released one stays released: its
+        // credits already moved, and its escrow row says so. Flipping it to disputed meant resolve
+        // later rewrote it to validated, which hid the release from the wallet history, made a
+        // second release fail, and stopped the last release from completing the enrollment. The
+        // dispute itself is still recorded either way. Because only validated rows become
+        // disputed, resolve restoring disputed to validated puts back exactly what was there.
         `UPDATE skill_up_milestone_validations
          SET status = 'disputed'
-         WHERE enrollment_id = $1::uuid AND milestone_id = $2::uuid`,
+         WHERE enrollment_id = $1::uuid AND milestone_id = $2::uuid AND status = 'validated'`,
         [input.enrollmentId, input.milestoneId],
       );
     }
@@ -1219,6 +1236,9 @@ export function isDisputeAdjustmentBetweenParties(
   );
 }
 
+// Statuses a dispute can be resolved from (the policy's `dispute_not_open` covers the rest).
+const DISPUTE_RESOLVABLE_STATUSES = new Set(['open', 'under_review']);
+
 export async function resolveDispute(input: {
   actorId: string;
   disputeId: string;
@@ -1254,21 +1274,6 @@ export async function resolveDispute(input: {
     return existingResolve.rows[0].response_payload;
   }
 
-  let adjustmentResult: Awaited<ReturnType<typeof applyDisputeAdjustment>> | null = null;
-
-  if (input.adjustment && input.adjustment.amount > 0) {
-    await assertAdjustmentBetweenDisputeParties(input.disputeId, input.adjustment);
-    adjustmentResult = await applyDisputeAdjustment({
-      actorId: input.actorId,
-      disputeCaseId: input.disputeId,
-      sourceUserId: input.adjustment.sourceUserId,
-      destinationUserId: input.adjustment.destinationUserId,
-      amount: input.adjustment.amount,
-      adjustmentReason: input.adjustment.reason,
-      idempotencyKey: `${input.idempotencyKey}:adjustment`,
-    });
-  }
-
   return withDbTransaction(async (client: PoolClient) => {
     const existing = await readCommandIdempotency<{
       disputeId: string;
@@ -1278,6 +1283,35 @@ export async function resolveDispute(input: {
     }>(client, input.actorId, 'skill-up.dispute.resolve', input.idempotencyKey);
     if (existing) {
       return existing;
+    }
+
+    // The access policy denies resolving a dispute that is not open (`dispute_not_open`). The row
+    // is locked first, so a second resolve under a different key (another admin, another tab)
+    // waits here, then sees `resolved` and is refused before it can move credits again or
+    // overwrite who decided the dispute.
+    const current = await client.query<{ status: string }>(
+      `SELECT status FROM skill_up_disputes WHERE id = $1::uuid FOR UPDATE`,
+      [input.disputeId],
+    );
+    if (!current.rows[0]) {
+      throw new Error('not_found');
+    }
+    if (!DISPUTE_RESOLVABLE_STATUSES.has(current.rows[0].status)) {
+      throw new Error('invalid_state');
+    }
+
+    let adjustmentResult: Awaited<ReturnType<typeof applyDisputeAdjustment>> | null = null;
+    if (input.adjustment && input.adjustment.amount > 0) {
+      await assertAdjustmentBetweenDisputeParties(input.disputeId, input.adjustment);
+      adjustmentResult = await applyDisputeAdjustment({
+        actorId: input.actorId,
+        disputeCaseId: input.disputeId,
+        sourceUserId: input.adjustment.sourceUserId,
+        destinationUserId: input.adjustment.destinationUserId,
+        amount: input.adjustment.amount,
+        adjustmentReason: input.adjustment.reason,
+        idempotencyKey: `${input.idempotencyKey}:adjustment`,
+      });
     }
 
     const dispute = await client.query(
