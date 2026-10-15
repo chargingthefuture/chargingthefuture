@@ -106,7 +106,7 @@ export function ContributionsAdminShell() {
   );
 
   const onReview = useCallback(
-    async (submissionId: string, input: { action: 'confirm' | 'reject'; confirmedAmountUsd?: number; reviewNote?: string }) => {
+    async (submissionId: string, input: { action: 'confirm' | 'reject'; confirmedAmountUsd?: number; reviewNote?: string; url?: string }) => {
       setReviewing(submissionId);
       setLoadError(null);
       try {
