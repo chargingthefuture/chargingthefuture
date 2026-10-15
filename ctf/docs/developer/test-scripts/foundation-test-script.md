@@ -471,11 +471,11 @@ Result: web ☐
 1. Open the provider's card or profile.
 2. Click "Connect now."
 3. Observe the consent dialog that opens.
-4. Look for the spend-limit (block-cap) selector and the worst-case total display.
+4. Look for the Send limit (block-cap) selector and the worst-case total display.
 5. Check the consent checkbox and read the copy.
 6. Note whether the "Start call" button is enabled.
 
-**Expected:** The dialog opens. A spend-limit selector is present (default 6 blocks). The worst-case total ("up to N ServiceCredits") updates as the cap changes. The copy honestly states that the first block is charged when the provider answers and that ringing is free. The "Start call" button is enabled (call ring/answer is live, not disabled with a "coming soon" note, as that stub was removed after task 3 shipped).
+**Expected:** The dialog opens. A Send limit selector is present (default 6 blocks). The worst-case total ("up to N ServiceCredits") updates as the cap changes. The copy honestly states that the first block is sent when the provider answers and that ringing is free, and describes the call in ServiceCredits without money words (send, not pay or charge). The "Start call" button is enabled (call ring/answer is live, not disabled with a "coming soon" note, as that stub was removed after task 3 shipped).
 
 Result: web ☐
 
@@ -522,7 +522,7 @@ Result: web ☐
    check that the id the audio room joins is the **video** call id (`streamCallId`) and not the chat
    channel id (`streamChannelId`) — the two come back in the same response and must not be swapped.
 
-**Expected:** Step 3: caller's overlay transitions to "connecting" then shows an in-call state with a live block countdown, "1 of N blocks paid," and an "Extend (+X credits)" control. The countdown runs from `paid_through_at`. Step 4: callee's overlay shows an in-call state with mute and end-call controls but no billing strip. Step 5: the caller's balance has decreased by exactly `rateCreditsLocked` (one block). Step 6: call ends cleanly for both; the terminal state is a plain hang-up (not "out of credits" or "paid time used up"). Step 7: the audio room joins on `streamCallId`. If that id is missing from a response, the overlay stays on "connecting" and the 2-second poll keeps going until it arrives — it must never try to join with an empty id, which would fail silently and show the caller nothing.
+**Expected:** Step 3: caller's overlay transitions to "connecting" then shows an in-call state with a live block countdown, "1 of N blocks paid," and an "Extend (+X credits)" control. The countdown runs from `paid_through_at`. Step 4: callee's overlay shows an in-call state with mute and end-call controls but no billing strip. Step 5: the caller's balance has decreased by exactly `rateCreditsLocked` (one block). Step 6: call ends cleanly for both; the terminal state is a plain hang-up (not "out of credits" or "the time you sent credits for is used up"). Step 7: the audio room joins on `streamCallId`. If that id is missing from a response, the overlay stays on "connecting" and the 2-second poll keeps going until it arrives — it must never try to join with an empty id, which would fail silently and show the caller nothing.
 
 Result: web ☐
 

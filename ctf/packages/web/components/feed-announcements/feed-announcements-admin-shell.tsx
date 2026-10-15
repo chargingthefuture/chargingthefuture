@@ -9,6 +9,8 @@ import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-but
 import type { Announcement, FeedConfig } from 'lib/feed/types';
 import { getFeedAnnouncementsTokens, type FeedAnnouncementsTokens } from './feed-announcements-shared';
 import { FeedAuditPanel } from './feed-audit-panel';
+import { failureText, responseFailureText } from 'lib/errors/client-failure';
+import { isAdminOnlyPlugin } from 'lib/plugins/admin-only';
 
 type PluginOption = { slug: string; name: string };
 
@@ -61,8 +63,8 @@ async function adminMutate(url: string, method: 'POST' | 'PUT', body?: unknown):
     if (res.ok) return { ok: true };
     const data = (await res.json().catch(() => null)) as { message?: string; reason?: string; code?: string } | null;
     return { ok: false, message: data?.message ?? data?.reason ?? data?.code ?? `Request failed (${res.status}).` };
-  } catch {
-    return { ok: false, message: 'Network error. Try again.' };
+  } catch (caught) {
+    return { ok: false, message: failureText(caught, { area: 'feed-announcements', op: 'admin_mutate', fallback: 'Request did not complete. Try again.', extra: { url, method } }) };
   }
 }
 
@@ -101,6 +103,7 @@ function LinkedPluginsPicker({
   nameForSlug,
   onAdd,
   onRemove,
+  loadError,
 }: {
   linkedPluginSlugs: string[];
   pluginOptions: PluginOption[];
@@ -108,6 +111,7 @@ function LinkedPluginsPicker({
   nameForSlug: (slug: string) => string;
   onAdd: (slug: string) => void;
   onRemove: (slug: string) => void;
+  loadError: string | null;
 }) {
   const { theme } = useTheme();
   const t = getFeedAnnouncementsTokens(theme);
@@ -142,6 +146,7 @@ function LinkedPluginsPicker({
       ) : (
         <span style={{ fontSize: 12, color: t.MUTED }}>Maximum of {max} linked plugins reached.</span>
       )}
+      {loadError ? <span style={{ fontSize: 12, color: '#EF4444' }}>{loadError}</span> : null}
       {linkedPluginSlugs.length > 0 ? (
         <span style={{ fontSize: 12, color: t.MUTED }}>Readers will see an “Open {nameForSlug(linkedPluginSlugs[0])}” link{linkedPluginSlugs.length > 1 ? ` and ${linkedPluginSlugs.length - 1} more` : ''}.</span>
       ) : null}
@@ -250,19 +255,34 @@ export function FeedAnnouncementsAdminShell({
   // Plugin registry options for the "Link a plugin" picker. Best-effort: a failed load just leaves the
   // picker empty and never blocks authoring. The server re-validates the chosen slug on submit.
   const [pluginOptions, setPluginOptions] = useState<PluginOption[]>([]);
+  const [pluginLoadError, setPluginLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     let canceled = false;
-    void fetch('/api/plugins', { cache: 'no-store' })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((payload: { plugins?: Array<{ slug: string; name: string }> } | null) => {
-        if (!canceled && payload && Array.isArray(payload.plugins)) {
-          setPluginOptions(payload.plugins.map((p) => ({ slug: p.slug, name: p.name })));
+    void (async () => {
+      try {
+        const res = await fetch('/api/plugins', { cache: 'no-store' });
+        if (!res.ok) {
+          const text = await responseFailureText(res, 'Could not load the plugin list');
+          if (!canceled) setPluginLoadError(text);
+          return;
         }
-      })
-      .catch(() => {
-        /* picker is best-effort */
-      });
+        const payload = (await res.json()) as { plugins?: Array<{ slug: string; name: string; isVisible?: boolean }> } | null;
+        if (!canceled && payload && Array.isArray(payload.plugins)) {
+          // Offer only plugins the server will keep: resolveLinkedPlugin drops hidden and admin-only
+          // plugins on save, so offering them here produced a link that silently vanished.
+          setPluginOptions(
+            payload.plugins
+              .filter((p) => p.isVisible !== false && !isAdminOnlyPlugin(p.slug))
+              .map((p) => ({ slug: p.slug, name: p.name })),
+          );
+        }
+      } catch (caught) {
+        if (!canceled) {
+          setPluginLoadError(failureText(caught, { area: 'feed-announcements', op: 'load_plugins', fallback: 'Could not load the plugin list.' }));
+        }
+      }
+    })();
     return () => {
       canceled = true;
     };
@@ -386,6 +406,7 @@ export function FeedAnnouncementsAdminShell({
             nameForSlug={nameForSlug}
             onAdd={addLinkedPlugin}
             onRemove={removeLinkedPlugin}
+            loadError={pluginLoadError}
           />
           <AnnouncementFormActions busy={busy} editingId={editingId} onSubmit={() => void submitDraft()} onCancel={cancelEdit} />
         </div>

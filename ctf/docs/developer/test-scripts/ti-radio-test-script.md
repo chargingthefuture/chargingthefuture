@@ -128,6 +128,8 @@ Result: web ☐
 2. Try a fourth inside the same 24 hours.
 3. Try one more than 24 hours after the earliest of the three.
 4. Book three slots late one evening, then try one shortly after midnight.
+5. Holding two slots in one day, send two bookings for two different open times in that day at the
+   same moment (two tabs, or two scripted requests).
 
 **Expected:**
 - The first three succeed.
@@ -136,6 +138,8 @@ Result: web ☐
 - The one past the 24-hour mark succeeds: it is a different stretch.
 - The one after midnight is **refused**. The rule is a rolling 24 hours, not a calendar day, which is
   exactly the case that separates the two.
+- Of the two sent together, one succeeds and the other is refused with the same 409. The member never
+  ends up holding four slots in 24 hours.
 
 Result: web ☐
 
@@ -172,11 +176,14 @@ Result: web ☐
 1. Press Remove on that row and give a reason.
 2. Look at the guide.
 3. Read `ti_radio_admin_audit_trail`.
+4. Call `POST /api/ti-radio/slots/<id>/remove` for another booked slot with a body that is not JSON.
 
 **Expected:**
 - The row returns to open.
-- A row in the audit trail with command `ti-radio.slot.remove`, the admin's id, the slot id, the
-  host's id, and the reason. **A log line is not enough** — the row has to be in the table.
+- A row in the audit trail with command `ti-radio.slot.remove`, the admin's id, the slot id (in
+  `target_id`), the host's id (in `metadata.hostUserId`), and the reason. **A log line is not
+  enough** — the row has to be in the table.
+- The body that is not JSON gets 400 `ti_radio_invalid_payload` and the slot stays booked.
 - The member's own booking wrote a row too, with command `ti-radio.slot.book`.
 
 Result: web ☐
