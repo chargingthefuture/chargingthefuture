@@ -3,6 +3,7 @@ import type { PoolClient } from 'pg';
 import { queryDb, withDbTransaction } from 'lib/db/postgres';
 import { isBlockedBetweenTx } from 'lib/blocks/repository';
 import { reportError } from 'lib/observability/report';
+import { DELETED_MEMBER_PLACEHOLDER } from 'lib/account/deletion-registry';
 import {
   FOUNDATION_DEFAULT_PAGE,
   FOUNDATION_DEFAULT_PAGE_SIZE,
@@ -518,7 +519,7 @@ type FoundationThreadRow = {
   id: string;
   survivor_user_id: string;
   provider_user_id: string;
-  provider_directory_profile_id: string;
+  provider_directory_profile_id: string | null;
   stream_channel_id: string;
   status: 'active' | 'closed';
   created_at: Date;
@@ -856,13 +857,17 @@ export async function sendMessageToThread(input: {
 
     const counterpartyUserId = senderRole === 'survivor' ? thread.rows[0].provider_user_id : thread.rows[0].survivor_user_id;
 
-    await client.query(
-      `
-        INSERT INTO foundation_notification_events (user_id, thread_id, kind, title, body, metadata)
-        VALUES ($1, $2::uuid, 'message.new', 'New message', 'You have a new Foundation message.', '{}'::jsonb)
-      `,
-      [counterpartyUserId, input.threadId],
-    );
+    // A thread whose other party deleted their account keeps the placeholder in their place; there is
+    // nobody to notify.
+    if (counterpartyUserId !== DELETED_MEMBER_PLACEHOLDER) {
+      await client.query(
+        `
+          INSERT INTO foundation_notification_events (user_id, thread_id, kind, title, body, metadata)
+          VALUES ($1, $2::uuid, 'message.new', 'New message', 'You have a new Foundation message.', '{}'::jsonb)
+        `,
+        [counterpartyUserId, input.threadId],
+      );
+    }
 
     return mapMessageRow(inserted.rows[0]);
   });
@@ -1163,15 +1168,17 @@ export async function createQuoteRequest(input: {
       [inserted.rows[0].id, input.actorUserId],
     );
 
-    await client.query(
-      `
-        INSERT INTO foundation_notification_events
-          (user_id, thread_id, quote_request_id, kind, title, body, metadata)
-        VALUES
-          ($1, $2::uuid, $3::uuid, 'quote.requested', 'Quote requested', 'A new quote request needs your response.', '{}'::jsonb)
-      `,
-      [row.provider_user_id, input.threadId, inserted.rows[0].id],
-    );
+    if (row.provider_user_id !== DELETED_MEMBER_PLACEHOLDER) {
+      await client.query(
+        `
+          INSERT INTO foundation_notification_events
+            (user_id, thread_id, quote_request_id, kind, title, body, metadata)
+          VALUES
+            ($1, $2::uuid, $3::uuid, 'quote.requested', 'Quote requested', 'A new quote request needs your response.', '{}'::jsonb)
+        `,
+        [row.provider_user_id, input.threadId, inserted.rows[0].id],
+      );
+    }
 
     return mapQuoteRow(inserted.rows[0]);
   });
@@ -1309,15 +1316,17 @@ export async function updateQuoteRequestState(input: {
     );
 
     const recipient = quote.provider_user_id === input.actorUserId ? quote.survivor_user_id : quote.provider_user_id;
-    await client.query(
-      `
-        INSERT INTO foundation_notification_events
-          (user_id, thread_id, quote_request_id, kind, title, body, metadata)
-        VALUES
-          ($1, $2::uuid, $3::uuid, 'quote.state.updated', 'Quote updated', 'A quote lifecycle state was updated.', '{}'::jsonb)
-      `,
-      [recipient, quote.thread_id, quote.id],
-    );
+    if (recipient !== DELETED_MEMBER_PLACEHOLDER) {
+      await client.query(
+        `
+          INSERT INTO foundation_notification_events
+            (user_id, thread_id, quote_request_id, kind, title, body, metadata)
+          VALUES
+            ($1, $2::uuid, $3::uuid, 'quote.state.updated', 'Quote updated', 'A quote lifecycle state was updated.', '{}'::jsonb)
+        `,
+        [recipient, quote.thread_id, quote.id],
+      );
+    }
 
     return {
       quote: mapQuoteRow(updated.rows[0]),

@@ -44,7 +44,7 @@ function MobileMoodPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyU
         <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800, lineHeight: 1.2 }}>
           Check in with yourself.<br /><span style={{ color: t.ACCENT }}>No names, no spotlight.</span>
         </h1>
-        <p style={{ margin: 0, fontSize: 14, color: t.SUBTLE, maxWidth: 300 }}>Your check-ins are pseudonymous — kept under a random ID separate from your account. Daily check-ins unlock resources and gentle nudges.</p>
+        <p style={{ margin: 0, fontSize: 14, color: t.SUBTLE, maxWidth: 300 }}>Your check-ins are pseudonymous — kept under a random ID separate from your account. One check-in a week, and a community-wide picture of how members are doing.</p>
         <PublicShellWorldwide color={t.MUTED} style={{ justifyContent: 'center' }} />
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
