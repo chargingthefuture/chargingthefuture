@@ -81,7 +81,8 @@ anyone's arrangement. One read-only review surface ships (2026-08-03):
      community, not a ring.
 2. The surface changes nothing, scores nobody, and feeds no member-facing figure. Flags are questions
    for a person to read, not findings. Member ids on flagged rows only are resolved to display names so
-   the reviewer can see who is involved; the surface never lists the roster.
+   the reviewer can see who is involved; the surface never lists the roster. If the name lookup
+   fails, the rows show account ids and the screen says names could not be loaded.
 3. It reads a bounded slice (the 5,000 most recent confirmed arrangements) and says plainly when that
    cap was hit, rather than showing a partial picture as if it were the entire one.
 4. Every read — allow or deny — writes an audit row (`recurring-activity.admin.review.read`), because
@@ -105,7 +106,8 @@ requires the same-origin CSRF header (`x-ctf-csrf: 1`) and writes an audit row.
 - `POST /api/recurring-activity/[activityId]/visibility` — owner sets visibility. Command:
   `recurring-activity.visibility.update`.
 - `GET /api/recurring-activity/admin/review` — **admin only**, read-only collusion review over
-  confirmed arrangements (see Admin Features). Returns `{ review, names }`; writes an audit row on both
+  confirmed arrangements (see Admin Features). Returns `{ review, names, namesUnavailable }`
+  (`namesUnavailable` is true when the name lookup failed and was reported); writes an audit row on both
   the allow and the deny path. Command: `recurring-activity.admin.review.read`. Rendered by
   `/admin/recurring-activity`.
 
@@ -231,6 +233,7 @@ flow, the Trust signal, and both GDP recognition branches. RACT's contribution w
 
 ## Change Log
 
+- 2026-10-12: **Failures on the member screen now say what failed, and a saved change is never answered as a failure.** (1) A failed Confirm, Decline, End or visibility change, or a failed refresh, now shows the route's message above "Your ongoing activities"; before, the message was only drawn when the list was empty, so it never showed. The visibility select goes back to the saved value when the change fails. A failed currency list shows a line above the form saying a new activity cannot be recorded right now, and a failed member search shows its reason in the picker instead of looking like no matches. Web and Android both. (2) The allow-path audit writes on create, confirm, decline, end and visibility now report a failure and carry on, as the deny paths already did. Before, a failed audit insert after the change was saved answered 503, skipped the notification, and a retried create recorded the activity twice. (3) The counterparty member check and the admin review's name lookup report their failures; the review also returns `namesUnavailable`, and the admin screen says names could not be loaded. No schema change.
 - 2026-10-08: **Recurring Activity is back on Android, copied from the web page.** Owner decision: the Android account hub carries every section of the web one, and the web hub links here. The new screen has the web's header, intro, refresh button, the "Acknowledge an ongoing activity" form with the member search, the list with Confirm, Decline, End activity and "Visible to", the empty and error states, and the "Finish verifying" view for a member who has not finished Unlock. It calls the existing routes only. No API, schema or contract change; the parity contract entry now lists the Android directory.
 - 2026-10-08: The Foundation port had made a second Android copy of this page (`features/foundation/recurring/`), opened from Foundation's "See your ongoing arrangements". It was removed when the branches were combined: the account copy is closer to the web page (it has the "Finish verifying" view and the web header), and Foundation's link now opens it, with back returning to Foundation.
 - 2026-10-05: **Confirm, decline, end and visibility work again.** The four

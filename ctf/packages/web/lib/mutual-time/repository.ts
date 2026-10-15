@@ -200,9 +200,21 @@ async function computeWinner(
 // `autoClosed` records which of the two ways it happened: the survey reaching its close time on its
 // own, or an admin pressing Close. The admin-landing dot reads it — an admin who closed a survey by
 // hand already knows the time; one whose survey closed itself has to be told.
+//
+// The row is re-read FOR UPDATE before anything is counted. saveVote takes the same lock, so a close
+// waits for a vote already in flight and counts it, and two closes racing each other (an admin press
+// and an auto-close on a read) cannot both write: the second sees status 'closed' and returns.
 async function closeAndComputeTx(client: PoolClient, row: EventRow, autoClosed: boolean): Promise<EventRow> {
   if (row.status === 'closed') {
     return row;
+  }
+  const locked = await client.query<EventRow>(
+    `SELECT ${EVENT_COLUMNS} FROM mutual_time_events WHERE id = $1 FOR UPDATE`,
+    [row.id],
+  );
+  const current = locked.rows[0] ?? row;
+  if (current.status === 'closed') {
+    return current;
   }
   const winner = await computeWinner(client, row.id);
   const updated = await client.query<EventRow>(
@@ -303,7 +315,8 @@ export async function listEventsForAdmin(createdByUserId: string): Promise<Mutua
     }
 
     // One query, no N+1: the distinct voter count is a correlated subquery per row so the entire list
-    // returns in a single round-trip. (The close loop above stays sequential — it holds FOR UPDATE.)
+    // returns in a single round-trip. (The close loop above stays sequential — each close takes the
+    // row lock FOR UPDATE in closeAndComputeTx.)
     const result = await client.query<EventRow & { voter_count: number }>(
       `SELECT ${EVENT_COLUMNS},
          (SELECT COUNT(DISTINCT v.voter_user_id)::int
