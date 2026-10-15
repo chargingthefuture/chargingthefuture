@@ -1861,6 +1861,13 @@ export async function updateAdminProfile(
     const country = preserveIfUndefined(input.country, current.country);
 
     await ensureTaxonomySelectors(client, sectorId, jobTitleId, skillIds);
+    // Same block as the admin create and member save: a Quora URL taken down at the person's request
+    // cannot be put onto an existing profile until the block is lifted. Checked only when the address
+    // changes, so editing other fields of a profile is never refused over its own stored address.
+    // Throws 'directory_quora_url_suppressed', which the PUT route maps to a 409.
+    if (normalizeQuoraProfileUrl(profileUrl) !== normalizeQuoraProfileUrl(current.profile_url)) {
+      await assertQuoraUrlNotSuppressed(client, profileUrl);
+    }
 
     await client.query(
       `

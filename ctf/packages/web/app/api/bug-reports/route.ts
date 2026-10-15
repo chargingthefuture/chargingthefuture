@@ -10,6 +10,7 @@ import {
 } from 'lib/bug-reports/constants';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
+import { pageAddressOnly } from 'lib/bug-reports/sanitize';
 
 type BugReportSubmitInput = {
   message?: unknown;
@@ -30,17 +31,9 @@ function asTrimmedString(value: unknown, maxLength: number): string | null {
   return trimmed.slice(0, maxLength);
 }
 
-export async function POST(request: Request) {
-  const gate = await requireReporterAccess();
-  if (!gate.allowed) {
-    return gate.response;
-  }
-
-  const csrfDeny = ensureMutationCsrf(request);
-  if (csrfDeny) {
-    return csrfDeny;
-  }
-
+// Reads the request body as a report object, or answers the 400 that says why it is not one. Kept out
+// of POST to hold its complexity down.
+async function readReportBody(request: Request): Promise<BugReportSubmitInput | NextResponse> {
   let input: BugReportSubmitInput;
   try {
     input = await request.json();
@@ -52,7 +45,7 @@ export async function POST(request: Request) {
   }
 
   // `null`, a number or an array parses as JSON but is not a report; reading fields off it
-  // would throw outside the try below and end as an unexplained 500.
+  // would throw outside the try in POST and end as an unexplained 500.
   if (!input || typeof input !== 'object' || Array.isArray(input)) {
     return NextResponse.json(
       {
@@ -62,6 +55,24 @@ export async function POST(request: Request) {
       },
       { status: 400 },
     );
+  }
+  return input;
+}
+
+export async function POST(request: Request) {
+  const gate = await requireReporterAccess();
+  if (!gate.allowed) {
+    return gate.response;
+  }
+
+  const csrfDeny = ensureMutationCsrf(request);
+  if (csrfDeny) {
+    return csrfDeny;
+  }
+
+  const input = await readReportBody(request);
+  if (input instanceof NextResponse) {
+    return input;
   }
 
   const message = asTrimmedString(input.message, BUG_REPORT_MESSAGE_MAX_LENGTH);
@@ -77,7 +88,9 @@ export async function POST(request: Request) {
   }
 
   const context = asTrimmedString(input.context, BUG_REPORT_CONTEXT_MAX_LENGTH);
-  const pageUrl = asTrimmedString(input.pageUrl, BUG_REPORT_METADATA_MAX_LENGTH);
+  // Stored without its query string or `#` part (see pageAddressOnly).
+  const rawPageUrl = asTrimmedString(input.pageUrl, BUG_REPORT_METADATA_MAX_LENGTH);
+  const pageUrl = rawPageUrl ? pageAddressOnly(rawPageUrl) || null : null;
   const pluginSlug = asTrimmedString(input.pluginSlug, BUG_REPORT_METADATA_MAX_LENGTH);
   const appVersion = asTrimmedString(input.appVersion, BUG_REPORT_METADATA_MAX_LENGTH);
   const userAgent = asTrimmedString(
