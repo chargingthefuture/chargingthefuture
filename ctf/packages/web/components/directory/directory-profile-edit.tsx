@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { X } from "lucide-react";
-import { getDirectoryTokens, type DirectoryTokens } from "./shared";
+import { getDirectoryTokens, onAccentText, type DirectoryTokens } from "./shared";
 import { DirectorySkillsPicker } from "./directory-skills-picker";
 import { groupJobTitlesBySector, type JobTitleGroup } from "./directory-job-title-fields";
 import { CountrySelect, StateField } from "@/components/shared/location-select";
@@ -233,7 +233,7 @@ function ErrorView({ t, message, onClose }: { t: DirectoryTokens; message: strin
   return (
     <div style={{ padding: "24px 0", textAlign: "center" }}>
       <div style={{ fontSize: 13, color: "#EF4444", marginBottom: 14 }}>{message}</div>
-      <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 8, background: t.ACCENT, border: "none", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>Close</button>
+      <button type="button" onClick={onClose} style={{ padding: "8px 16px", borderRadius: 8, background: t.ACCENT, border: "none", color: onAccentText(t), fontWeight: 700, fontSize: 13, cursor: "pointer" }}>Close</button>
     </div>
   );
 }
@@ -314,7 +314,7 @@ function ProfileFormFooter({
           type="button"
           onClick={onSave}
           disabled={!canSave}
-          style={{ padding: "10px 22px", borderRadius: 9, background: t.ACCENT, border: "none", color: "#fff", fontWeight: 700, fontSize: 13, cursor: canSave ? "pointer" : "not-allowed", opacity: canSave ? 1 : 0.5 }}
+          style={{ padding: "10px 22px", borderRadius: 9, background: t.ACCENT, border: "none", color: onAccentText(t), fontWeight: 700, fontSize: 13, cursor: canSave ? "pointer" : "not-allowed", opacity: canSave ? 1 : 0.5 }}
         >
           {saving ? "Saving…" : hadProfile ? "Save changes" : "Create profile"}
         </button>

@@ -14,7 +14,7 @@ import { quoraHandleFromUrl, type DirectoryInviteInput } from './invite-input';
 //  - a card (name, opening, date, address in the app, and the blog address for a public invite): the
 //    most a signed-out visitor, the landing site or the blog receives about a private invite;
 //  - a teaser (name and opening only): the blurred private cards on the signed-out page;
-//  - an open card (a public invite's card with its picture): already public on the blog;
+//  - an open card (a public invite's card, with its blog address): already public on the blog;
 //  - the full invite (title, post, picture, Quora address, Directory listing): signed-in members only.
 
 export const DIRECTORY_INVITE_PAGE_SIZE = 10;
@@ -34,10 +34,7 @@ export type DirectoryInviteCard = {
 
 export type DirectoryInviteTeaser = { name: string; opening: string };
 
-export type DirectoryOpenInviteCard = DirectoryInviteCard & {
-  blogUrl: string;
-  image: { url: string; alt: string } | null;
-};
+export type DirectoryOpenInviteCard = DirectoryInviteCard & { blogUrl: string };
 
 export type DirectoryInvite = {
   slug: string;
@@ -228,14 +225,11 @@ export async function getDirectoryInviteByHandle(handle: string): Promise<Direct
   return result.rows[0] ? toInvite(result.rows[0]) : null;
 }
 
-/** The picture on one invite. `publicOnly` (a signed-out read) serves it only for a public invite. */
-export async function readDirectoryInviteImage(
-  slug: string,
-  { publicOnly }: { publicOnly: boolean },
-): Promise<{ contentType: CommunityImageContentType; bytes: Buffer } | null> {
+/** The picture on one invite, for a signed-in reader of the full invitation. */
+export async function readDirectoryInviteImage(slug: string): Promise<{ contentType: CommunityImageContentType; bytes: Buffer } | null> {
   const result = await queryDb<{ image: Buffer; image_type: CommunityImageContentType }>(
-    'SELECT image, image_type FROM directory_invites WHERE slug = $1 AND image IS NOT NULL AND (public OR NOT $2::boolean)',
-    [slug, publicOnly],
+    'SELECT image, image_type FROM directory_invites WHERE slug = $1 AND image IS NOT NULL',
+    [slug],
   );
   const row = result.rows[0];
   return row ? { contentType: row.image_type, bytes: row.image } : null;
@@ -249,13 +243,13 @@ export async function countDirectoryInvitesByVisibility(): Promise<{ open: numbe
   return { open: Number.parseInt(result.rows[0]?.open ?? '0', 10), locked: Number.parseInt(result.rows[0]?.locked ?? '0', 10) };
 }
 
-/** One page of public invites, readable by anybody: each already sits on the blog, picture included. */
+/** One page of public invites as cards, readable by anybody: each already sits on the blog. */
 export async function listOpenDirectoryInviteCards(limit: number, offset: number): Promise<DirectoryOpenInviteCard[]> {
-  const result = await queryDb<CardRow & ImageColumns>(
-    `SELECT ${CARD_COLUMNS}, ${IMAGE_COLUMNS} FROM directory_invites WHERE public AND blog_url IS NOT NULL ${NEWEST_FIRST} LIMIT $1 OFFSET $2`,
+  const result = await queryDb<CardRow>(
+    `SELECT ${CARD_COLUMNS} FROM directory_invites WHERE public AND blog_url IS NOT NULL ${NEWEST_FIRST} LIMIT $1 OFFSET $2`,
     [limit, offset],
   );
-  return result.rows.map((row) => ({ ...toCard(row), blogUrl: row.blog_url ?? '', image: toImage(row) }));
+  return result.rows.map((row) => ({ ...toCard(row), blogUrl: row.blog_url ?? '' }));
 }
 
 /** The newest private invites as name and opening only, for the blurred cards a visitor sees. */

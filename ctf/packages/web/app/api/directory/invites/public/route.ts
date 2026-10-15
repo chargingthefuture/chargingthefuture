@@ -25,7 +25,7 @@ export const dynamic = 'force-dynamic';
 // `?invite=<handle>` also answers that one person's card, for a direct link.
 //
 // For the signed-out Directory page it also answers `openWall`, one page (`?page=`, ten a page,
-// clamped) of the public invites with their pictures, which are already public on the blog, and
+// clamped) of the public invites as cards, which are already public on the blog, and
 // `lockedCount` with `lockedTeasers`, the newest private invites as name and opening only, which
 // the page shows blurred.
 

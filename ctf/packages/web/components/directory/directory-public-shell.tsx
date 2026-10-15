@@ -7,9 +7,10 @@ import { useTheme } from '@/hooks/useTheme';
 import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
 import { failureText, responseFailureText } from 'lib/errors/client-failure';
-import { getDirectoryTokens, type DirectoryTokens } from './shared';
+import { getDirectoryTokens, onAccentText, type DirectoryTokens } from './shared';
 import { PublicShellWorldwide } from '@/components/plugins/public-shell-worldwide';
-import { formatInviteDate, type InviteCard, type InviteTeaser, type OpenInviteCard, type PublicInvites } from './directory-invite-format';
+import { INVITE_WALL_WHY, inviteCardSeed, type InviteCard, type InviteTeaser, type PublicInvites } from './directory-invite-format';
+import { INVITE_LINK_CLASS, InviteCardView } from './directory-invite-card';
 
 const FONT_FAMILY = "'Inter', system-ui, sans-serif";
 const LOAD_ERROR = 'Could not load the invitations.';
@@ -17,7 +18,6 @@ const LOAD_ERROR = 'Could not load the invitations.';
 type DirectoryPublicShellProps = PublicVisitorShellProps & {
   // The Quora handle from a direct link (/apps/directory?invite=<handle>): that person's card shows on top.
   inviteHandle?: string;
-  signUpUrl?: string;
   // The page of the open (already public) invitations, from ?page= in the address.
   page?: number;
 };
@@ -46,55 +46,30 @@ function usePublicInvites(inviteHandle: string | undefined, page: number) {
   return { data, error };
 }
 
-const cardStyle = (t: DirectoryTokens) => ({ borderRadius: 12, border: `1px solid ${t.BORDER_HI}`, background: t.SURFACE, padding: '14px 16px', display: 'flex', flexDirection: 'column' as const, gap: 6 });
-
 function BlogLink({ href, t }: { href: string; t: DirectoryTokens }) {
-  return <a href={href} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, fontWeight: 600, color: t.ACCENT }}>Read the invitation</a>;
+  return <a href={href} target="_blank" rel="noopener noreferrer" className={INVITE_LINK_CLASS} style={{ fontSize: 13, fontWeight: 600, color: t.ACCENT }}>Read the invitation</a>;
 }
 
 // A private invite as a visitor may see it: name and opening words. A public one adds its blog link.
 function CondensedCard({ card, t }: { card: InviteCard | InviteTeaser; t: DirectoryTokens }) {
   const dated = 'date' in card ? card : null;
   return (
-    <div style={cardStyle(t)}>
-      {dated ? <span style={{ fontSize: 11, color: t.MUTED }}>{formatInviteDate(dated.date)}</span> : null}
-      <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE }}>An invitation to {card.name}</span>
-      <p style={{ margin: 0, fontSize: 13, lineHeight: 1.55, color: t.SUBTLE, overflowWrap: 'anywhere' }}>{card.opening}</p>
+    <InviteCardView name={card.name} opening={card.opening} seed={inviteCardSeed(card)} date={dated?.date} t={t}>
       {dated?.blogUrl ? <BlogLink href={dated.blogUrl} t={t} /> : null}
-    </div>
+    </InviteCardView>
   );
 }
 
-// An invite already published on the blog: readable in the open, picture included.
-function OpenCard({ card, t }: { card: OpenInviteCard; t: DirectoryTokens }) {
-  return (
-    <article style={cardStyle(t)}>
-      <span style={{ fontSize: 11, color: t.MUTED }}>{formatInviteDate(card.date)}</span>
-      <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: t.TITLE }}>An invitation to {card.name}</h3>
-      {card.image ? (
-        <img src={card.image.url} alt={card.image.alt} loading="lazy" style={{ width: '100%', height: 'auto', borderRadius: 10, border: `1px solid ${t.BORDER}` }} />
-      ) : null}
-      <p style={{ margin: 0, fontSize: 13, lineHeight: 1.55, color: t.SUBTLE, overflowWrap: 'anywhere' }}>{card.opening}</p>
-      <BlogLink href={card.blogUrl} t={t} />
-    </article>
-  );
-}
-
-function Pitch({ t, signInUrl, signUpUrl, verifyUrl }: { t: DirectoryTokens; signInUrl: string; signUpUrl?: string; verifyUrl?: string }) {
+function Pitch({ t, signInUrl, verifyUrl }: { t: DirectoryTokens; signInUrl: string; verifyUrl?: string }) {
   if (verifyUrl) {
     return (
-      <a href={verifyUrl} style={{ padding: '14px', borderRadius: 12, background: t.ACCENT, color: '#fff', fontSize: 15, fontWeight: 700, textAlign: 'center', textDecoration: 'none' }}>Finish verifying</a>
+      <a href={verifyUrl} style={{ padding: '14px', borderRadius: 12, background: t.ACCENT, color: onAccentText(t), fontSize: 15, fontWeight: 700, textAlign: 'center', textDecoration: 'none' }}>Finish verifying</a>
     );
   }
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <p style={{ margin: 0, fontSize: 13, color: t.SUBTLE, lineHeight: 1.55 }}>
-        Sign in free to read every invitation. Listed already? Make an account and your listing can be attached to it. Not listed yet? Make an account, finish the check, and add yourself.
-      </p>
-      <div style={{ display: 'flex', gap: 8 }}>
-        <a href={signInUrl} style={{ flex: 1, padding: '12px', borderRadius: 12, background: t.ACCENT, color: '#fff', fontSize: 14, fontWeight: 700, textAlign: 'center', textDecoration: 'none' }}>Sign in</a>
-        <a href={signUpUrl ?? signInUrl} style={{ flex: 1, padding: '12px', borderRadius: 12, border: `1px solid ${t.ACCENT}60`, color: t.ACCENT, fontSize: 14, fontWeight: 700, textAlign: 'center', textDecoration: 'none' }}>Create a free account</a>
-      </div>
+      <p style={{ margin: 0, fontSize: 13, color: t.SUBTLE, lineHeight: 1.55 }}>Sign in free to read every invitation. Sign up to add yourself.</p>
+      <a href={signInUrl} style={{ padding: '12px', borderRadius: 12, background: t.ACCENT, color: onAccentText(t), fontSize: 14, fontWeight: 700, textAlign: 'center', textDecoration: 'none' }}>Sign in or create a free account</a>
     </div>
   );
 }
@@ -125,12 +100,12 @@ function OpenWall({ wall, t, handle }: { wall: PublicInvites['openWall']; t: Dir
   return (
     <section aria-label="Invitations published on the blog" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       <p style={{ margin: '0 4px', fontSize: 12, color: t.MUTED }}>Published on the blog · showing {wall.from}–{wall.to} of {wall.total}</p>
-      {wall.invites.map((card) => <OpenCard key={card.url} card={card} t={t} />)}
+      {wall.invites.map((card) => <CondensedCard key={card.url} card={card} t={t} />)}
       {wall.pageCount > 1 ? (
         <nav aria-label="Invitation pages" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-          {wall.page > 1 ? <Link href={pageHref(wall.page - 1, handle)} style={linkStyle}>Previous</Link> : <span />}
+          {wall.page > 1 ? <Link href={pageHref(wall.page - 1, handle)} className={INVITE_LINK_CLASS} style={linkStyle}>Previous</Link> : <span />}
           <span style={{ fontSize: 12, color: t.MUTED }}>Page {wall.page} of {wall.pageCount}</span>
-          {wall.page < wall.pageCount ? <Link href={pageHref(wall.page + 1, handle)} style={linkStyle}>Next</Link> : <span />}
+          {wall.page < wall.pageCount ? <Link href={pageHref(wall.page + 1, handle)} className={INVITE_LINK_CLASS} style={linkStyle}>Next</Link> : <span />}
         </nav>
       ) : null}
     </section>
@@ -151,7 +126,7 @@ function LockedWall({ data, t, signInUrl, verifyUrl }: { data: PublicInvites; t:
         <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', paddingTop: 48, gap: 12 }}>
           <div style={{ width: 48, height: 48, borderRadius: 24, border: `2px solid ${t.ACCENT}50`, background: t.BG, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Lock size={20} color={t.ACCENT} /></div>
           <div style={{ fontSize: 15, fontWeight: 700, textAlign: 'center', color: t.TITLE }}>Sign in to read the invitations</div>
-          <a href={verifyUrl ?? signInUrl} style={{ padding: '10px 24px', borderRadius: 9, background: t.ACCENT, color: '#fff', fontSize: 13, fontWeight: 700, textDecoration: 'none' }}>{verifyUrl ? 'Finish verifying' : 'Sign in'}</a>
+          <a href={verifyUrl ?? signInUrl} style={{ padding: '10px 24px', borderRadius: 9, background: t.ACCENT, color: onAccentText(t), fontSize: 13, fontWeight: 700, textDecoration: 'none' }}>{verifyUrl ? 'Finish verifying' : 'Sign in'}</a>
         </div>
       </div>
     </section>
@@ -172,12 +147,13 @@ function Invitations({ data, error, t, signInUrl, verifyUrl, handle }: { data: P
 
 /**
  * Signed-out visitor view for Directory (owner decision, 2026-10-15): how many people are listed, the
- * ask to sign in free and claim a listing or make one, then the invitations. Those already published
- * on the blog are readable here, picture included, each linking to its post; the private ones show
- * as a blurred wall carrying only each person's name and the opening words. Everything comes from
+ * ask to sign in free and claim a listing or make one, then the invitations as cards (a decorative
+ * avatar, the name, the date and the opening words). Those already published on the blog each link to
+ * their post; the private ones show as a blurred wall carrying only each person's name and the opening
+ * words. Everything comes from
  * GET /api/directory/invites/public.
  */
-export function DirectoryPublicShell({ signInUrl, verifyUrl, inviteHandle, signUpUrl, page = 1 }: DirectoryPublicShellProps) {
+export function DirectoryPublicShell({ signInUrl, verifyUrl, inviteHandle, page = 1 }: DirectoryPublicShellProps) {
   const { theme } = useTheme();
   const t = getDirectoryTokens(theme);
   const { data, error } = usePublicInvites(inviteHandle, page);
@@ -193,11 +169,12 @@ export function DirectoryPublicShell({ signInUrl, verifyUrl, inviteHandle, signU
         <p style={{ margin: 0, fontSize: 14, color: t.SUBTLE, lineHeight: 1.5 }}>Therapists, housing navigators, legal advocates, and more — searchable by location and specialty.</p>
         {data ? <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: t.TITLE }}>{data.listed.toLocaleString('en-US')} {data.listed === 1 ? 'person' : 'people'} listed</p> : null}
         <PublicShellWorldwide color={t.MUTED} />
-        <Pitch t={t} signInUrl={signInUrl} signUpUrl={signUpUrl} verifyUrl={verifyUrl} />
+        <Pitch t={t} signInUrl={signInUrl} verifyUrl={verifyUrl} />
         <FeaturedInvite handle={inviteHandle} data={data} t={t} />
       </div>
       <div style={{ flex: 1, padding: '0 16px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
         <h2 style={{ margin: '4px 4px 0', fontSize: 14, fontWeight: 700, color: t.SUBTLE }}>Invitations</h2>
+        <p style={{ margin: '0 4px', fontSize: 13, color: t.TEXT, lineHeight: 1.55 }}>{INVITE_WALL_WHY}</p>
         <Invitations data={data} error={error} t={t} signInUrl={signInUrl} verifyUrl={verifyUrl} handle={inviteHandle} />
       </div>
     </div>

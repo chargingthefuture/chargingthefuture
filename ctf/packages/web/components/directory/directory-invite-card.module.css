@@ -1,0 +1,6 @@
+/* Focus ring for the links on an invite card. Inline styles cannot reach :focus-visible. */
+.link:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+  border-radius: 4px;
+}

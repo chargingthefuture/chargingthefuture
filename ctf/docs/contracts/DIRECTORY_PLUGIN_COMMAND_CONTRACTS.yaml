@@ -587,8 +587,8 @@ contracts:
       people the Directory lists (directory_public_totals, restricted owners left out). ?invite=<handle>
       adds that one person's card. A card on a public invite (one already on the blog) also carries
       blogUrl. Nothing else about a private invite: no skills, location, picture, Quora address or
-      title. openWall is one page (?page=, ten a page, clamped) of the public invites with their
-      picture addresses; lockedCount and lockedTeasers (name and opening only, newest ten) are the
+      title. openWall is one page (?page=, ten a page, clamped) of the public invites as cards with
+      their blog addresses and no picture; lockedCount and lockedTeasers (name and opening only, newest ten) are the
       private invites the signed-out page shows blurred. Readable from the browser by the landing
       site and the blog.
     inputSchema:
@@ -659,9 +659,9 @@ contracts:
     command: directory.invite.image.fetch
     version: 1.0.0
     description: >-
-      One invitation's picture (GET /api/directory/invites/[slug]/image). A signed-in account of any
-      tier gets any picture; a signed-out caller only a public invite's, rate limited, and a private
-      one answers 401. Served with nosniff and a private cache header.
+      One invitation's picture (GET /api/directory/invites/[slug]/image), shown only inside the full
+      invitation. A signed-in account of any tier gets any picture; a signed-out caller gets 401,
+      since the cards a visitor sees carry no picture. Served with nosniff and a private cache header.
     inputSchema:
       slug:
         type: string
