@@ -3,7 +3,7 @@ import { MUTUAL_TIME_ERROR_CODE } from 'lib/mutual-time/constants';
 import { closeEvent } from 'lib/mutual-time/repository';
 import { recordMutualTimeAdminAudit } from 'lib/mutual-time/audit';
 import { reportError } from 'lib/observability/report';
-import { requireMutualTimeAdmin, ensureMutationCsrf, mutualTimeErrorResponse } from '../../../_lib';
+import { requireMutualTimeAdmin, ensureMutationCsrf, mutualTimeErrorResponse, mutualTimeErrorCategory } from '../../../_lib';
 
 // POST /api/mutual-time/events/[eventId]/close — close a survey now and compute the winning time.
 // Admin-only; the repository also checks the actor is the event's creator.
@@ -12,12 +12,12 @@ export async function POST(request: Request, context: { params: Promise<{ eventI
   if (csrfDeny) {
     return csrfDeny;
   }
-  const gate = await requireMutualTimeAdmin();
+  const { eventId } = await context.params;
+  const gate = await requireMutualTimeAdmin('mutual-time.event.close', { eventId });
   if (!gate.allowed) {
     return gate.response;
   }
 
-  const { eventId } = await context.params;
   try {
     const event = await closeEvent(gate.auth.userId, eventId);
     await recordMutualTimeAdminAudit({
@@ -33,6 +33,17 @@ export async function POST(request: Request, context: { params: Promise<{ eventI
     });
     return NextResponse.json({ ok: true, event }, { status: 200 });
   } catch (error) {
+    await recordMutualTimeAdminAudit({
+      pluginId: 'mutual-time',
+      command: 'mutual-time.event.close',
+      actorId: gate.auth.userId,
+      status: 'allow',
+      reason: 'admin',
+      evidence: 'role=admin',
+      target: { eventId },
+      result: 'failure',
+      errorCategory: mutualTimeErrorCategory(error),
+    });
     const mapped = mutualTimeErrorResponse(error);
     if (mapped) {
       return mapped;
