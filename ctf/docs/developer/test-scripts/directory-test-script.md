@@ -416,6 +416,41 @@ recorded only through the takedown control with a reason.
 
 ---
 
+### DIR-12 · Invitations: signed out, signed in, and taken down with the listing (added 2026-10-15)
+**Role:** visitor, unapproved member, approved member · **Surfaces:** web + mobile-responsive
+**Precondition:** the private invite repository's job has pushed at least one public invitation (one
+already on the blog, `public: true` with its blog address) and at least one private one, each for a
+listing that exists. Note one private invitation's Quora handle.
+**Steps:**
+1. Signed out, open `/apps/directory`. The page shows how many people are listed, **Sign in** and
+   **Create a free account**, then the public invitations: date, "An invitation to <name>", the
+   screenshot, the opening words and **Read the invitation**, which opens the blog post.
+2. Below them, a line reads "<N> more invitations are visible once you sign in, free." over blurred
+   cards. Inspect one: it holds only the name and the opening words, and is hidden from a screen
+   reader. No skills, location, Quora address or screenshot of a private invitation is anywhere on the
+   page or in `GET /api/directory/invites/public`.
+3. With more than ten public invitations, **Next** moves to `?page=2` and the line reads which ones are
+   on screen. Type `?page=999`: the last page shows.
+4. Signed out, open `/apps/directory?invite=<the private handle>`. That person's name and opening words
+   show clearly at the top, with "Sign in to read the full invitation." A public one's handle shows
+   the blog link too. An unknown handle says the invitation could not be found.
+5. Signed out, open a private invitation's picture address directly: 401. A public one's opens.
+6. Sign in with an account not yet approved in Unlock. `/apps/directory` shows every invitation in
+   full (title, picture, text, Quora address written out, a link to the listing), ten a page, with
+   **Finish verifying**. `/apps/directory/invites?page=2` works the same.
+7. As an approved member, open `/apps/directory`. The Directory shows as before, with **Read the
+   invitations** under the profile button. `/apps/directory?invite=<handle>` opens the wall with that
+   invitation first.
+8. As an admin, delete or take down the listing one invitation is about. The invitation is gone from
+   both walls and from the public route.
+9. On `/admin/directory/invite-queue`, the people who have an invitation are not in the queue.
+**Expected:** A visitor never sees more of a private invitation than a name and its opening words. A
+public one, already on the blog, reads in the open. Any signed-in account reads every invitation; the
+Directory itself still needs approval. An invitation never outlives its listing.
+**Result:** web ☐ mobile ☐ — notes:
+
+---
+
 ## Admin walkthrough
 
 ### DIR-A1 · Admin profile list, create, edit

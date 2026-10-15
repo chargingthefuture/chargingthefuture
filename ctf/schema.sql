@@ -5948,7 +5948,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_service_credits_treasury_events_type_actor_
 -- A legacy NOT NULL column the v3 code does not write at insert, which refused every new escrow
 -- hold: a hold has no transfer until it is released (releaseEscrow sets transfer_id then). The
 -- dispute adjustment table's unused dispute_id and adjustment_amount columns are dropped by
--- db/migrations/post/0060_drop_service_credits_dispute_adjustment_legacy_columns.sql.
+-- db/migrations/post/0061_drop_service_credits_dispute_adjustment_legacy_columns.sql.
 DO $sc_legacy_not_null_relax$
 BEGIN
   IF EXISTS (
@@ -7222,6 +7222,58 @@ ALTER TABLE IF EXISTS directory_unmet_needs ADD COLUMN IF NOT EXISTS need TEXT;
 ALTER TABLE IF EXISTS directory_unmet_needs ADD COLUMN IF NOT EXISTS job_title_ids TEXT[] NOT NULL DEFAULT '{}';
 ALTER TABLE IF EXISTS directory_unmet_needs ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 CREATE INDEX IF NOT EXISTS idx_directory_unmet_needs_need ON directory_unmet_needs (need, created_at DESC);
+
+-- Invitations to people listed in the Directory (owner decision, 2026-10-15). One row per invite: the
+-- post written for one listed person, naming them, their skills and their Directory listing. These
+-- were posts on the public blog until together they formed a public list of Targeted Individuals,
+-- the same reason the Directory itself sits behind a sign-in. They are now written in a private
+-- repository whose job pushes each one here through POST /api/internal/directory/invites.
+-- A signed-out visitor sees only name and opening of a private invite (lib/directory/invites.ts);
+-- everything else needs a sign-in. The invites already published on the blog before 2026-10-15 stay
+-- there and are stored here with public = TRUE and their blog_url: a visitor reads those in the
+-- open, picture included, with a link to the blog post. New invites are private. The picture is stored here as bytes, like feed_community_post_images, because the app has no
+-- object store. A row is removed when the listing it is about is taken down (directory_profile_id or
+-- the Quora handle), so an invite never outlives the listing.
+CREATE TABLE IF NOT EXISTS directory_invites (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  slug TEXT NOT NULL,
+  quora_handle TEXT NOT NULL,
+  quora_url TEXT NOT NULL,
+  name TEXT NOT NULL,
+  title TEXT NOT NULL,
+  opening TEXT NOT NULL,
+  body_markdown TEXT NOT NULL,
+  published_on DATE NOT NULL,
+  directory_profile_id TEXT,
+  image BYTEA,
+  image_type TEXT,
+  image_alt TEXT,
+  public BOOLEAN NOT NULL DEFAULT FALSE,
+  blog_url TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS directory_invites ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS directory_invites ADD COLUMN IF NOT EXISTS slug TEXT;
+ALTER TABLE IF EXISTS directory_invites ADD COLUMN IF NOT EXISTS quora_handle TEXT;
+ALTER TABLE IF EXISTS directory_invites ADD COLUMN IF NOT EXISTS quora_url TEXT;
+ALTER TABLE IF EXISTS directory_invites ADD COLUMN IF NOT EXISTS name TEXT;
+ALTER TABLE IF EXISTS directory_invites ADD COLUMN IF NOT EXISTS title TEXT;
+ALTER TABLE IF EXISTS directory_invites ADD COLUMN IF NOT EXISTS opening TEXT;
+ALTER TABLE IF EXISTS directory_invites ADD COLUMN IF NOT EXISTS body_markdown TEXT;
+ALTER TABLE IF EXISTS directory_invites ADD COLUMN IF NOT EXISTS published_on DATE;
+ALTER TABLE IF EXISTS directory_invites ADD COLUMN IF NOT EXISTS directory_profile_id TEXT;
+ALTER TABLE IF EXISTS directory_invites ADD COLUMN IF NOT EXISTS image BYTEA;
+ALTER TABLE IF EXISTS directory_invites ADD COLUMN IF NOT EXISTS image_type TEXT;
+ALTER TABLE IF EXISTS directory_invites ADD COLUMN IF NOT EXISTS image_alt TEXT;
+ALTER TABLE IF EXISTS directory_invites ADD COLUMN IF NOT EXISTS public BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS directory_invites ADD COLUMN IF NOT EXISTS blog_url TEXT;
+ALTER TABLE IF EXISTS directory_invites ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS directory_invites ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE UNIQUE INDEX IF NOT EXISTS uq_directory_invites_slug ON directory_invites (slug);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_directory_invites_quora_handle ON directory_invites (quora_handle);
+CREATE INDEX IF NOT EXISTS idx_directory_invites_published ON directory_invites (published_on DESC, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_directory_invites_profile ON directory_invites (directory_profile_id);
 
 -- === beacon-plugin ===
 -- Beacon: admin-only one-way livestream. An admin goes live ad hoc to broadcast a live demo

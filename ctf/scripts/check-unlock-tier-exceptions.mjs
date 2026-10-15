@@ -20,14 +20,15 @@
  *   "does something" with; they are the machinery around the gate.
  *
  *   EXCEPTIONS — a real capability deliberately opened to unapproved members. There are exactly
- *   three, each an explicit owner decision recorded with its date: the knowledge library
- *   contribution (2026-07-29), Contributions (2026-06-10), and the Quora account deletion survey
- *   (2026-08-19). Every other feature in this app requires Unlock approval to do anything at all.
- *   These three are the ones that must not grow by imitation, so each carries `feature` and
+ *   five, each an explicit owner decision recorded with its date: the knowledge library
+ *   contribution (2026-07-29), Contributions (2026-06-10), the Quora account deletion survey
+ *   (2026-08-19), the Fireside conversation (2026-09-13), and the Directory invite wall
+ *   (2026-10-15). Every other feature in this app requires Unlock approval to do anything at all.
+ *   These five are the ones that must not grow by imitation, so each carries `feature` and
  *   `decision` fields and this gate refuses an exception entry without them — an undated exception
  *   is indistinguishable from one somebody added on their own initiative.
  *
- * ADDING A FOURTH IS THE OWNER'S DECISION, not a build step. If a new surface seems to need this,
+ * ADDING A SIXTH IS THE OWNER'S DECISION, not a build step. If a new surface seems to need this,
  * the answer is almost always `approved_full`; ask before adding a line here.
  *
  *   Run: pnpm --dir ctf run check:unlock-tier-exceptions
