@@ -28,12 +28,12 @@ This folder contains the v3 monorepo for:
 
 ## Observability Provider Selection
 
-- One shared key selects the provider for both surfaces: set `OBSERVABILITY_PROVIDER` to `sentry`,
-  `signoz`, or `noop`.
+- One shared key selects the provider for both surfaces: `OBSERVABILITY_PROVIDER`. Unset or
+  `sentry` reports to Sentry; any other value (for example `noop`) turns error reporting off. Sentry
+  is the only provider wired up today.
 - The DSNs are `SENTRY_DSN` (web — server, edge, and browser) and `EXPO_SENTRY_DSN` (mobile). Both
   already exist in Infisical; do not add `NEXT_PUBLIC_` or mobile-specific copies of them.
-- Reporting starts when a DSN is present. Unknown or missing provider values fall back to the
-  documented default for that surface.
+- Reporting starts when a DSN is present and the provider is not switched off.
 
 ## Structure
 
