@@ -43,7 +43,7 @@ export function ClickLogEmptyState({ onLog }: { onLog: () => void }) {
           <div>
             <div style={{ fontSize: 24, fontWeight: 800, color: t.TITLE, marginBottom: 10 }}>No incidents logged</div>
             <div style={{ fontSize: 14, color: t.MUTED, lineHeight: 1.7, maxWidth: 440 }}>
-              ClickLog lets you silently track personal safety incidents — one tap, optionally add a note or location. All data is only visible to you.
+              ClickLog lets you silently track personal safety incidents — one tap, optionally add a note or location. Your notes stay private. Tagged incidents, and any you choose to share, send the owner only the date, rough area, and tags, and grouped totals may be published.
             </div>
           </div>
 

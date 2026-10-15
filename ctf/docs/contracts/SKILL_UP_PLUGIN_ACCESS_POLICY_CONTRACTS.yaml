@@ -180,6 +180,7 @@ policies:
     denyConditions:
       - dispute_window_closed
       - enrollment_not_visible
+      - milestone_outside_enrollment_cohort
 
   - pluginId: skill-up
     command: dispute.resolve

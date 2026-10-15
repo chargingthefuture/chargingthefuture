@@ -378,6 +378,14 @@ Owner decision, 2026-09-26. The owner pays the running costs of Skills Economy a
 
 ## 5) Change Log
 
+- 2026-10-15: **The Terms describe ServiceCredits without money words (§1.12, code-review #2771,
+  owner-approved).** Section 5 of the Terms in `app/terms/policy-content.ts` was headed
+  "ServiceCredits and payments" and said credits were used to pay for member-to-member activity and
+  could be released or refunded from escrow. The heading is now "ServiceCredits and real-money
+  payments", credits are used to exchange for member-to-member activity, and credits held in escrow
+  are released to the other member or returned to the sender's balance. The real-money paragraph,
+  the operator name and the effective date are unchanged. Copy only; no route, schema or contract
+  change.
 - 2026-10-14: **Full-account deletion queues the credits reclaim only after the data is gone; the
   blocks list stops naming members to unapproved callers (code-review #2642, #2696).** The
   full-account route, the operator delete route and the Clerk `user.deleted` webhook queued the
