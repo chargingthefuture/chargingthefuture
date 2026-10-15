@@ -15,17 +15,9 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
 
 const DISPUTE_COMMAND = 'service-credits.dispute.create';
 
-export async function POST(request: Request) {
-  const csrfDeny = ensureMutationCsrf(request);
-  if (csrfDeny) {
-    return csrfDeny;
-  }
-
-  const gate = await requireServiceCreditsReadAccess();
-  if (!gate.allowed) {
-    return gate.response;
-  }
-
+// Reads and checks the request body, or answers the 400 or 404 that says why it is not a dispute.
+// Kept out of POST to hold its complexity down.
+async function readDisputeBody(request: Request): Promise<{ transferId: string; reason: string } | NextResponse> {
   let body: DisputeBody;
   try {
     body = (await request.json()) as DisputeBody;
@@ -39,8 +31,25 @@ export async function POST(request: Request) {
   if (!UUID_PATTERN.test(body.transferId)) {
     return NextResponse.json({ ok: false, code: 'service_credits_transfer_not_found', message: 'Transfer not found.' }, { status: 404 });
   }
-  const transferId = body.transferId;
-  const reason = body.reason;
+  return { transferId: body.transferId, reason: body.reason };
+}
+
+export async function POST(request: Request) {
+  const csrfDeny = ensureMutationCsrf(request);
+  if (csrfDeny) {
+    return csrfDeny;
+  }
+
+  const gate = await requireServiceCreditsReadAccess();
+  if (!gate.allowed) {
+    return gate.response;
+  }
+
+  const parsed = await readDisputeBody(request);
+  if (parsed instanceof NextResponse) {
+    return parsed;
+  }
+  const { transferId, reason } = parsed;
 
   try {
     // Ownership check: only a party to the transfer (its sender or recipient) may open a dispute on it.
