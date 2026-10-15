@@ -45,12 +45,15 @@ describe('public invites', () => {
     expect(String(queryDb.mock.calls[0][0])).toMatch(/WHERE NOT public/);
   });
 
-  it('serves a signed-out picture only for a public invite', async () => {
-    queryDb.mockResolvedValueOnce({ rows: [] });
-    const { readDirectoryInviteImage } = await import('./invites');
-    await readDirectoryInviteImage('an-invitation-to-sam', { publicOnly: true });
-    expect(String(queryDb.mock.calls[0][0])).toMatch(/public OR NOT \$2::boolean/);
-    expect(queryDb.mock.calls[0][1]).toEqual(['an-invitation-to-sam', true]);
+  it('gives the open cards their blog address and no picture', async () => {
+    queryDb.mockResolvedValueOnce({
+      rows: [{ name: 'Ann', opening: 'Ann sews.', published_on: '2026-09-01', quora_handle: 'ann-1', public: true, blog_url: 'https://chargingthefuture.github.io/chargingthefuture/an-invitation-to-ann' }],
+    });
+    const { listOpenDirectoryInviteCards } = await import('./invites');
+    const [card] = await listOpenDirectoryInviteCards(10, 0);
+    expect(card).not.toHaveProperty('image');
+    expect(String(queryDb.mock.calls[0][0])).not.toMatch(/image/);
+    expect(card.blogUrl).toBe('https://chargingthefuture.github.io/chargingthefuture/an-invitation-to-ann');
   });
 });
 
