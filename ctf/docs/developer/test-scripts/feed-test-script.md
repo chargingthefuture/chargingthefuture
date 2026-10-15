@@ -780,7 +780,10 @@ FD-12b), with at least one reaction on it.
 4. Try with a non-UUID question ID.
 
 **Expected:**
-- Valid relabel returns 200 and writes a `feed.question.category.relabel` audit row.
+- Valid relabel returns 200 and writes a `feed.question.category.relabel` audit row. The question's
+  category and its Hub item title both change. (Before 2026-10-12 every relabel failed with a 503,
+  because the route also wrote an `llm_inference_log` row with no answer id, which that table forbids.)
+- A 503 names the reason after "Unable to relabel question:" rather than stopping at the sentence.
 - Invalid category returns 400.
 - Non-UUID ID returns 400.
 - Unknown but valid-format UUID returns 404.
@@ -878,6 +881,11 @@ FD-12b), with at least one reaction on it.
 - Step 4: no repeats. Every post that day computes the same period and loses the claim.
 - Step 5: rows are keyed by `notice_key` — the three notices never share a period row and never block
   each other.
+- A notice that fails to publish never takes the member's post with it. The notice step runs under a
+  savepoint, so a failed notice rolls back only its own writes; without it, the failed statement
+  aborted the post's transaction and the post vanished while the screen said it was sent. To check on a
+  local build, make a notice insert fail (for example rename the `announcements` table) and post once:
+  the post appears in the Commons and the failure is reported as `commons_guidance_autopost`.
 - Read the signal notice and confirm it says **Skills Economy**, never "TI Skills Economy (TSE)", and
   uses "Target" rather than "TI" as a label.
 
