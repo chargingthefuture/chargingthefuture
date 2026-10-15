@@ -3,6 +3,7 @@
 import { RefreshCw } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useState, type CSSProperties } from 'react';
+import { reportError } from '../../lib/observability/report';
 
 /**
  * Shared refresh control for web plugin shells. The installed web app (standalone display mode)
@@ -43,8 +44,10 @@ export function RefreshButton({
       } else {
         router.refresh();
       }
-    } catch {
-      // The shell surfaces its own load errors; the button only drives the refresh.
+    } catch (refreshError) {
+      // The shell surfaces its own load errors on screen; the button reports the rejection so a
+      // refresh that failed outside the shell's own handling still leaves a trace.
+      reportError(refreshError, { area: 'shared', op: 'refresh_button' });
     } finally {
       await minSpin;
       setRefreshing(false);

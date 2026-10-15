@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { BarChart2, Lock, Shield, Smile } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
+import { responseFailureText } from "@/lib/errors/client-failure";
 import {
   getMoodTokens,
   moodFaceForAverage,
@@ -124,7 +125,7 @@ export function MoodCommunity() {
       setError(null);
       try {
         const res = await fetch("/api/mood/community", { signal: controller.signal, cache: "no-store" });
-        if (!res.ok) throw new Error("Community pulse unavailable.");
+        if (!res.ok) throw new Error(await responseFailureText(res, "Community pulse unavailable.", "member"));
         const data = (await res.json()) as MoodCommunityResponse;
         if (!controller.signal.aborted) setPulse(data.pulse);
       } catch (e) {
@@ -145,7 +146,9 @@ export function MoodCommunity() {
       </div>
     );
   } else if (error) {
-    body = <EmptyPulse message="The community pulse could not be loaded right now. Please try again shortly." />;
+    // The fixed sentence stays; the reason the route or the network gave follows it, so a gate
+    // refusal, a server fault and a dropped connection no longer read the same.
+    body = <EmptyPulse message={`The community pulse could not be loaded right now. Please try again shortly. ${error}`} />;
   } else if (!pulse || !pulse.hasEnoughData) {
     body = <EmptyPulse message="Aggregated community mood trends appear here once enough members have checked in. All data is fully anonymous — no names, no IDs, only mood scores by day." />;
   } else {
