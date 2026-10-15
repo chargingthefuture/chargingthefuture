@@ -59,7 +59,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
   const { announcementId } = await params;
 
   try {
-    const replies = await listAnnouncementReplies(announcementId);
+    const replies = await listAnnouncementReplies(announcementId, gate.auth.userId);
     const response: CommonsAnnouncementRepliesResponse = {
       ok: true,
       announcementId,

@@ -586,6 +586,33 @@ auditEvents:
       status: success_or_failure
       errorCategory: none_or_error_class
 
+  # A hide or restore refused before the request body is read (not an admin, CSRF check failed), so
+  # it is not yet known which of the two it was. Always a failure row.
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: feed
+    command: feed.community.moderation.set
+    commandVersion: 1.0.0
+    purpose: content_moderation
+    policyDecision:
+      status: deny
+      reason: policy_reason_code
+      evidence:
+        adminCheck: pass_or_fail
+        csrfCheck: pass_or_fail
+    dataClassesAccessed:
+      - admin_mutation_audit_metadata
+    targetContext:
+      workspaceId: workspace_identifier
+      targetType: feed_community_post_reply_question_or_answer
+      targetId: content_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: failure
+      errorCategory: policy
+
   - eventId: uuid
     timestamp: rfc3339
     actorId: principal

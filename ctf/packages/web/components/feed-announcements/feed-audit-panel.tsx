@@ -32,6 +32,7 @@ const COMMAND_LABELS: Record<string, string> = {
   "feed.admin.config.update": "Changed the feed settings",
   "feed.community.moderation.hide": "Hid a Commons post",
   "feed.community.moderation.restore": "Restored a Commons post",
+  "feed.community.moderation.set": "Hid or restored a Commons post",
   "feed.question.category.relabel": "Re-labeled a question's category",
   "feed.membership.event.emit": "Recorded a membership change",
 };

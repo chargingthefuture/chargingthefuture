@@ -1,4 +1,5 @@
 import { ShieldOff, UserCheck } from 'lucide-react';
+import { AccountClosedSignInButton } from './account-closed-sign-in-button';
 
 // What a member sees when their account has been closed. Two versions, because the two reasons call for
 // genuinely different things from the reader.
@@ -97,7 +98,7 @@ export function AccountClosedNotice({
         </p>
 
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-          {isDuplicate ? <ActionLink href={signInUrl} label="Sign in to your other account" primary /> : null}
+          {isDuplicate ? <AccountClosedSignInButton signInUrl={signInUrl} /> : null}
           {manageAccountUrl ? (
             <ActionLink href={manageAccountUrl} label="Manage or delete this account" primary={!isDuplicate} />
           ) : null}
