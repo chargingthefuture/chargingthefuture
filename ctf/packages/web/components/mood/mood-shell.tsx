@@ -12,6 +12,7 @@ import { MoodLoading } from "./mood-loading";
 import { MoodCheckin } from "./mood-checkin";
 import { MoodCommunity } from "./mood-community";
 import { MoodCrisisRail } from "./mood-crisis-rail";
+import { responseFailureText } from "@/lib/errors/client-failure";
 
 // True only when the caller passed a signal that has already been aborted. Pulled out so the
 // abort guards below stay single decision points instead of repeating the optional-chain check.
@@ -19,13 +20,15 @@ function isAborted(signal?: AbortSignal): boolean {
   return signal?.aborted === true;
 }
 
-// Fetch the eligibility payload for a pseudonymous client. Throws on a non-OK response so the
-// caller's catch can surface the error message.
+// Fetch the eligibility payload for a pseudonymous client. Throws on a non-OK response with the
+// route's own message (or the fixed text when it sent none) so the caller's catch can surface it.
 async function fetchMoodEligibility(id: string, signal?: AbortSignal): Promise<MoodEligibility> {
   const res = await fetch(`/api/mood/eligibility?clientId=${encodeURIComponent(id)}`, { signal, cache: "no-store" });
-  if (!res.ok) throw new Error("Failed to check eligibility.");
+  if (!res.ok) throw new Error(await responseFailureText(res, "Failed to check eligibility.", "member"));
   return (await res.json()) as MoodEligibility;
 }
+
+const STORAGE_BLOCKED_TEXT = "Check-ins need browser storage, which is blocked in this window.";
 
 export default function MoodShell() {
   const [tab, setTab] = useState<Tab>("checkin");
@@ -58,13 +61,24 @@ export default function MoodShell() {
   useEffect(() => {
     const id = getMoodClientId();
     setClientId(id);
+    if (!id) {
+      // getMoodClientId answers "" when this window blocks browser storage; the eligibility call
+      // would only fail on the missing id, so say what is actually wrong instead.
+      setError(STORAGE_BLOCKED_TEXT);
+      setLoading(false);
+      return;
+    }
     const controller = new AbortController();
     void loadEligibility(id, true, controller.signal);
     return () => { controller.abort(); };
   }, [loadEligibility]);
 
   async function handleSubmit() {
-    if (!selected || submitting || !clientId) return;
+    if (!selected || submitting) return;
+    if (!clientId) {
+      setError(STORAGE_BLOCKED_TEXT);
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {

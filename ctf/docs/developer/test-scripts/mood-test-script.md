@@ -148,6 +148,19 @@ directly).
 
 ---
 
+### MD-8 · Failed loads say why (web)
+**Role:** member · **Surfaces:** web
+**Steps:**
+1. Open Mood in a private window that blocks site storage (or with site data blocked in the browser).
+2. In a normal window, open the community pulse tab with the network turned off in developer tools.
+**Expected:** In step 1 the check-in screen reads "Check-ins need browser storage, which is blocked in
+this window." and Submit Privately shows the same line rather than doing nothing. In step 2 the pulse
+reads "The community pulse could not be loaded right now. Please try again shortly." followed by the
+reason (the network error); a refusal from the server shows the server's own message there instead.
+**Result:** web ☐ — notes:
+
+---
+
 ## Parity check (web ↔ android)
 
 For MD-1, MD-2, MD-4, and MD-5, the android app and the mobile-responsive web layout must behave the
