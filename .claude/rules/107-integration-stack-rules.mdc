@@ -23,7 +23,7 @@ Define safe integration contracts for Clerk auth, GetStream chat, and Sentry obs
 - Plugins must not pass Stream credentials between each other at runtime, on the client or on the server.
 
 ### Shared Wrappers
-- Use shared client wrappers in `ctf/packages/shared` for raw Stream token issuance and channel operations. Shared wrappers are plugin-neutral primitives.
+- Use the shared Stream helpers in the web app for raw Stream token issuance and channel operations: `ctf/packages/web/lib/integrations/` (`stream-credentials.ts`, `stream-video.ts`, `stream-feeds.ts`) and `ctf/packages/web/lib/shared/` (`stream-chat-connection.ts` and the chat send and error helpers). They are plugin-neutral primitives. The `@ctf/shared` package holds no Stream code.
 - Per-plugin scoping (user-id prefix, channel-id namespace, capacity/membership rules) lives in the plugin's own server-side adapter on top of the shared wrappers.
 - Gate plugin command operations with policy checks before Stream-side actions.
 

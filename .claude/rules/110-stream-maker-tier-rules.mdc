@@ -12,7 +12,7 @@ Design Stream usage for current Maker-tier hard limits while preserving good UX 
 These are hard limits and must be treated as non-burstable ceilings in feature design.
 
 ## Architecture Rules
-- All Stream interactions must go through shared wrappers/adapters in `packages/shared`.
+- All Stream interactions must go through the shared Stream helpers in `ctf/packages/web/lib/integrations/` and `ctf/packages/web/lib/shared/` (see rule 107). The `@ctf/shared` package holds no Stream code.
 - Never call Stream SDKs directly from feature UI modules.
 - Centralize usage metering hooks (MAU, API calls, participant minutes, moderation usage) in shared integration layer.
 - Keep Stream capabilities behind feature flags and policy switches for progressive enablement.
