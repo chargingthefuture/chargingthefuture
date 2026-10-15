@@ -1,7 +1,4 @@
 packages:
-  - "packages/economic-models"
-  - "packages/eol"
   - "packages/mobile"
-  - "packages/education"
   - "packages/shared"
   - "packages/web"

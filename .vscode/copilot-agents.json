@@ -303,32 +303,6 @@
         }
       ]
     },
-      {
-        "name": "economic-models",
-        "description": "Implements and audits economic interdependence measurement modules (Hierarchical Network, Geopolitical, Input-Output) for up to 5M users. Ensures privacy, explainability, and benchmarking.",
-        "argument-hint": "Run or validate economic interdependence module, compare scores, or audit privacy/ethics.",
-        "target": "vscode",
-        "user-invocable": true,
-        "model": "gpt-4.1",
-        "tools": [
-          "vscode.workspace",
-          "vscode.diagnostics",
-          "github"
-        ],
-        "disable-model-invocation": false,
-        "handoffs": [
-          {
-            "label": "Escalate to Metrics Data Integrity",
-            "agent": "metrics-data-integrity",
-            "prompt": "Economic models module change detected. Run full Macro Audit MDC and synthetic test suite."
-          },
-          {
-            "label": "Return to Orchestrator",
-            "agent": "meta-orchestrator",
-            "prompt": "Economic models module review complete, returning results to orchestrator."
-          }
-        ]
-      },
     {
       "name": "compliance-safety",
       "description": "Enforces product safety, legal, and compliance constraints",
