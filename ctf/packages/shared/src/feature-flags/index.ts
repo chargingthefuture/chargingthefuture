@@ -1,13 +1,3 @@
-export {
-	SYSTEM_FLAGS,
-	UNLOCK_FLAGS,
-	featureFlagKey,
-	releaseFlagKey,
-} from './keys';
+export { SYSTEM_FLAGS, UNLOCK_FLAGS } from './keys';
 
-export type {
-	FlagKey,
-	SystemFlagKey,
-	UnlockFlagKey,
-	FeatureFlagContext,
-} from './keys';
+export type { FlagKey, FeatureFlagContext } from './keys';

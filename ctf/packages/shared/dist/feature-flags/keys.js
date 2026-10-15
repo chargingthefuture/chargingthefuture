@@ -17,14 +17,6 @@ export const SYSTEM_FLAGS = {
     // registered key for a future incident/pre-launch lockdown switch — see issue #102.
     PUBLIC_SURFACE: 'public-surface',
 };
-// Build a user-facing feature flag key: feature-{pluginSlug}-{featureName}.
-export function featureFlagKey(pluginSlug, featureName) {
-    return `feature-${pluginSlug}-${featureName}`;
-}
-// Build a release/rollout flag key: release-{agent}-{fixName}.
-export function releaseFlagKey(agent, fixName) {
-    return `release-${agent}-${fixName}`;
-}
 // Vendor-neutral evaluation context. The web/mobile/agent flag clients map this onto
 // their provider's native context (e.g. Unleash Context: userId + properties).
 // Per-user unlock feature flags. The stored Unlock submission decides access whenever the
