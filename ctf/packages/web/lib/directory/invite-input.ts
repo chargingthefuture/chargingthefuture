@@ -52,8 +52,9 @@ const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
 // Exactly ten lower-case letters and digits.
 export const INVITE_CODE_RE = /^[a-z0-9]{10}$/;
 // A Quora handle as it sits after /profile/ in the address, lower-cased for lookups. The address
-// itself is kept exactly as sent.
-const HANDLE_RE = /^[a-z0-9][a-z0-9._-]*$/;
+// itself is kept exactly as sent. A name with accented letters arrives percent-encoded
+// (jo%c3%a3o-louren%c3%a7o-16), so % is allowed.
+const HANDLE_RE = /^[a-z0-9][a-z0-9._%-]*$/;
 const PROFILE_ID_RE = /^[A-Za-z0-9-]+$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -85,10 +86,16 @@ export function quoraHandleFromUrl(url: string): string {
   return afterPrefix.replace(/\/+$/, '').toLowerCase();
 }
 
-/** Lower-cased handle, or null when it could not be one. */
+/**
+ * Lower-cased handle, or null when it could not be one. Used for a signed-in ?invite= value too, which
+ * arrives decoded, so accented letters are encoded back to match the stored handle.
+ */
 export function normalizeInviteHandle(raw: unknown): string | null {
   if (typeof raw !== 'string') return null;
-  const value = raw.trim().toLowerCase();
+  const value = raw
+    .trim()
+    .replace(/[^\x00-\x7f]/gu, (c) => encodeURIComponent(c))
+    .toLowerCase();
   if (value === '' || value.length > INVITE_MAX.quoraHandle || !HANDLE_RE.test(value)) return null;
   return value;
 }

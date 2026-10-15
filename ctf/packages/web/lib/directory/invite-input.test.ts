@@ -119,6 +119,7 @@ describe('handles', () => {
   it('reads the handle from a Quora address in either shape', () => {
     expect(quoraHandleFromUrl('https://www.quora.com/profile/Sam-Example-1/')).toBe('sam-example-1');
     expect(quoraHandleFromUrl('https://www.quora.com/profile/Sam-Example-1?ch=10')).toBe('sam-example-1');
+    expect(quoraHandleFromUrl('https://www.quora.com/profile/Marko-Petrovi%C4%87-49')).toBe('marko-petrovi%c4%87-49');
   });
 
   it('accepts an invite code only as exactly ten lower-case letters and digits', () => {
@@ -139,6 +140,8 @@ describe('handles', () => {
   it('normalizes a handle and refuses what could not be one', () => {
     expect(normalizeInviteHandle(' Farah-Brunache ')).toBe('farah-brunache');
     expect(normalizeInviteHandle('a/b')).toBeNull();
+    expect(normalizeInviteHandle('jo%C3%A3o-louren%C3%A7o-16')).toBe('jo%c3%a3o-louren%c3%a7o-16');
+    expect(normalizeInviteHandle('João-Lourenço-16')).toBe('jo%c3%a3o-louren%c3%a7o-16');
     expect(normalizeInviteHandle(undefined)).toBeNull();
     expect(normalizeInviteHandle(['farah-brunache'])).toBeNull();
   });
