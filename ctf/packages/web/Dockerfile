@@ -15,9 +15,6 @@ COPY package.json tsconfig.base.json ./
 # Copy every workspace member's package.json so pnpm can resolve the graph
 COPY packages/shared/package.json           packages/shared/package.json
 COPY packages/web/package.json              packages/web/package.json
-COPY packages/economic-models/package.json  packages/economic-models/package.json
-COPY packages/education/package.json        packages/education/package.json
-COPY packages/eol/package.json              packages/eol/package.json
 COPY packages/mobile/package.json           packages/mobile/package.json
 RUN pnpm install --frozen-lockfile
 

@@ -23,7 +23,6 @@ and code review cover those).
 - **The three covered cores:**
   - **ServiceCredits amount math** — `ctf/packages/web/lib/service-credits/amounts.ts`
     (`toMinorUnits`, `ensurePositiveAmount`).
-  - **economic-models computation** — `ctf/packages/economic-models/*.test.ts` (ETL + interdependence).
   - **Trust evidence** — `buildTrustEvidence` in `ctf/packages/web/lib/trust/`, which encodes the
     Rule 132 invariants (categorical only, dispute withholds the clean signal, sensitive plugins
     never surfaced).
