@@ -65,3 +65,7 @@ export function inviteCardSeed(card: { name: string; url?: string }): string {
   }
   return card.name;
 }
+
+// Why the invitations exist, shown above them on both walls (owner decision, 2026-10-15).
+export const INVITE_WALL_WHY =
+  'Why I write these: everyone in the Directory can do something the Skills Economy needs, and I write to each of you by name so you know it. You are seen, heard and wanted here. These are not referral offers, and nobody earns anything for them. Each person is a piece of the same puzzle: dignity and a say over your own life, won together.';

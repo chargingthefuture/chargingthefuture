@@ -8,7 +8,7 @@ import { BackChevronButton } from '@/lib/nav/back-history';
 import { SimpleMarkdown } from '@/components/shared/simple-markdown';
 import { failureText, responseFailureText } from 'lib/errors/client-failure';
 import { getDirectoryTokens, onAccentText, type DirectoryTokens } from './shared';
-import { formatInviteDate, type FullInvite, type InvitePage } from './directory-invite-format';
+import { INVITE_WALL_WHY, formatInviteDate, type FullInvite, type InvitePage } from './directory-invite-format';
 import { INVITE_LINK_CLASS, InviteAvatar, InviteCardView } from './directory-invite-card';
 
 const LOAD_ERROR = 'Could not load the invitations.';
@@ -142,6 +142,7 @@ export function DirectoryInviteWall({ page, inviteHandle, verifyUrl }: { page: n
         <h1 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1 }}>Invitations</h1>
       </div>
       <div style={{ padding: '14px 16px 24px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <p style={{ margin: 0, fontSize: 14, color: t.TEXT, lineHeight: 1.55 }}>{INVITE_WALL_WHY}</p>
         <p style={{ margin: 0, fontSize: 13, color: t.SUBTLE, lineHeight: 1.55 }}>
           One invitation for each person written to so far, newest first. Open one to read it in full.
           {listed !== null ? ` ${listed.toLocaleString('en-US')} ${listed === 1 ? 'person is' : 'people are'} listed in the Directory.` : ''}

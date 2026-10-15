@@ -9,7 +9,7 @@ import type { PublicVisitorShellProps } from '@/components/plugins/public-visito
 import { failureText, responseFailureText } from 'lib/errors/client-failure';
 import { getDirectoryTokens, onAccentText, type DirectoryTokens } from './shared';
 import { PublicShellWorldwide } from '@/components/plugins/public-shell-worldwide';
-import { inviteCardSeed, type InviteCard, type InviteTeaser, type PublicInvites } from './directory-invite-format';
+import { INVITE_WALL_WHY, inviteCardSeed, type InviteCard, type InviteTeaser, type PublicInvites } from './directory-invite-format';
 import { INVITE_LINK_CLASS, InviteCardView } from './directory-invite-card';
 
 const FONT_FAMILY = "'Inter', system-ui, sans-serif";
@@ -68,9 +68,7 @@ function Pitch({ t, signInUrl, verifyUrl }: { t: DirectoryTokens; signInUrl: str
   }
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <p style={{ margin: 0, fontSize: 13, color: t.SUBTLE, lineHeight: 1.55 }}>
-        Sign in free to read every invitation. Listed already? Make an account and your listing can be attached to it. Not listed yet? Make an account, finish the check, and add yourself.
-      </p>
+      <p style={{ margin: 0, fontSize: 13, color: t.SUBTLE, lineHeight: 1.55 }}>Sign in free to read every invitation. Sign up to add yourself.</p>
       <a href={signInUrl} style={{ padding: '12px', borderRadius: 12, background: t.ACCENT, color: onAccentText(t), fontSize: 14, fontWeight: 700, textAlign: 'center', textDecoration: 'none' }}>Sign in or create a free account</a>
     </div>
   );
@@ -176,6 +174,7 @@ export function DirectoryPublicShell({ signInUrl, verifyUrl, inviteHandle, page 
       </div>
       <div style={{ flex: 1, padding: '0 16px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
         <h2 style={{ margin: '4px 4px 0', fontSize: 14, fontWeight: 700, color: t.SUBTLE }}>Invitations</h2>
+        <p style={{ margin: '0 4px', fontSize: 13, color: t.TEXT, lineHeight: 1.55 }}>{INVITE_WALL_WHY}</p>
         <Invitations data={data} error={error} t={t} signInUrl={signInUrl} verifyUrl={verifyUrl} handle={inviteHandle} />
       </div>
     </div>
