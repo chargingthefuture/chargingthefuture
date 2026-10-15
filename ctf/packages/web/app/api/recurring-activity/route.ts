@@ -244,7 +244,7 @@ export async function POST(request: Request) {
         hasScValue: activity.scValue !== null,
         originPlugin: activity.originPlugin,
       },
-    });
+    }).catch((auditError) => reportError(auditError, { area: 'recurring-activity', op: 'create_audit' }));
     // Notify the counterparty they were named in a recurring activity to confirm or decline —
     // best-effort, deduped on the activity id.
     await notifySafe({

@@ -329,6 +329,7 @@ keeps that half reproducible; its stamped result stands.
   `mutual_time_events.auto_closed` (boolean, default `FALSE`, set by `closeAndComputeTx`), so the two
   ways a survey ends can be told apart — an admin who pressed Close does not need telling.
   `schema.demo.sql` regenerated. No contract or API-shape change.
+- 2026-10-12: **Closing a survey waits for a vote in flight, and the admin screen says why no time was chosen (code review #2918, #2919, #2920).** `closeAndComputeTx` now re-reads the event `FOR UPDATE` before counting votes. `saveVote` already took that lock, but none of the three close paths (admin Close, the auto-close on the public read, the auto-close on the admin list) did, so a close could count votes before an in-flight vote committed and stamp a result without it, and an admin close racing an auto-close could both write. Now the close waits for the vote and the second close sees `closed` and returns. The admin dashboard used to say "No time chosen (no votes)" on a row that also read "2 voters" when every pick had already passed; the row and the close notice now say the picked times had already passed when the survey has voters, matching the public page, and keep "no votes" for a survey nobody voted on. The post-save re-read on the vote screen and the Audit log panel's network-error path now report the caught error, and the panel names the reason in its message. No schema, contract or API-shape change.
 
 Ordered, dependency-based (no phases). Each item done in this initial build.
 

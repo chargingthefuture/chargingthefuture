@@ -142,7 +142,7 @@ export const trustTransportSource: RecognitionSource = {
  */
 export const skillUpTrainerPayoutSource: RecognitionSource = {
   pluginSlug: 'skill-up',
-  label: 'SkillUp trainer payouts for validated work',
+  label: 'SkillUp credits sent to trainers for validated work',
   async loadVolumes() {
     const result = await queryDb<{ total: string | null }>(
       `SELECT SUM(amount)::text AS total
@@ -171,7 +171,7 @@ export const skillUpTrainerPayoutSource: RecognitionSource = {
  */
 export const foundationCallSource: RecognitionSource = {
   pluginSlug: 'foundation',
-  label: 'Foundation paid service calls',
+  label: 'Foundation service calls settled in ServiceCredits',
   async loadVolumes() {
     const result = await queryDb<{ total: string | null }>(
       `SELECT SUM(blocks_charged * rate_credits_locked)::text AS total

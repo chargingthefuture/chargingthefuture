@@ -244,6 +244,19 @@ alongside the legacy `category`) and fulfillment outcomes for dev validation.
 
 ## 9) Change Log
 
+- 2026-10-05: **Failed loads and refused taps now say why; a retried post no longer posts twice (#2921,
+  #2922, #2924, #2926).** (1) The shell's list reader turned every non-OK answer into an empty list, so a
+  503 or 403 from `/requests`, `/my-requests` or `/my-fulfillments` read as an empty board; it now throws
+  with the route's message and the shell shows its error view. A failed "Load more" page shows a note
+  under the list. (2) "I can help" and "Re-post" now show the route's reason at the top of the feed when
+  refused (expired, already claimed, previously canceled helper, blocked pair, active helper), and the
+  feed refreshes either way. Opening a Direct Line shows the chat route's own message instead of a fixed
+  sentence. (3) The web post form now sends an `idempotencyKey` on a create, one per new draft and kept
+  across retries of that draft, so a retry after a lost response returns the request already saved
+  instead of creating a second one. The route already accepted the key; the contract already required
+  it. (4) The blank-amount message called the chosen settlement type a payment type, which put
+  ServiceCredits in payment terms; it now reads "Enter an amount for the settlement type you chose, or
+  switch it to Free." No route, contract or schema change.
 - 2026-10-02: **Requests can carry one picture** (owner decision: SocketRelay is the classifieds board,
   and a listing reads faster with a photo). New table `socket_relay_request_images`; new routes
   `GET/PUT/DELETE /api/socket-relay/requests/:id/image` and `DELETE /api/socket-relay/admin/requests/:id/image`;
