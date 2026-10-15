@@ -401,6 +401,7 @@ These cases must produce identical behavior on both surfaces. Run them on web an
 - With a money currency selected there is NO amount field; the panel says only that this happens and how often. With ServiceCredits selected, an optional value field appears.
 - After recording, the prompt is replaced by "Recorded — waiting for … to confirm it." plus a link reading "See your ongoing arrangements" that opens `/apps/recurring-activity`.
 - In the hub, A sees the new row as pending with a "Recorded from …" line naming the app. B sees it awaiting confirmation and gets the usual notification. Nothing counts toward Trust or GDP until B confirms.
+- The "Settled in" list names each currency by its label: ServiceCredits reads "ServiceCredits", and no option shows a bare code such as `SC` or `USD`.
 
 Result: web ☐
 
