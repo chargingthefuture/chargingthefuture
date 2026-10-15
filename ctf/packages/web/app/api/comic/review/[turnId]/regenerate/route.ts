@@ -7,7 +7,8 @@ import { reportError } from 'lib/observability/report';
 
 // Admin-only: re-run the AI draft for a still-pending review item. Use after the drafting engine
 // (the RunPod/Ollama endpoint) was down at ask time and has since recovered. Synchronous: the
-// response says whether a draft was attached, or that the engine is still unreachable.
+// response says whether a draft was attached, or that the engine is still unreachable. It can take
+// several minutes on a cold start; a second press for the same item joins the draft already running.
 // The dynamic segment is the review-queue id (named `turnId` for route-shape parity with resolve).
 export async function POST(request: Request, { params }: { params: Promise<{ turnId: string }> }) {
   const gate = await requireComicAdminAccess();

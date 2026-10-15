@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import { NextResponse } from 'next/server';
 import { reportError } from 'lib/observability/report';
+import { describeFailure } from './reason';
 
 // Verbose failure reporting for API routes (rule 137).
 //
@@ -18,15 +19,12 @@ import { reportError } from 'lib/observability/report';
 // The echoed reason is capped so one runaway upstream message cannot fill a banner or a log line.
 const MAX_REASON_LENGTH = 300;
 
-// The readable reason behind a caught value: an Error's message, or the value itself when something
-// non-Error was thrown. Never empty — an empty reason reads as "no information", which is the problem
-// this module exists to remove.
+// The readable reason behind a caught value: an Error's message with its cause appended (a failed
+// fetch reads "fetch failed (connect ECONNREFUSED …)", not just "fetch failed"), or the value itself
+// when something non-Error was thrown. Never empty — an empty reason reads as "no information", which
+// is the problem this module exists to remove. See `reason.ts`.
 export function failureReason(error: unknown, maxLength: number = MAX_REASON_LENGTH): string {
-  const raw = (error instanceof Error ? error.message : String(error)).trim();
-  if (raw.length === 0) {
-    return error instanceof Error ? `${error.name} with no message` : 'unknown error';
-  }
-  return raw.length > maxLength ? `${raw.slice(0, maxLength)}…` : raw;
+  return describeFailure(error, maxLength);
 }
 
 // Join a summary sentence with the reason: "Could not load the draft: relation does not exist".

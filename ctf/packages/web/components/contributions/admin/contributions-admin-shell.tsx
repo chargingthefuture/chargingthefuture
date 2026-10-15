@@ -59,10 +59,19 @@ export function ContributionsAdminShell() {
     }
   }, []);
 
+  // The drive the Drive tab edits: the active one, else the next upcoming one. An ended drive is never
+  // picked — editing it would reopen it with last drive's confirmed rows and granted credits still
+  // attached — so with no active or upcoming drive the tab shows "Start a drive" and saving creates one.
   const pickCurrentCycle = useCallback((cycles: ContributionsCycle[]): ContributionsCycle | null => {
     const now = Date.now();
     const active = cycles.find((c) => Date.parse(c.startsAt) <= now && Date.parse(c.endsAt) > now);
-    return active ?? cycles[0] ?? null;
+    if (active) {
+      return active;
+    }
+    const upcoming = cycles
+      .filter((c) => Date.parse(c.startsAt) > now)
+      .sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt));
+    return upcoming[0] ?? null;
   }, []);
 
   useEffect(() => {

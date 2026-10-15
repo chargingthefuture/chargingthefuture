@@ -182,6 +182,11 @@ export async function createGatedChannelPost(input: {
     throw new Error('rate_limit_exceeded');
   }
   if (input.replyToPostId) {
+    // Checked before the query: a value that is not a UUID makes Postgres throw a cast error, which
+    // the route would report and answer as a 503 instead of the 400 a bad reply id deserves.
+    if (!UUID_PATTERN.test(input.replyToPostId)) {
+      throw new Error('reply_target_not_found');
+    }
     const target = await queryDb<{ id: string }>(
       `SELECT id FROM contributor_access_channel_posts
        WHERE id = $1 AND deleted_at IS NULL AND moderation_status = 'accepted'`,

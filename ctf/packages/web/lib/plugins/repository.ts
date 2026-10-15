@@ -18,18 +18,9 @@ export type PluginRegistrySummary = {
   planned: number;
 };
 
-// Operator-only surfaces: real plugins that should not appear in the user app launcher and
-// whose /apps/<slug> route is gated to admins. Admins still see and use them; everyone else
-// neither sees the tile nor can open the route. Kept in code (not the DB registry) so it holds
-// whether the registry is served from the database or the in-code fallback.
-// mutual-time: admins create/manage the polls; members only ever vote via a shared event link
-// (/mutual-time/<slug>), never from a launcher tile — so it does not belong in the member apps list.
-// Kept reachable at /apps/mutual-time for admins (via the admin grid); just hidden from members here.
-export const ADMIN_ONLY_PLUGIN_SLUGS = new Set<string>(['weekly-performance', 'mutual-time']);
-
-export function isAdminOnlyPlugin(slug: string): boolean {
-  return ADMIN_ONLY_PLUGIN_SLUGS.has(slug);
-}
+// The operator-only list lives in lib/plugins/admin-only.ts so client components can read it too.
+import { ADMIN_ONLY_PLUGIN_SLUGS, isAdminOnlyPlugin } from 'lib/plugins/admin-only';
+export { ADMIN_ONLY_PLUGIN_SLUGS, isAdminOnlyPlugin };
 
 // Plugin pages whose own gate is a signed-in account rather than Unlock approval, matching the
 // approved exceptions in ctf/config/unlock-tier-exception-allowlist.json. Everything else stays on

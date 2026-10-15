@@ -40,7 +40,15 @@ function sendText(res, status, body, extraHeaders = {}) {
 }
 
 const server = http.createServer(async (req, res) => {
-  const url = new URL(req.url, `http://${req.headers.host}`);
+  // A fixed base: the handler never reads the host, and a client-supplied Host header the URL
+  // parser rejects (empty, a space, an unclosed bracket) would otherwise throw here, outside any
+  // try, and the unhandled rejection would stop the process.
+  let url;
+  try {
+    url = new URL(req.url, 'http://localhost');
+  } catch (err) {
+    return sendText(res, 400, `could not read the request address: ${err.message}`);
+  }
 
   if (url.pathname === '/health') return sendText(res, 200, 'ok');
   if (url.pathname !== '/weather' && url.pathname !== '/wind') return sendText(res, 404, 'not found');
