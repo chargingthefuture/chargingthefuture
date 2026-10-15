@@ -589,8 +589,9 @@ nomination, so it carries a Quora URL. Note its Quora URL.
    the `www.`, add a trailing slash, change the casing of the name, paste the share link with `?ch=…`
    on the end, or use a language subdomain such as `es.quora.com`. Each must still be blocked — the
    takedown is matched on a canonical form, not on the exact characters recorded (fixed 2026-09-18;
-   before that, dropping `www.` was enough to get a taken-down profile re-listed). Also confirm an
-   unrelated Quora profile is still **not** blocked.
+   before that, dropping `www.` was enough to get a taken-down profile re-listed). Also add a
+   profile tab to the end, such as `/answers` or `/activity`: it is the same person and must be
+   blocked too (fixed 2026-10-15). Also confirm an unrelated Quora profile is still **not** blocked.
 5b. Before lifting it, sign in as a member and save your own Directory profile with that Quora URL.
 **Expected:** The takedown deletes the profile and blocks its Quora URL from being listed (auto-gen
 from a SkillsHunt accept, or admin/member add) until an admin lifts it, whichever way that URL is
