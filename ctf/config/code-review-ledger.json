@@ -57,6 +57,14 @@
       "updatedAt": "2026-10-05T12:31:32.868Z"
     },
     {
+      "name": "apps",
+      "type": "module",
+      "lastReviewedAt": "2026-10-15T05:46:59.434Z",
+      "lastRunIssues": 1,
+      "partial": false,
+      "updatedAt": "2026-10-15T05:46:59.443Z"
+    },
+    {
       "name": "auth",
       "type": "module",
       "lastReviewedAt": "2026-10-04T02:57:53.205Z",
