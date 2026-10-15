@@ -442,12 +442,16 @@ export function CommonsModerationAdminShell({
   authors: initialAuthors,
   flagged: initialFlagged,
   pendingFlagged: initialPendingFlagged,
+  loadError = null,
 }: {
   rows: FeedModerationQueueRow[];
   hidden: { posts: number; replies: number };
   authors: FeedModerationAuthorSummary[];
   flagged: FeedFlaggedAnswerRow[];
   pendingFlagged: number;
+  // Which server-side reads failed on first load, and why. Shown in the error banner until the next
+  // action clears it.
+  loadError?: string | null;
 }) {
   const { theme } = useTheme();
   const t = getFeedAnnouncementsTokens(theme);
@@ -463,7 +467,7 @@ export function CommonsModerationAdminShell({
   // posts should not mean picking the same option twenty times.
   const [reason, setReason] = useState<FeedModerationReason>(FEED_MODERATION_REASON.offTopic);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(loadError);
   const [notice, setNotice] = useState<string | null>(null);
 
   // Apply a queue payload to state. Only replace the roster when the response carried one — a

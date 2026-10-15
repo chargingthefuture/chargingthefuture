@@ -463,7 +463,7 @@ Result: web ☐ mobile ☐
 2. On the dashboard, look at the event's voter count.
 3. Click "Close and choose the time", then open the public link.
 
-**Expected:** Step 2 shows 0 voters while the survey is open — picks that have passed no longer count. Step 3 closes the survey and the public link says the survey closed after the times members picked had already passed, so no time was chosen. No past time is ever stamped as the winner.
+**Expected:** Step 2 shows 0 voters while the survey is open — picks that have passed no longer count. Step 3 closes the survey: the dashboard notice reads "Survey closed. The times members picked had already passed, so no time was chosen.", the closed row reads "No time chosen (the picked times had already passed)" rather than "no votes", and the public link says the survey closed after the times members picked had already passed, so no time was chosen. No past time is ever stamped as the winner.
 
 Result: web ☐ mobile ☐
 

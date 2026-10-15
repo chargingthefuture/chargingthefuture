@@ -3,6 +3,7 @@ import { evaluatePluginAccess } from 'lib/auth/server-authz';
 import { readTrustSelfExtensionOrStored } from 'lib/trust/repository';
 import { logTrustAuditEvent } from 'lib/trust/audit';
 import { resolveRequestId } from 'lib/trust/_lib';
+import { TRUST_ERROR_CODE } from 'lib/trust/constants';
 import { reportError } from 'lib/observability/report';
 
 export async function GET(request: Request) {
@@ -30,7 +31,19 @@ export async function GET(request: Request) {
   // Both the throttle and that fallback live in readTrustSelfExtensionOrStored, which the
   // server-rendered self surfaces (account hub, home, apps launcher) call too — so this route and
   // those pages cannot drift into showing the same member two different panels.
-  const extension = await readTrustSelfExtensionOrStored(decision.userId);
+  //
+  // When the stored read fails as well (the database is unreachable), there is nothing to show: say
+  // so with the same 503 body the by-id route answers, rather than the framework's bare 500.
+  let extension;
+  try {
+    extension = await readTrustSelfExtensionOrStored(decision.userId);
+  } catch (error) {
+    reportError(error, { area: 'trust', op: 'self_stored_read' });
+    return NextResponse.json(
+      { ok: false, code: TRUST_ERROR_CODE.persistenceUnavailable, message: 'Trust data unavailable.' },
+      { status: 503 },
+    );
+  }
 
   // Record the trust.summary.read audit event required by the audit contract. A failed audit write
   // must never break the member's own read, so log-and-continue on error.
