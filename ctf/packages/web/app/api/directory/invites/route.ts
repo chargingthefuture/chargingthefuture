@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
 import { DIRECTORY_ERROR_CODE } from 'lib/directory/constants';
 import { requireInviteReader } from 'lib/directory/invite-access';
-import { normalizeInviteHandle } from 'lib/directory/invite-input';
+import { normalizeInviteLink } from 'lib/directory/invite-input';
 import {
   clampInvitePage,
   countDirectoryInvites,
   countDirectoryListedPeople,
-  getDirectoryInviteByHandle,
+  getDirectoryInviteByCodeOrHandle,
   listDirectoryInvites,
 } from 'lib/directory/invites';
 import { failureResponse } from 'lib/errors/failure';
@@ -16,7 +16,8 @@ export const dynamic = 'force-dynamic';
 // The invite wall in full, for any signed-in account (owner decision, 2026-10-15; the gate and its
 // reason are in lib/directory/invite-access.ts). One page of ten, newest first. `?page=` is 1-based
 // and clamped into range, so a page past the end answers with the last page rather than nothing.
-// `?invite=<handle>` adds that one invite on top, for a member who followed a direct link.
+// `?invite=<code or handle>` adds that one invite on top, for a member who followed a direct link:
+// read as an invite code first, then as a Quora handle.
 // Picture bytes are not in here; each invite carries the address of its picture.
 export async function GET(request: Request) {
   const gate = await requireInviteReader();
@@ -25,13 +26,13 @@ export async function GET(request: Request) {
   }
 
   const params = new URL(request.url).searchParams;
-  const handle = normalizeInviteHandle(params.get('invite'));
+  const link = normalizeInviteLink(params.get('invite'));
 
   try {
     const [total, listed, featured] = await Promise.all([
       countDirectoryInvites(),
       countDirectoryListedPeople(),
-      handle ? getDirectoryInviteByHandle(handle) : Promise.resolve(null),
+      link ? getDirectoryInviteByCodeOrHandle(link) : Promise.resolve(null),
     ]);
     const paging = clampInvitePage(params.get('page') ?? '1', total);
     const invites = await listDirectoryInvites(paging.pageSize, paging.offset);

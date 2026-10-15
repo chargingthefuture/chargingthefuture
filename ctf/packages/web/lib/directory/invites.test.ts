@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // The invite repository. What matters here: a card (the shape a signed-out caller, the landing site
-// and the blog receive) carries name, opening, date and link and nothing else; paging clamps; and a
+// and the blog receive) carries name, opening, date and link and nothing else, and its link opens the
+// invite by code, never by Quora handle; a signed-out lookup is by code alone; paging clamps; and a
 // listing's removal takes its invitations with it.
 
 const queryDb = vi.fn();
@@ -12,42 +13,70 @@ beforeEach(() => {
 });
 
 describe('cards', () => {
-  it('carries only name, opening, date and the app link for a private invite', async () => {
+  it('carries only name, opening, date and the app link by code for a private invite', async () => {
     queryDb.mockResolvedValueOnce({
-      rows: [{ name: 'Sam', opening: 'Sam fixes bicycles.', published_on: '2026-10-15', quora_handle: 'sam-example-1', public: false, blog_url: null }],
+      rows: [{ name: 'Sam', opening: 'Sam fixes bicycles.', published_on: '2026-10-15', invite_code: 'k3m9x2q7ab', public: false, blog_url: null }],
     });
     const { listLatestDirectoryInviteCards } = await import('./invites');
     const cards = await listLatestDirectoryInviteCards();
     expect(cards).toHaveLength(1);
     expect(Object.keys(cards[0]).sort()).toEqual(['date', 'name', 'opening', 'url']);
-    expect(cards[0].url.endsWith('/apps/directory?invite=sam-example-1')).toBe(true);
-    // The query names only the card columns, so nothing else can ride along.
+    expect(cards[0].url.endsWith('/apps/directory?invite=k3m9x2q7ab')).toBe(true);
+    // The query names only the card columns, so nothing else can ride along, the handle included.
     const sql = String(queryDb.mock.calls[0][0]);
-    expect(sql).not.toMatch(/body_markdown|image|quora_url|directory_profile_id/);
+    expect(sql).not.toMatch(/body_markdown|image|quora_url|quora_handle|directory_profile_id/);
+  });
+
+  it('links an invite with no code to the Directory page, with no ?invite=', async () => {
+    queryDb.mockResolvedValueOnce({
+      rows: [{ name: 'Sam', opening: 'Sam fixes bicycles.', published_on: '2026-10-15', invite_code: null, public: false, blog_url: null }],
+    });
+    const { listLatestDirectoryInviteCards } = await import('./invites');
+    const [card] = await listLatestDirectoryInviteCards();
+    expect(card.url.endsWith('/apps/directory')).toBe(true);
+  });
+});
+
+describe('direct links', () => {
+  it('looks a signed-out card up by code only, and never queries for a value that is not a code', async () => {
+    const { getDirectoryInviteCardByCode } = await import('./invites');
+    expect(await getDirectoryInviteCardByCode('sam-example-1')).toBeNull();
+    expect(queryDb).not.toHaveBeenCalled();
+
+    queryDb.mockResolvedValueOnce({ rows: [] });
+    expect(await getDirectoryInviteCardByCode('k3m9x2q7ab')).toBeNull();
+    expect(String(queryDb.mock.calls[0][0])).toMatch(/WHERE invite_code = \$1/);
+    expect(String(queryDb.mock.calls[0][0])).not.toMatch(/quora_handle/);
+  });
+
+  it('reads a signed-in link as a code first, then as a handle', async () => {
+    const { getDirectoryInviteByCodeOrHandle } = await import('./invites');
+    queryDb.mockResolvedValueOnce({ rows: [] }).mockResolvedValueOnce({ rows: [] });
+    await getDirectoryInviteByCodeOrHandle('k3m9x2q7ab');
+    expect(String(queryDb.mock.calls[0][0])).toMatch(/WHERE invite_code = \$1/);
+    expect(String(queryDb.mock.calls[1][0])).toMatch(/WHERE quora_handle = \$1/);
+
+    queryDb.mockReset();
+    queryDb.mockResolvedValueOnce({ rows: [] });
+    await getDirectoryInviteByCodeOrHandle('sam-example-1');
+    expect(queryDb).toHaveBeenCalledTimes(1);
+    expect(String(queryDb.mock.calls[0][0])).toMatch(/WHERE quora_handle = \$1/);
   });
 });
 
 describe('public invites', () => {
   it('adds the blog address to a public card', async () => {
     queryDb.mockResolvedValueOnce({
-      rows: [{ name: 'Ann', opening: 'Ann sews.', published_on: '2026-09-01', quora_handle: 'ann-1', public: true, blog_url: 'https://chargingthefuture.github.io/chargingthefuture/an-invitation-to-ann' }],
+      rows: [{ name: 'Ann', opening: 'Ann sews.', published_on: '2026-09-01', invite_code: 'a1b2c3d4e5', public: true, blog_url: 'https://chargingthefuture.github.io/chargingthefuture/an-invitation-to-ann' }],
     });
     const { listLatestDirectoryInviteCards } = await import('./invites');
     const [card] = await listLatestDirectoryInviteCards();
     expect(card.blogUrl).toBe('https://chargingthefuture.github.io/chargingthefuture/an-invitation-to-ann');
   });
 
-  it('gives the blurred private cards name and opening only, from private rows only', async () => {
-    queryDb.mockResolvedValueOnce({ rows: [{ name: 'Sam', opening: 'Sam fixes bicycles.' }] });
-    const { listLockedDirectoryInviteTeasers } = await import('./invites');
-    const teasers = await listLockedDirectoryInviteTeasers();
-    expect(teasers).toEqual([{ name: 'Sam', opening: 'Sam fixes bicycles.' }]);
-    expect(String(queryDb.mock.calls[0][0])).toMatch(/WHERE NOT public/);
-  });
-
   it('gives the open cards their blog address and no picture', async () => {
     queryDb.mockResolvedValueOnce({
-      rows: [{ name: 'Ann', opening: 'Ann sews.', published_on: '2026-09-01', quora_handle: 'ann-1', public: true, blog_url: 'https://chargingthefuture.github.io/chargingthefuture/an-invitation-to-ann' }],
+      rows: [{ name: 'Ann', opening: 'Ann sews.', published_on: '2026-09-01', invite_code: 'a1b2c3d4e5', public: true, blog_url: 'https://chargingthefuture.github.io/chargingthefuture/an-invitation-to-ann' }],
     });
     const { listOpenDirectoryInviteCards } = await import('./invites');
     const [card] = await listOpenDirectoryInviteCards(10, 0);
@@ -85,15 +114,34 @@ describe('deleteInvitesForListing', () => {
 });
 
 describe('upsertDirectoryInvite', () => {
+  const input = {
+    slug: 'another-slug', inviteCode: 'k3m9x2q7ab', quoraHandle: 'sam-example-1', quoraUrl: 'https://www.quora.com/profile/Sam-Example-1',
+    name: 'Sam', title: 't', opening: 'o', bodyMarkdown: 'b', publishedOn: '2026-10-15', directoryProfileId: null, image: null,
+    isPublic: false, blogUrl: null,
+  };
+
   it('refuses a Quora handle another slug already holds, without writing', async () => {
-    queryDb.mockResolvedValueOnce({ rows: [{ slug: 'an-invitation-to-sam' }] });
+    queryDb.mockResolvedValueOnce({ rows: [{ slug: 'an-invitation-to-sam', quora_handle: 'sam-example-1', invite_code: 'zzzzzzzzzz' }] });
     const { upsertDirectoryInvite } = await import('./invites');
-    const result = await upsertDirectoryInvite({
-      slug: 'another-slug', quoraHandle: 'sam-example-1', quoraUrl: 'https://www.quora.com/profile/Sam-Example-1',
-      name: 'Sam', title: 't', opening: 'o', bodyMarkdown: 'b', publishedOn: '2026-10-15', directoryProfileId: null, image: null,
-      isPublic: false, blogUrl: null,
-    });
+    const result = await upsertDirectoryInvite(input);
     expect(result).toEqual({ status: 'handle_taken', slug: 'an-invitation-to-sam' });
     expect(queryDb).toHaveBeenCalledTimes(1);
+  });
+
+  it('refuses an invite code another slug already holds, without writing', async () => {
+    queryDb.mockResolvedValueOnce({ rows: [{ slug: 'an-invitation-to-ann', quora_handle: 'ann-1', invite_code: 'k3m9x2q7ab' }] });
+    const { upsertDirectoryInvite } = await import('./invites');
+    const result = await upsertDirectoryInvite(input);
+    expect(result).toEqual({ status: 'code_taken', slug: 'an-invitation-to-ann' });
+    expect(queryDb).toHaveBeenCalledTimes(1);
+  });
+
+  it('stores the invite code with the rest', async () => {
+    queryDb.mockResolvedValueOnce({ rows: [] }).mockResolvedValueOnce({ rows: [{ id: 'id-1', inserted: true }] });
+    const { upsertDirectoryInvite } = await import('./invites');
+    const result = await upsertDirectoryInvite(input);
+    expect(result).toEqual({ status: 'created', id: 'id-1' });
+    expect(String(queryDb.mock.calls[1][0])).toMatch(/invite_code = EXCLUDED\.invite_code/);
+    expect(queryDb.mock.calls[1][1]).toContain('k3m9x2q7ab');
   });
 });

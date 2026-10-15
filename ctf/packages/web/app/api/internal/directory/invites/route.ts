@@ -69,6 +69,22 @@ export async function POST(request: NextRequest) {
         { status: 409 },
       );
     }
+    if (result.status === 'code_taken') {
+      await recordDirectoryAdminAudit({
+        actorId: CI_ACTOR_ID, command: 'directory.invite.upsert', status: 'deny', reason: 'invite_code_taken',
+        targetType: 'invite', targetId: invite.slug, result: 'failure', errorCategory: 'conflict',
+        metadata: { heldBy: result.slug },
+      });
+      return NextResponse.json(
+        {
+          ok: false,
+          code: DIRECTORY_ERROR_CODE.conflict,
+          field: 'inviteCode',
+          message: `inviteCode: this code is already used by the invite under slug ${result.slug}. Make a new random code for this invite.`,
+        },
+        { status: 409 },
+      );
+    }
     await recordDirectoryAdminAudit({
       actorId: CI_ACTOR_ID, command: 'directory.invite.upsert', status: 'allow', reason: `invite_${result.status}`,
       targetType: 'invite', targetId: invite.slug, result: 'success', errorCategory: null,

@@ -16,13 +16,13 @@ const WALL_PATH = '/apps/directory/invites';
 
 type Load = { kind: 'loading' } | { kind: 'error'; message: string } | { kind: 'ok'; page: InvitePage };
 
-function useInvitePage(page: number, inviteHandle: string | undefined): Load {
+function useInvitePage(page: number, inviteLink: string | undefined): Load {
   const [load, setLoad] = useState<Load>({ kind: 'loading' });
   useEffect(() => {
     const controller = new AbortController();
     setLoad({ kind: 'loading' });
     const params = new URLSearchParams({ page: String(page) });
-    if (inviteHandle) params.set('invite', inviteHandle);
+    if (inviteLink) params.set('invite', inviteLink);
     fetch(`/api/directory/invites?${params.toString()}`, { signal: controller.signal })
       .then(async (res) => {
         if (!res.ok) {
@@ -36,7 +36,7 @@ function useInvitePage(page: number, inviteHandle: string | undefined): Load {
         setLoad({ kind: 'error', message: failureText(caught, { area: 'directory', op: 'member_invites', fallback: LOAD_ERROR, audience: 'member' }) });
       });
     return () => controller.abort();
-  }, [page, inviteHandle]);
+  }, [page, inviteLink]);
   return load;
 }
 
@@ -50,7 +50,7 @@ function InviteArticle({ invite, t }: { invite: FullInvite; t: DirectoryTokens }
       style={{ borderRadius: 14, border: `1px solid ${t.ACCENT}70`, background: t.SURFACE, padding: '16px', display: 'flex', flexDirection: 'column', gap: 12 }}
     >
       <header style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <InviteAvatar name={invite.name} seed={invite.quoraHandle} size={52} />
+        <InviteAvatar name={invite.name} size={52} />
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
           <h2 id={`invite-${invite.slug}`} style={{ margin: 0, fontSize: 17, fontWeight: 800, color: t.TITLE, overflowWrap: 'anywhere' }}>{invite.title}</h2>
           <time dateTime={invite.date} style={{ fontSize: 12, color: t.SUBTLE }}>{formatInviteDate(invite.date)}</time>
@@ -79,33 +79,33 @@ function InviteArticle({ invite, t }: { invite: FullInvite; t: DirectoryTokens }
 // One invitation on the wall as a card; its link opens the full invitation at the top of this page.
 function WallCard({ invite, t, page }: { invite: FullInvite; t: DirectoryTokens; page: number }) {
   return (
-    <InviteCardView name={invite.name} opening={invite.opening} seed={invite.quoraHandle} date={invite.date} t={t} headingLevel={2}>
-      <Link href={pageHref(page, invite.quoraHandle)} aria-label={`Read the invitation to ${invite.name}`} className={INVITE_LINK_CLASS} style={{ fontSize: 13, fontWeight: 600, color: t.ACCENT }}>
+    <InviteCardView name={invite.name} opening={invite.opening} date={invite.date} t={t} headingLevel={2}>
+      <Link href={pageHref(page, invite.inviteCode ?? invite.quoraHandle)} aria-label={`Read the invitation to ${invite.name}`} className={INVITE_LINK_CLASS} style={{ fontSize: 13, fontWeight: 600, color: t.ACCENT }}>
         Read the invitation
       </Link>
     </InviteCardView>
   );
 }
 
-function pageHref(page: number, inviteHandle: string | undefined): string {
+function pageHref(page: number, inviteLink: string | undefined): string {
   const params = new URLSearchParams({ page: String(page) });
-  if (inviteHandle) params.set('invite', inviteHandle);
+  if (inviteLink) params.set('invite', inviteLink);
   return `${WALL_PATH}?${params.toString()}`;
 }
 
-function Pager({ page, t, inviteHandle }: { page: InvitePage; t: DirectoryTokens; inviteHandle?: string }) {
+function Pager({ page, t, inviteLink }: { page: InvitePage; t: DirectoryTokens; inviteLink?: string }) {
   if (page.pageCount <= 1) return null;
   const linkStyle = { padding: '8px 14px', borderRadius: 8, border: `1px solid ${t.BORDER_HI}`, color: t.ACCENT, fontSize: 13, fontWeight: 600, textDecoration: 'none' };
   return (
     <nav aria-label="Invitation pages" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-      {page.page > 1 ? <Link href={pageHref(page.page - 1, inviteHandle)} className={INVITE_LINK_CLASS} style={linkStyle}>Previous</Link> : <span />}
+      {page.page > 1 ? <Link href={pageHref(page.page - 1, inviteLink)} className={INVITE_LINK_CLASS} style={linkStyle}>Previous</Link> : <span />}
       <span style={{ fontSize: 12, color: t.MUTED }}>Page {page.page} of {page.pageCount}</span>
-      {page.page < page.pageCount ? <Link href={pageHref(page.page + 1, inviteHandle)} className={INVITE_LINK_CLASS} style={linkStyle}>Next</Link> : <span />}
+      {page.page < page.pageCount ? <Link href={pageHref(page.page + 1, inviteLink)} className={INVITE_LINK_CLASS} style={linkStyle}>Next</Link> : <span />}
     </nav>
   );
 }
 
-function WallBody({ load, t, inviteHandle }: { load: Load; t: DirectoryTokens; inviteHandle?: string }) {
+function WallBody({ load, t, inviteLink }: { load: Load; t: DirectoryTokens; inviteLink?: string }) {
   if (load.kind === 'loading') return <div role="status" style={{ fontSize: 13, color: t.MUTED }}>Loading the invitations…</div>;
   if (load.kind === 'error') return <div role="alert" style={{ fontSize: 13, color: '#EF4444' }}>{load.message}</div>;
   const { page } = load;
@@ -113,11 +113,11 @@ function WallBody({ load, t, inviteHandle }: { load: Load; t: DirectoryTokens; i
   const featured = page.invite;
   return (
     <>
-      {inviteHandle && !featured ? <p role="status" style={{ margin: 0, fontSize: 13, color: t.SUBTLE }}>That invitation could not be found. It may have been taken down along with the listing.</p> : null}
+      {inviteLink && !featured ? <p role="status" style={{ margin: 0, fontSize: 13, color: t.SUBTLE }}>That invitation could not be found. It may have been taken down along with the listing.</p> : null}
       {featured ? <InviteArticle invite={featured} t={t} /> : null}
       <p style={{ margin: 0, fontSize: 12, color: t.MUTED }}>Showing {page.from}–{page.to} of {page.total}</p>
       {page.invites.filter((invite) => invite.slug !== featured?.slug).map((invite) => <WallCard key={invite.slug} invite={invite} t={t} page={page.page} />)}
-      <Pager page={page} t={t} inviteHandle={inviteHandle} />
+      <Pager page={page} t={t} inviteLink={inviteLink} />
     </>
   );
 }
@@ -125,14 +125,14 @@ function WallBody({ load, t, inviteHandle }: { load: Load; t: DirectoryTokens; i
 /**
  * The invitations for any signed-in account (owner decision, 2026-10-15): each as a card with a
  * decorative avatar, its opening words and a link that opens it in full at the top of the page
- * (`?invite=<handle>`). A member not yet approved also sees the ask to finish the check (verifyUrl),
+ * (`?invite=<code>`, or a Quora handle from an older link). A member not yet approved also sees the ask to finish the check (verifyUrl),
  * because the Directory itself still needs it; an approved member gets a link back to the Directory.
  * Paged ten at a time with the page number in the address, never an endless scroll.
  */
-export function DirectoryInviteWall({ page, inviteHandle, verifyUrl }: { page: number; inviteHandle?: string; verifyUrl?: string }) {
+export function DirectoryInviteWall({ page, inviteLink, verifyUrl }: { page: number; inviteLink?: string; verifyUrl?: string }) {
   const { theme } = useTheme();
   const t = getDirectoryTokens(theme);
-  const load = useInvitePage(page, inviteHandle);
+  const load = useInvitePage(page, inviteLink);
   const listed = load.kind === 'ok' ? load.page.listed : null;
   return (
     <div style={{ minHeight: '100vh', background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT }}>
@@ -155,7 +155,7 @@ export function DirectoryInviteWall({ page, inviteHandle, verifyUrl }: { page: n
         ) : (
           <Link href="/apps/directory" style={{ fontSize: 13, color: t.ACCENT, fontWeight: 600 }}>Open the Directory</Link>
         )}
-        <WallBody load={load} t={t} inviteHandle={inviteHandle} />
+        <WallBody load={load} t={t} inviteLink={inviteLink} />
       </div>
     </div>
   );

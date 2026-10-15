@@ -2,7 +2,7 @@ import type { PoolClient } from 'pg';
 import { queryDb } from 'lib/db/postgres';
 import { getAppUrl } from 'lib/auth/provider-env';
 import type { CommunityImageContentType } from 'lib/feed/community-images';
-import { quoraHandleFromUrl, type DirectoryInviteInput } from './invite-input';
+import { INVITE_CODE_RE, normalizeInviteHandle, quoraHandleFromUrl, type DirectoryInviteInput } from './invite-input';
 
 // Invitations to people listed in the Directory (owner decision, 2026-10-15).
 //
@@ -12,8 +12,9 @@ import { quoraHandleFromUrl, type DirectoryInviteInput } from './invite-input';
 // whose job pushes them here. The invites already published on the blog before that stay there, and
 // are stored here marked public (column `public`, with their `blog_url`). What leaves this file:
 //  - a card (name, opening, date, address in the app, and the blog address for a public invite): the
-//    most a signed-out visitor, the landing site or the blog receives about a private invite;
-//  - a teaser (name and opening only): the blurred private cards on the signed-out page;
+//    most a signed-out visitor, the landing site or the blog receives about a private invite. Its
+//    address opens the invite by its random code, never by Quora handle, so the public route cannot
+//    be used to confirm who has an invitation by guessing handles;
 //  - an open card (a public invite's card, with its blog address): already public on the blog;
 //  - the full invite (title, post, picture, Quora address, Directory listing): signed-in members only.
 
@@ -32,12 +33,11 @@ export type DirectoryInviteCard = {
   blogUrl?: string;
 };
 
-export type DirectoryInviteTeaser = { name: string; opening: string };
-
 export type DirectoryOpenInviteCard = DirectoryInviteCard & { blogUrl: string };
 
 export type DirectoryInvite = {
   slug: string;
+  inviteCode: string | null;
   name: string;
   title: string;
   opening: string;
@@ -55,7 +55,7 @@ type CardRow = {
   name: string;
   opening: string;
   published_on: string;
-  quora_handle: string;
+  invite_code: string | null;
   public: boolean;
   blog_url: string | null;
 };
@@ -63,20 +63,24 @@ type CardRow = {
 type ImageColumns = { slug: string; has_image: boolean; image_alt: string | null; version: string };
 
 type InviteRow = CardRow & ImageColumns & {
+  quora_handle: string;
   title: string;
   body_markdown: string;
   quora_url: string;
   directory_profile_id: string | null;
 };
 
-/** The app address that opens one invite: the person's card for a visitor, the full invite once signed in. */
-export function inviteAppUrl(handle: string): string {
+/**
+ * The app address that opens one invite by its code: the person's card for a visitor, the full invite
+ * once signed in. An invite with no code yet opens the Directory page.
+ */
+export function inviteAppUrl(code: string | null): string {
   const origin = (getAppUrl() ?? DEFAULT_APP_ORIGIN).replace(/\/+$/, '');
-  return `${origin}/apps/directory?invite=${encodeURIComponent(handle)}`;
+  return code ? `${origin}/apps/directory?invite=${encodeURIComponent(code)}` : `${origin}/apps/directory`;
 }
 
 function toCard(row: CardRow): DirectoryInviteCard {
-  const card: DirectoryInviteCard = { name: row.name, opening: row.opening, date: row.published_on, url: inviteAppUrl(row.quora_handle) };
+  const card: DirectoryInviteCard = { name: row.name, opening: row.opening, date: row.published_on, url: inviteAppUrl(row.invite_code) };
   if (row.public && row.blog_url) {
     card.blogUrl = row.blog_url;
   }
@@ -93,6 +97,7 @@ function toImage(row: ImageColumns): { url: string; alt: string } | null {
 function toInvite(row: InviteRow): DirectoryInvite {
   return {
     slug: row.slug,
+    inviteCode: row.invite_code,
     name: row.name,
     title: row.title,
     opening: row.opening,
@@ -109,33 +114,46 @@ function toInvite(row: InviteRow): DirectoryInvite {
 
 // published_on is a DATE; to_char keeps it a plain YYYY-MM-DD string rather than a Date shifted by
 // the server's time zone.
-const CARD_COLUMNS = `name, opening, to_char(published_on, 'YYYY-MM-DD') AS published_on, quora_handle, public, blog_url`;
+// No Quora handle in a card: the public route answers cards only.
+const CARD_COLUMNS = `name, opening, to_char(published_on, 'YYYY-MM-DD') AS published_on, invite_code, public, blog_url`;
 const IMAGE_COLUMNS = `slug, (image IS NOT NULL) AS has_image, image_alt,
   floor(extract(epoch FROM updated_at))::bigint::text AS version`;
-const INVITE_COLUMNS = `${CARD_COLUMNS}, ${IMAGE_COLUMNS}, title, body_markdown, quora_url, directory_profile_id`;
+const INVITE_COLUMNS = `${CARD_COLUMNS}, ${IMAGE_COLUMNS}, quora_handle, title, body_markdown, quora_url, directory_profile_id`;
 const NEWEST_FIRST = 'ORDER BY published_on DESC, created_at DESC, slug ASC';
 
-export type UpsertInviteResult = { status: 'created' | 'updated'; id: string } | { status: 'handle_taken'; slug: string };
+export type UpsertInviteResult =
+  | { status: 'created' | 'updated'; id: string }
+  | { status: 'handle_taken'; slug: string }
+  | { status: 'code_taken'; slug: string };
 
 /**
  * Write one invite, keyed by slug. Every field is replaced, the picture included: an upsert without
  * a picture leaves the invite with none, so the private repository stays the one record of what an
- * invite holds. A Quora handle already used by another slug is refused rather than overwritten.
+ * invite holds. A Quora handle or an invite code already used by another slug is refused rather than
+ * overwritten.
  */
 export async function upsertDirectoryInvite(input: DirectoryInviteInput): Promise<UpsertInviteResult> {
-  const holder = await queryDb<{ slug: string }>('SELECT slug FROM directory_invites WHERE quora_handle = $1', [input.quoraHandle]);
-  const heldBy = holder.rows[0]?.slug;
-  if (heldBy && heldBy !== input.slug) {
-    return { status: 'handle_taken', slug: heldBy };
+  const holders = await queryDb<{ slug: string; quora_handle: string; invite_code: string | null }>(
+    'SELECT slug, quora_handle, invite_code FROM directory_invites WHERE (quora_handle = $1 OR invite_code = $2) AND slug <> $3',
+    [input.quoraHandle, input.inviteCode, input.slug],
+  );
+  const handleHolder = holders.rows.find((row) => row.quora_handle === input.quoraHandle);
+  if (handleHolder) {
+    return { status: 'handle_taken', slug: handleHolder.slug };
+  }
+  const codeHolder = holders.rows.find((row) => row.invite_code === input.inviteCode);
+  if (codeHolder) {
+    return { status: 'code_taken', slug: codeHolder.slug };
   }
   const result = await queryDb<{ id: string; inserted: boolean }>(
     `
       INSERT INTO directory_invites
         (slug, quora_handle, quora_url, name, title, opening, body_markdown, published_on,
-         directory_profile_id, image, image_type, image_alt, public, blog_url)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8::date, $9, $10, $11, $12, $13, $14)
+         directory_profile_id, image, image_type, image_alt, public, blog_url, invite_code)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8::date, $9, $10, $11, $12, $13, $14, $15)
       ON CONFLICT (slug) DO UPDATE SET
         quora_handle = EXCLUDED.quora_handle,
+        invite_code = EXCLUDED.invite_code,
         quora_url = EXCLUDED.quora_url,
         name = EXCLUDED.name,
         title = EXCLUDED.title,
@@ -166,6 +184,7 @@ export async function upsertDirectoryInvite(input: DirectoryInviteInput): Promis
       input.image?.alt ?? null,
       input.isPublic,
       input.blogUrl,
+      input.inviteCode,
     ],
   );
   const row = result.rows[0];
@@ -207,8 +226,10 @@ export async function listLatestDirectoryInviteCards(limit = DIRECTORY_INVITE_PU
   return result.rows.map(toCard);
 }
 
-export async function getDirectoryInviteCardByHandle(handle: string): Promise<DirectoryInviteCard | null> {
-  const result = await queryDb<CardRow>(`SELECT ${CARD_COLUMNS} FROM directory_invites WHERE quora_handle = $1`, [handle]);
+/** One invite's card by its code, for a signed-out direct link. Never looked up by Quora handle. */
+export async function getDirectoryInviteCardByCode(code: string): Promise<DirectoryInviteCard | null> {
+  if (!INVITE_CODE_RE.test(code)) return null;
+  const result = await queryDb<CardRow>(`SELECT ${CARD_COLUMNS} FROM directory_invites WHERE invite_code = $1`, [code]);
   return result.rows[0] ? toCard(result.rows[0]) : null;
 }
 
@@ -220,9 +241,16 @@ export async function listDirectoryInvites(limit: number, offset: number): Promi
   return result.rows.map(toInvite);
 }
 
-export async function getDirectoryInviteByHandle(handle: string): Promise<DirectoryInvite | null> {
-  const result = await queryDb<InviteRow>(`SELECT ${INVITE_COLUMNS} FROM directory_invites WHERE quora_handle = $1`, [handle]);
-  return result.rows[0] ? toInvite(result.rows[0]) : null;
+/** One full invite for a signed-in reader's direct link: by invite code first, then by Quora handle. */
+export async function getDirectoryInviteByCodeOrHandle(value: string): Promise<DirectoryInvite | null> {
+  if (INVITE_CODE_RE.test(value)) {
+    const byCode = await queryDb<InviteRow>(`SELECT ${INVITE_COLUMNS} FROM directory_invites WHERE invite_code = $1`, [value]);
+    if (byCode.rows[0]) return toInvite(byCode.rows[0]);
+  }
+  const handle = normalizeInviteHandle(value);
+  if (!handle) return null;
+  const byHandle = await queryDb<InviteRow>(`SELECT ${INVITE_COLUMNS} FROM directory_invites WHERE quora_handle = $1`, [handle]);
+  return byHandle.rows[0] ? toInvite(byHandle.rows[0]) : null;
 }
 
 /** The picture on one invite, for a signed-in reader of the full invitation. */
@@ -250,15 +278,6 @@ export async function listOpenDirectoryInviteCards(limit: number, offset: number
     [limit, offset],
   );
   return result.rows.map((row) => ({ ...toCard(row), blogUrl: row.blog_url ?? '' }));
-}
-
-/** The newest private invites as name and opening only, for the blurred cards a visitor sees. */
-export async function listLockedDirectoryInviteTeasers(limit = DIRECTORY_INVITE_PAGE_SIZE): Promise<DirectoryInviteTeaser[]> {
-  const result = await queryDb<DirectoryInviteTeaser>(
-    `SELECT name, opening FROM directory_invites WHERE NOT public ${NEWEST_FIRST} LIMIT $1`,
-    [limit],
-  );
-  return result.rows.map((row) => ({ name: row.name, opening: row.opening }));
 }
 
 /** Quora handles that already have an invite, for the admin invite queue. */

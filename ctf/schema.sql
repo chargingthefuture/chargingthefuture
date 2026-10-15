@@ -7212,7 +7212,8 @@ CREATE INDEX IF NOT EXISTS idx_directory_unmet_needs_need ON directory_unmet_nee
 -- were posts on the public blog until together they formed a public list of Targeted Individuals,
 -- the same reason the Directory itself sits behind a sign-in. They are now written in a private
 -- repository whose job pushes each one here through POST /api/internal/directory/invites.
--- A signed-out visitor sees only name and opening of a private invite (lib/directory/invites.ts);
+-- A signed-out visitor sees only name and opening of a private invite (lib/directory/invites.ts),
+-- and opens one by its random invite_code only, never by Quora handle (post/0063);
 -- everything else needs a sign-in. The invites already published on the blog before 2026-10-15 stay
 -- there and are stored here with public = TRUE and their blog_url: a visitor reads those in the
 -- open, picture included, with a link to the blog post. New invites are private. The picture is stored here as bytes, like feed_community_post_images, because the app has no
@@ -7234,6 +7235,7 @@ CREATE TABLE IF NOT EXISTS directory_invites (
   image_alt TEXT,
   public BOOLEAN NOT NULL DEFAULT FALSE,
   blog_url TEXT,
+  invite_code TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -7252,10 +7254,12 @@ ALTER TABLE IF EXISTS directory_invites ADD COLUMN IF NOT EXISTS image_type TEXT
 ALTER TABLE IF EXISTS directory_invites ADD COLUMN IF NOT EXISTS image_alt TEXT;
 ALTER TABLE IF EXISTS directory_invites ADD COLUMN IF NOT EXISTS public BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE IF EXISTS directory_invites ADD COLUMN IF NOT EXISTS blog_url TEXT;
+ALTER TABLE IF EXISTS directory_invites ADD COLUMN IF NOT EXISTS invite_code TEXT;
 ALTER TABLE IF EXISTS directory_invites ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS directory_invites ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 CREATE UNIQUE INDEX IF NOT EXISTS uq_directory_invites_slug ON directory_invites (slug);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_directory_invites_quora_handle ON directory_invites (quora_handle);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_directory_invites_invite_code ON directory_invites (invite_code) WHERE invite_code IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_directory_invites_published ON directory_invites (published_on DESC, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_directory_invites_profile ON directory_invites (directory_profile_id);
 

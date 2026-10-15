@@ -420,22 +420,28 @@ recorded only through the takedown control with a reason.
 **Role:** visitor, unapproved member, approved member · **Surfaces:** web + mobile-responsive
 **Precondition:** the private invite repository's job has pushed at least one public invitation (one
 already on the blog, `public: true` with its blog address) and at least one private one, each for a
-listing that exists. Note one private invitation's Quora handle.
+listing that exists. Note one private invitation's code (its `inviteCode`, ten lower-case letters
+and digits, from the invite file or from a card's link) and its Quora handle.
 **Steps:**
 1. Signed out, open `/apps/directory`. The page shows how many people are listed, one button,
    **Sign in or create a free account**, then the public invitations as cards: a round avatar with the person's
    initials (one character for a one-word name), "An invitation to <name>", the date, the opening
    words as a quote, a colored edge, and **Read the invitation**, which opens the blog post. No card
    shows a screenshot. Reload: each person's avatar keeps its colors.
-2. Below them, a line reads "<N> more invitations are visible once you sign in, free." over blurred
-   cards. Inspect one: it holds only the avatar, the name and the opening words, and is hidden from a
-   screen reader. No skills, location, Quora address or screenshot of a private invitation is anywhere on the
-   page or in `GET /api/directory/invites/public`.
+2. Below them, a line reads "<N> more invitations are visible once you sign in, free." over three
+   blurred cards. Inspect one: it holds an avatar circle with no letters and gray bars, no name and
+   no words, and is hidden from a screen reader. `GET /api/directory/invites/public` has `lockedCount`
+   and no `lockedTeasers`, and no card in it carries a Quora handle: each card's `url` ends
+   `?invite=<code>`. No skills, location, Quora address or screenshot of a private invitation is
+   anywhere on the page or in that response.
 3. With more than ten public invitations, **Next** moves to `?page=2` and the line reads which ones are
    on screen. Type `?page=999`: the last page shows.
-4. Signed out, open `/apps/directory?invite=<the private handle>`. That person's name and opening words
-   show clearly at the top, with "Sign in to read the full invitation." A public one's handle shows
-   the blog link too. An unknown handle says the invitation could not be found.
+4. Signed out, open `/apps/directory?invite=<the private code>`. That person's name and opening words
+   show clearly at the top, with "Sign in to read the full invitation." A public one's code shows
+   the blog link too. A code of the right shape that no invitation has says the invitation could not
+   be found. Then open `/apps/directory?invite=<the private handle>`: nothing about that person shows,
+   no card and no message, and `GET /api/directory/invites/public?invite=<the private handle>`
+   answers `invite: null`. A guessed Quora handle confirms nothing to a signed-out visitor.
 5. Signed out, open any invitation's picture address directly (copy one while signed in): 401.
 6. Sign in with an account not yet approved in Unlock. `/apps/directory` shows every invitation as a
    card like step 1, ten a page, with **Finish verifying**. With a screen reader, the avatar is not
@@ -444,8 +450,10 @@ listing that exists. Note one private invitation's Quora handle.
    text, Quora address written out, **See the live listing**, which opens the person's Directory
    listing). `/apps/directory/invites?page=2` works the same.
 7. As an approved member, open `/apps/directory`. The Directory shows as before, with **Read the
-   invitations** under the profile button. `/apps/directory?invite=<handle>` opens the wall with that
-   invitation in full, first, and **See the live listing** opens the listing.
+   invitations** under the profile button. `/apps/directory?invite=<code>` opens the wall with that
+   invitation in full, first, and **See the live listing** opens the listing. An older link,
+   `/apps/directory?invite=<handle>`, opens the same invitation. **Read the invitation** on a card
+   leads to `?invite=<code>`.
 8. As an admin, delete or take down the listing one invitation is about. The invitation is gone from
    both walls and from the public route.
 9. On `/admin/directory/invite-queue`, the people who have an invitation are not in the queue.
