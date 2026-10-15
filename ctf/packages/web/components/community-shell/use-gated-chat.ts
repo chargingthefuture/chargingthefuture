@@ -5,6 +5,7 @@ import { connectCommonsLive, type CommonsLiveConnection, type CommonsTypingUser 
 import type { GatedChannelMessage } from '../../lib/contributor-access/channel-repository';
 import type { ShellCurrentUser } from './shell-types';
 import { startVisibleInterval } from '../../lib/shared/visible-interval';
+import { failedRequestText } from './request-failure';
 
 // Gated contributor channel — client hook. A deliberately smaller sibling of useHomeChat: same
 // architecture (DB-backed history over polling, Stream as a best-effort live layer for instant
@@ -66,12 +67,14 @@ function mapMessage(message: GatedChannelMessage, currentUserId: string): GatedC
   };
 }
 
+// Shown when Edit is tapped while the composer holds a different unsent draft (same line as the Commons).
+const EDIT_WITH_DRAFT_TEXT = 'Send or clear your draft before editing.';
+
 async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, { cache: 'no-store', ...init });
   const payload = (await response.json().catch(() => null)) as T | { message?: string } | null;
   if (!response.ok) {
-    const message = payload && typeof payload === 'object' && 'message' in payload ? payload.message : 'Request failed.';
-    throw new Error(typeof message === 'string' ? message : 'Request failed.');
+    throw new Error(failedRequestText(payload, response.status));
   }
   return payload as T;
 }
@@ -140,6 +143,9 @@ export function useGatedChat(currentUser: ShellCurrentUser) {
   const [input, setInput] = useState('');
   const [replyTarget, setReplyTarget] = useState<GatedReplyTarget | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // The history-load failure is kept apart from send, delete and reaction errors so a later
+  // successful load (the poll) can clear it without wiping a fresh error from something else.
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isLive, setIsLive] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -151,6 +157,7 @@ export function useGatedChat(currentUser: ShellCurrentUser) {
       '/api/contributor-access/channel/messages',
     );
     setMessages(payload.messages.map((message) => mapMessage(message, currentUser.userId)));
+    setLoadError(null);
   }, [currentUser.userId]);
 
   const refreshHistoryRef = useRef(refreshHistory);
@@ -163,6 +170,7 @@ export function useGatedChat(currentUser: ShellCurrentUser) {
     let stopPoll: (() => void) | undefined;
     setIsLoading(true);
     setError(null);
+    setLoadError(null);
     setMessages([]);
 
     const poll = () => refreshHistoryRef.current();
@@ -172,7 +180,7 @@ export function useGatedChat(currentUser: ShellCurrentUser) {
         await refreshHistory();
       } catch (loadError) {
         if (active) {
-          setError(errorMessage(loadError, 'Unable to load the channel.'));
+          setLoadError(errorMessage(loadError, 'Unable to load the channel.'));
         }
       } finally {
         if (active) setIsLoading(false);
@@ -293,13 +301,21 @@ export function useGatedChat(currentUser: ShellCurrentUser) {
 
   // Edit one of the member's OWN messages. There is no in-place edit — editing is delete + repost —
   // so this loads the message text into the composer and deletes the original; the member tweaks it
-  // and sends a fresh message. Clears any active reply so the reposted text starts clean.
+  // and sends a fresh message. Clears any active reply so the reposted text starts clean. Refuses while
+  // the composer holds a different unsent draft, which the old text would otherwise replace after the
+  // original was already deleted.
   const editMessage = useCallback(
     (postId: string, text: string) => {
+      if (input.trim().length > 0 && input.trim() !== text.trim()) {
+        setError(EDIT_WITH_DRAFT_TEXT);
+        return;
+      }
+      setError(null);
+      setReplyTarget(null);
       setInput(text);
       void deleteMessage(postId);
     },
-    [deleteMessage],
+    [deleteMessage, input],
   );
 
   const beginReply = useCallback((message: GatedChatMessage) => {
@@ -351,6 +367,6 @@ export function useGatedChat(currentUser: ShellCurrentUser) {
     isLoading,
     isLive,
     isSending,
-    error,
+    error: error ?? loadError,
   };
 }

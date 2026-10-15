@@ -196,7 +196,7 @@ function AnnouncementThread({ state }: { state: AnnouncementRepliesState }) {
           type="button"
           className={sendClassName}
           onClick={state.sendReply}
-          disabled={state.sending || !canSend}
+          disabled={state.sending || state.loading || !canSend}
           aria-label="Post reply"
         >
           <Send size={14} />
@@ -222,6 +222,19 @@ function AnnouncementEngagement({
   const toggleClassName = state.threadOpen
     ? `${styles.announcementReplyToggle} ${styles.announcementReplyToggleActive}`
     : styles.announcementReplyToggle;
+  // A member not yet approved sees the reactions others left but cannot react or open the replies:
+  // both routes need Unlock approval, so the controls only ever failed for them. Same rule as the
+  // linked-plugin buttons above.
+  const unlockFocus = useCommonsUnlockFocus();
+  if (unlockFocus) {
+    return (
+      <div className={styles.announcementEngagement}>
+        <div className={styles.announcementActions}>
+          <ChatReactionRow postId={announcementId} reactions={reactions} onToggle={() => undefined} readOnly />
+        </div>
+      </div>
+    );
+  }
   return (
     <div className={styles.announcementEngagement}>
       <div className={styles.announcementActions}>

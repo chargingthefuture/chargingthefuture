@@ -17,6 +17,8 @@ import type { ChatMessage, ChatQuotedMessage, ChatReactionSummary, ComicAnswerRa
 import { FEED_REACTION_EMOJIS } from '../../lib/feed/constants';
 import { useCommonsUnlockFocus } from './commons-unlock-focus';
 import { startVisibleInterval } from '../../lib/shared/visible-interval';
+import { failedRequestText } from './request-failure';
+import { readStoredValue, writeStoredValue } from './stored-value';
 
 // Poll cadence: the 10s poll is the only refresh path when the live Stream connection is absent or
 // degraded. When the live connection is healthy, real-time events drive refreshes and the poll is a
@@ -85,6 +87,9 @@ function stripComicMention(text: string): string {
 function consentStorageKey(userId: string): string {
   return `${COMIC_CONSENT_STORAGE_PREFIX}.${userId}`;
 }
+
+// Shown when Edit is tapped while the composer holds a different unsent draft (see runEditMessage).
+const EDIT_WITH_DRAFT_TEXT = 'Send or clear your draft before editing.';
 
 // Collapse the repeated "surface an Error message or a fallback" pattern used by every catch block.
 function toErrorMessage(error: unknown, fallback: string): string {
@@ -287,10 +292,7 @@ async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
 
   const payload = (await response.json().catch(() => null)) as T | { message?: string } | null;
   if (!response.ok) {
-    const message = payload && typeof payload === 'object' && 'message' in payload
-      ? payload.message
-      : 'Request failed.';
-    throw new Error(typeof message === 'string' ? message : 'Request failed.');
+    throw new Error(failedRequestText(payload, response.status));
   }
 
   return payload as T;
@@ -504,9 +506,17 @@ function runEditMessage(
   postId: string,
   text: string,
   hasImage: boolean,
+  draft: string,
   setters: ChatSetters,
   deleteMessage: (postId: string) => Promise<void>,
 ): void {
+  // An unsent draft would be replaced, and for a text-only post the original deleted, in one tap.
+  // Refuse instead, so nothing the member wrote is lost.
+  if (draft.trim().length > 0 && draft.trim() !== text.trim()) {
+    setters.setError(EDIT_WITH_DRAFT_TEXT);
+    return;
+  }
+  setters.setError(null);
   setters.setReplyTarget(null);
   setters.setInput(text);
   if (hasImage) {
@@ -558,8 +568,9 @@ function buildOptimisticComicItem(question: string): ComicStreamItem {
 
 // Route an @comic question to the assistant. The server returns ONLY a holding response (202) —
 // never the unreviewed draft — so we optimistically render the pending card and rely on the polling
-// stream to surface the answer once a human approves it.
-async function runRouteToComic(questionText: string, refreshComic: () => Promise<void>, setters: ChatSetters): Promise<void> {
+// stream to surface the answer once a human approves it. Resolves false when the request failed, so a
+// composer send can put the member's text back.
+async function runRouteToComic(questionText: string, refreshComic: () => Promise<void>, setters: ChatSetters): Promise<boolean> {
   const question = stripComicMention(questionText);
   const optimisticItem = buildOptimisticComicItem(question);
   setters.setComicItems((previous) => [...previous, optimisticItem]);
@@ -572,11 +583,18 @@ async function runRouteToComic(questionText: string, refreshComic: () => Promise
     });
     // Pull the server stream so the pending card reflects the persisted turn.
     await refreshComic().catch(() => undefined);
+    return true;
   } catch (sendError) {
     // Drop the optimistic card on failure and surface the error.
     setters.setComicItems((previous) => previous.filter((item) => item.questionTurnId !== optimisticItem.questionTurnId));
     setters.setError(toErrorMessage(sendError, 'Unable to reach the AI Assistant right now.'));
+    return false;
   }
+}
+
+// Put a failed composer send's text back, unless the member has started typing something new.
+function restoreComposerText(text: string, setters: ChatSetters): void {
+  setters.setInput((current) => (current.trim().length === 0 ? text : current));
 }
 
 // Everything the composer send path needs. Values are read once per send; setters are stable.
@@ -587,7 +605,7 @@ type SendMessageContext = {
   replyTarget: ReplyTarget | null;
   editingPost: EditTarget | null;
   currentUserId: string;
-  routeToComic: (questionText: string) => Promise<void>;
+  routeToComic: (questionText: string) => Promise<boolean>;
   notifyStopTyping: () => void;
   setters: ChatSetters;
 };
@@ -661,7 +679,10 @@ async function sendComicFromComposer(text: string, ctx: SendMessageContext): Pro
   ctx.setters.setError(null);
   ctx.setters.setInput('');
   try {
-    await ctx.routeToComic(text);
+    // A failed ask (moderation, rate limit, network) puts the text back, as a failed peer post does.
+    if (!(await ctx.routeToComic(text))) {
+      restoreComposerText(text, ctx.setters);
+    }
   } finally {
     ctx.setters.setIsSending(false);
   }
@@ -822,7 +843,7 @@ function applyAnswerChip(chip: Extract<CommonsSuggestionChip, { kind: 'answer' }
 type AskComicContext = {
   isSending: boolean;
   consentGranted: boolean;
-  routeToComic: (questionText: string) => Promise<void>;
+  routeToComic: (questionText: string) => Promise<boolean>;
   setters: ChatSetters;
 };
 
@@ -842,8 +863,9 @@ function runAskComic(question: string, ctx: AskComicContext): void {
 
 type ConfirmConsentContext = {
   userId: string;
+  input: string;
   pendingConsentText: string | null;
-  routeToComic: (questionText: string) => Promise<void>;
+  routeToComic: (questionText: string) => Promise<boolean>;
   setters: ChatSetters;
 };
 
@@ -855,9 +877,7 @@ function dismissConsentState(setters: ChatSetters): void {
 
 // Consent modal "Confirm": persist consent and send the held @comic question.
 async function runConfirmConsent(ctx: ConfirmConsentContext): Promise<void> {
-  if (typeof window !== 'undefined') {
-    window.localStorage.setItem(consentStorageKey(ctx.userId), '1');
-  }
+  writeStoredValue(consentStorageKey(ctx.userId), '1');
   ctx.setters.setConsentGranted(true);
   ctx.setters.setConsentModalOpen(false);
 
@@ -865,11 +885,17 @@ async function runConfirmConsent(ctx: ConfirmConsentContext): Promise<void> {
   ctx.setters.setPendingConsentText(null);
   if (!held) return;
 
+  // The held text came from the composer when the composer still holds it (a composer @comic send
+  // leaves the text in place while the modal is open). A chip ask never touched the composer, so a
+  // half-written post there is left alone.
+  const fromComposer = ctx.input.trim() === held;
   ctx.setters.setIsSending(true);
   ctx.setters.setError(null);
-  ctx.setters.setInput('');
+  if (fromComposer) ctx.setters.setInput('');
   try {
-    await ctx.routeToComic(held);
+    if (!(await ctx.routeToComic(held)) && fromComposer) {
+      restoreComposerText(held, ctx.setters);
+    }
   } finally {
     ctx.setters.setIsSending(false);
   }
@@ -1174,8 +1200,7 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
   const notifyStopTyping = useCallback(() => liveConnectionRef.current?.stopTyping(), []);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    setConsentGranted(window.localStorage.getItem(consentStorageKey(currentUser.userId)) === '1');
+    setConsentGranted(readStoredValue(consentStorageKey(currentUser.userId)) === '1');
   }, [currentUser.userId]);
 
   useChatBootstrapEffect({
@@ -1259,16 +1284,16 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
   const editMessage = useCallback(
     (postId: string, text: string) => {
       const hasImage = Boolean(messages.find((message) => message.communityPostId === postId)?.image);
-      runEditMessage(postId, text, hasImage, settersRef.current, deleteMessage);
+      runEditMessage(postId, text, hasImage, input, settersRef.current, deleteMessage);
     },
-    [deleteMessage, messages],
+    [deleteMessage, input, messages],
   );
 
   // Consent modal "Confirm": persist consent and send the held @comic question.
   const confirmConsent = useCallback(
     () =>
-      runConfirmConsent({ userId: currentUser.userId, pendingConsentText, routeToComic, setters: settersRef.current }),
-    [currentUser.userId, pendingConsentText, routeToComic],
+      runConfirmConsent({ userId: currentUser.userId, input, pendingConsentText, routeToComic, setters: settersRef.current }),
+    [currentUser.userId, input, pendingConsentText, routeToComic],
   );
 
   // Consent modal "Not now": do not route, and do NOT populate the composer. When the modal was

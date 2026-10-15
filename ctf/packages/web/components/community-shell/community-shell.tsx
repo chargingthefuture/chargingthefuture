@@ -26,6 +26,7 @@ import { SeMark } from '../shared/se-mark';
 import type { UnlockReviewStatus } from '../../lib/unlock/types';
 import styles from './community-shell.module.css';
 import { cycleFocusTrap, focusableWithin } from './dialog-focus';
+import { readStoredValue, writeStoredValue } from './stored-value';
 import { failureText, responseFailureText } from 'lib/errors/client-failure';
 
 // Verification state for a signed-in member who has not yet completed Quora verification but reaches
@@ -570,10 +571,9 @@ export function CommunityShell(props: CommunityShellProps) {
   }, [authLoading, isAuthenticated, clientAuthenticated, router]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    setRecentPluginSlugs(parseStoredRecentPlugins(window.localStorage.getItem(RECENT_PLUGIN_STORAGE_KEY)));
-    setSortMode(parseStoredSortMode(window.localStorage.getItem(PLUGIN_SORT_MODE_STORAGE_KEY)));
-    setPluginUsageCounts(parseStoredUsageCounts(window.localStorage.getItem(PLUGIN_USAGE_COUNTS_STORAGE_KEY)));
+    setRecentPluginSlugs(parseStoredRecentPlugins(readStoredValue(RECENT_PLUGIN_STORAGE_KEY)));
+    setSortMode(parseStoredSortMode(readStoredValue(PLUGIN_SORT_MODE_STORAGE_KEY)));
+    setPluginUsageCounts(parseStoredUsageCounts(readStoredValue(PLUGIN_USAGE_COUNTS_STORAGE_KEY)));
   }, []);
 
   useEffect(() => {
@@ -666,15 +666,14 @@ export function CommunityShell(props: CommunityShellProps) {
   // mode in development) cannot write twice and inflate the count.
   const handleAppOpen = (slug: string) => {
     setActiveApp(slug);
-    if (typeof window === 'undefined') return;
 
     const nextRecent = [slug, ...recentPluginSlugs.filter((item) => item !== slug)].slice(0, MAX_RECENT_PLUGINS);
     setRecentPluginSlugs(nextRecent);
-    window.localStorage.setItem(RECENT_PLUGIN_STORAGE_KEY, JSON.stringify(nextRecent));
+    writeStoredValue(RECENT_PLUGIN_STORAGE_KEY, JSON.stringify(nextRecent));
 
     const nextCounts = { ...pluginUsageCounts, [slug]: (pluginUsageCounts[slug] ?? 0) + 1 };
     setPluginUsageCounts(nextCounts);
-    window.localStorage.setItem(PLUGIN_USAGE_COUNTS_STORAGE_KEY, JSON.stringify(nextCounts));
+    writeStoredValue(PLUGIN_USAGE_COUNTS_STORAGE_KEY, JSON.stringify(nextCounts));
   };
 
   // Escape closes the contributor-channel explainer; listener attached only while open.
@@ -696,8 +695,7 @@ export function CommunityShell(props: CommunityShellProps) {
 
   const handleSortModeChange = (mode: PluginSortMode) => {
     setSortMode(mode);
-    if (typeof window === 'undefined') return;
-    window.localStorage.setItem(PLUGIN_SORT_MODE_STORAGE_KEY, mode);
+    writeStoredValue(PLUGIN_SORT_MODE_STORAGE_KEY, mode);
   };
 
 

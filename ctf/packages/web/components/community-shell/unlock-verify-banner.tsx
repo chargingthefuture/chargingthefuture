@@ -105,6 +105,23 @@ function UnlockSubmitForm({ url, submitting, error, wasRejected, onUrlChange, on
   );
 }
 
+// POST the profile address and return the review status the route saved it with. The submission
+// route requires the CSRF header (and checks the origin), like the rest of the Commons POSTs.
+async function postSubmission(quoraProfileUrl: string): Promise<UnlockReviewStatus> {
+  const res = await fetch('/api/unlock/submission', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
+    body: JSON.stringify({ quoraProfileUrl }),
+  });
+  const payload = (await res.json().catch(() => null)) as
+    | { message?: string; submission?: { reviewStatus?: UnlockReviewStatus } }
+    | null;
+  if (!res.ok) {
+    throw new Error(payload?.message ?? 'Submission failed. Try again.');
+  }
+  return payload?.submission?.reviewStatus ?? 'pending';
+}
+
 // Shown at the top of the Commons for any signed-in member who has not yet completed Quora
 // verification — including someone who got here by pressing "ask for help" on the Unlock screen, or by
 // coming back a second day. Without it they see the chat with no indication that verification is still
@@ -121,15 +138,21 @@ export function UnlockVerifyBanner({
   const [url, setUrl] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Flip to a "pending review" state after a successful inline submission without a full reload.
-  const [justSubmitted, setJustSubmitted] = useState(false);
+  // The status of a submission just made here, read from the route's answer, so the banner changes
+  // without a full reload. It is not always pending: a denylisted profile address is saved as spam
+  // straight away, and the banner then shows what it shows for any spam submission rather than
+  // "under review" (which the Unlock screen would contradict).
+  const [submittedStatus, setSubmittedStatus] = useState<UnlockReviewStatus | null>(null);
+  const effectiveHasSubmission = hasSubmission || submittedStatus !== null;
+  const effectiveStatus = submittedStatus ?? reviewStatus;
 
   // Awaiting review — either a prior pending submission or one just made here. Show a calm status note
   // rather than the input, so the member knows they are in the queue and still have Commons access.
-  const isPending = justSubmitted || (hasSubmission && reviewStatus === 'pending');
+  const isPending = effectiveHasSubmission && effectiveStatus === 'pending';
   // A rejected/spam prior submission should re-prompt for a corrected URL.
   const wasRejected =
-    hasSubmission && (reviewStatus === 'rejected' || reviewStatus === 'spam' || reviewStatus === 'duplicate');
+    effectiveHasSubmission &&
+    (effectiveStatus === 'rejected' || effectiveStatus === 'spam' || effectiveStatus === 'duplicate');
 
   async function submit() {
     const trimmed = url.trim();
@@ -137,19 +160,9 @@ export function UnlockVerifyBanner({
     setSubmitting(true);
     setError(null);
     try {
-      // The submission route requires this header (and checks the origin), like the rest of the
-      // Commons POSTs.
-      const res = await fetch('/api/unlock/submission', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
-        body: JSON.stringify({ quoraProfileUrl: trimmed }),
-      });
-      if (!res.ok) {
-        const payload = (await res.json().catch(() => null)) as { message?: string } | null;
-        throw new Error(payload?.message ?? 'Submission failed. Try again.');
-      }
+      const status = await postSubmission(trimmed);
       setUrl('');
-      setJustSubmitted(true);
+      setSubmittedStatus(status);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Submission failed. Try again.');
     } finally {
