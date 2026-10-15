@@ -2,7 +2,7 @@ import { createHmac } from 'crypto';
 import { StreamChat } from 'stream-chat';
 import { resolveStreamCredentials, streamCredentialsFor, type StreamAppName } from 'lib/integrations/stream-credentials';
 import { reportError } from 'lib/observability/report';
-import { BEACON_CHAT_CHANNEL_TYPE, BEACON_MUTE_MINUTES, BEACON_STREAM_CALL_TYPE } from './constants';
+import { BEACON_CHAT_CHANNEL_TYPE, BEACON_HOST_TOKEN_TTL_SECONDS, BEACON_MUTE_MINUTES, BEACON_STREAM_CALL_TYPE } from './constants';
 
 // Beacon's Stream Video integration. Beacon is a one-way `livestream`: only the admin host
 // publishes; everyone else watches. Watching is public over HLS (no user token needed), which is
@@ -143,8 +143,14 @@ export type BeaconHostCredentials = {
 };
 
 // Mint a host (publisher) token scoped to the host user id. The Stream JWT works for both Video and
-// Chat (same app secret), so this token lets the admin publish the in-browser screen-share and act
-// as the chat channel moderator. Viewers never receive this token — they watch over public HLS.
+// Chat (same app secret), so this token lets the admin publish the in-browser screen-share and is the
+// RTMP stream key. Viewers never receive this token — they watch over public HLS.
+//
+// The Stream app is shared with the other plugins, so the host gets no app-wide role. Publishing comes
+// from the `host` call role (set on the call in ensureBeaconCallAndIngest) and chat moderation from
+// being a moderator of this event's channel only. The token expires after
+// BEACON_HOST_TOKEN_TTL_SECONDS, because as the stream key it is pasted into an app outside this one.
+// Stream offers no separate credential for RTMP ingest; the stream key is always a user token.
 export async function createBeaconHostCredentials(input: {
   userId: string;
   name: string;
@@ -162,18 +168,27 @@ export async function createBeaconHostCredentials(input: {
     // the chat user existing (the video client sends the user object when it connects). So a Chat-side
     // failure — quota, a chat-disabled app, a transient error — must not be the reason a broadcast
     // cannot start. It is reported and the broadcast proceeds; only the host's chat display name and
-    // moderator role are missed.
+    // moderator rights on the event chat are missed.
+    //
+    // `role: 'user'` is stated so a host who was given the app-wide `admin` role before this changed
+    // is put back to the ordinary role on their next broadcast.
     try {
-      await chatClient.upsertUser({ id: streamUserId, name: input.name, role: 'admin' });
+      await chatClient.upsertUser({ id: streamUserId, name: input.name, role: 'user' });
+      const channel = chatClient.channel(BEACON_CHAT_CHANNEL_TYPE, beaconCallIdForEvent(input.eventId), {
+        created_by_id: streamUserId,
+      });
+      await channel.create();
+      await channel.addModerators([streamUserId]);
     } catch (error) {
       reportError(error, { area: 'beacon', op: 'host_chat_upsert', extra: { eventId: input.eventId } });
     }
+    const issuedAt = Math.floor(Date.now() / 1000);
     return {
       streamApiKey: credentials.apiKey,
       streamCallType: BEACON_STREAM_CALL_TYPE,
       streamCallId: beaconCallIdForEvent(input.eventId),
       streamUserId,
-      hostToken: chatClient.createToken(streamUserId),
+      hostToken: chatClient.createToken(streamUserId, issuedAt + BEACON_HOST_TOKEN_TTL_SECONDS, issuedAt),
     };
   } finally {
     // A throw in a finally block replaces the value being returned, so closing the client is guarded
@@ -262,6 +277,14 @@ export async function ensureBeaconCallAndIngest(input: {
         },
       },
     },
+  });
+  // The `host` call role is what lets this user publish on a livestream call, in the browser and over
+  // RTMP, and it applies to this call only, unlike an app-wide role. Set through the members endpoint
+  // rather than on create, because get-or-create leaves an existing call's members as they were, and
+  // calls opened before the host lost the app-wide role already exist.
+  await streamVideoFetch(ctx, `/api/v2/video/call/${BEACON_STREAM_CALL_TYPE}/${callId}/members`, {
+    method: 'POST',
+    body: { update_members: [{ user_id: beaconStreamUserId(input.hostUserId), role: 'host' }] },
   });
   const call = (created.call ?? {}) as Record<string, unknown>;
   const ingress = (call.ingress ?? {}) as Record<string, unknown>;
