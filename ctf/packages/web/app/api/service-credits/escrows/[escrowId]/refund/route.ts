@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { insertServiceCreditsAudit, refundEscrow } from 'lib/service-credits/repository';
-import { ensureMutationCsrf, requireServiceCreditsServiceAccess, serviceCreditsErrorResponse } from 'lib/service-credits/_lib';
+import { ensureMutationCsrf, requireServiceCreditsServiceAccess, serviceCreditsErrorResponse, auditServiceCreditsFailure } from 'lib/service-credits/_lib';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
 
@@ -20,7 +20,7 @@ export async function POST(request: Request, context: EscrowParams) {
     return csrfDeny;
   }
 
-  const gate = await requireServiceCreditsServiceAccess();
+  const gate = await requireServiceCreditsServiceAccess({ command: 'service-credits.escrow.refund' });
   if (!gate.allowed) {
     return gate.response;
   }
@@ -63,6 +63,7 @@ export async function POST(request: Request, context: EscrowParams) {
     return NextResponse.json({ ok: true, refund }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'service-credits', op: 'escrows_escrowid_refund' });
+    await auditServiceCreditsFailure({ actorId: gate.auth.userId, command: 'service-credits.escrow.refund', targetType: 'escrow', targetId: escrowId, error });
     return serviceCreditsErrorResponse(error, 'Escrow refund unavailable.');
   }
 }

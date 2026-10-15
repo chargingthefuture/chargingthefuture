@@ -3,6 +3,28 @@ import { evaluatePluginAccess } from '../auth/server-authz';
 import { ensureServiceCreditsAdmin } from './policy';
 import { checkMutationOrigin } from '../auth/csrf';
 import { pluginAuthDeny } from '../auth/deny-taxonomy';
+import { insertServiceCreditsAudit } from './repository';
+import { reportError } from '../observability/report';
+
+// The audit contract records refused and failed commands as well as successful ones. A route passes
+// the command name to its gate so a role denial is written as a `deny` row against that command.
+type GateAuditOption = { command: string };
+
+async function auditRoleDenial(actorId: string, command: string): Promise<void> {
+  try {
+    await insertServiceCreditsAudit({
+      actorId,
+      command,
+      policyStatus: 'deny',
+      reason: 'insufficient_role',
+      targetType: 'command',
+      targetId: command,
+      metadata: { result: 'failure' },
+    });
+  } catch (error) {
+    reportError(error, { area: 'service-credits', op: 'audit_role_denial' });
+  }
+}
 
 export async function requireServiceCreditsReadAccess() {
   const decision = await evaluatePluginAccess({ requireUsername: false });
@@ -13,7 +35,7 @@ export async function requireServiceCreditsReadAccess() {
   return { allowed: true as const, auth: decision };
 }
 
-export async function requireServiceCreditsAdminAccess() {
+export async function requireServiceCreditsAdminAccess(audit?: GateAuditOption) {
   const gate = await requireServiceCreditsReadAccess();
   if (!gate.allowed) {
     return gate;
@@ -21,6 +43,9 @@ export async function requireServiceCreditsAdminAccess() {
 
   const deny = ensureServiceCreditsAdmin(gate.auth);
   if (deny) {
+    if (audit) {
+      await auditRoleDenial(gate.auth.userId, audit.command);
+    }
     return { allowed: false as const, response: NextResponse.json(deny, { status: deny.status }) };
   }
 
@@ -33,7 +58,7 @@ export async function requireServiceCreditsAdminAccess() {
 // create, release, or refund escrow holds against another member's balance.
 const SERVICE_CREDITS_ESCROW_ROLES = new Set(['service', 'system', 'dispute_moderator', 'admin']);
 
-export async function requireServiceCreditsServiceAccess() {
+export async function requireServiceCreditsServiceAccess(audit?: GateAuditOption) {
   const gate = await requireServiceCreditsReadAccess();
   if (!gate.allowed) {
     return gate;
@@ -41,6 +66,9 @@ export async function requireServiceCreditsServiceAccess() {
 
   const role = gate.auth.role;
   if (!gate.auth.isAdmin && (!role || !SERVICE_CREDITS_ESCROW_ROLES.has(role))) {
+    if (audit) {
+      await auditRoleDenial(gate.auth.userId, audit.command);
+    }
     const deny = pluginAuthDeny.forbiddenRole(['service', 'system', 'dispute_moderator']);
     return { allowed: false as const, response: NextResponse.json(deny, { status: deny.status }) };
   }
@@ -80,6 +108,15 @@ const SERVICE_CREDITS_ERROR_RESPONSES: Record<string, { code: string; message: s
   account_restricted: { code: 'service_credits_account_restricted', message: 'This account is restricted and cannot spend.', status: 403 },
   restriction_scope_conflict: { code: 'service_credits_restriction_scope_conflict', message: 'This account has an active restriction of a wider scope (all or contact) set outside ServiceCredits. The wallet freeze cannot replace or lift it.', status: 409 },
   recipient_not_found: { code: 'service_credits_recipient_not_found', message: 'No member has that username or ID. Check the recipient and try again; nothing was sent.', status: 404 },
+  self_transfer: { code: 'service_credits_self_transfer', message: 'You cannot send ServiceCredits to yourself. Choose another member.', status: 400 },
+  // Escrow release/refund on a hold that does not exist, or one already released or refunded, and an
+  // idempotent transfer whose earlier state cannot be read back. Not outages, so not a 500.
+  not_found: { code: 'service_credits_not_found', message: 'Requested resource was not found.', status: 404 },
+  invalid_state: { code: 'service_credits_invalid_state', message: 'Resource is not in a valid state for this command.', status: 409 },
+  transfer_conflict: { code: 'service_credits_transfer_conflict', message: 'Unable to resolve idempotent transfer state.', status: 409 },
+  dispute_forbidden: { code: 'service_credits_dispute_forbidden', message: 'You can only dispute a transfer you were a party to.', status: 403 },
+  dispute_case_not_found: { code: 'service_credits_dispute_case_not_found', message: 'No dispute has that id. Nothing was moved.', status: 404 },
+  dispute_parties_mismatch: { code: 'service_credits_dispute_parties_mismatch', message: 'The source and destination must be the sender and recipient of the disputed transfer. Nothing was moved.', status: 409 },
   recipient_lookup_unavailable: { code: 'service_credits_recipient_lookup_unavailable', message: 'The recipient could not be checked right now, so nothing was sent. Try again in a moment.', status: 503 },
   // Account-deletion reclaim "not yet" states — distinct from a real failure so the reclaim sweep can
   // skip them quietly and retry on the next run instead of treating every pre-window run as an error.
@@ -92,6 +129,33 @@ const SERVICE_CREDITS_ERROR_RESPONSES: Record<string, { code: string; message: s
 export function knownServiceCreditsErrorResponse(error: unknown): NextResponse | null {
   const mapped = error instanceof Error ? SERVICE_CREDITS_ERROR_RESPONSES[error.message] : undefined;
   return mapped ? NextResponse.json({ ok: false, code: mapped.code, message: mapped.message }, { status: mapped.status }) : null;
+}
+
+// Write the audit row for a mutation that was refused or failed. A known ServiceCredits refusal is a
+// `deny` with its code as the reason; anything else is recorded as a failure without the error text,
+// which goes to reportError instead. Never throws, so the caller's error response always returns.
+export async function auditServiceCreditsFailure(input: {
+  actorId: string;
+  command: string;
+  targetType: string;
+  targetId: string;
+  error: unknown;
+}): Promise<void> {
+  const code = input.error instanceof Error ? input.error.message : '';
+  const known = Object.prototype.hasOwnProperty.call(SERVICE_CREDITS_ERROR_RESPONSES, code);
+  try {
+    await insertServiceCreditsAudit({
+      actorId: input.actorId,
+      command: input.command,
+      policyStatus: known ? 'deny' : 'allow',
+      reason: known ? code : 'failed',
+      targetType: input.targetType,
+      targetId: input.targetId,
+      metadata: { result: 'failure' },
+    });
+  } catch (error) {
+    reportError(error, { area: 'service-credits', op: 'audit_failure' });
+  }
 }
 
 export function serviceCreditsErrorResponse(error: unknown, fallbackMessage: string): NextResponse {
