@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireTrustMemberAccess } from 'lib/trust/_lib';
 import { getMemberPresence } from 'lib/presence/repository';
+import { isBlockedBetween } from 'lib/blocks/repository';
 import { reportError } from 'lib/observability/report';
 
 // A member id is either a Clerk id (`user_…`) or a UUID; both fit this safe character set. The bound
@@ -31,6 +32,14 @@ export async function GET(_req: Request, context: { params: Promise<{ userId: st
   }
 
   try {
+    // A block hides the person in both directions (lib/blocks/repository.ts), and the plugins this
+    // list mirrors already drop a blocked member's listings from browse. So across a block the list
+    // is empty, the same answer a member with no listings gets, which says nothing about the block.
+    // An admin and the member themselves are not filtered.
+    const viewerId = gate.auth.userId;
+    if (!gate.auth.isAdmin && viewerId !== targetUserId && (await isBlockedBetween(viewerId, targetUserId))) {
+      return NextResponse.json({ presence: [] }, { status: 200 });
+    }
     const presence = await getMemberPresence(targetUserId);
     return NextResponse.json({ presence }, { status: 200 });
   } catch (error) {
