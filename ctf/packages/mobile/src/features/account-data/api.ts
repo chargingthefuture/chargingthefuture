@@ -77,7 +77,13 @@ export async function deleteServiceData(slug: string): Promise<void> {
   }
 }
 
-export async function deleteFullAccount(): Promise<void> {
+// What DELETE /api/account/full-account answers on success, as the web reads it
+// (components/account-data/account-data-shared.ts). Removing the sign-in is best-effort on the
+// server: a failed auth provider call still answers 200 with `identityRemoved: false` and the reason
+// in `identityError`. Only an explicit false counts as a failure.
+export type FullAccountDeletionResult = { identityRemoved: boolean; identityError: string | null };
+
+export async function deleteFullAccount(): Promise<FullAccountDeletionResult> {
   const res = await fetchWithTimeout('/api/account/full-account', {
     method: 'DELETE',
     headers: {
@@ -88,6 +94,11 @@ export async function deleteFullAccount(): Promise<void> {
   if (!res.ok) {
     throw new AccountRequestError(await readMessage(res, 'Unable to complete full-account deletion. Please try again.'));
   }
+  const body = (await res.json().catch(() => null)) as { identityRemoved?: unknown; identityError?: unknown } | null;
+  return {
+    identityRemoved: body?.identityRemoved !== false,
+    identityError: typeof body?.identityError === 'string' && body.identityError ? body.identityError : null,
+  };
 }
 
 // Download a JSON export, as the web's download buttons do: GET the export route, then hand the file

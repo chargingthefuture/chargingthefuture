@@ -126,12 +126,15 @@ export function ContributorAccessAdminSections({
     async (url: string, body: Record<string, unknown>, failMessage: string) => {
       setError(null);
       try {
-        await requestJson(url, {
+        const result = await requestJson<{ channelSyncWarning?: string }>(url, {
           method: 'POST',
           headers: { 'content-type': 'application/json', 'x-ctf-csrf': '1' },
           body: JSON.stringify(body),
         });
         await refresh();
+        // The change landed but the gated channel did not follow it yet. Shown after the refresh,
+        // which clears the banner, so a revoked member still in the channel is not hidden.
+        if (result?.channelSyncWarning) setError(result.channelSyncWarning);
       } catch (mutateError) {
         setError(mutateError instanceof Error ? mutateError.message : failMessage);
       }
@@ -174,13 +177,14 @@ export function ContributorAccessAdminSections({
       setSaving(true);
       setError(null);
       try {
-        await requestJson('/api/contributor-access/admin/config', {
+        const result = await requestJson<{ channelSyncWarning?: string }>('/api/contributor-access/admin/config', {
           method: 'PUT',
           headers: { 'content-type': 'application/json', 'x-ctf-csrf': '1' },
           body: JSON.stringify(update),
         });
         await refresh();
         onConfigSaved();
+        if (result?.channelSyncWarning) setError(result.channelSyncWarning);
       } catch (saveError) {
         setError(saveError instanceof Error ? saveError.message : 'Unable to save settings.');
       } finally {

@@ -25,7 +25,7 @@ async function failureText(res: Response, fallback: string): Promise<string> {
   return reference ? `${text} [ref ${reference}]` : text;
 }
 
-export async function fetchRecurringActivityData(): Promise<{ activities: Activity[]; currencies: Currency[] }> {
+export async function fetchRecurringActivityData(): Promise<{ activities: Activity[]; currencies: Currency[]; currenciesError: string | null }> {
   const [activitiesRes, currenciesRes] = await Promise.all([
     authedFetch('/api/recurring-activity', { cache: 'no-store' }),
     authedFetch('/api/currencies', { cache: 'no-store' }),
@@ -38,8 +38,13 @@ export async function fetchRecurringActivityData(): Promise<{ activities: Activi
     throw new Error(await failureText(activitiesRes, 'We could not load your ongoing activities. Try again in a moment.'));
   }
   const activitiesData = (await activitiesRes.json()) as { activities?: Activity[] };
+  // A failed currency list does not block the activities, but it leaves the form with nothing to
+  // pick, so the reason is returned for the screen to show.
+  const currenciesError = currenciesRes.ok
+    ? null
+    : await failureText(currenciesRes, 'The currency list could not be loaded, so a new activity cannot be recorded right now.');
   const currenciesData = currenciesRes.ok ? ((await currenciesRes.json()) as { currencies?: Currency[] }) : {};
-  return { activities: activitiesData.activities ?? [], currencies: currenciesData.currencies ?? [] };
+  return { activities: activitiesData.activities ?? [], currencies: currenciesData.currencies ?? [], currenciesError };
 }
 
 export interface CreateActivityInput {
@@ -76,10 +81,11 @@ interface DirectoryListItem {
   claimedByUserId: string | null;
 }
 
-// Only claimed profiles are offered, because the other party must be a real member.
+// Only claimed profiles are offered, because the other party must be a real member. A refused search
+// throws with the route's message, so the picker does not read it as a search with no matches.
 export async function searchMembers(term: string, signal: AbortSignal): Promise<MemberOption[]> {
   const res = await authedFetch(`/api/directory/list?q=${encodeURIComponent(term)}`, { signal });
-  if (!res.ok) return [];
+  if (!res.ok) throw new Error(await failureText(res, 'The member search did not work. Try again in a moment.'));
   const data = (await res.json()) as { items?: DirectoryListItem[] };
   return (data.items ?? [])
     .filter((item): item is DirectoryListItem & { claimedByUserId: string } => Boolean(item.claimedByUserId))

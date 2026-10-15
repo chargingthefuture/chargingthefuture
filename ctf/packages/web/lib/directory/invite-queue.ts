@@ -107,6 +107,7 @@ export const DIRECTORY_INVITE_ALREADY_WRITTEN = [
   'ms-thompson-11',
   'dc-1341',
   '00-661',
+  'ric-vaughn',
 ] as const;
 
 const DIRECTORY_PROFILE_BASE = 'https://app.chargingthefuture.com/apps/directory/profile/';

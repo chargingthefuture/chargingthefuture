@@ -98,6 +98,31 @@ export function glyphForService(slug: string): string {
 // The exact phrase the user must type to confirm full-account deletion (matches the mockup).
 export const FULL_ACCOUNT_CONFIRM_PHRASE = 'delete my account';
 
+// What DELETE /api/account/full-account answers on success. The data deletion has committed by then,
+// but removing the sign-in is best-effort: when the auth provider call fails the route still answers
+// 200 with `identityRemoved: false` and the reason in `identityError`, and the done screen must not
+// tell the member their sign-in is gone.
+export type FullAccountDeletionResult = { identityRemoved: boolean; identityError: string | null };
+
+// Reads the route's 200 body. Only an explicit `identityRemoved: false` counts as a failure, so an
+// older or unreadable body keeps the ordinary done message.
+export function readFullAccountDeletionResult(body: unknown): FullAccountDeletionResult {
+  const record = (body ?? {}) as { identityRemoved?: unknown; identityError?: unknown };
+  return {
+    identityRemoved: record.identityRemoved !== false,
+    identityError: typeof record.identityError === 'string' && record.identityError ? record.identityError : null,
+  };
+}
+
+// The done-screen sentence about the sign-in, for either outcome.
+export function signInRemovalSentence(result: FullAccountDeletionResult): string {
+  if (result.identityRemoved) {
+    return 'Your personal data is being removed across all services, and your sign-in is removed with it — you will not be able to sign back in.';
+  }
+  const reason = result.identityError ? ` The reason given: ${result.identityError.replace(/\.?$/, '.')}` : '';
+  return `Your personal data is being removed across all services, but your sign-in could not be removed, so you can still sign in to an empty account.${reason} Use Report a bug to have the sign-in removed for you.`;
+}
+
 // Which of the two Account & Data views is showing: the per-service data list, or the
 // danger zone (full-account deletion). Lived in the desktop layout until that never-rendered
 // layout was removed; it is shared state, so it belongs here with the other shared types.
