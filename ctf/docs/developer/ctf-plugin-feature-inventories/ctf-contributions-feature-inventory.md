@@ -86,6 +86,9 @@ flow is one-way, like gas-station reward points.
     would otherwise persist exactly. The integer-dollar rule on gift-card amounts is a separate,
     claim-shape rule and does not by itself guarantee this.
   - Rejection grants nothing.
+  - For a Quora comment or GitHub star the review panel shows the link as an editable field. A
+    link the admin pastes there (for example, found in notifications for a member who sent none)
+    is saved on the claim when they confirm or reject it.
 - Create and edit fundraiser cycles (window plus the three goals). The Drive tab edits the active
   drive, or the next upcoming one; once a drive has ended it shows "Start a drive" and saving creates
   a new drive, so an ended drive is never reopened with its old confirmed rows attached.
@@ -115,7 +118,9 @@ flow is one-way, like gas-station reward points.
 - `POST /api/contributions/banner/dismiss` — Silent banner snooze (not audited).
 - `GET /api/contributions/admin/submissions` — Admin review queue (`?status=` filter).
 - `POST /api/contributions/admin/submissions/[submissionId]/review` — Confirm/reject (body:
-  `action`, optional `confirmedAmountUsd`, optional `reviewNote`). 409
+  `action`, optional `confirmedAmountUsd`, optional `reviewNote`, optional `url` — the Quora post
+  or GitHub profile link, saved into `quora_post_url` / `github_profile_url`; refused on a gift
+  card). 409
   `contributions_mint_budget_exceeded` when the ServiceCredits mint budget for the period would be
   exceeded by the grant; the claim stays pending.
 - `GET /api/contributions/admin/config` / `PUT /api/contributions/admin/config` — Runtime config.
@@ -309,6 +314,14 @@ NOT EXISTS` per column) in `ctf/schema.sql`; the demo schema is regenerated into
   wiring yet.
 
 ## Change Log
+
+- 2026-10-15: **The link edited on review is saved (owner decision; issue #2980).** The review panel
+  let the admin edit the Quora post or GitHub profile link, but `confirm()` and `reject()` never
+  sent it and the review route had no field for it, so a pasted link was dropped. The review
+  command now takes an optional `url`, checked as an http(s) link and written to `quora_post_url`
+  or `github_profile_url` in the same transaction as the review. The panel sends it only when the
+  admin changed it, so an untouched field never rewrites the member's link; a blank field keeps
+  it. A link sent for a gift card is refused. No schema change: both columns already existed.
 
 - 2026-10-06: **Only real money counts as money given (owner decision; issue #2982).** Outside this
   plugin, the Weekly Performance card `value.contributions_confirmed_usd`, the registry metric
