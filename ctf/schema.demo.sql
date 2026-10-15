@@ -504,6 +504,17 @@ CREATE TABLE IF NOT EXISTS stream_video_usage_daily (
 );
 ALTER TABLE IF EXISTS stream_video_usage_daily ADD COLUMN IF NOT EXISTS participant_seconds BIGINT NOT NULL DEFAULT 0;
 ALTER TABLE IF EXISTS stream_video_usage_daily ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- One row per processed `call.session_participant_left` webhook delivery, so a delivery Stream
+-- re-sends after a slow response does not credit the same minutes to stream_video_usage_daily
+-- twice. The key is call cid | session id | the participant's Stream session id (a per-join Stream
+-- id, not a member id); no personal data. Rows older than a day are pruned on each insert
+-- (lib/stream-quota/webhook-usage.ts).
+CREATE TABLE IF NOT EXISTS stream_video_webhook_deliveries (
+  dedupe_key TEXT PRIMARY KEY,
+  received_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS stream_video_webhook_deliveries ADD COLUMN IF NOT EXISTS received_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS stream_video_webhook_deliveries_received_at_idx ON stream_video_webhook_deliveries (received_at);
 -- Moderation (2026-09-19, owner decision): a room has a speak mode, a removed-members list, and
 -- an admin audit trail. In 'open' mode every joiner may speak (the room as shipped); in
 -- 'hand_raise' mode a joiner listens until an admin lets them speak.
@@ -3508,7 +3519,8 @@ CREATE TABLE IF NOT EXISTS skill_up_cohorts (
   -- "SkillUp: <occupation>" (and "LevelUp: <occupation>" before the 2026-08-29 rename), which
   -- repeated the name of the plugin the row is already inside on every card. It is the occupation on
   -- its own now; post/0009_skill_up_cohort_title_drop_plugin_prefix.sql strips the prefix from the
-  -- rows written under the old template. Do not reintroduce the prefix.
+  -- rows written under the old template (created before 2026-08-30 only, so a title an admin types
+  -- later is left as typed on every re-run). Do not reintroduce the prefix.
   title TEXT NOT NULL,
   description TEXT NOT NULL,
   track TEXT NOT NULL,
@@ -7100,6 +7112,129 @@ FROM service_credits_wallets
 WHERE is_frozen = TRUE
 ON CONFLICT (user_id) DO NOTHING;
 
+-- === directory public landing page (owner decision, 2026-10-13) ===
+-- The public match page (landing-page-v4, on Vercel) reads Directory counts per job title and saves
+-- the match a visitor asks to come back to. It connects with its own login, landing_page, which may
+-- read the two views below and read, add and update rows in directory_landing_match_codes, and nothing else
+-- (the grants are pasted in the Neon dashboard, not kept here, because the login is created there).
+-- Defined at the END so directory_profiles, the taxonomy tables and account_restrictions exist.
+--
+-- A saved match holds the code, the job title and the count when it was saved. No name, no contact
+-- details, no IP address: the code is the only way back to it, on purpose.
+CREATE TABLE IF NOT EXISTS directory_landing_match_codes (
+  code TEXT PRIMARY KEY,
+  job_title_id TEXT NOT NULL,
+  job_title_ids TEXT[],
+  people_at_save INTEGER,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  last_seen_at TIMESTAMPTZ
+);
+ALTER TABLE IF EXISTS directory_landing_match_codes ADD COLUMN IF NOT EXISTS job_title_id TEXT;
+ALTER TABLE IF EXISTS directory_landing_match_codes ADD COLUMN IF NOT EXISTS people_at_save INTEGER;
+ALTER TABLE IF EXISTS directory_landing_match_codes ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS directory_landing_match_codes ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ;
+-- The job titles behind the needs a visitor picked (job_title_id keeps the first, for older rows).
+ALTER TABLE IF EXISTS directory_landing_match_codes ADD COLUMN IF NOT EXISTS job_title_ids TEXT[];
+CREATE INDEX IF NOT EXISTS idx_directory_landing_match_codes_job_title ON directory_landing_match_codes (job_title_id);
+
+-- Who lists which job title, by their job title or any of their skills, claimed or unclaimed,
+-- leaving out owners restricted with scope all or contact. Not granted to the landing page: it
+-- holds profile ids. The two public views and directory_public_match_count read it. Ids are
+-- compared as text because some production id columns are VARCHAR.
+CREATE OR REPLACE VIEW directory_person_job_titles AS
+  WITH people AS (
+    SELECT p.id::text AS id, p.job_title_id::text AS job_title_id
+    FROM directory_profiles p
+    WHERE NOT EXISTS (
+      SELECT 1 FROM account_restrictions r
+      WHERE r.user_id::text = p.claimed_by_user_id::text
+        AND r.is_restricted
+        AND r.restriction_scope IN ('all', 'contact')
+    )
+  )
+  SELECT id AS person_id, job_title_id FROM people WHERE job_title_id IS NOT NULL
+  UNION
+  SELECT pp.id, sk.job_title_id::text
+  FROM people pp
+  JOIN directory_profile_skills ps ON ps.profile_id::text = pp.id
+  JOIN skills_taxonomy_skills sk ON sk.id::text = ps.skill_id::text;
+
+-- One row per active job title and how many people list it (0 when nobody does).
+CREATE OR REPLACE VIEW directory_public_skill_counts AS
+  WITH per_title AS (
+    SELECT job_title_id, COUNT(*)::integer AS n FROM directory_person_job_titles GROUP BY job_title_id
+  )
+  SELECT jt.id::text AS job_title_id,
+         s.name AS sector,
+         s.display_order AS sector_order,
+         jt.name AS title,
+         jt.display_order AS title_order,
+         COALESCE(pt.n, 0) AS people
+  FROM skills_taxonomy_job_titles jt
+  JOIN skills_taxonomy_sectors s ON s.id = jt.sector_id AND s.is_active
+  LEFT JOIN per_title pt ON pt.job_title_id = jt.id::text
+  WHERE jt.is_active;
+
+-- One row: everybody in the Directory, restriction rule as above.
+CREATE OR REPLACE VIEW directory_public_totals AS
+  WITH people AS (
+    SELECT p.id::text AS id
+    FROM directory_profiles p
+    WHERE NOT EXISTS (
+      SELECT 1 FROM account_restrictions r
+      WHERE r.user_id::text = p.claimed_by_user_id::text
+        AND r.is_restricted
+        AND r.restriction_scope IN ('all', 'contact')
+    )
+  )
+  SELECT (SELECT COUNT(*)::integer FROM people) AS total;
+
+-- One row: how many different active skills at least one Directory profile lists, and how many
+-- active skills there are. The same query as Workforce's Skills Coverage tile
+-- (lib/workforce/repository.ts getDashboard), so the landing page shows the same percentage.
+-- Counts of skills only; nothing about a person.
+CREATE OR REPLACE VIEW directory_public_skill_coverage AS
+  SELECT
+    (SELECT COUNT(DISTINCT dps.skill_id)::integer
+       FROM directory_profile_skills dps
+       JOIN directory_profiles p ON dps.profile_id::text = p.id::text
+       JOIN skills_taxonomy_skills s ON s.id = dps.skill_id
+      WHERE s.is_active = TRUE) AS covered,
+    (SELECT COUNT(*)::integer FROM skills_taxonomy_skills WHERE is_active = TRUE) AS catalog;
+
+-- How many people match a visitor: everyone who lists any of the given job titles, each counted
+-- once, as an exact number. Runs with its owner's rights so the landing page can call it
+-- without reading directory_person_job_titles itself; at most 60 titles per call.
+CREATE OR REPLACE FUNCTION directory_public_match_count(title_ids TEXT[])
+RETURNS INTEGER
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT n
+  FROM (
+    SELECT COUNT(DISTINCT person_id)::integer AS n
+    FROM directory_person_job_titles
+    WHERE job_title_id = ANY (title_ids[1:60])
+  ) x
+$$;
+REVOKE ALL ON FUNCTION directory_public_match_count(TEXT[]) FROM PUBLIC;
+
+-- In-demand needs (owner decision, 2026-10-13): each time a visitor on the landing page picks a need
+-- and nobody in the Directory matches it, the page records it once per visit, so the owner can see
+-- which needs go unmet and look for somebody. One row per time asked: the need's label (or
+-- "skill:<job title>" for a single added skill), the job titles behind it, and when. Nothing about
+-- the visitor: no code, name, contact detail or IP address. The landing page login may only add rows.
+CREATE TABLE IF NOT EXISTS directory_unmet_needs (
+  id BIGSERIAL PRIMARY KEY,
+  need TEXT NOT NULL,
+  job_title_ids TEXT[] NOT NULL DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS directory_unmet_needs ADD COLUMN IF NOT EXISTS need TEXT;
+ALTER TABLE IF EXISTS directory_unmet_needs ADD COLUMN IF NOT EXISTS job_title_ids TEXT[] NOT NULL DEFAULT '{}';
+ALTER TABLE IF EXISTS directory_unmet_needs ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_directory_unmet_needs_need ON directory_unmet_needs (need, created_at DESC);
+
 -- === beacon-plugin ===
 -- Beacon: admin-only one-way livestream. An admin goes live ad hoc to broadcast a live demo
 -- (screen content), flagship use the "State of the Skills Economy" address. Watching is public
@@ -8630,17 +8765,24 @@ $$;
 -- Guarded on the prefix still being present, so a title that never carried one is
 -- untouched and a second run changes nothing. TRIM handles a stray space after the
 -- colon; a row that is nothing but the prefix is left alone rather than emptied.
+--
+-- Bounded to rows created before 2026-08-30, the day the template changed. Every file
+-- in this folder runs again on each deploy that applies migrations, and a cohort title
+-- is admin free text: without the date bound, a cohort an admin later names
+-- "SkillUp: Welding basics" would lose its prefix on the next deploy.
 UPDATE skill_up_cohorts
 SET title = TRIM(SUBSTRING(title FROM 10)),
     updated_at = NOW()
 WHERE title LIKE 'LevelUp: %'
-  AND TRIM(SUBSTRING(title FROM 10)) <> '';
+  AND TRIM(SUBSTRING(title FROM 10)) <> ''
+  AND created_at < TIMESTAMPTZ '2026-08-30 00:00:00+00';
 
 UPDATE skill_up_cohorts
 SET title = TRIM(SUBSTRING(title FROM 10)),
     updated_at = NOW()
 WHERE title LIKE 'SkillUp: %'
-  AND TRIM(SUBSTRING(title FROM 10)) <> '';
+  AND TRIM(SUBSTRING(title FROM 10)) <> ''
+  AND created_at < TIMESTAMPTZ '2026-08-30 00:00:00+00';
 
 
 -- ── post migration: 0010_skill_up_cohort_job_title_backfill.sql ──
@@ -10933,4 +11075,220 @@ UPDATE skills_hunt_submissions
  WHERE quora_profile_url_normalized ~ '^https://www\.quora\.com/profile/[^/]+/.+$';
 
 COMMIT;
+
+
+-- ── post migration: 0055_directory_landing_match_codes.sql ──
+-- post/0055: Saved matches and public skill counts for the landing page.
+--
+-- Why (owner decision, 2026-10-13): the public match page (landing-page-v4, on Vercel) is where a
+-- blog reader lands from Peace Battle 2. It shows how many people in the Directory list each job
+-- title, and lets the reader save a match as a code and come back to see who has been added, because
+-- the owner adds people most days. The page reads live counts instead of numbers pasted into it.
+--
+-- What it does: creates directory_landing_match_codes (code, job title, the count when saved, when
+-- it was saved, when it was last looked at; no name, contact detail or IP address) and two views,
+-- directory_public_skill_counts and directory_public_totals. Both give counts only, never a row
+-- about a person. The page's own login, landing_page, is created and
+-- granted in the Neon dashboard (ctf/scripts/sql/landing_page_login_grants.sql), not here.
+--
+-- Safe to re-run: IF NOT EXISTS on the table, columns and index, CREATE OR REPLACE on the views.
+BEGIN;
+CREATE TABLE IF NOT EXISTS directory_landing_match_codes (
+  code TEXT PRIMARY KEY,
+  job_title_id TEXT NOT NULL,
+  job_title_ids TEXT[],
+  people_at_save INTEGER,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  last_seen_at TIMESTAMPTZ
+);
+ALTER TABLE IF EXISTS directory_landing_match_codes ADD COLUMN IF NOT EXISTS job_title_id TEXT;
+ALTER TABLE IF EXISTS directory_landing_match_codes ADD COLUMN IF NOT EXISTS people_at_save INTEGER;
+ALTER TABLE IF EXISTS directory_landing_match_codes ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS directory_landing_match_codes ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ;
+-- The job titles behind the needs a visitor picked (job_title_id keeps the first, for older rows).
+ALTER TABLE IF EXISTS directory_landing_match_codes ADD COLUMN IF NOT EXISTS job_title_ids TEXT[];
+CREATE INDEX IF NOT EXISTS idx_directory_landing_match_codes_job_title ON directory_landing_match_codes (job_title_id);
+
+-- Who lists which job title, by their job title or any of their skills, claimed or unclaimed,
+-- leaving out owners restricted with scope all or contact. Not granted to the landing page: it
+-- holds profile ids. The two public views and directory_public_match_count read it. Ids are
+-- compared as text because some production id columns are VARCHAR.
+CREATE OR REPLACE VIEW directory_person_job_titles AS
+  WITH people AS (
+    SELECT p.id::text AS id, p.job_title_id::text AS job_title_id
+    FROM directory_profiles p
+    WHERE NOT EXISTS (
+      SELECT 1 FROM account_restrictions r
+      WHERE r.user_id::text = p.claimed_by_user_id::text
+        AND r.is_restricted
+        AND r.restriction_scope IN ('all', 'contact')
+    )
+  )
+  SELECT id AS person_id, job_title_id FROM people WHERE job_title_id IS NOT NULL
+  UNION
+  SELECT pp.id, sk.job_title_id::text
+  FROM people pp
+  JOIN directory_profile_skills ps ON ps.profile_id::text = pp.id
+  JOIN skills_taxonomy_skills sk ON sk.id::text = ps.skill_id::text;
+
+-- One row per active job title and how many people list it (0 when nobody does).
+CREATE OR REPLACE VIEW directory_public_skill_counts AS
+  WITH per_title AS (
+    SELECT job_title_id, COUNT(*)::integer AS n FROM directory_person_job_titles GROUP BY job_title_id
+  )
+  SELECT jt.id::text AS job_title_id,
+         s.name AS sector,
+         s.display_order AS sector_order,
+         jt.name AS title,
+         jt.display_order AS title_order,
+         COALESCE(pt.n, 0) AS people
+  FROM skills_taxonomy_job_titles jt
+  JOIN skills_taxonomy_sectors s ON s.id = jt.sector_id AND s.is_active
+  LEFT JOIN per_title pt ON pt.job_title_id = jt.id::text
+  WHERE jt.is_active;
+
+-- One row: everybody in the Directory, restriction rule as above.
+CREATE OR REPLACE VIEW directory_public_totals AS
+  WITH people AS (
+    SELECT p.id::text AS id
+    FROM directory_profiles p
+    WHERE NOT EXISTS (
+      SELECT 1 FROM account_restrictions r
+      WHERE r.user_id::text = p.claimed_by_user_id::text
+        AND r.is_restricted
+        AND r.restriction_scope IN ('all', 'contact')
+    )
+  )
+  SELECT (SELECT COUNT(*)::integer FROM people) AS total;
+
+-- How many people match a visitor: everyone who lists any of the given job titles, each counted
+-- once, as an exact number. Runs with its owner's rights so the landing page can call it
+-- without reading directory_person_job_titles itself; at most 60 titles per call.
+CREATE OR REPLACE FUNCTION directory_public_match_count(title_ids TEXT[])
+RETURNS INTEGER
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT n
+  FROM (
+    SELECT COUNT(DISTINCT person_id)::integer AS n
+    FROM directory_person_job_titles
+    WHERE job_title_id = ANY (title_ids[1:60])
+  ) x
+$$;
+REVOKE ALL ON FUNCTION directory_public_match_count(TEXT[]) FROM PUBLIC;
+COMMIT;
+
+
+-- ── post migration: 0056_landing_page_login_grants.sql ──
+-- post/0056: Keep the landing page's login able to read what it needs.
+--
+-- Why (2026-10-13): pre/0005 drops and schema.sql recreates directory_public_totals, and a dropped
+-- view takes its grants with it, so the landing page's counts would stop loading. This puts the
+-- access back after every run.
+--
+-- What it does: when the landing_page login exists, grants exactly what
+-- ctf/scripts/sql/landing_page_login_grants.sql grants: read the three count views, call the match count, read and add
+-- saved matches, set last_seen_at, replace what a saved match holds when it is saved again with
+-- the same code (2026-10-14), add in-demand needs. Nothing more. When the login does not exist yet (it is created by hand
+-- in the Neon dashboard), it does nothing.
+--
+-- Safe to re-run: granting what is already granted changes nothing.
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'landing_page') THEN
+    GRANT USAGE ON SCHEMA public TO landing_page;
+    GRANT SELECT ON directory_public_skill_counts, directory_public_totals TO landing_page;
+    GRANT SELECT, INSERT ON directory_landing_match_codes TO landing_page;
+    GRANT UPDATE (last_seen_at, job_title_id, job_title_ids, people_at_save, created_at) ON directory_landing_match_codes TO landing_page;
+    GRANT EXECUTE ON FUNCTION directory_public_match_count(TEXT[]) TO landing_page;
+    -- directory_unmet_needs comes from schema.sql (and post/0057); the guard keeps this file safe on a database without it.
+    IF to_regclass('public.directory_public_skill_coverage') IS NOT NULL THEN
+      GRANT SELECT ON directory_public_skill_coverage TO landing_page;
+    END IF;
+    IF to_regclass('public.directory_unmet_needs') IS NOT NULL THEN
+      GRANT INSERT ON directory_unmet_needs TO landing_page;
+      GRANT USAGE ON SEQUENCE directory_unmet_needs_id_seq TO landing_page;
+    END IF;
+  END IF;
+END $$;
+
+
+-- ── post migration: 0057_directory_unmet_needs.sql ──
+-- post/0057: In-demand needs from the landing page.
+--
+-- Why (owner decision, 2026-10-13): when a visitor picks a need and nobody in the Directory matches
+-- it, that demand was lost unless they saved a match. The page now records each such need once per
+-- visit, so the owner can see which needs go unmet and look for somebody to fill them.
+--
+-- What it does: creates directory_unmet_needs (need label, the job titles behind it, when). Nothing
+-- about the visitor is stored. post/0056 grants the landing page login INSERT on it, and nothing else.
+--
+-- Safe to re-run: IF NOT EXISTS on the table, columns and index.
+BEGIN;
+CREATE TABLE IF NOT EXISTS directory_unmet_needs (
+  id BIGSERIAL PRIMARY KEY,
+  need TEXT NOT NULL,
+  job_title_ids TEXT[] NOT NULL DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS directory_unmet_needs ADD COLUMN IF NOT EXISTS need TEXT;
+ALTER TABLE IF EXISTS directory_unmet_needs ADD COLUMN IF NOT EXISTS job_title_ids TEXT[] NOT NULL DEFAULT '{}';
+ALTER TABLE IF EXISTS directory_unmet_needs ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_directory_unmet_needs_need ON directory_unmet_needs (need, created_at DESC);
+COMMIT;
+
+
+-- ── post migration: 0058_directory_public_skill_coverage.sql ──
+-- post/0058: Skills coverage for the landing page.
+--
+-- Why (owner decision, 2026-10-14): the landing page states what share of the skills a small country
+-- runs on the people in the Directory already cover. It was typed into the page; this lets the page
+-- read it live, so it moves when the owner adds people.
+--
+-- What it does: creates directory_public_skill_coverage, one row with the number of different active
+-- skills at least one Directory profile lists and the number of active skills. The same query as the
+-- Workforce Skills Coverage tile. Grants the landing page login SELECT on it when that login exists.
+--
+-- Safe to re-run: CREATE OR REPLACE VIEW, and the grant is skipped when the role is missing.
+BEGIN;
+CREATE OR REPLACE VIEW directory_public_skill_coverage AS
+  SELECT
+    (SELECT COUNT(DISTINCT dps.skill_id)::integer
+       FROM directory_profile_skills dps
+       JOIN directory_profiles p ON dps.profile_id::text = p.id::text
+       JOIN skills_taxonomy_skills s ON s.id = dps.skill_id
+      WHERE s.is_active = TRUE) AS covered,
+    (SELECT COUNT(*)::integer FROM skills_taxonomy_skills WHERE is_active = TRUE) AS catalog;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'landing_page') THEN
+    GRANT SELECT ON directory_public_skill_coverage TO landing_page;
+  END IF;
+END $$;
+COMMIT;
+
+
+-- ── post migration: 0059_plugin_registry_gdp_skill_up_summaries.sql ──
+-- New wording on the GDP and SkillUp tiles in the apps list.
+--
+-- The GDP tile stated a $300B dollar figure. GDP is a unitless index in the app, and the only place a
+-- dollar figure for it may appear is the Workforce overview's Skills Economy Summary card. The
+-- SkillUp tile said learners earn credits at each milestone. A learner's own held deposit comes back
+-- at each milestone; new credits go to the trainer, not the learner.
+--
+-- schema.sql carries the same text in its registry seed. This sets it on an existing database too.
+-- It changes only these two summaries, and only while they still differ, so a second run changes
+-- nothing.
+UPDATE ctf_plugin_registry
+SET summary = 'Real time global survivor economic tracker. Your contributions counted, recorded, visible.',
+    updated_at = NOW()
+WHERE plugin_slug = 'gdp'
+  AND summary IS DISTINCT FROM 'Real time global survivor economic tracker. Your contributions counted, recorded, visible.';
+
+UPDATE ctf_plugin_registry
+SET summary = 'Skills-training cohorts with a trainer. Your credit deposit is held and comes back to you as you reach each milestone.',
+    updated_at = NOW()
+WHERE plugin_slug = 'skill-up'
+  AND summary IS DISTINCT FROM 'Skills-training cohorts with a trainer. Your credit deposit is held and comes back to you as you reach each milestone.';
 
