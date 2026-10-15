@@ -9,8 +9,8 @@ import {
   CONTRIBUTION_CONSENT_CLAUSES,
   CONTRIBUTION_CONSENT_NOTES,
   CONTRIBUTION_CONSENT_VERSION,
-} from '../../lib/comic/contribution-consent';
-import { MAX_LINKED_POSTS } from '../../lib/comic/contribution-links';
+} from '../../lib/comic/shared-writing-consent';
+import { MAX_LINKED_POSTS } from '../../lib/comic/shared-writing-links';
 import { failureText, responseFailureText } from 'lib/errors/client-failure';
 import { QuoraExportFaqSection } from './comic-quora-export-faq';
 
@@ -22,7 +22,7 @@ import { QuoraExportFaqSection } from './comic-quora-export-faq';
 // a standing source of confusion (owner decision, 2026-07-29).
 //
 // The consent form is ON this page, not a separate document behind a link, because a link is a thing
-// people click past. The clauses render from lib/comic/contribution-consent.ts — the same module the
+// people click past. The clauses render from lib/comic/shared-writing-consent.ts — the same module the
 // server version-stamps into the stored record — so what is displayed and what is agreed to cannot
 // come apart.
 //
@@ -31,7 +31,7 @@ import { QuoraExportFaqSection } from './comic-quora-export-faq';
 
 type LinkedPostDraft = { url: string; text: string };
 
-type ContributionSummary = {
+type SharedWritingSummary = {
   id: string;
   kind: 'links' | 'export';
   status: 'pending_review' | 'accepted' | 'declined' | 'withdrawn';
@@ -43,8 +43,8 @@ type ContributionSummary = {
 
 type Mode = 'links' | 'export';
 type ComicTokens = ReturnType<typeof getComicTokens>;
-type ContributionResponse = {
-  contribution?: ContributionSummary;
+type SharedWritingResponse = {
+  contribution?: SharedWritingSummary;
   message?: string;
   unlockLink?: string;
 };
@@ -53,7 +53,7 @@ type ContributionResponse = {
 // so the page says why it is missing rather than leaving the section out with no word.
 const HISTORY_LOAD_FAILED = 'Could not load what you have sent, so it cannot be withdrawn from here right now. Reload the page to try again.';
 
-const STATUS_LABEL: Record<ContributionSummary['status'], string> = {
+const STATUS_LABEL: Record<SharedWritingSummary['status'], string> = {
   pending_review: 'Waiting to be read',
   accepted: 'In the library',
   declined: 'Not used',
@@ -78,7 +78,7 @@ const MODE_OPTIONS: { value: Mode; label: string; hint: string }[] = [
 
 // Build the multipart form body the contributions endpoint expects. Kept out of the submit handler
 // so that handler stays a thin orchestration: build → send → apply the result.
-function buildContributionPayload(input: {
+function buildSharedWritingPayload(input: {
   mode: Mode;
   file: File | null;
   filledPosts: LinkedPostDraft[];
@@ -107,7 +107,7 @@ function buildContributionPayload(input: {
 // All contribution state, the network calls, and the derived flags. Grouped into one hook so the
 // component tree below is plain rendering. Hooks run in a fixed order (all state, then the history
 // loader, then the effect) and are never conditional.
-function useKnowledgeContribution(askForQuoraUrl: boolean) {
+function useKnowledgeSharedWriting(askForQuoraUrl: boolean) {
   const [mode, setMode] = useState<Mode>('links');
   const [posts, setPosts] = useState<LinkedPostDraft[]>([{ url: '', text: '' }]);
   const [agreed, setAgreed] = useState<Set<string>>(new Set());
@@ -118,11 +118,11 @@ function useKnowledgeContribution(askForQuoraUrl: boolean) {
   const [file, setFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [receipt, setReceipt] = useState<ContributionSummary | null>(null);
+  const [receipt, setReceipt] = useState<SharedWritingSummary | null>(null);
   // What happened to the Unlock submission this contribution opened, so the receipt can say so.
   // Silence here would leave a member unsure whether they still need to verify separately.
   const [unlockLink, setUnlockLink] = useState<string | null>(null);
-  const [history, setHistory] = useState<ContributionSummary[]>([]);
+  const [history, setHistory] = useState<SharedWritingSummary[]>([]);
   // Why the history list could not be loaded. Without it the list, and each Withdraw button in it,
   // would vanish with no word on the page.
   const [historyError, setHistoryError] = useState<string | null>(null);
@@ -131,12 +131,12 @@ function useKnowledgeContribution(askForQuoraUrl: boolean) {
 
   const loadHistory = useCallback(async () => {
     try {
-      const res = await fetch('/api/comic/contributions', { cache: 'no-store' });
+      const res = await fetch('/api/comic/shared-writing', { cache: 'no-store' });
       if (!res.ok) {
         setHistoryError(await responseFailureText(res, HISTORY_LOAD_FAILED, 'member'));
         return;
       }
-      const data = (await res.json()) as { contributions?: ContributionSummary[] };
+      const data = (await res.json()) as { contributions?: SharedWritingSummary[] };
       setHistory(Array.isArray(data.contributions) ? data.contributions : []);
       setHistoryError(null);
     } catch (caught) {
@@ -195,7 +195,7 @@ function useKnowledgeContribution(askForQuoraUrl: boolean) {
 
   // Applies the server's answer: an error message on failure, or the receipt plus a full form reset
   // on success. Split out of submit so submit itself stays small.
-  function handleSubmitResponse(ok: boolean, data: ContributionResponse | null) {
+  function handleSubmitResponse(ok: boolean, data: SharedWritingResponse | null) {
     if (!ok || !data?.contribution) {
       setError(data?.message ?? 'Could not send that file. Nothing was kept.');
       return;
@@ -215,10 +215,10 @@ function useKnowledgeContribution(askForQuoraUrl: boolean) {
     setSubmitting(true);
     setError(null);
     try {
-      const res = await fetch('/api/comic/contributions', {
+      const res = await fetch('/api/comic/shared-writing', {
         method: 'POST',
         headers: { 'x-ctf-csrf': '1' },
-        body: buildContributionPayload({
+        body: buildSharedWritingPayload({
           mode,
           file,
           filledPosts,
@@ -228,7 +228,7 @@ function useKnowledgeContribution(askForQuoraUrl: boolean) {
           quoraProfileUrl,
         }),
       });
-      const data = (await res.json().catch(() => null)) as ContributionResponse | null;
+      const data = (await res.json().catch(() => null)) as SharedWritingResponse | null;
       handleSubmitResponse(res.ok, data);
     } catch (caught) {
       setError(failureText(caught, { area: 'comic', op: 'submit', fallback: 'Could not reach the server. Nothing was sent.', audience: 'member' }));
@@ -239,7 +239,7 @@ function useKnowledgeContribution(askForQuoraUrl: boolean) {
 
   async function withdraw(id: string) {
     try {
-      const res = await fetch(`/api/comic/contributions/${id}/withdraw`, {
+      const res = await fetch(`/api/comic/shared-writing/${id}/withdraw`, {
         method: 'POST',
         headers: { 'x-ctf-csrf': '1' },
       });
@@ -284,7 +284,7 @@ function useKnowledgeContribution(askForQuoraUrl: boolean) {
 export function ComicKnowledgeShell({ askForQuoraUrl = false }: { askForQuoraUrl?: boolean }) {
   const { theme } = useTheme();
   const t = getComicTokens(theme);
-  const c = useKnowledgeContribution(askForQuoraUrl);
+  const c = useKnowledgeSharedWriting(askForQuoraUrl);
 
   return (
     <main style={{ minHeight: '100dvh', background: t.BG, color: t.TITLE, fontFamily: "'Inter',system-ui,sans-serif" }}>
@@ -821,7 +821,7 @@ function ReceiptSection({
   unlockLink,
 }: {
   t: ComicTokens;
-  receipt: ContributionSummary;
+  receipt: SharedWritingSummary;
   unlockLink: string | null;
 }) {
   return (
@@ -875,7 +875,7 @@ function HistorySection({
   onWithdraw,
 }: {
   t: ComicTokens;
-  history: ContributionSummary[];
+  history: SharedWritingSummary[];
   onWithdraw: (id: string) => void;
 }) {
   return (
@@ -894,7 +894,7 @@ function HistoryRow({
   onWithdraw,
 }: {
   t: ComicTokens;
-  item: ContributionSummary;
+  item: SharedWritingSummary;
   onWithdraw: (id: string) => void;
 }) {
   return (

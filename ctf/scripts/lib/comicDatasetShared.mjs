@@ -7,7 +7,7 @@ import { createHash } from "node:crypto";
 // THE canonical comic_knowledge_entries.content_hash formula. The hash is what stops the same
 // writing being stored twice, so every place that writes one must agree on it: the importer
 // (importComicKnowledge.mjs) and — across the package boundary, which cannot import this file — the
-// member-contribution accept path (packages/web/app/api/comic/admin/contributions/[id]/review/
+// member-contribution accept path (packages/web/app/api/comic/admin/shared-writing/[id]/review/
 // route.ts). Change the formula here and that route must change in the same commit.
 //
 // The separator is NUL, written as the escape rather than a literal NUL byte so this file stays

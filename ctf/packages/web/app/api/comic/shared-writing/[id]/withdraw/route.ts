@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { ensureMutationCsrf, requireComicContributionAccess } from '../../../_lib';
+import { ensureMutationCsrf, requireComicSharedWritingAccess } from '../../../_lib';
 import { COMIC_ERROR_CODE } from 'lib/comic/constants';
 import { logComicAudit } from 'lib/comic/audit';
-import { withdrawContribution } from 'lib/comic/contribution-repository';
+import { withdrawSharedWriting } from 'lib/comic/shared-writing-repository';
 import { reportError } from 'lib/observability/report';
 
 export const dynamic = 'force-dynamic';
@@ -18,7 +18,7 @@ type RouteContext = { params: Promise<{ id: string }> };
 // that marks it withdrawn, so there is no window where the submission reads as withdrawn while the
 // assistant is still quoting it.
 export async function POST(request: Request, context: RouteContext) {
-  const gate = await requireComicContributionAccess();
+  const gate = await requireComicSharedWritingAccess();
   if (!gate.allowed) return gate.response;
 
   const csrfDeny = ensureMutationCsrf(request);
@@ -29,7 +29,7 @@ export async function POST(request: Request, context: RouteContext) {
   try {
     // Scoped to the caller inside the query — a member can only withdraw their own contribution, and
     // an id belonging to someone else is indistinguishable from one that does not exist.
-    const withdrawn = await withdrawContribution(gate.auth.userId, id);
+    const withdrawn = await withdrawSharedWriting(gate.auth.userId, id);
     if (!withdrawn) {
       return NextResponse.json(
         {

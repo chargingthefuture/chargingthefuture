@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireComicAdminAccess } from '../../_lib';
 import { COMIC_ERROR_CODE } from 'lib/comic/constants';
-import { listContributionsForReview } from 'lib/comic/contribution-repository';
+import { listSharedWritingForReview } from 'lib/comic/shared-writing-repository';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
 
@@ -24,7 +24,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const contributions = await listContributionsForReview(status);
+    const contributions = await listSharedWritingForReview(status);
     return NextResponse.json({ ok: true, contributions }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'comic', op: 'admin_contributions_list' });

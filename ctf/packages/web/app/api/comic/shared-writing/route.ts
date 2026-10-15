@@ -1,21 +1,21 @@
 import { NextResponse } from 'next/server';
-import { ensureMutationCsrf, requireComicContributionAccess } from '../_lib';
+import { ensureMutationCsrf, requireComicSharedWritingAccess } from '../_lib';
 import { COMIC_ERROR_CODE } from 'lib/comic/constants';
 import { logComicAudit } from 'lib/comic/audit';
-import { readQuoraExportArchive } from 'lib/comic/contribution-archive';
+import { readQuoraExportArchive } from 'lib/comic/shared-writing-archive';
 import { dedupeContributedEntries, parseQuoraExportHtml } from 'lib/comic/quora-export-intake';
 import type { ContributedEntry } from 'lib/comic/quora-export-intake';
 import {
   CONTRIBUTION_CONSENT_VERSION,
   hasAgreedToEveryClause,
-} from 'lib/comic/contribution-consent';
+} from 'lib/comic/shared-writing-consent';
 import {
-  countRecentContributions,
-  createContribution,
-  listContributionsForUser,
-} from 'lib/comic/contribution-repository';
-import { validateLinkedPosts } from 'lib/comic/contribution-links';
-import { linkContributionToUnlock } from 'lib/comic/contribution-unlock-link';
+  countRecentSharedWriting,
+  createSharedWriting,
+  listSharedWritingForUser,
+} from 'lib/comic/shared-writing-repository';
+import { validateLinkedPosts } from 'lib/comic/shared-writing-links';
+import { linkSharedWritingToUnlock } from 'lib/comic/shared-writing-unlock-link';
 import { reportError } from 'lib/observability/report';
 
 export const dynamic = 'force-dynamic';
@@ -35,7 +35,7 @@ function badRequest(message: string, code: string = COMIC_ERROR_CODE.invalidPayl
 type IntakeResult = { error: NextResponse } | { entries: ContributedEntry[]; discarded: string[] };
 
 // A request validated up to (but not including) the rate-limit check and content intake.
-type PreparedContribution =
+type PreparedSharedWriting =
   | { error: NextResponse }
   | { form: FormData; kind: 'links' | 'export'; file: File | null };
 
@@ -80,7 +80,7 @@ function validateUpload(form: FormData): { error: NextResponse } | { file: File 
 
 // Parse the request up to the file: form body, chosen path, consent, and (export only) upload
 // validation. Kept before the rate-limit check so a malformed upload still 400s rather than 429s.
-async function prepareContribution(request: Request): Promise<PreparedContribution> {
+async function prepareSharedWriting(request: Request): Promise<PreparedSharedWriting> {
   let form: FormData;
   try {
     form = await request.formData();
@@ -155,7 +155,7 @@ async function intakeExport(file: File): Promise<IntakeResult> {
 }
 
 // Store the surviving entries and record the consent (never the content), then respond.
-async function storeContribution(params: {
+async function storeSharedWriting(params: {
   form: FormData;
   userId: string;
   kind: 'links' | 'export';
@@ -164,7 +164,7 @@ async function storeContribution(params: {
 }): Promise<NextResponse> {
   const { form, userId, kind, entries, discarded } = params;
 
-  const contribution = await createContribution({
+  const contribution = await createSharedWriting({
     userId,
     kind,
     consentVersion: CONTRIBUTION_CONSENT_VERSION,
@@ -177,7 +177,7 @@ async function storeContribution(params: {
   // one here, open an Unlock submission from it. Best-effort and AFTER the contribution is stored —
   // the writing is already safe, and a failure here just means they verify the ordinary way.
   // It creates a pending submission, never an approval; the owner still decides.
-  const unlockLink = await linkContributionToUnlock({
+  const unlockLink = await linkSharedWritingToUnlock({
     userId,
     quoraProfileUrl: typeof form.get('quoraProfileUrl') === 'string' ? String(form.get('quoraProfileUrl')) : null,
     contributionId: contribution.id,
@@ -209,11 +209,11 @@ async function storeContribution(params: {
 
 // GET: the member's own contribution history, for the page's status list.
 export async function GET() {
-  const gate = await requireComicContributionAccess();
+  const gate = await requireComicSharedWritingAccess();
   if (!gate.allowed) return gate.response;
 
   try {
-    const contributions = await listContributionsForUser(gate.auth.userId);
+    const contributions = await listSharedWritingForUser(gate.auth.userId);
     return NextResponse.json({ ok: true, contributions }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'comic', op: 'contributions_list' });
@@ -234,18 +234,18 @@ export async function GET() {
 //   4. store only what survived. The uploaded archive is never written to disk and is gone as soon
 //      as this request ends.
 export async function POST(request: Request) {
-  const gate = await requireComicContributionAccess();
+  const gate = await requireComicSharedWritingAccess();
   if (!gate.allowed) return gate.response;
 
   const csrfDeny = ensureMutationCsrf(request);
   if (csrfDeny) return csrfDeny;
 
-  const prepared = await prepareContribution(request);
+  const prepared = await prepareSharedWriting(request);
   if ('error' in prepared) return prepared.error;
   const { form, kind, file } = prepared;
 
   try {
-    if ((await countRecentContributions(gate.auth.userId, 24)) >= MAX_CONTRIBUTIONS_PER_DAY) {
+    if ((await countRecentSharedWriting(gate.auth.userId, 24)) >= MAX_CONTRIBUTIONS_PER_DAY) {
       return NextResponse.json(
         {
           ok: false,
@@ -259,7 +259,7 @@ export async function POST(request: Request) {
     const intake = kind === 'links' ? intakeLinks(form) : await intakeExport(file as File);
     if ('error' in intake) return intake.error;
 
-    return await storeContribution({
+    return await storeSharedWriting({
       form,
       userId: gate.auth.userId,
       kind,

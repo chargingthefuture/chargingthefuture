@@ -10,8 +10,8 @@ import { join } from 'node:path';
 // a second grant, a plugin reaching into Unlock, or an approval that fails because a grant did.
 const webRoot = join(__dirname, '..', '..');
 const catchUpSource = readFileSync(join(__dirname, 'approval-catch-up.ts'), 'utf8');
-const grantSource = readFileSync(join(__dirname, 'contribution-grant.ts'), 'utf8');
-const repositorySource = readFileSync(join(__dirname, 'contribution-repository.ts'), 'utf8');
+const grantSource = readFileSync(join(__dirname, 'shared-writing-grant.ts'), 'utf8');
+const repositorySource = readFileSync(join(__dirname, 'shared-writing-repository.ts'), 'utf8');
 const interfaceSource = readFileSync(join(webRoot, 'lib', 'shared', 'unlock-approval-interface.ts'), 'utf8');
 const reviewRouteSource = readFileSync(
   join(webRoot, 'app', 'api', 'unlock', 'admin', 'submissions', '[submissionId]', 'review', 'route.ts'),
@@ -28,7 +28,7 @@ function functionBody(source: string, declaration: string): string {
 }
 
 describe('only writing that is owed credits is granted', () => {
-  const list = functionBody(repositorySource, 'export async function listUngrantedAcceptedContributionIds');
+  const list = functionBody(repositorySource, 'export async function listUngrantedAcceptedSharedWritingIds');
 
   it('reads only this member’s accepted, ungranted contributions', () => {
     expect(list).toContain('user_id = $1');
@@ -37,25 +37,25 @@ describe('only writing that is owed credits is granted', () => {
   });
 
   it('grants through the same function the accept route uses, so the same checks apply', () => {
-    const body = functionBody(catchUpSource, 'export async function grantHeldContributionCredits');
-    expect(body).toContain('grantContributionRecognition(');
+    const body = functionBody(catchUpSource, 'export async function grantHeldSharedWritingCredits');
+    expect(body).toContain('grantSharedWritingCredits(');
     expect(catchUpSource).not.toContain('mintGrant');
   });
 });
 
 describe('nothing is granted twice', () => {
   it('stamps before minting and keys the mint on the contribution', () => {
-    const grant = functionBody(grantSource, 'export async function grantContributionRecognition');
-    expect(grant.indexOf('markContributionGranted(')).toBeGreaterThan(-1);
-    expect(grant.indexOf('markContributionGranted(')).toBeLessThan(grant.indexOf('mintGrant('));
+    const grant = functionBody(grantSource, 'export async function grantSharedWritingCredits');
+    expect(grant.indexOf('markSharedWritingGranted(')).toBeGreaterThan(-1);
+    expect(grant.indexOf('markSharedWritingGranted(')).toBeLessThan(grant.indexOf('mintGrant('));
     expect(grant).toContain('idempotencyKey: `comic-contribution-${input.contributionId}`');
   });
 
   it('clears the stamp only when the mint throws, so the grant can be tried again', () => {
-    const grant = functionBody(grantSource, 'export async function grantContributionRecognition');
+    const grant = functionBody(grantSource, 'export async function grantSharedWritingCredits');
     const catchAt = grant.indexOf('} catch (error) {');
     expect(catchAt).toBeGreaterThan(grant.indexOf('mintGrant('));
-    expect(grant.slice(catchAt)).toContain('clearContributionGranted(input.contributionId)');
+    expect(grant.slice(catchAt)).toContain('clearSharedWritingGranted(input.contributionId)');
   });
 });
 
@@ -68,7 +68,7 @@ describe('the plugins stay isolated, and an approval never fails because a grant
 
   it('catches the grant’s failure in the interface and reports it', () => {
     const run = functionBody(interfaceSource, 'export async function runUnlockApprovalCatchUp');
-    const at = run.indexOf('grantHeldContributionCredits(');
+    const at = run.indexOf('grantHeldSharedWritingCredits(');
     expect(at).toBeGreaterThan(-1);
     expect(run.slice(0, at).lastIndexOf('try {')).toBeGreaterThan(-1);
     expect(run).toContain("op: 'comic_held_contribution_credits'");

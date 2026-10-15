@@ -35,7 +35,7 @@ export async function requireComicReadAccess(): Promise<ComicApiGate> {
 // writing with their Quora profile URL; the owner has to look at that URL to judge the contribution
 // anyway, and that same look is the Unlock review. Requiring Unlock first would make the front door
 // depend on the room behind it.
-export async function requireComicContributionAccess(): Promise<ComicApiGate> {
+export async function requireComicSharedWritingAccess(): Promise<ComicApiGate> {
   const decision = await evaluatePluginAccess({ minUnlockTier: 'any_authenticated', requireUsername: false });
   if (!decision.allowed) {
     return {

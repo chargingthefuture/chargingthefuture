@@ -3,8 +3,8 @@ import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireComicAdminAccess } from '../../../../_lib';
 import { COMIC_ERROR_CODE } from 'lib/comic/constants';
 import { recordComicAdminAudit } from 'lib/comic/audit';
-import { acceptContribution, declineContribution } from 'lib/comic/contribution-repository';
-import { grantContributionRecognition } from 'lib/comic/contribution-grant';
+import { acceptSharedWriting, declineSharedWriting } from 'lib/comic/shared-writing-repository';
+import { grantSharedWritingCredits } from 'lib/comic/shared-writing-grant';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
 
@@ -64,7 +64,7 @@ async function handleDecline(id: string, reviewerId: string, rawReason: unknown)
     );
   }
 
-  const declined = await declineContribution({ contributionId: id, reviewerId, reason });
+  const declined = await declineSharedWriting({ contributionId: id, reviewerId, reason });
   if (!declined) {
     await auditReviewFailure(id, reviewerId, 'decline', { status: 'deny', errorCategory: 'not_found' });
     return NextResponse.json(
@@ -94,7 +94,7 @@ async function handleAccept(id: string, reviewerId: string, rawExcluded: unknown
     ? rawExcluded.filter((value): value is string => typeof value === 'string')
     : [];
 
-  const accepted = await acceptContribution({
+  const accepted = await acceptSharedWriting({
     contributionId: id,
     reviewerId,
     excludedEntryIds,
@@ -108,7 +108,7 @@ async function handleAccept(id: string, reviewerId: string, rawExcluded: unknown
     );
   }
 
-  const grant = await grantContributionRecognition({
+  const grant = await grantSharedWritingCredits({
     contributionId: id,
     contributorUserId: accepted.contributorUserId,
     reviewerId,
@@ -162,7 +162,7 @@ async function handleAccept(id: string, reviewerId: string, rawExcluded: unknown
 // recognition, and a mint outage must not cost the library the writing or make the reviewer redo the
 // reading. A failed grant is reported back so it can be retried by hand.
 //
-// Only an unlocked member receives credits (see lib/comic/contribution-grant.ts). Anyone signed in
+// Only an unlocked member receives credits (see lib/comic/shared-writing-grant.ts). Anyone signed in
 // may contribute.
 export async function POST(request: Request, context: RouteContext) {
   const gate = await requireComicAdminAccess();

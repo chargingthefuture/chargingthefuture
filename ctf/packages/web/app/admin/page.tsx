@@ -66,7 +66,7 @@ const ADMIN_AREAS: { href: string; name: string; slug?: string }[] = [
   // in the admin directory on its own.
   // Its own slug: the last segment is `contributions`, which is the Contributions area's key, so
   // without it this tile showed the Contributions queue's dot and opening it cleared that dot.
-  { href: '/admin/comic/contributions', name: 'Contributed Writing', slug: 'comic-contributions' },
+  { href: '/admin/comic/shared-writing', name: 'Shared Writing', slug: 'comic-shared-writing' },
   // Curation of the assistant's grounding library: switch what the assistant can quote off/on.
   { href: '/admin/comic/knowledge', name: 'AI Knowledge Base' },
   // Moderating the conversation under the blog posts: the blog-export queue, every comment, the
