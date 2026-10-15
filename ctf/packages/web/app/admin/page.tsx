@@ -7,9 +7,11 @@ import { getAdminAreaAttention } from 'lib/admin/area-attention';
 import { AdminAreaGrid, type AdminAreaTile } from './admin-area-grid';
 
 // The area's stable slug is the last segment of its href (e.g. /admin/bug-reports → 'bug-reports'),
-// which is the key the attention signal and the seen-marker are keyed on.
-function areaSlug(href: string): string {
-  return href.split('/').filter(Boolean).pop() ?? href;
+// which is the key the attention signal and the seen-marker are keyed on. An area whose last segment
+// another area already ends in names its own `slug`: two tiles sharing a key share a dot, so one
+// area's new item lit the other and opening either cleared both.
+function areaSlug(area: { href: string; slug?: string }): string {
+  return area.slug ?? area.href.split('/').filter(Boolean).pop() ?? area.href;
 }
 
 export const dynamic = 'force-dynamic';
@@ -20,7 +22,7 @@ export const dynamic = 'force-dynamic';
 // Compact launcher (owner decision, 2026-07-19): names only — no descriptions — so two columns
 // fit even at phone width and the list needs far less scrolling. Alphabetical, except Unlock
 // and AI Assistant pinned to the top (the two areas checked constantly).
-const ADMIN_AREAS: { href: string; name: string }[] = [
+const ADMIN_AREAS: { href: string; name: string; slug?: string }[] = [
   { href: '/admin/unlock', name: 'Unlock' },
   { href: '/admin/comic', name: 'AI Assistant' },
   { href: '/admin/beacon', name: 'Beacon' },
@@ -62,7 +64,9 @@ const ADMIN_AREAS: { href: string; name: string }[] = [
   // Review of member-contributed writing for the assistant's library. Its own area rather than a tab
   // inside AI Assistant: it has its own queue, and a contribution waiting to be read should show up
   // in the admin directory on its own.
-  { href: '/admin/comic/contributions', name: 'Contributed Writing' },
+  // Its own slug: the last segment is `contributions`, which is the Contributions area's key, so
+  // without it this tile showed the Contributions queue's dot and opening it cleared that dot.
+  { href: '/admin/comic/contributions', name: 'Contributed Writing', slug: 'comic-contributions' },
   // Curation of the assistant's grounding library: switch what the assistant can quote off/on.
   { href: '/admin/comic/knowledge', name: 'AI Knowledge Base' },
   // Read-only: each @comic question about Unlock from a member not yet approved, and whether that
@@ -155,7 +159,7 @@ export default async function AdminPage() {
   // no dot (the landing must always render).
   const attention = await getAdminAreaAttention(decision.userId).catch(() => ({} as Record<string, boolean>));
   const tiles: AdminAreaTile[] = ADMIN_AREAS.map((area) => {
-    const slug = areaSlug(area.href);
+    const slug = areaSlug(area);
     return { href: area.href, name: area.name, slug, hasNew: attention[slug] === true };
   });
 
