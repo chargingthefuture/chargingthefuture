@@ -146,6 +146,10 @@
 - Every announcement has a dismiss control — there is no mandatory/non-dismissable announcement.
 - (API-level, if inspecting the response) the `dismissedAt` value in the dismiss response is the
   timestamp the database stored, not one the route computed — it matches the persisted row.
+- (API-level, added 2026-10-12, #2891) `POST /api/announcements/not-a-uuid/dismiss` and
+  `/read` with `x-ctf-csrf: 1` answer 400 `FEED_INVALID_PAYLOAD`. The same calls with a well-formed
+  id that matches no announcement answer 404 `FEED_NOT_FOUND`, and the read call stores no row in
+  `announcement_user_state`. Neither is a 503.
 
 **Result:** web ☐
 
