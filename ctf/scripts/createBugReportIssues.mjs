@@ -58,7 +58,7 @@ function buildIssueBody(row) {
   lines.push('## Context');
   lines.push('');
   lines.push(`- Report id: \`${row.id}\``);
-  lines.push(`- Page: ${row.page_url || '(unknown)'}`);
+  lines.push(`- Page: ${pageAddressOnly(row.page_url) || '(unknown)'}`);
   lines.push(`- Plugin: ${row.plugin_slug || '(unknown)'}`);
   lines.push(`- App version: ${row.app_version || '(unknown)'}`);
   lines.push(`- Filed: ${new Date(row.created_at).toISOString()}`);
@@ -67,6 +67,18 @@ function buildIssueBody(row) {
   lines.push('Next: a triage agent investigates and proposes a fix plan, then waits for the owner to');
   lines.push('add the `approved-to-build` label before any branch or PR is created.');
   return lines.join('\n');
+}
+
+// Reports stored before the app dropped the query string and `#` part from the page address may
+// still carry one (search terms, an email, a sign-in token); never publish it to the triage issue.
+function pageAddressOnly(value) {
+  if (!value) return '';
+  try {
+    const url = new URL(value);
+    return `${url.origin}${url.pathname}`;
+  } catch {
+    return String(value).split(/[?#]/, 1)[0];
+  }
 }
 
 function buildIssueTitle(row) {

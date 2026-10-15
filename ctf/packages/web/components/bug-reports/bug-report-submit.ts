@@ -4,6 +4,7 @@
 // React components so the mapping is unit-readable and reusable (rule 116).
 
 import { BUG_REPORT_STATUS, type BugReportStatus } from '@/lib/bug-reports/constants';
+import { reportError } from '@/lib/observability/report';
 
 // Every mutating request to a CTF route carries this header; the server rejects a
 // POST without it (see app/api/bug-reports/_lib.ts → ensureMutationCsrf).
@@ -22,8 +23,8 @@ export type BugReportSubmitResult =
 export type BugReportSubmitInput = {
   message: string;
   context: string;
-  // Page the member was on when they opened the report. The server caps it at 512
-  // characters; we send the entire href and let the server trim.
+  // Page the member was on when they opened the report: origin and path only. The server
+  // drops any query string or `#` part again and caps it at 512 characters.
   pageUrl?: string;
   // Plugin the member was using, if the surface could work it out. Optional.
   pluginSlug?: string;
@@ -68,9 +69,11 @@ export async function submitBugReport(
       headers: BUG_REPORT_CSRF_HEADERS,
       body: JSON.stringify(payload),
     });
-  } catch {
+  } catch (caught) {
     // Network failure (offline, dropped request). Treated like any other failure:
-    // the typed text is preserved and the member can try again.
+    // the typed text is preserved and the member can try again. The one report a member
+    // files to say something is broken must not fail silently itself.
+    reportError(caught, { area: 'bug-reports', op: 'submit-network' });
     return { kind: 'error' };
   }
 

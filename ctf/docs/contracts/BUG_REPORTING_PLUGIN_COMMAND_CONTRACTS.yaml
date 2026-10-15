@@ -222,7 +222,7 @@ contracts:
       400: bug_reports.invalid_payload — "Invalid report id.", "Invalid JSON body.", a body that is not a JSON object (for example `null`), or action not release or reject.
       401: AUTH_UNAUTHORIZED — not signed in (shared deny body).
       403: AUTH_FORBIDDEN_ROLE (not an admin, shared deny body) or bug_reports.csrf_denied (header or origin check failed).
-      409: bug_reports.forbidden — no row changed; the report does not exist or is already in a status the action cannot move. Message "Report is not in a state that can be resolved."
+      409: bug_reports.conflict — no row changed; the report does not exist or is already in a status the action cannot move. Message "Report is not in a state that can be resolved."
       503: bug_reports.persistence_unavailable — message "Unable to resolve this report" followed by the failure reason; reported to observability (op admin-resolve).
     audit: >-
       Writes one bug_report_admin_audit_trail row on 200, 409 and 503. Nothing is written for 400,

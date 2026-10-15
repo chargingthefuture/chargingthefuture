@@ -110,7 +110,7 @@ policies:
       - AUTH_FORBIDDEN_ROLE (403) — signed in without the admin role
       - bug_reports.csrf_denied (403) — x-ctf-csrf header missing, or Origin unparseable or from another host
       - bug_reports.invalid_payload (400) — report id is not a UUID, body is not valid JSON, or action is not release or reject
-      - bug_reports.forbidden (409) — report missing or not in a status the action can move (audited as deny, reason not_resolvable)
+      - bug_reports.conflict (409) — report missing or not in a status the action can move (audited as deny, reason not_resolvable)
     notes: >-
       Every attempt that reaches the status update writes a bug_report_admin_audit_trail row: success,
       the 409 refusal, and a database failure. The 401, 403 and 400 refusals happen before that step

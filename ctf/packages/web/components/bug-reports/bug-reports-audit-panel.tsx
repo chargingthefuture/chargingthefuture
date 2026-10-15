@@ -101,8 +101,8 @@ export function BugReportsAuditPanel({ t }: { t: BugReportsTokens }) {
       }
       const data = (await res.json()) as { events?: AuditEvent[] };
       setEvents(data.events ?? []);
-    } catch {
-      setErr('Could not load the audit trail.');
+    } catch (caught) {
+      setErr(`Could not load the audit trail: ${caught instanceof Error ? caught.message : String(caught)}`);
     } finally {
       setLoading(false);
     }
