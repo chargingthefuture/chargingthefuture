@@ -30,7 +30,7 @@ import { reportError } from 'lib/observability/report';
 // admin card links to; this one is a matching key that happens to still open the right profile.
 //
 // It lives in lib/ rather than beside the Unlock routes because the knowledge-library contribution
-// path now opens an Unlock submission too (lib/comic/contribution-unlock-link.ts), and lib must not
+// path now opens an Unlock submission too (lib/comic/shared-writing-unlock-link.ts), and lib must not
 // import from app. `app/api/unlock/_lib.ts` re-exports it so every existing caller is unchanged.
 //
 // NOT the same as `normalizeQuoraProfileUrl` in lib/directory/quora-url.ts, which deliberately

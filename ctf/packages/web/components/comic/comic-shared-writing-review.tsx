@@ -27,7 +27,7 @@ type ReviewEntry = {
   promoted: boolean;
 };
 
-type ReviewContribution = {
+type ReviewSharedWriting = {
   id: string;
   kind: 'links' | 'export';
   status: string;
@@ -66,7 +66,7 @@ function grantLine(grant: ReviewResult['grant']): string {
   if (grant?.status === 'skipped_not_unlocked') {
     return 'No credits yet: this member is not verified. The writing is in the library; the credits are granted when they finish Unlock.';
   }
-  if (grant?.status === 'already_granted') return 'Credits were already granted for this contribution.';
+  if (grant?.status === 'already_granted') return 'Credits were already granted for this writing.';
   return `The credits grant did not go through (${grant?.reason ?? 'no reason given'}). Nothing was granted.`;
 }
 
@@ -75,11 +75,11 @@ function acceptNotice(data: ReviewResult | null): string {
   return `Accepted. ${data?.promoted ?? 0} added to the library${alreadyThere}. ${grantLine(data?.grant)}`;
 }
 
-export function ComicContributionReview() {
+export function ComicSharedWritingReview() {
   const { theme } = useTheme();
   const t = getComicTokens(theme);
 
-  const [contributions, setContributions] = useState<ReviewContribution[]>([]);
+  const [contributions, setContributions] = useState<ReviewSharedWriting[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -93,12 +93,12 @@ export function ComicContributionReview() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/comic/admin/contributions?status=pending_review', { cache: 'no-store' });
+      const res = await fetch('/api/comic/admin/shared-writing?status=pending_review', { cache: 'no-store' });
       const data = (await res.json().catch(() => null)) as
-        | { contributions?: ReviewContribution[]; message?: string }
+        | { contributions?: ReviewSharedWriting[]; message?: string }
         | null;
       if (!res.ok) {
-        setError(data?.message ?? 'Could not load contributions.');
+        setError(data?.message ?? 'Could not load shared writing.');
       } else {
         setContributions(data?.contributions ?? []);
         setError(null);
@@ -133,7 +133,7 @@ export function ComicContributionReview() {
         [...(excluded[contributionId] ?? [])],
         declineReason[contributionId] ?? '',
       );
-      const res = await fetch(`/api/comic/admin/contributions/${contributionId}/review`, {
+      const res = await fetch(`/api/comic/admin/shared-writing/${contributionId}/review`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
         body: JSON.stringify(payload),
@@ -145,7 +145,7 @@ export function ComicContributionReview() {
       }
       setNotice(
         action === 'decline'
-          ? 'Declined. The contributor sees your reason on their own page.'
+          ? 'Declined. The member sees your reason on their own page.'
           : acceptNotice(data),
       );
       await load();
@@ -159,7 +159,7 @@ export function ComicContributionReview() {
   return (
     <main style={{ minHeight: '100dvh', background: t.BG, color: t.TITLE, fontFamily: "'Inter',system-ui,sans-serif" }}>
       <MobileScreenHeader
-        title="Contributed writing"
+        title="Shared writing"
         accent={t.ACCENT}
         icon={<BookOpen size={18} color={t.ACCENT} />}
         actions={<PluginUserShellButton href="/knowledge" accent={t.ACCENT} label="Member view" />}
@@ -178,7 +178,7 @@ export function ComicContributionReview() {
           <p style={{ color: t.SUBTLE, fontSize: 14 }}>Nothing waiting to be read.</p>
         ) : (
           contributions.map((contribution) => (
-            <ContributionCard
+            <SharedWritingCard
               key={contribution.id}
               t={t}
               contribution={contribution}
@@ -198,7 +198,7 @@ export function ComicContributionReview() {
   );
 }
 
-function ContributionCard({
+function SharedWritingCard({
   t,
   contribution,
   excludedSet,
@@ -209,7 +209,7 @@ function ContributionCard({
   onDeclineReasonChange,
 }: {
   t: ComicTokens;
-  contribution: ReviewContribution;
+  contribution: ReviewSharedWriting;
   excludedSet: Set<string>;
   busyId: string | null;
   declineReason: string;
@@ -303,7 +303,7 @@ function ContributionCard({
         </button>
       </div>
       <label htmlFor={`decline-reason-${contribution.id}`} style={labelStyle(t)}>
-        Reason, if declining — the contributor reads this
+        Reason, if declining — the member reads this
       </label>
       <input
         id={`decline-reason-${contribution.id}`}

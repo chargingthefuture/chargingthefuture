@@ -230,7 +230,7 @@ regenerating or resolving a draft answer, switching a knowledge entry on or off 
 ones that were refused, and why**. Most recent 200, loaded lazily on first expand. Reads
 `GET /api/comic/admin/audit-events?limit=200`.
 
-### Contributed-writing review (`/admin/comic/contributions`, shipped 2026-07-29)
+### Shared-writing review (`/admin/comic/shared-writing`, shipped 2026-07-29; named "Contributed writing" until 2026-10-15)
 
 1. Queue of contributions waiting to be read, each showing the **actual writing** — the decision
    cannot be made from a summary. The contributor's own note about third parties is surfaced at the
@@ -254,7 +254,7 @@ ones that were refused, and why**. Most recent 200, loaded lazily on first expan
    screen states which of granted / not-yet-verified / already-granted / failed happened, so a skipped
    grant never looks like a silent no-op. **Writing accepted before the member was verified gets its
    credits when Unlock approves them** (owner decision, 2026-10-15): the Unlock approval runs
-   `grantHeldContributionCredits` (`lib/comic/approval-catch-up.ts`) through
+   `grantHeldSharedWritingCredits` (`lib/comic/approval-catch-up.ts`) through
    `lib/shared/unlock-approval-interface.ts`, which grants each of the member's accepted contributions
    with no `granted_at`, with the approving admin as the grant's actor.
 
@@ -288,13 +288,13 @@ Built on `feat/comic-ai-assistant`; all server-only routes (no rendered surface)
   via Ollama (captured as a bot turn), enqueues to `comic_review_queue`, and returns **only a
   safe holding response (HTTP 202)** — never the unreviewed draft. Safety-flagged turns skip
   generation and are queued human-first.
-- `POST /api/comic/contributions` (`comic.contribution.submit`) — **any signed-in member**
+- `POST /api/comic/shared-writing` (`comic.contribution.submit`) — **any signed-in member**
   **This is one of exactly three exceptions to the Unlock gate** (with Contributions and the Quora
   account deletion survey); every other feature requires Unlock approval to do anything. The list is
   closed and enforced by `ctf/config/unlock-tier-exception-allowlist.json` and the `unlock-tier-gate`
   CI job, and adding a fourth is the owner's decision, never a build step — do not read this as a
   pattern to copy into a new surface.
-  (`requireComicContributionAccess`, `minUnlockTier: 'any_authenticated'` — deliberately looser than
+  (`requireComicSharedWritingAccess`, `minUnlockTier: 'any_authenticated'` — deliberately looser than
   the rest of comic, which stays `approved_full`). Optionally carries `quoraProfileUrl`: when the
   member has **no Quora URL on file**, it opens a **pending** Unlock submission from it (never an
   approval) audited as `unlock.verification.submit` with `source: comic_knowledge_contribution`.
@@ -312,17 +312,17 @@ Built on `feat/comic-ai-assistant`; all server-only routes (no rendered surface)
   decompressed, entry names are validated, and a decompressed-size ceiling guards against a zip
   bomb; nothing is written to disk or executed. Public sections are kept, everything else discarded.
   Rate-limited to 5 per member per 24h. Audits the **consent**, never the content.
-- `GET /api/comic/contributions` — signed-in member. The caller's own contribution history.
-- `POST /api/comic/contributions/[id]/withdraw` (`comic.contribution.withdraw`) — signed-in member,
+- `GET /api/comic/shared-writing` — signed-in member. The caller's own contribution history.
+- `POST /api/comic/shared-writing/[id]/withdraw` (`comic.contribution.withdraw`) — signed-in member,
   own contribution only (scoped inside the query, so another member's id is indistinguishable from a
   missing one). Marks it withdrawn and deactivates its `comic_knowledge_entries` rows in one
   transaction, so there is no window where it reads as withdrawn while still being quoted. "Its rows"
   are the ones whose `contribution_id` is this contribution — the same rows account deletion
   removes. A row the contribution only pointed at because the text was already there (another
   member's, or the owner's import) stays on.
-- `GET /api/comic/admin/contributions?status=<status>` — admin. The contribution review queue, each
+- `GET /api/comic/admin/shared-writing?status=<status>` — admin. The contribution review queue, each
   row with its entries so the reviewer reads the writing rather than a count.
-- `POST /api/comic/admin/contributions/[id]/review` (`comic.contribution.review`) — admin. Accept
+- `POST /api/comic/admin/shared-writing/[id]/review` (`comic.contribution.review`) — admin. Accept
   (promoting the chosen entries into `comic_knowledge_entries` and making the ServiceCredits
   recognition grant) or decline (a reason is **required** — the contributor reads it). Promotion and
   the status flip share one transaction, so a half-accepted contribution cannot exist. The grant runs
@@ -785,17 +785,36 @@ buckets are not reproduced — only real provenance (engine / intent / safety ca
 
 ## Change Log
 
+- 2026-10-15: **The knowledge library side is named "shared writing" in the admin screen and the
+  code (owner decision).** Three different things were called "contribution": the Contributions
+  plugin (gift cards, Quora comments and GitHub stars for credits), the writing members share with
+  the knowledge library, and Contributor Access. Members already saw "Knowledge library" at
+  `/knowledge`; the admin screen and the code still said "contribution". Renamed: the admin page
+  `/admin/comic/contributions` → `/admin/comic/shared-writing` (title "Shared writing", admin
+  landing tile "Shared Writing", tile slug `comic-shared-writing`); the routes
+  `/api/comic/contributions*` → `/api/comic/shared-writing*` and
+  `/api/comic/admin/contributions*` → `/api/comic/admin/shared-writing*`; the modules
+  `lib/comic/contribution-*.ts` → `lib/comic/shared-writing-*.ts` and
+  `components/comic/comic-contribution-review.tsx` → `comic-shared-writing-review.tsx`; and the
+  exported names (`grantContributionRecognition` → `grantSharedWritingCredits`, and so on). Left as
+  they are on purpose: the tables and columns (`comic_contributions`, `comic_contribution_entries`,
+  `contribution_id`), the `comic.contribution.*` command ids recorded in audit rows, the
+  `contributionId` request and response field, and the grant's idempotency key
+  `comic-contribution-<id>` and grant reason. Renaming those would split the stored history, change
+  the request shape, or let an already-granted contribution be granted again. Nothing a member sees
+  changed. The old admin address no longer opens; the admin landing tile links to the new one.
+
 - 2026-10-15: **Credits held back for an unverified contributor are granted on Unlock approval
   (owner decision; code-review #2678).** An accepted contribution from a member not yet verified got
   no credits, and the admin screen said the grant could be made once they finished Unlock, but
   nothing ever made it: the accept route was the only caller and it acts only on writing still
   waiting for review. The Unlock approval catch-up (`runUnlockApprovalCatchUp`, now also taking the
-  approving admin) runs `grantHeldContributionCredits`, which grants each accepted contribution of
-  that member with `granted_at IS NULL` through `grantContributionRecognition`. Safe to run twice:
+  approving admin) runs `grantHeldSharedWritingCredits`, which grants each accepted contribution of
+  that member with `granted_at IS NULL` through `grantSharedWritingCredits`. Safe to run twice:
   the stamp and the per-contribution idempotency key both stop a second grant. A failed grant used
   to leave `granted_at` stamped with no credits behind it; the stamp is now cleared when the mint
   throws. The audit row `unlock.admin.submission.approval_catch_up` records
-  `comicContributionsGranted`. Admin wording on the review screen: the not-verified line now says the
+  `comicSharedWritingGranted`. Admin wording on the review screen: the not-verified line now says the
   credits are granted when the member finishes Unlock, and the failure line no longer tells the admin
   to retry by hand, since there is no screen for that. New test case CMC-A1b and
   `lib/comic/approval-catch-up.test.ts`.
@@ -803,11 +822,11 @@ buckets are not reproduced — only real provenance (engine / intent / safety ca
 - 2026-10-15: **The scripted Unlock-help path, its log and its switch are removed (owner decision).** The path answered @comic questions about Unlock only for members not yet approved, but `POST /api/comic/message` needs Unlock approval, so no member could ever reach it. The owner decided code no member can reach is deleted. Removed: `lib/comic/unlock-help-plan.ts`, `unlock-help-script.ts`, `unlock-help-log.ts`, `unlock-help-log-format.ts`, `runtime-config.ts` and their test; the admin page `/admin/comic/unlock-help` with its `/admin` link and `components/comic/comic-unlock-help-log.tsx`; `POST /api/comic/admin/unlock-help-setting` with its command and access-policy entries (`comic.admin.unlock-help.set-review`); the `answered` outcome of `comic.message.route` (now 1.3.0, which also no longer lists `comic_runtime_config` or `unlock_verification_submissions`); and the `comic_runtime_config` table (`db/migrations/post/0062_drop_comic_runtime_config.sql`, no longer created in `schema.sql`). Every @comic answer is held for review, with no exception. `routeComicMessage` and the draft paths keep working without the Unlock branch, and a turn's `intent` is always null. The audit panel keeps its label for `comic.admin.unlock-help.set-review` so past switch changes in `comic_admin_audit_trail` still read in words. The "Show me where to find it" steps in the Unlock help box are unchanged.
 - 2026-10-12: **AI drafts wait out a RunPod cold start instead of giving up at 30s, and a second press no longer sends a second billed job.** (Owner report: a "Generate draft" press timed out at 30s, RunPod finished the job anyway, and a second press sent another job, so one answer was billed twice.) (1) `lib/chatbot/ollama.ts`: `callOllamaChat` takes an optional `{ timeoutMs }`; review drafts (`generateComicDraft`, used by the ask-time background draft and by "Generate draft") pass the new `OLLAMA_DRAFT_TIMEOUT_MS` (5 minutes). The Feed assisted answer keeps the 30s default. (2) When a RunPod job runs out of time it is now canceled (`POST /cancel/<id>`, best-effort) so it does not start later and get billed for an answer nobody keeps. The timeout reason now says the job was canceled and to check the endpoint has at least 1 max worker, since RunPod sets it to 0 after about two weeks with no requests. (3) New `lib/comic/draft-in-flight.ts` (`runDraftOnce`): one draft per review item at a time, process-local. A "Generate draft" press while that item's draft is already running — from an earlier press or from ask time — joins it and gets the same result instead of sending a new job. The draft is saved on the review row whether or not the reviewer is still on the screen, and nothing reaches the asker until the owner approves. (4) Dashboard: while a draft is generating, the note under the actions says the model may take a few minutes to start and the draft is saved on the question when ready. No schema, route or contract change.
 
-- 2026-10-05: **Contributing no longer gets round the Unlock spam denylist, and a failed link to Unlock is said out loud.** `linkContributionToUnlock` opened the Unlock submission but ignored the status it came back with, so a Quora URL on the spam denylist was marked spam with no app-wide block and audited as `allow`/`ok`. It now applies the same block as the Unlock screen's own route — the helper moved from that route into `lib/unlock/denylist-block.ts` and is shared through `lib/shared/unlock-interface.ts` — and audits `deny`/`spam_denylisted`, with the submission id in the audit metadata. Both catches in `lib/comic/contribution-unlock-link.ts` now report the error (`contribution_unlock_status_check`, `contribution_unlock_link`). On `/knowledge`, the receipt has a line for the `failed` outcome (writing received, verification could not be started from here, finish it on the Unlock screen), and a failed load of "What you have sent" shows a line saying so instead of the section vanishing with its Withdraw buttons. The review dashboard reports a failed training-count or plugin-list load and shows the reason where the counter or picker would be. No schema, route-shape or contract change.
+- 2026-10-05: **Contributing no longer gets round the Unlock spam denylist, and a failed link to Unlock is said out loud.** `linkSharedWritingToUnlock` opened the Unlock submission but ignored the status it came back with, so a Quora URL on the spam denylist was marked spam with no app-wide block and audited as `allow`/`ok`. It now applies the same block as the Unlock screen's own route — the helper moved from that route into `lib/unlock/denylist-block.ts` and is shared through `lib/shared/unlock-interface.ts` — and audits `deny`/`spam_denylisted`, with the submission id in the audit metadata. Both catches in `lib/comic/shared-writing-unlock-link.ts` now report the error (`contribution_unlock_status_check`, `contribution_unlock_link`). On `/knowledge`, the receipt has a line for the `failed` outcome (writing received, verification could not be started from here, finish it on the Unlock screen), and a failed load of "What you have sent" shows a line saying so instead of the section vanishing with its Withdraw buttons. The review dashboard reports a failed training-count or plugin-list load and shows the reason where the counter or picker would be. No schema, route-shape or contract change.
 
-- 2026-10-05: **Withdrawing a contribution switches off only what that contribution put in the library, and curation cannot switch it back on.** An entry whose text was already in the library points at the existing row instead of making a new one, and `withdrawContribution` switched off every row its entries pointed at — so a member could switch off another member's entry, or the owner's imported writing, by sending a copy of it and withdrawing. The update now matches on `comic_knowledge_entries.contribution_id`, the same column account deletion cascades on. Separately, `setKnowledgeEntryActive` let an admin switch a withdrawn contribution's entry back on from `/admin/comic/knowledge`; switching on is now refused inside the same UPDATE when the row's contribution is withdrawn, and `PUT /api/comic/admin/knowledge/[entryId]` answers 409 with a plain reason and an audit row. No schema change.
+- 2026-10-05: **Withdrawing a contribution switches off only what that contribution put in the library, and curation cannot switch it back on.** An entry whose text was already in the library points at the existing row instead of making a new one, and `withdrawSharedWriting` switched off every row its entries pointed at — so a member could switch off another member's entry, or the owner's imported writing, by sending a copy of it and withdrawing. The update now matches on `comic_knowledge_entries.contribution_id`, the same column account deletion cascades on. Separately, `setKnowledgeEntryActive` let an admin switch a withdrawn contribution's entry back on from `/admin/comic/knowledge`; switching on is now refused inside the same UPDATE when the row's contribution is withdrawn, and `PUT /api/comic/admin/knowledge/[entryId]` answers 409 with a plain reason and an audit row. No schema change.
 
-- 2026-10-05: **Refused and failed review actions reach the audit trail, and four error paths say why.** `POST /api/comic/review/[turnId]/resolve`, `POST /api/comic/review/[turnId]/regenerate` and `POST /api/comic/admin/contributions/[id]/review` wrote an audit row only on success, though the audit contract asks for one on every outcome. Each now writes a `failure` row on its 404/409/400 refusals (`deny`, with `not_found`, `already_reviewed` or `invalid_payload`) and on a failed write (`persistence_error`); the code-to-category mapping is `reviewActionFailure` in `lib/comic/audit.ts`. Response bodies are unchanged. The Audit log panel now shows the reason when the trail cannot be fetched at all; the contribution review screen shows the grant's failure reason in "The credits grant did not go through (…)"; and `planUnlockHelp` reports a failed Unlock tier read (`unlock_help_tier_read`) before treating the question as ordinary. No schema or contract change.
+- 2026-10-05: **Refused and failed review actions reach the audit trail, and four error paths say why.** `POST /api/comic/review/[turnId]/resolve`, `POST /api/comic/review/[turnId]/regenerate` and `POST /api/comic/admin/shared-writing/[id]/review` wrote an audit row only on success, though the audit contract asks for one on every outcome. Each now writes a `failure` row on its 404/409/400 refusals (`deny`, with `not_found`, `already_reviewed` or `invalid_payload`) and on a failed write (`persistence_error`); the code-to-category mapping is `reviewActionFailure` in `lib/comic/audit.ts`. Response bodies are unchanged. The Audit log panel now shows the reason when the trail cannot be fetched at all; the contribution review screen shows the grant's failure reason in "The credits grant did not go through (…)"; and `planUnlockHelp` reports a failed Unlock tier read (`unlock_help_tier_read`) before treating the question as ordinary. No schema or contract change.
 - 2026-10-05: **The training export is redacted and leaves an audit row.** `GET /api/comic/training/export` moves rows from awaiting export to exported but wrote no audit row, although the audit contract defines `comic.training.export` and requires a durable row for every admin action. It now calls `recordComicAdminAudit` on success (format, `markedExported`, `preview`) and on failure (the reason), and the Audit log panel names it "Exported the training data". The deletion contract also says training text is redacted before export, but questions went into the file as typed. `exportComicTrainingExamples` and `exportComicRatedAnswers` now pass question and answer text through `redactContributedText` (`lib/comic/redact.ts`) first. No schema change.
 
 - 2026-09-30: **`GET /api/comic/conversation` answers an unchanged stream with a bodiless 304.** It is polled with the home chat every 10-30s; it now answers through `jsonWithEtag` (fingerprint plus `Cache-Control: private, no-cache`), and the home chat reads it with `cache: 'no-cache'`. The review queue poll (`comic-review-dashboard.tsx`) now skips ticks while the tab is hidden and refreshes once when shown. Same payload, no schema or contract change. Detail in the Feed inventory change log.
@@ -867,9 +886,9 @@ buckets are not reproduced — only real provenance (engine / intent / safety ca
   it arrived. Placed under both options rather than only the export one, because the days of waiting
   are part of choosing between them. Copy and data only — no route, schema, or contract change.
 
-- 2026-07-29: **One canonical `content_hash` formula, so the importer and the contribution path agree.** `content_hash` is what stops the same writing being stored twice in `comic_knowledge_entries`, and the places that computed it had drifted: `importComicKnowledge.mjs` joined the fields with a **NUL** character while the member-contribution accept path (`app/api/comic/admin/contributions/[id]/review/route.ts`) joined them with a **space**, under a comment claiming it matched the importer. Effect: a member contributing a post whose text was already in the library hashed differently, hit no conflict, and was stored a second time. The formula now lives once as `contentHashOf` in `ctf/scripts/lib/comicDatasetShared.mjs`, imported by the importer; the web route is outside that package and cannot import it, so it keeps a deliberate second copy with a comment naming the canonical definition and requiring both to change together. NUL is kept because it produced every live row hash (no stored hash is invalidated) and because it cannot occur in the text — a space join collides `(question "a b", content "c")` with `(question "a", content "b c")`, which NUL keeps distinct. Verified: the canonical function reproduces the importer previous hash for every case, both sites now agree, and the old space formula does not. **Known data gap, not fixed here:** the one-time identifier scrub (`scrubComicKnowledgeIdentifiers.mjs`, removed in #1954 after its production run) used the same space formula and *rewrote* `content_hash` on every row it touched, so those production rows hold hashes the importer will not reproduce and will not dedupe against a re-import until recomputed. Tracked in the corpus-refresh issue.
+- 2026-07-29: **One canonical `content_hash` formula, so the importer and the contribution path agree.** `content_hash` is what stops the same writing being stored twice in `comic_knowledge_entries`, and the places that computed it had drifted: `importComicKnowledge.mjs` joined the fields with a **NUL** character while the member-contribution accept path (`app/api/comic/admin/shared-writing/[id]/review/route.ts`) joined them with a **space**, under a comment claiming it matched the importer. Effect: a member contributing a post whose text was already in the library hashed differently, hit no conflict, and was stored a second time. The formula now lives once as `contentHashOf` in `ctf/scripts/lib/comicDatasetShared.mjs`, imported by the importer; the web route is outside that package and cannot import it, so it keeps a deliberate second copy with a comment naming the canonical definition and requiring both to change together. NUL is kept because it produced every live row hash (no stored hash is invalidated) and because it cannot occur in the text — a space join collides `(question "a b", content "c")` with `(question "a", content "b c")`, which NUL keeps distinct. Verified: the canonical function reproduces the importer previous hash for every case, both sites now agree, and the old space formula does not. **Known data gap, not fixed here:** the one-time identifier scrub (`scrubComicKnowledgeIdentifiers.mjs`, removed in #1954 after its production run) used the same space formula and *rewrote* `content_hash` on every row it touched, so those production rows hold hashes the importer will not reproduce and will not dedupe against a re-import until recomputed. Tracked in the corpus-refresh issue.
 - 2026-07-29: **`importComicKnowledge.mjs` is plain text again, so its diffs are reviewable.** The NUL separator was stored as a literal NUL byte, which made git classify the source as binary and print "Binary files differ" instead of a diff — a loader script that writes to the knowledge base could be changed without the change being visible in review. Moving the formula into `comicDatasetShared.mjs` (written with the `\u0000` escape rather than a raw byte) removes the last raw NUL from the file. The runtime string, and therefore every hash, is unchanged. This commit's own diff still shows binary because the base version on `main` contains the raw bytes; every diff after it is text.
-- 2026-07-29: **Reconciled the `source_ref` knowledge-import change with the merged member-contribution feature (schema-compatible).** After the member Quora-contribution feature (`comic_contributions`, `comic_contribution_entries`, `comic_knowledge_entries.contribution_id`) and the Quora space rename merged to `main`, this branch was rebased on top. The contribution accept path (`acceptContribution` in `lib/comic/contribution-repository.ts`) promoted rows with a bare `ON CONFLICT (content_hash) DO NOTHING`, which no longer matches the schema once the global `UNIQUE(content_hash)` is replaced by the partial index `uq_comic_knowledge_entries_content_hash` (`WHERE source_ref IS NULL`). Updated that insert and its already-present backfill lookup to key on `... WHERE source_ref IS NULL`: contributed rows carry a null `source_ref`, so they still dedupe against legacy and contribution rows exactly as before, while Markdown-repo rows (`source_ref` set) form a separate identity space and never collide with them. Confirmed the two partial indexes coexist with `contribution_id` and its `ON DELETE CASCADE`. Re-verified end to end on an embedded Postgres including the contribution insert path. **Owner note:** the pedigree101 content now has two ingestion routes — the already-imported legacy seed rows and the Markdown-repo `source_ref` path — so before importing the Markdown, decide which is authoritative for that account and retire the other's rows (`active = FALSE`) so the bot is not grounded on two copies.
+- 2026-07-29: **Reconciled the `source_ref` knowledge-import change with the merged member-contribution feature (schema-compatible).** After the member Quora-contribution feature (`comic_contributions`, `comic_contribution_entries`, `comic_knowledge_entries.contribution_id`) and the Quora space rename merged to `main`, this branch was rebased on top. The contribution accept path (`acceptSharedWriting` in `lib/comic/shared-writing-repository.ts`) promoted rows with a bare `ON CONFLICT (content_hash) DO NOTHING`, which no longer matches the schema once the global `UNIQUE(content_hash)` is replaced by the partial index `uq_comic_knowledge_entries_content_hash` (`WHERE source_ref IS NULL`). Updated that insert and its already-present backfill lookup to key on `... WHERE source_ref IS NULL`: contributed rows carry a null `source_ref`, so they still dedupe against legacy and contribution rows exactly as before, while Markdown-repo rows (`source_ref` set) form a separate identity space and never collide with them. Confirmed the two partial indexes coexist with `contribution_id` and its `ON DELETE CASCADE`. Re-verified end to end on an embedded Postgres including the contribution insert path. **Owner note:** the pedigree101 content now has two ingestion routes — the already-imported legacy seed rows and the Markdown-repo `source_ref` path — so before importing the Markdown, decide which is authoritative for that account and retire the other's rows (`active = FALSE`) so the bot is not grounded on two copies.
 - 2026-08-09: **The signed-out Knowledge library page had no way back (owner report).**
   `comic-knowledge-public-shell.tsx` builds its own header — the BookOpen mark and the title — and
   carried no back control at all, so a visitor who reached `/knowledge` from inside the app was
@@ -910,9 +929,9 @@ buckets are not reproduced — only real provenance (engine / intent / safety ca
   day: the page was `any_authenticated` while the routes were `approved_full`, so a member could fill
   in the entire form and only then be refused. Resolved by loosening the routes, not tightening the
   page — PR #1963, which did the opposite, was closed unmerged.)
-  - **Access:** new `requireComicContributionAccess` (`any_authenticated`) on the three contribution
+  - **Access:** new `requireComicSharedWritingAccess` (`any_authenticated`) on the three contribution
     routes; the rest of comic stays `approved_full`.
-  - **Unlock linkage** (`lib/comic/contribution-unlock-link.ts`): the submission may carry a Quora
+  - **Unlock linkage** (`lib/comic/shared-writing-unlock-link.ts`): the submission may carry a Quora
     profile URL. With **no URL on file** it opens a normal **pending** Unlock submission, audited
     `source: comic_knowledge_contribution`. Never an auto-approval — one review now answers both
     questions instead of one blocking the other. Best-effort, after the contribution is stored, so a
@@ -952,7 +971,7 @@ buckets are not reproduced — only real provenance (engine / intent / safety ca
   click past. Six clauses, one checkbox each, no bundled "agree to all" — own public writing / the
   single permitted use / contributor keeps every right / withdrawal / a human reads it and not
   everything is used / parts naming others may be cut. The clauses render from
-  `lib/comic/contribution-consent.ts`, the same module the server version-stamps into the record, so
+  `lib/comic/shared-writing-consent.ts`, the same module the server version-stamps into the record, so
   the displayed wording and the agreed wording cannot come apart; changing what a contributor agrees
   to requires bumping `CONTRIBUTION_CONSENT_VERSION`, and a page cached from before a change is
   refused rather than recorded as consent to wording it never showed. The file picker stays disabled
@@ -971,12 +990,12 @@ buckets are not reproduced — only real provenance (engine / intent / safety ca
   `lib/comic/quora-export-intake.ts`, on an **allowlist** — an unrecognized section is discarded, so a
   new Quora section containing private mail would be dropped for never having been named. The member
   gets an immediate receipt naming what was kept and what was thrown away.
-  **The uploaded archive is never stored.** It is parsed in memory (`lib/comic/contribution-archive.ts`:
+  **The uploaded archive is never stored.** It is parsed in memory (`lib/comic/shared-writing-archive.ts`:
   only `index.html` decompressed, entry names validated against traversal, decompressed-size ceiling
   against a zip bomb, nothing executed and no shell invoked) and discarded with the request — the
   upload endpoint takes files from anyone signed in, and the people this community exists to protect
   against are motivated to send a malicious one.
-  **Withdrawal is real, and the design is why.** `POST /api/comic/contributions/[id]/withdraw`
+  **Withdrawal is real, and the design is why.** `POST /api/comic/shared-writing/[id]/withdraw`
   deactivates every knowledge row a contribution produced in the same transaction that marks it
   withdrawn. That is possible because the assistant retrieves from a table at answer time rather than
   being trained on the text. Account deletion goes further and removes them, enforced by
@@ -986,7 +1005,7 @@ buckets are not reproduced — only real provenance (engine / intent / safety ca
   New commands `comic.contribution.submit` / `comic.contribution.withdraw` in the command, access-policy,
   and audit contracts — the audit records the **consent**, never the content. New dependency: `fflate`
   (zip reading, no transitive dependencies).
-  **The admin review surface ships with it** (`/admin/comic/contributions`, owner requirement before
+  **The admin review surface ships with it** (`/admin/comic/shared-writing`, owner requirement before
   launch): accept promotes the chosen entries and makes the grant, decline requires a reason the
   contributor reads. Until a contribution is accepted there it stays inert — nothing a member sends
   can reach the assistant on its own.

@@ -21,7 +21,7 @@
 import { mintGrant } from 'lib/shared/credits-interface';
 import { isUserUnlocked } from 'lib/shared/unlock-interface';
 import { reportError } from 'lib/observability/report';
-import { clearContributionGranted, markContributionGranted } from './contribution-repository';
+import { clearSharedWritingGranted, markSharedWritingGranted } from './shared-writing-repository';
 
 // Recognition for one accepted contribution, whatever its size. Deliberately flat rather than
 // per-post: paying by volume would reward padding a submission, and the reviewer would then be
@@ -34,7 +34,7 @@ export type GrantOutcome =
   | { status: 'skipped_not_unlocked' }
   | { status: 'failed'; reason: string };
 
-export async function grantContributionRecognition(input: {
+export async function grantSharedWritingCredits(input: {
   contributionId: string;
   contributorUserId: string;
   reviewerId: string;
@@ -44,7 +44,7 @@ export async function grantContributionRecognition(input: {
   }
 
   // Stamp first, so two attempts at once cannot both mint. The reverse order risks minting twice.
-  const stamped = await markContributionGranted(input.contributionId);
+  const stamped = await markSharedWritingGranted(input.contributionId);
   if (!stamped) {
     return { status: 'already_granted' };
   }
@@ -63,7 +63,7 @@ export async function grantContributionRecognition(input: {
     // Left stamped, the contribution would read as granted with no credits behind it, and nothing
     // would ever try again.
     try {
-      await clearContributionGranted(input.contributionId);
+      await clearSharedWritingGranted(input.contributionId);
     } catch (clearError) {
       reportError(clearError, { area: 'comic', op: 'contribution_grant_unstamp', extra: { contributionId: input.contributionId } });
     }

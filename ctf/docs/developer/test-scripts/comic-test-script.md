@@ -198,7 +198,7 @@ wrong, not Quora.
 **Role:** signed-in member, using browser developer tools
 **Steps:**
 1. Tick all six lines, choose a file, and before sending, use developer tools to POST to
-   `/api/comic/contributions` with `agreedClauseIds` missing one clause id.
+   `/api/comic/shared-writing` with `agreedClauseIds` missing one clause id.
 2. Repeat with all six ids but an older `consentVersion` string.
 3. Repeat with no `x-ctf-csrf` header.
 
@@ -219,7 +219,7 @@ wrong, not Quora.
 **Role:** admin, plus two contributors — one **verified (Unlock complete)** and one **not yet verified**
 **Steps:**
 1. Have both contributors send a contribution from `/knowledge`.
-2. Open `/admin/comic/contributions`.
+2. Open `/admin/comic/shared-writing`.
 3. On the verified member's card, press **Leave out** on one entry, then press it again and confirm
    it toggles back with **Put back**.
 4. Press **Accept N of M**.
@@ -255,9 +255,9 @@ wrong, not Quora.
 - After step 2 the member has 100 more credits for each such accepted contribution (on top of the
   Unlock reward), and `granted_at` is set on each.
 - The Unlock audit row `unlock.admin.submission.approval_catch_up` carries
-  `comicContributionsGranted` with that count.
+  `comicSharedWritingGranted` with that count.
 - A withdrawn or declined contribution is never granted.
-- Step 4 grants nothing more: `comicContributionsGranted` is 0 and the balance is unchanged.
+- Step 4 grants nothing more: `comicSharedWritingGranted` is 0 and the balance is unchanged.
 - The approval itself never fails because a grant did; a failed grant is reported and its
   `granted_at` is left empty.
 
@@ -269,7 +269,7 @@ wrong, not Quora.
 **Role:** admin
 **Steps:**
 1. Accept a contribution.
-2. POST the same accept again to `/api/comic/admin/contributions/<id>/review`.
+2. POST the same accept again to `/api/comic/admin/shared-writing/<id>/review`.
 3. Check the contributor's balance and `comic_knowledge_entries` for duplicates.
 
 **Expected:**
@@ -319,7 +319,7 @@ sending a copy of somebody else's entry and withdrawing it took their writing ou
 **Steps:** Open the apps launcher, find **Knowledge Library**, and tap it.
 
 **Expected:** It lands on `/knowledge` — `/apps/knowledge` redirects there, so there is one page
-rather than two copies to keep in step. The admin landing also lists **Contributed Writing** and
+rather than two copies to keep in step. The admin landing also lists **Shared Writing** and
 **AI Knowledge Base**.
 
 **Result:** web ☐
@@ -435,7 +435,7 @@ rather than two copies to keep in step. The admin landing also lists **Contribut
 **Role:** two signed-in members
 **Steps:**
 1. As member A, note a contribution id.
-2. As member B, POST to `/api/comic/contributions/<A's id>/withdraw`.
+2. As member B, POST to `/api/comic/shared-writing/<A's id>/withdraw`.
 
 **Expected:**
 - 404, worded identically to a genuinely missing id — another member's contribution must not be
