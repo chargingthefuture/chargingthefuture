@@ -17,11 +17,20 @@
 
 const RADIUS_MILES = Number(process.env.ROAD_EVENT_RADIUS_MILES) || 25;
 
-// Cached per process; the Render container is short-lived and feeds change
-// slowly, so a simple memo avoids refetching for each waypoint (and keeps the
-// 511.org call well under its hourly rate limit).
+// Cached briefly so one report does not refetch a feed for each waypoint (and the
+// 511.org call stays well under its hourly rate limit). Each entry carries its
+// fetch time and is refetched once it is older than CACHE_TTL_MS: a scheduled
+// Shortcut can keep the service awake all day, and a closure lifted or begun
+// since the first request must still reach the verdict.
+const CACHE_TTL_MS = 5 * 60 * 1000;
+// These sources are best-effort, so they get a shorter limit than the weather.
+const FEED_TIMEOUT_MS = 6_000;
 const feedCache = new Map();
 let sfBay511Cache;
+
+function fresh(entry) {
+  return Boolean(entry) && Date.now() - entry.fetchedAt < CACHE_TTL_MS;
+}
 
 function feedUrls() {
   return Object.entries(process.env)
@@ -86,13 +95,17 @@ async function fetchFeedEvents(lat, lon) {
   const out = [];
   for (const url of urls) {
     try {
-      let features = feedCache.get(url);
+      const cached = feedCache.get(url);
+      let features = fresh(cached) ? cached.features : null;
       if (!features) {
-        const res = await fetch(url, { headers: { Accept: 'application/geo+json, application/json' } });
+        const res = await fetch(url, {
+          headers: { Accept: 'application/geo+json, application/json' },
+          signal: AbortSignal.timeout(FEED_TIMEOUT_MS),
+        });
         if (!res.ok) continue;
         const data = await res.json();
         features = Array.isArray(data?.features) ? data.features : [];
-        feedCache.set(url, features);
+        feedCache.set(url, { features, fetchedAt: Date.now() });
       }
       for (const f of features) {
         const c = centroid(f.geometry);
@@ -114,17 +127,18 @@ async function fetchSfBay511(lat, lon) {
   const token = process.env.SF_BAY_511_TOKEN;
   if (!token) return [];
   try {
-    if (!sfBay511Cache) {
+    if (!fresh(sfBay511Cache)) {
       const res = await fetch(
         `https://api.511.org/traffic/events?api_key=${encodeURIComponent(token)}&format=json`,
-        { headers: { Accept: 'application/json' } },
+        { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(FEED_TIMEOUT_MS) },
       );
       if (!res.ok) return [];
       const data = await res.json();
-      sfBay511Cache = Array.isArray(data?.events) ? data.events : (Array.isArray(data) ? data : []);
+      const events = Array.isArray(data?.events) ? data.events : (Array.isArray(data) ? data : []);
+      sfBay511Cache = { events, fetchedAt: Date.now() };
     }
     const out = [];
-    for (const e of sfBay511Cache) {
+    for (const e of sfBay511Cache.events) {
       const c = centroid(e.geography || e.geometry);
       if (c && milesBetween(lat, lon, c.lat, c.lon) <= RADIUS_MILES) {
         out.push(clean(headlineOf(e)));

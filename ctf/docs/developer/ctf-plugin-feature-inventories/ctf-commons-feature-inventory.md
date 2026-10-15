@@ -220,6 +220,16 @@ There is no `seedHub.mjs`; the Commons channel's data layer is seeded by the Fee
 
 ## Change Log
 
+- 2026-10-12: **A failed read on the home page no longer sends an approved member into Unlock, and a
+  page that fails to render says so plainly.** `app/page.tsx` treated a failed Unlock tier read as "no
+  tier" and redirected the member to `/plugin/unlock`; it now reports `home/unlock_tier_read` and
+  renders the Hub without the verification banner (each plugin route checks the tier again on its
+  own). The identity read (`home/identity_read`), the Unlock status read (`home/unlock_status_read`)
+  and the `/apps` access check (`apps/access_check`) keep their fallbacks and are now reported
+  (#2769). A page that throws while rendering now lands on a new root `app/error.tsx`, inside the
+  layout, and `app/global-error.tsx` no longer shows Next's built-in client-side notice: both show
+  "This page could not be shown.", the error's reference (`digest`) when there is one, and a link to
+  the home page (`components/shared/page-error-notice.tsx`) (#2767).
 - 2026-10-14: **Quotes honor blocks, deletion clears the Commons Stream user, and Commons posts are
   audited (code-review #2973, #2974, #2975).** A quote now resolves to nothing for a viewer when the
   quoted post's author and the viewer have a block in either direction (`loadQuotedPosts` takes the
@@ -243,6 +253,13 @@ There is no `seedHub.mjs`; the Commons channel's data layer is seeded by the Fee
   the gift in the same row (`CommonsImageShareButton`), shown to admins only and hidden while
   notifications are open; tapping it opens or closes the same panel above the message box
   (`CommonsImageSharePanel`). The screen-reader label keeps the old wording.
+- 2026-10-05: **Two Commons failures that were hidden now show (#2636, #2637).** A failed first history
+  read set its error and the join that follows cleared it at once, leaving an empty stream with no
+  reason; the join now clears only its own error, and the next history poll that succeeds clears the
+  history error. A failed `/api/commons/channels` read was swallowed, leaving the channel list empty;
+  the shell now shows the route's reason above the channel row and reports a thrown failure. A 401/403
+  from that read is left to the chat panel, which already says why the member is not in. No route,
+  contract or schema change.
 - 2026-10-03: **Removed the keyword concierge that nothing called (#2627).** `lib/concierge/resolver.ts`
   and `lib/concierge/intents.ts` matched typed text to a plugin, and `useHomeChat` wrapped them as
   `sendConciergeAsk` and `starterPrompts`, but no screen used either after the chip row moved to
