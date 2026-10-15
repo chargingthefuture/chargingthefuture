@@ -107,6 +107,7 @@ contracts:
         type: string
     dataAccess:
       - announcement_user_state
+      - announcements
     purpose: acknowledgement_tracking
     retentionClass: derived_short_lived
     idempotency: true

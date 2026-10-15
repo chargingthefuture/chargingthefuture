@@ -59,6 +59,11 @@ and every column in it must exist on that table. It runs in the Schema Drift Gat
 `.github/workflows/ci.yml`, so the registry cannot drift from the schema again. It is plain Node (no
 TypeScript import), so it runs on any Node version, including the Node 20 runners.
 
+It also checks the other way: every table in `schema.sql` with a member column must appear in the
+registry or on the burn-down list `ctf/scripts/deletion-coverage-allowlist.json`. A member column is
+one whose name ends in `user_id` or `actor_id`; `actor_id` was added on 2026-10-05, after the two
+command-idempotency tables and the admin audit trails were found outside the registry.
+
 To run locally:
 
 ```sh
@@ -94,7 +99,12 @@ the field existed carry no marker and are read as `member`, which is what nearly
 Money is out of scope for the engine. ServiceCredits wallets/ledgers are `retain` in the registry
 and are settled by the existing reclaim flow (`markFullAccountDeletionRequested` →
 `enqueueServiceCreditsDeletionReclaim` → the service-credits adapter outbox). The full-account route
-calls that reclaim flow first, then runs the orchestrator; the engine never moves credits.
+runs the orchestrator first and calls that reclaim flow only after the data deletion has committed;
+the engine never moves credits. The order matters because each reclaim call writes a new deletion
+event with its own idempotency key: queued ahead of a deletion that then failed, it left the member
+with their account and without their credits, and a retry queued a second reclaim. The operator
+route and the Clerk `user.deleted` webhook use the same order, and the webhook checks the two halves
+separately so a redelivery finishes whichever one is missing.
 
 One step before the engine does move credits, and only back to the member: the orchestrator's
 `runPreDeletionSettlements` refunds any SkillUp deposit still held in escrow to the member's own
@@ -108,14 +118,15 @@ the deletion, and each refund is idempotent per escrow, so a retry returns only 
 - `DELETE /api/account/services/:slug` — delete just one plugin's data. The `:slug` is validated
   against the registry; plugins that are not service-scoped (money/aggregate-only) return a clear
   409 instead of a silent no-op.
-- `DELETE /api/account/full-account` — record the request, queue the ServiceCredits reclaim, then
-  delete the user's data across every plugin.
+- `DELETE /api/account/full-account` — delete the user's data across every plugin, then record the
+  request and queue the ServiceCredits reclaim. A failure returns 503 with `step`
+  (`data_deletion` or `reclaim_request`) and a message saying which one failed.
 
 Both require an authenticated caller (self-service only — a deletion only ever touches the caller's
 own rows) and the same-origin `x-ctf-csrf: 1` guard used elsewhere.
 
 - `POST /api/internal/account/delete` — the **operator** counterpart, for clearing a duplicate
-  account by id. Runs the same flow as `full-account` (reclaim + `deleteAllAccountData`) but the
+  account by id. Runs the same flow as `full-account` (`deleteAllAccountData`, then the reclaim) but the
   target `userId` comes from the request body, and by default it also deletes the Clerk identity
   (`createClerkClient().users.deleteUser`); pass `{ "deleteClerk": false }` to delete only the
   database data. It is **not** user-authenticated: it is guarded by a dedicated
