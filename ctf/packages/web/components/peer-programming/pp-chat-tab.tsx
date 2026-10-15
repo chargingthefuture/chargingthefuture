@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { MessageSquare, Send } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
+import { PEER_PROGRAMMING_MAX_MESSAGE_LENGTH } from "@/lib/peer-programming/constants";
 import { getPeerProgrammingTokens, initials, type Message, type Room } from "./pp-shared";
 
 // Message stamp: date + time, not time alone — without the date, messages from different days (e.g.
@@ -43,11 +44,13 @@ function ChatComposer({
   onMessageInput,
   onSend,
   submitting,
+  postError,
 }: {
   messageInput: string;
   onMessageInput: (v: string) => void;
   onSend: () => void;
   submitting: boolean;
+  postError: string | null;
 }) {
   const { theme } = useTheme();
   const t = getPeerProgrammingTokens(theme);
@@ -65,6 +68,11 @@ function ChatComposer({
   }, [messageInput]);
   return (
     <div style={{ padding: "8px 24px 20px", flexShrink: 0 }}>
+      {postError && (
+        <div role="alert" style={{ marginBottom: 8, fontSize: 13, color: "#EF4444" }}>
+          {postError}
+        </div>
+      )}
       {/* alignItems flex-end keeps the send button on the bottom edge as the box grows. */}
       <div style={{ display: "flex", alignItems: "flex-end", gap: 10, padding: "10px 16px", background: t.INPUT_BG, border: `1px solid ${t.BORDER_HI}`, borderRadius: 14 }}>
         <textarea
@@ -72,6 +80,7 @@ function ChatComposer({
           rows={1}
           aria-label="Message your cohort"
           value={messageInput}
+          maxLength={PEER_PROGRAMMING_MAX_MESSAGE_LENGTH}
           onChange={(e) => onMessageInput(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onSend(); } }}
           placeholder="Message your cohort…"
@@ -109,6 +118,7 @@ function ChatFooter({
   onMessageInput,
   onSend,
   submitting,
+  postError,
 }: {
   hasCohort: boolean;
   ended: boolean;
@@ -117,6 +127,7 @@ function ChatFooter({
   onMessageInput: (v: string) => void;
   onSend: () => void;
   submitting: boolean;
+  postError: string | null;
 }) {
   const { theme } = useTheme();
   const t = getPeerProgrammingTokens(theme);
@@ -129,6 +140,7 @@ function ChatFooter({
       onMessageInput={onMessageInput}
       onSend={onSend}
       submitting={submitting}
+      postError={postError}
     />
   );
 }
@@ -140,6 +152,7 @@ export function PeerProgrammingChatTab({
   onMessageInput,
   onSend,
   submitting,
+  postError = null,
   readOnly = false,
   ended = false,
 }: {
@@ -149,6 +162,8 @@ export function PeerProgrammingChatTab({
   onMessageInput: (v: string) => void;
   onSend: () => void;
   submitting: boolean;
+  // Why the last post failed (the route's reason), shown above the composer. Null when it did not.
+  postError?: string | null;
   // True when the viewer is listening in (or an admin viewing another cohort): the chat is visible
   // but the composer is replaced by a notice, since only cohort members can post.
   readOnly?: boolean;
@@ -182,6 +197,7 @@ export function PeerProgrammingChatTab({
         onMessageInput={onMessageInput}
         onSend={onSend}
         submitting={submitting}
+        postError={postError}
       />
     </div>
   );
