@@ -128,18 +128,34 @@ export async function POST(request: Request) {
   try {
     const outcome = await runWithForcedPool('public', async () => {
       // Idempotency guard: the app's own Delete Account flow calls Clerk deleteUser, which also fires
-      // this webhook. If an account-scope deletion event already exists, the data is gone — skip so we
-      // do not write a duplicate event or re-queue the ServiceCredits reclaim.
-      const existing = await queryDb<{ one: number }>(
-        `SELECT 1 AS one FROM account_deletion_events WHERE user_id = $1 AND scope = 'account' LIMIT 1`,
-        [userId],
-      );
-      if (existing.rows.length > 0) {
+      // this webhook. Each half is checked on its own so a retry finishes whichever half is missing:
+      // an account-scope deletion event means the data is gone, and an account-scope Chyme deletion
+      // event means the ServiceCredits reclaim was queued. When both exist, skip, so we do not write
+      // a duplicate event or re-queue the reclaim.
+      const [deleted, reclaimQueued] = await Promise.all([
+        queryDb<{ one: number }>(
+          `SELECT 1 AS one FROM account_deletion_events WHERE user_id = $1 AND scope = 'account' LIMIT 1`,
+          [userId],
+        ),
+        queryDb<{ one: number }>(
+          `SELECT 1 AS one FROM chyme_deletion_events WHERE user_id = $1 AND scope = 'account' LIMIT 1`,
+          [userId],
+        ),
+      ]);
+      if (deleted.rows.length > 0 && reclaimQueued.rows.length > 0) {
         return { skipped: true as const, tablesAffected: 0 };
       }
-      const reclaim = await markFullAccountDeletionRequested(userId);
-      const deletion = await deleteAllAccountData(userId, reclaim.requestedAtIso);
-      return { skipped: false as const, tablesAffected: deletion.tables.length };
+      // Data first, reclaim second: the reclaim writes a new deletion event with its own idempotency
+      // key on every call, so queuing it ahead of a deletion that can still fail would leave a
+      // reclaim behind on failure and queue a second one when Clerk retries the delivery.
+      const tablesAffected =
+        deleted.rows.length > 0
+          ? 0
+          : (await deleteAllAccountData(userId, new Date().toISOString())).tables.length;
+      if (reclaimQueued.rows.length === 0) {
+        await markFullAccountDeletionRequested(userId);
+      }
+      return { skipped: false as const, tablesAffected };
     });
 
     logChymeAudit({
