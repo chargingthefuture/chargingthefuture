@@ -1,4 +1,3 @@
-import type { ClerkTokenVerifier } from './clerkAuth';
 // Canonical generic plugin authentication logic
 // This module provides a generic, provider-agnostic authentication handler for plugin auth consistency.
 //
@@ -19,7 +18,7 @@ export interface PluginAuthContext {
    * shared package free of any server-only SDK while still refusing to
    * authenticate on an unverified (forgeable) token.
    */
-  verifier?: ClerkTokenVerifier;
+  verifier?: (token: string) => Promise<string | null> | string | null;
 }
 
 export interface PluginAuthResult {

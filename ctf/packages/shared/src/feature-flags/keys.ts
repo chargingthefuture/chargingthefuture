@@ -21,18 +21,6 @@ export const SYSTEM_FLAGS = {
 	PUBLIC_SURFACE: 'public-surface',
 } as const;
 
-export type SystemFlagKey = (typeof SYSTEM_FLAGS)[keyof typeof SYSTEM_FLAGS];
-
-// Build a user-facing feature flag key: feature-{pluginSlug}-{featureName}.
-export function featureFlagKey(pluginSlug: string, featureName: string): FlagKey {
-	return `feature-${pluginSlug}-${featureName}`;
-}
-
-// Build a release/rollout flag key: release-{agent}-{fixName}.
-export function releaseFlagKey(agent: string, fixName: string): FlagKey {
-	return `release-${agent}-${fixName}`;
-}
-
 // Vendor-neutral evaluation context. The web/mobile/agent flag clients map this onto
 // their provider's native context (e.g. Unleash Context: userId + properties).
 // Per-user unlock feature flags. The stored Unlock submission decides access whenever the
@@ -47,8 +35,6 @@ export const UNLOCK_FLAGS = {
 	// it is the standing rule for anyone who asks for help or comes back a second day. Delete the
 	// flag in Unleash too; nothing reads it any more.
 } as const;
-
-export type UnlockFlagKey = (typeof UNLOCK_FLAGS)[keyof typeof UNLOCK_FLAGS];
 
 export interface FeatureFlagContext {
 	// Stable identifier used for per-user targeting and sticky percentage rollout.
