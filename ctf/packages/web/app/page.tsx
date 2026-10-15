@@ -12,7 +12,6 @@ import { getGdpShellStats } from '../lib/gdp/repository';
 import { listPluginRegistry, filterPluginsForViewer } from '../lib/plugins/repository';
 import { readTrustSelfExtensionOrStored } from '../lib/trust/repository';
 import { getHostedSignInUrl } from '../lib/auth/provider-env';
-import { reportError } from '../lib/observability/report';
 
 function buildShellUser(userId: string, username: string | null): ShellCurrentUser {
   const safeUsername = username && username !== 'guest' ? username : null;
