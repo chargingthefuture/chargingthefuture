@@ -50,6 +50,9 @@ Member role unless noted.
    with a readable message, not a raw error. → web ☐ mobile ☐
 4. **Aggregate stays anonymous.** Open the community pulse / trends. It shows only an aggregate chart —
    no individual check-in, note, or identifier is ever shown. → web ☐ mobile ☐
+5. **Signed-out page says weekly.** Sign out and open `/apps/mood`. The intro says one check-in a
+   week and a community-wide picture of how members are doing; it does not say daily, and it does not
+   promise resources or nudges unlocked by checking in. → web ☐ mobile ☐
 
 ---
 

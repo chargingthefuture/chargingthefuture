@@ -43,6 +43,10 @@ member. Member role unless noted.
    other member's rows appear. → web ☐ mobile ☐
 4. **Sign-in required.** Sign out and try to reach ClickLog. Access is denied; there is no public
    view. → web ☐ mobile ☐
+5. **Empty state says what is shared.** On an account with no incidents, read the text under
+   "No incidents logged". It says notes stay private, that tagged incidents and any you choose to
+   share send the owner only the date, rough area, and tags, and that grouped totals may be
+   published. It does not say all data is only visible to you. → web ☐ mobile ☐
 
 ---
 
