@@ -125,6 +125,7 @@ export function BeaconBroadcastSection(props: BroadcastSectionProps) {
           <Text style={sectionLabelText(t)}>Or use a broadcaster app — push to this RTMP target</Text>
           <CopyRow t={t} label="RTMP URL" value={ingest.rtmpIngestUrl} copied={copied === 'RTMP URL'} onCopy={() => onCopy('RTMP URL', ingest.rtmpIngestUrl)} />
           <CopyRow t={t} label="Stream key" value={ingest.streamKey} copied={copied === 'Stream key'} onCopy={() => onCopy('Stream key', ingest.streamKey)} masked />
+          <Text style={[styles.keyNote, { color: t.SUBTLE }]}>The stream key works for 4 hours from when this page opened. Paste a fresh one for each broadcast.</Text>
         </View>
       ) : null}
 
@@ -138,6 +139,7 @@ const styles = StyleSheet.create({
   block: { marginTop: 18 },
   copyRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
   copyLabel: { width: 88, fontSize: 12, ...font('400') },
+  keyNote: { fontSize: 12, ...font('400') },
   code: { flex: 1, fontSize: 12, fontFamily: 'monospace', borderWidth: 1, paddingVertical: 8, paddingHorizontal: 10 },
   modRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 },
   modInput: { marginBottom: 0, width: '100%', maxWidth: 240 },

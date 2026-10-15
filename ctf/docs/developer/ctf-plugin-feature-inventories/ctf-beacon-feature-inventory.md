@@ -66,7 +66,8 @@ feed; when the event ends, Beacon auto-posts the recording to the Commons as a r
     preview, then joins the call as the host. "Flip camera" switches front and back cameras.
   - **Phone demo → RTMP ingest.** Beacon requests Stream's per-call RTMP ingest URL + stream key and
     shows them to the admin; the admin pushes the phone screen from a mobile broadcaster app. Stream
-    distributes it to viewers.
+    distributes it to viewers. The stream key works for 4 hours from when the broadcast panel opened
+    (the screen says so under it), so it is pasted fresh for each broadcast.
   - **Desktop demo → in-browser screen-share.** From `/admin/beacon`, the admin captures a desktop
     screen/window (browser `getDisplayMedia`) and publishes through the Stream web SDK as the host.
     The button is shown only where the browser offers screen capture, so not on a phone.
@@ -171,7 +172,10 @@ feed; when the event ends, Beacon auto-posts the recording to the Commons as a r
 - `POST /api/beacon` — create an event (draft).
 - `GET /api/beacon/[id]/ingest` — return the per-event RTMP ingest URL + stream key (for the phone
   broadcaster app) and a host token (for the in-browser camera, microphone and screen-share).
-  Admin-only.
+  Admin-only. The stream key is the host token, which expires after
+  `BEACON_HOST_TOKEN_TTL_SECONDS` (4 hours) and is minted fresh on every request. The host holds the
+  `host` role on this event's call (publishing) and is a moderator of this event's chat channel; it
+  has no app-wide Stream role.
 - `POST /api/beacon/[id]/go-live` — flip the call out of backstage (`goLive` with an empty body, no
   HLS/recording yet); flips status to `live`; auto-posts to Commons. The host stage mounts after this
   succeeds, so there is no publisher yet — HLS/recording start later via `start-broadcast`. Only a
@@ -391,6 +395,20 @@ stops. HLS is used for public viewers so scale does not multiply WebRTC cost.
 12. **Android viewer parity** — deferred via a parity ticket on the build PR.
 
 ## Change Log
+
+- 2026-10-15: **The host's Stream credential is short-lived and scoped to the event (code-review
+  #2663).** The host was registered on Stream Chat with the app-wide `admin` role, in a Stream app
+  shared with the other plugins, and given a token with no expiry that was also the RTMP stream key
+  pasted into a broadcaster app outside this one. Signed with no issue time either, it came out the
+  same on every request, so a saved key worked across events until the app secret was rotated. Now
+  `createBeaconHostCredentials` upserts the host with `role: 'user'` (putting back anyone given
+  `admin` before), makes them a moderator of this event's chat channel only, and signs the token
+  with an issue time and a 4-hour expiry (`BEACON_HOST_TOKEN_TTL_SECONDS`).
+  `ensureBeaconCallAndIngest` gives the host the `host` role on this event's call through Stream's
+  update-members endpoint, which also covers calls opened before the change. Chat moderation was
+  already server-side with the app secret and needed no role. Stream has no separate credential for
+  RTMP ingest, so the stream key is still the host token, now short-lived. A line under the stream
+  key on web and Android says it works for 4 hours and is pasted fresh for each broadcast.
 
 - 2026-10-14: **A re-sent participant-left webhook no longer counts the same minutes twice
   (code-review #2669).** `call.session_participant_left` added its seconds to the Stream Video meter
