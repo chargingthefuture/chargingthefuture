@@ -10,7 +10,7 @@ type AuditEvent = {
   actor_id: string;
   command: string;
   target_id: string;
-  metadata: { before?: Snapshot | null; after?: Snapshot | null };
+  metadata: { before?: Snapshot | null; after?: Snapshot | null; endpointIds?: unknown; daysRead?: unknown };
   created_at: string;
 };
 
@@ -20,6 +20,7 @@ const COMMAND_LABELS: Record<string, string> = {
   'admin.expenses.create': 'Added',
   'admin.expenses.update': 'Edited',
   'admin.expenses.delete': 'Removed',
+  'admin.expenses.gpu_bill.read': 'Read the RunPod bill',
 };
 
 function amountOf(snapshot: Snapshot | null | undefined): string {
@@ -41,8 +42,16 @@ function editChanges(before: Snapshot, after: Snapshot): string[] {
   return changes;
 }
 
+// A bill read changes no cost line; its metadata is { endpointIds, daysRead, readAt }.
+function describeBillRead(event: AuditEvent): string {
+  const endpoints = Array.isArray(event.metadata.endpointIds) ? event.metadata.endpointIds.length : 0;
+  const days = typeof event.metadata.daysRead === 'number' ? event.metadata.daysRead : 0;
+  return `${endpoints} endpoint${endpoints === 1 ? '' : 's'}, ${days} day${days === 1 ? '' : 's'} read`;
+}
+
 // One line saying what changed, read from the before/after the route stored.
 function describe(event: AuditEvent): string {
+  if (event.command === 'admin.expenses.gpu_bill.read') return describeBillRead(event);
   const before = event.metadata.before ?? {};
   const after = event.metadata.after ?? {};
   const name = after.provider ?? before.provider ?? event.target_id;

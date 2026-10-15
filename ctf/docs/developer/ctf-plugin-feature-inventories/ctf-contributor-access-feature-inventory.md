@@ -360,6 +360,16 @@ fill on the first recompute / config save / member post.
 
 ## Change Log
 
+- 2026-10-12 — The admin screen shows the channel sync warning, and a malformed reply id answers
+  400 (issues #2983, #2984). Revoke, reinstate and opening the channel already answered 200 with
+  `channelSyncWarning` when the Stream membership sync failed, but the Weavers admin section threw
+  the body away, so an admin who revoked a member for cause saw no sign the member was still in the
+  channel until the next sync. The section now shows the warning in its status banner after the
+  list refreshes. Separately, `createGatedChannelPost` sent any `replyToPostId` straight to a
+  `WHERE id = $1` against the UUID column; a value that was not a UUID threw a cast error that the
+  route reported and answered as a 503. It is now checked against `UUID_PATTERN` first and treated
+  as `reply_target_not_found` (400), the same way the delete and reaction paths already treat a bad
+  post id.
 - 2026-10-06 — Contributions split into a money event and a non-money event (owner decision; issue
   #2982). Only real money counts toward a dollar figure. `value.contributions_confirmed_usd` summed
   `confirmed_amount_usd` over every confirmed submission, and for a Quora comment or GitHub star that
@@ -374,6 +384,10 @@ fill on the first recompute / config save / member post.
   the owner set before the split keeps applying to comments and stars; the config editor now shows
   that effective weight rather than the default, and saving the form writes it as the new key's own.
 
+- 2026-10-05: **A failed contributor channel send keeps the typed text (#2634).** The composer was
+  cleared before the send and never refilled on failure, so a message over the length cap or a network
+  failure lost what the member wrote. It is now put back when the box is still empty, the same rule the
+  Commons composer uses. No route or contract change.
 - 2026-10-04: **Profile-and-deletion contract written.** A contract coverage audit found this plugin
   had the command, access-policy and audit contracts but not the deletion one that rule 114
   requires. `CONTRIBUTOR_ACCESS_PROFILE_AND_DELETION_CONTRACT.md` now states the registry entry

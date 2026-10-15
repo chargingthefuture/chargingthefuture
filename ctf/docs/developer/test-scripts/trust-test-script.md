@@ -94,6 +94,7 @@ These checks confirm the plugin is alive. If any fail, stop and file a bug befor
 - The recompute-on-read is **throttled**: the first read (when the newest `trust_signal_snapshot` is older than 5 minutes, or none exists yet) writes a new snapshot row; a second read within the 5-minute window returns the stored extension **without** writing another snapshot. Confirm by counting `trust_signal_snapshot` rows before and after two back-to-back reads — the count increases by at most one, not one per read. This bounds the write so a forced cross-site GET cannot drive unbounded snapshot inserts.
 - A `trust.summary.read` row is written to `trust_admin_audit_trail` for this read (`policy_status = allow`, reason `self_summary_read`; metadata carries `viewerUserId`/`subjectUserId`/`surface`). A failed audit write is reported but never changes the response.
 - If the recompute had thrown internally the route would still return 200 using the last stored extension (fallback); a crash/500 here is a bug.
+- If the stored read fails too (database unreachable), the route answers 503 with `code: TRUST_PERSISTENCE_UNAVAILABLE` and `message: "Trust data unavailable."`, the same body as the by-id route, and the failure is reported as `trust/self_stored_read`. A bare 500 with no `code` is a bug.
 
 **Result:** web ☐
 
@@ -139,6 +140,7 @@ These checks confirm the plugin is alive. If any fail, stop and file a bug befor
 - **No item carries a `createdAt` or a `details` field.** The full panel's last-sign-in detail must not appear anywhere in the response.
 - No per-plugin item survives — the response must not name SkillsHunt, Chyme, LightHouse, Foundation, or any other plugin, and must not carry a per-plugin count.
 - The breadth line counts DISTINCT plugins: a member with both a SocketRelay trades item and a SocketRelay requests item counts SocketRelay once.
+- Hosting TI Radio counts toward the breadth line: a member whose only participation is hosting TI Radio slots reads "Took part in 1 plugin".
 - Admin caller: HTTP 200 with the full panel and `trustDisclosure: "full"`. The owner reading their own row gets `full` too.
 - The response carries no `trustVisibility` field, and `trust_user_extension` has no `trust_visibility` column: `SELECT trust_visibility FROM trust_user_extension` must error with "column does not exist". Nothing in the product decides disclosure per member any more.
 - No recompute is triggered for the target (this is a plain read route); subsequent calls return the same `updatedAt`.
