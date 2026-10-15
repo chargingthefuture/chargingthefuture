@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireDirectoryAdminAccess } from '../../../_lib';
-import { DIRECTORY_ERROR_CODE } from 'lib/directory/constants';
+import { DIRECTORY_ERROR_CODE, QUORA_URL_SUPPRESSED_MESSAGE } from 'lib/directory/constants';
 import { deleteAdminProfile, updateAdminProfile, validateProfileInput } from 'lib/directory/repository';
 import { recordDirectoryAdminAudit } from 'lib/directory/audit';
 import type { DirectoryProfileInput } from 'lib/directory/types';
@@ -74,6 +74,23 @@ function parseBody(body: AdminProfileBody): DirectoryProfileInput {
   };
 }
 
+// An admin edit can rewrite a claimed member's name, headline, location, Quora address and skills, so
+// every outcome is a row in the admin audit trail the Audit log tab reads (the change-event row
+// updateAdminProfile writes is a different table that tab does not read).
+async function recordUpdateAudit(
+  actorId: string,
+  profileId: string,
+  outcome: { status: 'allow' | 'deny'; reason: string; result: 'success' | 'failure'; errorCategory: string | null },
+): Promise<void> {
+  await recordDirectoryAdminAudit({
+    actorId,
+    command: 'directory.admin.profile.update',
+    targetType: 'profile',
+    targetId: profileId,
+    ...outcome,
+  });
+}
+
 export async function PUT(request: Request, { params }: RouteParams) {
   const gate = await requireDirectoryAdminAccess();
   if (!gate.allowed) {
@@ -108,29 +125,38 @@ export async function PUT(request: Request, { params }: RouteParams) {
   try {
     const profile = await updateAdminProfile(gate.auth.userId, id, input);
     if (!profile) {
+      await recordUpdateAudit(gate.auth.userId, id, { status: 'deny', reason: 'not_found', result: 'failure', errorCategory: 'not_found' });
       return NextResponse.json(
         { ok: false, code: DIRECTORY_ERROR_CODE.notFound, message: 'Profile not found.' },
         { status: 404 },
       );
     }
 
+    await recordUpdateAudit(gate.auth.userId, id, { status: 'allow', reason: 'admin_route_guard', result: 'success', errorCategory: null });
     return NextResponse.json({ ok: true, profile }, { status: 200 });
   } catch (error) {
     // The submitted Quora address is on the takedown list (the person asked to be removed). The edit
-    // cannot succeed until an admin lifts that block, so answer 409 and keep the expected refusal out
-    // of error tracking.
+    // cannot succeed until an admin lifts that block, so answer 409, audit it as a deny like the admin
+    // create does, and keep the expected refusal out of error tracking.
     if (error instanceof Error && error.message === 'directory_quora_url_suppressed') {
+      await recordUpdateAudit(gate.auth.userId, id, { status: 'deny', reason: 'quora_url_suppressed', result: 'failure', errorCategory: 'policy' });
       return NextResponse.json(
         {
           ok: false,
           code: DIRECTORY_ERROR_CODE.quoraUrlSuppressed,
-          message:
-            "This Quora profile was removed from the Directory at the person's request, so it cannot be listed again until an admin lifts that block.",
+          message: QUORA_URL_SUPPRESSED_MESSAGE,
         },
         { status: 409 },
       );
     }
     reportError(error, { area: 'directory', op: 'admin_profiles_id' });
+    const isValidation = error instanceof Error && error.message.includes('_not_found');
+    await recordUpdateAudit(gate.auth.userId, id, {
+      status: 'allow',
+      reason: 'admin_route_guard',
+      result: 'failure',
+      errorCategory: isValidation ? 'validation' : 'persistence_error',
+    });
     return mapSelectorError(error);
   }
 }

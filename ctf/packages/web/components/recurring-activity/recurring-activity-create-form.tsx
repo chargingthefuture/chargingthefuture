@@ -12,6 +12,7 @@ import {
   type RecurringActivitySector,
   type RecurringActivityTokens,
 } from './recurring-activity-shared';
+import { failureText, responseFailureText } from 'lib/errors/client-failure';
 
 const SECTORS: RecurringActivitySector[] = ['housing', 'service', 'favor', 'general'];
 const CADENCES: RecurringActivityCadence[] = ['weekly', 'biweekly', 'monthly', 'quarterly'];
@@ -219,6 +220,7 @@ function CounterpartyPicker({
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<MemberOption[]>([]);
   const [loading, setLoading] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -231,6 +233,7 @@ function CounterpartyPicker({
     if (term.length < 2) {
       setResults([]);
       setLoading(false);
+      setSearchError(null);
       return;
     }
     if (debounceRef.current) {
@@ -239,16 +242,32 @@ function CounterpartyPicker({
     const controller = new AbortController();
     debounceRef.current = setTimeout(async () => {
       setLoading(true);
+      setSearchError(null);
       try {
         const params = new URLSearchParams();
         params.set('q', term);
         const res = await fetch(`/api/directory/list?${params.toString()}`, { signal: controller.signal });
-        if (res.ok) {
-          const data = (await res.json()) as Parameters<typeof mapDirectoryToMembers>[0];
-          setResults(mapDirectoryToMembers(data).slice(0, 8));
+        if (!res.ok) {
+          setResults([]);
+          setSearchError(await responseFailureText(res, 'The member search did not work. Try again in a moment.', 'member'));
+          return;
         }
-      } catch {
-        // Aborted or transient; the picker simply shows no new results.
+        const data = (await res.json()) as Parameters<typeof mapDirectoryToMembers>[0];
+        setResults(mapDirectoryToMembers(data).slice(0, 8));
+      } catch (error) {
+        // An abort is the next keystroke replacing this search, not a failure.
+        if (controller.signal.aborted) {
+          return;
+        }
+        setResults([]);
+        setSearchError(
+          failureText(error, {
+            area: 'recurring-activity',
+            op: 'member_search',
+            fallback: 'The member search did not work. Try again in a moment.',
+            audience: 'member',
+          }),
+        );
       } finally {
         if (!controller.signal.aborted) {
           setLoading(false);
@@ -320,6 +339,9 @@ function CounterpartyPicker({
       </div>
       {loading && results.length === 0 ? (
         <div style={{ fontSize: 12, color: t.MUTED, padding: '4px 2px' }}>Searching…</div>
+      ) : null}
+      {!loading && searchError ? (
+        <div role="alert" style={{ fontSize: 12, color: t.SUBTLE, padding: '4px 2px' }}>{searchError}</div>
       ) : null}
       {results.length > 0 && (
         <div style={{ border: `1px solid ${t.BORDER_SOLID}`, borderRadius: 8, overflow: 'hidden' }}>

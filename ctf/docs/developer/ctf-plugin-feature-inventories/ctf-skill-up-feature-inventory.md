@@ -77,6 +77,11 @@ trains**. Every Skills Taxonomy skill belongs to exactly one job title and each 
   read access plus the skills match; a refusal names what the person would have to change.
 - **Any trainerless cohort can be claimed**, not only ones the retired auto-cohort run opened —
   claiming is how a trainer attaches to a cohort at all.
+- **One trainer per claim race (2026-10-05, #2946).** `claimCohortAsTrainer` reads the update's row
+  count. When two eligible people claim the same cohort at once, both pass the ownership read but
+  only the first update matches. The second now gets `already_claimed` (409, "This cohort already
+  has a trainer.") with no enrollment backfill and no `skill-up.cohort.claim_trainer` audit row.
+  Before this it was answered 200 and audited as a second trainer of the same cohort.
 - **The audit that makes it safe.** Removing the human also removes what a human would have noticed,
   so every add and remove on a *claimed* Directory profile is written to
   `skill_up_trainer_skill_audit`.
@@ -364,6 +369,14 @@ that exist today.
 5. ~~Auto cohorts' trainer payout did not fire because enrollments had no `assigned_trainer_id`.~~ **Resolved (2026-06-29):** enrolling in a claimed auto cohort now sets `assigned_trainer_id` to the claiming trainer (the cohort's `created_by_user_id` once it is no longer the scheduler placeholder), and `claim-trainer` backfills that trainer onto any enrollments made before the claim. So a milestone release now settles the trainer split for auto cohorts. (Admin/human-built cohorts get no assigned trainer at enrollment, since their `created_by_user_id` may be an admin, not the trainer. Since 2026-10-05 the request can no longer name one.)
 
 ## Change Log
+
+- 2026-10-14: **The SkillUp seed runs again, and post/0009 leaves later cohort titles alone (code
+  review #2768, #2770).** `seedSkillUp.mjs` still inserted the four stipend and microgrant columns
+  that post/0012 and post/0013 dropped, so `pnpm seed:skill-up` failed before writing a cohort; the
+  insert now lists only current columns and sets `trainer_credits_per_milestone` to 10 as the demo
+  seed does. post/0009 strips the `SkillUp: ` / `LevelUp: ` prefix only from cohorts created before
+  2026-08-30, since the file runs on every deploy that applies migrations and an admin may now give a
+  cohort a title that starts with either word.
 
 - 2026-10-05: **SkillUp transfers go through the canonical ServiceCredits transfer (code review
   #2875).** `transferCreditsForSkillUp` imported a second copy of `createTransfer` that skipped the

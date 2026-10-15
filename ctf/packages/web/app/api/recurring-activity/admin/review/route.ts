@@ -51,7 +51,14 @@ export async function GET(request: Request) {
     review.reciprocalPairs.forEach((pair) => { involved.add(pair.userA); involved.add(pair.userB); });
     review.fastConfirmations.forEach((row) => { involved.add(row.ownerUserId); involved.add(row.counterpartyUserId); });
     review.tightClusters.forEach((cluster) => cluster.memberUserIds.forEach((id) => involved.add(id)));
-    const names = await resolveUsernames([...involved]).catch(() => new Map<string, string | null>());
+    // A failed name lookup still returns the review, with bare ids, and says so: the screen shows a
+    // line that names could not be loaded, and the failure is reported.
+    let namesUnavailable = false;
+    const names = await resolveUsernames([...involved]).catch((error) => {
+      reportError(error, { area: 'recurring-activity', op: 'admin_review_names' });
+      namesUnavailable = true;
+      return new Map<string, string | null>();
+    });
 
     await logRecurringActivityAuditEvent({
       actorUserId: gate.auth.userId,
@@ -69,7 +76,7 @@ export async function GET(request: Request) {
     });
 
     return NextResponse.json(
-      { ok: true, review, names: Object.fromEntries([...names].map(([id, name]) => [id, name])) },
+      { ok: true, review, names: Object.fromEntries([...names].map(([id, name]) => [id, name])), namesUnavailable },
       { status: 200 },
     );
   } catch (error) {

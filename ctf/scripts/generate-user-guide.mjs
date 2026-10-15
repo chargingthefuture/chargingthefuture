@@ -31,7 +31,7 @@ import { readFileSync, writeFileSync, existsSync, readdirSync } from 'fs';
 import { execFileSync } from 'child_process';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { anthropicApiError, reportIfRunBlocked } from './lib/anthropicRunBlocked.mjs';
+import { anthropicApiError, reportIfRunBlocked, reportRunBlocked } from './lib/anthropicRunBlocked.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(__dirname, '../..');
@@ -346,7 +346,13 @@ async function rewrite(slug, title, whatItIs, features, coreSmoke, focus) {
 // mode to rebuild the markdown copy from that JSON so the two files never drift.
 const RENDER_ONLY = process.env.USER_GUIDE_RENDER_ONLY === '1';
 if (!RENDER_ONLY && !process.env.ANTHROPIC_API_KEY) {
-  console.error('ANTHROPIC_API_KEY is not set — refusing to regenerate the user guide. The guide is left unchanged.');
+  // Reported as paused, not broken: the key lives in Infisical, outside this repo.
+  reportRunBlocked({
+    script: 'generate-user-guide',
+    reason: 'no_key',
+    manualRoute: '/user-guide',
+    nothingLost: 'The committed guide is untouched; the next run after this clears regenerates it.',
+  });
   process.exit(1);
 }
 if (RENDER_ONLY && !existsSync(OUT_JSON)) {

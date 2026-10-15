@@ -14,6 +14,7 @@ import { WhatWorksLoading } from './ww-loading';
 import { WhatWorksSuggestPanel } from './ww-suggest-panel';
 import { WhatWorksShellHeader } from './ww-shell-header';
 import { WhatWorksListBody } from './ww-list-body';
+import { failureText, responseFailureText } from 'lib/errors/client-failure';
 
 const EMPTY_STATS: WhatWorksStats = { problems: 0, verifiedTools: 0, survivorsHelped: 0 };
 
@@ -46,6 +47,8 @@ export function WhatWorksShell() {
   const [stats, setStats] = useState<WhatWorksStats>(EMPTY_STATS);
   const [isAdmin, setIsAdmin] = useState(false);
   const [problemOptions, setProblemOptions] = useState<WhatWorksProblemOption[]>([]);
+  // Set when the suggest form's problem list could not load, so the empty dropdown says why.
+  const [problemOptionsError, setProblemOptionsError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   // Which page of problems is on screen. The list is paged, not endlessly scrolled.
   const [page, setPage] = useState(0);
@@ -62,26 +65,35 @@ export function WhatWorksShell() {
     setError(null);
     try {
       const res = await fetch('/api/what-works');
-      if (!res.ok) throw new Error('Failed to load What Works');
+      if (!res.ok) {
+        // The route, the Unlock gate and the CSRF check each say why; show that, not a fixed line.
+        setError(await responseFailureText(res, 'Failed to load What Works', 'member'));
+        return;
+      }
       const data = (await res.json()) as WhatWorksListResponse;
       setProblems(data.problems ?? []);
       setStats(data.stats ?? EMPTY_STATS);
       setIsAdmin(Boolean(data.viewer?.isAdmin));
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Failed to load What Works');
+      setError(failureText(caught, { area: 'what-works', op: 'load_list', fallback: 'Failed to load What Works', audience: 'member' }));
     } finally {
       setLoading(false);
     }
   }
 
   async function loadProblemOptions(): Promise<void> {
+    setProblemOptionsError(null);
+    const fallback = 'The list of problems could not load, so a suggestion cannot be added yet. Refresh to try again.';
     try {
       const res = await fetch('/api/what-works/problems');
-      if (!res.ok) return;
+      if (!res.ok) {
+        setProblemOptionsError(await responseFailureText(res, fallback, 'member'));
+        return;
+      }
       const data = (await res.json()) as { problems: WhatWorksProblemOption[] };
       setProblemOptions(data.problems ?? []);
-    } catch {
-      // Non-fatal: the suggest dropdown simply stays empty until reload.
+    } catch (caught) {
+      setProblemOptionsError(failureText(caught, { area: 'what-works', op: 'load_problem_options', fallback, audience: 'member' }));
     }
   }
 
@@ -113,11 +125,14 @@ export function WhatWorksShell() {
     const method = product.viewerHasEndorsed ? 'DELETE' : 'POST';
     try {
       const res = await fetch(`/api/what-works/products/${product.id}/endorse`, { method, headers: { 'x-ctf-csrf': '1' } });
-      if (!res.ok) throw new Error('Could not update. Try again.');
+      if (!res.ok) {
+        setError(await responseFailureText(res, 'Could not update. Try again.', 'member'));
+        return;
+      }
       const data = (await res.json()) as { verifiedCount: number; viewerHasEndorsed: boolean };
       applyEndorsement(product.id, data);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Could not update. Try again.');
+      setError(failureText(caught, { area: 'what-works', op: 'toggle_helpful', fallback: 'Could not update. Try again.', audience: 'member', extra: { productId: product.id } }));
     } finally {
       setBusyProductId(null);
     }
@@ -194,6 +209,7 @@ export function WhatWorksShell() {
     return (
       <WhatWorksSuggestPanel
         problems={problemOptions}
+        optionsError={problemOptionsError}
         initialProblemId={suggestProblemId}
         isFirst={listHasNoTools}
         onSubmit={submitSuggestion}

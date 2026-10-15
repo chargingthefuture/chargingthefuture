@@ -54,7 +54,7 @@ export async function POST(request: Request, context: { params: Promise<{ activi
       activityId,
       requestId,
       traceId,
-    });
+    }).catch((auditError) => reportError(auditError, { area: 'recurring-activity', op: 'end_audit' }));
     return NextResponse.json(
       {
         ok: true,
