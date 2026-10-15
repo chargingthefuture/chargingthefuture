@@ -20,6 +20,14 @@ export function resolveWebSentryDsn(): string {
     const fromPage = (window as unknown as Record<string, unknown>)[SENTRY_DSN_GLOBAL];
     return typeof fromPage === 'string' ? fromPage.trim() : '';
   }
+  // OBSERVABILITY_PROVIDER is the shared switch named in the README and rule 108. Unset means
+  // Sentry (the default); any other value turns web reporting off, the same as on mobile. Every web
+  // Sentry entry point (server, edge, browser via the layout, and reportError) reads the DSN through
+  // here, so returning no DSN is what turns all of them off.
+  const provider = (process.env.OBSERVABILITY_PROVIDER ?? '').trim().toLowerCase();
+  if (provider && provider !== 'sentry') {
+    return '';
+  }
   return (process.env.SENTRY_DSN ?? '').trim();
 }
 
