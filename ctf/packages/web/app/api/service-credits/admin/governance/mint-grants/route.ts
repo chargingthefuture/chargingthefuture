@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { ensureMutationCsrf, requireServiceCreditsAdminAccess, serviceCreditsErrorResponse } from 'lib/service-credits/_lib';
+import { ensureMutationCsrf, requireServiceCreditsAdminAccess, serviceCreditsErrorResponse, auditServiceCreditsFailure } from 'lib/service-credits/_lib';
 import { insertServiceCreditsAudit, mintGrant } from 'lib/service-credits/repository';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
@@ -47,7 +47,7 @@ export async function POST(request: Request) {
     return csrfDeny;
   }
 
-  const gate = await requireServiceCreditsAdminAccess();
+  const gate = await requireServiceCreditsAdminAccess({ command: 'service-credits.governance.mint.grant' });
   if (!gate.allowed) {
     return gate.response;
   }
@@ -91,6 +91,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, grant }, { status: 201 });
   } catch (error) {
     reportError(error, { area: 'service-credits', op: 'admin_governance_mint_grants' });
+    await auditServiceCreditsFailure({ actorId: gate.auth.userId, command: 'service-credits.governance.mint.grant', targetType: 'wallet', targetId: input.targetUserId, error });
     return serviceCreditsErrorResponse(error, 'Governance mint grant unavailable.');
   }
 }

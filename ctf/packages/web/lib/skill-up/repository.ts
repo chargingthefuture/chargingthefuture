@@ -11,6 +11,7 @@ import {
   releaseEscrow,
 } from 'lib/shared/credits-interface';
 import { resolveUsernames } from 'lib/identity/resolve-usernames';
+import { reportError } from 'lib/observability/report';
 import {
   SKILL_UP_AUTO_COHORT_ACTOR_ID,
   SKILL_UP_DEFAULT_TRAINER_SPLIT_PERCENT,
@@ -641,10 +642,14 @@ async function createEnrollmentDraftTx(client: PoolClient, input: EnrollInCohort
   const enrollmentExisting = await client.query<{ id: string }>(
     `SELECT id::text
      FROM skill_up_enrollments
-     WHERE cohort_id = $1::uuid AND user_id = $2
+     WHERE cohort_id = $1::uuid AND user_id = $2 AND status <> 'dropped'
      LIMIT 1`,
     [input.cohortId, input.actorId],
   );
+  // A dropped enrollment is a member who left. It is not a seat, so it must not answer for one:
+  // returning it here told the member they had joined while nothing was held and the row stayed
+  // dropped. Leaving it out lets them enroll again with a new row and a new deposit hold, which the
+  // partial unique index (post/0014, WHERE status <> 'dropped') allows.
   if (enrollmentExisting.rows[0]) {
     const response: EnrollmentCreateResponse = {
       enrollmentId: enrollmentExisting.rows[0].id,
@@ -744,8 +749,21 @@ export async function enrollInCohort(input: EnrollInCohortInput) {
           originPlugin: SKILL_UP_PLUGIN_SLUG,
           idempotencyKey: `${input.idempotencyKey}:rollback:${escrowId}`,
         });
-      } catch {
-        // no-trace: best-effort rollback for escrows that are already held.
+        await queryDb(
+          `UPDATE skill_up_enrollment_milestone_escrows
+           SET release_status = 'refunded', updated_at = NOW()
+           WHERE enrollment_id = $1::uuid AND escrow_id = $2::uuid`,
+          [draft.enrollmentId, escrowId],
+        );
+      } catch (refundError) {
+        // The hold stays held in ServiceCredits. Its escrow row (if it was written) keeps
+        // release_status 'held', so a cohort close or a data deletion still refunds it later; the
+        // report names the escrow so it can also be found and returned by hand.
+        reportError(refundError, {
+          area: 'skill-up',
+          op: 'enrollment_setup_rollback_refund',
+          extra: { enrollmentId: draft.enrollmentId, escrowId },
+        });
       }
     }
 

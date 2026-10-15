@@ -504,6 +504,17 @@ CREATE TABLE IF NOT EXISTS stream_video_usage_daily (
 );
 ALTER TABLE IF EXISTS stream_video_usage_daily ADD COLUMN IF NOT EXISTS participant_seconds BIGINT NOT NULL DEFAULT 0;
 ALTER TABLE IF EXISTS stream_video_usage_daily ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- One row per processed `call.session_participant_left` webhook delivery, so a delivery Stream
+-- re-sends after a slow response does not credit the same minutes to stream_video_usage_daily
+-- twice. The key is call cid | session id | the participant's Stream session id (a per-join Stream
+-- id, not a member id); no personal data. Rows older than a day are pruned on each insert
+-- (lib/stream-quota/webhook-usage.ts).
+CREATE TABLE IF NOT EXISTS stream_video_webhook_deliveries (
+  dedupe_key TEXT PRIMARY KEY,
+  received_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS stream_video_webhook_deliveries ADD COLUMN IF NOT EXISTS received_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS stream_video_webhook_deliveries_received_at_idx ON stream_video_webhook_deliveries (received_at);
 -- Moderation (2026-09-19, owner decision): a room has a speak mode, a removed-members list, and
 -- an admin audit trail. In 'open' mode every joiner may speak (the room as shipped); in
 -- 'hand_raise' mode a joiner listens until an admin lets them speak.
@@ -3508,7 +3519,8 @@ CREATE TABLE IF NOT EXISTS skill_up_cohorts (
   -- "SkillUp: <occupation>" (and "LevelUp: <occupation>" before the 2026-08-29 rename), which
   -- repeated the name of the plugin the row is already inside on every card. It is the occupation on
   -- its own now; post/0009_skill_up_cohort_title_drop_plugin_prefix.sql strips the prefix from the
-  -- rows written under the old template. Do not reintroduce the prefix.
+  -- rows written under the old template (created before 2026-08-30 only, so a title an admin types
+  -- later is left as typed on every re-run). Do not reintroduce the prefix.
   title TEXT NOT NULL,
   description TEXT NOT NULL,
   track TEXT NOT NULL,
@@ -7100,6 +7112,129 @@ FROM service_credits_wallets
 WHERE is_frozen = TRUE
 ON CONFLICT (user_id) DO NOTHING;
 
+-- === directory public landing page (owner decision, 2026-10-13) ===
+-- The public match page (landing-page-v4, on Vercel) reads Directory counts per job title and saves
+-- the match a visitor asks to come back to. It connects with its own login, landing_page, which may
+-- read the two views below and read, add and update rows in directory_landing_match_codes, and nothing else
+-- (the grants are pasted in the Neon dashboard, not kept here, because the login is created there).
+-- Defined at the END so directory_profiles, the taxonomy tables and account_restrictions exist.
+--
+-- A saved match holds the code, the job title and the count when it was saved. No name, no contact
+-- details, no IP address: the code is the only way back to it, on purpose.
+CREATE TABLE IF NOT EXISTS directory_landing_match_codes (
+  code TEXT PRIMARY KEY,
+  job_title_id TEXT NOT NULL,
+  job_title_ids TEXT[],
+  people_at_save INTEGER,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  last_seen_at TIMESTAMPTZ
+);
+ALTER TABLE IF EXISTS directory_landing_match_codes ADD COLUMN IF NOT EXISTS job_title_id TEXT;
+ALTER TABLE IF EXISTS directory_landing_match_codes ADD COLUMN IF NOT EXISTS people_at_save INTEGER;
+ALTER TABLE IF EXISTS directory_landing_match_codes ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS directory_landing_match_codes ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ;
+-- The job titles behind the needs a visitor picked (job_title_id keeps the first, for older rows).
+ALTER TABLE IF EXISTS directory_landing_match_codes ADD COLUMN IF NOT EXISTS job_title_ids TEXT[];
+CREATE INDEX IF NOT EXISTS idx_directory_landing_match_codes_job_title ON directory_landing_match_codes (job_title_id);
+
+-- Who lists which job title, by their job title or any of their skills, claimed or unclaimed,
+-- leaving out owners restricted with scope all or contact. Not granted to the landing page: it
+-- holds profile ids. The two public views and directory_public_match_count read it. Ids are
+-- compared as text because some production id columns are VARCHAR.
+CREATE OR REPLACE VIEW directory_person_job_titles AS
+  WITH people AS (
+    SELECT p.id::text AS id, p.job_title_id::text AS job_title_id
+    FROM directory_profiles p
+    WHERE NOT EXISTS (
+      SELECT 1 FROM account_restrictions r
+      WHERE r.user_id::text = p.claimed_by_user_id::text
+        AND r.is_restricted
+        AND r.restriction_scope IN ('all', 'contact')
+    )
+  )
+  SELECT id AS person_id, job_title_id FROM people WHERE job_title_id IS NOT NULL
+  UNION
+  SELECT pp.id, sk.job_title_id::text
+  FROM people pp
+  JOIN directory_profile_skills ps ON ps.profile_id::text = pp.id
+  JOIN skills_taxonomy_skills sk ON sk.id::text = ps.skill_id::text;
+
+-- One row per active job title and how many people list it (0 when nobody does).
+CREATE OR REPLACE VIEW directory_public_skill_counts AS
+  WITH per_title AS (
+    SELECT job_title_id, COUNT(*)::integer AS n FROM directory_person_job_titles GROUP BY job_title_id
+  )
+  SELECT jt.id::text AS job_title_id,
+         s.name AS sector,
+         s.display_order AS sector_order,
+         jt.name AS title,
+         jt.display_order AS title_order,
+         COALESCE(pt.n, 0) AS people
+  FROM skills_taxonomy_job_titles jt
+  JOIN skills_taxonomy_sectors s ON s.id = jt.sector_id AND s.is_active
+  LEFT JOIN per_title pt ON pt.job_title_id = jt.id::text
+  WHERE jt.is_active;
+
+-- One row: everybody in the Directory, restriction rule as above.
+CREATE OR REPLACE VIEW directory_public_totals AS
+  WITH people AS (
+    SELECT p.id::text AS id
+    FROM directory_profiles p
+    WHERE NOT EXISTS (
+      SELECT 1 FROM account_restrictions r
+      WHERE r.user_id::text = p.claimed_by_user_id::text
+        AND r.is_restricted
+        AND r.restriction_scope IN ('all', 'contact')
+    )
+  )
+  SELECT (SELECT COUNT(*)::integer FROM people) AS total;
+
+-- One row: how many different active skills at least one Directory profile lists, and how many
+-- active skills there are. The same query as Workforce's Skills Coverage tile
+-- (lib/workforce/repository.ts getDashboard), so the landing page shows the same percentage.
+-- Counts of skills only; nothing about a person.
+CREATE OR REPLACE VIEW directory_public_skill_coverage AS
+  SELECT
+    (SELECT COUNT(DISTINCT dps.skill_id)::integer
+       FROM directory_profile_skills dps
+       JOIN directory_profiles p ON dps.profile_id::text = p.id::text
+       JOIN skills_taxonomy_skills s ON s.id = dps.skill_id
+      WHERE s.is_active = TRUE) AS covered,
+    (SELECT COUNT(*)::integer FROM skills_taxonomy_skills WHERE is_active = TRUE) AS catalog;
+
+-- How many people match a visitor: everyone who lists any of the given job titles, each counted
+-- once, as an exact number. Runs with its owner's rights so the landing page can call it
+-- without reading directory_person_job_titles itself; at most 60 titles per call.
+CREATE OR REPLACE FUNCTION directory_public_match_count(title_ids TEXT[])
+RETURNS INTEGER
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT n
+  FROM (
+    SELECT COUNT(DISTINCT person_id)::integer AS n
+    FROM directory_person_job_titles
+    WHERE job_title_id = ANY (title_ids[1:60])
+  ) x
+$$;
+REVOKE ALL ON FUNCTION directory_public_match_count(TEXT[]) FROM PUBLIC;
+
+-- In-demand needs (owner decision, 2026-10-13): each time a visitor on the landing page picks a need
+-- and nobody in the Directory matches it, the page records it once per visit, so the owner can see
+-- which needs go unmet and look for somebody. One row per time asked: the need's label (or
+-- "skill:<job title>" for a single added skill), the job titles behind it, and when. Nothing about
+-- the visitor: no code, name, contact detail or IP address. The landing page login may only add rows.
+CREATE TABLE IF NOT EXISTS directory_unmet_needs (
+  id BIGSERIAL PRIMARY KEY,
+  need TEXT NOT NULL,
+  job_title_ids TEXT[] NOT NULL DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS directory_unmet_needs ADD COLUMN IF NOT EXISTS need TEXT;
+ALTER TABLE IF EXISTS directory_unmet_needs ADD COLUMN IF NOT EXISTS job_title_ids TEXT[] NOT NULL DEFAULT '{}';
+ALTER TABLE IF EXISTS directory_unmet_needs ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_directory_unmet_needs_need ON directory_unmet_needs (need, created_at DESC);
+
 -- === beacon-plugin ===
 -- Beacon: admin-only one-way livestream. An admin goes live ad hoc to broadcast a live demo
 -- (screen content), flagship use the "State of the Skills Economy" address. Watching is public
@@ -8397,224 +8532,7 @@ DROP TABLE IF EXISTS workforce_announcements;
 
 
 -- ── post migration: 0008_login_events_backfill_launch_gap.sql ──
--- post/0008: Rebuild the sign-in days that nothing recorded between v2 stopping and v3 starting.
---
--- `login_events` is the entire definition of an active member (owner decision, 2026-08-27): a member
--- is active on a day the sign-in record holds a row for them, whatever they opened next. The record
--- carries real history from v2 — its first row is 2025-12-15 — but it has a hole. v2 wrote its last
--- row on 2026-05-26 and v3's writer did not exist until 2026-06-19, so for 23 days nothing wrote
--- anything down. The platform launched on 2026-06-12, inside that hole, which is why the oldest week
--- the Weekly Performance picker offers reported nobody at all while people were plainly using it.
---
--- This does not change what "active" means and does not widen it. It repairs the record for those
--- days only, from first-party evidence that an authenticated session existed: a row in a plugin's
--- command trail naming the member as the actor, or a row the member wrote themselves, is proof that
--- member was signed in on that day. Every source is member-attributed and dated by the member's own
--- action; rows whose timestamp belongs to a counterparty or an admin acting ON a member are not
--- evidence that the member turned up and are not used.
---
--- Properties:
---   * scoped     — only days in [2026-05-27, 2026-06-19). Outside the hole the record was being
---                  written, so an absent day there is a real absence and is left alone.
---   * guarded    — every source is checked for existence before it is read, so a database missing
---                  any of these tables simply contributes nothing instead of failing.
---   * idempotent — WHERE NOT EXISTS on the (member, UTC day) pair plus ON CONFLICT DO NOTHING. Safe
---                  to re-run, and safe to run after the same repair was applied by hand.
---   * honest     — where the table has v2's `source` column, backfilled rows are marked
---                  'backfill_launch_gap' so a reconstructed day is never mistaken for one that was
---                  recorded live. The timestamp is the member's earliest proven action that day.
---   * people only — actor ids the platform writes for itself (scheduled runs, the platform-authored
---                  Commons notice, the `anonymous`/`system` fallbacks) are excluded by name, and so
---                  is any member the `users` identity mirror no longer holds. Production's
---                  login_events has a v2 foreign key to users(id) (see
---                  ctf/schema-prod4.6.2026.sql), and the command trails outlive that mirror: a
---                  deleted account leaves audit rows behind. One such orphan is what made the first
---                  production run of this migration abort without writing anything.
---
--- Applied by the "Neon — Update DB" GitHub Action, which runs every post/ migration on a push to
--- main that touches this folder — so merging is what runs it, with no command to type. It reports as
--- it goes in the workflow log: the evidence it found, a line per day naming how many members that day
--- has evidence for, and how many rows it wrote. Being idempotent, it is re-applied on every later run
--- of that workflow and on every fresh database clone, writing nothing the second time.
-
-DO $$
-DECLARE
-  gap_start CONSTANT timestamptz := TIMESTAMPTZ '2026-05-27 00:00:00+00';
-  gap_end   CONSTANT timestamptz := TIMESTAMPTZ '2026-06-19 00:00:00+00';
-  -- Actor ids the platform writes for itself. None of these is a person turning up.
-  non_member_actors CONSTANT text[] := ARRAY[
-    'anonymous',
-    'system',
-    'system:commons-guidance',
-    'skills-hunt-auto-mission-scheduler',
-    'skill-up-auto-cohort-scheduler',
-    -- The value those rows carried before the 2026-08-29 SkillUp rename. Listed as well as the
-    -- new one so this stays correct whichever order the rename and this backfill run in.
-    'level-up-auto-cohort-scheduler',
-    'unlock-incentive-system',
-    'internal_service_credits_reclaimer'
-  ];
-  src record;
-  has_source boolean;
-  evidence_days bigint;
-  evidence_members bigint;
-  skipped bigint;
-  written bigint;
-BEGIN
-  IF to_regclass('public.login_events') IS NULL THEN
-    RAISE NOTICE 'login_events does not exist in this database; nothing to repair.';
-    RETURN;
-  END IF;
-
-  CREATE TEMP TABLE _login_gap_evidence (
-    user_id text NOT NULL,
-    activity_day date NOT NULL,
-    first_seen timestamptz NOT NULL
-  );
-
-  -- Every source is (table, member column). The date column is `created_at` throughout except where
-  -- named otherwise below, and each is read only for the gap window.
-  FOR src IN
-    SELECT * FROM (VALUES
-      -- Rows the member wrote themselves.
-      ('click_log_incidents', 'user_id', 'created_at'),
-      ('mood_submissions', 'user_id', 'submitted_at'),
-      ('feed_community_posts', 'author_user_id', 'created_at'),
-      ('feed_community_replies', 'author_user_id', 'created_at'),
-      ('feed_community_post_reactions', 'user_id', 'created_at'),
-      ('peer_programming_messages', 'author_user_id', 'created_at'),
-      ('skill_up_dispute_comments', 'actor_user_id', 'created_at'),
-      -- Command trails: one row per command the member ran, actor and time from their own request.
-      ('account_restrictions_audit', 'actor_id', 'created_at'),
-      ('announcement_membership_events', 'actor_id', 'created_at'),
-      ('beacon_events_admin_audit_trail', 'actor_id', 'created_at'),
-      ('contributions_audit_log', 'actor_user_id', 'created_at'),
-      ('contributor_access_audit_trail', 'actor_id', 'created_at'),
-      ('directory_profile_change_events', 'actor_id', 'created_at'),
-      ('feed_membership_events', 'actor_id', 'created_at'),
-      ('foundation_admin_audit_trail', 'actor_id', 'created_at'),
-      ('foundation_quote_status_events', 'actor_user_id', 'created_at'),
-      ('gdp_admin_audit_trail', 'actor_id', 'created_at'),
-      ('skill_up_audit_events', 'actor_id', 'created_at'),
-      ('lighthouse_admin_audit_trail', 'actor_id', 'created_at'),
-      ('llm_inference_log', 'actor_user_id', 'created_at'),
-      ('peer_programming_admin_audit_trail', 'actor_id', 'created_at'),
-      ('quora_deletion_survey_audit_log', 'actor_user_id', 'created_at'),
-      ('quora_live_census_audit_log', 'actor_user_id', 'created_at'),
-      ('recurring_activity_audit_trail', 'actor_user_id', 'created_at'),
-      ('safety_admin_audit_trail', 'actor_id', 'created_at'),
-      ('service_credits_admin_audit_trail', 'actor_id', 'created_at'),
-      ('skills_hunt_audit_log', 'actor_id', 'created_at'),
-      ('skills_taxonomy_change_events', 'actor_id', 'created_at'),
-      ('socket_relay_admin_audit_trail', 'actor_id', 'created_at'),
-      ('socket_relay_request_events', 'actor_user_id', 'created_at'),
-      ('trust_admin_audit_trail', 'actor_user_id', 'created_at'),
-      ('trust_transport_admin_audit_trail', 'actor_id', 'created_at'),
-      ('trust_transport_status_events', 'actor_user_id', 'created_at'),
-      ('unlock_audit_log', 'actor_user_id', 'created_at'),
-      ('weekly_performance_audit_trail', 'actor_id', 'created_at'),
-      ('workforce_admin_audit_trail', 'actor_id', 'created_at')
-    ) AS t(table_name, user_column, date_column)
-  LOOP
-    CONTINUE WHEN to_regclass('public.' || src.table_name) IS NULL;
-    CONTINUE WHEN NOT EXISTS (
-      SELECT 1 FROM information_schema.columns
-      WHERE table_schema = 'demo' AND table_name = src.table_name AND column_name = src.user_column
-    );
-    CONTINUE WHEN NOT EXISTS (
-      SELECT 1 FROM information_schema.columns
-      WHERE table_schema = 'demo' AND table_name = src.table_name AND column_name = src.date_column
-    );
-
-    EXECUTE format(
-      'INSERT INTO _login_gap_evidence (user_id, activity_day, first_seen)
-       SELECT btrim(%1$I),
-              (%2$I AT TIME ZONE ''UTC'')::date,
-              MIN(%2$I)
-       FROM public.%3$I
-       WHERE %2$I >= $1 AND %2$I < $2
-         AND %1$I IS NOT NULL
-         AND btrim(%1$I) <> ''''
-         AND btrim(%1$I) <> ALL ($3)
-       GROUP BY 1, 2',
-      src.user_column, src.date_column, src.table_name
-    ) USING gap_start, gap_end, non_member_actors;
-  END LOOP;
-
-  -- Production's login_events carries a v2 foreign key to users(id), so a sign-in row can only exist
-  -- for an account the identity mirror still holds. The command trails outlive that mirror: an
-  -- account deleted since the gap leaves its audit rows behind, and those rows are evidence of a
-  -- session that did happen but whose member is gone. Inserting for them is both impossible and
-  -- wrong, so they are dropped here rather than at the insert — where one orphan aborted the entire
-  -- statement and wrote nothing at all. Reported, not silent: a skipped day is a real day that
-  -- cannot be recovered, and the operator should see the count.
-  IF to_regclass('public.users') IS NOT NULL THEN
-    DELETE FROM _login_gap_evidence e
-    WHERE NOT EXISTS (SELECT 1 FROM users u WHERE u.id = e.user_id);
-    GET DIAGNOSTICS skipped = ROW_COUNT;
-    IF skipped > 0 THEN
-      RAISE NOTICE
-        'Skipped % row(s) of evidence whose member is no longer in the users table; their days cannot be rebuilt.',
-        skipped;
-    END IF;
-  END IF;
-
-  SELECT COUNT(*), COUNT(DISTINCT user_id)
-    INTO evidence_days, evidence_members
-  FROM (SELECT DISTINCT user_id, activity_day FROM _login_gap_evidence) d;
-
-  RAISE NOTICE 'Evidence in the gap: % member-day(s) across % member(s).', evidence_days, evidence_members;
-
-  -- A line per day, so the repair is legible rather than a single number to take on trust. The gap
-  -- is 23 days, so this is bounded and short.
-  FOR src IN
-    SELECT activity_day, COUNT(DISTINCT user_id) AS members
-    FROM _login_gap_evidence
-    GROUP BY activity_day
-    ORDER BY activity_day
-  LOOP
-    RAISE NOTICE '  % — % member(s) with evidence', src.activity_day, src.members;
-  END LOOP;
-
-  has_source := EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_schema = 'demo' AND table_name = 'login_events' AND column_name = 'source'
-  );
-
-  -- The WHERE NOT EXISTS guard is the one that always applies; it holds even on a database where the
-  -- (user_id, UTC-day) unique index was never built. The bare ON CONFLICT DO NOTHING closes the race
-  -- wherever that index does exist.
-  IF has_source THEN
-    INSERT INTO login_events (user_id, created_at, source)
-    SELECT e.user_id, MIN(e.first_seen), 'backfill_launch_gap'
-    FROM _login_gap_evidence e
-    WHERE NOT EXISTS (
-      SELECT 1 FROM login_events le
-      WHERE le.user_id = e.user_id
-        AND (le.created_at AT TIME ZONE 'UTC')::date = e.activity_day
-    )
-    GROUP BY e.user_id, e.activity_day
-    ON CONFLICT DO NOTHING;
-  ELSE
-    INSERT INTO login_events (user_id, created_at)
-    SELECT e.user_id, MIN(e.first_seen)
-    FROM _login_gap_evidence e
-    WHERE NOT EXISTS (
-      SELECT 1 FROM login_events le
-      WHERE le.user_id = e.user_id
-        AND (le.created_at AT TIME ZONE 'UTC')::date = e.activity_day
-    )
-    GROUP BY e.user_id, e.activity_day
-    ON CONFLICT DO NOTHING;
-  END IF;
-
-  GET DIAGNOSTICS written = ROW_COUNT;
-  RAISE NOTICE 'Sign-in days written: %. Re-running this migration writes 0.', written;
-
-  DROP TABLE _login_gap_evidence;
-END
-$$;
-
+-- [demo-skip: names production (public.) tables directly; it repairs production data and has no meaning here]
 
 -- ── post migration: 0009_skill_up_cohort_title_drop_plugin_prefix.sql ──
 -- post/0009: Drop the plugin-name prefix from SkillUp cohort titles.
@@ -8630,17 +8548,24 @@ $$;
 -- Guarded on the prefix still being present, so a title that never carried one is
 -- untouched and a second run changes nothing. TRIM handles a stray space after the
 -- colon; a row that is nothing but the prefix is left alone rather than emptied.
+--
+-- Bounded to rows created before 2026-08-30, the day the template changed. Every file
+-- in this folder runs again on each deploy that applies migrations, and a cohort title
+-- is admin free text: without the date bound, a cohort an admin later names
+-- "SkillUp: Welding basics" would lose its prefix on the next deploy.
 UPDATE skill_up_cohorts
 SET title = TRIM(SUBSTRING(title FROM 10)),
     updated_at = NOW()
 WHERE title LIKE 'LevelUp: %'
-  AND TRIM(SUBSTRING(title FROM 10)) <> '';
+  AND TRIM(SUBSTRING(title FROM 10)) <> ''
+  AND created_at < TIMESTAMPTZ '2026-08-30 00:00:00+00';
 
 UPDATE skill_up_cohorts
 SET title = TRIM(SUBSTRING(title FROM 10)),
     updated_at = NOW()
 WHERE title LIKE 'SkillUp: %'
-  AND TRIM(SUBSTRING(title FROM 10)) <> '';
+  AND TRIM(SUBSTRING(title FROM 10)) <> ''
+  AND created_at < TIMESTAMPTZ '2026-08-30 00:00:00+00';
 
 
 -- ── post migration: 0010_skill_up_cohort_job_title_backfill.sql ──
@@ -9746,265 +9671,7 @@ CREATE INDEX IF NOT EXISTS idx_directory_profiles_unclaimed
 
 
 -- ── post migration: 0034_login_events_drop_v2_users_fkey.sql ──
--- post/0034: Drop the v2 foreign key that has been refusing most members' sign-in rows, and rebuild
--- the days it refused.
---
--- `login_events` is the entire definition of an active member (owner decision, 2026-08-27): a member
--- is active on a day the sign-in record holds a row for them. v3 writes that row from the shared
--- identity gate (`recordLoginEvent`), once per member per UTC day, for every signed-in request.
---
--- On production that write has been failing for most members since the day it was added. The table
--- carries a v2 constraint, `login_events_user_id_fkey`, from `user_id` to `users(id)` (see
--- ctf/schema-prod4.6.2026.sql line 2384). `users` is the identity mirror v2 maintained; v3 never
--- writes it — nothing in this repository inserts into `users` — so it holds exactly the accounts
--- that existed while v2 was running and not one account created since. For every other member the
--- insert raises a foreign-key violation, the fire-and-forget writer logs it to the server log where
--- nobody reads it, and the member's day is never recorded. That is why the Weekly Performance
--- dashboard's Active Members and Daily Active Members rows read zero, or near zero, for every week
--- since launch while the Directory kept growing: the record could only ever hold the members v2
--- already knew. The same rows feed PeerProgramming's cohort selection, the Trust "seen" signal, and
--- the Recurring Activity counterparty check, so all of those were undercounting the same people.
---
--- The 2026-08-28 note on post/0008 read the one member it could not write as "an account deleted
--- since". The Update Neon DB log for every run since says otherwise: the evidence it skips is for a
--- live member the mirror never held. The mirror is not "an account the platform still holds"; it is
--- a list frozen on the day v2 stopped.
---
--- Two things, in one statement so they cannot half-apply:
---
---   1. Drop the constraint. Nothing in v3 depends on it — the reads of `login_events` never join
---      `users` — and the table's own guard against duplicate days (the (user_id, UTC day) unique
---      index in schema.sql) is untouched. Account deletion removes a member's rows by user_id and
---      never went through the key.
---
---   2. Rebuild the days the key refused, for exactly the members it refused: those with no `users`
---      row. Same method and same sources as post/0008 — first-party evidence that an authenticated
---      session existed on a day: a command-trail row naming the member as the actor, or a row the
---      member wrote themselves. Rows whose timestamp belongs to a counterparty or an admin acting
---      ON a member are not evidence the member turned up and are not used. The window runs from
---      2026-05-27 (where post/0008's window starts — v2's last live row is 2026-05-26) to the
---      moment this runs, because for these members the record was never being written at any
---      point in between. Members the mirror does hold are not touched: their writes succeeded, so
---      an absent day of theirs is a real absence.
---
--- Properties:
---   * one-shot   — everything is gated on the constraint being present. On a database that never
---                  had it (one built from schema.sql alone) it reports and does nothing; on a
---                  re-run after it has been dropped it does nothing, so it can never rebuild a day
---                  from evidence once live recording is in place. A future writer failure will
---                  show as a real absence, not be papered over on the next push.
---   * guarded    — every source table and column is checked for existence before it is read.
---   * idempotent — WHERE NOT EXISTS on the (member, UTC day) pair plus ON CONFLICT DO NOTHING.
---   * honest     — rebuilt rows are marked `source = 'backfill_users_fkey'` where the column exists,
---                  so a reconstructed day is never mistaken for one recorded live. The timestamp is
---                  the member's earliest proven action that day.
---   * people only — a member id is a Clerk id (`user_…`); the ids the platform writes for itself
---                  (scheduled runs, the webhook, the `anonymous`/`system` fallbacks) never carry
---                  that prefix and are also excluded by name.
---
--- Applied by the "Neon — Update DB" GitHub Action on the push to main. It reports as it goes: that
--- the key was dropped, the evidence found, a line per member-count per day, and rows written.
-
-DO $$
-DECLARE
-  repair_start CONSTANT timestamptz := TIMESTAMPTZ '2026-05-27 00:00:00+00';
-  repair_end timestamptz;
-  -- Actor ids the platform writes for itself. None of these is a person turning up. The `user_`
-  -- prefix filter below already excludes all of them; the list is kept so the exclusion reads.
-  non_member_actors CONSTANT text[] := ARRAY[
-    'anonymous',
-    'system',
-    'system:commons-guidance',
-    'system:unlock-spam-denylist',
-    'account-deletion-operator',
-    'ci-product-update',
-    'clerk-user-deleted-webhook',
-    'peer-programming-scheduler',
-    'skills-hunt-auto-mission-scheduler',
-    'skills-hunt-incentive-system',
-    'skill-up-auto-cohort-scheduler',
-    'level-up-auto-cohort-scheduler',
-    'unlock-incentive-system',
-    'internal_service_credits_reclaimer'
-  ];
-  src record;
-  has_source boolean;
-  evidence_days bigint;
-  evidence_members bigint;
-  written bigint;
-BEGIN
-  IF to_regclass('public.login_events') IS NULL THEN
-    RAISE NOTICE 'login_events does not exist in this database; nothing to do.';
-    RETURN;
-  END IF;
-
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint
-    WHERE conname = 'login_events_user_id_fkey'
-      AND conrelid = to_regclass('public.login_events')
-  ) THEN
-    RAISE NOTICE 'login_events carries no foreign key to users(id); nothing to drop and nothing to rebuild.';
-    RETURN;
-  END IF;
-
-  -- The moment recording starts working for everyone. Evidence after this point is not needed: the
-  -- live writer records those days itself.
-  repair_end := NOW();
-
-  ALTER TABLE public.login_events DROP CONSTRAINT login_events_user_id_fkey;
-  RAISE NOTICE 'Dropped login_events_user_id_fkey. Sign-ins are recorded for every member from now on.';
-
-  IF to_regclass('public.users') IS NULL THEN
-    RAISE NOTICE 'No users table, so no member was ever refused by the key; nothing to rebuild.';
-    RETURN;
-  END IF;
-
-  CREATE TEMP TABLE _login_fkey_evidence (
-    user_id text NOT NULL,
-    activity_day date NOT NULL,
-    first_seen timestamptz NOT NULL
-  );
-
-  -- Every source is (table, member column, date column), read only for the window and only for
-  -- members the mirror does not hold.
-  FOR src IN
-    SELECT * FROM (VALUES
-      -- Rows the member wrote themselves.
-      ('click_log_incidents', 'user_id', 'created_at'),
-      ('mood_submissions', 'user_id', 'submitted_at'),
-      ('feed_community_posts', 'author_user_id', 'created_at'),
-      ('feed_community_replies', 'author_user_id', 'created_at'),
-      ('feed_community_post_reactions', 'user_id', 'created_at'),
-      ('feed_answers', 'author_user_id', 'created_at'),
-      ('announcement_replies', 'author_user_id', 'created_at'),
-      ('fireside_comments', 'author_user_id', 'created_at'),
-      ('contributor_access_channel_posts', 'author_user_id', 'created_at'),
-      ('peer_programming_messages', 'author_user_id', 'created_at'),
-      ('skill_up_dispute_comments', 'actor_user_id', 'created_at'),
-      -- Command trails: one row per command the member ran, actor and time from their own request.
-      ('account_restrictions_audit', 'actor_id', 'created_at'),
-      ('announcement_membership_events', 'actor_id', 'created_at'),
-      ('beacon_events_admin_audit_trail', 'actor_id', 'created_at'),
-      ('bug_report_admin_audit_trail', 'actor_id', 'created_at'),
-      ('chyme_admin_audit_trail', 'actor_id', 'created_at'),
-      ('comic_admin_audit_trail', 'actor_id', 'created_at'),
-      ('contributions_audit_log', 'actor_user_id', 'created_at'),
-      ('contributor_access_audit_trail', 'actor_id', 'created_at'),
-      ('directory_admin_audit_trail', 'actor_id', 'created_at'),
-      ('directory_profile_change_events', 'actor_id', 'created_at'),
-      ('feed_admin_audit_trail', 'actor_id', 'created_at'),
-      ('feed_membership_events', 'actor_id', 'created_at'),
-      ('fireside_audit_events', 'actor_id', 'created_at'),
-      ('foundation_admin_audit_trail', 'actor_id', 'created_at'),
-      ('foundation_quote_status_events', 'actor_user_id', 'created_at'),
-      ('gdp_admin_audit_trail', 'actor_id', 'created_at'),
-      ('skill_up_audit_events', 'actor_id', 'created_at'),
-      ('lighthouse_admin_audit_trail', 'actor_id', 'created_at'),
-      ('llm_inference_log', 'actor_user_id', 'created_at'),
-      ('mutual_time_admin_audit_trail', 'actor_id', 'created_at'),
-      ('peer_programming_admin_audit_trail', 'actor_id', 'created_at'),
-      ('quora_deletion_survey_audit_log', 'actor_user_id', 'created_at'),
-      ('quora_live_census_audit_log', 'actor_user_id', 'created_at'),
-      ('recurring_activity_audit_trail', 'actor_user_id', 'created_at'),
-      ('safety_admin_audit_trail', 'actor_id', 'created_at'),
-      ('service_credits_admin_audit_trail', 'actor_id', 'created_at'),
-      ('skills_hunt_audit_log', 'actor_id', 'created_at'),
-      ('skills_taxonomy_change_events', 'actor_id', 'created_at'),
-      ('socket_relay_admin_audit_trail', 'actor_id', 'created_at'),
-      ('socket_relay_request_events', 'actor_user_id', 'created_at'),
-      ('ti_radio_admin_audit_trail', 'actor_id', 'created_at'),
-      ('trust_admin_audit_trail', 'actor_user_id', 'created_at'),
-      ('trust_transport_admin_audit_trail', 'actor_id', 'created_at'),
-      ('trust_transport_status_events', 'actor_user_id', 'created_at'),
-      ('unlock_audit_log', 'actor_user_id', 'created_at'),
-      ('weekly_performance_audit_trail', 'actor_id', 'created_at'),
-      ('what_works_admin_audit_trail', 'actor_id', 'created_at'),
-      ('workforce_admin_audit_trail', 'actor_id', 'created_at')
-    ) AS t(table_name, user_column, date_column)
-  LOOP
-    CONTINUE WHEN to_regclass('public.' || src.table_name) IS NULL;
-    CONTINUE WHEN NOT EXISTS (
-      SELECT 1 FROM information_schema.columns
-      WHERE table_schema = 'demo' AND table_name = src.table_name AND column_name = src.user_column
-    );
-    CONTINUE WHEN NOT EXISTS (
-      SELECT 1 FROM information_schema.columns
-      WHERE table_schema = 'demo' AND table_name = src.table_name AND column_name = src.date_column
-    );
-
-    EXECUTE format(
-      'INSERT INTO _login_fkey_evidence (user_id, activity_day, first_seen)
-       SELECT btrim(%1$I),
-              (%2$I AT TIME ZONE ''UTC'')::date,
-              MIN(%2$I)
-       FROM public.%3$I
-       WHERE %2$I >= $1 AND %2$I < $2
-         AND %1$I IS NOT NULL
-         AND btrim(%1$I) LIKE ''user\_%%''
-         AND btrim(%1$I) <> ALL ($3)
-         AND NOT EXISTS (SELECT 1 FROM public.users u WHERE u.id::text = btrim(%1$I))
-       GROUP BY 1, 2',
-      src.user_column, src.date_column, src.table_name
-    ) USING repair_start, repair_end, non_member_actors;
-  END LOOP;
-
-  SELECT COUNT(*), COUNT(DISTINCT user_id)
-    INTO evidence_days, evidence_members
-  FROM (SELECT DISTINCT user_id, activity_day FROM _login_fkey_evidence) d;
-
-  RAISE NOTICE 'Evidence for members the key refused: % member-day(s) across % member(s).',
-    evidence_days, evidence_members;
-
-  -- A line per day with evidence, so the repair is legible rather than a single number to take on
-  -- trust. Days with no evidence are not listed.
-  FOR src IN
-    SELECT activity_day, COUNT(DISTINCT user_id) AS members
-    FROM _login_fkey_evidence
-    GROUP BY activity_day
-    ORDER BY activity_day
-  LOOP
-    RAISE NOTICE '  % — % member(s) with evidence', src.activity_day, src.members;
-  END LOOP;
-
-  has_source := EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_schema = 'demo' AND table_name = 'login_events' AND column_name = 'source'
-  );
-
-  -- The WHERE NOT EXISTS guard is the one that always applies; it holds even on a database where the
-  -- (user_id, UTC-day) unique index was never built. The bare ON CONFLICT DO NOTHING closes the race
-  -- wherever that index does exist.
-  IF has_source THEN
-    INSERT INTO public.login_events (user_id, created_at, source)
-    SELECT e.user_id, MIN(e.first_seen), 'backfill_users_fkey'
-    FROM _login_fkey_evidence e
-    WHERE NOT EXISTS (
-      SELECT 1 FROM public.login_events le
-      WHERE le.user_id = e.user_id
-        AND (le.created_at AT TIME ZONE 'UTC')::date = e.activity_day
-    )
-    GROUP BY e.user_id, e.activity_day
-    ON CONFLICT DO NOTHING;
-  ELSE
-    INSERT INTO public.login_events (user_id, created_at)
-    SELECT e.user_id, MIN(e.first_seen)
-    FROM _login_fkey_evidence e
-    WHERE NOT EXISTS (
-      SELECT 1 FROM public.login_events le
-      WHERE le.user_id = e.user_id
-        AND (le.created_at AT TIME ZONE 'UTC')::date = e.activity_day
-    )
-    GROUP BY e.user_id, e.activity_day
-    ON CONFLICT DO NOTHING;
-  END IF;
-
-  GET DIAGNOSTICS written = ROW_COUNT;
-  RAISE NOTICE 'Sign-in days written: %. The key is gone, so a re-run of this migration does nothing.', written;
-
-  DROP TABLE _login_fkey_evidence;
-END
-$$;
-
+-- [demo-skip: names production (public.) tables directly; it repairs production data and has no meaning here]
 
 -- ── post migration: 0035_drop_weekly_performance_metrics.sql ──
 -- post/0035: Drop weekly_performance_metrics, the per-week aggregate store nothing reads.
@@ -10068,446 +9735,13 @@ ON CONFLICT (plugin_slug) DO UPDATE SET
 
 
 -- ── post migration: 0038_login_events_backfill_type_error_gap.sql ──
--- post/0038: Rebuild the sign-in days lost while the sign-in write was refused for a type error.
---
--- `login_events` is the entire definition of an active member (owner decision, 2026-08-27). From
--- 2026-09-20 until the fix in PR #2519 (2026-09-24) the once-a-day write in
--- ctf/packages/web/lib/engagement/login-activity.ts used an uncast `$1` both as the inserted value
--- and in its duplicate check. Production's `user_id` is the v2 VARCHAR, not the TEXT schema.sql
--- declares, so Postgres refused the statement with "inconsistent types deduced for parameter $1"
--- and nobody's day was recorded. The Sign-in record screen showed 0 members on 2026-09-21 through
--- 2026-09-24 and one on 2026-09-20 (before the change deployed).
---
--- This rebuilds those days from the same first-party evidence post/0008 and post/0034 use: a
--- command-trail row naming the member as the actor, or a row the member wrote themselves. Unlike
--- post/0034 it applies to every member, because the failure did.
---
--- Properties:
---   * bounded    — the window is fixed, 2026-09-20 00:00 UTC to 2026-09-25 00:00 UTC. It never
---                  reads past it, so a later writer failure shows as a real absence and is not
---                  papered over by a re-run.
---   * guarded    — every source table and column is checked for existence before it is read.
---   * idempotent — WHERE NOT EXISTS on the (member, UTC day) pair plus ON CONFLICT DO NOTHING. A day
---                  the live writer did record (2026-09-20 before the break, 2026-09-24 after the
---                  fix) is left alone, and a re-run writes nothing new.
---   * honest     — rebuilt rows are marked `source = 'backfill_type_error_gap'` where the column
---                  exists. The timestamp is the member's earliest proven action that day.
---   * people only — a member id is a Clerk id (`user_…`); the platform's own actor ids are excluded.
---
--- Applied by the "Neon — Update DB" GitHub Action on the push to main. It reports the evidence
--- found, a line per day, and rows written.
-
-DO $$
-DECLARE
-  repair_start CONSTANT timestamptz := TIMESTAMPTZ '2026-09-20 00:00:00+00';
-  repair_end CONSTANT timestamptz := TIMESTAMPTZ '2026-09-25 00:00:00+00';
-  -- Actor ids the platform writes for itself. None of these is a person turning up. The `user_`
-  -- prefix filter below already excludes all of them; the list is kept so the exclusion reads.
-  non_member_actors CONSTANT text[] := ARRAY[
-    'anonymous',
-    'system',
-    'system:commons-guidance',
-    'system:unlock-spam-denylist',
-    'account-deletion-operator',
-    'ci-product-update',
-    'clerk-user-deleted-webhook',
-    'peer-programming-scheduler',
-    'skills-hunt-auto-mission-scheduler',
-    'skills-hunt-incentive-system',
-    'skill-up-auto-cohort-scheduler',
-    'level-up-auto-cohort-scheduler',
-    'unlock-incentive-system',
-    'internal_service_credits_reclaimer'
-  ];
-  src record;
-  has_source boolean;
-  evidence_days bigint;
-  evidence_members bigint;
-  written bigint;
-BEGIN
-  IF to_regclass('public.login_events') IS NULL THEN
-    RAISE NOTICE 'login_events does not exist in this database; nothing to do.';
-    RETURN;
-  END IF;
-
-  CREATE TEMP TABLE _login_type_gap_evidence (
-    user_id text NOT NULL,
-    activity_day date NOT NULL,
-    first_seen timestamptz NOT NULL
-  );
-
-  -- Every source is (table, member column, date column), read only for the window. Same list as
-  -- post/0034.
-  FOR src IN
-    SELECT * FROM (VALUES
-      -- Rows the member wrote themselves.
-      ('click_log_incidents', 'user_id', 'created_at'),
-      ('mood_submissions', 'user_id', 'submitted_at'),
-      ('feed_community_posts', 'author_user_id', 'created_at'),
-      ('feed_community_replies', 'author_user_id', 'created_at'),
-      ('feed_community_post_reactions', 'user_id', 'created_at'),
-      ('feed_answers', 'author_user_id', 'created_at'),
-      ('announcement_replies', 'author_user_id', 'created_at'),
-      ('fireside_comments', 'author_user_id', 'created_at'),
-      ('contributor_access_channel_posts', 'author_user_id', 'created_at'),
-      ('peer_programming_messages', 'author_user_id', 'created_at'),
-      ('skill_up_dispute_comments', 'actor_user_id', 'created_at'),
-      -- Command trails: one row per command the member ran, actor and time from their own request.
-      ('account_restrictions_audit', 'actor_id', 'created_at'),
-      ('announcement_membership_events', 'actor_id', 'created_at'),
-      ('beacon_events_admin_audit_trail', 'actor_id', 'created_at'),
-      ('bug_report_admin_audit_trail', 'actor_id', 'created_at'),
-      ('chyme_admin_audit_trail', 'actor_id', 'created_at'),
-      ('comic_admin_audit_trail', 'actor_id', 'created_at'),
-      ('contributions_audit_log', 'actor_user_id', 'created_at'),
-      ('contributor_access_audit_trail', 'actor_id', 'created_at'),
-      ('directory_admin_audit_trail', 'actor_id', 'created_at'),
-      ('directory_profile_change_events', 'actor_id', 'created_at'),
-      ('feed_admin_audit_trail', 'actor_id', 'created_at'),
-      ('feed_membership_events', 'actor_id', 'created_at'),
-      ('fireside_audit_events', 'actor_id', 'created_at'),
-      ('foundation_admin_audit_trail', 'actor_id', 'created_at'),
-      ('foundation_quote_status_events', 'actor_user_id', 'created_at'),
-      ('gdp_admin_audit_trail', 'actor_id', 'created_at'),
-      ('skill_up_audit_events', 'actor_id', 'created_at'),
-      ('lighthouse_admin_audit_trail', 'actor_id', 'created_at'),
-      ('llm_inference_log', 'actor_user_id', 'created_at'),
-      ('mutual_time_admin_audit_trail', 'actor_id', 'created_at'),
-      ('peer_programming_admin_audit_trail', 'actor_id', 'created_at'),
-      ('quora_deletion_survey_audit_log', 'actor_user_id', 'created_at'),
-      ('quora_live_census_audit_log', 'actor_user_id', 'created_at'),
-      ('recurring_activity_audit_trail', 'actor_user_id', 'created_at'),
-      ('safety_admin_audit_trail', 'actor_id', 'created_at'),
-      ('service_credits_admin_audit_trail', 'actor_id', 'created_at'),
-      ('skills_hunt_audit_log', 'actor_id', 'created_at'),
-      ('skills_taxonomy_change_events', 'actor_id', 'created_at'),
-      ('socket_relay_admin_audit_trail', 'actor_id', 'created_at'),
-      ('socket_relay_request_events', 'actor_user_id', 'created_at'),
-      ('ti_radio_admin_audit_trail', 'actor_id', 'created_at'),
-      ('trust_admin_audit_trail', 'actor_user_id', 'created_at'),
-      ('trust_transport_admin_audit_trail', 'actor_id', 'created_at'),
-      ('trust_transport_status_events', 'actor_user_id', 'created_at'),
-      ('unlock_audit_log', 'actor_user_id', 'created_at'),
-      ('weekly_performance_audit_trail', 'actor_id', 'created_at'),
-      ('what_works_admin_audit_trail', 'actor_id', 'created_at'),
-      ('workforce_admin_audit_trail', 'actor_id', 'created_at')
-    ) AS t(table_name, user_column, date_column)
-  LOOP
-    CONTINUE WHEN to_regclass('public.' || src.table_name) IS NULL;
-    CONTINUE WHEN NOT EXISTS (
-      SELECT 1 FROM information_schema.columns
-      WHERE table_schema = 'demo' AND table_name = src.table_name AND column_name = src.user_column
-    );
-    CONTINUE WHEN NOT EXISTS (
-      SELECT 1 FROM information_schema.columns
-      WHERE table_schema = 'demo' AND table_name = src.table_name AND column_name = src.date_column
-    );
-
-    EXECUTE format(
-      'INSERT INTO _login_type_gap_evidence (user_id, activity_day, first_seen)
-       SELECT btrim(%1$I::text),
-              (%2$I AT TIME ZONE ''UTC'')::date,
-              MIN(%2$I)
-       FROM public.%3$I
-       WHERE %2$I >= $1 AND %2$I < $2
-         AND %1$I IS NOT NULL
-         AND btrim(%1$I::text) LIKE ''user\_%%''
-         AND btrim(%1$I::text) <> ALL ($3)
-       GROUP BY 1, 2',
-      src.user_column, src.date_column, src.table_name
-    ) USING repair_start, repair_end, non_member_actors;
-  END LOOP;
-
-  SELECT COUNT(*), COUNT(DISTINCT user_id)
-    INTO evidence_days, evidence_members
-  FROM (SELECT DISTINCT user_id, activity_day FROM _login_type_gap_evidence) d;
-
-  RAISE NOTICE 'Evidence in the type-error window: % member-day(s) across % member(s).',
-    evidence_days, evidence_members;
-
-  FOR src IN
-    SELECT activity_day, COUNT(DISTINCT user_id) AS members
-    FROM _login_type_gap_evidence
-    GROUP BY activity_day
-    ORDER BY activity_day
-  LOOP
-    RAISE NOTICE '  % — % member(s) with evidence', src.activity_day, src.members;
-  END LOOP;
-
-  has_source := EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_schema = 'demo' AND table_name = 'login_events' AND column_name = 'source'
-  );
-
-  -- `le.user_id::text` so the comparison is text on either column type (production's is VARCHAR).
-  IF has_source THEN
-    INSERT INTO public.login_events (user_id, created_at, source)
-    SELECT e.user_id, MIN(e.first_seen), 'backfill_type_error_gap'
-    FROM _login_type_gap_evidence e
-    WHERE NOT EXISTS (
-      SELECT 1 FROM public.login_events le
-      WHERE le.user_id::text = e.user_id
-        AND (le.created_at AT TIME ZONE 'UTC')::date = e.activity_day
-    )
-    GROUP BY e.user_id, e.activity_day
-    ON CONFLICT DO NOTHING;
-  ELSE
-    INSERT INTO public.login_events (user_id, created_at)
-    SELECT e.user_id, MIN(e.first_seen)
-    FROM _login_type_gap_evidence e
-    WHERE NOT EXISTS (
-      SELECT 1 FROM public.login_events le
-      WHERE le.user_id::text = e.user_id
-        AND (le.created_at AT TIME ZONE 'UTC')::date = e.activity_day
-    )
-    GROUP BY e.user_id, e.activity_day
-    ON CONFLICT DO NOTHING;
-  END IF;
-
-  GET DIAGNOSTICS written = ROW_COUNT;
-  RAISE NOTICE 'Sign-in days written: %. The window is fixed, so a re-run writes nothing new.', written;
-
-  DROP TABLE _login_type_gap_evidence;
-END
-$$;
-
+-- [demo-skip: names production (public.) tables directly; it repairs production data and has no meaning here]
 
 -- ── post migration: 0039_login_events_backfill_type_error_gap_visits.sql ──
--- post/0039: Rebuild the type-error days from visits, not only from writes.
---
--- post/0038 rebuilt the member-days lost from 2026-09-20 to 2026-09-24, when the sign-in write was
--- refused with "inconsistent types deduced for parameter $1". It read only rows a member wrote or a
--- command they ran, so a member who signed in and looked around without writing anything stayed
--- missing — and a sign-in, not a write, is what makes a member active (owner decision, 2026-08-27).
---
--- This reads the app's "last seen" markers, which are written only for a signed-in member opening
--- a screen:
---   * feed_commons_last_seen.last_seen_at — the member opened the Commons feed;
---   * feed_commons_notice_seen.seen_at     — the member was shown a Commons notice on arrival;
---   * chyme_room_members.last_seen_at      — the member was present in a Chyme room;
---   * chyme_room_members.joined_at         — the member joined a Chyme room;
---   * admin_area_seen.seen_at              — an admin opened an admin area.
--- Apart from joined_at, each keeps only the latest time per member (per notice, room, or area), so a later visit has
--- overwritten earlier ones. A marker adds a day only when its latest time falls inside the window;
--- days it has overwritten cannot be recovered from anywhere in the database.
---
--- Same window, guards and marking as post/0038: fixed window 2026-09-20 00:00 UTC to 2026-09-25
--- 00:00 UTC, every source checked for existence, WHERE NOT EXISTS plus ON CONFLICT DO NOTHING, rows
--- marked `source = 'backfill_type_error_gap'`, Clerk ids (`user_…`) only. A re-run writes nothing
--- new, and the fixed window means it can never cover a later writer failure.
---
--- Applied by the "Neon — Update DB" GitHub Action on the push to main. It reports the evidence
--- found, a line per day, and rows written.
-
-DO $$
-DECLARE
-  repair_start CONSTANT timestamptz := TIMESTAMPTZ '2026-09-20 00:00:00+00';
-  repair_end CONSTANT timestamptz := TIMESTAMPTZ '2026-09-25 00:00:00+00';
-  -- Actor ids the platform writes for itself. None of these is a person turning up. The `user_`
-  -- prefix filter below already excludes all of them; the list is kept so the exclusion reads.
-  non_member_actors CONSTANT text[] := ARRAY[
-    'anonymous',
-    'system',
-    'system:commons-guidance',
-    'system:unlock-spam-denylist',
-    'account-deletion-operator',
-    'ci-product-update',
-    'clerk-user-deleted-webhook',
-    'peer-programming-scheduler',
-    'skills-hunt-auto-mission-scheduler',
-    'skills-hunt-incentive-system',
-    'skill-up-auto-cohort-scheduler',
-    'level-up-auto-cohort-scheduler',
-    'unlock-incentive-system',
-    'internal_service_credits_reclaimer'
-  ];
-  src record;
-  has_source boolean;
-  evidence_days bigint;
-  evidence_members bigint;
-  written bigint;
-BEGIN
-  IF to_regclass('public.login_events') IS NULL THEN
-    RAISE NOTICE 'login_events does not exist in this database; nothing to do.';
-    RETURN;
-  END IF;
-
-  CREATE TEMP TABLE _login_visit_gap_evidence (
-    user_id text NOT NULL,
-    activity_day date NOT NULL,
-    first_seen timestamptz NOT NULL
-  );
-
-  -- Every source is (table, member column, date column), read only for the window.
-  FOR src IN
-    SELECT * FROM (VALUES
-      ('feed_commons_last_seen', 'user_id', 'last_seen_at'),
-      ('feed_commons_notice_seen', 'user_id', 'seen_at'),
-      ('chyme_room_members', 'user_id', 'last_seen_at'),
-      ('chyme_room_members', 'user_id', 'joined_at'),
-      ('admin_area_seen', 'user_id', 'seen_at')
-    ) AS t(table_name, user_column, date_column)
-  LOOP
-    CONTINUE WHEN to_regclass('public.' || src.table_name) IS NULL;
-    CONTINUE WHEN NOT EXISTS (
-      SELECT 1 FROM information_schema.columns
-      WHERE table_schema = 'demo' AND table_name = src.table_name AND column_name = src.user_column
-    );
-    CONTINUE WHEN NOT EXISTS (
-      SELECT 1 FROM information_schema.columns
-      WHERE table_schema = 'demo' AND table_name = src.table_name AND column_name = src.date_column
-    );
-
-    EXECUTE format(
-      'INSERT INTO _login_visit_gap_evidence (user_id, activity_day, first_seen)
-       SELECT btrim(%1$I::text),
-              (%2$I AT TIME ZONE ''UTC'')::date,
-              MIN(%2$I)
-       FROM public.%3$I
-       WHERE %2$I >= $1 AND %2$I < $2
-         AND %1$I IS NOT NULL
-         AND btrim(%1$I::text) LIKE ''user\_%%''
-         AND btrim(%1$I::text) <> ALL ($3)
-       GROUP BY 1, 2',
-      src.user_column, src.date_column, src.table_name
-    ) USING repair_start, repair_end, non_member_actors;
-  END LOOP;
-
-  SELECT COUNT(*), COUNT(DISTINCT user_id)
-    INTO evidence_days, evidence_members
-  FROM (SELECT DISTINCT user_id, activity_day FROM _login_visit_gap_evidence) d;
-
-  RAISE NOTICE 'Visit evidence in the type-error window: % member-day(s) across % member(s).',
-    evidence_days, evidence_members;
-
-  FOR src IN
-    SELECT activity_day, COUNT(DISTINCT user_id) AS members
-    FROM _login_visit_gap_evidence
-    GROUP BY activity_day
-    ORDER BY activity_day
-  LOOP
-    RAISE NOTICE '  % — % member(s) with evidence', src.activity_day, src.members;
-  END LOOP;
-
-  has_source := EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_schema = 'demo' AND table_name = 'login_events' AND column_name = 'source'
-  );
-
-  -- `le.user_id::text` so the comparison is text on either column type (production's is VARCHAR).
-  IF has_source THEN
-    INSERT INTO public.login_events (user_id, created_at, source)
-    SELECT e.user_id, MIN(e.first_seen), 'backfill_type_error_gap'
-    FROM _login_visit_gap_evidence e
-    WHERE NOT EXISTS (
-      SELECT 1 FROM public.login_events le
-      WHERE le.user_id::text = e.user_id
-        AND (le.created_at AT TIME ZONE 'UTC')::date = e.activity_day
-    )
-    GROUP BY e.user_id, e.activity_day
-    ON CONFLICT DO NOTHING;
-  ELSE
-    INSERT INTO public.login_events (user_id, created_at)
-    SELECT e.user_id, MIN(e.first_seen)
-    FROM _login_visit_gap_evidence e
-    WHERE NOT EXISTS (
-      SELECT 1 FROM public.login_events le
-      WHERE le.user_id::text = e.user_id
-        AND (le.created_at AT TIME ZONE 'UTC')::date = e.activity_day
-    )
-    GROUP BY e.user_id, e.activity_day
-    ON CONFLICT DO NOTHING;
-  END IF;
-
-  GET DIAGNOSTICS written = ROW_COUNT;
-  RAISE NOTICE 'Sign-in days written: %. The window is fixed, so a re-run writes nothing new.', written;
-
-  DROP TABLE _login_visit_gap_evidence;
-END
-$$;
-
+-- [demo-skip: names production (public.) tables directly; it repairs production data and has no meaning here]
 
 -- ── post migration: 0040_unlock_spam_denylist_restore.sql ──
--- post/0040: Put back the Unlock spam denylist entries a failed run of post/0028 deleted.
---
--- On 2026-09-24 the "Neon — Update DB" run deleted one row from `unlock_spam_quora_urls` and failed
--- before re-inserting it (post/0028 stashed the rows in a TEMP table, and the connection pooler ran
--- the re-insert on a session that could not see it; post/0028 now runs as one transaction). A profile
--- missing from the denylist can return to the review queue on a fresh account without being blocked.
---
--- Every spam decision is also kept on the member's submission (`review_status = 'spam'`), and the
--- review code writes the denylist from exactly that row. So the missing entries are rebuilt from
--- spam submissions whose canonical URL is not on the denylist, with one exception: a URL an admin
--- removed by hand (`unlock.admin.spam_denylist.remove` in `unlock_audit_log`) after the spam
--- decision stays removed, because that removal was a decision.
---
--- It also catches an entry whose best-effort denylist write failed at review time, which is the same
--- gap for the same reason.
---
--- Limit: the denylist outlives a member's data deletion, their submission does not. If the deleted
--- row belonged to an account deleted since, nothing in the database still holds it; the run then
--- reports 0 restored and the entry can only come back from Neon's history.
---
--- Single statement (a DO block), so it cannot be split across pooled sessions. Idempotent: an entry
--- already present is skipped (WHERE NOT EXISTS plus ON CONFLICT DO NOTHING), so a re-run restores
--- nothing new. It reports the count restored.
-
-DO $$
-DECLARE
-  restored bigint;
-BEGIN
-  IF to_regclass('public.unlock_spam_quora_urls') IS NULL
-     OR to_regclass('public.unlock_verification_submissions') IS NULL THEN
-    RAISE NOTICE 'Unlock tables are not present in this database; nothing to restore.';
-    RETURN;
-  END IF;
-
-  WITH spam AS (
-    SELECT DISTINCT ON (canonical)
-           canonical,
-           s.quora_profile_url,
-           s.reviewed_by_user_id,
-           COALESCE(s.reviewed_at, s.updated_at, NOW()) AS decided_at
-    FROM (
-      SELECT sub.*,
-             'https://www.quora.com/profile/'
-               || lower(substring(sub.quora_profile_url_normalized from 'quora\.com/profile/([^/?#]+)')) AS canonical
-      FROM public.unlock_verification_submissions sub
-      WHERE sub.review_status = 'spam'
-        AND substring(sub.quora_profile_url_normalized from 'quora\.com/profile/([^/?#]+)') IS NOT NULL
-    ) s
-    ORDER BY canonical, COALESCE(s.reviewed_at, s.updated_at) DESC NULLS LAST
-  )
-  INSERT INTO public.unlock_spam_quora_urls (
-    quora_profile_url_normalized,
-    quora_profile_url,
-    flagged_by_user_id,
-    flag_count,
-    first_flagged_at,
-    last_flagged_at,
-    updated_at
-  )
-  SELECT spam.canonical, spam.quora_profile_url, spam.reviewed_by_user_id, 1, spam.decided_at, spam.decided_at, NOW()
-  FROM spam
-  WHERE NOT EXISTS (
-      SELECT 1 FROM public.unlock_spam_quora_urls d
-      WHERE d.quora_profile_url_normalized = spam.canonical
-    )
-    AND NOT EXISTS (
-      SELECT 1 FROM public.unlock_audit_log a
-      WHERE a.command = 'unlock.admin.spam_denylist.remove'
-        AND a.created_at >= spam.decided_at
-        AND 'https://www.quora.com/profile/'
-              || lower(substring(a.metadata->>'quoraProfileUrlNormalized' from 'quora\.com/profile/([^/?#]+)'))
-            = spam.canonical
-    )
-  ON CONFLICT DO NOTHING;
-
-  GET DIAGNOSTICS restored = ROW_COUNT;
-  RAISE NOTICE 'Spam denylist entries restored from spam decisions: %.', restored;
-END
-$$;
-
+-- [demo-skip: names production (public.) tables directly; it repairs production data and has no meaning here]
 
 -- ── post migration: 0041_admin_expenses_starting_lines.sql ──
 -- The starting list for /admin/expenses (added 2026-09-26).
@@ -10932,5 +10166,197 @@ UPDATE skills_hunt_submissions
    SET quora_profile_url_normalized = regexp_replace(quora_profile_url_normalized, '^(https://www\.quora\.com/profile/[^/]+)/.*$', '\1')
  WHERE quora_profile_url_normalized ~ '^https://www\.quora\.com/profile/[^/]+/.+$';
 
+COMMIT;
+
+
+-- ── post migration: 0055_directory_landing_match_codes.sql ──
+-- post/0055: Saved matches and public skill counts for the landing page.
+--
+-- Why (owner decision, 2026-10-13): the public match page (landing-page-v4, on Vercel) is where a
+-- blog reader lands from Peace Battle 2. It shows how many people in the Directory list each job
+-- title, and lets the reader save a match as a code and come back to see who has been added, because
+-- the owner adds people most days. The page reads live counts instead of numbers pasted into it.
+--
+-- What it does: creates directory_landing_match_codes (code, job title, the count when saved, when
+-- it was saved, when it was last looked at; no name, contact detail or IP address) and two views,
+-- directory_public_skill_counts and directory_public_totals. Both give counts only, never a row
+-- about a person. The page's own login, landing_page, is created and
+-- granted in the Neon dashboard (ctf/scripts/sql/landing_page_login_grants.sql), not here.
+--
+-- Safe to re-run: IF NOT EXISTS on the table, columns and index, CREATE OR REPLACE on the views.
+BEGIN;
+CREATE TABLE IF NOT EXISTS directory_landing_match_codes (
+  code TEXT PRIMARY KEY,
+  job_title_id TEXT NOT NULL,
+  job_title_ids TEXT[],
+  people_at_save INTEGER,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  last_seen_at TIMESTAMPTZ
+);
+ALTER TABLE IF EXISTS directory_landing_match_codes ADD COLUMN IF NOT EXISTS job_title_id TEXT;
+ALTER TABLE IF EXISTS directory_landing_match_codes ADD COLUMN IF NOT EXISTS people_at_save INTEGER;
+ALTER TABLE IF EXISTS directory_landing_match_codes ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS directory_landing_match_codes ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ;
+-- The job titles behind the needs a visitor picked (job_title_id keeps the first, for older rows).
+ALTER TABLE IF EXISTS directory_landing_match_codes ADD COLUMN IF NOT EXISTS job_title_ids TEXT[];
+CREATE INDEX IF NOT EXISTS idx_directory_landing_match_codes_job_title ON directory_landing_match_codes (job_title_id);
+
+-- Who lists which job title, by their job title or any of their skills, claimed or unclaimed,
+-- leaving out owners restricted with scope all or contact. Not granted to the landing page: it
+-- holds profile ids. The two public views and directory_public_match_count read it. Ids are
+-- compared as text because some production id columns are VARCHAR.
+CREATE OR REPLACE VIEW directory_person_job_titles AS
+  WITH people AS (
+    SELECT p.id::text AS id, p.job_title_id::text AS job_title_id
+    FROM directory_profiles p
+    WHERE NOT EXISTS (
+      SELECT 1 FROM account_restrictions r
+      WHERE r.user_id::text = p.claimed_by_user_id::text
+        AND r.is_restricted
+        AND r.restriction_scope IN ('all', 'contact')
+    )
+  )
+  SELECT id AS person_id, job_title_id FROM people WHERE job_title_id IS NOT NULL
+  UNION
+  SELECT pp.id, sk.job_title_id::text
+  FROM people pp
+  JOIN directory_profile_skills ps ON ps.profile_id::text = pp.id
+  JOIN skills_taxonomy_skills sk ON sk.id::text = ps.skill_id::text;
+
+-- One row per active job title and how many people list it (0 when nobody does).
+CREATE OR REPLACE VIEW directory_public_skill_counts AS
+  WITH per_title AS (
+    SELECT job_title_id, COUNT(*)::integer AS n FROM directory_person_job_titles GROUP BY job_title_id
+  )
+  SELECT jt.id::text AS job_title_id,
+         s.name AS sector,
+         s.display_order AS sector_order,
+         jt.name AS title,
+         jt.display_order AS title_order,
+         COALESCE(pt.n, 0) AS people
+  FROM skills_taxonomy_job_titles jt
+  JOIN skills_taxonomy_sectors s ON s.id = jt.sector_id AND s.is_active
+  LEFT JOIN per_title pt ON pt.job_title_id = jt.id::text
+  WHERE jt.is_active;
+
+-- One row: everybody in the Directory, restriction rule as above.
+CREATE OR REPLACE VIEW directory_public_totals AS
+  WITH people AS (
+    SELECT p.id::text AS id
+    FROM directory_profiles p
+    WHERE NOT EXISTS (
+      SELECT 1 FROM account_restrictions r
+      WHERE r.user_id::text = p.claimed_by_user_id::text
+        AND r.is_restricted
+        AND r.restriction_scope IN ('all', 'contact')
+    )
+  )
+  SELECT (SELECT COUNT(*)::integer FROM people) AS total;
+
+-- How many people match a visitor: everyone who lists any of the given job titles, each counted
+-- once, as an exact number. Runs with its owner's rights so the landing page can call it
+-- without reading directory_person_job_titles itself; at most 60 titles per call.
+CREATE OR REPLACE FUNCTION directory_public_match_count(title_ids TEXT[])
+RETURNS INTEGER
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT n
+  FROM (
+    SELECT COUNT(DISTINCT person_id)::integer AS n
+    FROM directory_person_job_titles
+    WHERE job_title_id = ANY (title_ids[1:60])
+  ) x
+$$;
+REVOKE ALL ON FUNCTION directory_public_match_count(TEXT[]) FROM PUBLIC;
+COMMIT;
+
+
+-- ── post migration: 0056_landing_page_login_grants.sql ──
+-- post/0056: Keep the landing page's login able to read what it needs.
+--
+-- Why (2026-10-13): pre/0005 drops and schema.sql recreates directory_public_totals, and a dropped
+-- view takes its grants with it, so the landing page's counts would stop loading. This puts the
+-- access back after every run.
+--
+-- What it does: when the landing_page login exists, grants exactly what
+-- ctf/scripts/sql/landing_page_login_grants.sql grants: read the three count views, call the match count, read and add
+-- saved matches, set last_seen_at, replace what a saved match holds when it is saved again with
+-- the same code (2026-10-14), add in-demand needs. Nothing more. When the login does not exist yet (it is created by hand
+-- in the Neon dashboard), it does nothing.
+--
+-- Safe to re-run: granting what is already granted changes nothing.
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'landing_page') THEN
+    GRANT USAGE ON SCHEMA public TO landing_page;
+    GRANT SELECT ON directory_public_skill_counts, directory_public_totals TO landing_page;
+    GRANT SELECT, INSERT ON directory_landing_match_codes TO landing_page;
+    GRANT UPDATE (last_seen_at, job_title_id, job_title_ids, people_at_save, created_at) ON directory_landing_match_codes TO landing_page;
+    GRANT EXECUTE ON FUNCTION directory_public_match_count(TEXT[]) TO landing_page;
+    -- directory_unmet_needs comes from schema.sql (and post/0057); the guard keeps this file safe on a database without it.
+    IF to_regclass('public.directory_public_skill_coverage') IS NOT NULL THEN
+      GRANT SELECT ON directory_public_skill_coverage TO landing_page;
+    END IF;
+    IF to_regclass('public.directory_unmet_needs') IS NOT NULL THEN
+      GRANT INSERT ON directory_unmet_needs TO landing_page;
+      GRANT USAGE ON SEQUENCE directory_unmet_needs_id_seq TO landing_page;
+    END IF;
+  END IF;
+END $$;
+
+
+-- ── post migration: 0057_directory_unmet_needs.sql ──
+-- post/0057: In-demand needs from the landing page.
+--
+-- Why (owner decision, 2026-10-13): when a visitor picks a need and nobody in the Directory matches
+-- it, that demand was lost unless they saved a match. The page now records each such need once per
+-- visit, so the owner can see which needs go unmet and look for somebody to fill them.
+--
+-- What it does: creates directory_unmet_needs (need label, the job titles behind it, when). Nothing
+-- about the visitor is stored. post/0056 grants the landing page login INSERT on it, and nothing else.
+--
+-- Safe to re-run: IF NOT EXISTS on the table, columns and index.
+BEGIN;
+CREATE TABLE IF NOT EXISTS directory_unmet_needs (
+  id BIGSERIAL PRIMARY KEY,
+  need TEXT NOT NULL,
+  job_title_ids TEXT[] NOT NULL DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS directory_unmet_needs ADD COLUMN IF NOT EXISTS need TEXT;
+ALTER TABLE IF EXISTS directory_unmet_needs ADD COLUMN IF NOT EXISTS job_title_ids TEXT[] NOT NULL DEFAULT '{}';
+ALTER TABLE IF EXISTS directory_unmet_needs ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_directory_unmet_needs_need ON directory_unmet_needs (need, created_at DESC);
+COMMIT;
+
+
+-- ── post migration: 0058_directory_public_skill_coverage.sql ──
+-- post/0058: Skills coverage for the landing page.
+--
+-- Why (owner decision, 2026-10-14): the landing page states what share of the skills a small country
+-- runs on the people in the Directory already cover. It was typed into the page; this lets the page
+-- read it live, so it moves when the owner adds people.
+--
+-- What it does: creates directory_public_skill_coverage, one row with the number of different active
+-- skills at least one Directory profile lists and the number of active skills. The same query as the
+-- Workforce Skills Coverage tile. Grants the landing page login SELECT on it when that login exists.
+--
+-- Safe to re-run: CREATE OR REPLACE VIEW, and the grant is skipped when the role is missing.
+BEGIN;
+CREATE OR REPLACE VIEW directory_public_skill_coverage AS
+  SELECT
+    (SELECT COUNT(DISTINCT dps.skill_id)::integer
+       FROM directory_profile_skills dps
+       JOIN directory_profiles p ON dps.profile_id::text = p.id::text
+       JOIN skills_taxonomy_skills s ON s.id = dps.skill_id
+      WHERE s.is_active = TRUE) AS covered,
+    (SELECT COUNT(*)::integer FROM skills_taxonomy_skills WHERE is_active = TRUE) AS catalog;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'landing_page') THEN
+    GRANT SELECT ON directory_public_skill_coverage TO landing_page;
+  END IF;
+END $$;
 COMMIT;
 

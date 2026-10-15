@@ -254,15 +254,17 @@ Result: web ☐
 2. Enroll. Confirm the deposit is held and the Browse card reads Enrolled.
 3. Go to Progress and leave the cohort. Confirm the credits come back.
 4. Return to Browse. The card should offer Enroll again, not Enrolled.
-5. Enroll a second time in the same cohort.
+5. Enroll a second time in the same cohort. Check the wallet, then reload the page.
 6. Check the enrollment rows for that cohort and member.
 7. Now try to create a second **live** enrollment in the same cohort for the same member, directly against the database.
 
-**Expected:** Step 1 shows the partial index and no constraint. Step 5 succeeds. Step 6 shows the dropped row still there — the record of what happened is kept, not erased — alongside the new live one. Step 7 is refused by the unique index: one live enrollment per person per cohort still holds.
+**Expected:** Step 1 shows the partial index and no constraint. Step 5 succeeds and holds a new deposit (the wallet's held amount goes up again), and after the reload the card still reads Enrolled. Step 6 shows the dropped row still there — the record of what happened is kept, not erased — alongside the new live one. Step 7 is refused by the unique index: one live enrollment per person per cohort still holds.
 
 **Also:** a cohort the member **completed** is not re-enrollable. Only a dropped enrollment frees the slot.
 
 **Regression guard:** before 2026-09-13 step 5 failed. The index was unconditional, so the dropped row held the slot forever while the seat check — which counts only enrolled and active — said there was room. The application and the database disagreed, and the database won at the INSERT.
+
+**Third regression guard (2026-10-15, code review #2930):** after the index was fixed, the enroll code still looked for any earlier row for that member and cohort, found the dropped one, and answered success with nothing held. The screen showed Enrolled until the next load, then showed the member not enrolled. If step 5 holds nothing, or the card goes back to Enroll after the reload, that fault is back.
 
 **Second regression guard — why step 1 is a step (2026-09-14):** the first fix left the inline
 `UNIQUE (cohort_id, user_id)` in the `CREATE TABLE`. That makes a table constraint whose backing index
