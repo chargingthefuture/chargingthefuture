@@ -199,8 +199,27 @@ export async function DELETE(request: Request, { params }: RouteProps) {
   const { commentId } = await params;
 
   try {
-    const done = await withdrawOwnComment(gate.auth.userId, commentId);
-    if (!done) {
+    const outcome = await withdrawOwnComment(gate.auth.userId, commentId);
+    if (outcome === 'removed_by_admin') {
+      await insertFiresideAudit({
+        actorId: gate.auth.userId,
+        command: 'fireside.comment.withdraw',
+        policyStatus: 'deny',
+        reason: 'removed_by_admin',
+        targetType: 'comment',
+        targetId: commentId,
+        result: 'refused',
+      });
+      return NextResponse.json(
+        {
+          ok: false,
+          code: FIRESIDE_ERROR_CODE.removedByAdmin,
+          message: 'An admin removed this comment, so it cannot be withdrawn. It stays removed; only an admin can restore it.',
+        },
+        { status: 409 },
+      );
+    }
+    if (outcome === 'not_found') {
       return NextResponse.json(
         { ok: false, code: FIRESIDE_ERROR_CODE.notFound, message: 'No comment of yours with that id, or it is already withdrawn.' },
         { status: 404 },
