@@ -6,6 +6,7 @@ import {
 import { QUORA_MOTD_ONE_PERCENT } from './messages-one-percent';
 import { QUORA_MOTD_GOAL_BOARD } from './messages-goal-board';
 import { QUORA_MOTD_ONE_PERCENT_CALL } from './messages-one-percent-call';
+import { QUORA_MOTD_RECOMMEND } from './messages-recommend';
 
 /**
  * Day one. Peace Battle 2 starts on the evening of Friday 18 September 2026, so the rotation is
@@ -26,6 +27,7 @@ const POOLS: Record<QuoraMotdAction, QuoraMotdMessage[]> = {
   'one-percent': QUORA_MOTD_ONE_PERCENT,
   'goal-board': QUORA_MOTD_GOAL_BOARD,
   'one-percent-call': QUORA_MOTD_ONE_PERCENT_CALL,
+  recommend: QUORA_MOTD_RECOMMEND,
 };
 
 export type QuoraMotdPick = {
@@ -88,10 +90,11 @@ function orderFor(length: number, cycle: number): number[] {
 /**
  * The message for one calendar day.
  *
- * The action rotates every day — your 1%, the goal board, One Percent, and round again — so three days
- * running never ask for the same thing. Within an action, the pool is worked through in a shuffled
- * order with no repeat until it is exhausted. With ten messages per action and three actions, that
- * is thirty days before anything comes back, and it comes back in a different order.
+ * The action rotates every day — your 1%, the goal board, One Percent, recommend one person, and
+ * round again — so four days running never ask for the same thing. Within an action, the pool is
+ * worked through in a shuffled order with no repeat until it is exhausted. With ten messages per
+ * action and four actions, that is forty days before anything comes back, and it comes back in a
+ * different order.
  *
  * Days before the epoch are clamped to day one rather than refused, so the screen renders something
  * useful if it is opened early.
@@ -106,7 +109,7 @@ export function quoraMotdFor(date: string): QuoraMotdPick {
     throw new Error(`Message of the day: the "${action}" pool is empty, so no message can be picked.`);
   }
 
-  // How many times this action has come around, which is every third day.
+  // How many times this action has come around, which is every fourth day.
   const turn = Math.floor(dayIndex / QUORA_MOTD_ACTIONS.length);
   const cycle = Math.floor(turn / pool.length);
   const slot = turn % pool.length;
