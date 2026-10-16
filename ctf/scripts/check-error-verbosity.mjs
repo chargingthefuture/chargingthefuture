@@ -14,10 +14,13 @@
 //   discards-response  a `!res.ok` branch showing a fixed string instead of the route's message.
 //   discards-throw     a `catch` showing a fixed string that never uses the caught value.
 //
-// Everything else that catches (`web/lib/**`, `ctf/scripts/**`, `mobile/src/**`, `shared/src/**`):
+// Every catch, on every surface above and in `web/lib/**`, `ctf/scripts/**` and `shared/src/**`, and
+// every promise handler written `.catch(<arrow>)`:
 //
 //   empty-catch   an empty (or comment-only) catch with no `no-trace: <reason>` marker.
 //   says-nothing  a catch that does work while neither using nor recording the caught value.
+//
+// A route catch that answers is judged by the route pass alone, so it is never counted twice.
 //
 // ctf/config/error-verbosity-allowlist.json holds a per-file budget for what existed when this gate
 // landed. A budget may shrink, never grow; a file not listed must be clean. Regenerate the file's
@@ -232,7 +235,13 @@ function clientFindings(file, source) {
 // saying why the failure is expected — a reviewer's check, not a machine's.
 // ---------------------------------------------------------------------------------------------------
 
+// Routes and screens were added on 2026-10-16 (issue #2803): before, an empty catch there was read by
+// nothing, because the route pass only reads a catch that answers and the screen pass only one that
+// shows a fixed string.
 const silentRoots = [
+  'ctf/packages/web/app',
+  'ctf/packages/web/components',
+  'ctf/packages/web/hooks',
   'ctf/packages/web/lib',
   'ctf/scripts',
   'ctf/packages/mobile/src',
@@ -280,10 +289,64 @@ function isFallbackOnly(bare) {
 
 const SAYS_SOMETHING = /reportError\s*\(|console\.(error|warn|log)\s*\(|captureException\s*\(/;
 
+// The index of the bracket that closes the one open just before `start`, skipping strings. -1 when
+// the source ends first.
+function closingIndex(source, start) {
+  let depth = 1;
+  let i = start;
+  while (i < source.length) {
+    const ch = source[i];
+    if (ch === "'" || ch === '"' || ch === '`') {
+      i += 1;
+      while (i < source.length && source[i] !== ch) i += source[i] === '\\' ? 2 : 1;
+    } else if (ch === '(' || ch === '[' || ch === '{') {
+      depth += 1;
+    } else if (ch === ')' || ch === ']' || ch === '}') {
+      depth -= 1;
+      if (depth === 0) return i;
+    }
+    i += 1;
+  }
+  return -1;
+}
+
+// Promise handlers written `.catch(<arrow>)`, as blocks the silent pass reads like a `catch`. A
+// handler that is a name (`.catch(reportError)`, `.catch(console.error)`) receives the error, so it
+// is not read. An arrow with an expression body becomes `return <expr>` when the expression calls
+// nothing (`() => null`, `() => ({ ok: false })`): a fallback value, as `catch { return null }` is.
+// One that calls something (`() => setFailed(true)`) is doing work, and the reason must be recorded.
+function promiseCatchBlocks(source) {
+  const blocks = [];
+  const re = /\.catch\(\s*/g;
+  let match;
+  while ((match = re.exec(source)) !== null) {
+    const rest = source.slice(re.lastIndex);
+    const arrow = rest.match(/^(?:async\s+)?(?:\(([^)]*)\)|([A-Za-z_$][\w$]*))\s*=>\s*/);
+    if (!arrow) continue;
+    const binding = (arrow[1] ?? arrow[2] ?? '').split(',')[0].split(':')[0].trim();
+    const start = re.lastIndex + arrow[0].length;
+    const line = source.slice(0, match.index).split('\n').length;
+    if (source[start] === '{') {
+      const end = closingIndex(source, start + 1);
+      if (end < 0) continue;
+      blocks.push({ binding, body: source.slice(start + 1, end), line });
+      continue;
+    }
+    const end = closingIndex(source, start);
+    if (end < 0) continue;
+    const expr = source.slice(start, end).trim().replace(/,$/, '');
+    const callsSomething = /[\w$)\]]\s*\(/.test(expr.replace(/'(?:\\.|[^'])*'|"(?:\\.|[^"])*"|`(?:\\.|[^`])*`/g, "''"));
+    blocks.push({ binding, body: callsSomething ? `${expr};` : `return ${expr};`, line });
+  }
+  return blocks;
+}
+
 function silentFindings(file, source) {
   const rel = relative(repoRoot, file).split('\\').join('/');
+  const isRoute = rel.endsWith('/route.ts');
   const out = [];
-  for (const block of catchBlocks(source)) {
+  for (const block of [...catchBlocks(source), ...promiseCatchBlocks(source)]) {
+    if (isRoute && ANSWERS.test(block.body)) continue; // the route pass judges a catch that answers
     const binding = block.binding;
     if (binding.length > 0 && new RegExp(`\\b${binding}\\b`).test(block.body)) continue;
     if (/\bthrow\b/.test(block.body)) continue; // re-thrown: the reason travels with it
