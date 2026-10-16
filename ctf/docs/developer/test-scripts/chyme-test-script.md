@@ -474,6 +474,9 @@ action appears on another member's messages, and the server rejects deleting som
 Delete is confirm-gated (system dialog), Edit loads the text into the composer and deletes the
 original (delete + repost). Both call the same `DELETE /api/chyme/messages/[messageId]` route; the
 optimistic remove restores the message and shows a "Delete failed" alert if the request fails.
+**Stream (2026-10-16):** sending a room message makes no Stream call, so nothing of a deleted or
+edited message is left in the room's Stream channel. In the Stream dashboard, a message sent after
+this date does not appear in the room's channel.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ---
