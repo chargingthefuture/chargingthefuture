@@ -17,7 +17,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:skills-taxonomy` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-skills-taxonomy-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit); manually updated 2026-07-15 (browser made read-only — dead admin "add" buttons removed); 2026-08-04 (admin write surface recorded as retired — admin walkthrough marked API-only); 2026-08-29 (TAX-5 extended for changes 58–67 — the Childcare Workers and Tutors occupations under Education); 2026-08-29 (TAX-5 extended for changes 68–78 — the Photographer merge and the two plural renames); 2026-08-29 (TAX-5 extended for change 79 — the surviving label of the lighting pair); 2026-08-29 (TAX-5b added — the apply-time plural-twin guard); 2026-09-14 (TAX-5c added — the per-occupation demand weight and its mandatory rationale); 2026-10-01 (TAX-A7 added — the machine reader, its bound credential, and the routes it cannot reach); 2026-10-08 (TAX-5g added — change 143, Laboratory testing (basic) moved under Lab Technicians); 2026-10-13 (TAX-5h added — changes 144–149, Life coaching, Mechanical design and drafting (CAD) and the Taxi Drivers occupation from skill proposals #3144, #3145 and #3088) |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit); manually updated 2026-07-15 (browser made read-only — dead admin "add" buttons removed); 2026-08-04 (admin write surface recorded as retired — admin walkthrough marked API-only); 2026-08-29 (TAX-5 extended for changes 58–67 — the Childcare Workers and Tutors occupations under Education); 2026-08-29 (TAX-5 extended for changes 68–78 — the Photographer merge and the two plural renames); 2026-08-29 (TAX-5 extended for change 79 — the surviving label of the lighting pair); 2026-08-29 (TAX-5b added — the apply-time plural-twin guard); 2026-09-14 (TAX-5c added — the per-occupation demand weight and its mandatory rationale); 2026-10-01 (TAX-A7 added — the machine reader, its bound credential, and the routes it cannot reach); 2026-10-08 (TAX-5g added — change 143, Laboratory testing (basic) moved under Lab Technicians); 2026-10-13 (TAX-5h added — changes 144–149, Life coaching, Mechanical design and drafting (CAD) and the Taxi Drivers occupation from skill proposals #3144, #3145 and #3088); 2026-10-16 (the dependency-impact preview removed — core smoke item 4 dropped, TAX-A6 now checks the route is gone) |
 
 ## How to run this
 
@@ -42,8 +42,6 @@ are the can't-ship-broken checks.
 3. **Browser is read-only; server-side write gating holds.** The member-facing taxonomy browser shows
    no create/edit/delete controls for anyone (the old `/admin/skills-taxonomy` "add" buttons were
    removed); a non-admin call to a taxonomy write API is denied server-side. → web ☐ mobile ☐
-4. **Delete asks before it acts.** An admin delete first shows the dependency-impact preview, not an
-   immediate destructive delete. → web ☐ mobile ☐
 
 ---
 
@@ -409,17 +407,14 @@ directly).
 
 **Result:** web ☐ mobile ☐ — notes:
 
-### TAX-A6 · Dependency-impact preview still answers (added 2026-08-28)
+### TAX-A6 · The dependency-impact preview is gone (removed 2026-10-16)
 **Role:** admin · **Surfaces:** web (API only — no UI)
 **Steps:**
-1. `GET /api/skills-taxonomy/admin/dependency-impact` with `targetType`, `targetId` and `operation`
-   (one of `delete`/`deactivate`).
-2. Omit one of the three.
+1. `GET /api/skills-taxonomy/admin/dependency-impact?targetType=skill&targetId=<any skill id>&operation=deactivate`.
 
-**Expected:** Step 1 returns the impacted consumers and a risk level. Step 2 is rejected — all three
-are required and validated. This route is a read and survived task 7; it now informs a change-list
-entry (what a `deactivateSkill` would affect) rather than gating an in-app delete that no longer
-exists.
+**Expected:** 404. The preview read a table nothing wrote, so it called a skill safe to delete while
+members held it (#2801). A deactivation is checked against live references when the change list is
+applied (TAX-5 and the apply step), not by this route.
 
 **Result:** web ☐ mobile ☐ — notes:
 

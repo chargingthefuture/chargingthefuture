@@ -72,24 +72,6 @@ export type TaxonomyFlattenedItem = {
   isActive: boolean;
 };
 
-export type TaxonomyDependencyTargetType = 'sector' | 'job-title' | 'skill';
-
-export type TaxonomyDependencyImpact = {
-  targetType: TaxonomyDependencyTargetType;
-  targetId: string;
-  reasonRequired: boolean;
-  internal: {
-    childJobTitles: number;
-    childSkills: number;
-  };
-  external: {
-    knownBindings: number;
-    pending: boolean;
-  };
-  canDelete: boolean;
-  denyReasons: string[];
-};
-
 export type SkillsTaxonomyAuditEvent = {
   pluginId: 'skills-taxonomy';
   command:
@@ -103,8 +85,7 @@ export type SkillsTaxonomyAuditEvent = {
     | 'skills-taxonomy.job-title.delete'
     | 'skills-taxonomy.skill.create'
     | 'skills-taxonomy.skill.update'
-    | 'skills-taxonomy.skill.delete'
-    | 'skills-taxonomy.dependency-impact.preview';
+    | 'skills-taxonomy.skill.delete';
   actorId: string;
   status: 'allow' | 'deny';
   reason: string;
