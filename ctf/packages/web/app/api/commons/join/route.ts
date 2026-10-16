@@ -20,14 +20,10 @@ export async function POST(request: Request) {
 
   try {
     // The Commons home chat shares the Feed's community channel (ctf-feed-community). We mint real
-    // Stream credentials so the client can open a live connection beneath the existing custom UI and
-    // receive real-time events (new posts, typing). The Commons keeps its own design; this only adds
-    // the live layer on top.
-    const credentials = await getFeedStreamCredentials(
-      gate.identity.userId,
-      gate.identity.displayName,
-      'community',
-    );
+    // Stream credentials so the client can open a live connection beneath the existing custom UI for
+    // the typing indicator. Messages are not posted to Stream; the page reads them from Postgres and
+    // checks for new ones every 10 seconds.
+    const credentials = await getFeedStreamCredentials(gate.identity.userId, gate.identity.displayName);
 
     // Stream not configured in this environment (no API key/secret). Tell the client clearly so it
     // skips the live connection and stays on polling. Commons must never break when Stream is absent.

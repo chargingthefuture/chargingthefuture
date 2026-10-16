@@ -140,7 +140,9 @@ across the relevant surfaces. A task with no dependency can run anytime / in par
    2026-06-21). Added a live Stream Chat client connection beneath the existing custom Commons UI
    (kept the design; read live events, did not swap components): `POST /api/commons/join` now mints real
    `ctf-feed-community` credentials, the Commons hook opens a `stream-chat` connection and refreshes
-   history on `message.new`/reconnect, the 10s poll slows to a 30s backstop while live, and a subtle
+   history on `message.new`/reconnect, the 10s poll slows to a 30s backstop while live (since
+   2026-10-16 the poll stays at 10s: no Commons message is posted to Stream, so `message.new` never
+   fires and the slower poll only delayed new posts), and a subtle
    "X is typing…" line surfaces typing — all with a clean fall-back to polling when Stream is
    unconfigured. Read receipts (#18), delivery status (#19), and presence dots (#20) were left as
    deferred follow-ups for the presence cluster (task 6). This is the prerequisite for real-time
@@ -197,7 +199,7 @@ Programming.
 - 2026-06-21: Task 1 (Commons live Stream layer) shipped on branch `feat/commons-live-stream-layer`.
   `POST /api/commons/join` mints real `ctf-feed-community` credentials (or reports `configured: false`);
   the Commons hook opens a `stream-chat` connection, refreshes history on `message.new`/reconnect,
-  slows the poll to a 30s backstop while live, and surfaces a typing indicator — falling back to
+  slows the poll to a 30s backstop while live (stays at 10s since 2026-10-16; see above), and surfaces a typing indicator — falling back to
   polling when Stream is unconfigured. Read receipts, delivery status, and presence dots deferred to
   task 6. Quota note: `ctf/docs/quota-impact/2026-06-21-commons-live-stream-layer.md`.
 - 2026-06-21: Plugin-chat portions of @mentions (#4), in-channel message search (#9), and link

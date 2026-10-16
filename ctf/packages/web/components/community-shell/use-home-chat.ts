@@ -20,11 +20,11 @@ import { startVisibleInterval } from '../../lib/shared/visible-interval';
 import { failedRequestText } from './request-failure';
 import { readStoredValue, writeStoredValue } from './stored-value';
 
-// Poll cadence: the 10s poll is the only refresh path when the live Stream connection is absent or
-// degraded. When the live connection is healthy, real-time events drive refreshes and the poll is a
-// slow backstop only, so it runs far less often to cut request volume.
-const POLL_INTERVAL_FALLBACK_MS = 10_000;
-const POLL_INTERVAL_LIVE_MS = 30_000;
+// Poll cadence: new posts appear through this 10s poll whether or not the live Stream connection is
+// up. Commons messages are never posted to Stream, so the live connection carries only the typing
+// indicator; it used to slow the poll to 30s on the promise of a new-message event that never came,
+// which made other members' posts take up to 30s to appear (2026-10-16).
+const POLL_INTERVAL_MS = 10_000;
 
 // Shared headers for a JSON POST that also carries the CSRF marker the backend expects.
 const JSON_CSRF_HEADERS = { 'content-type': 'application/json', 'x-ctf-csrf': '1' } as const;
@@ -986,8 +986,8 @@ async function connectLiveWhenConfigured(
       streamChannelId: join.streamChannelId,
     },
     {
-      // A new post (or a recovered connection) pulls fresh history right away, so posts appear
-      // immediately instead of waiting for the next poll.
+      // A recovered connection pulls fresh history right away. (A new-message event would too, but
+      // no Commons message is posted to Stream, so new posts arrive through the poll.)
       onActivity: () => {
         void ctx.refreshHistoryRef.current().catch(() => undefined);
       },
@@ -1023,20 +1023,19 @@ async function joinAndConnect(ctx: ChatBootstrapContext): Promise<void> {
 
     if (live) {
       ctx.liveConnectionRef.current = live;
-      // Live connection drives refreshes; the poll becomes a slow backstop.
-      startChatPoll(ctx, POLL_INTERVAL_LIVE_MS);
+      startChatPoll(ctx, POLL_INTERVAL_MS);
     } else {
       // Stream not configured, or the live connection failed to open: silently stay on the frequent
       // poll. The chat is fully functional this way.
       ctx.setters.setTypingUsers([]);
-      startChatPoll(ctx, POLL_INTERVAL_FALLBACK_MS);
+      startChatPoll(ctx, POLL_INTERVAL_MS);
     }
   } catch (joinError) {
     if (!ctx.controller.active) return;
 
     ctx.setters.setConnectionState('fallback');
     ctx.setters.setError(toErrorMessage(joinError, 'Live chat is reconnecting.'));
-    startChatPoll(ctx, POLL_INTERVAL_FALLBACK_MS);
+    startChatPoll(ctx, POLL_INTERVAL_MS);
   }
 }
 

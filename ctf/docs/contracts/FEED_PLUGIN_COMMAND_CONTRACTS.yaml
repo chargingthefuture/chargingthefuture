@@ -739,8 +739,9 @@ contracts:
         type: string
         required: false
     outputSchema:
-      streamEmitted:
+      ok:
         type: boolean
+        note: Recorded in Postgres only; nothing is sent to Stream (streamEmitted removed 2026-10-16).
     dataAccess:
       - feed_membership_events
       - announcement_membership_events

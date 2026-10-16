@@ -233,6 +233,25 @@
 
 ---
 
+### FD-7c — Another member's Commons post appears within 10 seconds, and typing still shows
+
+**Role:** two members (A and B) | **Surface:** web
+
+**Precondition:** both signed in on the Commons, each in their own browser; Stream configured.
+
+**Steps:**
+1. With both on the Commons page, have member B start typing a post.
+2. Have member B send it. Start a timer on member A's screen.
+3. Repeat in the contributor channel if both members can open it.
+
+**Expected:** Member A sees "B is typing…" while B types. B's post appears on A's screen within
+about 10 seconds, never 30. Notifications for replies and @-mentions arrive as before; they do not
+use Stream.
+
+**Result:** web ☐
+
+---
+
 ### FD-8 — Member post with raw HTML is blocked
 **Role:** member | **Surface:** web
 
@@ -1241,7 +1260,7 @@ read. Step 2: no banner, and the queue loads as usual (#2712).
 
 **Steps:**
 1. Call `POST /api/feed/membership/events` with `{ "userId": "<a valid userId>", "pluginId": "feed", "eventType": "join" }` and `x-ctf-csrf: '1'`.
-2. Confirm the response contains `{ ok: true, streamEmitted: <boolean> }`.
+2. Confirm the response is `{ ok: true }` (no `streamEmitted`: nothing is sent to Stream since 2026-10-16).
 3. Repeat with `eventType: "leave"`.
 4. Try omitting `userId` — expect 400.
 5. Try without admin credentials — expect 403.

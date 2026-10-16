@@ -8,12 +8,14 @@ import { startVisibleInterval } from '../../lib/shared/visible-interval';
 import { failedRequestText } from './request-failure';
 
 // Gated contributor channel — client hook. A deliberately smaller sibling of useHomeChat: same
-// architecture (DB-backed history over polling, Stream as a best-effort live layer for instant
-// refresh + typing), none of the Commons extras (no AI assistant, no concierge, no filters).
+// architecture (DB-backed history over a 10s poll, Stream as a best-effort live layer for the
+// typing indicator), none of the Commons extras (no AI assistant, no concierge, no filters).
 // Threads are the same Signal-style quoted replies the Commons uses.
 
-const POLL_INTERVAL_FALLBACK_MS = 10_000;
-const POLL_INTERVAL_LIVE_MS = 30_000;
+// New posts appear through this poll whether or not the live connection is up: channel posts are
+// stored in Postgres and never posted to Stream, so no new-message event arrives to replace it. The
+// live connection used to slow the poll to 30s, which made posts take up to 30s to appear (2026-10-16).
+const POLL_INTERVAL_MS = 10_000;
 
 export type GatedReplyTarget = {
   postId: string;
@@ -210,15 +212,15 @@ export function useGatedChat(currentUser: ShellCurrentUser) {
         if (live) {
           liveConnectionRef.current = live;
           setIsLive(true);
-          stopPoll = startHistoryPoll(POLL_INTERVAL_LIVE_MS, poll);
+          stopPoll = startHistoryPoll(POLL_INTERVAL_MS, poll);
         } else {
           setTypingUsers([]);
-          stopPoll = startHistoryPoll(POLL_INTERVAL_FALLBACK_MS, poll);
+          stopPoll = startHistoryPoll(POLL_INTERVAL_MS, poll);
         }
       } catch {
         if (!active) return;
         // The live layer is best-effort — polling keeps the channel fully functional.
-        stopPoll = startHistoryPoll(POLL_INTERVAL_FALLBACK_MS, poll);
+        stopPoll = startHistoryPoll(POLL_INTERVAL_MS, poll);
       }
     }
 

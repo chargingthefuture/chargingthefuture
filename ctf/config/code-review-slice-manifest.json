@@ -45,10 +45,6 @@
       "contractPrefix": "FEED",
       "note": "The shell that renders the Commons/feed surfaces; no contracts of its own."
     },
-    "questions": {
-      "contractPrefix": "FEED",
-      "note": "Mints Stream credentials for the Questions screen over feed_questions, a Feed table; governed by the FEED_* contracts."
-    },
     "quora-deletion-survey": {
       "extraPaths": [
         "ctf/packages/web/app/survey"

@@ -67,7 +67,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await emitMembershipEvent({
+    await emitMembershipEvent({
       actorId: gate.auth.userId,
       userId: input.userId,
       pluginId: input.pluginId,
@@ -89,7 +89,7 @@ export async function POST(request: Request) {
       metadata: { pluginId: input.pluginId, eventType: input.eventType },
     });
 
-    return NextResponse.json({ ok: true, streamEmitted: result.streamEmitted }, { status: 200 });
+    return NextResponse.json({ ok: true }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'announcements', op: 'membership_events' });
     await recordFeedAdminAudit({
