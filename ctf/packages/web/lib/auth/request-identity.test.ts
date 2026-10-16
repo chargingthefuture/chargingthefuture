@@ -113,6 +113,38 @@ describe('where identity is read from', () => {
     expect(identity.username).toBeNull();
   });
 
+  it('takes the role from the bearer path when the middleware also accepted the app token', async () => {
+    // Clerk's middleware accepts the Android app's OAuth id_token as a session token and stamps the
+    // request with no role, since the token carries none. The bearer path fills the role from the
+    // member's Clerk account, so it must win, or every admin is a member on Android.
+    await setMiddlewareHeaders('user_admin');
+    requestHeaders.set('authorization', 'Bearer app-token');
+    verifyBearerIdentity.mockResolvedValue({
+      userId: 'user_admin',
+      username: 'farah',
+      firstName: null,
+      lastName: null,
+      role: 'admin',
+    });
+
+    const identity = await resolveRequestIdentity();
+
+    expect(identity.userId).toBe('user_admin');
+    expect(identity.isAdmin).toBe(true);
+    expect(identity.username).toBe('farah');
+    expect(recorded).toEqual(['user_admin']);
+  });
+
+  it('falls back to the middleware headers when a bearer header does not verify', async () => {
+    await setMiddlewareHeaders('user_web');
+    requestHeaders.set('authorization', 'Bearer not-a-clerk-token');
+
+    const identity = await resolveRequestIdentity();
+
+    expect(identity.userId).toBe('user_web');
+    expect(identity.isAuthenticated).toBe(true);
+  });
+
   it('ignores identity headers that carry no stamp, as on a path the middleware skipped', async () => {
     requestHeaders.set('x-ctf-authenticated', 'true');
     requestHeaders.set('x-ctf-user-id', 'user_spoofed');

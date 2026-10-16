@@ -9,6 +9,17 @@ import { requireChymeRoomAccess, ensureMutationCsrf } from '../_lib';
 // high-frequency keepalive, not a state-changing command. A beat that would put a member who has
 // dropped out of the count back into a room at its cap answers 409 CHYME_ROOM_FULL, the same
 // answer the join gives; the apps then stop beating and show the message in place of the stage.
+//
+// The body may carry `{ micOn: boolean }`, the member's microphone as their app sees it, so members
+// who have not joined can see who is muted. The apps also beat once whenever the microphone changes.
+// A beat without it (an app older than the field, or no body) leaves the stored value alone.
+async function readMicOn(request: Request): Promise<boolean | undefined> {
+  const body: unknown = await request.json().catch(() => null);
+  if (typeof body !== 'object' || body === null) return undefined;
+  const micOn = (body as { micOn?: unknown }).micOn;
+  return typeof micOn === 'boolean' ? micOn : undefined;
+}
+
 export async function POST(request: Request) {
   const gate = await requireChymeRoomAccess(request);
   if (!gate.allowed) {
@@ -21,7 +32,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    await touchRoomPresence(gate.identity, gate.roomKey);
+    await touchRoomPresence(gate.identity, gate.roomKey, await readMicOn(request));
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (error) {
     if (error instanceof ChymeRemovedError) {
