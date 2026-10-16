@@ -30,7 +30,7 @@
 
 ## Core smoke (every session)
 
-1. Sign in as an **admin**. Go to `/admin/daily-exchange` and scroll to the Weavers of the Commons section under the daily reading. It loads — no redirect, no blank screen, no unhandled error. The old address `/admin/daily-exchange` (Weavers of the Commons section) lands on the same section. web ☐
+1. Sign in as an **admin**. Go to `/admin/adoption` and scroll to the Weavers of the Commons section under the daily reading. It loads — no redirect, no blank screen, no unhandled error. web ☐
 2. Go to `/apps/directory`. Open any **claimed** Directory profile that the seed data marks as a badge holder. The "Weavers of the Commons" braid badge renders next to the member's name. web ☐
 3. Go to `/apps/directory/weavers-of-the-commons` while signed in as a **member**. The explainer page loads — no redirect, no error. web ☐
 4. Sign out, then navigate directly to `/apps/directory/weavers-of-the-commons`. You are redirected to `/apps/directory` — the page does not render. web ☐
@@ -406,9 +406,9 @@ Result: web ☐
 **Precondition:** Have both an admin account and a plain member account available.
 
 **Steps:**
-1. Sign in as **admin**. Navigate to `/admin/daily-exchange` (Weavers of the Commons section).
+1. Sign in as **admin**. Navigate to `/admin/adoption` (Weavers of the Commons section).
 2. Confirm the page loads.
-3. Sign out. Sign in as a plain **member**. Navigate to `/admin/daily-exchange` (Weavers of the Commons section).
+3. Sign out. Sign in as a plain **member**. Navigate to `/admin/adoption` (Weavers of the Commons section).
 
 **Expected:** Admin sees the daily reading followed by the Weavers of the Commons section — eligible members, config editor, and channel status card. The member is redirected to `/apps` and never sees admin content.
 
@@ -419,7 +419,7 @@ Result: web ☐
 ### CA-A2 — Eligible members list shows categorical data only
 **Role:** admin | **Surfaces:** web (desktop)
 
-**Precondition:** At least one member is eligible (seed data or manually triggered). Sign in as admin. Go to `/admin/daily-exchange` (Weavers of the Commons section).
+**Precondition:** At least one member is eligible (seed data or manually triggered). Sign in as admin. Go to `/admin/adoption` (Weavers of the Commons section).
 
 **Steps:**
 1. Look at the eligible members section.
@@ -437,7 +437,7 @@ Result: web ☐
 **Precondition:** At least one eligible member is listed. Sign in as admin.
 
 **Steps:**
-1. Go to `/admin/daily-exchange` (Weavers of the Commons section), eligible members section.
+1. Go to `/admin/adoption` (Weavers of the Commons section), eligible members section.
 2. Click Revoke on an eligible member.
 3. Leave the reason field empty and attempt to confirm.
 4. Then enter a reason (e.g. "Test revocation — this is a manual test run") and confirm.
@@ -476,7 +476,7 @@ Result: web ☐
 **Precondition:** The member revoked in CA-A3/CA-A4 is still revoked. The channel is open.
 
 **Steps:**
-1. Sign in as admin. Go to `/admin/daily-exchange` (Weavers of the Commons section).
+1. Sign in as admin. Go to `/admin/adoption` (Weavers of the Commons section).
 2. Click Reinstate on the revoked member. Confirm.
 3. Sign in as the reinstated member.
 4. Open the Commons.
@@ -524,7 +524,7 @@ Result: web ☐
 ### CA-A8 — Config editor loads with current values
 **Role:** admin | **Surfaces:** web (desktop), web (mobile-responsive)
 
-**Precondition:** Sign in as admin. Go to `/admin/daily-exchange` (Weavers of the Commons section).
+**Precondition:** Sign in as admin. Go to `/admin/adoption` (Weavers of the Commons section).
 
 **Steps:**
 1. Open the config editor section.
@@ -539,7 +539,7 @@ Result: web ☐ mobile-responsive ☐
 ### CA-A9 — Config update saves successfully
 **Role:** admin | **Surfaces:** web (desktop)
 
-**Precondition:** Sign in as admin. Go to `/admin/daily-exchange` (Weavers of the Commons section), config editor.
+**Precondition:** Sign in as admin. Go to `/admin/adoption` (Weavers of the Commons section), config editor.
 
 **Steps:**
 1. Change the score threshold to a new value (e.g. 95).
@@ -558,7 +558,7 @@ Result: web ☐
 **Precondition:** Sign in as admin. The eligible count is below `min_eligible_to_open_channel` (default 10). If the seed data produces fewer than 10 eligible members, this condition should hold naturally.
 
 **Steps:**
-1. Go to `/admin/daily-exchange` (Weavers of the Commons section), config editor.
+1. Go to `/admin/adoption` (Weavers of the Commons section), config editor.
 2. Observe the channel toggle.
 3. Attempt to turn the channel open toggle ON and save.
 
@@ -574,7 +574,7 @@ Result: web ☐
 **Precondition:** The eligible count meets or exceeds `min_eligible_to_open_channel`. (Lower the minimum via the config editor if needed — set it to 1, save, then try the open toggle. Remember to restore it after the test.) The channel is currently closed.
 
 **Steps:**
-1. Go to `/admin/daily-exchange` (Weavers of the Commons section), config editor.
+1. Go to `/admin/adoption` (Weavers of the Commons section), config editor.
 2. Set `minEligibleToOpenChannel` to 1 (if eligible count is low) and save.
 3. Turn the channel open toggle ON and save.
 
@@ -590,7 +590,7 @@ Result: web ☐
 **Precondition:** The channel is currently open (CA-A11 completed). Sign in as admin.
 
 **Steps:**
-1. Go to `/admin/daily-exchange` (Weavers of the Commons section), config editor.
+1. Go to `/admin/adoption` (Weavers of the Commons section), config editor.
 2. Turn the channel open toggle OFF and save.
 3. Sign in as an eligible member and open the Commons.
 
@@ -607,7 +607,7 @@ Result: web ☐
 
 **Steps:**
 1. Sign in as the operations-role user.
-2. Navigate to `/admin/daily-exchange` (Weavers of the Commons section).
+2. Navigate to `/admin/adoption` (Weavers of the Commons section).
 
 **Expected:** The user is redirected to `/apps`. No admin content renders.
 

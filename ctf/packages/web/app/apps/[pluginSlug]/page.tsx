@@ -347,9 +347,9 @@ function renderPluginShellC(
   }
 
   if (selectedPlugin.slug === 'weekly-performance') {
-    // Weekly Performance has no member view — the dashboard lives on the admin page only.
+    // Weekly Performance has no member view — the dashboard lives on the admin Adoption screen.
     // Non-admins never reach this branch (the admin-only gate above 404s them).
-    redirect('/admin/weekly-performance');
+    redirect('/admin/adoption');
   }
 
   if (selectedPlugin.slug === 'gdp') {

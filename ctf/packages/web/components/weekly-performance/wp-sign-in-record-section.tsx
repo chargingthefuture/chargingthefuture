@@ -1,15 +1,14 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { ClipboardCopy, LogIn, RefreshCw } from 'lucide-react';
+import { ClipboardCopy, RefreshCw } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
-import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import type { RecordLoginEventOutcome } from 'lib/engagement/login-activity';
 import type { SignInRecordHealth } from 'lib/engagement/sign-in-record';
 import { getWeeklyPerformanceTokens, type WeeklyPerformanceTokens } from './wp-shared';
 
 // The sign-in record behind Active Members and Daily Active Members, as a health check an admin
-// can read from a phone. Opening the screen runs the sign-in write for the admin and shows what
+// can read from a phone. Opening the section runs the sign-in write for the admin and shows what
 // the database did with it, then the record itself: today, the current week as the dashboard
 // computes it, and the last fourteen days. Aggregate only; the one per-member fact shown is the
 // admin's own row for today.
@@ -158,7 +157,9 @@ function SignInRecordBody({
   );
 }
 
-export function WeeklyPerformanceSignInRecordShell() {
+// The Sign-in record section of the Adoption screen. It mounts only when the admin opens it there,
+// because reading it records the admin's own sign-in.
+export function WeeklyPerformanceSignInRecordSection() {
   const { theme } = useTheme();
   const t = getWeeklyPerformanceTokens(theme);
 
@@ -201,17 +202,11 @@ export function WeeklyPerformanceSignInRecordShell() {
   }, [reading]);
 
   return (
-    <div style={{ background: t.BG, minHeight: '100vh', color: t.TEXT }}>
-      <MobileScreenHeader
-        title="Sign-in record"
-        accent={t.ACCENT}
-        icon={<LogIn size={18} color={t.ACCENT} />}
-        backHref="/admin/weekly-performance"
-      />
-      <div style={{ maxWidth: 780, margin: '0 auto', padding: '16px 20px 40px' }}>
+    <div style={{ color: t.TEXT }}>
+      <div>
         <p style={{ fontSize: 13, color: t.SUBTLE, margin: '0 0 14px', lineHeight: 1.5 }}>
           Active Members and Daily Active Members count this record and nothing else: one row per
-          member per day they signed in. Opening this screen records your own sign-in and shows
+          member per day they signed in. Opening this section records your own sign-in and shows
           what the database did with it, so a zero on the dashboard is answered here.
         </p>
 

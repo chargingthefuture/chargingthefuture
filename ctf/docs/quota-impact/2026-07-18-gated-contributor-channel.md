@@ -33,7 +33,7 @@
 ## Observability
 
 - Metrics and alerts added/updated: none new. Membership sync failures surface as a `channelSyncWarning` field in the recompute/revoke/reinstate responses and in the weekly recompute workflow's logs; the admin status card shows the synced member count, so a sync stall is visible on the dashboard the owner already checks.
-- Dashboard link (if available): `/admin/daily-exchange#weavers` (channel status card; the badge admin moved there on 2026-09-25).
+- Dashboard link (if available): `/admin/adoption` (channel status card, in the Daily exchange section; the badge admin moved there on 2026-09-25 and onto the Adoption screen on 2026-10-16).
 
 ## Validation
 

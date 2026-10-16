@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ClipboardCopy, Repeat } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
-import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { getPluginShellTokens } from '@/components/shared/plugin-shell-theme';
 import { getAppAccent } from 'lib/theme/theme-tokens';
 import { ContributorAccessAdminSections } from '@/components/contributor-access/contributor-access-admin-sections';
@@ -149,16 +148,13 @@ function TodayRoster({ roster, tokens }: { roster: ExchangeContributor[]; tokens
   );
 }
 
-export function DailyExchangeShell() {
-  const { theme } = useTheme();
-  const t = getPluginShellTokens(getAppAccent('service-credits', theme), theme);
-
+// The day's reading, read once on the Adoption screen and handed to both the steps card and the
+// section below it, so the two never disagree about a figure. Read on open, and again after the
+// badge settings are saved, because a saved weight changes today's scores too.
+export function useDailyExchangeReading() {
   const [reading, setReading] = useState<ExchangeActivityReading | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
 
-  // Read the day. Called on open, and again after the badge settings below are saved, because a
-  // saved weight changes today's scores too.
   const load = useCallback(async (isCanceled: () => boolean = () => false) => {
     try {
       const response = await fetch('/api/admin/daily-exchange');
@@ -186,13 +182,32 @@ export function DailyExchangeShell() {
     };
   }, [load]);
 
+  const reload = useCallback(() => void load(), [load]);
+  return { reading, error, reload };
+}
+
+// The Daily exchange and badge section of the Adoption screen. The page header lives on that screen.
+export function DailyExchangeSection({
+  reading,
+  error: readError,
+  onReload,
+}: {
+  reading: ExchangeActivityReading | null;
+  error: string | null;
+  onReload: () => void;
+}) {
+  const { theme } = useTheme();
+  const t = getPluginShellTokens(getAppAccent('service-credits', theme), theme);
+  const [copied, setCopied] = useState(false);
+  const [copyError, setCopyError] = useState<string | null>(null);
+  const error = readError ?? copyError;
+
   // The events that reach the badge but never a day's count, marked in the weights editor below.
   const badgeOnlyKeys = useMemo(
     () => new Set((reading?.events ?? []).filter((event) => !event.delivers).map((event) => event.key)),
     [reading],
   );
   const weightOrder = useMemo(() => (reading?.events ?? []).map((event) => event.key), [reading]);
-  const reloadDay = useCallback(() => void load(), [load]);
 
   const onCopy = useCallback(async () => {
     if (!reading) {
@@ -203,18 +218,17 @@ export function DailyExchangeShell() {
       setCopied(true);
       window.setTimeout(() => setCopied(false), 2500);
     } catch (caught) {
-      setError(caught instanceof Error ? `Copy failed: ${caught.message}` : 'Copy failed.');
+      setCopyError(caught instanceof Error ? `Copy failed: ${caught.message}` : 'Copy failed.');
     }
   }, [reading]);
 
   return (
-    <div style={{ background: t.BG, minHeight: '100vh', color: t.TEXT }}>
-      <MobileScreenHeader
-        title="Daily exchange and badge"
-        accent={t.ACCENT}
-        icon={<Repeat size={18} color={t.ACCENT} />}
-      />
-      <div style={{ maxWidth: 780, margin: '0 auto', padding: '16px 20px 40px' }}>
+    <section style={{ color: t.TEXT }}>
+      <h2 style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 15, fontWeight: 700, color: t.TITLE, margin: '0 0 8px' }}>
+        <Repeat size={16} color={t.ACCENT} />
+        Daily exchange and badge
+      </h2>
+      <div>
         <p style={{ fontSize: 13, color: t.SUBTLE, margin: '0 0 14px', lineHeight: 1.5 }}>
           How many members delivered value on a day, against 384. A member counts once however much
           they did, and it does not have to be the same people twice — the target is a day&apos;s
@@ -301,8 +315,8 @@ export function DailyExchangeShell() {
           </>
         )}
 
-        <ContributorAccessAdminSections badgeOnlyKeys={badgeOnlyKeys} weightOrder={weightOrder} onConfigSaved={reloadDay} />
+        <ContributorAccessAdminSections badgeOnlyKeys={badgeOnlyKeys} weightOrder={weightOrder} onConfigSaved={onReload} />
       </div>
-    </div>
+    </section>
   );
 }

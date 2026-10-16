@@ -89,13 +89,13 @@ no DMs) — and the **"Weavers of the Commons" badge** on Directory.
 3. Channel status card: eligible count vs `min_eligible_to_open_channel`, an OPEN/CLOSED badge,
    and the synced Stream member count (best-effort; "unavailable" when Stream is not configured).
 4. The three sections above render as the Weavers of the Commons section of the Daily exchange
-   screen, `/admin/daily-exchange#weavers` (server-side admin gate; non-admins redirect to `/apps`),
+   section on the Adoption screen, `/admin/adoption` (server-side admin gate; non-admins redirect to `/apps`),
    from `components/contributor-access/contributor-access-admin-sections.tsx`, with
    loading/error/populated states. The badge and the daily count score the same events with the
    same weights, so they share one admin page (owner decision, 2026-09-25). The weights are edited as
    a list, one event per row with its number on the right, in the order the daily reading lists them
    (delivering events first, heaviest first); the events that reach the badge but never a day's
-   count are dimmed and marked "badge only", and saving re-reads the day above. The old address `/admin/contributor-access` redirects to that section.
+   count are dimmed and marked "badge only", and saving re-reads the day above.
 
 ## API Surface and Route Map
 
@@ -306,7 +306,7 @@ counts still feed the score internally).
 
 ## Web and Android Delivery Status
 
-- **Web (desktop):** complete — admin (`/admin/daily-exchange#weavers`), the member gated channel
+- **Web (desktop):** complete — admin (`/admin/adoption`, Daily exchange section), the member gated channel
   inside the Commons shell (channel rail entry, gated panel), the Directory profile badge +
   dialog, and the `/apps/directory/weavers-of-the-commons` explainer page.
 - **Web (mobile-responsive):** complete — the admin sections sit under the Daily exchange screen's `MobileScreenHeader`;
@@ -359,6 +359,12 @@ fill on the first recompute / config save / member post.
   evidence; revisit only with strong cause).
 
 ## Change Log
+
+- 2026-10-16: **The badge admin moves with the daily exchange onto the Adoption screen (owner
+  decision).** The Weavers of the Commons sections now sit inside the Daily exchange section of
+  `/admin/adoption`, the one admin screen for adoption. `/admin/daily-exchange` and the old
+  redirect at `/admin/contributor-access` are deleted with no redirect (owner decision). Saving the
+  weights still re-reads the day above. No route, contract or schema change.
 
 - 2026-10-12 — The internal recompute route's failure now says why (#2938). A throw from the recompute answered 500 with the fixed `{ error: 'Recompute failed' }`, which is all `contributor-access-recompute.yml` prints on a red run. It now answers 500 `{ ok: false, code: 'contributor_access_recompute_failed', message: 'Recompute failed: <reason>' }`. Status codes unchanged.
 - 2026-10-12 — The admin screen shows the channel sync warning, and a malformed reply id answers

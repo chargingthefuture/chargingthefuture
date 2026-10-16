@@ -6,8 +6,8 @@ import { getContributorAccessTokens } from './contributor-access-shared';
 import { EligibleMembersSection, type EligibleMember } from './eligible-members-section';
 import { ConfigEditorSection, type ContributorAccessConfigView } from './config-editor-section';
 
-// Contributor Access admin sections (module slug contributor-access), rendered at the foot of the
-// Daily exchange screen (/admin/daily-exchange#weavers). The badge and the daily count score the
+// Contributor Access admin sections (module slug contributor-access), rendered in the Daily exchange
+// section of the Adoption screen (/admin/adoption). The badge and the daily count score the
 // same events with the same weights, so they share one admin page rather than two (owner decision,
 // 2026-09-25). Three sections: the eligible members list (revoke/reinstate), the owner-tunable
 // eligibility settings (including the gated channel's launch-gated open toggle), and the channel

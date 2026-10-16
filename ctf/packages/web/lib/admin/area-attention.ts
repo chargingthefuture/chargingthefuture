@@ -13,7 +13,7 @@ import { CONTRIBUTIONS_CALL_ACTOR_ID } from 'lib/admin-expenses/contributions-ca
 // shows what is new. (Mutual Time's admin page is `/apps/mutual-time`, not `/admin/*`, so its slug is
 // still `mutual-time` — the last segment of the tile's href.) Areas that are read-only dashboards,
 // config editors, or browse views (directory, beacon, lighthouse, foundation, socket-relay,
-// weekly-performance, workforce, daily-exchange) have no entry and never get a dot.
+// adoption, workforce) have no entry and never get a dot.
 // feed-announcements has one entry only: the twice-yearly Contributions call draft (see below).
 //
 // Each query takes $1 = the admin's last-seen timestamp for that area (nullable; null = never opened,
