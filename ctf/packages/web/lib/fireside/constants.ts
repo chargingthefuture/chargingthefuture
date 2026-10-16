@@ -86,6 +86,7 @@ export const FIRESIDE_ERROR_CODE = {
   forbidden: 'fireside_forbidden',
   threadClosed: 'fireside_thread_closed',
   exportRefused: 'fireside_export_refused',
+  removedByAdmin: 'fireside_removed_by_admin',
   rateLimited: 'fireside_rate_limited',
   csrfDenied: 'fireside_csrf_denied',
   persistenceUnavailable: 'fireside_persistence_unavailable',

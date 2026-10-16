@@ -139,7 +139,7 @@ the project controls rather than on a platform that has erased five of its accou
 |---|---|---|---|
 | `/api/fireside/threads?repo=&slug=` | GET | **Public, no account** | The conversation under one post, and the count of what is on it. A signed-in reader also gets their own held comments, and that answer is `private, no-store` — the signed-out one alone is shared-cacheable, and both carry `Vary: Cookie`. |
 | `/api/fireside/comments` | POST | Signed-in member | Write a comment. Answers with whether it is public yet and the held notice when it is not. |
-| `/api/fireside/comments/[commentId]` | DELETE | Author | Withdraw your own comment. |
+| `/api/fireside/comments/[commentId]` | DELETE | Author | Withdraw your own comment. A comment an admin removed is refused with 409 `fireside_removed_by_admin` and stays removed. |
 | `/api/fireside/comments/[commentId]` | PATCH | Author | Two things, by what the body carries: `body` rewrites the comment in place, `exportToBlog` turns the blog-export request on or off. |
 | `/api/fireside/comments/[commentId]/reactions` | POST | Signed-in member | Leave or take back a reaction. |
 | `/api/fireside/mine` | GET | Signed-in member | Your own comments, paged, each with its state. |
@@ -279,6 +279,15 @@ member active only in Fireside is seen by being read, which is what the plugin i
    the room, which is a different thing to offer members.
 
 ## Change Log
+
+- 2026-10-16: **A comment an admin removed can no longer be withdrawn (owner decision; #2751).**
+  The screen already showed no Withdraw button on a removed comment, but `withdrawOwnComment`
+  accepted any status except withdrawn, so a request from a page left open since before the removal,
+  or sent directly, turned the removed comment into a withdrawn one, and the admin restore (which
+  looks for `status = 'removed'`) could no longer find it. The withdrawal now skips removed rows,
+  and `DELETE /api/fireside/comments/[commentId]` answers 409 `fireside_removed_by_admin`, saying an
+  admin removed it and only an admin can restore it, and writes a deny audit row. The record fix
+  from #2751's first half shipped on 2026-10-14.
 
 - 2026-10-14: **Withdrawing a comment no longer clears the author's record (#2751).** The export
   queue's author record counted removals by `status = 'removed'` and refusals by `export_review =

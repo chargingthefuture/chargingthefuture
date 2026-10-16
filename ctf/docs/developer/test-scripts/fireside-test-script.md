@@ -665,6 +665,9 @@ it. An admin available. A second member's comment in the same thread.
 - A comment an admin removed carries no Edit control in the thread at all, and the line beside it
   says an admin took it down and putting it back is theirs to do. From your own comments screen the
   row carries no Edit either. Calling the route by hand still refuses it with the same sentence.
+  It carries no Withdraw either, and `DELETE /api/fireside/comments/<id>` on it answers 409
+  `fireside_removed_by_admin` (an admin removed it; only an admin can restore it). The admin can
+  still restore it afterwards (added 2026-10-16).
   In a closed conversation the edit is refused with a line saying so, and taking the comment down
   still works.
 - A comment you took down refuses the edit and says to write a new one instead; it cannot be undone.

@@ -702,7 +702,16 @@ export async function countOwnComments(userId: string): Promise<number> {
  * Copies from `body` rather than taking the text as an argument: the row is the truth about what
  * was written, and a client-supplied body could put words in somebody's mouth on their own screen.
  */
-export async function withdrawOwnComment(userId: string, commentId: string): Promise<boolean> {
+export type WithdrawOutcome = 'withdrawn' | 'removed_by_admin' | 'not_found';
+
+/*
+ * A comment an admin removed cannot be withdrawn (owner decision, 2026-10-16; issue #2751). It stays
+ * removed, and only an admin can restore it: withdrawing turned it into a withdrawn row, which the
+ * admin restore (it looks for `status = 'removed'`) could no longer find. The screen shows no
+ * Withdraw button on a removed comment; this refuses a request that arrives anyway, from a page left
+ * open since before the removal or sent directly.
+ */
+export async function withdrawOwnComment(userId: string, commentId: string): Promise<WithdrawOutcome> {
   const result = await queryDb(
     `UPDATE fireside_comments
         SET status = 'withdrawn',
@@ -715,10 +724,16 @@ export async function withdrawOwnComment(userId: string, commentId: string): Pro
             export_reviewed_by = CASE WHEN export_review = 'refused' THEN export_reviewed_by ELSE NULL END,
             export_reviewed_at = CASE WHEN export_review = 'refused' THEN export_reviewed_at ELSE NULL END,
             updated_at = NOW()
-      WHERE id = $1::uuid AND author_user_id = $2 AND status <> 'withdrawn'`,
+      WHERE id = $1::uuid AND author_user_id = $2 AND status NOT IN ('withdrawn', 'removed')`,
     [commentId, userId],
   );
-  return (result.rowCount ?? 0) > 0;
+  if ((result.rowCount ?? 0) > 0) return 'withdrawn';
+
+  const existing = await queryDb<{ status: string }>(
+    `SELECT status FROM fireside_comments WHERE id = $1::uuid AND author_user_id = $2`,
+    [commentId, userId],
+  );
+  return existing.rows[0]?.status === 'removed' ? 'removed_by_admin' : 'not_found';
 }
 
 /**

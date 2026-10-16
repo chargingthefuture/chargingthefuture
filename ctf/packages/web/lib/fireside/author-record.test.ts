@@ -104,4 +104,10 @@ describe('the author cannot clear their own record by withdrawing', () => {
     expect(withdraw).toContain("export_review = CASE WHEN export_review = 'refused' THEN 'refused' ELSE 'not_requested' END");
     expect(withdraw).not.toContain('removed_by = NULL');
   });
+
+  it('refuses to withdraw a comment an admin removed, so the admin restore can still find it', () => {
+    const withdraw = functionBody(repositorySource, 'export async function withdrawOwnComment');
+    expect(withdraw).toContain("status NOT IN ('withdrawn', 'removed')");
+    expect(withdraw).toContain("'removed_by_admin'");
+  });
 });
