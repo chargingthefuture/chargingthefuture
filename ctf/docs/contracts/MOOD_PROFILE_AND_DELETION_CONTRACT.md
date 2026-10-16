@@ -22,6 +22,12 @@
 > `user_id` as `''` — and exists so any row that ever carries a real id (a
 > legacy import, a write path that forgets the convention) is cleared with the
 > account rather than surviving as wellbeing data with a name on it.
+>
+> **Data export (2026-10-16, issue #2774):** the member's download reads their
+> check-ins through the same mapping — `mood_submissions` rows whose `pseudonym`
+> is the member's in `mood_client_identities`, plus any row carrying their id —
+> so the file holds their own mood values, notes and dates. Before this it read
+> `mood_submissions` by `user_id` alone and found none.
 
 ## 1) Plugin Metadata
 
@@ -171,4 +177,5 @@ If user returns after service-scoped deletion:
 
 ## Change Log
 
+- 2026-10-16: The data export reads check-ins through the pseudonym (issue #2774).
 - 2026-02-25: Created initial draft.

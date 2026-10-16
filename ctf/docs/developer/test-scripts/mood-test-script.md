@@ -166,6 +166,17 @@ reads "The community pulse could not be loaded right now. Please try again short
 reason (the network error); a refusal from the server shows the server's own message there instead.
 **Result:** web ☐ — notes:
 
+### MD-9 · The data download holds your check-ins (web)
+
+**Role:** member · **Precondition:** you have submitted at least one check-in, with a note.
+**Steps:**
+1. Open your account settings, then the data view, and tap the Download button on the Mood card.
+2. Open the downloaded file.
+**Expected:** The `mood_submissions` table lists each check-in you made, with its mood value, note and
+date, and no check-in of anyone else's. (Before 2026-10-16 this table came back empty; see account
+data test AD-2b.)
+**Result:** web ☐ — notes:
+
 ---
 
 ## Parity check (web ↔ android)
