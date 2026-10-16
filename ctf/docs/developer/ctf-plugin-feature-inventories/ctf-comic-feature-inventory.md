@@ -241,7 +241,13 @@ ones that were refused, and why**. Most recent 200, loaded lazily on first expan
    writing becomes something the assistant can quote — stamping `contribution_id` on each row so
    withdrawal and account deletion can still reach it. `content_hash` uses the same formula as
    `importComicKnowledge.mjs` with `ON CONFLICT DO NOTHING`, so two members quoting the same
-   widely-shared passage collapse onto one row instead of duplicating it.
+   widely-shared passage collapse onto one row instead of duplicating it. When the row it collapses
+   onto is switched off, the result depends on why (owner decision, 2026-10-16): off only because the
+   member who shared it first withdrew it, it is switched back on and handed to this contribution
+   (`contribution_id`), so this member's withdrawal or deletion switches it off from then on; off
+   because an admin switched it off (the latest successful `comic.admin.knowledge.set-active` on it
+   set `active: false`), it stays off. The accept answer and its audit row count `alreadyPresent`,
+   `revived` and `matchedSwitchedOff` separately, and the review screen says which happened.
 4. **Decline** requires a reason, which the contributor reads on their own page. A decline nobody can
    understand reads as a judgment on what they lived through.
 5. **ServiceCredits recognition grant** on accept: a flat 100 credits per accepted contribution
@@ -784,6 +790,16 @@ buckets are not reproduced — only real provenance (engine / intent / safety ca
 `nlu_confidence`, surfaced as "Not yet scored" when null) is shown.
 
 ## Change Log
+
+- 2026-10-16: **Accepting writing that matches a switched-off library entry no longer reports it as
+  present (owner decision; code-review #2726).** The accept step pointed an entry at the existing
+  row with the same text and counted it as already there without looking at whether that row was on,
+  so the reviewer saw "already there", the member saw "accepted", and the writing never reached the
+  assistant. Now a match that is off only because the member who shared it first withdrew it is
+  switched back on and handed to the new contribution; a match an admin switched off stays off. The
+  accept answer, the `comic.contribution.review` audit row and the review screen count
+  `alreadyPresent`, `revived` and `matchedSwitchedOff` separately. No schema change. Test case
+  CMC-A1c.
 
 - 2026-10-15: **The knowledge library side is named "shared writing" in the admin screen and the
   code (owner decision).** Three different things were called "contribution": the Contributions
