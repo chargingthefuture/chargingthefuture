@@ -37,6 +37,9 @@ export const QUORA_MOTD_PEACE_BATTLE_URL = `${QUORA_MOTD_BLOG_BASE}/pb2`;
 export const ONE_PERCENT_WORKFORCE_URL = 'https://app.chargingthefuture.com/apps/workforce?view=one-percent';
 export const GOAL_BOARD_URL = 'https://app.chargingthefuture.com/apps/peer-programming?tab=goals';
 export const ONE_PERCENT_PAID_TIER_URL = 'https://farahbrunache.com';
+export const SKILLS_HUNT_URL = 'https://app.chargingthefuture.com/apps/skills-hunt';
+/** The front page, where a visitor taps what they need and sees how many people could help. */
+export const FRONT_PAGE_URL = 'https://chargingthefuture.com';
 
 /**
  * Workforce needs an approved account, and most people reading a post on Quora do not have one.
@@ -53,8 +56,12 @@ export const ONE_PERCENT_NO_SIGN_IN_LINE = `No account yet? A shorter version of
  * Fireside and TI Radio were steps until 2026-10-02 and left the page that day, so they left here
  * too; "See your 1%" left Enact for Envision on 2026-10-03 and stays an ask here. The messages
  * follow the page, and no message calls your 1% a step or counts the steps as three.
+ *
+ * The fourth ask is not on the page: recommend one person who can help with one named need (owner
+ * request, 2026-10-16). A name somebody vouches for carries more weight than any post, and it
+ * still counts after the account that asked for it is banned.
  */
-export const QUORA_MOTD_ACTIONS = ['one-percent', 'goal-board', 'one-percent-call'] as const;
+export const QUORA_MOTD_ACTIONS = ['one-percent', 'goal-board', 'one-percent-call', 'recommend'] as const;
 
 export type QuoraMotdAction = (typeof QUORA_MOTD_ACTIONS)[number];
 
@@ -62,6 +69,7 @@ export const QUORA_MOTD_ACTION_LABEL: Record<QuoraMotdAction, string> = {
   'one-percent': 'See your 1%',
   'goal-board': 'Start on it on the goal board',
   'one-percent-call': 'Take it further with One Percent',
+  recommend: 'Recommend one person',
 };
 
 /**

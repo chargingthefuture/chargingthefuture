@@ -38,10 +38,16 @@ Three things follow, and they are why each message is written the way it is:
   a step or counts the steps as three. Fireside and TI
   Radio left both on 2026-10-02, when the outward message narrowed to the goal board, the Peace
   Battle 2 page and One Percent (see "Feature freeze, and one message" in `CLAUDE.md`).
+- A fourth ask, not on the Peace Battle 2 page, joined the rotation on 2026-10-16 at the owner's
+  request: recommend one person. Each of its messages names one need from the list on
+  chargingthefuture.com (a job, food, someone to talk to, legal help, housing, health care,
+  childcare, a ride) and asks who the reader knows who can help with it. A name somebody vouches
+  for carries more weight than any post, and it still counts after the account is banned. Members
+  nominate the person in SkillsHunt; a reader without an account sends them the post.
 - Within an action, the pool is worked through in a shuffled order with no repeat until it is
   exhausted. The shuffle is seeded by the pass number, so each pass through a pool is a different
   order and the same date always gives the same message.
-- Ten messages per action, three actions: thirty days before anything comes back.
+- Ten messages per action, four actions: forty days before anything comes back.
 - A date before day one clamps to day one rather than failing, so opening the screen early shows
   something usable.
 
@@ -62,13 +68,18 @@ what cannot be taken.
 
 ## Adding or editing a message
 
-The pools are `lib/quora-motd/messages-one-percent.ts`, `messages-goal-board.ts` and
-`messages-one-percent-call.ts`. Keep them the same length as each other, or one action's messages
+The pools are `lib/quora-motd/messages-one-percent.ts`, `messages-goal-board.ts`,
+`messages-one-percent-call.ts` and `messages-recommend.ts`. Keep them the same length as each other, or one action's messages
 come around more often than another's.
 
 Every 1% message ends with a line pointing a reader without an account to the shorter calculator on
 One Percent's site, which needs no sign-in (`ONE_PERCENT_NO_SIGN_IN_LINE`): Workforce needs an
 approved account, and most people reading the space do not have one yet.
+
+Every recommend message names one need, never a general call for people. The needs that matched
+nobody on the front page are recorded in `directory_unmet_needs`; when the report
+(`ctf/scripts/sql/landing_unmet_needs_report.sql`) shows one need asked for most, the message for that
+need is the one to sharpen or add a second of first.
 
 Every One Percent message says that your 1% and the goal board are complete without it and stay
 free. A paid step that reads as the real one turns the free part into a preview, and it is not one.
