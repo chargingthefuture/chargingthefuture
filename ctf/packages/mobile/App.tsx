@@ -28,8 +28,9 @@ import { ShellBackground } from './src/components/shell/ShellChrome';
 import { ScreenOverrideContext } from './src/components/shell/HeaderActions';
 import { AppHeader } from './src/navigation/AppHeader';
 import { buildFeatureViews } from './src/navigation/feature-views';
-import { pluginOf } from './src/navigation/screens';
+import { pluginOf, type FeatureKey } from './src/navigation/screens';
 import { useAppNavigation } from './src/navigation/useAppNavigation';
+import { InvitesPopup } from './src/features/invites/InvitesPopup';
 import { StreamVideoRN } from '@stream-io/video-react-native-sdk';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -182,6 +183,13 @@ function useUnlockGate(isLoading: boolean, isAuthenticated: boolean, isAdmin: bo
   return { unlockGate, refreshUnlockGate };
 }
 
+// The invitation card the web floats in the corner of every signed-out plugin page: shown over a
+// plugin's own screen (not its admin screen) while signed out.
+function SignedOutInvites({ signedIn, selected }: { signedIn: boolean; selected: FeatureKey }) {
+  if (signedIn || pluginOf(selected) !== selected) return null;
+  return <InvitesPopup />;
+}
+
 function AppShell() {
   const { isLoading, isAuthenticated, user } = useAuth();
   const { tokens } = useTheme();
@@ -266,6 +274,8 @@ function AppShell() {
           <ScreenOverrideContext.Provider value={setOverride}>{featureView}</ScreenOverrideContext.Provider>
         </FoundationCallController>
       </View>
+
+      <SignedOutInvites signedIn={isAuthenticated} selected={selected} />
 
       {/* Both themes are dark, so the clock and icons are always light. 'auto' followed the phone's
           light/dark setting and drew dark icons on the dark bar in light mode. */}

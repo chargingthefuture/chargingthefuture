@@ -295,6 +295,7 @@ Owner decision, 2026-09-19. The corner reviews popup, the `/reviews` wall page, 
 3. **Why the invites and not reviews.** The person an invite names is told on Quora, and Quora erases the account before most of them tap the notification; the app is the address that survives, and the invites they would have missed are what a newcomer needs to see.
 4. **Why it floats (owner report, 2026-09-20).** Between 2026-09-19 and 2026-09-20 this was a row at the top of the page flow, and it read as the plugin's own first section: a visitor opening Chyme met a block of invitations before anything about Chyme, and on a phone that block was most of the first screen. A fixed corner card — the shape of the reviews popup it replaced — is read as an aside about the app rather than part of it, and takes no vertical space from the plugin under it. It is last in the page markup so it never comes before the plugin in reading order.
 5. **What it does and does not do.** Nothing moves on its own: the visitor advances with the two buttons or the keyboard. The close control hides it for the rest of the browser session (`sessionStorage`, key `ctf-invites-popup-dismissed`); in private mode the dismissal simply does not persist. The card appears 2.5 seconds after the page settles, rising into place, and `prefers-reduced-motion` turns that animation off.
+6. **Android (2026-10-16).** The Android app shows the same card over the signed-out screens of the four plugins it carries (Chyme, Beacon, PeerProgramming, Foundation), drawn from the web values (`ctf/packages/mobile/src/features/invites/InvitesPopup.tsx`, mounted in `App.tsx`). It reads the same route, and its link opens the invitation on the web, since the Directory is not in the Android app. Closing it hides it until the app is closed, the nearest thing an installed app has to a browser session; the phone's reduce-motion setting turns off the rise.
 
 ### 1.16 Daily Exchange (admin, the 384 reading)
 
@@ -385,6 +386,8 @@ Owner decision, 2026-09-26. The owner pays the running costs of Skills Economy a
 ---
 
 ## 5) Change Log
+
+- 2026-10-16: **The invitation card on Android (§1.15, owner report).** The Android app's signed-out Chyme, Beacon, PeerProgramming and Foundation screens lacked the invitation card the web floats over every signed-out plugin page. It is now drawn there from the web's values (`mobile/src/features/invites/InvitesPopup.tsx`), reading the same public route; no route or data changed.
 
 - 2026-10-16: **Admins are admins on Android (§ account identity, owner report).** The Android app's Admin pill and admin screens never appeared, after two earlier fixes to the identity read. The cause was on the server: Clerk's middleware accepts the app's sign-in token (an OAuth id_token) as a web session token, stamps the request as signed in with no role, and `resolveRequestIdentity` trusted those headers before it ever reached the bearer path that fills the role and username from the member's Clerk account. A bearer header is now verified first; a web request carries none and is unchanged. Every admin route the app calls goes through the same function, so the Chyme, Beacon, PeerProgramming and Foundation admin screens now receive admin answers too. Test: `lib/auth/request-identity.test.ts`.
 
