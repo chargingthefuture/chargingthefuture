@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation';
 import { CommunityShell } from '../../components/community-shell/community-shell';
 import type { ShellCurrentUser } from '../../components/community-shell/shell-types';
 import type { TrustUserExtension } from '../../lib/trust/types';
@@ -43,6 +44,15 @@ export default async function AppsPage() {
     shellStatsPromise,
     authDecisionPromise,
   ]);
+
+  // A signed-in member the gate turns away (not yet approved in Unlock, or a restricted account) is
+  // sent to the home page, which already routes them: into Unlock, to the Commons stripped back to the
+  // verification banner, or to /account-closed (owner decision, 2026-10-16; issue #2772). Rendering
+  // the launcher here instead showed them the signed-out screen with Sign In buttons. Only a signed-
+  // out visitor (401) sees the public launcher.
+  if (authDecision && !authDecision.allowed && authDecision.status === 403) {
+    redirect('/');
+  }
 
   // Operator-only plugins (e.g. Weekly Performance) are kept out of the user launcher unless the
   // viewer is an admin. The matching /apps/<slug> route is admin-gated too, so this is UX, not the

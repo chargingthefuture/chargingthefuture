@@ -147,7 +147,7 @@ Feed routes that own the data layer remain under `/api/feed/*` (timeline, announ
 Web entry routes:
 
 - `GET /` — Commons home page (Next.js `app/page.tsx`, `CommunityShell` chat section).
-- `GET /apps` — Commons home, Apps section (`app/apps/page.tsx`).
+- `GET /apps` — Commons home, Apps section (`app/apps/page.tsx`). A signed-out visitor sees the public launcher. A signed-in member the gate turns away (not yet approved in Unlock, or a restricted account) is redirected to `/`, which routes them on as the home page always has: into Unlock, to the Commons stripped back to the verification banner, or to `/account-closed`.
 
 ## Data Model and Storage Contracts
 
@@ -219,6 +219,14 @@ There is no `seedHub.mjs`; the Commons channel's data layer is seeded by the Fee
 5. Live-layer follow-ups deferred from the foundation pass (task 1): read receipts (#18) and delivery status (#19) are not implemented in Commons — Commons messages live in our own `feed_community_posts`, not as Stream messages, so "seen"/"delivered" would need a separate model and are deferred. Online presence dots on peer avatars (#20) are also deferred: avatars are keyed by our own author identity, and the watched channel's `presence` set is keyed by Stream user ids (`feed-<userId>`), so mapping presence onto our cards is not clean enough to force in the foundation pass. Typing (#17) is delivered (web and now Android, #730); these three are tracked for the presence cluster (task 6). The same three (read receipts, delivery status, presence dots) are likewise deferred on mobile to match web.
 
 ## Change Log
+
+- 2026-10-16: **`/apps` no longer shows a signed-in, unapproved member the signed-out screen (owner
+  decision; code-review #2772).** `app/apps/page.tsx` read a denied access check as "signed out", so a
+  member who had not finished Unlock, or whose account was restricted, saw Sign In buttons although
+  they were signed in. They reach `/apps` in ordinary use: every public plugin page's back control
+  points there, and Fireside admits unapproved members. A 403 from the check now redirects to `/`,
+  which routes them the way the home page always has. A signed-out visitor (401) still sees the
+  public launcher, and an approved member is unchanged. Test case FD-1c in the Feed test script.
 
 - 2026-10-16: **New posts appear within 10 seconds again; Stream is kept for the typing indicator
   only (owner decision; follow-up to code-review #2732).** The home chat slowed its 10-second check
