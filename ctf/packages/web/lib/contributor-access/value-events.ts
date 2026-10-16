@@ -201,7 +201,7 @@ export const VALUE_EVENT_SOURCES: ValueEventSource[] = [
     tables: ['what_works_products'],
     rowSql: `SELECT suggested_by AS member_id, reviewed_at AS at, 1::numeric AS value, NULL::text AS ref
                FROM what_works_products
-              WHERE status = 'approved' AND suggested_by IS NOT NULL`,
+              WHERE status = 'approved' AND suggested_by IS NOT NULL AND suggested_by <> 'deleted_member'`,
     aggregate: 'count',
     occurrences: 'rows',
   },

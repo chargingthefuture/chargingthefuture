@@ -866,11 +866,14 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     serviceScopeSupported: true,
     tables: [
       del('what_works_endorsements', 'user_id', 'Your endorsements.'),
-      // The list itself is community content, not personal data: problems and products are curated
-      // entries that other members rely on, and the suggested_by/reviewed_by columns on them are the
-      // admin/review audit trail — same retain reasoning as every other reviewer column.
-      retain('what_works_problems', 'Curated problem list; community content, not personal data.'),
-      retain('what_works_products', 'Curated tool list; suggested_by/reviewed_by retained as review audit.'),
+      // The list itself is community content: problems and products are curated entries that other
+      // members rely on, so they stay. suggested_by is the member's own identity, though, and the
+      // plugin promises a suggestion never reveals who made it, so it is overwritten with the deleted
+      // placeholder (owner decision, 2026-10-16; issue #2812). reviewed_by and
+      // what_works_problems.created_by are admin columns, kept as the review audit trail like every
+      // other reviewer column.
+      retain('what_works_problems', 'Curated problem list; created_by is the admin who added it, kept as audit.'),
+      pseudo('what_works_products', 'suggested_by', [], 'Tools you suggested stay on the list; your identity on them does not.'),
       retain('what_works_admin_audit_trail', 'Admin action audit log; retained for compliance.'),
     ],
   },

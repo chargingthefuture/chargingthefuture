@@ -62,15 +62,19 @@ On service-scoped or full profile deletion for `user_id = X`:
     `what-works` entry (endorsements deleted; the curated problem/tool lists retained as community
     content with their review-audit columns), caught by the deletion-coverage gate.
   — removes the survivor's "this helped me" marks; each affected tool's verified count drops by one.
-- `UPDATE what_works_products SET suggested_by = NULL WHERE suggested_by = X`
-  — anonymizes authorship; the suggested tool stays on the list.
-- `UPDATE what_works_products SET reviewed_by = NULL WHERE reviewed_by = X`
-  — anonymizes the moderating admin reference.
-- `UPDATE what_works_problems SET created_by = NULL WHERE created_by = X`
-  — anonymizes the problem author reference.
+- `UPDATE what_works_products SET suggested_by = 'deleted_member' WHERE suggested_by = X`
+  — anonymizes authorship; the suggested tool stays on the list. The placeholder is the registry's
+  `pseudo(...)` value, the same constant every plugin uses, and the Contributions value reading
+  skips it, so a departed member is no longer credited for the tool.
+  - 2026-10-16 (issue #2812): until then the registry retained `what_works_products` untouched, so
+    this line was not carried out and a departed member's id stayed on every tool they suggested.
+- `reviewed_by` on `what_works_products` and `created_by` on `what_works_problems` are kept. They
+  name the admin who reviewed or added the row, and are the review audit trail, kept like every
+  other reviewer column. (This section used to say they were cleared; the registry never did, and
+  the 2026-10-16 decision is to keep them.)
 
-No WhatWorks row stores free-text that identifies the survivor, so anonymizing the `user_id`
-references fully removes the personal linkage while preserving the shared list.
+No WhatWorks row stores free-text that identifies the survivor, so replacing `suggested_by` fully
+removes the personal linkage while preserving the shared list.
 
 ## 6) Cascade Notes
 
