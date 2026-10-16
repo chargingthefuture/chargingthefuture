@@ -91,12 +91,14 @@ function useRoomCall(joinInfo: ChymeJoinResponse, displayName: string) {
 
 // While joined, ping the presence heartbeat every 35s (inside the server's 45s presence window). A
 // refusal that every later beat would share too (removed by an admin, or the room is now full)
-// stops the beat and shows its reason in place of the stage.
-function useHeartbeat(scope: ChymeRoomScope, joined: boolean, onStopped: (_message: string) => void) {
+// stops the beat and shows its reason in place of the stage. Each beat carries whether the
+// microphone is on, and a change of microphone beats at once, so a member who has not joined yet
+// sees who is muted (owner decision, 2026-10-16), as the web room does.
+function useHeartbeat(scope: ChymeRoomScope, call: Call | null, joined: boolean, onStopped: (_message: string) => void) {
   useEffect(() => {
     if (!joined) return;
     const ping = () => {
-      void postChymeHeartbeat(scope)
+      void postChymeHeartbeat(scope, call?.microphone.state.status === 'enabled')
         .then((result) => {
           if (!result.ok && result.code !== null && CHYME_HEARTBEAT_STOP_CODES.includes(result.code)) {
             onStopped(result.message ?? 'The room did not keep you in the call.');
@@ -108,8 +110,18 @@ function useHeartbeat(scope: ChymeRoomScope, joined: boolean, onStopped: (_messa
     };
     ping();
     const intervalId = setInterval(ping, 35000);
-    return () => clearInterval(intervalId);
-  }, [scope, joined, onStopped]);
+    // The observable repeats the current status on subscribe; only a change beats.
+    let lastMic = call?.microphone.state.status;
+    const micSubscription = call?.microphone.state.status$.subscribe((next) => {
+      if (next === lastMic) return;
+      lastMic = next;
+      ping();
+    });
+    return () => {
+      clearInterval(intervalId);
+      micSubscription?.unsubscribe();
+    };
+  }, [scope, call, joined, onStopped]);
 }
 
 type RoomProps = {
@@ -133,7 +145,7 @@ export const ChymeAudioRoom: React.FC<RoomProps> = (props) => {
     setErrorMessage(message);
     setStatus('error');
   }, [setErrorMessage, setStatus]);
-  useHeartbeat(props.roomScope, status === 'joined', onStopped);
+  useHeartbeat(props.roomScope, call, status === 'joined', onStopped);
 
   if (status !== 'joined' || !client || !call) {
     return (

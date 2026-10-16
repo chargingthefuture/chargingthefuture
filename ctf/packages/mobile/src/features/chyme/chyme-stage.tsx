@@ -1,6 +1,10 @@
 // Who is in the room before the member joins, copied from the web (web components/chyme/
 // chyme-stage.tsx). Nothing renders while the room is empty: the header already says
 // "0 participants". Once the member joins, the live stage in ChymeAudioRoom takes over.
+//
+// Each tile says whether that member's microphone is on, as their app last reported it (owner
+// decision, 2026-10-16), with the live tile's badge and pill. A member whose app has not reported
+// shows their role as before.
 
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -12,15 +16,18 @@ import { initials, useChymeTokens, type ChymeTokens } from './chyme-tokens';
 type Participant = ChymeRoomResponse['participants'][number];
 
 function StageTile({ participant, isSelf, t }: { participant: Participant; isSelf: boolean; t: ChymeTokens }) {
-  const isSpeaker = participant.role === 'speaker';
+  const micOn = participant.micOn ?? null;
+  const micOff = micOn === false;
+  const lit = micOn ?? participant.role === 'speaker';
+  const label = micOn === null ? participant.role : micOn ? 'speaking' : 'muted';
   return (
     <View style={styles.tile}>
       <View>
         <View style={[styles.avatar, { borderRadius: t.radius(36), backgroundColor: `${t.ACCENT}20`, borderColor: isSelf ? t.ACCENT : 'transparent', boxShadow: isSelf ? `0 0 20px ${t.ACCENT}50` : undefined }]}>
           <Text style={[styles.initials, { color: t.ACCENT }]}>{initials(participant.username ?? participant.userId)}</Text>
         </View>
-        <View style={[styles.badge, { borderRadius: t.radius(11), backgroundColor: t.ACCENT }]}>
-          <Mic size={10} color="#fff" />
+        <View style={[styles.badge, { borderRadius: t.radius(11), backgroundColor: micOff ? 'rgba(120,120,120,0.9)' : t.ACCENT }]}>
+          <Mic size={10} color="#fff" style={{ opacity: micOff ? 0.5 : 1 }} />
         </View>
       </View>
       <Text style={[styles.handle, { color: t.TEXT }]}>{chymeHandle(participant.username, participant.userId)}</Text>
@@ -29,12 +36,12 @@ function StageTile({ participant, isSelf, t }: { participant: Participant; isSel
           styles.role,
           {
             borderRadius: t.radius(20),
-            backgroundColor: isSpeaker ? `${t.ACCENT}20` : 'rgba(255,255,255,0.05)',
-            borderColor: isSpeaker ? `${t.ACCENT}35` : 'transparent',
+            backgroundColor: lit ? `${t.ACCENT}20` : 'rgba(255,255,255,0.05)',
+            borderColor: lit ? `${t.ACCENT}35` : 'transparent',
           },
         ]}
       >
-        <Text style={[styles.roleText, { color: isSpeaker ? t.ACCENT : t.MUTED }]}>{participant.role}</Text>
+        <Text style={[styles.roleText, { color: lit ? t.ACCENT : t.MUTED }]}>{label}</Text>
       </View>
     </View>
   );
