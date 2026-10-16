@@ -12,7 +12,7 @@
 | | |
 |---|---|
 | **Plugin** | Weekly Performance (`weekly-performance`) |
-| **Visibility** | Admin-only — shown in navigation only to admins (in `ADMIN_ONLY_PLUGIN_SLUGS`) |
+| **Visibility** | Not in the apps list for anybody. Admins reach it only through the Adoption tile on the admin index (`/admin/adoption`) |
 | **Roles to test** | admin (and the `operations` role) |
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
@@ -36,10 +36,10 @@
 
 Admin-only analytics plugin — these are the can't-ship-broken checks. Admin / operations role.
 
-1. **Non-admin cannot reach it.** As a plain member, the plugin is not in navigation, and the admin
+1. **Non-admin cannot reach it.** As a plain member, the plugin is not in the apps list, and the admin
    page `/admin/adoption`, where the dashboard lives, redirects to `/apps` (there is no member shell to land on); the
    admin-or-operations routes deny with a stable reason. A non-admin or signed-out visitor opening
-   `/apps/weekly-performance` gets a plain 404 — never a public landing/marketing page (the plugin
+   `/apps/weekly-performance` (admins included) gets a plain 404 — never a public landing/marketing page (the plugin
    has no public visitor shell; the unreachable one was deleted 2026-07-15). → web ☐ mobile ☐
 2. **Numbers are always live — no "closed" week.** Open the dashboard. Every week shows live numbers
    computed from that week's activity — there is no "metrics appear when the week closes" placeholder
@@ -57,8 +57,8 @@ Admin-only analytics plugin — these are the can't-ship-broken checks. Admin / 
    below the steps toward 384 and the daily exchange, with its own title bar holding the refresh
    control and the week selector, then the grouped metric cards. There is no Export control anywhere
    (the export feature was removed 2026-07-19). Opening
-   `/apps/weekly-performance` as an admin redirects straight to `/admin/adoption` — there
-   is no separate member view, no "Member view" pill, and no "Admin" pill anywhere in the plugin.
+   `/apps/weekly-performance` as an admin gives a 404, and the apps list has no Weekly Performance
+   tile — there is no separate member view, no "Member view" pill, and no "Admin" pill anywhere in the plugin.
    There is **no** "Active week / Set as active week" control and no open/locked/published
    status. → web ☐ mobile ☐
 4. **Numbers, not a spinner.** Metric cards render real values, each with its change from the week
@@ -75,7 +75,7 @@ Admin-only analytics plugin — these are the can't-ship-broken checks. Admin / 
 1. As a plain member, look for the plugin in navigation and try `/admin/adoption`.
 2. As an admin, open the same page.
 3. If an `operations`-role account is available, confirm it also passes.
-**Expected:** The member does not see the plugin in nav; the admin page redirects them to `/apps`
+**Expected:** Nobody, admin or member, sees the plugin in the apps list; the admin page redirects them to `/apps`
 and the read routes deny with a stable reason (`missing_required_role`). The admin sees the full
 dashboard on the admin page (the only surface). The admin gate (`ensureWeeklyPerformanceAdmin`)
 admits `admin` or the `operations` role, matching `requiredRoles: [admin, operations]`.

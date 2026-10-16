@@ -23,7 +23,6 @@ export const PLUGIN_EMOJI: Record<string, string> = {
   'skills-hunt': '🎓',
   'feed-announcements': '📢',
   'skills-taxonomy': '🧩',
-  'weekly-performance': '📊',
   'click-log': '📍',
   'skill-up': '🎯',
   'what-works': '🧰',

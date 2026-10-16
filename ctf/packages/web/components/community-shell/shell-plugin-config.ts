@@ -22,7 +22,6 @@ const PLUGIN_VISUALS: Record<string, PluginVisuals> = {
   'skills-hunt': { emoji: '🎓', color: '#FACC15', bg: '#1C1602' },
   'feed-announcements': { emoji: '📢', color: '#C4B5FD', bg: '#16141C' },
   'skills-taxonomy': { emoji: '🧩', color: '#8B5CF6', bg: '#0F0A1B' },
-  'weekly-performance': { emoji: '📊', color: '#6366F1', bg: '#01162e' },
   'click-log': { emoji: '📍', color: '#EC4899', bg: '#1A0811' },
   'skill-up': { emoji: '🎯', color: '#10B981', bg: '#02140E' },
   'what-works': { emoji: '🧰', color: '#84CC16', bg: '#0F1602' },

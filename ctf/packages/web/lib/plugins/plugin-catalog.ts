@@ -116,12 +116,6 @@ export const pluginCatalog: PluginCatalogItem[] = [
     summary: 'Anonymous mood tracking and pattern awareness. Know yourself. See patterns. Take back control.',
   },
   {
-    id: 'weekly-performance',
-    name: 'Weekly Performance',
-    kind: 'plugin',
-    summary: 'Week selection/guardrails with metrics, comparisons, and export gate checks.',
-  },
-  {
     id: 'gdp',
     name: 'GDP',
     kind: 'plugin',
