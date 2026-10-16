@@ -134,7 +134,7 @@ Seed script requirement: Provide a deterministic plugin seed script with dummy d
 ## 9) Change Log
 
 - 2026-10-16: **The community pulse hides a day with fewer than 3 check-ins (owner decision,
-  #2773).** The 5-check-in minimum applied to the week in total, so once it was met every day was
+  #2773).** The 5-check-in minimum applied to the week's total, so once it was met every day was
   shown with its own average and count, and a day holding one check-in showed that member's exact
   mood under its date. Now `MOOD_PULSE_MIN_DAY_SAMPLE` (3) hides such a day, and the week's total,
   average and the 5-check-in gate count only the shown days: with the week figure taken over every
@@ -269,6 +269,7 @@ Seed script requirement: Provide a deterministic plugin seed script with dummy d
 
 ### Change Log
 
+- 2026-10-16: **A member's data download holds their check-ins (#2774).** The export read `mood_submissions` by `user_id`, which is empty on every check-in, so the Mood part of the file held the pseudonym mapping and none of the member's check-ins. The registry entry now carries `exportThrough('pseudonym', 'mood_client_identities', 'user_id', ...)`, and the export reads the check-ins whose pseudonym is the member's. Deletion is unchanged. No schema, route or member-facing copy change.
 - 2026-10-15: **Failed loads say why.** The eligibility check and the community pulse now show the message the route sent (an access refusal, a missing client id, a server fault) instead of fixed text; the community error keeps its sentence and adds the reason after it. When the browser blocks storage, so no check-in id can be kept, the check-in screen says so ("Check-ins need browser storage, which is blocked in this window.") instead of doing nothing on Submit (#2776). Web only; no route, schema or contract change.
 - 2026-07-17: **Crisis-rail copy fix — dropped the unverifiable "verified" claim (owner directive; same sweep that removed "Verified Community" from the Commons shell).** The Directory support link in `mood-crisis-rail.tsx` read "Search verified community members by specialty…", but Directory profiles carry no verified state (there is no `verified` column on `directory_profiles`), so the claim was unverifiable. It now reads "Search community members by specialty — including people with mental-health expertise." Copy-only; no backend, schema, route, or contract change.
 - 2026-05-31: Seed runtime fix. `seedMood.mjs` now opens its own `pg` Pool and defines a local `withDbTransaction` helper instead of importing the TypeScript `packages/web/lib/db/postgres.ts`, which plain Node (e.g. the Node 20 seed/provision workflows) cannot load. Added `pool.end()` teardown. No change to seeded rows, schema, or API.
