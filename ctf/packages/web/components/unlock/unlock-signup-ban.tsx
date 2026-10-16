@@ -16,11 +16,13 @@ import { getUnlockTokens } from './unlock-shared';
 export function UnlockSignupBan({
   userId,
   banned,
+  providerApplied,
   busy,
   onToggleBanned,
 }: {
   userId: string;
   banned: boolean;
+  providerApplied: boolean;
   busy: boolean;
   onToggleBanned: (userId: string, banned: boolean) => void;
 }) {
@@ -31,16 +33,7 @@ export function UnlockSignupBan({
   // Lifting a ban restores access and is trivially repeatable, so it does not ask twice. Applying one
   // does: it signs somebody out of everything at once, which is not a press to make by accident.
   if (banned) {
-    return (
-      <button
-        type="button"
-        onClick={() => onToggleBanned(userId, false)}
-        disabled={busy}
-        style={{ marginTop: 8, marginRight: 8, padding: '5px 10px', borderRadius: 8, background: t.SURFACE_CARD, border: `1px solid ${t.BORDER_SOLID}`, color: t.MUTED, fontSize: 12, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}
-      >
-        Lift this ban
-      </button>
-    );
+    return <BannedControls userId={userId} providerApplied={providerApplied} busy={busy} onToggleBanned={onToggleBanned} />;
   }
 
   if (!confirming) {
@@ -82,5 +75,48 @@ export function UnlockSignupBan({
         Cancel
       </button>
     </div>
+  );
+}
+
+// The controls on a banned row: lift the ban, and, when the sign-in provider refused it (issue #2804),
+// try the sign-in ban again. Its own component so the control above stays inside the rule-116
+// complexity limit.
+function BannedControls({
+  userId,
+  providerApplied,
+  busy,
+  onToggleBanned,
+}: {
+  userId: string;
+  providerApplied: boolean;
+  busy: boolean;
+  onToggleBanned: (userId: string, banned: boolean) => void;
+}) {
+  const { theme } = useTheme();
+  const t = getUnlockTokens(theme);
+  return (
+      <>
+        {/* Shown only when the sign-in provider refused the ban (issue #2804). The retry presses ban
+            again: the row is already written, so only the provider half is new. */}
+        {!providerApplied ? (
+          <button
+            type="button"
+            onClick={() => onToggleBanned(userId, true)}
+            disabled={busy}
+            style={{ marginTop: 8, marginRight: 8, padding: '5px 10px', borderRadius: 8, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.35)', color: '#EF4444', fontSize: 12, fontWeight: 700, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}
+          >
+            <Ban size={11} style={{ marginRight: 4, verticalAlign: 'middle' }} />
+            Try the sign-in ban again
+          </button>
+        ) : null}
+        <button
+          type="button"
+          onClick={() => onToggleBanned(userId, false)}
+          disabled={busy}
+          style={{ marginTop: 8, marginRight: 8, padding: '5px 10px', borderRadius: 8, background: t.SURFACE_CARD, border: `1px solid ${t.BORDER_SOLID}`, color: t.MUTED, fontSize: 12, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}
+        >
+          Lift this ban
+        </button>
+      </>
   );
 }

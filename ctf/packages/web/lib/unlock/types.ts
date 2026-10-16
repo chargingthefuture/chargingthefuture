@@ -139,6 +139,9 @@ export type UnlockBannedAccount = {
   reason: string;
   note: string | null;
   bannedByUserId: string | null;
+  // False when the sign-in provider refused the ban: the account is banned in this app but can still
+  // sign in.
+  providerApplied: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -168,6 +171,8 @@ export type UnlockSignupAccount = {
   banned: boolean;
   bannedReason: string | null;
   bannedAt: string | null;
+  // False for a banned account whose ban the sign-in provider refused; true otherwise.
+  bannedProviderApplied: boolean;
   hasSubmission: boolean;
   reviewStatus: UnlockReviewStatus | null;
   submittedAt: string | null;

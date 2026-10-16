@@ -18,6 +18,7 @@ type UnlockBannedAccountRow = {
   reason: string;
   note: string | null;
   banned_by_user_id: string | null;
+  provider_applied: boolean;
   created_at: Date;
   updated_at: Date;
 };
@@ -28,6 +29,7 @@ function mapBannedAccount(row: UnlockBannedAccountRow): UnlockBannedAccount {
     reason: row.reason,
     note: row.note,
     bannedByUserId: row.banned_by_user_id,
+    providerApplied: row.provider_applied,
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString(),
   };
@@ -36,7 +38,7 @@ function mapBannedAccount(row: UnlockBannedAccountRow): UnlockBannedAccount {
 // Every banned account, newest ban first.
 export async function listUnlockBannedAccounts(): Promise<UnlockBannedAccount[]> {
   const result = await queryDb<UnlockBannedAccountRow>(
-    `SELECT user_id, reason, note, banned_by_user_id, created_at, updated_at
+    `SELECT user_id, reason, note, banned_by_user_id, provider_applied, created_at, updated_at
        FROM unlock_banned_accounts
       ORDER BY created_at DESC`,
   );
@@ -44,23 +46,26 @@ export async function listUnlockBannedAccounts(): Promise<UnlockBannedAccount[]>
   return result.rows.map(mapBannedAccount);
 }
 
-// Record a ban. Idempotent: re-banning an account already on the list refreshes its reason, note and
-// who banned it rather than failing, so a second press of the button is harmless.
+// Record a ban. Idempotent: re-banning an account already on the list refreshes its reason, note, who
+// banned it and whether the provider applied it rather than failing, so a second press of the button
+// is harmless and a retry that the provider accepts clears the refusal.
 export async function addUnlockBannedAccount(input: {
   userId: string;
   reason: string;
   note: string | null;
   actorUserId: string;
+  providerApplied: boolean;
 }): Promise<void> {
   await queryDb(
-    `INSERT INTO unlock_banned_accounts (user_id, reason, note, banned_by_user_id, created_at, updated_at)
-     VALUES ($1, $2, $3, $4, NOW(), NOW())
+    `INSERT INTO unlock_banned_accounts (user_id, reason, note, banned_by_user_id, provider_applied, created_at, updated_at)
+     VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
      ON CONFLICT (user_id) DO UPDATE
      SET reason = EXCLUDED.reason,
          note = EXCLUDED.note,
          banned_by_user_id = EXCLUDED.banned_by_user_id,
+         provider_applied = EXCLUDED.provider_applied,
          updated_at = NOW()`,
-    [input.userId, input.reason, input.note, input.actorUserId],
+    [input.userId, input.reason, input.note, input.actorUserId, input.providerApplied],
   );
 }
 

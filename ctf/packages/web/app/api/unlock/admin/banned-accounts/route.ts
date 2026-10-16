@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { ensureUnlockMutationCsrf, requireUnlockAdminAccess, resolveUnlockRequestId, unlockErrorResponse } from 'lib/unlock/_lib';
-import { addUnlockBannedAccount, removeUnlockBannedAccount } from 'lib/unlock/banned-accounts';
+import { addUnlockBannedAccount, getUnlockBannedReason, removeUnlockBannedAccount } from 'lib/unlock/banned-accounts';
 import { banAccountWithProvider, unbanAccountWithProvider, type ProviderBanOutcome } from 'lib/unlock/provider-ban';
 import { insertUnlockAudit } from 'lib/unlock/repository';
 import { failureResponse } from 'lib/errors/failure';
@@ -33,9 +33,13 @@ function parseBanBody(raw: BanBody): { ok: true; body: ParsedBody } | { ok: fals
 }
 
 // Ban or unban at the provider and record the result, so POST stays inside the rule-116 complexity
-// limit. The row is written whatever the provider said: a ban an admin believes in but that never
-// reached the provider is worse than one shown as still needing a press, so the refusal is kept on
-// the row rather than dropped.
+// limit. A ban row is written whatever the provider said, with whether it applied (issue #2804): a ban
+// an admin believes in but that never reached the provider is worse than one shown as still needing a
+// press, and the row offers that press. A lift the provider refuses leaves the row in place, because
+// the account is still banned at sign-in and the list must keep saying so.
+//
+// Pressing ban again on an account already on the list (the retry) keeps the reason it was banned for,
+// so retrying a spam or duplicate ban does not relabel it as one placed from this list.
 async function applyBan(input: {
   userId: string;
   banned: boolean;
@@ -47,15 +51,16 @@ async function applyBan(input: {
     : await unbanAccountWithProvider(input.userId);
 
   if (!input.banned) {
-    await removeUnlockBannedAccount(input.userId);
+    if (outcome.ok) await removeUnlockBannedAccount(input.userId);
     return outcome;
   }
 
   await addUnlockBannedAccount({
     userId: input.userId,
-    reason: 'perp',
+    reason: (await getUnlockBannedReason(input.userId)) ?? 'perp',
     note: banNote(input.note, outcome),
     actorUserId: input.actorUserId,
+    providerApplied: outcome.ok,
   });
   return outcome;
 }
@@ -74,9 +79,9 @@ function banNote(note: string | null, outcome: ProviderBanOutcome): string | nul
 //
 // The ban is two writes and both matter. The row is what the admin page reads and what keeps the ban
 // countable; the provider ban is what actually stops a sign-in, here and on anything else the same
-// provider fronts. A provider failure does not fail the request — the row is still written, carrying
-// the reason the ban did not take, so the admin page can show that it needs another press rather than
-// reporting a ban that never happened.
+// provider fronts. A provider failure does not fail the request — the row is still written, marked as
+// not applied at sign-in, so the admin page shows that it needs another press rather than reporting a
+// ban that never happened.
 export async function POST(request: Request) {
   const csrfDeny = ensureUnlockMutationCsrf(request);
   if (csrfDeny) {
