@@ -134,7 +134,7 @@ Seed script requirement: Provide a deterministic plugin seed script with dummy d
 ## 9) Change Log
 
 - 2026-10-16: **The community pulse hides a day with fewer than 3 check-ins (owner decision,
-  #2773).** The 5-check-in minimum applied to the week as a whole, so once it was met every day was
+  #2773).** The 5-check-in minimum applied to the week in total, so once it was met every day was
   shown with its own average and count, and a day holding one check-in showed that member's exact
   mood under its date. Now `MOOD_PULSE_MIN_DAY_SAMPLE` (3) hides such a day, and the week's total,
   average and the 5-check-in gate count only the shown days: with the week figure taken over every
