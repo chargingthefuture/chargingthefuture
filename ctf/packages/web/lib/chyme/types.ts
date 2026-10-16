@@ -4,7 +4,6 @@ export type ChymeServiceCreditsTransaction = {
   fromUserId: string;
   toUserId: string;
   amount: number;
-  message?: string;
   createdAtIso: string;
   status: 'pending' | 'completed' | 'failed';
 };

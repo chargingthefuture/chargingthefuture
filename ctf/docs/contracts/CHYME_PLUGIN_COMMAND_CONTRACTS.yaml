@@ -245,7 +245,7 @@ contracts:
   - pluginId: chyme
     command: chyme.transfer
     version: 1.0.0
-    description: Send ServiceCredits to another member from the main room (POST /api/chyme/service-credits, the tip dialog). Main-room only. Goes through the shared transfer primitive (createTransfer), so balance, freeze and restriction checks are the ServiceCredits ones. The optional message only selects the reason code (chyme.transfer.message vs chyme.transfer); it is not stored.
+    description: Send ServiceCredits to another member from the main room (POST /api/chyme/service-credits, the tip dialog). Main-room only. Goes through the shared transfer primitive (createTransfer), so balance, freeze and restriction checks are the ServiceCredits ones. A tip is an amount only, with no note (owner decision, 2026-10-16; issue #2733), the same rule as Recurring Activity: no free text travels with a credits send. The reason code is always chyme.transfer; a message field an older client sends is ignored.
     inputSchema:
       toUserId:
         type: string
@@ -255,9 +255,6 @@ contracts:
         type: number
         required: true
         rule: Finite, greater than 0, at most 10000 (CHYME_MAX_TIP_AMOUNT).
-      message:
-        type: string
-        required: false
       idempotencyKey:
         type: string
         required: false

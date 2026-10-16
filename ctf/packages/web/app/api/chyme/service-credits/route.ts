@@ -7,7 +7,7 @@ import { failureReason } from 'lib/errors/failure';
 import { logChymeAudit } from 'lib/chyme/audit';
 
 // One `chyme.transfer` audit event per decided request, so a tip sent from the room leaves a record in
-// Chyme's own trail. The note text is never logged; only who, to whom and how many.
+// Chyme's own trail: who, to whom and how many.
 function auditTip(
   actorId: string,
   outcome: { status: 'allow' | 'deny'; reason: string; result: 'success' | 'failure'; errorCategory: string | null },
@@ -28,7 +28,9 @@ function auditTip(
   });
 }
 
-type TipBody = { toUserId: string; amount: number; message?: string; idempotencyKey?: unknown };
+// No note: a tip is an amount only (owner decision, 2026-10-16; issue #2733), the same rule as
+// Recurring Activity. A `message` an older Android build still sends is ignored.
+type TipBody = { toUserId: string; amount: number; idempotencyKey?: unknown };
 
 // A stable client-supplied nonce makes a retried tip idempotent; namespace it under the sender so one
 // member's nonce can never collide with another's. Absent a nonce the repository mints a per-request UUID.
@@ -44,7 +46,7 @@ function buildTipIdempotencyKey(senderUserId: string, rawKey: unknown): string |
 function validateTipRequest(
   body: TipBody,
   senderUserId: string,
-): { error: NextResponse } | { data: { toUserId: string; amount: number; message?: string; idempotencyKey: string | undefined } } {
+): { error: NextResponse } | { data: { toUserId: string; amount: number; idempotencyKey: string | undefined } } {
   if (!body || typeof body !== 'object' || !body.toUserId || typeof body.amount !== 'number' || !Number.isFinite(body.amount) || body.amount <= 0) {
     return { error: NextResponse.json({ ok: false, message: 'Invalid payload.' }, { status: 400 }) };
   }
@@ -65,7 +67,7 @@ function validateTipRequest(
   }
 
   const idempotencyKey = buildTipIdempotencyKey(senderUserId, body.idempotencyKey);
-  return { data: { toUserId: body.toUserId, amount: body.amount, message: body.message, idempotencyKey } };
+  return { data: { toUserId: body.toUserId, amount: body.amount, idempotencyKey } };
 }
 
 // The refused-payload event, reading only what the (possibly malformed) body actually carries.
@@ -102,10 +104,10 @@ export async function POST(request: Request) {
     auditInvalidTip(actorId, body);
     return validated.error;
   }
-  const { toUserId, amount, message, idempotencyKey } = validated.data;
+  const { toUserId, amount, idempotencyKey } = validated.data;
 
   try {
-    const tx = await sendServiceCredits(actorId, toUserId, amount, message, idempotencyKey);
+    const tx = await sendServiceCredits(actorId, toUserId, amount, idempotencyKey);
     auditTip(actorId, { status: 'allow', reason: 'approved_user_or_admin', result: 'success', errorCategory: null }, { toUserId, amount });
     return NextResponse.json({ ok: true, transaction: tx }, { status: 200 });
   } catch (error) {

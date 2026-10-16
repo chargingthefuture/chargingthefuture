@@ -50,7 +50,6 @@ const ChymeTipModal: React.FC<{
 }> = ({ recipientUserId, recipientName, onClose }) => {
   const { styles, t } = useTipStyles();
   const [amount, setAmount] = useState('');
-  const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -67,7 +66,7 @@ const ChymeTipModal: React.FC<{
     setSubmitting(true);
     setError(null);
     try {
-      await postChymeTip(recipientUserId, numeric, message, tipKey);
+      await postChymeTip(recipientUserId, numeric, tipKey);
       setSuccess(true);
       setTimeout(onClose, 1000);
     } catch (e: unknown) {
@@ -101,16 +100,6 @@ const ChymeTipModal: React.FC<{
             placeholderTextColor={t.MUTED}
             style={styles.input}
             accessibilityLabel="Tip amount in ServiceCredits"
-          />
-
-          <Text style={styles.label}>Message (optional)</Text>
-          <TextInput
-            value={message}
-            onChangeText={setMessage}
-            placeholder="Say something"
-            placeholderTextColor={t.MUTED}
-            style={styles.input}
-            accessibilityLabel="Optional message with the tip"
           />
 
           {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}

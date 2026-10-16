@@ -6,7 +6,6 @@ export async function sendServiceCredits(
   fromUserId: string,
   toUserId: string,
   amount: number,
-  message?: string,
   // Optional idempotency key, normally derived from a stable client-supplied nonce by the route, so a
   // retried tip (e.g. after a network failure) deduplicates instead of double-charging. When absent we
   // mint a fresh per-request UUID — never `Date.now()`, which read like a dedup key but collides under
@@ -19,7 +18,9 @@ export async function sendServiceCredits(
     amount,
     idempotencyKey: idempotencyKey ?? `chyme-${fromUserId}-${randomUUID()}`,
     originPlugin: 'chyme',
-    reasonCode: message && message.trim().length > 0 ? 'chyme.transfer.message' : 'chyme.transfer',
+    // A tip carries no note (owner decision, 2026-10-16; issue #2733), the same rule as Recurring
+    // Activity: no free text travels with a credits send, so a member cannot over-disclose in it.
+    reasonCode: 'chyme.transfer',
   });
 
   const status: ChymeServiceCreditsTransaction['status'] =
@@ -30,7 +31,6 @@ export async function sendServiceCredits(
     fromUserId,
     toUserId,
     amount,
-    message,
     createdAtIso: new Date().toISOString(),
     status,
   };
