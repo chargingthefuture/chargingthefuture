@@ -83,7 +83,8 @@ Table `bug_reports` (in `ctf/schema.sql`):
 - `user_id` TEXT — Clerk user id of the reporter.
 - `status` TEXT — one of `new`, `held_for_review`, `issue_created`, `rejected`, `resolved`.
   A clean report is born `new`; a flagged one is born `held_for_review` and never
-  auto-advances.
+  auto-advances. A report in `issue_created` becomes `resolved` when its triage issue is
+  closed as completed (`ctf/scripts/resolveBugReportsFromTriage.mjs`).
 - `raw_message` TEXT, `raw_context` TEXT — the user's words. **Private source of truth;
   never published.**
 - `page_url`, `plugin_slug`, `app_version`, `user_agent` TEXT — auto-attached context. `page_url` is
@@ -141,7 +142,10 @@ contract follows the code):
   runs every 30 minutes, at :11 and :41, so a clean report reaches the triage repo within half an
   hour of being filed and a released held report within half an hour of release — which is what the
   admin screen tells the owner when they press Release. The triage agent
-  (`bug-reports-triage.yml`) runs on its own 30-minute schedule at :05 and :35. A report is visible
+  (`bug-reports-triage.yml`) runs on its own 30-minute schedule at :05 and :35. The same create-issues
+  job has a second step (`ctf/scripts/resolveBugReportsFromTriage.mjs`) that reads the triage repo's
+  closed issues and marks each `issue_created` report whose issue was closed as completed
+  `resolved`; an issue closed as not planned or as a duplicate leaves its report as it is. A report is visible
   on `/admin/bug-reports` the moment it is filed; neither job gates that.
 - **Web (UI):** complete — the global Help control + popover (`components/bug-reports/help-control.tsx`,
   wired into `components/community-shell/shell-icon-rail.tsx` on the desktop rail and into the
@@ -182,6 +186,17 @@ No seed script. Reports are user-generated at runtime; there is no fixture data 
   later for higher-quality issue text.
 
 ## Change Log
+
+- 2026-10-16: **A report is marked resolved when its triage issue closes as completed (#2693 item 4,
+  owner decision).** `resolved` was in the status list, the admin screen and the Android client, and
+  the admin landing dot leaves resolved reports out, but nothing ever set it, so a report whose fix
+  had shipped counted the same as a new one. New `ctf/scripts/resolveBugReportsFromTriage.mjs`, run
+  as a second step of `bug-reports-create-issues.yml` every 30 minutes: it lists the triage repo's
+  closed issues (newest 1,000), keeps those closed as completed, and moves the matching
+  `issue_created` reports in the same triage repo to `resolved`, re-checking the status in the
+  update. Nothing is sent to the triage repo. A reopened issue does not move its report back. No
+  schema, route or screen change: the admin screen and Android already show "Resolved". Test case
+  BUG-A6.
 
 - 2026-10-12: **Abusive-language check holds suffixed and compound forms, the page address loses its
   query string, and caught errors say what failed.** (1) `ABUSIVE_PATTERN` in

@@ -2,7 +2,8 @@ name: Bug Reports — Create Github Issues
 
 # Drains clean, user-filed bug reports from the app database into the PRIVATE triage
 # repo as issues. Raw user text never leaves the database — only redacted text is
-# published. See rule 129 (Bug Reporting and Triage Rules).
+# published. See rule 129 (Bug Reporting and Triage Rules). A second step marks a report
+# resolved once its triage issue is closed as completed.
 #
 # Runs on manual dispatch for now. Turn the schedule on once these are in place:
 #   1. The private triage repo exists (chargingthefuture/bug-reports).
@@ -56,3 +57,13 @@ jobs:
           GH_TOKEN: ${{ secrets.GH_PAT }}
           BUG_REPORTS_TRIAGE_REPO: chargingthefuture/bug-reports
         run: node ctf/scripts/createBugReportIssues.mjs
+
+      # The other direction: a report whose triage issue is closed as completed is marked
+      # resolved, so a fixed report stops counting on the admin landing (issue #2693). Reads
+      # the triage repo and writes only the report's status; no report text leaves the database.
+      - name: Mark reports resolved from completed triage issues
+        env:
+          # DATABASE_URL is injected by the Infisical step above.
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+          BUG_REPORTS_TRIAGE_REPO: chargingthefuture/bug-reports
+        run: node ctf/scripts/resolveBugReportsFromTriage.mjs

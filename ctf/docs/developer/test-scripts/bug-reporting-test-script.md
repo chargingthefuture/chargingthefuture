@@ -166,6 +166,22 @@ arrives.
 
 ---
 
+### BUG-A6 · A report is marked resolved when its triage issue is closed as completed (added 2026-10-16)
+**Role:** admin · **Surfaces:** web (internal surface) and the private triage repo
+**Precondition:** two reports already forwarded, each showing "Sent to triage" on `/admin/bug-reports`.
+**Steps:**
+1. In the triage repo, close the first report's issue as **completed** and the second's as **not
+   planned**.
+2. Run the **Bug Reports — Create Github Issues** workflow by hand (or wait for its next run).
+3. Reload `/admin/bug-reports`.
+4. Reopen the first issue and run the workflow again.
+**Expected:** After step 3 the first report shows **Resolved** and the second still shows "Sent to
+triage". The workflow's "Mark reports resolved" step logs how many reports it marked and nothing
+else — no report text. After step 4 the first report stays Resolved.
+**Result:** web ☐ — notes:
+
+---
+
 ### BUG-A5 · The audit log records every resolve decision, and never the report text (added 2026-08-28)
 **Role:** admin · **Surfaces:** web (admin surface)
 

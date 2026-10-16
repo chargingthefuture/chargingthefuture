@@ -105,7 +105,7 @@ deploy's status (live or failed) — it does not build or deploy anything itself
 |---|---|---|---|
 | `backup-formance.yml` | Formance — Nightly Backup to Private Repo | Daily 3:00 AM UTC; manual | Backs up the Formance Postgres database with `pg_dump` and uploads the dump as a Release asset on a private backup repo. |
 | `bug-reports-build.yml` | Bug Reports — Open PR for Approved Fix | Manual | Uses Claude to build an owner-approved bug fix from the private triage repo, runs typecheck, and opens a PR. |
-| `bug-reports-create-issues.yml` | Bug Reports — Create Github Issues | Every 15 min; manual | Moves clean, user-filed bug reports from the app database into the private triage repo as issues (text redacted). |
+| `bug-reports-create-issues.yml` | Bug Reports — Create Github Issues | Every 15 min; manual | Moves clean, user-filed bug reports from the app database into the private triage repo as issues (text redacted), and marks a report resolved once its triage issue is closed as completed. |
 | `bug-reports-triage.yml` | Bug Reports — Triage | Every 30 min; manual | Looks at open `needs-triage` issues and posts a proposed fix plan — no code, no PR. |
 | `build-images.yml` | Render — Build and push Docker images | Push to `main` (code paths); manual | Builds the `ctf-web`, `ctf-formance-ledger`, `ctf-route-weather` images, pushes them to the registry, then triggers a Render deploy for each. |
 | `check-stream-env.yml` | Check — Stream Credentials | Manual | Diagnostic: verifies each Stream (GetStream) API key/secret pair actually authenticates (production and staging), for when a Stream-backed feature fails even though keys look present in Infisical. |
