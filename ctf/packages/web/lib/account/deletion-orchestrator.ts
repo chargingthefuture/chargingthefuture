@@ -31,13 +31,16 @@ import {
 } from './deletion-registry';
 import { executeEntry, type DeletionTableResult } from './deletion-engine';
 import { getExternalCleanup } from './external-cleanup-registry';
+import { recordExternalCleanupFailure } from './external-cleanup-retries';
 import { reportError } from 'lib/observability/report';
 
 /**
  * Run external-store cleanups (e.g. Stream chat copies) for the given plugin slugs, AFTER the DB
  * transaction has committed. Best-effort and isolated: each cleanup is awaited in its own try/catch,
  * so one plugin's failure (or a Stream outage) is logged via `reportError` but never throws, never
- * blocks the others, and never rolls back the deletion the user already completed in the DB.
+ * blocks the others, and never rolls back the deletion the user already completed in the DB. A
+ * failure is also recorded for the hourly retry job (`external-cleanup-retries.ts`), so the copy
+ * left in the external store is tried again rather than forgotten.
  */
 async function runExternalCleanups(userId: string, slugs: readonly string[]): Promise<void> {
   for (const slug of slugs) {
@@ -49,6 +52,7 @@ async function runExternalCleanups(userId: string, slugs: readonly string[]): Pr
       await cleanup(userId);
     } catch (error) {
       reportError(error, { area: 'account', op: 'external_cleanup', extra: { slug, userId } });
+      await recordExternalCleanupFailure(userId, slug, error);
     }
   }
 }

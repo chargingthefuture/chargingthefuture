@@ -106,6 +106,11 @@ with their account and without their credits, and a retry queued a second reclai
 route and the Clerk `user.deleted` webhook use the same order, and the webhook checks the two halves
 separately so a redelivery finishes whichever one is missing.
 
+Copies in Stream (chat messages) are cleared after the transaction commits, one cleanup per plugin
+(`external-cleanup-registry.ts`). A cleanup that fails does not undo the deletion; it is written to
+`account_external_cleanup_retries` and retried hourly by `POST /api/internal/account/retry-external-cleanups`
+until it works or runs out of attempts (`external-cleanup-retries.ts`, issue #2703).
+
 One step before the engine does move credits, and only back to the member: the orchestrator's
 `runPreDeletionSettlements` refunds any SkillUp deposit still held in escrow to the member's own
 wallet before the SkillUp enrollments are deleted, for both scopes. The enrollment rows are the only

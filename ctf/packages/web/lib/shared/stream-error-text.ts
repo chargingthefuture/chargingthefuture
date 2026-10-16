@@ -27,3 +27,11 @@ export function streamFailureMessage(what: string, error: unknown): string {
 export function streamChannelSetupFailure(channelId: string, createError: unknown, watchError: unknown): string {
   return `Stream channel "${channelId}" could not be created (${describeStreamError(createError)}) and could not be watched either (${describeStreamError(watchError)})`;
 }
+
+// Stream answers code 16 ("does not exist") when the thing a call names is not there: a channel, or
+// a user that was never created or is already deleted. For a deletion that is the outcome wanted, so
+// a delete that gets it has nothing left to do. A member who never opened a plugin has no Stream user
+// for it, and a retried cleanup finds the user the first attempt already removed.
+export function isStreamNotFoundError(error: unknown): boolean {
+  return (error as { code?: unknown } | null)?.code === 16;
+}

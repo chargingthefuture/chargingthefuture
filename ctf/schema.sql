@@ -1049,6 +1049,38 @@ $account_deletion_events_status_check$;
 CREATE INDEX IF NOT EXISTS idx_account_deletion_events_user_scope
   ON account_deletion_events(user_id, scope, requested_at DESC);
 
+-- External-store cleanups (Stream chat copies) that failed after a deletion committed, waiting to be
+-- retried (issue #2703). The deletion itself has happened; a row here means the member's copy in
+-- Stream may still be there. lib/account/external-cleanup-retries.ts writes a row when a cleanup
+-- fails and the hourly retry job deletes it once the cleanup succeeds, so the table lists only the
+-- accounts that still need one. `slug` is the deletion registry slug whose cleanup failed; one row
+-- per account and slug. After MAX_CLEANUP_ATTEMPTS failures `given_up_at` is set and the row stays,
+-- counted in the job's summary. No member content: the account id, the slug and the failure reason.
+CREATE TABLE IF NOT EXISTS account_external_cleanup_retries (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id TEXT NOT NULL,
+  slug TEXT NOT NULL,
+  attempts INTEGER NOT NULL DEFAULT 1,
+  last_error TEXT NOT NULL DEFAULT '',
+  first_failed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  last_attempt_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  next_attempt_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  given_up_at TIMESTAMPTZ
+);
+ALTER TABLE IF EXISTS account_external_cleanup_retries ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS account_external_cleanup_retries ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS account_external_cleanup_retries ADD COLUMN IF NOT EXISTS slug TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS account_external_cleanup_retries ADD COLUMN IF NOT EXISTS attempts INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE IF EXISTS account_external_cleanup_retries ADD COLUMN IF NOT EXISTS last_error TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS account_external_cleanup_retries ADD COLUMN IF NOT EXISTS first_failed_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS account_external_cleanup_retries ADD COLUMN IF NOT EXISTS last_attempt_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS account_external_cleanup_retries ADD COLUMN IF NOT EXISTS next_attempt_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS account_external_cleanup_retries ADD COLUMN IF NOT EXISTS given_up_at TIMESTAMPTZ;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_account_external_cleanup_retries_user_slug
+  ON account_external_cleanup_retries (user_id, slug);
+CREATE INDEX IF NOT EXISTS idx_account_external_cleanup_retries_due
+  ON account_external_cleanup_retries (next_attempt_at) WHERE given_up_at IS NULL;
+
 -- === skills-hunt-service-credits ===
 -- Dropped 2026-06-27: `skills_hunt_service_credits_transactions` was a member-to-member transfer log
 -- that was never wired into the reward flow. SkillsHunt is reward-only — the treasury mints the round

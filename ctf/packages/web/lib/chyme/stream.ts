@@ -1,7 +1,7 @@
 import { StreamChat } from 'stream-chat';
 import { resolveStreamCredentials } from 'lib/integrations/stream-credentials';
 import { reportError } from 'lib/observability/report';
-import { streamChannelSetupFailure, streamFailureMessage } from 'lib/shared/stream-error-text';
+import { streamChannelSetupFailure, streamFailureMessage, isStreamNotFoundError } from 'lib/shared/stream-error-text';
 
 export const CHYME_STREAM_CHANNEL_ID = 'chyme-main-room';
 
@@ -233,6 +233,10 @@ export async function deleteChymeStreamData(userId: string): Promise<boolean> {
     });
     return true;
   } catch (error) {
+    // A Stream user that does not exist has nothing to delete.
+    if (isStreamNotFoundError(error)) {
+      return true;
+    }
     reportError(error, { area: 'chyme', op: 'stream_delete_user', extra: { streamUserId: toStreamUserId(userId) } });
     return false;
   } finally {

@@ -250,6 +250,7 @@ Backend-only endpoints with no UI, each guarded by a dedicated bearer secret and
 
 1. `POST /api/internal/account/delete` — operator-only; `Authorization: Bearer ${ACCOUNT_DELETE_SECRET}` (a dedicated secret, **not** the cron secret, because deletion is irreversible). Deletes ANY user's account by id (the admin counterpart to self-service `DELETE /api/account/full-account`): deletes every plugin's data via the deletion registry/orchestrator (`deleteAllAccountData`), then records the request + queues the ServiceCredits reclaim; optionally also deletes the Clerk identity (`deleteClerk` defaults true). Money is retained (wallets/ledgers are `retain` in the registry, settled by the reclaim flow). Returns 503 when the secret is unset, 403 on a wrong/absent secret, 400 when `userId` is missing; writes a chyme audit row (a requested Clerk removal that fails is reported and recorded as `result: failure`, `errorCategory: clerk_delete_failed`; the response stays 200 with `clerkError`). Called only by the manual `Delete Account (manual)` Actions workflow. Passes `initiatedBy: 'operator'` to the orchestrator, so the deletion event it writes is marked as a duplicate/test-account cleanup rather than a member choosing to leave (the Weekly Performance deleted-accounts row skips it). With `target: "demo"` the deletion runs inside `runWithForcedPool('demo')`, and the account-deletion Stream cleanups follow the same choice: `resolveStreamCredentials` reads the pinned schema before demo-mode targeting, so a demo deletion clears the demo Stream app (`STREAM_API_KEY_STAGING` / `STREAM_API_SECRET_STAGING`) and never the production one (#2941).
 2. `POST /api/internal/product-update` — `Authorization: Bearer ${INTERNAL_SERVICE_SECRET}`. Creates and immediately publishes a feed announcement from `{ title, body }` under the synthetic actor `ci-product-update`, writing a feed audit row. Returns 503 when the secret is unset, 401 on a wrong secret, 400 on missing fields. Lets a release pipeline post a product-update announcement to the feed.
+3. `POST /api/internal/account/retry-external-cleanups` — `Authorization: Bearer ${CRON_SECRET}`, called hourly by `account-external-cleanup-retry.yml`. Retries the Stream cleanups that failed after a deletion committed (issue #2703). When a plugin's Stream cleanup fails during an account or service deletion, the orchestrator reports it and writes a row to **`account_external_cleanup_retries`** (`id` UUID pk; `user_id`, `slug` — unique together; `attempts`; `last_error`; `first_failed_at`; `last_attempt_at`; `next_attempt_at`; `given_up_at`, with an index over the rows still due). The route tries each due row, production schema first and then the demo schema, each pinned to its own pool so the cleanup reaches the matching Stream app (`lib/account/external-cleanup-retries.ts`). A success deletes the row; a failure waits 1, 2, 4, 8, 16, then 24 hours before the next try, and after 12 attempts sets `given_up_at`. Answers counts only (`tried`, `cleared`, `stillFailing`, `gaveUp`, `givenUpTotal` for each schema), never an account id. The table is `retain` in the deletion registry because it must outlive the account it names. A Stream delete for a user that does not exist (code 16, a member who never opened that plugin, or a retry after the first attempt worked) now counts as done in all seven plugin cleanups (`isStreamNotFoundError` in `lib/shared/stream-error-text.ts`), so it is neither reported nor retried.
 
 ### 1.10 Operational Probes
 
@@ -380,6 +381,17 @@ Owner decision, 2026-09-26. The owner pays the running costs of Skills Economy a
 ---
 
 ## 5) Change Log
+
+- 2026-10-16: **A Stream cleanup that fails after a deletion is recorded and retried hourly (§1.9,
+  code-review #2703, owner decision).** A deletion clears the member's chat copy in Stream after the
+  rows are gone; when that failed, it went to error tracking only, every record said the deletion had
+  finished, and nobody could see which accounts still had a copy. `runExternalCleanups` now also
+  writes the failure to the new `account_external_cleanup_retries` table, and the hourly
+  `account-external-cleanup-retry.yml` calls the new `POST /api/internal/account/retry-external-cleanups`,
+  which retries due rows with a growing wait and gives up after 12 attempts. Migration
+  `post/0064_account_external_cleanup_retries.sql`; `schema.demo.sql` regenerated. The seven plugin
+  Stream delete helpers now treat Stream's "does not exist" answer as done, since a member who never
+  opened a plugin has no Stream user for it. Test case AD-8.
 
 - 2026-10-16: **Full-account deletion checks the typed phrase on the server too (code-review #2697,
   owner decision).** The web and Android screens enable the delete button only once "delete my
