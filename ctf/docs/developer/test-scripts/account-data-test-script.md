@@ -47,6 +47,18 @@ page. It is valid JSON with the envelope `exportVersion: 1`, `generatedAtIso`, `
 no data still downloads an honest zero-table/zero-row file.
 **Result:** web ☐ — notes:
 
+## AD-2b · The Mood download holds the member's check-ins
+
+**Role:** member · **Precondition:** the member has submitted at least one Mood check-in, with a note.
+**Steps:**
+1. On the Mood card, tap the Download (export) button.
+2. Open the downloaded file.
+**Expected:** The `mood_submissions` table lists every check-in the member made, with its
+`mood_value`, `note` and `submitted_at`, and carries `readThrough: "pseudonym in
+mood_client_identities"`. The rows hold an empty `user_id` and the member's pseudonym, which matches
+the one row in `mood_client_identities`. No other member's check-in appears.
+**Result:** web ☐ — notes:
+
 ## AD-3 · Export the entire account
 
 **Role:** member

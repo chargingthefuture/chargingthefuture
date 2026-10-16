@@ -59,6 +59,17 @@ export type OwnedTable = {
    * another person's record (a profile the member nominated). Use `notExported(...)` to set it.
    */
   readonly exportable?: false;
+  /**
+   * Set when the member's rows in this table carry no account id and are found through a second
+   * table that does. The export then also reads the rows whose `column` matches the same column in
+   * `throughTable`, on the rows of that table whose `throughUserColumn` is the member's id. Deletion
+   * ignores it. Use `exportThrough(...)` to set it.
+   */
+  readonly exportThrough?: {
+    readonly column: string;
+    readonly throughTable: string;
+    readonly throughUserColumn: string;
+  };
   /** Plain-language note for reviewers / audit. */
   readonly note?: string;
   /** Set when a human decision is still needed before this table's handling is final. */
@@ -124,6 +135,24 @@ const soft = (table: string, userColumn: string, softDeleteColumn: string, note?
  * member in a file is not.
  */
 const notExported = (owned: OwnedTable): OwnedTable => ({ ...owned, exportable: false });
+
+/**
+ * Let the data export find a member's rows through a second table (owner decision, 2026-10-16;
+ * issue #2774).
+ *
+ * The case this exists for: Mood check-ins are stored under a pseudonym, never the account id, and
+ * the only link between the two is `mood_client_identities`. Reading `mood_submissions` by its
+ * user column found nothing, so a member's download held their pseudonym and none of their
+ * check-ins. With this, the export reads the check-ins whose pseudonym is the member's. The linking
+ * column must have the same name in both tables. Deletion is unchanged: it still removes the
+ * mapping and the check-ins go with it.
+ */
+const exportThrough = (
+  column: string,
+  throughTable: string,
+  throughUserColumn: string,
+  owned: OwnedTable,
+): OwnedTable => ({ ...owned, exportThrough: { column, throughTable, throughUserColumn } });
 
 /**
  * The value written over a departed member's id when a row is pseudonymized. A single constant, not a
@@ -419,7 +448,14 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       // is cleared with the account instead of surviving as wellbeing data with a name on it. It
       // also makes this table's coverage visible to the deletion-coverage gate, which flags any
       // table with a user_id column that no registry entry names.
-      del('mood_submissions', 'user_id', 'Defense-in-depth: any check-in row carrying your raw id (none are written today).'),
+      //
+      // The export reads the check-ins through the same mapping, so the member's download holds them.
+      exportThrough(
+        'pseudonym',
+        'mood_client_identities',
+        'user_id',
+        del('mood_submissions', 'user_id', 'Defense-in-depth: any check-in row carrying your raw id (none are written today).'),
+      ),
       del('mood_client_identities', 'user_id', 'Your pseudonym mapping — removing it cascades every check-in stored under it.'),
     ],
   },
