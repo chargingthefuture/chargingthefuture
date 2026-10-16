@@ -15,6 +15,9 @@ export type ChymeParticipant = {
   avatarUrl: string | null;
   role: ChymeRole;
   handRaised: boolean;
+  // Whether their microphone is on, as their app last reported it; null when their app has not
+  // reported (a version older than the field). Shown to members who have not joined yet.
+  micOn: boolean | null;
   joinedAtIso: string;
   lastSeenAtIso: string;
 };

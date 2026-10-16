@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   StreamVideo,
   StreamVideoClient,
@@ -21,10 +21,10 @@ import { ChymeTipButton } from './chyme-tip-dialog';
 import { useBackChannel, type BackChannelController } from './chyme-back-channel';
 import { ChymeBackChannelLayer, ChymeBackChannelButton } from './chyme-back-channel-layer';
 import { useAudioCallKeepAlive } from './use-audio-call-keep-alive';
+import { useChymeHeartbeat } from './use-chyme-heartbeat';
 import { ChymeListeningNotice, ChymeModeratorActions, ChymeSpeakModeToggle, type ChymeModerationContext } from './chyme-moderation';
 import { reportError } from 'lib/observability/report';
 import type { ChymeJoinResponse } from 'lib/chyme/types';
-import { CHYME_ERROR_CODE } from 'lib/chyme/constants';
 
 // Chyme is open social audio (early-Clubhouse style): everyone who joins can
 // speak, so the plain "default" call type — where members may publish audio
@@ -182,47 +182,11 @@ export function ChymeAudioRoom({ joinInfo, currentUser, showChat, chatPanel, onL
     };
   }, [joinInfo.streamApiKey, joinInfo.streamToken, joinInfo.streamUserId, joinInfo.streamChannelId, currentUser.username, currentUser.userId]);
 
-  // While joined AND the tab is visible, ping the presence heartbeat so this member keeps
-  // counting as in the call. A backgrounded/forgotten tab stops pinging, so it stops writing
-  // to the DB and drops out of presence after the server's freshness window — which also lets
-  // the database compute go idle instead of being pinned awake by an open tab.
-  useEffect(() => {
-    if (status !== 'joined') return;
-    const ping = () => {
-      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
-      void fetch(`/api/chyme/heartbeat${roomScopeQuery(roomScope)}`, {
-        method: 'POST',
-        headers: { 'x-ctf-csrf': '1' },
-      })
-        .then(async (res) => {
-          if (res.ok) return;
-          // The server will not keep this member present: an admin removed them, or they dropped out
-          // of the count and the room is now at its cap. Every later beat would be refused too, so
-          // stop beating and show its reason in place of the stage (with Leave), as a join refusal is.
-          const body = (await res.json().catch(() => null)) as { code?: string; message?: string } | null;
-          if (body?.code === CHYME_ERROR_CODE.removedFromRoom || body?.code === CHYME_ERROR_CODE.roomFull) {
-            setErrorMessage(body.message ?? 'The room did not keep you in the call.');
-            setStatus('error');
-          }
-        })
-        .catch(() => {
-          /* best-effort keepalive */
-        });
-    };
-    ping();
-    // 35s keeps a visible member comfortably inside the 45s presence window (CHYME_PRESENCE_TTL_SECONDS)
-    // while cutting the write rate vs the old 20s.
-    const intervalId = window.setInterval(ping, 35000);
-    // Ping immediately when the member returns to the tab, so they re-appear without waiting.
-    const onVisibility = () => {
-      if (document.visibilityState === 'visible') ping();
-    };
-    document.addEventListener('visibilitychange', onVisibility);
-    return () => {
-      window.clearInterval(intervalId);
-      document.removeEventListener('visibilitychange', onVisibility);
-    };
-  }, [status]);
+  const onHeartbeatStopped = useCallback((message: string) => {
+    setErrorMessage(message);
+    setStatus('error');
+  }, []);
+  useChymeHeartbeat({ joined: status === 'joined', call, scopeQuery: roomScopeQuery(roomScope), onStopped: onHeartbeatStopped });
 
   // Back Channel (spec #1746): a free 1:1 audio sidebar with another member in this room. The controller
   // polls for invites and owns the active call; the layer renders the incoming prompt + active panel as a

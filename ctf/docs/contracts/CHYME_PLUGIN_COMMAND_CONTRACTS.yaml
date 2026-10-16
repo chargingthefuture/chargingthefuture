@@ -19,6 +19,7 @@ contracts:
         type: boolean
       participants:
         type: array
+        description: Each participant carries userId, username, avatarUrl, role, handRaised, micOn (boolean, or null when their app has not reported), joinedAtIso and lastSeenAtIso.
       guestCount:
         type: number
     dataAccess:
@@ -107,6 +108,26 @@ contracts:
       - stream_user_token_metadata
     purpose: social_audio_call_join
     retentionClass: operational_medium_lived
+    idempotency: true
+
+  - pluginId: chyme
+    command: chyme.call.heartbeat
+    version: 1.0.0
+    description: The member's presence keepalive, every 35s while joined and once more whenever their microphone changes. Refreshes last_seen_at, credits the gap since the previous beat to the Stream Video minute meter, and stores the reported microphone state so members who have not joined see who is muted. 403 CHYME_REMOVED_FROM_ROOM while a removal stands; 409 CHYME_ROOM_FULL when a member who dropped out of the count beats into a full room. CSRF-guarded.
+    inputSchema:
+      micOn:
+        type: boolean
+        required: false
+    outputSchema:
+      ok:
+        type: boolean
+    dataAccess:
+      - chyme_rooms
+      - chyme_room_members
+      - chyme_room_removals
+      - stream_video_usage_daily
+    purpose: social_audio_presence
+    retentionClass: derived_short_lived
     idempotency: true
 
   - pluginId: chyme
