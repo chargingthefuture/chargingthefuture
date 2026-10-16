@@ -8,6 +8,8 @@
 //   - retain tables (no userColumn) → (no statement)
 //   - entries wrapped in notExported(...) → (no statement): rows matched by the member's id that
 //     are not the member's own (a block another member placed on them, a profile they nominated)
+//   - entries wrapped in exportThrough(column, throughTable, throughUserColumn, ...) → the same
+//     read, OR <column> IN (SELECT <column> FROM <throughTable> WHERE <throughUserColumn> = $1)
 //
 // Like `check-deletion-engine.mjs`, this extracts the SQL template literal straight from the
 // engine source and renders it for every registry entry — so if someone changes the engine's SQL
@@ -58,18 +60,35 @@ function parseOwnedTables(src) {
     throw new Error('a notExported(...) call has a shape this check does not parse; wrap one del()/soft()/pseudo() call directly.');
   }
 
+  // Entries wrapped in exportThrough('column', 'throughTable', 'throughUserColumn', del(...)) —
+  // keyed "table.userColumn". The builder call must be the wrapper's last argument.
+  const through = new Map();
+  const throughRe =
+    /\bexportThrough\(\s*'([^']+)'\s*,\s*'([^']+)'\s*,\s*'([^']+)'\s*,\s*(?:del|soft|pseudo)\(\s*'([^']+)'\s*,\s*'([^']+)'/g;
+  let t;
+  while ((t = throughRe.exec(src)) !== null) {
+    through.set(`${t[4]}.${t[5]}`, { column: t[1], throughTable: t[2], throughUserColumn: t[3] });
+  }
+  if ((src.match(/\bexportThrough\(/g) ?? []).length - 1 !== through.size) {
+    // One occurrence is the helper's own definition; every other one must have been parsed.
+    throw new Error(
+      "an exportThrough(...) call has a shape this check does not parse; use exportThrough('column', 'table', 'user_column', del(...)).",
+    );
+  }
+
   const callRe = /\b(del|soft|pseudo|retain)\(\s*'([^']+)'(?:\s*,\s*'([^']+)')?(?:\s*,\s*'([^']+)')?/g;
   const owned = [];
   let m;
   while ((m = callRe.exec(src)) !== null) {
     const [, kind, a, b] = m;
     const exportable = !notExported.has(`${a}.${b}`);
+    const via = through.get(`${a}.${b}`);
     if (kind === 'del') {
-      owned.push({ action: 'delete', table: a, userColumn: b, exportable });
+      owned.push({ action: 'delete', table: a, userColumn: b, exportable, via });
     } else if (kind === 'soft') {
-      owned.push({ action: 'soft-delete', table: a, userColumn: b, exportable });
+      owned.push({ action: 'soft-delete', table: a, userColumn: b, exportable, via });
     } else if (kind === 'pseudo') {
-      owned.push({ action: 'pseudonymize', table: a, userColumn: b, exportable });
+      owned.push({ action: 'pseudonymize', table: a, userColumn: b, exportable, via });
     } else {
       owned.push({ action: 'retain', table: a });
     }
@@ -102,10 +121,21 @@ function extractEngineTemplate(engineSrc) {
     throw new Error('could not find the engine SELECT template; the engine SQL shape changed — re-read export-engine.ts.');
   }
 
+  // through: `SELECT * FROM ${owned.table} WHERE ${owned.userColumn} = $1 OR ${through.column} IN (...)`
+  const throughRe =
+    /`(SELECT \* FROM \$\{owned\.table\} WHERE \$\{owned\.userColumn\} = \$1 OR \$\{through\.column\} IN \(SELECT \$\{through\.column\} FROM \$\{through\.throughTable\} WHERE \$\{through\.throughUserColumn\} = \$1\))`/;
+  const thr = engineSrc.match(throughRe);
+  if (!thr) {
+    throw new Error('could not find the engine exportThrough SELECT template; the engine SQL shape changed — re-read export-engine.ts.');
+  }
+
   return (owned) =>
-    sel[1]
+    (owned.via ? thr[1] : sel[1])
       .replaceAll('${owned.table}', owned.table)
-      .replaceAll('${owned.userColumn}', owned.userColumn ?? '');
+      .replaceAll('${owned.userColumn}', owned.userColumn ?? '')
+      .replaceAll('${through.column}', owned.via?.column ?? '')
+      .replaceAll('${through.throughTable}', owned.via?.throughTable ?? '')
+      .replaceAll('${through.throughUserColumn}', owned.via?.throughUserColumn ?? '');
 }
 
 function main() {
@@ -180,6 +210,14 @@ function main() {
       fail(`table "${entry.table}" does not scope by its user column via $1: ${sql}`);
     }
     if (!sql.startsWith(`SELECT * FROM ${entry.table} `)) {
+      fail(`table "${entry.table}" produced unexpected SQL: ${sql}`);
+    }
+    // A read through a second table must scope that table by the member's id too, so it can only
+    // ever reach rows linked to the member's own rows there.
+    if (entry.via && !sql.endsWith(`FROM ${entry.via.throughTable} WHERE ${entry.via.throughUserColumn} = $1)`)) {
+      fail(`table "${entry.table}" reads through ${entry.via.throughTable} without scoping it by $1: ${sql}`);
+    }
+    if (!entry.via && sql !== `SELECT * FROM ${entry.table} WHERE ${entry.userColumn} = $1`) {
       fail(`table "${entry.table}" produced unexpected SQL: ${sql}`);
     }
   }
