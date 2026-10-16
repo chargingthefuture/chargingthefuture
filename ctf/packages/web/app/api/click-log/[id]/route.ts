@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { deleteIncident, getIncidentById, setIncidentShared } from 'lib/click-log/repository';
+import { deleteIncident, getIncidentById, insertClickLogAdminAudit, setIncidentShared } from 'lib/click-log/repository';
 import { canDeleteIncident, canToggleIncidentShare } from 'lib/click-log/policy';
 import { logClickLogAudit } from 'lib/click-log/audit';
 import { ensureMutationCsrf, requireClickLogAccess } from '../_lib';
@@ -49,6 +49,15 @@ export async function DELETE(request: NextRequest, context: { params: Promise<{ 
     result: 'success',
     target: { incidentId: id },
   });
+  // An admin deleting another member's incident is an admin action, so it is also a durable row.
+  if (incident.user_id !== gate.auth.userId) {
+    await insertClickLogAdminAudit({
+      actorId: gate.auth.userId,
+      command: 'click-log.incident.delete',
+      incidentId: id,
+      ownerUserId: incident.user_id,
+    });
+  }
   return NextResponse.json({ success: true });
 }
 

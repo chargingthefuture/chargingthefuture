@@ -110,6 +110,7 @@ commands:
           type: boolean
     dataAccess:
       - click_log_incidents (delete)
+      - click_log_admin_audit_trail (insert, when an admin deletes another member's incident)
     purpose: Delete an incident by id
     retentionClass: user_event
   - pluginId: click-log

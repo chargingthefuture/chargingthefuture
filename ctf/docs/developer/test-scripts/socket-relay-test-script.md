@@ -725,6 +725,20 @@ web ☐
 
 ---
 
+### SR-A3b — An admin changing a member's picture from the request is recorded (added 2026-10-16)
+**Role:** admin · **Surfaces:** web
+**Steps:**
+1. As admin, open a request that another member posted, and replace its picture from the request
+   itself (not the admin screen).
+2. Remove that picture the same way.
+3. As the member who owns a request, replace and remove the picture on your own request.
+**Expected:** Steps 1 and 2 each add a row to `socket_relay_admin_audit_trail`
+(`socket-relay.request.image.save`, then `socket-relay.request.image.delete`), naming the request and
+its owner. Step 3 adds no row: a member acting on their own request is not an admin action.
+**Result:** web ☐ — notes:
+
+---
+
 ### SR-A4 — Admin routes reject non-admin members
 
 **Role:** member (non-admin) · **Surfaces:** web (API)

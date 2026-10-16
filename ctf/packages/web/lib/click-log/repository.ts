@@ -181,3 +181,18 @@ export async function deleteIncident(id: string, userId: string, isAdmin = false
     : await queryDb(`DELETE FROM click_log_incidents WHERE id = $1 AND user_id = $2`, [id, userId]);
   return (result.rowCount ?? 0) > 0;
 }
+
+// Record an admin acting on another member's incident (issue #2806). A durable row, unlike
+// logClickLogAudit, which is a log line. The caller writes it only when the actor is not the owner.
+export async function insertClickLogAdminAudit(input: {
+  actorId: string;
+  command: string;
+  incidentId: string;
+  ownerUserId: string;
+}): Promise<void> {
+  await queryDb(
+    `INSERT INTO click_log_admin_audit_trail (actor_id, command, policy_status, reason, target_type, target_id, metadata)
+     VALUES ($1, $2, 'allow', 'admin_on_member_incident', 'incident', $3, $4::jsonb)`,
+    [input.actorId, input.command, input.incidentId, JSON.stringify({ ownerUserId: input.ownerUserId })],
+  );
+}

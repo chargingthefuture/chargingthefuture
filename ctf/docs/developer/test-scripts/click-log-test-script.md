@@ -240,6 +240,9 @@ directly).
 1. As admin, delete an incident that belongs to another member.
 **Expected:** The delete succeeds (admins are not limited to their own rows). The authorized request
 is logged; deleting a row that is already gone is logged as a failure result, not a server error.
+Deleting another member's incident also adds a row to `click_log_admin_audit_trail`
+(`click-log.incident.delete`, the incident id, and the owner); deleting your own incident adds none
+(added 2026-10-16).
 **Result:** web ☐ mobile ☐ — notes:
 
 ### CL-A3 · Trends dashboard shows tag breakdowns

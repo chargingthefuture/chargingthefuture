@@ -214,6 +214,7 @@ contracts:
     dataAccess:
       - socket_relay_requests
       - socket_relay_request_images
+      - socket_relay_admin_audit_trail
     purpose: request_lifecycle
     retentionClass: transactional_long_lived
     idempotency: true
@@ -254,6 +255,7 @@ contracts:
     dataAccess:
       - socket_relay_requests
       - socket_relay_request_images
+      - socket_relay_admin_audit_trail
     purpose: request_lifecycle
     retentionClass: transactional_long_lived
     idempotency: true

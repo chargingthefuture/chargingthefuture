@@ -137,8 +137,12 @@ User/authenticated routes:
 - `PUT /api/socket-relay/requests/:id/image` — owner or admin uploads or replaces the picture. Multipart:
   `image` (PNG, JPEG or WebP, checked from the file's first bytes, at most 3 MB), `alt` (required, up to
   300 characters), `width`, `height`, and `acknowledged=1`. 400 without the acknowledgement, 403 for a
-  member who does not own the request. Returns `{ ok, image: { url, alt, width, height } }`.
+  member who does not own the request. Returns `{ ok, image: { url, alt, width, height } }`. An admin
+  acting on another member's request writes a `socket-relay.request.image.save` row to
+  `socket_relay_admin_audit_trail` (#2806).
 - `DELETE /api/socket-relay/requests/:id/image` — owner or admin removes the picture; the request stays.
+  An admin removing another member's picture writes a `socket-relay.request.image.delete` row to
+  `socket_relay_admin_audit_trail` (#2806).
 - Every request read path returns `image: { url, alt, width, height } | null`.
 - `POST /api/socket-relay/requests/:id/repost`
 - `POST /api/socket-relay/requests/:id/fulfill` — claim a request. Rejected with 409
@@ -243,6 +247,12 @@ alongside the legacy `category`) and fulfillment outcomes for dev validation.
 3. Android requests now go through the shared `authedFetch` wrapper (Clerk bearer token, base URL from runtime config) like chyme/currency; earlier the SocketRelay mobile client used plain dev-only `fetch`. The admin client (`admin-api.ts`) and the chat-credentials fetcher (`fetchFulfillmentChatCredentials` in `api.ts`) now use the same wrapper. Ownership detection still leans on `GET /api/socket-relay/my-requests` (a card is "mine" if its id appears in that list) because the client does not compare user ids locally; one extra request per feed load.
 
 ## 9) Change Log
+
+- 2026-10-16: **An admin changing or removing the picture on another member's request is recorded
+  (code-review #2806, owner decision).** The member picture route lets an admin act on any request and
+  wrote no audit row. It now writes one to `socket_relay_admin_audit_trail` when the actor is not the
+  request's owner; `saveRequestImage` and `deleteRequestImage` return the owner so the route can tell.
+  An owner acting on their own request writes none.
 
 - 2026-10-05: **Failed loads and refused taps now say why; a retried post no longer posts twice (#2921,
   #2922, #2924, #2926).** (1) The shell's list reader turned every non-OK answer into an empty list, so a
