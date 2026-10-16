@@ -1,7 +1,6 @@
 import { randomUUID } from 'crypto';
 import { createTransfer } from 'lib/shared/credits-interface';
 import type { ChymeServiceCreditsTransaction } from './types';
-import { sendChymeStreamMessage } from './stream';
 
 export async function sendServiceCredits(
   fromUserId: string,
@@ -677,11 +676,10 @@ export async function sendRoomMessage(
     throw new Error('invalid_message_text');
   }
 
-  // Chat is stored in chyme_messages and both apps read it from there; the Stream copy is a fan-out.
-  // So the row is written first, and the fan-out runs after the transaction has committed: a Stream
-  // outage cannot stop a send, a database failure cannot leave a message on Stream that the app
-  // never shows, and a Stream round trip does not hold a database connection.
-  const { message, streamChannelId } = await withDbTransaction(async (client) => {
+  // Chat is stored in chyme_messages and both apps read it from there. It is not copied to Stream
+  // (owner decision, 2026-10-16; issue #2732): nothing read the copy, and a member who deleted or
+  // edited a message kept the original text in Stream, where nothing could find it to remove it.
+  return withDbTransaction(async (client) => {
     const room = await ensureRoom(client, roomKey);
     await ensureServiceProfile(client, identity);
 
@@ -707,19 +705,8 @@ export async function sendRoomMessage(
       ],
     );
 
-    return { message: mapMessage(inserted.rows[0]), streamChannelId: room.room_key };
+    return mapMessage(inserted.rows[0]);
   });
-
-  await sendChymeStreamMessage({
-    userId: identity.userId,
-    name: chymeHandle(identity.username, identity.userId),
-    text: validation.normalizedText,
-    // Fan out to this room's Stream channel (the channel id equals the room key), so the private
-    // room's chat never lands in the main room's Stream channel.
-    channelId: streamChannelId,
-  });
-
-  return message;
 }
 
 // Delete one of the member's OWN room chat messages. Author-only: the row is deleted only when its

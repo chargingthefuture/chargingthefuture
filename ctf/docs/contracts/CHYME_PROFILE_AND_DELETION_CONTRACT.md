@@ -82,7 +82,7 @@ When user deletes Chyme usage only (`DELETE /api/account/services/chyme`, driven
     recipient_user_id)` would be violated the moment both parties of one call delete their accounts
     and each id collapsed to the shared `deleted_member` placeholder. `ended_by_user_id` is always one
     of the two parties, so these two deletes clear every row naming the member in any column.
-  - Stream copy: the member's Stream user `chyme-<user_id>` is hard-deleted with `mark_messages_deleted` (`deleteChymeStreamData`), so the chat messages fanned out to Stream are removed too. Run by the shared account-deletion orchestrator's external-cleanup hook; best-effort after the Postgres delete, a Stream outage is logged and never blocks the deletion.
+  - Stream copy: the member's Stream user `chyme-<user_id>` is hard-deleted with `mark_messages_deleted` (`deleteChymeStreamData`), so the chat messages copied to Stream before 2026-10-16 (when the copy stopped) are removed too. Run by the shared account-deletion orchestrator's external-cleanup hook; best-effort after the Postgres delete, a Stream outage is logged and never blocks the deletion.
 - Anonymize/pseudonymize:
   - none currently (hard delete for user-owned member/message rows, on Postgres and Stream)
 - Retain for compliance/fraud/finance:

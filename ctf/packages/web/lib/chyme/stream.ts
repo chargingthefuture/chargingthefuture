@@ -175,49 +175,11 @@ export async function createChymeBackChannelCredentials(input: {
   }
 }
 
-export async function sendChymeStreamMessage(input: {
-  userId: string;
-  name: string;
-  text: string;
-  // The Stream channel id (= room key) to fan out into; defaults to the main room's channel.
-  channelId?: string;
-}): Promise<string | null> {
-  const streamConfig = await resolveStreamCredentials();
-  if (!streamConfig) {
-    return null;
-  }
-
-  const streamClient = new StreamChat(streamConfig.apiKey, streamConfig.apiSecret);
-  const streamChannelId = input.channelId ?? CHYME_STREAM_CHANNEL_ID;
-  try {
-    // The entire Stream step (user upsert, channel setup, send) sits inside the catch: the message
-    // is already stored in Postgres and the Stream copy is a fan-out, so a failure at any point is
-    // recorded with the channel it was meant for, then swallowed so the member's send still succeeds.
-    const streamUserId = await ensureMember(streamClient, input.userId, input.name);
-    const channel = await ensureChannel(streamClient, streamUserId, streamChannelId);
-    const result = await channel.sendMessage({
-      text: input.text,
-      user_id: streamUserId,
-    });
-
-    return result.message?.id ?? null;
-  } catch (error) {
-    reportError(error, {
-      area: 'chyme',
-      op: 'stream_fanout_send',
-      extra: { streamChannelId, userId: input.userId },
-    });
-    return null;
-  } finally {
-    await disconnectQuietly(streamClient, 'fanout_send_disconnect');
-  }
-}
-
 // Delete a member's Chyme data on the Stream side when they delete their Chyme profile or account.
-// Chyme chat messages are fanned out to Stream (sendChymeStreamMessage), so Stream keeps an
-// independent copy that the Postgres delete alone does not remove — leaving the member's message
-// content on Stream indefinitely. This hard-deletes the member's Stream user (`chyme-<userId>`) and
-// marks their messages deleted. Best-effort: returns `false` (never throws) when Stream is
+// Room chat messages used to be copied to Stream as they were sent (stopped 2026-10-16, issue #2732),
+// so Stream still holds the copies made before then, which the Postgres delete alone does not
+// remove. The member's Stream user (`chyme-<userId>`) also exists for room audio and the Back
+// Channel. This hard-deletes that user and marks their messages deleted. Best-effort: returns `false` (never throws) when Stream is
 // unconfigured or the call fails, so a Stream outage can never block or roll back the user's deletion.
 export async function deleteChymeStreamData(userId: string): Promise<boolean> {
   const streamConfig = await resolveStreamCredentials();
