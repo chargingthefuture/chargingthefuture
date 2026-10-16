@@ -114,6 +114,21 @@ remove and changes nothing on screen. Replies and reactions that hung off the de
 with them.
 **Result:** web ☐ — notes:
 
+## AD-7b · Full-account delete is refused without the typed phrase
+
+**Role:** member (any account; nothing is deleted in this case)
+**Steps:**
+1. Signed in, send `DELETE /api/account/full-account` with header `x-ctf-csrf: 1` and no body.
+2. Send it again with body `{"confirmPhrase":"delete my acount"}` (misspelled).
+3. Open Account & Data and the full-account delete on web and on the Android app; check the delete
+   button stays off until `delete my account` is typed.
+**Expected:** Steps 1 and 2 return 400 with code `ACCOUNT_CONFIRM_PHRASE_REQUIRED` and a message
+that nothing was deleted and that Android users should install the latest version first. The
+account and its data are untouched, and the Chyme audit log records a deny with reason
+`confirm_phrase_missing`. AD-7 still deletes the account when the phrase is typed, on web and on the
+current Android build.
+**Result:** web ☐ · android ☐ — notes:
+
 ## AD-7 · Full-account delete removes the sign-in too
 
 **Role:** member on a **throwaway account** · **Precondition:** a disposable account you are willing

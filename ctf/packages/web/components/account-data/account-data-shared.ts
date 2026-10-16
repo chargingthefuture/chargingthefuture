@@ -95,8 +95,9 @@ export function glyphForService(slug: string): string {
   return SERVICE_GLYPH[slug] ?? '📁';
 }
 
-// The exact phrase the user must type to confirm full-account deletion (matches the mockup).
-export const FULL_ACCOUNT_CONFIRM_PHRASE = 'delete my account';
+// The exact phrase the user must type to confirm full-account deletion. Defined beside the route
+// that checks it again on the server.
+export { FULL_ACCOUNT_CONFIRM_PHRASE } from 'lib/account/constants';
 
 // What DELETE /api/account/full-account answers on success. The data deletion has committed by then,
 // but removing the sign-in is best-effort: when the auth provider call fails the route still answers

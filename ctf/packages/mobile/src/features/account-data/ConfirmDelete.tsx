@@ -27,7 +27,7 @@ export function ConfirmDelete({
    * Runs DELETE /api/account/full-account. Resolves on success with whether the sign-in was removed,
    * rejects with a member-facing message.
    */
-  onConfirm: () => Promise<FullAccountDeletionResult>;
+  onConfirm: (_confirmPhrase: string) => Promise<FullAccountDeletionResult>;
 }) {
   const { tokens } = useTheme();
   const tok = getAccountTokens(tokens);
@@ -44,7 +44,7 @@ export function ConfirmDelete({
     setStatus('submitting');
     setErrorMessage(null);
     try {
-      setResult(await onConfirm());
+      setResult(await onConfirm(input));
       setStatus('done');
     } catch (error) {
       setStatus('error');

@@ -16,7 +16,7 @@ type ConfirmProps = {
   onCancel: () => void;
   // Performs the live DELETE /api/account/full-account call. Resolves on success with whether the
   // sign-in was removed, rejects on failure.
-  onConfirm: () => Promise<FullAccountDeletionResult>;
+  onConfirm: (confirmPhrase: string) => Promise<FullAccountDeletionResult>;
 };
 
 // The confirm/cancel button row. Kept as its own component so the ready/submitting style branches
@@ -76,7 +76,7 @@ export function AccountDataConfirmDelete({ serviceCount, onCancel, onConfirm }: 
     setStatus('submitting');
     setErrorMessage(null);
     try {
-      setResult(await onConfirm());
+      setResult(await onConfirm(input));
       setStatus('done');
     } catch (error) {
       setStatus('error');

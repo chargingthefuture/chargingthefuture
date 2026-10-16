@@ -6,6 +6,19 @@ import { deleteAllAccountData } from 'lib/account/deletion-orchestrator';
 import { deleteAuthIdentity } from 'lib/account/identity-deletion';
 import { requireAccountAccess, ensureMutationCsrf } from '../_lib';
 import { reportError } from 'lib/observability/report';
+import { ACCOUNT_ERROR_CODE, FULL_ACCOUNT_CONFIRM_PHRASE, isFullAccountConfirmPhrase } from 'lib/account/constants';
+
+// The typed confirmation, required here as well as on the screen (issue #2697). An Android build
+// from before this check sends no body and is refused with this message, which its screen shows.
+async function readConfirmPhrase(request: Request): Promise<unknown> {
+  try {
+    const body = (await request.json()) as unknown;
+    return body && typeof body === 'object' ? (body as { confirmPhrase?: unknown }).confirmPhrase : undefined;
+  } catch {
+    // An empty or unreadable body has no phrase; the caller answers that as a missing confirmation.
+    return undefined;
+  }
+}
 
 export async function DELETE(request: Request) {
   // Share the centralized account auth contract with the per-service delete route so the two
@@ -19,6 +32,27 @@ export async function DELETE(request: Request) {
   const csrfDeny = ensureMutationCsrf(request);
   if (csrfDeny) {
     return csrfDeny;
+  }
+
+  if (!isFullAccountConfirmPhrase(await readConfirmPhrase(request))) {
+    logChymeAudit({
+      pluginId: 'chyme',
+      command: 'account.profile.delete.full',
+      actorId: userId,
+      status: 'deny',
+      reason: 'confirm_phrase_missing',
+      target: { scope: 'account' },
+      result: 'failure',
+      errorCategory: 'validation_error',
+    });
+    return NextResponse.json(
+      {
+        ok: false,
+        code: ACCOUNT_ERROR_CODE.confirmPhraseRequired,
+        message: `Nothing was deleted: type "${FULL_ACCOUNT_CONFIRM_PHRASE}" to confirm. If you are using the Android app, install its latest version first.`,
+      },
+      { status: 400 },
+    );
   }
 
   // Which step is running, so a failure says whether the data deletion or the credits reclaim

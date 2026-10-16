@@ -83,13 +83,16 @@ export async function deleteServiceData(slug: string): Promise<void> {
 // in `identityError`. Only an explicit false counts as a failure.
 export type FullAccountDeletionResult = { identityRemoved: boolean; identityError: string | null };
 
-export async function deleteFullAccount(): Promise<FullAccountDeletionResult> {
+// The typed phrase goes with the request: the server checks it again and refuses a delete
+// without it.
+export async function deleteFullAccount(confirmPhrase: string): Promise<FullAccountDeletionResult> {
   const res = await fetchWithTimeout('/api/account/full-account', {
     method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',
       'x-ctf-csrf': '1',
     },
+    body: JSON.stringify({ confirmPhrase }),
   });
   if (!res.ok) {
     throw new AccountRequestError(await readMessage(res, 'Unable to complete full-account deletion. Please try again.'));

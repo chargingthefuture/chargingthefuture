@@ -645,7 +645,15 @@ contracts:
     command: account.profile.delete.full
     version: 1.0.0
     description: Record full-account deletion request for global orchestrator processing.
-    inputSchema: {}
+    inputSchema:
+      confirmPhrase:
+        type: string
+        required: true
+        note: >-
+          The phrase the member typed, "delete my account" (compared lowercased and trimmed). A
+          missing or different phrase is refused with 400 ACCOUNT_CONFIRM_PHRASE_REQUIRED and nothing
+          is deleted (issue #2697). An Android build from before 2026-10-16 sends no body and is
+          refused this way until it is updated.
     outputSchema:
       ok:
         type: boolean

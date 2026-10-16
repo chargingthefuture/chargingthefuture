@@ -72,7 +72,10 @@
     — no CSRF needed).
   - `DELETE /api/account/services/:slug` (one plugin) and `DELETE /api/account/full-account`
     (every plugin + ServiceCredits reclaim). Both are self-service (caller's own rows only) and
-    same-origin CSRF-guarded (`x-ctf-csrf: 1`). The full-account route also removes the member's
+    same-origin CSRF-guarded (`x-ctf-csrf: 1`). The full-account route also requires the typed
+    phrase in its body (`{ "confirmPhrase": "delete my account" }`, `FULL_ACCOUNT_CONFIRM_PHRASE` in
+    `lib/account/constants.ts`) and refuses a missing or wrong one with 400
+    `ACCOUNT_CONFIRM_PHRASE_REQUIRED` before anything is deleted. The full-account route also removes the member's
     **auth-provider identity** as its last step (`deleteAuthIdentity`, `lib/account/identity-deletion.ts`
     — the same helper the operator route uses), so "delete my account" removes the sign-in and not just
     the data. Best-effort by design: the data deletion has already committed, so a provider outage
@@ -377,6 +380,16 @@ Owner decision, 2026-09-26. The owner pays the running costs of Skills Economy a
 ---
 
 ## 5) Change Log
+
+- 2026-10-16: **Full-account deletion checks the typed phrase on the server too (code-review #2697,
+  owner decision).** The web and Android screens enable the delete button only once "delete my
+  account" is typed, but `DELETE /api/account/full-account` read no body, so any request carrying
+  the session and the CSRF header deleted the account. The route now reads `confirmPhrase` from the
+  body and refuses a missing or different phrase with 400 `ACCOUNT_CONFIRM_PHRASE_REQUIRED`, writing
+  a deny audit row and deleting nothing. The web shell and Android `deleteFullAccount` send the typed
+  phrase. Owner decision: strict from now on, so an Android build installed before this change gets
+  the refusal, whose message tells the member to install the latest app, until it is updated. Test
+  case AD-7b.
 
 - 2026-10-15: **Clearing the blocked list no longer deletes the safety reports a member filed
   (§1.6, code-review #2672, owner decision).** The `member-blocks` deletion registry entry is
