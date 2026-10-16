@@ -15,11 +15,18 @@ import { initials, useChymeTokens, type ChymeTokens } from './chyme-tokens';
 
 type Participant = ChymeRoomResponse['participants'][number];
 
-function StageTile({ participant, isSelf, t }: { participant: Participant; isSelf: boolean; t: ChymeTokens }) {
+// How a tile reads: the badge is gray only when the microphone is known to be off; the pill reads
+// speaking / muted once the app has reported, and the member's role until it has.
+function micLook(participant: Participant): { micOff: boolean; lit: boolean; label: string } {
   const micOn = participant.micOn ?? null;
-  const micOff = micOn === false;
-  const lit = micOn ?? participant.role === 'speaker';
-  const label = micOn === null ? participant.role : micOn ? 'speaking' : 'muted';
+  if (micOn === null) {
+    return { micOff: false, lit: participant.role === 'speaker', label: participant.role };
+  }
+  return { micOff: !micOn, lit: micOn, label: micOn ? 'speaking' : 'muted' };
+}
+
+function StageTile({ participant, isSelf, t }: { participant: Participant; isSelf: boolean; t: ChymeTokens }) {
+  const { micOff, lit, label } = micLook(participant);
   return (
     <View style={styles.tile}>
       <View>

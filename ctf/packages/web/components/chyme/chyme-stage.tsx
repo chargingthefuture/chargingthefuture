@@ -3,7 +3,7 @@
 import { Mic } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { getChymeTokens, chymeHandle, initials } from './chyme-shared';
-import type { ChymeRoomResponse } from 'lib/chyme/types';
+import type { ChymeParticipant, ChymeRoomResponse } from 'lib/chyme/types';
 
 // Pre-join preview of who is in the room. Once the viewer joins, the live
 // Stream-backed stage in chyme-audio-room.tsx takes over.
@@ -16,6 +16,15 @@ import type { ChymeRoomResponse } from 'lib/chyme/types';
 // Nothing renders while the room is empty (owner directive, 2026-09-30): the room header already
 // reads "0 participants", so an "On Stage · 0 Participants" block under the readings card said the
 // same thing twice and pushed the page past one screen.
+// How a tile reads: the badge is gray only when the microphone is known to be off; the pill reads
+// speaking / muted once the app has reported, and the member's role until it has.
+function micLook(participant: ChymeParticipant): { micOff: boolean; lit: boolean; label: string } {
+  if (participant.micOn === null) {
+    return { micOff: false, lit: participant.role === 'speaker', label: participant.role };
+  }
+  return { micOff: !participant.micOn, lit: participant.micOn, label: participant.micOn ? 'speaking' : 'muted' };
+}
+
 export function ChymeStage({
   room,
   currentUserId,
@@ -35,9 +44,7 @@ export function ChymeStage({
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20 }}>
           {room.participants.map((participant) => {
             const isSelf = participant.userId === currentUserId;
-            const micOff = participant.micOn === false;
-            const lit = participant.micOn ?? participant.role === 'speaker';
-            const label = participant.micOn === null ? participant.role : participant.micOn ? 'speaking' : 'muted';
+            const { micOff, lit, label } = micLook(participant);
             const handle = chymeHandle(participant.username, participant.userId);
             return (
               <div key={participant.userId} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, width: 100 }}>

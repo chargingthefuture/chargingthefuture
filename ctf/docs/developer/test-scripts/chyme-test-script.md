@@ -74,7 +74,7 @@ The one shared audio room — these are the can't-ship-broken checks. Member rol
 **Expected:** The single shared room loads with its name. Each participant is shown by their handle
 as `@username`, falling back to `user-<first 8 of the id>` when there is no username. Only members
 seen recently (within the 45-second presence window) appear; a member not seen within that window drops off.
-Before you join, each tile under **On Stage** says **muted** (grey microphone badge) or **speaking**
+Before you join, each tile under **On Stage** says **muted** (gray microphone badge) or **speaking**
 (green badge), matching the tile you see after joining. Have a second member join and press Unmute,
 then Mute: your list changes within a few seconds each time, on web and Android alike.
 The header back chevron returns to the page you came from (falling back to All Apps when opened
