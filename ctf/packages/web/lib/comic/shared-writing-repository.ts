@@ -1,4 +1,5 @@
 import { queryDb, withDbTransaction } from "lib/db/postgres";
+import type { PoolClient } from "pg";
 import type { ContributedEntry } from "./quora-export-intake";
 
 // Storage for member-contributed Quora writing. Nothing written here is visible to the assistant:
@@ -248,7 +249,12 @@ export async function listSharedWritingForReview(status: string): Promise<Shared
 export type AcceptResult = {
   status: "accepted";
   promoted: number;
+  /** Matched text already in the library and switched on. */
   alreadyPresent: number;
+  /** Matched an entry that was off only because the member who shared it first withdrew it; switched back on for this writing. */
+  revived: number;
+  /** Matched an entry an admin switched off (or one with no withdrawn writing behind it); left off. */
+  matchedSwitchedOff: number;
   contributorUserId: string;
 };
 
@@ -266,6 +272,59 @@ export type AcceptResult = {
 //     rows imported from the edited Quora Markdown repo carry a `source_ref` and are a separate
 //     identity space, so a Markdown row and a contributed row may share `content_hash` without
 //     colliding — the backfill lookup below is likewise scoped to `source_ref IS NULL`.
+// Point an accepted entry at the library row that already carries its text, and say what state that
+// row is in (owner decision, 2026-10-16; issue #2726).
+//
+// The row belongs to whoever put the text there first, and it can be switched off. If it is off only
+// because that member withdrew their writing, it is switched back on and handed to this writing
+// (`contribution_id`), so this member's withdrawal or deletion is what switches it off from now on and
+// the first member is no longer named on it. If an admin switched it off — the latest successful
+// `comic.admin.knowledge.set-active` on it set `active: false` — or nothing withdrawn is behind it, it
+// stays off and is counted separately, so the reviewer is told rather than shown "already present".
+async function linkToExistingEntry(
+  client: PoolClient,
+  contributionEntryId: string,
+  hash: string,
+  contributionId: string,
+): Promise<"present" | "revived" | "switched_off"> {
+  const match = await client.query<{ id: string; active: boolean; revivable: boolean }>(
+    `SELECT k.id, k.active,
+            (EXISTS (
+               SELECT 1 FROM comic_contributions c
+               WHERE c.id = k.contribution_id AND c.status = 'withdrawn'
+             )
+             AND COALESCE((
+               SELECT (a.metadata->>'active')::boolean
+               FROM comic_admin_audit_trail a
+               WHERE a.command = 'comic.admin.knowledge.set-active'
+                 AND a.target_type = 'knowledge_entry'
+                 AND a.target_id = k.id::text
+                 AND a.result = 'success'
+               ORDER BY a.created_at DESC
+               LIMIT 1
+             ), TRUE)) AS revivable
+     FROM comic_knowledge_entries k
+     WHERE k.content_hash = $1 AND k.source_ref IS NULL
+     LIMIT 1
+     FOR UPDATE OF k`,
+    [hash],
+  );
+  const row = match.rows[0];
+  await client.query(
+    `UPDATE comic_contribution_entries SET knowledge_entry_id = $2::uuid WHERE id = $1::uuid`,
+    [contributionEntryId, row?.id ?? null],
+  );
+  if (!row || row.active) return "present";
+  if (!row.revivable) return "switched_off";
+  await client.query(
+    `UPDATE comic_knowledge_entries
+     SET active = TRUE, contribution_id = $2::uuid, updated_at = NOW()
+     WHERE id = $1::uuid`,
+    [row.id, contributionId],
+  );
+  return "revived";
+}
+
 export async function acceptSharedWriting(input: {
   contributionId: string;
   reviewerId: string;
@@ -298,6 +357,8 @@ export async function acceptSharedWriting(input: {
 
     let promoted = 0;
     let alreadyPresent = 0;
+    let revived = 0;
+    let matchedSwitchedOff = 0;
 
     for (const entry of entries.rows) {
       if (excluded.has(entry.id)) {
@@ -332,16 +393,10 @@ export async function acceptSharedWriting(input: {
           [entry.id, inserted.rows[0].id],
         );
       } else {
-        alreadyPresent++;
-        // Point at the row that already carries this text, so the entry records where it went. That
-        // row belongs to whoever put the text there first, so withdrawing THIS contribution leaves it
-        // on (see withdrawSharedWriting).
-        await client.query(
-          `UPDATE comic_contribution_entries
-           SET knowledge_entry_id = (SELECT id FROM comic_knowledge_entries WHERE content_hash = $2 AND source_ref IS NULL LIMIT 1)
-           WHERE id = $1::uuid`,
-          [entry.id, hash],
-        );
+        const outcome = await linkToExistingEntry(client, entry.id, hash, input.contributionId);
+        if (outcome === "revived") revived++;
+        else if (outcome === "switched_off") matchedSwitchedOff++;
+        else alreadyPresent++;
       }
     }
 
@@ -352,7 +407,7 @@ export async function acceptSharedWriting(input: {
       [input.contributionId, input.reviewerId],
     );
 
-    return { status: "accepted" as const, promoted, alreadyPresent, contributorUserId };
+    return { status: "accepted" as const, promoted, alreadyPresent, revived, matchedSwitchedOff, contributorUserId };
   });
 }
 

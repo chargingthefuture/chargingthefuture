@@ -322,6 +322,15 @@ contracts:
         type: integer
       alreadyPresent:
         type: integer
+        note: Matched text already in the library and switched on.
+      revived:
+        type: integer
+        note: >-
+          Matched an entry that was off only because the member who shared it first withdrew it
+          (and no admin switched it off since); switched back on and handed to this contribution.
+      matchedSwitchedOff:
+        type: integer
+        note: Matched an entry an admin switched off, or one with no withdrawn writing behind it; left off.
       grant:
         type: object
     dataAccess:
