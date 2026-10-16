@@ -346,12 +346,6 @@ function renderPluginShellC(
     redirect('/account');
   }
 
-  if (selectedPlugin.slug === 'weekly-performance') {
-    // Weekly Performance has no member view — the dashboard lives on the admin page only.
-    // Non-admins never reach this branch (the admin-only gate above 404s them).
-    redirect('/admin/weekly-performance');
-  }
-
   if (selectedPlugin.slug === 'gdp') {
     return <GdpShell isAdmin={decision.isAdmin} />;
   }

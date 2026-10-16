@@ -8,7 +8,7 @@
 //
 // Its own module, with no database import, so a client component (the announcement plugin picker)
 // can read the same list the server checks.
-export const ADMIN_ONLY_PLUGIN_SLUGS = new Set<string>(['weekly-performance', 'mutual-time']);
+export const ADMIN_ONLY_PLUGIN_SLUGS = new Set<string>(['mutual-time']);
 
 export function isAdminOnlyPlugin(slug: string): boolean {
   return ADMIN_ONLY_PLUGIN_SLUGS.has(slug);

@@ -161,14 +161,6 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
     isVisible: true,
   },
   {
-    slug: 'weekly-performance',
-    name: 'Weekly Performance',
-    summary: 'Week selection/guardrails with metrics, comparisons, and export gate checks.',
-    availabilityState: 'implemented_shell',
-    navRank: 140,
-    isVisible: true,
-  },
-  {
     slug: 'gdp',
     name: 'GDP',
     summary: 'Real time global survivor economic tracker. Your contributions counted, recorded, visible.',

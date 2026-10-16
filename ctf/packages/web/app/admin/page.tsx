@@ -20,9 +20,13 @@ export const dynamic = 'force-dynamic';
 // route that is itself server-role-gated, so this page only renders for admins. Keep this
 // list in step with the pages under app/admin/* — add a row when a new admin area ships.
 // Compact launcher (owner decision, 2026-07-19): names only — no descriptions — so two columns
-// fit even at phone width and the list needs far less scrolling. Alphabetical, except Unlock
-// and AI Assistant pinned to the top (the two areas checked constantly).
+// fit even at phone width and the list needs far less scrolling. Alphabetical, except Adoption,
+// Unlock and AI Assistant pinned to the top (the areas checked constantly).
 const ADMIN_AREAS: { href: string; name: string; slug?: string }[] = [
+  // Whether members are working with each other: the steps toward 384, the daily exchange and the
+  // Weavers badge, Weekly Performance and its sign-in record, on one screen (owner decision,
+  // 2026-10-16). Those were three separate tiles before.
+  { href: '/admin/adoption', name: 'Adoption' },
   { href: '/admin/unlock', name: 'Unlock' },
   { href: '/admin/comic', name: 'AI Assistant' },
   { href: '/admin/beacon', name: 'Beacon' },
@@ -35,12 +39,6 @@ const ADMIN_AREAS: { href: string; name: string; slug?: string }[] = [
   { href: '/admin/chyme/readings', name: 'Chyme: Readings Loop' },
   { href: '/admin/click-log', name: 'ClickLog Trends' },
   { href: '/admin/contributions', name: 'Contributions' },
-  // How many members traded with another member on a day, against the 384 target. Counts people
-  // per day rather than accumulating a total, because the goal is a day's worth of members working
-  // with each other, not a headcount that only ever rises. The Weavers of the Commons badge admin
-  // (eligible members, weights, the gated channel) sits on the same screen, because both readings
-  // score the same events with the same weights (owner decision, 2026-09-25).
-  { href: '/admin/daily-exchange', name: 'Daily Exchange and Badge' },
   { href: '/admin/directory', name: 'Directory' },
   // Everybody listed in the Directory who does not have an invite post on the blog yet, with
   // their skills, and a control that copies the list as plain text. It had no row here, which
@@ -101,10 +99,6 @@ const ADMIN_AREAS: { href: string; name: string; slug?: string }[] = [
   { href: '/admin/skills-hunt', name: 'SkillsHunt' },
   { href: '/admin/socket-relay', name: 'SocketRelay' },
   { href: '/admin/trust-transport', name: 'TrustTransport' },
-  { href: '/admin/weekly-performance', name: 'Weekly Performance' },
-  // The sign-in record behind the dashboard's Active Members rows, read as a health check: opening
-  // it records the admin's own sign-in and shows what the database did with the write.
-  { href: '/admin/weekly-performance/sign-in-record', name: 'Weekly Performance: Sign-in Record' },
   { href: '/admin/what-works', name: 'WhatWorks' },
   { href: '/admin/workforce', name: 'Workforce' },
 ];

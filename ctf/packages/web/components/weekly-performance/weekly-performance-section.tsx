@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { BackChevronButton } from "@/lib/nav/back-history";
 import { useTheme } from "@/hooks/useTheme";
 import {
   getWeeklyPerformanceTokens,
@@ -15,9 +14,7 @@ import {
   formatWeekRange,
   isCurrentWeek,
 } from "./wp-shared";
-import { WeeklyPerformanceLoading } from "./wp-loading";
 import { WeeklyPerformanceDashboardMain } from "./wp-dashboard-main";
-import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 import { RefreshButton } from "@/components/shared/refresh-button";
 import { startVisibleInterval } from "../../lib/shared/visible-interval";
 import { responseFailureText } from "lib/errors/client-failure";
@@ -102,7 +99,9 @@ async function fetchShellData(): Promise<ShellData> {
   };
 }
 
-export function WeeklyPerformanceShell() {
+// The Weekly Performance section of the Adoption screen. The page header, back control and top
+// actions live on that screen; this section keeps its own title bar for the refresh and week picker.
+export function WeeklyPerformanceSection() {
   const [loading, setLoading] = useState(true);
   const [weeks, setWeeks] = useState<WpWeek[]>([]);
   const [selectedWeekStart, setSelectedWeekStart] = useState<string | null>(null);
@@ -188,7 +187,9 @@ export function WeeklyPerformanceShell() {
     await loadWeekData(selectedWeekStart, priorWeekStart(weeks, selectedWeekStart), true);
   }, [selectedWeekStart, weeks, loadWeekData]);
 
-  if (loading) return <WeeklyPerformanceLoading />;
+  if (loading) {
+    return <p style={{ fontSize: 13, color: t.SUBTLE, margin: 0 }}>Reading the weeks…</p>;
+  }
 
   const selectedWeek = weeks.find((w) => w.weekStartDate === selectedWeekStart) ?? null;
 
@@ -214,26 +215,23 @@ export function WeeklyPerformanceShell() {
     </>
   );
 
-    return (
-      <div style={{ minHeight: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TITLE }}>
-        <div style={{ position: "sticky", top: 0, zIndex: 20, background: t.HEADER, borderBottom: `1px solid ${t.BORDER}` }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px" }}>
-            <BackChevronButton style={{ background: t.BTN_BG, border: `1px solid ${t.BORDER_HI}`, color: t.TITLE }} />
-            {/* Title shrinks and truncates so the trailing controls stay on screen */}
-            <span style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Weekly Performance</span>
-            <RefreshButton onRefresh={refreshSelectedWeek} title="Refresh" />
-            <MobileTopActions />
-          </div>
-          <div style={{ display: "flex", gap: 8, padding: "0 12px 10px" }}>
-            <select value={selectedWeekStart ?? ""} onChange={(e) => setSelectedWeekStart(e.target.value)} style={{ flex: 1, padding: "8px 10px", background: t.INPUT_BG, border: `1px solid ${t.BORDER_HI}`, borderRadius: 8, color: t.TEXT, fontSize: 13 }}>
-              {weeks.map((w) => (
-                <option key={w.weekStartDate} value={w.weekStartDate}>Week of {formatWeekRange(w)}</option>
-              ))}
-            </select>
-          </div>
+  return (
+    <section style={{ background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TITLE, border: `1px solid ${t.BORDER}`, borderRadius: 12, overflow: "hidden" }}>
+      <div style={{ background: t.HEADER, borderBottom: `1px solid ${t.BORDER}` }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px" }}>
+          {/* Title shrinks and truncates so the refresh control stays on screen */}
+          <h2 style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, flex: 1, minWidth: 0, margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Weekly Performance</h2>
+          <RefreshButton onRefresh={refreshSelectedWeek} title="Refresh" />
         </div>
-        {content}
+        <div style={{ display: "flex", gap: 8, padding: "0 12px 10px" }}>
+          <select value={selectedWeekStart ?? ""} onChange={(e) => setSelectedWeekStart(e.target.value)} style={{ flex: 1, padding: "8px 10px", background: t.INPUT_BG, border: `1px solid ${t.BORDER_HI}`, borderRadius: 8, color: t.TEXT, fontSize: 13 }}>
+            {weeks.map((w) => (
+              <option key={w.weekStartDate} value={w.weekStartDate}>Week of {formatWeekRange(w)}</option>
+            ))}
+          </select>
+        </div>
       </div>
-    );
-
+      {content}
+    </section>
+  );
 }

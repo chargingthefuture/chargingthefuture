@@ -12,7 +12,7 @@
 | | |
 |---|---|
 | **Plugin** | Weekly Performance (`weekly-performance`) |
-| **Visibility** | Admin-only — shown in navigation only to admins (in `ADMIN_ONLY_PLUGIN_SLUGS`) |
+| **Visibility** | Not in the apps list for anybody. Admins reach it only through the Adoption tile on the admin index (`/admin/adoption`) |
 | **Roles to test** | admin (and the `operations` role) |
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
@@ -36,10 +36,10 @@
 
 Admin-only analytics plugin — these are the can't-ship-broken checks. Admin / operations role.
 
-1. **Non-admin cannot reach it.** As a plain member, the plugin is not in navigation, and the admin
-   page `/admin/weekly-performance` redirects to `/apps` (there is no member shell to land on); the
+1. **Non-admin cannot reach it.** As a plain member, the plugin is not in the apps list, and the admin
+   page `/admin/adoption`, where the dashboard lives, redirects to `/apps` (there is no member shell to land on); the
    admin-or-operations routes deny with a stable reason. A non-admin or signed-out visitor opening
-   `/apps/weekly-performance` gets a plain 404 — never a public landing/marketing page (the plugin
+   `/apps/weekly-performance` (admins included) gets a plain 404 — never a public landing/marketing page (the plugin
    has no public visitor shell; the unreachable one was deleted 2026-07-15). → web ☐ mobile ☐
 2. **Numbers are always live — no "closed" week.** Open the dashboard. Every week shows live numbers
    computed from that week's activity — there is no "metrics appear when the week closes" placeholder
@@ -52,11 +52,13 @@ Admin-only analytics plugin — these are the can't-ship-broken checks. Admin / 
    before the capture workflow existed reads 0. If a capture could not store a goal reading, the
    workflow run is red and its log shows `goal_snapshot_not_stored` with each goal and the reason;
    a green run means both readings were stored.) → web ☐ mobile ☐
-3. **One surface only — the admin page serves the full dashboard.** Open `/admin/weekly-performance`
-   as an admin: it renders the full dashboard (desktop: week-history sidebar + grouped metric cards; phone: week selector in the sticky header). There is no Export control anywhere
+3. **One surface only — the Adoption screen serves the full dashboard.** Open Adoption, the first
+   tile on the admin index (`/admin/adoption`), as an admin: the Weekly Performance section sits
+   below the steps toward 384 and the daily exchange, with its own title bar holding the refresh
+   control and the week selector, then the grouped metric cards. There is no Export control anywhere
    (the export feature was removed 2026-07-19). Opening
-   `/apps/weekly-performance` as an admin redirects straight to `/admin/weekly-performance` — there
-   is no separate member view, no "Member view" pill, and no "Admin" pill anywhere in the plugin.
+   `/apps/weekly-performance` as an admin gives a 404, and the apps list has no Weekly Performance
+   tile — there is no separate member view, no "Member view" pill, and no "Admin" pill anywhere in the plugin.
    There is **no** "Active week / Set as active week" control and no open/locked/published
    status. → web ☐ mobile ☐
 4. **Numbers, not a spinner.** Metric cards render real values, each with its change from the week
@@ -70,10 +72,10 @@ Admin-only analytics plugin — these are the can't-ship-broken checks. Admin / 
 **Role:** admin (and a plain member to confirm denial) · **Surfaces:** web (desktop), web (mobile-responsive)
 **Seed:** `seed:demo`
 **Steps:**
-1. As a plain member, look for the plugin in navigation and try `/admin/weekly-performance`.
+1. As a plain member, look for the plugin in navigation and try `/admin/adoption`.
 2. As an admin, open the same page.
 3. If an `operations`-role account is available, confirm it also passes.
-**Expected:** The member does not see the plugin in nav; the admin page redirects them to `/apps`
+**Expected:** Nobody, admin or member, sees the plugin in the apps list; the admin page redirects them to `/apps`
 and the read routes deny with a stable reason (`missing_required_role`). The admin sees the full
 dashboard on the admin page (the only surface). The admin gate (`ensureWeeklyPerformanceAdmin`)
 admits `admin` or the `operations` role, matching `requiredRoles: [admin, operations]`.
@@ -83,10 +85,10 @@ As the plain member, call each read route directly — `GET /api/weekly-performa
 (added 2026-10-14; these routes admitted any approved member before).
 **Result:** web ☐ mobile ☐ — notes:
 
-### WP-A1b · Sign-in record screen
+### WP-A1b · Sign-in record section
 **Role:** admin · **Surfaces:** web (mobile-responsive)
 **Steps:**
-1. From the admin index open "Weekly Performance: Sign-in Record" (`/admin/weekly-performance/sign-in-record`).
+1. From the admin index open Adoption (`/admin/adoption`), scroll to the bottom and tap "Sign-in record". It is folded shut until tapped, and nothing under it loads before then.
 2. Read the first line, then tap "Read again" and "Copy the reading".
 3. As a plain member, request `/api/weekly-performance/admin/sign-in-record`.
 **Expected:** The first line reads "Your sign-in today is on record" in green with a UTC time; if it

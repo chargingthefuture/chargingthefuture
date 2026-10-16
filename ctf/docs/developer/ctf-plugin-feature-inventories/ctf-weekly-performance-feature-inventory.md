@@ -68,15 +68,15 @@ Admin-or-operations routes (`ensureWeeklyPerformanceAdmin` admits `isAdmin` or t
 
 - `PUT /api/weekly-performance/admin/week-selection` — marks a week active (body `{ weekStartDate }`); requires the `x-ctf-csrf: '1'` header and writes a `weekly-performance.admin.week.select` audit row.
 - `GET /api/weekly-performance/admin/sign-in-record` — the sign-in record (`login_events`) as a
-  health check, for the screen at `/admin/weekly-performance/sign-in-record` (linked from the admin
-  index as "Weekly Performance: Sign-in Record"). Runs the once-per-day sign-in write for the
+  health check, for the Sign-in record section at the foot of the Adoption screen
+  (`/admin/adoption`), folded shut until tapped so a visit does not write a sign-in. Runs the once-per-day sign-in write for the
   calling admin (`recordLoginEventNow`, the same statement the identity gate fires) and returns the
   outcome with the database's own error text when it fails; then totals, today, the current week
   exactly as the dashboard computes it (`countMemberDaysInWeek` / `countActiveMembersInWeek` /
   `elapsedDaysInWeek`), the last fourteen days of distinct members per UTC day, and whether the v2
   foreign key `login_events_user_id_fkey` is present. Aggregate only; the one per-member fact is
   the caller's own row for today. Audits `weekly-performance.admin.sign_in_record.get`
-  (`lib/engagement/sign-in-record.ts`, `components/weekly-performance/wp-sign-in-record-shell.tsx`).
+  (`lib/engagement/sign-in-record.ts`, `components/weekly-performance/wp-sign-in-record-section.tsx`).
 
 Internal (service-to-service, never member/browser callable):
 
@@ -127,9 +127,9 @@ flow that never shipped, was read by nothing, and was dropped by `post/0035` on 
 
 ## 5) Web and Android Delivery Status
 
-Delivery: **web + mobile-responsive complete**. **Android (React Native) surface removed 2026-07-20 (rule 105, PR #1742)** — this feature is now web-only, served by the installable web app (PWA). Week-selector behavior, current-week polling policy, empty/error semantics, metric definitions, formatting, and deny reasons are served on web (`/admin/weekly-performance` — the single surface). Historical parity detail: these were previously consistent with the former Android surface (`packages/mobile/src/features/weekly-performance`, now removed).
+Delivery: **web + mobile-responsive complete**. **Android (React Native) surface removed 2026-07-20 (rule 105, PR #1742)** — this feature is now web-only, served by the installable web app (PWA). Week-selector behavior, current-week polling policy, empty/error semantics, metric definitions, formatting, and deny reasons are served on web (the Weekly Performance section of `/admin/adoption` — the single surface). Historical parity detail: these were previously consistent with the former Android surface (`packages/mobile/src/features/weekly-performance`, now removed).
 
-Single admin surface (2026-07-18, owner directive): there is exactly one web surface, the admin page `/admin/weekly-performance`, which serves the full dashboard (`weekly-performance-shell.tsx` — sidebar week history, grouped metric cards; the comparison chart was removed 2026-09-24). `/apps/weekly-performance` renders nothing: it redirects admins to the admin page and still 404s everyone else (admin-only gate). The thin review shell `wp-admin-shell.tsx` and the admin↔member cross-links ("Member view" pill, "Admin" pill, sidebar "Manage weeks") were deleted.
+Single admin surface (2026-07-18, owner directive): there is exactly one web surface, the Weekly Performance section of the admin Adoption screen `/admin/adoption` (since 2026-10-16; `/admin/weekly-performance` before), which serves the full dashboard (`weekly-performance-section.tsx` — a title bar with refresh and the week selector, grouped metric cards; the comparison chart was removed 2026-09-24). Weekly Performance is not an app: since 2026-10-16 it has no row in `ctf_plugin_registry` (deleted by `post/0065_plugin_registry_delete_weekly_performance.sql`), no tile in the apps list for anybody, and `/apps/weekly-performance` is a plain 404 for everyone. The thin review shell `wp-admin-shell.tsx` and the admin↔member cross-links ("Member view" pill, "Admin" pill, sidebar "Manage weeks") were deleted.
 
 Web pixel pass (design `c5d83c0`): the user-facing shell is rebuilt to `design/.../survivor-hub/WeeklyPerformance.tsx` and its Empty/Loading states — icon rail, week-history sidebar, metric cards, a this-week-vs-last-week comparison chart, and a week-summary right rail. Week selection drives `GET /api/weekly-performance/weeks`, `/current-week`, and `/metrics` (with `compareWeekStartDate` for per-metric deltas); admin export opens `GET /api/weekly-performance/export`. Real data only — the mockup's fabricated daily series became a real per-metric current-vs-compare chart scaled relative to the max value in view, metric labels are humanized from `metric_key` (no label column exists), and the unbacked "Top Apps" widget was omitted rather than faked. Decomposed into modular sub-components within the rule-116 limits.
 
@@ -244,6 +244,22 @@ V2's "verified" and "approved" member counts are intentionally omitted: V3's `us
 4. Contract gap: the shipped `PUT /api/weekly-performance/admin/week-selection` route (audit command `weekly-performance.admin.week.select`) is not represented in `docs/contracts/WEEKLY_PERFORMANCE_PLUGIN_COMMAND_CONTRACTS.yaml`, which lists only `week.list`, `week.get`, `metrics.get`, and `comparison.get`. The week-selection command should be added to the command/access/audit contracts.
 
 ## 8) Change Log
+
+- 2026-10-16: **Weekly Performance moves onto the Adoption screen (owner decision).** The admin
+  tiles Daily Exchange and Badge, Weekly Performance and Weekly Performance: Sign-in Record are
+  replaced by one tile, Adoption, pinned first on the admin index. `/admin/adoption` shows the steps
+  toward 384 on top, then the daily exchange and badge, then this dashboard
+  (`weekly-performance-section.tsx`, its own back control and top actions removed and its title bar
+  no longer sticky), then the sign-in record, folded shut and loaded only when tapped because
+  reading it writes the admin's own sign-in. `/admin/weekly-performance` and
+  `/admin/weekly-performance/sign-in-record` are deleted with no redirect (owner decision), and
+  Weekly Performance stops being an app: its `ctf_plugin_registry` row is deleted
+  (`post/0065_plugin_registry_delete_weekly_performance.sql`, and `schema.sql` no longer seeds it),
+  along with its entry in the in-code registry fallback, the plugin catalog, the parity contracts,
+  the admin-only list and the launcher icons, so it has no tile in the apps list and
+  `/apps/weekly-performance` is a 404 for everyone (owner decision: one place, the Adoption tile).
+  Its data, routes, contracts and audit trail are unchanged. `wp-loading.tsx` is deleted: the
+  section shows a line of text while it loads rather than the full-screen loader.
 
 - 2026-10-12: **A goal snapshot that was not stored now fails the scheduled run (#2934, #2938).** The capture route wrote the goal rows only as a side effect of `computeLiveWeekMetrics`, whose snapshot write logged a failure with `console.error` and carried on, and which skipped the write when the table was missing; the route answered 200 either way, so `weekly-performance-goal-snapshot.yml` stayed green while the week's reading was lost. Past weeks cannot be recomputed, so the workflow's "the next day's run covers a missed day" safety net needs a missed day to show red. The route now calls `captureCurrentWeekGoalSnapshots`, which returns each goal that was not stored with its reason, and answers 503 naming them. The dashboard read keeps returning the live value on a failed write, and now reports that failure through `reportError` instead of `console.error`. Both failure responses carry `failureReason(error)` instead of the fixed "Snapshot capture failed". No schema change.
 - 2026-10-14: **The read routes are admin and operations only, and the audit trail is classified for account deletion (code review #2832, #2848).** `GET /api/weekly-performance/weeks`, `/weeks/[weekStart]`, `/current-week` and `/metrics` called `requireWeeklyPerformanceReadAccess`, the plain Unlock gate, so any approved member could read every dashboard aggregate (the Foundation calls count included) and trigger the goal snapshot write. They now call `requireWeeklyPerformanceAdminAccess`, matching the access policy's `requiredRoles: [admin, operations]` and the admin-only page. `weekly_performance_audit_trail` is added to the plugin's account deletion registry entry as `retain`, like the sibling admin audit trails; its id column is `actor_id`, which the registry gate (looking for `*user_id`) did not catch.

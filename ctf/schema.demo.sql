@@ -2971,7 +2971,6 @@ INSERT INTO ctf_plugin_registry (plugin_slug, display_name, summary, availabilit
   ('trust-transport',    'TrustTransport',       'Vetted transportation for safe travel. Drivers screened by the community, for the community.',                           'implemented_shell', 100, TRUE),
   ('peer-programming',   'PeerProgramming',     'Weekly global mastermind sessions.',                            'implemented_shell', 110, TRUE),
   ('mood',               'Mood',                 'Anonymous mood tracking and pattern awareness. Know yourself. See patterns. Take back control.',                        'implemented_shell', 120, TRUE),
-  ('weekly-performance', 'Weekly Performance',   'Week selection/guardrails with metrics, comparisons, and export gate checks.',                    'implemented_shell', 140, TRUE),
   ('gdp',                'GDP',                  'Real time global survivor economic tracker. Your contributions counted, recorded, visible.',                        'implemented_shell', 150, TRUE),
   ('service-credits',    'ServiceCredits',      'Alternative economy and credits exchange. Trade value inside the network — no outside systems needed.',                             'implemented_shell', 160, TRUE),
   ('skill-up',           'SkillUp',              'Skills-training cohorts with a trainer. Your credit deposit is held and comes back to you as you reach each milestone.','implemented_shell', 170, TRUE),
@@ -10598,4 +10597,15 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_account_external_cleanup_retries_user_slug
 CREATE INDEX IF NOT EXISTS idx_account_external_cleanup_retries_due
   ON account_external_cleanup_retries (next_attempt_at) WHERE given_up_at IS NULL;
 COMMIT;
+
+
+-- ── post migration: 0065_plugin_registry_delete_weekly_performance.sql ──
+-- Weekly Performance is no longer an app (owner decision, 2026-10-16). Its dashboard is a section of
+-- the admin Adoption screen (/admin/adoption) and nowhere else, so its row leaves the registry the
+-- apps list reads. Its data, routes and audit trail are untouched; the Adoption screen reads them.
+--
+-- schema.sql no longer seeds the row. Deleting a row that is already gone changes nothing, so a
+-- second run is safe.
+DELETE FROM ctf_plugin_registry
+WHERE plugin_slug = 'weekly-performance';
 

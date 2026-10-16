@@ -543,7 +543,7 @@ Result: web ☐
 1. As A, look at the card in Done.
 2. Press "It helped".
 3. As B, then as C, open the Goals tab and find the card in Done.
-4. As an admin, open `/admin/daily-exchange` and look at Delivering today.
+4. As an admin, open `/admin/adoption` and look at Delivering today.
 
 **Expected:** Before step 2 A sees "Done by @B. Did it help?" with "It helped", "Keep" and "Send
 back". After step 2 the buttons are gone and A sees "Done by @B · it helped". B sees "Done by you ·

@@ -6,7 +6,7 @@ import { reportError } from 'lib/observability/report';
 export async function GET() {
   try {
     const { plugins, summary } = await listPluginRegistryWithSummary();
-    // Operator-only plugins (e.g. Weekly Performance) are hidden from non-admin viewers so the
+    // Operator-only plugins (e.g. Mutual Time) are hidden from non-admin viewers so the
     // user app launcher never lists them. Admins get the full registry.
     // A failed access read falls back to the member's list (no admin-only tiles), and is reported so
     // an admin who loses those tiles has a reason on record.

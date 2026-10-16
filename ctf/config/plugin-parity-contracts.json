@@ -80,12 +80,6 @@
       "requiresExplicitWebShell": true
     },
     {
-      "slug": "weekly-performance",
-      "mobileFeatureDirs": [],
-      "requiresMobileSurface": false,
-      "requiresExplicitWebShell": true
-    },
-    {
       "slug": "gdp",
       "mobileFeatureDirs": [],
       "requiresMobileSurface": false,
