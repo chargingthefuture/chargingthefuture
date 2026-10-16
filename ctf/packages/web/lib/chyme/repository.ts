@@ -98,6 +98,7 @@ type ParticipantRow = {
   avatar_url: string | null;
   role: 'speaker' | 'listener';
   hand_raised: boolean;
+  mic_on: boolean | null;
   joined_at: Date;
   last_seen_at: Date;
 };
@@ -135,6 +136,7 @@ function mapParticipant(row: ParticipantRow): ChymeParticipant {
     avatarUrl: row.avatar_url,
     role: row.role,
     handRaised: row.hand_raised,
+    micOn: row.mic_on,
     joinedAtIso: row.joined_at.toISOString(),
     lastSeenAtIso: row.last_seen_at.toISOString(),
   };
@@ -392,6 +394,7 @@ export async function listRoomParticipants(client: PoolClient, roomId: string): 
         avatar_url,
         role,
         hand_raised,
+        mic_on,
         joined_at,
         last_seen_at
       FROM chyme_room_members
@@ -799,9 +802,12 @@ export async function markRoomCallJoined(
 // in the background) would put them back into the count, so it passes the same locked cap check
 // the join does and throws ChymeRoomFullError when the room filled meanwhile. A member already
 // counted takes no lock, so the routine beat stays one cheap write.
+// `micOn` is the member's microphone as their app reports it with the beat; undefined (an app older
+// than the field) leaves the stored value alone.
 export async function touchRoomPresence(
   identity: IdentityInput,
   roomKey: string = CHYME_MAIN_ROOM_KEY,
+  micOn?: boolean,
 ): Promise<void> {
   await withDbTransaction(async (client) => {
     const room = await ensureRoom(client, roomKey);
@@ -810,6 +816,9 @@ export async function touchRoomPresence(
       await lockRoomAndAssertSpot(client, room.id, identity.userId);
     }
     const credited = await upsertMember(client, room.id, identity);
+    if (micOn !== undefined) {
+      await client.query('UPDATE chyme_room_members SET mic_on = $3 WHERE room_id = $1 AND user_id = $2', [room.id, identity.userId, micOn]);
+    }
     // Each heartbeat is one participant's connected time since the last one; this is the minute
     // meter's only input for members, so it is written here and nowhere else on the member path.
     await recordStreamVideoUsage(client, chymeRoomSurface(roomKey), credited);

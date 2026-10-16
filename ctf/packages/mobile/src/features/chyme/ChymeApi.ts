@@ -12,6 +12,9 @@ type ChymeParticipant = {
   // so it stays true until the member lowers their hand or leaves — unlike a transient Stream
   // reaction. The audio room polls GET /api/chyme/room to show every other member's raised hand.
   handRaised: boolean;
+  // Whether their microphone is on, as their app last reported it with the heartbeat; null when their
+  // app has not reported. Optional so an older server answer (without the field) still renders.
+  micOn?: boolean | null;
 };
 
 export type ChymeRole = 'speaker' | 'listener';
@@ -150,10 +153,12 @@ export const CHYME_HEARTBEAT_STOP_CODES: readonly string[] = ['CHYME_REMOVED_FRO
 
 export type ChymeHeartbeatResult = { ok: boolean; code: string | null; message: string | null };
 
-export async function postChymeHeartbeat(scope: ChymeRoomScope = 'main'): Promise<ChymeHeartbeatResult> {
+// Each beat carries whether the microphone is on, so a member who has not joined sees who is muted.
+export async function postChymeHeartbeat(scope: ChymeRoomScope = 'main', micOn?: boolean): Promise<ChymeHeartbeatResult> {
   const response = await authedFetch(withRoom('/api/chyme/heartbeat', scope), {
     method: 'POST',
-    headers: { 'x-ctf-csrf': '1' },
+    headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
+    body: JSON.stringify({ micOn }),
   });
   if (response.ok) return { ok: true, code: null, message: null };
   const body = (await response.json().catch(() => null)) as { code?: unknown; message?: unknown } | null;

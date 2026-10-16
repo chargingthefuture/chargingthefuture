@@ -382,6 +382,7 @@ CREATE TABLE IF NOT EXISTS chyme_room_members (
   avatar_url TEXT NULL,
   role TEXT NOT NULL CHECK (role IN ('speaker', 'listener')),
   hand_raised BOOLEAN NOT NULL DEFAULT FALSE,
+  mic_on BOOLEAN NULL,
   joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   PRIMARY KEY (room_id, user_id)
@@ -389,6 +390,10 @@ CREATE TABLE IF NOT EXISTS chyme_room_members (
 -- Persistent raise-hand state: a raised hand must stay up for everyone until the member
 -- lowers it or leaves. Guarded for legacy DBs that pre-date the column.
 ALTER TABLE IF EXISTS chyme_room_members ADD COLUMN IF NOT EXISTS hand_raised BOOLEAN NOT NULL DEFAULT FALSE;
+-- Whether the member's microphone is on, as their app reports it with each presence heartbeat, so
+-- somebody who has not joined yet can see who is muted (owner decision, 2026-10-16). NULL until the
+-- app reports, which an app version older than the column never does.
+ALTER TABLE IF EXISTS chyme_room_members ADD COLUMN IF NOT EXISTS mic_on BOOLEAN NULL;
 CREATE INDEX IF NOT EXISTS idx_chyme_room_members_room_id ON chyme_room_members(room_id);
 CREATE INDEX IF NOT EXISTS idx_chyme_room_members_user_id ON chyme_room_members(user_id);
 CREATE TABLE IF NOT EXISTS chyme_messages (
