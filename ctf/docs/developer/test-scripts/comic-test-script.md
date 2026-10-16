@@ -243,6 +243,28 @@ wrong, not Quora.
 
 ---
 
+## CMC-A1c · Accepting writing that matches a switched-off entry says what happened to it
+**Role:** admin · **Precondition:** two test members, A and B, who can share the same post text.
+**Steps:**
+1. Member A shares a post; accept it. Member A then withdraws it from `/knowledge`.
+2. Member B shares the same post text; accept it.
+3. In `/admin/comic/knowledge`, switch that entry off. Member C shares the same text again; accept it.
+4. Switch the entry back on, then have member C and then member B withdraw their writing.
+**Expected:**
+- After step 1 the entry is off in `/admin/comic/knowledge`.
+- After step 2 the review screen says the post was **switched back on** because the member who
+  shared it first had withdrawn it. The entry is on again.
+- After step 3 the review screen says the post **matched an entry an admin switched off, so it stays
+  off**, and the entry is still off.
+- After step 4 the entry stays on when member C withdraws (C only pointed at it) and goes off when
+  member B withdraws (the entry was handed to B's writing at step 2).
+- The `comic.contribution.review` audit rows carry `revived` and `matchedSwitchedOff` with those
+  counts.
+
+**Result:** web ☐
+
+---
+
 ## CMC-A1b · Writing accepted before Unlock gets its credits when the member is approved
 **Role:** admin · **Precondition:** a contribution from a member who is not verified yet was accepted
 (step 5 above), so it is in the library with no credits.
