@@ -15,6 +15,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, Animated, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { authedFetch } from '../../auth/authedFetch';
+import { reportError } from '../../observability/report';
 
 const INVITES_PATH = '/api/directory/invites/public';
 const APPEAR_DELAY_MS = 2500;
@@ -58,8 +59,9 @@ function useInvites(): { invites: InviteCard[]; visible: boolean; hide: () => vo
         setInvites(list);
         appearTimer = setTimeout(() => setVisible(true), APPEAR_DELAY_MS);
       })
-      .catch(() => {
-        /* additive: no list, no card */
+      .catch((error) => {
+        // Additive: no list, no card. The failure is still recorded.
+        reportError(error, { area: 'invites', op: 'popup_list_load' });
       });
     return () => {
       canceled = true;
