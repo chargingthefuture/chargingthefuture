@@ -3061,32 +3061,6 @@ ALTER TABLE IF EXISTS skills_taxonomy_skills ADD COLUMN IF NOT EXISTS is_active 
 ALTER TABLE IF EXISTS skills_taxonomy_skills ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS skills_taxonomy_skills ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
-CREATE TABLE IF NOT EXISTS skills_taxonomy_consumer_bindings (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  target_type TEXT NOT NULL,
-  target_id UUID NOT NULL,
-  consumer_plugin TEXT NOT NULL,
-  reference_count INTEGER NOT NULL DEFAULT 1,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-ALTER TABLE IF EXISTS skills_taxonomy_consumer_bindings ADD COLUMN IF NOT EXISTS id UUID;
-ALTER TABLE IF EXISTS skills_taxonomy_consumer_bindings ADD COLUMN IF NOT EXISTS target_type TEXT;
-ALTER TABLE IF EXISTS skills_taxonomy_consumer_bindings ADD COLUMN IF NOT EXISTS target_id UUID;
-ALTER TABLE IF EXISTS skills_taxonomy_consumer_bindings ADD COLUMN IF NOT EXISTS consumer_plugin TEXT;
-ALTER TABLE IF EXISTS skills_taxonomy_consumer_bindings ADD COLUMN IF NOT EXISTS reference_count INTEGER NOT NULL DEFAULT 1;
-ALTER TABLE IF EXISTS skills_taxonomy_consumer_bindings ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE IF EXISTS skills_taxonomy_consumer_bindings ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-UPDATE skills_taxonomy_consumer_bindings
-SET target_type = 'unknown'
-WHERE target_type IS NULL;
-UPDATE skills_taxonomy_consumer_bindings
-SET target_id = gen_random_uuid()
-WHERE target_id IS NULL;
-UPDATE skills_taxonomy_consumer_bindings
-SET consumer_plugin = 'unknown'
-WHERE consumer_plugin IS NULL;
-
 CREATE TABLE IF NOT EXISTS skills_taxonomy_flattened_projection (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   sector_id UUID NOT NULL,
@@ -7057,15 +7031,6 @@ ALTER TABLE IF EXISTS contributions_audit_log ADD COLUMN IF NOT EXISTS action TE
 ALTER TABLE IF EXISTS contributions_audit_log ADD COLUMN IF NOT EXISTS target_submission_id UUID;
 ALTER TABLE IF EXISTS contributions_audit_log ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
 ALTER TABLE IF EXISTS contributions_audit_log ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-
--- skills_taxonomy_dependency_graph view — defined at the END so its source table
--- (skills_taxonomy_consumer_bindings, created above) already exists. Defining it at the
--- top of the file made a fresh-DB `migrate:schema` fail: the view referenced a table
--- that had not been created yet.
-CREATE OR REPLACE VIEW skills_taxonomy_dependency_graph AS
-  SELECT target_type, target_id, sum(reference_count)::integer AS total_references, max(updated_at) AS snapshot_at
-  FROM skills_taxonomy_consumer_bindings
-  GROUP BY target_type, target_id;
 
 -- === account_restrictions (platform-wide trust & safety signal) ===
 -- One canonical record of whether a member is restricted, and at what scope. The auth gate blocks an

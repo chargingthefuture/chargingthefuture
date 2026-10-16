@@ -34,7 +34,7 @@ and code review cover those).
   and on demand, via `.github/workflows/unit-tests.yml`. A failure files a `test-failure` GitHub issue
   rather than blocking anything. Run locally with `pnpm --dir ctf -r run test`.
 - **Adding a core to this list is an owner decision.** Pick the next target by settledness + logic
-  value (e.g. SkillsHunt reward/leaderboard, Skills Taxonomy dependency-impact), not by coverage count.
+  value (e.g. SkillsHunt reward/leaderboard), not by coverage count.
 
 ## Release Readiness
 - Confirm contract compatibility for web/mobile/backend versions.

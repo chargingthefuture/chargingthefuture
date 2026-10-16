@@ -14,7 +14,7 @@
  *      the demo schema has no `users` table (identity is resolved from request headers/cookies).
  *      These statements are suppressed so they neither fail nor silently modify prod.
  *   3. Extensions (`pgcrypto`) — idempotent and schema-agnostic; left as-is.
- *   4. Views (`skills_taxonomy_dependency_graph`) — already at the end of schema.sql so the
+ *   4. Views (e.g. `directory_public_skill_counts`) — already at the end of schema.sql so the
  *      source table exists when the view is created; no special handling needed.
  *   5. Data-migration DO blocks that guard with `table_schema = 'public'` then update unqualified
  *      table names (e.g. lighthouse `move_in_date` → `desired_move_in_date`). The guard is

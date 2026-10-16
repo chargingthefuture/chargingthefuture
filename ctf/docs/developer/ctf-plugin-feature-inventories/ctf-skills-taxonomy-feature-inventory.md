@@ -19,7 +19,7 @@ This plugin must:
 1. provide governed hierarchy CRUD for taxonomy entities,
 2. provide stable hierarchy and flattened read models for downstream consumers,
 3. enforce destructive-action safeguards before deletes,
-4. enforce dependency-impact checks to protect cross-app compatibility.
+4. check live references before a deactivation, when the change list is applied, to protect cross-app compatibility.
 
 ---
 
@@ -63,7 +63,6 @@ Command groups:
 
 1. `skills-taxonomy.hierarchy.get`
 2. `skills-taxonomy.flattened.get`
-3. `skills-taxonomy.dependency-impact.preview`
 
 ### 2.2 HTTP Projection Routes
 
@@ -79,8 +78,6 @@ Admin routes:
 - `GET /api/skills-taxonomy/admin/skills/:id`
 **Every admin route is a read.** The write routes were removed 2026-08-28 (governance-plan task 7); the taxonomy is changed only through the append-only change list.
 
-- `GET /api/skills-taxonomy/admin/dependency-impact` — query params `targetType`, `targetId`, and `operation` (one of `delete`/`deactivate`); all three are required and validated.
-
 Consumer routes:
 
 - `GET /api/skills-taxonomy/hierarchy`
@@ -92,7 +89,7 @@ Consumer routes:
 1. Core taxonomy entities: sectors, job titles, skills.
 2. Read model projections: hierarchy model and flattened model.
 3. Downstream dependency inventory includes Directory, Workforce, and any approved plugin selector surfaces.
-4. Delete/update operations require dependency-impact checks before commit.
+4. A deactivation in the change list is checked against live references when it is applied (`scripts/lib/applyTaxonomyChange.mjs` counts `directory_profile_skills` rows for a skill and active skills for a job title).
 5. Contract versioning required when read models change shape.
 6. Compatibility contract requires both hierarchy and flattened feeds to remain maintained for downstream consumers.
 
@@ -101,13 +98,12 @@ Consumer routes:
 The canonical entities live in `skills_taxonomy_sectors`, `skills_taxonomy_job_titles`, and `skills_taxonomy_skills`. Both `skills_taxonomy_sectors` and (since 2026-09-14) `skills_taxonomy_job_titles` carry a nullable `workforce_share`: the sector's is its share of the working population, the job title's is its weight **relative to the other occupations in the same sector** rather than a percentage. NULL means nobody has set one and Workforce counts it as 1, so an unweighted sector splits evenly exactly as it did before the column existed. A job title's weight is set only through the change list (`setOccupationWorkforceShare`), never by an HTTP write. Three further tables back the read model, the dependency tracker, and the audit log:
 
 - `skills_taxonomy_flattened_projection` — a denormalized read model that no code path populates or reads; the flattened feed (`GET /api/skills-taxonomy/flattened`) joins `skills_taxonomy_skills`, `skills_taxonomy_job_titles` and `skills_taxonomy_sectors` directly. One row per skill carrying the full chain: `sector_id`/`sector_name`, `job_title_id`/`job_title_name`, `skill_id`/`skill_name`, `skill_aliases` (jsonb), `is_active`, `created_at`/`updated_at`. Rebuilt from the canonical tables so consumers read one flat shape instead of joining three levels.
-- `skills_taxonomy_consumer_bindings` — the downstream-reference tracker behind the dependency-impact safeguards (§4). Columns: `id`, `target_type` + `target_id` (the taxonomy node referenced), `consumer_plugin` (e.g. `directory`, `workforce`), `reference_count`, `created_at`/`updated_at`. A non-zero `reference_count` is what blocks a hard-delete of a still-referenced node.
 - `skills_taxonomy_change_events` — the append-only audit log of taxonomy mutations. Columns: `id`, `actor_id`, `target_type` + `target_id`, `action`, `reason`, `metadata` (jsonb), `created_at`. `action` is check-constrained to the full vocabulary both writers use: `create`, `update`, `delete` (the app's delete path), `rename`, `reparent`, `deactivate`, `reactivate` (the taxonomy change apply engine); `target_type` is check-constrained to `sector`, `job-title` (hyphen), `skill`. Both checks are `NOT VALID`: they constrain new writes only — the audit log is append-only and historical rows are never rewritten to fit a newer vocabulary. One row per change decision on a sector/job-title/skill, providing the auditable evidence required by §4.5.
 
 ## 4) Destructive-Action and Dependency-Impact Requirements
 
 1. Hard-delete is denied when active downstream references exist beyond approved thresholds.
-2. Pre-delete dependency preview is mandatory for sector/job-title/skill delete actions.
+2. A deactivation above the threshold needs an `acknowledgedImpact` note on the change, checked against the live count at apply time.
 3. High-impact delete paths require elevated role + explicit purpose code.
 4. Policy-safe alternatives (deactivate/rename/reparent) should be available where feasible.
 5. Every destructive decision (allow/deny) must emit auditable evidence.
@@ -119,15 +115,15 @@ The canonical entities live in `skills_taxonomy_sectors`, `skills_taxonomy_job_t
 3. CSRF protection for all taxonomy mutation routes.
 4. Deny-by-default policy enforcement for writes.
 5. Admin action logging is required for sector/job-title/skill create/update/delete mutations.
-6. Audit coverage for create/update/delete and dependency-impact checks.
+6. Audit coverage for create/update/delete.
 7. Request validation and integrity constraints to prevent hierarchy corruption.
 8. Machine reads are a bound consumer, not a valid token. `skills-taxonomy.hierarchy.get` and `.flattened.get` carry a `service` role in the access policy contract, and that role is now enforced: `lib/auth/service-consumer.ts` resolves an `Authorization: Bearer <name>.<secret>` credential against the `TAXONOMY_SERVICE_TOKENS` setting, with the consumer's name carried inside the token so a valid secret under a different name authenticates nothing — the contract's `approved_consumers_only` scope and its `unauthorized_consumer_binding` deny condition. The secret is compared in constant time. Only those two routes hand their request to `lib/skills-taxonomy/read-gate.ts`, so no admin route and no write can be reached by a machine at all; a credential that does not match falls through to the ordinary member path, which is what keeps the mobile app's Clerk bearer token working. The service path is rate-limited per consumer and audits as `service:<name>` with reason `approved_consumer`, never as a member user id. Unset or empty means no machine may read anything.
-9. Durable audit store: the delete path writes one row to `skills_taxonomy_change_events` (see §3.1) as the durable evidence of a destructive decision. The contract `dataAccess`/`dataClassesAccessed` audit data class is named `skills_taxonomy_change_events` to match this real store (there is no `skills_taxonomy_audit_log` table). Create/update/list/preview commands additionally emit a policy-decision audit line via `logSkillsTaxonomyAudit`; only the delete path persists a durable row today.
+9. Durable audit store: the delete path writes one row to `skills_taxonomy_change_events` (see §3.1) as the durable evidence of a destructive decision. The contract `dataAccess`/`dataClassesAccessed` audit data class is named `skills_taxonomy_change_events` to match this real store (there is no `skills_taxonomy_audit_log` table). Create/update/list commands additionally emit a policy-decision audit line via `logSkillsTaxonomyAudit`; only the delete path persists a durable row today.
 
 ## 6) Operator Safety and Destructive Risk
 
 1. Taxonomy mutations are treated as downstream blast-radius operations due to cross-app selector dependencies.
-2. Delete flows require explicit safeguards (dependency-impact preview, policy gates, and role checks) before commit.
+2. Delete flows require explicit safeguards (the live reference check at apply time, policy gates, and role checks) before commit.
 3. Safe alternatives (deactivate/rename/reparent) should be preferred when delete risk exceeds approved thresholds.
 
 ## 7) Web and Android Delivery Status
@@ -152,6 +148,8 @@ Android pixel pass (2026-05-31): the `SkillsTaxonomy` mobile screen is rebuilt f
 3. Read-model evolution has no formal contract versioning process; consumers track shape changes through code review.
 
 ## 10) Change Log
+
+- 2026-10-16: **The dependency-impact preview is removed (#2801).** `GET /api/skills-taxonomy/admin/dependency-impact` decided whether a node could be deleted partly from `skills_taxonomy_consumer_bindings`, which nothing ever wrote, so it called a skill safe to delete while members held it. No screen called the route, and the change list's apply step already counts live references itself. The route, `previewDependencyImpact` and its helpers, the `TaxonomyDependencyImpact` types, the command's entries in the three contracts, the table and its view `skills_taxonomy_dependency_graph` are removed; `post/0066` drops the table and view in production and the demo schema. Nothing a member or admin sees changes.
 
 - 2026-10-14: The browser at `/apps/skills-taxonomy` shows the route's own reason when the hierarchy read fails (an Unlock deny or the 503 outage text) instead of one fixed sentence, and reports the failure with its HTTP status (#2800). The command and audit contracts for `skills-taxonomy.flattened.get` now name the three base tables the route reads instead of `skills_taxonomy_flattened_projection`, which it stopped reading (#2802).
 
@@ -284,7 +282,7 @@ Android pixel pass (2026-05-31): the `SkillsTaxonomy` mobile screen is rebuilt f
 - [x] Implement sector/job-title/skill CRUD endpoints.
   - Acceptance criteria:
     - Parent-child validation and integrity constraints are enforced server-side.
-- [x] Implement dependency-impact preview endpoint.
+- [x] Implement dependency-impact preview endpoint. (Removed 2026-10-16, #2801: no screen called it and it read an empty table.)
   - Acceptance criteria:
     - Preview returns impacted downstream consumers before destructive actions.
 - [x] Enforce deny-by-default policy checks.

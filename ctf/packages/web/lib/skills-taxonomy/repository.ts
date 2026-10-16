@@ -1,12 +1,9 @@
-import type { PoolClient } from 'pg';
 import {
   queryDb,
   withDbTransaction,
 } from 'lib/db/postgres';
 
 import type {
-  TaxonomyDependencyImpact,
-  TaxonomyDependencyTargetType,
   TaxonomyFlattenedItem,
   TaxonomyHierarchyJobTitle,
   TaxonomyHierarchySector,
@@ -57,15 +54,6 @@ type FlattenedRow = {
   skill_name: string;
   skill_aliases: unknown;
   is_active: boolean;
-};
-
-type DependencyInternalRow = {
-  child_job_titles: string;
-  child_skills: string;
-};
-
-type DependencyExternalRow = {
-  known_bindings: string;
 };
 
 export type SectorCreateInput = {
@@ -165,155 +153,6 @@ function mapSkill(row: SkillRow): TaxonomySkill {
     createdAtIso: row.created_at.toISOString(),
     updatedAtIso: row.updated_at.toISOString(),
   };
-}
-
-export function validateDependencyPreviewInput(targetType: string, targetId: string): targetType is TaxonomyDependencyTargetType {
-  if (!targetId || targetId.trim().length === 0) {
-    return false;
-  }
-
-  return targetType === 'sector' || targetType === 'job-title' || targetType === 'skill';
-}
-
-async function previewDependencyImpactWithClient(
-  client: PoolClient,
-  targetType: TaxonomyDependencyTargetType,
-  targetId: string,
-): Promise<TaxonomyDependencyImpact> {
-  await ensureDependencyTargetExists(client, targetType, targetId);
-
-  const { childJobTitles, childSkills } = await fetchInternalDependencyCounts(client, targetType, targetId);
-  const knownBindings = await fetchExternalKnownBindings(client, targetType, targetId);
-  const denyReasons = buildDependencyDenyReasons(childJobTitles, childSkills, knownBindings);
-
-  return {
-    targetType,
-    targetId,
-    reasonRequired: true,
-    internal: {
-      childJobTitles,
-      childSkills,
-    },
-    external: {
-      knownBindings,
-      pending: true,
-    },
-    canDelete: denyReasons.length === 0,
-    denyReasons,
-  };
-}
-
-async function ensureDependencyTargetExists(
-  client: PoolClient,
-  targetType: TaxonomyDependencyTargetType,
-  targetId: string,
-): Promise<void> {
-  if (targetType === 'sector') {
-    await ensureSectorExists(client, targetId);
-    return;
-  }
-
-  if (targetType === 'job-title') {
-    await ensureJobTitleExists(client, targetId);
-    return;
-  }
-
-  await ensureSkillExists(client, targetId);
-}
-
-async function fetchInternalDependencyCounts(
-  client: PoolClient,
-  targetType: TaxonomyDependencyTargetType,
-  targetId: string,
-): Promise<{ childJobTitles: number; childSkills: number }> {
-  const internalResult = await client.query<DependencyInternalRow>(
-    `
-      SELECT
-        CASE
-          WHEN $1::text = 'sector'
-            THEN (
-              SELECT COUNT(*)::text FROM skills_taxonomy_job_titles jt WHERE jt.sector_id = $2
-            )
-          WHEN $1::text = 'job-title'
-            THEN '0'
-          ELSE '0'
-        END AS child_job_titles,
-        CASE
-          WHEN $1::text = 'sector'
-            THEN (
-              SELECT COUNT(*)::text
-              FROM skills_taxonomy_skills sk
-              JOIN skills_taxonomy_job_titles jt ON jt.id = sk.job_title_id
-              WHERE jt.sector_id = $2
-            )
-          WHEN $1::text = 'job-title'
-            THEN (
-              SELECT COUNT(*)::text FROM skills_taxonomy_skills sk WHERE sk.job_title_id = $2
-            )
-          ELSE '0'
-        END AS child_skills
-    `,
-    [targetType, targetId],
-  );
-
-  return {
-    childJobTitles: Number.parseInt(internalResult.rows[0]?.child_job_titles ?? '0', 10),
-    childSkills: Number.parseInt(internalResult.rows[0]?.child_skills ?? '0', 10),
-  };
-}
-
-async function fetchExternalKnownBindings(
-  client: PoolClient,
-  targetType: TaxonomyDependencyTargetType,
-  targetId: string,
-): Promise<number> {
-  const externalResult = await client.query<DependencyExternalRow>(
-    `
-      SELECT COALESCE(SUM(reference_count), 0)::text AS known_bindings
-      FROM skills_taxonomy_consumer_bindings
-      WHERE target_type = $1 AND target_id = $2
-    `,
-    [targetType, targetId],
-  );
-
-  return Number.parseInt(externalResult.rows[0]?.known_bindings ?? '0', 10);
-}
-
-function buildDependencyDenyReasons(
-  childJobTitles: number,
-  childSkills: number,
-  knownBindings: number,
-): string[] {
-  const denyReasons: string[] = [];
-  if (childJobTitles > 0 || childSkills > 0) {
-    denyReasons.push('unresolved_downstream_dependencies');
-  }
-  if (knownBindings > 0) {
-    denyReasons.push('destructive_threshold_exceeded');
-  }
-
-  return denyReasons;
-}
-
-async function ensureSectorExists(client: PoolClient, sectorId: string): Promise<void> {
-  const result = await client.query<{ id: string }>('SELECT id FROM skills_taxonomy_sectors WHERE id = $1', [sectorId]);
-  if (result.rows.length === 0) {
-    throw new Error('sector_not_found');
-  }
-}
-
-async function ensureJobTitleExists(client: PoolClient, jobTitleId: string): Promise<void> {
-  const result = await client.query<{ id: string }>('SELECT id FROM skills_taxonomy_job_titles WHERE id = $1', [jobTitleId]);
-  if (result.rows.length === 0) {
-    throw new Error('job_title_not_found');
-  }
-}
-
-async function ensureSkillExists(client: PoolClient, skillId: string): Promise<void> {
-  const result = await client.query<{ id: string }>('SELECT id FROM skills_taxonomy_skills WHERE id = $1', [skillId]);
-  if (result.rows.length === 0) {
-    throw new Error('skill_not_found');
-  }
 }
 
 export type TaxonomySummary = {
@@ -547,11 +386,4 @@ export async function getFlattened(includeInactive = false, includeAliases = fal
     aliases: includeAliases ? parseAliases(row.skill_aliases) : [],
     isActive: row.is_active,
   }));
-}
-
-export async function previewDependencyImpact(
-  targetType: TaxonomyDependencyTargetType,
-  targetId: string,
-): Promise<TaxonomyDependencyImpact> {
-  return withDbTransaction((client) => previewDependencyImpactWithClient(client, targetType, targetId));
 }
