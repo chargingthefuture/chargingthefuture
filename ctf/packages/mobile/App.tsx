@@ -30,6 +30,7 @@ import { AppHeader } from './src/navigation/AppHeader';
 import { buildFeatureViews } from './src/navigation/feature-views';
 import { pluginOf } from './src/navigation/screens';
 import { useAppNavigation } from './src/navigation/useAppNavigation';
+import { InvitesPopup } from './src/features/invites/InvitesPopup';
 import { StreamVideoRN } from '@stream-io/video-react-native-sdk';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -266,6 +267,9 @@ function AppShell() {
           <ScreenOverrideContext.Provider value={setOverride}>{featureView}</ScreenOverrideContext.Provider>
         </FoundationCallController>
       </View>
+
+      {/* The invitation card the web floats in the corner of every signed-out plugin page. */}
+      {!isAuthenticated && pluginOf(selected) === selected ? <InvitesPopup /> : null}
 
       {/* Both themes are dark, so the clock and icons are always light. 'auto' followed the phone's
           light/dark setting and drew dark icons on the dark bar in light mode. */}
