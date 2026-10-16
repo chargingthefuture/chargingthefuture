@@ -95,7 +95,7 @@ Excluded route groups:
 
 1. The community pulse is computed on read from the existing `mood_submissions` table — no new table or column is added.
 2. The aggregation query reads only `mood_value` and `submitted_at`, grouped by calendar day over the trailing 7 days. It never selects `user_id`, `client_id`, or `note`, so no result can be tied to a person.
-3. A minimum-sample threshold (`MOOD_PULSE_MIN_SAMPLE` = 5 check-ins in the window) gates display; below it the API returns `hasEnoughData: false` and a zeroed day series.
+3. A minimum-sample threshold (`MOOD_PULSE_MIN_SAMPLE` = 5 check-ins in the window) gates display; below it the API returns `hasEnoughData: false` and a zeroed day series. A per-day floor (`MOOD_PULSE_MIN_DAY_SAMPLE` = 3) hides any single day with fewer check-ins (`averageMood: null`, `count: 0`), and the window total, the window average and the 5-check-in gate are all counted from the shown days only, so a hidden day cannot be recovered by subtracting the shown days from the week. The chart says under it that a day with fewer than 3 check-ins shows no average.
 
 ## 5) Security, Privacy, and Compliance Controls
 
@@ -132,6 +132,15 @@ Seed script requirement: Provide a deterministic plugin seed script with dummy d
 2. Multi-device behavior (multiple `clientId`s for one authenticated user) is allowed by current schema; the cooldown is one-per-user via the pseudonym, so multiple devices share one cooldown. No UI affordance to reconcile or merge mood history across devices.
 
 ## 9) Change Log
+
+- 2026-10-16: **The community pulse hides a day with fewer than 3 check-ins (owner decision,
+  #2773).** The 5-check-in minimum applied to the week as a whole, so once it was met every day was
+  shown with its own average and count, and a day holding one check-in showed that member's exact
+  mood under its date. Now `MOOD_PULSE_MIN_DAY_SAMPLE` (3) hides such a day, and the week's total,
+  average and the 5-check-in gate count only the shown days: with the week figure taken over every
+  day, a hidden day's value would have followed by subtraction. A line under the chart says why a
+  day is blank. At today's numbers most days are blank. Test `lib/mood/community-pulse.test.ts`;
+  test case MD-5 updated.
 
 - 2026-10-15: **The signed-out page says weekly (owner-approved copy fix, #2780).** The intro on `mood-public-shell.tsx` said daily check-ins unlock resources and gentle nudges. The cooldown is seven days (`MOOD_COOLDOWN_DAYS`) and checking in unlocks nothing, so the sentence now reads "One check-in a week, and a community-wide picture of how members are doing." Nothing else on the page changed.
 - 2026-10-15: **Cooldown holds when two submits arrive together; eligibility contract matches the route** (#2775, #2777). `createMoodSubmission` (`lib/mood/repository.ts`) now reads the last check-in and inserts the new one in one transaction behind `pg_advisory_xact_lock` on the pseudonym, so a double tap or two open tabs store one check-in and the second gets `cooldown_active` (409) instead of both passing the read and both inserting. The `mood.check.eligibility.fetch` contract output now names the fields the route has always returned, `cooldownUntilIso` and `lastSubmissionAtIso` (both nullable), in place of a `nextEligibleAt` field nothing produced. Test script case MD-4a added.

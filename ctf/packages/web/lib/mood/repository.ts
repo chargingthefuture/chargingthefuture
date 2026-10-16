@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto';
 import type { PoolClient } from 'pg';
 import { queryDb, withDbTransaction } from 'lib/db/postgres';
-import { MOOD_COOLDOWN_DAYS, MOOD_PULSE_MIN_SAMPLE, MOOD_PULSE_WINDOW_DAYS } from './constants';
+import { MOOD_COOLDOWN_DAYS, MOOD_PULSE_MIN_DAY_SAMPLE, MOOD_PULSE_MIN_SAMPLE, MOOD_PULSE_WINDOW_DAYS } from './constants';
 
 // One bucket of the community pulse: a single day in the trailing window with
 // the average mood (1..5) and how many check-ins it is made of. Never any
@@ -27,17 +27,13 @@ type MoodPulseBucket = { sum: number; count: number };
 
 type MoodPulseRow = { day: string; avg_mood: string; count: string };
 
-// Fold the per-day query rows into a lookup by ISO date plus running totals.
+// Fold the per-day query rows into a lookup by ISO date.
 // Rows with a non-finite/zero count or a non-finite average are skipped, exactly
 // as the inline loop did, so nothing but real check-in data reaches the series.
 function aggregateMoodPulseRows(rows: MoodPulseRow[]): {
   byIso: Map<string, MoodPulseBucket>;
-  totalCount: number;
-  totalSum: number;
 } {
   const byIso = new Map<string, MoodPulseBucket>();
-  let totalCount = 0;
-  let totalSum = 0;
 
   for (const row of rows) {
     const count = Number.parseInt(row.count, 10);
@@ -45,11 +41,9 @@ function aggregateMoodPulseRows(rows: MoodPulseRow[]): {
     if (!Number.isFinite(count) || count <= 0 || !Number.isFinite(avg)) continue;
     const iso = row.day;
     byIso.set(iso, { sum: avg * count, count });
-    totalCount += count;
-    totalSum += avg * count;
   }
 
-  return { byIso, totalCount, totalSum };
+  return { byIso };
 }
 
 // Build a contiguous day series for the entire window so the chart always has
@@ -64,7 +58,9 @@ function buildMoodPulseDaySeries(
     const d = new Date(today);
     d.setUTCDate(d.getUTCDate() - offset);
     const iso = d.toISOString().slice(0, 10);
-    const bucket = byIso.get(iso);
+    // A day under the per-day floor is left out, so a thin day cannot show one member's mood.
+    const found = byIso.get(iso);
+    const bucket = found && found.count >= MOOD_PULSE_MIN_DAY_SAMPLE ? found : undefined;
     days.push({
       dateIso: iso,
       averageMood: bucket ? Math.round((bucket.sum / bucket.count) * 100) / 100 : null,
@@ -94,8 +90,13 @@ export async function getMoodCommunityPulse(): Promise<MoodCommunityPulse> {
     [windowDays],
   );
 
-  const { byIso, totalCount, totalSum } = aggregateMoodPulseRows(result.rows);
+  const { byIso } = aggregateMoodPulseRows(result.rows);
   const days = buildMoodPulseDaySeries(windowDays, byIso);
+  // The week's figures come from the days that are shown, never from the hidden ones: with the week
+  // total and every shown day's average and count, a hidden day's value would follow by subtraction.
+  const shown = [...byIso.values()].filter((bucket) => bucket.count >= MOOD_PULSE_MIN_DAY_SAMPLE);
+  const totalCount = shown.reduce((sum, bucket) => sum + bucket.count, 0);
+  const totalSum = shown.reduce((sum, bucket) => sum + bucket.sum, 0);
 
   const hasEnoughData = totalCount >= MOOD_PULSE_MIN_SAMPLE;
   const averageMood = hasEnoughData && totalCount > 0 ? Math.round((totalSum / totalCount) * 100) / 100 : null;

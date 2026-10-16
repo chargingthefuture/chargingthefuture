@@ -55,6 +55,10 @@ contracts:
       identifiers are returned. Output is withheld (hasEnoughData false, zeroed
       day series) until at least the minimum sample of check-ins exist in the
       window, so a single member can never be inferred from a thin aggregate.
+      A day with fewer than MOOD_PULSE_MIN_DAY_SAMPLE (3) check-ins returns
+      averageMood null and count 0, and the window total and average are taken
+      from the shown days only, so a hidden day cannot be worked out by
+      subtraction (owner decision, 2026-10-16; issue #2773).
     inputSchema: {}
     outputSchema:
       windowDays:
