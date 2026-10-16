@@ -79,33 +79,8 @@ policies:
       - cross_workspace_access
       - unauthorized_consumer_binding
 
-  - pluginId: skills-taxonomy
-    command: skills-taxonomy.dependency-impact.preview
-    version: 1.0.0
-    requiredRoles:
-      - admin
-      - taxonomy_admin
-      - operations
-    attributePolicies:
-      tenancy: same_workspace
-      targetExists: required
-      dependencyGraphFreshness: required
-    consentRequirements:
-      scopes:
-        - skills_taxonomy_admin
-      fallbackLawfulBasis: legitimate_interest
-    regionRestrictions:
-      allowedTransferMechanisms:
-        - local_processing
-        - scc
-    highRiskFlags:
-      containsPHI: false
-      requiresAdditionalAudit: true
-    denyConditions:
-      - insufficient_role
-      - invalid_target
-      - stale_dependency_graph
-
 changelog:
   - date: 2026-02-25
     change: Initial Skills Taxonomy access policy skeleton added with hierarchy integrity, destructive-action safeguards, and dependency-impact enforcement.
+  - date: 2026-10-16
+    change: Removed skills-taxonomy.dependency-impact.preview. No screen called it, and it summed skills_taxonomy_consumer_bindings, which nothing wrote, so it reported a skill as safe to delete while members held it. The route, the table and its view skills_taxonomy_dependency_graph are removed (#2801).

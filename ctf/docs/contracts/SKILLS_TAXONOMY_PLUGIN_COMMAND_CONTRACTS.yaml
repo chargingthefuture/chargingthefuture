@@ -74,36 +74,6 @@ contracts:
     retentionClass: derived_short_lived
     idempotency: true
 
-  - pluginId: skills-taxonomy
-    command: skills-taxonomy.dependency-impact.preview
-    version: 1.0.0
-    description: Preview cross-plugin dependency impact before sector, job title, or skill destructive changes.
-    inputSchema:
-      targetType:
-        type: string
-        required: true
-      targetId:
-        type: string
-        required: true
-      operation:
-        type: string
-        required: true
-    outputSchema:
-      targetType:
-        type: string
-      targetId:
-        type: string
-      impactedConsumers:
-        type: array
-      riskLevel:
-        type: string
-    dataAccess:
-      - skills_taxonomy_dependency_graph
-      - skills_taxonomy_consumer_bindings
-    purpose: taxonomy_dependency_governance
-    retentionClass: audit_long_lived
-    idempotency: true
-
 changelog:
   - date: 2026-02-25
     change: Initial Skills Taxonomy command contract skeleton added with hierarchy reads, CRUD commands, and dependency-impact preview governance.
@@ -111,3 +81,5 @@ changelog:
     change: Reconciled the audit data class name from skills_taxonomy_audit_log to skills_taxonomy_change_events to match the actual durable audit store written by the delete path; no skills_taxonomy_audit_log table exists.
   - date: 2026-10-14
     change: skills-taxonomy.flattened.get dataAccess now names skills_taxonomy_skills, skills_taxonomy_job_titles and skills_taxonomy_sectors, the three base tables getFlattened joins; it no longer reads skills_taxonomy_flattened_projection.
+  - date: 2026-10-16
+    change: Removed skills-taxonomy.dependency-impact.preview. No screen called it, and it summed skills_taxonomy_consumer_bindings, which nothing wrote, so it reported a skill as safe to delete while members held it. The route, the table and its view skills_taxonomy_dependency_graph are removed (#2801).
