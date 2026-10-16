@@ -161,8 +161,6 @@ User routes:
 - `POST /api/feed/community/posts` — body accepts an optional `replyToPostId` (the id of the peer post this one quotes, Signal-style). Validated server-side to reference an existing post; rejected with 400 when malformed or unknown.
 - `POST /api/feed/community/posts/:postId/reply`
 - `POST /api/commons/messages/:postId/reactions` — toggle the requesting member's emoji reaction on a Commons community post. Body `{ emoji }`; the emoji must be in the fixed quick set (👍 ❤️ 😂 🎉 🙏 😢 👋 💯), else 400. A second toggle of the same emoji removes it. Hub access gate + `x-ctf-csrf: '1'`. Returns `{ ok, reacted }`. Reactions are stored in our own database (`feed_community_post_reactions`), not Stream.
-- `POST /api/feed/stream` — mint Stream chat credentials for the announcements channel (`ctf-feed-announcements`)
-- `POST /api/questions/stream` — mint Stream chat credentials for the questions channel (`ctf-feed-questions`); used by the mobile Questions screen
 
 Public (unauthenticated) routes:
 
@@ -222,7 +220,7 @@ Admin routes:
   it). **There is no admin edit route**: a moderator may take content out of view, never rewrite a
   member's words while leaving the member's name on them.
 - `PATCH /api/feed/admin/questions/:questionId` — admin re-labels a feed question's category (`relabelQuestionCategory`). Body `{ category }` validated against the allowed feed question categories (else 400); the question id must be a UUID (else 400); admin-gated (`requireFeedAdminAccess`) + `x-ctf-csrf: '1'`; 404 when the question id is unknown. Writes a `feed.question.category.relabel` audit row.
-- `POST /api/feed/membership/events` — records a member join/leave membership event for the feed personalization layer (`emitMembershipEvent`, writing `feed_membership_events` and fanning out to Stream when configured). Body `{ userId, pluginId, eventType: 'join' | 'leave', requestId?, traceId? }` (`eventType` defaults to `join`; `userId` and `pluginId` required, else 400); admin-gated (`requireFeedAdminAccess`) + `x-ctf-csrf: '1'`. Returns `{ ok, streamEmitted }`.
+- `POST /api/feed/membership/events` — records a member join/leave membership event for the feed personalization layer (`emitMembershipEvent`, writing `feed_membership_events`, `announcement_membership_events` and `announcement_delivery_events`; nothing is sent to Stream since 2026-10-16). Answers `{ ok: true }`. Body `{ userId, pluginId, eventType: 'join' | 'leave', requestId?, traceId? }` (`eventType` defaults to `join`; `userId` and `pluginId` required, else 400); admin-gated (`requireFeedAdminAccess`) + `x-ctf-csrf: '1'`. Returns `{ ok, streamEmitted }`.
 
 ---
 
@@ -725,6 +723,19 @@ All three feed channels (announcements, questions, community) are shipped on web
     this failure mode and how `moderation_status` sat dead for months.
   - **Parity:** web + mobile-responsive; Android out of scope (web-only per rule 105).
 ### Change Log
+
+- 2026-10-16: **The Feed's unused Stream parts are removed; Stream is kept for the Commons typing
+  indicator only (owner decision; follow-up to code-review #2732).** Commons messages were already
+  Postgres-only. Removed: `POST /api/feed/stream` and `POST /api/questions/stream`, which minted
+  Stream credentials for the announcements and questions channels and had no caller on web or
+  Android; `emitFeedMembershipEventToStream`, which sent each membership event to the
+  `ctf-feed-membership-events` Stream channel that nothing read, so `POST /api/feed/membership/events`
+  and `POST /api/announcements/membership/events` now answer `{ ok: true }` without `streamEmitted`;
+  and the announcements/questions channel keys in `getFeedStreamCredentials`, which now serves the
+  community channel only. Separately, the Commons home chat and the contributor channel used to slow
+  their 10-second check for new posts to 30 seconds while the Stream connection was up, waiting on a
+  new-message event that never arrives because no message is posted to Stream; both now check every
+  10 seconds always. The `feed-<userId>` Stream user and its deletion cleanup stay.
 
 - 2026-07-31 (latest): **Copy preview — render member-facing text before it ships (owner request).** Two
   defects reached members in a day (sentences chopped mid-clause; a card that swallowed the screen), and

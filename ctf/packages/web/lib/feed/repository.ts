@@ -32,7 +32,6 @@ import { normalizeMultilineText } from './normalize';
 import { insertCommunityPostImage, loadCommunityPostImages, type FeedCommunityImage } from './community-images';
 import { toCommonsMessageImage } from 'lib/commons/message-image';
 import { generateFeedAssistedAnswer, inferFeedQuestionCategory } from './inference';
-import { emitFeedMembershipEventToStream } from './stream';
 import { getPluginBySlug, getPluginRoute, isAdminOnlyPlugin } from 'lib/plugins/repository';
 import { notifySafe } from 'lib/notifications/repository';
 import { isBlockedBetween } from 'lib/blocks/repository';
@@ -2921,7 +2920,9 @@ export async function emitMembershipEvent(input: {
   eventType: MembershipEventType;
   requestId: string | null;
   traceId: string | null;
-}): Promise<{ streamEmitted: boolean }> {
+}): Promise<void> {
+  // Recorded in Postgres only. It was also sent to a Stream channel that nothing read (removed
+  // 2026-10-16).
   await withDbTransaction(async (client) => {
     await client.query(
       `
@@ -2949,9 +2950,6 @@ export async function emitMembershipEvent(input: {
       [JSON.stringify({ userId: input.userId, pluginId: input.pluginId, eventType: input.eventType }), input.actorId],
     );
   });
-
-  const streamEmitted = await emitFeedMembershipEventToStream(input);
-  return { streamEmitted };
 }
 
 export function isValidFeedChannel(value: string | null): value is FeedChannel {
