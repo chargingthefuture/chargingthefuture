@@ -15,6 +15,8 @@
 // reviewed. The export envelope says this in its `notes` so the file is honest about what it holds.
 //
 //   - delete / soft-delete / pseudonymize → SELECT * FROM <table> WHERE <userColumn> = $1
+//   - an entry marked `exportThrough`     → the same read, plus the rows whose linking column
+//     matches the member's rows in a second table (Mood check-ins, stored under a pseudonym)
 //   - an entry marked `exportable: false`  → no operation (rows written by someone else about the
 //     member, or another person's record the member is only named on; see `notExported` in the
 //     registry)
@@ -35,6 +37,8 @@ export type ExportStatement = {
   readonly userColumn: string;
   /** Parameterized SQL with `$1` bound to the user id. */
   readonly sql: string;
+  /** Set when rows are also found through a second table; see `exportThrough` in the registry. */
+  readonly readThrough?: string;
 };
 
 /**
@@ -45,6 +49,15 @@ export type ExportStatement = {
 export function planTableExport(owned: OwnedTable): ExportStatement | null {
   if (!owned.userColumn || owned.exportable === false) {
     return null;
+  }
+  const through = owned.exportThrough;
+  if (through) {
+    return {
+      table: owned.table,
+      userColumn: owned.userColumn,
+      sql: `SELECT * FROM ${owned.table} WHERE ${owned.userColumn} = $1 OR ${through.column} IN (SELECT ${through.column} FROM ${through.throughTable} WHERE ${through.throughUserColumn} = $1)`,
+      readThrough: `${through.column} in ${through.throughTable}`,
+    };
   }
   return {
     table: owned.table,
@@ -78,6 +91,8 @@ export type ExportTableResult = {
   readonly table: string;
   /** The column the rows were scoped by (self-describing for the reader of the file). */
   readonly userColumn: string;
+  /** Set when rows were also found through a second table, naming the column and that table. */
+  readonly readThrough?: string;
   readonly rowCount: number;
   /** The user's own rows. Date values serialize to ISO strings via JSON.stringify. */
   readonly rows: Record<string, unknown>[];
@@ -99,12 +114,17 @@ export async function executeExportEntry(
   entry: PluginDeletionEntry,
   userId: string,
 ): Promise<ExportServiceResult> {
+  // Mood check-ins hold '' as their user id, so an empty id would match every member's rows.
+  if (!userId) {
+    throw new Error('Account export needs the signed-in member id; it was empty, so nothing was read.');
+  }
   const tables: ExportTableResult[] = [];
   for (const statement of planExport(entry)) {
     const result = await client.query<Record<string, unknown>>(statement.sql, [userId]);
     tables.push({
       table: statement.table,
       userColumn: statement.userColumn,
+      ...(statement.readThrough ? { readThrough: statement.readThrough } : {}),
       rowCount: result.rowCount ?? 0,
       rows: result.rows,
     });

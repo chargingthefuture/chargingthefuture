@@ -73,6 +73,8 @@ function parseSchemaColumns(sql) {
 // this parser does not understand — a raw `{ table: ... }` object literal, or double-quoted
 // builder arguments — it throws instead of silently skipping that entry (which would let an
 // unvalidated table slip past CI). Extend this parser if the registry's shape changes on purpose.
+const exportThroughRefs = [];
+
 function parseRegistry(src) {
   if (/\{\s*table\s*:/.test(src)) {
     throw new Error(
@@ -97,7 +99,15 @@ function parseRegistry(src) {
   // captured entire so each column inside it can be checked against schema.sql like any other.
   const rePseudo = /\bpseudo\(\s*'([^']+)'\s*,\s*'([^']+)'\s*,\s*\[([^\]]*)\]/g;
 
+  // exportThrough('column', 'through_table', 'through_user_column', del(...)) — the export reads the
+  // wrapped table's rows through a second table, so all three names are checked against schema.sql.
+  const reThrough =
+    /\bexportThrough\(\s*'([^']+)'\s*,\s*'([^']+)'\s*,\s*'([^']+)'\s*,\s*(?:del|soft|pseudo)\(\s*'([^']+)'/g;
+
   let m;
+  while ((m = reThrough.exec(src)) !== null) {
+    exportThroughRefs.push({ column: m[1], throughTable: m[2], throughUserColumn: m[3], table: m[4] });
+  }
   while ((m = reDel.exec(src)) !== null) {
     refs.push({ table: m[1], userColumn: m[2], action: 'delete' });
   }
@@ -242,6 +252,23 @@ function main() {
       }
     }
     checked += 1;
+  }
+
+  for (const ref of exportThroughRefs) {
+    const cols = schemaTables.get(ref.table);
+    const throughCols = schemaTables.get(ref.throughTable);
+    if (cols && !cols.has(ref.column)) {
+      fail(`table "${ref.table}" does not have column "${ref.column}" (used by its exportThrough).`);
+    }
+    if (!throughCols) {
+      fail(`table "${ref.throughTable}" is named by exportThrough on "${ref.table}" but does not exist in schema.sql.`);
+    } else {
+      for (const column of [ref.column, ref.throughUserColumn]) {
+        if (!throughCols.has(column)) {
+          fail(`table "${ref.throughTable}" does not have column "${column}" (used by exportThrough on "${ref.table}").`);
+        }
+      }
+    }
   }
 
   if (process.exitCode === 1) {
