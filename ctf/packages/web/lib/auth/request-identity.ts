@@ -66,76 +66,81 @@ async function isMiddlewareAuthenticated(headerStore: Headers): Promise<boolean>
   );
 }
 
+const SIGNED_OUT: RequestIdentity = {
+  isAuthenticated: false,
+  authProvider: 'clerk',
+  userId: null,
+  username: null,
+  firstName: null,
+  lastName: null,
+  role: null,
+  isAdmin: false,
+};
+
+// External API client path (the mobile app): the request carries an `Authorization: Bearer <token>`.
+// The token is CRYPTOGRAPHICALLY verified with Clerk's server SDK and identity comes ONLY from the
+// verified claims, filled from the subject's own Clerk account where the token is silent. Spoofable
+// `x-ctf-user-*` headers are never read on this path, so an external caller cannot forge an identity.
+async function resolveBearerIdentity(authorization: string): Promise<RequestIdentity | null> {
+  const verified = await verifyBearerIdentity(authorization);
+  if (!verified) return null;
+  const role = verified.role ? verified.role.toLowerCase() : null;
+  recordSignIn(verified.userId);
+  return {
+    isAuthenticated: true,
+    authProvider: 'clerk',
+    userId: verified.userId,
+    username: verified.username,
+    firstName: verified.firstName,
+    lastName: verified.lastName,
+    role,
+    isAdmin: role === 'admin',
+  };
+}
+
+// The web Clerk middleware is the ONLY thing allowed to set the managed `x-ctf-*` identity headers:
+// it strips whatever the client sent and rewrites them from the verified Clerk session, marking the
+// request with `x-ctf-authenticated`. So a same-origin web request (SSR/route handler) is already
+// trusted here. We only read the `x-ctf-user-*` identity headers when the middleware confirmed
+// authentication (`x-ctf-authenticated === 'true'`) and stamped the request (see identity-stamp.ts:
+// the middleware's matcher skips paths that look like static files, and on those a client-sent
+// header would arrive untouched). Headers only: a header the middleware left unset (no role or
+// username claim) means the value is absent, never a cookie, since cookies are written by the client.
+function middlewareIdentity(headerStore: Headers): RequestIdentity {
+  const userId = pickFirstNonEmpty(headerStore.get('x-ctf-user-id'));
+  const role = normalizeRole(headerStore.get('x-ctf-user-role'));
+  recordSignIn(userId);
+  return {
+    isAuthenticated: true,
+    authProvider: 'clerk',
+    userId,
+    username: pickFirstNonEmpty(headerStore.get('x-ctf-username')),
+    firstName: pickFirstNonEmpty(headerStore.get('x-ctf-first-name')),
+    lastName: pickFirstNonEmpty(headerStore.get('x-ctf-last-name')),
+    role,
+    isAdmin: role === 'admin',
+  };
+}
+
 export async function resolveRequestIdentity(): Promise<RequestIdentity> {
   const headerStore = await headers();
 
-  // The web Clerk middleware is the ONLY thing allowed to set the managed
-  // `x-ctf-*` identity headers: it strips whatever the client sent and rewrites
-  // them from the verified Clerk session, marking the request with
-  // `x-ctf-authenticated`. So a same-origin web request (SSR/route handler) is
-  // already trusted here. We only read the `x-ctf-user-*` identity headers when
-  // the middleware confirmed authentication (`x-ctf-authenticated === 'true'`)
-  // and stamped the request (see identity-stamp.ts: the middleware's matcher
-  // skips paths that look like static files, and on those a client-sent header
-  // would arrive untouched). Headers only: a header the middleware left unset
-  // (no role or username claim) means the value is absent, never a cookie, since
-  // cookies are written by the client.
-  const middlewareAuthenticated = await isMiddlewareAuthenticated(headerStore);
-
-  if (middlewareAuthenticated) {
-    const userId = pickFirstNonEmpty(headerStore.get('x-ctf-user-id'));
-    const username = pickFirstNonEmpty(headerStore.get('x-ctf-username'));
-    const firstName = pickFirstNonEmpty(headerStore.get('x-ctf-first-name'));
-    const lastName = pickFirstNonEmpty(headerStore.get('x-ctf-last-name'));
-    const role = normalizeRole(headerStore.get('x-ctf-user-role'));
-
-    recordSignIn(userId);
-
-    return {
-      isAuthenticated: true,
-      authProvider: 'clerk',
-      userId,
-      username,
-      firstName,
-      lastName,
-      role,
-      isAdmin: role === 'admin',
-    };
+  // A bearer token is verified here before the middleware's headers are read. Clerk's middleware
+  // accepts the Android app's sign-in token (an OAuth id_token) as a session token too, and that
+  // token carries no role or username, so trusting the middleware's headers for it made every admin
+  // a member on Android: no Admin pill and no admin screens. The bearer path fills both from the
+  // member's Clerk account. The web sends no bearer header, so a web session is unchanged.
+  const authorization = headerStore.get('authorization');
+  if (authorization) {
+    const bearer = await resolveBearerIdentity(authorization);
+    if (bearer) return bearer;
   }
 
-  // External API client path (e.g. the mobile app): the request carries an
-  // `Authorization: Bearer <clerk session token>`. We CRYPTOGRAPHICALLY verify
-  // that token with Clerk's server SDK and derive identity ONLY from the verified
-  // claims. Spoofable `x-ctf-user-*` headers are never read on this path, so an
-  // external caller cannot forge an identity.
-  const verified = await verifyBearerIdentity(headerStore.get('authorization'));
-  if (verified) {
-    const role = verified.role ? verified.role.toLowerCase() : null;
-    recordSignIn(verified.userId);
-
-    return {
-      isAuthenticated: true,
-      authProvider: 'clerk',
-      userId: verified.userId,
-      username: verified.username,
-      firstName: verified.firstName,
-      lastName: verified.lastName,
-      role,
-      isAdmin: role === 'admin',
-    };
+  if (await isMiddlewareAuthenticated(headerStore)) {
+    return middlewareIdentity(headerStore);
   }
 
-  // Unauthenticated.
-  return {
-    isAuthenticated: false,
-    authProvider: 'clerk',
-    userId: null,
-    username: null,
-    firstName: null,
-    lastName: null,
-    role: null,
-    isAdmin: false,
-  };
+  return { ...SIGNED_OUT };
 }
 
 // Lightweight: read only the request's user id from the middleware's headers, for
