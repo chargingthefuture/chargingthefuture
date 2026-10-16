@@ -71,7 +71,6 @@ function ChymeTipDialog({
   onClose: () => void;
 }) {
   const [amount, setAmount] = useState("");
-  const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -106,7 +105,6 @@ function ChymeTipDialog({
         body: JSON.stringify({
           toUserId: recipientUserId,
           amount: numeric,
-          message: message.trim() || undefined,
           idempotencyKey: tipKey,
         }),
       });
@@ -172,15 +170,6 @@ function ChymeTipDialog({
           inputMode="numeric"
           placeholder="e.g. 10"
           aria-label="Tip amount in ServiceCredits"
-          style={fieldStyle}
-        />
-        <label htmlFor="chyme-tip-message" style={{ display: "block", fontSize: 12, color: t.SUBTLE, marginBottom: 6 }}>Message (optional)</label>
-        <input
-          id="chyme-tip-message"
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          placeholder="Say something"
-          aria-label="Optional message with the tip"
           style={fieldStyle}
         />
         {error ? <div role="alert" style={{ fontSize: 12, color: "#EF4444", marginBottom: 10 }}>{error}</div> : null}

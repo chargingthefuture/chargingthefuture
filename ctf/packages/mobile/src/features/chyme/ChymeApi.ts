@@ -183,11 +183,11 @@ type ChymeTipResponse = {
 // Send ServiceCredits peer-to-peer to another room participant (origin_plugin 'chyme'). The transfer
 // delivers immediately; on failure the backend's message (e.g. insufficient balance) is surfaced.
 // `idempotencyKey` is one key per filled-in tip, so a retried press returns the first transfer
-// instead of sending the credits again.
+// instead of sending the credits again. A tip carries no note: nothing free-text travels with a
+// credits send, the same rule as Recurring Activity.
 export async function postChymeTip(
   toUserId: string,
   amount: number,
-  message: string | undefined,
   idempotencyKey: string,
 ): Promise<ChymeTipResponse> {
   return authedFetchJson('/api/chyme/service-credits', {
@@ -197,7 +197,6 @@ export async function postChymeTip(
       toUserId,
       amount,
       idempotencyKey,
-      ...(message && message.trim().length > 0 ? { message: message.trim() } : {}),
     }),
   });
 }

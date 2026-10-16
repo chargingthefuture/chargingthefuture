@@ -149,7 +149,8 @@ Tip action never appears on your own tile or on a listen-only guest. Self-tip is
 amount that is not a finite number above 0, or above the maximum (10000), is rejected (400). A tip
 from a frozen wallet is refused with 403 `chyme_account_restricted` and moves no credits (added
 2026-10-05). Step 5: the recipient receives the amount once, not twice; both presses carry the same
-idempotency key (added 2026-10-14).
+idempotency key (added 2026-10-14). The Tip dialog asks for an amount only, with no message box, on
+web and Android (added 2026-10-16).
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### CH-7 · Signed-out visitor can listen
