@@ -141,10 +141,11 @@ export function AccountDataShell() {
     );
   }, [downloadExport]);
 
-  const handleConfirmFullAccount = useCallback(async () => {
+  const handleConfirmFullAccount = useCallback(async (confirmPhrase: string) => {
     const res = await fetch('/api/account/full-account', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
+      body: JSON.stringify({ confirmPhrase }),
     });
     if (!res.ok) {
       let message = 'Unable to complete full-account deletion. Please try again.';

@@ -120,9 +120,9 @@ export function AccountData({ onBack }: { onBack: () => void }) {
     void downloadExport('/api/account/full-account/export', `ctf-account-data-full-account-${date}.json`, 'full-account');
   }, [downloadExport]);
 
-  const handleConfirmFullAccount = useCallback(async () => {
+  const handleConfirmFullAccount = useCallback(async (confirmPhrase: string) => {
     try {
-      return await deleteFullAccount();
+      return await deleteFullAccount(confirmPhrase);
     } catch (error) {
       if (error instanceof AccountRequestError) throw error;
       throw new Error('Unable to complete full-account deletion. Please try again.');
