@@ -14,6 +14,7 @@ import {
   exchangeCodeAsync,
   makeRedirectUri,
   refreshAsync,
+  TokenError,
   useAuthRequest,
   type DiscoveryDocument,
   type TokenResponse,
@@ -228,6 +229,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
+  // One refresh at a time. When the phone wakes, every screen's poll asks for a token at once;
+  // with a refresh each, the later ones spend a refresh token the first already used, get
+  // rejected, and sign the member out.
+  const refreshRef = useRef<Promise<string | null> | null>(null);
+
+  const refreshSession = useCallback(
+    async (current: StoredSession, refreshToken: string): Promise<string | null> => {
+      if (!discovery || !clientId) return null;
+      try {
+        const refreshed = await refreshAsync(
+          { clientId, refreshToken, scopes: OAUTH_SCOPES },
+          discovery,
+        );
+        const next = buildRefreshedSession(refreshed, current);
+        await persistSession(next);
+        return next.idToken;
+      } catch (caught) {
+        reportError(caught, { area: 'auth', op: 'refresh_session' });
+        // Only a refusal from the sign-in server ends the session. A network failure (the phone
+        // waking before Wi-Fi is back) keeps it, and the next call tries again.
+        if (caught instanceof TokenError) await persistSession(null);
+        return null;
+      }
+    },
+    [clientId, discovery, persistSession],
+  );
+
   // `getToken` returns the stored id_token, refreshing it first when it is
   // expired (or about to expire) and a refresh token is available.
   const getToken = useCallback(async (): Promise<string | null> => {
@@ -243,21 +271,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await persistSession(null);
       return null;
     }
-    try {
-      const refreshed = await refreshAsync(
-        { clientId, refreshToken: current.refreshToken, scopes: OAUTH_SCOPES },
-        discovery,
-      );
-      const next = buildRefreshedSession(refreshed, current);
-      await persistSession(next);
-      return next.idToken;
-    } catch (caught) {
-      // A failed refresh signs the member out, so the reason must not vanish with it.
-      reportError(caught, { area: 'auth', op: 'refresh_session' });
-      await persistSession(null);
-      return null;
+    if (!refreshRef.current) {
+      refreshRef.current = refreshSession(current, current.refreshToken).finally(() => {
+        refreshRef.current = null;
+      });
     }
-  }, [clientId, discovery, persistSession]);
+    return refreshRef.current;
+  }, [clientId, discovery, persistSession, refreshSession]);
 
   // Make the live token available to the plain (non-React) API modules.
   useEffect(() => {
