@@ -30,6 +30,42 @@ function buildFallbackTrust(userId: string): TrustUserExtension {
   };
 }
 
+type AccessDecision = Awaited<ReturnType<typeof evaluatePluginAccess>> | null;
+
+/**
+ * Who the launcher is showing, from the access check. Split out of AppsPage to keep it inside the
+ * complexity budget (rule 116).
+ *
+ * A signed-in member the gate turns away (not yet approved in Unlock, or a restricted account) is
+ * sent to the home page, which already routes them: into Unlock, to the Commons stripped back to the
+ * verification banner, or to /account-closed (owner decision, 2026-10-16; issue #2772). Rendering the
+ * launcher here instead showed them the signed-out screen with Sign In buttons. Only a signed-out
+ * visitor (401), or a failed check, sees the public launcher.
+ *
+ * Operator-only plugins (e.g. Weekly Performance) are kept out of the launcher unless the viewer is
+ * an admin; the matching /apps/<slug> route is admin-gated too, so that is UX, not the security
+ * boundary.
+ */
+function resolveViewer(authDecision: AccessDecision): {
+  allowedUserId: string | null;
+  currentUser: ShellCurrentUser;
+  isAuthenticated: boolean;
+  isAdmin: boolean;
+} {
+  if (authDecision && !authDecision.allowed && authDecision.status === 403) {
+    redirect('/');
+  }
+  if (authDecision && authDecision.allowed) {
+    return {
+      allowedUserId: authDecision.userId,
+      currentUser: buildShellUser(authDecision.userId, authDecision.username),
+      isAuthenticated: true,
+      isAdmin: Boolean(authDecision.isAdmin),
+    };
+  }
+  return { allowedUserId: null, currentUser: buildShellUser('guest', null), isAuthenticated: false, isAdmin: false };
+}
+
 export default async function AppsPage() {
   const pluginsPromise = listPluginRegistry();
   const shellStatsPromise = getGdpShellStats().catch(() => ({ memberCount: null, gdpValueUsd: null }));
@@ -45,29 +81,11 @@ export default async function AppsPage() {
     authDecisionPromise,
   ]);
 
-  // A signed-in member the gate turns away (not yet approved in Unlock, or a restricted account) is
-  // sent to the home page, which already routes them: into Unlock, to the Commons stripped back to the
-  // verification banner, or to /account-closed (owner decision, 2026-10-16; issue #2772). Rendering
-  // the launcher here instead showed them the signed-out screen with Sign In buttons. Only a signed-
-  // out visitor (401) sees the public launcher.
-  if (authDecision && !authDecision.allowed && authDecision.status === 403) {
-    redirect('/');
-  }
-
-  // Operator-only plugins (e.g. Weekly Performance) are kept out of the user launcher unless the
-  // viewer is an admin. The matching /apps/<slug> route is admin-gated too, so this is UX, not the
-  // security boundary.
-  const isAuthenticated = !!(authDecision && authDecision.allowed);
-  const isAdmin = !!(authDecision && authDecision.allowed && authDecision.isAdmin);
-  const visiblePlugins = filterPluginsForViewer(plugins, isAdmin);
-
-  const currentUser = authDecision && authDecision.allowed
-    ? buildShellUser(authDecision.userId, authDecision.username)
-    : buildShellUser('guest', null);
-
-  const trust = authDecision && authDecision.allowed
-    ? await readTrustSelfExtensionOrStored(authDecision.userId).catch(() => buildFallbackTrust(authDecision.userId))
-    : buildFallbackTrust(currentUser.userId);
+  const viewer = resolveViewer(authDecision);
+  const visiblePlugins = filterPluginsForViewer(plugins, viewer.isAdmin);
+  const trust = viewer.allowedUserId
+    ? await readTrustSelfExtensionOrStored(viewer.allowedUserId).catch(() => buildFallbackTrust(viewer.allowedUserId as string))
+    : buildFallbackTrust(viewer.currentUser.userId);
 
   const signInUrl = getHostedSignInUrl() ?? '/';
 
@@ -75,10 +93,10 @@ export default async function AppsPage() {
     <CommunityShell
       initialPlugins={visiblePlugins}
       shellStats={shellStats}
-      currentUser={currentUser}
+      currentUser={viewer.currentUser}
       trust={trust}
-      isAuthenticated={isAuthenticated}
-      isAdmin={isAdmin}
+      isAuthenticated={viewer.isAuthenticated}
+      isAdmin={viewer.isAdmin}
       signInUrl={signInUrl}
       initialSection="apps"
     />
