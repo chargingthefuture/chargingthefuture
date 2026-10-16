@@ -17,3 +17,9 @@ export const MOOD_PULSE_WINDOW_DAYS = 7;
 // this threshold we return an empty state so a handful of submissions can never
 // be reverse-engineered into anything resembling an individual mood.
 export const MOOD_PULSE_MIN_SAMPLE = 5;
+
+// Minimum check-ins on one day before that day's average is shown (owner decision, 2026-10-16;
+// issue #2773). The week total above is not enough on its own: once it is met, a day holding one
+// check-in would show that member's exact mood under a known date. A day below this shows no
+// average and a zero count, so it reads the same as a day nobody checked in.
+export const MOOD_PULSE_MIN_DAY_SAMPLE = 3;

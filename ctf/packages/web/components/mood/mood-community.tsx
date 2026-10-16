@@ -9,6 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { BarChart2, Lock, Shield, Smile } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { responseFailureText } from "@/lib/errors/client-failure";
+import { MOOD_PULSE_MIN_DAY_SAMPLE } from "@/lib/mood/constants";
 import {
   getMoodTokens,
   moodFaceForAverage,
@@ -101,6 +102,9 @@ function PulseChart({ pulse }: { pulse: MoodCommunityPulse }) {
               </div>
             );
           })}
+        </div>
+        <div style={{ fontSize: 12, color: t.MUTED, marginTop: 14 }}>
+          A day with fewer than {MOOD_PULSE_MIN_DAY_SAMPLE} check-ins shows no average, so no one&apos;s mood can be picked out.
         </div>
       </div>
 

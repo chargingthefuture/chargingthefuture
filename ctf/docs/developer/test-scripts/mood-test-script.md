@@ -113,6 +113,10 @@ pulse count goes up by one, not two.
 **Expected:** It shows a 7-day average-mood chart plus check-in counts, computed in aggregate. No
 per-user row, note, or identifier appears. When fewer than the minimum sample (5 check-ins in the
 window) exist, the surface withholds data and shows the not-enough-data state with a zeroed series.
+A day with fewer than 3 check-ins shows no face, no number and a count of 0, the same as a day
+nobody checked in, and a line under the chart says why. The week's average and count leave those
+days out, so the week figure minus the shown days never gives a hidden day's mood (added
+2026-10-16).
 **Result:** web ☐ mobile ☐ — notes:
 
 ### MD-6 · "Talk to someone" support links (no crisis hotlines)
