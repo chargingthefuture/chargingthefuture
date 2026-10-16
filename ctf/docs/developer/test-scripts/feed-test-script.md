@@ -91,6 +91,27 @@
 
 ---
 
+### FD-1c — /apps sends a signed-in, unapproved member where the home page does
+
+**Role:** a member who has not finished Unlock, a support-only member, a restricted member, a
+signed-out visitor, and an approved member | **Surface:** web
+
+**Steps:**
+1. As each of them, open `/apps` directly.
+2. As the member who has not finished Unlock, open a Fireside conversation and press its back control.
+
+**Expected:**
+- Not finished Unlock: lands in the Unlock flow, the same as opening `/`.
+- Support-only: lands on the Commons stripped back to the verification banner, the same as `/`.
+- Restricted (spam or duplicate): lands on `/account-closed`.
+- Signed out: sees the public launcher with Sign In, as before.
+- Approved: sees the Apps section, as before.
+- Nobody who is signed in sees a Sign In button. Step 2 ends where step 1 did for that member.
+
+**Result:** web ☐
+
+---
+
 ### FD-2 — Announcement card renders correctly
 **Role:** member | **Surface:** web
 
