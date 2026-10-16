@@ -1,0 +1,69 @@
+name: Account — Retry Failed Stream Cleanups
+
+# When an account or a plugin's data is deleted, the member's rows go in one transaction and their
+# chat copy in Stream is cleared afterwards. If that second step fails (a Stream outage, say), the
+# deletion still stands and the failure is recorded. Every hour this asks production to try each
+# recorded cleanup again, waiting longer between attempts and giving up after a set number
+# (issue #2703). A successful retry removes its record.
+#
+# What it needs (Settings → Secrets and variables → Actions), the same two secrets the Unlock reward
+# reconciliation uses:
+#   NEXT_PUBLIC_APP_URL — the production base URL.
+#   CRON_SECRET — must match the CRON_SECRET the app reads at runtime.
+#
+# The route answers counts only, never an account id, and this job prints only those counts.
+
+on:
+  schedule:
+    - cron: '23 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: account-external-cleanup-retry
+  cancel-in-progress: false
+
+jobs:
+  retry:
+    name: Retry failed Stream cleanups
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call the retry route
+        env:
+          APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          if [ -z "${APP_URL:-}" ]; then
+            echo "::warning::Stream cleanup retry skipped: NEXT_PUBLIC_APP_URL is not set in GitHub Actions secrets."
+            echo "Skipped: app URL not configured." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          if [ -z "${CRON_SECRET:-}" ]; then
+            echo "::warning::Stream cleanup retry skipped: CRON_SECRET is not set in GitHub Actions secrets. Failed Stream cleanups are recorded but not retried until it is added here and matched in the app runtime."
+            echo "Skipped: CRON_SECRET not set; failed Stream cleanups are not being retried." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          code=$(curl -sS -o /tmp/cleanup-retry.json -w '%{http_code}' -X POST \
+            "${APP_URL%/}/api/internal/account/retry-external-cleanups" \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            -H 'Content-Type: application/json' \
+            -d '{}')
+          echo "HTTP ${code}"
+          cat /tmp/cleanup-retry.json
+          echo
+          if [ "${code}" != "200" ]; then
+            echo "::error::Stream cleanup retry failed with HTTP ${code}. The response above says why."
+            exit 1
+          fi
+          {
+            echo "Stream cleanup retry ran."
+            echo ""
+            echo '```json'
+            cat /tmp/cleanup-retry.json
+            echo '```'
+            echo ""
+            echo "givenUpTotal is the number of cleanups that ran out of attempts; those accounts may still have a copy in Stream."
+          } >> "$GITHUB_STEP_SUMMARY"

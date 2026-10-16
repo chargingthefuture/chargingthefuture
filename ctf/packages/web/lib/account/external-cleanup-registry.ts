@@ -14,7 +14,9 @@
 //
 // Contract for a cleanup function: best-effort. It should either resolve on success or throw on
 // failure; the orchestrator wraps each call in try/catch + reportError, so a throw is logged and the
-// user's deletion still completes. It must never assume it can block the deletion.
+// user's deletion still completes. It must never assume it can block the deletion. A throw is also
+// recorded and retried hourly (`external-cleanup-retries.ts`), so a cleanup must be safe to run
+// again for an account whose Stream user is already gone.
 
 import { deleteChymeStreamData } from 'lib/chyme/stream';
 import { deleteBeaconStreamData } from 'lib/beacon/stream';

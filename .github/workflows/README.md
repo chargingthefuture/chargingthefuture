@@ -103,6 +103,7 @@ deploy's status (live or failed) — it does not build or deploy anything itself
 
 | File | Name (shown in the Actions tab) | When it runs | What it does |
 |---|---|---|---|
+| `account-external-cleanup-retry.yml` | Account — Retry Failed Stream Cleanups | Hourly at :23; manual | Retries the Stream chat cleanups that failed after an account or service deletion, with a growing wait, until each works or runs out of attempts; prints counts only. |
 | `backup-formance.yml` | Formance — Nightly Backup to Private Repo | Daily 3:00 AM UTC; manual | Backs up the Formance Postgres database with `pg_dump` and uploads the dump as a Release asset on a private backup repo. |
 | `bug-reports-build.yml` | Bug Reports — Open PR for Approved Fix | Manual | Uses Claude to build an owner-approved bug fix from the private triage repo, runs typecheck, and opens a PR. |
 | `bug-reports-create-issues.yml` | Bug Reports — Create Github Issues | Every 15 min; manual | Moves clean, user-filed bug reports from the app database into the private triage repo as issues (text redacted), and marks a report resolved once its triage issue is closed as completed. |

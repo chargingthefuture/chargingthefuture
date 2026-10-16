@@ -989,6 +989,10 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       del('login_events', 'user_id', 'Your sign-in timestamps (telemetry, not an enforcement record).'),
       del('admin_area_seen', 'user_id', 'Which admin areas you opened (per-admin new-item badge state).'),
       retain('account_deletion_events', 'The accountability record of the deletion itself.'),
+      // A row means a Stream cleanup failed after a deletion committed and is waiting to be retried.
+      // It has to outlive the account it names, or the retry would have nothing to work from; it is
+      // deleted by the retry job the moment the cleanup succeeds (lib/account/external-cleanup-retries.ts).
+      retain('account_external_cleanup_retries', 'Stream cleanups still to retry after your deletion; removed once each one succeeds.'),
       // Restriction state and its audit are moderation/abuse enforcement: a restricted account's
       // record must survive the account so a delete-and-return does not launder the history. The
       // user_id here is the enforcement key (and the table's primary key), so it is kept intact —

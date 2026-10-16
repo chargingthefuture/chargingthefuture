@@ -1,7 +1,7 @@
 import { StreamChat } from 'stream-chat';
 import { resolveStreamCredentials } from 'lib/integrations/stream-credentials';
 import { reportError } from 'lib/observability/report';
-import { streamChannelSetupFailure } from 'lib/shared/stream-error-text';
+import { streamChannelSetupFailure, isStreamNotFoundError } from 'lib/shared/stream-error-text';
 
 export type FoundationStreamParticipantCredentials = {
   streamApiKey: string;
@@ -31,6 +31,10 @@ export async function deleteFoundationStreamData(userId: string): Promise<boolea
     });
     return true;
   } catch (error) {
+    // A Stream user that does not exist has nothing to delete.
+    if (isStreamNotFoundError(error)) {
+      return true;
+    }
     // Still best-effort (the deletion goes on), but the reason is recorded: without it the account
     // cleanup could not tell "Stream unconfigured" from "Stream refused the delete".
     reportError(error, { area: 'foundation', op: 'stream_delete_user', extra: { streamUserId: toStreamUserId(userId) } });

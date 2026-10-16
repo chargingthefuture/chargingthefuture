@@ -3,6 +3,7 @@ import { StreamChat } from 'stream-chat';
 import { resolveStreamCredentials, streamCredentialsFor, type StreamAppName } from 'lib/integrations/stream-credentials';
 import { reportError } from 'lib/observability/report';
 import { BEACON_CHAT_CHANNEL_TYPE, BEACON_HOST_TOKEN_TTL_SECONDS, BEACON_MUTE_MINUTES, BEACON_STREAM_CALL_TYPE } from './constants';
+import { isStreamNotFoundError } from 'lib/shared/stream-error-text';
 
 // Beacon's Stream Video integration. Beacon is a one-way `livestream`: only the admin host
 // publishes; everyone else watches. Watching is public over HLS (no user token needed), which is
@@ -47,6 +48,10 @@ export async function deleteBeaconStreamData(userId: string): Promise<boolean> {
     });
     return true;
   } catch (error) {
+    // A Stream user that does not exist has nothing to delete.
+    if (isStreamNotFoundError(error)) {
+      return true;
+    }
     // Still best-effort (the deletion goes on), but the reason is recorded: without it the account
     // cleanup could not tell "Stream unconfigured" from "Stream refused the delete".
     reportError(error, { area: 'beacon', op: 'stream_delete_user', extra: { streamUserId: beaconStreamUserId(userId) } });

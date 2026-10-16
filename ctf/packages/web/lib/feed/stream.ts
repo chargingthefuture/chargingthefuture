@@ -3,7 +3,7 @@ import type { EventTypes } from 'stream-chat';
 import type { MembershipEventType } from './types';
 import { resolveStreamCredentials } from 'lib/integrations/stream-credentials';
 import { reportError } from 'lib/observability/report';
-import { streamChannelSetupFailure } from 'lib/shared/stream-error-text';
+import { streamChannelSetupFailure, isStreamNotFoundError } from 'lib/shared/stream-error-text';
 
 const FEED_MEMBERSHIP_EVENTS_CHANNEL_ID = 'ctf-feed-membership-events';
 
@@ -79,6 +79,10 @@ export async function deleteFeedStreamData(userId: string): Promise<boolean> {
     await streamClient.deleteUser(streamUserId, { mark_messages_deleted: true, hard_delete: true });
     return true;
   } catch (error) {
+    // A Stream user that does not exist has nothing to delete.
+    if (isStreamNotFoundError(error)) {
+      return true;
+    }
     reportError(error, { area: 'feed', op: 'stream_delete_user', extra: { streamUserId } });
     return false;
   }

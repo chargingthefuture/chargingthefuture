@@ -114,6 +114,24 @@ remove and changes nothing on screen. Replies and reactions that hung off the de
 with them.
 **Result:** web ☐ — notes:
 
+## AD-8 · A Stream cleanup that fails after a deletion is retried
+
+**Role:** admin with database access, on a **throwaway account** · **Precondition:** the throwaway
+account has posted in Chyme or the Commons, so it has a Stream user.
+**Steps:**
+1. Make Stream cleanups fail for a moment (for example, run the deletion in an environment whose
+   Stream secret is wrong), then delete the throwaway account's data.
+2. Read `account_external_cleanup_retries`.
+3. Put the Stream secret back, set that row's `next_attempt_at` to now, and run the **Account — Retry
+   Failed Stream Cleanups** workflow by hand.
+4. Delete the Chyme data of a member who never opened Beacon.
+**Expected:** The deletion itself succeeds at step 1. Step 2 shows one row per plugin whose cleanup
+failed, with the account id, the slug and the reason, and nothing the member wrote. After step 3 the
+row is gone, the workflow summary shows `cleared: 1` and no account id, and the member's messages
+are gone from Stream. Step 4 leaves no row: a Stream user that never existed counts as already
+deleted.
+**Result:** web ☐ — notes:
+
 ## AD-7b · Full-account delete is refused without the typed phrase
 
 **Role:** member (any account; nothing is deleted in this case)
