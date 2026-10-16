@@ -174,7 +174,10 @@ database call fails the admin banner gives the reason (for example "The change c
 ### Account deletion clears endorsements
 
 **Expected:** Deleting the account removes the member's endorsements; tool endorsement counts drop
-accordingly. The curated problem and tool lists themselves are unchanged.
+accordingly. The curated problem and tool lists themselves are unchanged, and tools the member
+suggested stay on the list. On those tools `suggested_by` now reads `deleted_member` instead of the
+member's id, and the Contributions value reading no longer credits them; `reviewed_by` and
+`created_by` (admin columns) are unchanged (added 2026-10-16, #2812).
 
 ## Admin walkthrough
 
