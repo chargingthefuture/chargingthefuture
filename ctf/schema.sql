@@ -1817,12 +1817,17 @@ CREATE TABLE IF NOT EXISTS unlock_banned_accounts (
   reason TEXT NOT NULL,
   note TEXT,
   banned_by_user_id TEXT,
+  provider_applied BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ALTER TABLE IF EXISTS unlock_banned_accounts ADD COLUMN IF NOT EXISTS reason TEXT NOT NULL DEFAULT 'perp';
 ALTER TABLE IF EXISTS unlock_banned_accounts ADD COLUMN IF NOT EXISTS note TEXT;
 ALTER TABLE IF EXISTS unlock_banned_accounts ADD COLUMN IF NOT EXISTS banned_by_user_id TEXT;
+-- Whether the sign-in provider applied the ban (issue #2804). False when it refused, so the admin row
+-- says the ban did not reach sign-in and offers to try again. Rows from before this column existed
+-- read as applied, which is what the admin screen said about them at the time.
+ALTER TABLE IF EXISTS unlock_banned_accounts ADD COLUMN IF NOT EXISTS provider_applied BOOLEAN NOT NULL DEFAULT TRUE;
 ALTER TABLE IF EXISTS unlock_banned_accounts ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS unlock_banned_accounts ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 

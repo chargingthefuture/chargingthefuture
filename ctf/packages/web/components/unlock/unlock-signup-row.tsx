@@ -72,9 +72,12 @@ function banLine(account: UnlockSignupAccount): string | null {
       : account.bannedReason === 'duplicate'
         ? 'marked a duplicate account'
         : 'banned from this list';
-  return on
-    ? `Banned on ${on} — ${why}. Signed out of this app and anything else they sign into with it. Not counted.`
-    : `Banned — ${why}. Signed out of this app and anything else they sign into with it. Not counted.`;
+  // The sign-in half is stated only when it happened (issue #2804): a ban the provider refused holds in
+  // this app but leaves the account able to sign in.
+  const effect = account.bannedProviderApplied
+    ? 'Signed out of this app and anything else they sign into with it.'
+    : 'Banned in this app, but the sign-in ban did not go through, so they can still sign in.';
+  return on ? `Banned on ${on} — ${why}. ${effect} Not counted.` : `Banned — ${why}. ${effect} Not counted.`;
 }
 
 // Said only for someone who asked to be forgotten: their submission was deleted with the rest of their
@@ -160,7 +163,13 @@ export function UnlockSignupRow({
       {canAddUrl(account) ? <UnlockSignupAddUrl userId={account.userId} busy={busy} onAdd={onAddUrl} /> : null}
 
       {canBan(account) ? (
-        <UnlockSignupBan userId={account.userId} banned={account.banned} busy={busy} onToggleBanned={onToggleBanned} />
+        <UnlockSignupBan
+          userId={account.userId}
+          banned={account.banned}
+          providerApplied={account.bannedProviderApplied}
+          busy={busy}
+          onToggleBanned={onToggleBanned}
+        />
       ) : null}
 
       <button

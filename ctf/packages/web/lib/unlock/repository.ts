@@ -597,6 +597,7 @@ async function syncProviderBanForDecision(input: {
         reason: input.reviewStatus,
         note: outcome.ok ? null : outcome.reason,
         actorUserId: input.actorUserId,
+        providerApplied: outcome.ok,
       });
       if (!outcome.ok) {
         reportError(new Error(outcome.reason), { area: 'unlock', op: 'ban_account_with_provider', extra });
@@ -605,10 +606,13 @@ async function syncProviderBanForDecision(input: {
     }
 
     const outcome = await unbanAccountWithProvider(input.userId);
-    await removeUnlockBannedAccount(input.userId);
     if (!outcome.ok) {
+      // The provider still bans the account, so the row stays and the sign-up list keeps showing the
+      // ban, which an admin can lift from there.
       reportError(new Error(outcome.reason), { area: 'unlock', op: 'unban_account_with_provider', extra });
+      return;
     }
+    await removeUnlockBannedAccount(input.userId);
   } catch (error) {
     reportError(error, { area: 'unlock', op: 'sync_provider_ban', extra });
   }

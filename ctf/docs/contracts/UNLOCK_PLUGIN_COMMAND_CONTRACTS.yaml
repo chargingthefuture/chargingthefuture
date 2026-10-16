@@ -210,8 +210,10 @@ contracts:
       submission row, so an account that signed up and stopped had no control beside it. Two writes: the
       unlock_banned_accounts row the admin page reads and counts, and a ban at the auth provider, which
       is what actually stops a sign-in on this app and on anything else the same provider fronts. A
-      provider failure does not fail the command: the row is written carrying the refusal, providerOk
-      comes back false, and the admin page shows the ban needs another press. Reversible, and it never
+      provider failure does not fail the command: a ban row is written with provider_applied false,
+      providerOk comes back false, and the admin row says the sign-in ban did not go through and offers
+      to try it again (pressing ban again keeps the reason the account was banned for). A lift the
+      provider refuses leaves the row in place, since the account is still banned at sign-in. Reversible, and it never
       deletes the account — the row is the record of who arrived. Refused when the caller names their
       own account.
     inputSchema:

@@ -665,6 +665,24 @@ words, and the account stays signed-in-able — a ban an admin believes in but t
 provider is the failure this is guarding against, so it is shown rather than swallowed.
 **Result:** web ☐ — notes:
 
+### UNLOCK-A9b2 · A ban the auth provider refused says so, and can be tried again (added 2026-10-16)
+**Role:** admin / reviewer · **Surfaces:** web (admin surface) — web-only, no Android admin (rule 105)
+**Precondition:** a way to make the provider refuse a ban (for example, the provider secret unset in a
+test runtime), and a test account on the **No Quora URL** tab.
+**Steps:**
+1. Ban the account (**Ban this account**, then **Confirm ban**) while the provider refuses.
+2. Read the panel message and the row. Reload the page and read the row again.
+3. Restore the provider, then press **Try the sign-in ban again** on that row.
+4. Make the provider refuse again, then press **Lift this ban**.
+**Expected:** Step 2: the panel message names the account and says it is banned in this app but the
+sign-in ban did not go through. The row reads "Banned in this app, but the sign-in ban did not go
+through, so they can still sign in." and shows **Try the sign-in ban again** beside **Lift this ban**,
+and it still does after the reload. Step 3: the button goes away and the row reads "Signed out of this
+app and anything else they sign into with it." Step 4: the panel message names the account and says
+the ban could not be lifted at sign-in. The row stays on **Banned**, because the account is still
+banned at sign-in.
+**Result:** web ☐ — notes:
+
 ### UNLOCK-A9c · A blocking review decision bans the account too, and a later approve lifts it
 **Role:** admin / reviewer · **Surfaces:** web (admin surface) — web-only, no Android admin (rule 105)
 **Precondition:** a submission that can be marked spam, and the ability to sign in as that member.

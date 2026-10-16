@@ -8,6 +8,7 @@ import { failureText } from 'lib/errors/client-failure';
 import { useTheme } from '@/hooks/useTheme';
 import { getUnlockTokens, type UnlockTokens } from './unlock-shared';
 import { UnlockSignupRow } from './unlock-signup-row';
+import { accountAfterBanToggle, providerRefusalText } from './unlock-signup-ban-state';
 import { UnlockSignupsSummary, signupHeadline } from './unlock-signups-summary';
 import {
   accountsForTab,
@@ -139,9 +140,9 @@ export function UnlockSignupsPanel({ overview }: { overview: UnlockSignupOvervie
   }
 
   // Ban an account outright, or lift that ban. Two writes on the server: the row the counts read, and
-  // the ban at the auth provider that actually stops the sign-in. A provider failure still writes the
-  // row, carrying the reason, so the ban shows as needing another press instead of silently not
-  // happening.
+  // the ban at the auth provider that actually stops the sign-in. A provider refusal is shown on the
+  // row itself and named in the message, so the ban shows as needing another press instead of
+  // silently not happening.
   async function toggleBanned(userId: string, banned: boolean) {
     setBusyUserId(userId);
     setError(null);
@@ -158,15 +159,13 @@ export function UnlockSignupsPanel({ overview }: { overview: UnlockSignupOvervie
         setError(data?.message ?? data?.code ?? `Update failed (${res.status}).`);
         return;
       }
-      if (data?.providerOk === false) {
-        setError(data.providerReason ?? 'The account was recorded but the auth provider did not apply the ban.');
+      const providerOk = data?.providerOk !== false;
+      if (!providerOk) {
+        const target = accounts.find((account) => account.userId === userId);
+        setError(providerRefusalText(target, userId, banned, data?.providerReason));
       }
       setAccounts((prev) =>
-        prev.map((account) =>
-          account.userId === userId
-            ? { ...account, banned, bannedReason: banned ? 'perp' : null, bannedAt: banned ? new Date().toISOString() : null }
-            : account,
-        ),
+        prev.map((account) => (account.userId === userId ? accountAfterBanToggle(account, banned, providerOk) : account)),
       );
       router.refresh();
     } catch (caught) {

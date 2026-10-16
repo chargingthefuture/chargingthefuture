@@ -173,11 +173,13 @@ function neverReturned(account: { createdAt: string; lastSignInAt: string | null
   return account.lastSignInAt.slice(0, 10) === account.createdAt.slice(0, 10);
 }
 
+type BannedMark = { reason: string; bannedAt: string; providerApplied: boolean };
+
 // Everything the overview joins onto one provider account. Passed as one object so the builder below
 // takes three arguments rather than seven.
 type AccountMarks = {
   excludedUserIds: Map<string, string | null>;
-  bannedAccounts: Map<string, { reason: string; bannedAt: string }>;
+  bannedAccounts: Map<string, BannedMark>;
   deletedDates: Map<string, string>;
   screenViews: Map<string, number>;
   quoraHints: Map<string, string>;
@@ -198,17 +200,25 @@ function buildSignupAccount(
 // supporting readings. Split from the builder above so each function stays inside the rule-116
 // complexity limit.
 function adminMarkFields(userId: string, marks: AccountMarks) {
-  const banned = marks.bannedAccounts.get(userId) ?? null;
   return {
     excluded: marks.excludedUserIds.has(userId),
     excludedNote: marks.excludedUserIds.get(userId) ?? null,
-    banned: banned !== null,
-    bannedReason: banned?.reason ?? null,
-    bannedAt: banned?.bannedAt ?? null,
+    ...banFields(marks.bannedAccounts.get(userId) ?? null),
     deletedTheirData: marks.deletedDates.has(userId),
     deletedAt: marks.deletedDates.get(userId) ?? null,
     unlockScreenViews: marks.screenViews.get(userId) ?? 0,
     quoraHint: marks.quoraHints.get(userId) ?? null,
+  };
+}
+
+// The ban fields, all empty for an account that is not banned. An unbanned account reads as applied,
+// so nothing on its row talks about a refused sign-in ban.
+function banFields(banned: BannedMark | null) {
+  return {
+    banned: banned !== null,
+    bannedReason: banned?.reason ?? null,
+    bannedAt: banned?.bannedAt ?? null,
+    bannedProviderApplied: banned?.providerApplied ?? true,
   };
 }
 
@@ -253,7 +263,7 @@ export async function getUnlockSignupOverview(): Promise<UnlockSignupOverview> {
 
   let submissions: Map<string, SubmissionFact>;
   let excludedUserIds: Map<string, string | null>;
-  let bannedAccounts: Map<string, { reason: string; bannedAt: string }>;
+  let bannedAccounts: Map<string, BannedMark>;
   let deletedDates: Map<string, string>;
   let screenViews: Map<string, number>;
   let quoraHints: Map<string, string>;
@@ -268,7 +278,9 @@ export async function getUnlockSignupOverview(): Promise<UnlockSignupOverview> {
     ]);
     submissions = facts;
     excludedUserIds = new Map(excluded.map((entry) => [entry.userId, entry.note]));
-    bannedAccounts = new Map(banned.map((entry) => [entry.userId, { reason: entry.reason, bannedAt: entry.createdAt }]));
+    bannedAccounts = new Map(
+      banned.map((entry) => [entry.userId, { reason: entry.reason, bannedAt: entry.createdAt, providerApplied: entry.providerApplied }]),
+    );
     deletedDates = deleted;
     screenViews = views;
     quoraHints = hints;
