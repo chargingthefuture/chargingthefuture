@@ -23,6 +23,59 @@ function stepValue(step: Step, reading: ExchangeActivityReading): number {
   return step.measure === 'best' ? (reading.bestDay?.members ?? 0) : reading.typicalDay;
 }
 
+function stepNow(step: Step, reading: ExchangeActivityReading): string {
+  if (step.measure === 'typical') {
+    return `Typical day ${reading.typicalDay}`;
+  }
+  return reading.bestDay ? `Best day ${reading.bestDay.members}, on ${reading.bestDay.day}` : 'No day on record yet';
+}
+
+function stepStatus(reached: boolean, isNext: boolean, now: string): string {
+  if (reached) {
+    return `Reached · ${now}`;
+  }
+  return isNext ? `Next step · ${now}` : 'Not yet';
+}
+
+function StepRow({
+  step,
+  index,
+  isNext,
+  reading,
+  tokens: t,
+}: {
+  step: Step;
+  index: number;
+  isNext: boolean;
+  reading: ExchangeActivityReading;
+  tokens: Tokens;
+}) {
+  const reached = stepValue(step, reading) >= step.threshold;
+  const lit = reached || isNext;
+  const Icon = reached ? CheckCircle2 : Circle;
+  return (
+    <li
+      style={{
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: 10,
+        padding: '8px 0',
+        borderTop: index === 0 ? 'none' : `1px solid ${t.BORDER}`,
+      }}
+    >
+      <Icon size={18} color={lit ? t.ACCENT : t.SUBTLE} style={{ flexShrink: 0, marginTop: 1 }} />
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontSize: 14, fontWeight: isNext ? 700 : 500, color: lit ? t.TITLE : t.SUBTLE }}>
+          {index + 1}. {step.label}
+        </div>
+        <div style={{ fontSize: 12, color: t.SUBTLE, marginTop: 2 }}>
+          {stepStatus(reached, isNext, stepNow(step, reading))}
+        </div>
+      </div>
+    </li>
+  );
+}
+
 export function AdoptionSteps({
   reading,
   failed,
@@ -59,43 +112,9 @@ export function AdoptionSteps({
 
       {reading && (
         <ol style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-          {STEPS.map((step, index) => {
-            const value = stepValue(step, reading);
-            const reached = value >= step.threshold;
-            const isNext = index === nextIndex;
-            const now =
-              step.measure === 'best'
-                ? reading.bestDay
-                  ? `Best day ${reading.bestDay.members}, on ${reading.bestDay.day}`
-                  : 'No day on record yet'
-                : `Typical day ${reading.typicalDay}`;
-            return (
-              <li
-                key={step.label}
-                style={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: 10,
-                  padding: '8px 0',
-                  borderTop: index === 0 ? 'none' : `1px solid ${t.BORDER}`,
-                }}
-              >
-                {reached ? (
-                  <CheckCircle2 size={18} color={t.ACCENT} style={{ flexShrink: 0, marginTop: 1 }} />
-                ) : (
-                  <Circle size={18} color={isNext ? t.ACCENT : t.SUBTLE} style={{ flexShrink: 0, marginTop: 1 }} />
-                )}
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: isNext ? 700 : 500, color: reached || isNext ? t.TITLE : t.SUBTLE }}>
-                    {index + 1}. {step.label}
-                  </div>
-                  <div style={{ fontSize: 12, color: t.SUBTLE, marginTop: 2 }}>
-                    {reached ? `Reached · ${now}` : isNext ? `Next step · ${now}` : 'Not yet'}
-                  </div>
-                </div>
-              </li>
-            );
-          })}
+          {STEPS.map((step, index) => (
+            <StepRow key={step.label} step={step} index={index} isNext={index === nextIndex} reading={reading} tokens={t} />
+          ))}
         </ol>
       )}
     </section>
