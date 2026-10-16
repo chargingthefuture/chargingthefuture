@@ -297,6 +297,8 @@ auditEvents:
       contributionId: contribution_identifier
       promoted: integer
       alreadyPresent: integer
+      revived: integer
+      matchedSwitchedOff: integer
       excluded: integer
       # granted | already_granted | skipped_not_unlocked | failed
       grant: grant_outcome

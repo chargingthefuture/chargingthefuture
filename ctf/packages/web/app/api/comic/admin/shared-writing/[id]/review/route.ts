@@ -135,6 +135,8 @@ async function handleAccept(id: string, reviewerId: string, rawExcluded: unknown
     metadata: {
       promoted: accepted.promoted,
       alreadyPresent: accepted.alreadyPresent,
+      revived: accepted.revived,
+      matchedSwitchedOff: accepted.matchedSwitchedOff,
       excluded: excludedEntryIds.length,
       grant: grant.status,
     },
@@ -146,6 +148,8 @@ async function handleAccept(id: string, reviewerId: string, rawExcluded: unknown
       status: 'accepted',
       promoted: accepted.promoted,
       alreadyPresent: accepted.alreadyPresent,
+      revived: accepted.revived,
+      matchedSwitchedOff: accepted.matchedSwitchedOff,
       grant,
     },
     { status: 200 },

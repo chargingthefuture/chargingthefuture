@@ -44,6 +44,8 @@ type ReviewResult = {
   message?: string;
   promoted?: number;
   alreadyPresent?: number;
+  revived?: number;
+  matchedSwitchedOff?: number;
   grant?: { status: string; amount?: number; reason?: string };
 };
 
@@ -70,9 +72,15 @@ function grantLine(grant: ReviewResult['grant']): string {
   return `The credits grant did not go through (${grant?.reason ?? 'no reason given'}). Nothing was granted.`;
 }
 
+// Text that matched an entry already in the library is reported by that entry's state, so a match
+// that stays switched off is never read as being in use (issue #2726).
 function acceptNotice(data: ReviewResult | null): string {
   const alreadyThere = data?.alreadyPresent ? `, ${data.alreadyPresent} already there` : '';
-  return `Accepted. ${data?.promoted ?? 0} added to the library${alreadyThere}. ${grantLine(data?.grant)}`;
+  const revived = data?.revived ? `, ${data.revived} switched back on (the member who shared it first had withdrawn it)` : '';
+  const switchedOff = data?.matchedSwitchedOff
+    ? `, ${data.matchedSwitchedOff} matched an entry an admin switched off, so it stays off`
+    : '';
+  return `Accepted. ${data?.promoted ?? 0} added to the library${alreadyThere}${revived}${switchedOff}. ${grantLine(data?.grant)}`;
 }
 
 export function ComicSharedWritingReview() {
