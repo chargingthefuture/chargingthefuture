@@ -795,6 +795,7 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       del('click_log_scheme_suggestions', 'user_id', 'Scheme descriptions you chose to share with the owner.'),
       del('click_log_incidents', 'user_id', 'Your logged incidents.'),
       del('click_log_preferences', 'user_id', 'Your owner-sharing preference.'),
+      retain('click_log_admin_audit_trail', 'Admin action audit log; retained for compliance.'),
     ],
   },
   {

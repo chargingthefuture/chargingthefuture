@@ -14,8 +14,9 @@
 // retention window. The most consequential example was Directory's profile takedown — the flow a
 // person outside the app relies on to have their community-generated profile removed.
 //
-// WHAT THIS CHECKS. Every route file under app/api that (a) calls an admin or moderator gate and
-// (b) exports a mutating handler (POST/PUT/PATCH/DELETE) must reach a durable audit write: an
+// WHAT THIS CHECKS. Every route file under app/api that (a) gives an admin power — an admin or
+// moderator gate, a policy check requiring the admin role, or an `isAdmin` branch letting an admin act
+// on another member's row — and (b) exports a mutating handler (POST/PUT/PATCH/DELETE) must reach a durable audit write: an
 // `insert*Audit(...)` helper or a raw `INSERT INTO ..._audit...`, either in the route itself or in a
 // `lib/` module the route imports directly.
 //
@@ -32,7 +33,13 @@ const WEB_ROOT = join(REPO_ROOT, 'ctf', 'packages', 'web');
 const API_ROOT = join(WEB_ROOT, 'app', 'api');
 const ALLOWLIST_PATH = join(import.meta.dirname, 'admin-audit-coverage-allowlist.json');
 
+// Three ways a route gives an admin power (issue #2806): a named admin or moderator gate, a policy
+// check that requires the admin role, and an owner-or-admin branch that lets an admin act on another
+// member's row. Before 2026-10-16 only the first was read, so the other two were never examined.
 const ADMIN_GATE = /\brequire[A-Za-z]*(?:Admin|Moderator)[A-Za-z]*\s*\(/;
+const ADMIN_ROLE_POLICY = /requiredRoles\s*:\s*\[[^\]]*['"]admin['"]/;
+const ADMIN_BRANCH = /\bisAdmin\b/;
+const grantsAdminPower = (text) => ADMIN_GATE.test(text) || ADMIN_ROLE_POLICY.test(text) || ADMIN_BRANCH.test(text);
 const MUTATING_HANDLER = /export\s+async\s+function\s+(?:POST|PUT|PATCH|DELETE)\b/;
 const DURABLE_WRITE = /\b(?:insert|record|append|write)[A-Za-z]*Audit[A-Za-z]*\s*\(|INSERT\s+INTO\s+[a-z_]*audit[a-z_]*/i;
 
@@ -111,7 +118,7 @@ let adminMutatingCount = 0;
 
 for (const file of routeFiles) {
   const text = read(file);
-  if (!ADMIN_GATE.test(text) || !MUTATING_HANDLER.test(text)) continue;
+  if (!grantsAdminPower(text) || !MUTATING_HANDLER.test(text)) continue;
   adminMutatingCount += 1;
 
   const routePath = `/${relative(join(WEB_ROOT, 'app'), file).replace(/\\/g, '/').replace(/\/route\.ts$/, '')}`;

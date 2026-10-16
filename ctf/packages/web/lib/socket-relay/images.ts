@@ -59,13 +59,14 @@ export async function loadRequestImages(requestIds: string[], client?: PoolClien
   return mapImageRows(result.rows);
 }
 
-// Owner or admin only. Replaces an earlier picture on the same request.
+// Owner or admin only. Replaces an earlier picture on the same request. Returns the request's owner
+// too, so the route can record an admin acting on another member's request (issue #2806).
 export async function saveRequestImage(
   requestId: string,
   actorUserId: string,
   isAdmin: boolean,
   image: SocketRelayImageUpload,
-): Promise<SocketRelayRequestImage> {
+): Promise<{ image: SocketRelayRequestImage; ownerUserId: string }> {
   return withDbTransaction(async (client) => {
     const owner = await client.query<{ owner_user_id: string }>(
       `SELECT owner_user_id FROM socket_relay_requests WHERE id = $1::uuid FOR UPDATE`,
@@ -87,12 +88,20 @@ export async function saveRequestImage(
       [requestId, actorUserId, image.contentType, Buffer.from(image.bytes), image.bytes.byteLength, image.width, image.height, image.altText],
     );
     await client.query(`UPDATE socket_relay_requests SET updated_at = NOW() WHERE id = $1::uuid`, [requestId]);
-    return mapImageRows(saved.rows).get(requestId) as SocketRelayRequestImage;
+    return {
+      image: mapImageRows(saved.rows).get(requestId) as SocketRelayRequestImage,
+      ownerUserId: owner.rows[0].owner_user_id,
+    };
   });
 }
 
-// Owner or admin only. Returns who uploaded the removed picture, so an admin removal can name them.
-export async function deleteRequestImage(requestId: string, actorUserId: string, isAdmin: boolean): Promise<{ uploadedByUserId: string } | null> {
+// Owner or admin only. Returns who uploaded the removed picture, so an admin removal can name them, and
+// the request's owner, so the route can record an admin acting on another member's request.
+export async function deleteRequestImage(
+  requestId: string,
+  actorUserId: string,
+  isAdmin: boolean,
+): Promise<{ uploadedByUserId: string; ownerUserId: string } | null> {
   return withDbTransaction(async (client) => {
     const owner = await client.query<{ owner_user_id: string }>(
       `SELECT owner_user_id FROM socket_relay_requests WHERE id = $1::uuid FOR UPDATE`,
@@ -106,7 +115,7 @@ export async function deleteRequestImage(requestId: string, actorUserId: string,
       [requestId],
     );
     if ((removed.rowCount ?? 0) === 0) return null;
-    return { uploadedByUserId: removed.rows[0].uploaded_by_user_id };
+    return { uploadedByUserId: removed.rows[0].uploaded_by_user_id, ownerUserId: owner.rows[0].owner_user_id };
   });
 }
 

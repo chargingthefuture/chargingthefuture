@@ -11,6 +11,7 @@ import {
 } from 'lib/socket-relay/images';
 import { parseCommunityImageDimension, sniffCommunityImageType } from 'lib/feed/community-images';
 import { reportError } from 'lib/observability/report';
+import { insertSocketRelayAudit } from 'lib/socket-relay/repository';
 
 // The one picture on a SocketRelay request.
 //
@@ -20,10 +21,27 @@ import { reportError } from 'lib/observability/report';
 // The form shows the warning that an inappropriate picture is an automatic ban, with no exceptions,
 // and the member ticks it before the file picker opens; an upload without the tick is refused.
 // DELETE removes it, owner or admin only.
+//
+// An admin changing or removing the picture on another member's request is an admin action, so it
+// writes a row to socket_relay_admin_audit_trail (issue #2806). An owner acting on their own request,
+// admin or not, writes none.
 
 type RouteProps = { params: Promise<{ id: string }> };
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+async function auditAdminOnOthers(input: { actorId: string; ownerUserId: string; requestId: string; command: string }) {
+  if (input.ownerUserId === input.actorId) return;
+  await insertSocketRelayAudit({
+    actorId: input.actorId,
+    command: input.command,
+    policyStatus: 'allow',
+    reason: 'admin_on_member_request',
+    targetType: 'request',
+    targetId: input.requestId,
+    metadata: { ownerUserId: input.ownerUserId },
+  });
+}
 
 function badRequest(message: string): NextResponse {
   return NextResponse.json({ ok: false, code: SOCKET_RELAY_ERROR_CODE.invalidPayload, message }, { status: 400 });
@@ -116,7 +134,8 @@ export async function PUT(request: Request, { params }: RouteProps) {
   if ('error' in parsed) return parsed.error;
 
   try {
-    const image = await saveRequestImage(requestId, gate.auth.userId, gate.auth.isAdmin, parsed.image);
+    const { image, ownerUserId } = await saveRequestImage(requestId, gate.auth.userId, gate.auth.isAdmin, parsed.image);
+    await auditAdminOnOthers({ actorId: gate.auth.userId, ownerUserId, requestId, command: 'socket-relay.request.image.save' });
     return NextResponse.json({ ok: true, image }, { status: 200 });
   } catch (error) {
     return socketRelayErrorResponse(error, 'The picture was not saved. Try again in a moment.');
@@ -134,7 +153,15 @@ export async function DELETE(request: Request, { params }: RouteProps) {
   if (!requestId) return badRequest('That request address is not valid.');
 
   try {
-    await deleteRequestImage(requestId, gate.auth.userId, gate.auth.isAdmin);
+    const removed = await deleteRequestImage(requestId, gate.auth.userId, gate.auth.isAdmin);
+    if (removed) {
+      await auditAdminOnOthers({
+        actorId: gate.auth.userId,
+        ownerUserId: removed.ownerUserId,
+        requestId,
+        command: 'socket-relay.request.image.delete',
+      });
+    }
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (error) {
     return socketRelayErrorResponse(error, 'The picture was not removed. Try again in a moment.');

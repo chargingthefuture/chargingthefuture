@@ -137,6 +137,29 @@ ALTER TABLE IF EXISTS click_log_unnamed_scheme_alerts ADD COLUMN IF NOT EXISTS w
 ALTER TABLE IF EXISTS click_log_unnamed_scheme_alerts ADD COLUMN IF NOT EXISTS shared_count INTEGER;
 ALTER TABLE IF EXISTS click_log_unnamed_scheme_alerts ADD COLUMN IF NOT EXISTS issue_url TEXT;
 ALTER TABLE IF EXISTS click_log_unnamed_scheme_alerts ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- Admin actions on another member's ClickLog data (issue #2806). Today that is one action: an admin
+-- deleting a member's incident. A member acting on their own incidents writes no row. Same shape as
+-- the other plugins' admin audit trails; target_id is the incident id, and metadata names the owner.
+CREATE TABLE IF NOT EXISTS click_log_admin_audit_trail (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  actor_id TEXT NOT NULL,
+  command TEXT NOT NULL,
+  policy_status TEXT NOT NULL,
+  reason TEXT NOT NULL,
+  target_type TEXT NOT NULL,
+  target_id TEXT NOT NULL,
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS click_log_admin_audit_trail ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS click_log_admin_audit_trail ADD COLUMN IF NOT EXISTS actor_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS click_log_admin_audit_trail ADD COLUMN IF NOT EXISTS command TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS click_log_admin_audit_trail ADD COLUMN IF NOT EXISTS policy_status TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS click_log_admin_audit_trail ADD COLUMN IF NOT EXISTS reason TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS click_log_admin_audit_trail ADD COLUMN IF NOT EXISTS target_type TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS click_log_admin_audit_trail ADD COLUMN IF NOT EXISTS target_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS click_log_admin_audit_trail ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS click_log_admin_audit_trail ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- === WHAT WORKS (survivor-verified shared tool list, organized by problem) ===
