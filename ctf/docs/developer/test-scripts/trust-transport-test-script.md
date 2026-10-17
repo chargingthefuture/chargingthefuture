@@ -514,6 +514,16 @@ Result: web ☐
 
 **Expected:** The change is saved. On reload the updated value persists. No crash.
 
+Then check the two controls are obeyed (added 2026-10-17, #2858):
+5. Set **Max concurrent trips** to 1. As a driver who already has one trip under way, offer on another
+   open request: refused with "You already have as many trips under way as one driver can hold at
+   once. Finish one before offering on another." As a requester, accept an offer from a driver who is
+   at the limit: refused with "This driver already has as many trips as they can take at once. Pick
+   another offer, or try again later."
+6. With **Require proof on delivery** on, try to mark a trip delivered as its driver without adding
+   proof: refused with "Add delivery proof before marking this trip delivered." Add proof, then mark
+   it delivered: it goes through. Turn the control off: delivered goes through without proof.
+
 Result: web ☐
 
 ---
@@ -531,6 +541,11 @@ Result: web ☐
 4. Toggle it back off and save.
 
 **Expected:** Both state changes save successfully. The current freeze state is clearly visible after each save.
+While the freeze is on, a member posting a request, a driver making an offer, and a requester
+accepting an offer are each refused with "TrustTransport is paused for new trips right now. Trips
+already under way carry on." A trip already under way can still move through its statuses. With the
+freeze off, all three go through again. On a fresh install, or one where the freeze was never turned
+on after 2026-10-17, the control reads off (added 2026-10-17, #2858).
 
 Result: web ☐
 

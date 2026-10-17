@@ -443,6 +443,7 @@ export async function createRequest(
   }
 
   await ensureUserNotRestricted(actorUserId);
+  await assertMarketOpen();
 
   const request = await withDbTransaction(async (client) => {
     // Serialize sends that carry the same key, so two at once cannot both miss the lookup below and
@@ -678,6 +679,10 @@ export async function createOffer(
   }
 
   await ensureUserNotRestricted(providerUserId);
+  const market = await assertMarketOpen();
+  if ((await countActiveProviderTrips(providerUserId)) >= market.maxConcurrentTrips) {
+    throw new Error('trip_limit_reached');
+  }
 
   const request = await getRequestById(requestId);
   if (!request) {
@@ -755,6 +760,8 @@ export async function acceptOffer(requestId: string, offerId: string, actorUserI
     throw new Error('invalid_transition');
   }
 
+  const market = await assertMarketOpen();
+
   const created = await withDbTransaction(async (client) => {
     const offerResult = await client.query<OfferRow>(
       `SELECT id, request_id, provider_user_id, note, proposed_amount, status, created_at, updated_at
@@ -783,6 +790,12 @@ export async function acceptOffer(requestId: string, offerId: string, actorUserI
     const providerRestriction = await getAccountRestrictionStatus(offer.provider_user_id, 'trading');
     if (providerRestriction.isRestricted) {
       throw new Error('offer_not_available');
+    }
+
+    // The driver's limit of trips at once (market controls, issue #2858), counted inside the
+    // transaction so it holds the row lock the offer read took.
+    if ((await countActiveProviderTrips(offer.provider_user_id, client)) >= market.maxConcurrentTrips) {
+      throw new Error('offer_driver_at_limit');
     }
 
     const existingTrip = await client.query<TripRow>(
@@ -1006,6 +1019,9 @@ export async function updateTripStatus(
     }
 
     assertTripTransition(trip.status, nextStatus);
+    if (nextStatus === 'delivered' && !isAdmin) {
+      await assertDeliveryProof(client, trip.id);
+    }
 
     const nextRequestStatus = mapRequestStatusFromTrip(nextStatus);
 
@@ -1439,8 +1455,64 @@ export async function getMarketConfig(): Promise<TrustTransportMarketConfig> {
   return {
     maxConcurrentTrips: Number.isInteger(config.maxConcurrentTrips) ? (config.maxConcurrentTrips as number) : 3,
     requireProofOnDelivery: typeof config.requireProofOnDelivery === 'boolean' ? config.requireProofOnDelivery : true,
-    emergencyFreezeEnabled: typeof config.emergencyFreezeEnabled === 'boolean' ? config.emergencyFreezeEnabled : true,
+    // Off unless an admin turns it on (owner decision, 2026-10-17). Stored under its own key from the
+    // day it started being enforced: the old emergencyFreezeEnabled key read as on by default, so the
+    // admin form saved "on" without anyone deciding to pause, and honoring it would pause every new
+    // trip on deploy. That key is ignored.
+    emergencyFreezeEnabled: config.emergencyFreezeActive === true,
   };
+}
+
+// The stored shape of the market controls. The freeze is written as emergencyFreezeActive; see
+// getMarketConfig for why the older emergencyFreezeEnabled key is not read.
+function storedMarketConfig(input: TrustTransportMarketConfig): Record<string, unknown> {
+  return {
+    maxConcurrentTrips: input.maxConcurrentTrips,
+    requireProofOnDelivery: input.requireProofOnDelivery,
+    emergencyFreezeActive: input.emergencyFreezeEnabled,
+  };
+}
+
+// The admin market controls, enforced (owner decision, 2026-10-17; issue #2858). Before this they were
+// saved and audited but nothing read them, so the emergency freeze paused nothing.
+//
+//   - Emergency freeze: no new request, offer or acceptance while it is on. Trips already under way
+//     carry on, so nobody is stranded mid-ride.
+//   - Max concurrent trips: a driver cannot offer on, or be accepted for, another trip while they
+//     already hold that many that have not ended.
+//   - Require proof on delivery: a trip cannot be marked delivered until proof is recorded for it.
+//     An admin can still move it, as with every other status override.
+const PROVIDER_ACTIVE_TRIP_STATUSES = ['assigned', 'en_route', 'picked_up', 'delivered', 'emergency_frozen'];
+
+async function assertMarketOpen(): Promise<TrustTransportMarketConfig> {
+  const market = await getMarketConfig();
+  if (market.emergencyFreezeEnabled) {
+    throw new Error('market_frozen');
+  }
+  return market;
+}
+
+async function countActiveProviderTrips(providerUserId: string, client?: PoolClient): Promise<number> {
+  const sql = `SELECT COUNT(*)::int AS count
+                 FROM trust_transport_trips
+                WHERE provider_user_id = $1 AND status = ANY($2::text[])`;
+  const params = [providerUserId, PROVIDER_ACTIVE_TRIP_STATUSES];
+  const result = client
+    ? await client.query<{ count: number }>(sql, params)
+    : await queryDb<{ count: number }>(sql, params);
+  return result.rows[0]?.count ?? 0;
+}
+
+async function assertDeliveryProof(client: PoolClient, tripId: string): Promise<void> {
+  const market = await getMarketConfig();
+  if (!market.requireProofOnDelivery) return;
+  const proof = await client.query<{ found: boolean }>(
+    `SELECT EXISTS (SELECT 1 FROM trust_transport_proof_artifacts WHERE trip_id = $1::uuid) AS found`,
+    [tripId],
+  );
+  if (!proof.rows[0]?.found) {
+    throw new Error('proof_required');
+  }
 }
 
 export async function updateMarketConfig(actorUserId: string, input: TrustTransportMarketConfig): Promise<TrustTransportMarketConfig> {
@@ -1453,7 +1525,7 @@ export async function updateMarketConfig(actorUserId: string, input: TrustTransp
      VALUES (TRUE, $1::jsonb, $2, NOW())
      ON CONFLICT (id)
      DO UPDATE SET config = EXCLUDED.config, updated_by_user_id = EXCLUDED.updated_by_user_id, updated_at = NOW()`,
-    [JSON.stringify(input), actorUserId],
+    [JSON.stringify(storedMarketConfig(input)), actorUserId],
   );
 
   return getMarketConfig();
