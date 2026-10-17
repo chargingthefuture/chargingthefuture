@@ -10,9 +10,10 @@ name: Demo Videos — Record Clips
 # Output: one MP4 (and a .vtt caption file) per clip, attached to the `demo-videos` release so they
 # open on a phone, and to the run as an artifact.
 #
-# Needs CLERK_SECRET_KEY and the Clerk user id of an account in demo mode. Each is read from the
-# first place that has it: the demo_user_id input, then the GitHub secrets CLERK_SECRET_KEY and
-# DEMO_VIDEO_CLERK_USER_ID, then Infisical. Infisical is optional; the run carries on without it.
+# Needs CLERK_SECRET_KEY and the Clerk user id of an account in demo mode. The id comes from the
+# demo_user_id box, else the repository variable DEMO_VIDEO_CLERK_USER_ID (member) or
+# DEMO_VIDEO_CLERK_ADMIN_ID (admin), else Infisical. CLERK_SECRET_KEY comes from the GitHub secret,
+# else Infisical. Infisical is optional; the run carries on without it.
 # Setting the account up is in ctf/scripts/demo-videos/README.md.
 
 on:
@@ -23,8 +24,16 @@ on:
         required: true
         default: "all"
         type: string
+      account:
+        description: "Which demo account films the clips"
+        required: true
+        default: "member"
+        type: choice
+        options:
+          - member
+          - admin
       demo_user_id:
-        description: "Clerk user id of the demo-mode account (the one you seed the demo schema with). Leave empty to use the DEMO_VIDEO_CLERK_USER_ID secret"
+        description: "Optional: a Clerk user id that replaces the chosen account for this run"
         required: false
         default: ""
         type: string
@@ -113,12 +122,18 @@ jobs:
           CLIPS: ${{ inputs.clips }}
           VOICE: ${{ inputs.voice }}
           INPUT_USER_ID: ${{ inputs.demo_user_id }}
-          GH_USER_ID: ${{ secrets.DEMO_VIDEO_CLERK_USER_ID }}
+          ACCOUNT: ${{ inputs.account }}
+          MEMBER_ID: ${{ vars.DEMO_VIDEO_CLERK_USER_ID || secrets.DEMO_VIDEO_CLERK_USER_ID }}
+          ADMIN_ID: ${{ vars.DEMO_VIDEO_CLERK_ADMIN_ID || secrets.DEMO_VIDEO_CLERK_ADMIN_ID }}
           GH_CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
         run: |
           set -euo pipefail
-          # The input wins, then the GitHub secret, then whatever Infisical set.
-          export DEMO_VIDEO_CLERK_USER_ID="${INPUT_USER_ID:-${GH_USER_ID:-${DEMO_VIDEO_CLERK_USER_ID:-}}}"
+          # The box wins, then the repository variable for the chosen account, then Infisical.
+          if [ "$ACCOUNT" = "admin" ]; then
+            export DEMO_VIDEO_CLERK_USER_ID="${INPUT_USER_ID:-${ADMIN_ID:-${DEMO_VIDEO_CLERK_ADMIN_ID:-}}}"
+          else
+            export DEMO_VIDEO_CLERK_USER_ID="${INPUT_USER_ID:-${MEMBER_ID:-${DEMO_VIDEO_CLERK_USER_ID:-}}}"
+          fi
           export CLERK_SECRET_KEY="${GH_CLERK_SECRET_KEY:-${CLERK_SECRET_KEY:-}}"
           export PIPER_BIN=python PIPER_MODEL="$VOICES_DIR/$VOICE.onnx" DEMO_OUT_DIR="$OUT_DIR"
           # CLIPS is split into names on purpose.
