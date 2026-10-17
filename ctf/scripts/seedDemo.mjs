@@ -36,6 +36,7 @@
 
 import { Pool } from 'pg';
 import crypto from 'node:crypto';
+import { listDemoSeedModules } from './demo-seed/index.mjs';
 
 function requireEnv(name) {
   const value = process.env[name];
@@ -1376,6 +1377,12 @@ async function seedRecurringActivity(c) {
   console.log('  ✓ recurring-activity');
 }
 
+// What the modules in demo-seed/ get: the people this seed created and its fixed ids, so they can
+// point at the same owner, peers, cohort or listing without redefining them.
+function demoContext() {
+  return { OWNER, OWNER2, TESTER_ADMIN, TESTER_MEMBER, REAL_USERS, PEER_1, PEER_2, ADMIN, HOST, TRAINER, ID, WEEK_START };
+}
+
 async function main() {
   const connStr =
     process.env.DATABASE_URL_DIRECT ||
@@ -1438,6 +1445,12 @@ async function main() {
       ['contributions', seedContributions],
       ['recurring-activity', seedRecurringActivity],
     ];
+
+    // The per-plugin extras in demo-seed/ run after every base step, as steps of their own.
+    const ctx = demoContext();
+    for (const [name, run] of await listDemoSeedModules()) {
+      steps.push([name, (c) => run(c, ctx)]);
+    }
 
     for (const [name, run] of steps) {
       try {
