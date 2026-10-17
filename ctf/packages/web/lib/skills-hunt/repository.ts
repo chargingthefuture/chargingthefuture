@@ -107,6 +107,7 @@ type SkillsHuntSubmissionRow = {
   edit_history?: unknown;
   edited_at?: Date | null;
   deleted_at?: Date | null;
+  removed_by_account_deletion?: boolean;
   directory_profile_generated_at: Date | null;
   created_at: Date;
   updated_at: Date;
@@ -332,10 +333,33 @@ function mapSubmission(row: SkillsHuntSubmissionRow): SkillsHuntSubmission {
     editHistory: mapEditHistory(row.edit_history),
     editedAtIso: toIsoOrNull(row.edited_at),
     deletedAtIso: toIsoOrNull(row.deleted_at),
+    removedByAccountDeletion: row.removed_by_account_deletion === true,
     directoryProfileGeneratedAtIso: toIsoOrNull(row.directory_profile_generated_at),
     createdAtIso: toIso(row.created_at),
     updatedAtIso: toIso(row.updated_at),
   };
+}
+
+// Whether a removed nomination was removed by its submitter deleting their account or their SkillsHunt
+// data, rather than by an admin (owner decision, 2026-10-17; issue #2868). Both write deleted_at. The
+// deletion engine stamps it in the same transaction that writes the account_deletion_events row, so the
+// row's deleted_at equals that event's completed_at (NOW() is fixed for a transaction). Such a row is
+// shown to admins, labelled, and can never be restored or reviewed back to life: the member asked for
+// it to be gone. `alias` is the submissions table name or alias in the calling query.
+export function removedByAccountDeletionSql(alias: string): string {
+  return `(${alias}.deleted_at IS NOT NULL AND EXISTS (
+            SELECT 1 FROM account_deletion_events e
+             WHERE e.user_id = ${alias}.submitter_user_id
+               AND e.completed_at = ${alias}.deleted_at
+               AND (e.scope = 'account' OR e.service_name = 'skills-hunt')))`;
+}
+
+export async function wasRemovedByAccountDeletion(client: PoolClient, submissionId: string): Promise<boolean> {
+  const result = await client.query<{ removed: boolean }>(
+    `SELECT ${removedByAccountDeletionSql('s')} AS removed FROM skills_hunt_submissions s WHERE s.id = $1::uuid`,
+    [submissionId],
+  );
+  return result.rows[0]?.removed === true;
 }
 
 function mapLeaderboard(row: SkillsHuntLeaderboardRow): SkillsHuntLeaderboardItem {
@@ -1941,6 +1965,7 @@ export async function listSubmissions(
       edit_history,
       edited_at,
       deleted_at,
+      ${removedByAccountDeletionSql('skills_hunt_submissions')} AS removed_by_account_deletion,
       directory_profile_generated_at,
       created_at,
       updated_at
@@ -2142,6 +2167,11 @@ export async function reviewSubmission(
     const existing = submissionResult.rows[0];
     if (!existing) {
       throw new Error('skills_hunt_submission_not_found');
+    }
+    // A nomination removed by its submitter's account deletion stays removed (issue #2868): a review
+    // would make it live again, back on the leaderboard under an erased account.
+    if (existing.deleted_at && (await wasRemovedByAccountDeletion(client, submissionId))) {
+      throw new Error('skills_hunt_submission_account_deleted');
     }
 
     // Captured before the write so the audit trail can record what actually changed, not only which

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireSkillsHuntModeratorAccess } from '../../../../_lib';
 import { logSkillsHuntAudit } from 'lib/skills-hunt/audit';
-import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
+import { ACCOUNT_DELETED_MESSAGE, SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
 import {
   insertSkillsHuntAudit,
   reviewSubmission,
@@ -26,10 +26,12 @@ function toReviewInput(body: ReviewBody): SkillsHuntSubmissionReviewInput {
 // The three ways a review can fail for the caller: the submission is gone, the nominee has been
 // taken down from the directory since it was filed (accepting would pay for a listing that can
 // never appear), or the write itself failed.
-type ReviewFailureKind = { isNotFound: boolean; isTakenDown: boolean; isLiveCollision: boolean };
+type ReviewFailureKind = { isNotFound: boolean; isTakenDown: boolean; isLiveCollision: boolean; isAccountDeleted: boolean };
 
-function resolveReviewErrorCategory(isNotFound: boolean, isTakenDown: boolean, isLiveCollision: boolean): string {
+function resolveReviewErrorCategory(kind: ReviewFailureKind): string {
+  const { isNotFound, isTakenDown, isLiveCollision, isAccountDeleted } = kind;
   if (isNotFound) return 'submission_not_found';
+  if (isAccountDeleted) return 'removed_by_account_deletion';
   if (isTakenDown) return 'quora_url_taken_down';
   if (isLiveCollision) return 'duplicate_live_nomination';
   return 'persistence_error';
@@ -40,9 +42,12 @@ function resolveReviewFailure(
   // Built by the caller with withReason so the reason reaches the answer (rule 137).
   fallbackMessage: string,
 ): { code: string; message: string; status: number } {
-  const { isNotFound, isTakenDown, isLiveCollision } = kind;
+  const { isNotFound, isTakenDown, isLiveCollision, isAccountDeleted } = kind;
   if (isNotFound) {
     return { code: SKILLS_HUNT_ERROR_CODE.submissionNotFound, message: 'Submission not found.', status: 404 };
+  }
+  if (isAccountDeleted) {
+    return { code: SKILLS_HUNT_ERROR_CODE.submissionAccountDeleted, message: ACCOUNT_DELETED_MESSAGE, status: 409 };
   }
   if (isLiveCollision) {
     return {
@@ -142,6 +147,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ sub
     // Reviewing a removed submission makes it live again, which can collide with a nomination made
     // for the same person while it was removed. Say so rather than leaking a constraint error.
     const isLiveCollision = message.includes('uq_skills_hunt_submissions_round_signature_live');
+    // Removed by the submitter's own account deletion; it stays removed (issue #2868).
+    const isAccountDeleted = message === 'skills_hunt_submission_account_deleted';
 
     logSkillsHuntAudit({
       actorId: gate.auth.userId,
@@ -152,11 +159,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ sub
       targetType: 'submission',
       targetId: submissionId,
       result: 'failure',
-      errorCategory: resolveReviewErrorCategory(isNotFound, isTakenDown, isLiveCollision),
+      errorCategory: resolveReviewErrorCategory({ isNotFound, isTakenDown, isLiveCollision, isAccountDeleted }),
       metadata: { action: input.action },
     });
 
-    const failure = resolveReviewFailure({ isNotFound, isTakenDown, isLiveCollision }, withReason('Unable to review submission', error));
+    const failure = resolveReviewFailure({ isNotFound, isTakenDown, isLiveCollision, isAccountDeleted }, withReason('Unable to review submission', error));
     return NextResponse.json({ ok: false, code: failure.code, message: failure.message }, { status: failure.status });
   }
 }

@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireSkillsHuntAdminAccess } from '../../../../_lib';
 import { withDbTransaction } from 'lib/db/postgres';
-import { insertSkillsHuntAudit, rebuildLeaderboard } from 'lib/skills-hunt/repository';
+import { insertSkillsHuntAudit, rebuildLeaderboard, wasRemovedByAccountDeletion } from 'lib/skills-hunt/repository';
 import { recomputeMissionProgressForUser } from 'lib/skills-hunt/missions';
-import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
+import { ACCOUNT_DELETED_MESSAGE, SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
 import { reportError } from 'lib/observability/report';
 import { withReason } from 'lib/errors/failure';
 
@@ -57,6 +57,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ sub
       if (!row.deleted_at) {
         return { alreadyLive: true, roundId: row.round_id, status: row.status };
       }
+      // The submitter deleted their account or SkillsHunt data, which removed this row; it stays
+      // removed (issue #2868).
+      if (await wasRemovedByAccountDeletion(client, submissionId)) {
+        throw new Error('skills_hunt_submission_account_deleted');
+      }
 
       await client.query(
         `UPDATE skills_hunt_submissions SET deleted_at = NULL, updated_at = NOW() WHERE id = $1::uuid`,
@@ -85,6 +90,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ sub
       return NextResponse.json(
         { ok: false, code: SKILLS_HUNT_ERROR_CODE.submissionNotFound, message: 'Submission not found.' },
         { status: 404 },
+      );
+    }
+    if (message === 'skills_hunt_submission_account_deleted') {
+      return NextResponse.json(
+        { ok: false, code: SKILLS_HUNT_ERROR_CODE.submissionAccountDeleted, message: ACCOUNT_DELETED_MESSAGE },
+        { status: 409 },
       );
     }
     if (isLiveSignatureCollision(error)) {
