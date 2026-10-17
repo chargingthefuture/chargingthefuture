@@ -292,6 +292,9 @@ NOT EXISTS` per column) in `ctf/schema.sql`; the demo schema is regenerated into
 - Known seed limitation: the confirmed demo claim records `credits_granted = 10` for display but
   has no backing governance event (`credit_governance_event_id` is null) because seeding does not
   run the real mint path.
+- Demo schema: `ctf/scripts/demo-seed/33-contributions.mjs` adds a pending Amazon gift-card claim for
+  the demo owner (placeholder Signal contact, nothing confirmed) and moves the demo GitHub star to
+  confirmed with 10 thank-you credits, so the star path reads as already credited.
 
 ## 10. Gaps and Known Technical Debt
 
@@ -315,6 +318,9 @@ NOT EXISTS` per column) in `ctf/schema.sql`; the demo schema is regenerated into
 
 ## Change Log
 
+- 2026-10-17: **Demo seed adds a gift-card claim and a credited star** (`ctf/scripts/demo-seed/33-contributions.mjs`),
+  so My history shows three claims and the GitHub star path reads as already credited in the demo
+  schema. No route, schema or contract change.
 - 2026-10-15: **The link edited on review is saved (owner decision; issue #2980).** The review panel
   let the admin edit the Quora post or GitHub profile link, but `confirm()` and `reject()` never
   sent it and the review route had no field for it, so a pasted link was dropped. The review

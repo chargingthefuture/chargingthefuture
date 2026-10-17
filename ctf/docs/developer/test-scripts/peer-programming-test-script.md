@@ -12,7 +12,7 @@
 | **Surfaces** | web (`/apps/peer-programming`, `/admin/peer-programming`); Android app (member and admin screens; see AN-PP in `android-app-test-script.md`) |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-peer-programming-feature-inventory.md` |
-| **Generated** | 2026-07-18 (commit 34badcbb) · 2026-09-20: the inventory's prose was swept for a banned word (CLAUDE.md); no step here changes, because nothing about what the plugin does or how it is tested moved · 2026-10-05: added PP-2c, a blocked-device check under PP-10, and the failure line in PP-A10 |
+| **Generated** | 2026-07-18 (commit 34badcbb) · 2026-09-20: the inventory's prose was swept for a banned word (CLAUDE.md); no step here changes, because nothing about what the plugin does or how it is tested moved · 2026-10-05: added PP-2c, a blocked-device check under PP-10, and the failure line in PP-A10 · 2026-10-17: the demo seed now places every seeded account in standing Cohort 1 with two sample goals, so smoke step 4 checks the board too |
 
 ---
 
@@ -62,7 +62,7 @@ While signed in as a regular member, navigate to `/admin/peer-programming`. You 
 web ☐
 
 **4. Seed data is present**
-After the seed, the admin cohort list shows at least one cohort and the topic form shows a topic for the current week (or a recent week).
+After the seed, the admin cohort list shows at least one cohort and the topic form shows a topic for the current week (or a recent week). Signed in as a seeded member, `/apps/peer-programming?tab=goals` shows the goal board (not "You are not in a cohort yet") with two sample goals, "A yard jockey job near Dallas" and "A week's groceries for three", and cards in Up for grabs, Doing and Done. Running the seed again puts those cards back to that state.
 web ☐
 
 **5. The cohort's video call opens**

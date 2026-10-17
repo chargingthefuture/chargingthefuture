@@ -17,7 +17,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-mood-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-09-20: the inventory's prose was swept for a banned word (CLAUDE.md); no step here changes, because nothing about what the plugin does or how it is tested moved |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-09-20: the inventory's prose was swept for a banned word (CLAUDE.md); no step here changes, because nothing about what the plugin does or how it is tested moved · 2026-10-17: smoke step 4 names the demo check-ins from `demo-seed/22-mood.mjs` |
 
 ## How to run this
 
@@ -49,7 +49,9 @@ Member role unless noted.
 3. **Cooldown blocks a second check.** Right after submitting, try again. The 7-day cooldown blocks it
    with a readable message, not a raw error. → web ☐ mobile ☐
 4. **Aggregate stays anonymous.** Open the community pulse / trends. It shows only an aggregate chart —
-   no individual check-in, note, or identifier is ever shown. → web ☐ mobile ☐
+   no individual check-in, note, or identifier is ever shown. In the demo schema the seed now puts
+   twelve check-ins on three days of the last week, so the chart shows rather than the not-enough-data
+   state. → web ☐ mobile ☐
 5. **Signed-out page says weekly.** Sign out and open `/apps/mood`. The intro says one check-in a
    week and a community-wide picture of how members are doing; it does not say daily, and it does not
    promise resources or nudges unlocked by checking in. → web ☐ mobile ☐

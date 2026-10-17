@@ -1,0 +1,171 @@
+name: Demo Videos — Record Clips
+
+# Records the short demo clips in ctf/scripts/demo-videos/clips/: a phone-sized browser signs in
+# as the demo account, clicks through each clip while it is filmed, a voice reads the narration,
+# and the captions are burned in. Run it again whenever a screen in a clip changes.
+#
+# The voice is Piper, which runs on the runner itself: no API credit, so no slash command stands
+# in for this workflow.
+#
+# Output: one MP4 (and a .vtt caption file) per clip, attached to a release of its own for each run,
+# tagged demo-videos-<run number>, so they open on a phone; and to the run as an artifact. Releases
+# in this repository are immutable once published, so a run never adds to an earlier one.
+#
+# Needs CLERK_SECRET_KEY and the Clerk user id of an account in demo mode. The id comes from the
+# demo_user_id box, else the repository variable DEMO_VIDEO_CLERK_USER_ID (member) or
+# DEMO_VIDEO_CLERK_ADMIN_ID (admin), else Infisical. CLERK_SECRET_KEY comes from the GitHub secret,
+# else Infisical. Infisical is optional; the run carries on without it.
+# Setting the account up is in ctf/scripts/demo-videos/README.md.
+
+on:
+  workflow_dispatch:
+    inputs:
+      clips:
+        description: "Clip names separated by spaces, or all"
+        required: true
+        default: "all"
+        type: string
+      account:
+        description: "Which demo account films the clips"
+        required: true
+        default: "member"
+        type: choice
+        options:
+          - member
+          - admin
+      demo_user_id:
+        description: "Optional: a Clerk user id that replaces the chosen account for this run"
+        required: false
+        default: ""
+        type: string
+      voice:
+        description: "Piper voice (see the README for others)"
+        required: true
+        default: "en_US-lessac-medium"
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: demo-videos
+  cancel-in-progress: false
+
+jobs:
+  record:
+    name: Record clips
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      OUT_DIR: ${{ github.workspace }}/demo-videos-out
+      VOICES_DIR: ${{ github.workspace }}/.piper-voices
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install ffmpeg and caption font
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q ffmpeg fonts-dejavu-core
+
+      - name: Install Playwright and Chromium
+        run: |
+          npm install --no-save --prefix ctf/scripts/demo-videos playwright@1.56.1
+          npx --prefix ctf/scripts/demo-videos playwright install --with-deps chromium
+
+      - name: Install Piper
+        run: pip install piper-tts==1.3.0
+
+      - name: Cache Piper voice
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.VOICES_DIR }}
+          key: piper-voice-${{ inputs.voice }}
+
+      - name: Download Piper voice
+        env:
+          VOICE: ${{ inputs.voice }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$VOICES_DIR"
+          if [ ! -f "$VOICES_DIR/$VOICE.onnx" ]; then
+            (cd "$VOICES_DIR" && python -m piper.download_voices "$VOICE")
+          fi
+          if [ ! -f "$VOICES_DIR/$VOICE.onnx" ]; then
+            echo "::error::Piper voice $VOICE did not download. Check the name against the voice list in the README."
+            exit 1
+          fi
+
+      - name: Inject secrets from Infisical (optional)
+        continue-on-error: true
+        uses: Infisical/secrets-action@v1.0.16
+        with:
+          client-id: ${{ secrets.INFISICAL_CLIENT_ID }}
+          client-secret: ${{ secrets.INFISICAL_CLIENT_SECRET }}
+          project-slug: ${{ secrets.INFISICAL_PROJECT_SLUG }}
+          env-slug: prod
+          domain: ${{ secrets.INFISICAL_URL }}
+          secret-path: /
+          recursive: true
+
+      - name: Record clips
+        env:
+          CLIPS: ${{ inputs.clips }}
+          VOICE: ${{ inputs.voice }}
+          INPUT_USER_ID: ${{ inputs.demo_user_id }}
+          ACCOUNT: ${{ inputs.account }}
+          MEMBER_ID: ${{ vars.DEMO_VIDEO_CLERK_USER_ID || secrets.DEMO_VIDEO_CLERK_USER_ID }}
+          ADMIN_ID: ${{ vars.DEMO_VIDEO_CLERK_ADMIN_ID || secrets.DEMO_VIDEO_CLERK_ADMIN_ID }}
+          GH_CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+        run: |
+          set -euo pipefail
+          # The box wins, then the repository variable for the chosen account, then Infisical.
+          if [ "$ACCOUNT" = "admin" ]; then
+            export DEMO_VIDEO_CLERK_USER_ID="${INPUT_USER_ID:-${ADMIN_ID:-${DEMO_VIDEO_CLERK_ADMIN_ID:-}}}"
+          else
+            export DEMO_VIDEO_CLERK_USER_ID="${INPUT_USER_ID:-${MEMBER_ID:-${DEMO_VIDEO_CLERK_USER_ID:-}}}"
+          fi
+          export CLERK_SECRET_KEY="${GH_CLERK_SECRET_KEY:-${CLERK_SECRET_KEY:-}}"
+          export PIPER_BIN=python PIPER_MODEL="$VOICES_DIR/$VOICE.onnx" DEMO_OUT_DIR="$OUT_DIR"
+          # CLIPS is split into names on purpose.
+          # shellcheck disable=SC2086
+          node ctf/scripts/demo-videos/record.mjs $CLIPS
+
+      - name: Publish as a release for this run
+        if: ${{ always() && hashFiles('demo-videos-out/*.mp4') != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: demo-videos-${{ github.run_number }}
+          ACCOUNT: ${{ inputs.account }}
+        run: |
+          set -euo pipefail
+          # gh uploads the files to a draft and publishes it after, which an immutable release needs.
+          gh release create "$TAG" "$OUT_DIR"/*.mp4 "$OUT_DIR"/*.vtt \
+            --target "$GITHUB_SHA" --prerelease --title "Demo videos, run ${{ github.run_number }}" \
+            --notes "Demo clips recorded by the Demo Videos workflow as the $ACCOUNT demo account. Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          {
+            echo "### Demo videos"
+            echo "Release: ${{ github.server_url }}/${{ github.repository }}/releases/tag/$TAG"
+            for f in "$OUT_DIR"/*.mp4; do echo "- $(basename "$f")"; done
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Keep as run artifact
+        if: ${{ always() && hashFiles('demo-videos-out/*.mp4', 'demo-videos-out/*.png') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: demo-videos
+          path: |
+            demo-videos-out/*.mp4
+            demo-videos-out/*.vtt
+            demo-videos-out/*.png
+          retention-days: 14

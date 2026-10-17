@@ -17,7 +17,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:what-works` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-what-works-feature-inventory.md` |
-| **Generated** | 2026-07-01 (updated by hand for the admin edit-tool feature; regenerate via CI to stamp the commit) |
+| **Generated** | 2026-07-01 (updated by hand for the admin edit-tool feature; regenerate via CI to stamp the commit) · 2026-10-17: demo seed adds eight problems so the list pages (WW-7) |
 
 ## How to run this
 
@@ -46,7 +46,7 @@ One shared survivor-verified list of tools by problem. Member role unless noted.
    the screen confirms it was submitted for review. → web ☐ mobile ☐
 5. **Lists end.** The problem list shows a page of problems with Previous / Page N of M / Next
    underneath — nothing keeps loading as you scroll — and a problem with more than two tools shows
-   two plus a "Show N more tools" control. → web ☐ mobile ☐
+   two plus a "Show N more tools" control. The demo seed now shows eleven problems, three pages of five, with "Charging Away From Home" on page 2 carrying four tools. → web ☐ mobile ☐
 6. **A problem with no tools yet still shows.** A problem an admin added but that has no approved
    tool renders with its heading and a "no tools on this one yet" panel with a **Suggest a tool**
    button — it is not missing from the list. → web ☐ mobile ☐

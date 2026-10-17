@@ -126,6 +126,8 @@ Android pixel pass (design `MobileMood.tsx`, 2026-05-31): built `ctf/packages/mo
 
 Seed script requirement: Provide a deterministic plugin seed script with dummy development data for manual plugin validation in dev environments.
 
+`ctf/scripts/demo-seed/22-mood.mjs` adds to the demo schema twelve check-ins from twelve synthetic members, four on each of three days in the last week, stored under pseudonyms the way the app stores them, so the Community Pulse shows its chart.
+
 ## 8) Gaps and Known Technical Debt
 
 1. Pseudonymous decoupling restored (2026-06-26): check-ins are now stored under a server-controlled pseudonym with no `user_id` on the row (see §4.1), so the v2 pseudo-anonymity carries into v3. Member-facing copy describes check-ins as **pseudonymous** (stored under a random id kept separate from the account); the community aggregate stays **anonymous** (no per-user data at all).
@@ -133,6 +135,7 @@ Seed script requirement: Provide a deterministic plugin seed script with dummy d
 
 ## 9) Change Log
 
+- 2026-10-17: Demo seed module `ctf/scripts/demo-seed/22-mood.mjs` fills the demo Community Pulse past its minimum sample (test case MD-5).
 - 2026-10-16: **The community pulse hides a day with fewer than 3 check-ins (owner decision,
   #2773).** The 5-check-in minimum applied to the week's total, so once it was met every day was
   shown with its own average and count, and a day holding one check-in showed that member's exact

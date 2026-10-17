@@ -13,7 +13,7 @@
 | **Surfaces** | web (`/apps/skill-up`, `/admin/skill-up`) · android (SkillUp screen, Admin SkillUp screen) |
 | **Seed first** | `pnpm --dir ctf seed:skill-up` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-skill-up-feature-inventory.md` |
-| **Generated** | 2026-07-20 (commit eca128e5) · 2026-10-04 manual note: `SKILL_UP_PROFILE_AND_DELETION_CONTRACT.md` written (the registry entry stated: enrollments, counters, trainer profile and achievements deleted; the credit-movement record retained) — no test change; the deletion cases live in the account test script · 2026-10-05 manual update: LU-9b added (a failed section load says so; the Progress deposit step); LU-6 says what "Earned through SkillUp" counts |
+| **Generated** | 2026-07-20 (commit eca128e5) · 2026-10-04 manual note: `SKILL_UP_PROFILE_AND_DELETION_CONTRACT.md` written (the registry entry stated: enrollments, counters, trainer profile and achievements deleted; the credit-movement record retained) — no test change; the deletion cases live in the account test script · 2026-10-05 manual update: LU-9b added (a failed section load says so; the Progress deposit step); LU-6 says what "Earned through SkillUp" counts · 2026-10-17: demo seed adds badges, a trainer listing, a trainerless cohort and an open dispute — step 1, LU-1c, LU-7, LU-9, LU-A1b |
 | **Inventory wording** | 2026-10-01: banned-term wording removed from the inventory prose; no step in this script changed |
 
 ---
@@ -38,7 +38,7 @@ deposit in money terms, is a bug (inventory Intent and Outcome, added 2026-08-18
 
 **Seed before starting:** `pnpm --dir ctf seed:skill-up` (it finishes without a `column ... does not exist` error; the stipend and microgrant columns it used to write were dropped)
 
-1. Sign in as the seed **member** (trainee 1). Open the SkillUp app. The cohort browse screen loads without error and shows at least one cohort card.
+1. Sign in as the seed **member** (trainee 1). Open the SkillUp app. The cohort browse screen loads without error and shows at least one cohort card. On the demo schema (`seed:demo`), the demo owner also has First Milestone earned, the Trainers tab lists the demo trainer, a cohort named Platform Engineering Foundations offers Claim as trainer, and the admin queue holds one open dispute.
    web ☐
 
 2. Sign in as the seed **admin**. Open `/admin/skill-up`. The admin panel loads and shows KPI cards and a cohort overview table.

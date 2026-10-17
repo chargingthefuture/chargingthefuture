@@ -15,6 +15,13 @@
  *   two real accounts can each test both sides. Leave it unset for the original
  *   single-owner behavior (unchanged).
  *
+ *   Admin demo account (DEMO_TESTER_ADMIN_ID): it carries the same personal demo data as
+ *   DEMO_OWNER_ID (wallet history, incidents, listings, quotes, enrollments, badges, check-ins and
+ *   the rest), each row with its own id (PERSONAL_ACCOUNTS, personalId), so the demo video clips work
+ *   signed in as either. The owner's rows and ids are unchanged, and every pairing with the second
+ *   owner and the tester member stays as it was, so live testing between the admin and member
+ *   accounts works the same way.
+ *
  *   Access note: the seed grants the approved_full unlock tier to both real owners
  *   (an unlock_verification_submissions row), so neither needs the
  *   feature-unlock-quora-onboarding Unleash flag. The second user still needs the
@@ -36,6 +43,7 @@
 
 import { Pool } from 'pg';
 import crypto from 'node:crypto';
+import { listDemoSeedModules } from './demo-seed/index.mjs';
 
 function requireEnv(name) {
   const value = process.env[name];
@@ -141,10 +149,39 @@ const ID = {
   contribSubmission2: 'ddd00000-0000-4000-8000-000000000037',
   raActive: 'ddd00000-0000-4000-8000-000000000038',
   raPending: 'ddd00000-0000-4000-8000-000000000039',
+  ppStandingCohort: 'ddd00000-0000-4000-8000-00000000003a',
+  ppGoalJob: 'ddd00000-0000-4000-8000-00000000003b',
+  ppGoalGroceries: 'ddd00000-0000-4000-8000-00000000003c',
+  ppTaskYards: 'ddd00000-0000-4000-8000-00000000003d',
+  ppTaskLicense: 'ddd00000-0000-4000-8000-00000000003e',
+  ppTaskAsk: 'ddd00000-0000-4000-8000-00000000003f',
+  ppTaskCourse: 'ddd00000-0000-4000-8000-000000000040',
+  ppTaskPantry: 'ddd00000-0000-4000-8000-000000000041',
+  ppTaskBus: 'ddd00000-0000-4000-8000-000000000042',
 };
 
 function sha256id(...parts) {
   return crypto.createHash('sha256').update(parts.join('|')).digest('hex').slice(0, 32);
+}
+
+// The accounts that carry the owner's personal demo data: their wallet history, incidents, listings,
+// quotes, enrollments, badges, check-ins and the rest. The admin demo account gets its own copy so the
+// demo video clips work signed in as either. Pairings with the second owner and the tester member
+// stay the owner's alone.
+const PERSONAL_ACCOUNTS = [OWNER, TESTER_ADMIN].filter(Boolean);
+
+// The id of one personal row for one account. The owner keeps the row's existing id exactly; any
+// other account gets a UUID derived from (account, that id), so a re-run lands on the same row.
+function personalId(account, ownerId) {
+  if (account === OWNER) return ownerId;
+  const h = sha256id('personal-demo-row', account, ownerId);
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20, 32)}`;
+}
+
+// The Directory profile an account claims: the owner's fixed one, or the tester profile seedDirectory
+// writes for a tester account (one claimed profile per account, so the admin reuses that one).
+function directoryProfileIdFor(account) {
+  return account === OWNER ? ID.dirProfileOwner : sha256id('dir-profile', account);
 }
 
 const WEEK_START = '2026-05-19';
@@ -180,7 +217,7 @@ async function seedUnlock(c) {
 
 async function seedServiceCredits(c) {
   const wallets = [
-    [OWNER, 750, 50],
+    ...PERSONAL_ACCOUNTS.map((uid) => [uid, 750, 50]),
     [PEER_1, 200, 0],
     [PEER_2, 150, 0],
     [TRAINER, 1200, 0],
@@ -197,35 +234,34 @@ async function seedServiceCredits(c) {
     );
   }
 
-  // Ledger: initial allocation for owner
-  const allocId = sha256id(OWNER, 'initial_allocation', '500');
-  await c.query(
-    `INSERT INTO service_credits_ledger_entries
-     (id, user_id, entry_type, amount, reference_type, reference_id, accounting_scope, metadata)
-     VALUES ($1, $2, 'initial_allocation', 500, 'bootstrap', 'demo-seed', 'global', $3)
-     ON CONFLICT (id) DO NOTHING`,
-    [allocId, OWNER, JSON.stringify({ reason: 'demo onboarding allocation' })],
-  );
+  for (const uid of PERSONAL_ACCOUNTS) {
+    // Ledger: initial allocation
+    await c.query(
+      `INSERT INTO service_credits_ledger_entries
+       (id, user_id, entry_type, amount, reference_type, reference_id, accounting_scope, metadata)
+       VALUES ($1, $2, 'initial_allocation', 500, 'bootstrap', 'demo-seed', 'global', $3)
+       ON CONFLICT (id) DO NOTHING`,
+      [personalId(uid, sha256id(OWNER, 'initial_allocation', '500')), uid, JSON.stringify({ reason: 'demo onboarding allocation' })],
+    );
 
-  // Ledger: skills-hunt credit award
-  const huntId = sha256id(OWNER, 'skills_hunt_award', '250');
-  await c.query(
-    `INSERT INTO service_credits_ledger_entries
-     (id, user_id, entry_type, amount, reference_type, reference_id, accounting_scope, metadata)
-     VALUES ($1, $2, 'skills_hunt_award', 250, 'skills_hunt', $3, 'global', $4)
-     ON CONFLICT (id) DO NOTHING`,
-    [huntId, OWNER, ID.submission, JSON.stringify({ round: 'Demo Wave 1' })],
-  );
+    // Ledger: skills-hunt credit award, for the account's own accepted nomination
+    await c.query(
+      `INSERT INTO service_credits_ledger_entries
+       (id, user_id, entry_type, amount, reference_type, reference_id, accounting_scope, metadata)
+       VALUES ($1, $2, 'skills_hunt_award', 250, 'skills_hunt', $3, 'global', $4)
+       ON CONFLICT (id) DO NOTHING`,
+      [personalId(uid, sha256id(OWNER, 'skills_hunt_award', '250')), uid, personalId(uid, ID.submission), JSON.stringify({ round: 'Demo Wave 1' })],
+    );
 
-  // Transfer: peer1 → owner (tip)
-  const xferId = sha256id(PEER_1, OWNER, '50');
-  await c.query(
-    `INSERT INTO service_credits_transfers
-     (id, sender_user_id, recipient_user_id, amount, status, idempotency_key, completed_at)
-     VALUES ($1, $2, $3, 50, 'completed', $4, NOW())
-     ON CONFLICT (id) DO NOTHING`,
-    [xferId, PEER_1, OWNER, `demo-transfer-${PEER_1}-${OWNER}`],
-  );
+    // Transfer: peer1 → account (tip)
+    await c.query(
+      `INSERT INTO service_credits_transfers
+       (id, sender_user_id, recipient_user_id, amount, status, idempotency_key, completed_at)
+       VALUES ($1, $2, $3, 50, 'completed', $4, NOW())
+       ON CONFLICT (id) DO NOTHING`,
+      [personalId(uid, sha256id(PEER_1, OWNER, '50')), PEER_1, uid, `demo-transfer-${PEER_1}-${uid}`],
+    );
+  }
 
   // Governance event
   const govId = sha256id('demo', 'governance', 'policy_v1');
@@ -258,8 +294,9 @@ async function seedServiceCredits(c) {
   }
 
   // Tester accounts (issue #2037): a wallet each, so credit-bearing script steps (send, escrow,
-  // Skill-Up deposit) work for them without an admin grant first.
-  for (const tester of [TESTER_ADMIN, TESTER_MEMBER].filter(Boolean)) {
+  // Skill-Up deposit) work for them without an admin grant first. The admin tester already has the
+  // owner's wallet above, as one of PERSONAL_ACCOUNTS, so only the member tester is left here.
+  for (const tester of [TESTER_ADMIN, TESTER_MEMBER].filter((uid) => uid && !PERSONAL_ACCOUNTS.includes(uid))) {
     await c.query(
       `INSERT INTO service_credits_wallets (user_id, available_balance, escrow_balance, updated_at)
        VALUES ($1, 300, 0, NOW())
@@ -357,15 +394,17 @@ async function seedSkillUp(c) {
     [ID.milestone1, ID.milestone2, ID.cohort],
   );
 
-  // Enroll owner as active participant
-  await c.query(
-    `INSERT INTO skill_up_enrollments
-     (id, cohort_id, user_id, status, credits_deposited, assigned_trainer_id)
-     VALUES ($1::uuid, $2::uuid, $3, 'active', 50, $4)
-     ON CONFLICT (id) DO UPDATE SET
-       status = EXCLUDED.status, credits_deposited = EXCLUDED.credits_deposited`,
-    [ID.enrollmentOwner, ID.cohort, OWNER, TRAINER],
-  );
+  // Enroll each personal account as an active participant
+  for (const uid of PERSONAL_ACCOUNTS) {
+    await c.query(
+      `INSERT INTO skill_up_enrollments
+       (id, cohort_id, user_id, status, credits_deposited, assigned_trainer_id)
+       VALUES ($1::uuid, $2::uuid, $3, 'active', 50, $4)
+       ON CONFLICT (id) DO UPDATE SET
+         status = EXCLUDED.status, credits_deposited = EXCLUDED.credits_deposited`,
+      [personalId(uid, ID.enrollmentOwner), ID.cohort, uid, TRAINER],
+    );
+  }
 
   if (OWNER2) {
     // Second participant in the same cohort. Conflict on the primary key with a
@@ -402,53 +441,57 @@ async function seedSkillsHunt(c) {
     [ID.round, ADMIN],
   );
 
-  const sigHash = sha256id(OWNER, ID.round, 'demo-submission');
-  await c.query(
-    `INSERT INTO skills_hunt_submissions
-     (id, round_id, submitter_user_id, full_name, bio, quora_profile_url,
-      quora_profile_url_normalized, skills, proposed_skills,
-      signature_hash, status, reviewed_by_user_id, points_awarded, participation_points,
-      credit_granted, url_validation_result, reviewed_at)
-     VALUES
-     ($1::uuid, $2::uuid, $3,
-      'Demo Participant', 'Platform engineer focused on developer tooling and distributed systems.',
-      'https://quora.com/profile/demo-participant',
-      'quora.com/profile/demo-participant',
-      '["TypeScript","PostgreSQL","React","Node.js"]'::jsonb,
-      '["OpenTelemetry","eBPF"]'::jsonb,
-      $4, 'accepted', $5, 50, 10, true, 'valid', NOW() - INTERVAL '2 days')
-     ON CONFLICT (id) DO UPDATE SET
-       status = EXCLUDED.status, points_awarded = EXCLUDED.points_awarded`,
-    [ID.submission, ID.round, OWNER, sigHash, ADMIN],
-  );
+  // One accepted nomination per personal account. The leaderboard's rank is unique per round, so
+  // the owner keeps rank 1 and the admin account sits at rank 2 with the same score.
+  for (const [index, uid] of PERSONAL_ACCOUNTS.entries()) {
+    await c.query(
+      `INSERT INTO skills_hunt_submissions
+       (id, round_id, submitter_user_id, full_name, bio, quora_profile_url,
+        quora_profile_url_normalized, skills, proposed_skills,
+        signature_hash, status, reviewed_by_user_id, points_awarded, participation_points,
+        credit_granted, url_validation_result, reviewed_at)
+       VALUES
+       ($1::uuid, $2::uuid, $3,
+        'Demo Participant', 'Platform engineer focused on developer tooling and distributed systems.',
+        'https://quora.com/profile/demo-participant',
+        'quora.com/profile/demo-participant',
+        '["TypeScript","PostgreSQL","React","Node.js"]'::jsonb,
+        '["OpenTelemetry","eBPF"]'::jsonb,
+        $4, 'accepted', $5, 50, 10, true, 'valid', NOW() - INTERVAL '2 days')
+       ON CONFLICT (id) DO UPDATE SET
+         status = EXCLUDED.status, points_awarded = EXCLUDED.points_awarded`,
+      [personalId(uid, ID.submission), ID.round, uid, sha256id(uid, ID.round, 'demo-submission'), ADMIN],
+    );
 
-  // Leaderboard entry
-  await c.query(
-    `INSERT INTO skills_hunt_leaderboard
-     (id, round_id, mode, rank, score, accepted_count, first_match_count, user_id)
-     VALUES ($1::uuid, $2::uuid, 'individual', 1, 60, 1, 1, $3)
-     ON CONFLICT (round_id, mode, rank) DO UPDATE SET
-       score = EXCLUDED.score, user_id = EXCLUDED.user_id`,
-    [ID.leaderboard, ID.round, OWNER],
-  );
+    await c.query(
+      `INSERT INTO skills_hunt_leaderboard
+       (id, round_id, mode, rank, score, accepted_count, first_match_count, user_id)
+       VALUES ($1::uuid, $2::uuid, 'individual', $4, 60, 1, 1, $3)
+       ON CONFLICT (round_id, mode, rank) DO UPDATE SET
+         score = EXCLUDED.score, user_id = EXCLUDED.user_id`,
+      [personalId(uid, ID.leaderboard), ID.round, uid, index + 1],
+    );
+  }
 
   console.log('  ✓ skills-hunt');
 }
 
 async function seedLighthouse(c) {
-  // Owner seeker profile
-  await c.query(
-    `INSERT INTO lighthouse_profiles
-     (user_id, profile_type, bio, phone_number, signal_url, is_active, has_property,
-      housing_needs, desired_country, desired_move_in_date)
-     VALUES ($1, 'seeker', 'Platform engineer seeking affordable housing near transit in a walkable neighbourhood.',
-       '+10000000099', 'https://signal.me/#demo-owner',
-       true, false, '1-bedroom near tech hub', 'US', CURRENT_DATE + INTERVAL '30 days')
-     ON CONFLICT (user_id) DO UPDATE SET
-       bio = EXCLUDED.bio, housing_needs = EXCLUDED.housing_needs,
-       desired_move_in_date = EXCLUDED.desired_move_in_date, updated_at = NOW()`,
-    [OWNER],
-  );
+  // Seeker profile for each personal account
+  for (const uid of PERSONAL_ACCOUNTS) {
+    await c.query(
+      `INSERT INTO lighthouse_profiles
+       (user_id, profile_type, bio, phone_number, signal_url, is_active, has_property,
+        housing_needs, desired_country, desired_move_in_date)
+       VALUES ($1, 'seeker', 'Platform engineer seeking affordable housing near transit in a walkable neighbourhood.',
+         '+10000000099', 'https://signal.me/#demo-owner',
+         true, false, '1-bedroom near tech hub', 'US', CURRENT_DATE + INTERVAL '30 days')
+       ON CONFLICT (user_id) DO UPDATE SET
+         bio = EXCLUDED.bio, housing_needs = EXCLUDED.housing_needs,
+         desired_move_in_date = EXCLUDED.desired_move_in_date, updated_at = NOW()`,
+      [uid],
+    );
+  }
 
   // Host profile
   await c.query(
@@ -483,14 +526,16 @@ async function seedLighthouse(c) {
     );
   }
 
-  // Match: owner ↔ property 1
-  await c.query(
-    `INSERT INTO lighthouse_matches
-     (id, seeker_user_id, host_user_id, property_id, status, message)
-     VALUES ($1::uuid, $2, $3, $4::uuid, 'pending', 'Demo match — intro message sent.')
-     ON CONFLICT (id) DO UPDATE SET status = EXCLUDED.status`,
-    [ID.match, OWNER, HOST, ID.property1],
-  );
+  // Match: each personal account ↔ property 1
+  for (const uid of PERSONAL_ACCOUNTS) {
+    await c.query(
+      `INSERT INTO lighthouse_matches
+       (id, seeker_user_id, host_user_id, property_id, status, message)
+       VALUES ($1::uuid, $2, $3, $4::uuid, 'pending', 'Demo match — intro message sent.')
+       ON CONFLICT (id) DO UPDATE SET status = EXCLUDED.status`,
+      [personalId(uid, ID.match), uid, HOST, ID.property1],
+    );
+  }
 
   if (OWNER2) {
     // Second owner is a host with their own property; owner (a seeker) has a
@@ -627,7 +672,7 @@ async function seedWorkforce(c) {
     [ID.occupation, ADMIN],
   );
 
-  for (const [uid, recruited] of [[OWNER, false], [PEER_1, true]]) {
+  for (const [uid, recruited] of [...PERSONAL_ACCOUNTS.map((u) => [u, false]), [PEER_1, true]]) {
     await c.query(
       `INSERT INTO workforce_profiles
        (user_id, occupation_id, skill_level, region, recruited_state, updated_by_user_id)
@@ -697,17 +742,19 @@ async function seedTrust(c) {
   // These rows are a placeholder for a first raw read; the snapshot route and the self read
   // recompute them from real seeded activity. There is no status column: the platform does not vet
   // members, so a seeded 'verified' row would have been asserting something the product never does.
-  await c.query(
-    `INSERT INTO trust_user_extension
-     (user_id, trust_evidence, updated_at)
-     VALUES ($1,
-       '[{"type":"engagement-skillshunt-submissions","summary":"Accepted 1 SkillsHunt submission","createdAt":"2026-05-19T00:00:00.000Z","createdBy":"trust-signal"}]'::jsonb,
-       NOW())
-     ON CONFLICT (user_id) DO UPDATE SET
-       trust_evidence = EXCLUDED.trust_evidence,
-       updated_at = NOW()`,
-    [OWNER],
-  );
+  for (const uid of PERSONAL_ACCOUNTS) {
+    await c.query(
+      `INSERT INTO trust_user_extension
+       (user_id, trust_evidence, updated_at)
+       VALUES ($1,
+         '[{"type":"engagement-skillshunt-submissions","summary":"Accepted 1 SkillsHunt submission","createdAt":"2026-05-19T00:00:00.000Z","createdBy":"trust-signal"}]'::jsonb,
+         NOW())
+       ON CONFLICT (user_id) DO UPDATE SET
+         trust_evidence = EXCLUDED.trust_evidence,
+         updated_at = NOW()`,
+      [uid],
+    );
+  }
 
   if (OWNER2) {
     await c.query(
@@ -727,10 +774,10 @@ async function seedTrust(c) {
 }
 
 async function seedMood(c) {
-  const submissions = [
-    [sha256id(OWNER, 'mood', '4', '2026-05-19'), OWNER, 4, 'Good momentum this week.', '2026-05-19'],
-    [sha256id(OWNER, 'mood', '5', '2026-05-26'), OWNER, 5, 'SkillsHunt accepted — great week!', '2026-05-26'],
-  ];
+  const submissions = PERSONAL_ACCOUNTS.flatMap((uid) => [
+    [personalId(uid, sha256id(OWNER, 'mood', '4', '2026-05-19')), uid, 4, 'Good momentum this week.', '2026-05-19'],
+    [personalId(uid, sha256id(OWNER, 'mood', '5', '2026-05-26')), uid, 5, 'SkillsHunt accepted — great week!', '2026-05-26'],
+  ]);
 
   for (const [id, uid, val, note, date] of submissions) {
     await c.query(
@@ -763,8 +810,10 @@ async function seedFoundation(c) {
   // is populated. Depends on seedDirectory + seedSkillsTaxonomy having run
   // (foundation_provider_skills has an FK to skills_taxonomy_skills).
   const dirSkills = [
-    [ID.dirProfileOwner, ID.taxSkill1],
-    [ID.dirProfileOwner, ID.taxSkill2],
+    ...PERSONAL_ACCOUNTS.flatMap((uid) => [
+      [directoryProfileIdFor(uid), ID.taxSkill1],
+      [directoryProfileIdFor(uid), ID.taxSkill2],
+    ]),
     [ID.dirProfilePeer1, ID.taxSkill1],
     [ID.dirProfilePeer2, ID.taxSkill2],
   ];
@@ -796,45 +845,47 @@ async function seedFoundation(c) {
     );
   }
 
-  // Connection thread between owner and peer.
+  // Connection thread between each personal account and peer 1.
   // The id is a fixed demo UUID, but thread_key is derived from the owner. When
   // the seed is re-run with a different DEMO_OWNER_ID, the thread_key changes
   // while the id stays the same — so we key the upsert on the primary key (id)
   // and refresh thread_key, otherwise the fixed id collides on re-seed.
   // survivor/provider ids make the thread a coherent two-party record: the owner
   // is the survivor side, peer 1 (a browsable provider above) the provider side.
-  const threadKey = [OWNER, PEER_1].sort().join(':');
-  await c.query(
-    `INSERT INTO foundation_connection_threads
-       (id, thread_key, created_by_user_id, survivor_user_id, provider_user_id)
-     VALUES ($1::uuid, $2, $3, $3, $4)
-     ON CONFLICT (id) DO UPDATE SET
-       thread_key = EXCLUDED.thread_key,
-       created_by_user_id = EXCLUDED.created_by_user_id,
-       survivor_user_id = EXCLUDED.survivor_user_id,
-       provider_user_id = EXCLUDED.provider_user_id,
-       updated_at = NOW()`,
-    [ID.thread, threadKey, OWNER, PEER_1],
-  );
+  for (const uid of PERSONAL_ACCOUNTS) {
+    const threadKey = [uid, PEER_1].sort().join(':');
+    await c.query(
+      `INSERT INTO foundation_connection_threads
+         (id, thread_key, created_by_user_id, survivor_user_id, provider_user_id)
+       VALUES ($1::uuid, $2, $3, $3, $4)
+       ON CONFLICT (id) DO UPDATE SET
+         thread_key = EXCLUDED.thread_key,
+         created_by_user_id = EXCLUDED.created_by_user_id,
+         survivor_user_id = EXCLUDED.survivor_user_id,
+         provider_user_id = EXCLUDED.provider_user_id,
+         updated_at = NOW()`,
+      [personalId(uid, ID.thread), threadKey, uid, PEER_1],
+    );
 
-  // One open quote request from the owner (survivor) to peer 1 (provider) on that
-  // thread, so the owner's quote history has a row in the 'requested' state. Only
-  // owner-attributed: a second demo owner's quote history stays empty on purpose.
-  await c.query(
-    `INSERT INTO foundation_quote_requests
-       (id, user_id, request_text, status, thread_id, survivor_user_id,
-        provider_user_id, service_type, lifecycle_state, last_transitioned_at)
-     VALUES ($1::uuid, $2,
-       'Looking for help setting up automated tests for a small TypeScript project.',
-       'pending', $3::uuid, $2, $4, 'skills-support', 'requested', NOW())
-     ON CONFLICT (id) DO UPDATE SET
-       thread_id = EXCLUDED.thread_id,
-       survivor_user_id = EXCLUDED.survivor_user_id,
-       provider_user_id = EXCLUDED.provider_user_id,
-       lifecycle_state = EXCLUDED.lifecycle_state,
-       updated_at = NOW()`,
-    [ID.quoteRequest, OWNER, ID.thread, PEER_1],
-  );
+    // One open quote request from the account (survivor) to peer 1 (provider) on that
+    // thread, so its quote history has a row in the 'requested' state. Personal
+    // accounts only: a second demo owner's quote history stays empty on purpose.
+    await c.query(
+      `INSERT INTO foundation_quote_requests
+         (id, user_id, request_text, status, thread_id, survivor_user_id,
+          provider_user_id, service_type, lifecycle_state, last_transitioned_at)
+       VALUES ($1::uuid, $2,
+         'Looking for help setting up automated tests for a small TypeScript project.',
+         'pending', $3::uuid, $2, $4, 'skills-support', 'requested', NOW())
+       ON CONFLICT (id) DO UPDATE SET
+         thread_id = EXCLUDED.thread_id,
+         survivor_user_id = EXCLUDED.survivor_user_id,
+         provider_user_id = EXCLUDED.provider_user_id,
+         lifecycle_state = EXCLUDED.lifecycle_state,
+         updated_at = NOW()`,
+      [personalId(uid, ID.quoteRequest), uid, personalId(uid, ID.thread), PEER_1],
+    );
+  }
 
   if (OWNER2) {
     // A real two-party thread between the two demo owners (distinct id + a
@@ -863,7 +914,9 @@ async function seedChyme(c) {
     [ID.room],
   );
 
-  for (const [uid, username] of [[OWNER, 'demo_participant'], [PEER_1, 'alex_rivera']]) {
+  // The admin account takes its own username, so the two real accounts read apart in the room.
+  const personalUsernames = PERSONAL_ACCOUNTS.map((uid) => [uid, uid === OWNER ? 'demo_participant' : 'demo_tester_admin']);
+  for (const [uid, username] of [...personalUsernames, [PEER_1, 'alex_rivera']]) {
     await c.query(
       `INSERT INTO chyme_room_members
        (room_id, user_id, username, role, joined_at, last_seen_at)
@@ -874,7 +927,7 @@ async function seedChyme(c) {
     );
   }
 
-  const memberUsernames = { [OWNER]: 'demo_participant', [PEER_1]: 'alex_rivera' };
+  const memberUsernames = { ...Object.fromEntries(personalUsernames), [PEER_1]: 'alex_rivera' };
   const messages = [
     [PEER_1, 'Hey — welcome to the demo environment!'],
     [OWNER, 'Thanks! Just exploring the platform. Looks great.'],
@@ -892,6 +945,16 @@ async function seedChyme(c) {
     );
   }
 
+  // The owner's own line, repeated for every other personal account.
+  for (const uid of PERSONAL_ACCOUNTS.filter((u) => u !== OWNER)) {
+    await c.query(
+      `INSERT INTO chyme_messages (id, room_id, user_id, username, text)
+       VALUES ($1::uuid, $2::uuid, $3, $4, $5)
+       ON CONFLICT (id) DO NOTHING`,
+      [personalId(uid, sha256id('chyme-demo-msg', ID.room, '1')), ID.room, uid, memberUsernames[uid], messages[1][1]],
+    );
+  }
+
   if (OWNER2) {
     await c.query(
       `INSERT INTO chyme_room_members
@@ -906,27 +969,30 @@ async function seedChyme(c) {
 }
 
 async function seedTrustTransport(c) {
-  await c.query(
-    `INSERT INTO trust_transport_requests
-     (id, requester_user_id, mode, title, details, pickup_city, dropoff_city,
-      pickup_geo_redacted, dropoff_geo_redacted, status)
-     VALUES ($1::uuid, $2, 'rideshare',
-       'Ride to community job fair', 'Attending the East Bay job fair — need reliable transport.',
-       'Oakland', 'San Francisco',
-       'Oakland, CA (redacted)', 'San Francisco, CA (redacted)',
-       'completed')
-     ON CONFLICT (id) DO UPDATE SET status = EXCLUDED.status`,
-    [ID.ttRequest, OWNER],
-  );
+  // A completed ride for each personal account, driven by peer 2.
+  for (const uid of PERSONAL_ACCOUNTS) {
+    await c.query(
+      `INSERT INTO trust_transport_requests
+       (id, requester_user_id, mode, title, details, pickup_city, dropoff_city,
+        pickup_geo_redacted, dropoff_geo_redacted, status)
+       VALUES ($1::uuid, $2, 'rideshare',
+         'Ride to community job fair', 'Attending the East Bay job fair — need reliable transport.',
+         'Oakland', 'San Francisco',
+         'Oakland, CA (redacted)', 'San Francisco, CA (redacted)',
+         'completed')
+       ON CONFLICT (id) DO UPDATE SET status = EXCLUDED.status`,
+      [personalId(uid, ID.ttRequest), uid],
+    );
 
-  await c.query(
-    `INSERT INTO trust_transport_offers
-     (id, request_id, provider_user_id, note, proposed_amount, status)
-     VALUES ($1::uuid, $2::uuid, $3,
-       'Happy to help — I drive that route daily.', 0, 'accepted')
-     ON CONFLICT (id) DO UPDATE SET status = EXCLUDED.status`,
-    [ID.ttOffer, ID.ttRequest, PEER_2],
-  );
+    await c.query(
+      `INSERT INTO trust_transport_offers
+       (id, request_id, provider_user_id, note, proposed_amount, status)
+       VALUES ($1::uuid, $2::uuid, $3,
+         'Happy to help — I drive that route daily.', 0, 'accepted')
+       ON CONFLICT (id) DO UPDATE SET status = EXCLUDED.status`,
+      [personalId(uid, ID.ttOffer), personalId(uid, ID.ttRequest), PEER_2],
+    );
+  }
 
   if (OWNER2) {
     // Two OPEN requests, one owned by each real user. The marketplace shows a
@@ -973,7 +1039,7 @@ async function seedPeerProgramming(c) {
     [ID.ppCohort, WEEK_START, ID.ppTopic, OWNER],
   );
 
-  for (const uid of [OWNER, PEER_1]) {
+  for (const uid of [...PERSONAL_ACCOUNTS, PEER_1]) {
     await c.query(
       `INSERT INTO peer_programming_cohort_members (cohort_id, user_id)
        VALUES ($1::uuid, $2)
@@ -991,7 +1057,80 @@ async function seedPeerProgramming(c) {
     );
   }
 
+  await seedPeerProgrammingGoalBoard(c);
+
   console.log('  ✓ peer-programming');
+}
+
+// The goal board reads the single standing cohort (single-open-cohort mode is on by default), not
+// the weekly Demo-A cohort above, and opening the board never places anybody in it. So every real
+// demo account and both sample peers join the standing cohort here, and two sample goals give the
+// board cards in all three columns. Re-running resets those goals and cards to this state, so a
+// recording always starts from the same board. The real accounts own no goal, so they see
+// "+ Add your goal" and can take any card.
+async function seedPeerProgrammingGoalBoard(c) {
+  await c.query(
+    `INSERT INTO peer_programming_cohorts
+     (id, week_start_date, cohort_label, fallback_open, is_standing, assigned_by_user_id)
+     VALUES ($1::uuid, CURRENT_DATE, 'C1', TRUE, TRUE, $2)
+     ON CONFLICT DO NOTHING`,
+    [ID.ppStandingCohort, ADMIN],
+  );
+  const standing = await c.query(`SELECT id FROM peer_programming_cohorts WHERE is_standing = TRUE LIMIT 1`);
+  const cohortId = standing.rows[0]?.id;
+  if (!cohortId) {
+    throw new Error('peer-programming: no standing cohort after the insert; check uq_peer_programming_cohorts_standing in the demo schema');
+  }
+
+  for (const uid of [...REAL_USERS, PEER_1, PEER_2]) {
+    await c.query(
+      `INSERT INTO peer_programming_cohort_members (cohort_id, user_id)
+       VALUES ($1::uuid, $2)
+       ON CONFLICT (cohort_id, user_id) DO NOTHING`,
+      [cohortId, uid],
+    );
+  }
+
+  const goals = [
+    [ID.ppGoalJob, PEER_1, 'A yard jockey job near Dallas'],
+    [ID.ppGoalGroceries, PEER_2, "A week's groceries for three"],
+  ];
+  for (const [id, owner, title] of goals) {
+    await c.query(
+      `INSERT INTO peer_programming_goals (id, cohort_id, owner_user_id, title, status, closed_at)
+       VALUES ($1::uuid, $2::uuid, $3, $4, 'open', NULL)
+       ON CONFLICT (id) DO UPDATE SET cohort_id = EXCLUDED.cohort_id, owner_user_id = EXCLUDED.owner_user_id,
+         title = EXCLUDED.title, status = 'open', closed_at = NULL, updated_at = NOW()`,
+      [id, cohortId, owner, title],
+    );
+  }
+
+  // [id, goal, description, taken by, result, finished, helped]. A helped card is also kept (the
+  // owner's "It helped"); the pickup card is finished and waits on its owner.
+  const tasks = [
+    [ID.ppTaskYards, ID.ppGoalJob, 'Find three yards hiring near Dallas and add their numbers', null, null, false, false],
+    [ID.ppTaskLicense, ID.ppGoalJob, 'Find out what a yard jockey needs to be licensed in Texas', null, null, false, false],
+    [ID.ppTaskAsk, ID.ppGoalJob, 'Ask in Commons who has worked at a yard', PEER_2, null, false, false],
+    [ID.ppTaskCourse, ID.ppGoalJob, 'Find a free forklift safety course nearby', PEER_2, 'Two free courses through the county workforce center, both this month.', true, true],
+    [ID.ppTaskPantry, ID.ppGoalGroceries, 'List food pantries open on Saturday near the bus line', null, null, false, false],
+    [ID.ppTaskBus, ID.ppGoalGroceries, 'Check which grocery stores take orders for pickup', PEER_1, 'Two stores nearby take pickup orders with no fee over $35.', true, false],
+  ];
+  for (const [id, goalId, description, takenBy, result, finished, helped] of tasks) {
+    await c.query(
+      `INSERT INTO peer_programming_goal_tasks
+       (id, goal_id, description, taken_by_user_id, taken_at, result, finished_at, kept_at, helped)
+       VALUES ($1::uuid, $2::uuid, $3, $4::text,
+         CASE WHEN $4::text IS NULL THEN NULL ELSE NOW() - INTERVAL '2 hours' END,
+         $5::text,
+         CASE WHEN $6::boolean THEN NOW() - INTERVAL '1 hour' ELSE NULL END,
+         CASE WHEN $7::boolean THEN NOW() - INTERVAL '30 minutes' ELSE NULL END,
+         $7::boolean)
+       ON CONFLICT (id) DO UPDATE SET goal_id = EXCLUDED.goal_id, description = EXCLUDED.description,
+         taken_by_user_id = EXCLUDED.taken_by_user_id, taken_at = EXCLUDED.taken_at, result = EXCLUDED.result,
+         finished_at = EXCLUDED.finished_at, kept_at = EXCLUDED.kept_at, helped = EXCLUDED.helped, updated_at = NOW()`,
+      [id, goalId, description, takenBy, result, finished, helped],
+    );
+  }
 }
 
 async function seedSkillsTaxonomy(c) {
@@ -1026,7 +1165,7 @@ async function seedSkillsTaxonomy(c) {
 
 async function seedSocketRelay(c) {
   for (const [uid, bio] of [
-    [OWNER, 'Open to helping neighbours with logistics and community tasks.'],
+    ...PERSONAL_ACCOUNTS.map((u) => [u, 'Open to helping neighbours with logistics and community tasks.']),
     [PEER_1, 'Community connector — ask me anything.'],
   ]) {
     await c.query(
@@ -1043,26 +1182,30 @@ async function seedSocketRelay(c) {
     );
   }
 
-  // Request owned by peer, fulfilled by owner — shows owner as helper
-  await c.query(
-    `INSERT INTO socket_relay_requests
-     (id, owner_user_id, title, details, category, city, is_public, status,
-      idempotency_key, reopened_count, claimed_fulfillment_id)
-     VALUES ($1::uuid, $2,
-       'Help moving a few boxes', 'Moving to a new place this weekend — need 2 hours of lifting help.',
-       'logistics', 'Oakland', true, 'claimed', 'demo-sr-req-001', 0, $3::uuid)
-     ON CONFLICT (owner_user_id, idempotency_key) DO UPDATE SET
-       status = EXCLUDED.status, claimed_fulfillment_id = EXCLUDED.claimed_fulfillment_id`,
-    [ID.srRequest, PEER_1, ID.srFulfillment],
-  );
+  for (const uid of PERSONAL_ACCOUNTS) {
+    const idempotencyKey = uid === OWNER ? 'demo-sr-req-001' : `demo-sr-req-001-${sha256id(uid).slice(0, 12)}`;
+    // Request owned by peer, fulfilled by the account — shows it as helper. One request per
+    // account, because a request holds one claimed fulfillment.
+    await c.query(
+      `INSERT INTO socket_relay_requests
+       (id, owner_user_id, title, details, category, city, is_public, status,
+        idempotency_key, reopened_count, claimed_fulfillment_id)
+       VALUES ($1::uuid, $2,
+         'Help moving a few boxes', 'Moving to a new place this weekend — need 2 hours of lifting help.',
+         'logistics', 'Oakland', true, 'claimed', $4, 0, $3::uuid)
+       ON CONFLICT (owner_user_id, idempotency_key) DO UPDATE SET
+         status = EXCLUDED.status, claimed_fulfillment_id = EXCLUDED.claimed_fulfillment_id`,
+      [personalId(uid, ID.srRequest), PEER_1, personalId(uid, ID.srFulfillment), idempotencyKey],
+    );
 
-  await c.query(
-    `INSERT INTO socket_relay_fulfillments
-     (id, request_id, requester_user_id, fulfiller_user_id, status)
-     VALUES ($1::uuid, $2::uuid, $3, $4, 'active')
-     ON CONFLICT (id) DO UPDATE SET status = EXCLUDED.status`,
-    [ID.srFulfillment, ID.srRequest, PEER_1, OWNER],
-  );
+    await c.query(
+      `INSERT INTO socket_relay_fulfillments
+       (id, request_id, requester_user_id, fulfiller_user_id, status)
+       VALUES ($1::uuid, $2::uuid, $3, $4, 'active')
+       ON CONFLICT (id) DO UPDATE SET status = EXCLUDED.status`,
+      [personalId(uid, ID.srFulfillment), personalId(uid, ID.srRequest), PEER_1, uid],
+    );
+  }
 
   if (OWNER2) {
     await c.query(
@@ -1097,8 +1240,10 @@ async function seedSocketRelay(c) {
 
 async function seedClickLog(c) {
   const incidents = [
-    { uid: OWNER, meta: { latitude: 37.7749, longitude: -122.4194, notes: 'Demo check-in — SF' } },
-    { uid: OWNER, meta: { latitude: 37.8044, longitude: -122.2712, notes: 'Demo check-in — Oakland' } },
+    ...PERSONAL_ACCOUNTS.flatMap((uid) => [
+      { uid, meta: { latitude: 37.7749, longitude: -122.4194, notes: 'Demo check-in — SF' } },
+      { uid, meta: { latitude: 37.8044, longitude: -122.2712, notes: 'Demo check-in — Oakland' } },
+    ]),
     { uid: PEER_1, meta: { latitude: 37.7749, longitude: -122.4194 } },
   ];
 
@@ -1195,6 +1340,15 @@ async function seedWhatWorks(c) {
           [sha256id('what-works-endorsement', canonicalProductId, endorsers[index % endorsers.length]), canonicalProductId, endorsers[index % endorsers.length]],
         );
       }
+      // The owner (endorsers[0]) marks every product helpful; every other personal account does too.
+      for (const uid of PERSONAL_ACCOUNTS.filter((u) => u !== OWNER)) {
+        await c.query(
+          `INSERT INTO what_works_endorsements (id, product_id, user_id)
+           VALUES ($1, $2, $3)
+           ON CONFLICT (product_id, user_id) DO NOTHING`,
+          [personalId(uid, sha256id('what-works-endorsement', canonicalProductId, OWNER)), canonicalProductId, uid],
+        );
+      }
     }
   }
 
@@ -1219,79 +1373,94 @@ async function seedContributions(c) {
     [ID.contribCycle, ADMIN],
   );
 
-  // Owner-attributed claims: one confirmed Quora comment (with its thank-you
-  // credit grant) and one pending GitHub star awaiting review. No gift-card claim
-  // — that kind requires a personal Signal contact. Only owner-attributed, so a
-  // second demo owner's "my contributions" list stays empty on purpose.
-  await c.query(
-    `INSERT INTO contributions_submissions
-     (id, user_id, kind, quora_post_url, status, confirmed_amount_usd, credits_granted,
-      cycle_id, reviewed_by_user_id, reviewed_at, review_note)
-     VALUES ($1::uuid, $2, 'quora_comment',
-       'https://quora.com/demo-answer-link', 'confirmed', 1, 10,
-       $3::uuid, $4, NOW() - INTERVAL '2 days', 'Comment verified on the linked answer.')
-     ON CONFLICT (id) DO UPDATE SET
-       status = EXCLUDED.status,
-       credits_granted = EXCLUDED.credits_granted,
-       cycle_id = EXCLUDED.cycle_id,
-       updated_at = NOW()`,
-    [ID.contribSubmission1, OWNER, ID.contribCycle, ADMIN],
-  );
+  // Claims for each personal account: one confirmed Quora comment (with its
+  // thank-you credit grant) and one pending GitHub star awaiting review. No
+  // gift-card claim here — that kind requires a personal Signal contact. Personal
+  // accounts only, so a second demo owner's "my contributions" list stays empty on purpose.
+  for (const uid of PERSONAL_ACCOUNTS) {
+    await c.query(
+      `INSERT INTO contributions_submissions
+       (id, user_id, kind, quora_post_url, status, confirmed_amount_usd, credits_granted,
+        cycle_id, reviewed_by_user_id, reviewed_at, review_note)
+       VALUES ($1::uuid, $2, 'quora_comment',
+         'https://quora.com/demo-answer-link', 'confirmed', 1, 10,
+         $3::uuid, $4, NOW() - INTERVAL '2 days', 'Comment verified on the linked answer.')
+       ON CONFLICT (id) DO UPDATE SET
+         status = EXCLUDED.status,
+         credits_granted = EXCLUDED.credits_granted,
+         cycle_id = EXCLUDED.cycle_id,
+         updated_at = NOW()`,
+      [personalId(uid, ID.contribSubmission1), uid, ID.contribCycle, ADMIN],
+    );
 
-  await c.query(
-    `INSERT INTO contributions_submissions
-     (id, user_id, kind, github_profile_url, status, cycle_id)
-     VALUES ($1::uuid, $2, 'github_star',
-       'https://github.com/demo-participant', 'pending', $3::uuid)
-     ON CONFLICT (id) DO UPDATE SET
-       status = EXCLUDED.status,
-       cycle_id = EXCLUDED.cycle_id,
-       updated_at = NOW()`,
-    [ID.contribSubmission2, OWNER, ID.contribCycle],
-  );
+    await c.query(
+      `INSERT INTO contributions_submissions
+       (id, user_id, kind, github_profile_url, status, cycle_id)
+       VALUES ($1::uuid, $2, 'github_star',
+         'https://github.com/demo-participant', 'pending', $3::uuid)
+       ON CONFLICT (id) DO UPDATE SET
+         status = EXCLUDED.status,
+         cycle_id = EXCLUDED.cycle_id,
+         updated_at = NOW()`,
+      [personalId(uid, ID.contribSubmission2), uid, ID.contribCycle],
+    );
+  }
 
   console.log('  ✓ contributions');
 }
 
 async function seedRecurringActivity(c) {
-  // One active activity the owner declared (peer 1 confirmed it) and one pending
-  // activity a peer declared with the owner as counterparty, so the owner can test
-  // the confirm/decline action. A fiat/free line never carries an amount (the
-  // value firewall); only the ServiceCredits line declares an sc_value. Only
-  // owner-attributed, so a second demo owner's activity list stays empty on purpose.
-  await c.query(
-    `INSERT INTO recurring_activities
-     (id, owner_user_id, counterparty_user_id, sector, currency_code, cadence,
-      sc_value, status, visibility, confirmed_at)
-     VALUES ($1::uuid, $2, $3, 'favor', 'FREE', 'weekly', NULL, 'active', 'private', NOW() - INTERVAL '3 days')
-     ON CONFLICT (id) DO UPDATE SET
-       owner_user_id = EXCLUDED.owner_user_id,
-       counterparty_user_id = EXCLUDED.counterparty_user_id,
-       status = EXCLUDED.status,
-       confirmed_at = EXCLUDED.confirmed_at,
-       ended_at = NULL,
-       ended_by_user_id = NULL,
-       updated_at = NOW()`,
-    [ID.raActive, OWNER, PEER_1],
-  );
+  // For each personal account: one active activity it declared (peer 1 confirmed
+  // it) and one pending activity peer 2 declared with it as counterparty, so it can
+  // test the confirm/decline action. A fiat/free line never carries an amount (the
+  // value firewall); only the ServiceCredits line declares an sc_value. Personal
+  // accounts only, so a second demo owner's activity list stays empty on purpose.
+  for (const uid of PERSONAL_ACCOUNTS) {
+    await c.query(
+      `INSERT INTO recurring_activities
+       (id, owner_user_id, counterparty_user_id, sector, currency_code, cadence,
+        sc_value, status, visibility, confirmed_at)
+       VALUES ($1::uuid, $2, $3, 'favor', 'FREE', 'weekly', NULL, 'active', 'private', NOW() - INTERVAL '3 days')
+       ON CONFLICT (id) DO UPDATE SET
+         owner_user_id = EXCLUDED.owner_user_id,
+         counterparty_user_id = EXCLUDED.counterparty_user_id,
+         status = EXCLUDED.status,
+         confirmed_at = EXCLUDED.confirmed_at,
+         ended_at = NULL,
+         ended_by_user_id = NULL,
+         updated_at = NOW()`,
+      [personalId(uid, ID.raActive), uid, PEER_1],
+    );
 
-  await c.query(
-    `INSERT INTO recurring_activities
-     (id, owner_user_id, counterparty_user_id, sector, currency_code, cadence,
-      sc_value, status, visibility)
-     VALUES ($1::uuid, $2, $3, 'service', 'SC', 'monthly', 25, 'pending', 'private')
-     ON CONFLICT (id) DO UPDATE SET
-       owner_user_id = EXCLUDED.owner_user_id,
-       counterparty_user_id = EXCLUDED.counterparty_user_id,
-       status = EXCLUDED.status,
-       confirmed_at = NULL,
-       ended_at = NULL,
-       ended_by_user_id = NULL,
-       updated_at = NOW()`,
-    [ID.raPending, PEER_2, OWNER],
-  );
+    await c.query(
+      `INSERT INTO recurring_activities
+       (id, owner_user_id, counterparty_user_id, sector, currency_code, cadence,
+        sc_value, status, visibility)
+       VALUES ($1::uuid, $2, $3, 'service', 'SC', 'monthly', 25, 'pending', 'private')
+       ON CONFLICT (id) DO UPDATE SET
+         owner_user_id = EXCLUDED.owner_user_id,
+         counterparty_user_id = EXCLUDED.counterparty_user_id,
+         status = EXCLUDED.status,
+         confirmed_at = NULL,
+         ended_at = NULL,
+         ended_by_user_id = NULL,
+         updated_at = NOW()`,
+      [personalId(uid, ID.raPending), PEER_2, uid],
+    );
+  }
 
   console.log('  ✓ recurring-activity');
+}
+
+// What the modules in demo-seed/ get: the people this seed created and its fixed ids, so they can
+// point at the same owner, peers, cohort or listing without redefining them. A row that is the
+// owner's own is written for every account in PERSONAL_ACCOUNTS, with personalId(account, ownerId)
+// as its id.
+function demoContext() {
+  return {
+    OWNER, OWNER2, TESTER_ADMIN, TESTER_MEMBER, REAL_USERS, PERSONAL_ACCOUNTS, personalId,
+    PEER_1, PEER_2, ADMIN, HOST, TRAINER, ID, WEEK_START,
+  };
 }
 
 async function main() {
@@ -1356,6 +1525,12 @@ async function main() {
       ['contributions', seedContributions],
       ['recurring-activity', seedRecurringActivity],
     ];
+
+    // The per-plugin extras in demo-seed/ run after every base step, as steps of their own.
+    const ctx = demoContext();
+    for (const [name, run] of await listDemoSeedModules()) {
+      steps.push([name, (c) => run(c, ctx)]);
+    }
 
     for (const [name, run] of steps) {
       try {

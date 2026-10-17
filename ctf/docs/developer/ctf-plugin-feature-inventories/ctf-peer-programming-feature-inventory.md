@@ -362,6 +362,8 @@ Contract note: the command contract file (`docs/contracts/PEER_PROGRAMMING_PLUGI
 
 Deterministic PeerProgramming seed script: `ctf/scripts/seedPeerProgramming.mjs` (topics, cohorts, members, messages, feedback, notifications).
 
+Demo schema (`ctf/scripts/seedDemo.mjs`, `seedPeerProgrammingGoalBoard`): finds or creates the standing cohort (`C1`, `is_standing = TRUE`) and adds every real demo account (owner, second owner, both testers) and the two sample peers to it, alongside the weekly `Demo-A` cohort. It seeds two goals owned by the sample peers ("A yard jockey job near Dallas", "A week's groceries for three") with six cards: three open, one held, one finished and waiting on its owner, one kept and marked helped. Fixed UUIDs `…003a`–`…0042`. A re-run puts the goals and cards back to that state, so a demo recording always starts from the same board.
+
 ## Gaps and Known Technical Debt
 
 1. Heuristic for partially-filled cohorts when active-user count is not divisible by 5 is implemented as best-effort packing; product sign-off on edge cases is pending.
@@ -395,6 +397,11 @@ Deterministic PeerProgramming seed script: `ctf/scripts/seedPeerProgramming.mjs`
 
 ## Change Log
 
+- 2026-10-17: **Demo seed fills the goal board.** In the demo schema every account saw "You are not in a
+  cohort yet", because the seed placed accounts only in the weekly `Demo-A` cohort, while the board reads
+  the standing cohort (single-open-cohort mode is on by default) and opening it places nobody. The demo
+  seed now adds the real demo accounts and sample peers to the standing cohort and seeds two goals with
+  cards in every column. Demo data only; no change to routes, schema or the product.
 - 2026-10-08: **The Android screens match the web page (owner directive).** The Android PeerProgramming
   screen looked like a different product. It now copies the web at phone width: the separate title,
   topic line and Refresh button under the header are gone; Refresh and, for admins, an Admin pill sit

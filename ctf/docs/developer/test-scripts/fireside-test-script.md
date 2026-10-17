@@ -12,6 +12,11 @@ left over from another tab is the easiest way to get a false pass on the one cas
 You will need three accounts: an approved member, a signed-in member who is **not** approved, and an
 admin.
 
+In the demo schema, `pnpm --dir ctf seed:demo` (module `demo-seed/21-fireside.mjs`) puts two of the
+demo owner's comments under the Dictionary post, one with another member's reply and an I recognize
+this reaction on it, plus that member's own comment, so FS-5, FS-6 and FS-21 start without setup.
+No seeded comment has a blog request on. (Added 2026-10-17.)
+
 ## Core smoke (every session)
 
 1. Sign out completely. Open a post's conversation and read it. No sign-in prompt, no empty gate.

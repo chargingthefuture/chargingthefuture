@@ -4,16 +4,17 @@ on:
   workflow_dispatch:
     inputs:
       demo_owner_id:
-        description: "Your Clerk user ID (find it in the Clerk dashboard)"
-        required: true
+        description: "Clerk user ID of the demo account. Leave empty to use the DEMO_VIDEO_CLERK_USER_ID repository variable"
+        required: false
         type: string
+        default: ""
       demo_second_owner_id:
         description: "Optional: a SECOND Clerk user ID to be the two-sided marketplace counterparty (for testing both sides). Also target the demo-mode Unleash flag at this ID."
         required: false
         type: string
         default: ""
       demo_tester_admin_id:
-        description: "Optional: the hired tester's ADMIN Clerk user ID (issue #2037). The seed grants entry + wallet + profile; you must also set role=admin on it in Clerk and target the demo-mode Unleash flag at it."
+        description: "Optional: the ADMIN demo Clerk user ID. Leave empty to use the DEMO_VIDEO_CLERK_ADMIN_ID repository variable. The seed grants entry + wallet + profile; set role=admin on it in Clerk and target the demo-mode Unleash flag at it."
         required: false
         type: string
         default: ""
@@ -70,13 +71,18 @@ jobs:
         env:
           DATABASE_URL_DIRECT: ${{ secrets.DATABASE_URL_DIRECT }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          DEMO_OWNER_ID: ${{ inputs.demo_owner_id }}
+          # A box filled in wins; otherwise the repository variable (or a secret of the same name).
+          DEMO_OWNER_ID: ${{ inputs.demo_owner_id || vars.DEMO_VIDEO_CLERK_USER_ID || secrets.DEMO_VIDEO_CLERK_USER_ID }}
           DEMO_SECOND_OWNER_ID: ${{ inputs.demo_second_owner_id }}
-          DEMO_TESTER_ADMIN_ID: ${{ inputs.demo_tester_admin_id }}
+          DEMO_TESTER_ADMIN_ID: ${{ inputs.demo_tester_admin_id || vars.DEMO_VIDEO_CLERK_ADMIN_ID || secrets.DEMO_VIDEO_CLERK_ADMIN_ID }}
           DEMO_TESTER_MEMBER_ID: ${{ inputs.demo_tester_member_id }}
         run: |
           if [ -z "$DATABASE_URL_DIRECT" ] && [ -z "$DATABASE_URL" ]; then
             echo "DATABASE_URL_DIRECT or DATABASE_URL secret is not set."
+            exit 1
+          fi
+          if [ -z "$DEMO_OWNER_ID" ]; then
+            echo "::error::No demo account: fill in demo_owner_id, or set the DEMO_VIDEO_CLERK_USER_ID repository variable."
             exit 1
           fi
           cd ctf
