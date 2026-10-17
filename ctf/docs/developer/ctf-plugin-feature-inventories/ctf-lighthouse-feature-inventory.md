@@ -274,7 +274,7 @@ the model, the routes, and the manage-list. LightHouse's job is to honor it:
 - `GET /api/lighthouse/properties/:id` — the host and an admin read any listing. Anyone else gets an active listing whose host is not blocked with them, or a hidden one they already have a match on (unless blocked); otherwise 404.
 - `GET /api/lighthouse/my-properties`
 - `POST /api/lighthouse/properties`
-- `PUT /api/lighthouse/properties/:id` — a body without `isActive` or `photos` keeps the stored values (the host form sends neither), so a host edit never puts back a listing an admin hid.
+- `PUT /api/lighthouse/properties/:id` — a body without `isActive` or `photos` keeps the stored values (the host form sends neither), so a host edit never puts back a listing an admin hid. `isActive` is ignored from anyone but an admin, so a host cannot change whether a listing shows even by sending it (#2819).
 - `DELETE /api/lighthouse/properties/:id`
 
 ### 3.3 Match APIs
@@ -424,6 +424,8 @@ Android admin present (2026-06-06): `AdminLighthouse.tsx` + `admin-api.ts` added
    release after this one has shipped, the same sequence `post/0048` used.
 
 ## 9) Change Log
+
+- 2026-10-17: **Only an admin changes whether a listing shows (code review #2819, owner decision).** The host edit route kept the stored `is_active` when the body left it out, but a host who sent `isActive: true` could still put back a listing an admin had hidden. `updateProperty` now takes `isActive` only from an admin (`keepStoredWhenOmitted` gets the caller's admin flag); a host's value is ignored and the edit saves with the listing's visibility unchanged. The host form has no visibility control, so nothing a host sees changes. Test: `lib/lighthouse/property-visibility.test.ts`.
 
 - 2026-10-14: **Hidden listings stay hidden, chat waits for the host, and stay requests and credit sends cannot double (#2811, #2817, #2819, #2826, #2827, #2828, #2830).**
   - `GET /api/lighthouse/properties/:id` returned any listing to anyone holding the id, an admin-hidden one or a blocked host's included, and any member could pass `onlyActive=false` to browse every hidden listing. `getPropertyById` now returns a listing to its host and an admin, and otherwise only on browse's terms (active, host not blocked), plus a hidden listing the viewer already has a match on. `onlyActive=false` is honored for admins only.

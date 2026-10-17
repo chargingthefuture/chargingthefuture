@@ -59,6 +59,7 @@ function parsePropertyInput(body: PropertyBody): LighthousePropertyInput {
     airbnbProfileUrl: asString(body.airbnbProfileUrl),
     // Left undefined when the body does not carry it, so updateProperty keeps the stored value: the
     // host's edit form sends no isActive, and a host edit must not undo an admin hiding the listing.
+    // updateProperty also ignores it from anyone but an admin (issue #2819).
     isActive: typeof body.isActive === 'boolean' ? body.isActive : undefined,
   };
 }

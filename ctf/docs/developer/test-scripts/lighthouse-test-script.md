@@ -198,9 +198,13 @@ in "Your listings".
 2. Use Edit listing, change a field (e.g. rent), and save.
 3. Have an admin hide the listing (LH-A3). As the host, edit its title and save, then check browse as
    another member.
+4. As the host, send `PUT /api/lighthouse/properties/:id` with the full listing and `isActive: true`,
+   then check browse again.
 **Expected:** On your own listing the detail shows "This is your listing." with an Edit button — not
 "Apply Now"/"Message Host". The edit form prefills the full record and the change persists. Step 3:
-the listing stays hidden after the host's edit and keeps any photos it had (added 2026-10-14).
+the listing stays hidden after the host's edit and keeps any photos it had (added 2026-10-14). Step 4:
+the save succeeds and the listing is still hidden: only an admin changes whether it shows (added
+2026-10-17).
 **Result:** web ☐ mobile ☐ — notes:
 
 ### LH-7 · A host can't also be a seeker
