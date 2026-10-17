@@ -9,6 +9,9 @@
 // is re-run freely, and a re-run puts the module's rows back to the state it describes.
 //
 // DEMO_SEED_ONLY=a.mjs,b.mjs runs only the named modules, for checking one while others change.
+//
+// check-demo-seed-coverage.mjs (CI) fails on any schema table no seed file writes unless
+// demo-seed-coverage-allowlist.json gives the reason, so a new member table arrives here with it.
 import { readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
