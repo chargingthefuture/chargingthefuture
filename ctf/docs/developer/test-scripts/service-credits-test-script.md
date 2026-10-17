@@ -704,6 +704,8 @@ Result:
 
 **Expected:** The ledger status card renders with configuration state clearly shown. If unconfigured, the reassurance note is visible. If the status could not be read, the card still appears and shows the reason in red rather than disappearing. No sensitive credentials (API tokens, URLs) are exposed in the UI.
 
+Since 2026-10-17 (#2907) the card also says how far behind Formance is: "Every credit movement has been copied to Formance." when nothing is waiting, or "N credit movements are waiting to be copied to Formance. An hourly job re-sends them. The oldest has waited since <time>." To see it move: with Formance unreachable, send credits once (the send still succeeds and the card reads 1 waiting); restore Formance and run **ServiceCredits — Re-send Queued Formance Posts** from Actions. The run summary shows `delivered: 1` and the card goes back to "Every credit movement has been copied". Running it again shows `tried: 0`, and Formance holds that transfer once.
+
 Result: web ☐
 
 ---

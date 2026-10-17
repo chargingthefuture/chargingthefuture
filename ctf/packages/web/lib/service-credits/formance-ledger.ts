@@ -91,6 +91,22 @@ function readTransactionId(payload: FormanceTransactionResponse): string | null 
   return String(candidate);
 }
 
+// The error a post throws when Formance already holds a transaction with the same reference.
+export const FORMANCE_DUPLICATE_REFERENCE = 'external_ledger_duplicate_reference';
+
+// Formance answers a reused reference with 409, or with errorCode CONFLICT in the body, depending on
+// the version. Both mean the transaction is already recorded.
+async function isDuplicateReference(response: Response): Promise<boolean> {
+  if (response.status === 409) return true;
+  try {
+    const body = (await response.json()) as { errorCode?: unknown };
+    return body.errorCode === 'CONFLICT';
+  } catch {
+    // no-trace: a body that is not JSON carries no error code, so it is not a duplicate reference.
+    return false;
+  }
+}
+
 async function postTransactionToFormance(input: {
   reference: string;
   postings: LedgerPosting[];
@@ -117,6 +133,11 @@ async function postTransactionToFormance(input: {
   });
 
   if (!response.ok) {
+    // A transaction with this reference is already in Formance. The replay job relies on this to
+    // re-send a queued post safely: the second send of the same reference is refused, not applied twice.
+    if (await isDuplicateReference(response)) {
+      throw new Error(FORMANCE_DUPLICATE_REFERENCE);
+    }
     throw new Error('external_ledger_unavailable');
   }
 
