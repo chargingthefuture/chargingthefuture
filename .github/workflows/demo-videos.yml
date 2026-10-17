@@ -1,0 +1,139 @@
+name: Demo Videos — Record Clips
+
+# Records the short demo clips in ctf/scripts/demo-videos/clips/: a phone-sized browser signs in
+# as the demo account, clicks through each clip while it is filmed, a voice reads the narration,
+# and the captions are burned in. Run it again whenever a screen in a clip changes.
+#
+# The voice is Piper, which runs on the runner itself: no API credit, so no slash command stands
+# in for this workflow.
+#
+# Output: one MP4 (and a .vtt caption file) per clip, attached to the `demo-videos` release so they
+# open on a phone, and to the run as an artifact.
+#
+# Needs (from Infisical): CLERK_SECRET_KEY, and DEMO_VIDEO_CLERK_USER_ID, the Clerk user id of an
+# account in demo mode. Setting that account up is in ctf/scripts/demo-videos/README.md.
+
+on:
+  workflow_dispatch:
+    inputs:
+      clips:
+        description: "Clip names separated by spaces, or all"
+        required: true
+        default: "all"
+        type: string
+      voice:
+        description: "Piper voice (see the README for others)"
+        required: true
+        default: "en_US-lessac-medium"
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: demo-videos
+  cancel-in-progress: false
+
+jobs:
+  record:
+    name: Record clips
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      OUT_DIR: ${{ github.workspace }}/demo-videos-out
+      VOICES_DIR: ${{ github.workspace }}/.piper-voices
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install ffmpeg and caption font
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q ffmpeg fonts-dejavu-core
+
+      - name: Install Playwright and Chromium
+        run: |
+          npm install --no-save --prefix ctf/scripts/demo-videos playwright@1.56.1
+          npx --prefix ctf/scripts/demo-videos playwright install --with-deps chromium
+
+      - name: Install Piper
+        run: pip install piper-tts==1.3.0
+
+      - name: Cache Piper voice
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.VOICES_DIR }}
+          key: piper-voice-${{ inputs.voice }}
+
+      - name: Download Piper voice
+        env:
+          VOICE: ${{ inputs.voice }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$VOICES_DIR"
+          if [ ! -f "$VOICES_DIR/$VOICE.onnx" ]; then
+            (cd "$VOICES_DIR" && python -m piper.download_voices "$VOICE")
+          fi
+          if [ ! -f "$VOICES_DIR/$VOICE.onnx" ]; then
+            echo "::error::Piper voice $VOICE did not download. Check the name against the voice list in the README."
+            exit 1
+          fi
+
+      - name: Inject secrets from Infisical
+        uses: Infisical/secrets-action@v1.0.16
+        with:
+          client-id: ${{ secrets.INFISICAL_CLIENT_ID }}
+          client-secret: ${{ secrets.INFISICAL_CLIENT_SECRET }}
+          project-slug: ${{ secrets.INFISICAL_PROJECT_SLUG }}
+          env-slug: prod
+          domain: ${{ secrets.INFISICAL_URL }}
+          secret-path: /
+          recursive: true
+
+      - name: Record clips
+        env:
+          CLIPS: ${{ inputs.clips }}
+          VOICE: ${{ inputs.voice }}
+        run: |
+          set -euo pipefail
+          export PIPER_BIN=python PIPER_MODEL="$VOICES_DIR/$VOICE.onnx" DEMO_OUT_DIR="$OUT_DIR"
+          # CLIPS is split into names on purpose.
+          # shellcheck disable=SC2086
+          node ctf/scripts/demo-videos/record.mjs $CLIPS
+
+      - name: Attach to the demo-videos release
+        if: ${{ !cancelled() && hashFiles('demo-videos-out/*.mp4') != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if ! gh release view demo-videos >/dev/null 2>&1; then
+            gh release create demo-videos --prerelease --title "Demo videos" \
+              --notes "Short demo clips of the app, recorded by the Demo Videos workflow. Each upload replaces the clip of the same name."
+          fi
+          gh release upload demo-videos "$OUT_DIR"/*.mp4 "$OUT_DIR"/*.vtt --clobber
+          {
+            echo "### Demo videos"
+            echo "Release: ${{ github.server_url }}/${{ github.repository }}/releases/tag/demo-videos"
+            for f in "$OUT_DIR"/*.mp4; do echo "- $(basename "$f")"; done
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Keep as run artifact
+        if: ${{ !cancelled() && hashFiles('demo-videos-out/*.mp4') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: demo-videos
+          path: |
+            demo-videos-out/*.mp4
+            demo-videos-out/*.vtt
+          retention-days: 14
