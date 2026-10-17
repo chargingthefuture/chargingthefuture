@@ -2105,17 +2105,6 @@ export async function dismissAnnouncement(
   return { dismissedAtIso: new Date(dismissed.rows[0].dismissed_at).toISOString() };
 }
 
-export function validateAnnouncementTargeting(targeting: unknown): { ok: boolean; normalized: AnnouncementTargeting } {
-  const normalized = normalizeTargeting(targeting);
-  const hasInvalidRole = (normalized.roles ?? []).some((role) => !['member', 'admin', 'all'].includes(role));
-
-  if (hasInvalidRole) {
-    return { ok: false, normalized };
-  }
-
-  return { ok: true, normalized };
-}
-
 export async function createFeedQuestion(actorId: string, input: FeedQuestionInput): Promise<{ questionId: string; createdAtIso: string }> {
   return withDbTransaction(async (client) => {
     const body = normalizeText(input.body);

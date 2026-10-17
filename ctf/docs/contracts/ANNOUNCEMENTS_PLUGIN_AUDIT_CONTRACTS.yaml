@@ -159,30 +159,6 @@ auditEvents:
     timestamp: rfc3339
     actorId: principal
     pluginId: announcements
-    command: announcements.targeting.validate
-    commandVersion: 1.0.0
-    purpose: broadcast_governance
-    policyDecision:
-      status: allow_or_deny
-      reason: policy_reason_code
-      evidence:
-        roleCheck: pass_or_fail
-        targetingValidationCheck: pass_or_fail
-    dataClassesAccessed:
-      - announcement_targeting_metadata
-    targetContext:
-      workspaceId: workspace_identifier
-      validationRequestId: request_identifier
-    requestId: request_identifier
-    traceId: trace_identifier
-    result:
-      status: success_or_failure
-      errorCategory: none_or_error_class
-
-  - eventId: uuid
-    timestamp: rfc3339
-    actorId: principal
-    pluginId: announcements
     command: announcements.membership.event.emit
     commandVersion: 1.0.0
     purpose: broadcast_delivery

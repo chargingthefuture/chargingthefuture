@@ -107,13 +107,12 @@ Command groups:
 4. `announcements.archive`
 5. `announcements.read.mark`
 6. `announcements.dismiss`
-7. `announcements.targeting.validate`
-8. `announcements.membership.event.emit`
-9. `feed.announcement.reaction.toggle`
-10. `feed.announcement.reply.create`
-11. `feed.announcement.reply.list`
-12. `feed.announcement.reply.update`
-13. `feed.announcement.reply.delete`
+7. `announcements.membership.event.emit`
+8. `feed.announcement.reaction.toggle`
+9. `feed.announcement.reply.create`
+10. `feed.announcement.reply.list`
+11. `feed.announcement.reply.update`
+12. `feed.announcement.reply.delete`
 
 ### 3.2 HTTP Projection Routes
 
@@ -133,7 +132,6 @@ Admin routes:
 - `PUT /api/announcements/admin/drafts/:draftId`
 - `POST /api/announcements/admin/:announcementId/publish`
 - `POST /api/announcements/admin/:announcementId/archive`
-- `POST /api/announcements/admin/targeting/validate`
 - `POST /api/announcements/membership/events` — records a member join/leave membership event so announcement audience eligibility can be recalculated; admin-gated (`requireFeedAdminAccess`) + CSRF (`x-ctf-csrf: '1'`). Body `{ userId, pluginId, eventType: 'join' | 'leave', requestId?, traceId? }` (`eventType` must be exactly `join` or `leave`, else 400; `userId` and `pluginId` required, else 400). Answers `{ ok: true }`; since 2026-10-16 nothing is sent to Stream and the response no longer carries `streamEmitted`. Shares the feed membership-events handler (`emitMembershipEvent`, contracts unified under `feed.*`) and returns `{ ok, streamEmitted }` — the announcements-namespaced twin of `POST /api/feed/membership/events`.
 
 ---
@@ -248,6 +246,8 @@ Delivery: **web + mobile-responsive complete**. **Android (React Native) surface
 ---
 
 ## 11) Change Log
+
+- 2026-10-17: **The targeting check route is removed (code review #2892, owner decision).** `POST /api/announcements/admin/targeting/validate` had no caller and answered `{ ok, targeting }` where its contract promised `{ valid, normalizedTargeting }`. The route, `validateAnnouncementTargeting` (its only caller), and the `announcements.targeting.validate` / `feed.announcement.targeting.validate` contract entries are removed, with its rows in the orphan-route and admin-audit allowlists. Drafts keep normalizing targeting when they are saved.
 
 - 2026-10-12: **Read and dismiss answer a bad announcement id as a bad id, not an outage (#2891).** A malformed id failed the `::uuid` cast inside the query and an unknown id on dismiss threw `announcement_not_found`; both were reported as errors and answered 503. An unknown id on read went the other way: the insert into `announcement_user_state` (no foreign key to `announcements`) stored a read row for an announcement that does not exist and answered 200. Both routes now reject an id `normalizeUuid` does not accept with 400 `invalidPayload` and map `announcement_not_found` to 404 `notFound` without reporting it. `markAnnouncementRead` now inserts from `announcements`, so an unknown id writes nothing and throws `announcement_not_found` like `dismissAnnouncement`. The `announcements.read.mark` command contract lists `announcements` in `dataAccess`. No schema change.
 - 2026-10-12: **The plugin picker offers only plugins the server keeps, and the admin screens say why a request failed (#2971, #2972).** The "Link plugins" picker listed every plugin `/api/plugins` returns to an admin, including the admin-only Weekly Performance and Mutual Time; `resolveLinkedPlugin` drops those (and hidden plugins) on save, so the chosen link disappeared after "Draft saved." with nothing saying why. The picker now leaves out hidden and admin-only plugins, reading the same list the server checks, which moved to its own module `lib/plugins/admin-only.ts` (no database import) so a client component can use it; `lib/plugins/repository.ts` re-exports it. A failed plugin list load now shows a line under the picker with the route's message. `adminMutate` (create, save, publish, archive) and the audit panel load now report the caught value and name the reason on screen through `failureText` / `responseFailureText`, as the moderation screen already does, instead of a fixed "Network error" or "Could not load the audit trail." No route, schema or contract change.

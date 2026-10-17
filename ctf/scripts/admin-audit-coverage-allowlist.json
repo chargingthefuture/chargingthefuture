@@ -2,11 +2,6 @@
   "_comment": "Burn-down list for check-admin-audit-coverage.mjs. Owner directive 2026-08-28: every admin action is recorded, on every surface, from the day the surface ships. Every entry here is a surface where that is not yet true — recorded on 2026-08-28 when the gate was introduced, so no NEW surface can ship without an audit row while these are fixed. This list only ever shrinks. Never add an entry to silence the gate; add one only when a durable row is genuinely written somewhere the gate cannot see, and name the file that writes it. Since 2026-10-16 (issue #2806) the gate also reads routes that check the admin role through a policy call or an isAdmin branch. Those can be listed with kind 'own-data' when the admin power only changes the admin's own row, never another member's: an admin acting on their own data is not an admin action on anyone, the same as a member acting on theirs.",
   "routes": [
     {
-      "route": "/api/announcements/admin/targeting/validate",
-      "kind": "not-a-mutation",
-      "reason": "Validates an announcement targeting expression and returns the normalized form. It reads no table and writes none — a POST only because it takes a body — so there is no admin action here to record. Verified 2026-08-28 against the handler: it calls validateAnnouncementTargeting, a pure function, and returns."
-    },
-    {
       "route": "/api/admin/area-seen",
       "kind": "own-data",
       "reason": "Marks an admin area as opened by the calling admin, which clears that area's new-to-review dot on their own landing page. markAdminAreaSeen writes the caller's own per-admin marker and nothing about any member. Verified 2026-10-16 against lib/admin/area-attention.ts."

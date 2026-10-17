@@ -156,25 +156,6 @@ contracts:
     idempotency: true
 
   - pluginId: announcements
-    command: announcements.targeting.validate
-    version: 1.0.0
-    description: Validate announcement targeting constraints before publish.
-    inputSchema:
-      targeting:
-        type: object
-        required: true
-    outputSchema:
-      valid:
-        type: boolean
-      normalizedTargeting:
-        type: object
-    dataAccess:
-      - announcements
-    purpose: broadcast_governance
-    retentionClass: derived_short_lived
-    idempotency: true
-
-  - pluginId: announcements
     command: announcements.membership.event.emit
     version: 1.0.0
     description: Emit membership events to recalculate audience visibility.
