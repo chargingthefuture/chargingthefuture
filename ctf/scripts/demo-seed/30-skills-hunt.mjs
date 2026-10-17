@@ -18,6 +18,29 @@ const NOTE_TOP_TEN = 'ddd00000-0000-4000-8300-000000000022';
 export default async function seed(client, ctx) {
   const { PERSONAL_ACCOUNTS, personalId, ADMIN, ID } = ctx;
 
+  // Keep the demo round open. seedDemo.mjs sets its dates only when the row is first written, so
+  // three weeks later the round still read as active while its window had shut, and Scout showed
+  // "Nominations ... have closed" in place of the form. A re-run moves the window to now.
+  await client.query(
+    `UPDATE skills_hunt_rounds
+     SET status = 'active', starts_at = NOW() - INTERVAL '7 days', ends_at = NOW() + INTERVAL '21 days',
+         updated_at = NOW()
+     WHERE id = $1::uuid`,
+    [ID.round],
+  );
+
+  // Hand each account's seeded nomination back to it. seedDemo.mjs keeps the owner's fixed id and its
+  // upsert leaves submitter_user_id alone, so a schema first seeded with a different DEMO_OWNER_ID
+  // kept the nomination under that earlier account and My Finds was empty.
+  for (const account of PERSONAL_ACCOUNTS) {
+    await client.query(
+      `UPDATE skills_hunt_submissions
+       SET submitter_user_id = $2, round_id = $3::uuid, deleted_at = NULL, updated_at = NOW()
+       WHERE id = $1::uuid AND (submitter_user_id <> $2 OR round_id <> $3::uuid OR deleted_at IS NOT NULL)`,
+      [personalId(account, ID.submission), account, ID.round],
+    );
+  }
+
   const missions = [
     [MISSION_ANY, 'Find three skilled people', 'Every accepted nomination in this round counts toward this one.',
       'count_total_accepted', 3, {}, 10, '#22C55E', 'active', 1],

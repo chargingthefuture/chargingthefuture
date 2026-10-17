@@ -318,6 +318,7 @@ NOT EXISTS` per column) in `ctf/schema.sql`; the demo schema is regenerated into
 
 ## Change Log
 
+- 2026-10-17: **Demo seed hands the Quora comment and GitHub star claims back to their account** (`ctf/scripts/demo-seed/33-contributions.mjs`). `seedDemo.mjs` keeps the owner's fixed claim ids and its upsert leaves `user_id` alone, so a demo schema first seeded with a different `DEMO_OWNER_ID` kept both claims under that earlier account: My history showed no Confirmed claim and the star was not shown as thanked (CONT-6, CONT-8). Demo data only; no route, schema or screen change.
 - 2026-10-17: **Demo seed adds a gift-card claim and a credited star** (`ctf/scripts/demo-seed/33-contributions.mjs`),
   so My history shows three claims and the GitHub star path reads as already credited in the demo
   schema. No route, schema or contract change.

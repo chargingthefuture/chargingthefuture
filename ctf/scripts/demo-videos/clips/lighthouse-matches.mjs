@@ -1,4 +1,6 @@
-// LightHouse: the Matches tab, showing the demo account's stay request. Makes no writes.
+// LightHouse: the Matches tab, showing the demo account's stay request. The listing line is matched
+// by its label, because a listing that is not on the first page of Browse shows by its id. Makes no
+// writes.
 export default {
   slug: 'lighthouse-matches',
   title: 'LightHouse: your matches',
@@ -18,7 +20,7 @@ export default {
     },
     {
       say: 'It also names the listing you asked about.',
-      do: async ({ page, highlight }) => highlight(page.getByText('Property: Bright 1BR in Mission District').first()),
+      do: async ({ page, highlight }) => highlight(page.getByText(/^Property: /).first()),
     },
     {
       say: 'Once a host accepts, Direct Line opens a private chat between the two of you.',

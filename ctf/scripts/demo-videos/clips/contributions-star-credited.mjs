@@ -15,11 +15,11 @@ export default {
     },
     {
       say: 'A star on GitHub is thanked once per person. This account has already been thanked, so the star is grayed out.',
-      do: async ({ page, highlight }) => highlight(page.getByText(/^You've already received credits for starring the repository/).locator('xpath=..')),
+      do: async ({ page, highlight }) => highlight(page.getByRole('button', { name: /already received credits for starring the repository/ })),
     },
     {
       say: 'The gift card and the Quora comment stay open. Quora comments can be thanked more than once.',
-      do: async ({ page, highlight }) => highlight(page.getByText('Comment on a Quora post', { exact: true }).locator('xpath=..')),
+      do: async ({ page, highlight }) => highlight(page.getByRole('button', { name: /Comment on a Quora post/ })),
     },
   ],
 };

@@ -3,6 +3,8 @@
 // tag chips have several tags to rank. One names ServiceCredits, one Free and one Barter, so the
 // settlement badge shows each kind. All are within their 28 days, so they also count toward the GDP
 // "Value waiting to happen" panel (GDP-12). Nothing here needs the optional second owner account.
+import { createHash } from 'node:crypto';
+
 const id = (n) => `ddd00000-0000-4000-8420-0000000000${n.toString(16).padStart(2, '0')}`;
 
 export default async function seed(client, ctx) {
@@ -72,4 +74,34 @@ export default async function seed(client, ctx) {
         city === 'Toronto' ? 'Canada' : 'United States', `demo-sr-feed-${n}`, currency, amount, hoursAgo],
     );
   }
+
+  // The request each account is helping with ("Help moving a few boxes", written by seedDemo.mjs),
+  // tied back together. seedDemo.mjs keeps the owner's fixed fulfillment id, but its upserts leave
+  // the helper and the request link alone, and the request itself is matched on its idempotency
+  // key, so it can keep an id from an earlier seed. On a schema first seeded with a different
+  // DEMO_OWNER_ID the Direct Line then had no row naming the request. This points the fulfillment
+  // at the account and at the request that really carries the key, and the request back at it.
+  for (const account of ctx.PERSONAL_ACCOUNTS) {
+    const key = account === ctx.OWNER ? 'demo-sr-req-001' : `demo-sr-req-001-${sha256id(account).slice(0, 12)}`;
+    const fulfillmentId = ctx.personalId(account, ctx.ID.srFulfillment);
+    await client.query(
+      `UPDATE socket_relay_fulfillments f
+       SET fulfiller_user_id = $2, requester_user_id = r.owner_user_id, request_id = r.id, updated_at = NOW()
+       FROM socket_relay_requests r
+       WHERE f.id = $1::uuid AND r.owner_user_id = $3 AND r.idempotency_key = $4
+         AND (f.fulfiller_user_id <> $2 OR f.request_id <> r.id OR f.requester_user_id <> r.owner_user_id)`,
+      [fulfillmentId, account, ctx.PEER_1, key],
+    );
+    await client.query(
+      `UPDATE socket_relay_requests SET claimed_fulfillment_id = $1::uuid, status = 'claimed'
+       WHERE owner_user_id = $2 AND idempotency_key = $3
+         AND (claimed_fulfillment_id IS DISTINCT FROM $1::uuid OR status <> 'claimed')`,
+      [fulfillmentId, ctx.PEER_1, key],
+    );
+  }
+}
+
+// The same id helper seedDemo.mjs uses, for the per-account idempotency key it writes.
+function sha256id(...parts) {
+  return createHash('sha256').update(parts.join('|')).digest('hex').slice(0, 32);
 }

@@ -1,4 +1,8 @@
-// SkillUp: the Progress tab, showing the demo account's cohort and its milestones. Makes no writes.
+// SkillUp: the Progress tab, showing the demo account's cohort, its trainer, and where the milestone
+// bar goes. The demo enrollment holds no milestone deposits, so the card shows its waiting line
+// rather than the bar; the clip matches either. Makes no writes.
+const PROGRESS_LINE = /^(Milestones|Enrolled — awaiting cohort start)$/;
+
 export default {
   slug: 'skill-up-progress',
   title: 'SkillUp: your progress',
@@ -9,16 +13,21 @@ export default {
         await page.goto(app('/apps/skill-up'));
         await button('Progress').waitFor({ timeout: 20_000 });
         await button('Progress').click();
-        await page.getByText('Milestones', { exact: true }).first().waitFor({ timeout: 20_000 });
+        await page.getByText(PROGRESS_LINE).first().waitFor({ timeout: 20_000 });
       },
     },
     {
-      say: 'Here is your cohort.',
-      do: async ({ page, highlight }) => highlight(page.getByText('Career Acceleration — Demo Cohort').last()),
+      say: 'Here is your cohort, and the trainer who runs it.',
+      do: async ({ page, highlight }) => highlight(
+        page.locator('div')
+          .filter({ hasText: 'Career Acceleration — Demo Cohort' })
+          .filter({ has: page.getByText(PROGRESS_LINE) })
+          .last(),
+      ),
     },
     {
-      say: 'The bar shows how many milestones you have finished. Your trainer signs each one off, and your deposit comes back as they do.',
-      do: async ({ page, highlight }) => highlight(page.getByText('Milestones', { exact: true }).first()),
+      say: 'Once the cohort is underway, a bar here counts the milestones you have finished. Your trainer signs each one off, and your deposit comes back as they do.',
+      do: async ({ page, highlight }) => highlight(page.getByText(PROGRESS_LINE).first()),
     },
   ],
 };
