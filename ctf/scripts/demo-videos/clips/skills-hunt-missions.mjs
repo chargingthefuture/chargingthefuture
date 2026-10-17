@@ -17,8 +17,8 @@ export default {
       do: async ({ page, highlight }) => highlight(page.getByText(/^What this round still needs\./)),
     },
     {
-      say: 'This mission counts every accepted nomination. One of three is done, so two more people are needed.',
-      do: async ({ page, highlight }) => highlight(page.getByText('1 of 3 nominated', { exact: true })),
+      say: 'This mission counts every accepted nomination. The bar shows how many it has of the three it needs.',
+      do: async ({ page, highlight }) => highlight(page.getByText(/^\d+ of 3 nominated$/).first()),
     },
     {
       say: 'Nobody has started this one yet. The points beside it are the bonus for finishing it.',
