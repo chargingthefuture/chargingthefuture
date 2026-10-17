@@ -1175,3 +1175,22 @@ can't be sent right now." Nothing on either screen says the account is restricte
 moved. (Before this it was a generic error and the call kept ringing.) Lift the restriction after.
 
 **Result:** web ☐ android ☐ — notes:
+
+### FDN-47 — Web: one browser belongs to one member, and signing out stops it (added 2026-10-17)
+
+**Role:** Two members using the same browser, one after the other
+**Surface:** web (Android is FDN-44)
+
+**Steps:**
+1. Sign in as member A on the web and turn on **Call alerts on this device** in Foundation (or a
+   category under **Manage what pings your device** in the 🔔 panel).
+2. Sign out from the account menu. From another device, ring member A.
+3. Sign in as member B in the same browser and turn call alerts on. From another device, ring member A
+   again, then ring member B.
+
+**Expected:**
+- After step 2 the browser shows nothing for member A.
+- After step 3 the browser shows only member B's ring, never member A's.
+- Signing back in as member A shows call alerts off in that browser until A turns them on again.
+
+**Result:** web ☐ — notes:

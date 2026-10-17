@@ -62,7 +62,13 @@ export function getWebPushPublicKey(): string {
 
 // Upsert a device's Web Push subscription on (user_id, endpoint): a device re-subscribing refreshes its
 // keys rather than duplicating. user_agent is a short, non-identifying device label.
+// One browser belongs to one member at a time: any other member's row for the same endpoint is removed
+// first, so a shared browser stops showing the previous member's notifications to the next one.
 export async function saveWebPushSubscription(input: SaveWebPushSubscriptionInput): Promise<void> {
+  await queryDb(
+    `DELETE FROM push_subscriptions WHERE kind = 'web' AND endpoint = $1 AND user_id <> $2`,
+    [input.endpoint, input.userId],
+  );
   await queryDb(
     `
       INSERT INTO push_subscriptions (user_id, kind, endpoint, p256dh, auth, user_agent, last_used_at)

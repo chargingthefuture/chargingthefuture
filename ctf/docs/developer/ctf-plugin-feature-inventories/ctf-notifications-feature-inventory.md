@@ -143,6 +143,16 @@ No seed yet. A follow-up seed can insert a couple of sample notifications for a 
 
 ## Change Log
 
+- 2026-10-17: **One browser shows notifications for one member at a time (#2908).** Two members who
+  turned pings on in the same browser both got pushes there, and signing out left them on, because the
+  unique key on `push_subscriptions` is `(user_id, endpoint)` and nothing removed a row at sign-out.
+  `saveWebPushSubscription` (`lib/notifications/push.ts`) now deletes any `kind='web'` row with the same
+  endpoint for another account before it saves, as `saveExpoPushSubscription` already did for phones.
+  When the web app finds nobody signed in, it cancels the browser's own push subscription
+  (`lib/notifications/browser-signed-out.ts`, called from `lib/auth/client-context.tsx`); the push service
+  then answers the next send with 404/410 and the row is deleted by the existing cleanup. This runs after
+  sign-out from the account menu too, which gives the app no chance to call the server first. The Android
+  app already did both. No route, schema or contract change. Test script FDN-47.
 - 2026-10-12: Device pings on iPhone (owner report: an installed iPhone web app with every category
   on got no pings). The panel asked for permission only after other awaited work, which iOS can ignore;
   it never checked whether the server saved the subscription; and once a device had a subscription it
