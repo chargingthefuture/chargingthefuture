@@ -37,8 +37,11 @@ The account you already seed the demo schema with works as it is: it is in demo 
 data around it. The admin demo account carries the same personal demo data (its own wallet history,
 incidents, listings, quotes, enrollments and the rest), so a clip shows the same screens signed in as
 either. Its Fireside comments sit under a different post, because one post showing both accounts'
-comments would show each line twice. Pairing the admin and member accounts for live testing works
-as before. Two things to know:
+comments would show each line twice. With no second owner set (`demo_second_owner_id` left empty),
+the admin account is the other side of the two-sided demo data: a credits transfer, a LightHouse
+match on a place the admin hosts, a Foundation thread, and an open TrustTransport and SocketRelay
+request from each account for the other to act on. Set `DEMO_SECOND_OWNER_ID` to use a different
+account instead. Two things to know:
 
 - Its name and avatar show wherever the app shows the signed-in member.
 - If it is an admin account, admin controls show in the clips. A plain member account films the way

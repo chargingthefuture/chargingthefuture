@@ -24,7 +24,9 @@ seed makes that user the real counterparty to `DEMO_OWNER_ID`:
   Foundation thread, a Lighthouse seeker(owner)↔host(second-owner) match with a property,
   a Skill-Up co-enrollment, cohort/room membership, and an owner→second credit transfer.
 
-Leave `DEMO_SECOND_OWNER_ID` unset for the original single-owner behavior.
+With `DEMO_SECOND_OWNER_ID` unset, the admin demo account (`DEMO_TESTER_ADMIN_ID`) is the
+counterparty instead; see the 2026-10-17 section below. With neither set, the far side stays
+synthetic.
 
 ## Plugin coverage
 
@@ -319,3 +321,32 @@ natural unique keys. Each now lands on the existing row:
   `personalId`, else (when another account holds that id) an id derived from it.
 
 A fresh database gets the same ids as before. No row is deleted.
+
+## The admin account is the other side of the two-sided demo data — 2026-10-17
+
+Owner report: live testing of two-sided flows between the member and admin demo accounts found
+nothing to act on, because the two-sided data was built only between `DEMO_OWNER_ID` and
+`DEMO_SECOND_OWNER_ID`, and a third Clerk account is not wanted.
+
+With no second owner set, the admin account is the other side of the two-sided demo data.
+`seedDemo.mjs` defines `COUNTERPARTY` (`DEMO_SECOND_OWNER_ID`, else `DEMO_TESTER_ADMIN_ID`) and
+builds the pairings with it:
+
+- a completed owner-to-counterparty credits transfer;
+- a pending LightHouse match, owner as seeker, on a property the counterparty hosts. The admin
+  keeps its personal seeker profile (one per member) and is marked as having a property, as listing
+  a place does in the app;
+- a Foundation thread between the two;
+- an open TrustTransport request and an open SocketRelay request owned by each, so each can offer
+  on or fulfill the other's.
+
+The admin already shares the Skill-Up cohort, the PeerProgramming Demo-A cohort and the Chyme room
+with the owner as one of `PERSONAL_ACCOUNTS`. The second owner's own account setup (wallet,
+directory, workforce, trust, socket-relay presence, cohort and room rows) stays the second owner's
+alone. Set `DEMO_SECOND_OWNER_ID` to use a different account instead; the admin then gets none of
+the pairings, and every id is the same as before.
+
+Pairing ids are derived from (key, counterparty), so they never meet the admin's personal rows,
+which use `personalId`.
+
+Schema impact: none. Rows in the `demo` schema only.

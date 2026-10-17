@@ -3,7 +3,7 @@
  * seed:demo — populates the `demo` Postgres schema with a rich, coherent scenario
  * for the demo participant identified by DEMO_OWNER_ID.
  *
- * Two-sided testing (DEMO_SECOND_OWNER_ID, optional):
+ * Two-sided testing (DEMO_SECOND_OWNER_ID, optional; the admin account by default):
  *   The platform is a two-sided marketplace — TrustTransport (requester/provider),
  *   SocketRelay (requester/fulfiller), Foundation (two-party thread), Lighthouse
  *   (seeker/host). By default the "other side" of each flow is a synthetic user
@@ -12,15 +12,19 @@
  *   makes that user the real counterparty to DEMO_OWNER_ID: it gives them a member
  *   profile and wires up both-sided data (open requests each can act on, a shared
  *   Foundation thread, a Lighthouse seeker↔host match, a co-enrollment, etc.), so
- *   two real accounts can each test both sides. Leave it unset for the original
- *   single-owner behavior (unchanged).
+ *   two real accounts can each test both sides. Leave it unset and set
+ *   DEMO_TESTER_ADMIN_ID, and the admin account is that counterparty instead (COUNTERPARTY):
+ *   the same pairings, with no third account needed. The second owner's own account setup
+ *   (wallet, directory, workforce, trust, chyme and cohort rows) is never given to the admin,
+ *   which already has its own as one of PERSONAL_ACCOUNTS. With neither set, the other side
+ *   of each flow stays synthetic.
  *
  *   Admin demo account (DEMO_TESTER_ADMIN_ID): it carries the same personal demo data as
  *   DEMO_OWNER_ID (wallet history, incidents, listings, quotes, enrollments, badges, check-ins and
  *   the rest), each row with its own id (PERSONAL_ACCOUNTS, personalId), so the demo video clips work
- *   signed in as either. The owner's rows and ids are unchanged, and every pairing with the second
- *   owner and the tester member stays as it was, so live testing between the admin and member
- *   accounts works the same way.
+ *   signed in as either. The owner's rows and ids are unchanged. With no second owner set, the admin
+ *   is also the other side of every two-sided pairing with DEMO_OWNER_ID (above), so live testing
+ *   between the admin and member accounts covers both sides of each flow.
  *
  *   Access note: the seed grants the approved_full unlock tier to both real owners
  *   (an unlock_verification_submissions row), so neither needs the
@@ -87,6 +91,14 @@ if (OWNER2 && OWNER2 === OWNER) {
 //   - demo routing: target the `demo-mode` Unleash flag at both ids.
 const TESTER_ADMIN = (process.env.DEMO_TESTER_ADMIN_ID || '').trim() || null;
 const TESTER_MEMBER = (process.env.DEMO_TESTER_MEMBER_ID || '').trim() || null;
+
+// The other side of every two-sided pairing with the owner (a credits transfer, a Foundation thread,
+// a LightHouse seeker-host match, the open TrustTransport and SocketRelay requests each side can act
+// on). The second owner when one is set; otherwise the admin account, so the owner can test both
+// sides with the two accounts they already have. The second owner's account setup (wallet, profiles,
+// enrollments) stays theirs alone: the admin already has its own as one of PERSONAL_ACCOUNTS.
+// Pairing ids are derived from (key, COUNTERPARTY), so a schema seeded with a second owner keeps them.
+const COUNTERPARTY = OWNER2 || TESTER_ADMIN || null;
 {
   const ids = [OWNER, OWNER2, TESTER_ADMIN, TESTER_MEMBER].filter(Boolean);
   if (new Set(ids).size !== ids.length) {
@@ -166,8 +178,8 @@ function sha256id(...parts) {
 
 // The accounts that carry the owner's personal demo data: their wallet history, incidents, listings,
 // quotes, enrollments, badges, check-ins and the rest. The admin demo account gets its own copy so the
-// demo video clips work signed in as either. Pairings with the second owner and the tester member
-// stay the owner's alone.
+// demo video clips work signed in as either. Two-sided pairings are not personal data: they run
+// between the owner and COUNTERPARTY, which is the admin itself when no second owner is set.
 const PERSONAL_ACCOUNTS = [OWNER, TESTER_ADMIN].filter(Boolean);
 
 // The id of one personal row for one account. The owner keeps the row's existing id exactly; any
@@ -295,7 +307,7 @@ async function seedServiceCredits(c) {
 
   if (OWNER2) {
     // The second real user needs a wallet to move credits and to deposit into a
-    // Skill-Up cohort. Plus a real member↔member transfer both can see.
+    // Skill-Up cohort. The admin account already has one as a personal account.
     await c.query(
       `INSERT INTO service_credits_wallets (user_id, available_balance, escrow_balance, updated_at)
        VALUES ($1, 450, 50, NOW())
@@ -304,13 +316,16 @@ async function seedServiceCredits(c) {
          escrow_balance = EXCLUDED.escrow_balance, updated_at = NOW()`,
       [OWNER2],
     );
-    const xfer2 = sha256id(OWNER, OWNER2, '40');
+  }
+
+  if (COUNTERPARTY) {
+    // A real member-to-member transfer both sides can see.
     await c.query(
       `INSERT INTO service_credits_transfers
        (id, sender_user_id, recipient_user_id, amount, status, idempotency_key, completed_at)
        VALUES ($1, $2, $3, 40, 'completed', $4, NOW())
        ON CONFLICT DO NOTHING`,
-      [xfer2, OWNER, OWNER2, `demo-transfer-${OWNER}-${OWNER2}`],
+      [sha256id(OWNER, COUNTERPARTY, '40'), OWNER, COUNTERPARTY, `demo-transfer-${OWNER}-${COUNTERPARTY}`],
     );
   }
 
@@ -450,7 +465,8 @@ async function seedSkillUp(c) {
   }
 
   if (OWNER2) {
-    // Second participant in the same cohort. Conflict on the primary key with a
+    // Second participant in the same cohort (the admin account is already enrolled in it as a
+    // personal account, so this co-enrollment needs nothing more for the admin). Conflict on the primary key with a
     // deterministic per-owner id (like the owner enrollment above), NOT on
     // (cohort_id, user_id): that composite unique is absent from the live demo
     // schema (its backfill DO block checks pg_indexes without a schemaname filter,
@@ -608,18 +624,27 @@ async function seedLighthouse(c) {
     );
   }
 
-  if (OWNER2) {
-    // Second owner is a host with their own property; owner (a seeker) has a
+  if (COUNTERPARTY) {
+    // The counterparty is a host with their own property; owner (a seeker) has a
     // pending match on it — so both real users can work opposite sides.
-    await c.query(
-      `INSERT INTO lighthouse_profiles
-       (user_id, profile_type, bio, phone_number, signal_url, is_active, has_property, desired_country)
-       VALUES ($1, 'host', 'Second demo participant hosting a spare unit for the community.',
-         '+10000000077', 'https://signal.me/#demo-owner2', true, true, 'US')
-       ON CONFLICT (user_id) DO UPDATE SET bio = EXCLUDED.bio, updated_at = NOW()`,
-      [OWNER2],
-    );
-    const prop2 = sha256id('lh-property', OWNER2);
+    if (COUNTERPARTY === OWNER2) {
+      await c.query(
+        `INSERT INTO lighthouse_profiles
+         (user_id, profile_type, bio, phone_number, signal_url, is_active, has_property, desired_country)
+         VALUES ($1, 'host', 'Second demo participant hosting a spare unit for the community.',
+           '+10000000077', 'https://signal.me/#demo-owner2', true, true, 'US')
+         ON CONFLICT (user_id) DO UPDATE SET bio = EXCLUDED.bio, updated_at = NOW()`,
+        [OWNER2],
+      );
+    } else {
+      // The admin keeps its personal seeker profile (one per user) and is flagged as having a
+      // property, as listing a place does in the app.
+      await c.query(
+        `UPDATE lighthouse_profiles SET has_property = TRUE, updated_at = NOW() WHERE user_id = $1`,
+        [COUNTERPARTY],
+      );
+    }
+    const prop2 = sha256id('lh-property', COUNTERPARTY);
     await c.query(
       `INSERT INTO lighthouse_properties
        (id, host_user_id, title, description, property_type, city, state, country,
@@ -631,14 +656,14 @@ async function seedLighthouse(c) {
          '["wifi","laundry"]'::jsonb, '["no-smoking"]'::jsonb, '[]'::jsonb,
          true, $2, $2)
        ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, updated_at = NOW()`,
-      [prop2, OWNER2],
+      [prop2, COUNTERPARTY],
     );
     await c.query(
       `INSERT INTO lighthouse_matches
        (id, seeker_user_id, host_user_id, property_id, status, message)
        VALUES ($1::uuid, $2, $3, $4::uuid, 'pending', 'Demo two-sided match — owner (seeker) ↔ second owner (host).')
        ON CONFLICT (id) DO UPDATE SET status = EXCLUDED.status`,
-      [sha256id('lh-match', OWNER, OWNER2), OWNER, OWNER2, prop2],
+      [sha256id('lh-match', OWNER, COUNTERPARTY), OWNER, COUNTERPARTY, prop2],
     );
   }
 
@@ -958,11 +983,11 @@ async function seedFoundation(c) {
     );
   }
 
-  if (OWNER2) {
-    // A real two-party thread between the two demo owners (distinct id + a
+  if (COUNTERPARTY) {
+    // A real two-party thread between the owner and the counterparty (distinct id + a
     // thread_key derived from the sorted pair, which the UNIQUE(thread_key)
-    // index requires be different from the owner↔peer thread above).
-    const threadKey2 = [OWNER, OWNER2].sort().join(':');
+    // index requires be different from the owner↔peer threads above).
+    const threadKey2 = [OWNER, COUNTERPARTY].sort().join(':');
     await c.query(
       `INSERT INTO foundation_connection_threads (id, thread_key, created_by_user_id)
        VALUES ($1::uuid, $2, $3)
@@ -970,7 +995,7 @@ async function seedFoundation(c) {
          thread_key = EXCLUDED.thread_key,
          created_by_user_id = EXCLUDED.created_by_user_id,
          updated_at = NOW()`,
-      [sha256id('foundation-thread', OWNER, OWNER2), threadKey2, OWNER],
+      [sha256id('foundation-thread', OWNER, COUNTERPARTY), threadKey2, OWNER],
     );
   }
 
@@ -1065,14 +1090,14 @@ async function seedTrustTransport(c) {
     );
   }
 
-  if (OWNER2) {
+  if (COUNTERPARTY) {
     // Two OPEN requests, one owned by each real user. The marketplace shows a
     // request as "available" when status='open' AND requester <> me, so each user
     // sees the OTHER's request and can make a provider offer on it — exercising
     // both the requester and provider sides with two real accounts.
     const openReqs = [
       [sha256id('tt-open-req', OWNER), OWNER, 'Ride to the pharmacy', 'Need a lift to pick up a prescription.', 'Berkeley', 'Oakland'],
-      [sha256id('tt-open-req', OWNER2), OWNER2, 'Ride to a job interview', 'Interview across town — need reliable transport.', 'San Francisco', 'Daly City'],
+      [sha256id('tt-open-req', COUNTERPARTY), COUNTERPARTY, 'Ride to a job interview', 'Interview across town — need reliable transport.', 'San Francisco', 'Daly City'],
     ];
     for (const [id, uid, title, details, pickup, dropoff] of openReqs) {
       await c.query(
@@ -1288,11 +1313,14 @@ async function seedSocketRelay(c) {
          presence_opt_in = true, service_deleted_at = NULL, updated_at = NOW()`,
       [OWNER2],
     );
+  }
+
+  if (COUNTERPARTY) {
     // One OPEN request owned by each real user (distinct id AND distinct
     // owner+idempotency_key), so each can browse and fulfill the other's request.
     const openRelay = [
       [sha256id('sr-open-req', OWNER), OWNER, 'demo-sr-open-owner', 'Need a hand assembling furniture', 'Flat-pack wardrobe — could use a second pair of hands for an hour.'],
-      [sha256id('sr-open-req', OWNER2), OWNER2, 'demo-sr-open-owner2', 'Ride to the community center', 'Looking for someone headed downtown on Saturday morning.'],
+      [sha256id('sr-open-req', COUNTERPARTY), COUNTERPARTY, 'demo-sr-open-owner2', 'Ride to the community center', 'Looking for someone headed downtown on Saturday morning.'],
     ];
     for (const [id, uid, idem, title, details] of openRelay) {
       await c.query(
@@ -1529,7 +1557,7 @@ async function seedRecurringActivity(c) {
 // as its id.
 function demoContext() {
   return {
-    OWNER, OWNER2, TESTER_ADMIN, TESTER_MEMBER, REAL_USERS, PERSONAL_ACCOUNTS, personalId, personalRowId,
+    OWNER, OWNER2, COUNTERPARTY, TESTER_ADMIN, TESTER_MEMBER, REAL_USERS, PERSONAL_ACCOUNTS, personalId, personalRowId,
     PEER_1, PEER_2, ADMIN, HOST, TRAINER, ID, WEEK_START,
   };
 }
@@ -1557,6 +1585,8 @@ async function main() {
   console.log(`Seeding demo schema for owner: ${OWNER}`);
   if (OWNER2) {
     console.log(`Two-sided counterparty (DEMO_SECOND_OWNER_ID): ${OWNER2}`);
+  } else if (COUNTERPARTY) {
+    console.log(`Two-sided counterparty (no DEMO_SECOND_OWNER_ID, so the admin account): ${COUNTERPARTY}`);
   }
   if (TESTER_ADMIN) console.log(`Tester admin account (DEMO_TESTER_ADMIN_ID): ${TESTER_ADMIN}`);
   if (TESTER_MEMBER) console.log(`Tester member account (DEMO_TESTER_MEMBER_ID): ${TESTER_MEMBER}`);
