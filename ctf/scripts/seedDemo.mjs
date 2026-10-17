@@ -178,6 +178,24 @@ function personalId(account, ownerId) {
   return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20, 32)}`;
 }
 
+// The id to write one account's personal row under, for a table with a natural unique key besides
+// its id. A schema seeded before the accounts changed roles (the admin once seeded as DEMO_OWNER_ID)
+// already holds the earlier owner's rows under the owner's fixed ids, so: the account's existing row
+// under the natural key wins; otherwise personalId, unless another account's row already holds that
+// id, in which case an id derived from it. A fresh database always gets personalId.
+// `table` and the keys of `naturalKey` are column names written in this file, never input.
+async function personalRowId(c, account, ownerId, table, naturalKey) {
+  const columns = Object.keys(naturalKey);
+  const found = await c.query(
+    `SELECT id FROM ${table} WHERE ${columns.map((col, i) => `${col} = $${i + 1}`).join(' AND ')} LIMIT 1`,
+    Object.values(naturalKey),
+  );
+  if (found.rows[0]) return String(found.rows[0].id);
+  const id = personalId(account, ownerId);
+  const taken = await c.query(`SELECT 1 FROM ${table} WHERE id::text = $1`, [id]);
+  return taken.rowCount ? personalId(`moved:${account}`, ownerId) : id;
+}
+
 // The Directory profile an account claims: the owner's fixed one, or the tester profile seedDirectory
 // writes for a tester account (one claimed profile per account, so the admin reuses that one).
 function directoryProfileIdFor(account) {
@@ -255,10 +273,13 @@ async function seedServiceCredits(c) {
 
     // Transfer: peer1 → account (tip)
     await c.query(
+      // No conflict target: a schema seeded before an account's ids changed already holds this
+      // transfer under its (sender, idempotency_key) with a different id, and either match means
+      // the transfer is there.
       `INSERT INTO service_credits_transfers
        (id, sender_user_id, recipient_user_id, amount, status, idempotency_key, completed_at)
        VALUES ($1, $2, $3, 50, 'completed', $4, NOW())
-       ON CONFLICT (id) DO NOTHING`,
+       ON CONFLICT DO NOTHING`,
       [personalId(uid, sha256id(PEER_1, OWNER, '50')), PEER_1, uid, `demo-transfer-${PEER_1}-${uid}`],
     );
   }
@@ -288,7 +309,7 @@ async function seedServiceCredits(c) {
       `INSERT INTO service_credits_transfers
        (id, sender_user_id, recipient_user_id, amount, status, idempotency_key, completed_at)
        VALUES ($1, $2, $3, 40, 'completed', $4, NOW())
-       ON CONFLICT (id) DO NOTHING`,
+       ON CONFLICT DO NOTHING`,
       [xfer2, OWNER, OWNER2, `demo-transfer-${OWNER}-${OWNER2}`],
     );
   }
@@ -394,15 +415,37 @@ async function seedSkillUp(c) {
     [ID.milestone1, ID.milestone2, ID.cohort],
   );
 
-  // Enroll each personal account as an active participant
+  // Hand each account's demo cohort enrollment back to it first. The owner's upsert below keeps the
+  // fixed enrollment id and leaves user_id alone, so a schema first seeded with a different
+  // DEMO_OWNER_ID holds that enrollment under the earlier account; when the earlier account is now
+  // another personal account, its own insert would then hit the (cohort, member) unique index.
+  // Skipped when the account already holds another enrollment in the cohort.
   for (const uid of PERSONAL_ACCOUNTS) {
+    await c.query(
+      `UPDATE skill_up_enrollments n SET user_id = $2, updated_at = NOW()
+       WHERE n.id = $1::uuid AND n.user_id <> $2
+         AND NOT EXISTS (
+           SELECT 1 FROM skill_up_enrollments o
+           WHERE o.cohort_id = n.cohort_id AND o.user_id = $2 AND o.id <> n.id
+         )`,
+      [personalId(uid, ID.enrollmentOwner), uid],
+    );
+  }
+
+  // Enroll each personal account as an active participant, on the account's existing enrollment in
+  // the cohort when it already has one under another id.
+  for (const uid of PERSONAL_ACCOUNTS) {
+    const existing = await c.query(
+      `SELECT id FROM skill_up_enrollments WHERE cohort_id = $1::uuid AND user_id = $2 ORDER BY created_at LIMIT 1`,
+      [ID.cohort, uid],
+    );
     await c.query(
       `INSERT INTO skill_up_enrollments
        (id, cohort_id, user_id, status, credits_deposited, assigned_trainer_id)
        VALUES ($1::uuid, $2::uuid, $3, 'active', 50, $4)
        ON CONFLICT (id) DO UPDATE SET
          status = EXCLUDED.status, credits_deposited = EXCLUDED.credits_deposited`,
-      [personalId(uid, ID.enrollmentOwner), ID.cohort, uid, TRAINER],
+      [existing.rows[0]?.id ?? personalId(uid, ID.enrollmentOwner), ID.cohort, uid, TRAINER],
     );
   }
 
@@ -443,7 +486,35 @@ async function seedSkillsHunt(c) {
 
   // One accepted nomination per personal account. The leaderboard's rank is unique per round, so
   // the owner keeps rank 1 and the admin account sits at rank 2 with the same score.
+  // Hand each account's seeded nomination back to it first. The owner's upsert below keeps the fixed
+  // id and leaves submitter_user_id alone, so a schema first seeded with a different DEMO_OWNER_ID
+  // holds that nomination under the earlier account, with the earlier account's signature; when the
+  // earlier account is now another personal account, its own insert would then hit the live
+  // (round, signature) unique index. Skipped when the signature is already live on another row.
+  for (const uid of PERSONAL_ACCOUNTS) {
+    await c.query(
+      `UPDATE skills_hunt_submissions n
+       SET submitter_user_id = $2, round_id = $3::uuid, signature_hash = $4, deleted_at = NULL, updated_at = NOW()
+       WHERE n.id = $1::uuid
+         AND (n.submitter_user_id <> $2 OR n.round_id <> $3::uuid OR n.signature_hash <> $4 OR n.deleted_at IS NOT NULL)
+         AND NOT EXISTS (
+           SELECT 1 FROM skills_hunt_submissions o
+           WHERE o.round_id = $3::uuid AND o.signature_hash = $4 AND o.id <> n.id
+             AND o.deleted_at IS NULL AND o.status <> 'rejected'
+         )`,
+      [personalId(uid, ID.submission), uid, ID.round, sha256id(uid, ID.round, 'demo-submission')],
+    );
+  }
+
   for (const [index, uid] of PERSONAL_ACCOUNTS.entries()) {
+    const signature = sha256id(uid, ID.round, 'demo-submission');
+    // The account's live nomination under another id, when it already has one.
+    const existing = await c.query(
+      `SELECT id FROM skills_hunt_submissions
+       WHERE round_id = $1::uuid AND signature_hash = $2 AND deleted_at IS NULL AND status <> 'rejected'
+       LIMIT 1`,
+      [ID.round, signature],
+    );
     await c.query(
       `INSERT INTO skills_hunt_submissions
        (id, round_id, submitter_user_id, full_name, bio, quora_profile_url,
@@ -460,7 +531,7 @@ async function seedSkillsHunt(c) {
         $4, 'accepted', $5, 50, 10, true, 'valid', NOW() - INTERVAL '2 days')
        ON CONFLICT (id) DO UPDATE SET
          status = EXCLUDED.status, points_awarded = EXCLUDED.points_awarded`,
-      [personalId(uid, ID.submission), ID.round, uid, sha256id(uid, ID.round, 'demo-submission'), ADMIN],
+      [existing.rows[0]?.id ?? personalId(uid, ID.submission), ID.round, uid, signature, ADMIN],
     );
 
     await c.query(
@@ -1458,7 +1529,7 @@ async function seedRecurringActivity(c) {
 // as its id.
 function demoContext() {
   return {
-    OWNER, OWNER2, TESTER_ADMIN, TESTER_MEMBER, REAL_USERS, PERSONAL_ACCOUNTS, personalId,
+    OWNER, OWNER2, TESTER_ADMIN, TESTER_MEMBER, REAL_USERS, PERSONAL_ACCOUNTS, personalId, personalRowId,
     PEER_1, PEER_2, ADMIN, HOST, TRAINER, ID, WEEK_START,
   };
 }

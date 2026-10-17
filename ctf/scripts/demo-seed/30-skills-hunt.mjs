@@ -16,7 +16,7 @@ const NOTE_ACCEPTED = 'ddd00000-0000-4000-8300-000000000021';
 const NOTE_TOP_TEN = 'ddd00000-0000-4000-8300-000000000022';
 
 export default async function seed(client, ctx) {
-  const { PERSONAL_ACCOUNTS, personalId, ADMIN, ID } = ctx;
+  const { PERSONAL_ACCOUNTS, personalId, personalRowId, ADMIN, ID } = ctx;
 
   // Keep the demo round open. seedDemo.mjs sets its dates only when the row is first written, so
   // three weeks later the round still read as active while its window had shut, and Scout showed
@@ -28,18 +28,6 @@ export default async function seed(client, ctx) {
      WHERE id = $1::uuid`,
     [ID.round],
   );
-
-  // Hand each account's seeded nomination back to it. seedDemo.mjs keeps the owner's fixed id and its
-  // upsert leaves submitter_user_id alone, so a schema first seeded with a different DEMO_OWNER_ID
-  // kept the nomination under that earlier account and My Finds was empty.
-  for (const account of PERSONAL_ACCOUNTS) {
-    await client.query(
-      `UPDATE skills_hunt_submissions
-       SET submitter_user_id = $2, round_id = $3::uuid, deleted_at = NULL, updated_at = NOW()
-       WHERE id = $1::uuid AND (submitter_user_id <> $2 OR round_id <> $3::uuid OR deleted_at IS NOT NULL)`,
-      [personalId(account, ID.submission), account, ID.round],
-    );
-  }
 
   const missions = [
     [MISSION_ANY, 'Find three skilled people', 'Every accepted nomination in this round counts toward this one.',
@@ -72,7 +60,8 @@ export default async function seed(client, ctx) {
          VALUES ($1::uuid, $2::uuid, $3, $4, NULL, NOW())
          ON CONFLICT (mission_id, user_id) DO UPDATE SET
            progress_count = EXCLUDED.progress_count, completed_at = NULL, updated_at = NOW()`,
-        [personalId(account, id), missionId, account, count],
+        [await personalRowId(client, account, id, 'skills_hunt_mission_progress', { mission_id: missionId, user_id: account }),
+          missionId, account, count],
       );
     }
 
