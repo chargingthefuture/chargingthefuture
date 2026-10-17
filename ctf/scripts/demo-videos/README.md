@@ -87,7 +87,14 @@ export default {
   (`page.getByText('+ Add your goal').click()`), which survives restyling.
 - `app(path)` builds an address on the app, `scroll(pixels)` scrolls like a thumb (negative goes up),
   and `pause(seconds)` holds the screen.
+- `button(name)` finds a button by its visible text or its aria-label, exactly, so `button('Session')`
+  is the tab and not "Join Session".
+- `highlight(locator)` rings an element in coral and dims the rest of the screen while the step's
+  sentence plays. The ring goes when the next step starts. The usual pattern is one step that
+  highlights a button and says what it does, then a step that presses it.
 - Each tap shows a coral circle where it lands.
+- The browser has a test-pattern camera and a tone for a microphone, already allowed, so a clip can
+  join a live call. Demo mode puts that call on the staging video service.
 - Use `speak` when the voice mispronounces a name: "Peer Programming" for PeerProgramming,
   "Service Credits" for ServiceCredits. Captions always show `say`.
 - Keep a clip to one task and under a minute. The narration follows the same rules as the blog:
