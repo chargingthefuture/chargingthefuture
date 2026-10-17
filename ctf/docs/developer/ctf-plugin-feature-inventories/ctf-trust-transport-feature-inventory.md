@@ -184,7 +184,7 @@ Admin routes:
 - `POST /api/trust-transport/admin/incidents/:incidentId/resolve` — Resolve an incident.
 - `POST /api/trust-transport/admin/accounts/:userId/restrict` — Restrict an account.
 - `POST /api/trust-transport/admin/accounts/:userId/restore` — Restore a restricted account.
-- `PUT /api/trust-transport/admin/market-config` — Update market configuration.
+- `PUT /api/trust-transport/admin/market-config` — Update market configuration: `maxConcurrentTrips`, `requireProofOnDelivery`, `emergencyFreezeEnabled` (stored as `emergencyFreezeActive`). All three are enforced (#2858): the freeze refuses new requests, offers and acceptances (409 `TRUST_TRANSPORT_MARKET_FROZEN`); the limit refuses an offer from, or acceptance of, a driver who already holds that many unfinished trips (`TRUST_TRANSPORT_TRIP_LIMIT_REACHED` / `TRUST_TRANSPORT_OFFER_DRIVER_AT_LIMIT`); proof-on-delivery refuses a non-admin move to `delivered` with no proof row (`TRUST_TRANSPORT_PROOF_REQUIRED`).
 - `GET /api/trust-transport/admin/audit-events` — Read admin audit trail.
 
 ---
@@ -311,6 +311,8 @@ Admin parity (2026-06-06): the Android admin screen `AdminTrustTransport.tsx` (e
    history only (completed vs. not), never a score, by owner directive.
 
 ## Change Log
+
+- 2026-10-17: **The market controls are obeyed (code review #2858, owner decision).** They were saved and audited but nothing read them, so the emergency freeze paused nothing, a driver could hold any number of trips, and a trip reached `delivered` with no proof. Now `createRequest`, `createOffer` and `acceptOffer` refuse while the freeze is on (trips under way carry on); `createOffer` and `acceptOffer` refuse a driver who already holds `maxConcurrentTrips` trips that have not ended (assigned, en route, picked up, delivered or emergency-frozen; the acceptance count runs inside its transaction); `updateTripStatus` refuses a non-admin move to `delivered` with no `trust_transport_proof_artifacts` row when proof is required. The freeze is off unless an admin turns it on. It is now stored as `emergencyFreezeActive`: the old `emergencyFreezeEnabled` key read as on by default, so the admin form had saved it as on without anyone deciding to pause, and honoring it would have paused every new trip on deploy. The limit (default 3) and proof requirement (default on) keep their saved or default values. Test: `lib/trust-transport/market-controls.test.ts`.
 
 - 2026-10-17: **A trip's chat ends with the trip (code review #2857, owner decision).** The chat route checked only that the caller was on the trip, and nothing touched the Stream channel when a trip ended, so the two people matched for one ride kept an open 1:1 channel. Now `tripChatAccess` decides: open while the trip is under way (emergency-frozen included), read-only once completed, canceled or disputed, and closed 30 days after a completed (from `completed_at`) or canceled (from `updated_at`) trip ended; a disputed trip stays readable until the dispute is resolved. `freezeTrustTransportTripChannel` freezes the Stream channel on the complete route, a status change to an end state, and an order cancel (`cancelOrder` now returns the canceled trip ids), and again whenever an ended trip's chat is opened. Both chat screens show the read-only line in place of the message box. Messages stay stored for moderation. Quota note: `docs/quota-impact/2026-10-17-trust-transport-trip-chat-closes.md`. Test: `lib/trust-transport/trip-chat-window.test.ts`.
 

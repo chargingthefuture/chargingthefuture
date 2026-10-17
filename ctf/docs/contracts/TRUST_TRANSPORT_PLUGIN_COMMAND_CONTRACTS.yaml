@@ -31,6 +31,7 @@ contracts:
       - trust_transport_status_events
       - trust_transport_request_accepted_currencies
       - currencies
+      - trust_transport_market_config
     purpose: marketplace_request_creation
     retentionClass: transactional_long_lived
     idempotency: true
@@ -61,6 +62,8 @@ contracts:
       - trust_transport_requests
       - trust_transport_admin_audit_trail
       - member_blocks
+      - trust_transport_market_config
+      - trust_transport_trips
     purpose: marketplace_offer_creation
     retentionClass: transactional_long_lived
     idempotency: true
@@ -86,6 +89,7 @@ contracts:
       - trust_transport_trips
       - trust_transport_status_events
       - member_blocks
+      - trust_transport_market_config
     purpose: marketplace_fulfillment_start
     retentionClass: transactional_long_lived
     idempotency: true
@@ -120,6 +124,8 @@ contracts:
       - trust_transport_trips
       - trust_transport_status_events
       - trust_transport_proof_artifacts
+      # Read when a non-admin moves the trip to delivered: proof is required while the market control is on.
+      - trust_transport_market_config
       # On an admin-override completion: ServiceCredits settlement moves credits requester -> provider;
       # fiat/crypto settlement credits the provider's earnings ledger in that currency. (For the normal
       # member path, settlement fires on trust-transport.trip.completion.confirm instead.)
