@@ -6,8 +6,7 @@
 //     their claimed Directory profile lists a skill under it (LU-1c). A re-run hands it back to the
 //     scheduler, so the claim can be shown again;
 //   - one open dispute on the owner's enrollment, for the admin review queue (LU-A1b, LU-A9), and the
-//     same on the admin demo account's own enrollment;
-//   - each account's demo cohort enrollment handed back to that account (see the end of seed).
+//     same on the admin demo account's own enrollment (the one seedDemo.mjs left it in the cohort).
 
 // The owner id the auto-cohort run writes (lib/skill-up/constants.ts SKILL_UP_AUTO_COHORT_ACTOR_ID).
 const AUTO_COHORT_ACTOR = 'skill-up-auto-cohort-scheduler';
@@ -97,6 +96,10 @@ export default async function seed(client, ctx) {
   );
 
   for (const account of PERSONAL_ACCOUNTS) {
+    const enrollment = await client.query(
+      `SELECT id FROM skill_up_enrollments WHERE cohort_id = $1::uuid AND user_id = $2 ORDER BY created_at LIMIT 1`,
+      [ID.cohort, account],
+    );
     await client.query(
       `INSERT INTO skill_up_disputes
        (id, enrollment_id, milestone_id, opened_by_user_id, title, description, status,
@@ -107,23 +110,7 @@ export default async function seed(client, ctx) {
        ON CONFLICT (id) DO UPDATE SET
          status = 'open', resolution_comment = NULL, resolved_by_user_id = NULL, resolved_at = NULL,
          created_at = EXCLUDED.created_at, updated_at = NOW()`,
-      [personalId(account, DISPUTE), personalId(account, ID.enrollmentOwner), ID.milestone1, account],
-    );
-  }
-
-  // Hand each account's demo cohort enrollment back to it. seedDemo.mjs keeps the owner's fixed
-  // enrollment id and its upsert leaves user_id alone, so a schema first seeded with a different
-  // DEMO_OWNER_ID kept the enrollment under that earlier account. Skipped when the account already
-  // holds another enrollment in the cohort, which the (cohort, member) unique index would refuse.
-  for (const account of PERSONAL_ACCOUNTS) {
-    await client.query(
-      `UPDATE skill_up_enrollments n SET user_id = $2, updated_at = NOW()
-       WHERE n.id = $1::uuid AND n.user_id <> $2
-         AND NOT EXISTS (
-           SELECT 1 FROM skill_up_enrollments o
-           WHERE o.cohort_id = n.cohort_id AND o.user_id = $2 AND o.id <> n.id
-         )`,
-      [personalId(account, ID.enrollmentOwner), account],
+      [personalId(account, DISPUTE), enrollment.rows[0]?.id ?? personalId(account, ID.enrollmentOwner), ID.milestone1, account],
     );
   }
 

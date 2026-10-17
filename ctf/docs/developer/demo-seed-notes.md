@@ -285,10 +285,11 @@ conflict, so a demo schema first seeded with a different `DEMO_OWNER_ID` kept th
 earlier account. The per-plugin modules now hand them back on every run, for each account in
 `PERSONAL_ACCOUNTS`:
 
-- `30-skills-hunt.mjs`: the demo nomination's `submitter_user_id`, and the demo round's dates,
-  which were set only on first insert and had run out, so Scout showed the round closed.
-- `31-skill-up.mjs`: the demo cohort enrollment's `user_id`, unless the account already has
-  another enrollment in that cohort.
+- `30-skills-hunt.mjs`: the demo round's dates, which were set only on first insert and had run
+  out, so Scout showed the round closed. The demo nomination's `submitter_user_id` is now handed
+  back in `seedDemo.mjs`, before the insert (see the next section).
+- The demo cohort enrollment's `user_id`, unless the account already has another enrollment in that
+  cohort: now in `seedDemo.mjs` too, before the insert.
 - `33-contributions.mjs`: the Quora comment and GitHub star claims' `user_id`.
 - `42-socket-relay.mjs`: the "Help moving a few boxes" fulfillment's helper and request link, and
   the request's claimed fulfillment.
@@ -296,3 +297,25 @@ earlier account. The per-plugin modules now hand them back on every run, for eac
 
 Schema impact: none. These are updates to rows the seed already writes in the `demo` schema; no
 table, column or constraint changed.
+
+## A demo schema whose accounts changed roles re-seeds — 2026-10-17
+
+The live demo schema was first seeded with the admin account as `DEMO_OWNER_ID`, so the admin held
+the owner's rows under the owner's fixed ids. Seeding it now, with the member as owner and the admin
+given its own copy under derived ids, failed: the admin's new rows hit its old ones on the tables'
+natural unique keys. Each now lands on the existing row:
+
+- `service_credits_transfers` (`uq_service_credits_transfers_sender_idem`): `ON CONFLICT DO
+  NOTHING` with no target, so a match on either the id or (sender, idempotency key) means the
+  transfer is there.
+- `skill_up_enrollments` (cohort, member): the hand-back to the owner runs before the insert, and
+  each account's insert reuses its existing enrollment in the cohort. The dispute in
+  `31-skill-up.mjs` points at the enrollment the account actually has.
+- `skills_hunt_submissions` (`uq_skills_hunt_submissions_round_signature_live`): the hand-back runs
+  before the insert and also resets `signature_hash` to the account's own; the insert reuses a live
+  nomination with the same signature.
+- `skills_hunt_mission_progress` (mission, member): the owner's fixed id was held by the admin's
+  row. `personalRowId` in `seedDemo.mjs` returns the account's row under the natural key, else
+  `personalId`, else (when another account holds that id) an id derived from it.
+
+A fresh database gets the same ids as before. No row is deleted.
