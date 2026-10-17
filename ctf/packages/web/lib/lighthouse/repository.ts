@@ -946,14 +946,19 @@ export async function createProperty(actorUserId: string, input: LighthousePrope
 
 // photos and is_active as the update writes them: what the caller sent, or the stored value when the
 // body left the field out.
-function keepStoredWhenOmitted(
+// Only an admin changes whether a listing shows in browse (owner decision, 2026-10-17; issue #2819).
+// The host's form has no such control, and the table does not record who hid a listing, so a host's
+// isActive is ignored rather than trusted: otherwise a host calling the route directly could put back
+// a listing an admin took down.
+export function keepStoredWhenOmitted(
   input: LighthousePropertyInput,
   current: { is_active: boolean; photos: unknown },
+  isAdmin: boolean,
 ): { photosJson: string; isActive: boolean } {
   const photos = input.photos === undefined ? current.photos : input.photos;
   return {
     photosJson: JSON.stringify(normalizeStringArray(parseJsonArray(photos))),
-    isActive: typeof input.isActive === 'boolean' ? input.isActive : current.is_active,
+    isActive: isAdmin && typeof input.isActive === 'boolean' ? input.isActive : current.is_active,
   };
 }
 
@@ -980,7 +985,7 @@ export async function updateProperty(actorUserId: string, propertyId: string, in
     if (!isAdmin && current.host_user_id !== actorUserId) {
       throw new Error('not_owner');
     }
-    const { photosJson, isActive } = keepStoredWhenOmitted(input, current);
+    const { photosJson, isActive } = keepStoredWhenOmitted(input, current, isAdmin);
 
     const updated = await client.query(
       `
