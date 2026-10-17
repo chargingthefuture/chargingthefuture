@@ -14,8 +14,10 @@ phone:
 - account: `member` (the default) or `admin`.
 - voice: leave the default, or use another Piper voice name (list below).
 
-Each clip is attached to the `demo-videos` release as `<clip>.mp4`, with `<clip>.vtt` (captions as a
-separate file, for players that take one). Re-running a clip replaces its video there. A clip that
+Each run publishes a release of its own, `demo-videos-<run number>`, with every clip it recorded as
+`<clip>.mp4` and `<clip>.vtt` (captions as a separate file, for players that take one). The run's
+summary page links it, and the newest is at the top of the repository's Releases list. Releases here
+cannot be changed once published, so a re-run makes a new release rather than replacing a video. A clip that
 fails does not stop the others; the run goes red and its log names the clip, the step, and what went
 wrong on screen.
 

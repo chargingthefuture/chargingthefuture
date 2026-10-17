@@ -7,8 +7,9 @@ name: Demo Videos — Record Clips
 # The voice is Piper, which runs on the runner itself: no API credit, so no slash command stands
 # in for this workflow.
 #
-# Output: one MP4 (and a .vtt caption file) per clip, attached to the `demo-videos` release so they
-# open on a phone, and to the run as an artifact.
+# Output: one MP4 (and a .vtt caption file) per clip, attached to a release of its own for each run,
+# tagged demo-videos-<run number>, so they open on a phone; and to the run as an artifact. Releases
+# in this repository are immutable once published, so a run never adds to an earlier one.
 #
 # Needs CLERK_SECRET_KEY and the Clerk user id of an account in demo mode. The id comes from the
 # demo_user_id box, else the repository variable DEMO_VIDEO_CLERK_USER_ID (member) or
@@ -140,20 +141,21 @@ jobs:
           # shellcheck disable=SC2086
           node ctf/scripts/demo-videos/record.mjs $CLIPS
 
-      - name: Attach to the demo-videos release
+      - name: Publish as a release for this run
         if: ${{ always() && hashFiles('demo-videos-out/*.mp4') != '' }}
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: demo-videos-${{ github.run_number }}
+          ACCOUNT: ${{ inputs.account }}
         run: |
           set -euo pipefail
-          if ! gh release view demo-videos >/dev/null 2>&1; then
-            gh release create demo-videos --prerelease --title "Demo videos" \
-              --notes "Short demo clips of the app, recorded by the Demo Videos workflow. Each upload replaces the clip of the same name."
-          fi
-          gh release upload demo-videos "$OUT_DIR"/*.mp4 "$OUT_DIR"/*.vtt --clobber
+          # gh uploads the files to a draft and publishes it after, which an immutable release needs.
+          gh release create "$TAG" "$OUT_DIR"/*.mp4 "$OUT_DIR"/*.vtt \
+            --target "$GITHUB_SHA" --prerelease --title "Demo videos, run ${{ github.run_number }}" \
+            --notes "Demo clips recorded by the Demo Videos workflow as the $ACCOUNT demo account. Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           {
             echo "### Demo videos"
-            echo "Release: ${{ github.server_url }}/${{ github.repository }}/releases/tag/demo-videos"
+            echo "Release: ${{ github.server_url }}/${{ github.repository }}/releases/tag/$TAG"
             for f in "$OUT_DIR"/*.mp4; do echo "- $(basename "$f")"; done
           } >> "$GITHUB_STEP_SUMMARY"
 
