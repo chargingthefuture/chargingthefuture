@@ -162,8 +162,24 @@ async function recordClip(browser, clip, storageFile) {
   return output;
 }
 
+// DEMO_SHARD=i/n keeps every n-th clip starting at i, so n machines can record a long list side by
+// side. Without it, every clip is recorded here.
+function shardOf(clips) {
+  const shard = process.env.DEMO_SHARD;
+  if (!shard) return clips;
+  const [index, count] = shard.split('/').map(Number);
+  if (!Number.isInteger(index) || !Number.isInteger(count) || count < 1 || index < 0 || index >= count) {
+    throw new Error(`DEMO_SHARD="${shard}" is not of the form i/n with 0 <= i < n.`);
+  }
+  return clips.filter((_, position) => position % count === index);
+}
+
 async function main() {
-  const clips = await loadClips(process.argv.slice(2).filter((a) => a && a !== 'all'));
+  const clips = shardOf(await loadClips(process.argv.slice(2).filter((a) => a && a !== 'all')));
+  if (clips.length === 0) {
+    console.log('No clip falls in this shard.');
+    return;
+  }
   mkdirSync(workRoot, { recursive: true });
   const chromium = await loadChromium();
   const browser = await chromium.launch({

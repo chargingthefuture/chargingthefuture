@@ -15,11 +15,17 @@ phone:
 - voice: leave the default, or use another Piper voice name (list below).
 
 Each run publishes a release of its own, `demo-videos-<run number>`, with every clip it recorded as
-`<clip>.mp4` and `<clip>.vtt` (captions as a separate file, for players that take one). The run's
-summary page links it, and the newest is at the top of the repository's Releases list. Releases here
-cannot be changed once published, so a re-run makes a new release rather than replacing a video. A clip that
-fails does not stop the others; the run goes red and its log names the clip, the step, and what went
-wrong on screen.
+`<clip>.mp4` and `<clip>.vtt` (captions as a separate file, for players that take one). A clip that
+fails does not stop the others: the run goes red, its log names the clip, the step and what went
+wrong on screen, and the release carries `<clip>-failure.png`, the screen at that moment, so it can
+be seen on a phone. Open the release's files under Assets; "Source code (zip)" is the repository,
+which GitHub adds to every release. The run's summary page links the release and lists what
+recorded and what failed, and the newest release is at the top of the repository's Releases list.
+Releases here cannot be changed once published, so a re-run makes a new release rather than
+replacing a video.
+
+Four machines record a quarter of the clips each at the same time, so a full run of 93 clips takes
+about 20 minutes; `DEMO_SHARD=i/n` is how `record.mjs` picks its share.
 
 ## Setting up the demo account (once)
 
