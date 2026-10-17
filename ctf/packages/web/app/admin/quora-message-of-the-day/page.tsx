@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { evaluatePluginAccess } from 'lib/auth/server-authz';
 import { QuoraMotdShell, type QuoraMotdDay } from '@/components/quora-motd/quora-motd-shell';
-import { motdToday, quoraMotdSchedule, quoraMotdAll } from 'lib/quora-motd/select';
+import { motdProtestDay, motdToday, quoraMotdSchedule, quoraMotdAll } from 'lib/quora-motd/select';
 import { motdDayLine } from 'lib/quora-motd/types';
 
 // Admin-only, and deliberately not public. Every message here is written to be pasted into the
@@ -30,12 +30,15 @@ export default async function QuoraMessageOfTheDayPage() {
     redirect('/apps');
   }
 
-  const schedule = quoraMotdSchedule(motdToday(), UPCOMING_DAYS + 1);
-  const days: QuoraMotdDay[] = schedule.map((pick) => ({
+  const now = new Date();
+  const schedule = quoraMotdSchedule(motdToday(now), UPCOMING_DAYS + 1);
+  // Today reads the clock as it stands now; each later row is one more than the row before it.
+  const protestDay = motdProtestDay(now);
+  const days: QuoraMotdDay[] = schedule.map((pick, offset) => ({
     date: pick.date,
     label: label(pick.date),
-    day: Math.max(1, pick.dayIndex),
-    dayLine: motdDayLine(pick.dayIndex),
+    day: protestDay + offset,
+    dayLine: motdDayLine(protestDay + offset),
     message: pick.message,
   }));
 

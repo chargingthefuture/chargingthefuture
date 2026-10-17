@@ -57,11 +57,12 @@ Every post opens with which day of the protest it is and the Peace Battle 2 page
 address (`/pb2`), built by `motdDayLine` in `lib/quora-motd/types.ts`. The page is the lead link,
 ahead of chargingthefuture.com, so it sits in the first line rather than at the foot.
 
-The day is the count the page's own clock shows: days since Friday 18 September 2026 at 7:00 PM
-Eastern, taken by calendar day in Eastern so it changes once a day. The opening night is not a day
-of its own, so the first full day, 19 September, is Day 1, and 2 October is Day 14. The line is
-generated, not stored with the message, so a message reads the right day whenever the rotation
-reaches it.
+The day is the count the page's own clock shows: complete days since Friday 18 September 2026 at
+7:00 PM Eastern, so it changes at 7:00 PM Eastern, when the clock's does, and never reads below
+Day 1. Saturday 17 October reads Day 28 until 7:00 PM and Day 29 after it. Counting by calendar day
+put the post a day ahead of the clock from midnight until 7:00 PM, which is when posts are pasted.
+The line is generated, not stored with the message, so a message reads the right day whenever the
+rotation reaches it.
 
 The line names the protest as a stand: Targeted Individuals holding it for their lives, by building
 what cannot be taken.
