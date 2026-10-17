@@ -3,7 +3,7 @@
 import { MessageSquare } from "lucide-react";
 import { StreamChatPanel } from "../shared/stream-chat-panel";
 import { useTheme } from "@/hooks/useTheme";
-import { getTrustTransportTokens, type ChatCreds, type TripRequest } from "./tt-shared";
+import { getTrustTransportTokens, tripChatReadOnlyNotice, type ChatCreds, type TripRequest } from "./tt-shared";
 
 function ChatEmpty({ onBook }: { onBook: () => void }) {
   const { theme } = useTheme();
@@ -51,6 +51,7 @@ function ChatPane({ selected, creds, loading, error }: { selected: TripRequest |
         streamUserId={creds.streamUserId}
         streamChannelId={creds.streamChannelId}
         accentColor={t.ACCENT}
+        readOnlyNotice={tripChatReadOnlyNotice(creds)}
       />
     );
   }

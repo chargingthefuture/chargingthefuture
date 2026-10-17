@@ -87,6 +87,23 @@ export async function ensureTrustTransportTripChannel(input: {
   return streamChannelId;
 }
 
+// Freeze a trip's chat so neither member can send in it (issue #2857). A frozen Stream channel keeps
+// its messages readable and refuses new ones. Called when a trip reaches completed, canceled or
+// disputed, and again whenever an ended trip's chat is opened, so a missed call is caught up.
+// Best-effort: never throws, so a Stream outage cannot fail the trip change that called it. A
+// channel that was never created has nothing to freeze, and that is not a failure.
+export async function freezeTrustTransportTripChannel(tripId: string): Promise<void> {
+  const config = await resolveStreamCredentials();
+  if (!config) return;
+  try {
+    const streamClient = new StreamChat(config.apiKey, config.apiSecret);
+    await streamClient.channel('messaging', `trust-transport-trip-${tripId}`).updatePartial({ set: { frozen: true } });
+  } catch (error) {
+    if (isStreamNotFoundError(error)) return;
+    reportError(error, { area: 'trust-transport', op: 'freeze_trip_channel', extra: { tripId } });
+  }
+}
+
 export async function createTrustTransportParticipantToken(userId: string): Promise<TrustTransportStreamParticipantCredentials | null> {
   const config = await resolveStreamCredentials();
   if (!config) {

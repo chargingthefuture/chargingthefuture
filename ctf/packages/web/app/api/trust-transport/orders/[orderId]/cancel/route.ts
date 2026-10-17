@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { freezeTrustTransportTripChannel } from 'lib/trust-transport/stream';
 import { ensureMutationCsrf, requireTrustTransportReadAccess, trustTransportErrorResponse } from 'lib/trust-transport/_lib';
 import { cancelOrder, insertTrustTransportAudit } from 'lib/trust-transport/repository';
 import { reportError } from 'lib/observability/report';
@@ -29,7 +30,9 @@ export async function POST(request: Request, { params }: RouteProps) {
   const { orderId } = await params;
 
   try {
-    await cancelOrder(orderId, gate.auth.userId, gate.auth.isAdmin, reason);
+    const { canceledTripIds } = await cancelOrder(orderId, gate.auth.userId, gate.auth.isAdmin, reason);
+    // Every trip on a canceled order has ended, so its chat stops taking new messages (issue #2857).
+    for (const tripId of canceledTripIds) await freezeTrustTransportTripChannel(tripId);
     // Canceling an order also cancels every unfinished trip on it, so it writes the same audit event as
     // the status route. The target is the request: the trips canceled with it are found by request id.
     await insertTrustTransportAudit({
