@@ -219,7 +219,9 @@ These checks confirm the plugin is alive. If any fail, stop and file a bug befor
 - The response carries no status field of any kind — the snapshot recomputes evidence and nothing else.
 - `trustEvidence` items each follow the "verb N noun" pattern (e.g. "Active on 5 days", "Completed 3 SocketRelay trades") — no item contains a raw count from ClickLog, Mood, GentlePulse, Unlock, or the Foundation seeker side.
 - No evidence item references a money amount or balance.
-- A row exists in `trust_admin_audit_trail` for this mutation.
+- A row exists in `trust_admin_audit_trail` for this mutation. Its `metadata` holds `snapshotId`,
+  `snapshotGeneratedAt` and `evidenceCount` only, with no `metrics` key; after `post/0067` has run, no
+  older `trust.signal.snapshot.refresh` row has one either (added 2026-10-17).
 
 **Result:** web ☐
 
