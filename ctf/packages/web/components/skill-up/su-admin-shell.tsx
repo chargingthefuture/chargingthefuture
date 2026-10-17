@@ -21,12 +21,13 @@ import {
   type AdminEnrollment,
   type AdminKpis,
   type AdminProposal,
-  type AdminValidation,
+  type AdminMilestoneQueueItem,
   type AutoCohortRunResult,
   type ProposalTermMonths,
 } from './su-admin-shared';
 import { getSkillUpTokens, trackRepeatsTitle, type SkillUpTokens } from './su-shared';
-import { ClaimTrainerControl, DisputeResolveControl, ValidationActions } from './su-review-actions';
+import { ClaimTrainerControl, DisputeResolveControl } from './su-review-actions';
+import { MilestoneQueueSection } from './su-milestone-queue-section';
 import { EnrollmentsSection } from './su-enrollments-section';
 import { useTheme } from '@/hooks/useTheme';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
@@ -97,35 +98,6 @@ function DisputesSection({ openDisputes, t, onChanged }: { openDisputes: AdminDi
               Opened by {dispute.openedByName ?? `member ${dispute.openedByUserId.slice(0, 6)}`}
             </div>
             <DisputeResolveControl dispute={dispute} t={t} onDone={onChanged} />
-          </div>
-        ))
-      )}
-    </div>
-  );
-}
-
-function ValidationsSection({ pendingValidations, t, onChanged }: { pendingValidations: AdminValidation[]; t: SkillUpTokens; onChanged: () => void }) {
-  return (
-    <div style={{ marginBottom: 24 }}>
-      <h2 style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, marginBottom: 12 }}>
-        Pending milestone validations {pendingValidations.length > 0 ? `(${pendingValidations.length})` : ''}
-      </h2>
-      {pendingValidations.length === 0 ? (
-        <div style={{ padding: '20px 16px', textAlign: 'center', color: t.MUTED, fontSize: 13, borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
-          No pending validations.
-        </div>
-      ) : (
-        pendingValidations.map((validation) => (
-          <div key={validation.id} style={{ marginBottom: 10, padding: '12px 14px', borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: t.TITLE }}>Milestone {validation.milestoneId.slice(0, 8)}</span>
-              <span style={{ fontSize: 11, color: t.MUTED, marginLeft: 'auto' }}>{formatQueueTime(validation.createdAtIso)}</span>
-            </div>
-            {validation.validationNote ? (
-              <p style={{ fontSize: 13, color: '#D1D5DB', margin: '6px 0 0', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{validation.validationNote}</p>
-            ) : null}
-            <div style={{ fontSize: 12, color: t.MUTED, marginTop: 6 }}>Enrollment {validation.enrollmentId.slice(0, 8)}</div>
-            <ValidationActions validation={validation} t={t} onDone={onChanged} />
           </div>
         ))
       )}
@@ -749,13 +721,13 @@ function useSkillUpAdminController(pendingProposals: AdminProposal[]) {
 export function SkillUpAdminShell({
   kpis,
   openDisputes,
-  pendingValidations,
+  milestoneQueue,
   pendingProposals,
   enrollments,
 }: {
   kpis: AdminKpis;
   openDisputes: AdminDispute[];
-  pendingValidations: AdminValidation[];
+  milestoneQueue: AdminMilestoneQueueItem[];
   pendingProposals: AdminProposal[];
   enrollments: AdminEnrollment[];
 }) {
@@ -831,8 +803,8 @@ export function SkillUpAdminShell({
             so a completed action re-pulls them via router.refresh(). */}
         <DisputesSection openDisputes={openDisputes} t={t} onChanged={() => router.refresh()} />
 
-        {/* Review queue: pending milestone validations — with validate/release actions inline. */}
-        <ValidationsSection pendingValidations={pendingValidations} t={t} onChanged={() => router.refresh()} />
+        {/* Milestone queue: credits waiting to move, then milestones waiting for sign-off (#2931). */}
+        <MilestoneQueueSection milestoneQueue={milestoneQueue} t={t} onChanged={() => router.refresh()} />
 
         {/* Cohort proposals from Workforce gaps (issue #904) */}
         <ProposalsSection

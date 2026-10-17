@@ -18,7 +18,7 @@ export default async function SkillUpAdminPage() {
     <SkillUpAdminShell
       kpis={panel.kpis}
       openDisputes={panel.openDisputes}
-      pendingValidations={panel.pendingValidations}
+      milestoneQueue={panel.milestoneQueue}
       enrollments={panel.enrollments}
       pendingProposals={pendingProposals}
     />
