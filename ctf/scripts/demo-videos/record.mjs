@@ -80,7 +80,30 @@ function helpers(page) {
       }
       await page.waitForTimeout(300);
     },
+    // A button by its visible text or aria-label. exact, so "Session" does not match "Join Session".
+    button: (name) => page.getByRole('button', { name, exact: true }).first(),
+    // Rings the element in coral and dims the rest of the screen while the step's sentence plays.
+    // The ring is cleared when the next step starts, so a step that highlights nothing shows none.
+    highlight: async (locator) => {
+      await locator.scrollIntoViewIfNeeded();
+      const box = await locator.boundingBox();
+      if (!box) throw new Error('the element to highlight is not on screen');
+      await page.evaluate(({ x, y, width, height }) => {
+        const ring = document.createElement('div');
+        ring.className = '__demo-highlight';
+        ring.style.cssText = `position:fixed;z-index:2147483646;pointer-events:none;left:${x - 6}px;top:${y - 6}px;width:${width + 12}px;height:${height + 12}px;border:3px solid #ff7f50;border-radius:12px;box-shadow:0 0 0 9999px rgba(0,0,0,.45);`;
+        document.documentElement.appendChild(ring);
+      }, box);
+    },
   };
+}
+
+async function clearHighlights(page) {
+  try {
+    await page.evaluate(() => document.querySelectorAll('.__demo-highlight').forEach((ring) => ring.remove()));
+  } catch {
+    // no-trace: the page was between documents, and a new document has no ring to clear
+  }
 }
 
 async function recordClip(browser, clip, storageFile) {
@@ -95,6 +118,9 @@ async function recordClip(browser, clip, storageFile) {
     deviceScaleFactor: 2,
     isMobile: true,
     hasTouch: true,
+    // The Session clips join a real call: the launch flags below give the browser a test-pattern
+    // camera and a tone for a microphone, and this lets the page use them without a prompt.
+    permissions: ['camera', 'microphone'],
     storageState: clip.signIn === false ? undefined : storageFile,
     // Playwright films at the viewport's own size whatever the pixel density; assemble() doubles it.
     recordVideo: { dir: workDir, size: VIEWPORT },
@@ -106,6 +132,7 @@ async function recordClip(browser, clip, storageFile) {
   const placed = [];
 
   for (const [index, step] of clip.steps.entries()) {
+    await clearHighlights(page);
     try {
       if (step.do) await step.do(tools);
     } catch (error) {
@@ -139,7 +166,9 @@ async function main() {
   const clips = await loadClips(process.argv.slice(2).filter((a) => a && a !== 'all'));
   mkdirSync(workRoot, { recursive: true });
   const chromium = await loadChromium();
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({
+    args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'],
+  });
   const storageFile = join(workRoot, 'session.json');
   const failures = [];
   try {
