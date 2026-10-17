@@ -16,7 +16,6 @@ import { signInDemoAccount } from './lib/sign-in.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const appUrl = (process.env.DEMO_APP_URL || 'https://app.chargingthefuture.com').replace(/\/$/, '');
-const signInUrl = process.env.DEMO_SIGN_IN_URL || 'https://accounts.app.chargingthefuture.com/sign-in';
 const outDir = process.env.DEMO_OUT_DIR || join(here, 'out');
 const workRoot = join(outDir, '.work');
 
@@ -144,7 +143,7 @@ async function main() {
     let signInError = null;
     if (clips.some((c) => c.signIn !== false)) {
       try {
-        await signInDemoAccount(browser, { appUrl, signInUrl, storageFile });
+        await signInDemoAccount(browser, { appUrl, storageFile, screenshotFile: join(outDir, 'sign-in-failure.png') });
         console.log('Signed in as the demo account.');
       } catch (error) {
         signInError = error;
