@@ -983,6 +983,26 @@ Result: web ☐
 
 ---
 
+### SH-A6f — A nomination its submitter deleted stays removed (added 2026-10-17)
+
+**Role:** admin · **Surfaces:** web
+
+**Precondition:** a test member with a nomination in the current round.
+
+**Steps:**
+1. As that member, delete your SkillsHunt data from account settings (or delete the account).
+2. As admin, open the round's submissions and find the nomination (filter **Removed** if needed).
+3. Send `POST /api/skills-hunt/admin/submissions/:id/restore` and a review for it directly.
+
+**Expected:**
+- Step 2: the row is listed with an **Account deleted** badge and the line "Removed on <date> when the person who made it deleted their account or their SkillsHunt data. It cannot be restored or reviewed." It shows no Accept, Reject, Flag or Restore button.
+- Step 3: both answer 409 `SKILLS_HUNT_SUBMISSION_ACCOUNT_DELETED` with "The person who made this nomination deleted their account or their SkillsHunt data, which removed it. It stays removed." Nothing returns to the leaderboard.
+- A row an admin removed (SH-A6e) still restores as before.
+
+Result: web ☐
+
+---
+
 ### SH-A6d — The admin list hides nothing, and the refusal says what is blocking
 
 **Role:** admin, then member · **Surfaces:** web

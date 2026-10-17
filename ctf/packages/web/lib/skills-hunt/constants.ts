@@ -82,6 +82,8 @@ export const SKILLS_HUNT_ERROR_CODE = {
   submissionLimitExceeded: 'SKILLS_HUNT_SUBMISSION_LIMIT_EXCEEDED',
   rejectionGuardViolation: 'SKILLS_HUNT_REJECTION_GUARD_VIOLATION',
   submissionNotFound: 'SKILLS_HUNT_SUBMISSION_NOT_FOUND',
+  // Removed by the submitter deleting their account or SkillsHunt data; never restored (issue #2868).
+  submissionAccountDeleted: 'SKILLS_HUNT_SUBMISSION_ACCOUNT_DELETED',
   invalidReviewAction: 'SKILLS_HUNT_INVALID_REVIEW_ACTION',
   profileAlreadyGenerated: 'SKILLS_HUNT_PROFILE_ALREADY_GENERATED',
   urlValidationFailed: 'SKILLS_HUNT_URL_VALIDATION_FAILED',
@@ -94,3 +96,7 @@ export const SKILLS_HUNT_ERROR_CODE = {
   anotherRoundOpen: 'SKILLS_HUNT_ANOTHER_ROUND_OPEN',
   roundAwardNotReady: 'SKILLS_HUNT_ROUND_AWARD_NOT_READY',
 } as const;
+
+// The refusal shown when an admin tries to restore or review a nomination its submitter deleted.
+export const ACCOUNT_DELETED_MESSAGE =
+  'The person who made this nomination deleted their account or their SkillsHunt data, which removed it. It stays removed.';

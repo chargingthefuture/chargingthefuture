@@ -82,6 +82,9 @@ export type SkillsHuntSubmission = {
   editHistory: SkillsHuntSubmissionEditEntry[];
   editedAtIso: string | null;
   deletedAtIso: string | null;
+  // True when the row was removed by its submitter deleting their account or SkillsHunt data
+  // (issue #2868). Shown to admins, never restorable.
+  removedByAccountDeletion?: boolean;
   directoryProfileGeneratedAtIso: string | null;
   createdAtIso: string;
   updatedAtIso: string;

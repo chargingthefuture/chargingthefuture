@@ -63,6 +63,9 @@ function RowActions({ submission, acting, onAccept, onReject, onFlag, onUnflag, 
     cursor: acting ? "default" : "pointer", opacity: acting ? 0.5 : 1,
   });
   const removed = submission.deletedAtIso !== null;
+  if (submission.removedByAccountDeletion) {
+    return <AccountDeletedNote deletedAtIso={submission.deletedAtIso} />;
+  }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -97,6 +100,19 @@ function RowActions({ submission, acting, onAccept, onReject, onFlag, onUnflag, 
   );
 }
 
+// A row its submitter's account deletion removed (issue #2868). Shown, because nothing is hidden from
+// an admin, but with no control that could bring it back: the member asked for it to be gone.
+function AccountDeletedNote({ deletedAtIso }: { deletedAtIso: string | null }) {
+  const { theme } = useTheme();
+  const t = getSkillsHuntAdminTokens(theme);
+  const on = deletedAtIso ? ` on ${new Date(deletedAtIso).toLocaleDateString()}` : "";
+  return (
+    <span style={{ fontSize: 12, color: t.MUTED }}>
+      Removed{on} when the person who made it deleted their account or their SkillsHunt data. It cannot be restored or reviewed.
+    </span>
+  );
+}
+
 // Marks a soft-deleted row in the list. The row is shown rather than hidden, so it needs to say
 // what it is at a glance.
 function RemovedBadge({ submission }: { submission: SkillsHuntSubmission }) {
@@ -105,7 +121,7 @@ function RemovedBadge({ submission }: { submission: SkillsHuntSubmission }) {
   }
   return (
     <span style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", padding: "2px 8px", borderRadius: 10, background: "rgba(100,116,139,0.18)", border: "1px solid rgba(100,116,139,0.45)", color: "#94A3B8" }}>
-      Removed
+      {submission.removedByAccountDeletion ? "Account deleted" : "Removed"}
     </span>
   );
 }

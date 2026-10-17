@@ -297,6 +297,8 @@ contracts:
       - skills_hunt_submissions
       - skills_hunt_leaderboard
       - skills_hunt_audit_log
+      # Read to refuse a row its submitter's account deletion removed (2026-10-17).
+      - account_deletion_events
       # Read-only, through lib/shared/directory-interface.ts: a nomination is refused when the
       # person's Quora URL is on Directory's takedown list.
       - directory_suppressed_quora_urls
@@ -361,6 +363,8 @@ contracts:
       - skills_hunt_leaderboard
       - skills_hunt_mission_progress
       - skills_hunt_audit_log
+      # Read to refuse a row its submitter's account deletion removed (2026-10-17).
+      - account_deletion_events
     purpose: moderation_and_scoring
     retentionClass: audit_long_lived
     idempotency: true
@@ -995,3 +999,9 @@ changelog:
       Removed skills-hunt.profile.delete. Its route, DELETE /api/account/skills-hunt-profile, had no
       caller and removed less than the account deletion registry does; DELETE
       /api/account/services/skills-hunt is the only per-service delete.
+  - date: 2026-10-17
+    change: >-
+      skills-hunt.submission.restore and skills-hunt.submission.review refuse a nomination that its
+      submitter's account deletion (or SkillsHunt data deletion) removed, answering 409
+      SKILLS_HUNT_SUBMISSION_ACCOUNT_DELETED. Both read account_deletion_events to tell that removal
+      from an admin Remove (issue #2868).
