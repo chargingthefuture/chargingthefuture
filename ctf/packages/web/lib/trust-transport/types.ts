@@ -81,6 +81,8 @@ export type TrustTransportRequest = {
   tripProviderUserId?: string | null;
   requesterCompletionConfirmedAtIso?: string | null;
   providerCompletionConfirmedAtIso?: string | null;
+  // True when the trip finished but its credits did not move (issue #2866); both members are told.
+  tripSettlementFailed?: boolean;
 };
 
 export type TrustTransportOffer = {
@@ -110,6 +112,8 @@ export type TrustTransportProviderTrip = {
   // confirming does not alone complete it — both must confirm before it settles.
   requesterCompletionConfirmedAtIso: string | null;
   providerCompletionConfirmedAtIso: string | null;
+  // True when the trip finished but its credits did not move (issue #2866).
+  settlementFailed: boolean;
 };
 
 // What a member browsing open requests to help with is allowed to see (discovery model B). Deliberately

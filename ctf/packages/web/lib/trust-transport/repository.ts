@@ -1,7 +1,7 @@
 import type { PoolClient } from 'pg';
 import { queryDb, withDbTransaction } from 'lib/db/postgres';
 import { getCurrency } from 'lib/currency/repository';
-import { createTransfer } from 'lib/shared/credits-interface';
+import { createTransfer, getOrCreateWallet } from 'lib/shared/credits-interface';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
 import {
@@ -33,6 +33,7 @@ import type {
   TrustTransportTripStatus,
 } from './types';
 import { ensureTrustTransportTripChannel } from './stream';
+import { InsufficientTripCreditsError } from './errors';
 import { clearMemberPresence, recordMemberPresence } from 'lib/presence/live';
 import { isBlockedBetween, isBlockedBetweenTx } from 'lib/blocks/repository';
 
@@ -139,6 +140,7 @@ type RequestRow = {
   trip_provider_user_id?: string | null;
   requester_completion_confirmed_at?: Date | null;
   provider_completion_confirmed_at?: Date | null;
+  trip_settlement_failed_at?: Date | null;
 };
 
 type OfferRow = {
@@ -264,6 +266,7 @@ function mapRequestRow(row: RequestRow): TrustTransportRequest {
     tripProviderUserId: row.trip_provider_user_id ?? null,
     requesterCompletionConfirmedAtIso: row.requester_completion_confirmed_at ? toIso(row.requester_completion_confirmed_at) : null,
     providerCompletionConfirmedAtIso: row.provider_completion_confirmed_at ? toIso(row.provider_completion_confirmed_at) : null,
+    tripSettlementFailed: Boolean(row.trip_settlement_failed_at),
   };
 }
 
@@ -549,10 +552,11 @@ export async function listRequests(options?: { page?: number; pageSize?: number;
     // LATERAL with LIMIT 1 so a request with more than one trip row (data anomaly) cannot duplicate the
     // request in the page and diverge from the COUNT above — at most one trip id per request.
     `SELECT r.id, r.requester_user_id, r.mode, r.title, r.details, r.pickup_city, r.dropoff_city, r.pickup_geo_redacted, r.dropoff_geo_redacted, r.status, r.price_amount, r.price_currency, r.created_at, r.updated_at,
-            t.id AS trip_id, t.status AS trip_status, t.provider_user_id AS trip_provider_user_id, t.requester_completion_confirmed_at, t.provider_completion_confirmed_at
+            t.id AS trip_id, t.status AS trip_status, t.provider_user_id AS trip_provider_user_id, t.requester_completion_confirmed_at, t.provider_completion_confirmed_at,
+            t.settlement_failed_at AS trip_settlement_failed_at
      FROM trust_transport_requests r
      LEFT JOIN LATERAL (
-       SELECT id, status, provider_user_id, requester_completion_confirmed_at, provider_completion_confirmed_at FROM trust_transport_trips
+       SELECT id, status, provider_user_id, requester_completion_confirmed_at, provider_completion_confirmed_at, settlement_failed_at FROM trust_transport_trips
        WHERE request_id = r.id
        ORDER BY created_at
        LIMIT 1
@@ -761,6 +765,7 @@ export async function acceptOffer(requestId: string, offerId: string, actorUserI
   }
 
   const market = await assertMarketOpen();
+  await assertRequesterCanSettle(request);
 
   const created = await withDbTransaction(async (client) => {
     const offerResult = await client.query<OfferRow>(
@@ -907,11 +912,12 @@ export async function listProviderTrips(providerUserId: string): Promise<TrustTr
     price_currency: string | null;
     requester_completion_confirmed_at: Date | null;
     provider_completion_confirmed_at: Date | null;
+    settlement_failed_at: Date | null;
     trip_created_at: Date;
   }>(
     `SELECT t.id AS trip_id, t.request_id, t.status, t.mode,
             r.pickup_city, r.dropoff_city, r.price_amount, r.price_currency,
-            t.requester_completion_confirmed_at, t.provider_completion_confirmed_at, t.created_at AS trip_created_at
+            t.requester_completion_confirmed_at, t.provider_completion_confirmed_at, t.settlement_failed_at, t.created_at AS trip_created_at
      FROM trust_transport_trips t
      JOIN trust_transport_requests r ON r.id = t.request_id
      WHERE t.provider_user_id = $1
@@ -930,6 +936,7 @@ export async function listProviderTrips(providerUserId: string): Promise<TrustTr
     priceAmount: row.price_amount === null || row.price_amount === undefined ? null : Number(row.price_amount),
     requesterCompletionConfirmedAtIso: row.requester_completion_confirmed_at ? toIso(row.requester_completion_confirmed_at) : null,
     providerCompletionConfirmedAtIso: row.provider_completion_confirmed_at ? toIso(row.provider_completion_confirmed_at) : null,
+    settlementFailed: Boolean(row.settlement_failed_at),
     createdAtIso: toIso(row.trip_created_at),
   }));
 }
@@ -1296,6 +1303,18 @@ async function settleTripOnCompletion(
   }
 }
 
+// A ServiceCredits trip settles from the requester's available credits when both confirm, so an
+// acceptance the requester cannot pay for is refused up front (issue #2866). Before this nothing checked,
+// and the trip finished with nothing moved. Other currencies settle outside the app and are not checked.
+async function assertRequesterCanSettle(request: TrustTransportRequest): Promise<void> {
+  const amount = request.priceAmount;
+  if (request.priceCurrency !== 'SC' || amount === null || !(amount > 0)) return;
+  const wallet = await getOrCreateWallet(request.requesterUserId);
+  if (wallet.availableBalance < amount) {
+    throw new InsufficientTripCreditsError(wallet.availableBalance, amount);
+  }
+}
+
 // The audit contract's trust-transport.trip.settlement event carries success or failure. A failed
 // settlement leaves the trip completed with nothing moved, so it gets a row too: an admin reading the
 // trail can find the trip and settle it, and a retry stays safe because the transfer key is the trip id.
@@ -1306,6 +1325,12 @@ async function recordSettlementFailure(
   amount: number,
   error: unknown,
 ): Promise<void> {
+  // Marked on the trip too, so both members see that the credits did not move (issue #2866).
+  try {
+    await queryDb(`UPDATE trust_transport_trips SET settlement_failed_at = NOW() WHERE id = $1::uuid`, [trip.id]);
+  } catch (markError) {
+    reportError(markError, { area: 'trust-transport', op: 'trip_settlement_failure_mark', extra: { tripId: trip.id } });
+  }
   try {
     await insertTrustTransportAudit({
       actorId: trip.providerUserId,
