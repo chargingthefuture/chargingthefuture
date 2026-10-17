@@ -12,6 +12,7 @@ import {
 } from 'lib/shared/credits-interface';
 import { resolveUsernames } from 'lib/identity/resolve-usernames';
 import { reportError } from 'lib/observability/report';
+import { listMilestoneQueue } from './milestone-queue';
 import {
   SKILL_UP_AUTO_COHORT_ACTOR_ID,
   SKILL_UP_DEFAULT_TRAINER_SPLIT_PERCENT,
@@ -1655,15 +1656,6 @@ export type SkillUpAdminEnrollment = {
   enrolledAtIso: string;
 };
 
-// One pending milestone validation awaiting an admin/trainer decision.
-export type SkillUpAdminValidation = {
-  id: string;
-  enrollmentId: string;
-  milestoneId: string;
-  validationNote: string | null;
-  createdAtIso: string;
-};
-
 type AdminDisputeRow = {
   id: string;
   enrollment_id: string;
@@ -1681,14 +1673,6 @@ type AdminEnrollmentRow = {
   cohort_title: string;
   status: string;
   enrolled_at: Date;
-};
-
-type AdminValidationRow = {
-  id: string;
-  enrollment_id: string;
-  milestone_id: string;
-  validation_note: string | null;
-  created_at: Date;
 };
 
 // Admin-only: open disputes, newest first (capped). Resolves opener display names in one batched
@@ -1713,27 +1697,6 @@ export async function listOpenDisputes(limit = 100): Promise<SkillUpAdminDispute
     description: row.description,
     openedByUserId: row.opened_by_user_id,
     openedByName: names.get(row.opened_by_user_id) ?? null,
-    createdAtIso: row.created_at.toISOString(),
-  }));
-}
-
-// Admin-only: pending milestone validations, newest first (capped). Backs the admin "Pending
-// validations" review list and the admin-landing dot.
-export async function listPendingMilestoneValidations(limit = 100): Promise<SkillUpAdminValidation[]> {
-  const pageSize = Math.min(Math.max(1, limit), 200);
-  const result = await queryDb<AdminValidationRow>(
-    `SELECT v.id, v.enrollment_id, v.milestone_id, v.validation_note, v.created_at
-       FROM skill_up_milestone_validations v
-       WHERE v.status = 'pending'
-       ORDER BY v.created_at DESC
-       LIMIT $1`,
-    [pageSize],
-  );
-  return result.rows.map((row) => ({
-    id: row.id,
-    enrollmentId: row.enrollment_id,
-    milestoneId: row.milestone_id,
-    validationNote: row.validation_note,
     createdAtIso: row.created_at.toISOString(),
   }));
 }
@@ -1785,7 +1748,7 @@ function mapAdminEnrollmentKpis(row: AdminEnrollmentCountRow | undefined, avgLea
 }
 
 export async function getAdminPanelData() {
-  const [enrollmentCounts, avgLeadDays, openDisputes, pendingValidations, enrollments] = await Promise.all([
+  const [enrollmentCounts, avgLeadDays, openDisputes, milestoneQueue, enrollments] = await Promise.all([
     // One pass over the enrollment rows for every headline number, so the counts can never disagree
     // with each other. `enrollments` is every row ever written (a member who joins three cohorts
     // contributes three), `membersEnrolled` is how many distinct people are in a cohort right now —
@@ -1812,14 +1775,14 @@ export async function getAdminPanelData() {
        WHERE f.first_payout_at >= e.enrolled_at`,
     ),
     listOpenDisputes(100),
-    listPendingMilestoneValidations(100),
+    listMilestoneQueue(100),
     listEnrollmentsForAdmin(100),
   ]);
 
   return {
     kpis: mapAdminEnrollmentKpis(enrollmentCounts.rows[0], avgLeadDays.rows[0]?.avg_days),
     openDisputes,
-    pendingValidations,
+    milestoneQueue,
     enrollments,
   };
 }

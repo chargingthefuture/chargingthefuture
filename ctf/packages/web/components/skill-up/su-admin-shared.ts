@@ -93,13 +93,20 @@ export type AdminEnrollment = {
   enrolledAtIso: string;
 };
 
-// One pending milestone validation in the admin review list (mirrors SkillUpAdminValidation).
-export type AdminValidation = {
-  id: string;
+// One item in the admin milestone queue (mirrors SkillUpMilestoneQueueItem): a milestone waiting on a
+// sign-off, or signed off and waiting on its credits to move.
+export type AdminMilestoneQueueItem = {
   enrollmentId: string;
   milestoneId: string;
+  stage: 'awaiting_validation' | 'awaiting_release';
+  cohortTitle: string;
+  milestoneName: string;
+  requiredTask: string;
+  sequenceNo: number;
+  learnerUserId: string;
+  learnerName: string | null;
   validationNote: string | null;
-  createdAtIso: string;
+  queuedAtIso: string;
 };
 
 // What the operator typed for a ServiceCredits adjustment. `amount` may be

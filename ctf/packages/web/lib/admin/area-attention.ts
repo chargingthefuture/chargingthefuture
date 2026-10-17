@@ -2,6 +2,7 @@ import { queryDb } from 'lib/db/postgres';
 // The Fireside export queue decides what is in it partly outside its own table, so this file asks
 // the queue rather than describing it. See the `{ count }` note on AttentionQuery below.
 import { countPendingExportRequests } from 'lib/fireside/export-review';
+import { countMilestoneQueueSince } from 'lib/skill-up/milestone-queue';
 import { reportError } from 'lib/observability/report';
 import { CONTRIBUTIONS_CALL_ACTOR_ID } from 'lib/admin-expenses/contributions-call';
 
@@ -114,8 +115,9 @@ const ATTENTION_QUERIES: Record<string, AttentionQuery[]> = {
   'skill-up': [
     `SELECT COUNT(*)::int AS n FROM skill_up_disputes
        WHERE status = 'open' AND ($1::timestamptz IS NULL OR created_at > $1)`,
-    `SELECT COUNT(*)::int AS n FROM skill_up_milestone_validations
-       WHERE status = 'pending' AND ($1::timestamptz IS NULL OR created_at > $1)`,
+    // Milestones waiting on a sign-off or on their credits moving. The queue's own function, so the dot
+    // and the list cannot disagree (#2931: the dot counted 'pending' rows, which nothing writes).
+    { count: countMilestoneQueueSince },
   ],
   // ServiceCredits disputes have no status column; "open" means no adjustment has been applied yet
   // (no matching service_credits_dispute_adjustments row).

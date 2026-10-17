@@ -6,7 +6,7 @@
 // cohort. These controls call the live, already-hardened routes. Kept out of su-admin-shell.tsx
 // (862 lines) per rule 116.
 import { useState } from 'react';
-import type { AdminDispute, AdminValidation } from './su-admin-shared';
+import type { AdminDispute, AdminMilestoneQueueItem } from './su-admin-shared';
 import type { SkillUpTokens } from './su-shared';
 
 type Outcome = { ok: boolean; message: string };
@@ -94,28 +94,28 @@ export function DisputeResolveControl({ dispute, t, onDone }: {
   );
 }
 
-// Validate (approve the learner's milestone) and Release (settle the escrowed credits) for one
-// pending validation. Release only makes sense after validate; the route enforces order, so the
-// buttons stay simple and the server stays the referee. The routes read the cohort from the
-// enrollment, so only the enrollment id is sent.
-export function ValidationActions({ validation, t, onDone }: {
-  validation: AdminValidation;
+// Validate (sign off the learner's milestone) or Release (move the milestone's credits) for one queue
+// item. Each item shows the one step it is waiting on; the routes still enforce the order. The routes
+// read the cohort from the enrollment, so only the enrollment id is sent.
+export function ValidationActions({ item, t, onDone }: {
+  item: AdminMilestoneQueueItem;
   t: SkillUpTokens;
   onDone: () => void;
 }) {
-  const [busyAction, setBusyAction] = useState<'validate' | 'release' | null>(null);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const action = item.stage === 'awaiting_release' ? 'release' : 'validate';
 
-  async function run(action: 'validate' | 'release') {
-    if (busyAction) return;
-    setBusyAction(action);
+  async function run() {
+    if (busy) return;
+    setBusy(true);
     setError(null);
     const outcome = await postSkillUpAction(
-      `/api/skill-up/milestones/${validation.milestoneId}/${action}`,
-      { enrollmentId: validation.enrollmentId, idempotencyKey: `${action}-${validation.id}` },
+      `/api/skill-up/milestones/${item.milestoneId}/${action}`,
+      { enrollmentId: item.enrollmentId, idempotencyKey: `${action}-${item.enrollmentId}-${item.milestoneId}` },
       action === 'validate' ? 'Could not validate the milestone' : 'Could not release the milestone credits',
     );
-    setBusyAction(null);
+    setBusy(false);
     if (!outcome.ok) {
       setError(outcome.message);
       return;
@@ -123,17 +123,14 @@ export function ValidationActions({ validation, t, onDone }: {
     onDone();
   }
 
+  const idleLabel = action === 'validate' ? 'Validate' : 'Release credits';
+  const busyLabel = action === 'validate' ? 'Validating…' : 'Releasing…';
   return (
     <div style={{ marginTop: 8 }}>
       {error ? <div role="alert" style={{ marginBottom: 6, fontSize: 12, color: '#EF4444' }}>{error}</div> : null}
-      <div style={{ display: 'flex', gap: 8 }}>
-        <button type="button" disabled={busyAction !== null} onClick={() => void run('validate')} style={buttonStyle(t, busyAction !== null)}>
-          {busyAction === 'validate' ? 'Validating…' : 'Validate'}
-        </button>
-        <button type="button" disabled={busyAction !== null} onClick={() => void run('release')} style={buttonStyle(t, busyAction !== null)}>
-          {busyAction === 'release' ? 'Releasing…' : 'Release credits'}
-        </button>
-      </div>
+      <button type="button" disabled={busy} onClick={() => void run()} style={buttonStyle(t, busy)}>
+        {busy ? busyLabel : idleLabel}
+      </button>
     </div>
   );
 }
