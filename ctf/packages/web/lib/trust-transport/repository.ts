@@ -1352,7 +1352,12 @@ export async function captureTripProof(tripId: string, actorUserId: string, isAd
   );
 }
 
-export async function cancelOrder(orderId: string, actorUserId: string, isAdmin: boolean, reason: string | null) {
+export async function cancelOrder(
+  orderId: string,
+  actorUserId: string,
+  isAdmin: boolean,
+  reason: string | null,
+): Promise<{ canceledTripIds: string[] }> {
   const request = await getRequestById(orderId);
   if (!request) {
     throw new Error('request_not_found');
@@ -1373,13 +1378,13 @@ export async function cancelOrder(orderId: string, actorUserId: string, isAdmin:
     [orderId],
   );
 
-  const canceledTrips = await queryDb<{ provider_user_id: string; offer_id: string; status: string }>(
+  const canceledTrips = await queryDb<{ id: string; provider_user_id: string; offer_id: string; status: string }>(
     `UPDATE trust_transport_trips
      SET status = CASE WHEN status IN ('completed', 'canceled') THEN status ELSE 'canceled' END,
          canceled_reason = COALESCE($2, canceled_reason),
          updated_at = NOW()
      WHERE request_id = $1::uuid
-     RETURNING provider_user_id, offer_id, status`,
+     RETURNING id::text AS id, provider_user_id, offer_id, status`,
     [orderId, normalizeNullableText(reason)],
   );
 
@@ -1395,6 +1400,7 @@ export async function cancelOrder(orderId: string, actorUserId: string, isAdmin:
   for (const trip of canceledTrips.rows) {
     await syncTrustTransportOfferPresence(trip.provider_user_id, trip.offer_id, trip.status);
   }
+  return { canceledTripIds: canceledTrips.rows.map((trip) => trip.id) };
 }
 
 // The caller's recorded earnings per currency: the total value of the trips they completed, grouped by

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { HandHeart, Loader2, Check, MessageCircle } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { responseFailureText } from "@/lib/errors/client-failure";
-import { getTrustTransportTokens, ttSettlementLabel, type AvailableRequest, type ChatCreds, type ProviderTrip } from "./tt-shared";
+import { getTrustTransportTokens, tripChatReadOnlyNotice, ttSettlementLabel, type AvailableRequest, type ChatCreds, type ProviderTrip } from "./tt-shared";
 import { acceptedCurrenciesBadgeLabel } from "@/components/shared/accepted-currency-picker";
 import { StreamChatPanel } from "../shared/stream-chat-panel";
 
@@ -140,6 +140,7 @@ function TripChat({ tripId }: { tripId: string }) {
           streamUserId={creds.streamUserId}
           streamChannelId={creds.streamChannelId}
           accentColor={t.ACCENT}
+          readOnlyNotice={tripChatReadOnlyNotice(creds)}
         />
       ) : null}
     </div>

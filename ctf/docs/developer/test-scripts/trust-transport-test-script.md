@@ -211,8 +211,16 @@ Result: web ☐
 **Steps:**
 1. Open the completed/canceled trip.
 2. Navigate to the Chat tab.
+3. Open a disputed trip's chat.
+4. Open the chat of a trip completed or canceled more than 30 days ago.
+5. While a trip is under way, keep its chat open in a second window, then complete the trip in the first.
 
 **Expected:** Chat messages are visible (read-only). There is no text input field — no new messages can be sent.
+In its place the chat reads "This trip has ended. You can read this chat until <date>, but not send in
+it." Step 3 reads "This trip is in dispute. You can read this chat, but not send in it." Step 4 shows
+"This trip's chat closed 30 days after the trip ended." and no messages (the route answers 410
+`trip_chat_closed`). Step 5: a message sent from the second window after completion is refused, because
+the channel is frozen when the trip ends (added 2026-10-17, #2857).
 
 Result: web ☐
 

@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { freezeTrustTransportTripChannel } from 'lib/trust-transport/stream';
+import { tripEnded } from 'lib/trust-transport/trip-chat-window';
 import { ensureMutationCsrf, requireTrustTransportReadAccess, trustTransportErrorResponse } from 'lib/trust-transport/_lib';
 import { TRUST_TRANSPORT_ERROR_CODE } from 'lib/trust-transport/constants';
 import { insertTrustTransportAudit, updateTripStatus } from 'lib/trust-transport/repository';
@@ -64,6 +66,7 @@ export async function POST(request: Request, { params }: RouteProps) {
       targetId: tripId,
       metadata: { nextStatus },
     });
+    if (tripEnded(result.trip.status)) await freezeTrustTransportTripChannel(result.trip.id);
     return NextResponse.json({ ok: true, ...result }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'trust-transport', op: 'trips_tripid_status' });

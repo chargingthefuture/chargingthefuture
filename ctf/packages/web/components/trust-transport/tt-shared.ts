@@ -84,6 +84,18 @@ export interface ChatCreds {
   streamUserId: string;
   streamChannelId?: string;
   message?: string;
+  // Set once the trip has ended (issue #2857): the chat can be read but takes no new messages.
+  // closesAtIso is when it stops opening, or null while a dispute is open.
+  readOnly?: boolean;
+  closesAtIso?: string | null;
+}
+
+// The line shown in place of the message box on an ended trip's chat.
+export function tripChatReadOnlyNotice(creds: ChatCreds | null): string | null {
+  if (!creds?.readOnly) return null;
+  if (!creds.closesAtIso) return "This trip is in dispute. You can read this chat, but not send in it.";
+  const closes = new Date(creds.closesAtIso).toLocaleDateString();
+  return `This trip has ended. You can read this chat until ${closes}, but not send in it.`;
 }
 
 export type Tab = "book" | "tracking" | "chat" | "help" | "earnings";

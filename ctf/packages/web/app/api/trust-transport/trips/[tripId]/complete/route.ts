@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { freezeTrustTransportTripChannel } from 'lib/trust-transport/stream';
+import { tripEnded } from 'lib/trust-transport/trip-chat-window';
 import { ensureMutationCsrf, requireTrustTransportReadAccess, trustTransportErrorResponse } from 'lib/trust-transport/_lib';
 import { confirmTripCompletion, insertTrustTransportAudit } from 'lib/trust-transport/repository';
 import { reportError } from 'lib/observability/report';
@@ -36,6 +38,7 @@ export async function POST(request: Request, { params }: RouteProps) {
       targetId: tripId,
       metadata: { bothConfirmed: result.bothConfirmed },
     });
+    if (tripEnded(result.trip.status)) await freezeTrustTransportTripChannel(result.trip.id);
     return NextResponse.json({ ok: true, ...result }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'trust-transport', op: 'trips_tripid_complete' });
