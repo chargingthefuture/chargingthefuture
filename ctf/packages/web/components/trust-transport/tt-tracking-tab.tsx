@@ -8,6 +8,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { responseFailureText } from "@/lib/errors/client-failure";
 import { getTrustTransportTokens, ttSettlementLabel, type TripRequest, type TtOffer } from "./tt-shared";
 import { acceptedCurrenciesBadgeLabel } from "@/components/shared/accepted-currency-picker";
+import { SettlementFailedNotice } from "./tt-settlement-notice";
 
 const TERMINAL_STATUSES = new Set(["completed", "canceled"]);
 
@@ -307,6 +308,7 @@ function TrackingCard({ request, onChat, onAccepted, onCancelled, onCompletionCo
     <div style={{ padding: "24px", borderRadius: 16, background: `${t.ACCENT}08`, border: `1px solid ${t.ACCENT}30`, marginBottom: 16 }}>
       <TrackingCardHeader route={model.route} status={model.status} settlementLabel={ttSettlementLabel(request.priceCurrency, request.priceAmount)} acceptedLabel={acceptedCurrenciesBadgeLabel(request.acceptedCurrencies)} />
       <TrackingStatusMessage awaitingDriver={model.awaitingDriver} />
+      <SettlementFailedNotice show={request.tripSettlementFailed} />
       {model.awaitingDriver && <RequestOffers requestId={request.id} onAccepted={onAccepted} />}
       {model.awaitingCompletionConfirmation && <TrackingCompletion request={request} onCompletionConfirmed={onCompletionConfirmed} />}
       {/* A ride is often not a one-off — the same school run every week, the same weekly shop. The

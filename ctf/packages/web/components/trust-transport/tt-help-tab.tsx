@@ -7,6 +7,7 @@ import { responseFailureText } from "@/lib/errors/client-failure";
 import { getTrustTransportTokens, tripChatReadOnlyNotice, ttSettlementLabel, type AvailableRequest, type ChatCreds, type ProviderTrip } from "./tt-shared";
 import { acceptedCurrenciesBadgeLabel } from "@/components/shared/accepted-currency-picker";
 import { StreamChatPanel } from "../shared/stream-chat-panel";
+import { SettlementFailedNotice } from "./tt-settlement-notice";
 
 function modeLabel(mode: string | undefined): string {
   if (!mode) return "Request";
@@ -218,7 +219,10 @@ function TripActionArea({ trip, busyId, onAdvance, onConfirmed }: { trip: Provid
     );
   }
   return (
-    <div style={{ marginTop: 10, fontSize: 12, color: t.MUTED }}>No further action — this trip is {tripStatusLabel(trip.status).toLowerCase()}.</div>
+    <>
+      <SettlementFailedNotice show={trip.settlementFailed} />
+      <div style={{ marginTop: 10, fontSize: 12, color: t.MUTED }}>No further action — this trip is {tripStatusLabel(trip.status).toLowerCase()}.</div>
+    </>
   );
 }
 

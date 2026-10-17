@@ -71,7 +71,9 @@ web ☐
 
 **Provider presence after the trip (added 2026-10-14):** once a trip is completed or canceled, the driver's member-presence entry "Offering rides" for that offer is gone.
 
-**Failed settlement is recorded (added 2026-10-14):** complete a ServiceCredits trip whose requester has less balance than the price. The trip still reads completed, and the admin audit trail has a `trust-transport.trip.settlement` row with status `deny` and reason `settlement_failed`.
+**Failed settlement is recorded (added 2026-10-14):** complete a ServiceCredits trip whose requester has less balance than the price. The trip still reads completed, and the admin audit trail has a `trust-transport.trip.settlement` row with status `deny` and reason `settlement_failed`. Since 2026-10-17 (#2866) both members also see "The credits for this trip did not move. An admin has been told." on that trip: the requester on their Tracking card, the driver under the trip's status. To reach this case now, spend the requester's credits after the offer is accepted, because acceptance itself is checked (below).
+
+**Acceptance checks the requester's credits (added 2026-10-17, #2866):** as a requester with fewer ServiceCredits available than a credits-priced request's amount, accept an offer on it. The acceptance is refused with "This trip settles for <amount> ServiceCredits and you have <balance> available. Add credits before accepting this offer." The driver is not told the requester's balance. With enough credits, the same acceptance goes through. A Free, Barter or fiat request is not checked.
 
 Result: web ☐
 
