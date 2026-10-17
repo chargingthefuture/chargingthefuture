@@ -9,6 +9,7 @@ import {
 } from 'react';
 import { useUser, useAuth as useClerkAuth } from '@clerk/nextjs';
 import { getHostedSignInUrl } from './clerk-env';
+import { dropBrowserPushWhenSignedOut } from 'lib/notifications/browser-signed-out';
 
 /**
  * Provider-agnostic authentication context and types.
@@ -60,6 +61,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       });
     } else if (isClerkLoaded && !clerkUser) {
       setUser(null);
+      // Nobody is signed in, so this browser should not keep showing the last member's notifications.
+      void dropBrowserPushWhenSignedOut();
     }
   }, [clerkUser, isClerkLoaded]);
 
