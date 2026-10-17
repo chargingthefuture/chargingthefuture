@@ -950,6 +950,10 @@ async function seedFoundation(c) {
   // is the survivor side, peer 1 (a browsable provider above) the provider side.
   for (const uid of PERSONAL_ACCOUNTS) {
     const threadKey = [uid, PEER_1].sort().join(':');
+    // A thread for this pair may already exist under another id (the account held another seed
+    // slot before, or the pair talked in the app). thread_key is unique, so reuse that thread.
+    const existing = await c.query(`SELECT id FROM foundation_connection_threads WHERE thread_key = $1`, [threadKey]);
+    const threadId = existing.rows[0]?.id ?? personalId(uid, ID.thread);
     await c.query(
       `INSERT INTO foundation_connection_threads
          (id, thread_key, created_by_user_id, survivor_user_id, provider_user_id)
@@ -960,7 +964,7 @@ async function seedFoundation(c) {
          survivor_user_id = EXCLUDED.survivor_user_id,
          provider_user_id = EXCLUDED.provider_user_id,
          updated_at = NOW()`,
-      [personalId(uid, ID.thread), threadKey, uid, PEER_1],
+      [threadId, threadKey, uid, PEER_1],
     );
 
     // One open quote request from the account (survivor) to peer 1 (provider) on that
@@ -979,7 +983,7 @@ async function seedFoundation(c) {
          provider_user_id = EXCLUDED.provider_user_id,
          lifecycle_state = EXCLUDED.lifecycle_state,
          updated_at = NOW()`,
-      [personalId(uid, ID.quoteRequest), uid, personalId(uid, ID.thread), PEER_1],
+      [personalId(uid, ID.quoteRequest), uid, threadId, PEER_1],
     );
   }
 
@@ -989,12 +993,11 @@ async function seedFoundation(c) {
     // index requires be different from the owner↔peer threads above).
     const threadKey2 = [OWNER, COUNTERPARTY].sort().join(':');
     await c.query(
+      // No conflict target: when the two accounts already have a thread (they talk in the app
+      // while testing live), that thread is theirs and the seed leaves it as it is.
       `INSERT INTO foundation_connection_threads (id, thread_key, created_by_user_id)
        VALUES ($1::uuid, $2, $3)
-       ON CONFLICT (id) DO UPDATE SET
-         thread_key = EXCLUDED.thread_key,
-         created_by_user_id = EXCLUDED.created_by_user_id,
-         updated_at = NOW()`,
+       ON CONFLICT DO NOTHING`,
       [sha256id('foundation-thread', OWNER, COUNTERPARTY), threadKey2, OWNER],
     );
   }

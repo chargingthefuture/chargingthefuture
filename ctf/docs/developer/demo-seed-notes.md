@@ -350,3 +350,12 @@ Pairing ids are derived from (key, counterparty), so they never meet the admin's
 which use `personalId`.
 
 Schema impact: none. Rows in the `demo` schema only.
+
+## Foundation threads the accounts already have — 2026-10-17
+
+`foundation_connection_threads.thread_key` (the sorted pair of user ids) is unique. The member and
+admin demo accounts talk to each other in the app when the owner tests live, so a thread for that
+pair can exist before the seed writes its own; the live run failed on it. The member–admin thread
+insert now skips on any conflict, leaving an existing thread as it is, and each account's thread
+with the sample provider reuses the thread already stored for that pair (its quote points there).
+Schema impact: none.
