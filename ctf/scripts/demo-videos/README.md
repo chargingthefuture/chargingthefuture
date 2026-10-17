@@ -28,7 +28,11 @@ account's reads and writes to the `demo` database schema, the staging Stream app
 so the clips show seeded sample people and never real members.
 
 The account you already seed the demo schema with works as it is: it is in demo mode and has sample
-data around it. Two things to know:
+data around it. The admin demo account carries the same personal demo data (its own wallet history,
+incidents, listings, quotes, enrollments and the rest), so a clip shows the same screens signed in as
+either. Its Fireside comments sit under a different post, because one post showing both accounts'
+comments would show each line twice. Pairing the admin and member accounts for live testing works
+as before. Two things to know:
 
 - Its name and avatar show wherever the app shows the signed-in member.
 - If it is an admin account, admin controls show in the clips. A plain member account films the way

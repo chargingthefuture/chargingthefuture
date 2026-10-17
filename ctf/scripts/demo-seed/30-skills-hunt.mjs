@@ -1,5 +1,6 @@
 // SkillsHunt demo extras: missions on the demo round (SH-9, SH-9b) and Status panel entries for the
-// demo owner, one read and one unread (SH-11). Runs after seedDemo.mjs, which creates the round, the
+// demo owner, one read and one unread (SH-11). Every account in ctx.PERSONAL_ACCOUNTS gets its own
+// progress and entries, the owner's under the ids below and the others' derived from them. Runs after seedDemo.mjs, which creates the round, the
 // owner's one accepted nomination and the leaderboard row the entries below describe.
 //
 // Mission progress rows hold what the app's own recompute would write for that nomination, so an
@@ -15,7 +16,7 @@ const NOTE_ACCEPTED = 'ddd00000-0000-4000-8300-000000000021';
 const NOTE_TOP_TEN = 'ddd00000-0000-4000-8300-000000000022';
 
 export default async function seed(client, ctx) {
-  const { OWNER, ADMIN, ID } = ctx;
+  const { PERSONAL_ACCOUNTS, personalId, ADMIN, ID } = ctx;
 
   const missions = [
     [MISSION_ANY, 'Find three skilled people', 'Every accepted nomination in this round counts toward this one.',
@@ -41,37 +42,41 @@ export default async function seed(client, ctx) {
     );
   }
 
-  for (const [id, missionId, count] of [[PROGRESS_ANY, MISSION_ANY, 1], [PROGRESS_TECH, MISSION_TECH, 1]]) {
-    await client.query(
-      `INSERT INTO skills_hunt_mission_progress (id, mission_id, user_id, progress_count, completed_at, updated_at)
-       VALUES ($1::uuid, $2::uuid, $3, $4, NULL, NOW())
-       ON CONFLICT (mission_id, user_id) DO UPDATE SET
-         progress_count = EXCLUDED.progress_count, completed_at = NULL, updated_at = NOW()`,
-      [id, missionId, OWNER, count],
-    );
-  }
+  for (const account of PERSONAL_ACCOUNTS) {
+    for (const [id, missionId, count] of [[PROGRESS_ANY, MISSION_ANY, 1], [PROGRESS_TECH, MISSION_TECH, 1]]) {
+      await client.query(
+        `INSERT INTO skills_hunt_mission_progress (id, mission_id, user_id, progress_count, completed_at, updated_at)
+         VALUES ($1::uuid, $2::uuid, $3, $4, NULL, NOW())
+         ON CONFLICT (mission_id, user_id) DO UPDATE SET
+           progress_count = EXCLUDED.progress_count, completed_at = NULL, updated_at = NOW()`,
+        [personalId(account, id), missionId, account, count],
+      );
+    }
 
-  // Same titles and bodies the app writes for these two events (lib/skills-hunt/notifications.ts).
-  const notes = [
-    [NOTE_ACCEPTED, 'submission-accepted', 'Submission accepted',
-      'Your SkillsHunt submission was accepted with 50 points.',
-      { submissionId: ID.submission, pointsAwarded: 50 }, true, '2 days'],
-    [NOTE_TOP_TEN, 'leaderboard-top-ten', "You're in the top 10",
-      "You moved to rank #1 on this round's leaderboard (60 pts).",
-      { roundId: ID.round, rank: 1, score: 60 }, false, '1 day'],
-  ];
-  for (const [id, kind, title, body, metadata, isRead, age] of notes) {
-    await client.query(
-      `INSERT INTO skills_hunt_notifications (id, user_id, kind, title, body, metadata, is_read, read_at, created_at)
-       VALUES ($1::uuid, $2, $3, $4, $5, $6::jsonb, $7,
-               CASE WHEN $7 THEN NOW() - $8::interval + INTERVAL '1 hour' ELSE NULL END,
-               NOW() - $8::interval)
-       ON CONFLICT (id) DO UPDATE SET
-         user_id = EXCLUDED.user_id, kind = EXCLUDED.kind, title = EXCLUDED.title, body = EXCLUDED.body,
-         metadata = EXCLUDED.metadata, is_read = EXCLUDED.is_read, read_at = EXCLUDED.read_at,
-         created_at = EXCLUDED.created_at`,
-      [id, OWNER, kind, title, body, JSON.stringify(metadata), isRead, age],
-    );
+    // Same titles and bodies the app writes for these two events (lib/skills-hunt/notifications.ts).
+    // The rank matches the leaderboard row seedDemo.mjs gives this account: the owner is 1, the next 2.
+    const rank = PERSONAL_ACCOUNTS.indexOf(account) + 1;
+    const notes = [
+      [NOTE_ACCEPTED, 'submission-accepted', 'Submission accepted',
+        'Your SkillsHunt submission was accepted with 50 points.',
+        { submissionId: personalId(account, ID.submission), pointsAwarded: 50 }, true, '2 days'],
+      [NOTE_TOP_TEN, 'leaderboard-top-ten', "You're in the top 10",
+        `You moved to rank #${rank} on this round's leaderboard (60 pts).`,
+        { roundId: ID.round, rank, score: 60 }, false, '1 day'],
+    ];
+    for (const [id, kind, title, body, metadata, isRead, age] of notes) {
+      await client.query(
+        `INSERT INTO skills_hunt_notifications (id, user_id, kind, title, body, metadata, is_read, read_at, created_at)
+         VALUES ($1::uuid, $2, $3, $4, $5, $6::jsonb, $7,
+                 CASE WHEN $7 THEN NOW() - $8::interval + INTERVAL '1 hour' ELSE NULL END,
+                 NOW() - $8::interval)
+         ON CONFLICT (id) DO UPDATE SET
+           user_id = EXCLUDED.user_id, kind = EXCLUDED.kind, title = EXCLUDED.title, body = EXCLUDED.body,
+           metadata = EXCLUDED.metadata, is_read = EXCLUDED.is_read, read_at = EXCLUDED.read_at,
+           created_at = EXCLUDED.created_at`,
+        [personalId(account, id), account, kind, title, body, JSON.stringify(metadata), isRead, age],
+      );
+    }
   }
 
   console.log('  ✓ demo-seed skills-hunt (3 missions, 2 status entries)');

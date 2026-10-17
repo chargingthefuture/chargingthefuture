@@ -1,10 +1,12 @@
 // SkillUp demo extras, on top of the demo cohort seedDemo.mjs creates:
-//   - three badge definitions, the first earned by the demo owner (LU-7; LU-8 for any other account);
+//   - three badge definitions, the first earned by the demo owner and the admin demo account (LU-7;
+//     LU-8 for any other account);
 //   - a Trainers listing for the demo cohort's trainer (LU-9);
 //   - a cohort with no trainer yet, for the demo occupation, which the demo owner can claim because
 //     their claimed Directory profile lists a skill under it (LU-1c). A re-run hands it back to the
 //     scheduler, so the claim can be shown again;
-//   - one open dispute on the owner's enrollment, for the admin review queue (LU-A1b, LU-A9).
+//   - one open dispute on the owner's enrollment, for the admin review queue (LU-A1b, LU-A9), and the
+//     same on the admin demo account's own enrollment.
 
 // The owner id the auto-cohort run writes (lib/skill-up/constants.ts SKILL_UP_AUTO_COHORT_ACTOR_ID).
 const AUTO_COHORT_ACTOR = 'skill-up-auto-cohort-scheduler';
@@ -20,7 +22,7 @@ const OPEN_MILESTONE_2 = 'ddd00000-0000-4000-8310-000000000033';
 const DISPUTE = 'ddd00000-0000-4000-8310-000000000041';
 
 export default async function seed(client, ctx) {
-  const { OWNER, TRAINER, ID } = ctx;
+  const { PERSONAL_ACCOUNTS, personalId, TRAINER, ID } = ctx;
 
   const badges = [
     [BADGE_FIRST, 'first-milestone', 'First Milestone', 'Finish the first milestone in any cohort.', 'award', 10, 1],
@@ -40,15 +42,17 @@ export default async function seed(client, ctx) {
     );
   }
 
-  await client.query(
-    `INSERT INTO skill_up_user_achievements
-     (id, user_id, achievement_id, earned_at, granted_credits, source_reference)
-     VALUES ($1::uuid, $2, $3::uuid, NOW() - INTERVAL '5 days', 10, 'demo-seed')
-     ON CONFLICT (id) DO UPDATE SET
-       user_id = EXCLUDED.user_id, achievement_id = EXCLUDED.achievement_id,
-       earned_at = EXCLUDED.earned_at, granted_credits = EXCLUDED.granted_credits`,
-    [EARNED_FIRST, OWNER, BADGE_FIRST],
-  );
+  for (const account of PERSONAL_ACCOUNTS) {
+    await client.query(
+      `INSERT INTO skill_up_user_achievements
+       (id, user_id, achievement_id, earned_at, granted_credits, source_reference)
+       VALUES ($1::uuid, $2, $3::uuid, NOW() - INTERVAL '5 days', 10, 'demo-seed')
+       ON CONFLICT (id) DO UPDATE SET
+         user_id = EXCLUDED.user_id, achievement_id = EXCLUDED.achievement_id,
+         earned_at = EXCLUDED.earned_at, granted_credits = EXCLUDED.granted_credits`,
+      [personalId(account, EARNED_FIRST), account, BADGE_FIRST],
+    );
+  }
 
   await client.query(
     `INSERT INTO skill_up_trainers (id, user_id, display_name, headline, bio, tracks, status)
@@ -91,18 +95,20 @@ export default async function seed(client, ctx) {
     [OPEN_MILESTONE_1, OPEN_MILESTONE_2, OPEN_COHORT],
   );
 
-  await client.query(
-    `INSERT INTO skill_up_disputes
-     (id, enrollment_id, milestone_id, opened_by_user_id, title, description, status,
-      resolution_comment, resolved_by_user_id, resolved_at, created_at)
-     VALUES ($1::uuid, $2::uuid, $3::uuid, $4, 'Foundation Review sign-off is waiting',
-       'I sent the foundation task a week ago and the milestone still shows as not signed off. Could someone check it?',
-       'open', NULL, NULL, NULL, NOW() - INTERVAL '2 days')
-     ON CONFLICT (id) DO UPDATE SET
-       status = 'open', resolution_comment = NULL, resolved_by_user_id = NULL, resolved_at = NULL,
-       created_at = EXCLUDED.created_at, updated_at = NOW()`,
-    [DISPUTE, ID.enrollmentOwner, ID.milestone1, OWNER],
-  );
+  for (const account of PERSONAL_ACCOUNTS) {
+    await client.query(
+      `INSERT INTO skill_up_disputes
+       (id, enrollment_id, milestone_id, opened_by_user_id, title, description, status,
+        resolution_comment, resolved_by_user_id, resolved_at, created_at)
+       VALUES ($1::uuid, $2::uuid, $3::uuid, $4, 'Foundation Review sign-off is waiting',
+         'I sent the foundation task a week ago and the milestone still shows as not signed off. Could someone check it?',
+         'open', NULL, NULL, NULL, NOW() - INTERVAL '2 days')
+       ON CONFLICT (id) DO UPDATE SET
+         status = 'open', resolution_comment = NULL, resolved_by_user_id = NULL, resolved_at = NULL,
+         created_at = EXCLUDED.created_at, updated_at = NOW()`,
+      [personalId(account, DISPUTE), personalId(account, ID.enrollmentOwner), ID.milestone1, account],
+    );
+  }
 
   console.log('  ✓ demo-seed skill-up (badges, trainer listing, trainerless cohort, open dispute)');
 }
