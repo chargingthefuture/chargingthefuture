@@ -40,6 +40,22 @@ export type QuoraMotdPick = {
   message: QuoraMotdMessage;
 };
 
+/**
+ * The moment Peace Battle 2 began, Friday 18 September 2026 at 7:00 PM Eastern (daylight time, so
+ * 23:00 UTC). The protest page's clock counts from this instant.
+ */
+const PEACE_BATTLE_START_MS = Date.UTC(2026, 8, 18, 23, 0);
+
+/**
+ * Which day of Peace Battle 2 it is right now: the complete days the protest page's clock shows,
+ * counted from the 7:00 PM start rather than from midnight, so the number turns over at 7:00 PM
+ * Eastern exactly when the clock's does. Counting by calendar day instead put the post a day ahead
+ * of the clock from midnight until 7:00 PM, which is when it is pasted. Never below Day 1.
+ */
+export function motdProtestDay(now: Date = new Date()): number {
+  return Math.max(1, Math.floor((now.getTime() - PEACE_BATTLE_START_MS) / 86_400_000));
+}
+
 /** Today's calendar date where the owner is, as YYYY-MM-DD. */
 export function motdToday(now: Date = new Date()): string {
   // en-CA formats as YYYY-MM-DD, which is the shape the rest of this file compares and stores.
