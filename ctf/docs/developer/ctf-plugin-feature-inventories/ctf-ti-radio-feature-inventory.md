@@ -163,6 +163,8 @@ week ahead with deterministic ids, so the guide renders locally with something o
 computed from the current grid rather than hard-coded: a fixed timestamp falls out of the rolling
 week within days, and the seed would then appear to do nothing.
 
+Demo schema: `ctf/scripts/demo-seed/44-ti-radio.mjs` books three slots by synthetic hosts in the next two days, worked out from the current grid on every run and placed on the first free slot so a booking made in the demo is never moved, for Chyme's "Coming up on TI Radio" (CH-22).
+
 It seeds no released and no removed slot. Both are one press to make by hand, and a seeded removal
 would put a moderation decision in front of a reviewer that nobody actually made.
 
@@ -210,6 +212,7 @@ only here would be invisible on their own trust card.
 
 ## Change Log
 
+- 2026-10-17: **Demo seed for "Coming up on TI Radio".** `ctf/scripts/demo-seed/44-ti-radio.mjs` books three upcoming slots by synthetic hosts in the demo schema. Demo data only; no code, schema or route change.
 - 2026-10-12: **Review findings #2745, #2750, #2755.** A failed identity or Unlock read on the guide
   page and `GET /api/ti-radio/guide` still renders the guide without hosting controls, and is now
   reported (`ti-radio/reader_identity`, `page_unlock_read`, `guide_unlock_read`) instead of dropped.

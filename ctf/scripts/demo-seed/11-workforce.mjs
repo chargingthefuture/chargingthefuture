@@ -32,7 +32,7 @@ const PROFILES = [
   [0x05, null, 'community-d11a05', 'Grace', 'Lindqvist', 'Water treatment operator',
     'Runs water quality checks and keeps pumps running.',
     'Duluth', 'Minnesota', 'United States', 4, 'Water Treatment Plant Operators',
-    ['Water Treatment Plant Operators › Water quality testing', 'Water Treatment Plant Operators › Pump maintenance', 'Lab Technicians › Laboratory testing (basic)']],
+    ['Water Treatment Plant Operators › Water quality testing', 'Water Treatment Plant Operators › Pump maintenance', 'Lab Technicians › Laboratory testing (basic)', 'Research Assistants › Data collection']],
   [0x06, null, 'community-d11a06', 'Paul', 'Novak', 'Welder',
     'MIG welding and small metal fabrication; has run heavy equipment.',
     'Scranton', 'Pennsylvania', 'United States', 5, 'Welders',

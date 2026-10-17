@@ -250,6 +250,8 @@ hand, and a seeded removal or a seeded request would put a decision in front of 
 nobody actually made. Seeded comments therefore start at `export_review = 'not_requested'`, which is
 the column's default.
 
+`ctf/scripts/demo-seed/21-fireside.mjs` adds to the demo schema, under the Dictionary post's thread, two comments by the demo owner, a reply to the first by an approved synthetic member, a comment by that member, and one I recognize this reaction on the owner's first comment. It writes one `unlock_verification_submissions` row so that member's words are visible, and never writes the export columns.
+
 ## Trust Signal
 
 Recorded as **not applicable**, deliberately (rule 132). Participation here is writing about
@@ -280,6 +282,7 @@ member active only in Fireside is seen by being read, which is what the plugin i
 
 ## Change Log
 
+- 2026-10-17: Demo seed module `ctf/scripts/demo-seed/21-fireside.mjs` gives the demo owner a comment with a reply and a reaction under the Dictionary post (test cases FS-5, FS-6, FS-21).
 - 2026-10-16: **A comment an admin removed can no longer be withdrawn (owner decision; #2751).**
   The screen already showed no Withdraw button on a removed comment, but `withdrawOwnComment`
   accepted any status except withdrawn, so a request from a page left open since before the removal,

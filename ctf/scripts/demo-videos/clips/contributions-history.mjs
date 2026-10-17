@@ -1,6 +1,6 @@
 // Contributions' My history tab: the member's own contributions and where each one stands. Seed Demo
-// gives the demo account a confirmed Quora comment and a GitHub star waiting for review. Reads only;
-// no write to the demo data.
+// and demo-seed/33-contributions.mjs give the demo account a confirmed Quora comment, a confirmed
+// GitHub star and a gift card waiting for review (CONT-8). Reads only; no write to the demo data.
 export default {
   slug: 'contributions-history',
   title: 'Contributions: your history',
@@ -20,7 +20,7 @@ export default {
       do: async ({ page, highlight }) => highlight(page.getByText('Confirmed', { exact: true }).first().locator('xpath=../..')),
     },
     {
-      say: 'Waiting for review means the owner has not checked it yet.',
+      say: 'Waiting for review means the owner has not checked it yet. A gift card waits until the card itself arrives on Signal.',
       do: async ({ page, highlight }) => highlight(page.getByText('Waiting for review', { exact: true }).first().locator('xpath=../..')),
     },
     {

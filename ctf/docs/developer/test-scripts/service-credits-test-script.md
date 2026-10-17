@@ -13,7 +13,7 @@
 | **Surfaces** | web (`/service-credits`, `/admin/service-credits`) · android (`ServiceCredits.tsx`, `AdminServiceCredits.tsx`) |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-service-credits-feature-inventory.md` |
-| **Generated** | 2026-07-13 (commit 0aef7039) · 2026-10-12 manual update: SC-A disputes list and ledger status card show a failed read · 2026-10-15 manual update: SC-3b self-send refused, SC-A7a adjustment checks |
+| **Generated** | 2026-07-13 (commit 0aef7039) · 2026-10-12 manual update: SC-A disputes list and ledger status card show a failed read · 2026-10-15 manual update: SC-3b self-send refused, SC-A7a adjustment checks · 2026-10-17: demo seed adds a community credit line for the demo owner — smoke 1, SC-5 |
 | **Inventory wording** | 2026-10-01: banned-term wording removed from the inventory prose; no step in this script changed |
 
 ---
@@ -52,7 +52,7 @@
 These are the checks that must pass before any other case is meaningful.
 
 **1. Wallet loads for a seeded member**
-Sign in as a seeded member account. Navigate to the ServiceCredits section (web: `/service-credits`; android: ServiceCredits screen). The wallet tab must appear showing an available balance figure (a number of credits, not a currency symbol) and no error state.
+Sign in as a seeded member account. Navigate to the ServiceCredits section (web: `/service-credits`; android: ServiceCredits screen). The wallet tab must appear showing an available balance figure (a number of credits, not a currency symbol) and no error state. The demo seed turns community credit on and gives the demo owner a 20-credit line, so their wallet reads "you can send down to −20 credits" (SC-5); every other seeded member reads a limit of 0 (SC-5b).
 web ☐
 
 **2. Admin dashboard loads for an admin account**

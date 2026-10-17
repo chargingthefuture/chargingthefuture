@@ -11,7 +11,7 @@
 | **Surfaces** | Web (`/apps/contributions`, `/admin/contributions`, fundraiser banner in Hub) |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-contributions-feature-inventory.md` |
-| **Generated** | 2026-08-06 (commit 4cfc88690) |
+| **Generated** | 2026-08-06 (commit 4cfc88690) · 2026-10-17: demo seed adds a pending gift-card claim and confirms the demo star with credits — smoke 2, CONT-5, CONT-6, CONT-8 |
 
 > **Android note:** The Android surface was removed 2026-07-20 (rule 105, PR #1742). This plugin is now web-only (installable PWA). All cases are web-only. The parity section documents this explicitly.
 
@@ -35,7 +35,7 @@ Sign in as a member. Navigate to `/apps/contributions`. The page loads — it do
 web ☐
 
 **2. Fundraiser progress is visible**
-On `/apps/contributions`, collective totals are visible: USD raised, number of Quora comments, number of GitHub stars, and contributor count. These are aggregate numbers — no individual member names appear.
+On `/apps/contributions`, collective totals are visible: USD raised, number of Quora comments, number of GitHub stars, and contributor count. These are aggregate numbers — no individual member names appear. The demo seed gives the demo owner three claims: a pending Amazon gift card, a confirmed Quora comment and a confirmed, credited GitHub star.
 web ☐
 
 **3. Admin can reach the admin dashboard**
@@ -176,7 +176,7 @@ The member-facing copy shows the same numbers as the admin settings. If admin se
 
 **Role:** Member
 **Surfaces:** Web (`/apps/contributions`)
-**Precondition:** Signed in as a member whose account has no prior credited GitHub star (a fresh demo member, or a member whose seed data shows the star was rejected, not confirmed with credits).
+**Precondition:** Signed in as a member whose account has no prior credited GitHub star (a fresh demo member such as the tester member account; the demo owner's seeded star is already credited).
 
 **Steps:**
 1. Navigate to `/apps/contributions`.
@@ -199,7 +199,7 @@ The member-facing copy shows the same numbers as the admin settings. If admin se
 
 **Role:** Member
 **Surfaces:** Web (`/apps/contributions`)
-**Precondition:** Signed in as a member who already has a confirmed GitHub star with `credits_granted > 0`. (The demo seed has a rejected star; for this case you need an admin to confirm a star submission with credits, or manually insert a confirmed row with credits > 0 in the dev DB.)
+**Precondition:** Signed in as a member who already has a confirmed GitHub star with `credits_granted > 0`. (The demo owner's seeded star is confirmed with 10 credits.)
 
 **Steps:**
 1. Navigate to `/apps/contributions`.
@@ -234,7 +234,7 @@ The server returns HTTP 409 with error code `contributions_github_star_already_c
 
 **Role:** Member
 **Surfaces:** Web (`/apps/contributions`)
-**Precondition:** Seed has run. Signed in as the demo member who has the three seeded claims (pending gift card, confirmed Quora comment, rejected GitHub star).
+**Precondition:** Seed has run. Signed in as the demo member who has the three seeded claims (pending gift card, confirmed Quora comment, confirmed GitHub star).
 
 **Steps:**
 1. Navigate to `/apps/contributions`.
@@ -242,8 +242,8 @@ The server returns HTTP 409 with error code `contributions_github_star_already_c
 3. Review the list of claims.
 
 **Expected:**
-- Three claims are visible: one pending Amazon gift card, one confirmed Quora comment, one rejected GitHub star.
-- Each shows its status clearly (pending / confirmed / rejected).
+- Three claims are visible: one pending Amazon gift card, one confirmed Quora comment, one confirmed GitHub star.
+- Each shows its status clearly (Waiting for review / Confirmed).
 - No other member's claims appear.
 - The `signalContact` value from the gift-card claim is not shown anywhere on the member view.
 

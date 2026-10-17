@@ -338,6 +338,8 @@ All three feed channels (announcements, questions, community) are shipped on web
 
 `ctf/scripts/seedFeedAnnouncements.mjs` seeds deterministic feed items, announcements, questions, community posts, replies, and membership/read/dismiss states for dev validation.
 
+`ctf/scripts/demo-seed/20-commons.mjs` adds to the demo schema three Commons posts by other members in the last hour (one quoting another), one published announcement, each with its `feed_items` copy and a member target, and one reaction from another member on a post and on the announcement; a re-run removes the demo accounts' own reactions on them.
+
 ---
 
 ## 9) Schema Drift and Predeployment Expectations
@@ -363,6 +365,7 @@ All three feed channels (announcements, questions, community) are shipped on web
 
 ## 11) Change Log
 
+- 2026-10-17: Demo seed module `ctf/scripts/demo-seed/20-commons.mjs` gives the demo Commons posts by other members, a quoted reply and an announcement to react to (test cases FD-10, FD-11, FD-14).
 - 2026-10-15: **Commons and contributor channel: refusals say why, typed text survives, blocked storage no longer breaks the page (#3222, #3224, #3225, #3226, #3227, #3228, #3229, #3230).**
   A failed Commons request read only `message` and otherwise showed "Request failed."; the access
   gates send `{ code, reason }`, so `components/community-shell/request-failure.ts` now turns

@@ -311,6 +311,8 @@ Seed content:
 5. 3 achievement definitions (`skill_up_achievements`): First Milestone, Cohort Graduate, Peer Mentor — deterministic UUIDs.
 6. 1 earned badge row (`skill_up_user_achievements`): trainee 1 has earned First Milestone.
 
+Demo schema: `ctf/scripts/demo-seed/31-skill-up.mjs` adds the same three badge definitions with First Milestone earned by the demo owner, a Trainers listing for the demo trainer (tracks `Tech`, `Finance`), a trainerless auto-created cohort for the demo occupation that the demo owner can claim, and one open dispute on the demo owner's enrollment for the admin queue.
+
 ## Web and Android Delivery Status
 
 Delivery: **web + mobile-responsive complete** (pixel pass delivered). **Android (React Native) surface removed 2026-07-20 (rule 105, PR #1742)** — this feature is now web-only, served by the installable web app (PWA). Web pixel pass complete: the web shell
@@ -374,6 +376,7 @@ that exist today.
 
 ## Change Log
 
+- 2026-10-17: **Demo seed adds badges, a trainer listing, a trainerless cohort and an open dispute** (`ctf/scripts/demo-seed/31-skill-up.mjs`), so Achievements, Trainers and Claim as trainer can be recorded in the demo schema. No route, schema or contract change.
 - 2026-10-15: **The apps list tile says what milestones do (owner-approved copy fix, #2888).** The registry summary said learners earn credits as they reach each milestone, and opened with "Paid". A milestone release returns the learner's own held deposit (`releaseEscrow`) and mints new credits only to the trainer. It now reads "Skills-training cohorts with a trainer. Your credit deposit is held and comes back to you as you reach each milestone." in `schema.sql`, `schema.demo.sql`, the fallback array in `lib/plugins/repository.ts` and `lib/plugins/plugin-catalog.ts`; `post/0059_plugin_registry_gdp_skill_up_summaries.sql` sets it on existing databases.
 - 2026-10-15: **A dispute can be resolved once, and a released milestone stays released (code
   review #2928, #2940).** `resolveDispute` never read the dispute's status, and its credit
