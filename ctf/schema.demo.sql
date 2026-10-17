@@ -5107,6 +5107,9 @@ ALTER TABLE IF EXISTS trust_user_extension DROP COLUMN IF EXISTS trust_visibilit
 -- showed it. The platform does not vet people; Trust reports what a member has actually done.
 ALTER TABLE IF EXISTS trust_user_extension DROP COLUMN IF EXISTS trust_status;
 
+-- trust_admin_audit_trail is retained when a member deletes their Trust data or account, so a row
+-- holds who and when, never a copy of the member's numbers. The snapshot refresh row once copied the
+-- full metric bundle; post/0067 removed it from those rows (issue #2847).
 CREATE TABLE IF NOT EXISTS trust_admin_audit_trail (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   actor_user_id TEXT,
