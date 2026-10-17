@@ -87,8 +87,8 @@ async function parseDeleteRequest(request: Request): Promise<{ error: NextRespon
 
 // Optionally delete the Clerk identity after the DB deletion has already succeeded. Runs only when
 // requested. A Clerk failure is returned as clerkError, reported to error tracking and recorded as a
-// failure on the audit line; the request itself still answers 200 because the data deletion did
-// complete. There is no Clerk-only mode, so a re-run repeats the data deletion as well. The removal
+// failure on the audit line, and the request answers 502 so the workflow run fails. There is no
+// Clerk-only mode, so a re-run repeats the data deletion as well. The removal
 // itself is the shared `deleteAuthIdentity` the self-service delete route also uses, so the two
 // cannot drift.
 async function deleteClerkAccountIfRequested(
@@ -154,8 +154,12 @@ export async function POST(request: Request) {
       errorCategory: clerkError ? 'clerk_delete_failed' : null,
     });
 
+    // A sign-in that was asked to go and did not is a failed run (#2935): answering 502 makes the
+    // workflow step go red instead of reporting "Deleted account". The data deletion did complete, so
+    // the body still carries its counts, and a re-run repeats it harmlessly before retrying Clerk.
     return NextResponse.json({
-      ok: true,
+      ok: !clerkError,
+      ...(clerkError ? { code: 'account_delete_clerk_failed', message: `Data deleted, but the sign-in was not removed: ${clerkError}` } : {}),
       userId,
       scope: 'account',
       schema: targetLabel,
@@ -165,7 +169,7 @@ export async function POST(request: Request) {
       completedAtIso: deletion.completedAtIso,
       clerkDeleted,
       clerkError,
-    });
+    }, { status: clerkError ? 502 : 200 });
   } catch (error) {
     reportError(error, { area: 'account', op: 'operator_delete', extra: { step } });
     // `status` is the POLICY-gate decision (allow/deny), not the outcome — the request passed the

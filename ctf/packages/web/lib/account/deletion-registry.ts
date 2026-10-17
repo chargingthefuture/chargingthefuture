@@ -768,7 +768,7 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       // Burn-down batch 4: the member-owned leftovers and the shared/admin remainder.
       del('skill_up_trainers', 'user_id', 'Your trainer profile (name, headline, bio, tracks).'),
       del('skill_up_user_achievements', 'user_id', 'Your achievements.'),
-      retain('skill_up_cohorts', 'Shared cohorts; created_by is the admin audit.'),
+      retain('skill_up_cohorts', 'Shared cohorts; created_by is the admin audit. A cohort you were training that is not completed goes back to needing a trainer first (deletion-orchestrator.ts → releaseTrainerCohortsForDeletion).'),
       retain('skill_up_cohort_proposals', 'Auto-cohort proposals; decided_by is the admin decision audit.'),
       retain('skill_up_milestone_validations', 'Milestone validations — part of why cohort credits were released; ledger-adjacent audit.'),
       // Retained deliberately. This log exists because nobody approves trainers by hand: the skills

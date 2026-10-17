@@ -57,7 +57,7 @@ function mapCreateThreadError(error: unknown): NextResponse {
 
   if (code === 'rate_limit_exceeded') {
     return NextResponse.json(
-      { ok: false, code: FOUNDATION_ERROR_CODE.rateLimitExceeded, message: 'You already have the maximum number of open connections. Close one to start another.' },
+      { ok: false, code: FOUNDATION_ERROR_CODE.rateLimitExceeded, message: 'You have reached the limit of active connections. A connection with no activity for 30 days stops counting.' },
       { status: 429 },
     );
   }

@@ -592,6 +592,20 @@ async function evaluateRateLimit(client: PoolClient, input: {
   };
 }
 
+// The admin's saved per-minute limit for one command (#2962), or 20 when no policy row exists yet.
+async function readPerMinuteLimit(
+  client: PoolClient,
+  column: 'max_messages_per_minute' | 'max_quote_transitions_per_minute',
+): Promise<number> {
+  const result = await client.query<{ n: number }>(
+    `SELECT ${column} AS n FROM foundation_capacity_policies WHERE singleton_key = TRUE LIMIT 1`,
+  );
+  return Number(result.rows[0]?.n ?? 20);
+}
+
+// The cap counts only connections with activity in the last 30 days (#2961): opened, a message, a
+// quote change or a call. Nothing closes a thread, so counting every thread ever opened locked a member
+// out for good once they had reached the cap.
 async function assertConnectionThreadCapacity(client: PoolClient, actorUserId: string): Promise<void> {
   const [capacity, actorThreadCount] = await Promise.all([
     client.query<{ max_active_threads_per_user: number }>(
@@ -604,9 +618,18 @@ async function assertConnectionThreadCapacity(client: PoolClient, actorUserId: s
     client.query<{ total: string }>(
       `
         SELECT COUNT(*)::text AS total
-        FROM foundation_connection_threads
-        WHERE survivor_user_id = $1
-          AND status = 'active'
+        FROM foundation_connection_threads t
+        WHERE t.survivor_user_id = $1
+          AND t.status = 'active'
+          AND (
+            t.created_at > NOW() - INTERVAL '30 days'
+            OR EXISTS (SELECT 1 FROM foundation_message_metadata m
+                        WHERE m.thread_id = t.id AND m.created_at > NOW() - INTERVAL '30 days')
+            OR EXISTS (SELECT 1 FROM foundation_quote_requests q
+                        WHERE q.thread_id = t.id AND q.updated_at > NOW() - INTERVAL '30 days')
+            OR EXISTS (SELECT 1 FROM foundation_call_sessions c
+                        WHERE c.thread_id = t.id AND c.created_at > NOW() - INTERVAL '30 days')
+          )
       `,
       [actorUserId],
     ),
@@ -806,7 +829,7 @@ export async function sendMessageToThread(input: {
     const rateLimit = await evaluateRateLimit(client, {
       userId: input.actorUserId,
       commandName: 'foundation.connection.message.send',
-      limit: 20,
+      limit: await readPerMinuteLimit(client, 'max_messages_per_minute'),
       windowSeconds: 60,
     });
 
@@ -1125,10 +1148,27 @@ export async function createQuoteRequest(input: {
     }
     await assertThreadPairNotBlockedTx(client, row, input.actorUserId);
 
+    // A repeat of the same ask returns the request already waiting on the provider (#2964): a second
+    // press, or a retry after a lost response, otherwise filed a second request and notification.
+    const existing = await client.query<FoundationQuoteRow>(
+      `
+        SELECT id::text, thread_id::text, survivor_user_id, provider_user_id, service_type, lifecycle_state,
+               quoted_amount, quoted_currency, settled_at, created_at, updated_at
+        FROM foundation_quote_requests
+        WHERE thread_id = $1::uuid AND service_type = $2 AND lifecycle_state = 'requested'
+        ORDER BY created_at DESC
+        LIMIT 1
+      `,
+      [input.threadId, input.serviceType],
+    );
+    if (existing.rows[0]) {
+      return mapQuoteRow(existing.rows[0]);
+    }
+
     const rateLimit = await evaluateRateLimit(client, {
       userId: input.actorUserId,
       commandName: 'foundation.quote.request.create',
-      limit: 20,
+      limit: await readPerMinuteLimit(client, 'max_quote_transitions_per_minute'),
       windowSeconds: 60,
     });
 
@@ -1641,7 +1681,6 @@ export async function getCapacityPolicy(): Promise<FoundationCapacityPolicy> {
   const result = await queryDb<{
     max_active_threads_per_user: number;
     max_messages_per_minute: number;
-    max_searches_per_minute: number;
     max_quote_transitions_per_minute: number;
     max_call_duration_minutes: number;
     quota_state: 'green' | 'yellow' | 'orange' | 'red';
@@ -1651,7 +1690,6 @@ export async function getCapacityPolicy(): Promise<FoundationCapacityPolicy> {
       SELECT
         max_active_threads_per_user,
         max_messages_per_minute,
-        max_searches_per_minute,
         max_quote_transitions_per_minute,
         max_call_duration_minutes,
         quota_state,
@@ -1667,7 +1705,6 @@ export async function getCapacityPolicy(): Promise<FoundationCapacityPolicy> {
     return {
       maxActiveThreadsPerUser: 20,
       maxMessagesPerMinute: 20,
-      maxSearchesPerMinute: 40,
       maxQuoteTransitionsPerMinute: 20,
       maxCallDurationMinutes: 45,
       quotaState: 'green',
@@ -1692,7 +1729,6 @@ export async function getCapacityPolicy(): Promise<FoundationCapacityPolicy> {
   return {
     maxActiveThreadsPerUser: row.max_active_threads_per_user,
     maxMessagesPerMinute: row.max_messages_per_minute,
-    maxSearchesPerMinute: row.max_searches_per_minute,
     maxQuoteTransitionsPerMinute: row.max_quote_transitions_per_minute,
     maxCallDurationMinutes: row.max_call_duration_minutes,
     quotaState: row.quota_state,
@@ -1706,7 +1742,6 @@ export async function updateCapacityPolicy(input: {
   actorUserId: string;
   maxActiveThreadsPerUser: number;
   maxMessagesPerMinute: number;
-  maxSearchesPerMinute: number;
   maxQuoteTransitionsPerMinute: number;
   maxCallDurationMinutes: number;
   quotaState: 'green' | 'yellow' | 'orange' | 'red';
@@ -1715,7 +1750,6 @@ export async function updateCapacityPolicy(input: {
     const updated = await client.query<{
       max_active_threads_per_user: number;
       max_messages_per_minute: number;
-      max_searches_per_minute: number;
       max_quote_transitions_per_minute: number;
       max_call_duration_minutes: number;
       quota_state: 'green' | 'yellow' | 'orange' | 'red';
@@ -1723,14 +1757,13 @@ export async function updateCapacityPolicy(input: {
     }>(
       `
         INSERT INTO foundation_capacity_policies
-          (singleton_key, max_active_threads_per_user, max_messages_per_minute, max_searches_per_minute, max_quote_transitions_per_minute, max_call_duration_minutes, quota_state, updated_by_user_id)
+          (singleton_key, max_active_threads_per_user, max_messages_per_minute, max_quote_transitions_per_minute, max_call_duration_minutes, quota_state, updated_by_user_id)
         VALUES
-          (TRUE, $1, $2, $3, $4, $5, $6, $7)
+          (TRUE, $1, $2, $3, $4, $5, $6)
         ON CONFLICT (singleton_key)
         DO UPDATE SET
           max_active_threads_per_user = EXCLUDED.max_active_threads_per_user,
           max_messages_per_minute = EXCLUDED.max_messages_per_minute,
-          max_searches_per_minute = EXCLUDED.max_searches_per_minute,
           max_quote_transitions_per_minute = EXCLUDED.max_quote_transitions_per_minute,
           max_call_duration_minutes = EXCLUDED.max_call_duration_minutes,
           quota_state = EXCLUDED.quota_state,
@@ -1739,7 +1772,6 @@ export async function updateCapacityPolicy(input: {
         RETURNING
           max_active_threads_per_user,
           max_messages_per_minute,
-          max_searches_per_minute,
           max_quote_transitions_per_minute,
           max_call_duration_minutes,
           quota_state,
@@ -1748,7 +1780,6 @@ export async function updateCapacityPolicy(input: {
       [
         input.maxActiveThreadsPerUser,
         input.maxMessagesPerMinute,
-        input.maxSearchesPerMinute,
         input.maxQuoteTransitionsPerMinute,
         input.maxCallDurationMinutes,
         input.quotaState,
@@ -1768,16 +1799,15 @@ export async function updateCapacityPolicy(input: {
     const eventResult = await client.query<{ activated_at: Date }>(
       `
         INSERT INTO foundation_capacity_policy_events
-          (policy_version, max_active_threads_per_user, max_messages_per_minute, max_searches_per_minute,
+          (policy_version, max_active_threads_per_user, max_messages_per_minute,
            max_quote_transitions_per_minute, max_call_duration_minutes, quota_state, changed_by_user_id)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
         RETURNING activated_at
       `,
       [
         policyVersion,
         row.max_active_threads_per_user,
         row.max_messages_per_minute,
-        row.max_searches_per_minute,
         row.max_quote_transitions_per_minute,
         row.max_call_duration_minutes,
         row.quota_state,
@@ -1788,7 +1818,6 @@ export async function updateCapacityPolicy(input: {
     return {
       maxActiveThreadsPerUser: row.max_active_threads_per_user,
       maxMessagesPerMinute: row.max_messages_per_minute,
-      maxSearchesPerMinute: row.max_searches_per_minute,
       maxQuoteTransitionsPerMinute: row.max_quote_transitions_per_minute,
       maxCallDurationMinutes: row.max_call_duration_minutes,
       quotaState: row.quota_state,

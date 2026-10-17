@@ -1194,3 +1194,20 @@ moved. (Before this it was a generic error and the call kept ringing.) Lift the 
 - Signing back in as member A shows call alerts off in that browser until A turns them on again.
 
 **Result:** web ☐ — notes:
+
+### FDN-48 — Connection cap, saved limits and repeat quote requests (added 2026-10-17)
+
+**Role:** A member and an admin
+**Surface:** web and Android
+
+**Steps:**
+1. As admin, set **Max active threads per user** to 1 and **Max quote requests / min** to 1. Confirm there is no **Max searches / min** field.
+2. As the member, connect with provider A, then try provider B.
+3. As the member, press **Request Quote** twice quickly for provider A with the same service.
+
+**Expected:**
+- Step 2: provider B is refused with "You have reached the limit of active connections. A connection with no activity for 30 days stops counting." Provider A still opens.
+- Step 3: one quote request appears in each side's Quotes list, and the provider gets one notification.
+- Reset the admin values after.
+
+**Result:** web ☐ android ☐ — notes:

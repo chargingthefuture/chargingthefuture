@@ -231,7 +231,6 @@ export type QuotaState = 'green' | 'yellow' | 'orange' | 'red';
 export type CapacityPolicyForm = {
   maxActiveThreadsPerUser: number;
   maxMessagesPerMinute: number;
-  maxSearchesPerMinute: number;
   maxQuoteTransitionsPerMinute: number;
   maxCallDurationMinutes: number;
   quotaState: QuotaState;
@@ -245,7 +244,6 @@ export async function fetchCapacityPolicy(): Promise<CapacityPolicyForm> {
   return {
     maxActiveThreadsPerUser: policy.maxActiveThreadsPerUser,
     maxMessagesPerMinute: policy.maxMessagesPerMinute,
-    maxSearchesPerMinute: policy.maxSearchesPerMinute,
     maxQuoteTransitionsPerMinute: policy.maxQuoteTransitionsPerMinute,
     maxCallDurationMinutes: policy.maxCallDurationMinutes,
     quotaState: policy.quotaState,

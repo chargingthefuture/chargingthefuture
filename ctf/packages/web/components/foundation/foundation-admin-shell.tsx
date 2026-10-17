@@ -55,15 +55,13 @@ function StatBlock({ label, value, accent }: { label: string; value: number; acc
 type NumericPolicyKey =
   | 'maxActiveThreadsPerUser'
   | 'maxMessagesPerMinute'
-  | 'maxSearchesPerMinute'
   | 'maxQuoteTransitionsPerMinute'
   | 'maxCallDurationMinutes';
 
 const NUMERIC_FIELDS: { key: NumericPolicyKey; label: string }[] = [
   { key: 'maxActiveThreadsPerUser', label: 'Max active threads / user' },
   { key: 'maxMessagesPerMinute', label: 'Max messages / min' },
-  { key: 'maxSearchesPerMinute', label: 'Max searches / min' },
-  { key: 'maxQuoteTransitionsPerMinute', label: 'Max quote transitions / min' },
+  { key: 'maxQuoteTransitionsPerMinute', label: 'Max quote requests / min' },
   { key: 'maxCallDurationMinutes', label: 'Max call duration (min)' },
 ];
 
@@ -80,7 +78,6 @@ export function FoundationAdminShell({
   const [form, setForm] = useState({
     maxActiveThreadsPerUser: policy.maxActiveThreadsPerUser,
     maxMessagesPerMinute: policy.maxMessagesPerMinute,
-    maxSearchesPerMinute: policy.maxSearchesPerMinute,
     maxQuoteTransitionsPerMinute: policy.maxQuoteTransitionsPerMinute,
     maxCallDurationMinutes: policy.maxCallDurationMinutes,
     quotaState: policy.quotaState,
