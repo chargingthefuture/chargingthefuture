@@ -57,7 +57,11 @@ export async function signInDemoAccount(browser, { appUrl, storageFile, screensh
     await page.reload();
     await page.waitForLoadState('networkidle', { timeout: 30_000 });
   } catch (error) {
-    if (screenshotFile) await page.screenshot({ path: screenshotFile }).catch(() => {});
+    if (screenshotFile) {
+      await page.screenshot({ path: screenshotFile }).catch((shotError) => {
+        console.error(`Could not save the sign-in screenshot: ${shotError.message}`);
+      });
+    }
     await context.close();
     throw new Error(`Signing in as the demo account failed at ${page.url()}: ${error.message}`);
   }
