@@ -139,7 +139,7 @@ All command contracts must conform to templates from:
 2. `feed.item.read.mark`
 3. `feed.item.dismiss`
 
-**Announcements:** 4. `feed.announcement.draft.create` 5. `feed.announcement.draft.update` 6. `feed.announcement.publish` 7. `feed.announcement.archive` 8. `feed.announcement.read.mark` 9. `feed.announcement.dismiss` 10. `feed.announcement.render-mode.update` 11. `feed.announcement.targeting.validate`
+**Announcements:** 4. `feed.announcement.draft.create` 5. `feed.announcement.draft.update` 6. `feed.announcement.publish` 7. `feed.announcement.archive` 8. `feed.announcement.read.mark` 9. `feed.announcement.dismiss` 10. `feed.announcement.render-mode.update`
 
 **Questions (LLM-assisted Q&A):** 12. `feed.question.submit` 13. `feed.question.answer.generate` 14. `feed.question.answer.rate`
 
@@ -364,6 +364,8 @@ All three feed channels (announcements, questions, community) are shipped on web
 ---
 
 ## 11) Change Log
+
+- 2026-10-17: **`feed.announcement.targeting.validate` is removed with its route (#2892).** See the Announcements inventory.
 
 - 2026-10-17: Demo seed module `ctf/scripts/demo-seed/20-commons.mjs` gives the demo Commons posts by other members, a quoted reply and an announcement to react to (test cases FD-10, FD-11, FD-14).
 - 2026-10-15: **Commons and contributor channel: refusals say why, typed text survives, blocked storage no longer breaks the page (#3222, #3224, #3225, #3226, #3227, #3228, #3229, #3230).**

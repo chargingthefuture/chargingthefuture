@@ -260,25 +260,6 @@ contracts:
     retentionClass: audit_long_lived
     idempotency: true
 
-  - pluginId: feed
-    command: feed.announcement.targeting.validate
-    version: 1.0.0
-    description: Validate announcement targeting constraints before publish.
-    inputSchema:
-      targeting:
-        type: object
-        required: true
-    outputSchema:
-      valid:
-        type: boolean
-      normalizedTargeting:
-        type: object
-    dataAccess:
-      - announcements
-    purpose: broadcast_governance
-    retentionClass: derived_short_lived
-    idempotency: true
-
   # ─── Channel: Questions (LLM-assisted Q&A) ─────────────────────────────
   - pluginId: feed
     command: feed.question.submit

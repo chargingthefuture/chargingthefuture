@@ -1357,8 +1357,6 @@ read. Step 2: no banner, and the queue loads as usual (#2712).
 - Step 7: a "Changed the feed settings" row marked **Refused** with the member's id (added 2026-10-14). A bad payload, a missing record or a database failure on any of the seven admin actions is also a row.
 - Nothing an admin did in this session is missing from the list.
 
-**Note:** `POST /api/announcements/admin/targeting/validate` deliberately writes no audit row — it validates a targeting expression and changes nothing, so there is no action to record. Its absence from this list is correct, not a gap.
-
 **Result:** web ☐
 
 ---
