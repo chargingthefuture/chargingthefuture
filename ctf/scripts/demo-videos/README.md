@@ -24,16 +24,27 @@ Clips are filmed on the live app, signed in as an account in demo mode. Demo mod
 account's reads and writes to the `demo` database schema, the staging Stream app and the test ledger,
 so the clips show seeded sample people and never real members.
 
-1. In the Clerk dashboard, create a user for the recordings. Its name shows in some clips, so pick a
-   plain one such as "Demo".
-2. In Unleash, add that user's Clerk id to the targeting of the `demo-mode` flag. Without this step
-   the clips would show real member data. Check it before the first run.
-3. Run the Seed Demo workflow (`seed-demo.yml`) with that id as `demo_tester_member_id`, so the
-   account has an entry, a wallet, a profile and sample data around it.
-4. In Infisical (production), add `DEMO_VIDEO_CLERK_USER_ID` with that id.
+The account you already seed the demo schema with works as it is: it is in demo mode and has sample
+data around it. Two things to know:
 
-The workflow signs in with a one-time Clerk sign-in token for that id (`CLERK_SECRET_KEY`, already in
-Infisical). No password is stored anywhere.
+- Its name and avatar show wherever the app shows the signed-in member.
+- If it is an admin account, admin controls show in the clips. A plain member account films the way
+  a member sees the app.
+
+Give the workflow that account's Clerk user id in one of these ways, first match wins:
+
+1. The `demo_user_id` box when running the workflow.
+2. A GitHub repository secret `DEMO_VIDEO_CLERK_USER_ID`, so the box can stay empty.
+3. `DEMO_VIDEO_CLERK_USER_ID` in Infisical (production).
+
+It also needs `CLERK_SECRET_KEY`, read from the GitHub secret of that name first and Infisical
+second. Infisical is optional: if it cannot be reached, the run carries on with the GitHub secrets.
+The workflow signs in with a one-time Clerk sign-in token for that id. No password is stored
+anywhere.
+
+A separate recording account instead: create the user in Clerk, add its id to the `demo-mode`
+Unleash flag (without this the clips would show real members), and run Seed Demo with it as
+`demo_tester_member_id`.
 
 The `user-guide` clip needs no sign-in, so it is the clip to run first to check that recording, voice
 and captions work.

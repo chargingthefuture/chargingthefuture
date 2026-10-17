@@ -10,8 +10,10 @@ name: Demo Videos — Record Clips
 # Output: one MP4 (and a .vtt caption file) per clip, attached to the `demo-videos` release so they
 # open on a phone, and to the run as an artifact.
 #
-# Needs (from Infisical): CLERK_SECRET_KEY, and DEMO_VIDEO_CLERK_USER_ID, the Clerk user id of an
-# account in demo mode. Setting that account up is in ctf/scripts/demo-videos/README.md.
+# Needs CLERK_SECRET_KEY and the Clerk user id of an account in demo mode. Each is read from the
+# first place that has it: the demo_user_id input, then the GitHub secrets CLERK_SECRET_KEY and
+# DEMO_VIDEO_CLERK_USER_ID, then Infisical. Infisical is optional; the run carries on without it.
+# Setting the account up is in ctf/scripts/demo-videos/README.md.
 
 on:
   workflow_dispatch:
@@ -20,6 +22,11 @@ on:
         description: "Clip names separated by spaces, or all"
         required: true
         default: "all"
+        type: string
+      demo_user_id:
+        description: "Clerk user id of the demo-mode account (the one you seed the demo schema with). Leave empty to use the DEMO_VIDEO_CLERK_USER_ID secret"
+        required: false
+        default: ""
         type: string
       voice:
         description: "Piper voice (see the README for others)"
@@ -89,7 +96,8 @@ jobs:
             exit 1
           fi
 
-      - name: Inject secrets from Infisical
+      - name: Inject secrets from Infisical (optional)
+        continue-on-error: true
         uses: Infisical/secrets-action@v1.0.16
         with:
           client-id: ${{ secrets.INFISICAL_CLIENT_ID }}
@@ -104,15 +112,21 @@ jobs:
         env:
           CLIPS: ${{ inputs.clips }}
           VOICE: ${{ inputs.voice }}
+          INPUT_USER_ID: ${{ inputs.demo_user_id }}
+          GH_USER_ID: ${{ secrets.DEMO_VIDEO_CLERK_USER_ID }}
+          GH_CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
         run: |
           set -euo pipefail
+          # The input wins, then the GitHub secret, then whatever Infisical set.
+          export DEMO_VIDEO_CLERK_USER_ID="${INPUT_USER_ID:-${GH_USER_ID:-${DEMO_VIDEO_CLERK_USER_ID:-}}}"
+          export CLERK_SECRET_KEY="${GH_CLERK_SECRET_KEY:-${CLERK_SECRET_KEY:-}}"
           export PIPER_BIN=python PIPER_MODEL="$VOICES_DIR/$VOICE.onnx" DEMO_OUT_DIR="$OUT_DIR"
           # CLIPS is split into names on purpose.
           # shellcheck disable=SC2086
           node ctf/scripts/demo-videos/record.mjs $CLIPS
 
       - name: Attach to the demo-videos release
-        if: ${{ !cancelled() && hashFiles('demo-videos-out/*.mp4') != '' }}
+        if: ${{ always() && hashFiles('demo-videos-out/*.mp4') != '' }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -129,7 +143,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Keep as run artifact
-        if: ${{ !cancelled() && hashFiles('demo-videos-out/*.mp4') != '' }}
+        if: ${{ always() && hashFiles('demo-videos-out/*.mp4') != '' }}
         uses: actions/upload-artifact@v4
         with:
           name: demo-videos
