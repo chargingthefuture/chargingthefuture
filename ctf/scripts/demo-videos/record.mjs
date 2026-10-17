@@ -140,11 +140,23 @@ async function main() {
   const storageFile = join(workRoot, 'session.json');
   const failures = [];
   try {
+    // A failed sign-in fails only the clips that need it; the public ones are still recorded.
+    let signInError = null;
     if (clips.some((c) => c.signIn !== false)) {
-      await signInDemoAccount(browser, { appUrl, signInUrl, storageFile });
-      console.log('Signed in as the demo account.');
+      try {
+        await signInDemoAccount(browser, { appUrl, signInUrl, storageFile });
+        console.log('Signed in as the demo account.');
+      } catch (error) {
+        signInError = error;
+        console.error(`::error::${error.message}`);
+      }
     }
     for (const clip of clips) {
+      if (signInError && clip.signIn !== false) {
+        failures.push(clip.slug);
+        console.error(`::error::Skipped ${clip.slug}: it needs the demo account and the sign-in failed.`);
+        continue;
+      }
       try {
         console.log(`Recorded ${clip.slug}: ${await recordClip(browser, clip, storageFile)}`);
       } catch (error) {

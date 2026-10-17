@@ -26,9 +26,11 @@ export async function signInDemoAccount(browser, { appUrl, signInUrl, storageFil
   const secretKey = process.env.CLERK_SECRET_KEY;
   const userId = process.env.DEMO_VIDEO_CLERK_USER_ID;
   if (!secretKey || !userId) {
-    throw new Error(
-      `Signing in needs ${secretKey ? '' : 'CLERK_SECRET_KEY (a GitHub secret or Infisical) '}${userId ? '' : 'the demo account\'s Clerk user id (the demo_user_id input, or the DEMO_VIDEO_CLERK_USER_ID secret) '}and neither place had it. README, "Setting up the demo account".`,
-    );
+    const missing = [
+      !secretKey && 'CLERK_SECRET_KEY (a GitHub secret, or Infisical)',
+      !userId && 'the demo account\'s Clerk user id (the demo_user_id box, or the DEMO_VIDEO_CLERK_USER_ID secret)',
+    ].filter(Boolean);
+    throw new Error(`Signing in needs ${missing.join(' and ')}, and the run had none set. README, "Setting up the demo account".`);
   }
   // Clerk answers with a ready sign-in address; build one on the Account Portal if it does not.
   const { token, url: ticketUrl } = await createSignInToken(secretKey, userId);
