@@ -2,10 +2,11 @@ import { queryDb } from 'lib/db/postgres';
 
 // Whether an operator cleared this account from the demo schema recently (issue #2893). The operator
 // delete route runs a demo deletion and then deletes the Clerk user, which fires this webhook; the
-// event says nothing about the schema or who started it. Without this the production deletion that
-// follows was recorded as a member leaving and counted in the deleted-accounts figure. It still runs,
-// so any production data the same sign-in had is cleared, but it is recorded as operator-run. The
-// window covers Clerk's retries of a delivery; a demo schema that does not exist reads as no.
+// event says nothing about the schema or who started it. Without this the webhook ran a production
+// deletion for a demo test account and counted it as a member leaving. When this is true the webhook
+// does nothing in production (owner decision, 2026-10-17): demo data shares the database, but clearing
+// it never starts anything in the production tables. The window covers Clerk's retries of a delivery;
+// a demo schema that does not exist reads as no.
 const OPERATOR_DEMO_DELETION_WINDOW_HOURS = 72;
 
 export async function operatorClearedDemoAccount(userId: string): Promise<boolean> {
