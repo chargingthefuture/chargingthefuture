@@ -276,3 +276,23 @@ untouched.
 
 Schema impact: none. Every table, column and constraint written already existed; the change
 adds rows to the `demo` schema only.
+
+## Personal rows follow the account they are seeded for — 2026-10-17
+
+Nine demo clips filmed as the member demo account found empty screens. `seedDemo.mjs` keeps the
+owner's personal rows on fixed ids, and several of its upserts leave the owning column alone on a
+conflict, so a demo schema first seeded with a different `DEMO_OWNER_ID` kept those rows under the
+earlier account. The per-plugin modules now hand them back on every run, for each account in
+`PERSONAL_ACCOUNTS`:
+
+- `30-skills-hunt.mjs`: the demo nomination's `submitter_user_id`, and the demo round's dates,
+  which were set only on first insert and had run out, so Scout showed the round closed.
+- `31-skill-up.mjs`: the demo cohort enrollment's `user_id`, unless the account already has
+  another enrollment in that cohort.
+- `33-contributions.mjs`: the Quora comment and GitHub star claims' `user_id`.
+- `42-socket-relay.mjs`: the "Help moving a few boxes" fulfillment's helper and request link, and
+  the request's claimed fulfillment.
+- `43-trust-transport.mjs` (new): the demo ride's `requester_user_id`.
+
+Schema impact: none. These are updates to rows the seed already writes in the `demo` schema; no
+table, column or constraint changed.

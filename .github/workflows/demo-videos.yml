@@ -7,9 +7,13 @@ name: Demo Videos — Record Clips
 # The voice is Piper, which runs on the runner itself: no API credit, so no slash command stands
 # in for this workflow.
 #
-# Output: one MP4 (and a .vtt caption file) per clip, attached to a release of its own for each run,
-# tagged demo-videos-<run number>, so they open on a phone; and to the run as an artifact. Releases
-# in this repository are immutable once published, so a run never adds to an earlier one.
+# Four machines record a quarter of the clips each, side by side, so a full run fits well inside the
+# time limit (one machine took over an hour for 93 clips). A last job gathers what they made.
+#
+# Output: one MP4 (and a .vtt caption file) per clip, plus <clip>-failure.png for any clip that
+# failed, attached to a release of its own for each run, tagged demo-videos-<run number>, so they
+# open on a phone; and to the run as an artifact. Releases in this repository are immutable once
+# published, so a run never adds to an earlier one.
 #
 # Needs CLERK_SECRET_KEY and the Clerk user id of an account in demo mode. The id comes from the
 # demo_user_id box, else the repository variable DEMO_VIDEO_CLERK_USER_ID (member) or
@@ -53,9 +57,13 @@ concurrency:
 
 jobs:
   record:
-    name: Record clips
+    name: Record clips (${{ matrix.shard }} of 4)
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3]
     env:
       OUT_DIR: ${{ github.workspace }}/demo-videos-out
       VOICES_DIR: ${{ github.workspace }}/.piper-voices
@@ -136,31 +144,66 @@ jobs:
             export DEMO_VIDEO_CLERK_USER_ID="${INPUT_USER_ID:-${MEMBER_ID:-${DEMO_VIDEO_CLERK_USER_ID:-}}}"
           fi
           export CLERK_SECRET_KEY="${GH_CLERK_SECRET_KEY:-${CLERK_SECRET_KEY:-}}"
-          export PIPER_BIN=python PIPER_MODEL="$VOICES_DIR/$VOICE.onnx" DEMO_OUT_DIR="$OUT_DIR"
+          export PIPER_BIN=python PIPER_MODEL="$VOICES_DIR/$VOICE.onnx" DEMO_OUT_DIR="$OUT_DIR" DEMO_SHARD="${{ matrix.shard }}/4"
           # CLIPS is split into names on purpose.
           # shellcheck disable=SC2086
           node ctf/scripts/demo-videos/record.mjs $CLIPS
 
+      - name: Hand this shard's clips to the publish job
+        if: ${{ always() && hashFiles('demo-videos-out/*.mp4', 'demo-videos-out/*.png') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: demo-videos-shard-${{ matrix.shard }}
+          path: |
+            demo-videos-out/*.mp4
+            demo-videos-out/*.vtt
+            demo-videos-out/*.png
+          retention-days: 1
+
+  publish:
+    name: Publish the clips
+    needs: record
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    env:
+      OUT_DIR: ${{ github.workspace }}/demo-videos-out
+    steps:
+      - name: Gather every shard's clips
+        uses: actions/download-artifact@v4
+        with:
+          pattern: demo-videos-shard-*
+          merge-multiple: true
+          path: demo-videos-out
+
       - name: Publish as a release for this run
-        if: ${{ always() && hashFiles('demo-videos-out/*.mp4') != '' }}
+        if: ${{ hashFiles('demo-videos-out/*.mp4') != '' }}
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
           TAG: demo-videos-${{ github.run_number }}
           ACCOUNT: ${{ inputs.account }}
         run: |
           set -euo pipefail
+          shopt -s nullglob
+          files=("$OUT_DIR"/*.mp4 "$OUT_DIR"/*.vtt "$OUT_DIR"/*.png)
           # gh uploads the files to a draft and publishes it after, which an immutable release needs.
-          gh release create "$TAG" "$OUT_DIR"/*.mp4 "$OUT_DIR"/*.vtt \
+          gh release create "$TAG" "${files[@]}" \
             --target "$GITHUB_SHA" --prerelease --title "Demo videos, run ${{ github.run_number }}" \
-            --notes "Demo clips recorded by the Demo Videos workflow as the $ACCOUNT demo account. Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            --notes "Demo clips recorded by the Demo Videos workflow as the $ACCOUNT demo account. A <clip>-failure.png is what the screen showed when that clip failed. Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           {
             echo "### Demo videos"
             echo "Release: ${{ github.server_url }}/${{ github.repository }}/releases/tag/$TAG"
+            echo "Recorded: $(ls "$OUT_DIR"/*.mp4 | wc -l)"
             for f in "$OUT_DIR"/*.mp4; do echo "- $(basename "$f")"; done
+            failed=("$OUT_DIR"/*-failure.png)
+            if [ "${#failed[@]}" -gt 0 ]; then
+              echo "Failed (screenshot in the release):"
+              for f in "${failed[@]}"; do echo "- $(basename "$f" -failure.png)"; done
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Keep as run artifact
-        if: ${{ always() && hashFiles('demo-videos-out/*.mp4', 'demo-videos-out/*.png') != '' }}
+        if: ${{ hashFiles('demo-videos-out/*.mp4', 'demo-videos-out/*.png') != '' }}
         uses: actions/upload-artifact@v4
         with:
           name: demo-videos

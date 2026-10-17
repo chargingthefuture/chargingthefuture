@@ -12,7 +12,7 @@
 | **Surfaces** | web (`/apps/socket-relay`, `/admin/socket-relay`) · android (`SocketRelay.tsx`, `AdminSocketRelay.tsx`) |
 | **Seed first** | `pnpm --dir ctf seed:socket-relay` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-socket-relay-feature-inventory.md` |
-| **Generated** | 2026-07-11 (hand-updated for per-request location defaulting from the directory profile — see SR-3; regenerate via CI to stamp the commit) · 2026-08-04 (SR-16 marked API-only by design — no profile UI exists or is planned) · 2026-10-02 (SR-4b and SR-A3a added for request pictures) · 2026-10-17: demo seed adds seven open tagged requests by other members (SR-1, SR-2) |
+| **Generated** | 2026-07-11 (hand-updated for per-request location defaulting from the directory profile — see SR-3; regenerate via CI to stamp the commit) · 2026-08-04 (SR-16 marked API-only by design — no profile UI exists or is planned) · 2026-10-02 (SR-4b and SR-A3a added for request pictures) · 2026-10-17: demo seed adds seven open tagged requests by other members (SR-1, SR-2) · 2026-10-17: demo seed relinks the seeded account's "Help moving a few boxes" Direct Line after an owner change |
 
 ---
 

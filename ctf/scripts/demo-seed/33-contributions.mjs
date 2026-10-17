@@ -4,7 +4,11 @@
 //     nothing is confirmed, no money is counted toward the drive, and the Signal contact is a
 //     placeholder that is never shown on the member screen;
 //   - the GitHub star moved to confirmed with its thank-you credits, so the star path reads as
-//     already credited (CONT-6). Credits are not money.
+//     already credited (CONT-6). Credits are not money;
+//   - both of those claims handed to the account they are seeded for. seedDemo.mjs keeps the owner's
+//     fixed claim ids, and its upsert leaves user_id alone, so a demo schema first seeded with a
+//     different DEMO_OWNER_ID kept them under that earlier account and My history showed no
+//     Confirmed claim.
 
 const GIFT_CARD_CLAIM = 'ddd00000-0000-4000-8330-000000000001';
 
@@ -12,6 +16,12 @@ export default async function seed(client, ctx) {
   const { PERSONAL_ACCOUNTS, personalId, ADMIN, ID } = ctx;
 
   for (const account of PERSONAL_ACCOUNTS) {
+    await client.query(
+      `UPDATE contributions_submissions SET user_id = $2, updated_at = NOW()
+       WHERE id = ANY($1::uuid[]) AND user_id <> $2`,
+      [[personalId(account, ID.contribSubmission1), personalId(account, ID.contribSubmission2)], account],
+    );
+
     await client.query(
       `INSERT INTO contributions_submissions
        (id, user_id, kind, method, claimed_amount_usd, signal_contact, status, cycle_id, created_at)

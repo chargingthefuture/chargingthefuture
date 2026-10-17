@@ -250,6 +250,7 @@ alongside the legacy `category`) and fulfillment outcomes for dev validation.
 
 ## 9) Change Log
 
+- 2026-10-17: **Demo seed ties the "Help moving a few boxes" Direct Line back together** (`ctf/scripts/demo-seed/42-socket-relay.mjs`). `seedDemo.mjs` matches that request on its idempotency key, so it can keep an id from an earlier seed, and its fulfillment upsert leaves the helper and the request link alone. On a demo schema first seeded with a different `DEMO_OWNER_ID` the Direct Line had no row naming the request. The module now points each account's fulfillment at that account and at the request carrying the key, and the request back at the fulfillment. Demo data only; no route, schema or screen change.
 - 2026-10-17: **Demo seed for the feed.** `ctf/scripts/demo-seed/42-socket-relay.mjs` adds seven open requests with tags by synthetic members to the demo schema. Demo data only; no code, schema or route change.
 - 2026-10-16: **An admin changing or removing the picture on another member's request is recorded
   (code-review #2806, owner decision).** The member picture route lets an admin act on any request and

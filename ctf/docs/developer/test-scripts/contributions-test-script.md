@@ -11,7 +11,7 @@
 | **Surfaces** | Web (`/apps/contributions`, `/admin/contributions`, fundraiser banner in Hub) |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-contributions-feature-inventory.md` |
-| **Generated** | 2026-08-06 (commit 4cfc88690) · 2026-10-17: demo seed adds a pending gift-card claim and confirms the demo star with credits — smoke 2, CONT-5, CONT-6, CONT-8 |
+| **Generated** | 2026-08-06 (commit 4cfc88690) · 2026-10-17: demo seed adds a pending gift-card claim and confirms the demo star with credits — smoke 2, CONT-5, CONT-6, CONT-8 · 2026-10-17: demo seed hands the seeded Quora comment and star claims back to the seeded account after an owner change — CONT-6, CONT-8 |
 
 > **Android note:** The Android surface was removed 2026-07-20 (rule 105, PR #1742). This plugin is now web-only (installable PWA). All cases are web-only. The parity section documents this explicitly.
 
