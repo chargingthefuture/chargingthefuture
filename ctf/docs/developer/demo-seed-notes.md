@@ -258,3 +258,21 @@ Regenerating it was deliberately left out of this change: the file's name marks 
 DB-impacting to the schema-drift gate, which then requires a matching `ctf/schema.sql` edit —
 correct behavior for a schema file, and there is no schema change here to pair it with.
 Regenerate it in a commit that actually changes `ctf/schema.sql`.
+
+## The admin demo account carries the owner's personal data — 2026-10-17
+
+The demo videos (`ctf/scripts/demo-videos/`) are filmed signed in as either the member demo
+account (`DEMO_OWNER_ID`) or the admin one (`DEMO_TESTER_ADMIN_ID`). The admin tester slot was
+built for running admin test scripts and got only approval, a wallet and a profile, so every
+clip showing "your" data found an empty screen as admin.
+
+`PERSONAL_ACCOUNTS` (the owner and the admin tester) now each get every personal demo row, in
+`seedDemo.mjs` and in the per-plugin modules under `ctf/scripts/demo-seed/`. `personalId()`
+keeps the owner's existing fixed ids, so the owner's rows are unchanged, and derives a fixed id
+per row for the admin, so a re-run stays idempotent. Pairings with `DEMO_SECOND_OWNER_ID`, the
+shared content (WhatWorks problems and products, the weekly Demo-A cohort) and the admin's own
+Directory profile stay as they were; the owner's member–admin pairing for live testing is
+untouched.
+
+Schema impact: none. Every table, column and constraint written already existed; the change
+adds rows to the `demo` schema only.
