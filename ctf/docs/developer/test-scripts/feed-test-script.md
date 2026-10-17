@@ -9,7 +9,7 @@
 | **Surfaces** | web (desktop + mobile-responsive browser); Android surface was removed 2026-07-20 — web only |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-feed-feature-inventory.md` |
-| **Generated** | 2026-07-25 (commit 95cb98b2) |
+| **Generated** | 2026-07-25 (commit 95cb98b2) · 2026-10-17: seed step names the demo posts and announcement from `demo-seed/20-commons.mjs` |
 | **Inventory wording** | 2026-10-01: banned-term wording removed from the inventory prose; no step in this script changed |
 
 ---
@@ -25,7 +25,7 @@
 
 ## Core smoke (every session)
 
-1. **Seed is clean.** Run `pnpm --dir ctf seed:demo`. Confirm the command exits without errors and the app starts. web ☐
+1. **Seed is clean.** Run `pnpm --dir ctf seed:demo`. Confirm the command exits without errors and the app starts. The demo seed now shows three posts by other members from the last hour (one quoting another) and the announcement "Small tasks on the goal board", for FD-10, FD-11 and FD-14. web ☐
 
 2. **Commons home loads.** Sign in as a member. Navigate to the Commons home. The feed timeline renders with at least one item (announcement, question, or community post) and no unhandled error is shown. web ☐
 

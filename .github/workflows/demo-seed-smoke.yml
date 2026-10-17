@@ -22,6 +22,7 @@ on:
       - 'ctf/schema.demo.sql'
       - 'ctf/db/migrations/**'
       - 'ctf/scripts/seedDemo.mjs'
+      - 'ctf/scripts/demo-seed/**'
       - 'ctf/scripts/generateDemoSchema.mjs'
       - '.github/workflows/demo-seed-smoke.yml'
   schedule:

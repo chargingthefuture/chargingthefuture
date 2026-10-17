@@ -11,7 +11,9 @@ Work top to bottom. Cases marked **public** must be done signed out, in a privat
 left over from another tab is the easiest way to get a false pass on the case that matters most.
 
 You will need three accounts: an approved member, a signed-in member who is **not** approved, and an
-admin. Seed some rows first with `pnpm --dir ctf run seed:ti-radio`.
+admin. Seed some rows first with `pnpm --dir ctf run seed:ti-radio`. The demo seed now shows three booked slots by synthetic hosts in the next two days, which also fill Chyme's "Coming up on TI Radio" rail.
+
+Updated by hand: 2026-10-17: demo seed books three upcoming slots (CH-22).
 
 ## Core smoke (every session)
 

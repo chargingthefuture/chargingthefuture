@@ -240,6 +240,8 @@ Web admin mobile-responsive: confirmed. `app/admin/socket-relay/page.tsx` is a s
 `ctf/scripts/seedSocketRelay.mjs` seeds deterministic request lifecycle (including the `tags` array
 alongside the legacy `category`) and fulfillment outcomes for dev validation.
 
+`ctf/scripts/demo-seed/42-socket-relay.mjs` adds seven open, unexpired requests by synthetic members to the demo schema, each with one to three tags and one each settled in ServiceCredits, Free and Barter, so the feed (SR-1), the tag chips (SR-2) and the GDP "Value waiting to happen" panel have other members' posts without the optional second owner account.
+
 ## 8) Gaps and Known Technical Debt
 
 1. Audit retention policy for `socket_relay_admin_audit_trail` follows the platform default; a plugin-specific retention contract has not been finalized.
@@ -248,6 +250,7 @@ alongside the legacy `category`) and fulfillment outcomes for dev validation.
 
 ## 9) Change Log
 
+- 2026-10-17: **Demo seed for the feed.** `ctf/scripts/demo-seed/42-socket-relay.mjs` adds seven open requests with tags by synthetic members to the demo schema. Demo data only; no code, schema or route change.
 - 2026-10-16: **An admin changing or removing the picture on another member's request is recorded
   (code-review #2806, owner decision).** The member picture route lets an admin act on any request and
   wrote no audit row. It now writes one to `socket_relay_admin_audit_trail` when the actor is not the

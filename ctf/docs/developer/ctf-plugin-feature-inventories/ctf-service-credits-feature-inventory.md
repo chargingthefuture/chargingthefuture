@@ -288,6 +288,8 @@ Android pixel pass complete (2026-05-31): `MockServiceCredits.tsx` retired. Real
 
 ServiceCredits seeds wallets, transfers, escrow holds, and dispute fixtures via the platform's deterministic test ledger; a plugin-specific `seedServiceCreditsPhase*.mjs` script is not currently provided.
 
+Demo schema: `ctf/scripts/demo-seed/32-service-credits.mjs` turns community credit on in the demo treasury policy (`mutualCredit.enabled`, default limit 0, maximum 100) and gives the demo owner a 20-credit line in `service_credits_credit_limits`. Postgres rows only; nothing is written to the external ledger.
+
 ---
 
 ## 9) Gaps and Known Technical Debt
@@ -302,6 +304,7 @@ ServiceCredits seeds wallets, transfers, escrow holds, and dispute fixtures via 
 
 ## 10) Change Log
 
+- 2026-10-17: **Demo seed adds a community credit line for the demo owner** (`ctf/scripts/demo-seed/32-service-credits.mjs`), so the wallet's floor sentence and the Mutual Credit send option can be recorded in the demo schema. No route, schema or contract change.
 - 2026-10-15: **Dropped the legacy dispute adjustment columns (owner directive: unused columns go with a migration).**
   `service_credits_dispute_adjustments.dispute_id` and `adjustment_amount` came over from the v2
   database; the code records an adjustment's case and amount in `dispute_case_id` and `amount` and
