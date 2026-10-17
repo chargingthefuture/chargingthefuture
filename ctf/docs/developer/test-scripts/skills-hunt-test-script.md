@@ -751,6 +751,8 @@ Result: web ☐
 
 **Expected:** The new round appears in the admin rounds list with status `active` and the line "100 ServiceCredits pool · 10+ points". A round saved with no pool reads "Points only · no end-of-round award set". The member-facing `/apps/skills-hunt` rounds list also shows the new round.
 
+Rare skills (added 2026-10-17, #2870): open Workforce, note a job title with a large gap, and pick one of its skills in Skills Taxonomy. Nominate someone in the new round with that skill and accept it: the score breakdown includes the rare-skill bonus. Before this, the bonus applied only when a skill had its job title's exact name.
+
 Result: web ☐
 
 ---

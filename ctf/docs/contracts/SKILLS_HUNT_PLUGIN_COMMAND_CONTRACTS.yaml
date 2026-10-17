@@ -48,6 +48,9 @@ contracts:
     dataAccess:
       - skills_hunt_rounds
       - skills_hunt_audit_log
+      # The round's rare-skill snapshot: the active skills under the most under-recruited job titles.
+      - skills_hunt_rare_skills_lookup
+      - skills_taxonomy_skills
     purpose: campaign_governance
     retentionClass: audit_long_lived
     idempotency: true
@@ -1005,3 +1008,8 @@ changelog:
       submitter's account deletion (or SkillsHunt data deletion) removed, answering 409
       SKILLS_HUNT_SUBMISSION_ACCOUNT_DELETED. Both read account_deletion_events to tell that removal
       from an admin Remove (issue #2868).
+  - date: 2026-10-17
+    change: >-
+      skills-hunt.round.create snapshots the active Skills Taxonomy skills under the most
+      under-recruited job titles into skills_hunt_rare_skills_lookup, instead of the job title names,
+      which a nomination's skills almost never matched (issue #2870).
