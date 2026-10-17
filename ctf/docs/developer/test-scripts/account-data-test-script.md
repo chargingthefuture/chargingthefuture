@@ -159,6 +159,18 @@ account and its data are untouched, and the Chyme audit log records a deny with 
 current Android build.
 **Result:** web ☐ · android ☐ — notes:
 
+## AD-7c · Clearing a demo test account with its sign-in is not counted as a member leaving
+
+**Role:** admin / operator · **Precondition:** the Clerk webhook secret is set; a throwaway test account
+with data in the demo schema. Added 2026-10-17 (#2893).
+**Steps:**
+1. Run the **Delete Account (manual)** workflow with `target: demo` and `also_delete_clerk` on, for that account.
+2. Check the production `account_deletion_events` row the webhook writes for the same user id.
+3. Open `/admin/adoption` and look at the deleted-accounts figure.
+**Expected:** Step 2: the row exists and its `summary.initiatedBy` is `operator`. Step 3: the figure is
+unchanged by this cleanup. A member deleting their own account still writes `member` and is counted.
+**Result:** web ☐ — notes:
+
 ## AD-7 · Full-account delete removes the sign-in too
 
 **Role:** member on a **throwaway account** · **Precondition:** a disposable account you are willing

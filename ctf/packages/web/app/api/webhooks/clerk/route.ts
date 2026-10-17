@@ -3,6 +3,7 @@ import { createHmac, timingSafeEqual } from 'crypto';
 import { markFullAccountDeletionRequested } from 'lib/chyme/repository';
 import { logChymeAudit } from 'lib/chyme/audit';
 import { deleteAllAccountData } from 'lib/account/deletion-orchestrator';
+import { operatorClearedDemoAccount } from 'lib/account/operator-demo-deletion';
 import { runWithForcedPool, queryDb } from 'lib/db/postgres';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
@@ -148,10 +149,11 @@ export async function POST(request: Request) {
       // Data first, reclaim second: the reclaim writes a new deletion event with its own idempotency
       // key on every call, so queuing it ahead of a deletion that can still fail would leave a
       // reclaim behind on failure and queue a second one when Clerk retries the delivery.
+      const initiatedBy = (await operatorClearedDemoAccount(userId)) ? 'operator' : 'member';
       const tablesAffected =
         deleted.rows.length > 0
           ? 0
-          : (await deleteAllAccountData(userId, new Date().toISOString())).tables.length;
+          : (await deleteAllAccountData(userId, new Date().toISOString(), initiatedBy)).tables.length;
       if (reclaimQueued.rows.length === 0) {
         await markFullAccountDeletionRequested(userId);
       }
