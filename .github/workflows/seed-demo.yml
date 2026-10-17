@@ -18,6 +18,11 @@ on:
         required: false
         type: string
         default: ""
+      start_fresh:
+        description: "Empty every demo table first, so the demo data is rebuilt from nothing (demo schema only; real member data is never touched). Anything made by hand in demo mode is removed."
+        required: true
+        type: boolean
+        default: true
       demo_tester_member_id:
         description: "Optional: the hired tester's MEMBER Clerk user ID (issue #2037). The seed grants entry + wallet + profile; also target the demo-mode Unleash flag at it."
         required: false
@@ -49,6 +54,19 @@ jobs:
 
       - name: Install psql client
         run: sudo apt-get install -y postgresql-client
+
+      - name: Empty the demo schema (start fresh)
+        if: ${{ inputs.start_fresh }}
+        env:
+          DATABASE_URL_DIRECT: ${{ secrets.DATABASE_URL_DIRECT }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          DB="${DATABASE_URL_DIRECT:-$DATABASE_URL}"
+          if [ -z "$DB" ]; then
+            echo "::error::DATABASE_URL_DIRECT or DATABASE_URL secret is not set."
+            exit 1
+          fi
+          psql "$DB" -v ON_ERROR_STOP=1 -f ctf/scripts/sql/demo-schema-empty.sql
 
       - name: Bring the demo schema up to date
         env:

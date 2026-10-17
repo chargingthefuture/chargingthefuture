@@ -70,6 +70,10 @@ Unleash flag (without this the clips would show real members), and run Seed Demo
 The `user-guide` clip needs no sign-in, so it is the clip to run first to check that recording, voice
 and captions work.
 
+Seed Demo empties the demo tables before it seeds ("start fresh", on by default), so each run
+gives the clips the same starting point. Anything made by hand in demo mode is removed; switch the
+option off to keep it.
+
 ## Adding a clip
 
 One file per clip in `clips/`, named after its slug. Each step is one thing on screen and the
