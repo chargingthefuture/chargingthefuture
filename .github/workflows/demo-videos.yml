@@ -143,11 +143,12 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Keep as run artifact
-        if: ${{ always() && hashFiles('demo-videos-out/*.mp4') != '' }}
+        if: ${{ always() && hashFiles('demo-videos-out/*.mp4', 'demo-videos-out/*.png') != '' }}
         uses: actions/upload-artifact@v4
         with:
           name: demo-videos
           path: |
             demo-videos-out/*.mp4
             demo-videos-out/*.vtt
+            demo-videos-out/*.png
           retention-days: 14
