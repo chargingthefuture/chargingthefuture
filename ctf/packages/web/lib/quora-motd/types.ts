@@ -75,12 +75,11 @@ export const QUORA_MOTD_ACTION_LABEL: Record<QuoraMotdAction, string> = {
 /**
  * The line every post opens with: which day of the protest it is, and the page to come back to.
  *
- * The day is the same count the page's clock shows, days since Friday 18 September 2026 at 7:00 PM
- * Eastern, taken by calendar day in Eastern so it changes once a day rather than at 7 PM. The
- * opening night is not counted as a day of its own; the first full day is Day 1.
+ * The day is the same count the page's clock shows: complete days since Friday 18 September 2026
+ * at 7:00 PM Eastern, so it changes at 7:00 PM Eastern rather than at midnight. Never below Day 1.
  */
-export function motdDayLine(dayIndex: number): string {
-  const day = Math.max(1, dayIndex);
+export function motdDayLine(protestDay: number): string {
+  const day = Math.max(1, protestDay);
   return `Day ${day} of Peace Battle 2, the global protest Targeted Individuals are holding for our lives. We are taking a stand by building what they cannot take: ${QUORA_MOTD_PEACE_BATTLE_URL}`;
 }
 
