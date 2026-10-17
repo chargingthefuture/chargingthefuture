@@ -3,6 +3,7 @@ import { createHmac, timingSafeEqual } from 'crypto';
 import { markFullAccountDeletionRequested } from 'lib/chyme/repository';
 import { logChymeAudit } from 'lib/chyme/audit';
 import { deleteAllAccountData } from 'lib/account/deletion-orchestrator';
+import { operatorClearedDemoAccount } from 'lib/account/operator-demo-deletion';
 import { runWithForcedPool, queryDb } from 'lib/db/postgres';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
@@ -126,6 +127,23 @@ export async function POST(request: Request) {
   }
 
   try {
+    // A demo test account an operator just cleared (issue #2893, owner decision): the demo data lives
+    // in the production database, but clearing it must not start anything in production. No deletion,
+    // no ServiceCredits reclaim, and nothing counted as a member leaving.
+    if (await operatorClearedDemoAccount(userId)) {
+      logChymeAudit({
+        pluginId: 'chyme',
+        command: 'account.profile.delete.full',
+        actorId: WEBHOOK_ACTOR_ID,
+        status: 'allow',
+        reason: 'clerk_user_deleted_after_demo_operator_deletion',
+        target: { scope: 'account', userId, source: 'clerk_webhook', skipped: 'true' },
+        result: 'success',
+        errorCategory: null,
+      });
+      return NextResponse.json({ ok: true, userId, skipped: true, tablesAffected: 0, reason: 'demo_operator_deletion' });
+    }
+
     const outcome = await runWithForcedPool('public', async () => {
       // Idempotency guard: the app's own Delete Account flow calls Clerk deleteUser, which also fires
       // this webhook. Each half is checked on its own so a retry finishes whichever half is missing:
