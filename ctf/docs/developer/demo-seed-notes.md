@@ -359,3 +359,14 @@ pair can exist before the seed writes its own; the live run failed on it. The me
 insert now skips on any conflict, leaving an existing thread as it is, and each account's thread
 with the sample provider reuses the thread already stored for that pair (its quote points there).
 Schema impact: none.
+
+## Seed Demo starts fresh by default — 2026-10-17
+
+The seed only adds and updates rows, so every change to which account holds which slot left old
+rows behind for later runs to collide with (three failures on one day). `seed-demo.yml` now has a
+`start_fresh` input, on by default: before the demo schema is rebuilt from `schema.demo.sql` it
+runs `ctf/scripts/sql/demo-schema-empty.sql`, which empties every table in `demo` with one
+`TRUNCATE` and no `CASCADE`, after refusing to run if any table outside `demo` has a foreign key
+into it. The rebuild then restores the built-in rows `schema.demo.sql` inserts, and the seed runs on
+an empty schema. Anything made by hand in demo mode is removed; turn the input off to keep it.
+Schema impact: none.
