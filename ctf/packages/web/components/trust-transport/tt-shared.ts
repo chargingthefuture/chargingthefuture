@@ -66,6 +66,7 @@ export interface TripRequest {
   tripProviderUserId?: string | null;
   requesterCompletionConfirmedAtIso?: string | null;
   providerCompletionConfirmedAtIso?: string | null;
+  tripSettlementFailed?: boolean;
 }
 
 // Plain label for how a ride is settled (issue #420). Honors the ServiceCredits rule (never the bare
@@ -127,6 +128,7 @@ export interface ProviderTrip {
   // can complete the trip — both must confirm.
   requesterCompletionConfirmedAtIso?: string | null;
   providerCompletionConfirmedAtIso?: string | null;
+  settlementFailed?: boolean;
 }
 
 // A request shown on the "Help out" tab (discovery model B): mode + settlement + age only. The pickup

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { InsufficientTripCreditsError } from 'lib/trust-transport/errors';
 import { evaluatePluginAccess, type AllowDecision } from 'lib/auth/server-authz';
 import { checkMutationOrigin } from 'lib/auth/csrf';
 import { TRUST_TRANSPORT_ERROR_CODE } from 'lib/trust-transport/constants';
@@ -128,6 +129,18 @@ const TRUST_TRANSPORT_ERROR_RESPONSES: Record<string, TrustTransportErrorRespons
 };
 
 export function trustTransportErrorResponse(error: unknown, fallbackMessage: string) {
+  if (error instanceof InsufficientTripCreditsError) {
+    return NextResponse.json(
+      {
+        ok: false,
+        code: TRUST_TRANSPORT_ERROR_CODE.insufficientTripCredits,
+        message: `This trip settles for ${error.needed} ServiceCredits and you have ${error.available} available. Add credits before accepting this offer.`,
+        available: error.available,
+        needed: error.needed,
+      },
+      { status: 409 },
+    );
+  }
   const code = error instanceof Error ? error.message : '';
 
   const mapped = TRUST_TRANSPORT_ERROR_RESPONSES[code];

@@ -90,6 +90,8 @@ contracts:
       - trust_transport_status_events
       - member_blocks
       - trust_transport_market_config
+      # Read to check the requester can pay a ServiceCredits-priced trip before it is accepted (#2866).
+      - service_credits_wallets
     purpose: marketplace_fulfillment_start
     retentionClass: transactional_long_lived
     idempotency: true

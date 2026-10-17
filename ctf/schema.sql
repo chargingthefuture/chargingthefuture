@@ -2215,9 +2215,13 @@ CREATE TABLE IF NOT EXISTS trust_transport_trips (
   completed_at TIMESTAMPTZ,
   requester_completion_confirmed_at TIMESTAMPTZ,
   provider_completion_confirmed_at TIMESTAMPTZ,
+  settlement_failed_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+-- When a completed trip's settlement failed, so both members are told the credits did not move
+-- (issue #2866). Null on every trip that settled or has nothing to settle.
+ALTER TABLE IF EXISTS trust_transport_trips ADD COLUMN IF NOT EXISTS settlement_failed_at TIMESTAMPTZ;
 CREATE TABLE IF NOT EXISTS trust_transport_risk_signals (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   request_id UUID,
