@@ -605,19 +605,23 @@ Result: web ☐
 
 ---
 
-### LU-A1b — Admin review queues (open disputes, pending validations)
+### LU-A1b — Admin review queues (open disputes, milestone queue)
 
 **Role:** admin · **Surfaces:** web
-**Precondition:** Signed in as seed admin. Ideally at least one open dispute (open one via LU-10) and/or one pending milestone validation exist.
+**Precondition:** Signed in as seed admin. At least one member is enrolled in a cohort that has milestones (run LU-3 first, as that member). Ideally one open dispute exists too (open one via LU-10).
 
 **Steps:**
 1. Open `/admin/skill-up`.
-2. Find the "Open disputes" and "Pending milestone validations" sections below the KPI cards.
+2. Find "Open disputes", "Signed off, credits not released" and "Milestones waiting for sign-off" below the KPI cards.
+3. On a row under "Milestones waiting for sign-off", press **Validate**.
+4. Find the same milestone under "Signed off, credits not released" and press **Release credits**.
 
 **Expected:**
 - "Open disputes" lists each open dispute newest first — title, description, who opened it (a resolved name or a short `member <id>` fallback), and time. With none it shows "No open disputes."
-- "Pending milestone validations" lists each pending validation newest first (milestone, note if present, enrollment). With none it shows "No pending validations."
-- Both are read-only here (resolving/approving happens in the existing dispute and trainer-validation flows). The admin-landing tile shows a "new to review" dot when a dispute/validation arrived since you last opened the area; opening it clears the dot.
+- "Milestones waiting for sign-off" lists each milestone of a live enrollment that is not signed off yet: milestone name, the learner's `@handle` (or `member <id>`), the cohort, the required task, and one **Validate** button. With none it shows "No milestones waiting for sign-off."
+- After step 3 the page refreshes and the milestone moves to "Signed off, credits not released", with one **Release credits** button. With none that list shows "No milestones waiting on their credits."
+- After step 4 the milestone leaves both lists, and the learner's Progress shows it released.
+- The admin-landing tile shows a "new to review" dot when a dispute, a milestone to sign off, or credits to release arrived since you last opened the area; opening it clears the dot.
 
 Result: web ☐
 
