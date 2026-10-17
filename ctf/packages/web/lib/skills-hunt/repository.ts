@@ -344,7 +344,7 @@ function mapSubmission(row: SkillsHuntSubmissionRow): SkillsHuntSubmission {
 // data, rather than by an admin (owner decision, 2026-10-17; issue #2868). Both write deleted_at. The
 // deletion engine stamps it in the same transaction that writes the account_deletion_events row, so the
 // row's deleted_at equals that event's completed_at (NOW() is fixed for a transaction). Such a row is
-// shown to admins, labelled, and can never be restored or reviewed back to life: the member asked for
+// shown to admins, labeled, and can never be restored or reviewed back to life: the member asked for
 // it to be gone. `alias` is the submissions table name or alias in the calling query.
 export function removedByAccountDeletionSql(alias: string): string {
   return `(${alias}.deleted_at IS NOT NULL AND EXISTS (
