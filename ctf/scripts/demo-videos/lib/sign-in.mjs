@@ -29,7 +29,7 @@ export async function signInDemoAccount(browser, { appUrl, storageFile, screensh
   if (!secretKey || !userId) {
     const missing = [
       !secretKey && 'CLERK_SECRET_KEY (a GitHub secret, or Infisical)',
-      !userId && 'the demo account\'s Clerk user id (the demo_user_id box, or the DEMO_VIDEO_CLERK_USER_ID secret)',
+      !userId && 'the demo account\'s Clerk user id (the demo_user_id box, or the DEMO_VIDEO_CLERK_USER_ID / DEMO_VIDEO_CLERK_ADMIN_ID repository variable)',
     ].filter(Boolean);
     throw new Error(`Signing in needs ${missing.join(' and ')}, and the run had none set. README, "Setting up the demo account".`);
   }
@@ -57,7 +57,11 @@ export async function signInDemoAccount(browser, { appUrl, storageFile, screensh
     await page.reload();
     await page.waitForLoadState('networkidle', { timeout: 30_000 });
   } catch (error) {
-    if (screenshotFile) await page.screenshot({ path: screenshotFile }).catch(() => {});
+    if (screenshotFile) {
+      await page.screenshot({ path: screenshotFile }).catch((shotError) => {
+        console.error(`Could not save the sign-in screenshot: ${shotError.message}`);
+      });
+    }
     await context.close();
     throw new Error(`Signing in as the demo account failed at ${page.url()}: ${error.message}`);
   }

@@ -11,6 +11,7 @@ Run the Actions workflow Demo Videos — Record Clips (`demo-videos.yml`) from t
 phone:
 
 - clips: `all`, or clip names separated by spaces (`peer-programming-goal-board user-guide`).
+- account: `member` (the default) or `admin`.
 - voice: leave the default, or use another Piper voice name (list below).
 
 Each clip is attached to the `demo-videos` release as `<clip>.mp4`, with `<clip>.vtt` (captions as a
@@ -31,11 +32,16 @@ data around it. Two things to know:
 - If it is an admin account, admin controls show in the clips. A plain member account films the way
   a member sees the app.
 
-Give the workflow that account's Clerk user id in one of these ways, first match wins:
+Store the two demo accounts' Clerk user ids as repository variables (Settings → Secrets and
+variables → Actions → Variables):
 
-1. The `demo_user_id` box when running the workflow.
-2. A GitHub repository secret `DEMO_VIDEO_CLERK_USER_ID`, so the box can stay empty.
-3. `DEMO_VIDEO_CLERK_USER_ID` in Infisical (production).
+| Variable | Account |
+|---|---|
+| `DEMO_VIDEO_CLERK_USER_ID` | The member demo account. Films the clips by default, and is the account Seed Demo seeds. |
+| `DEMO_VIDEO_CLERK_ADMIN_ID` | The admin demo account. Films the clips when `account` is set to `admin`, and is seeded as the admin tester. |
+
+Both workflows read them, so neither box has to be typed. A box filled in still wins for that run. A
+secret with the same name works too, and Infisical is read last.
 
 It also needs `CLERK_SECRET_KEY`, read from the GitHub secret of that name first and Infisical
 second. Infisical is optional: if it cannot be reached, the run carries on with the GitHub secrets.
