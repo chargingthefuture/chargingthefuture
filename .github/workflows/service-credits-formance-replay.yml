@@ -1,0 +1,69 @@
+name: ServiceCredits — Re-send Queued Formance Posts
+
+# Every ServiceCredits movement is written to the app's own ledger first, which is the record, and
+# then copied to Formance, the outside ledger. When the copy fails the movement still stands and is
+# queued. Every hour this asks production to re-send the queued copies, oldest first, with the same
+# reference they were first sent with, so Formance never records one twice (issue #2907). A re-send
+# that fails again stays queued for the next run.
+#
+# What it needs (Settings → Secrets and variables → Actions), the same two secrets the account-deletion
+# reclaim sweep uses:
+#   NEXT_PUBLIC_APP_URL — the production base URL.
+#   SERVICE_CREDITS_INTERNAL_TOKEN — must match the value the app runtime checks.
+#
+# The route answers counts only, never a member id or an amount, and this job prints only those counts.
+
+on:
+  schedule:
+    - cron: '41 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: service-credits-formance-replay
+  cancel-in-progress: false
+
+jobs:
+  replay:
+    name: Re-send queued Formance posts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call the replay route
+        env:
+          APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
+          SERVICE_CREDITS_INTERNAL_TOKEN: ${{ secrets.SERVICE_CREDITS_INTERNAL_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${APP_URL:-}" ]; then
+            echo "::warning::Formance replay skipped: NEXT_PUBLIC_APP_URL is not set in GitHub Actions secrets."
+            echo "Skipped: app URL not configured." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          if [ -z "${SERVICE_CREDITS_INTERNAL_TOKEN:-}" ]; then
+            echo "::warning::Formance replay skipped: SERVICE_CREDITS_INTERNAL_TOKEN is not set in GitHub Actions secrets. Queued Formance posts are not being re-sent until it is added here and matched in the app runtime."
+            echo "Skipped: SERVICE_CREDITS_INTERNAL_TOKEN not set; queued Formance posts are not being re-sent." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          code=$(curl -sS -o /tmp/formance-replay.json -w '%{http_code}' -X POST \
+            "${APP_URL%/}/api/internal/service-credits/formance-replay" \
+            -H "x-service-credits-internal-token: ${SERVICE_CREDITS_INTERNAL_TOKEN}" \
+            -H 'Content-Type: application/json' \
+            -d '{}')
+          echo "HTTP ${code}"
+          cat /tmp/formance-replay.json
+          echo
+          if [ "${code}" != "200" ]; then
+            echo "::error::Formance replay failed with HTTP ${code}. The response above says why."
+            exit 1
+          fi
+          {
+            echo "Formance replay ran."
+            echo ""
+            echo '```json'
+            cat /tmp/formance-replay.json
+            echo '```'
+            echo ""
+            echo "skipped: not_configured means Formance is not set up in the app runtime, so nothing was re-sent. remaining is how many are still queued."
+          } >> "$GITHUB_STEP_SUMMARY"

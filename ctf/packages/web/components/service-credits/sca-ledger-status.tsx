@@ -14,6 +14,18 @@ type FormanceStatus = {
   demoMode: boolean;
 };
 
+// Movements written to the app's ledger but not yet copied to Formance (issue #2907). An hourly job
+// re-sends them; this says how many are waiting and since when.
+type ReplayQueue = { queued: number; oldestQueuedAtIso: string | null };
+
+function queueLine(queue: ReplayQueue | null): string | null {
+  if (!queue) return null;
+  if (queue.queued === 0) return 'Every credit movement has been copied to Formance.';
+  const since = queue.oldestQueuedAtIso ? ` The oldest has waited since ${new Date(queue.oldestQueuedAtIso).toLocaleString()}.` : '';
+  const noun = queue.queued === 1 ? 'credit movement is' : 'credit movements are';
+  return `${queue.queued} ${noun} waiting to be copied to Formance. An hourly job re-sends them.${since}`;
+}
+
 // Read-only status of the external ledger (Formance) so the operator can see, from this page,
 // whether the mirror is wired up. Balances are authoritative in the app database; Formance is the
 // external mirror, so "not configured" is safe — operations still commit locally and queue for
@@ -23,6 +35,7 @@ export function ServiceCreditsLedgerStatus() {
   const { theme } = useTheme();
   const t = getServiceCreditsTokens(theme);
   const [status, setStatus] = useState<FormanceStatus | null>(null);
+  const [queue, setQueue] = useState<ReplayQueue | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -35,8 +48,11 @@ export function ServiceCreditsLedgerStatus() {
           if (!canceled) setLoadError(text);
           return;
         }
-        const data = (await res.json()) as { formance: FormanceStatus };
-        if (!canceled) setStatus(data.formance);
+        const data = (await res.json()) as { formance: FormanceStatus; queue?: ReplayQueue };
+        if (!canceled) {
+          setStatus(data.formance);
+          setQueue(data.queue ?? null);
+        }
       } catch (caught) {
         const text = failureText(caught, {
           area: 'service-credits',
@@ -102,6 +118,7 @@ export function ServiceCreditsLedgerStatus() {
           ledger operations commit locally and queue for reconciliation when Formance is reconnected.
         </p>
       )}
+      {queueLine(queue) ? <p style={{ color: t.MUTED, margin: '6px 0 0', lineHeight: 1.5 }}>{queueLine(queue)}</p> : null}
     </section>
   );
 }

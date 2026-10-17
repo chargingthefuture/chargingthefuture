@@ -184,6 +184,7 @@ Endpoint/contract gap: a prior route map line referenced `GET /api/service-credi
 Internal routes:
 
 - `POST /api/internal/service-credits/accounts/:accountId/deletion-reclaims/:deletionRequestId/execute`
+- `POST /api/internal/service-credits/formance-replay` — re-sends the Formance posts that failed (#2907). Same `x-service-credits-internal-token` gate as the reclaim route (503 when unset, 403 when wrong). Reads queued `service_credits_adapter_outbox` rows of the eight movement commands (`transfer.create`, `escrow.hold.create`, `escrow.release`, `escrow.refund`, `governance.mint.grant`, `governance.burn`, `treasury.fee.collect`, `dispute.adjustment.apply`), up to 100 a run, oldest first, re-posts each with its original reference and marks it `delivered`; a reference Formance already holds also counts as delivered, so nothing is recorded twice. A failure stays `queued` with its reason and one more attempt. `account.deletion.reclaim.execute` rows are left to the reclaim sweep. Production schema only. Answers counts only (`tried`, `delivered`, `alreadyRecorded`, `stillQueued`, `remaining`, or `skipped: 'not_configured'`). Called hourly by `service-credits-formance-replay.yml`. `GET /api/service-credits/admin/ledger-status` also answers `queue: { queued, oldestQueuedAtIso }`, shown on the admin ledger card.
 
 ### 3.3 Formance-First Adapter Seam Notes
 
@@ -295,7 +296,7 @@ Demo schema: `ctf/scripts/demo-seed/32-service-credits.mjs` turns community cred
 ## 9) Gaps and Known Technical Debt
 
 1. Role taxonomy for governance, treasury, and dispute operators is implemented as a flat admin role; a finer-grained split has not been carved out.
-2. Nothing re-posts `queued` rows in `service_credits_adapter_outbox` to Formance. Every ledger path writes one when the Formance post fails and commits the local ledger, but the reconciliation worker promised in the 2026-06-13 entry was never built; the only reader of the outbox is the deletion-reclaim sweep, which reads its own command alone. So the external mirror falls behind after the first failed post and does not catch up, though local balances stay correct. Building the replay worker is open as code review #2907, waiting on the owner.
+2. A queued Formance post for an account-deletion reclaim (`account.deletion.reclaim.execute`) is not re-sent by the replay job, because a queued row of that command is also the reclaim sweep's work queue. The other eight commands are re-sent hourly (since 2026-10-17, #2907). Demo-schema rows are not re-sent.
 3. Cross-plugin path attestation format is implemented as a structured field on transfers but has not been promoted to a canonical shared contract.
 4. Retention classes for dispute artifacts and treasury evidence follow platform defaults; a plugin-specific retention contract has not been published.
 5. `service_credits_disputes` has no resolution/closure state (no `status`/`resolved_at` column, and nothing marks a dispute resolved), unlike the skill-up and trust-transport dispute tables. So the admin `openDisputes` metric counts every dispute ever opened. A dispute-closure model (mark resolved when an adjustment is applied or an operator closes it) is the follow-up that would let `openDisputes` reflect only unresolved cases (GitHub #1479).
@@ -303,6 +304,8 @@ Demo schema: `ctf/scripts/demo-seed/32-service-credits.mjs` turns community cred
 ---
 
 ## 10) Change Log
+
+- 2026-10-17: **Formance catches up after an outage (code review #2907, owner decision).** Every ledger path left a `queued` outbox row when its Formance post failed, but nothing ever re-sent them, so Formance fell behind for good after the first failure. New `lib/service-credits/formance-replay.ts` re-sends them (see the internal route above), driven hourly by `service-credits-formance-replay.yml`. `postTransactionToFormance` now tells a reused reference (409, or `errorCode: CONFLICT`) from an outage (`FORMANCE_DUPLICATE_REFERENCE`), which is what makes a re-send safe. The admin ledger card says how many movements are waiting and since when. The app's own ledger was always the record and is unchanged. Tests: `lib/service-credits/formance-replay.test.ts`, `formance-duplicate-reference.test.ts`.
 
 - 2026-10-17: **Demo seed adds a community credit line for the demo owner** (`ctf/scripts/demo-seed/32-service-credits.mjs`), so the wallet's floor sentence and the Mutual Credit send option can be recorded in the demo schema. No route, schema or contract change.
 - 2026-10-15: **Dropped the legacy dispute adjustment columns (owner directive: unused columns go with a migration).**

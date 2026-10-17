@@ -619,3 +619,33 @@ contracts:
     purpose: trust_and_safety
     retentionClass: audit_long_lived
     idempotency: false
+
+  - pluginId: service-credits
+    command: adapter.outbox.replay
+    version: 1.0.0
+    description: >-
+      Re-send the ServiceCredits ledger posts Formance did not take (POST
+      /api/internal/service-credits/formance-replay, hourly from service-credits-formance-replay.yml).
+      Reads queued service_credits_adapter_outbox rows of the eight movement commands, oldest first,
+      re-posts each with its original reference, and marks it delivered; a reference Formance already
+      holds counts as delivered, so nothing is recorded twice. account.deletion.reclaim.execute rows are
+      left to the reclaim sweep. Production schema only. Moves no credits in the app's own ledger.
+    inputSchema: {}
+    outputSchema:
+      tried:
+        type: number
+      delivered:
+        type: number
+      alreadyRecorded:
+        type: number
+      stillQueued:
+        type: number
+      remaining:
+        type: number
+      skipped:
+        type: string
+    dataAccess:
+      - service_credits_adapter_outbox
+    purpose: external_ledger_reconciliation
+    retentionClass: transactional_long_lived
+    idempotency: true
