@@ -141,6 +141,15 @@ const ID = {
   contribSubmission2: 'ddd00000-0000-4000-8000-000000000037',
   raActive: 'ddd00000-0000-4000-8000-000000000038',
   raPending: 'ddd00000-0000-4000-8000-000000000039',
+  ppStandingCohort: 'ddd00000-0000-4000-8000-00000000003a',
+  ppGoalJob: 'ddd00000-0000-4000-8000-00000000003b',
+  ppGoalGroceries: 'ddd00000-0000-4000-8000-00000000003c',
+  ppTaskYards: 'ddd00000-0000-4000-8000-00000000003d',
+  ppTaskLicense: 'ddd00000-0000-4000-8000-00000000003e',
+  ppTaskAsk: 'ddd00000-0000-4000-8000-00000000003f',
+  ppTaskCourse: 'ddd00000-0000-4000-8000-000000000040',
+  ppTaskPantry: 'ddd00000-0000-4000-8000-000000000041',
+  ppTaskBus: 'ddd00000-0000-4000-8000-000000000042',
 };
 
 function sha256id(...parts) {
@@ -991,7 +1000,80 @@ async function seedPeerProgramming(c) {
     );
   }
 
+  await seedPeerProgrammingGoalBoard(c);
+
   console.log('  ✓ peer-programming');
+}
+
+// The goal board reads the single standing cohort (single-open-cohort mode is on by default), not
+// the weekly Demo-A cohort above, and opening the board never places anybody in it. So every real
+// demo account and both sample peers join the standing cohort here, and two sample goals give the
+// board cards in all three columns. Re-running resets those goals and cards to this state, so a
+// recording always starts from the same board. The real accounts own no goal, so they see
+// "+ Add your goal" and can take any card.
+async function seedPeerProgrammingGoalBoard(c) {
+  await c.query(
+    `INSERT INTO peer_programming_cohorts
+     (id, week_start_date, cohort_label, fallback_open, is_standing, assigned_by_user_id)
+     VALUES ($1::uuid, CURRENT_DATE, 'C1', TRUE, TRUE, $2)
+     ON CONFLICT DO NOTHING`,
+    [ID.ppStandingCohort, ADMIN],
+  );
+  const standing = await c.query(`SELECT id FROM peer_programming_cohorts WHERE is_standing = TRUE LIMIT 1`);
+  const cohortId = standing.rows[0]?.id;
+  if (!cohortId) {
+    throw new Error('peer-programming: no standing cohort after the insert; check uq_peer_programming_cohorts_standing in the demo schema');
+  }
+
+  for (const uid of [...REAL_USERS, PEER_1, PEER_2]) {
+    await c.query(
+      `INSERT INTO peer_programming_cohort_members (cohort_id, user_id)
+       VALUES ($1::uuid, $2)
+       ON CONFLICT (cohort_id, user_id) DO NOTHING`,
+      [cohortId, uid],
+    );
+  }
+
+  const goals = [
+    [ID.ppGoalJob, PEER_1, 'A yard jockey job near Dallas'],
+    [ID.ppGoalGroceries, PEER_2, "A week's groceries for three"],
+  ];
+  for (const [id, owner, title] of goals) {
+    await c.query(
+      `INSERT INTO peer_programming_goals (id, cohort_id, owner_user_id, title, status, closed_at)
+       VALUES ($1::uuid, $2::uuid, $3, $4, 'open', NULL)
+       ON CONFLICT (id) DO UPDATE SET cohort_id = EXCLUDED.cohort_id, owner_user_id = EXCLUDED.owner_user_id,
+         title = EXCLUDED.title, status = 'open', closed_at = NULL, updated_at = NOW()`,
+      [id, cohortId, owner, title],
+    );
+  }
+
+  // [id, goal, description, taken by, result, finished, helped]. A helped card is also kept (the
+  // owner's "It helped"); the pickup card is finished and waits on its owner.
+  const tasks = [
+    [ID.ppTaskYards, ID.ppGoalJob, 'Find three yards hiring near Dallas and add their numbers', null, null, false, false],
+    [ID.ppTaskLicense, ID.ppGoalJob, 'Find out what a yard jockey needs to be licensed in Texas', null, null, false, false],
+    [ID.ppTaskAsk, ID.ppGoalJob, 'Ask in Commons who has worked at a yard', PEER_2, null, false, false],
+    [ID.ppTaskCourse, ID.ppGoalJob, 'Find a free forklift safety course nearby', PEER_2, 'Two free courses through the county workforce center, both this month.', true, true],
+    [ID.ppTaskPantry, ID.ppGoalGroceries, 'List food pantries open on Saturday near the bus line', null, null, false, false],
+    [ID.ppTaskBus, ID.ppGoalGroceries, 'Check which grocery stores take orders for pickup', PEER_1, 'Two stores nearby take pickup orders with no fee over $35.', true, false],
+  ];
+  for (const [id, goalId, description, takenBy, result, finished, helped] of tasks) {
+    await c.query(
+      `INSERT INTO peer_programming_goal_tasks
+       (id, goal_id, description, taken_by_user_id, taken_at, result, finished_at, kept_at, helped)
+       VALUES ($1::uuid, $2::uuid, $3, $4::text,
+         CASE WHEN $4::text IS NULL THEN NULL ELSE NOW() - INTERVAL '2 hours' END,
+         $5::text,
+         CASE WHEN $6::boolean THEN NOW() - INTERVAL '1 hour' ELSE NULL END,
+         CASE WHEN $7::boolean THEN NOW() - INTERVAL '30 minutes' ELSE NULL END,
+         $7::boolean)
+       ON CONFLICT (id) DO UPDATE SET goal_id = EXCLUDED.goal_id, description = EXCLUDED.description,
+         taken_by_user_id = EXCLUDED.taken_by_user_id, taken_at = EXCLUDED.taken_at, result = EXCLUDED.result,
+         finished_at = EXCLUDED.finished_at, kept_at = EXCLUDED.kept_at, helped = EXCLUDED.helped, updated_at = NOW()`,
+      [id, goalId, description, takenBy, result, finished, helped],
+    );
+  }
 }
 
 async function seedSkillsTaxonomy(c) {
