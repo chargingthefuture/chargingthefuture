@@ -15,7 +15,8 @@ export default {
       do: async ({ page, highlight }) => {
         const search = page.getByPlaceholder('Search trade providers…');
         await search.click();
-        await search.pressSequentially('Alex', { delay: 60 });
+        // One change, not a key at a time: the list reloads on each change and drops later keys.
+        await search.fill('Alex');
         await page.getByText('Jordan Kim', { exact: true }).waitFor({ state: 'hidden', timeout: 20_000 });
         await highlight(page.getByText('Alex Rivera', { exact: true }).first());
       },
