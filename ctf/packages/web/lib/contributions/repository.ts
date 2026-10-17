@@ -37,6 +37,19 @@ export const GIFT_CARD_MAX_USD = 500;
 
 const GRANT_REASON = 'contributions_confirmed';
 
+// Deleting Contributions data removes the submissions but keeps the ServiceCredits grant record, so
+// the once-per-member star limit and the per-drive cap also read that record (#2977); otherwise
+// deleting and resubmitting reset both. The grant's ticket carries what the checks need:
+// `contribution-<submissionId>:<kind>:<cycleId or none>`. Grants made before this change carry only
+// the submission id and are counted from the submissions alone.
+function grantTicketId(submissionId: string, kind: string, cycleId: string | null): string {
+  return `contribution-${submissionId}:${kind}:${cycleId ?? 'none'}`;
+}
+
+const KEPT_STAR_GRANT_SQL = `SELECT 1 FROM service_credits_governance_events
+       WHERE event_type = 'mint_grant' AND target_user_id = $1 AND reason = '${GRANT_REASON}'
+         AND governance_ticket_id LIKE 'contribution-%:github_star:%'`;
+
 // --- row types (NUMERIC columns arrive from pg as strings) -------------------------------
 
 type SubmissionRow = {
@@ -432,7 +445,7 @@ export async function hasCreditedGithubStar(userId: string): Promise<boolean> {
     `SELECT EXISTS (
        SELECT 1 FROM contributions_submissions
        WHERE user_id = $1 AND kind = 'github_star' AND status = 'confirmed' AND credits_granted > 0
-     ) AS exists`,
+     ) OR EXISTS (${KEPT_STAR_GRANT_SQL}) AS exists`,
     [userId],
   );
 
@@ -445,7 +458,7 @@ async function hasCreditedGithubStarWithClient(client: PoolClient, userId: strin
        SELECT 1 FROM contributions_submissions
        WHERE user_id = $1 AND kind = 'github_star' AND status = 'confirmed'
          AND credits_granted > 0 AND id <> $2
-     ) AS exists`,
+     ) OR EXISTS (${KEPT_STAR_GRANT_SQL} AND governance_ticket_id NOT LIKE 'contribution-' || $2 || ':%') AS exists`,
     [userId, excludeSubmissionId],
   );
 
@@ -672,9 +685,15 @@ async function computeCycleCappedGrant(
   params: { userId: string; cycleId: string | null; computedCredits: number; cap: number },
 ): Promise<number> {
   const result = await client.query<{ already_granted: string }>(
-    `SELECT COALESCE(SUM(credits_granted), 0)::text AS already_granted
-     FROM contributions_submissions
-     WHERE user_id = $1 AND status = 'confirmed' AND cycle_id IS NOT DISTINCT FROM $2`,
+    // The larger of the two records: the submissions (complete before a deletion) and the kept
+    // ServiceCredits grants (complete for grants since #2977, and kept after a deletion).
+    `SELECT GREATEST(
+       (SELECT COALESCE(SUM(credits_granted), 0) FROM contributions_submissions
+         WHERE user_id = $1 AND status = 'confirmed' AND cycle_id IS NOT DISTINCT FROM $2),
+       (SELECT COALESCE(SUM(amount), 0) FROM service_credits_governance_events
+         WHERE event_type = 'mint_grant' AND target_user_id = $1 AND reason = '${GRANT_REASON}'
+           AND governance_ticket_id LIKE 'contribution-%:' || COALESCE($2::text, 'none'))
+     )::text AS already_granted`,
     [params.userId, params.cycleId],
   );
 
@@ -771,7 +790,7 @@ async function applyConfirmReview(
       targetUserId: row.user_id,
       amount: creditsGranted,
       grantReason: GRANT_REASON,
-      governanceTicketId: `contribution-${input.submissionId}`,
+      governanceTicketId: grantTicketId(input.submissionId, row.kind, cycleId),
       idempotencyKey: `contribution-${input.submissionId}`,
     });
     governanceEventId = grant.governanceEventId;

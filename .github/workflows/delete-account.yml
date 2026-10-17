@@ -103,7 +103,7 @@ jobs:
           cat /tmp/delete.json
           echo
           if [ "${code}" != "200" ]; then
-            echo "::error::Account delete failed (HTTP ${code}). Read the JSON above: code 'account_delete_not_configured' = ACCOUNT_DELETE_SECRET missing in the app runtime; HTTP 403 = the secret here does not match the app runtime value; code 'account_delete_failed' means the deletion itself threw — its 'step' (reclaim_request | data_deletion) and 'detail' fields say why."
+            echo "::error::Account delete failed (HTTP ${code}). Read the JSON above: code 'account_delete_not_configured' = ACCOUNT_DELETE_SECRET missing in the app runtime; HTTP 403 = the secret here does not match the app runtime value; code 'account_delete_failed' means the deletion itself threw — its 'step' (reclaim_request | data_deletion) and 'detail' fields say why; HTTP 502 with code 'account_delete_clerk_failed' means the data was deleted but the sign-in was not removed — 'clerkError' says why, and a re-run retries it."
             exit 1
           fi
           echo "Deleted account ${USER_ID} from ${TARGET_VALUE} schema: $(cat /tmp/delete.json)" >> "$GITHUB_STEP_SUMMARY"

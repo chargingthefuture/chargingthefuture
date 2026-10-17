@@ -158,7 +158,6 @@ export type FoundationNotificationEvent = {
 export type FoundationCapacityPolicy = {
   maxActiveThreadsPerUser: number;
   maxMessagesPerMinute: number;
-  maxSearchesPerMinute: number;
   maxQuoteTransitionsPerMinute: number;
   maxCallDurationMinutes: number;
   quotaState: 'green' | 'yellow' | 'orange' | 'red';

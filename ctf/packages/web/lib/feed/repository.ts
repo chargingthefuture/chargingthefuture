@@ -753,6 +753,15 @@ export function validateFeedConfigInput(input: FeedConfigInput): boolean {
   return renderModeAllowed && maxPageSizeAllowed && channelsAllowed;
 }
 
+// Region targeting is rejected (#2970): no timeline query compares a region, so an announcement
+// aimed at one region would show to every member.
+function isAcceptedTargeting(targeting: unknown): boolean {
+  if (targeting === undefined) return true;
+  if (typeof targeting !== 'object' || targeting === null || Array.isArray(targeting)) return false;
+  const regions = (targeting as { regions?: unknown }).regions;
+  return regions === undefined || (Array.isArray(regions) && regions.length === 0);
+}
+
 export function validateAnnouncementDraftInput(input: AnnouncementDraftInput): boolean {
   const title = normalizeText(input.title ?? '');
   const body = normalizeMultilineText(input.body ?? '');
@@ -765,9 +774,7 @@ export function validateAnnouncementDraftInput(input: AnnouncementDraftInput): b
   // contract, but that broke the real Create-draft flow, so targeting is intentionally not required.
   // When targeting IS supplied it must be a plain object; an array or other non-object is rejected.
   const targeting = input.targeting;
-  const targetingOk =
-    targeting === undefined
-    || (typeof targeting === 'object' && targeting !== null && !Array.isArray(targeting));
+  const targetingOk = isAcceptedTargeting(targeting);
 
   const checks = [
     title.length > 0 && title.length <= FEED_MAX_TITLE_LENGTH,

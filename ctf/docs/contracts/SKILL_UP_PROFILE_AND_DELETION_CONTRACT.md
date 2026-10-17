@@ -59,7 +59,7 @@ returns the first answer.
 
 ## What a deleted member leaves behind
 
-A cohort they trained keeps its row and its history; the learners in it keep theirs. Credits
+A cohort they trained keeps its row and its history; the learners in it keep theirs. A cohort they were training that is not completed goes back to needing a trainer (the scheduler placeholder holds it until somebody claims it), and its live learners have no assigned trainer, so they can leave and no trainer credits go to the removed account (#2937). Credits
 already disbursed stay where they were sent. A deposit that was still held comes back to the
 member's wallet first; if that refund fails, the deletion stops and can be run again, and a deposit
 already returned is not returned twice. A dispute they opened stays open or closed as it was,

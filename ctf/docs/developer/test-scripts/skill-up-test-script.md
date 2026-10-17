@@ -959,3 +959,16 @@ The following cases must produce the same data and UX outcome on both surfaces. 
 
 **1.** As a trainer or admin, release a milestone's credits for a learner. Sign in as that learner, open the 🔔 notifications tab in the Commons, and confirm a "A SkillUp milestone was approved and your credits were released." item appears (unread) with an "Open" pill to SkillUp.
 web ☐
+
+### LU-DEL-TRAINER — A deleted trainer's open cohort needs a trainer again (added 2026-10-17)
+
+**Role:** A trainer, a learner and an admin · **Surface:** web
+
+**Steps:**
+1. As the trainer, claim a cohort; as the learner, enroll in it.
+2. Delete the trainer's account.
+3. As admin, open `/admin/skill-up`.
+
+**Expected:** The cohort shows as needing a trainer and can be claimed again. The learner has no assigned trainer and can leave the cohort.
+
+Result: web ☐

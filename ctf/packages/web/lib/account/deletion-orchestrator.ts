@@ -20,6 +20,7 @@ import type { PoolClient } from 'pg';
 import { withDbTransaction } from 'lib/db/postgres';
 import { DIRECTORY_MEMBER_DELETION_REASON, removeClaimedDirectoryProfile } from 'lib/directory/repository';
 import { refundHeldDepositsBeforeDataDeletion } from 'lib/skill-up/repository';
+import { releaseTrainerCohortsForDeletion } from 'lib/skill-up/trainer-deletion';
 import { withdrawAnsweredCommentsForDeletion } from 'lib/fireside/repository';
 import { redactRawBugReportTextForDeletion } from 'lib/bug-reports/repository';
 import { logAccountAudit } from './audit';
@@ -178,6 +179,10 @@ async function runInTransactionSteps(client: PoolClient, userId: string, slugs: 
   // replaced with the redacted copy first, while the rows can still be found by the member's id.
   if (slugs.includes('bug-reports')) {
     await redactRawBugReportTextForDeletion(client, userId);
+  }
+  // A deleted trainer's open cohorts go back to needing a trainer, and their live learners lose them.
+  if (slugs.includes('skill-up')) {
+    await releaseTrainerCohortsForDeletion(client, userId);
   }
 }
 

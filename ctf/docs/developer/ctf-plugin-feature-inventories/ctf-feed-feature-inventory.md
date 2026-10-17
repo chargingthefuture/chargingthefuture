@@ -365,6 +365,7 @@ All three feed channels (announcements, questions, community) are shipped on web
 
 ## 11) Change Log
 
+- 2026-10-17: **Announcement region targeting is rejected (#2970, owner decision).** The timeline queries already match roles exactly (a member sees `member` and `all`; an admin also sees `admin`), but no query compares a region, so an announcement aimed at one region showed to every member. `validateAnnouncementDraftInput` now refuses a draft with a non-empty `targeting.regions`. No screen sets targeting. Test script FD-REGION.
 - 2026-10-17: **`feed.announcement.targeting.validate` is removed with its route (#2892).** See the Announcements inventory.
 
 - 2026-10-17: Demo seed module `ctf/scripts/demo-seed/20-commons.mjs` gives the demo Commons posts by other members, a quoted reply and an announcement to react to (test cases FD-10, FD-11, FD-14).

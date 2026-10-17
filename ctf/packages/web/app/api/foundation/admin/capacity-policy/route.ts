@@ -27,7 +27,6 @@ export async function GET() {
 type CapacityPolicyPayload = {
   maxActiveThreadsPerUser?: number;
   maxMessagesPerMinute?: number;
-  maxSearchesPerMinute?: number;
   maxQuoteTransitionsPerMinute?: number;
   maxCallDurationMinutes?: number;
   quotaState?: 'green' | 'yellow' | 'orange' | 'red';
@@ -36,7 +35,6 @@ type CapacityPolicyPayload = {
 type ValidatedCapacityPolicyPayload = {
   maxActiveThreadsPerUser: number;
   maxMessagesPerMinute: number;
-  maxSearchesPerMinute: number;
   maxQuoteTransitionsPerMinute: number;
   maxCallDurationMinutes: number;
   quotaState: 'green' | 'yellow' | 'orange' | 'red';
@@ -48,7 +46,6 @@ function validateCapacityPolicyPayload(payload: CapacityPolicyPayload): Validate
   if (
     !Number.isInteger(payload.maxActiveThreadsPerUser)
     || !Number.isInteger(payload.maxMessagesPerMinute)
-    || !Number.isInteger(payload.maxSearchesPerMinute)
     || !Number.isInteger(payload.maxQuoteTransitionsPerMinute)
     || !Number.isInteger(payload.maxCallDurationMinutes)
     || (payload.quotaState !== 'green' && payload.quotaState !== 'yellow' && payload.quotaState !== 'orange' && payload.quotaState !== 'red')
@@ -93,7 +90,6 @@ export async function PUT(request: Request) {
       actorUserId: gate.auth.userId,
       maxActiveThreadsPerUser: validatedPayload.maxActiveThreadsPerUser,
       maxMessagesPerMinute: validatedPayload.maxMessagesPerMinute,
-      maxSearchesPerMinute: validatedPayload.maxSearchesPerMinute,
       maxQuoteTransitionsPerMinute: validatedPayload.maxQuoteTransitionsPerMinute,
       maxCallDurationMinutes: validatedPayload.maxCallDurationMinutes,
       quotaState: validatedPayload.quotaState,

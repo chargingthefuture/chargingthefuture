@@ -33,4 +33,9 @@ describe('validateAnnouncementDraftInput', () => {
       validateAnnouncementDraftInput({ ...base, targeting: [] as unknown as undefined }),
     ).toBe(false);
   });
+
+  it('rejects region targeting, which no timeline query applies', () => {
+    expect(validateAnnouncementDraftInput({ ...base, targeting: { regions: ['NY'] } as unknown as undefined })).toBe(false);
+    expect(validateAnnouncementDraftInput({ ...base, targeting: { roles: ['member'], regions: [] } as unknown as undefined })).toBe(true);
+  });
 });

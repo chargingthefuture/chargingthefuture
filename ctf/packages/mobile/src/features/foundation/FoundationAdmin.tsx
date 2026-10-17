@@ -31,8 +31,7 @@ const QUOTA_STATES: { value: QuotaState; color: string }[] = [
 const NUMERIC_FIELDS: { key: NumericKey; label: string }[] = [
   { key: 'maxActiveThreadsPerUser', label: 'Max active threads / user' },
   { key: 'maxMessagesPerMinute', label: 'Max messages / min' },
-  { key: 'maxSearchesPerMinute', label: 'Max searches / min' },
-  { key: 'maxQuoteTransitionsPerMinute', label: 'Max quote transitions / min' },
+  { key: 'maxQuoteTransitionsPerMinute', label: 'Max quote requests / min' },
   { key: 'maxCallDurationMinutes', label: 'Max call duration (min)' },
 ];
 

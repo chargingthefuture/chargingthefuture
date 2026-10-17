@@ -833,3 +833,16 @@ For completeness: the parity contract entry in `config/plugin-parity-contracts.j
 - **`SHOW_DISMISS_BUTTON` flag.** The "Not now" dismiss button on the fundraiser banner may be hidden in the current build (the flag defaults to hidden per the 2026-07-01 change log entry, then restored per 2026-07-18). If the button is not visible, cases CONT-9, CONT-10, and CONT-11 are blocked ⛔ — note the flag state and do not file the missing button as a bug unless the flag is confirmed to be set to show.
 - **Mobile admin is read-only for drive and config.** Creating or editing a drive cycle and editing config knobs is done on the web admin dashboard only — but this gap is now moot since the Android surface has been fully removed.
 - **`bannerSnoozeMonths` default migration.** If testing against a database that was created before 2026-07-19, the production config row may still carry the old 6-month default. A one-time migration was included in the change log; if the value shows as 6 in a freshly seeded environment, that is a seed/migration issue to investigate but is called out here as a known transition artifact.
+
+### CT-KEPT — Deleting Contributions data keeps the star limit (added 2026-10-17)
+
+**Role:** A member and an admin · **Surface:** web
+
+**Steps:**
+1. As the member, submit a GitHub star; as admin, confirm it so credits are granted.
+2. As the member, delete Contributions data from the account area.
+3. Submit a GitHub star again; as admin, confirm it.
+
+**Expected:** The second star earns no credits, with the note that the member already received credits for an earlier GitHub star. The drive cap counts the first grant too.
+
+Result: web ☐

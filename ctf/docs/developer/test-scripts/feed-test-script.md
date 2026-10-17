@@ -1390,3 +1390,13 @@ The following cases are the highest-signal functional checks that must remain co
 1. **LLM provider failover not contractualized.** The Q&A pipeline runs against a single configured LLM provider. If that provider is unavailable the answer generation fails. Provider failover and confidence-thresholding policy are tracked as future work — a failure here is expected behavior, not a bug.
 
 2. **Deprecated contract YAML files.** Separate `ANNOUNCEMENTS_PLUGIN_*_CONTRACTS.yaml` files remain in the repository as intentional historical reference. Their presence is not a bug; they are a known cleanup item.
+
+### FD-REGION — Region targeting is refused (added 2026-10-17)
+
+**Role:** admin · **Surface:** API only (no screen sets targeting)
+
+**Steps:** Create an announcement draft through `POST /api/feed/admin/announcements` with `targeting: { "regions": ["NY"] }`.
+
+**Expected:** The draft is refused as invalid. The same request without `regions` is accepted.
+
+Result: web ☐

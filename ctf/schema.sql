@@ -2134,7 +2134,6 @@ CREATE TABLE IF NOT EXISTS foundation_capacity_policies (
   singleton_key BOOLEAN PRIMARY KEY DEFAULT TRUE,
   max_active_threads_per_user INTEGER NOT NULL DEFAULT 20,
   max_messages_per_minute INTEGER NOT NULL DEFAULT 20,
-  max_searches_per_minute INTEGER NOT NULL DEFAULT 40,
   max_quote_transitions_per_minute INTEGER NOT NULL DEFAULT 20,
   max_call_duration_minutes INTEGER NOT NULL DEFAULT 45,
   quota_state TEXT NOT NULL DEFAULT 'green' CHECK (quota_state IN ('green', 'yellow', 'orange', 'red')),
@@ -2144,7 +2143,6 @@ CREATE TABLE IF NOT EXISTS foundation_capacity_policies (
 ALTER TABLE IF EXISTS foundation_capacity_policies ADD COLUMN IF NOT EXISTS singleton_key BOOLEAN DEFAULT TRUE;
 ALTER TABLE IF EXISTS foundation_capacity_policies ADD COLUMN IF NOT EXISTS max_active_threads_per_user INTEGER NOT NULL DEFAULT 20;
 ALTER TABLE IF EXISTS foundation_capacity_policies ADD COLUMN IF NOT EXISTS max_messages_per_minute INTEGER NOT NULL DEFAULT 20;
-ALTER TABLE IF EXISTS foundation_capacity_policies ADD COLUMN IF NOT EXISTS max_searches_per_minute INTEGER NOT NULL DEFAULT 40;
 ALTER TABLE IF EXISTS foundation_capacity_policies ADD COLUMN IF NOT EXISTS max_quote_transitions_per_minute INTEGER NOT NULL DEFAULT 20;
 ALTER TABLE IF EXISTS foundation_capacity_policies ADD COLUMN IF NOT EXISTS max_call_duration_minutes INTEGER NOT NULL DEFAULT 45;
 ALTER TABLE IF EXISTS foundation_capacity_policies ADD COLUMN IF NOT EXISTS quota_state TEXT DEFAULT 'green';
@@ -2162,7 +2160,6 @@ CREATE TABLE IF NOT EXISTS foundation_capacity_policy_events (
   policy_version INTEGER NOT NULL UNIQUE,
   max_active_threads_per_user INTEGER NOT NULL,
   max_messages_per_minute INTEGER NOT NULL,
-  max_searches_per_minute INTEGER NOT NULL,
   max_quote_transitions_per_minute INTEGER NOT NULL,
   max_call_duration_minutes INTEGER NOT NULL,
   quota_state TEXT NOT NULL CHECK (quota_state IN ('green', 'yellow', 'orange', 'red')),
@@ -2173,7 +2170,6 @@ ALTER TABLE IF EXISTS foundation_capacity_policy_events ADD COLUMN IF NOT EXISTS
 ALTER TABLE IF EXISTS foundation_capacity_policy_events ADD COLUMN IF NOT EXISTS policy_version INTEGER;
 ALTER TABLE IF EXISTS foundation_capacity_policy_events ADD COLUMN IF NOT EXISTS max_active_threads_per_user INTEGER;
 ALTER TABLE IF EXISTS foundation_capacity_policy_events ADD COLUMN IF NOT EXISTS max_messages_per_minute INTEGER;
-ALTER TABLE IF EXISTS foundation_capacity_policy_events ADD COLUMN IF NOT EXISTS max_searches_per_minute INTEGER;
 ALTER TABLE IF EXISTS foundation_capacity_policy_events ADD COLUMN IF NOT EXISTS max_quote_transitions_per_minute INTEGER;
 ALTER TABLE IF EXISTS foundation_capacity_policy_events ADD COLUMN IF NOT EXISTS max_call_duration_minutes INTEGER;
 ALTER TABLE IF EXISTS foundation_capacity_policy_events ADD COLUMN IF NOT EXISTS quota_state TEXT;
