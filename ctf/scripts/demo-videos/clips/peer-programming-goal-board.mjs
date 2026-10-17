@@ -8,7 +8,9 @@ export default {
       speak: 'This is the goal board in Peer Programming. Each card is one small task toward somebody else\'s goal.',
       do: async ({ page, app }) => {
         await page.goto(app('/apps/peer-programming?tab=goals'));
-        await page.waitForLoadState('networkidle');
+        // The board only renders for a member of a cohort; waiting on its first column fails here,
+        // with a screenshot, rather than three steps later.
+        await page.getByText('Up for grabs').first().waitFor({ timeout: 20_000 });
       },
     },
     {

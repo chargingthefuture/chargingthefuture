@@ -109,6 +109,10 @@ async function recordClip(browser, clip, storageFile) {
     try {
       if (step.do) await step.do(tools);
     } catch (error) {
+      // What the browser showed when the step gave up; kept in the run artifact.
+      await page.screenshot({ path: join(outDir, `${clip.slug}-failure.png`) }).catch((shotError) => {
+        console.error(`Could not save the failure screenshot for ${clip.slug}: ${shotError.message}`);
+      });
       await context.close();
       throw new Error(`Clip ${clip.slug}, step ${index + 1} ("${step.say.slice(0, 50)}") failed on screen: ${error.message}`);
     }
