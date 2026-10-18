@@ -39,7 +39,7 @@ function BookedCard({ onReset }: { onReset: () => void }) {
         <CheckCircle size={20} style={{ color: "#22C55E" }} />
         <div style={{ fontSize: 16, fontWeight: 700, color: "#22C55E" }}>Request submitted!</div>
       </div>
-      <div style={{ fontSize: 13, color: t.SUBTLE, marginTop: 6 }}>Your request is being matched with nearby drivers.</div>
+      <div style={{ fontSize: 13, color: t.SUBTLE, marginTop: 6 }}>Your request is now visible to community members who can offer to help. Offers appear on the Tracking tab.</div>
       <button type="button" onClick={onReset} style={{ marginTop: 12, padding: "8px 16px", borderRadius: 8, background: t.BORDER, border: `1px solid ${t.BORDER_HI}`, color: t.SUBTLE, fontSize: 13, cursor: "pointer" }}>
         Book Another
       </button>

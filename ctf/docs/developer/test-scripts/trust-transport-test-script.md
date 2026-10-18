@@ -173,7 +173,7 @@ Result: web ☐
 1. Open a trip from your request list.
 2. Navigate to the **Tracking** tab (labeled "Tracking", not "Live Tracking").
 
-**Expected:** The tab shows the current trip status as a text/state label derived from manual status updates. There is no "live map" copy. There is no claim of real-time GPS tracking.
+**Expected:** The tab shows the current trip status as a text/state label derived from manual status updates. There is no "live map" copy. There is no claim of real-time GPS tracking. The message under the card matches the status: an open request says it is waiting for a driver; an accepted or in-progress trip says the driver is on the way; a delivered trip asks you to confirm below; a completed trip says it is complete; a canceled request says it was canceled. A completed or canceled trip never says the driver is on the way.
 
 Result: web ☐
 
