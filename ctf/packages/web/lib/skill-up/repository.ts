@@ -322,7 +322,7 @@ export async function listCohorts(filter: CohortFilter) {
 
   const whereSql = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
 
-  const result = await queryDb<CohortRow & { active_enrollments: string }>(
+  const result = await queryDb<CohortRow & { active_enrollments: string; trainer_name: string | null }>(
     `SELECT
       c.id::text,
       c.title,
@@ -345,8 +345,13 @@ export async function listCohorts(filter: CohortFilter) {
       c.source_job_title_id::text AS source_job_title_id,
       c.source_sector,
       COALESCE(e.active_enrollments, 0)::text AS active_enrollments,
-      COALESCE(m.milestone_count, 0)::text AS milestone_count
+      COALESCE(m.milestone_count, 0)::text AS milestone_count,
+      NULLIF(t.display_name, '') AS trainer_name
      FROM skill_up_cohorts c
+     -- The cohort's trainer is the trainer who owns it, the same reading the trainer list uses for
+     -- its cohort count. An admin-built cohort or one the scheduler still owns has no trainer row,
+     -- so the card says "Trainer TBD".
+     LEFT JOIN skill_up_trainers t ON t.user_id = c.created_by_user_id
      LEFT JOIN (
        SELECT cohort_id, COUNT(*)::int AS active_enrollments
        FROM skill_up_enrollments
@@ -365,6 +370,7 @@ export async function listCohorts(filter: CohortFilter) {
 
   return result.rows.map((row) => ({
     ...mapCohort(row),
+    trainerName: row.trainer_name,
     seatsAvailable: Number(row.seats) - Number(row.active_enrollments),
   }));
 }
