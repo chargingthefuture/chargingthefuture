@@ -224,12 +224,28 @@ function TrackingCardHeader({ route, status, settlementLabel, acceptedLabel }: {
   );
 }
 
-function TrackingStatusMessage({ awaitingDriver }: { awaitingDriver: boolean }) {
+// "On the way" is only true while a driver has the trip; a finished or canceled trip says so, and a
+// disputed or frozen one shows nothing beyond its status badge.
+function trackingStatusMessage(status: string, awaitingDriver: boolean, awaitingCompletionConfirmation: boolean): string | null {
+  if (awaitingDriver) return "Waiting for a driver to accept your request.";
+  const normalized = status.toLowerCase();
+  if (normalized === "accepted" || normalized === "in_progress") {
+    return "Your driver is on the way. Status updates as they mark progress — message them on the Direct Line for specifics.";
+  }
+  if (normalized === "completed") {
+    return awaitingCompletionConfirmation
+      ? "Your driver marked this trip delivered. Confirm below once you have arrived."
+      : "This trip is complete.";
+  }
+  if (normalized === "canceled") return "This request was canceled.";
+  return null;
+}
+
+function TrackingStatusMessage({ status, awaitingDriver, awaitingCompletionConfirmation }: { status: string; awaitingDriver: boolean; awaitingCompletionConfirmation: boolean }) {
   const { theme } = useTheme();
   const t = getTrustTransportTokens(theme);
-  const message = awaitingDriver
-    ? "Waiting for a driver to accept your request."
-    : "Your driver is on the way. Status updates as they mark progress — message them on the Direct Line for specifics.";
+  const message = trackingStatusMessage(status, awaitingDriver, awaitingCompletionConfirmation);
+  if (!message) return null;
   return (
     <div style={{ padding: "48px 20px", borderRadius: 12, background: "rgba(255,255,255,0.02)", border: `1px solid ${t.BORDER}`, textAlign: "center", color: t.SUBTLE, fontSize: 13, marginBottom: 16, lineHeight: 1.5 }}>
       {message}
@@ -307,7 +323,7 @@ function TrackingCard({ request, onChat, onAccepted, onCancelled, onCompletionCo
   return (
     <div style={{ padding: "24px", borderRadius: 16, background: `${t.ACCENT}08`, border: `1px solid ${t.ACCENT}30`, marginBottom: 16 }}>
       <TrackingCardHeader route={model.route} status={model.status} settlementLabel={ttSettlementLabel(request.priceCurrency, request.priceAmount)} acceptedLabel={acceptedCurrenciesBadgeLabel(request.acceptedCurrencies)} />
-      <TrackingStatusMessage awaitingDriver={model.awaitingDriver} />
+      <TrackingStatusMessage status={model.status} awaitingDriver={model.awaitingDriver} awaitingCompletionConfirmation={model.awaitingCompletionConfirmation} />
       <SettlementFailedNotice show={request.tripSettlementFailed} />
       {model.awaitingDriver && <RequestOffers requestId={request.id} onAccepted={onAccepted} />}
       {model.awaitingCompletionConfirmation && <TrackingCompletion request={request} onCompletionConfirmed={onCompletionConfirmed} />}
