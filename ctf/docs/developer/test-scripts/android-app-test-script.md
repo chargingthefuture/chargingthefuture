@@ -234,6 +234,14 @@ The caller needs enough ServiceCredits for a few blocks.
 7. Join a room on Chyme, switch to Account & Data, and sign out. Go back to Chyme: you are not in
    the room as a member and the Android "Chyme live audio" notification is gone.
 
+## AN-7c — Switch to 3.1 and back to 3.0
+
+1. Open the account screen (gear) and tap **Switch to 3.1** in the Settings card. Expect the 3.1 home:
+   forest green and gold, dark, the date above "Today in the Avenhood", and the tab bar.
+2. Tap each tab. Press the phone's back button on any tab but Today: it returns to Today.
+3. On Me, tap **Account and data**, then come back; tap **Back to 3.0** and expect the Apps screen.
+4. Open the web app on the same account: it shows the same choice.
+
 ## AN-8 — Blocked members
 
 1. Open the **Blocked members** pill.

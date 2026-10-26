@@ -9,7 +9,7 @@
 
 | | |
 |---|---|
-| **Surface** | `/account/data` (Your Data & Privacy) |
+| **Surface** | `/account/data` (Your Data & Privacy), and `/account` for AD-10 |
 | **Visibility** | Any signed-in identity (including unlock-pending) |
 | **Roles to test** | member |
 | **Surfaces** | web (phone-width layout) |
@@ -193,3 +193,19 @@ screen then says the sign-in could not be removed, gives that reason, and points
 instead of saying the sign-in is gone. The leftover account is cleared through the operator
 `Delete Account (manual)` workflow.
 **Result:** web ☐ · android ☐ — notes:
+
+## AD-10 · Switch to 3.1 and back to 3.0
+
+**Role:** member · **Precondition:** signed in and approved, on 3.0.
+**Steps:**
+1. Open `/account` and find the Settings card. Tap **Switch to 3.1**.
+2. On the home screen, tap each tab along the bottom: Today, People, the round + button, Activity, Me.
+3. Press the browser's back button after moving between two tabs.
+4. Open `/apps/directory/invites` and one invite's page from it, then come back to `/`.
+5. On the Me tab, tap **Back to 3.0**.
+**Expected:** Step 1 lands on the 3.1 home: forest green and gold, dark, the date above "Today in the
+Avenhood", and the tab bar. Each tab shows its title; Me shows your handle and Back to 3.0, and the
+others say the screen is still being built. The address carries the tab (`/?tab=people`), and back
+returns to the tab before. The invite wall and the invite page open and work as before. Back to 3.0
+returns to the 3.0 home. Signing in on another device or the Android app shows the same choice.
+**Result:** web ☐ — notes:

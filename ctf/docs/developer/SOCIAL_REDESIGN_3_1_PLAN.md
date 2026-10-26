@@ -141,8 +141,9 @@ Unlock stops being the gate for most of the app.
 | Commons | Dissolves into Today. Announcements become one pinned card; @comic becomes Ask the architect; the gated channel becomes the Weavers room |
 | Direct Lines | The name and separate chat screens go; conversations open inside their cards |
 | PeerProgramming | Goals and tasks are Ask cards; board columns go; cohorts show as a "with you this week" card |
-| SocketRelay, LightHouse, Mutual Time, TrustTransport | Cards in Today, full features opened in place; tiles in Me |
+| SocketRelay, LightHouse, Mutual Time, TrustTransport | Cards in Today, full features opened in place; tiles in Me. LightHouse listings are sage Offer cards and the Me tile is "A place to stay" |
 | Foundation | Contact route for People; provider side in Me |
+| Directory invite wall | Unchanged and still working: `/apps/directory/invites`, each invite's own page, the sign-in rule in `lib/directory/invite-access.ts`, and the public feed `/api/directory/invites/public` that the blog's invite row and the landing page read. Every address blog posts and Quora answers link to keeps answering. New invites also show as brass Story cards in Today, opening the invite's page |
 | Directory, SkillsHunt | People screen; Wanted card leads to the current round; the scout leaderboard is removed with its code and data; missions stay; each member sees their own nomination count |
 | Workforce, GDP | Our numbers card and tile; full report one tap away |
 | Skills Taxonomy | No page; the list behind prompts, search and matches |
