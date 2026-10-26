@@ -78,7 +78,7 @@ export interface Cohort {
   id: string;
   title: string;
   track?: string;
-  trainerName?: string;
+  trainerName?: string | null;
   seatsAvailable?: number;
   seats?: number;
   requiredCredits?: number;
