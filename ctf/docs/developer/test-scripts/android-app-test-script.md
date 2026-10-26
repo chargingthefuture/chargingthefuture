@@ -240,7 +240,7 @@ The caller needs enough ServiceCredits for a few blocks.
    top right of the Apps screen.
 2. Open the same account on the web and compare with its account button there.
 
-Expect a colored pattern, never the photo, and the same pattern on Android and the web.
+Expect a small landscape or cut-paper picture, never the photo, and the same picture on Android and the web.
 
 ## AN-8 — Blocked members
 

@@ -12,6 +12,11 @@ describe('generated avatars', () => {
     expect(pictures.size).toBeGreaterThan(100);
   });
 
+  it('draws both kinds, landscapes and cut paper', () => {
+    const kinds = new Set(Array.from({ length: 50 }, (_, i) => seAvatar(`user_${i}`).kind));
+    expect(kinds).toEqual(new Set(['landscape', 'paper']));
+  });
+
   it('writes a data address with nothing taken from the account id', () => {
     const uri = seAvatarDataUri('"><script>alert(1)</script>');
     expect(uri.startsWith('data:image/svg+xml,')).toBe(true);

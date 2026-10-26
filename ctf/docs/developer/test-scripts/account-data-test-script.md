@@ -203,7 +203,7 @@ instead of saying the sign-in is gone. The leftover account is cleared through t
 2. Open `/account`. Look at the Identity card's account button, then open it and choose Manage
    account.
 3. Sign out, sign in as a second member, and repeat step 1.
-**Expected:** Each place shows a colored square-in-a-circle pattern, never the Clerk photo. The same
+**Expected:** Each place shows a small landscape or a cut-paper picture in earth colors, never the Clerk photo. The same
 member gets the same pattern in every place and after a reload; the second member's differs. Clerk's
 menu and Manage account show no photo and no upload or remove control. The Identity card reads
 "Your name, username, and email".

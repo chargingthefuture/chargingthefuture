@@ -1,22 +1,30 @@
-import { SE_AVATAR_VIEWBOX, seAvatar } from '@ctf/shared';
+import { SE_AVATAR_VIEWBOX, seAvatar, type SeAvatarStroke } from '@ctf/shared';
 
-// A member's generated picture: a pattern from a hash of their account id (see
-// packages/shared/src/design/se-avatar.ts). Decorative, so screen readers skip it; the handle
-// beside it carries the name.
+// A member's generated picture: a small landscape or cut paper drawn from a hash of their account
+// id (see packages/shared/src/design/se-avatar.ts). Decorative, so screen readers skip it; the
+// handle beside it carries the name.
+function strokeProps(stroke: SeAvatarStroke | null) {
+  return stroke
+    ? { stroke: stroke.stroke, strokeWidth: stroke.strokeWidth, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }
+    : {};
+}
+
 export function SeAvatar({ accountId, size = 40, className }: { accountId: string; size?: number; className?: string }) {
-  const { bg, fg, d, rotate } = seAvatar(accountId);
-  const half = SE_AVATAR_VIEWBOX / 2;
+  const v = SE_AVATAR_VIEWBOX;
   return (
     <svg
       width={size}
       height={size}
-      viewBox={`0 0 ${SE_AVATAR_VIEWBOX} ${SE_AVATAR_VIEWBOX}`}
+      viewBox={`0 0 ${v} ${v}`}
       aria-hidden="true"
       className={className}
       style={{ borderRadius: '50%', display: 'block' }}
     >
-      <rect width={SE_AVATAR_VIEWBOX} height={SE_AVATAR_VIEWBOX} fill={bg} />
-      <path d={d} fill={fg} transform={`rotate(${rotate} ${half} ${half})`} />
+      {seAvatar(accountId).shapes.map((s, i) => {
+        if (s.type === 'rect') return <rect key={i} width={v} height={v} fill={s.fill} />;
+        if (s.type === 'circle') return <circle key={i} cx={s.cx} cy={s.cy} r={s.r} fill={s.fill ?? 'none'} {...strokeProps(s.stroke)} />;
+        return <path key={i} d={s.d} fill={s.fill ?? 'none'} opacity={s.opacity} {...strokeProps(s.stroke)} />;
+      })}
     </svg>
   );
 }
