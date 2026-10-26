@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import '@fontsource-variable/dm-sans/opsz.css';
-import { SE_TABS, type SeTab } from '@ctf/shared';
+import { SE_AVEN_DEFINITION, SE_AVENHOOD, SE_AVENHOOD_DEFINITION, SE_TABS, type SeTab } from '@ctf/shared';
 import type { ShellCurrentUser } from '../community-shell/shell-types';
 import { SeTabBar } from './se-tab-bar';
 import { seThemeVars } from './se-theme-vars';
@@ -21,11 +21,37 @@ function readTab(): SeTab {
 
 const TODAY_DATE = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
-function ScreenHeader({ eyebrow, title }: { eyebrow?: string; title: string }) {
+function ScreenHeader({ title }: { title: string }) {
   return (
     <header className={styles.header}>
-      {eyebrow ? <span className={styles.eyebrow}>{eyebrow}</span> : null}
       <h1 className={styles.title}>{title}</h1>
+    </header>
+  );
+}
+
+// "Today in the Avenhood", with the word itself a button that opens its definition in place.
+function TodayHeader() {
+  const [open, setOpen] = useState(false);
+  return (
+    <header className={styles.header}>
+      <span className={styles.eyebrow}>{TODAY_DATE.format(new Date())}</span>
+      <h1 className={styles.title}>
+        Today in the{' '}
+        <button
+          type="button"
+          className={styles.termButton}
+          aria-expanded={open}
+          aria-controls="se-avenhood-definition"
+          onClick={() => setOpen((value) => !value)}
+        >
+          {SE_AVENHOOD}
+        </button>
+      </h1>
+      {open ? (
+        <p id="se-avenhood-definition" className={styles.definition}>
+          {SE_AVENHOOD_DEFINITION}
+        </p>
+      ) : null}
     </header>
   );
 }
@@ -48,6 +74,12 @@ function MeScreen({ currentUser, onBack, saving }: { currentUser: ShellCurrentUs
       <ScreenHeader title="Me" />
       <section className={styles.card}>
         <span className={styles.handle}>{currentUser.displayName}</span>
+      </section>
+      <section className={styles.card}>
+        <p className={styles.cardLabel}>About</p>
+        <p className={styles.cardTitle}>The {SE_AVENHOOD}</p>
+        <p className={styles.emptyText}>{SE_AVENHOOD_DEFINITION}</p>
+        <p className={styles.emptyText}>{SE_AVEN_DEFINITION}</p>
       </section>
       <section className={styles.card}>
         <p className={styles.cardLabel}>Settings</p>
@@ -88,7 +120,7 @@ export function SeAppFrame({ currentUser }: { currentUser: ShellCurrentUser }) {
   return (
     <div className={styles.frame} style={seThemeVars()}>
       <main className={styles.screen}>
-        {tab === 'today' ? <ScreenHeader eyebrow={TODAY_DATE.format(new Date())} title="Today in the Avenhood" /> : null}
+        {tab === 'today' ? <TodayHeader /> : null}
         {tab === 'people' ? <ScreenHeader title="People" /> : null}
         {tab === 'new' ? <ScreenHeader title="New" /> : null}
         {tab === 'activity' ? <ScreenHeader title="Activity" /> : null}

@@ -17,7 +17,7 @@ page: half an hour a day, given to each other, counted as days won back together
 | Word | Meaning |
 | --- | --- |
 | Skills Economy | The app |
-| Avenhood | The community, and the idea: a distributed peoplehood connected across borders, trading skills and building lives beyond exploitation, without waiting for the world to become safe first (working definition) |
+| Avenhood | The community, and the idea: "A distributed peoplehood of people connected across borders, trading skills and building lives beyond exploitation—without waiting for the world to become safe first." The app's text is `SE_AVENHOOD_DEFINITION` in `ctf/packages/shared/src/design/se-words.ts` |
 | Aven | One member |
 | System Architect | The owner's title, and the label on every admin entry the owner sees. Route names in code stay |
 | One Percent | The paid tier only. Never a measure of time |
@@ -25,6 +25,11 @@ page: half an hour a day, given to each other, counted as days won back together
 Home screen title: "Today in the Avenhood". Days won card: "Days the Avenhood has won". Presence:
 "3 Avens here". Me: "Aven since June 2026". Signed-out hero: "Skills Economy is where the Avenhood
 meets", ending with the mission line. Never "family" or "home" as a promise.
+
+The definition is in the app in three places, all read from `se-words.ts`: tapping "Avenhood" in the
+Today title opens it in place; the About card on Me carries it with "An Aven is one member of the
+Avenhood."; and the signed-out Today, when it is built, opens with it as its first line.
+lagatos.com is the address only and carries no meaning of its own.
 
 ## Screens
 

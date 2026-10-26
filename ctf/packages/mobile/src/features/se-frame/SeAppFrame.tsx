@@ -4,7 +4,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { BackHandler, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { seTheme, type SeTab, type SeThemeTokens } from '@ctf/shared';
+import { SE_AVEN_DEFINITION, SE_AVENHOOD, SE_AVENHOOD_DEFINITION, seTheme, type SeTab, type SeThemeTokens } from '@ctf/shared';
 import { useAuth } from '../../auth/auth-context';
 import { SeTabBar } from './SeTabBar';
 import { SE_FONT } from './fonts';
@@ -13,7 +13,7 @@ import { useInterfaceVersion } from './interface-version';
 const TODAY_DATE = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
 const TITLES: Record<SeTab, string> = {
-  today: 'Today in the Avenhood',
+  today: `Today in the ${SE_AVENHOOD}`,
   people: 'People',
   new: 'New',
   activity: 'Activity',
@@ -26,6 +26,7 @@ export function SeAppFrame({ onOpenAccount }: { onOpenAccount: () => void }) {
   const { user } = useAuth();
   const { switchTo, saving, error } = useInterfaceVersion();
   const [tab, setTab] = useState<SeTab>('today');
+  const [definitionOpen, setDefinitionOpen] = useState(false);
 
   useEffect(() => {
     if (tab === 'today') return;
@@ -44,15 +45,36 @@ export function SeAppFrame({ onOpenAccount }: { onOpenAccount: () => void }) {
       <ScrollView contentContainerStyle={s.screen}>
         <View style={s.header}>
           {tab === 'today' ? <Text style={s.eyebrow}>{TODAY_DATE.format(new Date())}</Text> : null}
-          <Text accessibilityRole="header" style={s.title}>
-            {TITLES[tab]}
-          </Text>
+          {tab === 'today' ? (
+            <Text accessibilityRole="header" style={s.title}>
+              Today in the{' '}
+              <Text
+                accessibilityRole="button"
+                accessibilityState={{ expanded: definitionOpen }}
+                onPress={() => setDefinitionOpen((value) => !value)}
+                style={s.term}
+              >
+                {SE_AVENHOOD}
+              </Text>
+            </Text>
+          ) : (
+            <Text accessibilityRole="header" style={s.title}>
+              {TITLES[tab]}
+            </Text>
+          )}
+          {tab === 'today' && definitionOpen ? <Text style={s.definition}>{SE_AVENHOOD_DEFINITION}</Text> : null}
         </View>
 
         {tab === 'me' ? (
           <>
             <View style={s.card}>
               <Text style={s.handle}>{handle}</Text>
+            </View>
+            <View style={s.card}>
+              <Text style={s.cardLabel}>About</Text>
+              <Text style={s.cardTitle}>The {SE_AVENHOOD}</Text>
+              <Text style={s.emptyText}>{SE_AVENHOOD_DEFINITION}</Text>
+              <Text style={s.emptyText}>{SE_AVEN_DEFINITION}</Text>
             </View>
             <View style={s.card}>
               <Text style={s.cardLabel}>Settings</Text>
@@ -108,6 +130,21 @@ function makeStyles(t: SeThemeTokens) {
     eyebrow: { fontSize: 13, color: t.soft, fontFamily: SE_FONT.sans },
     title: { fontSize: 30, lineHeight: 33, color: t.ink, fontFamily: SE_FONT.serif },
     card: { gap: 10, padding: 14, borderRadius: 18, backgroundColor: t.card, borderWidth: 1.5, borderColor: t.hair, alignItems: 'flex-start' },
+    term: { textDecorationLine: 'underline', textDecorationStyle: 'dotted' },
+    definition: {
+      marginTop: 8,
+      paddingVertical: 12,
+      paddingHorizontal: 14,
+      borderRadius: 18,
+      backgroundColor: t.card,
+      borderWidth: 1.5,
+      borderColor: t.hair,
+      fontSize: 15,
+      lineHeight: 22,
+      color: t.ink,
+      fontFamily: SE_FONT.sans,
+    },
+    cardTitle: { fontSize: 20, color: t.ink, fontFamily: SE_FONT.serif },
     cardLabel: { fontSize: 12, color: t.soft, fontFamily: SE_FONT.sansBold },
     emptyTitle: { fontSize: 22, color: t.ink, fontFamily: SE_FONT.serif },
     emptyText: { fontSize: 15, lineHeight: 21, color: t.soft, fontFamily: SE_FONT.sans },

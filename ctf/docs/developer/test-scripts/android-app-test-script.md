@@ -238,7 +238,9 @@ The caller needs enough ServiceCredits for a few blocks.
 
 1. Open the account screen (gear) and tap **Switch to 3.1** in the Settings card. Expect the 3.1 home:
    forest green and gold, dark, the date above "Today in the Avenhood", and the tab bar.
-2. Tap each tab. Press the phone's back button on any tab but Today: it returns to Today.
+2. Tap each tab. Press the phone's back button on any tab but Today: it returns to Today. On Today,
+   tap **Avenhood** in the title: its definition opens under it, the same text as the web. Me has the
+   About card with the same definition.
 3. On Me, tap **Account and data**, then come back; tap **Back to 3.0** and expect the Apps screen.
 4. Open the web app on the same account: it shows the same choice.
 
