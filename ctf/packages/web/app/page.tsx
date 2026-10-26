@@ -12,6 +12,9 @@ import { getGdpShellStats } from '../lib/gdp/repository';
 import { listPluginRegistry, filterPluginsForViewer } from '../lib/plugins/repository';
 import { readTrustSelfExtensionOrStored } from '../lib/trust/repository';
 import { getHostedSignInUrl } from '../lib/auth/provider-env';
+import { SeAppFrame } from '../components/se-frame/se-app-frame';
+import { getUserInterfaceVersion } from '../lib/account/ui-preferences-repository';
+import type { SeInterfaceVersion } from '@ctf/shared';
 
 function buildShellUser(userId: string, username: string | null): ShellCurrentUser {
   const safeUsername = username && username !== 'guest' ? username : null;
@@ -129,6 +132,15 @@ async function readHubTier(
   }
 }
 
+async function readInterfaceVersion(userId: string): Promise<SeInterfaceVersion> {
+  try {
+    return await getUserInterfaceVersion(userId);
+  } catch (error: unknown) {
+    reportError(error, { area: 'home', op: 'interface_version_read' });
+    return '3.0';
+  }
+}
+
 export default async function HomePage() {
   const pluginsPromise = listPluginRegistry();
   const shellStatsPromise = getGdpShellStats().catch(() => ({ memberCount: null, gdpValueUsd: null }));
@@ -180,6 +192,12 @@ export default async function HomePage() {
   const currentUser = userId
     ? buildShellUser(userId, identity?.username ?? null)
     : buildShellUser('guest', null);
+
+  // A member who switched to 3.1 in Settings sees the new frame instead of the 3.0 shell. A failed
+  // read keeps them on 3.0, the shipped app, and is reported.
+  if (userId && (await readInterfaceVersion(userId)) === '3.1') {
+    return <SeAppFrame currentUser={currentUser} />;
+  }
 
   const trust = await resolveTrust(userId, currentUser.userId);
 

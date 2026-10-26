@@ -6478,14 +6478,29 @@ $comic_answer_ratings_rating_check$;
 -- === user_ui_preferences (per-user UI theme choice) ===
 -- Stores the signed-in user's selected app theme so the choice follows their account
 -- across devices. Anonymous visitors rely on localStorage only. `theme` is 'default'
--- (the original dark UI) or 'comic' (the comic-book dark theme).
+-- (the original dark UI) or 'comic' (the comic-book dark theme). `interface_version` is which
+-- interface the member sees: '3.0' (the shipped app) or '3.1' (the social redesign), switched in
+-- Settings; everyone starts on '3.0'.
 CREATE TABLE IF NOT EXISTS user_ui_preferences (
   user_id TEXT PRIMARY KEY,
   theme TEXT NOT NULL DEFAULT 'default',
+  interface_version TEXT NOT NULL DEFAULT '3.0' CHECK (interface_version IN ('3.0', '3.1')),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ALTER TABLE IF EXISTS user_ui_preferences ADD COLUMN IF NOT EXISTS theme TEXT NOT NULL DEFAULT 'default';
+ALTER TABLE IF EXISTS user_ui_preferences ADD COLUMN IF NOT EXISTS interface_version TEXT NOT NULL DEFAULT '3.0';
 ALTER TABLE IF EXISTS user_ui_preferences ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+DO $user_ui_preferences_interface_version_check$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'user_ui_preferences_interface_version_check' AND connamespace = current_schema()::regnamespace
+  ) THEN
+    ALTER TABLE user_ui_preferences
+      ADD CONSTRAINT user_ui_preferences_interface_version_check CHECK (interface_version IN ('3.0', '3.1'));
+  END IF;
+END
+$user_ui_preferences_interface_version_check$;
 
 -- === BUG REPORTS (in-app "Report a problem" capture; raw text stays private) ===
 -- Users file problem reports from inside the app and never touch GitHub. The raw

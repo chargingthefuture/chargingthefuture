@@ -68,6 +68,7 @@ function accountViews(ctx: FeatureViewContext) {
         onOpenData={() => open('account-data')}
         onOpenBlocks={() => open('blocked-members')}
         onOpenVerification={() => open('unlock')}
+        onOpenHome={() => open('apps')}
         onOpenRecurring={() => open('recurring-activity')}
       />
     ),

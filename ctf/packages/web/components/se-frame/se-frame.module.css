@@ -1,0 +1,181 @@
+/* The 3.1 frame. Colors come from the custom properties set by seThemeVars (se-theme-vars.ts).
+   Flat, hard shadows in the theme's line color; no blur, no glass, no gradients. */
+.frame {
+  min-height: 100dvh;
+  background: var(--se-bg);
+  color: var(--se-ink);
+  font-family: 'DM Sans Variable', 'DM Sans', system-ui, sans-serif;
+}
+
+.screen {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 20px 16px 120px;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.eyebrow {
+  font-size: 13px;
+  color: var(--se-soft);
+}
+
+.title {
+  margin: 0;
+  font-family: 'Newsreader Variable', Newsreader, Georgia, serif;
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.card,
+.emptyCard {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 18px;
+  background: var(--se-card);
+  border: 1.5px solid var(--se-hair);
+}
+
+.emptyCard {
+  align-items: flex-start;
+}
+
+.cardLabel {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--se-soft);
+}
+
+.emptyTitle {
+  margin: 0;
+  font-family: 'Newsreader Variable', Newsreader, Georgia, serif;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.emptyText {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.4;
+  color: var(--se-soft);
+}
+
+.handle {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.buttonRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.secondaryButton {
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1.5px solid var(--se-line);
+  background: var(--se-card);
+  color: var(--se-ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: 0 2px 0 var(--se-line);
+  cursor: pointer;
+}
+
+.secondaryButton:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.textLink {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--se-ink);
+  text-underline-offset: 3px;
+}
+
+.error {
+  margin: 0;
+  font-size: 14px;
+  color: var(--se-kind-ask);
+}
+
+.tabBar {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: 24px;
+  max-width: 528px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  align-items: center;
+  padding: 6px;
+  border-radius: 999px;
+  background: var(--se-card);
+  border: 1.5px solid var(--se-line);
+  box-shadow: 0 3px 0 var(--se-line);
+}
+
+.tab {
+  min-height: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--se-soft);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tabActive {
+  background: var(--se-sunk);
+  color: var(--se-ink);
+  font-weight: 700;
+}
+
+.newButton {
+  justify-self: center;
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--se-btn);
+  color: var(--se-on-btn);
+  border: 1.5px solid var(--se-line);
+  box-shadow: 0 3px 0 var(--se-line);
+  cursor: pointer;
+}
+
+.tab:focus-visible,
+.newButton:focus-visible,
+.secondaryButton:focus-visible,
+.textLink:focus-visible {
+  outline: 2px solid var(--se-pick);
+  outline-offset: 2px;
+}

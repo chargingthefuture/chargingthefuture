@@ -9,6 +9,7 @@ import { getAccountDataTokens } from '@/components/account-data/account-data-sha
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { TrustRightRailCard } from '@/components/shared/trust/TrustRightRailCard';
 import type { TrustUserExtension } from 'lib/trust/types';
+import { InterfaceSwitchSection } from './interface-switch-section';
 
 // One identity, shown wherever it lives. This hub does not store a profile — it routes the member to
 // the real place each part is edited, so they never feel like they are filling in "another profile".
@@ -131,6 +132,8 @@ export function AccountHubShell({ username, trust }: { username: string | null; 
             last
           />
         </section>
+
+        <InterfaceSwitchSection tok={tok} cardStyle={cardStyle} sectionLabel={sectionLabel} />
         </div>
       </div>
     </div>
