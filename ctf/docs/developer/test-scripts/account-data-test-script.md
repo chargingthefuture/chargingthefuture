@@ -9,7 +9,7 @@
 
 | | |
 |---|---|
-| **Surface** | `/account/data` (Your Data & Privacy) |
+| **Surface** | `/account/data` (Your Data & Privacy), and `/account` for AD-9 |
 | **Visibility** | Any signed-in identity (including unlock-pending) |
 | **Roles to test** | member |
 | **Surfaces** | web (phone-width layout) |
@@ -193,3 +193,18 @@ screen then says the sign-in could not be removed, gives that reason, and points
 instead of saying the sign-in is gone. The leftover account is cleared through the operator
 `Delete Account (manual)` workflow.
 **Result:** web ☐ · android ☐ — notes:
+
+## AD-9 · Every member shows a generated picture, never an uploaded photo
+
+**Role:** member · **Precondition:** signed in on an account that has a profile photo set in Clerk.
+**Steps:**
+1. Open `/`. Look at the profile card on the right rail (wide screen) and the account button on the
+   phone-width top bar.
+2. Open `/account`. Look at the Identity card's account button, then open it and choose Manage
+   account.
+3. Sign out, sign in as a second member, and repeat step 1.
+**Expected:** Each place shows a colored square-in-a-circle pattern, never the Clerk photo. The same
+member gets the same pattern in every place and after a reload; the second member's differs. Clerk's
+menu and Manage account show no photo and no upload or remove control. The Identity card reads
+"Your name, username, and email".
+**Result:** web ☐ — notes:
