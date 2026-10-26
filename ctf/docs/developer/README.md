@@ -10,6 +10,10 @@ what code does not.
 - [FORMANCE.md](FORMANCE.md) — Formance ledger: runtime contract, bootstrap, backup/restore.
 - [OLLAMA.md](OLLAMA.md) — Ollama model management on Render (baking models, sizing, failures).
 
+## Plans
+
+- [SOCIAL_REDESIGN_3_1_PLAN.md](SOCIAL_REDESIGN_3_1_PLAN.md) — Skills Economy 3.1.0: the social redesign, decisions and ordered build tasks.
+
 ## Architecture
 
 - [AUTH_ARCHITECTURE.md](AUTH_ARCHITECTURE.md) — authentication architecture.
