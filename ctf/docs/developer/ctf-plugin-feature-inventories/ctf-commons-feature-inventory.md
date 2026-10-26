@@ -220,7 +220,7 @@ There is no `seedHub.mjs`; the Commons channel's data layer is seeded by the Fee
 
 ## Change Log
 
-- 2026-10-26: **Generated pictures, no uploaded photos (3.1.0, owner decision).** `CommonsMessage` loses `avatarUrl`, which was always null. The shell's right-rail card and Clerk's account button (icon rail and phone bar, `components/shared/se-user-button.tsx`) show the member's picture generated from their account id (`seAvatar` in `@ctf/shared`). Clerk's photos and its upload and remove buttons are hidden on every Clerk screen in the app (`CLERK_NO_PHOTOS` in `app/layout.tsx`). Android's top-bar account button draws the same picture (`mobile/src/components/shared/SeAvatar.tsx`) and the app no longer reads the token's `picture` claim.
+- 2026-10-26: **Generated pictures, no uploaded photos (3.1.0, owner decision).** `CommonsMessage` loses `avatarUrl`, which was always null. The shell's right-rail card and Clerk's account button (icon rail, phone bar and the account page, `components/shared/se-user-button.tsx`; the account page no longer says "photo") show the member's picture generated from their account id (`seAvatar` in `@ctf/shared`). Clerk's photos and its upload and remove buttons are hidden on every Clerk screen in the app (`CLERK_NO_PHOTOS` in `app/layout.tsx`). Android's top-bar account button draws the same picture (`mobile/src/components/shared/SeAvatar.tsx`) and the app no longer reads the token's `picture` claim.
 
 - 2026-10-16: **`/apps` no longer shows a signed-in, unapproved member the signed-out screen (owner
   decision; code-review #2772).** `app/apps/page.tsx` read a denied access check as "signed out", so a
