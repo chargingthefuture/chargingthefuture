@@ -54,6 +54,7 @@ contracts:
     dataAccess:
       - skill_up_cohorts
       - skill_up_enrollments
+      - skill_up_trainers
     purpose: training_marketplace_discovery
     retentionClass: derived_short_lived
     idempotency: true
