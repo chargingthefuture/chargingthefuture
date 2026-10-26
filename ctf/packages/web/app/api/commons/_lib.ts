@@ -6,7 +6,6 @@ export type CommonsApiIdentity = {
   userId: string;
   username: string | null;
   displayName: string;
-  avatarUrl: string | null;
 };
 
 export type CommonsApiGate =
@@ -39,7 +38,6 @@ export async function requireCommonsAccess(): Promise<CommonsApiGate> {
     userId: authDecision.userId,
     username: authDecision.username,
     displayName: buildIdentityDisplayName(authDecision.username, authDecision.userId),
-    avatarUrl: null,
   };
 
   return {

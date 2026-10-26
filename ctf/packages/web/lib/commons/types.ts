@@ -29,7 +29,6 @@ export type CommonsMessage = {
   userId: string;
   username: string | null;
   displayName: string;
-  avatarUrl: string | null;
   // Which feed channel this message came from. `community` for peer posts (the common case),
   // `announcement` for official operator posts, `question` for AI Q&A items.
   kind: CommonsMessageKind;

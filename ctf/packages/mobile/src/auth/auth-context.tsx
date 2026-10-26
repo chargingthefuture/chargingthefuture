@@ -44,8 +44,6 @@ export interface AuthUser {
   isAdmin?: boolean;
   isApproved?: boolean;
   provider?: string | null;
-  /** Profile image address from the token's standard `picture` claim, or null. */
-  imageUrl?: string | null;
 }
 
 export interface AuthContextType {
@@ -129,7 +127,6 @@ function deriveUserFromClaims(claims: Record<string, unknown> | null): AuthUser 
     isAdmin: role === "admin",
     isApproved: resolveApproved(claims, metadata),
     provider: getRuntimeConfig().authProvider ?? "clerk",
-    imageUrl: typeof claims.picture === "string" ? claims.picture : null,
   };
 }
 

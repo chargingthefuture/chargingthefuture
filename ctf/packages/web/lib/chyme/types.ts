@@ -12,7 +12,6 @@ export type ChymeRole = 'speaker' | 'listener';
 export type ChymeParticipant = {
   userId: string;
   username: string | null;
-  avatarUrl: string | null;
   role: ChymeRole;
   handRaised: boolean;
   // Whether their microphone is on, as their app last reported it; null when their app has not
@@ -26,7 +25,6 @@ export type ChymeMessage = {
   id: string;
   userId: string;
   username: string | null;
-  avatarUrl: string | null;
   text: string;
   sentAtIso: string;
 };

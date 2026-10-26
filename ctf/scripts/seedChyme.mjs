@@ -28,7 +28,6 @@ const demoUsers = [
     deletionEventId: '31111111-1111-4111-8111-111111111111',
     userId: 'seed-chyme-user-001',
     username: 'seed_amina',
-    avatarUrl: null,
     role: 'speaker',
     message: 'Welcome to the deterministic Chyme seed room.',
   },
@@ -37,7 +36,6 @@ const demoUsers = [
     deletionEventId: '31111111-1111-4111-8111-222222222222',
     userId: 'seed-chyme-user-002',
     username: 'seed_luis',
-    avatarUrl: null,
     role: 'listener',
     message: 'Seed fixture online and ready for validation.',
   },
@@ -79,16 +77,14 @@ async function main() {
             room_id,
             user_id,
             username,
-            avatar_url,
             role,
             joined_at,
             last_seen_at
           )
-          VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+          VALUES ($1, $2, $3, $4, NOW(), NOW())
           ON CONFLICT (room_id, user_id)
           DO UPDATE SET
             username = EXCLUDED.username,
-            avatar_url = EXCLUDED.avatar_url,
             role = EXCLUDED.role,
             last_seen_at = NOW()
         `,
@@ -96,15 +92,14 @@ async function main() {
           roomId,
           demoUser.userId,
           demoUser.username,
-          demoUser.avatarUrl,
           demoUser.role,
         ],
       );
 
       await client.query(
         `
-          INSERT INTO chyme_messages (id, room_id, user_id, username, avatar_url, text, sent_at)
-          VALUES ($1, $2, $3, $4, $5, $6, NOW())
+          INSERT INTO chyme_messages (id, room_id, user_id, username, text, sent_at)
+          VALUES ($1, $2, $3, $4, $5, NOW())
           ON CONFLICT (id)
           DO UPDATE SET
             text = EXCLUDED.text,
@@ -115,7 +110,6 @@ async function main() {
           roomId,
           demoUser.userId,
           demoUser.username,
-          demoUser.avatarUrl,
           demoUser.message,
         ],
       );

@@ -1,33 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { useUser } from '@clerk/nextjs';
 import type { TrustUserExtension } from '../../lib/trust/types';
 import type { ShellCurrentUser } from './shell-types';
 import { TrustRightRailCard } from '../shared/trust/TrustRightRailCard';
+import { SeAvatar } from '../shared/se-avatar';
 import styles from './community-shell.module.css';
-
-// The avatar photo is drawn by writing the URL into a CSS `url("…")` string, so anything that could
-// close that quoted string early would be writing raw CSS into the page. Clerk's own image URLs are
-// plain https links and safe, but the value is checked rather than trusted. Parsing it and using the
-// parser's own output does the escaping: the URL parser percent-encodes quotes, turns backslashes
-// into slashes, and drops control characters, so the result cannot contain a string terminator.
-// (Percent-encoding it again here would corrupt any URL that already contains a %-escape.) Only
-// http(s) is accepted, and the quote/backslash check below is a cheap backstop. Returns null when
-// there is no usable photo, which falls back to the initial monogram.
-function safeImageUrl(rawUrl: string | undefined): string | null {
-  if (!rawUrl) return null;
-  let parsed: URL;
-  try {
-    parsed = new URL(rawUrl);
-  } catch {
-    return null;
-  }
-  if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return null;
-  const normalized = parsed.toString();
-  if (normalized.includes('"') || normalized.includes('\\')) return null;
-  return normalized;
-}
 
 type ShellRightRailProps = {
   currentUser: ShellCurrentUser;
@@ -37,22 +15,14 @@ type ShellRightRailProps = {
 };
 
 export function ShellRightRail({ currentUser, trust, isAuthenticated = false, signInUrl = '/' }: ShellRightRailProps) {
-  const initial = currentUser.initial;
-  // Clerk photo when the member has uploaded one, so this card matches the avatar the icon-rail
-  // UserButton shows for the same person (it was a gradient monogram here vs. a photo there).
-  // Rendered as a background image on the existing avatar div (the repo uses no raw <img>), so the
-  // profileAvatar sizing/border-radius/comic-theme border all still apply. Falls back to the initial
-  // monogram when there is no photo or the user is signed out.
-  const { user } = useUser();
-  const photoUrl = safeImageUrl(user?.imageUrl);
-  const avatar = photoUrl ? (
-    <div
-      className={styles.profileAvatar}
-      style={{ backgroundImage: `url("${photoUrl}")`, backgroundSize: 'cover', backgroundPosition: 'center' }}
-      aria-hidden="true"
-    />
+  // Signed in: the member's generated picture, never an uploaded photo. Signed out there is no
+  // account to draw from, so the initial monogram stays.
+  const avatar = isAuthenticated ? (
+    <div className={styles.profileAvatar} style={{ overflow: 'hidden' }} aria-hidden="true">
+      <SeAvatar accountId={currentUser.userId} size={52} />
+    </div>
   ) : (
-    <div className={styles.profileAvatar} aria-hidden="true">{initial}</div>
+    <div className={styles.profileAvatar} aria-hidden="true">{currentUser.initial}</div>
   );
 
   if (!isAuthenticated) {
