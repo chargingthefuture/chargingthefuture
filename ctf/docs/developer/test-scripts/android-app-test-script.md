@@ -264,7 +264,9 @@ Expect a small landscape or cut-paper picture, never the photo, and the same pic
    in**, move between tabs (the audio keeps going and a bar shows above the tab bar), press the
    phone's back button with the room open (the room closes into the bar), then tap **Leave quietly**
    on the bar.
-6. Open the + tab and book a talk as on the web (AD-13); the open times are a list to tap.
+6. Open the + tab and run AD-13 as on the web: book a talk (the open times are a list to tap), post
+   an ask from a suggestion, and open each Offer choice and the Story link (Foundation opens in the
+   app; the rest in the browser).
 7. Open Me and run AD-14 as on the web: Send and History open ServiceCredits in the browser, Receive
    copies your handle, the colors change at once and stay after closing and reopening the app, and
    there is no Android app link (you are in it).
