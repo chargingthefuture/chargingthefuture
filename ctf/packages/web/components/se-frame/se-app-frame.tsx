@@ -10,6 +10,7 @@ import { MeScreen } from './me/me-screen';
 import { useSeTheme } from './use-se-theme';
 import { NewScreen } from './new/new-screen';
 import { ActivityScreen } from './activity/activity-screen';
+import { PeopleScreen } from './people/people-screen';
 import { SeRoomBar, SeRoomHosts } from './rooms/se-room-screen';
 import { SeRoomsProvider, useSeRooms } from './rooms/se-rooms';
 import { seThemeVars } from './se-theme-vars';
@@ -62,18 +63,6 @@ function TodayHeader() {
   );
 }
 
-function NotBuiltYet({ onBack, saving }: { onBack: () => void; saving: boolean }) {
-  return (
-    <section className={styles.emptyCard}>
-      <p className={styles.emptyTitle}>This screen is still being built.</p>
-      <p className={styles.emptyText}>Everything you use today is in 3.0, unchanged.</p>
-      <button type="button" className={styles.secondaryButton} onClick={onBack} disabled={saving}>
-        Back to 3.0
-      </button>
-    </section>
-  );
-}
-
 type FrameProps = { currentUser: ShellCurrentUser; isAdmin: boolean };
 
 export function SeAppFrame({ currentUser, isAdmin }: FrameProps) {
@@ -104,7 +93,7 @@ function TabScreen({ tab, currentUser, isAdmin, theme, onTheme, onBack, saving }
       {tab === 'new' ? <NewScreen /> : null}
       {tab === 'me' ? <MeScreen currentUser={currentUser} isAdmin={isAdmin} theme={theme} onTheme={onTheme} onBack={onBack} saving={saving} /> : null}
       {tab === 'activity' ? <ActivityScreen /> : null}
-      {tab === 'people' ? <NotBuiltYet onBack={onBack} saving={saving} /> : null}
+      {tab === 'people' ? <PeopleScreen /> : null}
     </>
   );
 }
