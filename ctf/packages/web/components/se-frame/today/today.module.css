@@ -1,4 +1,31 @@
 /* Today in 3.1. Colors come from the frame's custom properties (se-theme-vars.ts). */
+.daysWon {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 16px;
+  border-radius: 20px;
+  background: var(--se-hero);
+  color: var(--se-on-hero);
+}
+
+.daysWonLabel {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.daysWonBig {
+  font-family: 'Newsreader Variable', Newsreader, Georgia, serif;
+  font-size: 40px;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.daysWonSmall {
+  font-size: 14px;
+  line-height: 1.4;
+}
+
 .roomCard {
   display: flex;
   flex-direction: column;

@@ -1442,3 +1442,12 @@ The following cases must produce identical behavior on both surfaces. Rerun them
 2. **URL liveness check has no finalized SLO.** A submission with a live Quora URL that happens to time out or return a transient error may behave unpredictably. The 5-second HEAD-check is best-effort; do not file a bug if a valid URL occasionally fails the check.
 3. **There is no leaderboard of any kind.** The scout leaderboard, its tab, its rebuild button, the Leaderboard Champion badge and the top-10 notice were removed 2026-10-27 (owner decision, 3.1.0), along with test cases CS-3, SH-8, SH-A2b and SH-A10b (their numbers are left unused). The team leaderboard went earlier, on 2026-08-27: it grouped by each nominee's free-text claimed profession rather than by any team of members, and every row had collapsed into one "Unspecified" bucket once the nomination form stopped collecting professions. Do not file its absence as a bug.
 4. **There is no Reports queue, and no way to report a profile.** Both were removed 2026-08-27, along with test cases SH-13 and SH-A13 (their numbers are left unused rather than renumbering every case after them). Nothing could ever file a report — the member route had no button anywhere in the app — and resolving one only flipped a status column without deleting a profile or blocking anything. Taking down a community-generated profile is Directory's job and always was: in the Directory admin screen, an unclaimed community-generated profile carries an amber "Remove at the person's request" control that asks for a reason, deletes the profile, and blocks its Quora URL from being listed again until an admin lifts the block from the "Taken-down Quora URLs" panel on the same screen.
+
+### SH-17 · Today's mission in 3.1
+**Role:** approved member · **Surfaces:** web, android
+1. With a round active and two or more active missions, open Today on 3.1 on two different days.
+**Expected:** Each day shows one "Wanted · today's mission" card with the mission's title, its
+description and "N of M found so far" (the community's count against the goal), and a Suggest
+someone button that opens SkillsHunt. The mission changes from one day to the next. An archived
+mission never shows; with no active round there is no card.
+**Result:** web ☐ android ☐ — notes:

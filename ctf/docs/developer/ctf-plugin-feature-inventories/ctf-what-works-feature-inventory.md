@@ -36,6 +36,10 @@ the problem categories and review every suggestion before it joins the shared li
   "N survivors verified"; toggle off to withdraw it.
 - Suggest a tool: choose an existing problem, add a product name, a direct purchase link, and an
   optional note. Suggestions are reviewed before they appear (anonymous to other members).
+- Propose a problem that is not listed: under the suggest form, type the problem in a few words and,
+  optionally, when it happens. Problems already listed that share words with it appear while typing;
+  tapping one picks it in the form instead. A proposal waits for review and shows once approved; a
+  duplicate is merged into the problem already listed. A member can have three waiting at once.
 - Paged lists, no endless scrolling. The problem list shows five problems per page with
   Previous / Page N of M / Next controls; moving a page returns to the top of the list.
 - Each problem shows its first two tools; any beyond that sit behind a "Show N more tools" control
@@ -49,6 +53,9 @@ the problem categories and review every suggestion before it joins the shared li
 ## 4. Admin Features
 
 - Review queue: approve or reject (with an admin-only reason) each suggested tool; delete tools.
+- **Proposed problems**, above the problem list: each problem a member proposed, oldest first,
+  without who proposed it, with **Approve as new**, **Merge** into a listed problem (anything
+  suggested under the proposal moves there) and **Delete as spam**. Each decision is in the Audit log.
 - Edit a tool's own details (emoji, name, type, note, purchase link) at any status — including after
   it is approved — to fix a typo or a broken link without unpublishing it. Status, verified count,
   and submitter identity are left untouched.
@@ -70,7 +77,12 @@ the problem categories and review every suggestion before it joins the shared li
 
 - `GET /api/what-works` — Authenticated read of the shared list (problems + approved tools + per-viewer endorsement state + stats + `viewer.isAdmin`).
 - `GET /api/what-works/public` — Public, identity-free teaser slice of the list + stats. The teaser skips problems that have no approved tool yet (a heading with nothing under it is not a preview of anything); signed-in members do see those problems. The returned stats describe only the teaser slice (not the full list), so the public payload never advertises counts a signed-out visitor cannot see.
-- `GET /api/what-works/problems` — Active problems for the suggest form (authenticated).
+- `GET /api/what-works/problems` — Approved, active problems for the suggest form (authenticated).
+- `POST /api/what-works/problems` — A member proposes a problem `{ title, context? }`; it is saved as
+  pending (`review_status 'pending'`, `proposed_by` the member). 429 once the member has three
+  waiting. Audit `what-works.problem.propose`.
+- `GET /api/what-works/problems/similar?q=` — Up to five approved, active problems sharing words
+  (three letters or more) with `q`, most words in common first.
 - `GET /api/what-works/admin/audit-events` — admin read of `what_works_admin_audit_trail`, newest first. Optional `?limit=` (default 100, capped at 200). Returns `{ events }`. Backs the Audit log panel on the admin screen.
 - `POST /api/what-works/products` — Suggest a tool (lands `pending`; suggester auto-recorded as first verifier).
 - `POST /api/what-works/products/[id]/endorse` — Mark an approved tool helpful.
@@ -79,6 +91,12 @@ the problem categories and review every suggestion before it joins the shared li
 - `POST /api/what-works/admin/problems` — Admin: create a problem.
 - `PATCH /api/what-works/admin/problems/[id]` — Admin: edit/reorder/deactivate a problem.
 - `DELETE /api/what-works/admin/problems/[id]` — Admin: delete a problem (cascade).
+- `GET /api/what-works/admin/problems/pending` — Admin: proposed problems, oldest first, as
+  `{ id, title, context, createdAt }` (never who proposed them).
+- `POST /api/what-works/admin/problems/[id]/review` — Admin: `{ action: 'approve' | 'merge' | 'spam',
+  intoId? }` on a problem still pending. Merge moves the proposal's products to `intoId` (an approved
+  problem) and deletes the proposal; spam deletes it. 404 when it is not pending or the target is not
+  listed. Audit `what-works.admin.problem.review` with the action.
 - `GET /api/what-works/admin/products` — Admin: moderation queue (optional `?status=`).
 - `PATCH /api/what-works/admin/products/[id]` — Admin: with `action` (`approve`/`reject`), moderate the tool; without `action`, correct its own details (name, purchase link, note, emoji, type). The edit path never changes status, endorsements, or the identity columns.
 - `DELETE /api/what-works/admin/products/[id]` — Admin: delete a tool (cascade).
@@ -104,7 +122,14 @@ All mutating routes require the `x-ctf-csrf: 1` confirmation header (same-origin
   - `is_active BOOLEAN NOT NULL DEFAULT TRUE`
   - `created_by TEXT` (admin user id, nullable/anonymizable)
   - `created_at`, `updated_at TIMESTAMPTZ`
+  - `review_status TEXT NOT NULL DEFAULT 'approved'` (check: `pending`, `approved`; 2026-10-27,
+    `post/0072_what_works_problem_review.sql`). Every reader and the admin problem list show approved
+    problems only; a product can be suggested only under an approved one.
+  - `proposed_by TEXT` — the member who proposed it. Read only to cap waiting proposals; never
+    selected by any reader or admin read (problem reads use an explicit column list). Account
+    deletion overwrites it with the deleted placeholder.
   - Index: `idx_what_works_problems_active_sort (is_active, sort_order)`
+  - Index: `idx_what_works_problems_pending (proposed_by) WHERE review_status = 'pending'`
 - Table: `what_works_products` — survivor-suggested tools.
   - `id UUID PRIMARY KEY`
   - `problem_id UUID NOT NULL REFERENCES what_works_problems(id) ON DELETE CASCADE`
@@ -192,6 +217,7 @@ Derived metrics (no stored counters): a tool's verified count is `COUNT(*)` of i
 
 ## Change Log
 
+- 2026-10-27: **Members propose problems; admins approve, merge or delete them as spam (3.1.0, plan task 13).** Until now only admins added problems. A member proposes one under the suggest form, with listed problems that share words shown while typing (`GET /api/what-works/problems/similar`) and a note that duplicates are merged; it waits for review (`POST /api/what-works/problems`, at most three waiting per member). The admin screen gains Proposed problems with Approve as new, Merge and Delete as spam (`GET /api/what-works/admin/problems/pending`, `POST /api/what-works/admin/problems/[id]/review`). Schema: `review_status` and `proposed_by` on `what_works_problems` (`post/0072_what_works_problem_review.sql`); every reader filters to approved. Problem reads now name their columns instead of `SELECT *`, so `proposed_by` is never returned. The deletion registry overwrites `proposed_by` on account deletion. Contracts: `what-works.problem.propose`, `.problems.similar`, `.admin.problem.pending`, `.admin.problem.review`.
 - 2026-10-17: **Demo seed for paging.** `ctf/scripts/demo-seed/41-what-works.mjs` adds eight problems and their approved tools to the demo schema, so the list pages and a second problem shows "Show N more tools". Demo data only; no code, schema or route change.
 - 2026-10-16: **Account deletion removes the member's id from the tools they suggested (code review #2812, owner decision).** The deletion registry retained `what_works_products` untouched, so a departed member's id stayed in `suggested_by` on every tool they suggested, against the deletion contract and the plugin's anonymity promise, and the Contributions value reading kept crediting it. The registry now runs `pseudo('what_works_products', 'suggested_by', [])`, which writes `deleted_member` over it; the tools stay on the list. `value.what_works_tools_approved` skips that placeholder. `reviewed_by` and `what_works_problems.created_by` are admin columns and are kept as the review audit trail; the deletion contract now says so instead of claiming they are cleared. A member's data download now includes the tools they suggested.
 - 2026-10-14: **The admin audit trail records refusals and failed writes, as its contract always said (code review #2814).** `recordWhatWorksAdminAudit` was only called after a write succeeded, so the Audit log panel's **Refused** and **Failed** badges could never appear. Every admin mutation (problem create, update, delete; product edit, review, delete) now runs through `runAuditedWhatWorksAdminMutation` in `app/api/what-works/_lib.ts`: a not-found or bad-body refusal writes a `deny` row with `error_category` `not_found` or `validation`, and a write that throws writes a `failure` row with `persistence_error` and answers 503 naming the reason instead of an unhandled error. `requireWhatWorksAdminAccess` takes the mutation's audit target and writes a `deny` / `policy` row when a signed-in member who is not an admin tries it. A missing CSRF header is refused before the caller is identified, so it still writes no row.

@@ -9,6 +9,7 @@ import { BackChevronButton } from '@/lib/nav/back-history';
 import { useTheme } from '@/hooks/useTheme';
 import { getWhatWorksTokens, type SuggestDraft, type WhatWorksProblemOption, type WhatWorksTokens } from './ww-shared';
 import { WhatWorksSuggestGuidance } from './ww-suggest-guidance';
+import { WhatWorksProposeProblem } from './ww-propose-problem';
 
 type Props = {
   problems: WhatWorksProblemOption[];
@@ -146,7 +147,7 @@ function SuggestForm({ t, inputStyle, problems, isFirst, error, problemId, setPr
                 </select>
                 <ChevronDown size={15} color={t.MUTED} style={{ flexShrink: 0 }} />
               </div>
-              <div style={{ fontSize: 11, color: t.MUTED, marginTop: 6, lineHeight: 1.5 }}>Pick an existing problem. New problems are added by admins to avoid duplicates.</div>
+              <div style={{ fontSize: 11, color: t.MUTED, marginTop: 6, lineHeight: 1.5 }}>Pick an existing problem. Not listed? Propose it below the form.</div>
             </Field>
 
             <Field label="Product name" required>
@@ -166,6 +167,7 @@ function SuggestForm({ t, inputStyle, problems, isFirst, error, problemId, setPr
 
             <SuggestSubmitButton t={t} ready={ready} submitting={submitting} />
           </form>
+          <WhatWorksProposeProblem onPick={setProblemId} />
         </div>
 
         <WhatWorksSuggestGuidance />

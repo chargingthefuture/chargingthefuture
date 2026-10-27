@@ -15,7 +15,7 @@ import type {
   WhatWorksPublicProduct,
 } from './types';
 
-function slugifyTitle(title: string): string {
+export function slugifyTitle(title: string): string {
   const base = title
     .toLowerCase()
     .trim()
@@ -28,7 +28,7 @@ function slugifyTitle(title: string): string {
 // run of identically-named problems fails with a clear error instead of hanging the request.
 const MAX_SLUG_ATTEMPTS = 100;
 
-async function ensureUniqueSlug(base: string): Promise<string> {
+export async function ensureUniqueSlug(base: string): Promise<string> {
   let candidate = base;
   let suffix = 2;
   for (let attempt = 0; attempt < MAX_SLUG_ATTEMPTS; attempt += 1) {
@@ -94,7 +94,7 @@ export async function getReaderList(viewerId: string | null): Promise<WhatWorksL
   const problemsResult = await queryDb<ProblemProjectionRow>(
     `SELECT id, slug, emoji, title, context
        FROM what_works_problems
-      WHERE is_active = TRUE
+      WHERE is_active = TRUE AND review_status = 'approved'
       ORDER BY sort_order ASC, created_at ASC`,
   );
 
@@ -111,7 +111,7 @@ export async function getReaderList(viewerId: string | null): Promise<WhatWorksL
         END AS viewer_has_endorsed
        FROM what_works_products p
        JOIN what_works_problems pr ON pr.id = p.problem_id
-      WHERE p.status = 'approved' AND pr.is_active = TRUE
+      WHERE p.status = 'approved' AND pr.is_active = TRUE AND pr.review_status = 'approved'
       ORDER BY p.created_at ASC`,
     [viewerId],
   );
@@ -150,7 +150,7 @@ async function getListStats(problemCount: number, verifiedTools: number): Promis
        FROM what_works_endorsements e
        JOIN what_works_products p ON p.id = e.product_id
        JOIN what_works_problems pr ON pr.id = p.problem_id
-      WHERE p.status = 'approved' AND pr.is_active = TRUE`,
+      WHERE p.status = 'approved' AND pr.is_active = TRUE AND pr.review_status = 'approved'`,
   );
   return {
     problems: problemCount,
@@ -161,8 +161,8 @@ async function getListStats(problemCount: number, verifiedTools: number): Promis
 
 export async function listActiveProblems(): Promise<WhatWorksProblem[]> {
   const result = await queryDb<WhatWorksProblem>(
-    `SELECT * FROM what_works_problems
-      WHERE is_active = TRUE
+    `SELECT id, slug, emoji, title, context, sort_order, is_active, created_by, created_at, updated_at, review_status FROM what_works_problems
+      WHERE is_active = TRUE AND review_status = 'approved'
       ORDER BY sort_order ASC, created_at ASC`,
   );
   return result.rows;
@@ -170,7 +170,7 @@ export async function listActiveProblems(): Promise<WhatWorksProblem[]> {
 
 export async function getProblemById(id: string): Promise<WhatWorksProblem | null> {
   const result = await queryDb<WhatWorksProblem>(
-    'SELECT * FROM what_works_problems WHERE id = $1 LIMIT 1',
+    'SELECT id, slug, emoji, title, context, sort_order, is_active, created_by, created_at, updated_at, review_status FROM what_works_problems WHERE id = $1 LIMIT 1',
     [id],
   );
   return result.rows[0] ?? null;
@@ -278,6 +278,7 @@ export async function listAdminProblems(): Promise<WhatWorksAdminProblem[]> {
         COUNT(p.id) FILTER (WHERE p.status = 'pending')::int AS pending_count
        FROM what_works_problems pr
        LEFT JOIN what_works_products p ON p.problem_id = pr.id
+      WHERE pr.review_status = 'approved'
       GROUP BY pr.id
       ORDER BY pr.sort_order ASC, pr.created_at ASC`,
   );
@@ -294,7 +295,7 @@ export async function createProblem(input: CreateProblemInput): Promise<WhatWork
   const result = await queryDb<WhatWorksProblem>(
     `INSERT INTO what_works_problems (slug, emoji, title, context, sort_order, created_by)
      VALUES ($1, $2, $3, $4, $5, $6)
-     RETURNING *`,
+     RETURNING id, slug, emoji, title, context, sort_order, is_active, created_by, created_at, updated_at, review_status`,
     [slug, input.emoji ?? '', input.title, input.context ?? '', input.sortOrder ?? 0, input.createdBy],
   );
   return result.rows[0];
@@ -313,7 +314,7 @@ export async function updateProblem(
             is_active = COALESCE($6, is_active),
             updated_at = NOW()
       WHERE id = $1
-      RETURNING *`,
+      RETURNING id, slug, emoji, title, context, sort_order, is_active, created_by, created_at, updated_at, review_status`,
     [
       id,
       patch.emoji ?? null,

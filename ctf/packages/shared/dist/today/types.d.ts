@@ -45,6 +45,10 @@ export type SeTodayBroadcast = {
 export type SeToday = {
     generatedAtIso: string;
     presence: number | null;
+    daysWon: {
+        total: number;
+        thisWeek: number;
+    } | null;
     broadcast: SeTodayBroadcast | null;
     rooms: SeTodayRoom[];
     cards: SeTodayCard[];

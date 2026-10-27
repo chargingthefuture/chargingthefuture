@@ -3,9 +3,12 @@ import { reportError } from 'lib/observability/report';
 import type { TodayViewer } from './card';
 import { goalAsks, relayAsks, rideAsks } from './sources-asks';
 import { cohortOffers, placeOffers } from './sources-offers';
-import { announcementStories, inviteStories, whatWorksStory } from './sources-stories';
-import { broadcast, moodCard, numbersCard, replayCards, wantedCard } from './sources-live';
+import { announcementStories, inviteStories, surveyCard, whatWorksStory } from './sources-stories';
+import { broadcast, missionCard, moodCard, numbersCard, replayCards, wantedCard } from './sources-live';
 import { mainRoom, nextTalk, weaversRoom } from './sources-rooms';
+import { readDaysWon } from 'lib/measures/action-minutes';
+import { listMutes } from 'lib/mutes/repository';
+import { seApplyMutes } from '@ctf/shared';
 
 // The Today read. Every source runs at once and on its own: one that fails leaves its cards out,
 // is reported, and is named in `unavailable` so the screen can say what is missing instead of
@@ -37,28 +40,33 @@ export async function buildToday(viewer: TodayViewer, now = new Date()): Promise
     { name: 'announcements', read: () => announcementStories(viewer) },
     { name: 'directory-invites', read: () => inviteStories() },
     { name: 'what-works', read: () => whatWorksStory(viewer, now) },
+    { name: 'quora-survey', read: () => surveyCard(viewer, now) },
     { name: 'mood', read: () => moodCard(viewer, now) },
     { name: 'numbers', read: () => numbersCard(now) },
     { name: 'beacon-replays', read: () => replayCards() },
     { name: 'skills-hunt', read: () => wantedCard() },
+    { name: 'skills-hunt-mission', read: () => missionCard(now) },
   ];
 
-  const [cardLists, live, room, weavers] = await Promise.all([
+  const [cardLists, live, room, weavers, daysWon, mutes] = await Promise.all([
     Promise.all(sources.map((source) => settle(source.name, source.read, unavailable))),
     settle<SeTodayBroadcast | null>('beacon', () => broadcast(), unavailable),
     settle<SeTodayRoom>('chyme', () => mainRoom(nextTalk(now)), unavailable),
     // Reported but never named on screen: a member who may not enter is not told the room exists.
     settle<SeTodayRoom | null>('weavers', () => weaversRoom(viewer), []),
+    settle('days-won', () => readDaysWon(now), unavailable),
+    // A member's own mutes; a failed read shows every card rather than none.
+    settle('mutes', () => listMutes(viewer.userId), []),
   ]);
 
-  const cards = cardLists
-    .flatMap((list) => list ?? [])
+  const cards = seApplyMutes(cardLists.flatMap((list) => list ?? []), mutes ?? [])
     .sort((a, b) => b.createdAtIso.localeCompare(a.createdAtIso))
     .slice(0, TODAY_MAX_CARDS);
 
   return {
     generatedAtIso: now.toISOString(),
     presence: null,
+    daysWon: daysWon ?? null,
     broadcast: live ?? null,
     rooms: [room, weavers].filter((item): item is SeTodayRoom => Boolean(item)),
     cards,
