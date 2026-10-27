@@ -22,10 +22,21 @@ export function initMobileSentry(): void {
   if (!dsn || provider !== 'sentry') return;
   Sentry.init({
     dsn,
-    // Crash/error capture only — no session replay, no tracing, no PII. Members of this app carry a
-    // real-world threat model; the report must never include more than the error itself.
+    // No tracing and no PII. Members of this app carry a real-world threat model, so Session Replay
+    // (owner decision, 3.1.0) is fully masked: every word, image and drawing is covered on the phone
+    // before a frame leaves it, so a replay shows layout, taps and the failure, never what a member
+    // wrote or saw. Disclosed in the privacy policy (web app/terms/policy-content.ts, Sentry line).
     sendDefaultPii: false,
     tracesSampleRate: 0,
     environment: __DEV__ ? 'development' : 'production',
+    integrations: [
+      Sentry.mobileReplayIntegration({
+        maskAllText: true,
+        maskAllImages: true,
+        maskAllVectors: true,
+      }),
+    ],
+    replaysSessionSampleRate: 0.1,
+    replaysOnErrorSampleRate: 1.0,
   });
 }
