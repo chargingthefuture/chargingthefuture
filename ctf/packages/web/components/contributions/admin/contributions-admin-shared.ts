@@ -1,13 +1,12 @@
-// Shared types, API helpers, and the credit-valuation mapping for the Contributions admin dashboard.
+// Shared types and API helpers for the Contributions admin dashboard.
 
 import type {
   ContributionStatus,
   ContributionSubmissionAdminView,
-  ContributionsCycle,
   ContributionsRuntimeConfig,
 } from '@/lib/contributions/types';
 
-export type AdminTab = 'queue' | 'drive' | 'settings';
+export type AdminTab = 'queue' | 'settings';
 export type QueueFilter = 'all' | 'pending' | 'confirmed' | 'rejected';
 
 const CSRF_HEADERS = { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' } as const;
@@ -31,7 +30,7 @@ export async function fetchSubmissions(filter: QueueFilter): Promise<Contributio
 
 export async function reviewSubmission(
   submissionId: string,
-  body: { action: 'confirm' | 'reject'; confirmedAmountUsd?: number; reviewNote?: string; url?: string },
+  body: { action: 'confirm' | 'reject'; confirmedAmountUsd?: number; reviewNote?: string },
 ): Promise<ContributionSubmissionAdminView> {
   const res = await fetch(`/api/contributions/admin/submissions/${submissionId}/review`, {
     method: 'POST',
@@ -54,13 +53,7 @@ export async function fetchConfig(): Promise<ContributionsRuntimeConfig> {
   return data.config;
 }
 
-export async function updateConfig(body: Partial<{
-  creditsPerUsd: number;
-  nonMonetaryUnitValueUsd: number;
-  perUserCycleCreditCap: number;
-  bannerEnabled: boolean;
-  signalInstructions: string;
-}>): Promise<ContributionsRuntimeConfig> {
+export async function updateConfig(body: Partial<{ creditsPerUsd: number; perUserYearCreditCap: number }>): Promise<ContributionsRuntimeConfig> {
   const res = await fetch('/api/contributions/admin/config', {
     method: 'PUT',
     headers: CSRF_HEADERS,
@@ -73,68 +66,14 @@ export async function updateConfig(body: Partial<{
   return data.config;
 }
 
-export async function fetchCycles(): Promise<ContributionsCycle[]> {
-  const res = await fetch('/api/contributions/admin/cycles', { cache: 'no-store' });
+// One claim's code, read when the admin is about to redeem it. Audited on the server, never cached.
+export async function revealCode(submissionId: string): Promise<string> {
+  const res = await fetch(`/api/contributions/admin/submissions/${submissionId}/code`, { method: 'POST', headers: CSRF_HEADERS });
   if (!res.ok) {
     throw new Error(await readError(res));
   }
-  const data = (await res.json()) as { cycles: ContributionsCycle[] };
-  return data.cycles ?? [];
+  const data = (await res.json()) as { code: string };
+  return data.code;
 }
 
-export async function createCycle(body: {
-  startsAt: string;
-  endsAt: string;
-  fiatGoalUsd: number;
-  quoraCommentGoal: number;
-  githubStarGoal: number;
-}): Promise<ContributionsCycle> {
-  const res = await fetch('/api/contributions/admin/cycles', {
-    method: 'POST',
-    headers: CSRF_HEADERS,
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    throw new Error(await readError(res));
-  }
-  const data = (await res.json()) as { cycle: ContributionsCycle };
-  return data.cycle;
-}
-
-export async function updateCycle(
-  cycleId: string,
-  body: Partial<{ startsAt: string; endsAt: string; fiatGoalUsd: number; quoraCommentGoal: number; githubStarGoal: number }>,
-): Promise<ContributionsCycle> {
-  const res = await fetch(`/api/contributions/admin/cycles/${cycleId}`, {
-    method: 'PUT',
-    headers: CSRF_HEADERS,
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    throw new Error(await readError(res));
-  }
-  const data = (await res.json()) as { cycle: ContributionsCycle };
-  return data.cycle;
-}
-
-// --- credit valuation mapping ------------------------------------------------------------------
-//
-// The stored model is authoritative: a confirmed comment or star is worth
-// `non_monetary_unit_value_usd` USD, and credits = USD-equivalent x `credits_per_usd`. The admin
-// mockup exposes a single "Credits per comment or star" number (resulting SC). We surface that
-// resulting-SC value and convert it back to the stored USD-equivalent before saving, so the stored
-// model stays the source of truth.
-
-export function creditsPerActionFromConfig(config: ContributionsRuntimeConfig): number {
-  return Math.round(config.nonMonetaryUnitValueUsd * config.creditsPerUsd);
-}
-
-// Convert a resulting-SC-per-action value back to the stored USD-equivalent, given creditsPerUsd.
-export function nonMonetaryUnitValueFromCreditsPerAction(creditsPerAction: number, creditsPerUsd: number): number {
-  if (creditsPerUsd <= 0) {
-    return creditsPerAction;
-  }
-  return creditsPerAction / creditsPerUsd;
-}
-
-export type { ContributionStatus, ContributionSubmissionAdminView, ContributionsCycle, ContributionsRuntimeConfig };
+export type { ContributionStatus, ContributionSubmissionAdminView, ContributionsRuntimeConfig };

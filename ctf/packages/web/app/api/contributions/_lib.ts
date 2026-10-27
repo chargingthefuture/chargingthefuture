@@ -120,14 +120,9 @@ export function isUuid(candidate: string): boolean {
 
 const BAD_REQUEST_CODES: Record<string, string> = {
   invalid_payload: 'Invalid request payload.',
-  invalid_kind: 'kind must be gift_card, quora_comment, or github_star.',
-  invalid_method: 'method must be amazon, apple, or dennys.',
-  invalid_amount: 'Amount must be an integer number of US dollars, from 1 to 500 — no cents.',
-  invalid_url: 'URL must be a valid http(s) link.',
-  invalid_cycle_window: 'ends_at must be after starts_at.',
-  signal_contact_required: 'A Signal contact is required for gift-card contributions.',
-  confirmed_amount_required: 'confirmedAmountUsd is required, as an integer number of US dollars from 1 to 500.',
-  gift_card_code_rejected: 'Never send a gift-card code here. Codes go to the owner over Signal only.',
+  invalid_amount: 'Amount must be a whole number of US dollars, from 1 to 500.',
+  invalid_code: 'The gift card code should be the letters and numbers on the card, 6 to 40 of them.',
+  confirmed_amount_required: 'confirmedAmountUsd is required, as a whole number of US dollars from 1 to 500.',
 };
 
 export function contributionsErrorResponse(error: unknown, fallbackMessage: string, op: string): NextResponse {
@@ -145,14 +140,11 @@ export function contributionsErrorResponse(error: unknown, fallbackMessage: stri
     );
   }
 
-  if (code === 'github_star_already_credited') {
+  // CONTRIBUTIONS_CODE_KEY is not set, so the app will not take a code it could not protect.
+  if (code === 'contributions_paused') {
     return NextResponse.json(
-      {
-        ok: false,
-        code: 'contributions_github_star_already_credited',
-        message: "You've already received credits for starring the repository — thank you.",
-      },
-      { status: 409 },
+      { ok: false, code: 'contributions_paused', message: 'Gift cards are paused for now. Nothing was sent; try again later.' },
+      { status: 503 },
     );
   }
 

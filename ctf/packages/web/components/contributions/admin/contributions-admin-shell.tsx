@@ -3,33 +3,16 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Gift } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
-import type {
-  ContributionSubmissionAdminView,
-  ContributionsCycle,
-  ContributionsRuntimeConfig,
-} from '@/lib/contributions/types';
+import type { ContributionSubmissionAdminView, ContributionsRuntimeConfig } from '@/lib/contributions/types';
 import { FONT_FAMILY, getContributionsTokens } from '../contributions-shared';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-button';
-import {
-  createCycle,
-  fetchConfig,
-  fetchCycles,
-  fetchSubmissions,
-  nonMonetaryUnitValueFromCreditsPerAction,
-  reviewSubmission,
-  updateConfig,
-  updateCycle,
-  type AdminTab,
-  type QueueFilter,
-} from './contributions-admin-shared';
+import { fetchConfig, fetchSubmissions, reviewSubmission, updateConfig, type AdminTab, type QueueFilter } from './contributions-admin-shared';
 import { ContributionsAdminQueue } from './contributions-admin-queue';
-import { ContributionsAdminDrive } from './contributions-admin-drive';
 import { ContributionsAdminSettings, type SettingsSaveInput } from './contributions-admin-settings';
 
 const TABS: { key: AdminTab; label: string }[] = [
   { key: 'queue', label: 'Submission queue' },
-  { key: 'drive', label: 'Drive management' },
   { key: 'settings', label: 'Settings' },
 ];
 
@@ -40,14 +23,11 @@ export function ContributionsAdminShell() {
   const [tab, setTab] = useState<AdminTab>('queue');
   const [submissions, setSubmissions] = useState<ContributionSubmissionAdminView[]>([]);
   const [config, setConfig] = useState<ContributionsRuntimeConfig | null>(null);
-  const [currentCycle, setCurrentCycle] = useState<ContributionsCycle | null>(null);
 
   const [filter, setFilter] = useState<QueueFilter>('all');
   const [search, setSearch] = useState('');
   const [loadError, setLoadError] = useState<string | null>(null);
   const [reviewing, setReviewing] = useState<string | null>(null);
-  const [savingDrive, setSavingDrive] = useState(false);
-  const [driveError, setDriveError] = useState<string | null>(null);
   const [savingSettings, setSavingSettings] = useState(false);
   const [settingsError, setSettingsError] = useState<string | null>(null);
 
@@ -59,32 +39,16 @@ export function ContributionsAdminShell() {
     }
   }, []);
 
-  // The drive the Drive tab edits: the active one, else the next upcoming one. An ended drive is never
-  // picked — editing it would reopen it with last drive's confirmed rows and granted credits still
-  // attached — so with no active or upcoming drive the tab shows "Start a drive" and saving creates one.
-  const pickCurrentCycle = useCallback((cycles: ContributionsCycle[]): ContributionsCycle | null => {
-    const now = Date.now();
-    const active = cycles.find((c) => Date.parse(c.startsAt) <= now && Date.parse(c.endsAt) > now);
-    if (active) {
-      return active;
-    }
-    const upcoming = cycles
-      .filter((c) => Date.parse(c.startsAt) > now)
-      .sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt));
-    return upcoming[0] ?? null;
-  }, []);
-
   useEffect(() => {
     let canceled = false;
     async function load() {
       try {
-        const [subs, cfg, cycles] = await Promise.all([fetchSubmissions('all'), fetchConfig(), fetchCycles()]);
+        const [subs, cfg] = await Promise.all([fetchSubmissions('all'), fetchConfig()]);
         if (canceled) {
           return;
         }
         setSubmissions(subs);
         setConfig(cfg);
-        setCurrentCycle(pickCurrentCycle(cycles));
       } catch (e) {
         if (!canceled) {
           setLoadError(e instanceof Error ? e.message : 'Could not load the admin dashboard.');
@@ -95,7 +59,7 @@ export function ContributionsAdminShell() {
     return () => {
       canceled = true;
     };
-  }, [pickCurrentCycle]);
+  }, []);
 
   const onFilter = useCallback(
     (next: QueueFilter) => {
@@ -106,7 +70,7 @@ export function ContributionsAdminShell() {
   );
 
   const onReview = useCallback(
-    async (submissionId: string, input: { action: 'confirm' | 'reject'; confirmedAmountUsd?: number; reviewNote?: string; url?: string }) => {
+    async (submissionId: string, input: { action: 'confirm' | 'reject'; confirmedAmountUsd?: number; reviewNote?: string }) => {
       setReviewing(submissionId);
       setLoadError(null);
       try {
@@ -121,36 +85,6 @@ export function ContributionsAdminShell() {
     [filter, reloadSubmissions],
   );
 
-  const onSaveDrive = useCallback(
-    async (input: { cycleId: string | null; startsAt: string; endsAt: string; fiatGoalUsd: number; quoraCommentGoal: number; githubStarGoal: number }) => {
-      setSavingDrive(true);
-      setDriveError(null);
-      try {
-        const saved = input.cycleId
-          ? await updateCycle(input.cycleId, {
-              startsAt: input.startsAt || undefined,
-              endsAt: input.endsAt || undefined,
-              fiatGoalUsd: input.fiatGoalUsd,
-              quoraCommentGoal: input.quoraCommentGoal,
-              githubStarGoal: input.githubStarGoal,
-            })
-          : await createCycle({
-              startsAt: input.startsAt,
-              endsAt: input.endsAt,
-              fiatGoalUsd: input.fiatGoalUsd,
-              quoraCommentGoal: input.quoraCommentGoal,
-              githubStarGoal: input.githubStarGoal,
-            });
-        setCurrentCycle(saved);
-      } catch (e) {
-        setDriveError(e instanceof Error ? e.message : 'Could not save the drive.');
-      } finally {
-        setSavingDrive(false);
-      }
-    },
-    [],
-  );
-
   const onSaveSettings = useCallback(
     async (input: SettingsSaveInput) => {
       setSavingSettings(true);
@@ -158,10 +92,7 @@ export function ContributionsAdminShell() {
       try {
         const saved = await updateConfig({
           creditsPerUsd: input.creditsPerUsd,
-          nonMonetaryUnitValueUsd: nonMonetaryUnitValueFromCreditsPerAction(input.creditsPerAction, input.creditsPerUsd),
-          perUserCycleCreditCap: input.perUserCycleCreditCap,
-          bannerEnabled: input.bannerEnabled,
-          signalInstructions: input.signalInstructions,
+          perUserYearCreditCap: input.perUserYearCreditCap,
         });
         setConfig(saved);
       } catch (e) {
@@ -191,13 +122,6 @@ export function ContributionsAdminShell() {
           isMobile={true}
         />
       )}
-      {tab === 'drive' && (
-        // Keyed on the cycle so the form re-reads its fields when the cycle finishes loading. The
-        // form seeds its inputs with useState, which only reads the cycle on the first render — open
-        // this tab before the fetch lands and the boxes stay empty, and saving an empty box writes a
-        // goal of 0 over the real one. Changing the key remounts the form with the loaded values.
-        <ContributionsAdminDrive key={currentCycle?.id ?? 'new-cycle'} t={t} cycle={currentCycle} saving={savingDrive} error={driveError} onSave={onSaveDrive} isMobile={true} />
-      )}
       {tab === 'settings' &&
         (config ? (
           <ContributionsAdminSettings t={t} config={config} saving={savingSettings} error={settingsError} onSave={onSaveSettings} isMobile={true} />
@@ -226,7 +150,7 @@ export function ContributionsAdminShell() {
               onClick={() => setTab(key)}
               style={{ flex: 1, padding: '10px 0', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: tab === key ? 700 : 400, color: tab === key ? t.ACCENT : t.MUTED, borderBottom: tab === key ? `2px solid ${t.ACCENT}` : '2px solid transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}
             >
-              {key === 'queue' ? 'Queue' : key === 'drive' ? 'Drive' : 'Settings'}
+              {key === 'queue' ? 'Queue' : 'Settings'}
               {key === 'queue' && pendingCount > 0 && <span style={{ background: '#F59E0B', color: '#000', fontSize: 9, fontWeight: 700, padding: '0 4px', borderRadius: 99, lineHeight: '14px' }}>{pendingCount}</span>}
             </button>
           ))}
