@@ -6,7 +6,7 @@ import { reportError } from 'lib/observability/report';
 
 // GET /api/people?page=&offering=1&q=: the 3.1 People screen, a page of the Directory with each
 // person's Foundation offering. Approved members only (the default tier), the same bar as the
-// Directory. A page past the end answers the last page, so a stale link never shows nothing.
+// Directory. A page past the end answers the last page, so an old link never shows nothing.
 
 export const dynamic = 'force-dynamic';
 
