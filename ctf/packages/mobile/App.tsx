@@ -199,6 +199,22 @@ function SignedOutInvites({ signedIn, selected }: { signedIn: boolean; selected:
   return <InvitesPopup />;
 }
 
+function showsNewFrame(isAuthenticated: boolean, interfaceVersion: string, selected: FeatureKey): boolean {
+  return isAuthenticated && interfaceVersion === '3.1' && selected === 'apps';
+}
+
+// The 3.1 home, with the Foundation call controller above it so an incoming call still rings.
+function NewFrameShell({ user, onOpenAccount }: { user: { id?: string; username?: string | null } | null; onOpenAccount: () => void }) {
+  return (
+    <View key={user?.id ?? 'signed-out'} style={styles.container}>
+      <FoundationCallController signedIn displayName={callDisplayName(user)}>
+        <SeAppFrame onOpenAccount={onOpenAccount} />
+      </FoundationCallController>
+      <StatusBar style="light" />
+    </View>
+  );
+}
+
 function AppShell() {
   const { isLoading, isAuthenticated, user } = useAuth();
   const { tokens } = useTheme();
@@ -263,15 +279,8 @@ function AppShell() {
 
   // A member who switched to 3.1 sees the new frame on the home screen, as the web does at `/`. The
   // account screens it links to keep the 3.0 shell for now.
-  if (isAuthenticated && interfaceVersion === '3.1' && selected === 'apps') {
-    return (
-      <View key={user?.id ?? 'signed-out'} style={styles.container}>
-        <FoundationCallController signedIn={isAuthenticated} displayName={callDisplayName(user)}>
-          <SeAppFrame onOpenAccount={openAccount} />
-        </FoundationCallController>
-        <StatusBar style="light" />
-      </View>
-    );
+  if (showsNewFrame(isAuthenticated, interfaceVersion, selected)) {
+    return <NewFrameShell user={user} onOpenAccount={openAccount} />;
   }
 
   return (
