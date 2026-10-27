@@ -13,7 +13,7 @@
 | **Surfaces** | Web (`/apps/skills-hunt`, `/admin/skills-hunt`) · Android (`SkillsHunt.tsx`, `AdminSkillsHunt.tsx`) |
 | **Seed first** | `pnpm --dir ctf seed:skills-hunt` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-skills-hunt-feature-inventory.md` |
-| **Generated** | 2026-08-27 (hand-updated: 2026-10-13 a pasted link is cut back to the profile — SH-6b; 2026-10-08 "profession" reads "job title" — SH-2; 2026-10-08 the nomination keeps its job title — SH-7b; team leaderboard removed — SH-8; report flow removed — SH-13, SH-A13; flag reversal + re-add after remove — SH-A6, SH-A6b; taken-down URL refused — SH-A6c; unflag — SH-A6; admin list hides nothing — SH-A6d; restore a removed row — SH-A6e) · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-09-17 manual update: SH-2 now checks that the nomination is really written, not only acknowledged on screen — the submission INSERT listed 18 columns against 19 values and Postgres refused every nomination · 2026-09-17 manual update: SH-A10b and SH-A10c cover the named-skill mission goal, the mission Edit control and Recompute progress; SH-9 now says how to read a count against its title · 2026-09-18 manual update: SH-9 expects a count capped at its target, and points the mis-pointed-mission check at the admin Missions tab · 2026-09-20 manual update: SH-9b covers the missions picture control, which moved to the admin Missions tab the same day and now shows the picture on that screen rather than handing the file off · 2026-09-20 manual update: SH-A4c covers the paged moderation queue (25 a page, Previous/Next, filter change returns to page 1) · 2026-09-22 manual update: SH-1c covers the round as a field the scout marks (nothing pre-marked with two rounds open, submit waits for a mark, the mark survives a refresh) and the round named on the confirmation; SH-1d covers a closed round leaving the field reachable; SH-A4d covers the round's purpose above the moderation controls and the second confirmation on accept · 2026-10-01 manual update: one open round and the end-of-round award — SH-1c, SH-1d, SH-10c, SH-A1, SH-A3, SH-A4d, SH-A8, SH-A9b rewritten; SH-A-award and SH-A10d added · 2026-10-02 manual update: CS-4, SH-A3, SH-A4c and SH-A4d — Moderation opens on the open round with no round chips · 2026-10-05 manual update: SH-11b added (a failed load or mark-read says so); SH-A2b covers a failed rebuild showing its reason · 2026-10-17: demo seed adds missions and Status entries — CS-1, SH-9, SH-11 · 2026-10-17: demo seed reopens the demo round's dates on every run and hands the demo nomination back to the seeded account — SH-1c, SH-10 |
+| **Generated** | 2026-08-27 (hand-updated: 2026-10-27 the scout leaderboard is removed — CS-3, SH-8, SH-A2b and SH-A10b deleted, SH-11 seeds one unread entry; 2026-10-13 a pasted link is cut back to the profile — SH-6b; 2026-10-08 "profession" reads "job title" — SH-2; 2026-10-08 the nomination keeps its job title — SH-7b; team leaderboard removed — SH-8; report flow removed — SH-13, SH-A13; flag reversal + re-add after remove — SH-A6, SH-A6b; taken-down URL refused — SH-A6c; unflag — SH-A6; admin list hides nothing — SH-A6d; restore a removed row — SH-A6e) · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-09-17 manual update: SH-2 now checks that the nomination is really written, not only acknowledged on screen — the submission INSERT listed 18 columns against 19 values and Postgres refused every nomination · 2026-09-17 manual update: SH-A10b and SH-A10c cover the named-skill mission goal, the mission Edit control and Recompute progress; SH-9 now says how to read a count against its title · 2026-09-18 manual update: SH-9 expects a count capped at its target, and points the mis-pointed-mission check at the admin Missions tab · 2026-09-20 manual update: SH-9b covers the missions picture control, which moved to the admin Missions tab the same day and now shows the picture on that screen rather than handing the file off · 2026-09-20 manual update: SH-A4c covers the paged moderation queue (25 a page, Previous/Next, filter change returns to page 1) · 2026-09-22 manual update: SH-1c covers the round as a field the scout marks (nothing pre-marked with two rounds open, submit waits for a mark, the mark survives a refresh) and the round named on the confirmation; SH-1d covers a closed round leaving the field reachable; SH-A4d covers the round's purpose above the moderation controls and the second confirmation on accept · 2026-10-01 manual update: one open round and the end-of-round award — SH-1c, SH-1d, SH-10c, SH-A1, SH-A3, SH-A4d, SH-A8, SH-A9b rewritten; SH-A-award and SH-A10d added · 2026-10-02 manual update: CS-4, SH-A3, SH-A4c and SH-A4d — Moderation opens on the open round with no round chips · 2026-10-05 manual update: SH-11b added (a failed load or mark-read says so); SH-A2b covers a failed rebuild showing its reason · 2026-10-17: demo seed adds missions and Status entries — CS-1, SH-9, SH-11 · 2026-10-17: demo seed reopens the demo round's dates on every run and hands the demo nomination back to the seeded account — SH-1c, SH-10 |
 | **Inventory wording** | 2026-10-01: banned-term wording removed from the inventory prose; no step in this script changed |
 
 ---
@@ -37,10 +37,6 @@ web ☐
 
 **CS-2 — Scout tab / nomination form is reachable**
 From the rounds list, tap or click into the active round. Navigate to the Scout tab. The "Nominate a Survivor" form renders with fields: Quora URL (required — marked with *, first), Full name, Bio, a skills picker, and a location block (Country — required, State/region and City — optional). On web the Country field is a dropdown; on Android it is a button that opens a searchable country list.
-web ☐
-
-**CS-3 — Leaderboard tab loads**
-Switch to the Leaderboard tab on the same round. A ranked list appears (seeded data). No fabricated figures — every visible number comes from the API.
 web ☐
 
 **CS-4 — Admin moderation shell is reachable by an admin**
@@ -139,9 +135,9 @@ Result: web ☐
 1. Sign in as a member.
 2. Open `/apps/skills-hunt` and stay on the Scout tab.
 3. Read what is on screen; do not try to submit.
-4. Open the Leaderboard tab, then My finds.
+4. Open My finds.
 
-**Expected:** The Scout tab shows a panel reading "Nominations for *round name* have closed", naming the date the round ran until and saying an admin opens the next round. No nomination form and no submit button. This is not the "No active round right now" panel — the round exists and is named. The Leaderboard and My finds tabs still load that round's data.
+**Expected:** The Scout tab shows a panel reading "Nominations for *round name* have closed", naming the date the round ran until and saying an admin opens the next round. No nomination form and no submit button. This is not the "No active round right now" panel — the round exists and is named. The My finds tab still loads that round's data.
 
 **Regression guard:** before 2026-09-12 this drew a working nomination form. Filling it in and pressing Submit returned "Round is not currently active." after the fact, which read as the form being broken. If the form appears here, the client and the server have gone back to disagreeing about what "active" means.
 
@@ -186,7 +182,7 @@ Result: web ☐
 2. Read what sits where the nomination fields would be.
 
 **Expected:** The "Nominations for *round name* have closed" notice sits where the fields were,
-naming the date it ran until. Leaderboard, Missions and My finds still show that round.
+naming the date it ran until. Missions and My finds still show that round.
 
 Result: web ☐
 
@@ -452,27 +448,6 @@ Result: web ☐
 
 ---
 
-### SH-8 — Leaderboard ranks scouts by accepted points
-
-**Role:** member · **Surfaces:** web
-
-**Precondition:** Seeded data includes accepted submissions with points.
-
-**Steps:**
-1. Navigate to the Leaderboard tab on an active or closed round.
-2. Confirm the list shows ranked entries with: rank, handle/name, score.
-3. Confirm there is **no Scouts/Teams toggle** — there is one board.
-
-**Expected:**
-- Entries are ordered by score descending, with first_match_count as the tie-break; no fabricated numbers.
-- The title reads "Scout Leaderboard".
-- If the signed-in member is in the top-100 their row is highlighted; if outside the top-100, their rank still appears.
-- The team view was removed 2026-08-27: it regrouped the same nominations by the nominee's claimed profession, not by any team of members, and every row had fallen into a single "Unspecified" bucket once the form stopped collecting professions.
-
-Result: web ☐
-
----
-
 ### SH-9 — Missions tab shows what the round still needs, the same for everybody
 
 **Role:** member (two different accounts) · **Surfaces:** web
@@ -500,7 +475,7 @@ mission back below complete, because the community now has more to do.
 The subtitle reads that everyone's nominations count toward the same missions.
 
 **Not changed by this:** a scout's own bonus points. Those are still earned on their own completion
-and are not taken back — check that on the leaderboard, not here.
+and are not taken back; they count in the end-of-round award (SH-A-award).
 
 A mis-pointed mission does not announce itself here. Check it on the **admin** Missions tab
 instead, where each row names what it counts ("Every accepted nomination, whatever the skill") with
@@ -571,7 +546,7 @@ Result: web ☐ installed app ☐
 2. Observe the submissions list: each entry shows full name, status (pending/accepted/rejected), and relative date.
 3. Observe the achievements/badges row — seeded badges (e.g. First Finder) appear if awarded.
 
-**Expected:** Only the signed-in member's own submissions appear. Statuses are accurate. Achievement codes shown match the 5 named badges: First Finder, Diversity Champion, Rare Talent Scout, Quality Contributor, Leaderboard Champion. **Diversity Champion** is awarded for accepted nominations spanning 3+ distinct taxonomy sectors, resolved from the submitted skills — it counted claimed professions until 2026-08-27, a field the nomination form no longer collects, which made it unearnable. The nomination form asks for skills, never professions.
+**Expected:** Only the signed-in member's own submissions appear. Statuses are accurate. Achievement codes shown match the 4 named badges: First Finder, Diversity Champion, Rare Talent Scout, Quality Contributor. **Diversity Champion** is awarded for accepted nominations spanning 3+ distinct taxonomy sectors, resolved from the submitted skills — it counted claimed professions until 2026-08-27, a field the nomination form no longer collects, which made it unearnable. The nomination form asks for skills, never professions.
 
 Result: web ☐
 
@@ -586,11 +561,11 @@ Result: web ☐
 **Steps:**
 1. As an admin, open `/admin/skills-hunt` → **Rounds** and set the draft round's status to `active`. Save.
 2. Try again by creating a new round with status `active`.
-3. As a member, open `/apps/skills-hunt` and go through Scout, Leaderboard, Missions and My Finds.
+3. As a member, open `/apps/skills-hunt` and go through Scout, Missions and My Finds.
 
 **Expected:** Steps 1 and 2 — both saves are refused with a message naming the round that is already
 open; the draft round stays `draft` and no new active round appears. Step 3 — every tab shows the
-same single open round; there are no round chips above Leaderboard, Missions or My Finds, and no
+same single open round; there are no round chips above Missions or My Finds, and no
 round field on Scout. If two rounds are open from before this rule (set one by hand in the
 database), the member screen shows a note saying an admin needs to close the others.
 
@@ -644,7 +619,7 @@ Result: web ☐
 
 **Steps:**
 1. Block `/api/skills-hunt/rounds/*/submissions`, open the My Finds tab, and press Refresh.
-2. Do the same for the Missions tab (`/missions`) and the Leaderboard tab (`/leaderboard`).
+2. Do the same for the Missions tab (`/missions`).
 3. Unblock the requests and press Refresh.
 4. Block `/api/skills-hunt/notifications/*/read`, open the Status panel, and tap an unread update.
 
@@ -720,13 +695,13 @@ Result: web ☐
 **Role:** member · **Surfaces:** web, android
 
 **Steps:**
-1. Open SkillsHunt, then in a second session change data that affects it (e.g. an admin accepts a pending submission so the leaderboard and My Finds change).
+1. Open SkillsHunt, then in a second session change data that affects it (e.g. an admin accepts a pending submission so My Finds changes).
 2. Web / mobile-responsive: tap the refresh icon (desktop header right side; phone header next to the top actions).
 3. Android: open the Leaders, Missions, or My Finds tab and pull down on the list.
 
 **Expected:**
 - On web the refresh icon spins while the re-pull is in flight; on android the pull-to-refresh spinner shows.
-- The rounds, leaderboard, missions, and My Finds data re-fetches and the change from the other session appears without closing and reopening the app.
+- The rounds, missions, and My Finds data re-fetches and the change from the other session appears without closing and reopening the app.
 - Refreshing never clears the screen to the full-screen loading state — the current content stays visible until the new data lands.
 The header back chevron returns to the page you came from (falling back to All Apps when opened
 directly), and the admin screen header shows a "Member view" pill opening `/apps/skills-hunt`.
@@ -774,23 +749,7 @@ Result: web ☐
 
 ---
 
-### SH-A2b — Manual leaderboard rebuild button
-
-**Role:** admin · **Surfaces:** web, android
-
-**Precondition:** A round with at least one accepted submission exists.
-
-**Steps:**
-1. In the admin Rounds tab (web) / on the admin screen with the round selected (Android), find the round's "Rebuild leaderboard" button and tap/click it; confirm the prompt.
-2. Open that round's Leaderboard tab and check the standings.
-
-**Expected:** The button shows a busy state, then a success notice ("Leaderboard rebuilt…" on Android). The Leaderboard reflects the current accepted submissions — a scout whose accepted submission was removed/rejected out-of-band no longer carries its points. A non-admin cannot reach this action. On Android the button sits in a "Leaderboard" card under the selected round and sends `x-ctf-csrf: '1'`. If the rebuild fails (block `/leaderboard/rebuild` in the browser's developer tools to try it), the button reads "Failed — retry" and the route's reason appears in red under it.
-
-Result: web ☐
-
----
-
-### SH-A3 — Review a submission: accept, then verify leaderboard rebuild and notification
+### SH-A3 — Review a submission: accept, then verify My Finds and the notification
 
 **Role:** admin/moderator · **Surfaces:** web, android
 
@@ -805,7 +764,7 @@ Result: web ☐
 **Expected:**
 - The submission status changes to "accepted".
 - No ServiceCredits are sent: the scout's balance is unchanged. Credits come only from the end-of-round award (SH-A-award).
-- The leaderboard for that round rebuilds — navigate to the Leaderboard tab and verify the submitter's score increased.
+- As the submitter, My Finds shows the nomination accepted with its points.
 - The submitter receives a `submission-accepted` notification (check the Status panel as the member, waiting up to 30s for the next poll).
 
 Result: web ☐
@@ -828,7 +787,7 @@ Result: web ☐
 - Submission status changes to "rejected".
 - Review notes are stored (visible in the submission detail or admin table).
 - The submitter receives a `submission-rejected` notification (check Status panel as member, up to 30s).
-- The leaderboard does not increase for this submitter; participation_points (+1) are awarded internally but the member's score reflects the reject correctly.
+- The submitter's accepted points do not increase; participation_points (+1) are awarded internally.
 
 Result: web ☐
 
@@ -838,13 +797,13 @@ Result: web ☐
 
 **Role:** admin · **Surfaces:** web, android
 
-**Precondition:** Any submission exists (any status). Ideally an accepted one so you can see the leaderboard change.
+**Precondition:** Any submission exists (any status). Ideally an accepted one so you can see its points leave the scout's totals.
 
 **Steps:**
 1. In the admin submissions table (web) / on each submission card (Android), tap/click "Remove" on a row and confirm the prompt.
-2. Re-open the round's Leaderboard and, as the affected scout, open the Scout tab and My Finds.
+2. As the affected scout, open the Scout tab and My Finds.
 
-**Expected:** The row disappears from the admin list (soft-deleted). The leaderboard no longer counts it. Crucially, unlike Reject, it does **not** add to the scout's rejection rate — a scout removed this way is not pushed toward the restricted/pre-approval state. It is gone from the scout's My Finds. No ServiceCredits are reversed by this action (that is a separate admin burn). A non-admin cannot reach the Remove action. On Android the "Remove" button shows on every submission card (any status) and sends `x-ctf-csrf: '1'`.
+**Expected:** The row disappears from the admin list (soft-deleted). My Finds and Your totals no longer count it. Crucially, unlike Reject, it does **not** add to the scout's rejection rate — a scout removed this way is not pushed toward the restricted/pre-approval state. It is gone from the scout's My Finds. No ServiceCredits are reversed by this action (that is a separate admin burn). A non-admin cannot reach the Remove action. On Android the "Remove" button shows on every submission card (any status) and sends `x-ctf-csrf: '1'`.
 
 Result: web ☐
 
@@ -926,7 +885,7 @@ Result: web ☐
 5. Confirm the count shown in the confirmation dialog matches the selected submissions.
 6. Confirm.
 
-**Expected:** All selected submissions change to "accepted" status sequentially. The leaderboard reflects each accepted submission. The confirmation dialog shows the count of pending submissions before firing.
+**Expected:** All selected submissions change to "accepted" status sequentially. My Finds reflects each accepted submission. The confirmation dialog shows the count of pending submissions before firing.
 
 Result: web ☐
 
@@ -979,7 +938,7 @@ Result: web ☐
 Notes:
 - This is the fix for a reported bug: with removed rows visible at last, the row was on screen and marked Removed with no action available on it and a disabled select box. Remove was a one-way door, the same dead end flag had. On the admin page every row now offers every action and every select box works — there is no terminal state.
 - The refusal in step 6 is not a bug: removing a submission frees its Quora URL for a fresh nomination, so a restore can collide with one. Two live nominations for one person is what `uq_skills_hunt_submissions_round_signature_live` prevents.
-- Restoring an **accepted** submission returns its points to the leaderboard and its mission progress with them. It does **not** re-mint a ServiceCredits reward, because removing it did not reverse one.
+- Restoring an **accepted** submission counts its points in the round again, and its mission progress with them. It does **not** re-mint a ServiceCredits reward, because removing it did not reverse one.
 
 Result: web ☐
 
@@ -1249,28 +1208,6 @@ Result: web ☐
 2. Look at Status, Starts and Ends, and at "Points needed for an award" and "ServiceCredits pool" below them.
 
 **Expected:** Every field sits fully inside the column — nothing is cut off at the right edge and the page never scrolls sideways. The date fields each take a full row rather than sharing one. (Starts used to run off-screen: `datetime-local` reports a wide intrinsic size on iOS Safari and grew its grid track.)
-### SH-A10b — Completing a mission moves the scout up the leaderboard
-
-**Role:** admin + member · **Surfaces:** web
-
-**Precondition:** An active round with a mission carrying a bonus above 0, and a scout close to finishing it.
-
-**Steps:**
-1. Note the scout's current score and rank on the round leaderboard, and on the all-time view.
-2. Accept enough nominations to complete the mission for that scout.
-3. Re-read both leaderboards.
-4. Archive the completed mission, then rebuild the leaderboard for that round.
-5. Re-read the leaderboard again.
-
-**Expected:**
-- Step 3: the score has risen by exactly the mission's bonus points, in the round leaderboard **and** the all-time view, and the rank reflects it — a scout on fewer submission points can now sit above one with more. The rise shows on the same review that completed the mission, not the next one.
-- Step 5: the score does **not** change. Earned is earned — the leaderboard reports a round, so archiving closes a mission to new completions but never takes back points already earned. (A member starts a fresh points count in a new round.)
-- **No ServiceCredits move at any point.** Points are a ranking figure and have no connection to credits.
-
-Result: web ☐
-
----
-
 ### SH-A10d — The missions picture's dates match the Rounds tab
 
 **Role:** admin · **Surfaces:** web
@@ -1339,13 +1276,13 @@ Result: web ☐
 2. Read the newest rows.
 3. Find the row for a submission you accepted while it was flagged and removed (flag it, remove it, then accept it from the admin list if you have not already).
 4. Open the Missions tab, press **Run now** on the auto-mission panel, then return to the Audit log tab and press **Refresh**.
-5. Create a round (SH-A1) and rebuild a leaderboard (SH-A2b), then refresh the Audit log again.
+5. Create a round (SH-A1), then refresh the Audit log again.
 
 **Expected:**
 - Step 2: rows are newest first, at most 200, each naming the action in plain words ("Reviewed a nomination", "Removed a nomination", "Restored a nomination"), the actor, what it was done to, and the local date and time. A denied action carries a red chip with its policy status.
 - Step 3: the review row reads `accepted · flagged → accepted · also restored it from removed` — it says the status the row came from, the status it went to, and that the accept brought the removed row back. A plain accept on a pending row shows only `accepted · pending → accepted`.
 - Step 4: a new "Auto-mission run" row appears with the number opened and updated.
-- Step 5: "Created a round" and "Rebuilt the leaderboard" rows appear. Nothing an admin did in this session is missing from the list.
+- Step 5: a "Created a round" row appears. Nothing an admin did in this session is missing from the list.
 
 Result: web ☐
 
@@ -1453,7 +1390,7 @@ Result: web ☐
 - Step 3: every live auto mission now reads `+3 pts`. This is the reported bug: before this change a round already at its cap kept the settings it was created with, so the new number appeared nowhere.
 - Step 4: the run reports nothing updated and nothing opened — a run that changes nothing says so.
 
-**Points are not credits.** A mission's bonus points are a leaderboard ranking figure; completing a mission sends no ServiceCredits, and no balance should move. (Today they do not reach the leaderboard either — see the inventory Gaps.)
+**Points are not credits.** A mission's bonus points count toward the scout's round score for the end-of-round award; completing a mission sends no ServiceCredits, and no balance should move.
 
 Result: web ☐
 
@@ -1484,7 +1421,6 @@ The following cases must produce identical behavior on both surfaces. Rerun them
 | SH-2b | Country required, state/city optional; US shows a state list, other countries a free-text region |
 | SH-4 | Full name and bio validation errors fire on the same conditions |
 | SH-7 | Proposed-skill chips appear and are submitted correctly |
-| SH-8 | Leaderboard rankings match (same data, same order) |
 | SH-9 | Missions list shows same missions with same progress |
 | SH-10 | My Finds shows same submissions and achievement codes |
 | SH-11 | Status panel shows same notifications; mark-read works |
@@ -1504,5 +1440,5 @@ The following cases must produce identical behavior on both surfaces. Rerun them
 
 1. **Admin pre-approval pathway for restricted submitters is disabled.** A user whose rejection rate exceeds the threshold gets a 403 (`SKILLS_HUNT_PRE_APPROVAL_REQUIRED`) but there is no UI for an admin to manually pre-approve them. This is intentional in the current scope.
 2. **URL liveness check has no finalized SLO.** A submission with a live Quora URL that happens to time out or return a transient error may behave unpredictably. The 5-second HEAD-check is best-effort; do not file a bug if a valid URL occasionally fails the check.
-3. **The team leaderboard no longer exists.** It was removed 2026-08-27: it grouped by each nominee's free-text claimed profession rather than by any team of members, and every row had collapsed into one "Unspecified" bucket once the nomination form stopped collecting professions. Do not file its absence as a bug.
+3. **There is no leaderboard of any kind.** The scout leaderboard, its tab, its rebuild button, the Leaderboard Champion badge and the top-10 notice were removed 2026-10-27 (owner decision, 3.1.0), along with test cases CS-3, SH-8, SH-A2b and SH-A10b (their numbers are left unused). The team leaderboard went earlier, on 2026-08-27: it grouped by each nominee's free-text claimed profession rather than by any team of members, and every row had collapsed into one "Unspecified" bucket once the nomination form stopped collecting professions. Do not file its absence as a bug.
 4. **There is no Reports queue, and no way to report a profile.** Both were removed 2026-08-27, along with test cases SH-13 and SH-A13 (their numbers are left unused rather than renumbering every case after them). Nothing could ever file a report — the member route had no button anywhere in the app — and resolving one only flipped a status column without deleting a profile or blocking anything. Taking down a community-generated profile is Directory's job and always was: in the Directory admin screen, an unclaimed community-generated profile carries an amber "Remove at the person's request" control that asks for a reason, deletes the profile, and blocks its Quora URL from being listed again until an admin lifts the block from the "Taken-down Quora URLs" panel on the same screen.

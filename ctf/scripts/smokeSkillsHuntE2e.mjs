@@ -4,7 +4,7 @@
  *
  * Verifies the full chain that the rewrite checklist asks for:
  *
- *   rounds list -> submit -> admin accept -> leaderboard rebuild
+ *   rounds list -> submit -> admin accept
  *     -> notification fan-out -> unclaimed Directory profile with @handle
  *
  * Strategy: run against the live DB AFTER seedSkillsHunt.mjs has
@@ -77,24 +77,6 @@ async function main() {
         match_base: (v) => v === 10,
         first_match: (v) => v === 5,
         points_awarded: (v) => v >= 17,
-      },
-    );
-
-    // 4. Leaderboard rebuild populated the new Wave 2 columns.
-    await assertRow(
-      'leaderboard rebuild wrote first_match_count + last_submission_at',
-      client.query(
-        `SELECT rank, score, first_match_count, last_submission_at
-         FROM skills_hunt_leaderboard
-         WHERE round_id = $1::uuid AND mode = 'individual' AND user_id = $2
-         ORDER BY rank ASC LIMIT 1`,
-        [SEED_ROUND_ID, SEED_USERNAME],
-      ),
-      [],
-      {
-        rank: 1,
-        first_match_count: (v) => v === 1,
-        last_submission_at: (v) => v != null,
       },
     );
 

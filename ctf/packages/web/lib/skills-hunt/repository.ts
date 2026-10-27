@@ -32,7 +32,6 @@ import type {
   SkillsHuntAchievement,
   SkillsHuntFeatureRewardCard,
   SkillsHuntFeatureRewardCardInput,
-  SkillsHuntLeaderboardItem,
   SkillsHuntNotification,
   SkillsHuntPagination,
   SkillsHuntReputationProfile,
@@ -50,13 +49,10 @@ import { findNominationBlocker } from './nomination-check';
 import { reportError } from 'lib/observability/report';
 import { recomputeMissionProgressForUser } from './missions';
 import {
-  captureTopTenUserIds,
   emitAchievementUnlocked,
-  emitLeaderboardTopTen,
   emitMissionComplete,
   emitSubmissionAccepted,
   emitSubmissionRejected,
-  readCurrentTopTen,
 } from './notifications';
 import { snapshotRareSkillsForRound } from './rare-skill-snapshot';
 import { generateAutoMissionsForNewRound } from './auto-missions';
@@ -113,18 +109,6 @@ type SkillsHuntSubmissionRow = {
   updated_at: Date;
 };
 
-type SkillsHuntLeaderboardRow = {
-  rank: number;
-  score: number;
-  accepted_count: number;
-  first_match_count?: number | null;
-  pending_points?: number | null;
-  rare_skill_bonus: number;
-  user_id: string | null;
-  username_snapshot: string | null;
-  last_submission_at?: Date | null;
-  metadata: Record<string, unknown>;
-};
 
 type SkillsHuntNotificationRow = {
   id: string;
@@ -360,21 +344,6 @@ export async function wasRemovedByAccountDeletion(client: PoolClient, submission
     [submissionId],
   );
   return result.rows[0]?.removed === true;
-}
-
-function mapLeaderboard(row: SkillsHuntLeaderboardRow): SkillsHuntLeaderboardItem {
-  return {
-    rank: row.rank,
-    score: row.score,
-    acceptedCount: row.accepted_count,
-    firstMatchCount: row.first_match_count ?? 0,
-    pendingPoints: row.pending_points ?? 0,
-    rareSkillBonus: row.rare_skill_bonus,
-    userId: row.user_id,
-    usernameSnapshot: row.username_snapshot,
-    lastSubmissionAtIso: row.last_submission_at ? toIso(row.last_submission_at) : null,
-    metadata: normalizeJsonObject(row.metadata),
-  };
 }
 
 function mapNotification(row: SkillsHuntNotificationRow): SkillsHuntNotification {
@@ -935,13 +904,6 @@ const NAMED_BADGES = {
     title: 'Quality Contributor',
     description: '100% acceptance rate with 5+ submissions.',
   },
-  // leaderboard-champion fires on round close (top-3 final standings).
-  // Wired separately when the round-close handler lands; not awarded here.
-  leaderboardChampion: {
-    code: 'leaderboard-champion',
-    title: 'Leaderboard Champion',
-    description: 'Finished top-3 on a round’s final standings.',
-  },
 } as const;
 
 // first-finder — this submission's score includes the firstMatchBonus.
@@ -1064,129 +1026,6 @@ async function awardNamedBadges(
   await maybeAwardRareTalentScout(client, userId, roundId);
   await maybeAwardDiversityChampion(client, userId, roundId);
   await maybeAwardQualityContributor(client, userId, roundId);
-}
-
-export async function rebuildLeaderboard(client: PoolClient, roundId: string): Promise<void> {
-  await client.query(
-    'DELETE FROM skills_hunt_leaderboard WHERE round_id = $1::uuid',
-    [roundId],
-  );
-
-  // Spec tie-break: score DESC, first_match_count DESC, last_submission_at ASC.
-  // first_match_count = accepted submissions where firstMatchBonus > 0.
-  // last_submission_at = MAX(created_at) across all statuses, drives "ties go
-  // to the scout who showed up earliest".
-  // pending_points = a rough preview of points-in-flight if every pending
-  // submission accepts at SPEC matchBase (+10). Cheap lower bound; UI shows
-  // it as "+N pending" next to the score.
-  const individualRows = await client.query<{
-    submitter_user_id: string;
-    submitter_username: string | null;
-    score: string;
-    accepted_count: string;
-    rare_skill_bonus: string;
-    first_match_count: string;
-    pending_points: string;
-    last_submission_at: Date | null;
-  }>(
-    `
-      WITH accepted AS (
-        SELECT
-          submitter_user_id,
-          MAX(submitter_username) AS submitter_username,
-          SUM(points_awarded)::text AS score,
-          COUNT(*)::text AS accepted_count,
-          SUM(COALESCE((score_breakdown->>'rareSkillBonus')::int, 0))::text AS rare_skill_bonus,
-          COUNT(*) FILTER (
-            WHERE COALESCE((score_breakdown->>'firstMatchBonus')::int, 0) > 0
-          )::text AS first_match_count
-        FROM skills_hunt_submissions
-        WHERE round_id = $1::uuid AND status = 'accepted' AND deleted_at IS NULL
-        GROUP BY submitter_user_id
-      ),
-      pending AS (
-        SELECT
-          submitter_user_id,
-          (COUNT(*) * $2)::text AS pending_points
-        FROM skills_hunt_submissions
-        WHERE round_id = $1::uuid AND status = 'pending' AND deleted_at IS NULL
-        GROUP BY submitter_user_id
-      ),
-      activity AS (
-        -- Spec tie-break: "ties go to the earliest scout to submit". We use
-        -- MIN(created_at) here and ORDER BY ASC at the consumer so the row
-        -- with the oldest first-touch wins. The column name is kept for
-        -- backwards compatibility with existing consumers.
-        SELECT
-          submitter_user_id,
-          MIN(created_at) AS last_submission_at
-        FROM skills_hunt_submissions
-        WHERE round_id = $1::uuid AND deleted_at IS NULL
-        GROUP BY submitter_user_id
-      ),
-      -- Mission bonuses earned in this round. Points are a ranking figure (owner directive
-      -- 2026-08-27), so completing a mission adds its bonus_points to the scout's score.
-      -- Earned is earned: the mission's current status is not consulted. Archiving a mission
-      -- closes it to new completions (the member-facing list only returns active/locked ones),
-      -- but it never takes back points a scout already earned in this round.
-      mission_bonus AS (
-        SELECT
-          mp.user_id AS submitter_user_id,
-          SUM(m.bonus_points)::int AS mission_bonus
-        FROM skills_hunt_mission_progress mp
-        JOIN skills_hunt_missions m ON m.id = mp.mission_id
-        WHERE m.round_id = $1::uuid
-          AND mp.completed_at IS NOT NULL
-        GROUP BY mp.user_id
-      )
-      SELECT
-        a.submitter_user_id,
-        a.submitter_username,
-        (a.score::int + COALESCE(mb.mission_bonus, 0))::text AS score,
-        a.accepted_count,
-        a.rare_skill_bonus,
-        a.first_match_count,
-        COALESCE(p.pending_points, '0') AS pending_points,
-        act.last_submission_at
-      FROM accepted a
-      LEFT JOIN pending p ON p.submitter_user_id = a.submitter_user_id
-      LEFT JOIN activity act ON act.submitter_user_id = a.submitter_user_id
-      LEFT JOIN mission_bonus mb ON mb.submitter_user_id = a.submitter_user_id
-      ORDER BY
-        (a.score::int + COALESCE(mb.mission_bonus, 0)) DESC,
-        a.first_match_count::int DESC,
-        act.last_submission_at ASC NULLS LAST,
-        a.submitter_user_id ASC
-    `,
-    [roundId, SKILLS_HUNT_SCORE_WEIGHTS_SPEC.matchBase],
-  );
-
-  for (let index = 0; index < individualRows.rows.length; index += 1) {
-    const row = individualRows.rows[index];
-    await client.query(
-      `
-        INSERT INTO skills_hunt_leaderboard
-          (round_id, mode, rank, score, accepted_count, rare_skill_bonus,
-           first_match_count, pending_points, last_submission_at,
-           user_id, username_snapshot, metadata)
-        VALUES
-          ($1::uuid, 'individual', $2, $3, $4, $5, $6, $7, $8::timestamptz, $9, $10, '{}'::jsonb)
-      `,
-      [
-        roundId,
-        index + 1,
-        Number.parseInt(row.score, 10),
-        Number.parseInt(row.accepted_count, 10),
-        Number.parseInt(row.rare_skill_bonus, 10),
-        Number.parseInt(row.first_match_count, 10),
-        Number.parseInt(row.pending_points, 10),
-        row.last_submission_at,
-        row.submitter_user_id,
-        row.submitter_username,
-      ],
-    );
-  }
-
 }
 
 // Effective per-submission scoring weights = SPEC defaults + per-round overrides.
@@ -1596,36 +1435,6 @@ export async function updateRound(actorId: string, roundId: string, input: Skill
         actorId,
       ],
     );
-
-    // Round-close hook: when the admin flips a round from active → closed,
-    // award `leaderboard-champion` to the top-3 individual finishers. This is
-    // the only place that badge can fire (the recompute helper inside
-    // reviewSubmission can't know whether the round has ended).
-    if (existing.status === 'active' && input.status === 'closed') {
-      const finalTopThree = await client.query<{ user_id: string | null; rank: number }>(
-        `
-          SELECT user_id, rank
-          FROM skills_hunt_leaderboard
-          WHERE round_id = $1::uuid
-            AND mode = 'individual'
-            AND user_id IS NOT NULL
-          ORDER BY rank ASC
-          LIMIT 3
-        `,
-        [roundId],
-      );
-      for (const row of finalTopThree.rows) {
-        if (!row.user_id) continue;
-        await ensureAchievement(
-          client,
-          row.user_id,
-          NAMED_BADGES.leaderboardChampion.code,
-          NAMED_BADGES.leaderboardChampion.title,
-          NAMED_BADGES.leaderboardChampion.description,
-          roundId,
-        );
-      }
-    }
 
     return mapRound(updated.rows[0]);
   });
@@ -2053,7 +1862,7 @@ async function resolveReviewOutcome(
 
   // Undo a flag: back to pending, exactly as it arrived, with no verdict recorded against the
   // scout. Flagging already zeroed the points, so there is nothing to give back; a later accept
-  // scores it fresh. The caller rebuilds the leaderboard either way.
+  // scores it fresh.
   if (input.action === 'unflag') {
     status = 'pending';
     pointsAwarded = 0;
@@ -2061,21 +1870,6 @@ async function resolveReviewOutcome(
   }
 
   return { status, pointsAwarded, scoreBreakdown, participationPoints };
-}
-
-// Fan out emitLeaderboardTopTen() for anyone who is inside the top-ten cap now
-// (after the rebuild) but was not before.
-async function emitNewTopTenEntries(
-  client: PoolClient,
-  roundId: string,
-  topTenBefore: Set<string>,
-): Promise<void> {
-  const topTenAfter = await readCurrentTopTen(client, roundId);
-  for (const entry of topTenAfter) {
-    if (!topTenBefore.has(entry.userId)) {
-      await emitLeaderboardTopTen(client, entry.userId, roundId, entry.rank, entry.score);
-    }
-  }
 }
 
 // Post-accept fan-out: acceptance notification (only on a real transition into
@@ -2099,9 +1893,8 @@ async function handleAcceptedReview(
 
   await awardNamedBadges(client, existing.submitter_user_id, existing.round_id, scoreBreakdown);
 
-  // Mission progress is recomputed by the caller before the leaderboard rebuild (a completed
-  // mission's bonus counts toward the score), and the mission-complete notifications go out
-  // there too.
+  // Mission progress is recomputed by the caller (a completed mission's bonus counts toward the
+  // round score), and the mission-complete notifications go out there too.
 
   const attributionUsername = existing.submitter_username ?? actorUsername ?? 'system';
   // Generating the Directory profile is a best-effort follow-up to the accept: it must
@@ -2169,7 +1962,7 @@ export async function reviewSubmission(
       throw new Error('skills_hunt_submission_not_found');
     }
     // A nomination removed by its submitter's account deletion stays removed (issue #2868): a review
-    // would make it live again, back on the leaderboard under an erased account.
+    // would make it live again, counted in the round under an erased account.
     if (existing.deleted_at && (await wasRemovedByAccountDeletion(client, submissionId))) {
       throw new Error('skills_hunt_submission_account_deleted');
     }
@@ -2247,21 +2040,11 @@ export async function reviewSubmission(
       ],
     );
 
-    // Mission progress is recomputed BEFORE the leaderboard rebuild: a completed mission's
-    // bonus_points count toward the round score, so rebuilding first would leave the score a
-    // review behind. The notifications for anything newly completed go out after the rebuild,
-    // with the rest of the accept side effects.
+    // Mission progress is recomputed on accept; the notifications for anything newly completed go
+    // out with the rest of the accept side effects.
     const newlyCompletedMissions = status === 'accepted'
       ? (await recomputeMissionProgressForUser(client, existing.round_id, existing.submitter_user_id)).newlyCompleted
       : [];
-
-    // Capture top-10 before the rebuild so we can diff and fan out
-    // emitLeaderboardTopTen() for anyone newly inside the cap.
-    const topTenBefore = new Set(await captureTopTenUserIds(client, existing.round_id));
-
-    await rebuildLeaderboard(client, existing.round_id);
-
-    await emitNewTopTenEntries(client, existing.round_id, topTenBefore);
 
     for (const mission of newlyCompletedMissions) {
       await emitMissionComplete(client, existing.submitter_user_id, mission.id, mission.title, mission.bonusPoints);
@@ -2301,154 +2084,6 @@ export async function reviewSubmission(
       restoredFromRemoved: wasRemoved,
     };
   });
-}
-
-const LEADERBOARD_TOP_CAP = 100;
-
-const LEADERBOARD_SELECT = `
-  rank, score, accepted_count, rare_skill_bonus,
-  first_match_count, pending_points, last_submission_at,
-  user_id, username_snapshot, metadata
-`;
-
-export async function listLeaderboard(
-  roundId: string,
-  viewerUserId: string | null = null,
-): Promise<{ items: SkillsHuntLeaderboardItem[]; currentUserEntry: SkillsHuntLeaderboardItem | null; totalCount: number }> {
-  const rows = await queryDb<SkillsHuntLeaderboardRow>(
-    `
-      SELECT ${LEADERBOARD_SELECT}
-      FROM skills_hunt_leaderboard
-      WHERE round_id = $1::uuid AND mode = 'individual'
-      ORDER BY rank ASC
-      LIMIT $2
-    `,
-    [roundId, LEADERBOARD_TOP_CAP],
-  );
-
-  const totalResult = await queryDb<CountRow>(
-    `SELECT COUNT(*)::text AS total FROM skills_hunt_leaderboard WHERE round_id = $1::uuid AND mode = 'individual'`,
-    [roundId],
-  );
-  const totalCount = Number.parseInt(totalResult.rows[0]?.total ?? '0', 10);
-
-  let currentUserEntry: SkillsHuntLeaderboardItem | null = null;
-  if (viewerUserId) {
-    const inTopCap = rows.rows.find((r) => r.user_id === viewerUserId);
-    if (inTopCap) {
-      currentUserEntry = mapLeaderboard(inTopCap);
-    } else {
-      const userRow = await queryDb<SkillsHuntLeaderboardRow>(
-        `
-          SELECT ${LEADERBOARD_SELECT}
-          FROM skills_hunt_leaderboard
-          WHERE round_id = $1::uuid AND mode = 'individual' AND user_id = $2
-          LIMIT 1
-        `,
-        [roundId, viewerUserId],
-      );
-      if (userRow.rows.length > 0) currentUserEntry = mapLeaderboard(userRow.rows[0]);
-    }
-  }
-
-  return { items: rows.rows.map(mapLeaderboard), currentUserEntry, totalCount };
-}
-
-// All-time view: aggregates accepted submissions across every round. Read-only
-// derivation — no rows are materialized into skills_hunt_leaderboard with a
-// sentinel round_id (cheaper to recompute on read at this scale).
-export async function listAllTimeLeaderboard(
-  viewerUserId: string | null = null,
-): Promise<{ items: SkillsHuntLeaderboardItem[]; currentUserEntry: SkillsHuntLeaderboardItem | null; totalCount: number }> {
-  const orderTail = `
-    ORDER BY
-      score::int DESC,
-      first_match_count::int DESC,
-      last_submission_at ASC NULLS LAST,
-      identity ASC
-  `;
-
-  type AggRow = {
-    identity: string;
-    submitter_username: string | null;
-    score: string;
-    accepted_count: string;
-    rare_skill_bonus: string;
-    first_match_count: string;
-    last_submission_at: Date | null;
-  };
-
-  // Mission bonuses count toward the all-time score too, on the same terms as the per-round
-  // leaderboard: completed progress on a mission that has not been archived, summed across
-  // every round.
-  const sqlIndividual = `
-    WITH agg AS (
-      SELECT
-        submitter_user_id AS identity,
-        MAX(submitter_username) AS submitter_username,
-        SUM(points_awarded)::int AS score,
-        COUNT(*)::text AS accepted_count,
-        SUM(COALESCE((score_breakdown->>'rareSkillBonus')::int, 0))::text AS rare_skill_bonus,
-        COUNT(*) FILTER (
-          WHERE COALESCE((score_breakdown->>'firstMatchBonus')::int, 0) > 0
-        )::text AS first_match_count,
-        MIN(created_at) AS last_submission_at
-      FROM skills_hunt_submissions
-      WHERE status = 'accepted' AND deleted_at IS NULL
-      GROUP BY submitter_user_id
-    ),
-    mission_bonus AS (
-      SELECT
-        mp.user_id AS identity,
-        SUM(m.bonus_points)::int AS mission_bonus
-      FROM skills_hunt_mission_progress mp
-      JOIN skills_hunt_missions m ON m.id = mp.mission_id
-      WHERE mp.completed_at IS NOT NULL
-      GROUP BY mp.user_id
-    )
-    SELECT * FROM (
-      SELECT
-        agg.identity,
-        agg.submitter_username,
-        (agg.score + COALESCE(mb.mission_bonus, 0))::text AS score,
-        agg.accepted_count,
-        agg.rare_skill_bonus,
-        agg.first_match_count,
-        agg.last_submission_at
-      FROM agg
-      LEFT JOIN mission_bonus mb ON mb.identity = agg.identity
-    ) ranked
-    -- The wrapper matters: orderTail sorts on \`score\`, and without it that name would resolve to
-    -- agg.score inside the join — the figure before the mission bonus — so rows would be ordered by
-    -- a different number than the one displayed.
-    ${orderTail}
-  `;
-
-  const result = await queryDb<AggRow>(sqlIndividual, []);
-  const totalCount = result.rows.length;
-
-  const toItem = (row: AggRow, rank: number): SkillsHuntLeaderboardItem => ({
-    rank,
-    score: Number.parseInt(row.score, 10),
-    acceptedCount: Number.parseInt(row.accepted_count, 10),
-    firstMatchCount: Number.parseInt(row.first_match_count, 10),
-    pendingPoints: 0,
-    rareSkillBonus: Number.parseInt(row.rare_skill_bonus, 10),
-    userId: row.identity,
-    usernameSnapshot: row.submitter_username,
-    lastSubmissionAtIso: row.last_submission_at ? toIso(row.last_submission_at) : null,
-    metadata: {},
-  });
-
-  const items = result.rows.slice(0, LEADERBOARD_TOP_CAP).map((row, index) => toItem(row, index + 1));
-
-  let currentUserEntry: SkillsHuntLeaderboardItem | null = null;
-  if (viewerUserId) {
-    const userIndex = result.rows.findIndex((r) => r.identity === viewerUserId);
-    if (userIndex >= 0) currentUserEntry = toItem(result.rows[userIndex], userIndex + 1);
-  }
-
-  return { items, currentUserEntry, totalCount };
 }
 
 export async function listAchievements(userId: string): Promise<SkillsHuntAchievement[]> {

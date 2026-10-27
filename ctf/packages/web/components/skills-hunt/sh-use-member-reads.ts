@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { reportError } from "lib/observability/report";
 import { startVisibleInterval } from "../../lib/shared/visible-interval";
 import type {
-  SkillsHuntLeaderboardItem, SkillsHuntMissionWithCommunityProgress, SkillsHuntNotification, SkillsHuntSubmission, Tab,
+  SkillsHuntMissionWithCommunityProgress, SkillsHuntNotification, SkillsHuntSubmission, Tab,
 } from "./sh-shared";
 
 // The member screen's reads, each with its own error state. A failed read used to leave its list
@@ -71,19 +71,11 @@ function itemsOf<T>(data: { items: T[] } | null): T[] {
   return data?.items ?? [];
 }
 
-type LeaderboardBody = { items: SkillsHuntLeaderboardItem[]; currentUserEntry?: SkillsHuntLeaderboardItem | null };
-
-// The open round's three lists. The leaderboard loads whenever there is a round; My Finds and
-// Missions load only while their tab is showing.
+// The open round's lists. My Finds and Missions load only while their tab is showing.
 export function useRoundTabReads(roundKey: string | null, tab: Tab, refreshKey: number) {
-  const board = useSkillsHuntRead<LeaderboardBody>(roundUrl(roundKey, "leaderboard", true), refreshKey, "the leaderboard", "member_leaderboard_load");
   const finds = useSkillsHuntRead<{ items: SkillsHuntSubmission[] }>(roundUrl(roundKey, "submissions", tab === "my-finds"), refreshKey, "your finds", "member_finds_load");
   const missions = useSkillsHuntRead<{ items: SkillsHuntMissionWithCommunityProgress[] }>(roundUrl(roundKey, "missions", tab === "missions"), refreshKey, "missions", "member_missions_load");
   return {
-    leaderboard: itemsOf(board.data),
-    serverCurrentUserEntry: board.data?.currentUserEntry ?? null,
-    loadingLeaderboard: board.loading,
-    leaderboardError: board.error,
     myFinds: itemsOf(finds.data),
     loadingFinds: finds.loading,
     findsError: finds.error,

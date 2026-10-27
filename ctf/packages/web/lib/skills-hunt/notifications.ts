@@ -1,7 +1,7 @@
 // SkillsHunt — in-DB notification fan-out.
 //
-// All five spec triggers (accept, reject, leaderboard-top10 change,
-// round-ending-24h, achievement-unlocked) plus mission-complete write rows
+// The spec triggers (accept, reject, round-ending-24h, achievement-unlocked)
+// plus mission-complete write rows
 // to `skills_hunt_notifications`. Client polls
 // `GET /api/skills-hunt/notifications` at 30s. GetStream is explicitly out
 // of scope (continuity §2.11).
@@ -13,7 +13,6 @@ const SKILLS_HUNT_NOTIFICATION_KIND = {
   submissionRejected: 'submission-rejected',
   achievementUnlocked: 'achievement-unlocked',
   missionComplete: 'mission-complete',
-  leaderboardTopTen: 'leaderboard-top-ten',
   roundEndingSoon: 'round-ending-soon',
 } as const;
 
@@ -102,23 +101,6 @@ export async function emitMissionComplete(
   );
 }
 
-export async function emitLeaderboardTopTen(
-  client: PoolClient,
-  userId: string,
-  roundId: string,
-  rank: number,
-  score: number,
-): Promise<void> {
-  await insertNotificationRow(
-    client,
-    userId,
-    SKILLS_HUNT_NOTIFICATION_KIND.leaderboardTopTen,
-    `You're in the top 10`,
-    `You moved to rank #${rank} on this round's leaderboard (${score} pts).`,
-    { roundId, rank, score },
-  );
-}
-
 // Round-ending-24h is the only trigger that isn't fired by a user action —
 // it needs an external scheduler. Caller (cron / scheduled job) invokes this
 // with the current time; the helper emits one notification per
@@ -169,34 +151,4 @@ export async function notifyRoundsEndingSoon(client: PoolClient): Promise<{ emit
     emitted += 1;
   }
   return { emitted };
-}
-
-// Helper: capture top-10 user_ids for a round BEFORE rebuildLeaderboard
-// runs, so the caller can diff after the rebuild and fan out
-// emitLeaderboardTopTen() to anyone newly inside the cap.
-export async function captureTopTenUserIds(client: PoolClient, roundId: string): Promise<string[]> {
-  const result = await client.query<{ user_id: string }>(
-    `
-      SELECT user_id FROM skills_hunt_leaderboard
-      WHERE round_id = $1::uuid AND mode = 'individual' AND user_id IS NOT NULL
-      ORDER BY rank ASC LIMIT 10
-    `,
-    [roundId],
-  );
-  return result.rows.map((r) => r.user_id);
-}
-
-export async function readCurrentTopTen(
-  client: PoolClient,
-  roundId: string,
-): Promise<Array<{ userId: string; rank: number; score: number }>> {
-  const result = await client.query<{ user_id: string; rank: number; score: number }>(
-    `
-      SELECT user_id, rank, score FROM skills_hunt_leaderboard
-      WHERE round_id = $1::uuid AND mode = 'individual' AND user_id IS NOT NULL
-      ORDER BY rank ASC LIMIT 10
-    `,
-    [roundId],
-  );
-  return result.rows.map((r) => ({ userId: r.user_id, rank: r.rank, score: r.score }));
 }

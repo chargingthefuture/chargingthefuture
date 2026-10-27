@@ -2,7 +2,6 @@ import type { PoolClient } from 'pg';
 import { queryDb, withDbTransaction } from 'lib/db/postgres';
 import { insertServiceCreditsAudit, mintGrant } from 'lib/shared/credits-interface';
 import { reportError } from 'lib/observability/report';
-import { rebuildLeaderboard } from './repository';
 
 // End-of-round awards (owner decision, 2026-10-01). A round is points only while it runs. When it
 // closes, every scout whose score reached the round's points bar shares the round's ServiceCredits
@@ -90,17 +89,47 @@ async function readStoredAwards(client: PoolClient, roundId: string): Promise<St
   return result.rows;
 }
 
-// Final standings from the round's leaderboard, rebuilt first so late reviews count.
+// Final standings for the round, read from the reviews themselves so late reviews count: a scout's
+// score is the points on their accepted nominations plus the bonus of every mission they completed in
+// this round. A scout needs at least one accepted nomination to appear, as before. Ties order by more
+// first matches, then by who submitted first, then by id, so the order is stable.
+const STANDINGS_SQL = `
+  WITH accepted AS (
+    SELECT
+      submitter_user_id,
+      MAX(submitter_username) AS submitter_username,
+      SUM(points_awarded)::int AS score,
+      COUNT(*) FILTER (WHERE COALESCE((score_breakdown->>'firstMatchBonus')::int, 0) > 0)::int AS first_match_count
+    FROM skills_hunt_submissions
+    WHERE round_id = $1::uuid AND status = 'accepted' AND deleted_at IS NULL
+    GROUP BY submitter_user_id
+  ),
+  first_activity AS (
+    SELECT submitter_user_id, MIN(created_at) AS first_at
+    FROM skills_hunt_submissions
+    WHERE round_id = $1::uuid AND deleted_at IS NULL
+    GROUP BY submitter_user_id
+  ),
+  mission_bonus AS (
+    SELECT mp.user_id AS submitter_user_id, SUM(m.bonus_points)::int AS bonus
+    FROM skills_hunt_mission_progress mp
+    JOIN skills_hunt_missions m ON m.id = mp.mission_id
+    WHERE m.round_id = $1::uuid AND mp.completed_at IS NOT NULL
+    GROUP BY mp.user_id
+  )
+  SELECT
+    a.submitter_user_id AS user_id,
+    a.submitter_username AS username,
+    (a.score + COALESCE(mb.bonus, 0)) AS score
+  FROM accepted a
+  LEFT JOIN mission_bonus mb ON mb.submitter_user_id = a.submitter_user_id
+  LEFT JOIN first_activity fa ON fa.submitter_user_id = a.submitter_user_id
+  ORDER BY score DESC, a.first_match_count DESC, fa.first_at ASC NULLS LAST, a.submitter_user_id ASC
+`;
+
 async function readStandings(client: PoolClient, roundId: string): Promise<SkillsHuntAwardStanding[]> {
-  await rebuildLeaderboard(client, roundId);
-  const result = await client.query<{ user_id: string; username_snapshot: string | null; score: number }>(
-    `SELECT user_id, username_snapshot, score
-     FROM skills_hunt_leaderboard
-     WHERE round_id = $1::uuid AND mode = 'individual' AND user_id IS NOT NULL
-     ORDER BY rank ASC`,
-    [roundId],
-  );
-  return result.rows.map((r) => ({ userId: r.user_id, username: r.username_snapshot, score: Number(r.score) }));
+  const result = await client.query<{ user_id: string; username: string | null; score: number }>(STANDINGS_SQL, [roundId]);
+  return result.rows.map((r) => ({ userId: r.user_id, username: r.username, score: Number(r.score) }));
 }
 
 function notReadyReason(round: RoundAwardRow): string | null {

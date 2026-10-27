@@ -6,12 +6,11 @@
 --
 -- What it does not touch: ServiceCredits already sent stay sent, and every nomination keeps its
 -- status, points and Directory profile. Find Doctors' own missions stay with the closed round.
--- The round is closed here rather than from the Rounds tab, because closing there awards the
--- round's "Leaderboard Champion" badge to its top three, and this round is being folded away rather
--- than finished.
+-- The round is closed here rather than from the Rounds tab, because this round is being folded away
+-- rather than finished.
 --
--- After it runs, on the admin Rounds tab press "Rebuild leaderboard" on both rounds, then on the
--- Missions tab for 2026 SkillsHunt press "Recompute progress", and add the Find Doctors mission there.
+-- After it runs, on the admin Missions tab for 2026 SkillsHunt press "Recompute progress", and add
+-- the Find Doctors mission there.
 
 -- 1. Preview: both rounds, how many nominations move, and how many cannot (the same person is
 --    already nominated in 2026 SkillsHunt; those stay where they are).

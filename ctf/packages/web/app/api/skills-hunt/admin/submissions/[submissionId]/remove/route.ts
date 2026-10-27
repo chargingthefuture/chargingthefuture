@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireSkillsHuntAdminAccess } from '../../../../_lib';
 import { withDbTransaction } from 'lib/db/postgres';
-import { insertSkillsHuntAudit, rebuildLeaderboard } from 'lib/skills-hunt/repository';
+import { insertSkillsHuntAudit } from 'lib/skills-hunt/repository';
 import { recomputeMissionProgressForUser } from 'lib/skills-hunt/missions';
 import { SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
 import { reportError } from 'lib/observability/report';
@@ -10,7 +10,7 @@ import { withReason } from 'lib/errors/failure';
 // Admin-only soft-delete of a submission. This is the right way to void a
 // submission that should never have counted — a duplicate, spam, or a test row —
 // WITHOUT it registering as a scout "rejection". All the derived-state queries
-// (reputation/rate-limit, leaderboard, mission progress, My Finds, directory
+// (reputation/rate-limit, round scores, mission progress, My Finds, directory
 // eligibility) filter `deleted_at IS NULL`, so a soft-deleted row simply
 // disappears from them; in particular it does not raise the scout's rejection
 // rate the way a `reject` review does.
@@ -54,7 +54,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ sub
         [submissionId],
       );
       // Recompute the derived state that excluded this row is now gone from.
-      await rebuildLeaderboard(client, row.round_id);
       await recomputeMissionProgressForUser(client, row.round_id, row.submitter_user_id);
       return { alreadyRemoved: false, roundId: row.round_id };
     });
