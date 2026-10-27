@@ -17,7 +17,7 @@
  *   node scripts/generateDemoSchema.mjs
  *
  * Transforms (mirrors migrateToDemo.mjs applyDemoTransforms):
- *   H1/H2: public.chyme_room_members / public.chyme_messages → unqualified
+ *   H1/H2: public.chyme_room_members → unqualified
  *   H3:    public.users ALTER TABLE suppressed
  *   H4:    public.users unique-index DO block suppressed
  *   H5:    table_schema = 'public' → table_schema = 'demo'
@@ -37,7 +37,6 @@ const outPath = path.resolve(__dirname, '..', 'schema.demo.sql');
 
 function applyDemoTransforms(sql, targetSchema) {
   sql = sql.replace(/\bpublic\.chyme_room_members\b/g, 'chyme_room_members');
-  sql = sql.replace(/\bpublic\.chyme_messages\b/g, 'chyme_messages');
   sql = sql.replace(/\bpublic\.socket_relay_user_extension\b/g, 'socket_relay_user_extension');
   sql = sql.replace(
     /^ALTER TABLE IF EXISTS public\.users\b.*$/gm,

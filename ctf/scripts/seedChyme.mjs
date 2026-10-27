@@ -24,20 +24,16 @@ const serviceName = 'chyme';
 
 const demoUsers = [
   {
-    messageId: '21111111-1111-4111-8111-111111111111',
     deletionEventId: '31111111-1111-4111-8111-111111111111',
     userId: 'seed-chyme-user-001',
     username: 'seed_amina',
     role: 'speaker',
-    message: 'Welcome to the deterministic Chyme seed room.',
   },
   {
-    messageId: '21111111-1111-4111-8111-222222222222',
     deletionEventId: '31111111-1111-4111-8111-222222222222',
     userId: 'seed-chyme-user-002',
     username: 'seed_luis',
     role: 'listener',
-    message: 'Seed fixture online and ready for validation.',
   },
 ];
 
@@ -93,24 +89,6 @@ async function main() {
           demoUser.userId,
           demoUser.username,
           demoUser.role,
-        ],
-      );
-
-      await client.query(
-        `
-          INSERT INTO chyme_messages (id, room_id, user_id, username, text, sent_at)
-          VALUES ($1, $2, $3, $4, $5, NOW())
-          ON CONFLICT (id)
-          DO UPDATE SET
-            text = EXCLUDED.text,
-            sent_at = NOW()
-        `,
-        [
-          demoUser.messageId,
-          roomId,
-          demoUser.userId,
-          demoUser.username,
-          demoUser.message,
         ],
       );
 

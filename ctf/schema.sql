@@ -418,23 +418,9 @@ ALTER TABLE IF EXISTS chyme_room_members ADD COLUMN IF NOT EXISTS hand_raised BO
 ALTER TABLE IF EXISTS chyme_room_members ADD COLUMN IF NOT EXISTS mic_on BOOLEAN NULL;
 CREATE INDEX IF NOT EXISTS idx_chyme_room_members_room_id ON chyme_room_members(room_id);
 CREATE INDEX IF NOT EXISTS idx_chyme_room_members_user_id ON chyme_room_members(user_id);
-CREATE TABLE IF NOT EXISTS chyme_messages (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  room_id UUID NOT NULL REFERENCES chyme_rooms(id) ON DELETE CASCADE,
-  user_id TEXT NOT NULL,
-  username TEXT NULL,
-  text TEXT NOT NULL CHECK (char_length(text) BETWEEN 1 AND 1000),
-  sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
--- Column reconciliation so older databases converge on the current shape
--- (added nullable / with safe defaults so they never fail on populated tables).
-ALTER TABLE IF EXISTS chyme_messages ADD COLUMN IF NOT EXISTS room_id UUID;
-ALTER TABLE IF EXISTS chyme_messages ADD COLUMN IF NOT EXISTS user_id TEXT;
-ALTER TABLE IF EXISTS chyme_messages ADD COLUMN IF NOT EXISTS username TEXT;
-ALTER TABLE IF EXISTS chyme_messages ADD COLUMN IF NOT EXISTS text TEXT;
-ALTER TABLE IF EXISTS chyme_messages ADD COLUMN IF NOT EXISTS sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-CREATE INDEX IF NOT EXISTS idx_chyme_messages_room_sent_at ON chyme_messages(room_id, sent_at DESC);
-CREATE INDEX IF NOT EXISTS idx_chyme_messages_user_id ON chyme_messages(user_id);
+-- Chyme room chat removed (owner decision, 3.1.0): rooms are listen and speak only. Migration
+-- post/0071 drops the table from existing databases.
+DROP TABLE IF EXISTS chyme_messages;
 CREATE TABLE IF NOT EXISTS chyme_deletion_events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id TEXT NOT NULL,
@@ -636,7 +622,6 @@ ALTER TABLE IF EXISTS public.users ADD COLUMN IF NOT EXISTS username VARCHAR(64)
 ALTER TABLE IF EXISTS public.users ADD COLUMN IF NOT EXISTS is_approved BOOLEAN DEFAULT FALSE;
 ALTER TABLE IF EXISTS public.users ADD COLUMN IF NOT EXISTS quora_profile_url VARCHAR;
 ALTER TABLE IF EXISTS public.chyme_room_members ADD COLUMN IF NOT EXISTS username VARCHAR(64);
-ALTER TABLE IF EXISTS public.chyme_messages ADD COLUMN IF NOT EXISTS author_username VARCHAR(64);
 -- Username uniqueness (defense-in-depth — Clerk owns canonical assignment).
 -- Case-insensitive UNIQUE on LOWER(username) so @Farah and @farah cannot
 -- coexist. NULLs allowed for legacy users. Reserved prefix `community-`

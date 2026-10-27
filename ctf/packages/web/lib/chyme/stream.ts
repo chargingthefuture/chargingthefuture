@@ -1,7 +1,7 @@
 import { StreamChat } from 'stream-chat';
 import { resolveStreamCredentials } from 'lib/integrations/stream-credentials';
 import { reportError } from 'lib/observability/report';
-import { streamChannelSetupFailure, streamFailureMessage, isStreamNotFoundError } from 'lib/shared/stream-error-text';
+import { streamFailureMessage, isStreamNotFoundError } from 'lib/shared/stream-error-text';
 
 export const CHYME_STREAM_CHANNEL_ID = 'chyme-main-room';
 
@@ -23,35 +23,6 @@ async function ensureMember(streamClient: StreamChat, userId: string, name: stri
     name,
   });
   return streamUserId;
-}
-
-// The Stream chat channel id equals the room key, so each Chyme room (the open main room and the
-// private Weavers room) has its own distinct Stream channel. Defaults to the main room for callers
-// that don't pass one.
-async function ensureChannel(
-  streamClient: StreamChat,
-  streamUserId: string,
-  channelId: string = CHYME_STREAM_CHANNEL_ID,
-) {
-  const channel = streamClient.channel('messaging', channelId, {
-    created_by_id: streamUserId,
-  });
-
-  try {
-    await channel.create();
-  } catch (createError) {
-    // A failed create usually means the channel already exists, and watching it is then the answer.
-    // The create error is kept so that, when the watch fails too, the thrown reason names both
-    // failures instead of only the second one.
-    try {
-      await channel.watch();
-    } catch (watchError) {
-      throw new Error(streamChannelSetupFailure(channelId, createError, watchError));
-    }
-  }
-
-  await channel.addMembers([streamUserId]);
-  return channel;
 }
 
 // The server-side client holds no socket, so disconnecting is bookkeeping; a failure there must
@@ -77,11 +48,12 @@ export async function createStreamJoinCredentials(
   const streamClient = new StreamChat(streamConfig.apiKey, streamConfig.apiSecret);
   try {
     const streamUserId = await ensureMember(streamClient, userId, name);
-    const channel = await ensureChannel(streamClient, streamUserId, channelId);
 
+    // The room key doubles as the Stream Video call id the apps join (`streamChannelId`). No Stream
+    // Chat channel is created: the room has no chat.
     return {
       streamApiKey: streamConfig.apiKey,
-      streamChannelId: channel.id ?? channelId,
+      streamChannelId: channelId,
       streamUserId,
       streamToken: streamClient.createToken(streamUserId),
     };
@@ -176,8 +148,8 @@ export async function createChymeBackChannelCredentials(input: {
 }
 
 // Delete a member's Chyme data on the Stream side when they delete their Chyme profile or account.
-// Room chat messages used to be copied to Stream as they were sent (stopped 2026-10-16, issue #2732),
-// so Stream still holds the copies made before then, which the Postgres delete alone does not
+// Room chat is gone (removed in 3.1.0); its messages used to be copied to Stream as they were sent
+// (stopped 2026-10-16, issue #2732), so Stream still holds the copies made before then, which the Postgres delete alone does not
 // remove. The member's Stream user (`chyme-<userId>`) also exists for room audio and the Back
 // Channel. This hard-deletes that user and marks their messages deleted. Best-effort: returns `false` (never throws) when Stream is
 // unconfigured or the call fails, so a Stream outage can never block or roll back the user's deletion.

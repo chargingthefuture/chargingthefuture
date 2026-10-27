@@ -1026,34 +1026,6 @@ async function seedChyme(c) {
     );
   }
 
-  const memberUsernames = { ...Object.fromEntries(personalUsernames), [PEER_1]: 'alex_rivera' };
-  const messages = [
-    [PEER_1, 'Hey — welcome to the demo environment!'],
-    [OWNER, 'Thanks! Just exploring the platform. Looks great.'],
-    [PEER_1, 'Let me know if you have any questions about how it works.'],
-  ];
-  for (const [index, [uid, text]] of messages.entries()) {
-    // Deterministic id + ON CONFLICT so re-running the seed does not append a
-    // duplicate copy of each demo message every time (chyme_messages has only a
-    // uuid pk, no natural unique key).
-    await c.query(
-      `INSERT INTO chyme_messages (id, room_id, user_id, username, text)
-       VALUES ($1::uuid, $2::uuid, $3, $4, $5)
-       ON CONFLICT (id) DO NOTHING`,
-      [sha256id('chyme-demo-msg', ID.room, String(index)), ID.room, uid, memberUsernames[uid] ?? 'demo_user', text],
-    );
-  }
-
-  // The owner's own line, repeated for every other personal account.
-  for (const uid of PERSONAL_ACCOUNTS.filter((u) => u !== OWNER)) {
-    await c.query(
-      `INSERT INTO chyme_messages (id, room_id, user_id, username, text)
-       VALUES ($1::uuid, $2::uuid, $3, $4, $5)
-       ON CONFLICT (id) DO NOTHING`,
-      [personalId(uid, sha256id('chyme-demo-msg', ID.room, '1')), ID.room, uid, memberUsernames[uid], messages[1][1]],
-    );
-  }
-
   if (OWNER2) {
     await c.query(
       `INSERT INTO chyme_room_members

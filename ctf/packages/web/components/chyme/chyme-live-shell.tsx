@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, type RefObject } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Radio } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
@@ -12,42 +12,30 @@ import { ChymeRoomView } from './chyme-room-view';
 import { ChymeReadingsPlayer } from '@/components/chyme/readings/chyme-readings-player';
 import type { ChymeConnectionState } from './chyme-audio-room';
 import { responseFailureText } from 'lib/errors/client-failure';
-import type {
-  ChymeJoinResponse,
-  ChymeMessage,
-  ChymeRoomResponse,
-} from 'lib/chyme/types';
+import type { ChymeJoinResponse, ChymeRoomResponse } from 'lib/chyme/types';
 
 export type ChymeRoomScope = 'main' | 'contributors';
 
 type ChymeTokens = ReturnType<typeof getChymeTokens>;
 
-// Everything ChymeLiveShell needs from the shell controller: the room/chat state, the derived
+// Everything ChymeLiveShell needs from the shell controller: the room state, the derived
 // `locked` and `t` values, and the async handlers. Hoisted into a hook so the component itself stays
 // a thin render — the hooks below run in exactly the order they always have (state, ref, theme, then
 // the three effects), so hook ordering is unchanged.
 function useChymeShellState(roomScope: ChymeRoomScope) {
   const [room, setRoom] = useState<ChymeRoomResponse | null>(null);
-  const [messages, setMessages] = useState<ChymeMessage[]>([]);
-  const [draft, setDraft] = useState('');
   const [loading, setLoading] = useState(true);
-  const [sending, setSending] = useState(false);
   const [joinState, setJoinState] = useState<'idle' | 'joining' | 'ready'>('idle');
   // The live connection as the Stream SDK reports it, for the Join pill. 'joined' until the audio
   // room says otherwise; reset on leave and on a fresh join.
   const [connection, setConnection] = useState<ChymeConnectionState>('joined');
   const [joinInfo, setJoinInfo] = useState<ChymeJoinResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  // Closed until the member presses Chat (owner directive, 2026-09-30): chat is a utility, not the
-  // reason to open Chyme, and open it pushed the stage and controls below the fold. Matches the
-  // signed-out view, which already starts closed (chyme-guest-chat.tsx).
-  const [showChat, setShowChat] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   // Only the private contributors room can be "locked": a member who is not eligible (or the channel
   // is not open yet) gets a 404 from the room read, and we show the "how it's earned" explainer
   // instead — the same no-shaming pattern the gated Commons chat uses.
   const [locked, setLocked] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const { theme } = useTheme();
   const t = getChymeTokens(theme);
 
@@ -79,12 +67,8 @@ function useChymeShellState(roomScope: ChymeRoomScope) {
           throw new Error(await responseFailureText(roomRes, 'Unable to load Chyme.', 'member'));
         }
         const roomPayload = (await roomRes.json()) as ChymeRoomResponse;
-        const messagePayload = await requestJson<{ roomKey: string; messages: ChymeMessage[] }>(
-          withRoom('/api/chyme/messages?limit=50'),
-        );
         if (!active) return;
         setRoom(roomPayload);
-        setMessages(messagePayload.messages);
       } catch (loadError) {
         if (active) {
           setError(loadError instanceof Error ? loadError.message : 'Unable to load Chyme.');
@@ -97,13 +81,9 @@ function useChymeShellState(roomScope: ChymeRoomScope) {
     return () => { active = false; };
   }, [roomScope]);
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
   // Light room poll: while a room is shown AND the tab is visible, refresh just the room state every
   // 15s so other members' persistent raised hands (and the live participant list) appear/disappear
-  // without a manual refresh. It updates only `room` — chat messages and the draft are untouched.
+  // without a manual refresh.
   // A backgrounded tab stops polling, mirroring the heartbeat's visibility guard, so it stays light.
   const roomLoaded = room !== null;
   useEffect(() => {
@@ -127,71 +107,20 @@ function useChymeShellState(roomScope: ChymeRoomScope) {
     };
   }, [roomLoaded]);
 
-  // Refresh BOTH the room (live status + participant count) and the chat. The button used to refresh
-  // only the messages, so when there were no new messages it looked like nothing happened and the
-  // participant count never updated. `refreshing` drives the spinning icon so the press is visible.
-  async function refreshRoomAndMessages(): Promise<void> {
+  // Refresh the room (live status and who is in it). `refreshing` drives the spinning icon so the
+  // press is visible.
+  async function refreshRoom(): Promise<void> {
     if (refreshing) return;
     setRefreshing(true);
     setError(null);
     try {
-      const [roomPayload, messagePayload] = await Promise.all([
-        requestJson<ChymeRoomResponse>(withRoom('/api/chyme/room')),
-        requestJson<{ roomKey: string; messages: ChymeMessage[] }>(withRoom('/api/chyme/messages?limit=50')),
-      ]);
+      const roomPayload = await requestJson<ChymeRoomResponse>(withRoom('/api/chyme/room'));
       setRoom(roomPayload);
-      setMessages(messagePayload.messages);
     } catch (refreshError) {
       setError(refreshError instanceof Error ? refreshError.message : 'Unable to refresh the room.');
     } finally {
       setRefreshing(false);
     }
-  }
-
-  async function handleSend(): Promise<void> {
-    const text = draft.trim();
-    if (!text || sending) return;
-    setSending(true);
-    setError(null);
-    try {
-      const payload = await requestJson<{ ok: true; message: ChymeMessage }>(withRoom('/api/chyme/messages'), {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ text }),
-      });
-      setMessages((current) => [...current, payload.message]);
-      setDraft('');
-    } catch (sendError) {
-      setError(sendError instanceof Error ? sendError.message : 'Unable to send message.');
-    } finally {
-      setSending(false);
-    }
-  }
-
-  // Delete one of the member's own chat messages. Optimistically removes it, then DELETEs; on failure
-  // it is restored and an error is shown. Author-only is enforced server-side.
-  async function handleDeleteMessage(messageId: string): Promise<void> {
-    let removed: ChymeMessage | undefined;
-    setMessages((current) => {
-      removed = current.find((m) => m.id === messageId);
-      return current.filter((m) => m.id !== messageId);
-    });
-    try {
-      await requestJson(withRoom(`/api/chyme/messages/${encodeURIComponent(messageId)}`), { method: 'DELETE' });
-    } catch (deleteError) {
-      if (removed) {
-        const restored = removed;
-        setMessages((current) => [...current, restored].sort((a, b) => a.sentAtIso.localeCompare(b.sentAtIso)));
-      }
-      setError(deleteError instanceof Error ? deleteError.message : 'Unable to delete your message.');
-    }
-  }
-
-  // Edit = delete + repost (matching the Commons home chat): load the message text back into the
-  // composer and delete the original, so the member fixes it and sends a fresh message.
-  function handleEditMessage(messageId: string, text: string): void {
-    setDraft(text);
-    void handleDeleteMessage(messageId);
   }
 
   async function handleLeave(): Promise<void> {
@@ -230,26 +159,16 @@ function useChymeShellState(roomScope: ChymeRoomScope) {
 
   return {
     room,
-    messages,
-    draft,
     loading,
-    sending,
     joinState,
     joinInfo,
     error,
-    showChat,
     refreshing,
     locked,
-    messagesEndRef,
     t,
     connection,
     setConnection,
-    setDraft,
-    setShowChat,
-    refreshRoomAndMessages,
-    handleSend,
-    handleEditMessage,
-    handleDeleteMessage,
+    refreshRoom,
     handleLeave,
     handleJoin,
   };
@@ -311,20 +230,10 @@ type ChymeShellContentProps = {
   loading: boolean;
   t: ChymeTokens;
   currentUser: CurrentUser;
-  showChat: boolean;
-  onToggleChat: () => void;
   joinInfo: ChymeJoinResponse | null;
   joinReady: boolean;
-  messages: ChymeMessage[];
-  draft: string;
-  onDraftChange: (value: string) => void;
-  onSend: () => void;
-  sending: boolean;
-  messagesEndRef: RefObject<HTMLDivElement | null>;
   onLeave: () => void;
   roomScope: ChymeRoomScope;
-  onEditMessage: (messageId: string, text: string) => void;
-  onDeleteMessage: (messageId: string) => void;
   onConnectionChange: (state: ChymeConnectionState) => void;
 };
 
@@ -341,20 +250,10 @@ function ChymeShellContent(props: ChymeShellContentProps) {
         <ChymeRoomView
           room={room}
           currentUser={props.currentUser}
-          showChat={props.showChat}
-          onToggleChat={props.onToggleChat}
           joinInfo={props.joinInfo}
           joinReady={props.joinReady}
-          messages={props.messages}
-          draft={props.draft}
-          onDraftChange={props.onDraftChange}
-          onSend={props.onSend}
-          sending={props.sending}
-          messagesEndRef={props.messagesEndRef}
           onLeave={props.onLeave}
           roomScope={props.roomScope}
-          onEditMessage={props.onEditMessage}
-          onDeleteMessage={props.onDeleteMessage}
           onConnectionChange={props.onConnectionChange}
         />
       )}
@@ -365,26 +264,16 @@ function ChymeShellContent(props: ChymeShellContentProps) {
 export function ChymeLiveShell({ currentUser, roomScope = 'main' }: { currentUser: CurrentUser; roomScope?: ChymeRoomScope }) {
   const {
     room,
-    messages,
-    draft,
     loading,
-    sending,
     joinState,
     joinInfo,
     error,
-    showChat,
     refreshing,
     locked,
-    messagesEndRef,
     t,
     connection,
     setConnection,
-    setDraft,
-    setShowChat,
-    refreshRoomAndMessages,
-    handleSend,
-    handleEditMessage,
-    handleDeleteMessage,
+    refreshRoom,
     handleLeave,
     handleJoin,
   } = useChymeShellState(roomScope);
@@ -398,7 +287,7 @@ export function ChymeLiveShell({ currentUser, roomScope = 'main' }: { currentUse
       <ChymeHeader
         participantCount={room?.participants.length ?? 0}
         isLive={Boolean(room)}
-        onRefresh={() => void refreshRoomAndMessages()}
+        onRefresh={() => void refreshRoom()}
         refreshing={refreshing}
       />
 
@@ -408,7 +297,7 @@ export function ChymeLiveShell({ currentUser, roomScope = 'main' }: { currentUse
           joinState={joinState}
           connection={connection}
           onJoin={() => void handleJoin()}
-          onRefresh={() => void refreshRoomAndMessages()}
+          onRefresh={() => void refreshRoom()}
           refreshing={refreshing}
         />
 
@@ -418,20 +307,10 @@ export function ChymeLiveShell({ currentUser, roomScope = 'main' }: { currentUse
           loading={loading}
           t={t}
           currentUser={currentUser}
-          showChat={showChat}
-          onToggleChat={() => setShowChat((s) => !s)}
           joinInfo={joinInfo}
           joinReady={joinState === 'ready'}
-          messages={messages}
-          draft={draft}
-          onDraftChange={setDraft}
-          onSend={() => void handleSend()}
-          sending={sending}
-          messagesEndRef={messagesEndRef}
           onLeave={() => void handleLeave()}
           roomScope={roomScope}
-          onEditMessage={handleEditMessage}
-          onDeleteMessage={(id) => void handleDeleteMessage(id)}
           onConnectionChange={setConnection}
         />
       </div>

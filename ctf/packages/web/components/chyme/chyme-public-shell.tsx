@@ -7,7 +7,6 @@ import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link
 import { useTheme } from '@/hooks/useTheme';
 import { getChymeTokens } from './chyme-shared';
 import { ChymeGuestListen, GuestNote } from '@/components/chyme/chyme-guest-listen';
-import { ChymeGuestChat } from '@/components/chyme/chyme-guest-chat';
 import { ChymeUpcoming } from '@/components/chyme/chyme-upcoming';
 import { ChymeReadingsPlayer } from '@/components/chyme/readings/chyme-readings-player';
 import { HOSTING_NOT_ENDORSEMENT_SHORT } from '@ctf/shared';
@@ -86,7 +85,7 @@ function failedCheck(status: number, data: unknown): LiveState {
 // a live room with no guest identity matched neither branch and rendered nothing at all. A visitor
 // looking at a blank space under a live room, or at "no rooms" while a member is audibly in the
 // call, has no way to tell what happened — and neither has the person they report it to.
-function ChymePublicRoomList({ live, onRoomGone, signInUrl, refreshKey, listen }: { live: LiveState; onRoomGone: () => void; signInUrl: string; refreshKey: number; listen: GuestListenControl }) {
+function ChymePublicRoomList({ live, onRoomGone, listen }: { live: LiveState; onRoomGone: () => void; listen: GuestListenControl }) {
   const { theme } = useTheme();
   const t = getChymeTokens(theme);
 
@@ -126,12 +125,6 @@ function ChymePublicRoomList({ live, onRoomGone, signInUrl, refreshKey, listen }
             onListeningChange={listen.onListeningChange}
             leaveKey={listen.leaveKey}
           />
-          {/* The room chat, read-only, under the stage (owner directive, 2026-09-18): a visitor can
-              follow what members are saying and signs in to write. Closed until opened, so the page
-              below it stays on the first screen (owner directive, 2026-09-20). */}
-          <div style={{ marginTop: 10 }}>
-            <ChymeGuestChat signInUrl={signInUrl} refreshKey={refreshKey} />
-          </div>
         </>
       ) : (
         <>
@@ -233,13 +226,13 @@ function ChymePublicView({
 
       {/* Room list. The label row carries the same refresh control the signed-in page has beside
           Join Room (owner directive, 2026-09-18: the two screens should match, and the installed app
-          on Android has no browser reload). It re-reads the room and the chat; a listener already
+          on Android has no browser reload). It re-reads the room; a listener already
           in the call keeps their connection. Beside it, while sound is on, a Leave control — before
           it, a visitor listening in had no way to stop short of closing the tab or reloading a long
           page (owner report, 2026-09-20). It shows only while there is a call to leave. */}
       <div style={{ flex: 1, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
         {/* What is coming up on the TI Radio guide, so a visitor at a quiet room knows when to come
-            back (scheduled rooms MVP, 2026-09-19). Same refresh control as the room and the chat.
+            back (scheduled rooms MVP, 2026-09-19). Same refresh control as the room.
             Above the room, where the signed-in page has it (owner directive, 2026-09-30). */}
         <div style={{ borderRadius: 10, border: `1px solid ${t.BORDER}`, overflow: 'hidden' }}>
           <ChymeUpcoming refreshKey={refreshKey} compact />
@@ -262,15 +255,15 @@ function ChymePublicView({
               type="button"
               onClick={onRefresh}
               disabled={refreshing}
-              aria-label="Refresh the room and chat"
-              title="Refresh the room and chat"
+              aria-label="Refresh the room"
+              title="Refresh the room"
               style={{ width: 44, height: 44, borderRadius: 12, background: t.INPUT_BG, border: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: refreshing ? 'wait' : 'pointer', color: t.MUTED, flexShrink: 0 }}
             >
               <RefreshCw size={16} className={refreshing ? 'ctf-spin' : undefined} />
             </button>
           </div>
         </div>
-        <ChymePublicRoomList live={live} onRoomGone={onRoomGone} signInUrl={signInUrl} refreshKey={refreshKey} listen={listen} />
+        <ChymePublicRoomList live={live} onRoomGone={onRoomGone} listen={listen} />
       </div>
 
       {/* No bottom bar. A grayed, locked "Start a Room" sat here until 2026-09-18 as the statement
@@ -294,7 +287,7 @@ export function ChymePublicShell({ signInUrl, verifyUrl }: PublicVisitorShellPro
   // minted on the visitor's tap, not here, so a page load costs nothing on Stream.
   const [live, setLive] = useState<LiveState>({ isLive: false, participantCount: 0, guestCount: 0 });
   const [refreshing, setRefreshing] = useState(false);
-  // Bumped by the refresh button; the chat panel re-reads when it changes.
+  // Bumped by the refresh button; the upcoming list re-reads when it changes.
   const [refreshKey, setRefreshKey] = useState(0);
   // Whether the visitor's sound is actually on, reported by the listener below. The Leave control
   // in the Live Rooms row shows only while it is true.
@@ -330,7 +323,7 @@ export function ChymePublicShell({ signInUrl, verifyUrl }: PublicVisitorShellPro
     void loadLive();
   }, [loadLive]);
 
-  // The refresh button: re-read the room, then tell the chat panel to re-read too. `refreshing`
+  // The refresh button: re-read the room, then tell the upcoming list to re-read too. `refreshing`
   // drives the spinning icon so the press is visible even when nothing changed.
   const handleRefresh = useCallback(async () => {
     if (refreshing) return;

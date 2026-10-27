@@ -8,9 +8,6 @@
  */
 export {
   getChymeRoom,
-  getChymeMessages,
-  postChymeMessage,
-  deleteChymeMessage,
   postChymeJoin,
   postChymeLeave,
   postChymeTip,

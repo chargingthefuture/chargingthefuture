@@ -110,8 +110,7 @@ export function ChymeShell({ currentUser, isAdmin }: ChymeShellProps) {
   const scopes = useMemo<ChymeRoomScope[]>(() => ['main', 'contributors'], []);
 
   // The compact top bar (back + brand) is pinned with position:sticky, and the page below flows
-  // naturally. The chat message list is capped (see chyme-chat-panel) so incoming messages scroll
-  // inside the chat window instead of stretching the document.
+  // naturally.
   return (
     <div style={{ minHeight: '100dvh', background: t.BG }}>
       <div style={{ position: 'sticky', top: 0, zIndex: 20, display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: t.HEADER, borderBottom: `1px solid ${t.BORDER}` }}>

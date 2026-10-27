@@ -25,8 +25,6 @@ export function chymeRoomKeyForScope(scope: ChymeRoomScope): string {
 export function chymeRoomNameForKey(roomKey: string): string {
   return roomKey === CHYME_CONTRIBUTORS_ROOM_KEY ? CHYME_CONTRIBUTORS_ROOM_NAME : CHYME_MAIN_ROOM_NAME;
 }
-export const CHYME_MAX_MESSAGE_LENGTH = 1000;
-export const CHYME_DEFAULT_MESSAGES_LIMIT = 100;
 
 // Upper bound on a single Chyme peer tip (ServiceCredits). The route rejects anything above this so a
 // member can never submit an unbounded amount; the shared transfer primitive (balance check) is then
@@ -70,9 +68,6 @@ export const CHYME_ERROR_CODE = {
   removedFromRoom: 'CHYME_REMOVED_FROM_ROOM',
   // The member the admin action names is not in the room right now.
   memberNotInRoom: 'CHYME_MEMBER_NOT_IN_ROOM',
-  // Single-message delete (author-only)
-  messageNotFound: 'CHYME_MESSAGE_NOT_FOUND',
-  notMessageOwner: 'CHYME_NOT_MESSAGE_OWNER',
   // Back Channel specific
   backChannelBlocked: 'CHYME_BACK_CHANNEL_BLOCKED',
   backChannelNotInRoom: 'CHYME_BACK_CHANNEL_NOT_IN_ROOM',
