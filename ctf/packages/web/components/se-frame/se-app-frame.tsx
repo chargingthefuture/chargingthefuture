@@ -7,6 +7,7 @@ import { SE_AVEN_DEFINITION, SE_AVENHOOD, SE_AVENHOOD_DEFINITION, SE_TABS, type 
 import type { ShellCurrentUser } from '../community-shell/shell-types';
 import { SeAvatar } from '../shared/se-avatar';
 import { SeTabBar } from './se-tab-bar';
+import { TodayScreen } from './today/today-screen';
 import { seThemeVars } from './se-theme-vars';
 import { useInterfaceSwitch } from './use-interface-switch';
 import styles from './se-frame.module.css';
@@ -128,11 +129,9 @@ export function SeAppFrame({ currentUser }: { currentUser: ShellCurrentUser }) {
         {tab === 'people' ? <ScreenHeader title="People" /> : null}
         {tab === 'new' ? <ScreenHeader title="New" /> : null}
         {tab === 'activity' ? <ScreenHeader title="Activity" /> : null}
-        {tab === 'me' ? (
-          <MeScreen currentUser={currentUser} onBack={back} saving={saving} />
-        ) : (
-          <NotBuiltYet onBack={back} saving={saving} />
-        )}
+        {tab === 'today' ? <TodayScreen accountId={currentUser.userId} /> : null}
+        {tab === 'me' ? <MeScreen currentUser={currentUser} onBack={back} saving={saving} /> : null}
+        {tab !== 'today' && tab !== 'me' ? <NotBuiltYet onBack={back} saving={saving} /> : null}
         {error ? (
           <p role="alert" className={styles.error}>
             {error}

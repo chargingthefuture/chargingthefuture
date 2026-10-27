@@ -36,13 +36,17 @@ lagatos.com is the address only and carries no meaning of its own.
 Five places, one floating tab bar: Today, People, + New, Activity, Me. Cards open in place, never on
 a new page.
 
+Each screen does one job: Today is for reading what others posted, + New for making something,
+People for finding a person, Activity for what needs an answer, and Me only for what is the member's
+own. A feature has one way in, not one per screen (owner decision, 2026-10-27).
+
 | Screen | Holds |
 | --- | --- |
 | Today | Days won; presence; week strip; Beacon "Live now" card when the owner broadcasts; the Chyme Main Room card (open to everyone) with the TI Radio slot's topic, host and time; the Weavers of the Commons room card (badge holders only, never captured in a screenshot or share picture); the day's cards in time order |
 | People | The Directory, behind verification. Each person shows Foundation "Offering" skills (filled) apart from Directory "Listed" skills (outlined). Request a quote appears only when someone offers a skill. "Offering now" filter |
-| + New | Ask, Offer, Story, Talk. Talk books a 90-minute TI Radio slot. Ask suggestions appear while typing (holiday list, below). No private log here |
+| + New | Ask, Offer, Story, Talk. Offer covers a place to stay, hours, a ride and a skill; Story also takes imported writing (Knowledge Library). Talk books a 90-minute TI Radio slot. Ask suggestions appear while typing (holiday list, below). No private log here |
 | Activity | Talk requests at the top (Agree, Not now), replies, room times, credits confirmed, Unlock approved, Recurring Activity confirmations. No red badges |
-| Me | Profile prompts (I can help with, I need, Ask me about), badges, ServiceCredits (Send, Receive, History), Saved, Read, Hidden, tools named by what they do, Settings, System Architect entry |
+| Me | Only what is the member's own: picture and handle, profile prompts (I can help with, I need, Ask me about), badges, ServiceCredits (Send, Receive, History), Yours (everything they posted or joined, grouped by kind, each with edit or close), Saved, Read, Hidden, ClickLog, Trust, Reader, About, Settings, System Architect entry. No tiles for making or browsing posts: those are + New and Today |
 
 ### Card kinds
 
@@ -146,20 +150,20 @@ Unlock stops being the gate for most of the app.
 | Commons | Dissolves into Today. Announcements become one pinned card; @comic becomes Ask the architect; the gated channel becomes the Weavers room |
 | Direct Lines | The name and separate chat screens go; conversations open inside their cards |
 | PeerProgramming | Goals and tasks are Ask cards; board columns go; cohorts show as a "with you this week" card |
-| SocketRelay, LightHouse, Mutual Time, TrustTransport | Cards in Today, full features opened in place; tiles in Me. LightHouse listings are sage Offer cards and the Me tile is "A place to stay" |
+| SocketRelay, LightHouse, Mutual Time, TrustTransport | Cards in Today, full features opened in place; made through + New (Ask or Offer). LightHouse listings are sage Offer cards; listing a place is + New → Offer → A place to stay. A member's own listings and requests are under Me → Yours. No tiles in Me |
 | Foundation | Contact route for People; provider side in Me |
 | Directory invite wall | Unchanged and still working: `/apps/directory/invites`, each invite's own page, the sign-in rule in `lib/directory/invite-access.ts`, and the public feed `/api/directory/invites/public` that the blog's invite row and the landing page read. Every address blog posts and Quora answers link to keeps answering. New invites also show as brass Story cards in Today, opening the invite's page |
 | Directory, SkillsHunt | People screen; Wanted card leads to the current round; the scout leaderboard is removed with its code and data; missions stay; each member sees their own nomination count |
-| Workforce, GDP | Our numbers card and tile; full report one tap away |
+| Workforce, GDP | Our numbers card in Today; full report one tap from the card. No tile in Me |
 | Skills Taxonomy | No page; the list behind prompts, search and matches |
-| Skill Up | Cohort cards in Today; tile in Me |
+| Skill Up | Cohort cards in Today, joined from the card; the member's own cohorts under Me → Yours. No tile in Me |
 | What Works | Open to every signed-in member. Duplicate problems are discouraged: matches appear while typing, a note says duplicates are merged, new problems wait for review, and the review offers Merge, Approve as new, Delete as spam |
 | ClickLog | Private, a tile in Me, never in + New or Today |
 | Recurring Activity | Confirm prompts in Activity; arrangements in Me |
 | Mood | Daily card in Today |
 | Contributions | Amazon gift cards only, starting at $10 ($1 to $500), open all year. No drives, goals, progress or banner. The code is entered in the app, encrypted at rest and destroyed when the System Architect confirms or rejects it. Thank-you credits stay. The twice-yearly post stays |
 | Quora deletion survey | A one-time card in Today, a link in the Unlock banner, a tile and a Settings row |
-| Reader, Trust, Settings | Tiles and sections in Me |
+| Reader, Trust, Settings | Sections in Me |
 | Wallpapers, Android app | Links in Settings to the GitHub releases filtered to each |
 | Admin screens | Restyled, reached from Me → System Architect |
 
