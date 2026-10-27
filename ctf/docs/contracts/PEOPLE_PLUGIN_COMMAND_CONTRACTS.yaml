@@ -1,0 +1,39 @@
+contracts:
+  - pluginId: people
+    command: people.list
+    version: 1.0.0
+    description: Read a page of the 3.1 People screen (GET /api/people), the Directory with each person's Foundation offering.
+    inputSchema:
+      page:
+        type: integer
+        minimum: 1
+      offering:
+        type: string
+        enum: ['1']
+        description: Only people whose claimed profile's owner offers at least one skill through Foundation.
+      q:
+        type: string
+        maxLength: 80
+    outputSchema:
+      people:
+        type: object
+        properties:
+          items:
+            type: array
+            maxItems: 20
+            description: Each person is id, name, headline, job title, claimed, offering skill names, listed skill names.
+          page:
+            type: integer
+          pageSize:
+            type: integer
+          total:
+            type: integer
+    dataAccess:
+      - directory_profiles
+      - directory_profile_skills
+      - skills_taxonomy_skills
+      - skills_taxonomy_job_titles
+      - foundation_provider_skills
+    purpose: member_directory_browse
+    retentionClass: none_read_only
+    idempotency: true

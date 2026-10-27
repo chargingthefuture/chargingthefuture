@@ -9,7 +9,7 @@
 
 | | |
 |---|---|
-| **Surface** | `/account/data` (Your Data & Privacy), `/account` for AD-9 and AD-10, the 3.1 Today screen for AD-11, rooms in 3.1 for AD-12, + New for AD-13, Me for AD-14 and Activity for AD-15 |
+| **Surface** | `/account/data` (Your Data & Privacy), `/account` for AD-9 and AD-10, the 3.1 Today screen for AD-11, rooms in 3.1 for AD-12, + New for AD-13, Me for AD-14, Activity for AD-15 and People for AD-16 |
 | **Visibility** | Any signed-in identity (including unlock-pending) |
 | **Roles to test** | member |
 | **Surfaces** | web (phone-width layout) |
@@ -319,4 +319,21 @@ not an admin never sees it.
 anywhere). Opening the reply goes to it and its "New" is gone on return. Step 3 clears every "New".
 With nothing recorded, Activity reads "Nothing yet. Replies, credits sent to you and confirmations
 show here."
+**Result:** web ☐ — notes:
+
+## AD-16 · People in 3.1
+
+**Role:** approved member; a signed-in member not yet approved · **Precondition:** on 3.1; one
+claimed profile whose owner offers a skill in Foundation.
+**Steps:**
+1. Open People. Page forward and back, then reload on page 2.
+2. Tap **Offering now**, then **Everyone**. Search a skill name.
+3. On a person who offers a skill, tap **Request a quote**; on another, tap **Profile**.
+4. As the member not yet approved, open People.
+**Expected:** Step 1 lists 20 people a page with "1–20 of N", people who offer something first; the
+reload stays on page 2. Offered skills are filled in the Offer color and listed skills outlined, and a
+skill shows once. Step 2 keeps only people offering something, then everyone again; the search narrows
+to people with that skill in their name, headline, job title or listing. Step 3 opens the Foundation
+provider page and the Directory profile. Request a quote never shows for someone offering nothing.
+Step 4 shows the route's refusal reason instead of any person.
 **Result:** web ☐ — notes:
