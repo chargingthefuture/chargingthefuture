@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { UserButton } from '@clerk/nextjs';
+import { SeUserButton } from '../shared/se-user-button';
 import { Users, Zap, Shield, SlidersHorizontal, Gift } from 'lucide-react';
 import type { ShellSection } from './shell-types';
 import { HelpControl } from '../bug-reports/help-control';
@@ -104,7 +104,7 @@ export function ShellIconRail({ section, onSectionChange, initial = 'S', isAuthe
         // first name, last name, username, and email. This is the one place in the
         // shell that leads to identity editing, so it must stay a live control.
         <span className={styles.clerkAvatarSlot} title="Your account — edit name, username, and email">
-          <UserButton appearance={{ elements: { avatarBox: styles.clerkAvatarBox } }} />
+          <SeUserButton boxClassName={styles.clerkAvatarBox} />
         </span>
       ) : (
         <div className={styles.iconRailAvatar} aria-hidden="true">{initial}</div>

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { UserButton } from '@clerk/nextjs';
+import { SeUserButton } from '../shared/se-user-button';
 import { SlidersHorizontal, Settings, MessagesSquare, LayoutGrid } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import type { TrustUserExtension } from '../../lib/trust/types';
@@ -279,7 +279,7 @@ function MobileTopBar({ section, onSectionChange, isAuthenticated, isAdmin, sign
           // Clerk's account widget on the phone-width bar too: avatar opens
           // Clerk's menu; "Manage account" edits name, username, and email.
           <span className={styles.clerkAvatarSlot} title="Your account — edit name, username, and email">
-            <UserButton appearance={{ elements: { avatarBox: styles.clerkMobileAvatarBox } }} />
+            <SeUserButton boxClassName={styles.clerkMobileAvatarBox} />
           </span>
         ) : (
           <Link className={styles.mobileBarSignIn} href={signInUrl}>Sign in</Link>

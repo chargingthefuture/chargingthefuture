@@ -63,6 +63,18 @@ export const viewport: Viewport = {
   themeColor: '#0F1117',
 };
 
+// No uploaded photo is ever shown (3.1.0): Clerk's pictures and its upload and remove buttons are
+// hidden on every Clerk screen in the app. Members show as their generated picture instead
+// (components/shared/se-user-button.tsx).
+const CLERK_NO_PHOTOS = {
+  elements: {
+    avatarImage: { display: 'none' },
+    userButtonAvatarImage: { display: 'none' },
+    userPreviewAvatarImage: { display: 'none' },
+    avatarImageActions: { display: 'none' },
+  },
+} as const;
+
 export default function RootLayout({
   children,
 }: {
@@ -109,6 +121,7 @@ export default function RootLayout({
         />
         <ClerkProvider
           {...clerkOptions}
+          appearance={CLERK_NO_PHOTOS}
           {...(signInUrl ? { signInUrl } : {})}
           {...(signUpUrl ? { signUpUrl } : {})}
           {...(appHomeUrl

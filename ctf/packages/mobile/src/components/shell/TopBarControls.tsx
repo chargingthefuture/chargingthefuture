@@ -7,13 +7,14 @@
 // MobileTopActions it copies opens the report form straight away and is spaced differently.
 
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { Image, Modal, Pressable, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { Modal, Pressable, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { AlertCircle, Bug, Settings } from 'lucide-react-native';
 import { useAuth } from '../../auth/auth-context';
 import { useTheme, type ThemeTokens } from '../../theme';
 import { interFamily } from '../ui';
 import { BugReportModal } from '../../features/bug-reporting';
+import { SeAvatar } from '../shared/SeAvatar';
 
 // Web comic tokens the mobile token set has no field for: --ctf-surface-raised and
 // --ctf-elevation-shadow (3px 3px 0 #d4c49a).
@@ -70,28 +71,15 @@ function SignInButton() {
   );
 }
 
-// The web Clerk avatar (UserButton, 32px). It shows the account's profile picture; with none in the
-// token it falls back to the web .mobileBarAvatar initial on the brand gradient.
+// The web account button (32px): the member's generated picture, drawn from their account id, never
+// an uploaded photo.
 function AccountAvatar({ onPress }: { onPress: () => void }) {
   const { user } = useAuth();
   const { tokens } = useTheme();
   const s = useMemo(() => makeStyles(tokens), [tokens]);
-  const initial = (user?.username ?? user?.email ?? '?').charAt(0).toUpperCase();
   return (
-    <TouchableOpacity
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel="Your account"
-      style={[s.avatar, user?.imageUrl ? null : s.avatarFallback]}
-    >
-      {user?.imageUrl ? (
-        <Image source={{ uri: user.imageUrl }} style={s.avatarImage} />
-      ) : (
-        <>
-          {tokens.isComic ? null : <GradientFill width={32} height={32} id="topbar-avatar" />}
-          <Text style={s.avatarInitial}>{initial}</Text>
-        </>
-      )}
+    <TouchableOpacity onPress={onPress} accessibilityRole="button" accessibilityLabel="Your account" style={s.avatar}>
+      {user ? <SeAvatar accountId={user.id} size={32} /> : null}
     </TouchableOpacity>
   );
 }
@@ -209,19 +197,11 @@ function makeStyles(t: ThemeTokens) {
     avatar: {
       width: 32,
       height: 32,
-      borderRadius: t.isComic ? 0 : 16,
+      borderRadius: 16,
       overflow: 'hidden',
       alignItems: 'center',
       justifyContent: 'center',
     },
-    // .mobileBarAvatar, with its comic override.
-    avatarFallback: {
-      backgroundColor: t.isComic ? COMIC_RAISED : 'transparent',
-      borderWidth: t.isComic ? 1 : 0,
-      borderColor: t.border,
-    },
-    avatarImage: { width: 32, height: 32 },
-    avatarInitial: { fontSize: 13, fontFamily: interFamily('700'), color: t.isComic ? t.border : '#FFFFFF' },
     ...signInStyles(t),
   });
 }

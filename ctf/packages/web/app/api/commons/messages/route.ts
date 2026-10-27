@@ -116,7 +116,6 @@ function mapTimelineItemToCommonsMessage(
     userId: author.userId,
     username: author.username,
     displayName: author.displayName,
-    avatarUrl: null,
     kind: item.itemType,
     title,
     linkedPlugins,
@@ -351,7 +350,6 @@ export async function POST(request: Request) {
       userId: gate.identity.userId,
       username: authorUsername,
       displayName: feedAuthorHandle(authorUsername, gate.identity.userId),
-      avatarUrl: null,
       // A message posted from the composer is always a peer community post.
       kind: 'community',
       title: null,

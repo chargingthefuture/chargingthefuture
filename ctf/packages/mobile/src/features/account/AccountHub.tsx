@@ -75,7 +75,7 @@ export function AccountHub({
           </View>
           <View style={s.identityBody}>
             <Text style={s.handle}>{handle}</Text>
-            <Text style={s.identityDesc}>Your name, username, photo, and email</Text>
+            <Text style={s.identityDesc}>Your name, username, and email</Text>
           </View>
           <UserMenuButton />
         </View>
