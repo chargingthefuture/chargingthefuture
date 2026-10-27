@@ -194,7 +194,7 @@ export function TrustTransportShell({ isAdmin }: { isAdmin?: boolean } = {}) {
   if (loading) return <AppLoading />;
   if (error) {
     return (
-      <div style={{ width: "100%", minHeight: "100vh", background: BG, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', system-ui, sans-serif", color: "#EF4444" }}>
+      <div style={{ width: "100%", minHeight: "100vh", background: BG, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Figtree Variable', system-ui, sans-serif", color: "#EF4444" }}>
         {error}
       </div>
     );
@@ -253,7 +253,7 @@ export function TrustTransportShell({ isAdmin }: { isAdmin?: boolean } = {}) {
   );
 
     return (
-      <div style={{ minHeight: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT }}>
+      <div style={{ minHeight: "100vh", background: t.BG, fontFamily: "'Figtree Variable', system-ui, sans-serif", color: t.TEXT }}>
         <TrustTransportHeader t={t} isAdmin={isAdmin} tab={tab} onTab={setTab} onRefresh={() => fetchRequests()} />
         {content}
       </div>

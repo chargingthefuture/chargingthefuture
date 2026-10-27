@@ -8,7 +8,7 @@ export function pageStyle(t: CensusTokens): CSSProperties {
     minHeight: '100dvh',
     background: t.BG,
     color: t.TITLE,
-    fontFamily: "'Inter',system-ui,sans-serif",
+    fontFamily: "'Figtree Variable',system-ui,sans-serif",
   };
 }
 

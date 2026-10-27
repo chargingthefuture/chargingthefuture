@@ -57,7 +57,7 @@ export function WeaversBadgeControl({ size = 20, tokens }: { size?: number; toke
             style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.6)", border: "none", padding: 0, cursor: "default" }}
           />
           <div
-            style={{ position: "relative", width: "100%", maxWidth: 380, background: tokens.HEADER, border: `1px solid ${tokens.BORDER}`, borderRadius: 16, padding: "22px 22px 18px", fontFamily: "'Inter', system-ui, sans-serif" }}
+            style={{ position: "relative", width: "100%", maxWidth: 380, background: tokens.HEADER, border: `1px solid ${tokens.BORDER}`, borderRadius: 16, padding: "22px 22px 18px", fontFamily: "'Figtree Variable', system-ui, sans-serif" }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
               <WeaversBadge size={32} />

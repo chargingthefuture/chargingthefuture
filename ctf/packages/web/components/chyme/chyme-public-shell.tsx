@@ -48,7 +48,7 @@ type GuestListenControl = {
 // text, t.MUTED gray, t.ACCENT green). One value has no token slot and stays static:
 const ACCENT_CYAN = '#16A34A'; // deep-green gradient partner — no getter field matches
 
-const FONT_FAMILY = "'Inter', system-ui, sans-serif";
+const FONT_FAMILY = "'Figtree Variable', system-ui, sans-serif";
 
 type PublicRoomPayload = Record<string, unknown> & { ok: true };
 

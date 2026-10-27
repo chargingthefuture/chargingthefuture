@@ -341,7 +341,7 @@ export function ClickLogShell({ isAdmin }: { isAdmin?: boolean }) {
   );
 
   return (
-      <div style={{ minHeight: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TITLE }}>
+      <div style={{ minHeight: "100vh", background: t.BG, fontFamily: "'Figtree Variable', system-ui, sans-serif", color: t.TITLE }}>
         <ClickLogHeader
           tokens={t}
           total={displayTotal}

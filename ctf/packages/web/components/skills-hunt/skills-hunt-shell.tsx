@@ -156,7 +156,7 @@ export function SkillsHuntShell({
   );
 
     return (
-      <div style={{ minHeight: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT }}>
+      <div style={{ minHeight: "100vh", background: t.BG, fontFamily: "'Figtree Variable', system-ui, sans-serif", color: t.TEXT }}>
         <div style={{ position: "sticky", top: 0, zIndex: 20, background: t.HEADER, borderBottom: `1px solid ${t.BORDER}` }}>
           {/* flexWrap: this row carries the plugin actions plus the three global ones, which
               together overflow a 390px phone — the last control was clipped off the right

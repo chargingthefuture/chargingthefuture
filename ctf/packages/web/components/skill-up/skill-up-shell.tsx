@@ -360,7 +360,7 @@ export function SkillUpShell({ isAdmin = false }: { userId?: string; isAdmin?: b
       { key: "wallet", label: "Wallet" },
     ];
     return (
-      <div style={{ minHeight: "100dvh", background: t.BG, fontFamily: "Inter, system-ui, sans-serif", color: t.TEXT_BODY }}>
+      <div style={{ minHeight: "100dvh", background: t.BG, fontFamily: "'Figtree Variable', system-ui, sans-serif", color: t.TEXT_BODY }}>
         <div style={{ position: "sticky", top: 0, zIndex: 20, background: t.HEADER, borderBottom: `1px solid ${t.BORDER}` }}>
           {/* flexWrap: this row carries the plugin actions plus the three global ones, which
               together overflow a 390px phone — the last control was clipped off the right

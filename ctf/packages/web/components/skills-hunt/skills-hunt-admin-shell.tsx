@@ -34,7 +34,7 @@ export function SkillsHuntAdminShell({ rounds }: Props) {
   const activeRoundId = (rounds.find((r) => r.status === "active") ?? rounds[0])?.id ?? null;
 
   return (
-    <div style={{ minHeight: "100vh", background: t.BG, color: t.TEXT, fontFamily: "'Inter', system-ui, sans-serif", padding: "clamp(12px, 4vw, 24px)" }}>
+    <div style={{ minHeight: "100vh", background: t.BG, color: t.TEXT, fontFamily: "'Figtree Variable', system-ui, sans-serif", padding: "clamp(12px, 4vw, 24px)" }}>
       <MobileScreenHeader title="SkillsHunt Admin" accent={t.ACCENT} icon={<Search size={18} color={t.ACCENT} />} actions={<PluginUserShellButton href="/apps/skills-hunt" accent={t.ACCENT} />} />
       {/* No in-page title here: MobileScreenHeader above already names the screen and carries the
           icon, back control, and Member view. Repeating it cost a screen of phone height for no new

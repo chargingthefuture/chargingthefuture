@@ -252,7 +252,7 @@ export default function GdpShell({ sharePicture = false, isAdmin = false }: { sh
   }
 
     return (
-      <div style={{ minHeight: "100vh", background: t.BG, fontFamily: "Inter, system-ui, sans-serif", color: t.TEXT, display: "flex", flexDirection: "column" }}>
+      <div style={{ minHeight: "100vh", background: t.BG, fontFamily: "'Figtree Variable', system-ui, sans-serif", color: t.TEXT, display: "flex", flexDirection: "column" }}>
         <div data-capture-hide="" style={{ position: "sticky", top: 0, zIndex: 20, background: t.HEADER, borderBottom: `1px solid ${t.BORDER}` }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px" }}>
             <BackChevronButton accent={t.ACCENT} />

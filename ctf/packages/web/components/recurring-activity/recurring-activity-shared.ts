@@ -33,7 +33,7 @@ export function getRecurringActivityTokens(theme: ThemeName): RecurringActivityT
   return { ...getPluginShellTokens(accent, theme), SURFACE: '#161B27', BORDER_SOLID: '#1E2A3A' };
 }
 
-export const FONT_FAMILY = "'Inter', system-ui, sans-serif";
+export const FONT_FAMILY = "'Figtree Variable', system-ui, sans-serif";
 
 // Every mutation carries the same-origin CSRF confirmation header the server expects.
 export const CSRF_HEADERS = { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' } as const;

@@ -9,7 +9,7 @@ import { PublicShellWorldwide } from '@/components/plugins/public-shell-worldwid
 
 // Palette from the LightHousePublic / MobileLightHousePublic design mockups,
 // served through the shared theme tokens (default theme returns the exact shipped hex).
-const FONT_FAMILY = "'Inter', system-ui, sans-serif";
+const FONT_FAMILY = "'Figtree Variable', system-ui, sans-serif";
 
 // The mockup shows blurred sample listing cards behind a lock overlay. A public
 // shell has no session and there is no public listing feed, so the locked region

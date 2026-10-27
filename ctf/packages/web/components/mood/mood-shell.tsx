@@ -123,7 +123,7 @@ export default function MoodShell() {
       { key: "community", label: "Community" },
     ];
     return (
-      <div style={{ minHeight: "100dvh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT }}>
+      <div style={{ minHeight: "100dvh", background: t.BG, fontFamily: "'Figtree Variable', system-ui, sans-serif", color: t.TEXT }}>
         <div style={{ position: "sticky", top: 0, zIndex: 20, background: t.HEADER, borderBottom: `1px solid ${t.BORDER}` }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px" }}>
             <BackChevronButton accent={t.ACCENT} />

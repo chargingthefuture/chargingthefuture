@@ -17,7 +17,7 @@ export function WeaversEarnedPage() {
   const body = { fontSize: 14, color: t.SUBTLE, lineHeight: 1.65, margin: 0 };
 
   return (
-    <div style={{ width: "100%", minHeight: "100dvh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT, display: "flex", flexDirection: "column" }}>
+    <div style={{ width: "100%", minHeight: "100dvh", background: t.BG, fontFamily: "'Figtree Variable', system-ui, sans-serif", color: t.TEXT, display: "flex", flexDirection: "column" }}>
       <header style={{ height: 56, borderBottom: `1px solid ${t.BORDER}`, display: "flex", alignItems: "center", padding: "0 16px", gap: 12, background: t.HEADER, flexShrink: 0 }}>
         <BackChevronButton accent={t.ACCENT} />
         <div style={{ fontSize: 15, fontWeight: 700, color: t.TITLE }}>Weavers of the Commons</div>

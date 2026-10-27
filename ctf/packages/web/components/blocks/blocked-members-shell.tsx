@@ -76,7 +76,7 @@ export function BlockedMembersShell() {
 
   if (loadState === 'loading') {
     return (
-      <div style={{ display: 'flex', height: '100dvh', background: DEFAULT_BG, color: DEFAULT_TEXT, alignItems: 'center', justifyContent: 'center', fontFamily: "'Inter',system-ui" }}>
+      <div style={{ display: 'flex', height: '100dvh', background: DEFAULT_BG, color: DEFAULT_TEXT, alignItems: 'center', justifyContent: 'center', fontFamily: "'Figtree Variable',system-ui" }}>
         <Loader2 size={22} className="blocks-spin" />
         <style>{'@keyframes blocks-spin{to{transform:rotate(360deg)}}.blocks-spin{animation:blocks-spin 0.8s linear infinite}'}</style>
       </div>
@@ -85,7 +85,7 @@ export function BlockedMembersShell() {
 
   if (loadState === 'error') {
     return (
-      <div style={{ display: 'flex', height: '100dvh', background: DEFAULT_BG, color: DEFAULT_TEXT, alignItems: 'center', justifyContent: 'center', fontFamily: "'Inter',system-ui", padding: '0 32px' }}>
+      <div style={{ display: 'flex', height: '100dvh', background: DEFAULT_BG, color: DEFAULT_TEXT, alignItems: 'center', justifyContent: 'center', fontFamily: "'Figtree Variable',system-ui", padding: '0 32px' }}>
         <div style={{ textAlign: 'center', maxWidth: 420 }}>
           <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 10 }}>We couldn&apos;t load your blocked members</div>
           {loadError ? <div role="alert" style={{ fontSize: 14, color: '#F87171', lineHeight: 1.6, marginBottom: 6 }}>{loadError}</div> : null}
@@ -96,7 +96,7 @@ export function BlockedMembersShell() {
   }
 
   return (
-    <div style={{ minHeight: '100dvh', background: BG, color: TEXT, fontFamily: "'Inter', system-ui, -apple-system, sans-serif" }}>
+    <div style={{ minHeight: '100dvh', background: BG, color: TEXT, fontFamily: "'Figtree Variable', system-ui, -apple-system, sans-serif" }}>
       <style>{'@keyframes blocks-spin{to{transform:rotate(360deg)}}.blocks-spin{animation:blocks-spin 0.8s linear infinite}'}</style>
 
       <header style={{ height: 56, borderBottom: `1px solid ${BORDER}`, display: 'flex', alignItems: 'center', padding: '0 16px', gap: 12, position: 'sticky', top: 0, background: BG, zIndex: 1 }}>

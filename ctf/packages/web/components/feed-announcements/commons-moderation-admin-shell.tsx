@@ -579,7 +579,7 @@ export function CommonsModerationAdminShell({
   }
 
   return (
-    <div style={{ minHeight: '100dvh', background: t.BG, color: t.TITLE, fontFamily: "'Inter',system-ui,sans-serif" }}>
+    <div style={{ minHeight: '100dvh', background: t.BG, color: t.TITLE, fontFamily: "'Figtree Variable',system-ui,sans-serif" }}>
       <MobileScreenHeader
         title="Commons Moderation"
         accent={t.ACCENT}

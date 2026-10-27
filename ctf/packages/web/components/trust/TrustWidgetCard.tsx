@@ -117,7 +117,7 @@ export const TrustWidgetCard: React.FC<TrustWidgetCardProps> = ({ trust, isOwnCa
   const hasEvidence = trust.trustEvidence.length > 0;
   const disclosure: TrustDisclosure = "trustDisclosure" in trust ? trust.trustDisclosure : "full";
   return (
-    <div style={{ borderRadius: 12, background: CARD_BG, border: `1px solid ${CARD_BORDER}`, overflow: "hidden", fontFamily: "'Inter', system-ui, sans-serif" }}>
+    <div style={{ borderRadius: 12, background: CARD_BG, border: `1px solid ${CARD_BORDER}`, overflow: "hidden", fontFamily: "'Figtree Variable', system-ui, sans-serif" }}>
       <WidgetHeader />
       {hasEvidence
         ? <EvidenceBody evidence={trust.trustEvidence} isOwnCard={isOwnCard} disclosure={disclosure} />

@@ -670,7 +670,7 @@ export function SocketRelayShell({ userId, isAdmin }: SocketRelayShellProps) {
   if (sr.loading) return <SocketRelayLoading />;
   if (sr.error) {
     return (
-      <div style={{ width: "100%", minHeight: "100vh", background: BG, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', system-ui, sans-serif", color: "#EF4444" }}>
+      <div style={{ width: "100%", minHeight: "100vh", background: BG, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Figtree Variable', system-ui, sans-serif", color: "#EF4444" }}>
         {sr.error}
       </div>
     );
@@ -709,7 +709,7 @@ export function SocketRelayShell({ userId, isAdmin }: SocketRelayShellProps) {
     { key: "chat", label: "Direct Line" },
   ];
   return (
-    <div style={{ minHeight: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT }}>
+    <div style={{ minHeight: "100vh", background: t.BG, fontFamily: "'Figtree Variable', system-ui, sans-serif", color: t.TEXT }}>
       <SocketRelayHeader
         t={t}
         openCount={openCount}

@@ -17,7 +17,7 @@ export function ClickLogEmptyState({ onLog }: { onLog: () => void }) {
   const { theme } = useTheme();
   const t = getClickLogTokens(theme);
   return (
-    <div style={{ width: "100%", minHeight: "100vh", background: t.BG, fontFamily: "'Inter',system-ui", color: t.TITLE, display: "flex", flexDirection: "column" }}>
+    <div style={{ width: "100%", minHeight: "100vh", background: t.BG, fontFamily: "'Figtree Variable',system-ui", color: t.TITLE, display: "flex", flexDirection: "column" }}>
       <div style={{ height: 56, borderBottom: `1px solid ${t.BORDER}`, display: "flex", alignItems: "center", padding: "0 16px", gap: 12, background: t.HEADER, flexShrink: 0 }}>
         {/* Back control — the empty state renders full-screen before the shell's
             own back chrome, so without this a member with no incidents (common on
