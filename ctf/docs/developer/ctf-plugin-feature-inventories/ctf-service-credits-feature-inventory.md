@@ -305,6 +305,8 @@ Demo schema: `ctf/scripts/demo-seed/32-service-credits.mjs` turns community cred
 
 ## 10) Change Log
 
+- 2026-10-27: **A link can open a tab.** The ServiceCredits page reads `?tab=` (`wallet`, `earn`, `economy` or `send`) on load, so the 3.1 Me screen's Send and History open the right tab. No route, schema or contract change.
+
 - 2026-10-17: **Formance catches up after an outage (code review #2907, owner decision).** Every ledger path left a `queued` outbox row when its Formance post failed, but nothing ever re-sent them, so Formance fell behind for good after the first failure. New `lib/service-credits/formance-replay.ts` re-sends them (see the internal route above), driven hourly by `service-credits-formance-replay.yml`. `postTransactionToFormance` now tells a reused reference (409, or `errorCode: CONFLICT`) from an outage (`FORMANCE_DUPLICATE_REFERENCE`), which is what makes a re-send safe. The admin ledger card says how many movements are waiting and since when. The app's own ledger was always the record and is unchanged. Tests: `lib/service-credits/formance-replay.test.ts`, `formance-duplicate-reference.test.ts`.
 
 - 2026-10-17: **Demo seed adds a community credit line for the demo owner** (`ctf/scripts/demo-seed/32-service-credits.mjs`), so the wallet's floor sentence and the Mutual Credit send option can be recorded in the demo schema. No route, schema or contract change.

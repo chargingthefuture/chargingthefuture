@@ -9,7 +9,7 @@
 
 | | |
 |---|---|
-| **Surface** | `/account/data` (Your Data & Privacy), `/account` for AD-9 and AD-10, the 3.1 Today screen for AD-11, rooms in 3.1 for AD-12 and + New → Talk for AD-13 |
+| **Surface** | `/account/data` (Your Data & Privacy), `/account` for AD-9 and AD-10, the 3.1 Today screen for AD-11, rooms in 3.1 for AD-12, + New → Talk for AD-13 and Me for AD-14 |
 | **Visibility** | Any signed-in identity (including unlock-pending) |
 | **Roles to test** | member |
 | **Surfaces** | web (phone-width layout) |
@@ -266,7 +266,7 @@ the card only to the Weaver; the room reads "Private to Weavers of the Commons" 
 notice. The 3.0 Chyme page still reads Join Room, Leave and Back Channel.
 **Result:** web ☐ — notes:
 
-## AD-13 · + New → Talk
+## AD-13 · + New: Talk, Ask, Offer and Story
 
 **Role:** approved member; an account not yet approved · **Precondition:** on 3.1.
 **Steps:**
@@ -277,4 +277,31 @@ notice. The 3.0 Chyme page still reads Join Room, Leave and Back Channel.
 the time leaves the list. Step 2 shows the booking on the guide and, when it is the next talk, on
 the Main Room card. Step 3 shows the route's own reason when a limit is hit, and the account not
 yet approved sees "Booking a talk needs Unlock approval." with a link to Unlock.
+4. Under Ask, type "ride". Tap "A ride to the pharmacy or grocery store", add a line and tap **Post the
+   ask**.
+5. Tap each Offer choice and the Story link.
+**Expected (4 and 5):** Typing shows only suggestions that contain every word typed; with nothing
+typed, one from each group. The hint "Everyone can read this. Keep times and places for the private
+conversation." sits under the box. Posting says "Posted. It shows on Today, and answers come to
+Activity." and the ask appears on Today and in SocketRelay with the tag "Getting around" and no city.
+A place to stay opens LightHouse, Hours Mutual Time, A ride TrustTransport, A skill Foundation, and the
+Story link the Knowledge Library.
+**Result:** web ☐ — notes:
+
+## AD-14 · Me and Settings in 3.1
+
+**Role:** approved member; an admin · **Precondition:** on 3.1.
+**Steps:**
+1. Open Me.
+2. Tap Send, go back, tap History, go back, tap Receive.
+3. Under Settings → Colors, pick Burgundy, then Light. Reload the page.
+4. Tap Account and data, the survey, Wallpapers and The Android app in turn.
+5. Sign in as the admin and open Me.
+**Expected:** Step 1 shows the avatar and handle, ServiceCredits with the balance in credits (never
+money words), ClickLog, Trust and Reader, About with the Avenhood definition, and Settings; no tile
+for making or browsing posts. Step 2 opens ServiceCredits on its Send tab, then on the wallet tab with
+recent transactions; Receive copies @handle and says so. Step 3 recolors the app at once and keeps the
+choice after the reload. Step 4 opens each place; Wallpapers and the Android app open GitHub releases
+filtered to each. Step 5 adds a System Architect entry that opens the admin screens; a member who is
+not an admin never sees it.
 **Result:** web ☐ — notes:

@@ -196,7 +196,7 @@ export default async function HomePage() {
   // A member who switched to 3.1 in Settings sees the new frame instead of the 3.0 shell. A failed
   // read keeps them on 3.0, the shipped app, and is reported.
   if (userId && (await readInterfaceVersion(userId)) === '3.1') {
-    return <SeAppFrame currentUser={currentUser} />;
+    return <SeAppFrame currentUser={currentUser} isAdmin={isAdmin} />;
   }
 
   const trust = await resolveTrust(userId, currentUser.userId);

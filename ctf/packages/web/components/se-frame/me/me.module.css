@@ -1,0 +1,151 @@
+/* The 3.1 Me screen. Colors come from the frame's custom properties (se-theme-vars.ts). */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 18px;
+  background: var(--se-card);
+  border: 1.5px solid var(--se-hair);
+}
+
+.profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.handle {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.label,
+.subLabel {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--se-soft);
+}
+
+.title {
+  margin: 0;
+  font-family: 'Newsreader Variable', Newsreader, Georgia, serif;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.big {
+  margin: 0;
+  font-family: 'Newsreader Variable', Newsreader, Georgia, serif;
+  font-size: 28px;
+  font-weight: 600;
+}
+
+.text {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.4;
+  color: var(--se-soft);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pill,
+.pillButton,
+.swatch {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1.5px solid var(--se-line);
+  background: var(--se-card);
+  color: var(--se-ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: 0 2px 0 var(--se-line);
+  cursor: pointer;
+}
+
+.pillButton {
+  align-self: flex-start;
+}
+
+.pillButton:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.swatch[aria-checked='true'] {
+  background: var(--se-btn);
+  color: var(--se-on-btn);
+}
+
+.swatchDot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 3px solid;
+}
+
+.picker {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px;
+  border-radius: 18px;
+  background: var(--se-card);
+  border: 1.5px solid var(--se-line);
+  box-shadow: 0 3px 0 var(--se-line);
+  color: var(--se-ink);
+  text-decoration: none;
+}
+
+.tileTitle {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.links {
+  display: flex;
+  flex-direction: column;
+}
+
+.links a {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--se-ink);
+  text-underline-offset: 3px;
+}
+
+.pill:focus-visible,
+.pillButton:focus-visible,
+.swatch:focus-visible,
+.tile:focus-visible,
+.links a:focus-visible {
+  outline: 2px solid var(--se-pick);
+  outline-offset: 2px;
+}
