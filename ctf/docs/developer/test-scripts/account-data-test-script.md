@@ -9,7 +9,7 @@
 
 | | |
 |---|---|
-| **Surface** | `/account/data` (Your Data & Privacy), `/account` for AD-9 and AD-10, the 3.1 Today screen for AD-11, rooms in 3.1 for AD-12, + New → Talk for AD-13 and Me for AD-14 |
+| **Surface** | `/account/data` (Your Data & Privacy), `/account` for AD-9 and AD-10, the 3.1 Today screen for AD-11, rooms in 3.1 for AD-12, + New for AD-13, Me for AD-14 and Activity for AD-15 |
 | **Visibility** | Any signed-in identity (including unlock-pending) |
 | **Roles to test** | member |
 | **Surfaces** | web (phone-width layout) |
@@ -304,4 +304,19 @@ recent transactions; Receive copies @handle and says so. Step 3 recolors the app
 choice after the reload. Step 4 opens each place; Wallpapers and the Android app open GitHub releases
 filtered to each. Step 5 adds a System Architect entry that opens the admin screens; a member who is
 not an admin never sees it.
+**Result:** web ☐ — notes:
+
+## AD-15 · Activity in 3.1
+
+**Role:** approved member; a second member · **Precondition:** on 3.1.
+**Steps:**
+1. As the second member, reply to one of the first member's Commons posts, send them 1 ServiceCredit,
+   and invite them to a Recurring Activity.
+2. As the first member, open Activity. Open the reply.
+3. Tap **Mark all as read**.
+**Expected:** Step 2 shows the invite under "Needs your answer" and the reply and the credits under
+"What happened", newest first, each with how long ago and "New" on the unread ones (no red badge
+anywhere). Opening the reply goes to it and its "New" is gone on return. Step 3 clears every "New".
+With nothing recorded, Activity reads "Nothing yet. Replies, credits sent to you and confirmations
+show here."
 **Result:** web ☐ — notes:

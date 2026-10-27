@@ -12,6 +12,7 @@ import { TodayScreen } from './today/TodayScreen';
 import { MeScreen } from './me/MeScreen';
 import { useSeTheme } from './useSeTheme';
 import { NewScreen } from './new/NewScreen';
+import { ActivityScreen } from './activity/ActivityScreen';
 import { SeRoomBar, SeRoomHosts } from './rooms/SeRoomScreen';
 import { SeRoomsProvider, useSeRooms } from './rooms/SeRooms';
 import type { FeatureKey } from '../../navigation/screens';
@@ -123,6 +124,7 @@ function TabScreen({ t, s, tab, user, theme, onTheme, onBack, saving, onOpenAcco
   }
   if (tab === 'today') return user ? <TodayScreen t={t} accountId={user.id} onOpen={onOpen} /> : null;
   if (tab === 'new') return <NewScreen t={t} onOpen={onOpen} />;
+  if (tab === 'activity') return <ActivityScreen t={t} onOpen={onOpen} />;
   return <NotBuiltCard s={s} onBack={onBack} saving={saving} />;
 }
 

@@ -9,6 +9,7 @@ import { TodayScreen } from './today/today-screen';
 import { MeScreen } from './me/me-screen';
 import { useSeTheme } from './use-se-theme';
 import { NewScreen } from './new/new-screen';
+import { ActivityScreen } from './activity/activity-screen';
 import { SeRoomBar, SeRoomHosts } from './rooms/se-room-screen';
 import { SeRoomsProvider, useSeRooms } from './rooms/se-rooms';
 import { seThemeVars } from './se-theme-vars';
@@ -102,7 +103,8 @@ function TabScreen({ tab, currentUser, isAdmin, theme, onTheme, onBack, saving }
       {tab === 'today' ? <TodayScreen accountId={currentUser.userId} /> : null}
       {tab === 'new' ? <NewScreen /> : null}
       {tab === 'me' ? <MeScreen currentUser={currentUser} isAdmin={isAdmin} theme={theme} onTheme={onTheme} onBack={onBack} saving={saving} /> : null}
-      {tab === 'people' || tab === 'activity' ? <NotBuiltYet onBack={onBack} saving={saving} /> : null}
+      {tab === 'activity' ? <ActivityScreen /> : null}
+      {tab === 'people' ? <NotBuiltYet onBack={onBack} saving={saving} /> : null}
     </>
   );
 }
