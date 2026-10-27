@@ -162,7 +162,7 @@ function BlockMemberDialog({
       role="dialog"
       aria-modal="true"
       aria-label="Block this member"
-      style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(9,11,15,0.78)', fontFamily: "'Inter', system-ui, sans-serif", color: TEXT, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, overflowY: 'auto' }}
+      style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(9,11,15,0.78)', fontFamily: "'Figtree Variable', system-ui, sans-serif", color: TEXT, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, overflowY: 'auto' }}
     >
       <div style={{ width: '100%', maxWidth: 460, borderRadius: 22, background: '#0D0F14', border: '1px solid rgba(239,68,68,0.3)', boxShadow: '0 28px 72px rgba(0,0,0,0.65)', overflow: 'hidden' }}>
         <div style={{ padding: '22px 24px 16px', display: 'flex', alignItems: 'flex-start', gap: 12, borderBottom: '1px solid rgba(239,68,68,0.12)' }}>

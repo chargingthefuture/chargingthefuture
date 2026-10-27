@@ -174,7 +174,7 @@ export function ComicKnowledgeAdmin() {
   const hasMore = entries.length < total;
 
   return (
-    <div style={{ minHeight: '100dvh', background: t.BG, color: t.TITLE, fontFamily: "'Inter',system-ui,sans-serif" }}>
+    <div style={{ minHeight: '100dvh', background: t.BG, color: t.TITLE, fontFamily: "'Figtree Variable',system-ui,sans-serif" }}>
       <MobileScreenHeader title="AI Knowledge Base" accent={t.ACCENT} icon={<BookOpen size={18} color={t.ACCENT} />} />
       <div style={{ maxWidth: 880, margin: '0 auto', padding: '20px 16px 48px' }}>
         <div style={{ fontSize: 12, color: t.MUTED, marginBottom: 12, lineHeight: 1.6 }}>

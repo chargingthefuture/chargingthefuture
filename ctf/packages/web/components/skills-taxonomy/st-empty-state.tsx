@@ -16,7 +16,7 @@ export function SkillsTaxonomyEmptyState() {
   const { theme } = useTheme();
   const t = getSkillsTaxonomyTokens(theme);
   return (
-    <div style={{ width: "100%", minHeight: "100vh", background: t.BG, fontFamily: "'Inter',system-ui", color: t.TITLE, display: "flex", flexDirection: "column" }}>
+    <div style={{ width: "100%", minHeight: "100vh", background: t.BG, fontFamily: "'Figtree Variable',system-ui", color: t.TITLE, display: "flex", flexDirection: "column" }}>
       <div style={{ height: 56, borderBottom: `1px solid ${t.BORDER}`, display: "flex", alignItems: "center", padding: "0 28px", gap: 12, background: t.HEADER, flexShrink: 0 }}>
         <Layers size={18} color={t.ACCENT} />
         <div>

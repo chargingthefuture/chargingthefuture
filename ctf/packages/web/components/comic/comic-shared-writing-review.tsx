@@ -165,7 +165,7 @@ export function ComicSharedWritingReview() {
   }
 
   return (
-    <main style={{ minHeight: '100dvh', background: t.BG, color: t.TITLE, fontFamily: "'Inter',system-ui,sans-serif" }}>
+    <main style={{ minHeight: '100dvh', background: t.BG, color: t.TITLE, fontFamily: "'Figtree Variable',system-ui,sans-serif" }}>
       <MobileScreenHeader
         title="Shared writing"
         accent={t.ACCENT}

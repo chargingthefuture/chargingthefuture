@@ -11,7 +11,7 @@ import { PublicShellWorldwide } from '@/components/plugins/public-shell-worldwid
 // (t.ACCENT) is the single source of truth, so the signed-out public shell matches the signed-in
 // in-app shell on every device and in every auth state. The mobile mockup had used a divergent
 // red (#F43F5E); that drift is corrected by using the shared accent (#FB923C) for both layouts.
-const FONT_FAMILY = "'Inter', system-ui, sans-serif";
+const FONT_FAMILY = "'Figtree Variable', system-ui, sans-serif";
 
 function MobileSocketRelayPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
   const { theme } = useTheme();

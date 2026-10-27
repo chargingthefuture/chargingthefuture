@@ -17,7 +17,7 @@ import { RefreshButton } from "@/components/shared/refresh-button";
 
 function CenteredNote({ color, children }: { color: string; children: React.ReactNode }) {
   return (
-    <div style={{ width: "100%", minHeight: "100vh", background: BG, display: "flex", alignItems: "center", justifyContent: "center", color, fontFamily: "'Inter', system-ui, sans-serif" }}>
+    <div style={{ width: "100%", minHeight: "100vh", background: BG, display: "flex", alignItems: "center", justifyContent: "center", color, fontFamily: "'Figtree Variable', system-ui, sans-serif" }}>
       {children}
     </div>
   );
@@ -120,7 +120,7 @@ export function ServiceCreditsShell({ isAdmin }: { isAdmin?: boolean } = {}) {
       { key: "economy", label: "Economy" },
     ];
     return (
-      <div style={{ minHeight: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT }}>
+      <div style={{ minHeight: "100vh", background: t.BG, fontFamily: "'Figtree Variable', system-ui, sans-serif", color: t.TEXT }}>
         <div style={{ position: "sticky", top: 0, zIndex: 20, background: t.HEADER, borderBottom: `1px solid ${t.BORDER}` }}>
           {/* flexWrap: this row carries the plugin actions plus the three global ones, which
               together overflow a 390px phone — the last control was clipped off the right

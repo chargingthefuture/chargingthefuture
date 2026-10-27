@@ -216,7 +216,7 @@ export function WeeklyPerformanceSection() {
   );
 
   return (
-    <section style={{ background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TITLE, border: `1px solid ${t.BORDER}`, borderRadius: 12, overflow: "hidden" }}>
+    <section style={{ background: t.BG, fontFamily: "'Figtree Variable', system-ui, sans-serif", color: t.TITLE, border: `1px solid ${t.BORDER}`, borderRadius: 12, overflow: "hidden" }}>
       <div style={{ background: t.HEADER, borderBottom: `1px solid ${t.BORDER}` }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px" }}>
           {/* Title shrinks and truncates so the refresh control stays on screen */}

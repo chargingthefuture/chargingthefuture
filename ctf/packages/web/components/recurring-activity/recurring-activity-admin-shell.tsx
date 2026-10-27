@@ -120,7 +120,7 @@ export function RecurringActivityAdminShell() {
   const nameOf = (userId: string) => names[userId] ?? `${userId.slice(0, 10)}…`;
 
   return (
-    <div style={{ minHeight: '100vh', background: BG, color: TEXT, fontFamily: 'Inter, system-ui, sans-serif' }}>
+    <div style={{ minHeight: '100vh', background: BG, color: TEXT, fontFamily: "'Figtree Variable', system-ui, sans-serif" }}>
       <MobileScreenHeader title="Recurring Activity Review" />
       <div style={{ padding: '16px 16px 40px', maxWidth: 760, margin: '0 auto' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>

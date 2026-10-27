@@ -60,7 +60,7 @@ export function QuoraSurveyAdminShell() {
   }, [load]);
 
   return (
-    <main style={{ minHeight: '100dvh', background: t.BG, color: t.TITLE, fontFamily: "'Inter',system-ui,sans-serif" }}>
+    <main style={{ minHeight: '100dvh', background: t.BG, color: t.TITLE, fontFamily: "'Figtree Variable',system-ui,sans-serif" }}>
       {/* The shared header is the only sanctioned back control (rule 134). It carries the back
           chevron and the report-bug / settings / account cluster, so an admin on a phone — where
           the installed app has no browser back button — is never stranded here. The title is not

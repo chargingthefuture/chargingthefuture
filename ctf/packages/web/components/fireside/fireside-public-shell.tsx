@@ -9,7 +9,7 @@ import { getAppAccent } from '@/lib/theme/theme-tokens';
 import { FIRESIDE_BLOG_BASE } from '@/lib/fireside/constants';
 import { PublicShellWorldwide } from '@/components/plugins/public-shell-worldwide';
 
-const FONT_FAMILY = "'Inter', system-ui, sans-serif";
+const FONT_FAMILY = "'Figtree Variable', system-ui, sans-serif";
 
 // Fireside is the one plugin whose main thing is already open to a visitor: the conversation
 // renders under each blog post and reading it needs no account at all. The generic public shell

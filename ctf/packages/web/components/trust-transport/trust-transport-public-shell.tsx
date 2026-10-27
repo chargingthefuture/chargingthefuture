@@ -9,7 +9,7 @@ import { PublicShellWorldwide } from '@/components/plugins/public-shell-worldwid
 
 // Palette from the TrustTransportPublic / MobileTrustTransportPublic mockups, now served from
 // the shared theme tokens (default theme returns the exact shipped hex values).
-const FONT_FAMILY = "'Inter', system-ui, sans-serif";
+const FONT_FAMILY = "'Figtree Variable', system-ui, sans-serif";
 
 // Built per-render from the theme tokens so the accent follows the theme; the package/food
 // category colors are data-viz swatches and deliberately stay raw.

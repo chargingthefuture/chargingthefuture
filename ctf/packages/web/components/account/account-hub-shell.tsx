@@ -40,7 +40,7 @@ export function AccountHubShell({ username, trust }: { username: string | null; 
   // the document unscrollable, which stops Safari's "Full Page" screenshot from reaching past the
   // first viewport. The shared header below pins itself with position: sticky.
   return (
-    <div style={{ display: 'flex', minHeight: '100dvh', background: tok.BG, color: tok.TEXT, fontFamily: "'Inter',system-ui,-apple-system,sans-serif" }}>
+    <div style={{ display: 'flex', minHeight: '100dvh', background: tok.BG, color: tok.TEXT, fontFamily: "'Figtree Variable',system-ui,-apple-system,sans-serif" }}>
       {/* The shared header carries the back + account controls at phone width, matching every plugin shell. */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <MobileScreenHeader title="Your account" accent={tok.BRAND} icon={<UserCircle size={18} color={tok.BRAND} />} />

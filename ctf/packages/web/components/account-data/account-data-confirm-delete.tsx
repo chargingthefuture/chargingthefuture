@@ -86,7 +86,7 @@ export function AccountDataConfirmDelete({ serviceCount, onCancel, onConfirm }: 
 
   if (status === 'done') {
     return (
-      <div style={{ position: 'fixed', inset: 0, zIndex: 60, background: BG, fontFamily: "'Inter', system-ui, sans-serif", color: TEXT, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 32px' }}>
+      <div style={{ position: 'fixed', inset: 0, zIndex: 60, background: BG, fontFamily: "'Figtree Variable', system-ui, sans-serif", color: TEXT, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 32px' }}>
         <div style={{ textAlign: 'center', maxWidth: 440 }}>
           <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
             <CheckCircle size={30} color="#22C55E" />
@@ -117,7 +117,7 @@ export function AccountDataConfirmDelete({ serviceCount, onCancel, onConfirm }: 
   const panelWidth = '100%';
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(9,11,15,0.78)', fontFamily: "'Inter', system-ui, sans-serif", color: TEXT, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '16px', overflowY: 'auto' }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(9,11,15,0.78)', fontFamily: "'Figtree Variable', system-ui, sans-serif", color: TEXT, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '16px', overflowY: 'auto' }}>
       <div style={{ width: panelWidth, maxWidth: 560, borderRadius: 22, background: '#0D0F14', border: '1px solid rgba(239,68,68,0.3)', boxShadow: '0 28px 72px rgba(0,0,0,0.65)', overflow: 'hidden' }}>
         {/* Header band */}
         <div style={{ padding: '24px 26px 18px', background: 'linear-gradient(135deg,rgba(239,68,68,0.1),rgba(233,30,140,0.04))', borderBottom: '1px solid rgba(239,68,68,0.12)', display: 'flex', alignItems: 'flex-start', gap: 12 }}>

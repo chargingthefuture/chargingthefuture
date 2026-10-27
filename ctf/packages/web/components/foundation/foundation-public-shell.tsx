@@ -9,7 +9,7 @@ import { PublicShellWorldwide } from '@/components/plugins/public-shell-worldwid
 
 // Layout from the FoundationPublic / MobileFoundationPublic design mockups; chrome colors come from
 // the shared Foundation theme tokens (default theme returns the exact shipped hex).
-const FONT_FAMILY = "'Inter', system-ui, sans-serif";
+const FONT_FAMILY = "'Figtree Variable', system-ui, sans-serif";
 
 function MobileFoundationPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
   const { theme } = useTheme();

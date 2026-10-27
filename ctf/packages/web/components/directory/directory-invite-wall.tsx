@@ -135,7 +135,7 @@ export function DirectoryInviteWall({ page, inviteLink, verifyUrl }: { page: num
   const load = useInvitePage(page, inviteLink);
   const listed = load.kind === 'ok' ? load.page.listed : null;
   return (
-    <div style={{ minHeight: '100vh', background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT }}>
+    <div style={{ minHeight: '100vh', background: t.BG, fontFamily: "'Figtree Variable', system-ui, sans-serif", color: t.TEXT }}>
       <div style={{ position: 'sticky', top: 0, zIndex: 20, background: t.HEADER, borderBottom: `1px solid ${t.BORDER}`, display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px' }}>
         <BackChevronButton accent={t.ACCENT} />
         <Mail size={18} style={{ color: t.ACCENT, flexShrink: 0 }} />

@@ -19,7 +19,7 @@ export function PageErrorNotice({ digest }: { digest?: string }): React.JSX.Elem
         textAlign: 'center',
         background: 'var(--ctf-bg, #0f1117)',
         color: 'var(--ctf-text, #d5d9e2)',
-        fontFamily: 'Inter, system-ui, sans-serif',
+        fontFamily: "'Figtree Variable', system-ui, sans-serif",
       }}
     >
       <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>This page could not be shown.</h1>
