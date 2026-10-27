@@ -2,8 +2,8 @@
  * ChymePublicScreen — the Chyme page for a signed-out visitor, copied from the web (web
  * components/chyme/chyme-public-shell.tsx): its own green header with the back control, the
  * invitation card with Sign In, what is coming up on TI Radio, then the Live Rooms row with Leave
- * (while listening) and refresh, and the room: listen without an account, read the room chat, or
- * the plain reason when that is not possible.
+ * (while listening) and refresh, and the room: listen without an account, or the plain reason when
+ * that is not possible.
  */
 import React, { useCallback, useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -16,7 +16,6 @@ import { GradientFill, Spin } from './chyme-join-bar';
 import { ChymeUpcoming } from './chyme-upcoming';
 import { ChymeReadingsPlayer } from './chyme-readings-player';
 import { ChymeGuestListen, GuestNote } from './chyme-guest-listen';
-import { ChymeGuestChat } from './chyme-guest-chat';
 import { getPublicRoom, type LiveState } from './chyme-public-api';
 
 type Listen = { listening: boolean; onListeningChange: (_l: boolean) => void; leaveKey: number };
@@ -67,7 +66,7 @@ function DashedState({ title, body, t, children }: { title: string; body: string
   );
 }
 
-function RoomList({ live, onRoomGone, onSignIn, refreshKey, listen, t }: { live: LiveState; onRoomGone: () => void; onSignIn: () => void; refreshKey: number; listen: Listen; t: ChymeTokens }) {
+function RoomList({ live, onRoomGone, listen, t }: { live: LiveState; onRoomGone: () => void; listen: Listen; t: ChymeTokens }) {
   if (live.checkFailed) return <DashedState title="Couldn't check whether a room is live" body={live.checkFailed} t={t} />;
   if (!live.isLive) {
     return (
@@ -90,9 +89,6 @@ function RoomList({ live, onRoomGone, onSignIn, refreshKey, listen, t }: { live:
             onListeningChange={listen.onListeningChange}
             leaveKey={listen.leaveKey}
           />
-          <View style={styles.chatGap}>
-            <ChymeGuestChat onSignIn={onSignIn} refreshKey={refreshKey} />
-          </View>
         </>
       ) : (
         <>
@@ -115,7 +111,7 @@ function RoomsRow({ listening, onLeave, onRefresh, refreshing, t }: { listening:
             <Text style={[styles.leaveText, { color: t.TITLE }]}>Leave</Text>
           </TouchableOpacity>
         ) : null}
-        <TouchableOpacity onPress={onRefresh} disabled={refreshing} accessibilityRole="button" accessibilityLabel="Refresh the room and chat" style={[styles.refresh, { borderRadius: t.radius(12), backgroundColor: t.INPUT_BG }]}>
+        <TouchableOpacity onPress={onRefresh} disabled={refreshing} accessibilityRole="button" accessibilityLabel="Refresh the room" style={[styles.refresh, { borderRadius: t.radius(12), backgroundColor: t.INPUT_BG }]}>
           <Spin spinning={refreshing}>
             <RefreshCw size={16} color={t.MUTED} />
           </Spin>
@@ -164,7 +160,7 @@ export function ChymePublicScreen({ onBack }: { onBack: () => void }) {
             <ChymeUpcoming refreshKey={refreshKey} compact />
           </View>
           <RoomsRow listening={listening} onLeave={() => setLeaveKey((n) => n + 1)} onRefresh={() => void refresh()} refreshing={refreshing} t={t} />
-          <RoomList live={live} onRoomGone={onRoomGone} onSignIn={onSignIn} refreshKey={refreshKey} listen={{ listening, onListeningChange: setListening, leaveKey }} t={t} />
+          <RoomList live={live} onRoomGone={onRoomGone} listen={{ listening, onListeningChange: setListening, leaveKey }} t={t} />
         </View>
       </ScrollView>
     </View>
@@ -212,5 +208,4 @@ const styles = StyleSheet.create({
   dashedBody: { fontSize: 12, lineHeight: 18, textAlign: 'center', fontFamily: interFamily('400') },
   roomName: { fontSize: 13, marginBottom: 2, fontFamily: interFamily('700') },
   roomLine: { fontSize: 12, marginBottom: 8, fontFamily: interFamily('400') },
-  chatGap: { marginTop: 10 },
 });

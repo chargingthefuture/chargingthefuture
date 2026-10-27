@@ -37,10 +37,8 @@ export async function sendServiceCredits(
 }
 import type { PoolClient } from 'pg';
 import {
-  CHYME_DEFAULT_MESSAGES_LIMIT,
   CHYME_MAIN_ROOM_KEY,
   CHYME_MAIN_ROOM_NAME,
-  CHYME_MAX_MESSAGE_LENGTH,
   CHYME_PRESENCE_TTL_SECONDS,
   chymeRoomNameForKey,
   isChymeSpeakMode,
@@ -48,8 +46,6 @@ import {
 } from './constants';
 import type {
   ChymeDeletionResponse,
-  ChymeMessage,
-  ChymePublicMessage,
   ChymeParticipant,
   ChymeRoomResponse,
 } from './types';
@@ -101,14 +97,6 @@ type ParticipantRow = {
   last_seen_at: Date;
 };
 
-type MessageRow = {
-  id: string;
-  user_id: string;
-  username: string | null;
-  text: string;
-  sent_at: Date;
-};
-
 type DeletionEventRow = {
   id: string;
   requested_at: Date;
@@ -136,20 +124,6 @@ function mapParticipant(row: ParticipantRow): ChymeParticipant {
     joinedAtIso: row.joined_at.toISOString(),
     lastSeenAtIso: row.last_seen_at.toISOString(),
   };
-}
-
-function mapMessage(row: MessageRow): ChymeMessage {
-  return {
-    id: row.id,
-    userId: row.user_id,
-    username: row.username,
-    text: row.text,
-    sentAtIso: row.sent_at.toISOString(),
-  };
-}
-
-function sanitizeMessageText(text: string): string {
-  return text.trim().replace(/\s+/g, ' ');
 }
 
 function readTreasuryUserId(policy: Record<string, unknown> | null | undefined): string | null {
@@ -589,142 +563,6 @@ export async function touchGuestPresence(guestId: string): Promise<ChymeGuestPre
 export async function removeGuestListener(guestId: string): Promise<void> {
   await withDbTransaction(async (client) => {
     await client.query(`DELETE FROM chyme_guest_listeners WHERE guest_id = $1`, [guestId]);
-  });
-}
-
-// The main room's recent chat for a signed-out visitor (owner directive, 2026-09-18: a visitor can
-// read the room chat and signs in to write). Read-only and identity-free: nothing is upserted, and a
-// room that no member has ever opened yields an empty list rather than being created here.
-export async function listPublicRoomMessages(limit = CHYME_DEFAULT_MESSAGES_LIMIT): Promise<ChymePublicMessage[]> {
-  return withDbTransaction(async (client) => {
-    const room = await getMainRoomReadOnly(client);
-    if (!room) {
-      return [];
-    }
-    const boundedLimit = Math.min(Math.max(limit, 1), CHYME_DEFAULT_MESSAGES_LIMIT);
-    const result = await client.query<MessageRow>(
-      `
-        SELECT id, user_id, username, text, sent_at
-        FROM chyme_messages
-        WHERE room_id = $1
-        ORDER BY sent_at DESC
-        LIMIT $2
-      `,
-      [room.id, boundedLimit],
-    );
-    // A reduced shape for anonymous readers: the handle is built here so the member's account id
-    // never leaves the server on this route.
-    return result.rows.reverse().map((row) => ({
-      id: row.id,
-      username: row.username,
-      handle: chymeHandle(row.username, row.user_id),
-      text: row.text,
-      sentAtIso: row.sent_at.toISOString(),
-    }));
-  });
-}
-
-export async function listRoomMessages(
-  identity: IdentityInput,
-  limit = CHYME_DEFAULT_MESSAGES_LIMIT,
-  roomKey: string = CHYME_MAIN_ROOM_KEY,
-): Promise<ChymeMessage[]> {
-  return withDbTransaction(async (client) => {
-    const room = await ensureRoom(client, roomKey);
-    await ensureServiceProfile(client, identity);
-
-    const boundedLimit = Math.min(Math.max(limit, 1), CHYME_DEFAULT_MESSAGES_LIMIT);
-    const result = await client.query<MessageRow>(
-      `
-        SELECT id, user_id, username, text, sent_at
-        FROM chyme_messages
-        WHERE room_id = $1
-        ORDER BY sent_at DESC
-        LIMIT $2
-      `,
-      [room.id, boundedLimit],
-    );
-
-    return result.rows.reverse().map(mapMessage);
-  });
-}
-
-export function validateMessageInput(text: string): { valid: true; normalizedText: string } | { valid: false } {
-  const normalizedText = sanitizeMessageText(text);
-  if (normalizedText.length === 0 || normalizedText.length > CHYME_MAX_MESSAGE_LENGTH) {
-    return { valid: false };
-  }
-
-  return {
-    valid: true,
-    normalizedText,
-  };
-}
-
-export async function sendRoomMessage(
-  identity: IdentityInput,
-  text: string,
-  roomKey: string = CHYME_MAIN_ROOM_KEY,
-): Promise<ChymeMessage> {
-  const validation = validateMessageInput(text);
-  if (!validation.valid) {
-    throw new Error('invalid_message_text');
-  }
-
-  // Chat is stored in chyme_messages and both apps read it from there. It is not copied to Stream
-  // (owner decision, 2026-10-16; issue #2732): nothing read the copy, and a member who deleted or
-  // edited a message kept the original text in Stream, where nothing could find it to remove it.
-  return withDbTransaction(async (client) => {
-    const room = await ensureRoom(client, roomKey);
-    await ensureServiceProfile(client, identity);
-
-    const inserted = await client.query<MessageRow>(
-      `
-        INSERT INTO chyme_messages (
-          room_id,
-          user_id,
-          username,
-          text,
-          sent_at
-        )
-        VALUES ($1, $2, $3, $4, NOW())
-        RETURNING id, user_id, username, text, sent_at
-      `,
-      [
-        room.id,
-        identity.userId,
-        identity.username,
-        validation.normalizedText,
-      ],
-    );
-
-    return mapMessage(inserted.rows[0]);
-  });
-}
-
-// Delete one of the member's OWN room chat messages. Author-only: the row is deleted only when its
-// user_id matches the caller. The product has no in-place edit — editing IS delete + repost — so the
-// client re-uses this: it loads the text back into the composer and deletes the original, and the
-// member sends a fresh message. Throws 'message_not_found' (unknown/already gone) or
-// 'not_message_owner' (someone else's message) so the route can map them to 404 / 403.
-export async function deleteRoomMessage(
-  identity: IdentityInput,
-  messageId: string,
-  roomKey: string = CHYME_MAIN_ROOM_KEY,
-): Promise<void> {
-  await withDbTransaction(async (client) => {
-    const room = await ensureRoom(client, roomKey);
-    const existing = await client.query<{ user_id: string }>(
-      `SELECT user_id FROM chyme_messages WHERE id = $1 AND room_id = $2 LIMIT 1`,
-      [messageId, room.id],
-    );
-    if (existing.rowCount === 0) {
-      throw new Error('message_not_found');
-    }
-    if (existing.rows[0].user_id !== identity.userId) {
-      throw new Error('not_message_owner');
-    }
-    await client.query(`DELETE FROM chyme_messages WHERE id = $1 AND room_id = $2`, [messageId, room.id]);
   });
 }
 

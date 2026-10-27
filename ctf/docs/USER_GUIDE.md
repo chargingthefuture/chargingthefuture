@@ -111,22 +111,19 @@ Track all your requests, active connections, and past work in one place. Get not
 
 ## Chyme
 
-_Last updated: 2026-08-05_
+_Last updated: 2026-10-27_
 
-Chyme is a live audio room where survivors can connect, listen, speak, and chat together in real time.
+Chyme is a live audio room where survivors can connect, listen, and speak together in real time.
 
-When you open Chyme, you join a shared room with other members. You can listen for free, or sign in to speak and chat. The room stays open — you can mute and unmute your microphone anytime, and you'll see who else is in the room.
+When you open Chyme, you join a shared room with other members. You can listen for free, or sign in to speak. The room stays open — you can mute and unmute your microphone anytime, and you'll see who else is in the room.
 
-You can send text messages in the room chat. Your messages stay there and show up again if you reload the page. You can edit or delete your own messages anytime.
-
-You can send ServiceCredits as a tip to another member in the room right now using the tip button on their profile card. You can also start a private, one-to-one audio call with another member using the Back Channel action — they'll get an invite they can accept or decline, and the call stays private while the room chat keeps running.
+You can send ServiceCredits as a tip to another member in the room right now using the tip button on their profile card. You can also start a private, one-to-one audio call with another member using the Back Channel action — they'll get an invite they can accept or decline, and the call stays private while the room keeps running.
 
 **How to use it**
 
-1. Open Chyme while signed in. The room, the list of who's there, and the chat panel will load.
+1. Open Chyme while signed in. The room and the list of who's there will load.
 2. Press the join button to connect to the live audio. You'll start muted. You can mute and unmute yourself anytime.
-3. Type a message in the chat and send it. It will show up in the list right away and stay there when you come back.
-4. If you're not signed in, you can listen to the room but won't be able to speak or chat.
+3. If you're not signed in, you can listen to the room but won't be able to speak.
 
 ## Mutual Time
 

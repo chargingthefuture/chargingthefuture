@@ -7,7 +7,7 @@
  *   DATABASE_URL=<conn> node scripts/migrateToDemo.mjs [--schema=demo]
  *
  * Known schema.sql hazards handled here (see continuity doc for full detail):
- *   1. `public.chyme_room_members` / `public.chyme_messages` ALTER TABLE statements —
+ *   1. `public.chyme_room_members` ALTER TABLE statements —
  *      schema-qualified to `public`; replaced with unqualified names so search_path routes them
  *      to the target schema instead of prod.
  *   2. `public.users` ALTER TABLE block + the unique-index DO block — Clerk manages `users`;
@@ -59,7 +59,6 @@ function parseArgs(argv) {
 function applyDemoTransforms(sql, targetSchema) {
   // Retarget public.-qualified chyme tables to unqualified (resolves to demo via search_path)
   sql = sql.replace(/\bpublic\.chyme_room_members\b/g, 'chyme_room_members');
-  sql = sql.replace(/\bpublic\.chyme_messages\b/g, 'chyme_messages');
 
   // Suppress the public.users ALTER TABLE lines (IF EXISTS makes them no-ops, but keeping them
   // explicit would silently target the production users table instead of failing clearly)

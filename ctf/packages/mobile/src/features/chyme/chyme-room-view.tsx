@@ -1,16 +1,15 @@
 // The room under the Join row, copied from the web (web components/chyme/chyme-room-view.tsx): the
-// room header with its live badge, name, participant line and Chat button; the quota notice and the
-// hand-raise notice when there is something to say; then either the live call or, before joining,
-// the readings loop (main room, nobody live), the stage and the chat.
+// room header with its live badge, name and participant line; the quota notice and the hand-raise
+// notice when there is something to say; then either the live call or, before joining, the readings
+// loop (main room, nobody live) and the stage.
 
 import React, { useMemo } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Lock, MessageSquare } from 'lucide-react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Lock } from 'lucide-react-native';
 import { interFamily } from '../../components/ui';
 import { chymeHandle, type ChymeRoomResponse, type ChymeRoomScope } from './ChymeApi';
 import { useChymeTokens, type ChymeTokens } from './chyme-tokens';
 import { ChymeStage } from './chyme-stage';
-import { ChymeChatPanel } from './chyme-chat-panel';
 import { ChymeAudioRoom } from './ChymeAudioRoom';
 import { ChymeReadingsPlayer } from './chyme-readings-player';
 import type { MobileModerationContext } from './ChymeModeration';
@@ -29,7 +28,7 @@ export function participantLine(current: number, max: number, guests: number): s
   return `${members} · ${guests} ${guests === 1 ? 'guest' : 'guests'} listening`;
 }
 
-function RoomHeader({ room, user, showChat, onToggleChat, t }: { room: ChymeRoomResponse; user: CurrentUser; showChat: boolean; onToggleChat: () => void; t: ChymeTokens }) {
+function RoomHeader({ room, user, t }: { room: ChymeRoomResponse; user: CurrentUser; t: ChymeTokens }) {
   return (
     <View style={[styles.header, { borderBottomColor: t.BORDER }]}>
       <View style={styles.headerMain}>
@@ -46,21 +45,6 @@ function RoomHeader({ room, user, showChat, onToggleChat, t }: { room: ChymeRoom
           {participantLine(room.participants.length, room.capacity.max, room.guestCount ?? 0)} · Signed in as {chymeHandle(user.username, user.userId)}
         </Text>
       </View>
-      <TouchableOpacity
-        onPress={onToggleChat}
-        accessibilityRole="button"
-        style={[
-          styles.chatButton,
-          {
-            borderRadius: t.radius(10),
-            backgroundColor: showChat ? `${t.ACCENT}20` : t.INPUT_BG,
-            borderColor: showChat ? `${t.ACCENT}40` : t.BORDER_STRONG,
-          },
-        ]}
-      >
-        <MessageSquare size={14} color={showChat ? t.ACCENT : t.SUBTLE} />
-        <Text style={[styles.chatText, { color: showChat ? t.ACCENT : t.SUBTLE }]}>Chat</Text>
-      </TouchableOpacity>
     </View>
   );
 }
@@ -119,24 +103,12 @@ export function ChymeRoomView({ state, room, user, scope, backChannel }: ViewPro
   const t = useChymeTokens();
   const raisedHandUserIds = useMemo(() => new Set(room.participants.filter((p) => p.handRaised).map((p) => p.userId)), [room.participants]);
   const moderation = useModeration(room, scope);
-  const { chat, call } = state;
-  const chatPanel = (
-    <ChymeChatPanel
-      messages={state.messages}
-      currentUserId={user.userId}
-      draft={chat.draft}
-      onDraftChange={chat.setDraft}
-      onSend={() => void chat.send()}
-      sending={chat.sending}
-      onEditMessage={chat.edit}
-      onDeleteMessage={(id) => void chat.remove(id)}
-    />
-  );
+  const { call } = state;
   const inCall = call.joinState === 'ready' && call.joinInfo !== null;
 
   return (
     <>
-      <RoomHeader room={room} user={user} showChat={state.showChat} onToggleChat={() => state.setShowChat((s) => !s)} t={t} />
+      <RoomHeader room={room} user={user} t={t} />
       <QuotaNotice room={room} t={t} />
       <HandRaiseNotice room={room} t={t} />
       {inCall && call.joinInfo ? (
@@ -144,8 +116,6 @@ export function ChymeRoomView({ state, room, user, scope, backChannel }: ViewPro
           joinInfo={call.joinInfo}
           displayName={chymeHandle(user.username, user.userId)}
           roomScope={scope}
-          showChat={state.showChat}
-          chatPanel={chatPanel}
           onLeave={() => void call.leave()}
           raisedHandUserIds={raisedHandUserIds}
           backChannel={backChannel}
@@ -160,7 +130,6 @@ export function ChymeRoomView({ state, room, user, scope, backChannel }: ViewPro
             </View>
           ) : null}
           <ChymeStage room={room} currentUserId={user.userId} />
-          {state.showChat ? chatPanel : null}
         </View>
       )}
     </>
@@ -177,8 +146,6 @@ const styles = StyleSheet.create({
   membersOnly: { fontSize: 12, fontFamily: interFamily('400') },
   roomName: { fontSize: 20, lineHeight: 26, marginBottom: 4, fontFamily: interFamily('800') },
   line: { fontSize: 13, color: '#16A34A', fontFamily: interFamily('400') },
-  chatButton: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 14, borderWidth: 1 },
-  chatText: { fontSize: 13, fontFamily: interFamily('600') },
   notice: { marginTop: 12, marginHorizontal: 24, paddingVertical: 10, paddingHorizontal: 14, borderWidth: 1 },
   noticeText: { fontSize: 13, lineHeight: 19.5, fontFamily: interFamily('400') },
   handNotice: { paddingVertical: 8, backgroundColor: 'rgba(234,179,8,0.10)', borderColor: 'rgba(234,179,8,0.3)' },

@@ -66,8 +66,8 @@ export function ChymeSidebar({
         <button
           onClick={onRefresh}
           disabled={refreshing}
-          aria-label="Refresh the room and chat"
-          title="Refresh the room and chat"
+          aria-label="Refresh the room"
+          title="Refresh the room"
           style={{ width: 44, height: 44, borderRadius: 12, background: t.INPUT_BG, border: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: refreshing ? 'wait' : 'pointer', color: t.MUTED, flexShrink: 0 }}
         >
           <RefreshCw size={16} className={refreshing ? 'ctf-spin' : undefined} />

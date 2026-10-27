@@ -1,19 +1,9 @@
 // The signed-out Chyme reads and writes, copied from the web public page (web components/chyme/
-// chyme-public-shell.tsx, chyme-guest-listen.tsx, chyme-guest-chat.tsx). The routes under
+// chyme-public-shell.tsx, chyme-guest-listen.tsx). The routes under
 // /api/chyme/public/* need no account; the listener is identified by the cookie the listen route
 // sets, which the app's network layer keeps and sends back like a browser does.
 
 import { authedFetch } from '../../auth/authedFetch';
-// One room message as the public route returns it: the display handle, never the member's
-// account id (the web's ChymePublicMessage in lib/chyme/types.ts).
-export type ChymePublicMessage = {
-  id: string;
-  username: string | null;
-  handle: string;
-  text: string;
-  sentAtIso: string;
-};
-
 export type LiveState = {
   isLive: boolean;
   participantCount: number;
@@ -128,15 +118,6 @@ export function postGuestLeave(): void {
   void authedFetch('/api/chyme/public/leave', POST).catch(() => {
     /* no-trace: best-effort; the presence window lapses the listener anyway */
   });
-}
-
-export type ChatState = { kind: 'loading' } | { kind: 'ready'; messages: ChymePublicMessage[] } | { kind: 'error'; message: string };
-
-export async function readPublicChat(): Promise<ChatState> {
-  const res = await authedFetch('/api/chyme/public/messages?limit=50');
-  const body = await readBody(res);
-  if (!res.ok) return { kind: 'error', message: serverWords(res.status, body) };
-  return { kind: 'ready', messages: Array.isArray(body.messages) ? (body.messages as ChymePublicMessage[]) : [] };
 }
 
 // The web's chymeAttendanceLine (lib/chyme/capacity-line.ts).

@@ -227,10 +227,9 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
   {
     slug: 'chyme',
     name: 'Chyme',
-    dataSummary: 'Your Chyme chat messages and room membership.',
+    dataSummary: 'Your Chyme room membership and calls.',
     serviceScopeSupported: true,
     tables: [
-      del('chyme_messages', 'user_id', 'Your chat messages.'),
       // Both sides of the ephemeral back-channel call log are deleted, not pseudonymized: a call row
       // (invite → active → ended, with ~60s timeouts) has no history surface either party revisits,
       // and the table's no-self CHECK (initiator <> recipient) would be violated the moment BOTH

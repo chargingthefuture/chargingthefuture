@@ -18,7 +18,7 @@ Current implementation reads user identity from the provider-neutral server auth
 - Write fields:
   - none currently written to canonical profile by Chyme routes
 - Why canonical fields are needed:
-  - show consistent participant identity in room roster/chat
+  - show consistent participant identity in the room roster
   - avoid separate plugin identity records
   - enforce shared handle contract with other plugins per `ctf/docs/contracts/PLUGIN_IDENTITY_HANDLE_BASELINE.md`
 
@@ -50,10 +50,8 @@ Chyme handle contract decision:
   - Contains personal data? yes (`user_id`, `username`, optional avatar URL)
   - Retention period: until service-scoped delete or policy change
   - Legal/compliance note: considered service participation metadata
-- Table/entity: `chyme_messages`
-  - Contains personal data? yes (`user_id`, message text, `username`)
-  - Retention period: currently retained until service-scoped delete by sender
-  - Legal/compliance note: high-sensitivity user content; avoid logging payloads
+- Table/entity: `chyme_messages` (dropped 2026-10-27, `post/0071_chyme_drop_messages.sql`)
+  - Room chat was removed with its screens and routes; the table and every row in it were dropped.
 - Table/entity: `chyme_deletion_events`
   - Contains personal data? minimal (`user_id`, scope, service_name, timestamp)
   - Retention period: retained as compliance/audit evidence
@@ -74,7 +72,6 @@ When user deletes Chyme usage only (`DELETE /api/account/services/chyme`, driven
 
 - Delete immediately:
   - `chyme_room_members` rows for the member, in every room
-  - `chyme_messages` rows for the member, in every room
   - `chyme_room_removals` rows for the member
   - `chyme_back_channel_calls` rows where the member is the initiator OR the recipient. Both sides are
     deleted, not pseudonymized: a back-channel call row (invite → active → ended, ~60s timeouts) has
@@ -84,7 +81,7 @@ When user deletes Chyme usage only (`DELETE /api/account/services/chyme`, driven
     of the two parties, so these two deletes clear every row naming the member in any column.
   - Stream copy: the member's Stream user `chyme-<user_id>` is hard-deleted with `mark_messages_deleted` (`deleteChymeStreamData`), so the chat messages copied to Stream before 2026-10-16 (when the copy stopped) are removed too. Run by the shared account-deletion orchestrator's external-cleanup hook; best-effort after the Postgres delete, a Stream outage is logged and never blocks the deletion.
 - Anonymize/pseudonymize:
-  - none currently (hard delete for user-owned member/message rows, on Postgres and Stream)
+  - none currently (hard delete for user-owned member rows, on Postgres and Stream)
 - Retain for compliance/fraud/finance:
   - the `account_deletion_events` row the shared delete writes, and existing `chyme_deletion_events` rows
   - `chyme_admin_audit_trail` (the admin's moderation actions, naming the member by id only)
@@ -113,9 +110,9 @@ If user returns to Chyme after service-scoped deletion:
 
 - Recreated defaults:
   - `chyme_service_profiles.status` set back to `active`
-  - room membership row recreated on room/join/message operations
+  - room membership row recreated on room/join operations
 - Data that is not restored:
-  - prior deleted chat messages and membership history
+  - prior membership history
 - Re-consent required? (yes/no):
   - no (MVP policy), with future consent-policy revision owned by compliance stream
 
@@ -150,7 +147,6 @@ If user returns to Chyme after service-scoped deletion:
   - All schema changes are made directly in `ctf/schema.sql` (canonical source of truth).
 - Rollback approach:
   - drop Chyme-only tables/indexes in reverse dependency order if needed:
-    - `chyme_messages`
     - `chyme_room_members`
     - `chyme_service_profiles`
     - `chyme_deletion_events`

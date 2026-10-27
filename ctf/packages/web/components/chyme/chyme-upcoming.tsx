@@ -35,7 +35,7 @@ async function readUpcoming(): Promise<UpcomingState> {
 }
 
 // The list itself, in the room's chrome. `refreshKey` re-reads when the page's refresh control is
-// pressed, the same way the guest chat does.
+// pressed.
 export function ChymeUpcoming({ refreshKey = 0, compact = false }: { refreshKey?: number; compact?: boolean }) {
   const { theme } = useTheme();
   const t = getChymeTokens(theme);

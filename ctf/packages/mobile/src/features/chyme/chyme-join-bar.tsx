@@ -95,7 +95,7 @@ export function ChymeJoinBar({
           onPress={onRefresh}
           disabled={refreshing}
           accessibilityRole="button"
-          accessibilityLabel="Refresh the room and chat"
+          accessibilityLabel="Refresh the room"
           style={[styles.refresh, { borderRadius: t.radius(12), backgroundColor: t.INPUT_BG }]}
         >
           <Spin spinning={refreshing}>

@@ -46,24 +46,6 @@ export type ChymeRoomResponse = {
   };
 };
 
-export type ChymeMessage = {
-  id: string;
-  userId: string;
-  username: string | null;
-  text: string;
-  sentAtIso: string;
-};
-
-type ChymeMessagesResponse = {
-  roomKey: string;
-  messages: ChymeMessage[];
-};
-
-type ChymeSendResponse = {
-  ok: true;
-  message: ChymeMessage;
-};
-
 export type ChymeJoinResponse = {
   ok: true;
   roomId: string;
@@ -79,7 +61,7 @@ export type ChymeJoinResponse = {
 // go through authedFetchJson, which attaches that token.
 
 // Which room a call acts on: the main room, or the private Weavers of the Commons room, which the
-// server addresses with `?room=contributors` on every room, chat, presence and moderation route.
+// server addresses with `?room=contributors` on every room, presence and moderation route.
 export type ChymeRoomScope = 'main' | 'contributors';
 
 export function withRoom(path: string, scope: ChymeRoomScope): string {
@@ -102,29 +84,6 @@ export async function readChymeRoom(scope: ChymeRoomScope): Promise<ChymeRoomRes
     throw new Error(typeof payload?.message === 'string' ? payload.message : `Network request failed: ${response.status}`);
   }
   return payload;
-}
-
-export async function getChymeMessages(scope: ChymeRoomScope = 'main'): Promise<ChymeMessagesResponse> {
-  return authedFetchJson(withRoom('/api/chyme/messages?limit=50', scope));
-}
-
-export async function postChymeMessage(text: string, scope: ChymeRoomScope = 'main'): Promise<ChymeSendResponse> {
-  return authedFetchJson(withRoom('/api/chyme/messages', scope), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
-    body: JSON.stringify({ text }),
-  });
-}
-
-// Delete the signed-in member's OWN room chat message. Author-only is enforced server-side
-// (DELETE /api/chyme/messages/[messageId] → 403 for someone else's message, 404 for a missing id,
-// 400 for a non-UUID). CSRF-guarded. There is no in-place edit: the client's "Edit" loads the text
-// back into the composer and calls this delete, then the member sends a fresh message (new id/time).
-export async function deleteChymeMessage(messageId: string, scope: ChymeRoomScope = 'main'): Promise<{ ok: true }> {
-  return authedFetchJson(withRoom(`/api/chyme/messages/${encodeURIComponent(messageId)}`, scope), {
-    method: 'DELETE',
-    headers: { 'x-ctf-csrf': '1' },
-  });
 }
 
 export async function postChymeJoin(scope: ChymeRoomScope = 'main'): Promise<ChymeJoinResponse> {

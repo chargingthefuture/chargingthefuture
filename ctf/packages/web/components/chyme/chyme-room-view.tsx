@@ -1,14 +1,13 @@
 'use client';
 
-import { useMemo, type ReactNode, type RefObject } from 'react';
+import { useMemo } from 'react';
 import dynamic from 'next/dynamic';
-import { Lock, MessageSquare } from 'lucide-react';
+import { Lock } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { getChymeTokens, chymeHandle, type CurrentUser } from './chyme-shared';
 import { ChymeStage } from './chyme-stage';
-import { ChymeChatPanel } from './chyme-chat-panel';
 import { ChymeReadingsPlayer } from '@/components/chyme/readings/chyme-readings-player';
-import type { ChymeJoinResponse, ChymeMessage, ChymeRoomResponse } from 'lib/chyme/types';
+import type { ChymeJoinResponse, ChymeRoomResponse } from 'lib/chyme/types';
 import type { ChymeConnectionState } from './chyme-audio-room';
 import type { ChymeModerationContext } from './chyme-moderation';
 import { chymeParticipantLine } from 'lib/chyme/capacity-line';
@@ -22,20 +21,10 @@ const ChymeAudioRoom = dynamic(() => import('./chyme-audio-room').then((m) => m.
 export type ChymeRoomViewProps = {
   room: ChymeRoomResponse;
   currentUser: CurrentUser;
-  showChat: boolean;
-  onToggleChat: () => void;
   joinInfo: ChymeJoinResponse | null;
   joinReady: boolean;
-  messages: ChymeMessage[];
-  draft: string;
-  onDraftChange: (value: string) => void;
-  onSend: () => void;
-  sending: boolean;
-  messagesEndRef: RefObject<HTMLDivElement | null>;
   onLeave: () => void;
   roomScope: 'main' | 'contributors';
-  onEditMessage: (messageId: string, text: string) => void;
-  onDeleteMessage: (messageId: string) => void;
   onConnectionChange?: (state: ChymeConnectionState) => void;
 };
 
@@ -68,7 +57,7 @@ function ChymeQuotaNotice({ notice, band }: { notice: string | null; band: Chyme
 // The room before the member joins the call: the stage, and the readings loop while it is switched
 // on and the main room is idle (temporary module, 2026-09-28). The main room opens by itself, so this
 // is where members land; joining the call unmounts it, which stops the sound.
-function ChymeIdleStage({ room, currentUserId, roomScope, children }: { room: ChymeRoomResponse; currentUserId: string; roomScope: ChymeRoomViewProps['roomScope']; children: ReactNode }) {
+function ChymeIdleStage({ room, currentUserId, roomScope }: { room: ChymeRoomResponse; currentUserId: string; roomScope: ChymeRoomViewProps['roomScope'] }) {
   const showReadings = roomScope === 'main' && !room.callActive;
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
@@ -78,13 +67,12 @@ function ChymeIdleStage({ room, currentUserId, roomScope, children }: { room: Ch
         </div>
       ) : null}
       <ChymeStage room={room} currentUserId={currentUserId} />
-      {children}
     </div>
   );
 }
 
 export function ChymeRoomView(props: ChymeRoomViewProps) {
-  const { room, currentUser, showChat, onToggleChat, joinInfo, joinReady } = props;
+  const { room, currentUser, joinInfo, joinReady } = props;
   const { theme } = useTheme();
   const t = getChymeTokens(theme);
 
@@ -108,20 +96,6 @@ export function ChymeRoomView(props: ChymeRoomViewProps) {
     [props.roomScope, room.speakMode, room.viewer, room.participants],
   );
 
-  const chatPanel = (
-    <ChymeChatPanel
-      messages={props.messages}
-      currentUserId={currentUser.userId}
-      draft={props.draft}
-      onDraftChange={props.onDraftChange}
-      onSend={props.onSend}
-      sending={props.sending}
-      messagesEndRef={props.messagesEndRef}
-      onEditMessage={props.onEditMessage}
-      onDeleteMessage={props.onDeleteMessage}
-    />
-  );
-
   const inCall = joinReady && joinInfo !== null;
 
   return (
@@ -142,12 +116,6 @@ export function ChymeRoomView(props: ChymeRoomViewProps) {
               {chymeParticipantLine(room.participants.length, room.capacity.max, room.guestCount)} · Signed in as {chymeHandle(currentUser.username, currentUser.userId)}
             </div>
           </div>
-          <button
-            onClick={onToggleChat}
-            style={{ padding: '8px 14px', borderRadius: 10, background: showChat ? `${t.ACCENT}20` : t.INPUT_BG, border: `1px solid ${showChat ? t.ACCENT + '40' : t.BORDER_STRONG}`, color: showChat ? t.ACCENT : t.SUBTLE, fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
-          >
-            <MessageSquare size={14} /> Chat
-          </button>
         </div>
       </div>
 
@@ -162,8 +130,6 @@ export function ChymeRoomView(props: ChymeRoomViewProps) {
         <ChymeAudioRoom
           joinInfo={joinInfo}
           currentUser={currentUser}
-          showChat={showChat}
-          chatPanel={chatPanel}
           isMobile={true}
           onLeave={props.onLeave}
           raisedHandUserIds={raisedHandUserIds}
@@ -173,9 +139,7 @@ export function ChymeRoomView(props: ChymeRoomViewProps) {
           moderation={moderation}
         />
       ) : (
-        <ChymeIdleStage room={room} currentUserId={currentUser.userId} roomScope={props.roomScope}>
-          {showChat && chatPanel}
-        </ChymeIdleStage>
+        <ChymeIdleStage room={room} currentUserId={currentUser.userId} roomScope={props.roomScope} />
       )}
     </>
   );

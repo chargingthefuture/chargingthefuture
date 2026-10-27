@@ -1,20 +1,15 @@
 // One room's state and actions, copied from the web shell's controller (web
-// components/chyme/chyme-live-shell.tsx useChymeShellState): read the room and its chat, poll the
-// room every 15 seconds while it is shown, refresh both on request, join, leave, send, edit and
-// delete. Every call carries the room scope, so the main room and the private Weavers of the
+// components/chyme/chyme-live-shell.tsx useChymeShellState): read the room, poll it every 15
+// seconds while it is shown, refresh it on request, join and leave. Every call carries the room scope, so the main room and the private Weavers of the
 // Commons room each have their own copy of this state.
 
-import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
-  deleteChymeMessage,
-  getChymeMessages,
   getChymeRoom,
   postChymeJoin,
   postChymeLeave,
-  postChymeMessage,
   readChymeRoom,
   type ChymeJoinResponse,
-  type ChymeMessage,
   type ChymeRoomResponse,
   type ChymeRoomScope,
 } from './ChymeApi';
@@ -32,9 +27,9 @@ function messageOf(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
 }
 
-// The first read: the room, then its chat. The private room answers 404 to a member who has not
+// The first read. The private room answers 404 to a member who has not
 // earned it, which becomes the explainer; any other failure is the error banner with no room.
-function useRoomLoad(scope: ChymeRoomScope, setRoom: SetRoom, setMessages: (_m: ChymeMessage[]) => void, setError: SetError) {
+function useRoomLoad(scope: ChymeRoomScope, setRoom: SetRoom, setError: SetError) {
   const [loading, setLoading] = useState(true);
   const [locked, setLocked] = useState(false);
   useEffect(() => {
@@ -46,10 +41,8 @@ function useRoomLoad(scope: ChymeRoomScope, setRoom: SetRoom, setMessages: (_m: 
           if (active) setLocked(true);
           return;
         }
-        const messagePayload = await getChymeMessages(scope);
         if (!active) return;
         setRoom(roomPayload);
-        setMessages(messagePayload.messages);
       } catch (loadError) {
         if (active) setError(messageOf(loadError, 'Unable to load Chyme.'));
       } finally {
@@ -59,12 +52,12 @@ function useRoomLoad(scope: ChymeRoomScope, setRoom: SetRoom, setMessages: (_m: 
     return () => {
       active = false;
     };
-  }, [scope, setRoom, setMessages, setError]);
+  }, [scope, setRoom, setError]);
   return { loading, locked };
 }
 
 // Light room poll: while a room is shown, refresh just the room every 15s so raised hands, roles
-// and the participant list stay current. Chat and the draft are untouched. A failed tick is ignored.
+// and the participant list stay current. A failed tick is ignored.
 function useRoomPoll(scope: ChymeRoomScope, roomLoaded: boolean, setRoom: SetRoom) {
   useEffect(() => {
     if (!roomLoaded) return;
@@ -83,53 +76,6 @@ function useRoomPoll(scope: ChymeRoomScope, roomLoaded: boolean, setRoom: SetRoo
       clearInterval(intervalId);
     };
   }, [scope, roomLoaded, setRoom]);
-}
-
-function useChatActions(scope: ChymeRoomScope, setMessages: Dispatch<SetStateAction<ChymeMessage[]>>, setError: SetError) {
-  const [draft, setDraft] = useState('');
-  const [sending, setSending] = useState(false);
-
-  const send = useCallback(async () => {
-    const text = draft.trim();
-    if (!text || sending) return;
-    setSending(true);
-    setError(null);
-    try {
-      const payload = await postChymeMessage(text, scope);
-      setMessages((current) => [...current, payload.message]);
-      setDraft('');
-    } catch (sendError) {
-      setError(messageOf(sendError, 'Unable to send message.'));
-    } finally {
-      setSending(false);
-    }
-  }, [scope, draft, sending, setMessages, setError]);
-
-  // Optimistic remove, then DELETE; restored in time order on failure. Author-only on the server.
-  const remove = useCallback(async (messageId: string) => {
-    let removed: ChymeMessage | undefined;
-    setMessages((current) => {
-      removed = current.find((m) => m.id === messageId);
-      return current.filter((m) => m.id !== messageId);
-    });
-    try {
-      await deleteChymeMessage(messageId, scope);
-    } catch (deleteError) {
-      const restored = removed;
-      if (restored) {
-        setMessages((current) => [...current, restored].sort((a, b) => a.sentAtIso.localeCompare(b.sentAtIso)));
-      }
-      setError(messageOf(deleteError, 'Unable to delete your message.'));
-    }
-  }, [scope, setMessages, setError]);
-
-  // Edit = delete + repost: the text goes back into the composer and the original is deleted.
-  const edit = useCallback((messageId: string, text: string) => {
-    setDraft(text);
-    void remove(messageId);
-  }, [remove]);
-
-  return { draft, setDraft, sending, send, remove, edit };
 }
 
 function useCallActions(scope: ChymeRoomScope, setRoom: SetRoom, setError: SetError) {
@@ -173,27 +119,21 @@ function useCallActions(scope: ChymeRoomScope, setRoom: SetRoom, setError: SetEr
 
 export function useChymeRoomState(scope: ChymeRoomScope) {
   const [room, setRoomState] = useState<ChymeRoomResponse | null>(null);
-  const [messages, setMessages] = useState<ChymeMessage[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  // Closed until the member presses Chat, as on the web.
-  const [showChat, setShowChat] = useState(false);
   const setRoom = useCallback((r: ChymeRoomResponse) => setRoomState(r), []);
 
-  const { loading, locked } = useRoomLoad(scope, setRoom, setMessages, setError);
+  const { loading, locked } = useRoomLoad(scope, setRoom, setError);
   useRoomPoll(scope, room !== null, setRoom);
-  const chat = useChatActions(scope, setMessages, setError);
   const call = useCallActions(scope, setRoom, setError);
 
-  // Refresh the room (live state and count) and the chat together; the spinner shows the press.
+  // Refresh the room (live state and count); the spinner shows the press.
   const refresh = useCallback(async () => {
     if (refreshing) return;
     setRefreshing(true);
     setError(null);
     try {
-      const [roomPayload, messagePayload] = await Promise.all([getChymeRoom(scope), getChymeMessages(scope)]);
-      setRoom(roomPayload);
-      setMessages(messagePayload.messages);
+      setRoom(await getChymeRoom(scope));
     } catch (refreshError) {
       setError(messageOf(refreshError, 'Unable to refresh the room.'));
     } finally {
@@ -201,7 +141,7 @@ export function useChymeRoomState(scope: ChymeRoomScope) {
     }
   }, [scope, refreshing, setRoom]);
 
-  return { room, messages, error, loading, locked, refreshing, refresh, showChat, setShowChat, chat, call };
+  return { room, error, loading, locked, refreshing, refresh, call };
 }
 
 export type ChymeRoomState = ReturnType<typeof useChymeRoomState>;

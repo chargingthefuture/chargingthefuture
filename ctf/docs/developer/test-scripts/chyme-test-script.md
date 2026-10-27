@@ -15,7 +15,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) · android |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-chyme-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-08-04 manual note: inventory scope line corrected to the real constant names (`CHYME_MAIN_ROOM_KEY`, `CHYME_CONTRIBUTORS_ROOM_KEY`) — no test change; the two-room cases below already match the shipped product · 2026-08-24 manual update: CH-7 now also checks that the signed-out view scrolls as a page (pinned header, Safari Full Page reaches the bottom) and ships one layout at every width · 2026-09-20 manual update: CH-7 now also checks the **Leave** control beside refresh, which a signed-out listener uses to stop listening without closing the page · 2026-09-20 manual update: CH-1 room name no longer carries a fixed topic · 2026-09-21 manual update: CH-A2 now also checks the day-by-day range control (7 days / 30 days / This month / All of it) and that "Copy as text" pastes the selected range · 2026-10-05 manual update: CH-4 Android leave drops the row at once; CH-7 step 7 re-admits a listener pruned while the tab was hidden; CH-12 refused Back Channel actions show their reason; CH-23 step 5 a removed member already in the room sees the reason · 2026-10-08 manual update: CH-AND checks the Android screen against the web page at phone width (signed in, signed out, admin screens) · 2026-10-16 manual update: CH-1 checks the muted / speaking label on the list shown before joining · 2026-10-26 manual note: the stored picture address (`avatar_url`) is gone; it was always empty, so no step changes and the room still shows each member by handle |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-08-04 manual note: inventory scope line corrected to the real constant names (`CHYME_MAIN_ROOM_KEY`, `CHYME_CONTRIBUTORS_ROOM_KEY`) — no test change; the two-room cases below already match the shipped product · 2026-08-24 manual update: CH-7 now also checks that the signed-out view scrolls as a page (pinned header, Safari Full Page reaches the bottom) and ships one layout at every width · 2026-09-20 manual update: CH-7 now also checks the **Leave** control beside refresh, which a signed-out listener uses to stop listening without closing the page · 2026-09-20 manual update: CH-1 room name no longer carries a fixed topic · 2026-09-21 manual update: CH-A2 now also checks the day-by-day range control (7 days / 30 days / This month / All of it) and that "Copy as text" pastes the selected range · 2026-10-05 manual update: CH-4 Android leave drops the row at once; CH-7 step 7 re-admits a listener pruned while the tab was hidden; CH-12 refused Back Channel actions show their reason; CH-23 step 5 a removed member already in the room sees the reason · 2026-10-08 manual update: CH-AND checks the Android screen against the web page at phone width (signed in, signed out, admin screens) · 2026-10-16 manual update: CH-1 checks the muted / speaking label on the list shown before joining · 2026-10-26 manual note: the stored picture address (`avatar_url`) is gone; it was always empty, so no step changes and the room still shows each member by handle · 2026-10-27 manual update: room chat removed — CH-2, CH-3 and CH-18 deleted; CH-1 and core smoke check there is no chat; CH-7, CH-11, CH-17 and CH-AND drop their chat steps |
 
 ## How to run this
 
@@ -34,13 +34,13 @@ The one shared audio room — these are the can't-ship-broken checks. Member rol
 
 1. **Room loads.** Open Chyme as a signed-in member. The room ("Chyme Main Room" — the name says
    the room, never a topic; what is being discussed comes from the booked TI Radio slot), the
-   participant list, and the **Chat** button render — not a spinner or an error. The chat panel
-   starts closed (since 2026-09-30); press **Chat** and it opens, press it again and it closes.
+   participant list render — not a spinner or an error. There is no Chat button and no chat panel:
+   room chat was removed on 2026-10-27, and the room is audio only.
    → web ☐ mobile ☐ android ☐
 2. **Join the call.** Press join. You connect to the live audio room, start muted, and can mute
    and unmute your own microphone. → web ☐ mobile ☐ android ☐
-3. **Chat send/read.** Type a message and send it. It appears in the list and persists on
-   reload. → web ☐ mobile ☐ android ☐
+3. **No room chat.** Nothing in the room, signed in or signed out, offers a message box or a chat
+   list. → web ☐ mobile ☐ android ☐
 4. **Access wall for the signed-out visitor.** Open the plugin route while signed out. You see the
    public listen view (free to listen, sign in to speak), not private member data. → web ☐ mobile ☐ android ☐
 5. **A host is not endorsed, signed out, whether or not anything is live.** Open Chyme signed out
@@ -79,32 +79,6 @@ Before you join, each tile under **On Stage** says **muted** (gray microphone ba
 then Mute: your list changes within a few seconds each time, on web and Android alike.
 The header back chevron returns to the page you came from (falling back to All Apps when opened
 directly).
-**Result:** web ☐ mobile ☐ android ☐ — notes:
-
-### CH-2 · Send a chat message (validation)
-**Role:** member · **Surfaces:** all
-**Steps:**
-1. Send a normal message.
-2. Try to send an empty message (only spaces).
-3. Try to send a very long message (over 1000 characters).
-4. Send a message containing a long unbroken string (e.g. a full URL with no spaces), then read the
-   Room Chat window on a phone-width screen.
-**Expected:** The normal message posts and persists. An empty/whitespace-only message is rejected
-(the `chyme.message.send` contract requires 1 to 1000 characters after trimming). A message over
-1000 characters is rejected by the same bound, not silently cut. The long-URL message **wraps**
-inside the chat window — the window scrolls only up and down, never left/right (no horizontal scroll).
-Since 2026-10-05 a send still posts and persists when Stream Chat is unreachable or refuses the user
-or channel setup: chat is read from the database, so only the Stream copy is skipped (and reported).
-**Result:** web ☐ mobile ☐ android ☐ — notes:
-
-### CH-3 · Read chat history with a page size
-**Role:** member · **Surfaces:** all
-**Steps:**
-1. Open a room with several seeded messages.
-2. Reload the history.
-**Expected:** History loads bounded. The page size is clamped to the `chyme.messages.list` range
-(at least 1, at most 100); a missing or non-numeric size falls back to the default. You never get an
-unbounded dump or an error from an odd `limit`.
 **Result:** web ☐ mobile ☐ android ☐ — notes:
 
 ### CH-4 · Join, presence heartbeat, leave
@@ -196,12 +170,8 @@ A phone in Silent mode with no microphone in use is muted by the switch itself, 
 override; the tap asks the browser to treat the page as media playback, and the line names the
 switch. Under those, an **On Stage** section shows the same avatar tiles the member
 room shows — every member in the call by handle with the speaking ring and mic badge, and your own
-tile as "You (listening)" with the headphones badge — and under the stage a **Room Chat** row. Since
-2026-09-20 that row starts closed, reading "Room Chat · read what members are saying" with a
-right-pointing chevron and nothing under it; the chat is not read at all while it is closed. Tap it
-and it opens to the read-only panel with the members' messages, refreshed every ten seconds, and one
-**Sign in to chat** link; there is no composer. If the chat cannot load, the open panel reads
-"Couldn't load the room chat." with the server's message and the HTTP status.
+tile as "You (listening)" with the headphones badge. There is no Room Chat row under the stage
+(room chat was removed on 2026-10-27).
 (Since 2026-09-18: the join used to run on page load, which put the guest on stage with the audio
 blocked by the phone's autoplay rule — the member in the room saw a listener who heard nothing.) The view shows marketing/empty-state content only — no private or per-user data, and the
 room list is an honest empty state. When the room is not live, there is no listen audio. The public
@@ -212,9 +182,9 @@ screenful.
 
 In step 1, on a phone, the first screen carries the header, the invitation card, the **Coming up
 on TI Radio** rail, the **Live Rooms** row with its refresh button, the room name and the **Tap to
-listen** control, and the closed **Room Chat** row — nothing of the page's own content needs a scroll
+listen** control — nothing of the page's own content needs a scroll
 to be found (owner directive, 2026-09-20). What scrolls is the stage when the room holds many
-people, and the chat once you open it. The invitations card is not part of this page at all: it
+people. The invitations card is not part of this page at all: it
 floats in the bottom-left corner over whatever is under it, with a **×** that closes it for the rest
 of the browser session; it is described in the non-plugin feature inventory, section 1.15.
 
@@ -225,7 +195,7 @@ control and the title only, with no sign-in or join button. There is **no bottom
 grayed, locked **Start a Room** that sat there is gone (owner directive, 2026-09-18). The **Live
 Rooms** label row carries the same 44-px **refresh** button the signed-in page has beside Join Room,
 with the **Leave** control of step 6 to its left while sound is on;
-pressing refresh spins the icon, re-reads the room (live state, count) and the chat, and a listener
+pressing refresh spins the icon, re-reads the room (live state, count), and a listener
 already in the call stays connected — the installed app on Android has no browser reload, so this is
 the only way a visitor there re-checks the room. There is **no
 search box and no category tags** (Healing / Economy / Housing / Legal / Skills) anywhere on the
@@ -271,7 +241,7 @@ Mode** on (Settings → Privacy & Security → Lockdown Mode), or a desktop brow
 **Expected:** No raw error like `Can't find variable: RTCPeerConnection`. Instead the room shows a
 clear message that live audio isn't available because the browser has WebRTC turned off, names Safari
 Lockdown Mode, and tells you how to turn it off for the site (address bar → aA → Website Settings) or
-use another browser. **Chat still loads and works.** The guest listen path shows the same explanation
+use another browser. The guest listen path shows the same explanation
 (not a misleading "try refreshing"). Turning Lockdown Mode off for the site and reloading lets the
 audio room connect normally. When the guest listener does fail for a real reason (not Lockdown Mode),
 the note carries the underlying reason as a second line under "Couldn't connect to the live room",
@@ -345,16 +315,16 @@ phone is locked — that is Android-only (CH-10).
 
 ### CH-11 · Deletion also clears the Stream copy (privacy)
 **Role:** member · **Surfaces:** web (Account & Data) + api/data
-**Precondition:** a test member who has sent at least one chat message (so there is a Stream copy).
+**Precondition:** a test member who sent a room chat message before 2026-10-16 (so there is a Stream
+copy; room chat no longer exists, so a new copy cannot be made), or any member who has joined a room.
 Access to the Stream dashboard for the app behind `STREAM_API_KEY`.
 **Steps:**
-1. As that member, send a chat message, then delete: on Account & Data, delete the Chyme service
+1. As that member, delete: on Account & Data, delete the Chyme service
    (`DELETE /api/account/services/chyme`) OR the entire account (`DELETE /api/account/full-account`). Also worth checking the
    Clerk-webhook path (delete the user in Clerk) since that also runs the orchestrator hook.
 2. In the Stream dashboard, look up the member's Stream user `chyme-<userId>` and their messages in the
    `messaging:chyme-main-room` channel.
-**Expected:** After the delete, the member's rows are gone from Postgres (`chyme_messages`,
-`chyme_room_members`) **and** their Stream user `chyme-<userId>` is hard-deleted with messages marked
+**Expected:** After the delete, the member's rows are gone from Postgres (`chyme_room_members`) **and** their Stream user `chyme-<userId>` is hard-deleted with messages marked
 deleted — the Stream copy no longer lingers, on any deletion path (service delete, full-account,
 internal delete and Clerk webhook all run the orchestrator's external-cleanup hook). If Stream is
 down at delete time, the deletion still succeeds and the failure is
@@ -449,41 +419,15 @@ test member is contributor-eligible, one is not, and one is an admin.
    shows two cards: **Main Room** and **Weavers of the Commons** (the latter with the badge + a lock).
 2. As the **non-eligible** member, tap **Weavers of the Commons**.
 3. As the **eligible** member (or an **admin**), tap **Weavers of the Commons**, then Join Room, unmute,
-   send a chat message, and raise/lower your hand.
-4. Confirm the private room's participants and chat are separate from the main room (a message sent in
-   one room does not appear in the other).
+   and raise/lower your hand.
+4. Confirm the private room's participants are separate from the main room.
 **Expected:** The non-eligible member sees the "Weavers of the Commons" explainer (badge + "How it's
 earned →") and no room content — no locked/absence wording, just the explainer (no-shaming). The
-eligible member/admin joins the private room, hears audio, sends/reads its own chat, and raises a hand
+eligible member/admin joins the private room, hears audio, and raises a hand
 — all scoped to `chyme-contributors-room` and never mixed with the main room. Tips and Back Channel are
 intentionally absent in the private room (MVP). If the channel is closed, even an eligible member gets
 the explainer (only an admin still enters).
 **Result:** web ☐ mobile ☐ — notes:
-
-### CH-18 · Delete and Edit your own room chat message
-**Role:** two members (A and B) · **Surfaces:** web (mobile-responsive), android (native app, #1858)
-**Precondition:** both in the same room (main or private); each has sent at least one chat message.
-On Android, run it in the native app's Chyme Room Chat (open a room → Chat).
-**Steps:**
-1. As member A, confirm **Edit** and **Delete** show under your own messages but NOT under member B's.
-2. Tap **Delete** on one of your messages, confirm the prompt.
-3. Tap **Edit** on another of your messages, change the text in the composer, and send.
-4. As member B, re-read the chat (refresh).
-**Expected:** Delete removes your message (optimistically right away; it stays gone on B's next
-refresh). Edit deletes the original and loads its text into the composer — there is no in-place edit;
-the reposted message is a brand-new message with a new timestamp, not the original edited. Neither
-action appears on another member's messages, and the server rejects deleting someone else's message
-(403) — a member can only delete their own. This mirrors the Commons home chat.
-**Android (#1858):** same behavior in the native app — Edit/Delete under your own messages only,
-Delete is confirm-gated (system dialog), Edit loads the text into the composer and deletes the
-original (delete + repost). Both call the same `DELETE /api/chyme/messages/[messageId]` route; the
-optimistic remove restores the message and shows a "Delete failed" alert if the request fails.
-**Stream (2026-10-16):** sending a room message makes no Stream call, so nothing of a deleted or
-edited message is left in the room's Stream channel. In the Stream dashboard, a message sent after
-this date does not appear in the room's channel.
-**Result:** web ☐ mobile ☐ android ☐ — notes:
-
----
 
 ### CH-19 · Rooms rail, no-disconnect room switch, and control placement
 **Role:** contributor-eligible member (so both rooms are reachable) · **Surfaces:** web (mobile-responsive)
@@ -496,8 +440,8 @@ this date does not appear in the room's channel.
    again. Confirm you were **not** disconnected — the main-room call stays connected throughout
    (audio never drops, you do not have to re-Join).
 4. Look at the joined room's layout top-to-bottom: participant avatars (On Stage), then the audio
-   controls (Mute/Unmute · Raise Hand · Leave), then the room chat. Confirm the controls sit **below**
-   the avatars and **above** the chat, and you can mute/unmute without scrolling.
+   controls (Mute/Unmute · Raise Hand · Leave). Confirm the controls sit **below** the avatars and you
+   can mute/unmute without scrolling.
 5. Android-app card: on a non-Android browser, confirm a "Get the Android app" card shows in the rail
    and opens the repo's GitHub Releases page filtered to the mobile releases
    (`https://github.com/chargingthefuture/chargingthefuture/releases?q=mobile`), with the newest
@@ -505,8 +449,8 @@ this date does not appear in the room's channel.
    the rail is just the list of rooms.
 **Expected:** The rooms rail is one compact scrollable row; the title is not duplicated and no vertical
 space is wasted. Switching rooms never tears down a live call — a member joined in one room stays
-connected while viewing the other and when switching back. The in-room controls render between the
-avatars and the chat. The Android-app card links to the GitHub Releases page on a non-Android
+connected while viewing the other and when switching back. The in-room controls render directly below the
+avatars. The Android-app card links to the GitHub Releases page on a non-Android
 browser and is hidden on Android.
 **Result:** web ☐ mobile ☐ — notes:
 
@@ -697,7 +641,7 @@ card is back. The same steps are in the Android app test script (AN-1, AN-7).
 ## Admin walkthrough
 
 Chyme has one admin surface: the Live Audio Usage screen (`/admin/chyme`, since 2026-09-19).
-Room/chat/join access is gated by the shared "approved user or admin" eligibility rule.
+Room/join access is gated by the shared "approved user or admin" eligibility rule.
 
 ### CH-A1 · Access gate (approved-user or admin only)
 **Role:** admin and non-approved member · **Surfaces:** web
@@ -761,8 +705,8 @@ still gone (the app's own record is lifted). Step 3: 403 for both.
 
 ## Parity check (web ↔ android)
 
-For CH-1, CH-2, CH-4, and CH-6, the android app and the mobile-responsive web layout must behave the
-same: same room state, same chat validation, same presence/leave, same tip rules. Note any drift here
+For CH-1, CH-4, and CH-6, the android app and the mobile-responsive web layout must behave the
+same: same room state, same presence/leave, same tip rules. Note any drift here
 rather than filing three separate bugs. Persistent raised-hand display for *other* members is now at
 parity: both web and android poll room state and render it (CH-5, #1599).
 
@@ -803,7 +747,7 @@ hit one of these, it is already tracked, not a new bug:
 **Steps:**
 1. Signed in, open Chyme in the Android app beside the web page at phone width. The rooms rail
    (Main Room, Weavers of the Commons), the hosting statement, "Coming up on TI Radio", the Join Room
-   row with refresh, the room header with Chat, the stage and the control row match the web in
+   row with refresh, the room header, the stage and the control row match the web in
    wording, order and colors, in both themes.
 2. Signed out, open Chyme: the web's public page shows with its own green header and Sign In, and
    no second app header above it. Listen without an account, then tap Leave.

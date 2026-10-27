@@ -1,7 +1,7 @@
 /**
  * ChymeAudioRoom — the live audio room, copied from the web room (web components/chyme/
  * chyme-audio-room.tsx): it joins the room's Stream call muted, keeps the presence heartbeat going,
- * and lays out the stage (one tile per member), the control row and, when open, the room chat.
+ * and lays out the stage (one tile per member) and the control row.
  *
  * The audio is carried by the Stream Video React Native SDK over WebRTC, which needs native code,
  * so this only works in an EAS dev or production build, never in Expo Go. While in a call the
@@ -128,8 +128,6 @@ type RoomProps = {
   joinInfo: ChymeJoinResponse;
   displayName: string;
   roomScope: ChymeRoomScope;
-  showChat: boolean;
-  chatPanel: React.ReactNode;
   onLeave: () => void;
   raisedHandUserIds: ReadonlySet<string>;
   // Null where Back Channel is off: the private room, or while the quota policy has it paused.
@@ -150,8 +148,6 @@ export const ChymeAudioRoom: React.FC<RoomProps> = (props) => {
   if (status !== 'joined' || !client || !call) {
     return (
       <ChymeAudioFrame
-        showChat={props.showChat}
-        chatPanel={props.chatPanel}
         stage={
           <Text style={[styles.statusText, { color: status === 'error' ? '#F87171' : t.FAINT }]}>
             {status === 'error' ? (errorMessage ?? 'Could not connect to the audio room.') : 'Connecting to the audio room…'}
@@ -215,13 +211,12 @@ function ConnectionNotice({ state }: { state: ChymeConnectionState }) {
   );
 }
 
-// The stage, then the controls, then the chat — the order the web room uses.
-function ChymeAudioFrame({ stage, controls, showChat, chatPanel }: { stage: React.ReactNode; controls: React.ReactNode; showChat: boolean; chatPanel: React.ReactNode }) {
+// The stage, then the controls — the order the web room uses.
+function ChymeAudioFrame({ stage, controls }: { stage: React.ReactNode; controls: React.ReactNode }) {
   return (
     <View>
       <View style={styles.stage}>{stage}</View>
       {controls}
-      {showChat ? chatPanel : null}
     </View>
   );
 }
@@ -296,8 +291,6 @@ function ChymeAudioRoomLive(props: RoomProps) {
 
   return (
     <ChymeAudioFrame
-      showChat={props.showChat}
-      chatPanel={props.chatPanel}
       stage={stage}
       controls={<ChymeAudioControls onLeave={props.onLeave} handRaised={handRaised} onToggleHand={onToggleHand} moderation={props.moderation} />}
     />

@@ -31,60 +31,6 @@ auditEvents:
     timestamp: rfc3339
     actorId: principal
     pluginId: chyme
-    command: chyme.messages.list
-    commandVersion: 1.0.0
-    purpose: social_audio_chat_read
-    policyDecision:
-      status: allow_or_deny
-      reason: policy_reason_code
-      evidence:
-        authenticationCheck: pass_or_fail
-        approvalGateCheck: pass_or_fail
-        readBoundsCheck: pass_or_fail
-    dataClassesAccessed:
-      - chyme_message_metadata
-      - participant_membership_metadata
-    targetContext:
-      workspaceId: workspace_identifier
-      roomKey: room_key
-      limit: bounded_limit
-    requestId: request_identifier
-    traceId: trace_identifier
-    result:
-      status: success_or_failure
-      errorCategory: none_or_error_class
-
-  - eventId: uuid
-    timestamp: rfc3339
-    actorId: principal
-    pluginId: chyme
-    command: chyme.message.send
-    commandVersion: 1.0.0
-    purpose: social_audio_chat_write
-    policyDecision:
-      status: allow_or_deny
-      reason: policy_reason_code
-      evidence:
-        authenticationCheck: pass_or_fail
-        approvalGateCheck: pass_or_fail
-        messageBoundsCheck: pass_or_fail
-    dataClassesAccessed:
-      - chyme_message_metadata
-      - participant_membership_metadata
-    targetContext:
-      workspaceId: workspace_identifier
-      roomKey: room_key
-      messageId: message_identifier
-    requestId: request_identifier
-    traceId: trace_identifier
-    result:
-      status: success_or_failure
-      errorCategory: none_or_error_class
-
-  - eventId: uuid
-    timestamp: rfc3339
-    actorId: principal
-    pluginId: chyme
     command: chyme.transfer
     commandVersion: 1.0.0
     purpose: social_audio_tip
@@ -105,32 +51,6 @@ auditEvents:
     result:
       status: success_or_failure
       errorCategory: none_or_error_class (validation, policy, transfer_error)
-
-  - eventId: uuid
-    timestamp: rfc3339
-    actorId: principal
-    pluginId: chyme
-    command: chyme.message.delete
-    commandVersion: 1.0.0
-    purpose: social_audio_chat_write
-    policyDecision:
-      status: allow_or_deny
-      reason: policy_reason_code
-      evidence:
-        authenticationCheck: pass_or_fail
-        approvalGateCheck: pass_or_fail
-        messageOwnershipCheck: pass_or_fail
-    dataClassesAccessed:
-      - chyme_message_metadata
-    targetContext:
-      workspaceId: workspace_identifier
-      roomKey: room_key
-      messageId: message_identifier
-    requestId: request_identifier
-    traceId: trace_identifier
-    result:
-      status: success_or_failure
-      errorCategory: none_or_error_class
 
   - eventId: uuid
     timestamp: rfc3339

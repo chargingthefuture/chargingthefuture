@@ -84,15 +84,13 @@ function roomScopeQuery(roomScope: ChymeRoomScope): string {
 type ChymeAudioRoomProps = {
   joinInfo: ChymeJoinResponse;
   currentUser: CurrentUser;
-  showChat: boolean;
-  chatPanel: ReactNode;
   isMobile: boolean;
   onLeave: () => void;
   // Clerk user ids (NOT the `chyme-` Stream id) of members whose hand is raised per the server,
   // refreshed by the live shell's room poll. Drives the persistent raised-hand indicator for
   // everyone except the local member (who is driven by their own instant local toggle).
   raisedHandUserIds: ReadonlySet<string>;
-  // Which room this call is for. The private "contributors" room is an audio+chat MVP: Back Channel
+  // Which room this call is for. The private "contributors" room is audio only for now: Back Channel
   // 1:1 calls (which are scoped to the main room's presence) are disabled there for now.
   roomScope: ChymeRoomScope;
   // From the room's quota state: false while the Stream quota policy has Back Channel paused
@@ -104,7 +102,7 @@ type ChymeAudioRoomProps = {
   moderation: ChymeModerationContext;
 };
 
-export function ChymeAudioRoom({ joinInfo, currentUser, showChat, chatPanel, onLeave, raisedHandUserIds, roomScope, backChannelAllowed, onConnectionChange, moderation }: ChymeAudioRoomProps) {
+export function ChymeAudioRoom({ joinInfo, currentUser, onLeave, raisedHandUserIds, roomScope, backChannelAllowed, onConnectionChange, moderation }: ChymeAudioRoomProps) {
   const [client, setClient] = useState<StreamVideoClient | null>(null);
   const [call, setCall] = useState<Call | null>(null);
   const [status, setStatus] = useState<'connecting' | 'joined' | 'error' | 'unsupported'>('connecting');
@@ -125,7 +123,7 @@ export function ChymeAudioRoom({ joinInfo, currentUser, showChat, chatPanel, onL
   useEffect(() => {
     // If the browser has no WebRTC (Safari Lockdown Mode, some hardened/older browsers), the Stream
     // Video SDK can't connect. Detect it before creating the client and show a clear, actionable
-    // message instead of a raw "Can't find variable: RTCPeerConnection" — chat still works. This is an
+    // message instead of a raw "Can't find variable: RTCPeerConnection". This is an
     // expected environment state, not a fault, so we don't report it to Sentry.
     if (!isWebRtcAvailable()) {
       setStatus('unsupported');
@@ -199,8 +197,6 @@ export function ChymeAudioRoom({ joinInfo, currentUser, showChat, chatPanel, onL
     return (
       <>
         <ChymeAudioFrame
-          showChat={showChat}
-          chatPanel={chatPanel}
           isMobile={true}
           onLeave={onLeave}
           stage={
@@ -210,8 +206,7 @@ export function ChymeAudioRoom({ joinInfo, currentUser, showChat, chatPanel, onL
               </div>
               <div style={{ color: t.SUBTLE }}>
                 The audio room needs WebRTC, which this browser has turned off. On iPhone or iPad this
-                usually means Safari <strong>Lockdown Mode</strong> is on. You can still read and send chat
-                here. To listen or speak, turn off Lockdown Mode for this site (Safari address bar →{' '}
+                usually means Safari <strong>Lockdown Mode</strong> is on. To listen or speak, turn off Lockdown Mode for this site (Safari address bar →{' '}
                 <strong>aA</strong> → Website Settings) or open the room in another browser.
               </div>
             </div>
@@ -226,8 +221,6 @@ export function ChymeAudioRoom({ joinInfo, currentUser, showChat, chatPanel, onL
     return (
       <>
         <ChymeAudioFrame
-          showChat={showChat}
-          chatPanel={chatPanel}
           isMobile={true}
           onLeave={onLeave}
           stage={
@@ -248,8 +241,6 @@ export function ChymeAudioRoom({ joinInfo, currentUser, showChat, chatPanel, onL
       <StreamVideo client={client}>
         <StreamCall call={call}>
           <ChymeAudioRoomLive
-            showChat={showChat}
-            chatPanel={chatPanel}
             isMobile={true}
             onLeave={onLeave}
             raisedHandUserIds={raisedHandUserIds}
@@ -312,19 +303,14 @@ function ChymeConnectionNotice({ state }: { state: ChymeConnectionState }) {
 
 // Layout shared by the connecting/error state and the live state so the room
 // keeps a stable shape. Order top-to-bottom is: the stage (avatars), then the controls
-// (mute / raise hand / leave), then the chat. Controls sit directly BELOW the avatars and ABOVE the
-// chat so a member can mute/unmute while talking without hunting past the avatars or scrolling the
-// chat (owner request 2026-07-23).
+// (mute / raise hand / leave), directly BELOW the avatars so a member can mute/unmute while talking
+// without hunting past them (owner request 2026-07-23).
 function ChymeAudioFrame({
   stage,
-  showChat,
-  chatPanel,
   controls,
   onLeave,
 }: {
   stage: ReactNode;
-  showChat: boolean;
-  chatPanel: ReactNode;
   controls?: ReactNode;
   isMobile: boolean;
   onLeave: () => void;
@@ -334,8 +320,7 @@ function ChymeAudioFrame({
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
       {/* Natural height so the participant avatars always render (a cramped flex/overflow region
-          clipped the single avatar under the "On Stage" label). The page flows; chat stays a
-          bounded internal scroller. */}
+          clipped the single avatar under the "On Stage" label). The page flows. */}
       <div style={{ padding: '20px 24px' }}>{stage}</div>
       {controls ?? (
         <div style={{ padding: '16px 24px', borderTop: `1px solid ${t.BORDER}`, borderBottom: `1px solid ${t.BORDER}`, background: t.HEADER, display: 'flex', justifyContent: 'flex-end', flexShrink: 0 }}>
@@ -347,14 +332,11 @@ function ChymeAudioFrame({
           </button>
         </div>
       )}
-      {showChat && chatPanel}
     </div>
   );
 }
 
 function ChymeAudioRoomLive({
-  showChat,
-  chatPanel,
   onLeave,
   raisedHandUserIds,
   backChannel,
@@ -363,8 +345,6 @@ function ChymeAudioRoomLive({
   onConnectionChange,
   moderation,
 }: {
-  showChat: boolean;
-  chatPanel: ReactNode;
   isMobile: boolean;
   onLeave: () => void;
   raisedHandUserIds: ReadonlySet<string>;
@@ -450,8 +430,6 @@ function ChymeAudioRoomLive({
 
   return (
     <ChymeAudioFrame
-      showChat={showChat}
-      chatPanel={chatPanel}
       isMobile={true}
       onLeave={onLeave}
       stage={stage}
