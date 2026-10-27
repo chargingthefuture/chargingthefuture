@@ -72,7 +72,6 @@ export class ChymeRoomFullError extends Error {
 export type IdentityInput = {
   userId: string;
   username: string | null;
-  avatarUrl: string | null;
 };
 
 // Thrown when an admin removed this member from the room (chyme_room_removals, not lifted). The
@@ -95,7 +94,6 @@ export type RoomRow = {
 type ParticipantRow = {
   user_id: string;
   username: string | null;
-  avatar_url: string | null;
   role: 'speaker' | 'listener';
   hand_raised: boolean;
   mic_on: boolean | null;
@@ -107,7 +105,6 @@ type MessageRow = {
   id: string;
   user_id: string;
   username: string | null;
-  avatar_url: string | null;
   text: string;
   sent_at: Date;
 };
@@ -133,7 +130,6 @@ function mapParticipant(row: ParticipantRow): ChymeParticipant {
   return {
     userId: row.user_id,
     username: row.username,
-    avatarUrl: row.avatar_url,
     role: row.role,
     handRaised: row.hand_raised,
     micOn: row.mic_on,
@@ -147,7 +143,6 @@ function mapMessage(row: MessageRow): ChymeMessage {
     id: row.id,
     userId: row.user_id,
     username: row.username,
-    avatarUrl: row.avatar_url,
     text: row.text,
     sentAtIso: row.sent_at.toISOString(),
   };
@@ -297,20 +292,18 @@ async function upsertMember(client: PoolClient, roomId: string, identity: Identi
         room_id,
         user_id,
         username,
-        avatar_url,
         role,
         joined_at,
         last_seen_at
       )
-      VALUES ($1, $2, $3, $4, 'listener', NOW(), NOW())
+      VALUES ($1, $2, $3, 'listener', NOW(), NOW())
       ON CONFLICT (room_id, user_id)
       DO UPDATE SET
         username = EXCLUDED.username,
-        avatar_url = EXCLUDED.avatar_url,
         last_seen_at = NOW()
       RETURNING (
         SELECT CASE
-          WHEN NOW() - previous.last_seen_at <= ($5 || ' seconds')::interval
+          WHEN NOW() - previous.last_seen_at <= ($4 || ' seconds')::interval
             THEN FLOOR(EXTRACT(EPOCH FROM (NOW() - previous.last_seen_at)))::text
           ELSE '0'
         END
@@ -318,7 +311,7 @@ async function upsertMember(client: PoolClient, roomId: string, identity: Identi
         WHERE previous.room_id = $1 AND previous.user_id = $2
       ) AS credited_seconds
     `,
-    [roomId, identity.userId, identity.username, identity.avatarUrl, String(CHYME_PRESENCE_TTL_SECONDS)],
+    [roomId, identity.userId, identity.username, String(CHYME_PRESENCE_TTL_SECONDS)],
   );
   return Number(result.rows[0]?.credited_seconds ?? 0);
 }
@@ -391,7 +384,6 @@ export async function listRoomParticipants(client: PoolClient, roomId: string): 
       SELECT
         user_id,
         username,
-        avatar_url,
         role,
         hand_raised,
         mic_on,
@@ -612,7 +604,7 @@ export async function listPublicRoomMessages(limit = CHYME_DEFAULT_MESSAGES_LIMI
     const boundedLimit = Math.min(Math.max(limit, 1), CHYME_DEFAULT_MESSAGES_LIMIT);
     const result = await client.query<MessageRow>(
       `
-        SELECT id, user_id, username, avatar_url, text, sent_at
+        SELECT id, user_id, username, text, sent_at
         FROM chyme_messages
         WHERE room_id = $1
         ORDER BY sent_at DESC
@@ -644,7 +636,7 @@ export async function listRoomMessages(
     const boundedLimit = Math.min(Math.max(limit, 1), CHYME_DEFAULT_MESSAGES_LIMIT);
     const result = await client.query<MessageRow>(
       `
-        SELECT id, user_id, username, avatar_url, text, sent_at
+        SELECT id, user_id, username, text, sent_at
         FROM chyme_messages
         WHERE room_id = $1
         ORDER BY sent_at DESC
@@ -692,18 +684,16 @@ export async function sendRoomMessage(
           room_id,
           user_id,
           username,
-          avatar_url,
           text,
           sent_at
         )
-        VALUES ($1, $2, $3, $4, $5, NOW())
-        RETURNING id, user_id, username, avatar_url, text, sent_at
+        VALUES ($1, $2, $3, $4, NOW())
+        RETURNING id, user_id, username, text, sent_at
       `,
       [
         room.id,
         identity.userId,
         identity.username,
-        identity.avatarUrl,
         validation.normalizedText,
       ],
     );

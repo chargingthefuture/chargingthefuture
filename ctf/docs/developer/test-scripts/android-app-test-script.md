@@ -234,6 +234,14 @@ The caller needs enough ServiceCredits for a few blocks.
 7. Join a room on Chyme, switch to Account & Data, and sign out. Go back to Chyme: you are not in
    the room as a member and the Android "Chyme live audio" notification is gone.
 
+## AN-7b — Account picture
+
+1. Sign in on an account that has a profile photo set in Clerk, and look at the account button at the
+   top right of the Apps screen.
+2. Open the same account on the web and compare with its account button there.
+
+Expect a small landscape or cut-paper picture, never the photo, and the same picture on Android and the web.
+
 ## AN-8 — Blocked members
 
 1. Open the **Blocked members** pill.

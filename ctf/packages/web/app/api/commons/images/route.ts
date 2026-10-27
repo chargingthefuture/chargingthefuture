@@ -138,7 +138,6 @@ export async function POST(request: Request) {
       userId: gate.identity.userId,
       username: authorUsername,
       displayName: feedAuthorHandle(authorUsername, gate.identity.userId),
-      avatarUrl: null,
       kind: 'community',
       title: null,
       linkedPlugins: [],
