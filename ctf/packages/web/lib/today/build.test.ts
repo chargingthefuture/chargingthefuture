@@ -23,6 +23,7 @@ vi.mock('./sources-live', () => ({
   numbersCard: vi.fn(async () => []),
   replayCards: vi.fn(async () => []),
   wantedCard: vi.fn(async () => []),
+  missionCard: vi.fn(async () => []),
   broadcast: vi.fn(async () => null),
 }));
 vi.mock('./sources-rooms', () => ({

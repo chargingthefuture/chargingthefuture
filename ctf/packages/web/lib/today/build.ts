@@ -4,7 +4,7 @@ import type { TodayViewer } from './card';
 import { goalAsks, relayAsks, rideAsks } from './sources-asks';
 import { cohortOffers, placeOffers } from './sources-offers';
 import { announcementStories, inviteStories, surveyCard, whatWorksStory } from './sources-stories';
-import { broadcast, moodCard, numbersCard, replayCards, wantedCard } from './sources-live';
+import { broadcast, missionCard, moodCard, numbersCard, replayCards, wantedCard } from './sources-live';
 import { mainRoom, nextTalk, weaversRoom } from './sources-rooms';
 
 // The Today read. Every source runs at once and on its own: one that fails leaves its cards out,
@@ -42,6 +42,7 @@ export async function buildToday(viewer: TodayViewer, now = new Date()): Promise
     { name: 'numbers', read: () => numbersCard(now) },
     { name: 'beacon-replays', read: () => replayCards() },
     { name: 'skills-hunt', read: () => wantedCard() },
+    { name: 'skills-hunt-mission', read: () => missionCard(now) },
   ];
 
   const [cardLists, live, room, weavers] = await Promise.all([
