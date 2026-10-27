@@ -78,6 +78,21 @@ auditEvents:
     # Cascades to what_works_products and what_works_endorsements (user-linked rows).
     dataClassesAccessed: [community_content, user_event]
     targetContext: admin
+  - eventId: what-works.problem.propose
+    pluginId: what-works
+    command: what-works.problem.propose
+    version: 1.0.0
+    policyDecision: allow
+    dataClassesAccessed: [community_content, user_event]
+    targetContext: user
+  - eventId: what-works.admin.problem.review
+    pluginId: what-works
+    command: what-works.admin.problem.review
+    version: 1.0.0
+    policyDecision: allow
+    # Merge moves suggestions to the target problem; spam deletes the proposal.
+    dataClassesAccessed: [community_content]
+    targetContext: admin
   - eventId: what-works.admin.product.list
     pluginId: what-works
     command: what-works.admin.product.list

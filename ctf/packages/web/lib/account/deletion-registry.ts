@@ -869,8 +869,9 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       // plugin promises a suggestion never reveals who made it, so it is overwritten with the deleted
       // placeholder (owner decision, 2026-10-16; issue #2812). reviewed_by and
       // what_works_problems.created_by are admin columns, kept as the review audit trail like every
-      // other reviewer column.
-      retain('what_works_problems', 'Curated problem list; created_by is the admin who added it, kept as audit.'),
+      // other reviewer column. proposed_by on a problem a member proposed is their identity, so it is
+      // overwritten too; the problem itself stays if it was approved.
+      pseudo('what_works_problems', 'proposed_by', [], 'Problems you proposed stay on the list once approved; your identity on them does not. created_by is the admin who added a problem, kept as audit.'),
       pseudo('what_works_products', 'suggested_by', [], 'Tools you suggested stay on the list; your identity on them does not.'),
       retain('what_works_admin_audit_trail', 'Admin action audit log; retained for compliance.'),
     ],

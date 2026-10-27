@@ -223,6 +223,93 @@ commands:
     purpose: Delete a problem and (by cascade) its tools and endorsements
     retentionClass: community_content
   - pluginId: what-works
+    command: what-works.problem.propose
+    version: 1.0.0
+    inputSchema:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 120
+        context:
+          type: string
+          maxLength: 280
+      required: [title]
+    outputSchema:
+      type: object
+      properties:
+        problemId:
+          type: string
+        status:
+          type: string
+          enum: [pending]
+    dataAccess:
+      - what_works_problems (select)
+      - what_works_problems (insert)
+    purpose: A member proposes a problem; it waits for review (review_status pending). proposed_by caps a member at three waiting proposals and is never returned.
+    retentionClass: community_content
+  - pluginId: what-works
+    command: what-works.problems.similar
+    version: 1.0.0
+    inputSchema:
+      type: object
+      properties:
+        q:
+          type: string
+          maxLength: 120
+    outputSchema:
+      type: object
+      properties:
+        problems:
+          type: array
+          maxItems: 5
+    dataAccess:
+      - what_works_problems (select)
+    purpose: Listed problems sharing words with what a member is typing, so they add to one instead of proposing a duplicate
+    retentionClass: community_content
+  - pluginId: what-works
+    command: what-works.admin.problem.pending
+    version: 1.0.0
+    inputSchema:
+      type: object
+      properties: {}
+    outputSchema:
+      type: object
+      properties:
+        problems:
+          type: array
+    dataAccess:
+      - what_works_problems (select)
+    purpose: Problems members proposed, oldest first, without who proposed them
+    retentionClass: community_content
+  - pluginId: what-works
+    command: what-works.admin.problem.review
+    version: 1.0.0
+    inputSchema:
+      type: object
+      properties:
+        id:
+          type: string
+        action:
+          type: string
+          enum: [approve, merge, spam]
+        intoId:
+          type: string
+      required: [id, action]
+    outputSchema:
+      type: object
+      properties:
+        ok:
+          type: boolean
+    dataAccess:
+      - what_works_problems (select)
+      - what_works_problems (update)
+      - what_works_problems (delete)
+      - what_works_products (update)
+      - what_works_admin_audit_trail
+    purpose: Approve a proposal as new, merge it into a listed problem (its suggestions move there), or delete it as spam
+    retentionClass: community_content
+  - pluginId: what-works
     command: what-works.admin.product.list
     version: 1.0.0
     inputSchema:

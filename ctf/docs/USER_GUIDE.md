@@ -254,7 +254,7 @@ What comes back is a community pulse and nothing else: the average and the numbe
 
 ## WhatWorks
 
-_Last updated: 2026-08-02_
+_Last updated: 2026-10-27_
 
 WhatWorks is a shared list of tools that survivors say help with specific problems.
 
@@ -264,11 +264,14 @@ Mark a tool as helpful if it worked for you. Your endorsement adds to the count 
 
 Suggest a new tool for a problem you know about. Give the product name, a link to buy or access it, and an optional note. Your suggestion goes to review before it appears on the list.
 
+If the problem you have is not on the list, propose it under the suggest form. Problems already listed that sound the same appear as you type, so you can add to one of those instead. A proposed problem waits for review, and a duplicate is merged into the one already listed.
+
 **How to use it**
 
 1. Open the WhatWorks app while signed in. Problems and their tools load with names, why-it-works notes, helpful counts, and purchase links.
 2. Pick a tool and mark it helpful if it helped you. The count goes up by one. Toggle it off to remove your endorsement.
 3. To suggest a tool, choose a problem, enter the product name and purchase link, add a note if you want, and submit. The suggestion waits for review before appearing on the shared list.
+4. To propose a problem, type it in a few words under the suggest form, check the matches that appear, and tap Propose it.
 
 ## SkillsHunt
 
