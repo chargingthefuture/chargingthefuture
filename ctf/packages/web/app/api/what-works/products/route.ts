@@ -101,7 +101,7 @@ export async function POST(request: Request) {
   const { problemId, name, purchaseUrl, emoji, kind, note } = validated.data;
 
   const problem = await getProblemById(problemId);
-  if (!problem || !problem.is_active) {
+  if (!problem || !problem.is_active || problem.review_status !== 'approved') {
     return whatWorksError('That problem could not be found.', 'what_works_problem_not_found', 404);
   }
 

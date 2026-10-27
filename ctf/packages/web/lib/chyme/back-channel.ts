@@ -14,6 +14,7 @@ import type { ChymeBackChannelState } from './types';
 import { STREAM_VIDEO_SURFACE } from 'lib/stream-quota/constants';
 import { resolveChymeQuotaPolicy } from 'lib/stream-quota/policy';
 import { readStreamVideoQuotaBand, recordStreamVideoUsage } from 'lib/stream-quota/usage';
+import { creditActionSeconds } from 'lib/measures/action-minutes';
 
 // Back Channel — a free, casual 1:1 audio call between two members who are BOTH currently in the same
 // live Chyme room (spec #1746). Everything here is deliberately minimal and private:
@@ -337,7 +338,7 @@ export async function heartbeatBackChannel(userId: string, callId: string): Prom
     // Both parties beat the same row, so the gaps between beats add up to the call's wall time
     // once; a 1:1 call is two participants, so the meter is credited twice the gap. Capped at the
     // reap window, like the room heartbeat, so a call that went quiet is not credited for the gap.
-    const updated = await client.query<{ credited_seconds: string | null }>(
+    const updated = await client.query<{ credited_seconds: string | null; initiator_user_id: string; recipient_user_id: string }>(
       `
         UPDATE chyme_back_channel_calls AS current
         SET last_heartbeat_at = NOW()
@@ -352,14 +353,19 @@ export async function heartbeatBackChannel(userId: string, callId: string): Prom
           END
           FROM chyme_back_channel_calls AS previous
           WHERE previous.id = $1
-        ) AS credited_seconds
+        ) AS credited_seconds, current.initiator_user_id, current.recipient_user_id
       `,
       [callId, userId, String(CHYME_BACK_CHANNEL_CALL_TTL_SECONDS)],
     );
     if ((updated.rowCount ?? 0) === 0) {
       throw new BackChannelError(CHYME_ERROR_CODE.backChannelNotFound, 'This Back Channel is no longer active.');
     }
-    await recordStreamVideoUsage(client, STREAM_VIDEO_SURFACE.chymeBackChannel, 2 * Number(updated.rows[0]?.credited_seconds ?? 0));
+    const row = updated.rows[0];
+    const gap = Number(row?.credited_seconds ?? 0);
+    await recordStreamVideoUsage(client, STREAM_VIDEO_SURFACE.chymeBackChannel, 2 * gap);
+    // The gap is both people's action minutes (Days won, retention).
+    await creditActionSeconds(client, row.initiator_user_id, 'back-channel', gap);
+    await creditActionSeconds(client, row.recipient_user_id, 'back-channel', gap);
   });
 }
 

@@ -39,7 +39,9 @@ identity store. It persists only the canonical `user_id` as a foreign reference 
 
 
 - Table/entity: `what_works_problems`
-  - Contains personal data? minimal — `created_by` (admin user id) only
+  - Contains personal data? `created_by` (the admin who added it) and, since 2026-10-27,
+    `proposed_by` (the member who proposed it, never displayed or returned by any read; used only to
+    cap waiting proposals at three)
   - Retention: long-lived community content
 - Table/entity: `what_works_products`
   - Contains personal data? yes — `suggested_by` and `reviewed_by` user ids (never displayed)
@@ -68,6 +70,9 @@ On service-scoped or full profile deletion for `user_id = X`:
   skips it, so a departed member is no longer credited for the tool.
   - 2026-10-16 (issue #2812): until then the registry retained `what_works_products` untouched, so
     this line was not carried out and a departed member's id stayed on every tool they suggested.
+- `UPDATE what_works_problems SET proposed_by = 'deleted_member' WHERE proposed_by = X` (2026-10-27)
+  — a problem the member proposed stays if it was approved; their identity on it does not. A
+  proposal still waiting stays waiting and is reviewed like any other.
 - `reviewed_by` on `what_works_products` and `created_by` on `what_works_problems` are kept. They
   name the admin who reviewed or added the row, and are the review audit trail, kept like every
   other reviewer column. (This section used to say they were cleared; the registry never did, and

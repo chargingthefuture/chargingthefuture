@@ -380,6 +380,7 @@ this is not a plugin. The steps that matter:
 
 ## Change Log
 
+- 2026-10-27: **A one-time card on Today in 3.1.** Today shows a Story card linking to `/survey/quora-account-deletions` until the member has answered (`hasSurveyResponse(userId)` in `lib/quora-deletion-survey/repository.ts`, an EXISTS on `quora_deletion_survey_responses`). No route, schema or contract change here.
 - 2026-10-05: **A year the form offers is a year the table accepts.** The year list and the parser
   ran up to 2110, but the `removed_year` CHECK stops at 2100. Picking 2101 to 2110, the first ten
   entries of the list, passed the parser, failed the insert, and lost the entire response behind

@@ -41,12 +41,18 @@ contracts:
       - skills_taxonomy_skills
       - beacon_events
       - skills_hunt_rounds
+      - skills_hunt_missions
+      - skills_hunt_mission_progress
+      - member_action_seconds_daily
+      - foundation_call_sessions
+      - member_mutes
       - chyme_rooms
       - chyme_room_members
       - chyme_guest_listeners
       - ti_radio_slots
       - contributor_access_config
       - contributor_access_eligibility
+      - quora_deletion_survey_responses
     purpose: member_daily_overview
     retentionClass: none_read_only
     idempotency: true

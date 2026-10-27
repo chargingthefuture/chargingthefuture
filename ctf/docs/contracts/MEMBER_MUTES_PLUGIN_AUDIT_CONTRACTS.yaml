@@ -1,0 +1,29 @@
+# Audit contract for personal mute. Like a block, a mute is the member's own private control and
+# nobody is told, so no durable audit row records who muted whom. The authorization decision is
+# still made and logged with the request. Entries are kept so the command set matches
+# MEMBER_MUTES_PLUGIN_COMMAND_CONTRACTS.yaml one to one.
+auditEvents:
+  - pluginId: member-mutes
+    command: member.mute.create
+    commandVersion: 1.0.0
+    eventId: member.mute.create
+    policyDecision: allow
+    dataClassesAccessed: [member_mute]
+    targetContext: user
+    # Request-log only; no durable row (see the note at the top).
+  - pluginId: member-mutes
+    command: member.mute.remove
+    commandVersion: 1.0.0
+    eventId: member.mute.remove
+    policyDecision: allow
+    dataClassesAccessed: [member_mute]
+    targetContext: user
+    # Request-log only; no durable row (see the note at the top).
+  - pluginId: member-mutes
+    command: member.mute.list
+    commandVersion: 1.0.0
+    eventId: member.mute.list
+    policyDecision: allow
+    dataClassesAccessed: [member_mute]
+    targetContext: user
+    # Request-log only; no durable row (see the note at the top).

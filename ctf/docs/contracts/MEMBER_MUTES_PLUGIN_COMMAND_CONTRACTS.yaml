@@ -1,0 +1,54 @@
+contracts:
+  - pluginId: member-mutes
+    command: member.mute.create
+    version: 1.0.0
+    description: Mute a person (target = account id, label = handle shown) or words (target = lower-cased words, at most 60 characters) for the signed-in member. Idempotent; at most 100 mutes; rejects muting yourself.
+    inputSchema:
+      kind:
+        type: string
+        enum: [person, words]
+        required: true
+      target:
+        type: string
+        required: true
+      label:
+        type: string
+    outputSchema:
+      mute:
+        type: object
+    dataAccess:
+      - member_mutes
+    purpose: member_personal_control
+    retentionClass: transactional_long_lived
+    idempotency: true
+
+  - pluginId: member-mutes
+    command: member.mute.remove
+    version: 1.0.0
+    description: Unmute: remove one of the signed-in member's own mutes. Idempotent.
+    inputSchema:
+      muteId:
+        type: string
+        required: true
+    outputSchema:
+      ok:
+        type: boolean
+    dataAccess:
+      - member_mutes
+    purpose: member_personal_control
+    retentionClass: transactional_long_lived
+    idempotency: true
+
+  - pluginId: member-mutes
+    command: member.mute.list
+    version: 1.0.0
+    description: List the signed-in member's own mutes, newest first.
+    inputSchema: {}
+    outputSchema:
+      mutes:
+        type: array
+    dataAccess:
+      - member_mutes
+    purpose: member_personal_control
+    retentionClass: derived_short_lived
+    idempotency: true
