@@ -25,17 +25,11 @@
       "title": "http-cache-semantics max-stale handling can disclose cross-user cached responses",
       "note": "No patched version is published: the advisory covers <=4.2.0 and 4.2.0 is the latest release. Installed at 4.2.0 through make-fetch-happen 15.0.5 under unleash-client 6.11.0 in packages/web, which fetches feature-flag settings for the server only, not member responses. Remove as soon as http-cache-semantics ships a fix. Checked 2026-10-03."
     },
-    "1240992": {
-      "module": "braces",
+    "1243066": {
+      "module": "zod",
       "severity": "high",
-      "title": "braces vulnerable to stack-exhaustion denial of service through deeply nested patterns",
-      "note": "No patched version is published: the advisory covers <=3.0.3 and 3.0.3 is the latest release. Installed at 3.0.3 through micromatch 4.0.8 under Metro and Jest inside react-native in packages/mobile, build-time paths that only see patterns from this repo. Remove as soon as braces ships a fix. Checked 2026-10-03."
-    },
-    "1241202": {
-      "module": "sprintf-js",
-      "severity": "moderate",
-      "title": "sprintf-js vulnerable to denial of service through unbounded precision specifiers",
-      "note": "No patched version is published: the advisory covers <=1.1.3 and 1.1.3 is the latest release. Installed at 1.0.3 through argparse 1.0.10 under js-yaml 3.15.2, which gray-matter 4.0.3 brings in to read the front matter of this repo's own markdown, so the format strings it sees come only from argparse itself. Remove as soon as sprintf-js ships a fix. Checked 2026-10-12."
+      "title": "Zod can exhaust memory while validating oversized constrained collections",
+      "note": "The fix is published only in 4.6.6 and later. The web package's own zod is updated to 4.6.6; the copy still listed is zod 3.25.76, pulled in by @expo/cli under packages/mobile, a build tool this repo does not choose a version for, and 4.x is not a drop-in replacement for 3.x. No 3.x release carries the fix. Remove once Expo moves @expo/cli to zod 4. Checked 2026-10-27."
     }
   }
 }
