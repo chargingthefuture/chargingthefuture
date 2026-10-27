@@ -190,7 +190,9 @@ CREATE TABLE IF NOT EXISTS what_works_problems (
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
   created_by TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  review_status TEXT NOT NULL DEFAULT 'approved' CHECK (review_status IN ('pending', 'approved')),
+  proposed_by TEXT
 );
 ALTER TABLE IF EXISTS what_works_problems ADD COLUMN IF NOT EXISTS id UUID;
 ALTER TABLE IF EXISTS what_works_problems ADD COLUMN IF NOT EXISTS slug TEXT;
@@ -204,6 +206,9 @@ ALTER TABLE IF EXISTS what_works_problems ADD COLUMN IF NOT EXISTS created_at TI
 ALTER TABLE IF EXISTS what_works_problems ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 CREATE UNIQUE INDEX IF NOT EXISTS idx_what_works_problems_slug ON what_works_problems(slug);
 CREATE INDEX IF NOT EXISTS idx_what_works_problems_active_sort ON what_works_problems(is_active, sort_order);
+ALTER TABLE IF EXISTS what_works_problems ADD COLUMN IF NOT EXISTS review_status TEXT NOT NULL DEFAULT 'approved';
+ALTER TABLE IF EXISTS what_works_problems ADD COLUMN IF NOT EXISTS proposed_by TEXT;
+CREATE INDEX IF NOT EXISTS idx_what_works_problems_pending ON what_works_problems(proposed_by) WHERE review_status = 'pending';
 
 CREATE TABLE IF NOT EXISTS what_works_products (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -4751,6 +4756,24 @@ ALTER TABLE IF EXISTS legacy_profile_redirects ADD COLUMN IF NOT EXISTS created_
 -- refuses it on production only with "inconsistent types deduced for parameter". That refused
 -- every sign-in from 2026-09-20 to 2026-09-24; post/0038 (from writes) and post/0039 (from visits)
 -- rebuild those days.
+-- Action minutes (3.1.0, Measures): seconds a member was connected in a room or a Back Channel,
+-- per day and source. Days won and retention add Foundation calls and confirmed PeerProgramming
+-- tasks from their own tables.
+CREATE TABLE IF NOT EXISTS member_action_seconds_daily (
+  user_id TEXT NOT NULL,
+  usage_date DATE NOT NULL,
+  source TEXT NOT NULL,
+  seconds INTEGER NOT NULL DEFAULT 0,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (user_id, usage_date, source)
+);
+ALTER TABLE IF EXISTS member_action_seconds_daily ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS member_action_seconds_daily ADD COLUMN IF NOT EXISTS usage_date DATE NOT NULL DEFAULT CURRENT_DATE;
+ALTER TABLE IF EXISTS member_action_seconds_daily ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS member_action_seconds_daily ADD COLUMN IF NOT EXISTS seconds INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS member_action_seconds_daily ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_member_action_seconds_daily_date ON member_action_seconds_daily(usage_date);
+
 CREATE TABLE IF NOT EXISTS login_events (
   user_id TEXT NOT NULL,
   source VARCHAR(50) NOT NULL DEFAULT 'webapp',
@@ -7371,6 +7394,21 @@ ALTER TABLE IF EXISTS member_plugin_presence ADD COLUMN IF NOT EXISTS updated_at
 CREATE UNIQUE INDEX IF NOT EXISTS member_plugin_presence_unique_ref_idx
   ON member_plugin_presence (user_id, plugin_slug, ref_type, ref_id);
 CREATE INDEX IF NOT EXISTS member_plugin_presence_user_id_idx ON member_plugin_presence (user_id);
+
+-- member_mutes: personal mute (3.1.0). A member mutes a person (target = their account id, label =
+-- the handle shown at the time) or a word or phrase (target = the lower-cased words). Today leaves
+-- out cards by that person or containing those words. Nobody is told; a mute is not a block.
+CREATE TABLE IF NOT EXISTS member_mutes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id TEXT NOT NULL,
+  kind TEXT NOT NULL CHECK (kind IN ('person', 'words')),
+  target TEXT NOT NULL,
+  label TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT member_mutes_unique UNIQUE (user_id, kind, target)
+);
+ALTER TABLE IF EXISTS member_mutes ADD COLUMN IF NOT EXISTS label TEXT;
+CREATE INDEX IF NOT EXISTS idx_member_mutes_user ON member_mutes(user_id);
 
 -- member_blocks: product-wide, cross-cutting member blocking (issue #809, owner-signed model
 -- 2026-06-24). One member (blocker_user_id) blocks another (blocked_user_id). A block is created
@@ -10688,4 +10726,62 @@ $demo_skills_hunt_leaderboard_rows$;
 -- when they delete their account, as before. The demo schema's copy goes too. Safe to re-run.
 DROP TABLE IF EXISTS chyme_messages;
 DROP TABLE IF EXISTS demo.chyme_messages;
+
+
+-- ── post migration: 0072_what_works_problem_review.sql ──
+-- Members propose What Works problems, and each waits for review (3.1.0, owner-approved plan).
+--
+-- review_status: 'approved' for every problem already on the list and every one an admin adds,
+-- 'pending' for one a member proposed until an admin approves it, merges it into an existing
+-- problem, or deletes it as spam. proposed_by is the member who proposed it, used only to cap how
+-- many a member can have waiting; it is never returned by a reader or admin read, and account
+-- deletion overwrites it. The demo schema gets the same columns. Safe to re-run.
+ALTER TABLE IF EXISTS what_works_problems ADD COLUMN IF NOT EXISTS review_status TEXT NOT NULL DEFAULT 'approved';
+ALTER TABLE IF EXISTS what_works_problems ADD COLUMN IF NOT EXISTS proposed_by TEXT;
+DO $what_works_review_status_check$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'what_works_problems_review_status_check') THEN
+    ALTER TABLE what_works_problems
+      ADD CONSTRAINT what_works_problems_review_status_check CHECK (review_status IN ('pending', 'approved'));
+  END IF;
+END
+$what_works_review_status_check$;
+CREATE INDEX IF NOT EXISTS idx_what_works_problems_pending ON what_works_problems(proposed_by) WHERE review_status = 'pending';
+
+ALTER TABLE IF EXISTS demo.what_works_problems ADD COLUMN IF NOT EXISTS review_status TEXT NOT NULL DEFAULT 'approved';
+ALTER TABLE IF EXISTS demo.what_works_problems ADD COLUMN IF NOT EXISTS proposed_by TEXT;
+
+
+-- ── post migration: 0073_member_action_seconds_daily.sql ──
+-- Action minutes for Days won and retention (3.1.0, owner-approved plan, Measures).
+--
+-- One row per member per day per source ('chyme-room', 'back-channel'): seconds connected, added on
+-- each presence heartbeat the same way the room's minute meter is. Foundation calls and confirmed
+-- PeerProgramming tasks are read from their own tables, so they are not copied here. Account
+-- deletion removes a member's rows. Safe to re-run.
+CREATE TABLE IF NOT EXISTS member_action_seconds_daily (
+  user_id TEXT NOT NULL,
+  usage_date DATE NOT NULL,
+  source TEXT NOT NULL,
+  seconds INTEGER NOT NULL DEFAULT 0,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (user_id, usage_date, source)
+);
+CREATE INDEX IF NOT EXISTS idx_member_action_seconds_daily_date ON member_action_seconds_daily(usage_date);
+
+
+-- ── post migration: 0074_member_mutes.sql ──
+-- Personal mute (3.1.0, owner-approved plan, Personal controls). A member mutes a person or a word;
+-- Today leaves out cards by that person or containing that word. Nobody is told, and nothing else
+-- changes: a mute is not a block. Account deletion removes a member's own mutes. Safe to re-run.
+CREATE TABLE IF NOT EXISTS member_mutes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id TEXT NOT NULL,
+  kind TEXT NOT NULL CHECK (kind IN ('person', 'words')),
+  target TEXT NOT NULL,
+  label TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT member_mutes_unique UNIQUE (user_id, kind, target)
+);
+CREATE INDEX IF NOT EXISTS idx_member_mutes_user ON member_mutes(user_id);
 

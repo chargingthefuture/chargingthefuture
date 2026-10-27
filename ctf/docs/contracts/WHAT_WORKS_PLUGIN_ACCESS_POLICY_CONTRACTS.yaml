@@ -65,6 +65,30 @@ policies:
     attributePolicies: []
     consentRequirements: []
   - pluginId: what-works
+    command: what-works.problem.propose
+    version: 1.0.0
+    requiredRoles: [user, admin]
+    attributePolicies: []
+    consentRequirements: []
+  - pluginId: what-works
+    command: what-works.problems.similar
+    version: 1.0.0
+    requiredRoles: [user, admin]
+    attributePolicies: []
+    consentRequirements: []
+  - pluginId: what-works
+    command: what-works.admin.problem.pending
+    version: 1.0.0
+    requiredRoles: [admin]
+    attributePolicies: []
+    consentRequirements: []
+  - pluginId: what-works
+    command: what-works.admin.problem.review
+    version: 1.0.0
+    requiredRoles: [admin]
+    attributePolicies: []
+    consentRequirements: []
+  - pluginId: what-works
     command: what-works.admin.product.list
     version: 1.0.0
     requiredRoles: [admin]

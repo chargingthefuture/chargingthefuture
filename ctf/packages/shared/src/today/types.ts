@@ -55,6 +55,9 @@ export type SeTodayBroadcast = { live: boolean; title: string | null; href: stri
 export type SeToday = {
   generatedAtIso: string;
   presence: number | null;
+  // All members' action minutes ÷ 480, in total and over the last 7 days; null when it could not
+  // be read.
+  daysWon: { total: number; thisWeek: number } | null;
   broadcast: SeTodayBroadcast | null;
   rooms: SeTodayRoom[];
   cards: SeTodayCard[];

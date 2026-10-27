@@ -9,7 +9,7 @@
 
 | | |
 |---|---|
-| **Surface** | `/account/data` (Your Data & Privacy), `/account` for AD-9 and AD-10, the 3.1 Today screen for AD-11, rooms in 3.1 for AD-12, + New for AD-13, Me for AD-14, Activity for AD-15 and People for AD-16 |
+| **Surface** | `/account/data` (Your Data & Privacy), `/account` for AD-9 and AD-10, the 3.1 Today screen for AD-11, rooms in 3.1 for AD-12, + New for AD-13, Me for AD-14, Activity for AD-15, People for AD-16, Days won for AD-17 and mute for AD-18 |
 | **Visibility** | Any signed-in identity (including unlock-pending) |
 | **Roles to test** | member |
 | **Surfaces** | web (phone-width layout) |
@@ -236,6 +236,8 @@ on your board, a LightHouse listing, an announcement).
 3. Tap each chip: All, Asks, Offers, Stories, Matches.
 4. On a card, open ••• and choose **Copy link**, then open ••• on another card and choose **Hide**.
 5. Open the Main Room card's button.
+6. If you have not answered the Quora account removals survey, find its card ("Has Quora removed an
+   account of yours?"), answer the survey, then reopen Today.
 **Expected:** Step 1 shows the Main Room card (LIVE only while somebody is in it), with the TI Radio
 talk that is on ("On now: …") or next ("Next: … · Today · 9:00 PM") when one is booked, and the day's cards,
 newest first; after the reload the cards appear at once from the saved copy and then refresh. No
@@ -244,7 +246,7 @@ text and closes it, a check mark appears on it, and "1 of N done" appears above 
 not there before). Step 3 shows only that kind. Step 4 copies the card's address, and the hidden card
 is gone and stays gone after a reload. Step 5 opens the room inside 3.1 (AD-12). If a source fails, a
 line under the chips names it and the rest of the cards still show. A member who is not a Weaver of
-the Commons never sees a Weavers card or any line naming it.
+the Commons never sees a Weavers card or any line naming it. Step 6: the survey card is gone once the survey is answered.
 **Result:** web ☐ — notes:
 
 ## AD-12 · Rooms in 3.1
@@ -336,4 +338,31 @@ skill shows once. Step 2 keeps only people offering something, then everyone aga
 to people with that skill in their name, headline, job title or listing. Step 3 opens the Foundation
 provider page and the Directory profile. Request a quote never shows for someone offering nothing.
 Step 4 shows the route's refusal reason instead of any person.
+**Result:** web ☐ — notes:
+
+## AD-17 · Days won, and the measures on Adoption
+
+**Role:** two approved members; an admin · **Precondition:** on 3.1.
+**Steps:**
+1. Open Today and note "Days the Avenhood has won".
+2. Both members join the Main Room and stay 20 minutes. Then reload Today.
+3. As the admin, open `/admin/adoption` and read "Days won and retention". Tap **Copy as text**.
+**Expected:** Step 1 shows the total and "N this week. A day won is 8 hours members spent together
+in rooms and calls, or helping with each other's tasks." Step 2 raises the total by about 40 minutes
+÷ 480 (0.1 after rounding). Step 3 shows Days won, Retained (with the share and the 20% target),
+Came back, Every day and time to unlock as counts only, with no member named; Copy as text pastes the
+same lines. A failed read shows "Could not read the measures:" with the reason.
+**Result:** web ☐ — notes:
+
+## AD-18 · Personal mute
+
+**Role:** two approved members, A and B · **Precondition:** on 3.1; B has an ask on Today.
+**Steps:**
+1. As A, open B's card ••• menu and tap **Mute @B**.
+2. Open Me → Muted. Add the words "blankets". Then tap **Unmute** on B.
+3. As B, look for any sign of the mute.
+**Expected:** Step 1 says "@B is muted. Their cards leave Today." and B's cards leave Today (after a
+reload too). Step 2 lists @B; a card with "blankets" in it leaves Today; after Unmute, B's cards
+return. Step 3: B sees nothing; B can still see A's cards, and nothing else between them changes (a
+mute is not a block).
 **Result:** web ☐ — notes:

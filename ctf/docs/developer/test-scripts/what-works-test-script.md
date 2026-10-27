@@ -300,3 +300,23 @@ one of these, it is already tracked, not a new bug:
   tracked outside this plugin.
 
 > _Terminology (2026-07-20): the source inventory's user-facing section is now titled **User Features** (was "Target User Features"), and its admin section **Admin Features**. Heading rename only — no test steps changed._
+
+### WW-10 · Propose a problem, and review it
+
+**Role:** approved member, then admin · **Surfaces:** web (mobile-responsive)
+**Steps:**
+1. As the member, open the suggest form. Under "Not on the list? Propose a problem", type a few
+   words that match a listed problem's title.
+2. Tap one of the "Already listed" matches.
+3. Type a problem that is not listed, add when it happens, and tap **Propose it**. Propose three more.
+4. As the admin, open the What Works admin screen. Under Proposed problems, approve one, merge one
+   into a listed problem, and delete one as spam.
+5. As the member, reload What Works.
+**Expected:** Step 1 shows up to five listed problems sharing words with what was typed. Step 2 picks
+that problem in the suggest form's dropdown. Step 3 says "Sent for review. It shows on the list once
+approved."; the fourth proposal is refused with "A member can have 3 problems waiting for review at
+once." The proposals do not appear on the list or in the dropdown. Step 4 lists them oldest first
+with no name or id of who proposed them; each action removes the row and appears in the Audit log
+with the action. Step 5 shows the approved problem on the list (and in the dropdown), the merged one
+nowhere, and the spam one nowhere.
+**Result:** web ☐ — notes:

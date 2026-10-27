@@ -258,3 +258,12 @@ export async function insertSurveyAudit(input: SurveyAuditInput): Promise<void> 
     console.error('[quora-deletion-survey.audit] could not write audit row', failureReason(error));
   }
 }
+
+// Whether this member has sent the survey. Today's one-time card asks only those who have not.
+export async function hasSurveyResponse(userId: string): Promise<boolean> {
+  const result = await queryDb<{ answered: boolean }>(
+    `SELECT EXISTS (SELECT 1 FROM quora_deletion_survey_responses WHERE user_id = $1) AS answered`,
+    [userId],
+  );
+  return result.rows[0]?.answered === true;
+}

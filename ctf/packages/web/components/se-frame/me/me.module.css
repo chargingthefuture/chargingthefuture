@@ -141,6 +141,28 @@
   text-underline-offset: 3px;
 }
 
+.muteItem {
+  flex: 1;
+  min-width: 0;
+  align-self: center;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.wordsInput {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1.5px solid var(--se-line);
+  background: var(--se-bg);
+  color: var(--se-ink);
+  font: inherit;
+  font-size: 16px;
+}
+
+.wordsInput:focus-visible,
 .pill:focus-visible,
 .pillButton:focus-visible,
 .swatch:focus-visible,
