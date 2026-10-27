@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { seRoomPeopleLine, seTodayView, type SeToday } from '@ctf/shared';
+import { seRoomPeopleLine, seTalkLine, seTodayView, type SeToday } from '@ctf/shared';
 
 const card = (id: string, kind: 'ask' | 'offer' | 'story') => ({
   id,
@@ -40,7 +40,15 @@ describe('seTodayView', () => {
   });
 
   it('says how many are in a room', () => {
-    expect(seRoomPeopleLine(0, 0)).toBe('Quiet now');
+    expect(seRoomPeopleLine(0, 0)).toBe('Quiet right now');
     expect(seRoomPeopleLine(2, 3)).toBe('2 in the room, 3 listening as guests');
+  });
+
+  it('says which talk is on or next', () => {
+    const now = new Date('2026-10-27T12:00:00');
+    const talk = { title: 'Rent and repairs', host: 'ana', startIso: new Date('2026-10-27T21:00:00').toISOString(), endIso: new Date('2026-10-27T22:30:00').toISOString(), onAir: false };
+    expect(seTalkLine(null, now)).toBeNull();
+    expect(seTalkLine(talk, now)).toBe('Next: Rent and repairs with @ana · Today · 9:00 PM');
+    expect(seTalkLine({ ...talk, onAir: true }, now)).toBe('On now: Rent and repairs with @ana');
   });
 });

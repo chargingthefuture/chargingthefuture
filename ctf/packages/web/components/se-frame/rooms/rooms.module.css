@@ -1,0 +1,161 @@
+/* The 3.1 room screen and the bar that stands for it while the member browses. Colors come from
+   the frame's custom properties (se-theme-vars.ts). */
+.screen {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 16px 180px;
+}
+
+.screen[hidden] {
+  display: none;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.minimize {
+  align-self: flex-start;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--se-ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.title {
+  margin: 0;
+  font-family: 'Newsreader Variable', Newsreader, Georgia, serif;
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.meta,
+.talk {
+  margin: 0;
+  font-size: 14px;
+  color: var(--se-soft);
+}
+
+.talk {
+  color: var(--se-ink);
+  font-weight: 600;
+}
+
+.notice {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 14px;
+  border: 1.5px solid var(--se-hair);
+  background: var(--se-card);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.quiet {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 18px;
+  background: var(--se-card);
+  border: 1.5px solid var(--se-hair);
+}
+
+.quietTitle {
+  margin: 0;
+  font-family: 'Newsreader Variable', Newsreader, Georgia, serif;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.quietText {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.4;
+  color: var(--se-soft);
+}
+
+.room {
+  overflow: hidden;
+  border-radius: 18px;
+  border: 1.5px solid var(--se-hair);
+}
+
+.bar {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: 96px;
+  max-width: 528px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 6px 6px 14px;
+  border-radius: 999px;
+  background: var(--se-card);
+  border: 1.5px solid var(--se-line);
+  box-shadow: 0 3px 0 var(--se-line);
+}
+
+.barOpen {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--se-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.barDot {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--se-live-badge);
+}
+
+.barName {
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.barCount {
+  flex-shrink: 0;
+  font-size: 13px;
+  color: var(--se-soft);
+}
+
+.barLeave {
+  flex-shrink: 0;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1.5px solid var(--se-line);
+  background: var(--se-bg);
+  color: var(--se-ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}

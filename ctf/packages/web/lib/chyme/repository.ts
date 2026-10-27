@@ -198,10 +198,10 @@ async function enqueueServiceCreditsDeletionReclaim(
 // Read-only fetch of the one main room. The public, unauthenticated live-state endpoint must NOT
 // write (ensureMainRoom upserts on every call), so it uses this instead — otherwise a public page
 // turns every read into row-write traffic. Returns null if the room has never been created.
-async function getMainRoomReadOnly(client: PoolClient): Promise<RoomRow | null> {
+async function getRoomReadOnly(client: PoolClient, roomKey: string = CHYME_MAIN_ROOM_KEY): Promise<RoomRow | null> {
   const result = await client.query<RoomRow>(
     `SELECT id, room_key, room_name, call_active, speak_mode FROM chyme_rooms WHERE room_key = $1 LIMIT 1`,
-    [CHYME_MAIN_ROOM_KEY],
+    [roomKey],
   );
   return result.rows[0] ?? null;
 }
@@ -409,7 +409,7 @@ export type ChymePublicRoomLiveState = {
 
 export async function getPublicRoomLiveState(): Promise<ChymePublicRoomLiveState> {
   return withDbTransaction(async (client) => {
-    const [room, policy] = await Promise.all([getMainRoomReadOnly(client), readQuotaPolicy(client)]);
+    const [room, policy] = await Promise.all([getRoomReadOnly(client), readQuotaPolicy(client)]);
     if (!room) {
       // Room not created yet (no member has ever opened Chyme): nothing to listen to.
       return { roomName: CHYME_MAIN_ROOM_NAME, roomKey: CHYME_MAIN_ROOM_KEY, callActive: false, participantCount: 0, guestCount: 0, policy };
@@ -423,6 +423,16 @@ export async function getPublicRoomLiveState(): Promise<ChymePublicRoomLiveState
       guestCount,
       policy,
     };
+  });
+}
+
+// How many members are in a room right now, without creating it. Today reads this for the Weavers
+// room card; a room nobody has opened yet answers 0.
+export async function countRoomMembers(roomKey: string): Promise<number> {
+  return withDbTransaction(async (client) => {
+    const room = await getRoomReadOnly(client, roomKey);
+    if (!room) return 0;
+    return (await listRoomParticipants(client, room.id)).length;
   });
 }
 
@@ -476,7 +486,7 @@ export class ChymeGuestListenError extends Error {
 // last spot: the roster count and the insert see the same snapshot behind the room row lock.
 export async function admitGuestListener(guestId: string): Promise<ChymePublicRoomLiveState> {
   return withDbTransaction(async (client) => {
-    const room = await getMainRoomReadOnly(client);
+    const room = await getRoomReadOnly(client);
     if (!room) {
       throw new ChymeGuestListenError('not_live', 'No public room is live right now.');
     }
@@ -551,7 +561,7 @@ export async function touchGuestPresence(guestId: string): Promise<ChymeGuestPre
       return null;
     }
     await recordStreamVideoUsage(client, STREAM_VIDEO_SURFACE.chymeGuest, Number(result.rows[0]?.credited_seconds ?? 0));
-    const room = await getMainRoomReadOnly(client);
+    const room = await getRoomReadOnly(client);
     if (!room) {
       return { participantCount: 0, guestCount: 0 };
     }

@@ -8,6 +8,9 @@ import type { ShellCurrentUser } from '../community-shell/shell-types';
 import { SeAvatar } from '../shared/se-avatar';
 import { SeTabBar } from './se-tab-bar';
 import { TodayScreen } from './today/today-screen';
+import { NewScreen } from './new/new-screen';
+import { SeRoomBar, SeRoomHosts } from './rooms/se-room-screen';
+import { SeRoomsProvider, useSeRooms } from './rooms/se-rooms';
 import { seThemeVars } from './se-theme-vars';
 import { useInterfaceSwitch } from './use-interface-switch';
 import styles from './se-frame.module.css';
@@ -103,7 +106,33 @@ function MeScreen({ currentUser, onBack, saving }: { currentUser: ShellCurrentUs
 }
 
 export function SeAppFrame({ currentUser }: { currentUser: ShellCurrentUser }) {
+  return (
+    <SeRoomsProvider>
+      <SeAppFrameBody currentUser={currentUser} />
+    </SeRoomsProvider>
+  );
+}
+
+const TAB_TITLES: Partial<Record<SeTab, string>> = { people: 'People', new: 'New', activity: 'Activity' };
+
+function TabScreen({ tab, currentUser, onBack, saving }: { tab: SeTab; currentUser: ShellCurrentUser; onBack: () => void; saving: boolean }) {
+  const title = TAB_TITLES[tab];
+  return (
+    <>
+      {tab === 'today' ? <TodayHeader /> : null}
+      {title ? <ScreenHeader title={title} /> : null}
+      {tab === 'today' ? <TodayScreen accountId={currentUser.userId} /> : null}
+      {tab === 'new' ? <NewScreen /> : null}
+      {tab === 'me' ? <MeScreen currentUser={currentUser} onBack={onBack} saving={saving} /> : null}
+      {tab === 'people' || tab === 'activity' ? <NotBuiltYet onBack={onBack} saving={saving} /> : null}
+    </>
+  );
+}
+
+function SeAppFrameBody({ currentUser }: { currentUser: ShellCurrentUser }) {
   const [tab, setTab] = useState<SeTab>('today');
+  const rooms = useSeRooms();
+  const { minimize } = rooms;
   const { switchTo, saving, error } = useInterfaceSwitch();
 
   useEffect(() => {
@@ -113,31 +142,29 @@ export function SeAppFrame({ currentUser }: { currentUser: ShellCurrentUser }) {
     return () => window.removeEventListener('popstate', onPop);
   }, []);
 
+  // Choosing a tab while a room is open puts the room in the bar above the tab bar.
   const select = useCallback((next: SeTab) => {
+    minimize();
     setTab(next);
     const url = next === 'today' ? '/' : `/?tab=${next}`;
     window.history.pushState(null, '', url);
     window.scrollTo(0, 0);
-  }, []);
+  }, [minimize]);
 
   const back = () => void switchTo('3.0');
 
   return (
     <div className={styles.frame} style={seThemeVars()}>
-      <main className={styles.screen}>
-        {tab === 'today' ? <TodayHeader /> : null}
-        {tab === 'people' ? <ScreenHeader title="People" /> : null}
-        {tab === 'new' ? <ScreenHeader title="New" /> : null}
-        {tab === 'activity' ? <ScreenHeader title="Activity" /> : null}
-        {tab === 'today' ? <TodayScreen accountId={currentUser.userId} /> : null}
-        {tab === 'me' ? <MeScreen currentUser={currentUser} onBack={back} saving={saving} /> : null}
-        {tab !== 'today' && tab !== 'me' ? <NotBuiltYet onBack={back} saving={saving} /> : null}
+      <main className={styles.screen} hidden={rooms.shown !== null}>
+        <TabScreen tab={tab} currentUser={currentUser} onBack={back} saving={saving} />
         {error ? (
           <p role="alert" className={styles.error}>
             {error}
           </p>
         ) : null}
       </main>
+      <SeRoomHosts currentUser={currentUser} />
+      <SeRoomBar />
       <SeTabBar active={tab} onSelect={select} />
     </div>
   );

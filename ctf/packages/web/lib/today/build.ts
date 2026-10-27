@@ -4,7 +4,8 @@ import type { TodayViewer } from './card';
 import { goalAsks, relayAsks, rideAsks } from './sources-asks';
 import { cohortOffers, placeOffers } from './sources-offers';
 import { announcementStories, inviteStories, whatWorksStory } from './sources-stories';
-import { broadcast, mainRoom, moodCard, numbersCard, replayCards, wantedCard } from './sources-live';
+import { broadcast, moodCard, numbersCard, replayCards, wantedCard } from './sources-live';
+import { mainRoom, nextTalk, weaversRoom } from './sources-rooms';
 
 // The Today read. Every source runs at once and on its own: one that fails leaves its cards out,
 // is reported, and is named in `unavailable` so the screen can say what is missing instead of
@@ -42,10 +43,12 @@ export async function buildToday(viewer: TodayViewer, now = new Date()): Promise
     { name: 'skills-hunt', read: () => wantedCard() },
   ];
 
-  const [cardLists, live, room] = await Promise.all([
+  const [cardLists, live, room, weavers] = await Promise.all([
     Promise.all(sources.map((source) => settle(source.name, source.read, unavailable))),
     settle<SeTodayBroadcast | null>('beacon', () => broadcast(), unavailable),
-    settle<SeTodayRoom>('chyme', () => mainRoom(), unavailable),
+    settle<SeTodayRoom>('chyme', () => mainRoom(nextTalk(now)), unavailable),
+    // Reported but never named on screen: a member who may not enter is not told the room exists.
+    settle<SeTodayRoom | null>('weavers', () => weaversRoom(viewer), []),
   ]);
 
   const cards = cardLists
@@ -57,7 +60,7 @@ export async function buildToday(viewer: TodayViewer, now = new Date()): Promise
     generatedAtIso: now.toISOString(),
     presence: null,
     broadcast: live ?? null,
-    rooms: room ? [room] : [],
+    rooms: [room, weavers].filter((item): item is SeTodayRoom => Boolean(item)),
     cards,
     unavailable,
   };

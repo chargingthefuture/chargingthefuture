@@ -41,7 +41,12 @@ contracts:
       - skills_taxonomy_skills
       - beacon_events
       - skills_hunt_rounds
+      - chyme_rooms
       - chyme_room_members
+      - chyme_guest_listeners
+      - ti_radio_slots
+      - contributor_access_config
+      - contributor_access_eligibility
     purpose: member_daily_overview
     retentionClass: none_read_only
     idempotency: true

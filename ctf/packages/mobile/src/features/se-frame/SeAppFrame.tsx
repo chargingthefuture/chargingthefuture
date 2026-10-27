@@ -1,8 +1,7 @@
 // The 3.1 app frame, the Android copy of the web (components/se-frame/se-app-frame.tsx): one screen
-// per tab and the tab bar along the bottom. The phone's back button returns to Today from any other
-// tab, as the web's back button does through the address.
+// per tab, the open room and its bar, and the tab bar along the bottom.
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { BackHandler, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SE_AVEN_DEFINITION, SE_AVENHOOD, SE_AVENHOOD_DEFINITION, seTheme, type SeTab, type SeThemeTokens } from '@ctf/shared';
 import { useAuth } from '../../auth/auth-context';
@@ -11,6 +10,9 @@ import { SeTabBar } from './SeTabBar';
 import { SE_FONT } from './fonts';
 import { useInterfaceVersion } from './interface-version';
 import { TodayScreen } from './today/TodayScreen';
+import { NewScreen } from './new/NewScreen';
+import { SeRoomBar, SeRoomHosts } from './rooms/SeRoomScreen';
+import { SeRoomsProvider, useSeRooms } from './rooms/SeRooms';
 import type { FeatureKey } from '../../navigation/screens';
 
 const TODAY_DATE = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
@@ -23,37 +25,55 @@ const TITLES: Record<SeTab, string> = {
   me: 'Me',
 };
 
-export function SeAppFrame({ onOpenAccount, onOpen }: { onOpenAccount: () => void; onOpen: (_key: FeatureKey) => void }) {
+type FrameProps = { onOpenAccount: () => void; onOpen: (_key: FeatureKey) => void };
+
+export function SeAppFrame(props: FrameProps) {
+  return (
+    <SeRoomsProvider>
+      <SeAppFrameBody {...props} />
+    </SeRoomsProvider>
+  );
+}
+
+// The phone's back button closes an open room first, then returns to Today from any other tab.
+function useFrameBack(tab: SeTab, setTab: (_tab: SeTab) => void, roomShown: boolean, minimize: () => void) {
+  useEffect(() => {
+    if (tab === 'today' && !roomShown) return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (roomShown) minimize();
+      else setTab('today');
+      return true;
+    });
+    return () => sub.remove();
+  }, [tab, setTab, roomShown, minimize]);
+}
+
+function SeAppFrameBody({ onOpenAccount, onOpen }: FrameProps) {
   const t = seTheme();
   const s = useMemo(() => makeStyles(t), [t]);
   const { user } = useAuth();
   const { switchTo, saving, error } = useInterfaceVersion();
   const [tab, setTab] = useState<SeTab>('today');
+  const rooms = useSeRooms();
+  const { minimize } = rooms;
+  useFrameBack(tab, setTab, rooms.shown !== null, minimize);
 
-  useEffect(() => {
-    if (tab === 'today') return;
-    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      setTab('today');
-      return true;
-    });
-    return () => sub.remove();
-  }, [tab]);
-
-  const handle = user?.username ? `@${user.username}` : 'Survivor';
+  // Choosing a tab while a room is open puts the room in the bar above the tab bar.
+  const select = useCallback(
+    (next: SeTab) => {
+      minimize();
+      setTab(next);
+    },
+    [minimize],
+  );
   const back = () => void switchTo('3.0');
 
   return (
     <View style={s.frame}>
-      <ScrollView contentContainerStyle={s.screen}>
+      <ScrollView contentContainerStyle={s.screen} style={rooms.shown ? s.hidden : null}>
         <FrameHeader s={s} tab={tab} />
 
-        {tab === 'me' ? (
-          <MeTab s={s} user={user} handle={handle} onBack={back} saving={saving} onOpenAccount={onOpenAccount} />
-        ) : tab === 'today' ? (
-          user ? <TodayScreen t={t} accountId={user.id} onOpen={onOpen} /> : null
-        ) : (
-          <NotBuiltCard s={s} onBack={back} saving={saving} />
-        )}
+        <TabScreen t={t} s={s} tab={tab} user={user} onBack={back} saving={saving} onOpenAccount={onOpenAccount} onOpen={onOpen} />
 
         {error ? (
           <Text accessibilityRole="alert" style={s.error}>
@@ -61,12 +81,35 @@ export function SeAppFrame({ onOpenAccount, onOpen }: { onOpenAccount: () => voi
           </Text>
         ) : null}
       </ScrollView>
-      <SeTabBar t={t} active={tab} onSelect={setTab} />
+      {user ? <SeRoomHosts t={t} user={{ userId: user.id, username: user.username ?? null }} /> : null}
+      <SeRoomBar t={t} />
+      <SeTabBar t={t} active={tab} onSelect={select} />
     </View>
   );
 }
 
 type Styles = ReturnType<typeof makeStyles>;
+
+type TabScreenProps = {
+  t: SeThemeTokens;
+  s: Styles;
+  tab: SeTab;
+  user: { id: string; username?: string | null } | null;
+  onBack: () => void;
+  saving: boolean;
+  onOpenAccount: () => void;
+  onOpen: (_key: FeatureKey) => void;
+};
+
+function TabScreen({ t, s, tab, user, onBack, saving, onOpenAccount, onOpen }: TabScreenProps) {
+  if (tab === 'me') {
+    const handle = user?.username ? `@${user.username}` : 'Survivor';
+    return <MeTab s={s} user={user} handle={handle} onBack={onBack} saving={saving} onOpenAccount={onOpenAccount} />;
+  }
+  if (tab === 'today') return user ? <TodayScreen t={t} accountId={user.id} onOpen={onOpen} /> : null;
+  if (tab === 'new') return <NewScreen t={t} onOpen={onOpen} />;
+  return <NotBuiltCard s={s} onBack={onBack} saving={saving} />;
+}
 
 function FrameHeader({ s, tab }: { s: Styles; tab: SeTab }) {
   const [definitionOpen, setDefinitionOpen] = useState(false);
@@ -168,7 +211,9 @@ function SecondaryButton({ s, label, onPress, disabled }: { s: Styles; label: st
 function makeStyles(t: SeThemeTokens) {
   return StyleSheet.create({
     frame: { flex: 1, backgroundColor: t.bg },
-    screen: { gap: 18, paddingTop: 20, paddingHorizontal: 16, paddingBottom: 120 },
+    hidden: { display: 'none' },
+    // Room for the tab bar, and the room bar above it while the member is in a call.
+    screen: { gap: 18, paddingTop: 20, paddingHorizontal: 16, paddingBottom: 180 },
     header: { gap: 2 },
     eyebrow: { fontSize: 13, color: t.soft, fontFamily: SE_FONT.sans },
     title: { fontSize: 30, lineHeight: 33, color: t.ink, fontFamily: SE_FONT.serif },

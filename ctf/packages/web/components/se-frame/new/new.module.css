@@ -1,0 +1,92 @@
+/* + New. Colors come from the frame's custom properties (se-theme-vars.ts). */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 18px;
+  background: var(--se-card);
+  border: 1.5px solid var(--se-hair);
+}
+
+.cardTitle {
+  margin: 0;
+  font-family: 'Newsreader Variable', Newsreader, Georgia, serif;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.text {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.4;
+  color: var(--se-soft);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.label {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1.5px solid var(--se-line);
+  background: var(--se-bg);
+  color: var(--se-ink);
+  font: inherit;
+  font-size: 16px;
+}
+
+.submit {
+  min-height: 46px;
+  margin-top: 4px;
+  border-radius: 999px;
+  border: 1.5px solid var(--se-line);
+  background: var(--se-btn);
+  color: var(--se-on-btn);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  box-shadow: 0 3px 0 var(--se-line);
+  cursor: pointer;
+}
+
+.submit:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.error {
+  margin: 0;
+  font-size: 14px;
+  color: var(--se-ink);
+  font-weight: 600;
+}
+
+.done {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1.5px solid var(--se-hair);
+  font-size: 14px;
+}
+
+.linkButton {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}

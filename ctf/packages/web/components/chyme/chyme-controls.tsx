@@ -4,6 +4,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { Hand, Mic, MicOff, Phone, Volume2 } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { getChymeTokens, type ChymeTokens } from './chyme-shared';
+import { useChymeWords } from './chyme-words';
 
 function toggleButtonStyle(t: ChymeTokens, active: boolean, activeBg: string, activeBorder: string, activeColor: string): CSSProperties {
   return {
@@ -44,6 +45,7 @@ export function ChymeControls({
 }) {
   const { theme } = useTheme();
   const t = getChymeTokens(theme);
+  const words = useChymeWords();
   const muteStyle = muted
     ? toggleButtonStyle(t, true, 'rgba(239,68,68,0.15)', 'rgba(239,68,68,0.4)', '#F87171')
     : toggleButtonStyle(t, true, `${t.ACCENT}18`, `${t.ACCENT}40`, t.ACCENT);
@@ -71,7 +73,7 @@ export function ChymeControls({
           onClick={onLeave}
           style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderRadius: 12, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', color: '#F87171', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
         >
-          <Phone size={16} /> Leave
+          <Phone size={16} /> {words.leave}
         </button>
       )}
     </div>

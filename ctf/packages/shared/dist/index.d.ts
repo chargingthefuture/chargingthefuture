@@ -7,3 +7,4 @@ export * from './design/se-interface';
 export * from './design/se-words';
 export * from './today/types';
 export * from './today/view';
+export * from './today/rooms';

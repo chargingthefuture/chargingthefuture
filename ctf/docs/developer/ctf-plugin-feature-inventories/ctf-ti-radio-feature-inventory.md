@@ -212,6 +212,7 @@ only here would be invisible on their own trust card.
 
 ## Change Log
 
+- 2026-10-27: **Booking from + New in 3.1 (plan task 7).** The 3.1 frame's + New → Talk books a slot through `GET /api/ti-radio/guide` and `POST /api/ti-radio/slots`, the same routes and rules as the guide (non-plugin inventory §1.5 item 5c). Today's Main Room card shows the talk on or next, read with `getGuide`. No route, schema or contract change.
 - 2026-10-17: **Demo seed for "Coming up on TI Radio".** `ctf/scripts/demo-seed/44-ti-radio.mjs` books three upcoming slots by synthetic hosts in the demo schema. Demo data only; no code, schema or route change.
 - 2026-10-12: **Review findings #2745, #2750, #2755.** A failed identity or Unlock read on the guide
   page and `GET /api/ti-radio/guide` still renders the guide without hosting controls, and is now

@@ -12,7 +12,12 @@
   display: flex;
   flex-direction: column;
   gap: 18px;
-  padding: 20px 16px 120px;
+  /* Room for the tab bar, and the room bar above it while the member is in a call. */
+  padding: 20px 16px 180px;
+}
+
+.screen[hidden] {
+  display: none;
 }
 
 .header {

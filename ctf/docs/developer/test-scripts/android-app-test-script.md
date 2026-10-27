@@ -260,7 +260,11 @@ Expect a small landscape or cut-paper picture, never the photo, and the same pic
 3. Tap a card's button: a goal opens PeerProgramming in the app; a place to stay or a cohort opens
    the web page in the browser.
 4. Use the chips, Copy link and Hide as on the web (AD-11); a hidden card stays hidden after reopening.
-5. Tap the Main Room card's button: Chyme opens in the app.
+5. Tap the Main Room card's button: the room opens inside 3.1, as on the web (AD-12). Tap **Listen
+   in**, move between tabs (the audio keeps going and a bar shows above the tab bar), press the
+   phone's back button with the room open (the room closes into the bar), then tap **Leave quietly**
+   on the bar.
+6. Open the + tab and book a talk as on the web (AD-13); the open times are a list to tap.
 
 ## AN-8 — Blocked members
 

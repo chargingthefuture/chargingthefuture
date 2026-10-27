@@ -3,7 +3,7 @@
 // source that failed to load.
 
 import type { SeCardKind } from '../design/se-theme';
-import type { SeToday, SeTodayCard } from './types';
+import type { SeToday, SeTodayCard, SeTodayTalk } from './types';
 
 export type SeTodayFilter = 'all' | 'asks' | 'offers' | 'stories' | 'matches';
 
@@ -57,6 +57,23 @@ export function seTodayView(today: SeToday | null, marks: SeTodayMarks, filter: 
 }
 
 export function seRoomPeopleLine(members: number, guests: number): string {
-  if (members + guests === 0) return 'Quiet now';
+  if (members + guests === 0) return 'Quiet right now';
   return `${members} in the room${guests ? `, ${guests} listening as guests` : ''}`;
+}
+
+// "Today · 9:00 PM", "Tomorrow · 9:00 PM" or "Mon, Nov 2 · 9:00 PM", in the reader's own timezone.
+export function seTalkWhen(startIso: string, now: Date = new Date()): string {
+  const start = new Date(startIso);
+  const time = start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  const day = (d: Date) => d.toDateString();
+  if (day(start) === day(now)) return `Today · ${time}`;
+  if (day(start) === day(new Date(now.getTime() + 86_400_000))) return `Tomorrow · ${time}`;
+  return `${start.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} · ${time}`;
+}
+
+// The line under the Main Room's name: what is on, or what is next.
+export function seTalkLine(talk: SeTodayTalk | null, now: Date = new Date()): string | null {
+  if (!talk) return null;
+  if (talk.onAir) return `On now: ${talk.title} with @${talk.host}`;
+  return `Next: ${talk.title} with @${talk.host} · ${seTalkWhen(talk.startIso, now)}`;
 }

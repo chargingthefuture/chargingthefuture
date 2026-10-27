@@ -13,7 +13,7 @@ left over from another tab is the easiest way to get a false pass on the case th
 You will need three accounts: an approved member, a signed-in member who is **not** approved, and an
 admin. Seed some rows first with `pnpm --dir ctf run seed:ti-radio`. The demo seed now shows three booked slots by synthetic hosts in the next two days, which also fill Chyme's "Coming up on TI Radio" rail.
 
-Updated by hand: 2026-10-17: demo seed books three upcoming slots (CH-22).
+Updated by hand: 2026-10-17: demo seed books three upcoming slots (CH-22). 2026-10-27: TR-14, booking from + New in 3.1.
 
 ## Core smoke (every session)
 
@@ -318,3 +318,16 @@ Result: web ☐
 > _2026-09-19: Chyme now reads this guide and shows the next booked slots on its member view, its
 > signed-out page, and the Android Upcoming tab (Chyme test script CH-22). Booking, releasing, and
 > removing here are unchanged; a slot released here disappears from Chyme on its next read._
+
+### TR-14 — Booking from + New in 3.1
+
+**Role:** approved member, then a signed-in member who is not approved · **Surfaces:** web, android
+1. On 3.1, open the + tab. Under Talk, choose a time, write a subject and tap **Book the talk**.
+2. Open `/ti-radio` and Today's Main Room card.
+3. As the member who is not approved, open the + tab.
+**Expected:** Step 1 confirms the booking and the time leaves the list. Step 2 shows the booking on
+the guide, and on the Main Room card when it is the next talk ("Next: <subject> with @<handle> ·
+<day> · <time>"). The per-day limit and the overlap rule refuse the same way they do on the guide,
+with the route's own reason. Step 3 shows "Booking a talk needs Unlock approval." and a link to
+Unlock, and no list of times.
+**Result:** web ☐ android ☐ — notes:

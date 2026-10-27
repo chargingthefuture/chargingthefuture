@@ -23,7 +23,11 @@ vi.mock('./sources-live', () => ({
   replayCards: vi.fn(async () => []),
   wantedCard: vi.fn(async () => []),
   broadcast: vi.fn(async () => null),
-  mainRoom: vi.fn(async () => ({ key: 'main', name: 'Main Room', live: false, members: 0, guests: 0, href: '/apps/chyme' })),
+}));
+vi.mock('./sources-rooms', () => ({
+  nextTalk: vi.fn(async () => null),
+  mainRoom: vi.fn(async () => ({ key: 'main', name: 'Main Room', live: false, members: 0, guests: 0, href: '/apps/chyme', nextTalk: null })),
+  weaversRoom: vi.fn(async () => null),
 }));
 
 function stub(id: string, createdAtIso: string) {

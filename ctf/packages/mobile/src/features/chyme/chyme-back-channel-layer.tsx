@@ -12,6 +12,7 @@ import type { MobileBackChannelController } from './useChymeBackChannel';
 import { ChymeBackChannelInvite } from './chyme-back-channel-invite';
 import { ChymeBackChannelPanel } from './chyme-back-channel-panel';
 import { PulseDot } from './chyme-pulse-dot';
+import { useChymeWords } from './chyme-words';
 import { useChymeTokens } from './chyme-tokens';
 
 const PRIMARY = '#22C55E';
@@ -63,6 +64,7 @@ function ErrorNotice({ message, onDismiss }: { message: string | null; onDismiss
 // this member. Hidden while in a call with somebody else. Never on the member's own tile.
 export const ChymeBackChannelButton: React.FC<{ recipientUserId: string; controller: MobileBackChannelController }> = ({ recipientUserId, controller }) => {
   const t = useChymeTokens();
+  const words = useChymeWords();
   if (controller.activeCall?.otherUserId === recipientUserId) {
     return (
       <View accessibilityLabel="Back Channel active" style={[styles.badge, { borderRadius: t.radius(20) }]}>
@@ -88,7 +90,7 @@ export const ChymeBackChannelButton: React.FC<{ recipientUserId: string; control
       style={[styles.start, { borderRadius: t.radius(20), opacity: controller.busy ? 0.7 : 1 }]}
     >
       <Phone size={10} color={PRIMARY} strokeWidth={2.5} />
-      <Text style={styles.badgeText}>Back Channel</Text>
+      <Text style={styles.badgeText}>{words.backChannel}</Text>
     </TouchableOpacity>
   );
 };
