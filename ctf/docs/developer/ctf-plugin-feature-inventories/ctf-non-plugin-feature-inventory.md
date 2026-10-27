@@ -196,6 +196,26 @@
 5f. People in the 3.1 frame. `GET /api/people?page=&offering=1&q=` (`app/api/people/route.ts`, `lib/people/repository.ts`) answers 20 Directory profiles a page, live profiles only (`deleted_at IS NULL`, the Directory's own test), each with its id, name, headline, job title, whether it is claimed, the skills it lists, and, for a claimed profile, the skills its owner offers through Foundation (`foundation_provider_skills`). Profiles whose owner offers something come first; `offering=1` keeps only those ("Offering now"); `q` searches name, headline, job title and listed skills. A page past the end answers the last page. Approved members only (the default tier), the same bar as the Directory; it reads and writes nothing else. Contracts `PEOPLE_PLUGIN_COMMAND_CONTRACTS.yaml` (`people.list`), access, audit and deletion. The screen (web `components/se-frame/people/`, Android `src/features/se-frame/people/`) shows offerings filled in the Offer color and listings outlined, with Profile (the Directory page) and, only for someone offering, Request a quote (the Foundation provider page); the page number is in the address on the web. Shape and words in `@ctf/shared` (`today/people.ts`).
 6. `GET /api/account/identity` returns the caller's own `{ ok, userId, username, isAdmin }`, gated by `requireAccountAccess` (any signed-in identity, its own values only, no writes). The Android app reads it after sign-in, retries a failed read three times (2, 5 and 15 seconds) and reads it again each time the app returns to the foreground, because its Clerk OAuth id_token carries neither the username nor the role; without it an admin gets no Admin pill and handles fall back to a short id. On the server, `verifyClerkSessionToken` (`lib/auth/verify-bearer.ts`) reads `preferred_username` / `given_name` / `family_name` from that token and fills a missing username or role from the subject's own Clerk account (`users.getUser`, a successful lookup cached five minutes per account; a failed one is not cached); values in the token always win. `resolveRequestIdentity` (`lib/auth/request-identity.ts`) verifies a bearer header before it reads the middleware's identity headers, because Clerk's middleware also accepts that id_token as a session token and stamps the request with no role; read first, those headers made every admin a member on Android (fixed 2026-10-16).
 
+### 1.6a Personal mute (3.1.0)
+
+1. A member mutes a person (from a card's ••• menu, "Mute @handle") or words (Me → Muted). Today
+   leaves out cards by a muted person or whose title or text contains muted words (`seApplyMutes` in
+   `@ctf/shared`, applied in `lib/today/build.ts`; a failed read of the mutes shows every card).
+   Nobody is told; a mute is not a block and changes nothing else. Speaker mute in rooms comes later.
+2. Routes, under the account area's gate like blocks (`requireAccountAccess`):
+   - `GET /api/account/mutes` — the member's own mutes, newest first.
+   - `POST /api/account/mutes` — `{ kind: 'person', target: accountId, label? }` or
+     `{ kind: 'words', target }` (lower-cased, at most 60 characters). Idempotent; at most 100;
+     muting yourself is refused. 429 at the limit.
+   - `DELETE /api/account/mutes/[muteId]` — unmute one of the member's own; idempotent.
+3. Table **`member_mutes`** (`id`, `user_id`, `kind` `person` or `words`, `target`, `label`,
+   `created_at`; unique on `user_id, kind, target`; index on `user_id`;
+   `post/0074_member_mutes.sql`). Account deletion removes the member's own rows (registry entry
+   `member-mutes`). No demo rows. Contracts `MEMBER_MUTES_*` (`member.mute.create`, `.remove`,
+   `.list`).
+4. Screens: web `components/se-frame/me/muted-card.tsx` and the card menu in
+   `components/se-frame/today/`; Android `src/features/se-frame/me/MutedCard.tsx` and `TodayCard.tsx`.
+
 ### 1.6 Member Blocking (cross-cutting safety control)
 
 1. Any signed-in member can block, unblock, and list who they have blocked — a baseline safety boundary gated by `requireAccountAccess` (the same `any_authenticated` gate as account deletion, never the unlock gate). A block is the member's own private boundary: never visible to the person blocked, and it carries no reason.
@@ -423,6 +443,7 @@ Owner decision, 2026-09-26. The owner pays the running costs of Skills Economy a
 
 ## 5) Change Log
 
+- 2026-10-27: **Personal mute (§1.6a, plan task 10).** A member mutes a person from a card's ••• menu or words from Me; Today leaves those cards out. New `member_mutes`, `/api/account/mutes` routes and `MEMBER_MUTES_*` contracts; nobody is told.
 - 2026-10-27: **Measures (§1.16a, plan task 11).** Action minutes are credited per member from Chyme room and Back Channel heartbeats into the new `member_action_seconds_daily`, and read with Foundation calls and kept PeerProgramming tasks. Today shows "Days the Avenhood has won"; the Adoption screen shows Days won, Retained, Came back, Every day and time to unlock (`GET /api/admin/measures`).
 - 2026-10-27: **Today's mission (§1.5 item 5a, plan task 13).** One active SkillsHunt mission a day shows on Today as a Wanted card, "Wanted · today's mission", with the community's count against its goal; the missions take turns by day. `today.read` lists `skills_hunt_missions` and `skills_hunt_mission_progress`.
 - 2026-10-27: **The Quora survey card on Today (§1.5 item 5a, plan task 13).** A one-time Story card asks a member who has not answered the Quora account removals survey to answer it; it goes once they have, or when they hide it. `today.read` lists `quora_deletion_survey_responses`.

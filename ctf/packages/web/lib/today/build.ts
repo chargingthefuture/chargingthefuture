@@ -7,6 +7,8 @@ import { announcementStories, inviteStories, surveyCard, whatWorksStory } from '
 import { broadcast, missionCard, moodCard, numbersCard, replayCards, wantedCard } from './sources-live';
 import { mainRoom, nextTalk, weaversRoom } from './sources-rooms';
 import { readDaysWon } from 'lib/measures/action-minutes';
+import { listMutes } from 'lib/mutes/repository';
+import { seApplyMutes } from '@ctf/shared';
 
 // The Today read. Every source runs at once and on its own: one that fails leaves its cards out,
 // is reported, and is named in `unavailable` so the screen can say what is missing instead of
@@ -46,17 +48,18 @@ export async function buildToday(viewer: TodayViewer, now = new Date()): Promise
     { name: 'skills-hunt-mission', read: () => missionCard(now) },
   ];
 
-  const [cardLists, live, room, weavers, daysWon] = await Promise.all([
+  const [cardLists, live, room, weavers, daysWon, mutes] = await Promise.all([
     Promise.all(sources.map((source) => settle(source.name, source.read, unavailable))),
     settle<SeTodayBroadcast | null>('beacon', () => broadcast(), unavailable),
     settle<SeTodayRoom>('chyme', () => mainRoom(nextTalk(now)), unavailable),
     // Reported but never named on screen: a member who may not enter is not told the room exists.
     settle<SeTodayRoom | null>('weavers', () => weaversRoom(viewer), []),
     settle('days-won', () => readDaysWon(now), unavailable),
+    // A member's own mutes; a failed read shows every card rather than none.
+    settle('mutes', () => listMutes(viewer.userId), []),
   ]);
 
-  const cards = cardLists
-    .flatMap((list) => list ?? [])
+  const cards = seApplyMutes(cardLists.flatMap((list) => list ?? []), mutes ?? [])
     .sort((a, b) => b.createdAtIso.localeCompare(a.createdAtIso))
     .slice(0, TODAY_MAX_CARDS);
 

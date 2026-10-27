@@ -38,6 +38,7 @@
     "lighthouse_admin_audit_trail": "audit trail: the app writes it as people act; no demo screen reads it as content",
     "login_events": "derived or logged data: computed or recorded by the app from activity, not seeded directly",
     "member_action_seconds_daily": "derived or logged data: computed or recorded by the app from activity, not seeded directly",
+    "member_mutes": "a member's own private list; no demo screen shows another member's mutes, and a demo viewer mutes from the card menu",
     "member_safety_reports": "admin or moderation record: not shown on member screens; admin clips are out of scope for now",
     "mutual_time_admin_audit_trail": "audit trail: the app writes it as people act; no demo screen reads it as content",
     "peer_programming_admin_audit_trail": "audit trail: the app writes it as people act; no demo screen reads it as content",
