@@ -175,7 +175,9 @@ CREATE TABLE IF NOT EXISTS what_works_problems (
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
   created_by TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  review_status TEXT NOT NULL DEFAULT 'approved' CHECK (review_status IN ('pending', 'approved')),
+  proposed_by TEXT
 );
 ALTER TABLE IF EXISTS what_works_problems ADD COLUMN IF NOT EXISTS id UUID;
 ALTER TABLE IF EXISTS what_works_problems ADD COLUMN IF NOT EXISTS slug TEXT;
@@ -189,6 +191,9 @@ ALTER TABLE IF EXISTS what_works_problems ADD COLUMN IF NOT EXISTS created_at TI
 ALTER TABLE IF EXISTS what_works_problems ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 CREATE UNIQUE INDEX IF NOT EXISTS idx_what_works_problems_slug ON what_works_problems(slug);
 CREATE INDEX IF NOT EXISTS idx_what_works_problems_active_sort ON what_works_problems(is_active, sort_order);
+ALTER TABLE IF EXISTS what_works_problems ADD COLUMN IF NOT EXISTS review_status TEXT NOT NULL DEFAULT 'approved';
+ALTER TABLE IF EXISTS what_works_problems ADD COLUMN IF NOT EXISTS proposed_by TEXT;
+CREATE INDEX IF NOT EXISTS idx_what_works_problems_pending ON what_works_problems(proposed_by) WHERE review_status = 'pending';
 
 CREATE TABLE IF NOT EXISTS what_works_products (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
