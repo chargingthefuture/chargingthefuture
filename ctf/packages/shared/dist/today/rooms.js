@@ -44,10 +44,6 @@ export const SE_TALK_WORDS = {
     tryAgain: 'Try again',
     noOpen: 'Every time this week is booked. New times open each day.',
 };
-export const SE_NEW_LATER = {
-    title: 'Ask, Offer, Story',
-    text: 'These are still being built. Until then they are where they are in 3.0.',
-};
 export function seTalkBooked(dayLabel) {
     return `Booked for ${dayLabel}. It shows on Today and in the TI Radio schedule.`;
 }

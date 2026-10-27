@@ -91,6 +91,51 @@
   cursor: pointer;
 }
 
+.suggestions,
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.choices {
+  flex-direction: column;
+}
+
+.chip {
+  min-height: 40px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1.5px solid var(--se-hair);
+  background: var(--se-bg);
+  color: var(--se-ink);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.choice {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 44px;
+  justify-content: center;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1.5px solid var(--se-line);
+  background: var(--se-bg);
+  color: var(--se-ink);
+  text-decoration: none;
+}
+
+.choiceTitle {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.chip:focus-visible,
+.choice:focus-visible,
 .input:focus-visible,
 .submit:focus-visible,
 .linkButton:focus-visible {

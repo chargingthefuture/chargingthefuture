@@ -266,7 +266,7 @@ the card only to the Weaver; the room reads "Private to Weavers of the Commons" 
 notice. The 3.0 Chyme page still reads Join Room, Leave and Back Channel.
 **Result:** web ☐ — notes:
 
-## AD-13 · + New → Talk
+## AD-13 · + New: Talk, Ask, Offer and Story
 
 **Role:** approved member; an account not yet approved · **Precondition:** on 3.1.
 **Steps:**
@@ -277,6 +277,15 @@ notice. The 3.0 Chyme page still reads Join Room, Leave and Back Channel.
 the time leaves the list. Step 2 shows the booking on the guide and, when it is the next talk, on
 the Main Room card. Step 3 shows the route's own reason when a limit is hit, and the account not
 yet approved sees "Booking a talk needs Unlock approval." with a link to Unlock.
+4. Under Ask, type "ride". Tap "A ride to the pharmacy or grocery store", add a line and tap **Post the
+   ask**.
+5. Tap each Offer choice and the Story link.
+**Expected (4 and 5):** Typing shows only suggestions that contain every word typed; with nothing
+typed, one from each group. The hint "Everyone can read this. Keep times and places for the private
+conversation." sits under the box. Posting says "Posted. It shows on Today, and answers come to
+Activity." and the ask appears on Today and in SocketRelay with the tag "Getting around" and no city.
+A place to stay opens LightHouse, Hours Mutual Time, A ride TrustTransport, A skill Foundation, and the
+Story link the Knowledge Library.
 **Result:** web ☐ — notes:
 
 ## AD-14 · Me and Settings in 3.1

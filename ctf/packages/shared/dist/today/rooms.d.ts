@@ -41,10 +41,6 @@ export declare const SE_TALK_WORDS: {
     tryAgain: string;
     noOpen: string;
 };
-export declare const SE_NEW_LATER: {
-    title: string;
-    text: string;
-};
 export declare function seTalkBooked(dayLabel: string): string;
 export declare function seSlotLabel(startIso: string, endIso: string): string;
 export declare function seSlotDay(startIso: string): string;

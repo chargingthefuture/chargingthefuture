@@ -815,3 +815,11 @@ The following cases must produce the same observable result on both surfaces. Ru
 
 **1.** As member A, post a request. As member B, claim it. Sign in as member A, open the 🔔 notifications tab in the Commons, and confirm a "Someone offered to help with your SocketRelay request." item appears (unread) with an "Open" pill.
 web ☐
+
+### SR-21 · An ask from + New in 3.1
+**Role:** approved member · **Surfaces:** web, android
+1. On 3.1, open + and post an ask from the suggestion "A ride to the pharmacy or grocery store".
+2. Open SocketRelay.
+**Expected:** The request is there, public, with the tag "Getting around" and no city, state or
+country. It can be fulfilled, edited and closed exactly like one made in SocketRelay.
+**Result:** web ☐ android ☐ — notes:
