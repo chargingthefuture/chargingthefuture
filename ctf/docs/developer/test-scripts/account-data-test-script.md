@@ -9,7 +9,7 @@
 
 | | |
 |---|---|
-| **Surface** | `/account/data` (Your Data & Privacy), and `/account` for AD-9 and AD-10 |
+| **Surface** | `/account/data` (Your Data & Privacy), `/account` for AD-9 and AD-10, and the 3.1 Today screen for AD-11 |
 | **Visibility** | Any signed-in identity (including unlock-pending) |
 | **Roles to test** | member |
 | **Surfaces** | web (phone-width layout) |
@@ -224,4 +224,23 @@ others say the screen is still being built. The address carries the tab (`/?tab=
 returns to the tab before. Tapping Avenhood opens and closes its definition under the title; the
 About card on Me shows the same definition and what an Aven is. The invite wall and the invite page open and work as before. Back to 3.0
 returns to the 3.0 home. Signing in on another device or the Android app shows the same choice.
+**Result:** web ☐ — notes:
+
+## AD-11 · Today in 3.1
+
+**Role:** approved member · **Precondition:** on 3.1 (AD-10 step 1); some activity exists (an open goal
+on your board, a LightHouse listing, an announcement).
+**Steps:**
+1. Open `/`. Wait for the cards, then reload the page.
+2. Tap a card's text, then tap it again. Tap one of its buttons.
+3. Tap each chip: All, Asks, Offers, Stories, Matches.
+4. On a card, open ••• and choose **Copy link**, then open ••• on another card and choose **Hide**.
+5. Open the Main Room card's button.
+**Expected:** Step 1 shows the Main Room card (LIVE only while somebody is in it) and the day's cards,
+newest first; after the reload the cards appear at once from the saved copy and then refresh. No
+card shows a street address, a city on a request, or where a ride goes. Step 2 opens the card's full
+text and closes it, a check mark appears on it, and "1 of N done" appears above the chips (it was
+not there before). Step 3 shows only that kind. Step 4 copies the card's address, and the hidden card
+is gone and stays gone after a reload. Step 5 opens Chyme. If a source fails, a line under the
+chips names it and the rest of the cards still show.
 **Result:** web ☐ — notes:

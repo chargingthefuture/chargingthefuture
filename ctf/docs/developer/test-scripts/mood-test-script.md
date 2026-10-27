@@ -17,7 +17,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-mood-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-09-20: the inventory's prose was swept for a banned word (CLAUDE.md); no step here changes, because nothing about what the plugin does or how it is tested moved · 2026-10-17: smoke step 4 names the demo check-ins from `demo-seed/22-mood.mjs` |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-09-20: the inventory's prose was swept for a banned word (CLAUDE.md); no step here changes, because nothing about what the plugin does or how it is tested moved · 2026-10-17: smoke step 4 names the demo check-ins from `demo-seed/22-mood.mjs` · 2026-10-27 manual note: the 3.1 Today card reads eligibility without creating a pseudonym; the check-in steps here are unchanged |
 
 ## How to run this
 

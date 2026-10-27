@@ -1,0 +1,39 @@
+policies:
+  - pluginId: today
+    command: today.read
+    version: 1.0.0
+    requiredRoles:
+      - member
+    attributePolicies:
+      tenancy: same_workspace
+      minUnlockTier: approved_full
+      readsOnly: true
+      sources:
+        - peer-programming goals on the viewer's own cohort board
+        - socket-relay open requests (no city)
+        - trust-transport available requests (no title, no places)
+        - lighthouse active listings (no address, no city)
+        - skill-up open cohorts with seats
+        - feed announcements
+        - directory invite cards
+        - what-works verified products
+        - mood eligibility (read only, creates no pseudonym)
+        - workforce dashboard counts
+        - beacon live event and replays
+        - skills-hunt active round
+        - chyme public main room state
+    consentRequirements:
+      scopes:
+        - platform_terms
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - actor_not_authenticated
+      - actor_not_approved
+      - account_restricted

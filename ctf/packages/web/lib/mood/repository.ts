@@ -173,6 +173,19 @@ export async function getMoodEligibility(input: { pseudonym: string }): Promise<
   return eligibilityFromLastSubmission(result.rows[0]?.submitted_at);
 }
 
+// Eligibility for a member without creating their pseudonym: a member who has never checked in has
+// no pseudonym yet and is eligible. For reads that only ask the question, such as the Today card, so
+// opening Today never creates Mood data for somebody who has not used Mood.
+export async function readMoodEligibilityForUser(userId: string): Promise<MoodEligibility> {
+  const existing = await queryDb<{ pseudonym: string }>(
+    `SELECT pseudonym FROM mood_client_identities WHERE user_id = $1`,
+    [userId],
+  );
+  const pseudonym = existing.rows[0]?.pseudonym;
+  if (!pseudonym) return eligibilityFromLastSubmission(undefined);
+  return getMoodEligibility({ pseudonym });
+}
+
 export async function createMoodSubmission(input: { pseudonym: string; clientId: string; moodValue: number; note: string | null }) {
   if (!Number.isInteger(input.moodValue) || input.moodValue < 1 || input.moodValue > 5) {
     throw new Error('invalid_payload');
