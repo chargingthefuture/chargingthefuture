@@ -775,3 +775,18 @@ tracked, not a new bug:
   flow started removing the sign-in as well as the data (PR #2259). The sign-up panel labels them "Left"
   and subtracts them, so the numbers are right, but clearing the account itself is the
   `Delete Account (manual)` workflow, not something the panel can do.
+
+### UNLOCK-M6 · The Unlock banner and the 14 days (3.1)
+**Role:** a new signed-in member, not approved, on 3.1 · **Surfaces:** web, android
+1. Open the app on day 1. Close the banner, then open the app again.
+2. On day 8, open the app.
+3. On day 15 with nothing sent, open the app and try to post an ask; open Mood and Today.
+4. Send a Quora profile address, then open the app again.
+5. Get approved and open the app.
+**Expected:** Step 1: the app opens (no Unlock wall) with "Day 1 of 14" and the way to finish; Close
+hides it until the next visit. Step 2: "Day 8 of 14" with no Close. Step 3: "Posting is paused until
+Unlock is done." with what stays open; the ask is refused, Mood and Today work, and nothing says the
+account is at risk. Step 4: "Sent. Waiting for approval." and posting works again. Step 5: no banner.
+People shows "People opens once Unlock is done" until approval. 3.0 still sends the member to the
+Unlock screen as before.
+**Result:** web ☐ android ☐ — notes:

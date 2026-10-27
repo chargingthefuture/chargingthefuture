@@ -320,3 +320,9 @@ with no name or id of who proposed them; each action removes the row and appears
 with the action. Step 5 shows the approved problem on the list (and in the dropdown), the merged one
 nowhere, and the spam one nowhere.
 **Result:** web ☐ — notes:
+
+### WW-11 · What Works before Unlock is done (3.1)
+**Role:** a signed-in member not yet approved, on 3.1 · **Surfaces:** web, android
+1. Open What Works, mark a tool Helpful, suggest a tool and propose a problem.
+**Expected:** All of it works. The admin screens still refuse this member.
+**Result:** web ☐ — notes:

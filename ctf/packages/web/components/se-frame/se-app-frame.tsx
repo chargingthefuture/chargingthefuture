@@ -8,6 +8,7 @@ import { SeTabBar } from './se-tab-bar';
 import { TodayScreen } from './today/today-screen';
 import { MeScreen } from './me/me-screen';
 import { useSeTheme } from './use-se-theme';
+import { UnlockBanner } from './unlock-banner';
 import { NewScreen } from './new/new-screen';
 import { ActivityScreen } from './activity/activity-screen';
 import { PeopleScreen } from './people/people-screen';
@@ -126,6 +127,7 @@ function SeAppFrameBody({ currentUser, isAdmin }: FrameProps) {
   return (
     <div className={styles.frame} style={seThemeVars(theme.color, theme.mode)}>
       <main className={styles.screen} hidden={rooms.shown !== null}>
+        <UnlockBanner />
         <TabScreen tab={tab} currentUser={currentUser} isAdmin={isAdmin} theme={theme} onTheme={setTheme} onBack={back} saving={saving} />
         {error ? (
           <p role="alert" className={styles.error}>

@@ -199,6 +199,10 @@ function SignedOutInvites({ signedIn, selected }: { signedIn: boolean; selected:
   return <InvitesPopup />;
 }
 
+function showsUnlockWall(walled: boolean, interfaceVersion: string): boolean {
+  return walled && interfaceVersion !== '3.1';
+}
+
 function showsNewFrame(isAuthenticated: boolean, interfaceVersion: string, selected: FeatureKey): boolean {
   return isAuthenticated && interfaceVersion === '3.1' && selected === 'apps';
 }
@@ -280,8 +284,10 @@ function AppShell() {
   // Unlock wall: a signed-in non-admin whose tier is neither approved_full nor
   // locked_support_only sees the Unlock screen full-screen instead of the app
   // shell, matching the web redirect to /plugin/unlock. A successful submission
-  // re-runs the check so an approval mid-session lets them through.
-  if (unlockGate.walled) {
+  // re-runs the check so an approval mid-session lets them through. On 3.1 there is no wall: the
+  // app is open before Unlock is done and the frame carries the Unlock banner (owner decision,
+  // 2026-10-27); every gated route still answers for itself.
+  if (showsUnlockWall(unlockGate.walled, interfaceVersion)) {
     return <Unlock onStatusChanged={refreshUnlockGate} onGoHome={() => void refreshUnlockGate()} showSignOut />;
   }
 

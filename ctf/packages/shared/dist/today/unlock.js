@@ -5,7 +5,7 @@
 // for help finding it. Not finishing never removes an account.
 export const SE_UNLOCK_OPEN_DAYS = 14;
 export const SE_UNLOCK_WORDS = {
-    routes: 'Finish Unlock one of three ways: send your Quora profile address, add a removed Quora account to the census, or bring your Quora writing into the Knowledge Library. The System Architect approves each, usually within a day.',
+    routes: 'Finish Unlock by sending your Quora profile address, or ask for help finding it. The System Architect approves each, usually within a day. Everything stays open for 14 days; after that, posting pauses until it is done.',
     sentTitle: 'Sent. Waiting for approval.',
     sentText: 'The System Architect approves each, usually within a day. Everything stays open while you wait.',
     pausedTitle: 'Posting is paused until Unlock is done.',

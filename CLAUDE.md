@@ -153,9 +153,9 @@ chargingthefuture/          ← repo root
 
 ## Unlock Approval Is the Gate (Critical — all agents)
 
-**A member must be approved through Unlock to do anything in this app.** There are exactly five
+**A member must be approved through Unlock to do anything in this app.** There are exactly six
 exceptions, and they are exceptions — not a pattern, not a precedent, and not an argument for a
-sixth:
+seventh:
 
 | Feature | Owner decision | Why it is excepted |
 |---|---|---|
@@ -164,6 +164,7 @@ sixth:
 | Quora account deletion survey | 2026-08-19 | The research is about people outside this app, so approval cannot be the bar without sampling only the members already reached. Sign-in keeps bulk junk out; it is not a claim that the member is verified. |
 | Fireside conversation | 2026-09-13 | Writing under a blog post is a route *into* verification, on the same reasoning as the Knowledge Library row above. Nothing an unapproved member writes is publicly visible; approval is per person and makes everything they have written appear at once. Reading needs no account at all, so it is not an exception — it is not gated in the first place. |
 | Directory invite wall | 2026-10-15 | The invitations to people listed in the Directory are how people arrive from Quora, and seeing who has been invited is the reason to make an account. Reading them needs a sign-in, so the list is not public, which is why they left the blog; approval is not required because the people reading are mostly the people invited. A signed-out visitor sees each person's name and the invite's opening words only, except for the invites already published on the blog before that day, which stay public. The Directory itself still needs approval. The gate is `lib/directory/invite-access.ts`. |
+| 3.1 open sign-up use | 2026-10-27 | The 3.1 plan (`ctf/docs/developer/SOCIAL_REDESIGN_3_1_PLAN.md`, Access) lets a member use the app before Unlock is done. Two tiers in `evaluatePluginAccess`: `signed_in` (Today, Mood, ClickLog, What Works and their own Activity, open after day 14 too) and `signed_in_posting` (posting an ask from + New, which pauses after day 14 until Unlock is done; the count stops once the address is sent or the member asks for help). Both still apply account restrictions. The Directory, People, speaking in rooms, booking a talk, credits and Foundation contact stay approved-only. Not finishing never removes an account. The standing is `lib/unlock/standing.ts`. |
 
 Every other feature requires Unlock approval. When you build anything new the answer is
 `minUnlockTier: 'approved_full'` — the default — essentially every time.
@@ -181,7 +182,8 @@ on any call site missing from it (`ctf/scripts/check-unlock-tier-exceptions.mjs`
 copies whatever nearby code does, and a bypass added by copy-and-paste does not look like a
 decision in review — it looks like the house style. **Adding another exception is the owner's
 decision, never a build step. Ask first.** The fourth was asked for and decided on 2026-09-13 and
-the fifth on 2026-10-15; that they happened does not make a sixth ordinary.
+the fifth on 2026-10-15, and the sixth on 2026-10-27; that they happened does not make a seventh
+ordinary.
 
 ## What the Gate Costs, and What It Does Not (owner decision, 2026-09-23)
 

@@ -11,6 +11,7 @@ export const SE_PEOPLE_WORDS = {
     quote: 'Request a quote',
     empty: 'Nobody matches yet.',
     failed: 'Could not read People.',
+    needsUnlock: 'People opens once Unlock is done: the Directory is for approved members only.',
     tryAgain: 'Try again',
     loading: 'Reading People…',
     previous: 'Previous',
