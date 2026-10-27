@@ -20,6 +20,7 @@ export declare const SE_ME_WORDS: {
     send: string;
     receive: string;
     receiveCopied: (handle: string) => string;
+    receiveCopyFailed: (handle: string, reason: string) => string;
     receiveNoHandle: string;
     history: string;
     theme: string;

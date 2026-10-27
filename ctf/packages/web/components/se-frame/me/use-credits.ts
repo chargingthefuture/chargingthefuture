@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { reportError } from 'lib/observability/report';
 
 // The member's own ServiceCredits balance for the Me screen, from the wallet route the
 // ServiceCredits page reads.
-export type CreditsState = { kind: 'loading' } | { kind: 'ready'; available: number } | { kind: 'error' };
+export type CreditsState = { kind: 'loading' } | { kind: 'ready'; available: number } | { kind: 'error'; message: string };
 
 export function useCredits(): CreditsState {
   const [state, setState] = useState<CreditsState>({ kind: 'loading' });
@@ -17,8 +18,9 @@ export function useCredits(): CreditsState {
         if (!res.ok || typeof available !== 'number') throw new Error(`Wallet read failed (HTTP ${res.status}).`);
         if (active) setState({ kind: 'ready', available });
       })
-      .catch(() => {
-        if (active) setState({ kind: 'error' });
+      .catch((error: unknown) => {
+        reportError(error, { area: 'se-frame', op: 'me_credits' });
+        if (active) setState({ kind: 'error', message: error instanceof Error ? error.message : 'The request did not complete.' });
       });
     return () => {
       active = false;

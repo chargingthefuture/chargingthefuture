@@ -22,6 +22,7 @@ export const SE_ME_WORDS = {
     send: 'Send',
     receive: 'Receive',
     receiveCopied: (handle) => `Copied ${handle}. Anyone can send to it.`,
+    receiveCopyFailed: (handle, reason) => `Could not copy (${reason}). Your handle is ${handle}.`,
     receiveNoHandle: 'Choose a handle in Account and data to receive.',
     history: 'History',
     theme: 'Colors',
