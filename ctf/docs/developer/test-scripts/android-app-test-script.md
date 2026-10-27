@@ -265,6 +265,9 @@ Expect a small landscape or cut-paper picture, never the photo, and the same pic
    phone's back button with the room open (the room closes into the bar), then tap **Leave quietly**
    on the bar.
 6. Open the + tab and book a talk as on the web (AD-13); the open times are a list to tap.
+7. Open Me and run AD-14 as on the web: Send and History open ServiceCredits in the browser, Receive
+   copies your handle, the colors change at once and stay after closing and reopening the app, and
+   there is no Android app link (you are in it).
 
 ## AN-8 — Blocked members
 

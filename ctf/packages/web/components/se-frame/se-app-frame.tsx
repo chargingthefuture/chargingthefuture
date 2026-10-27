@@ -1,13 +1,13 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import Link from 'next/link';
 import '@fontsource-variable/dm-sans/opsz.css';
-import { SE_AVEN_DEFINITION, SE_AVENHOOD, SE_AVENHOOD_DEFINITION, SE_TABS, type SeTab } from '@ctf/shared';
+import { SE_AVENHOOD, SE_AVENHOOD_DEFINITION, SE_TABS, type SeTab, type SeThemeChoice } from '@ctf/shared';
 import type { ShellCurrentUser } from '../community-shell/shell-types';
-import { SeAvatar } from '../shared/se-avatar';
 import { SeTabBar } from './se-tab-bar';
 import { TodayScreen } from './today/today-screen';
+import { MeScreen } from './me/me-screen';
+import { useSeTheme } from './use-se-theme';
 import { NewScreen } from './new/new-screen';
 import { SeRoomBar, SeRoomHosts } from './rooms/se-room-screen';
 import { SeRoomsProvider, useSeRooms } from './rooms/se-rooms';
@@ -73,49 +73,27 @@ function NotBuiltYet({ onBack, saving }: { onBack: () => void; saving: boolean }
   );
 }
 
-function MeScreen({ currentUser, onBack, saving }: { currentUser: ShellCurrentUser; onBack: () => void; saving: boolean }) {
-  return (
-    <>
-      <ScreenHeader title="Me" />
-      <section className={styles.card}>
-        <div className={styles.meRow}>
-          <SeAvatar accountId={currentUser.userId} size={56} />
-          <span className={styles.handle}>{currentUser.displayName}</span>
-        </div>
-      </section>
-      <section className={styles.card}>
-        <p className={styles.cardLabel}>About</p>
-        <p className={styles.cardTitle}>The {SE_AVENHOOD}</p>
-        <p className={styles.emptyText}>{SE_AVENHOOD_DEFINITION}</p>
-        <p className={styles.emptyText}>{SE_AVEN_DEFINITION}</p>
-      </section>
-      <section className={styles.card}>
-        <p className={styles.cardLabel}>Settings</p>
-        <p className={styles.emptyText}>You are using 3.1. You can go back to 3.0 at any time.</p>
-        <div className={styles.buttonRow}>
-          <button type="button" className={styles.secondaryButton} onClick={onBack} disabled={saving}>
-            Back to 3.0
-          </button>
-          <Link href="/account" className={styles.textLink}>
-            Account and data
-          </Link>
-        </div>
-      </section>
-    </>
-  );
-}
+type FrameProps = { currentUser: ShellCurrentUser; isAdmin: boolean };
 
-export function SeAppFrame({ currentUser }: { currentUser: ShellCurrentUser }) {
+export function SeAppFrame({ currentUser, isAdmin }: FrameProps) {
   return (
     <SeRoomsProvider>
-      <SeAppFrameBody currentUser={currentUser} />
+      <SeAppFrameBody currentUser={currentUser} isAdmin={isAdmin} />
     </SeRoomsProvider>
   );
 }
 
 const TAB_TITLES: Partial<Record<SeTab, string>> = { people: 'People', new: 'New', activity: 'Activity' };
 
-function TabScreen({ tab, currentUser, onBack, saving }: { tab: SeTab; currentUser: ShellCurrentUser; onBack: () => void; saving: boolean }) {
+type TabScreenProps = FrameProps & {
+  tab: SeTab;
+  theme: SeThemeChoice;
+  onTheme: (_next: SeThemeChoice) => void;
+  onBack: () => void;
+  saving: boolean;
+};
+
+function TabScreen({ tab, currentUser, isAdmin, theme, onTheme, onBack, saving }: TabScreenProps) {
   const title = TAB_TITLES[tab];
   return (
     <>
@@ -123,13 +101,14 @@ function TabScreen({ tab, currentUser, onBack, saving }: { tab: SeTab; currentUs
       {title ? <ScreenHeader title={title} /> : null}
       {tab === 'today' ? <TodayScreen accountId={currentUser.userId} /> : null}
       {tab === 'new' ? <NewScreen /> : null}
-      {tab === 'me' ? <MeScreen currentUser={currentUser} onBack={onBack} saving={saving} /> : null}
+      {tab === 'me' ? <MeScreen currentUser={currentUser} isAdmin={isAdmin} theme={theme} onTheme={onTheme} onBack={onBack} saving={saving} /> : null}
       {tab === 'people' || tab === 'activity' ? <NotBuiltYet onBack={onBack} saving={saving} /> : null}
     </>
   );
 }
 
-function SeAppFrameBody({ currentUser }: { currentUser: ShellCurrentUser }) {
+function SeAppFrameBody({ currentUser, isAdmin }: FrameProps) {
+  const { theme, setTheme } = useSeTheme();
   const [tab, setTab] = useState<SeTab>('today');
   const rooms = useSeRooms();
   const { minimize } = rooms;
@@ -154,9 +133,9 @@ function SeAppFrameBody({ currentUser }: { currentUser: ShellCurrentUser }) {
   const back = () => void switchTo('3.0');
 
   return (
-    <div className={styles.frame} style={seThemeVars()}>
+    <div className={styles.frame} style={seThemeVars(theme.color, theme.mode)}>
       <main className={styles.screen} hidden={rooms.shown !== null}>
-        <TabScreen tab={tab} currentUser={currentUser} onBack={back} saving={saving} />
+        <TabScreen tab={tab} currentUser={currentUser} isAdmin={isAdmin} theme={theme} onTheme={setTheme} onBack={back} saving={saving} />
         {error ? (
           <p role="alert" className={styles.error}>
             {error}

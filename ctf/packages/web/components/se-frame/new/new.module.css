@@ -90,3 +90,10 @@
   text-decoration: underline;
   cursor: pointer;
 }
+
+.input:focus-visible,
+.submit:focus-visible,
+.linkButton:focus-visible {
+  outline: 2px solid var(--se-pick);
+  outline-offset: 2px;
+}
