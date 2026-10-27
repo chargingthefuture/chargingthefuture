@@ -164,29 +164,6 @@ async function main() {
 
     await client.query(
       `
-        INSERT INTO skills_hunt_leaderboard
-          (round_id, mode, rank, score, accepted_count, rare_skill_bonus,
-           first_match_count, pending_points, last_submission_at,
-           user_id, username_snapshot, metadata)
-        VALUES
-          ($1::uuid, 'individual', 1, 17, 1, 0, 1, 0, NOW(), 'seed-user-01', 'seed-user-01', '{}'::jsonb)
-        ON CONFLICT (round_id, mode, rank)
-        DO UPDATE SET
-          score = EXCLUDED.score,
-          accepted_count = EXCLUDED.accepted_count,
-          rare_skill_bonus = EXCLUDED.rare_skill_bonus,
-          first_match_count = EXCLUDED.first_match_count,
-          pending_points = EXCLUDED.pending_points,
-          last_submission_at = EXCLUDED.last_submission_at,
-          user_id = EXCLUDED.user_id,
-          username_snapshot = EXCLUDED.username_snapshot,
-          updated_at = NOW()
-      `,
-      [roundId],
-    );
-
-    await client.query(
-      `
         INSERT INTO skills_hunt_achievements (user_id, code, title, description, metadata)
         VALUES ('seed-user-01', 'accepted-first', 'First Accepted Submission', 'First accepted SkillsHunt submission.', '{}'::jsonb)
         ON CONFLICT (user_id, code)

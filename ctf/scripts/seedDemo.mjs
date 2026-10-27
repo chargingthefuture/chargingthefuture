@@ -148,7 +148,6 @@ const ID = {
   ppTopic: 'ddd00000-0000-4000-8000-000000000024',
   ppCohort: 'ddd00000-0000-4000-8000-000000000025',
   enrollmentOwner: 'ddd00000-0000-4000-8000-000000000026',
-  leaderboard: 'ddd00000-0000-4000-8000-000000000027',
   srRequest: 'ddd00000-0000-4000-8000-000000000028',
   srFulfillment: 'ddd00000-0000-4000-8000-000000000029',
   taxSector: 'ddd00000-0000-4000-8000-000000000030',
@@ -500,8 +499,7 @@ async function seedSkillsHunt(c) {
     [ID.round, ADMIN],
   );
 
-  // One accepted nomination per personal account. The leaderboard's rank is unique per round, so
-  // the owner keeps rank 1 and the admin account sits at rank 2 with the same score.
+  // One accepted nomination per personal account.
   // Hand each account's seeded nomination back to it first. The owner's upsert below keeps the fixed
   // id and leaves submitter_user_id alone, so a schema first seeded with a different DEMO_OWNER_ID
   // holds that nomination under the earlier account, with the earlier account's signature; when the
@@ -522,7 +520,7 @@ async function seedSkillsHunt(c) {
     );
   }
 
-  for (const [index, uid] of PERSONAL_ACCOUNTS.entries()) {
+  for (const uid of PERSONAL_ACCOUNTS) {
     const signature = sha256id(uid, ID.round, 'demo-submission');
     // The account's live nomination under another id, when it already has one.
     const existing = await c.query(
@@ -548,15 +546,6 @@ async function seedSkillsHunt(c) {
        ON CONFLICT (id) DO UPDATE SET
          status = EXCLUDED.status, points_awarded = EXCLUDED.points_awarded`,
       [existing.rows[0]?.id ?? personalId(uid, ID.submission), ID.round, uid, signature, ADMIN],
-    );
-
-    await c.query(
-      `INSERT INTO skills_hunt_leaderboard
-       (id, round_id, mode, rank, score, accepted_count, first_match_count, user_id)
-       VALUES ($1::uuid, $2::uuid, 'individual', $4, 60, 1, 1, $3)
-       ON CONFLICT (round_id, mode, rank) DO UPDATE SET
-         score = EXCLUDED.score, user_id = EXCLUDED.user_id`,
-      [personalId(uid, ID.leaderboard), ID.round, uid, index + 1],
     );
   }
 

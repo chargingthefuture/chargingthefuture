@@ -286,7 +286,7 @@ function renderPluginShellA(
 
 function renderPluginShellB(selectedPlugin: SelectedPlugin, decision: AllowDecision): ReactNode | null {
   if (selectedPlugin.slug === 'skills-hunt') {
-    return <SkillsHuntShell userId={decision.userId} isAdmin={decision.isAdmin} isModerator={decision.role === 'moderator'} />;
+    return <SkillsHuntShell isAdmin={decision.isAdmin} isModerator={decision.role === 'moderator'} />;
   }
 
   if (selectedPlugin.slug === 'skills-taxonomy') {

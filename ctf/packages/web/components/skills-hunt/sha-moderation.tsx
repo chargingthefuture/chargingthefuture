@@ -211,7 +211,7 @@ export function SkillsHuntModeration({ activeRoundId }: {
     const notes = action === "reject" ? promptRejectReason() : null;
     if (action === "reject" && notes === null) return;
     for (const id of ids) {
-      // Sequential so the leaderboard rebuilds settle row-by-row.
+      // Sequential so each review settles before the next.
       await reviewOne(id, action, notes);
     }
     await refresh();

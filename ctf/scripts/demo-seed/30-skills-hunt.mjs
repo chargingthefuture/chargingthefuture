@@ -1,7 +1,7 @@
-// SkillsHunt demo extras: missions on the demo round (SH-9, SH-9b) and Status panel entries for the
-// demo owner, one read and one unread (SH-11). Every account in ctx.PERSONAL_ACCOUNTS gets its own
-// progress and entries, the owner's under the ids below and the others' derived from them. Runs after seedDemo.mjs, which creates the round, the
-// owner's one accepted nomination and the leaderboard row the entries below describe.
+// SkillsHunt demo extras: missions on the demo round (SH-9, SH-9b) and a Status panel entry for the
+// demo owner, unread (SH-11). Every account in ctx.PERSONAL_ACCOUNTS gets its own progress and entry,
+// the owner's under the ids below and the others' derived from them. Runs after seedDemo.mjs, which
+// creates the round and the owner's one accepted nomination the entry below describes.
 //
 // Mission progress rows hold what the app's own recompute would write for that nomination, so an
 // admin's "Recompute progress" leaves the screen unchanged: one accepted find in total, none with a
@@ -13,7 +13,6 @@ const MISSION_TECH = 'ddd00000-0000-4000-8300-000000000003';
 const PROGRESS_ANY = 'ddd00000-0000-4000-8300-000000000011';
 const PROGRESS_TECH = 'ddd00000-0000-4000-8300-000000000012';
 const NOTE_ACCEPTED = 'ddd00000-0000-4000-8300-000000000021';
-const NOTE_TOP_TEN = 'ddd00000-0000-4000-8300-000000000022';
 
 export default async function seed(client, ctx) {
   const { PERSONAL_ACCOUNTS, personalId, personalRowId, ADMIN, ID } = ctx;
@@ -65,16 +64,11 @@ export default async function seed(client, ctx) {
       );
     }
 
-    // Same titles and bodies the app writes for these two events (lib/skills-hunt/notifications.ts).
-    // The rank matches the leaderboard row seedDemo.mjs gives this account: the owner is 1, the next 2.
-    const rank = PERSONAL_ACCOUNTS.indexOf(account) + 1;
+    // Same title and body the app writes for this event (lib/skills-hunt/notifications.ts).
     const notes = [
       [NOTE_ACCEPTED, 'submission-accepted', 'Submission accepted',
         'Your SkillsHunt submission was accepted with 50 points.',
-        { submissionId: personalId(account, ID.submission), pointsAwarded: 50 }, true, '2 days'],
-      [NOTE_TOP_TEN, 'leaderboard-top-ten', "You're in the top 10",
-        `You moved to rank #${rank} on this round's leaderboard (60 pts).`,
-        { roundId: ID.round, rank, score: 60 }, false, '1 day'],
+        { submissionId: personalId(account, ID.submission), pointsAwarded: 50 }, false, '2 days'],
     ];
     for (const [id, kind, title, body, metadata, isRead, age] of notes) {
       await client.query(
@@ -91,5 +85,5 @@ export default async function seed(client, ctx) {
     }
   }
 
-  console.log('  ✓ demo-seed skills-hunt (3 missions, 2 status entries)');
+  console.log('  ✓ demo-seed skills-hunt (3 missions, 1 status entry)');
 }

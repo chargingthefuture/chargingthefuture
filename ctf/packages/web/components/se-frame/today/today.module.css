@@ -1,0 +1,315 @@
+/* Today in 3.1. Colors come from the frame's custom properties (se-theme-vars.ts). */
+.roomCard {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  border-radius: 20px;
+  background: var(--se-card);
+  border: 1.5px solid var(--se-line);
+  box-shadow: 0 3px 0 var(--se-line);
+}
+
+.roomHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.liveBadge {
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: var(--se-live-badge);
+  color: var(--se-on-live-badge);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+.roomName {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.roomTitle {
+  font-family: 'Newsreader Variable', Newsreader, Georgia, serif;
+  font-size: 21px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.roomMeta {
+  font-size: 13px;
+  color: var(--se-soft);
+}
+
+.primaryButton {
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1.5px solid var(--se-line);
+  background: var(--se-btn);
+  color: var(--se-on-btn);
+  font-size: 15px;
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: 0 3px 0 var(--se-line);
+}
+
+.listHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.listTitle {
+  margin: 0;
+  font-family: 'Newsreader Variable', Newsreader, Georgia, serif;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.doneCount,
+.noticeQuiet {
+  margin: 0;
+  font-size: 13px;
+  color: var(--se-soft);
+}
+
+.chips {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin-right: -16px;
+  padding-right: 16px;
+}
+
+.chip {
+  flex: none;
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1.5px solid var(--se-hair);
+  background: transparent;
+  color: var(--se-ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.chipOn {
+  border-color: var(--se-ink);
+  background: var(--se-ink);
+  color: var(--se-bg);
+}
+
+.notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: var(--se-card);
+  border: 1.5px solid var(--se-hair);
+  font-size: 14px;
+}
+
+.timeline {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-left: 40px;
+}
+
+.line {
+  position: absolute;
+  left: 13px;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  background: var(--se-hair);
+}
+
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 18px;
+  background: var(--se-card);
+  border: 1.5px solid var(--se-hair);
+}
+
+.dot {
+  position: absolute;
+  left: -40px;
+  top: 12px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+}
+
+.cardHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.handle {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.label {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.check {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+
+.menuWrap {
+  position: relative;
+}
+
+.menuButton {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--se-ink);
+  cursor: pointer;
+}
+
+.menu {
+  position: absolute;
+  right: 0;
+  top: 44px;
+  z-index: 5;
+  min-width: 160px;
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+  border-radius: 14px;
+  background: var(--se-card);
+  border: 1.5px solid var(--se-line);
+  box-shadow: 0 3px 0 var(--se-line);
+}
+
+.menuItem {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--se-ink);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.textButton {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cardTitle {
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.body {
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--se-soft);
+}
+
+.bodyClosed {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.actionButton {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1.5px solid var(--se-line);
+  background: var(--se-card);
+  color: var(--se-ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: 0 2px 0 var(--se-line);
+  cursor: pointer;
+}
+
+.caughtUp {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin-left: -40px;
+  padding-top: 18px;
+  text-align: center;
+}
+
+.caughtUpTitle {
+  font-family: 'Newsreader Variable', Newsreader, Georgia, serif;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.chip:focus-visible,
+.menuButton:focus-visible,
+.menuItem:focus-visible,
+.textButton:focus-visible,
+.actionButton:focus-visible,
+.primaryButton:focus-visible {
+  outline: 2px solid var(--se-pick);
+  outline-offset: 2px;
+}

@@ -67,7 +67,7 @@ function NoActiveRound() {
 
 // The round is still marked active but its dates have run out, so the server will refuse every
 // nomination. Say that here rather than drawing the form and letting the refusal arrive on submit.
-// The leaderboard and My finds tabs still read this round, so it is named rather than hidden.
+// The My finds tab still reads this round, so it is named rather than hidden.
 function RoundWindowClosed({ round }: { round: SkillsHuntRound }) {
   const { theme } = useTheme();
   const t = getSkillsHuntTokens(theme);
@@ -80,14 +80,14 @@ function RoundWindowClosed({ round }: { round: SkillsHuntRound }) {
       <div>
         <div style={{ fontSize: 22, fontWeight: 800, color: t.TITLE, marginBottom: 8 }}>Nominations for {round.name} have closed</div>
         <div style={{ fontSize: 14, color: t.MUTED, maxWidth: 400, lineHeight: 1.7 }}>
-          This round ran until {endedOn} and is no longer taking nominations. Your finds and the leaderboard for it are still here. An admin opens the next round.
+          This round ran until {endedOn} and is no longer taking nominations. Your finds for it are still here. An admin opens the next round.
         </div>
       </div>
     </div>
   );
 }
 
-function SubmittedState({ roundName, onReset, onViewLeaderboard }: { roundName: string | null; onReset: () => void; onViewLeaderboard: () => void }) {
+function SubmittedState({ roundName, onReset, onViewFinds }: { roundName: string | null; onReset: () => void; onViewFinds: () => void }) {
   const { theme } = useTheme();
   const t = getSkillsHuntTokens(theme);
   return (
@@ -104,7 +104,7 @@ function SubmittedState({ roundName, onReset, onViewLeaderboard }: { roundName: 
       ) : null}
       <div style={{ display: "flex", gap: 12 }}>
         <button type="button" onClick={onReset} style={{ padding: "12px 24px", borderRadius: 12, background: t.ACCENT, border: "none", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>Nominate Another</button>
-        <button type="button" onClick={onViewLeaderboard} style={{ padding: "12px 24px", borderRadius: 12, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: t.SUBTLE, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>View Leaderboard</button>
+        <button type="button" onClick={onViewFinds} style={{ padding: "12px 24px", borderRadius: 12, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: t.SUBTLE, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>See my finds</button>
       </div>
     </div>
   );
@@ -315,7 +315,7 @@ export function SkillsHuntScoutTab({
   onNavTab: (tab: Tab) => void;
 }) {
   if (noActiveRound) return <NoActiveRound />;
-  if (submitted) return <SubmittedState roundName={activeRound?.name ?? null} onReset={onReset} onViewLeaderboard={() => onNavTab("leaderboard")} />;
+  if (submitted) return <SubmittedState roundName={activeRound?.name ?? null} onReset={onReset} onViewFinds={() => onNavTab("my-finds")} />;
   return (
     <div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 24 }}>

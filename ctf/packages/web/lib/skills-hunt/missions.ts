@@ -241,8 +241,7 @@ export async function recomputeMissionProgressForUser(
 // corrects a mission: re-pointing "Find a mechanic" from count_total_accepted to the mechanic skill
 // leaves every stored progress row at the old, wrong count until somebody's next nomination happens
 // to be accepted in that round. A member would keep reading "82/1 complete" after the fix. This is
-// the admin's way to settle the round's counts immediately, in the same spirit as the manual
-// leaderboard rebuild.
+// the admin's way to settle the round's counts immediately.
 //
 // completed_at is deliberately not cleared by a recompute: the upsert below only ever sets it when a
 // mission is newly complete. A scout who genuinely earned a mission keeps it even if an admin later

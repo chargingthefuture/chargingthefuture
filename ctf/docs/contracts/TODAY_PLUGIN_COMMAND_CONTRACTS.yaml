@@ -1,0 +1,47 @@
+contracts:
+  - pluginId: today
+    command: today.read
+    version: 1.0.0
+    description: Read everything the 3.1 Today screen draws, in one answer (GET /api/today).
+    inputSchema: {}
+    outputSchema:
+      today:
+        type: object
+        properties:
+          generatedAtIso:
+            type: string
+          presence:
+            type: integer
+            nullable: true
+          broadcast:
+            type: object
+            nullable: true
+          rooms:
+            type: array
+          cards:
+            type: array
+            maxItems: 30
+          unavailable:
+            type: array
+    dataAccess:
+      - peer_programming_goals
+      - peer_programming_goal_tasks
+      - peer_programming_cohort_members
+      - socket_relay_requests
+      - trust_transport_requests
+      - lighthouse_properties
+      - skill_up_cohorts
+      - feed_announcements
+      - directory_invites
+      - what_works_problems
+      - what_works_products
+      - mood_client_identities
+      - mood_submissions
+      - directory_profile_skills
+      - skills_taxonomy_skills
+      - beacon_events
+      - skills_hunt_rounds
+      - chyme_room_members
+    purpose: member_daily_overview
+    retentionClass: none_read_only
+    idempotency: true

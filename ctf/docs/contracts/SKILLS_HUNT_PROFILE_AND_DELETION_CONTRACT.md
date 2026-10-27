@@ -54,10 +54,6 @@ SkillsHunt uses canonical profile fields for account identity, role checks, and 
   - Contains personal data? yes (submitter linkage + submitted profile content)
   - Retention period: transactional long-lived per moderation policy
   - Legal/compliance note: moderation and anti-abuse evidence required
-- Table/entity: `skills_hunt_leaderboard`
-  - Contains personal data? limited display identifiers
-  - Retention period: medium/long-lived per season history policy
-  - Legal/compliance note: public ranking projection, minimize sensitive fields
 - Table/entity: `skills_hunt_achievements`
   - Contains personal data? yes (user linkage)
   - Retention period: long-lived reward history
@@ -153,7 +149,7 @@ If user returns after service-scoped deletion:
 - Rollback approach:
   - reverse-order plugin table rollback with retention safeguards
 - Backfill required? (yes/no):
-  - yes (for round, leaderboard, and reward seed data as needed)
+  - yes (for round and reward seed data as needed)
 
 ## 11) Sign-off Checklist
 

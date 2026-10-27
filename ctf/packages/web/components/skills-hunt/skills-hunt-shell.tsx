@@ -10,12 +10,11 @@ import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 import { RefreshButton } from "@/components/shared/refresh-button";
 import {
   getSkillsHuntTokens, TABS, type SkillsHuntTokens, type Tab,
-  type SkillsHuntRound, type SkillsHuntLeaderboardItem, type SkillsHuntAchievement,
+  type SkillsHuntRound, type SkillsHuntAchievement,
   type SkillsHuntSubmission, type SkillsHuntMissionWithCommunityProgress,
 } from "./sh-shared";
 import { SkillsHuntNotifications } from "./sh-notifications";
 import { SkillsHuntScoutTab, type ScoutFormModel } from "./sh-scout-tab";
-import { SkillsHuntLeaderboardTab } from "./sh-leaderboard-tab";
 import { SkillsHuntMissionsTab } from "./sh-missions-tab";
 import { SkillsHuntMyFindsTab } from "./sh-my-finds-tab";
 import { useNominationForm } from "./sh-use-nomination-form";
@@ -38,10 +37,6 @@ interface ShellData {
   submitted: boolean;
   form: ScoutFormModel;
   resetForm: () => void;
-  loadingLeaderboard: boolean;
-  leaderboard: SkillsHuntLeaderboardItem[];
-  leaderboardError: string | null;
-  userId?: string;
   loadingMissions: boolean;
   missions: SkillsHuntMissionWithCommunityProgress[];
   missionsError: string | null;
@@ -63,24 +58,9 @@ async function roundsReadError(res: Response): Promise<RoundsReadError> {
   return new RoundsReadError(await routeFailureMessage(res, `Unable to load rounds (HTTP ${res.status}).`));
 }
 
-function deriveShellState(args: {
-  leaderboard: SkillsHuntLeaderboardItem[];
-  serverCurrentUserEntry: SkillsHuntLeaderboardItem | null;
-  userId?: string;
-  rounds: SkillsHuntRound[];
-}) {
-  return {
-    currentUserEntry: args.leaderboard.find((item) => item.userId === args.userId) ?? args.serverCurrentUserEntry,
-    noActiveRound: args.rounds.length === 0,
-  };
-}
-
 function ShellContent(d: ShellData) {
   if (d.tab === "scout") {
     return <SkillsHuntScoutTab noActiveRound={d.noActiveRound} activeRound={d.activeRound} submitted={d.submitted} form={d.form} onReset={d.resetForm} onNavTab={d.setTab} />;
-  }
-  if (d.tab === "leaderboard") {
-    return <SkillsHuntLeaderboardTab loading={d.loadingLeaderboard} leaderboard={d.leaderboard} error={d.leaderboardError} userId={d.userId} />;
   }
   if (d.tab === "missions") {
     return <SkillsHuntMissionsTab noActiveRound={d.noActiveRound} loading={d.loadingMissions} missions={d.missions} error={d.missionsError} onNavTab={d.setTab} />;
@@ -89,11 +69,9 @@ function ShellContent(d: ShellData) {
 }
 
 export function SkillsHuntShell({
-  userId,
   isAdmin = false,
   isModerator = false,
 }: {
-  userId?: string;
   isAdmin?: boolean;
   isModerator?: boolean;
 }) {
@@ -159,21 +137,19 @@ export function SkillsHuntShell({
   }, [refreshKey]);
 
   const lists = useRoundTabReads(roundKey, tab, refreshKey);
-  const { leaderboard, serverCurrentUserEntry } = lists;
   const notif = useSkillsHuntNotifications();
 
   if (loadingRounds) return <AppLoading />;
   if (globalError) return <CenteredNote t={t} color="#EF4444">{globalError}</CenteredNote>;
   if (rounds.length > 1) return <CenteredNote t={t} color={t.MUTED}>More than one round is open, and only one can be. An admin needs to close the others before nominations can continue.</CenteredNote>;
 
-  const { noActiveRound } = deriveShellState({ leaderboard, serverCurrentUserEntry, userId, rounds });
+  const noActiveRound = rounds.length === 0;
   const showModeratorTools = isAdmin || isModerator;
 
   const content = (
     <ShellContent
       tab={tab} setTab={setTab} noActiveRound={noActiveRound} submitted={submitted} form={form} resetForm={resetForm}
       activeRound={activeRound}
-      loadingLeaderboard={lists.loadingLeaderboard} leaderboard={leaderboard} leaderboardError={lists.leaderboardError} userId={userId}
       loadingMissions={lists.loadingMissions} missions={lists.missions} missionsError={lists.missionsError}
       loadingFinds={lists.loadingFinds} myFinds={lists.myFinds} findsError={lists.findsError} refreshKey={refreshKey}
     />

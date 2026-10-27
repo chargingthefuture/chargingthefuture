@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireSkillsHuntAdminAccess } from '../../../../_lib';
 import { withDbTransaction } from 'lib/db/postgres';
-import { insertSkillsHuntAudit, rebuildLeaderboard, wasRemovedByAccountDeletion } from 'lib/skills-hunt/repository';
+import { insertSkillsHuntAudit, wasRemovedByAccountDeletion } from 'lib/skills-hunt/repository';
 import { recomputeMissionProgressForUser } from 'lib/skills-hunt/missions';
 import { ACCOUNT_DELETED_MESSAGE, SKILLS_HUNT_ERROR_CODE } from 'lib/skills-hunt/constants';
 import { reportError } from 'lib/observability/report';
@@ -14,7 +14,7 @@ import { withReason } from 'lib/errors/failure';
 // admin is never forced into a verdict to undo a removal.
 //
 // The derived state is recomputed the same way remove recomputes it, because the row counts again:
-// an accepted submission's points return to the leaderboard, and its mission progress with them.
+// an accepted submission's points count in the round again, and its mission progress with them.
 // The ServiceCredits ledger is untouched in both directions — remove does not reverse a reward, so
 // restore does not re-mint one.
 //
@@ -68,7 +68,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ sub
         [submissionId],
       );
       // Recompute the derived state this row is part of again.
-      await rebuildLeaderboard(client, row.round_id);
       await recomputeMissionProgressForUser(client, row.round_id, row.submitter_user_id);
       return { alreadyLive: false, roundId: row.round_id, status: row.status };
     });

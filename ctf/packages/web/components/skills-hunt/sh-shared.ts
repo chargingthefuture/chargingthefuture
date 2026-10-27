@@ -1,11 +1,10 @@
 // Shared constants, types, and helpers for the SkillsHunt web shell.
 // Palette/layout derive from design/.../survivor-hub/SkillsHunt.tsx.
-import { Search, Trophy, Target, Users } from "lucide-react";
+import { Search, Target, Users } from "lucide-react";
 import { getAppAccent, type ThemeName } from "@/lib/theme/theme-tokens";
 import { getPluginShellTokens, type PluginShellTokens } from "@/components/shared/plugin-shell-theme";
 import type {
   SkillsHuntRound,
-  SkillsHuntLeaderboardItem,
   SkillsHuntAchievement,
   SkillsHuntNotification,
   SkillsHuntSubmission,
@@ -14,7 +13,6 @@ import type {
 
 export type {
   SkillsHuntRound,
-  SkillsHuntLeaderboardItem,
   SkillsHuntAchievement,
   SkillsHuntNotification,
   SkillsHuntSubmission,
@@ -110,7 +108,6 @@ const BADGE_META: Record<string, { emoji: string; desc: string }> = {
   "diversity-champion":   { emoji: "🌍", desc: "Skills spanning 3+ sectors" },
   "rare-talent-scout":    { emoji: "💎", desc: "Found a rare skill (<50% recruited)" },
   "quality-contributor":  { emoji: "⭐", desc: "10 accepted with no admin edits" },
-  "leaderboard-champion": { emoji: "🏆", desc: "Reached top 10 on the leaderboard" },
   "accepted-first":       { emoji: "✅", desc: "First accepted submission" },
   "accepted-five":        { emoji: "🎯", desc: "5 accepted submissions" },
   "accepted-ten":         { emoji: "🌟", desc: "10 accepted submissions" },
@@ -120,28 +117,13 @@ export function badgeMeta(code: string, fallbackDesc: string): { emoji: string; 
   return BADGE_META[code] ?? { emoji: "🏅", desc: fallbackDesc };
 }
 
-export type Tab = "scout" | "leaderboard" | "missions" | "my-finds";
+export type Tab = "scout" | "missions" | "my-finds";
 
 export const TABS: { key: Tab; icon: typeof Search; label: string }[] = [
   { key: "scout",       icon: Search, label: "Scout" },
-  { key: "leaderboard", icon: Trophy, label: "Leaderboard" },
   { key: "missions",    icon: Target, label: "Missions" },
   { key: "my-finds",    icon: Users,  label: "My Finds" },
 ];
-
-export function rankDisplay(rank: number): string {
-  if (rank === 1) return "🥇";
-  if (rank === 2) return "🥈";
-  if (rank === 3) return "🥉";
-  return `#${rank}`;
-}
-
-export function rankColor(rank: number): string {
-  if (rank === 1) return "#F59E0B";
-  if (rank === 2) return "#9CA3AF";
-  if (rank === 3) return "#CD7C2F";
-  return "#6B7280";
-}
 
 export function submissionStatusStyle(status: string): { bg: string; color: string; border: string; label: string } {
   if (status === "accepted") return { bg: "#22C55E20", color: "#22C55E", border: "#22C55E40", label: "✓ Accepted" };

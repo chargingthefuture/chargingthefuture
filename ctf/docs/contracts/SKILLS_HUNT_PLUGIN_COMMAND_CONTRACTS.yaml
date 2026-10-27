@@ -298,7 +298,6 @@ contracts:
         type: string
     dataAccess:
       - skills_hunt_submissions
-      - skills_hunt_leaderboard
       - skills_hunt_audit_log
       # Read to refuse a row its submitter's account deletion removed (2026-10-17).
       - account_deletion_events
@@ -318,8 +317,8 @@ contracts:
     description: >-
       Admin-only soft-delete of a submission (sets deleted_at). Voids a duplicate,
       test, or mistaken row WITHOUT it counting as a scout rejection — a soft-deleted
-      row is excluded from reputation/rate-limit, leaderboard, mission progress, My
-      Finds, and directory eligibility. Rebuilds the round leaderboard and recomputes
+      row is excluded from reputation/rate-limit, round scores, mission progress, My
+      Finds, and directory eligibility. Recomputes
       the scout's mission progress. Does not touch the ServiceCredits ledger.
     inputSchema:
       submissionId:
@@ -334,7 +333,6 @@ contracts:
         type: string
     dataAccess:
       - skills_hunt_submissions
-      - skills_hunt_leaderboard
       - skills_hunt_mission_progress
       - skills_hunt_audit_log
     purpose: moderation_and_scoring
@@ -347,8 +345,8 @@ contracts:
     description: >-
       Admin-only restore of a submission (sets deleted_at). Voids a duplicate,
       test, or mistaken row WITHOUT it counting as a scout rejection — a restored
-      row is excluded from reputation/rate-limit, leaderboard, mission progress, My
-      Finds, and directory eligibility. Rebuilds the round leaderboard and recomputes
+      row is excluded from reputation/rate-limit, round scores, mission progress, My
+      Finds, and directory eligibility. Recomputes
       the scout's mission progress. Does not touch the ServiceCredits ledger.
     inputSchema:
       submissionId:
@@ -363,53 +361,12 @@ contracts:
         type: string
     dataAccess:
       - skills_hunt_submissions
-      - skills_hunt_leaderboard
       - skills_hunt_mission_progress
       - skills_hunt_audit_log
       # Read to refuse a row its submitter's account deletion removed (2026-10-17).
       - account_deletion_events
     purpose: moderation_and_scoring
     retentionClass: audit_long_lived
-    idempotency: true
-
-  - pluginId: skills-hunt
-    command: skills-hunt.leaderboard.list
-    version: 1.0.0
-    description: Retrieve round leaderboard entries, ranked by accepted points. Scout ranking only — the team board was removed 2026-08-27.
-    inputSchema:
-      roundId:
-        type: string
-        required: true
-      limit:
-        type: integer
-        required: false
-    outputSchema:
-      items:
-        type: array
-      generatedAtIso:
-        type: string
-    dataAccess:
-      - skills_hunt_leaderboard
-    purpose: progress_visibility
-    retentionClass: derived_short_lived
-    idempotency: true
-
-  - pluginId: skills-hunt
-    command: skills-hunt.leaderboard.rebuild
-    version: 1.0.0
-    description: Admin-only manual rebuild of a round's cached scout leaderboard from its current accepted submissions.
-    inputSchema:
-      roundId:
-        type: string
-        required: true
-    outputSchema:
-      ok:
-        type: boolean
-    dataAccess:
-      - skills_hunt_leaderboard
-      - skills_hunt_submissions
-    purpose: progress_visibility
-    retentionClass: derived_short_lived
     idempotency: true
 
   - pluginId: skills-hunt
@@ -818,8 +775,8 @@ contracts:
       round's points bar, their share of the ServiceCredits pool (floor(pool × score ÷ sum of
       eligible scores), shares of 0 left out), the total planned, the remainder that is not sent,
       and a plain reason when sending is not ready (round not closed, no bar, pool of 0, or no scout
-      reached the bar). Before any row is stored it rebuilds the round's cached leaderboard so the
-      split uses final scores; once sending has started the plan is the stored rows, not a fresh
+      reached the bar). Before any row is stored it reads each scout's final score from their accepted
+      nominations and completed missions; once sending has started the plan is the stored rows, not a fresh
       split. Changes no award row and sends nothing.
     inputSchema:
       roundId:
@@ -834,7 +791,6 @@ contracts:
     dataAccess:
       - skills_hunt_rounds
       - skills_hunt_round_awards
-      - skills_hunt_leaderboard
       - skills_hunt_submissions
       - skills_hunt_mission_progress
       - skills_hunt_missions
@@ -871,7 +827,6 @@ contracts:
     dataAccess:
       - skills_hunt_rounds
       - skills_hunt_round_awards
-      - skills_hunt_leaderboard
       - skills_hunt_submissions
       - skills_hunt_mission_progress
       - skills_hunt_missions
@@ -1013,3 +968,5 @@ changelog:
       skills-hunt.round.create snapshots the active Skills Taxonomy skills under the most
       under-recruited job titles into skills_hunt_rare_skills_lookup, instead of the job title names,
       which a nomination's skills almost never matched (issue #2870).
+  - date: 2026-10-27
+    change: Removed skills-hunt.leaderboard.list and skills-hunt.leaderboard.rebuild with the scout leaderboard (owner decision, 3.1.0). Review, remove, restore and the award plan no longer touch a leaderboard table; the award plan reads scores from accepted nominations and completed missions.

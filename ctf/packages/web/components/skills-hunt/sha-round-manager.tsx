@@ -3,7 +3,6 @@
 import { useState } from "react";
 import type { SkillsHuntRound, SkillsHuntRoundStatus } from "lib/skills-hunt/types";
 import { useTheme } from "@/hooks/useTheme";
-import { reportError } from "lib/observability/report";
 import { getSkillsHuntAdminTokens, type SkillsHuntAdminTokens } from "./sha-shared";
 import { SkillsHuntRoundAwards } from "./sha-round-awards";
 
@@ -185,50 +184,6 @@ function rewardLabel(r: SkillsHuntRound): string {
   return `${r.awardPoolCredits} ServiceCredits pool · ${bar}${r.awardsSentAtIso ? " · sent" : ""}`;
 }
 
-// Manual leaderboard rebuild for a round. The leaderboard is a cached table that
-// only refreshes as a side effect of a review action, so this is the way to
-// recompute it after an out-of-band change (e.g. a data fix that rejected an
-// already-accepted submission) without waiting for the next review.
-function RebuildLeaderboardButton({ round, t }: { round: SkillsHuntRound; t: SkillsHuntAdminTokens }) {
-  const [state, setState] = useState<"idle" | "working" | "done" | "error">("idle");
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  async function rebuild() {
-    if (!window.confirm(`Rebuild the leaderboard for “${round.name}” from its current accepted submissions?`)) return;
-    setState("working");
-    setErrorMessage(null);
-    try {
-      const res = await fetch(`/api/skills-hunt/admin/rounds/${round.id}/leaderboard/rebuild`, {
-        method: "POST",
-        headers: { "x-ctf-csrf": "1" },
-      });
-      if (!res.ok) {
-        const body = (await res.json().catch(() => null)) as { message?: string } | null;
-        throw new Error(body?.message ?? "Unable to rebuild leaderboard.");
-      }
-      setState("done");
-    } catch (err) {
-      reportError(err, { area: "skills-hunt", op: "admin_round_leaderboard_rebuild" });
-      // The route's own reason (a 503's cause, or the gate's refusal) is what the admin can act on.
-      setErrorMessage(err instanceof Error ? err.message : "Unable to rebuild leaderboard.");
-      setState("error");
-    }
-  }
-
-  const label = state === "working" ? "Rebuilding…" : state === "done" ? "Rebuilt ✓" : state === "error" ? "Failed — retry" : "Rebuild leaderboard";
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 0 }}>
-      <button type="button" onClick={() => void rebuild()} disabled={state === "working"}
-        style={{ padding: "6px 14px", borderRadius: 8, background: "transparent", border: "1px solid rgba(255,255,255,0.16)", color: state === "error" ? "#EF4444" : t.SUBTLE, fontSize: 12, fontWeight: 600, cursor: state === "working" ? "not-allowed" : "pointer", opacity: state === "working" ? 0.6 : 1 }}>
-        {label}
-      </button>
-      {state === "error" && errorMessage && (
-        <div role="alert" style={{ color: "#EF4444", fontSize: 12, maxWidth: 260, overflowWrap: "anywhere" }}>{errorMessage}</div>
-      )}
-    </div>
-  );
-}
-
 export function SkillsHuntRoundManager({ rounds }: { rounds: SkillsHuntRound[] }) {
   const { theme } = useTheme();
   const t = getSkillsHuntAdminTokens(theme);
@@ -272,7 +227,6 @@ export function SkillsHuntRoundManager({ rounds }: { rounds: SkillsHuntRound[] }
                   <div style={{ fontSize: 11, color: t.MUTED, marginTop: 2 }}>{new Date(r.startsAtIso).toLocaleDateString()} → {new Date(r.endsAtIso).toLocaleDateString()}</div>
                 </div>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <RebuildLeaderboardButton round={r} t={t} />
                   <button type="button" onClick={() => { setEditingId(editingId === r.id ? null : r.id); setCreating(false); }}
                     style={{ padding: "6px 14px", borderRadius: 8, background: "transparent", border: "1px solid rgba(255,255,255,0.16)", color: t.SUBTLE, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
                     {editingId === r.id ? "Close" : "Edit"}
