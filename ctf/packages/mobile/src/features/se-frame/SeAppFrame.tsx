@@ -10,6 +10,8 @@ import { SeAvatar } from '../../components/shared/SeAvatar';
 import { SeTabBar } from './SeTabBar';
 import { SE_FONT } from './fonts';
 import { useInterfaceVersion } from './interface-version';
+import { TodayScreen } from './today/TodayScreen';
+import type { FeatureKey } from '../../navigation/screens';
 
 const TODAY_DATE = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
@@ -21,13 +23,12 @@ const TITLES: Record<SeTab, string> = {
   me: 'Me',
 };
 
-export function SeAppFrame({ onOpenAccount }: { onOpenAccount: () => void }) {
+export function SeAppFrame({ onOpenAccount, onOpen }: { onOpenAccount: () => void; onOpen: (_key: FeatureKey) => void }) {
   const t = seTheme();
   const s = useMemo(() => makeStyles(t), [t]);
   const { user } = useAuth();
   const { switchTo, saving, error } = useInterfaceVersion();
   const [tab, setTab] = useState<SeTab>('today');
-  const [definitionOpen, setDefinitionOpen] = useState(false);
 
   useEffect(() => {
     if (tab === 'today') return;
@@ -44,59 +45,14 @@ export function SeAppFrame({ onOpenAccount }: { onOpenAccount: () => void }) {
   return (
     <View style={s.frame}>
       <ScrollView contentContainerStyle={s.screen}>
-        <View style={s.header}>
-          {tab === 'today' ? <Text style={s.eyebrow}>{TODAY_DATE.format(new Date())}</Text> : null}
-          {tab === 'today' ? (
-            <Text accessibilityRole="header" style={s.title}>
-              Today in the{' '}
-              <Text
-                accessibilityRole="button"
-                accessibilityState={{ expanded: definitionOpen }}
-                onPress={() => setDefinitionOpen((value) => !value)}
-                style={s.term}
-              >
-                {SE_AVENHOOD}
-              </Text>
-            </Text>
-          ) : (
-            <Text accessibilityRole="header" style={s.title}>
-              {TITLES[tab]}
-            </Text>
-          )}
-          {tab === 'today' && definitionOpen ? <Text style={s.definition}>{SE_AVENHOOD_DEFINITION}</Text> : null}
-        </View>
+        <FrameHeader s={s} tab={tab} />
 
         {tab === 'me' ? (
-          <>
-            <View style={s.card}>
-              <View style={s.meRow}>
-                {user ? <SeAvatar accountId={user.id} size={56} /> : null}
-                <Text style={s.handle}>{handle}</Text>
-              </View>
-            </View>
-            <View style={s.card}>
-              <Text style={s.cardLabel}>About</Text>
-              <Text style={s.cardTitle}>The {SE_AVENHOOD}</Text>
-              <Text style={s.emptyText}>{SE_AVENHOOD_DEFINITION}</Text>
-              <Text style={s.emptyText}>{SE_AVEN_DEFINITION}</Text>
-            </View>
-            <View style={s.card}>
-              <Text style={s.cardLabel}>Settings</Text>
-              <Text style={s.emptyText}>You are using 3.1. You can go back to 3.0 at any time.</Text>
-              <View style={s.buttonRow}>
-                <SecondaryButton s={s} label="Back to 3.0" onPress={back} disabled={saving} />
-                <TouchableOpacity accessibilityRole="link" onPress={onOpenAccount} style={s.textLink}>
-                  <Text style={s.textLinkLabel}>Account and data</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </>
+          <MeTab s={s} user={user} handle={handle} onBack={back} saving={saving} onOpenAccount={onOpenAccount} />
+        ) : tab === 'today' ? (
+          user ? <TodayScreen t={t} accountId={user.id} onOpen={onOpen} /> : null
         ) : (
-          <View style={s.card}>
-            <Text style={s.emptyTitle}>This screen is still being built.</Text>
-            <Text style={s.emptyText}>Everything you use today is in 3.0, unchanged.</Text>
-            <SecondaryButton s={s} label="Back to 3.0" onPress={back} disabled={saving} />
-          </View>
+          <NotBuiltCard s={s} onBack={back} saving={saving} />
         )}
 
         {error ? (
@@ -111,6 +67,89 @@ export function SeAppFrame({ onOpenAccount }: { onOpenAccount: () => void }) {
 }
 
 type Styles = ReturnType<typeof makeStyles>;
+
+function FrameHeader({ s, tab }: { s: Styles; tab: SeTab }) {
+  const [definitionOpen, setDefinitionOpen] = useState(false);
+  if (tab !== 'today') {
+    return (
+      <View style={s.header}>
+        <Text accessibilityRole="header" style={s.title}>
+          {TITLES[tab]}
+        </Text>
+      </View>
+    );
+  }
+  return (
+    <View style={s.header}>
+      <Text style={s.eyebrow}>{TODAY_DATE.format(new Date())}</Text>
+      <Text accessibilityRole="header" style={s.title}>
+        Today in the{' '}
+        <Text
+          accessibilityRole="button"
+          accessibilityState={{ expanded: definitionOpen }}
+          onPress={() => setDefinitionOpen((value) => !value)}
+          style={s.term}
+        >
+          {SE_AVENHOOD}
+        </Text>
+      </Text>
+      {definitionOpen ? <Text style={s.definition}>{SE_AVENHOOD_DEFINITION}</Text> : null}
+    </View>
+  );
+}
+
+function MeTab({
+  s,
+  user,
+  handle,
+  onBack,
+  saving,
+  onOpenAccount,
+}: {
+  s: Styles;
+  user: { id: string } | null;
+  handle: string;
+  onBack: () => void;
+  saving: boolean;
+  onOpenAccount: () => void;
+}) {
+  return (
+    <>
+      <View style={s.card}>
+        <View style={s.meRow}>
+          {user ? <SeAvatar accountId={user.id} size={56} /> : null}
+          <Text style={s.handle}>{handle}</Text>
+        </View>
+      </View>
+      <View style={s.card}>
+        <Text style={s.cardLabel}>About</Text>
+        <Text style={s.cardTitle}>The {SE_AVENHOOD}</Text>
+        <Text style={s.emptyText}>{SE_AVENHOOD_DEFINITION}</Text>
+        <Text style={s.emptyText}>{SE_AVEN_DEFINITION}</Text>
+      </View>
+      <View style={s.card}>
+        <Text style={s.cardLabel}>Settings</Text>
+        <Text style={s.emptyText}>You are using 3.1. You can go back to 3.0 at any time.</Text>
+        <View style={s.buttonRow}>
+          <SecondaryButton s={s} label="Back to 3.0" onPress={onBack} disabled={saving} />
+          <TouchableOpacity accessibilityRole="link" onPress={onOpenAccount} style={s.textLink}>
+            <Text style={s.textLinkLabel}>Account and data</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </>
+  );
+}
+
+function NotBuiltCard({ s, onBack, saving }: { s: Styles; onBack: () => void; saving: boolean }) {
+  return (
+    <View style={s.card}>
+      <Text style={s.emptyTitle}>This screen is still being built.</Text>
+      <Text style={s.emptyText}>Everything you use today is in 3.0, unchanged.</Text>
+      <SecondaryButton s={s} label="Back to 3.0" onPress={onBack} disabled={saving} />
+    </View>
+  );
+}
 
 function SecondaryButton({ s, label, onPress, disabled }: { s: Styles; label: string; onPress: () => void; disabled: boolean }) {
   return (

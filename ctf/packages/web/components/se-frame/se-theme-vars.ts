@@ -19,6 +19,8 @@ export function seThemeVars(color?: SeThemeColor, mode?: SeThemeMode): CSSProper
     '--se-btn': t.btn,
     '--se-on-btn': t.onBtn,
     '--se-live': t.live,
+    '--se-live-badge': t.liveBadge,
+    '--se-on-live-badge': t.onLiveBadge,
   };
   for (const [kind, value] of Object.entries(t.kind)) vars[`--se-kind-${kind}`] = value;
   return vars as CSSProperties;

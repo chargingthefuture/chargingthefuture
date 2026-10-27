@@ -25,8 +25,8 @@ export type SeTodayRoom = {
     key: 'main' | 'weavers';
     name: string;
     live: boolean;
-    speaking: number;
-    listening: number;
+    members: number;
+    guests: number;
     href: string;
 };
 export type SeTodayBroadcast = {

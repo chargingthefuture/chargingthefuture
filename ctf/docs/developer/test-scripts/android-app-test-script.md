@@ -252,6 +252,16 @@ Expect a small landscape or cut-paper picture, never the photo, and the same pic
 3. On Me, tap **Account and data**, then come back; tap **Back to 3.0** and expect the Apps screen.
 4. Open the web app on the same account: it shows the same choice.
 
+## AN-7d — Today in 3.1
+
+1. On 3.1, open the app and wait for Today's cards, then close and reopen the app: the cards appear
+   at once from the saved copy, then refresh.
+2. Tap a card's text to open it in place; a check mark and "1 of N done" appear.
+3. Tap a card's button: a goal opens PeerProgramming in the app; a place to stay or a cohort opens
+   the web page in the browser.
+4. Use the chips, Copy link and Hide as on the web (AD-11); a hidden card stays hidden after reopening.
+5. Tap the Main Room card's button: Chyme opens in the app.
+
 ## AN-8 — Blocked members
 
 1. Open the **Blocked members** pill.

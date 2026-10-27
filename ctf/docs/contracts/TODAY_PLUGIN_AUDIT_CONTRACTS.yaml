@@ -1,0 +1,3 @@
+# Today is a read that writes nothing and changes nothing, so it emits no audit event; each source
+# keeps the audit events its own feature defines. Listed so the contract set is complete.
+auditEvents: []

@@ -33,8 +33,9 @@ export type SeTodayRoom = {
   key: 'main' | 'weavers';
   name: string;
   live: boolean;
-  speaking: number;
-  listening: number;
+  // Signed-in members in the room, and signed-out guests listening.
+  members: number;
+  guests: number;
   href: string;
 };
 
