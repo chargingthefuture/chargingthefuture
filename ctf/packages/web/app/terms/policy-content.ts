@@ -12,7 +12,7 @@ export const SERVICE_NAME = 'Charging the Future';
 export const CONTACT_EMAIL = 'ctf.connected070@slmails.com';
 export const GOVERNING_LAW = 'the State of Delaware, United States';
 // Last updated / effective date for both documents.
-export const EFFECTIVE_DATE = 'July 1, 2026';
+export const EFFECTIVE_DATE = 'October 27, 2026';
 
 export type PolicyBlock =
   | { type: 'p'; text: string }
@@ -376,7 +376,7 @@ export const PRIVACY_DOCUMENT: PolicyDocument = {
           items: [
             'Clerk — sign-in and account identity. Receives your email, name, username, and session/device information.',
             'GetStream — chat and video for transaction-tied and group conversations. Receives the messages and the identifiers of the people in a conversation.',
-            'Sentry — error monitoring so we can find and fix problems. Configured not to receive personal information from you.',
+            'Sentry — error monitoring so we can find and fix problems. Configured not to receive personal information from you. For some visits, and for any visit where something breaks, it also records how the page moved: every word, every field you type in, and every picture and video are hidden before the recording leaves your device, so it shows where things were tapped and what failed, never what was on screen.',
             'Hosting and infrastructure (our application host, our database, and our self-hosted financial ledger for ServiceCredits and any real-money earnings or payouts) and, if you turn on notifications, the push-delivery service for your device.',
           ],
         },
