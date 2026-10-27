@@ -28,7 +28,7 @@ function ReceiveButton({ handle }: { handle: string | null }) {
     void navigator.clipboard
       .writeText(handle)
       .then(() => setNote(W.receiveCopied(handle)))
-      .catch(() => setNote(handle));
+      .catch((error: unknown) => setNote(W.receiveCopyFailed(handle, error instanceof Error ? error.message : 'the browser refused')));
   };
   return (
     <>
@@ -52,7 +52,11 @@ function CreditsCard({ handle }: { handle: string | null }) {
         {W.credits}
       </p>
       {credits.kind === 'ready' ? <p className={styles.big}>{W.creditsUnit(credits.available)}</p> : null}
-      {credits.kind === 'error' ? <p className={styles.text}>{W.creditsFailed}</p> : null}
+      {credits.kind === 'error' ? (
+        <p className={styles.text}>
+          {W.creditsFailed} {credits.message}
+        </p>
+      ) : null}
       <div className={styles.row}>
         <Link href={`${SE_ME_LINKS.credits}?tab=send`} className={styles.pill}>
           {W.send}

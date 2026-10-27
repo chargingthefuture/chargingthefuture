@@ -22,6 +22,7 @@ import {
 } from '@ctf/shared';
 import { authedFetchJson } from '../../../auth/authedFetch';
 import { SeAvatar } from '../../../components/shared/SeAvatar';
+import { reportError } from '../../../observability/report';
 import type { FeatureKey } from '../../../navigation/screens';
 import { openTodayLink } from '../today/openTodayLink';
 import { SE_FONT } from '../fonts';
@@ -29,7 +30,7 @@ import { SE_FONT } from '../fonts';
 type Styles = ReturnType<typeof makeStyles>;
 type Go = (_href: string) => void;
 
-type CreditsState = { kind: 'loading' } | { kind: 'ready'; available: number } | { kind: 'error' };
+type CreditsState = { kind: 'loading' } | { kind: 'ready'; available: number } | { kind: 'error'; message: string };
 
 function useCredits(): CreditsState {
   const [state, setState] = useState<CreditsState>({ kind: 'loading' });
@@ -41,8 +42,9 @@ function useCredits(): CreditsState {
         if (typeof available !== 'number') throw new Error('The wallet answer had no balance.');
         if (active) setState({ kind: 'ready', available });
       })
-      .catch(() => {
-        if (active) setState({ kind: 'error' });
+      .catch((error: unknown) => {
+        reportError(error, { area: 'se-frame', op: 'me_credits' });
+        if (active) setState({ kind: 'error', message: error instanceof Error ? error.message : 'The request did not complete.' });
       });
     return () => {
       active = false;
@@ -64,13 +66,15 @@ function CreditsCard({ s, go, handle }: { s: Styles; go: Go; handle: string | nu
   const [note, setNote] = useState<string | null>(null);
   const receive = () => {
     if (!handle) return setNote(W.receiveNoHandle);
-    void Clipboard.setStringAsync(handle).then(() => setNote(W.receiveCopied(handle)));
+    void Clipboard.setStringAsync(handle)
+      .then(() => setNote(W.receiveCopied(handle)))
+      .catch((error: unknown) => setNote(W.receiveCopyFailed(handle, error instanceof Error ? error.message : 'the phone refused')));
   };
   return (
     <View style={s.card}>
       <Text style={s.label}>{W.credits}</Text>
       {credits.kind === 'ready' ? <Text style={s.big}>{W.creditsUnit(credits.available)}</Text> : null}
-      {credits.kind === 'error' ? <Text style={s.text}>{W.creditsFailed}</Text> : null}
+      {credits.kind === 'error' ? <Text style={s.text}>{`${W.creditsFailed} ${credits.message}`}</Text> : null}
       <View style={s.row}>
         <Pill s={s} label={W.send} onPress={() => go(`${SE_ME_LINKS.credits}?tab=send`)} />
         <Pill s={s} label={W.history} onPress={() => go(`${SE_ME_LINKS.credits}?tab=wallet`)} />
