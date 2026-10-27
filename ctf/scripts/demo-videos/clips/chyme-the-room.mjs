@@ -5,7 +5,7 @@ export default {
   title: 'Chyme: the room',
   steps: [
     {
-      say: 'Chyme is a live audio room. Members listen, speak, and chat together in real time.',
+      say: 'Chyme is a live audio room. Members listen and speak together in real time.',
       do: async ({ page, app, button }) => {
         await page.goto(app('/apps/chyme'));
         await button('Join Room').waitFor({ timeout: 20_000 });

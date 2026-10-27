@@ -32,54 +32,6 @@ contracts:
     idempotency: true
 
   - pluginId: chyme
-    command: chyme.messages.list
-    version: 1.0.0
-    description: Read bounded Chyme message history for the deterministic room.
-    inputSchema:
-      limit:
-        type: number
-        required: false
-        minimum: 1
-        maximum: 100
-    outputSchema:
-      roomKey:
-        type: string
-      messages:
-        type: array
-    dataAccess:
-      - chyme_rooms
-      - chyme_service_profiles
-      - chyme_room_members
-      - chyme_messages
-    purpose: social_audio_chat_read
-    retentionClass: communication_medium_lived
-    idempotency: true
-
-  - pluginId: chyme
-    command: chyme.message.send
-    version: 1.0.0
-    description: Send a trimmed Chyme chat message after policy and size validation.
-    inputSchema:
-      text:
-        type: string
-        required: true
-        minLength: 1
-        maxLength: 1000
-    outputSchema:
-      ok:
-        type: boolean
-      message:
-        type: object
-    dataAccess:
-      - chyme_rooms
-      - chyme_service_profiles
-      - chyme_room_members
-      - chyme_messages
-    purpose: social_audio_chat_write
-    retentionClass: communication_medium_lived
-    idempotency: false
-
-  - pluginId: chyme
     command: chyme.call.join
     version: 1.2.0
     description: Provision Stream token and channel membership for Chyme room join flow. Refused (409 CHYME_ROOM_FULL) when the room already holds as many members as the Stream quota policy's cap allows; checked before the Stream mint and again under a lock on the room row. Credits the presence gap to the Stream Video minute meter. When CHYME_GUEST_STREAM_ROLE is set, gives the joiner the Stream call role the room's speak mode calls for (the listener role in hand-raise mode unless let speak or an admin; the default role otherwise); a Stream failure there is reported and does not turn the join away.
@@ -389,38 +341,6 @@ contracts:
       - chyme_guest_listeners
     purpose: social_audio_public_listen
     retentionClass: derived_short_lived
-    idempotency: true
-
-  - pluginId: chyme
-    command: chyme.public.messages.read
-    version: 1.0.0
-    description: Public, unauthenticated, read-only (GET /api/chyme/public/messages). The default room's most recent chat messages, only while the room is live; an empty list otherwise. Each message carries the display handle and never the member's account id. Per-IP rate limited.
-    inputSchema:
-      limit:
-        type: number
-        required: false
-        default: 50
-        minimum: 1
-        maximum: 100
-    outputSchema:
-      ok:
-        type: boolean
-      isLive:
-        type: boolean
-      messages:
-        type: array
-        items:
-          id: string
-          username: string | null
-          handle: string (`@username`, or `user-` plus the first 8 characters of the account id when the member has no username)
-          text: string
-          sentAtIso: string
-    dataAccess:
-      - chyme_rooms
-      - chyme_room_members
-      - chyme_messages
-    purpose: social_audio_public_listen
-    retentionClass: communication_medium_lived
     idempotency: true
 
   - pluginId: chyme
