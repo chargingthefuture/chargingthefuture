@@ -273,6 +273,7 @@ Expect a small landscape or cut-paper picture, never the photo, and the same pic
 8. Open Activity and run AD-15 as on the web; an item for a part of the app the Android app does not
    carry opens in the browser.
 9. Open People and run AD-16 as on the web; Profile and Request a quote open in the browser.
+10. Today opens with "Days the Avenhood has won", as on the web (AD-17).
 
 ## AN-8 — Blocked members
 

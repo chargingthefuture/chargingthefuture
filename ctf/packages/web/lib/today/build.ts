@@ -6,6 +6,7 @@ import { cohortOffers, placeOffers } from './sources-offers';
 import { announcementStories, inviteStories, surveyCard, whatWorksStory } from './sources-stories';
 import { broadcast, missionCard, moodCard, numbersCard, replayCards, wantedCard } from './sources-live';
 import { mainRoom, nextTalk, weaversRoom } from './sources-rooms';
+import { readDaysWon } from 'lib/measures/action-minutes';
 
 // The Today read. Every source runs at once and on its own: one that fails leaves its cards out,
 // is reported, and is named in `unavailable` so the screen can say what is missing instead of
@@ -45,12 +46,13 @@ export async function buildToday(viewer: TodayViewer, now = new Date()): Promise
     { name: 'skills-hunt-mission', read: () => missionCard(now) },
   ];
 
-  const [cardLists, live, room, weavers] = await Promise.all([
+  const [cardLists, live, room, weavers, daysWon] = await Promise.all([
     Promise.all(sources.map((source) => settle(source.name, source.read, unavailable))),
     settle<SeTodayBroadcast | null>('beacon', () => broadcast(), unavailable),
     settle<SeTodayRoom>('chyme', () => mainRoom(nextTalk(now)), unavailable),
     // Reported but never named on screen: a member who may not enter is not told the room exists.
     settle<SeTodayRoom | null>('weavers', () => weaversRoom(viewer), []),
+    settle('days-won', () => readDaysWon(now), unavailable),
   ]);
 
   const cards = cardLists
@@ -61,6 +63,7 @@ export async function buildToday(viewer: TodayViewer, now = new Date()): Promise
   return {
     generatedAtIso: now.toISOString(),
     presence: null,
+    daysWon: daysWon ?? null,
     broadcast: live ?? null,
     rooms: [room, weavers].filter((item): item is SeTodayRoom => Boolean(item)),
     cards,

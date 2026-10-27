@@ -9,7 +9,7 @@
 
 | | |
 |---|---|
-| **Surface** | `/account/data` (Your Data & Privacy), `/account` for AD-9 and AD-10, the 3.1 Today screen for AD-11, rooms in 3.1 for AD-12, + New for AD-13, Me for AD-14, Activity for AD-15 and People for AD-16 |
+| **Surface** | `/account/data` (Your Data & Privacy), `/account` for AD-9 and AD-10, the 3.1 Today screen for AD-11, rooms in 3.1 for AD-12, + New for AD-13, Me for AD-14, Activity for AD-15, People for AD-16 and Days won for AD-17 |
 | **Visibility** | Any signed-in identity (including unlock-pending) |
 | **Roles to test** | member |
 | **Surfaces** | web (phone-width layout) |
@@ -338,4 +338,18 @@ skill shows once. Step 2 keeps only people offering something, then everyone aga
 to people with that skill in their name, headline, job title or listing. Step 3 opens the Foundation
 provider page and the Directory profile. Request a quote never shows for someone offering nothing.
 Step 4 shows the route's refusal reason instead of any person.
+**Result:** web ☐ — notes:
+
+## AD-17 · Days won, and the measures on Adoption
+
+**Role:** two approved members; an admin · **Precondition:** on 3.1.
+**Steps:**
+1. Open Today and note "Days the Avenhood has won".
+2. Both members join the Main Room and stay 20 minutes. Then reload Today.
+3. As the admin, open `/admin/adoption` and read "Days won and retention". Tap **Copy as text**.
+**Expected:** Step 1 shows the total and "N this week. A day won is 8 hours members spent together
+in rooms and calls, or helping with each other's tasks." Step 2 raises the total by about 40 minutes
+÷ 480 (0.1 after rounding). Step 3 shows Days won, Retained (with the share and the 20% target),
+Came back, Every day and time to unlock as counts only, with no member named; Copy as text pastes the
+same lines. A failed read shows "Could not read the measures:" with the reason.
 **Result:** web ☐ — notes:

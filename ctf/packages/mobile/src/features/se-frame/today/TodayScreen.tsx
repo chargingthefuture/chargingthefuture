@@ -1,5 +1,5 @@
 // Today in 3.1 on Android, the copy of the web's today-screen.tsx: the broadcast while it is live,
-// the rooms, then the day's cards newest first. The done count stays hidden until the member
+// Days won, the rooms, then the day's cards newest first. The done count stays hidden until the member
 // has opened a card.
 
 import React, { useState } from 'react';
@@ -8,7 +8,9 @@ import {
   SE_ROOM_MAIN_AUDIENCE,
   SE_ROOM_WEAVERS_AUDIENCE,
   SE_ROOM_WORDS_MAIN,
+  SE_DAYS_WON_TITLE,
   SE_TODAY_FILTERS,
+  seDaysWonLines,
   seRoomPeopleLine,
   seTalkLine,
   seTodayView,
@@ -50,10 +52,22 @@ function RoomCard({ t, room }: { t: SeThemeTokens; room: SeTodayRoom }) {
 
 type Styles = ReturnType<typeof makeStyles>;
 
+function DaysWonCard({ s, daysWon }: { s: Styles; daysWon: NonNullable<SeToday['daysWon']> }) {
+  const lines = seDaysWonLines(daysWon);
+  return (
+    <View style={s.daysWon} accessibilityLabel={SE_DAYS_WON_TITLE}>
+      <Text style={s.daysWonLabel}>{SE_DAYS_WON_TITLE}</Text>
+      <Text style={s.daysWonBig}>{lines.big}</Text>
+      <Text style={s.daysWonSmall}>{lines.small}</Text>
+    </View>
+  );
+}
+
 function LiveCards({ t, s, today, go }: { t: SeThemeTokens; s: Styles; today: SeToday | null; go: (_href: string) => void }) {
   const broadcast = today?.broadcast;
   return (
     <>
+      {today?.daysWon ? <DaysWonCard s={s} daysWon={today.daysWon} /> : null}
       {broadcast?.live ? (
         <View style={s.roomCard} accessibilityLabel="Live broadcast">
           <View style={s.row}>
@@ -153,6 +167,10 @@ export function TodayScreen({ t, accountId, onOpen }: { t: SeThemeTokens; accoun
 
 function makeStyles(t: SeThemeTokens) {
   return StyleSheet.create({
+    daysWon: { gap: 2, padding: 16, borderRadius: 20, backgroundColor: t.hero },
+    daysWonLabel: { fontSize: 13, color: t.onHero, fontFamily: SE_FONT.sansBold },
+    daysWonBig: { fontSize: 40, lineHeight: 44, color: t.onHero, fontFamily: SE_FONT.serif },
+    daysWonSmall: { fontSize: 14, lineHeight: 20, color: t.onHero, fontFamily: SE_FONT.sans },
     roomCard: { gap: 10, padding: 16, borderRadius: 20, backgroundColor: t.card, borderWidth: 1.5, borderColor: t.line, boxShadow: `0px 3px 0px ${t.line}` },
     row: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 },
     liveBadge: { paddingVertical: 4, paddingHorizontal: 9, borderRadius: 999, overflow: 'hidden', backgroundColor: t.liveBadge, color: t.onLiveBadge, fontSize: 11, letterSpacing: 1.1, fontFamily: SE_FONT.sansBold },

@@ -1,18 +1,30 @@
 'use client';
 
 import { useState } from 'react';
-import { SE_TODAY_FILTERS, seTodayView, type SeToday, type SeTodayFilter } from '@ctf/shared';
+import { SE_DAYS_WON_TITLE, SE_TODAY_FILTERS, seDaysWonLines, seTodayView, type SeToday, type SeTodayFilter } from '@ctf/shared';
 import { BroadcastCard, RoomCard } from './room-card';
 import { TodayCard } from './today-card';
 import { useToday, type TodayMarks } from './use-today';
 import styles from './today.module.css';
 
-// Today in 3.1: the broadcast while it is live, the Main Room, then the day's cards newest first.
+// Today in 3.1: Days won, the broadcast while it is live, the rooms, then the day's cards newest first.
 // What a filter shows and when the done count appears is shared with Android (seTodayView).
+
+function DaysWonCard({ daysWon }: { daysWon: NonNullable<SeToday['daysWon']> }) {
+  const lines = seDaysWonLines(daysWon);
+  return (
+    <section aria-label={SE_DAYS_WON_TITLE} className={styles.daysWon}>
+      <span className={styles.daysWonLabel}>{SE_DAYS_WON_TITLE}</span>
+      <span className={styles.daysWonBig}>{lines.big}</span>
+      <span className={styles.daysWonSmall}>{lines.small}</span>
+    </section>
+  );
+}
 
 function LiveCards({ today }: { today: SeToday | null }) {
   return (
     <>
+      {today?.daysWon ? <DaysWonCard daysWon={today.daysWon} /> : null}
       {today?.broadcast?.live ? <BroadcastCard broadcast={today.broadcast} /> : null}
       {today?.rooms.map((room) => <RoomCard key={room.key} room={room} />)}
     </>
