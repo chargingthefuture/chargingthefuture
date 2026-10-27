@@ -9,7 +9,7 @@
 
 | | |
 |---|---|
-| **Surface** | `/account/data` (Your Data & Privacy), and `/account` for AD-9 |
+| **Surface** | `/account/data` (Your Data & Privacy), and `/account` for AD-9 and AD-10 |
 | **Visibility** | Any signed-in identity (including unlock-pending) |
 | **Roles to test** | member |
 | **Surfaces** | web (phone-width layout) |
@@ -207,4 +207,21 @@ instead of saying the sign-in is gone. The leftover account is cleared through t
 member gets the same pattern in every place and after a reload; the second member's differs. Clerk's
 menu and Manage account show no photo and no upload or remove control. The Identity card reads
 "Your name, username, and email".
+
+## AD-10 · Switch to 3.1 and back to 3.0
+
+**Role:** member · **Precondition:** signed in and approved, on 3.0.
+**Steps:**
+1. Open `/account` and find the Settings card. Tap **Switch to 3.1**.
+2. On the home screen, tap each tab along the bottom: Today, People, the round + button, Activity, Me.
+3. Press the browser's back button after moving between two tabs.
+4. On Today, tap the word **Avenhood** in the title, then tap it again. On Me, read the About card.
+5. Open `/apps/directory/invites` and one invite's page from it, then come back to `/`.
+6. On the Me tab, tap **Back to 3.0**.
+**Expected:** Step 1 lands on the 3.1 home: forest green and gold, dark, the date above "Today in the
+Avenhood", and the tab bar. Each tab shows its title; Me shows your picture, your handle and Back to 3.0, and the
+others say the screen is still being built. The address carries the tab (`/?tab=people`), and back
+returns to the tab before. Tapping Avenhood opens and closes its definition under the title; the
+About card on Me shows the same definition and what an Aven is. The invite wall and the invite page open and work as before. Back to 3.0
+returns to the 3.0 home. Signing in on another device or the Android app shows the same choice.
 **Result:** web ☐ — notes:

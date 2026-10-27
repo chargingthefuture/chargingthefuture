@@ -17,7 +17,7 @@ page: half an hour a day, given to each other, counted as days won back together
 | Word | Meaning |
 | --- | --- |
 | Skills Economy | The app |
-| Avenhood | The community, and the idea: a distributed peoplehood connected across borders, trading skills and building lives beyond exploitation, without waiting for the world to become safe first (working definition) |
+| Avenhood | The community, and the idea: "A distributed peoplehood of people connected across borders, trading skills and building lives beyond exploitation—without waiting for the world to become safe first." The app's text is `SE_AVENHOOD_DEFINITION` in `ctf/packages/shared/src/design/se-words.ts` |
 | Aven | One member |
 | System Architect | The owner's title, and the label on every admin entry the owner sees. Route names in code stay |
 | One Percent | The paid tier only. Never a measure of time |
@@ -25,6 +25,11 @@ page: half an hour a day, given to each other, counted as days won back together
 Home screen title: "Today in the Avenhood". Days won card: "Days the Avenhood has won". Presence:
 "3 Avens here". Me: "Aven since June 2026". Signed-out hero: "Skills Economy is where the Avenhood
 meets", ending with the mission line. Never "family" or "home" as a promise.
+
+The definition is in the app in three places, all read from `se-words.ts`: tapping "Avenhood" in the
+Today title opens it in place; the About card on Me carries it with "An Aven is one member of the
+Avenhood."; and the signed-out Today, when it is built, opens with it as its first line.
+lagatos.com is the address only and carries no meaning of its own.
 
 ## Screens
 
@@ -141,8 +146,9 @@ Unlock stops being the gate for most of the app.
 | Commons | Dissolves into Today. Announcements become one pinned card; @comic becomes Ask the architect; the gated channel becomes the Weavers room |
 | Direct Lines | The name and separate chat screens go; conversations open inside their cards |
 | PeerProgramming | Goals and tasks are Ask cards; board columns go; cohorts show as a "with you this week" card |
-| SocketRelay, LightHouse, Mutual Time, TrustTransport | Cards in Today, full features opened in place; tiles in Me |
+| SocketRelay, LightHouse, Mutual Time, TrustTransport | Cards in Today, full features opened in place; tiles in Me. LightHouse listings are sage Offer cards and the Me tile is "A place to stay" |
 | Foundation | Contact route for People; provider side in Me |
+| Directory invite wall | Unchanged and still working: `/apps/directory/invites`, each invite's own page, the sign-in rule in `lib/directory/invite-access.ts`, and the public feed `/api/directory/invites/public` that the blog's invite row and the landing page read. Every address blog posts and Quora answers link to keeps answering. New invites also show as brass Story cards in Today, opening the invite's page |
 | Directory, SkillsHunt | People screen; Wanted card leads to the current round; the scout leaderboard is removed with its code and data; missions stay; each member sees their own nomination count |
 | Workforce, GDP | Our numbers card and tile; full report one tap away |
 | Skills Taxonomy | No page; the list behind prompts, search and matches |

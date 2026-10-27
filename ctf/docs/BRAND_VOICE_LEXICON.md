@@ -55,6 +55,10 @@ This document is the canonical source of truth for brand language across:
 - Survivors is the default user descriptor in UI and editorial content.
 - Victims is only allowed in legal, statutory, or externally quoted contexts.
 - Prefer named capabilities over generic labels — never a bare "Chat".
+- **Avenhood** (3.1.0): the community, and the idea. Definition, word for word as the app shows it: "A distributed peoplehood of people connected across borders, trading skills and building lives beyond exploitation—without waiting for the world to become safe first." Source of the text: `ctf/packages/shared/src/design/se-words.ts`. Capital A; "the Avenhood".
+- **Aven** (3.1.0): one member of the Avenhood. Plural Avens ("3 Avens here").
+- **System Architect** (3.1.0): the owner's title, and the label on admin entries the owner sees. Route names in code stay `admin`.
+- **lagatos.com**: the planned address only. It is not a name for the community and carries no meaning; do not write a translation or a gloss for it.
 - **Commons**: the homepage community chat — the shared, many-voices space where members post to everyone. Use "the Commons" (capital C) for the home chat surface; its nav uses a community (people) icon.
 - **Direct Line**: the private, one-to-one chat paired with a single plugin transaction — a LightHouse match, a SocketRelay request, a TrustTransport trip, a Foundation quote. Use "Direct Line" for that paired chat; its nav uses a single-bubble icon. ("LightHouse Direct Line" etc. is fine when the plugin needs naming.)
 - Group rooms are not a Direct Line: a many-people room (for example Chyme's audio-room chat) stays "Room Chat", since Direct Line means one-to-one.

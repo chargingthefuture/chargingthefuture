@@ -20,7 +20,10 @@ import {
   Inter_900Black,
 } from '@expo-google-fonts/inter';
 // The wordmark's serif on the shell bar, shared with the project's websites (ShellChrome.tsx).
-import { Newsreader_500Medium } from '@expo-google-fonts/newsreader';
+import { Newsreader_500Medium, Newsreader_600SemiBold } from '@expo-google-fonts/newsreader';
+// The 3.1 screens' text face (src/features/se-frame/fonts.ts).
+import { DMSans_400Regular, DMSans_600SemiBold, DMSans_700Bold } from '@expo-google-fonts/dm-sans';
+import { InterfaceVersionProvider, SeAppFrame, useInterfaceVersion } from './src/features/se-frame';
 import { AuthProvider, useAuth } from './src/auth/auth-context';
 import { ThemeProvider, useTheme } from './src/theme';
 import { LoadingScreen } from './src/components/shared/LoadingScreen';
@@ -73,6 +76,10 @@ export default function App() {
     Inter_800ExtraBold,
     Inter_900Black,
     Newsreader_500Medium,
+    Newsreader_600SemiBold,
+    DMSans_400Regular,
+    DMSans_600SemiBold,
+    DMSans_700Bold,
   });
 
   if (!fontsLoaded) {
@@ -83,9 +90,11 @@ export default function App() {
     <SafeAreaProvider>
       <AuthProvider>
         <ThemeProvider>
-          <SystemBarInsets>
-            <AppShell />
-          </SystemBarInsets>
+          <InterfaceVersionProvider>
+            <SystemBarInsets>
+              <AppShell />
+            </SystemBarInsets>
+          </InterfaceVersionProvider>
         </ThemeProvider>
       </AuthProvider>
     </SafeAreaProvider>
@@ -190,6 +199,22 @@ function SignedOutInvites({ signedIn, selected }: { signedIn: boolean; selected:
   return <InvitesPopup />;
 }
 
+function showsNewFrame(isAuthenticated: boolean, interfaceVersion: string, selected: FeatureKey): boolean {
+  return isAuthenticated && interfaceVersion === '3.1' && selected === 'apps';
+}
+
+// The 3.1 home, with the Foundation call controller above it so an incoming call still rings.
+function NewFrameShell({ user, onOpenAccount }: { user: { id?: string; username?: string | null } | null; onOpenAccount: () => void }) {
+  return (
+    <View key={user?.id ?? 'signed-out'} style={styles.container}>
+      <FoundationCallController signedIn displayName={callDisplayName(user)}>
+        <SeAppFrame onOpenAccount={onOpenAccount} />
+      </FoundationCallController>
+      <StatusBar style="light" />
+    </View>
+  );
+}
+
 function AppShell() {
   const { isLoading, isAuthenticated, user } = useAuth();
   const { tokens } = useTheme();
@@ -205,6 +230,7 @@ function AppShell() {
   }, [selected]);
 
   const openAccount = useCallback(() => open('account'), [open]);
+  const { version: interfaceVersion } = useInterfaceVersion();
   const { unlockGate, refreshUnlockGate } = useUnlockGate(isLoading, isAuthenticated, isAdmin);
 
   const featureView = useMemo(() => {
@@ -249,6 +275,12 @@ function AppShell() {
   // re-runs the check so an approval mid-session lets them through.
   if (unlockGate.walled) {
     return <Unlock onStatusChanged={refreshUnlockGate} onGoHome={() => void refreshUnlockGate()} showSignOut />;
+  }
+
+  // A member who switched to 3.1 sees the new frame on the home screen, as the web does at `/`. The
+  // account screens it links to keep the 3.0 shell for now.
+  if (showsNewFrame(isAuthenticated, interfaceVersion, selected)) {
+    return <NewFrameShell user={user} onOpenAccount={openAccount} />;
   }
 
   return (

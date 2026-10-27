@@ -22,6 +22,7 @@ import { useTheme, type ThemeTokens } from '../../theme';
 import { interFamily } from '../../components/ui';
 import { UserMenuButton } from '../../components/shared/SessionControls';
 import { getAccountTokens, radius, type AccountTokens } from './tokens';
+import { useInterfaceVersion } from '../se-frame/interface-version';
 
 function useOwnTrust(): TrustPeerEvidenceItem[] | null {
   const [evidence, setEvidence] = useState<TrustPeerEvidenceItem[] | null>(null);
@@ -43,11 +44,13 @@ export function AccountHub({
   onOpenBlocks,
   onOpenVerification,
   onOpenRecurring,
+  onOpenHome,
 }: {
   onOpenData: () => void;
   onOpenBlocks: () => void;
   onOpenVerification: () => void;
   onOpenRecurring: () => void;
+  onOpenHome: () => void;
 }) {
   const { user } = useAuth();
   const evidence = useOwnTrust();
@@ -141,11 +144,50 @@ export function AccountHub({
           last
         />
       </View>
+
+      <InterfaceSwitchCard s={s} tok={tok} onSwitched={onOpenHome} />
     </ScrollView>
   );
 }
 
 type Styles = ReturnType<typeof makeStyles>;
+
+// Settings: the switch into 3.1, the social redesign, as on the web hub
+// (components/account/interface-switch-section.tsx). The way back is on the Me tab inside 3.1.
+function InterfaceSwitchCard({ s, tok, onSwitched }: { s: Styles; tok: AccountTokens; onSwitched: () => void }) {
+  const { switchTo, saving, error } = useInterfaceVersion();
+  const press = async () => {
+    if (await switchTo('3.1')) onSwitched();
+  };
+  return (
+    <View style={s.card}>
+      <Text style={s.sectionLabel}>Settings</Text>
+      <View style={[s.linkRow, { alignItems: 'flex-start' }]}>
+        <View>
+          <Sparkles size={18} color={tok.BRAND} />
+        </View>
+        <View style={s.linkBody}>
+          <Text style={s.linkTitle}>Try Skills Economy 3.1</Text>
+          <Text style={s.linkDesc}>The new look is still being built. You can go back to 3.0 at any time from the Me tab.</Text>
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityState={{ disabled: saving }}
+            disabled={saving}
+            onPress={() => void press()}
+            style={[s.switchButton, saving ? { opacity: 0.6 } : null]}
+          >
+            <Text style={s.switchLabel}>{saving ? 'Switching…' : 'Switch to 3.1'}</Text>
+          </TouchableOpacity>
+          {error ? (
+            <Text accessibilityRole="alert" style={[s.linkDesc, { color: tok.TEXT, marginTop: 8 }]}>
+              {error}
+            </Text>
+          ) : null}
+        </View>
+      </View>
+    </View>
+  );
+}
 
 function AccountLinkRow({
   s,
@@ -228,5 +270,17 @@ function makeStyles(t: ThemeTokens, tok: AccountTokens) {
     linkBody: { flex: 1, minWidth: 0 },
     linkTitle: { fontSize: 14, fontFamily: interFamily('600'), color: tok.TEXT },
     linkDesc: { fontSize: 12, lineHeight: 18, fontFamily: interFamily('400'), color: tok.SUBTLE },
+    switchButton: {
+      alignSelf: 'flex-start',
+      marginTop: 10,
+      minHeight: 44,
+      paddingHorizontal: 16,
+      justifyContent: 'center',
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: tok.BORDER,
+      backgroundColor: tok.SURFACE,
+    },
+    switchLabel: { fontSize: 14, fontFamily: interFamily('600'), color: tok.TEXT },
   });
 }
