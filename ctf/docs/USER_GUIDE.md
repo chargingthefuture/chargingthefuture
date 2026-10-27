@@ -283,13 +283,13 @@ Open a SkillsHunt round to nominate a survivor. Fill in their display name, shor
 
 Your submissions are checked for safety and accuracy. The system verifies the Quora profile URL is live, and one person's Quora profile can only have one active nomination across all rounds, so the same survivor is not nominated twice.
 
-View the leaderboard to see scouts ranked by accepted points. There is one board. The Missions tab shows the round's shared goals — nominate three people, find someone in a sector that is short, and so on — with a progress bar that is the community's, not yours, and completing one adds its bonus points to your score. You'll get notifications when your submissions are accepted or rejected, when a mission completes, and for reaching milestones.
+The My Finds tab shows your own nominations and your totals; nobody is ranked against anybody else. The Missions tab shows the round's shared goals — nominate three people, find someone in a sector that is short, and so on — with a progress bar that is the community's, not yours, and completing one adds its bonus points to your round score. You'll get notifications when your submissions are accepted or rejected, when a mission completes, and for reaching milestones.
 
 **How to use it**
 
 1. Go to SkillsHunt and pick an active round.
 2. Click or tap the Scout tab and fill out the nomination form with the survivor's name, bio, Quora URL, and skills.
-3. Switch to the Leaderboard tab to see ranked submissions and your progress.
+3. Switch to the My Finds tab to see your nominations and your totals.
 
 ## Workforce
 

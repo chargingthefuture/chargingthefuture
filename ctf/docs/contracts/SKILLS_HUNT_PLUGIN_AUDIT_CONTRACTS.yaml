@@ -55,7 +55,6 @@ auditEvents:
       reason: policy_reason_code
     dataClassesAccessed:
       - skills_hunt_submissions
-      - skills_hunt_leaderboard
       - skills_hunt_mission_progress
     targetContext:
       workspaceId: workspace_identifier
@@ -78,33 +77,10 @@ auditEvents:
       reason: policy_reason_code
     dataClassesAccessed:
       - skills_hunt_submissions
-      - skills_hunt_leaderboard
       - skills_hunt_mission_progress
     targetContext:
       workspaceId: workspace_identifier
       submissionId: submission_identifier
-    requestId: request_identifier
-    traceId: trace_identifier
-    result:
-      status: success_or_failure
-      errorCategory: none_or_error_class
-
-  - eventId: uuid
-    timestamp: rfc3339
-    actorId: principal
-    pluginId: skills-hunt
-    command: skills-hunt.leaderboard.rebuild
-    commandVersion: 1.0.0
-    purpose: campaign_governance
-    policyDecision:
-      status: allow_or_deny
-      reason: policy_reason_code
-    dataClassesAccessed:
-      - skills_hunt_leaderboard
-      - skills_hunt_submissions
-    targetContext:
-      workspaceId: workspace_identifier
-      roundId: round_identifier
     requestId: request_identifier
     traceId: trace_identifier
     result:
@@ -213,7 +189,6 @@ auditEvents:
       reason: policy_reason_code
     dataClassesAccessed:
       - skills_hunt_submissions
-      - skills_hunt_leaderboard
       - skills_hunt_rare_skills_lookup
     targetContext:
       workspaceId: workspace_identifier
@@ -281,7 +256,6 @@ auditEvents:
     dataClassesAccessed:
       - skills_hunt_rounds
       - skills_hunt_round_awards
-      - skills_hunt_leaderboard
     targetType: round
     targetId: round_identifier
     # One row per press of Send. The per-scout mints are recorded separately by
@@ -290,28 +264,6 @@ auditEvents:
       sentNow: rows_sent_by_this_press
       failed: rows_that_failed_this_press
       plannedCredits: total_credits_in_the_fixed_split
-    requestId: request_identifier
-    traceId: trace_identifier
-    result:
-      status: success_or_failure
-      errorCategory: none_or_error_class
-
-  - eventId: uuid
-    timestamp: rfc3339
-    actorId: principal
-    pluginId: skills-hunt
-    command: skills-hunt.leaderboard.list
-    commandVersion: 1.0.0
-    purpose: progress_visibility
-    policyDecision:
-      status: allow_or_deny
-      reason: policy_reason_code
-    dataClassesAccessed:
-      - skills_hunt_leaderboard
-    targetContext:
-      workspaceId: workspace_identifier
-      roundId: round_identifier
-      mode: leaderboard_mode
     requestId: request_identifier
     traceId: trace_identifier
     result:

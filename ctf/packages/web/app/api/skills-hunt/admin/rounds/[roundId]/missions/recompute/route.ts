@@ -13,7 +13,7 @@ import { failureReason } from 'lib/errors/failure';
 // is enough while a mission's goal never changes. It is not enough after an admin corrects one:
 // re-pointing a mission at a different goal leaves every stored count at its old value until
 // somebody's next nomination happens to be accepted in that round, so a member keeps reading a
-// number the mission no longer means. Same shape as the manual leaderboard rebuild next door.
+// number the mission no longer means.
 export async function POST(request: Request, { params }: { params: Promise<{ roundId: string }> }) {
   const gate = await requireSkillsHuntAdminAccess();
   if (!gate.allowed) {

@@ -112,26 +112,12 @@ export type SkillsHuntSubmissionReviewInput = {
   notes: string | null;
 };
 
-export type SkillsHuntLeaderboardItem = {
-  rank: number;
-  score: number;
-  acceptedCount: number;
-  firstMatchCount: number;
-  pendingPoints: number;
-  rareSkillBonus: number;
-  userId: string | null;
-  usernameSnapshot: string | null;
-  lastSubmissionAtIso: string | null;
-  metadata: Record<string, unknown>;
-};
-
 type SkillsHuntAchievementCode =
   | 'first-finder'
   | 'diversity-champion'
   | 'rare-talent-scout'
   | 'quality-contributor'
-  | 'leaderboard-champion'
-  // Legacy generic achievements (pre-Wave 2). Will be migrated to the 5 named
+  // Legacy generic achievements (pre-Wave 2). Will be migrated to the 4 named
   // badges above when the scoring rewrite ships.
   | 'accepted-first'
   | 'accepted-five'

@@ -73,10 +73,8 @@ function MobileSkillsHuntPublic({ signInUrl, verifyUrl }: { signInUrl: string; v
  *
  * Real-data-only deviations from the mockup (no session = no private/fabricated
  * data): the mockup's hero activity counters (247 found this week, 1,482 skills
- * mapped, 63 scouts active) and the named scout leaderboard rows (Amara O.,
- * Maria G., Priya S., DeShawn W. with survivor counts) are invented sample data,
- * so the counters are dropped and the leaderboard renders neutral blurred
- * placeholder rows behind the sign-in lock. The "Nominate a Survivor" form posts
+ * mapped, 63 scouts active) are invented sample data, so they are dropped, and
+ * there is no scout ranking at all. The "Nominate a Survivor" form posts
  * to an authenticated-only endpoint, so its blurred preview stays decorative and
  * its calls to action point at the sign-in URL. The simulated phone status bar is
  * dropped because the real app renders inside the browser chrome.

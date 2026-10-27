@@ -739,23 +739,6 @@ CREATE TABLE IF NOT EXISTS skills_hunt_submissions (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE TABLE IF NOT EXISTS skills_hunt_leaderboard (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  round_id UUID NOT NULL REFERENCES skills_hunt_rounds(id) ON DELETE CASCADE,
-  mode TEXT NOT NULL CHECK (mode IN ('individual')),
-  rank INTEGER NOT NULL,
-  score INTEGER NOT NULL,
-  accepted_count INTEGER NOT NULL DEFAULT 0,
-  first_match_count INTEGER NOT NULL DEFAULT 0,
-  pending_points INTEGER NOT NULL DEFAULT 0,
-  rare_skill_bonus INTEGER NOT NULL DEFAULT 0,
-  user_id TEXT NULL,
-  username_snapshot TEXT NULL,
-  last_submission_at TIMESTAMPTZ NULL,
-  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  UNIQUE (round_id, mode, rank)
-);
 CREATE TABLE IF NOT EXISTS skills_hunt_achievements (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id TEXT NOT NULL,
@@ -768,8 +751,8 @@ CREATE TABLE IF NOT EXISTS skills_hunt_achievements (
   awarded_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (user_id, code)
 );
--- NOTE: Wave 2 will refactor UNIQUE(user_id, code) to support per-round badges
--- (e.g., Leaderboard Champion earned across multiple rounds). For now the
+-- NOTE: Wave 2 will refactor UNIQUE(user_id, code) to support per-round badges.
+-- For now the
 -- existing constraint is preserved so the in-tree generic badge inserts
 -- (accepted-first / accepted-five / accepted-ten) continue to work with their
 -- ON CONFLICT (user_id, code) DO NOTHING clause.
@@ -826,7 +809,7 @@ CREATE TABLE IF NOT EXISTS skills_hunt_audit_log (
 -- Missions: themed sub-goals within a round (post-design lock 2026-05-11,
 -- continuity 2.9). One mission belongs to one round; per-user progress is
 -- tracked in skills_hunt_mission_progress and recomputed on accept by the
--- same review hook that rebuilds the leaderboard. goal_type drives the
+-- review hook. goal_type drives the
 -- recompute strategy in lib/skills-hunt/missions.ts.
 CREATE TABLE IF NOT EXISTS skills_hunt_missions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -913,21 +896,13 @@ CREATE INDEX IF NOT EXISTS idx_skills_hunt_submissions_active ON skills_hunt_sub
 -- profile's headline had been null for as long as the column had been empty. Nothing reads it, so
 -- it goes rather than sitting as a column no code touches.
 ALTER TABLE IF EXISTS skills_hunt_submissions DROP COLUMN IF EXISTS claimed_professions;
--- Team leaderboard removed (owner directive 2026-08-27). Teams was meant to be members teaming up
--- on submissions; it was never that — it regrouped the same accepted nominations by the nominee's
--- claimed profession, and since the nomination form stopped collecting professions every row landed
--- in a single "Unspecified" bucket. The mode toggle, the team rows and the team queries are gone.
--- Existing team rows are deleted here rather than left to age out on the next rebuild. `mode` is
--- kept because it carries the UNIQUE (round_id, mode, rank) key and is now always 'individual';
--- the CHECK is narrowed so a team row cannot come back. `team_key` is dropped below with the rest
--- of the unused code — nothing reads or writes it.
-DELETE FROM skills_hunt_leaderboard WHERE mode <> 'individual';
-ALTER TABLE IF EXISTS skills_hunt_leaderboard DROP CONSTRAINT IF EXISTS skills_hunt_leaderboard_mode_check;
-ALTER TABLE IF EXISTS skills_hunt_leaderboard ADD CONSTRAINT skills_hunt_leaderboard_mode_check CHECK (mode IN ('individual'));
--- Unused-code sweep (owner directive 2026-08-27). Two columns nothing reads or writes:
--- `skills_hunt_leaderboard.team_key` (only ever set by the team aggregation removed above) and
--- `skills_hunt_mission_progress.bonus_credited_at` (the marker for a ServiceCredits payout that is
--- not being built — mission points are a leaderboard ranking figure, not credits).
+-- Scout leaderboard removed (owner decision, 3.1.0): the table, its rebuild and its badge are gone.
+-- End-of-round awards read each scout's score from accepted nominations and completed missions
+-- directly (lib/skills-hunt/round-awards.ts). Migration post/0070 drops it from existing databases.
+DROP TABLE IF EXISTS skills_hunt_leaderboard;
+-- Unused-code sweep (owner directive 2026-08-27): `skills_hunt_mission_progress.bonus_credited_at`,
+-- the marker for a ServiceCredits payout that is not being built — mission points count toward a
+-- scout's round score, not credits.
 -- Community moderation reports removed (owner directive 2026-08-27). A member could never file one:
 -- the route had no button anywhere in the app, so the admin queue could only ever be empty. And
 -- resolving a report as 'removed' only flipped this table's status column — it never deleted the
@@ -937,10 +912,7 @@ ALTER TABLE IF EXISTS skills_hunt_leaderboard ADD CONSTRAINT skills_hunt_leaderb
 -- down a community-generated profile from the Directory admin screen, which deletes it and blocks
 -- its Quora URL from being listed again until the block is lifted.
 DROP TABLE IF EXISTS skills_hunt_submission_reports;
-ALTER TABLE IF EXISTS skills_hunt_leaderboard DROP COLUMN IF EXISTS team_key;
 ALTER TABLE IF EXISTS skills_hunt_mission_progress DROP COLUMN IF EXISTS bonus_credited_at;
-CREATE INDEX IF NOT EXISTS idx_skills_hunt_leaderboard_lookup ON skills_hunt_leaderboard (round_id, mode, rank ASC, score DESC);
-CREATE INDEX IF NOT EXISTS idx_skills_hunt_leaderboard_tiebreak ON skills_hunt_leaderboard (round_id, mode, score DESC, first_match_count DESC, last_submission_at ASC);
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_achievements_user ON skills_hunt_achievements (user_id, archived_at, awarded_at DESC);
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_achievements_round ON skills_hunt_achievements (round_id) WHERE round_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_skills_hunt_notifications_user_unread ON skills_hunt_notifications (user_id, read_at, created_at DESC);
@@ -5790,9 +5762,6 @@ BEGIN
 END
 $skills_hunt_submissions_url_validation_check$;
 
-ALTER TABLE IF EXISTS skills_hunt_leaderboard ADD COLUMN IF NOT EXISTS first_match_count INTEGER NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS skills_hunt_leaderboard ADD COLUMN IF NOT EXISTS pending_points INTEGER NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS skills_hunt_leaderboard ADD COLUMN IF NOT EXISTS last_submission_at TIMESTAMPTZ;
 
 ALTER TABLE IF EXISTS skills_hunt_achievements ADD COLUMN IF NOT EXISTS round_id UUID;
 ALTER TABLE IF EXISTS skills_hunt_achievements ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ;
