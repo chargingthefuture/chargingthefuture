@@ -31,6 +31,7 @@ const SOURCE_NAMES: Record<string, string> = {
   numbers: 'numbers',
   'beacon-replays': 'replays',
   'skills-hunt': 'the Wanted card',
+  'skills-hunt-mission': "today's mission",
   beacon: 'the broadcast',
   chyme: 'the Main Room',
 };

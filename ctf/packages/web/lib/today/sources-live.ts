@@ -4,6 +4,8 @@ import { getDashboard } from 'lib/workforce/repository';
 import { getLiveBeaconEvent, listBeaconReplays } from 'lib/beacon/repository';
 import { toPublicBeaconReplay } from 'lib/beacon/replays';
 import { listRounds } from 'lib/skills-hunt/repository';
+import { listMissionsForRoundWithCommunityProgress } from 'lib/skills-hunt/missions';
+import { withDbTransaction } from 'lib/db/postgres';
 import { action, card, startOfTodayIso, type TodayViewer } from './card';
 
 // The parts of Today that belong to the day or to this moment: the Mood check-in, the numbers, a
@@ -83,6 +85,34 @@ export async function wantedCard(): Promise<SeTodayCard[]> {
       title: round.name,
       body: round.description,
       createdAtIso: round.startsAtIso,
+      href,
+      actions: [action('know-someone', 'Suggest someone', href)],
+    }),
+  ];
+}
+
+// One SkillsHunt mission a day, as the day's task: the active round's open missions in turn, a
+// different one each day, with how many the community has found so far.
+export async function missionCard(now = new Date()): Promise<SeTodayCard[]> {
+  const round = (await listRounds('active'))[0];
+  if (!round) return [];
+  const missions = (await withDbTransaction((client) => listMissionsForRoundWithCommunityProgress(client, round.id))).filter(
+    (mission) => mission.status === 'active',
+  );
+  if (missions.length === 0) return [];
+  const day = Math.floor(Date.parse(startOfTodayIso(now)) / 86_400_000);
+  const mission = missions[day % missions.length];
+  const href = '/apps/skills-hunt';
+  const found = `${mission.community.count} of ${mission.goalTarget} found so far.`;
+  return [
+    card({
+      source: 'skills-hunt-mission',
+      sourceId: `${mission.id}:${startOfTodayIso(now).slice(0, 10)}`,
+      kind: 'match',
+      label: "Wanted · today's mission",
+      title: mission.title,
+      body: mission.description ? `${mission.description} ${found}` : found,
+      createdAtIso: startOfTodayIso(now),
       href,
       actions: [action('know-someone', 'Suggest someone', href)],
     }),

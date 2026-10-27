@@ -41,6 +41,8 @@ contracts:
       - skills_taxonomy_skills
       - beacon_events
       - skills_hunt_rounds
+      - skills_hunt_missions
+      - skills_hunt_mission_progress
       - chyme_rooms
       - chyme_room_members
       - chyme_guest_listeners
