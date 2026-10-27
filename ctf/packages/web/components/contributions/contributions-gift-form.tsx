@@ -87,7 +87,7 @@ function AmountField({
         style={fieldStyle(t)}
         aria-invalid={!amountOk}
       />
-      {!amountOk ? <span style={{ fontSize: 12, color: '#EF4444' }}>A whole number from {minUsd} to {maxUsd}.</span> : null}
+      {!amountOk ? <span style={{ fontSize: 12, color: '#EF4444' }}>Dollars with no cents, from {minUsd} to {maxUsd}.</span> : null}
     </label>
   );
 }

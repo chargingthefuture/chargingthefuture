@@ -1,6 +1,31 @@
 #!/usr/bin/env node
 
 // Contributions seed — runtime config singleton and three demo gift card claims in mixed statuses.
+// Deterministic UUIDs and fixed timestamps so re-running is idempotent and byte-for-byte stable.
+//
+// No gift card code anywhere: a real code is sealed with CONTRIBUTIONS_CODE_KEY by the app, and a
+// reviewed claim has none left. The pending claim therefore shows "No code is stored".
+
+import { Pool } from 'pg';
+
+function requireEnv(name) {
+  const value = process.env[name];
+  if (!value || value.trim().length === 0) {
+    throw new Error(`${name} is required.`);
+  }
+
+  return value;
+}
+
+const pool = new Pool({
+  connectionString: requireEnv('DATABASE_URL'),
+  ssl: { rejectUnauthorized: false },
+});
+
+const seedMemberId = 'seed-contributions-member-001';
+const seedSecondMemberId = 'seed-contributions-member-002';
+const seedAdminId = 'seed-contributions-admin-001';
+
 // Deterministic UUIDs (hex-only) so ON CONFLICT (id) DO UPDATE keeps re-runs idempotent.
 const SUBMISSION_GIFT_CARD_PENDING = '00000000-c0de-4000-a000-000000000101';
 const SUBMISSION_GIFT_CARD_CONFIRMED = '00000000-c0de-4000-a000-000000000102';

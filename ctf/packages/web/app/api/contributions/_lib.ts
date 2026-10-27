@@ -120,9 +120,9 @@ export function isUuid(candidate: string): boolean {
 
 const BAD_REQUEST_CODES: Record<string, string> = {
   invalid_payload: 'Invalid request payload.',
-  invalid_amount: 'Amount must be a whole number of US dollars, from 1 to 500.',
+  invalid_amount: 'Amount must be US dollars with no cents, from 1 to 500.',
   invalid_code: 'The gift card code should be the letters and numbers on the card, 6 to 40 of them.',
-  confirmed_amount_required: 'confirmedAmountUsd is required, as a whole number of US dollars from 1 to 500.',
+  confirmed_amount_required: 'confirmedAmountUsd is required, in US dollars with no cents, from 1 to 500.',
 };
 
 export function contributionsErrorResponse(error: unknown, fallbackMessage: string, op: string): NextResponse {

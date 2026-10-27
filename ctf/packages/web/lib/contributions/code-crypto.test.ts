@@ -37,7 +37,7 @@ describe('gift card code sealing', () => {
 });
 
 describe('gift card input', () => {
-  it('takes whole dollars from 1 to 500', () => {
+  it('takes dollars with no cents, from 1 to 500', () => {
     expect(isValidGiftCardAmount(10)).toBe(true);
     expect(isValidGiftCardAmount(0)).toBe(false);
     expect(isValidGiftCardAmount(501)).toBe(false);

@@ -25,7 +25,7 @@ contracts:
         type: integer
         required: true
         note: >-
-          A whole number of US dollars, from 1 to 500 (400 contributions_invalid_amount otherwise).
+          An integer number of US dollars, from 1 to 500 (400 contributions_invalid_amount otherwise).
           Real gift cards are not sold in parts of a dollar (owner decision, 2026-08-09). Grants are
           still rounded when they are issued, because the credits-per-dollar rate is admin-set.
       code:
@@ -157,7 +157,7 @@ contracts:
         type: integer
         required: false
         note: >-
-          Required for confirm, as a whole number of US dollars from 1 to 500 — the same rule the
+          Required for confirm, as an integer number of US dollars from 1 to 500 — the same rule the
           member's claim had to clear, re-checked here because the admin records what was actually
           redeemed and that can differ from the claim (400 contributions_confirmed_amount_required).
       reviewNote:

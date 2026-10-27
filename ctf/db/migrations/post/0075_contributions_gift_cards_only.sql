@@ -77,3 +77,15 @@ BEGIN
   END IF;
 END
 $rename_demo_cap$;
+
+-- The plugin's one-line description on the apps list.
+UPDATE ctf_plugin_registry SET summary = 'Send an Amazon gift card toward hosting, any time of year, and receive ServiceCredits as a thank-you.'
+ WHERE plugin_slug = 'contributions';
+DO $demo_summary$
+BEGIN
+  IF to_regclass('demo.ctf_plugin_registry') IS NOT NULL THEN
+    UPDATE demo.ctf_plugin_registry SET summary = 'Send an Amazon gift card toward hosting, any time of year, and receive ServiceCredits as a thank-you.'
+     WHERE plugin_slug = 'contributions';
+  END IF;
+END
+$demo_summary$;
