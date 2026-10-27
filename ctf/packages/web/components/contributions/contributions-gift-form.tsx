@@ -46,6 +46,52 @@ function PausedCard({ t }: { t: ContributionsTokens }) {
   );
 }
 
+function FormHeader({ t, minUsd, maxUsd }: { t: ContributionsTokens; minUsd: number; maxUsd: number }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <div style={{ width: 34, height: 34, borderRadius: 9, background: `${t.ACCENT}18`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Gift size={17} color={t.ACCENT} />
+      </div>
+      <div>
+        <div style={{ fontSize: 15, fontWeight: 600, color: t.TITLE }}>Amazon gift card</div>
+        <div style={{ fontSize: 12, color: t.MUTED }}>
+          ${minUsd} to ${maxUsd}, any time of year
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AmountField({
+  t,
+  amount,
+  amountOk,
+  minUsd,
+  maxUsd,
+  onChange,
+}: {
+  t: ContributionsTokens;
+  amount: string;
+  amountOk: boolean;
+  minUsd: number;
+  maxUsd: number;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label>
+      <span style={labelStyle(t)}>Amount in US dollars</span>
+      <input
+        inputMode="numeric"
+        value={amount}
+        onChange={(event) => onChange(event.target.value.replace(/[^0-9]/g, ''))}
+        style={fieldStyle(t)}
+        aria-invalid={!amountOk}
+      />
+      {!amountOk ? <span style={{ fontSize: 12, color: '#EF4444' }}>A whole number from {minUsd} to {maxUsd}.</span> : null}
+    </label>
+  );
+}
+
 // An Amazon gift card: its amount, from $10 by default, and its code. The code is sent once and is
 // never shown back.
 export function ContributionsGiftForm({ t, open, minUsd, maxUsd, creditsPerUsd, submitting, error, onSubmit }: GiftFormProps) {
@@ -68,29 +114,8 @@ export function ContributionsGiftForm({ t, open, minUsd, maxUsd, creditsPerUsd, 
       }}
       style={{ background: t.SURFACE, borderRadius: 12, padding: 16, border: `1px solid ${t.BORDER_SOLID}`, display: 'flex', flexDirection: 'column', gap: 14 }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div style={{ width: 34, height: 34, borderRadius: 9, background: `${t.ACCENT}18`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Gift size={17} color={t.ACCENT} />
-        </div>
-        <div>
-          <div style={{ fontSize: 15, fontWeight: 600, color: t.TITLE }}>Amazon gift card</div>
-          <div style={{ fontSize: 12, color: t.MUTED }}>
-            ${minUsd} to ${maxUsd}, any time of year
-          </div>
-        </div>
-      </div>
-
-      <label>
-        <span style={labelStyle(t)}>Amount in US dollars</span>
-        <input
-          inputMode="numeric"
-          value={amount}
-          onChange={(event) => setAmount(event.target.value.replace(/[^0-9]/g, ''))}
-          style={fieldStyle(t)}
-          aria-invalid={!amountOk}
-        />
-        {!amountOk ? <span style={{ fontSize: 12, color: '#EF4444' }}>A whole number from {minUsd} to {maxUsd}.</span> : null}
-      </label>
+      <FormHeader t={t} minUsd={minUsd} maxUsd={maxUsd} />
+      <AmountField t={t} amount={amount} amountOk={amountOk} minUsd={minUsd} maxUsd={maxUsd} onChange={setAmount} />
 
       <label>
         <span style={labelStyle(t)}>Gift card code</span>

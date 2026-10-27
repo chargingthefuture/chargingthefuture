@@ -1,19 +1,16 @@
-// Contributions demo extras for the demo owner and the admin demo account, on top of the Quora comment and GitHub star
-// seedDemo.mjs creates:
-//   - a third claim, a gift card waiting for review (CONT-8). It records a claimed card value only:
-//     nothing is confirmed, no money is counted toward the drive, and the Signal contact is a
-//     placeholder that is never shown on the member screen;
-//   - the GitHub star moved to confirmed with its thank-you credits, so the star path reads as
-//     already credited (CONT-6). Credits are not money;
+// Contributions demo extras for the demo owner and the admin demo account, on top of the confirmed
+// and pending gift cards seedDemo.mjs creates:
 //   - both of those claims handed to the account they are seeded for. seedDemo.mjs keeps the owner's
 //     fixed claim ids, and its upsert leaves user_id alone, so a demo schema first seeded with a
 //     different DEMO_OWNER_ID kept them under that earlier account and My history showed no
-//     Confirmed claim.
+//     Confirmed claim;
+//   - the third claim this module seeded before Contributions took gift cards only (a Signal-era gift
+//     card) removed, so the demo queue matches what the app can produce now.
 
-const GIFT_CARD_CLAIM = 'ddd00000-0000-4000-8330-000000000001';
+const OLD_SIGNAL_GIFT_CARD_CLAIM = 'ddd00000-0000-4000-8330-000000000001';
 
 export default async function seed(client, ctx) {
-  const { PERSONAL_ACCOUNTS, personalId, ADMIN, ID } = ctx;
+  const { PERSONAL_ACCOUNTS, personalId, ID } = ctx;
 
   for (const account of PERSONAL_ACCOUNTS) {
     await client.query(
@@ -22,31 +19,8 @@ export default async function seed(client, ctx) {
       [[personalId(account, ID.contribSubmission1), personalId(account, ID.contribSubmission2)], account],
     );
 
-    await client.query(
-      `INSERT INTO contributions_submissions
-       (id, user_id, kind, method, claimed_amount_usd, signal_contact, status, cycle_id, created_at)
-       VALUES ($1::uuid, $2, 'gift_card', 'amazon', 10, 'demo-signal-placeholder', 'pending', $3::uuid,
-         NOW() - INTERVAL '1 day')
-       ON CONFLICT (id) DO UPDATE SET
-         user_id = EXCLUDED.user_id, kind = EXCLUDED.kind, method = EXCLUDED.method,
-         claimed_amount_usd = EXCLUDED.claimed_amount_usd, signal_contact = EXCLUDED.signal_contact,
-         status = 'pending', confirmed_amount_usd = NULL, credits_granted = 0,
-         reviewed_by_user_id = NULL, reviewed_at = NULL, review_note = NULL,
-         cycle_id = EXCLUDED.cycle_id, created_at = EXCLUDED.created_at, updated_at = NOW()`,
-      [personalId(account, GIFT_CARD_CLAIM), account, ID.contribCycle],
-    );
-
-    // One star unit at the default rate (non_monetary_unit_value_usd 1 x credits_per_usd 10), the
-    // same figures a review writes.
-    await client.query(
-      `UPDATE contributions_submissions
-       SET status = 'confirmed', confirmed_amount_usd = 1, credits_granted = 10,
-           reviewed_by_user_id = $2, reviewed_at = NOW() - INTERVAL '3 days',
-           review_note = 'Star found on the repository.', updated_at = NOW()
-       WHERE id = $1::uuid`,
-      [personalId(account, ID.contribSubmission2), ADMIN],
-    );
+    await client.query(`DELETE FROM contributions_submissions WHERE id = $1::uuid`, [personalId(account, OLD_SIGNAL_GIFT_CARD_CLAIM)]);
   }
 
-  console.log('  ✓ demo-seed contributions (gift card claim, credited star)');
+  console.log('  ✓ demo-seed contributions (claims owned by their account)');
 }

@@ -1,64 +1,55 @@
 # Contributions plugin command contracts.
 #
 # Core invariants, repeated where they matter:
-# - Gift-card CODES are never accepted, stored, or logged by any command. The member sends
-#   the code to the owner over Signal, outside the platform. There is no code field anywhere.
-# - Credits granted on confirmation are thank-you grants of ServiceCredits (the platform's
-#   internal barter token). They are never redeemable for real money (one-way, like
-#   gas-station reward points).
+# - Contributions takes Amazon gift cards only, open all year. There are no drives, goals,
+#   progress or banner, and no Quora comment or GitHub star claims. Older rows keep their
+#   kind ('quora_comment', 'github_star'); pending ones were closed by post/0075 with a note.
+# - The gift card code is entered in the app and stored encrypted in
+#   contributions_submissions.gift_card_code_encrypted (AES-256-GCM, key derived from the
+#   server-only CONTRIBUTIONS_CODE_KEY, the member's account id bound in as additional data).
+#   It is never returned to the member, never logged, and never written into audit metadata.
+#   It is erased in the same statement that records the review (confirm or reject).
+# - When CONTRIBUTIONS_CODE_KEY is unset the app takes no codes: submission.create answers
+#   503 contributions_paused and the member screen shows a paused card.
+# - Credits granted on confirmation are thank-you grants of ServiceCredits, the platform's
+#   internal credits unit. They are not money and are never redeemable for money.
 # - Contributing never requires Unlock verification and never changes Unlock state. No
 #   command reads or writes any unlock_* table.
 contracts:
   - pluginId: contributions
     command: contributions.submission.create
-    version: 1.0.0
-    description: Submit a contribution claim (gift card, Quora comment, or GitHub star). Gift-card claims require the member's Signal contact; the gift-card code itself is never collected.
+    version: 2.0.0
+    description: Send an Amazon gift card. The member enters the amount and the code; the code is sealed (AES-256-GCM) before it is stored and is never returned.
     inputSchema:
-      kind:
+      claimedAmountUsd:
+        type: integer
+        required: true
+        note: >-
+          A whole number of US dollars, from 1 to 500 (400 contributions_invalid_amount otherwise).
+          Real gift cards are not sold in parts of a dollar (owner decision, 2026-08-09). Grants are
+          still rounded when they are issued, because the credits-per-dollar rate is admin-set.
+      code:
         type: string
         required: true
-        enum: [gift_card, quora_comment, github_star]
-      method:
-        type: string
-        required: false
-        enum: [amazon, apple, dennys]
-        note: Required when kind is gift_card; rejected otherwise.
-      claimedAmountUsd:
-        type: number
-        required: false
         note: >-
-          Required when kind is gift_card; an integer number of US dollars, from 1 to 500. Fractions are
-          rejected — real gift cards are not sold in parts of a dollar (owner decision, 2026-08-09).
-          This is a claim-shape rule and is not what keeps a credit grant entire; grants are rounded
-          when they are issued, because the credits-per-dollar rate is admin-set and need not divide
-          evenly into a dollar.
-      signalContact:
-        type: string
-        required: false
-        note: Required when kind is gift_card (member's Signal URL or phone number; personal data, admin-only, never logged).
-      quoraPostUrl:
-        type: string
-        required: false
-        note: >-
-          Optional for kind quora_comment (the owner can paste it in during review). The web form
-          asks for it and will not submit without it, on purpose — an untrackable claim cannot be
-          confirmed, so the form points the member to the Commons for help finding the link instead.
-          The command stays optional so a claim recorded by the owner during review is still valid.
-      githubProfileUrl:
-        type: string
-        required: false
-        note: >-
-          Optional for kind github_star (the owner can paste it in during review). Same as
-          quoraPostUrl: the web form requires it by design, the command does not.
+          The gift card code. Spaces are removed and letters upper-cased, then it must be 6 to 40
+          letters, digits or dashes (400 contributions_invalid_code otherwise). Sealed with the
+          member's account id bound in, so it does not decrypt on another member's row. Never
+          logged or audited.
     outputSchema:
       ok:
         type: boolean
       submission:
         type: object
-        note: The created submission (member projection — no signalContact). Includes id, userId, kind, method, claimedAmountUsd, quoraPostUrl, githubProfileUrl, status, confirmedAmountUsd, creditsGranted, creditGovernanceEventId, cycleId, reviewedByUserId, reviewedAt, reviewNote, createdAt, updatedAt.
+        note: The created submission (no code). Fields id, userId, kind (gift_card), method (amazon), claimedAmountUsd, status (pending), confirmedAmountUsd, creditsGranted, creditGovernanceEventId, reviewedByUserId, reviewedAt, reviewNote, createdAt, updatedAt.
+      refusals:
+        type: object
+        note: >-
+          503 contributions_paused when CONTRIBUTIONS_CODE_KEY is unset, so nothing is stored. 400
+          contributions_invalid_payload when the body is not a JSON object. 403
+          contributions_csrf_denied without the x-ctf-csrf header or from another origin.
     dataAccess:
       - contributions_submissions
-      - contributions_cycles
       - contributions_audit_log
     purpose: voluntary_contribution_claim
     retentionClass: transactional_long_lived
@@ -66,72 +57,38 @@ contracts:
 
   - pluginId: contributions
     command: contributions.status.get
-    version: 1.0.0
-    description: List the signed-in member's own contribution claims and their statuses.
+    version: 2.0.0
+    description: The signed-in member's own claims, and what the form needs (whether gift cards are being taken, the amount range, the thank-you rate).
     inputSchema: {}
     outputSchema:
       ok:
         type: boolean
       submissions:
         type: array
-        note: The member's own submissions (member projection — no signalContact), newest first.
+        note: The member's own submissions, newest first, at most 100 (no code, and no flag saying whether one is stored).
+      open:
+        type: boolean
+        note: True when CONTRIBUTIONS_CODE_KEY is set. False shows the paused card instead of the form.
+      minUsd:
+        type: integer
+        note: 1.
+      maxUsd:
+        type: integer
+        note: 500.
+      creditsPerUsd:
+        type: number
+        note: Live thank-you ServiceCredits per dollar from the runtime config, so the form copy matches the admin settings.
     dataAccess:
       - contributions_submissions
+      - contributions_runtime_config
     purpose: own_contribution_history
     retentionClass: derived_short_lived
     idempotency: true
 
   - pluginId: contributions
-    command: contributions.fundraiser.get
-    version: 1.0.0
-    description: Read the current fundraiser cycle, collective progress toward its three goals, and whether the fundraiser banner is visible for this member.
-    inputSchema: {}
-    outputSchema:
-      ok:
-        type: boolean
-      fundraiser:
-        type: object
-        note: "Snapshot object with: cycle (object or null), fiatConfirmedUsd (number), quoraCommentsConfirmed (integer), githubStarsConfirmed (integer), contributorCount (integer), bannerVisible (boolean — the full banner shows for this member now, i.e. feature on and not snoozed), bannerEnabled (boolean — the banner feature is on at all, independent of the per-member snooze; lets the phone-width UI tell snoozed from turned-off so it can show a small emoji reminder while snoozed), githubStarAlreadyCredited (boolean — true when this member already holds a confirmed, credit-earning github_star; a star is creditable at most once per member ever, so the UI grays out the GitHub-star path)."
-      signalInstructions:
-        type: string
-        note: Member-safe Signal instructions copy (shown after a gift-card submission).
-      ownerSignalUrl:
-        type: string
-        note: The owner's Signal contact URL/number, read from the server-only CONTRIBUTIONS_OWNER_SIGNAL_URL env var, shown inline on the confirmation screen. Null when the env var is unset/empty; the UI then falls back to signalInstructions. Never logged.
-      creditsPerUsd:
-        type: number
-        note: Live thank-you SC granted per USD (gift cards), from the runtime config, so member copy matches the admin settings screen.
-      creditsPerActionSc:
-        type: number
-        note: Live thank-you SC for one confirmed comment or star, computed as nonMonetaryUnitValueUsd × creditsPerUsd (rounded). Replaces a previously hardcoded member-side default.
-    dataAccess:
-      - contributions_cycles
-      - contributions_submissions
-      - contributions_runtime_config
-      - contributions_banner_state
-    purpose: collective_fundraiser_progress
-    retentionClass: derived_short_lived
-    idempotency: true
-
-  - pluginId: contributions
-    command: contributions.banner.dismiss
-    version: 1.0.0
-    description: Dismiss the fundraiser banner. Silently snoozes it for the configured number of months; the snooze length is internal and not returned. Deliberately not audited.
-    inputSchema: {}
-    outputSchema:
-      ok:
-        type: boolean
-    dataAccess:
-      - contributions_banner_state
-      - contributions_runtime_config
-    purpose: banner_snooze
-    retentionClass: derived_short_lived
-    idempotency: true
-
-  - pluginId: contributions
     command: contributions.admin.submission.list
-    version: 1.0.0
-    description: Admin review queue of contribution claims, filterable by status. The admin projection includes the member's Signal contact so the owner can match a gift-card code received over Signal to the claim.
+    version: 2.0.0
+    description: Admin review queue of claims, filterable by status. Each item says whether a code is still stored (hasCode); the code itself is read one claim at a time through contributions.admin.code.reveal, never in the list.
     inputSchema:
       status:
         type: string
@@ -146,7 +103,7 @@ contracts:
         type: boolean
       submissions:
         type: array
-        note: Admin projection — each item includes signalContact in addition to the member fields.
+        note: Admin projection — the member fields plus hasCode (boolean). No code.
     dataAccess:
       - contributions_submissions
       - contributions_audit_log
@@ -155,58 +112,86 @@ contracts:
     idempotency: true
 
   - pluginId: contributions
-    command: contributions.admin.submission.review
+    command: contributions.admin.code.reveal
     version: 1.0.0
-    description: Confirm or reject a pending claim, exactly once. On confirm, the credit grant (confirmedAmountUsd x credits_per_usd, clamped by the per-user-per-cycle cap, then rounded to an integer number of credits) is delegated to the service-credits plugin's canonical governance.mint.grant command (idempotency key contribution-<submissionId>); contributions never writes service_credits tables directly.
+    description: Show one claim's gift card code to the admin redeeming it. A POST so it is never prefetched or cached (Cache-Control no-store). Every reveal is audited as contributions.admin.code.reveal with the reviewed member and whether a code was shown, never the code.
     inputSchema:
       submissionId:
         type: string
         required: true
+        note: Path parameter; must be a UUID (400 contributions_invalid_payload otherwise).
+    outputSchema:
+      ok:
+        type: boolean
+      code:
+        type: string
+        note: The decrypted code. Only on success.
+      refusals:
+        type: object
+        note: >-
+          404 contributions_not_found for an unknown claim. 409 contributions_code_unavailable, with
+          the reason in message, when no code is stored (erased on review, or a claim from before
+          codes were entered in the app), when CONTRIBUTIONS_CODE_KEY is unset, or when the code does
+          not decrypt with the current key (the key was changed after it was sent).
+    dataAccess:
+      - contributions_submissions
+      - contributions_audit_log
+    purpose: gift_card_redemption
+    retentionClass: audit_long_lived
+    idempotency: true
+
+  - pluginId: contributions
+    command: contributions.admin.submission.review
+    version: 2.0.0
+    description: Confirm or reject a pending claim, exactly once. Either way the stored code is erased in the same statement. On confirm, the credit grant (confirmedAmountUsd x credits_per_usd, clamped by the per-member cap over the last 365 days, then rounded to an integer number of credits) is delegated to the service-credits plugin's canonical governance.mint.grant command (idempotency key contribution-<submissionId>); contributions never writes service_credits tables directly.
+    inputSchema:
+      submissionId:
+        type: string
+        required: true
+        note: Path parameter; must be a UUID.
       action:
         type: string
         required: true
         enum: [confirm, reject]
       confirmedAmountUsd:
-        type: number
+        type: integer
         required: false
         note: >-
-          Required for gift_card confirmation, as an integer number of US dollars from 1 to 500 — the
-          same rule the member's claim had to clear, re-checked here because the admin records what
-          was actually redeemed and that can differ from what was claimed. Defaults to
-          non_monetary_unit_value_usd for quora_comment and github_star, which is not held to the
-          integer-dollar rule.
+          Required for confirm, as a whole number of US dollars from 1 to 500 — the same rule the
+          member's claim had to clear, re-checked here because the admin records what was actually
+          redeemed and that can differ from the claim (400 contributions_confirmed_amount_required).
       reviewNote:
         type: string
         required: false
-      url:
-        type: string
-        required: false
-        note: >-
-          The Quora post link (quora_comment) or GitHub profile link (github_star) as the admin found
-          it, saved into quoraPostUrl or githubProfileUrl on confirm or reject and replacing what the
-          member sent. Must be an http(s) link (400 contributions_invalid_url otherwise). Omitted or
-          blank keeps the member's link. Refused with 400 contributions_invalid_payload on a
-          gift_card claim, which has no link.
     outputSchema:
       ok:
         type: boolean
       submission:
         type: object
-        note: Admin projection of the reviewed submission (includes signalContact), with status confirmed|rejected, confirmedAmountUsd, creditsGranted, creditGovernanceEventId, cycleId, reviewedByUserId, reviewedAt, reviewNote populated.
+        note: Admin projection of the reviewed submission, with status confirmed|rejected, confirmedAmountUsd, creditsGranted, creditGovernanceEventId, reviewedByUserId, reviewedAt, reviewNote populated and hasCode false.
       refusals:
         type: object
         note: >-
-          409 contributions_already_reviewed when the claim is no longer pending. 409
-          contributions_mint_budget_exceeded when the ServiceCredits per-period mint budget is on and
-          this confirm's credit grant would go over it; the review rolls back, so the claim stays
-          pending and can be confirmed once the period resets or the budget is raised.
+          404 contributions_not_found. 409 contributions_already_reviewed when the claim is no longer
+          pending. 409 contributions_mint_budget_exceeded when the ServiceCredits per-period mint
+          budget is on and this confirm's grant would go over it; the review rolls back, so the claim
+          stays pending with its code and can be confirmed once the period resets or the budget is
+          raised.
+      yearCap:
+        type: object
+        note: >-
+          The credits already granted are the larger of two sums over the last 365 days: confirmed
+          contributions_submissions.credits_granted, and the kept service_credits_governance_events
+          mint_grant rows with reason contributions_confirmed. The second keeps the cap in place after
+          a member deletes their Contributions data and sends again. A grant that rounds to 0 still
+          confirms the claim with 0 credits.
     dataAccess:
       - contributions_submissions
-      - contributions_cycles
       - contributions_runtime_config
       - contributions_audit_log
       # Credit grant path — delegated to the service-credits plugin's governance.mint.grant
-      # command (canonical mintGrant()); listed here for traceability only:
+      # command (canonical mintGrant()); listed here for traceability only, plus the read of
+      # kept grants for the 365-day cap:
       - service_credits_wallets
       - service_credits_governance_events
       - service_credits_ledger_entries
@@ -216,14 +201,15 @@ contracts:
 
   - pluginId: contributions
     command: contributions.admin.config.get
-    version: 1.0.0
-    description: Read the runtime configuration knobs (credit valuation, per-cycle cap, banner behavior, Signal instructions copy).
+    version: 2.0.0
+    description: Read the runtime settings (credits per dollar, most credits per member over 365 days).
     inputSchema: {}
     outputSchema:
       ok:
         type: boolean
       config:
         type: object
+        note: creditsPerUsd, perUserYearCreditCap, updatedByUserId, updatedAt. Defaults 10 and 300 when no row exists.
     dataAccess:
       - contributions_runtime_config
     purpose: configuration_read
@@ -232,27 +218,17 @@ contracts:
 
   - pluginId: contributions
     command: contributions.admin.config.update
-    version: 1.0.0
-    description: Update the runtime configuration knobs. signal_instructions is owner-authored copy shown after a gift-card submission (codes go to the owner on Signal; all other communication belongs in the public Hub support channel).
+    version: 2.0.0
+    description: Update the runtime settings. An omitted field keeps its current value.
     inputSchema:
       creditsPerUsd:
         type: number
         required: false
-      nonMonetaryUnitValueUsd:
+        note: Must be a positive finite number.
+      perUserYearCreditCap:
         type: number
         required: false
-      perUserCycleCreditCap:
-        type: number
-        required: false
-      bannerSnoozeMonths:
-        type: integer
-        required: false
-      bannerEnabled:
-        type: boolean
-        required: false
-      signalInstructions:
-        type: string
-        required: false
+        note: Most thank-you credits one member is granted over the last 365 days. Must be a positive finite number.
     outputSchema:
       ok:
         type: boolean
@@ -263,73 +239,4 @@ contracts:
       - contributions_audit_log
     purpose: configuration_update
     retentionClass: audit_long_lived
-    idempotency: true
-
-  - pluginId: contributions
-    command: contributions.admin.cycle.create
-    version: 1.0.0
-    description: Create a fundraiser cycle (time window plus the three goals).
-    inputSchema:
-      startsAt:
-        type: string
-        required: true
-      endsAt:
-        type: string
-        required: true
-      fiatGoalUsd:
-        type: number
-        required: false
-      quoraCommentGoal:
-        type: integer
-        required: false
-      githubStarGoal:
-        type: integer
-        required: false
-    outputSchema:
-      ok:
-        type: boolean
-      cycle:
-        type: object
-        note: The created/updated cycle (id, startsAt, endsAt, fiatGoalUsd, quoraCommentGoal, githubStarGoal, createdByUserId, createdAt, updatedAt).
-    dataAccess:
-      - contributions_cycles
-      - contributions_audit_log
-    purpose: fundraiser_cycle_management
-    retentionClass: transactional_long_lived
-    idempotency: false
-
-  - pluginId: contributions
-    command: contributions.admin.cycle.update
-    version: 1.0.0
-    description: Update a fundraiser cycle's window or goals.
-    inputSchema:
-      cycleId:
-        type: string
-        required: true
-      startsAt:
-        type: string
-        required: false
-      endsAt:
-        type: string
-        required: false
-      fiatGoalUsd:
-        type: number
-        required: false
-      quoraCommentGoal:
-        type: integer
-        required: false
-      githubStarGoal:
-        type: integer
-        required: false
-    outputSchema:
-      ok:
-        type: boolean
-      cycle:
-        type: object
-        note: The created/updated cycle (id, startsAt, endsAt, fiatGoalUsd, quoraCommentGoal, githubStarGoal, createdByUserId, createdAt, updatedAt).
-    dataAccess:
-      - contributions_cycles
-      - contributions_audit_log
-    purpose: fundraiser_cycle_management
-    retentionClass: transactional_long_lived
     idempotency: true
