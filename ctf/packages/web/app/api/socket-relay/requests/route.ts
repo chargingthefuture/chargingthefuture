@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { ensureMutationCsrf, parsePositiveInteger, requireSocketRelayReadAccess, socketRelayErrorResponse } from 'lib/socket-relay/_lib';
+import { ensureMutationCsrf, parsePositiveInteger, requireSocketRelayPostAccess, requireSocketRelayReadAccess, socketRelayErrorResponse } from 'lib/socket-relay/_lib';
 import {
   SOCKET_RELAY_DEFAULT_PAGE,
   SOCKET_RELAY_DEFAULT_PAGE_SIZE,
@@ -91,7 +91,7 @@ export async function POST(request: Request) {
     return csrfDeny;
   }
 
-  const gate = await requireSocketRelayReadAccess();
+  const gate = await requireSocketRelayPostAccess();
   if (!gate.allowed) {
     return gate.response;
   }

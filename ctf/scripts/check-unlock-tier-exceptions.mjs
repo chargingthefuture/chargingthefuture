@@ -62,7 +62,9 @@ function walk(dir, acc = []) {
 
 // Only a real call counts. A comment explaining the tier is not a bypass, and flagging one would
 // teach the next writer to stop explaining themselves.
-const CALL_RE = /minUnlockTier\s*:\s*'any_authenticated'/;
+// 'signed_in' and 'signed_in_posting' (the 3.1 open tiers) open a surface to unapproved members just
+// as 'any_authenticated' does, so they are listed the same way.
+const CALL_RE = /minUnlockTier\s*:\s*'(?:any_authenticated|signed_in|signed_in_posting)'/;
 
 // A tier passed as anything other than a literal — a variable, a helper call, a ternary — is
 // invisible to the literal match above, so a surface could drop to 'any_authenticated' at runtime
@@ -71,7 +73,7 @@ const CALL_RE = /minUnlockTier\s*:\s*'any_authenticated'/;
 //
 // An indirect tier is not banned. It is treated exactly like a literal one: the file has to be on
 // the approved list, which is where the decision behind it is written down.
-const INDIRECT_CALL_RE = /minUnlockTier\s*:\s*(?!'(?:approved_full|any_authenticated|locked_support_only|pending_readonly)')[A-Za-z_$]/;
+const INDIRECT_CALL_RE = /minUnlockTier\s*:\s*(?!'(?:approved_full|any_authenticated|signed_in|signed_in_posting|support_only|locked_support_only|pending_readonly)')[A-Za-z_$]/;
 
 const allowlist = JSON.parse(readFileSync(allowlistPath, 'utf8'));
 const allowed = new Map(allowlist.exceptions.map((entry) => [entry.file, entry]));
