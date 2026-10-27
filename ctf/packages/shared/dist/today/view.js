@@ -38,6 +38,25 @@ export function seTodayView(today, marks, filter) {
 }
 export function seRoomPeopleLine(members, guests) {
     if (members + guests === 0)
-        return 'Quiet now';
+        return 'Quiet right now';
     return `${members} in the room${guests ? `, ${guests} listening as guests` : ''}`;
+}
+// "Today · 9:00 PM", "Tomorrow · 9:00 PM" or "Mon, Nov 2 · 9:00 PM", in the reader's own timezone.
+export function seTalkWhen(startIso, now = new Date()) {
+    const start = new Date(startIso);
+    const time = start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    const day = (d) => d.toDateString();
+    if (day(start) === day(now))
+        return `Today · ${time}`;
+    if (day(start) === day(new Date(now.getTime() + 86_400_000)))
+        return `Tomorrow · ${time}`;
+    return `${start.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} · ${time}`;
+}
+// The line under the Main Room's name: what is on, or what is next.
+export function seTalkLine(talk, now = new Date()) {
+    if (!talk)
+        return null;
+    if (talk.onAir)
+        return `On now: ${talk.title} with @${talk.host}`;
+    return `Next: ${talk.title} with @${talk.host} · ${seTalkWhen(talk.startIso, now)}`;
 }

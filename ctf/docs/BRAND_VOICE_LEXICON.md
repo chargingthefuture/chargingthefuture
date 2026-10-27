@@ -57,6 +57,7 @@ This document is the canonical source of truth for brand language across:
 - Prefer named capabilities over generic labels — never a bare "Chat".
 - **Avenhood** (3.1.0): the community, and the idea. Definition, word for word as the app shows it: "A distributed peoplehood of people connected across borders, trading skills and building lives beyond exploitation—without waiting for the world to become safe first." Source of the text: `ctf/packages/shared/src/design/se-words.ts`. Capital A; "the Avenhood".
 - **Aven** (3.1.0): one member of the Avenhood. Plural Avens ("3 Avens here").
+- **Room words** (3.1.0): Listen in (join a room), Leave quietly (leave it), Bring someone in (start a Back Channel with someone in the room), Quiet right now (nobody in it). A member in the Main Room's call sees "Guests may be listening. Anyone can hear this room without an account." Source: `ctf/packages/shared/src/today/rooms.ts`. 3.0's Chyme page keeps Join Room, Leave and Back Channel.
 - **System Architect** (3.1.0): the owner's title, and the label on admin entries the owner sees. Route names in code stay `admin`.
 - **lagatos.com**: the planned address only. It is not a name for the community and carries no meaning; do not write a translation or a gloss for it.
 - **Commons**: the homepage community chat — the shared, many-voices space where members post to everyone. Use "the Commons" (capital C) for the home chat surface; its nav uses a community (people) icon.

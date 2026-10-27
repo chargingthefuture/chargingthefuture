@@ -1,13 +1,16 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import Link from 'next/link';
 import '@fontsource-variable/dm-sans/opsz.css';
-import { SE_AVEN_DEFINITION, SE_AVENHOOD, SE_AVENHOOD_DEFINITION, SE_TABS, type SeTab } from '@ctf/shared';
+import { SE_AVENHOOD, SE_AVENHOOD_DEFINITION, SE_TABS, type SeTab, type SeThemeChoice } from '@ctf/shared';
 import type { ShellCurrentUser } from '../community-shell/shell-types';
-import { SeAvatar } from '../shared/se-avatar';
 import { SeTabBar } from './se-tab-bar';
 import { TodayScreen } from './today/today-screen';
+import { MeScreen } from './me/me-screen';
+import { useSeTheme } from './use-se-theme';
+import { NewScreen } from './new/new-screen';
+import { SeRoomBar, SeRoomHosts } from './rooms/se-room-screen';
+import { SeRoomsProvider, useSeRooms } from './rooms/se-rooms';
 import { seThemeVars } from './se-theme-vars';
 import { useInterfaceSwitch } from './use-interface-switch';
 import styles from './se-frame.module.css';
@@ -70,40 +73,45 @@ function NotBuiltYet({ onBack, saving }: { onBack: () => void; saving: boolean }
   );
 }
 
-function MeScreen({ currentUser, onBack, saving }: { currentUser: ShellCurrentUser; onBack: () => void; saving: boolean }) {
+type FrameProps = { currentUser: ShellCurrentUser; isAdmin: boolean };
+
+export function SeAppFrame({ currentUser, isAdmin }: FrameProps) {
+  return (
+    <SeRoomsProvider>
+      <SeAppFrameBody currentUser={currentUser} isAdmin={isAdmin} />
+    </SeRoomsProvider>
+  );
+}
+
+const TAB_TITLES: Partial<Record<SeTab, string>> = { people: 'People', new: 'New', activity: 'Activity' };
+
+type TabScreenProps = FrameProps & {
+  tab: SeTab;
+  theme: SeThemeChoice;
+  onTheme: (_next: SeThemeChoice) => void;
+  onBack: () => void;
+  saving: boolean;
+};
+
+function TabScreen({ tab, currentUser, isAdmin, theme, onTheme, onBack, saving }: TabScreenProps) {
+  const title = TAB_TITLES[tab];
   return (
     <>
-      <ScreenHeader title="Me" />
-      <section className={styles.card}>
-        <div className={styles.meRow}>
-          <SeAvatar accountId={currentUser.userId} size={56} />
-          <span className={styles.handle}>{currentUser.displayName}</span>
-        </div>
-      </section>
-      <section className={styles.card}>
-        <p className={styles.cardLabel}>About</p>
-        <p className={styles.cardTitle}>The {SE_AVENHOOD}</p>
-        <p className={styles.emptyText}>{SE_AVENHOOD_DEFINITION}</p>
-        <p className={styles.emptyText}>{SE_AVEN_DEFINITION}</p>
-      </section>
-      <section className={styles.card}>
-        <p className={styles.cardLabel}>Settings</p>
-        <p className={styles.emptyText}>You are using 3.1. You can go back to 3.0 at any time.</p>
-        <div className={styles.buttonRow}>
-          <button type="button" className={styles.secondaryButton} onClick={onBack} disabled={saving}>
-            Back to 3.0
-          </button>
-          <Link href="/account" className={styles.textLink}>
-            Account and data
-          </Link>
-        </div>
-      </section>
+      {tab === 'today' ? <TodayHeader /> : null}
+      {title ? <ScreenHeader title={title} /> : null}
+      {tab === 'today' ? <TodayScreen accountId={currentUser.userId} /> : null}
+      {tab === 'new' ? <NewScreen /> : null}
+      {tab === 'me' ? <MeScreen currentUser={currentUser} isAdmin={isAdmin} theme={theme} onTheme={onTheme} onBack={onBack} saving={saving} /> : null}
+      {tab === 'people' || tab === 'activity' ? <NotBuiltYet onBack={onBack} saving={saving} /> : null}
     </>
   );
 }
 
-export function SeAppFrame({ currentUser }: { currentUser: ShellCurrentUser }) {
+function SeAppFrameBody({ currentUser, isAdmin }: FrameProps) {
+  const { theme, setTheme } = useSeTheme();
   const [tab, setTab] = useState<SeTab>('today');
+  const rooms = useSeRooms();
+  const { minimize } = rooms;
   const { switchTo, saving, error } = useInterfaceSwitch();
 
   useEffect(() => {
@@ -113,31 +121,29 @@ export function SeAppFrame({ currentUser }: { currentUser: ShellCurrentUser }) {
     return () => window.removeEventListener('popstate', onPop);
   }, []);
 
+  // Choosing a tab while a room is open puts the room in the bar above the tab bar.
   const select = useCallback((next: SeTab) => {
+    minimize();
     setTab(next);
     const url = next === 'today' ? '/' : `/?tab=${next}`;
     window.history.pushState(null, '', url);
     window.scrollTo(0, 0);
-  }, []);
+  }, [minimize]);
 
   const back = () => void switchTo('3.0');
 
   return (
-    <div className={styles.frame} style={seThemeVars()}>
-      <main className={styles.screen}>
-        {tab === 'today' ? <TodayHeader /> : null}
-        {tab === 'people' ? <ScreenHeader title="People" /> : null}
-        {tab === 'new' ? <ScreenHeader title="New" /> : null}
-        {tab === 'activity' ? <ScreenHeader title="Activity" /> : null}
-        {tab === 'today' ? <TodayScreen accountId={currentUser.userId} /> : null}
-        {tab === 'me' ? <MeScreen currentUser={currentUser} onBack={back} saving={saving} /> : null}
-        {tab !== 'today' && tab !== 'me' ? <NotBuiltYet onBack={back} saving={saving} /> : null}
+    <div className={styles.frame} style={seThemeVars(theme.color, theme.mode)}>
+      <main className={styles.screen} hidden={rooms.shown !== null}>
+        <TabScreen tab={tab} currentUser={currentUser} isAdmin={isAdmin} theme={theme} onTheme={setTheme} onBack={back} saving={saving} />
         {error ? (
           <p role="alert" className={styles.error}>
             {error}
           </p>
         ) : null}
       </main>
+      <SeRoomHosts currentUser={currentUser} />
+      <SeRoomBar />
       <SeTabBar active={tab} onSelect={select} />
     </div>
   );

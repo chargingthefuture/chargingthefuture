@@ -29,14 +29,25 @@ export type SeTodayCard = {
   actions: SeTodayAction[];
 };
 
+// The next booked TI Radio talk, held in the Main Room. `onAir` while its 90 minutes are running.
+export type SeTodayTalk = {
+  title: string;
+  host: string;
+  startIso: string;
+  endIso: string;
+  onAir: boolean;
+};
+
 export type SeTodayRoom = {
   key: 'main' | 'weavers';
   name: string;
   live: boolean;
-  // Signed-in members in the room, and signed-out guests listening.
+  // Signed-in members in the room, and signed-out guests listening (always 0 in Weavers).
   members: number;
   guests: number;
   href: string;
+  // Main Room only.
+  nextTalk: SeTodayTalk | null;
 };
 
 export type SeTodayBroadcast = { live: boolean; title: string | null; href: string };

@@ -22,6 +22,7 @@ import { useBackChannel, type BackChannelController } from './chyme-back-channel
 import { ChymeBackChannelLayer, ChymeBackChannelButton } from './chyme-back-channel-layer';
 import { useAudioCallKeepAlive } from './use-audio-call-keep-alive';
 import { useChymeHeartbeat } from './use-chyme-heartbeat';
+import { useChymeWords } from './chyme-words';
 import { ChymeListeningNotice, ChymeModeratorActions, ChymeSpeakModeToggle, type ChymeModerationContext } from './chyme-moderation';
 import { reportError } from 'lib/observability/report';
 import type { ChymeJoinResponse } from 'lib/chyme/types';
@@ -317,6 +318,7 @@ function ChymeAudioFrame({
 }) {
   const { theme } = useTheme();
   const t = getChymeTokens(theme);
+  const words = useChymeWords();
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
       {/* Natural height so the participant avatars always render (a cramped flex/overflow region
@@ -328,7 +330,7 @@ function ChymeAudioFrame({
             onClick={onLeave}
             style={{ padding: '10px 18px', borderRadius: 12, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', color: '#F87171', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
           >
-            Leave
+            {words.leave}
           </button>
         </div>
       )}

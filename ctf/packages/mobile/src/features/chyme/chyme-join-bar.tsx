@@ -8,13 +8,14 @@ import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { Mic, RefreshCw } from 'lucide-react-native';
 import { interFamily } from '../../components/ui';
 import { useChymeTokens } from './chyme-tokens';
+import { useChymeWords } from './chyme-words';
 import type { ChymeConnectionState, JoinState } from './useChymeRoomState';
 
 type Pill = { label: string; from: string; to: string };
 
-function joinPill(joinState: JoinState, connection: ChymeConnectionState, accent: string): Pill {
+function joinPill(joinState: JoinState, connection: ChymeConnectionState, accent: string, joinLabel: string): Pill {
   if (joinState === 'joining') return { label: 'Joining…', from: accent, to: '#16A34A' };
-  if (joinState !== 'ready') return { label: 'Join Room', from: accent, to: '#16A34A' };
+  if (joinState !== 'ready') return { label: joinLabel, from: accent, to: '#16A34A' };
   if (connection === 'reconnecting') return { label: 'Reconnecting…', from: '#CA8A04', to: '#A16207' };
   if (connection === 'lost') return { label: 'Connection lost — leave and rejoin', from: '#DC2626', to: '#991B1B' };
   return { label: '✓ Joined', from: accent, to: '#16A34A' };
@@ -75,7 +76,8 @@ export function ChymeJoinBar({
   refreshing: boolean;
 }) {
   const t = useChymeTokens();
-  const pill = joinPill(joinState, connection, t.ACCENT);
+  const words = useChymeWords();
+  const pill = joinPill(joinState, connection, t.ACCENT, words.join);
   const dimmed = joinState !== 'idle' && connection === 'joined';
   return (
     <View style={[styles.bar, { borderBottomColor: t.BORDER, backgroundColor: t.RAIL }]}>

@@ -790,3 +790,10 @@ These items are recorded in the inventory's Gaps and Known Technical Debt sectio
 
 **1.** As member A, send credits to member B via a direct transfer. Sign in as member B, open the 🔔 notifications tab in the Commons, and confirm a "You received N ServiceCredits." item appears (unread) with an "Open" pill to ServiceCredits. Sending to yourself produces no notification.
 web ☐
+
+### SC-TAB · A link opens a tab
+**Role:** member · **Surfaces:** web
+1. Open `/apps/service-credits?tab=send`, then `/apps/service-credits?tab=wallet`.
+**Expected:** The first opens on the Send tab, the second on the wallet tab with recent transactions.
+An unknown `tab` value opens the wallet tab.
+**Result:** web ☐ — notes:

@@ -9,7 +9,7 @@ import { Radio } from 'lucide-react-native';
 import { interFamily } from '../../components/ui';
 import type { ChymeRoomScope } from './ChymeApi';
 import { openWebPath, useChymeTokens, type ChymeTokens } from './chyme-tokens';
-import { useChymeRoomState } from './useChymeRoomState';
+import { useChymeRoomState, type ChymeRoomState } from './useChymeRoomState';
 import { ChymeJoinBar } from './chyme-join-bar';
 import { ChymeRoomView, type CurrentUser } from './chyme-room-view';
 import { ChymeReadingsPlayer } from './chyme-readings-player';
@@ -69,8 +69,26 @@ export function ChymeLiveRoom({
   backChannel: MobileBackChannelController | null;
   onBackChannelEnabled?: (_enabled: boolean) => void;
 }) {
-  const t = useChymeTokens();
   const state = useChymeRoomState(scope);
+  return <ChymeLiveRoomView state={state} scope={scope} user={user} backChannel={backChannel} onBackChannelEnabled={onBackChannelEnabled} />;
+}
+
+// The room as drawn from its state. 3.0's Chyme screen owns the state; the 3.1 frame holds it itself
+// so the call keeps running while the member moves between tabs.
+export function ChymeLiveRoomView({
+  state,
+  scope,
+  user,
+  backChannel,
+  onBackChannelEnabled,
+}: {
+  state: ChymeRoomState;
+  scope: ChymeRoomScope;
+  user: CurrentUser;
+  backChannel: MobileBackChannelController | null;
+  onBackChannelEnabled?: (_enabled: boolean) => void;
+}) {
+  const t = useChymeTokens();
   const { room, call } = state;
   // Back Channel runs in the main room while joined and while the quota policy allows it.
   const backChannelEnabled = scope === 'main' && call.joinState === 'ready' && room?.quota.backChannelAllowed === true;

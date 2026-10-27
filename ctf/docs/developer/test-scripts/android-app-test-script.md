@@ -260,7 +260,16 @@ Expect a small landscape or cut-paper picture, never the photo, and the same pic
 3. Tap a card's button: a goal opens PeerProgramming in the app; a place to stay or a cohort opens
    the web page in the browser.
 4. Use the chips, Copy link and Hide as on the web (AD-11); a hidden card stays hidden after reopening.
-5. Tap the Main Room card's button: Chyme opens in the app.
+5. Tap the Main Room card's button: the room opens inside 3.1, as on the web (AD-12). Tap **Listen
+   in**, move between tabs (the audio keeps going and a bar shows above the tab bar), press the
+   phone's back button with the room open (the room closes into the bar), then tap **Leave quietly**
+   on the bar.
+6. Open the + tab and run AD-13 as on the web: book a talk (the open times are a list to tap), post
+   an ask from a suggestion, and open each Offer choice and the Story link (Foundation opens in the
+   app; the rest in the browser).
+7. Open Me and run AD-14 as on the web: Send and History open ServiceCredits in the browser, Receive
+   copies your handle, the colors change at once and stay after closing and reopening the app, and
+   there is no Android app link (you are in it).
 
 ## AN-8 — Blocked members
 

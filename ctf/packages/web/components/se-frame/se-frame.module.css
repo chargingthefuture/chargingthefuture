@@ -12,7 +12,12 @@
   display: flex;
   flex-direction: column;
   gap: 18px;
-  padding: 20px 16px 120px;
+  /* Room for the tab bar, and the room bar above it while the member is in a call. */
+  padding: 20px 16px 180px;
+}
+
+.screen[hidden] {
+  display: none;
 }
 
 .header {
@@ -57,14 +62,6 @@
   color: var(--se-ink);
 }
 
-.cardTitle {
-  margin: 0;
-  font-family: 'Newsreader Variable', Newsreader, Georgia, serif;
-  font-size: 20px;
-  font-weight: 600;
-}
-
-.card,
 .emptyCard {
   display: flex;
   flex-direction: column;
@@ -73,17 +70,7 @@
   border-radius: 18px;
   background: var(--se-card);
   border: 1.5px solid var(--se-hair);
-}
-
-.emptyCard {
   align-items: flex-start;
-}
-
-.cardLabel {
-  margin: 0;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--se-soft);
 }
 
 .emptyTitle {
@@ -98,24 +85,6 @@
   font-size: 15px;
   line-height: 1.4;
   color: var(--se-soft);
-}
-
-.meRow {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.handle {
-  font-size: 17px;
-  font-weight: 700;
-}
-
-.buttonRow {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
 }
 
 .secondaryButton {
@@ -135,16 +104,6 @@
 .secondaryButton:disabled {
   opacity: 0.6;
   cursor: default;
-}
-
-.textLink {
-  min-height: 44px;
-  display: inline-flex;
-  align-items: center;
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--se-ink);
-  text-underline-offset: 3px;
 }
 
 .error {
@@ -211,8 +170,7 @@
 .tab:focus-visible,
 .newButton:focus-visible,
 .secondaryButton:focus-visible,
-.termButton:focus-visible,
-.textLink:focus-visible {
+.termButton:focus-visible {
   outline: 2px solid var(--se-pick);
   outline-offset: 2px;
 }

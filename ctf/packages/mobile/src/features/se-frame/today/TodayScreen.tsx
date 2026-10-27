@@ -1,28 +1,48 @@
 // Today in 3.1 on Android, the copy of the web's today-screen.tsx: the broadcast while it is live,
-// the Main Room, then the day's cards newest first. The done count stays hidden until the member
+// the rooms, then the day's cards newest first. The done count stays hidden until the member
 // has opened a card.
 
 import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { SE_TODAY_FILTERS, seRoomPeopleLine, seTodayView, type SeThemeTokens, type SeToday, type SeTodayFilter, type SeTodayRoom } from '@ctf/shared';
+import {
+  SE_ROOM_MAIN_AUDIENCE,
+  SE_ROOM_WEAVERS_AUDIENCE,
+  SE_ROOM_WORDS_MAIN,
+  SE_TODAY_FILTERS,
+  seRoomPeopleLine,
+  seTalkLine,
+  seTodayView,
+  type SeThemeTokens,
+  type SeToday,
+  type SeTodayFilter,
+  type SeTodayRoom,
+} from '@ctf/shared';
+import { useSeRooms } from '../rooms/SeRooms';
 import type { FeatureKey } from '../../../navigation/screens';
 import { SE_FONT } from '../fonts';
 import { TodayCard } from './TodayCard';
 import { openTodayLink } from './openTodayLink';
 import { useToday } from './useToday';
 
-function RoomCard({ t, room, onOpen }: { t: SeThemeTokens; room: SeTodayRoom; onOpen: () => void }) {
+const AUDIENCE: Record<SeTodayRoom['key'], string> = { main: SE_ROOM_MAIN_AUDIENCE, weavers: SE_ROOM_WEAVERS_AUDIENCE };
+
+// Opens the room inside the frame, so the call keeps running while the member reads Today.
+function RoomCard({ t, room }: { t: SeThemeTokens; room: SeTodayRoom }) {
   const s = makeStyles(t);
+  const { open } = useSeRooms();
+  const talkLine = seTalkLine(room.nextTalk);
+  const scope = room.key === 'weavers' ? 'contributors' : 'main';
   return (
     <View style={s.roomCard} accessibilityLabel={room.name}>
       <View style={s.row}>
         {room.live ? <Text style={s.liveBadge}>LIVE</Text> : null}
         <Text style={s.roomName}>{room.name}</Text>
-        <Text style={s.meta}>· open to everyone</Text>
+        <Text style={s.meta}>· {AUDIENCE[room.key]}</Text>
       </View>
+      {talkLine ? <Text style={s.roomTitle}>{talkLine}</Text> : null}
       <Text style={s.meta}>{seRoomPeopleLine(room.members, room.guests)}</Text>
-      <TouchableOpacity accessibilityRole="button" onPress={onOpen} style={s.primary}>
-        <Text style={s.primaryLabel}>{room.live ? 'Listen in' : 'Open the room'}</Text>
+      <TouchableOpacity accessibilityRole="button" onPress={() => open(scope, room.nextTalk)} style={s.primary}>
+        <Text style={s.primaryLabel}>{room.live ? SE_ROOM_WORDS_MAIN.join : 'Open the room'}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -46,7 +66,7 @@ function LiveCards({ t, s, today, go }: { t: SeThemeTokens; s: Styles; today: Se
           </TouchableOpacity>
         </View>
       ) : null}
-      {today?.rooms.map((room) => <RoomCard key={room.key} t={t} room={room} onOpen={() => go(room.href)} />)}
+      {today?.rooms.map((room) => <RoomCard key={room.key} t={t} room={room} />)}
     </>
   );
 }

@@ -5,6 +5,7 @@ import { PRIMARY, type CurrentUser } from './chyme-shared';
 import type { BackChannelController } from './chyme-back-channel';
 import { ChymeBackChannelInvite } from './chyme-back-channel-invite';
 import { ChymeBackChannelPanel } from './chyme-back-channel-panel';
+import { useChymeWords } from './chyme-words';
 
 // The fixed-position overlay layer: an incoming-invite prompt and/or the active-call panel, driven by
 // the controller. Rendered once by the audio room, outside the room's own Stream call.
@@ -95,6 +96,7 @@ export function ChymeBackChannelButton({
   recipientUserId: string;
   controller: BackChannelController;
 }) {
+  const words = useChymeWords();
   const isActiveWithThis = controller.activeCall?.otherUserId === recipientUserId;
   const isPendingToThis = controller.outgoingInvite?.toUserId === recipientUserId;
   const inSomeCall = Boolean(controller.activeCall);
@@ -159,7 +161,7 @@ export function ChymeBackChannelButton({
         opacity: controller.busy ? 0.7 : 1,
       }}
     >
-      <Phone size={10} strokeWidth={2.5} /> Back Channel
+      <Phone size={10} strokeWidth={2.5} /> {words.backChannel}
     </button>
   );
 }

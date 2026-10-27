@@ -61,6 +61,11 @@ export function ServiceCreditsShell({ isAdmin }: { isAdmin?: boolean } = {}) {
   const [error, setError] = useState<string | null>(null);
   const [wallet, setWallet] = useState<WalletData | null>(null);
   const [tab, setTab] = useState<Tab>("wallet");
+  // A link can open a tab directly (?tab=send), as the 3.1 Me screen's Send does.
+  useEffect(() => {
+    const asked = new URLSearchParams(window.location.search).get("tab");
+    if (asked === "wallet" || asked === "earn" || asked === "economy" || asked === "send") setTab(asked);
+  }, []);
   const { theme } = useTheme();
   const t = getServiceCreditsTokens(theme);
 

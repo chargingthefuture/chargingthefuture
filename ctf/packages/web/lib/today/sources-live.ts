@@ -1,10 +1,9 @@
-import type { SeTodayBroadcast, SeTodayCard, SeTodayRoom } from '@ctf/shared';
+import type { SeTodayBroadcast, SeTodayCard } from '@ctf/shared';
 import { readMoodEligibilityForUser } from 'lib/mood/repository';
 import { getDashboard } from 'lib/workforce/repository';
 import { getLiveBeaconEvent, listBeaconReplays } from 'lib/beacon/repository';
 import { toPublicBeaconReplay } from 'lib/beacon/replays';
 import { listRounds } from 'lib/skills-hunt/repository';
-import { getPublicRoomLiveState } from 'lib/chyme/repository';
 import { action, card, startOfTodayIso, type TodayViewer } from './card';
 
 // The parts of Today that belong to the day or to this moment: the Mood check-in, the numbers, a
@@ -88,16 +87,4 @@ export async function wantedCard(): Promise<SeTodayCard[]> {
       actions: [action('know-someone', 'Suggest someone', href)],
     }),
   ];
-}
-
-export async function mainRoom(): Promise<SeTodayRoom> {
-  const state = await getPublicRoomLiveState();
-  return {
-    key: 'main',
-    name: state.roomName,
-    live: state.callActive,
-    members: state.participantCount,
-    guests: state.guestCount,
-    href: '/apps/chyme',
-  };
 }

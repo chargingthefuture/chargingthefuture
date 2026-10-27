@@ -9,6 +9,7 @@ import { Hand, Mic, MicOff, Phone, Volume2 } from 'lucide-react-native';
 import { useCallStateHooks } from '@stream-io/video-react-native-sdk';
 import { interFamily } from '../../components/ui';
 import { ChymeListeningNotice, ChymeSpeakModeToggle, type MobileModerationContext } from './ChymeModeration';
+import { useChymeWords } from './chyme-words';
 import { useChymeTokens, type ChymeTokens } from './chyme-tokens';
 
 type Look = { bg: string; border: string; color: string };
@@ -61,10 +62,11 @@ export function ChymeControls({
 
 export function ChymeLeaveButton({ onLeave, withIcon = false }: { onLeave: () => void; withIcon?: boolean }) {
   const t = useChymeTokens();
+  const words = useChymeWords();
   return (
     <TouchableOpacity onPress={onLeave} accessibilityRole="button" style={[styles.button, styles.leave, { borderRadius: t.radius(12) }]}>
       {withIcon ? <Phone size={16} color="#F87171" /> : null}
-      <Text style={[styles.buttonText, styles.leaveText]}>Leave</Text>
+      <Text style={[styles.buttonText, styles.leaveText]}>{words.leave}</Text>
     </TouchableOpacity>
   );
 }

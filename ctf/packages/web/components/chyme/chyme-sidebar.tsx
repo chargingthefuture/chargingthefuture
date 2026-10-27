@@ -4,19 +4,20 @@ import { Mic, RefreshCw } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { getChymeTokens } from './chyme-shared';
 import type { ChymeConnectionState } from './chyme-audio-room';
+import { useChymeWords } from './chyme-words';
 
 type JoinState = 'idle' | 'joining' | 'ready';
 
 // The pill's label and color for the join state plus what the live connection is doing. "✓ Joined"
 // used to be pinned from the join request succeeding once, whatever happened to the call after;
 // now it follows the Stream SDK's calling state (see ChymeConnectionState in chyme-audio-room).
-function joinPill(joinState: JoinState, connection: ChymeConnectionState, accent: string): { label: string; background: string } {
+function joinPill(joinState: JoinState, connection: ChymeConnectionState, accent: string, joinLabel: string): { label: string; background: string } {
   const joinedGradient = `linear-gradient(135deg, ${accent} 0%, #16A34A 100%)`;
   if (joinState === 'joining') {
     return { label: 'Joining…', background: joinedGradient };
   }
   if (joinState !== 'ready') {
-    return { label: 'Join Room', background: joinedGradient };
+    return { label: joinLabel, background: joinedGradient };
   }
   if (connection === 'reconnecting') {
     return { label: 'Reconnecting…', background: 'linear-gradient(135deg, #CA8A04 0%, #A16207 100%)' };
@@ -48,7 +49,8 @@ export function ChymeSidebar({
 }) {
   const { theme } = useTheme();
   const t = getChymeTokens(theme);
-  const pill = joinPill(joinState, connection, t.ACCENT);
+  const words = useChymeWords();
+  const pill = joinPill(joinState, connection, t.ACCENT, words.join);
 
   return (
     <aside style={{ width: '100%', borderBottom: `1px solid ${t.BORDER}`, display: 'flex', flexDirection: 'column', flexShrink: 0, background: t.RAIL }}>

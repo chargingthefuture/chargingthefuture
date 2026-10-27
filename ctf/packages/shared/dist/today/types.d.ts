@@ -21,6 +21,13 @@ export type SeTodayCard = {
     href: string;
     actions: SeTodayAction[];
 };
+export type SeTodayTalk = {
+    title: string;
+    host: string;
+    startIso: string;
+    endIso: string;
+    onAir: boolean;
+};
 export type SeTodayRoom = {
     key: 'main' | 'weavers';
     name: string;
@@ -28,6 +35,7 @@ export type SeTodayRoom = {
     members: number;
     guests: number;
     href: string;
+    nextTalk: SeTodayTalk | null;
 };
 export type SeTodayBroadcast = {
     live: boolean;

@@ -18,11 +18,11 @@ export type ChymeRoomScope = 'main' | 'contributors';
 
 type ChymeTokens = ReturnType<typeof getChymeTokens>;
 
-// Everything ChymeLiveShell needs from the shell controller: the room state, the derived
+// Everything the room needs from the shell controller: the room state, the derived
 // `locked` and `t` values, and the async handlers. Hoisted into a hook so the component itself stays
 // a thin render — the hooks below run in exactly the order they always have (state, ref, theme, then
 // the three effects), so hook ordering is unchanged.
-function useChymeShellState(roomScope: ChymeRoomScope) {
+export function useChymeRoomSession(roomScope: ChymeRoomScope) {
   const [room, setRoom] = useState<ChymeRoomResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [joinState, setJoinState] = useState<'idle' | 'joining' | 'ready'>('idle');
@@ -261,7 +261,16 @@ function ChymeShellContent(props: ChymeShellContentProps) {
   );
 }
 
+export type ChymeRoomSession = ReturnType<typeof useChymeRoomSession>;
+
 export function ChymeLiveShell({ currentUser, roomScope = 'main' }: { currentUser: CurrentUser; roomScope?: ChymeRoomScope }) {
+  const session = useChymeRoomSession(roomScope);
+  return <ChymeLiveShellView session={session} currentUser={currentUser} roomScope={roomScope} />;
+}
+
+// The room as drawn from a session. 3.0's Chyme page owns its session; the 3.1 frame holds the
+// session itself so the call keeps running while the member moves between tabs.
+export function ChymeLiveShellView({ session, currentUser, roomScope }: { session: ChymeRoomSession; currentUser: CurrentUser; roomScope: ChymeRoomScope }) {
   const {
     room,
     loading,
@@ -276,7 +285,7 @@ export function ChymeLiveShell({ currentUser, roomScope = 'main' }: { currentUse
     refreshRoom,
     handleLeave,
     handleJoin,
-  } = useChymeShellState(roomScope);
+  } = session;
 
   if (locked) {
     return <ChymeLockedExplainer t={t} />;
