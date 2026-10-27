@@ -274,6 +274,7 @@ Expect a small landscape or cut-paper picture, never the photo, and the same pic
    carry opens in the browser.
 9. Open People and run AD-16 as on the web; Profile and Request a quote open in the browser.
 10. Today opens with "Days the Avenhood has won", as on the web (AD-17).
+11. Mute a person from a card's ••• menu and words from Me → Muted, as on the web (AD-18).
 
 ## AN-8 — Blocked members
 

@@ -13,6 +13,7 @@ import {
 import type { ShellCurrentUser } from '../../community-shell/shell-types';
 import { SeAvatar } from '../../shared/se-avatar';
 import { ThemePicker } from './theme-picker';
+import { MutedCard } from './muted-card';
 import { useCredits } from './use-credits';
 import type { SeThemeChoice } from '@ctf/shared';
 import styles from './me.module.css';
@@ -135,6 +136,7 @@ export function MeScreen({ currentUser, isAdmin, ...settings }: MeScreenProps) {
       <CreditsCard handle={currentUser.username ? `@${currentUser.username}` : null} />
       <Tiles />
       <AboutCard />
+      <MutedCard />
       <SettingsCard {...settings} />
       {isAdmin ? (
         <Link href={SE_ME_LINKS.architect} className={styles.tile}>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { SE_DAYS_WON_TITLE, SE_TODAY_FILTERS, seDaysWonLines, seTodayView, type SeToday, type SeTodayFilter } from '@ctf/shared';
+import { SE_DAYS_WON_TITLE, SE_MUTE_WORDS, SE_TODAY_FILTERS, seDaysWonLines, seTodayView, type SeToday, type SeTodayCard, type SeTodayFilter } from '@ctf/shared';
 import { BroadcastCard, RoomCard } from './room-card';
 import { TodayCard } from './today-card';
 import { useToday, type TodayMarks } from './use-today';
@@ -66,7 +66,14 @@ function Notices({ error, missingLine, loading, onRetry }: { error: string | nul
   );
 }
 
-function Timeline({ view, marks, mark }: { view: ReturnType<typeof seTodayView>; marks: TodayMarks; mark: (kind: keyof TodayMarks, id: string) => void }) {
+type TimelineProps = {
+  view: ReturnType<typeof seTodayView>;
+  marks: TodayMarks;
+  mark: (kind: keyof TodayMarks, id: string) => void;
+  onMute: (card: SeTodayCard) => void;
+};
+
+function Timeline({ view, marks, mark, onMute }: TimelineProps) {
   return (
     <div className={styles.timeline}>
       <span className={styles.line} aria-hidden="true" />
@@ -77,6 +84,7 @@ function Timeline({ view, marks, mark }: { view: ReturnType<typeof seTodayView>;
           read={marks.read.includes(card.id)}
           onRead={() => mark('read', card.id)}
           onHide={() => mark('hidden', card.id)}
+          onMute={card.author ? () => onMute(card) : undefined}
         />
       ))}
       <div className={styles.caughtUp}>
@@ -91,6 +99,22 @@ export function TodayScreen({ accountId }: { accountId: string }) {
   const { today, loading, error, marks, mark, reload } = useToday(accountId);
   const [filter, setFilter] = useState<SeTodayFilter>('all');
   const view = seTodayView(today, marks, filter);
+  const [muteNote, setMuteNote] = useState<string | null>(null);
+
+  // Mute the card's author: their cards leave Today from the next read. Nobody is told.
+  const mute = async (card: SeTodayCard) => {
+    if (!card.author) return;
+    const res = await fetch('/api/account/mutes', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-ctf-csrf': '1' },
+      body: JSON.stringify({ kind: 'person', target: card.author.accountId, label: card.author.handle }),
+    }).catch(() => null);
+    const body = (await res?.json().catch(() => null)) as { message?: string } | null;
+    if (!res?.ok) return setMuteNote(`${SE_MUTE_WORDS.failed} ${body?.message ?? ''}`.trim());
+    setMuteNote(SE_MUTE_WORDS.muted(card.author.handle));
+    mark('hidden', card.id);
+    void reload();
+  };
 
   return (
     <>
@@ -101,7 +125,12 @@ export function TodayScreen({ accountId }: { accountId: string }) {
       </div>
       <FilterChips filter={filter} onChange={setFilter} />
       <Notices error={error} missingLine={view.missingLine} loading={!today && loading} onRetry={() => void reload()} />
-      {today ? <Timeline view={view} marks={marks} mark={mark} /> : null}
+      {muteNote ? (
+        <p role="status" className={styles.noticeQuiet}>
+          {muteNote}
+        </p>
+      ) : null}
+      {today ? <Timeline view={view} marks={marks} mark={mark} onMute={(card) => void mute(card)} /> : null}
     </>
   );
 }

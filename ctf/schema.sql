@@ -7397,6 +7397,21 @@ CREATE UNIQUE INDEX IF NOT EXISTS member_plugin_presence_unique_ref_idx
   ON member_plugin_presence (user_id, plugin_slug, ref_type, ref_id);
 CREATE INDEX IF NOT EXISTS member_plugin_presence_user_id_idx ON member_plugin_presence (user_id);
 
+-- member_mutes: personal mute (3.1.0). A member mutes a person (target = their account id, label =
+-- the handle shown at the time) or a word or phrase (target = the lower-cased words). Today leaves
+-- out cards by that person or containing those words. Nobody is told; a mute is not a block.
+CREATE TABLE IF NOT EXISTS member_mutes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id TEXT NOT NULL,
+  kind TEXT NOT NULL CHECK (kind IN ('person', 'words')),
+  target TEXT NOT NULL,
+  label TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT member_mutes_unique UNIQUE (user_id, kind, target)
+);
+ALTER TABLE IF EXISTS member_mutes ADD COLUMN IF NOT EXISTS label TEXT;
+CREATE INDEX IF NOT EXISTS idx_member_mutes_user ON member_mutes(user_id);
+
 -- member_blocks: product-wide, cross-cutting member blocking (issue #809, owner-signed model
 -- 2026-06-24). One member (blocker_user_id) blocks another (blocked_user_id). A block is created
 -- one-way and is invisible to the blocked person, but enforcement is SYMMETRIC: once A blocks B,

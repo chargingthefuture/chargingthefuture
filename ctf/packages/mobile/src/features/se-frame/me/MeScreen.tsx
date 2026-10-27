@@ -26,6 +26,7 @@ import { reportError } from '../../../observability/report';
 import type { FeatureKey } from '../../../navigation/screens';
 import { openTodayLink } from '../today/openTodayLink';
 import { SE_FONT } from '../fonts';
+import { MutedCard } from './MutedCard';
 
 type Styles = ReturnType<typeof makeStyles>;
 type Go = (_href: string) => void;
@@ -176,6 +177,7 @@ export function MeScreen({ t, user, isAdmin, onOpen, ...settings }: MeProps) {
         <Text style={s.text}>{SE_AVENHOOD_DEFINITION}</Text>
         <Text style={s.text}>{SE_AVEN_DEFINITION}</Text>
       </View>
+      <MutedCard t={t} />
       <SettingsCard s={s} go={go} {...settings} />
       {isAdmin ? <Tile s={s} title={W.architect} text={W.architectText} onPress={() => go(SE_ME_LINKS.architect)} /> : null}
     </>

@@ -2,18 +2,19 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import type { SeTodayCard } from '@ctf/shared';
+import { SE_MUTE_WORDS, type SeTodayCard } from '@ctf/shared';
 import { SeAvatar } from '../../shared/se-avatar';
 import styles from './today.module.css';
 
 // One card in Today. Tapping the text opens it in place; the buttons open the item where it lives.
-// The ••• menu holds Copy link and Hide; mute and report join it with the safety controls.
+// The ••• menu holds Copy link, Hide and, on a card with an author, Mute; report joins it with the
+// rest of the safety controls.
 
 function absolute(href: string): string {
   return href.startsWith('http') ? href : `${window.location.origin}${href}`;
 }
 
-function CardMenu({ card, onHide }: { card: SeTodayCard; onHide: () => void }) {
+function CardMenu({ card, onHide, onMute }: { card: SeTodayCard; onHide: () => void; onMute?: () => void }) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const copy = async () => {
@@ -30,7 +31,7 @@ function CardMenu({ card, onHide }: { card: SeTodayCard; onHide: () => void }) {
       <button
         type="button"
         className={styles.menuButton}
-        aria-label="More: copy link, hide"
+        aria-label={onMute ? 'More: copy link, hide, mute' : 'More: copy link, hide'}
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
       >
@@ -48,6 +49,11 @@ function CardMenu({ card, onHide }: { card: SeTodayCard; onHide: () => void }) {
           <button type="button" role="menuitem" className={styles.menuItem} onClick={onHide}>
             Hide
           </button>
+          {onMute && card.author ? (
+            <button type="button" role="menuitem" className={styles.menuItem} onClick={onMute}>
+              {SE_MUTE_WORDS.mutePerson(card.author.handle)}
+            </button>
+          ) : null}
         </div>
       ) : null}
     </div>
@@ -59,11 +65,13 @@ export function TodayCard({
   read,
   onRead,
   onHide,
+  onMute,
 }: {
   card: SeTodayCard;
   read: boolean;
   onRead: () => void;
   onHide: () => void;
+  onMute?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const color = `var(--se-kind-${card.kind})`;
@@ -88,7 +96,7 @@ export function TodayCard({
             </svg>
           </span>
         ) : null}
-        <CardMenu card={card} onHide={onHide} />
+        <CardMenu card={card} onHide={onHide} onMute={onMute} />
       </div>
       <button type="button" className={styles.textButton} aria-expanded={open} onClick={toggle}>
         <span className={styles.cardTitle}>{card.title}</span>

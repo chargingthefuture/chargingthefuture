@@ -9,6 +9,7 @@ import {
   SE_ROOM_WEAVERS_AUDIENCE,
   SE_ROOM_WORDS_MAIN,
   SE_DAYS_WON_TITLE,
+  SE_MUTE_WORDS,
   SE_TODAY_FILTERS,
   seDaysWonLines,
   seRoomPeopleLine,
@@ -16,10 +17,12 @@ import {
   seTodayView,
   type SeThemeTokens,
   type SeToday,
+  type SeTodayCard,
   type SeTodayFilter,
   type SeTodayRoom,
 } from '@ctf/shared';
 import { useSeRooms } from '../rooms/SeRooms';
+import { authedFetchJson } from '../../../auth/authedFetch';
 import type { FeatureKey } from '../../../navigation/screens';
 import { SE_FONT } from '../fonts';
 import { TodayCard } from './TodayCard';
@@ -129,6 +132,24 @@ export function TodayScreen({ t, accountId, onOpen }: { t: SeThemeTokens; accoun
   const [filter, setFilter] = useState<SeTodayFilter>('all');
   const go = (href: string) => openTodayLink(href, onOpen);
   const view = seTodayView(today, marks, filter);
+  const [muteNote, setMuteNote] = useState<string | null>(null);
+
+  // Mute the card's author: their cards leave Today from the next read. Nobody is told.
+  const mute = async (card: SeTodayCard) => {
+    if (!card.author) return;
+    try {
+      await authedFetchJson('/api/account/mutes', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-ctf-csrf': '1' },
+        body: JSON.stringify({ kind: 'person', target: card.author.accountId, label: card.author.handle }),
+      });
+      setMuteNote(SE_MUTE_WORDS.muted(card.author.handle));
+      mark('hidden', card.id);
+      void reload();
+    } catch (error) {
+      setMuteNote(`${SE_MUTE_WORDS.failed} ${error instanceof Error ? error.message : ''}`.trim());
+    }
+  };
 
   return (
     <>
@@ -141,6 +162,7 @@ export function TodayScreen({ t, accountId, onOpen }: { t: SeThemeTokens; accoun
       </View>
       <FilterChips s={s} filter={filter} onChange={setFilter} />
       <Notices s={s} error={error} missingLine={view.missingLine} loading={!today && loading} onRetry={() => void reload()} />
+      {muteNote ? <Text style={s.meta}>{muteNote}</Text> : null}
       {today ? (
         <View style={s.timeline}>
           <View style={s.line} />
@@ -152,6 +174,7 @@ export function TodayScreen({ t, accountId, onOpen }: { t: SeThemeTokens; accoun
               read={marks.read.includes(card.id)}
               onRead={() => mark('read', card.id)}
               onHide={() => mark('hidden', card.id)}
+              onMute={card.author ? () => void mute(card) : undefined}
               onOpenLink={go}
             />
           ))}
