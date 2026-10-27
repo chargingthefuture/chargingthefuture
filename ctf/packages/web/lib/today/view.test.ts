@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { seRoomPeopleLine, seTalkLine, seTodayView, type SeToday } from '@ctf/shared';
+import { seApplyMutes, seDaysWonLines, seNormalizeMuteWords, seRoomPeopleLine, seTalkLine, seTodayView, type SeToday } from '@ctf/shared';
 
 const card = (id: string, kind: 'ask' | 'offer' | 'story') => ({
   id,
@@ -17,6 +17,7 @@ const card = (id: string, kind: 'ask' | 'offer' | 'story') => ({
 const today: SeToday = {
   generatedAtIso: '2026-10-27T00:00:00.000Z',
   presence: null,
+  daysWon: null,
   broadcast: null,
   rooms: [],
   cards: [card('a', 'ask'), card('b', 'offer'), card('c', 'story')],
@@ -50,5 +51,24 @@ describe('seTodayView', () => {
     expect(seTalkLine(null, now)).toBeNull();
     expect(seTalkLine(talk, now)).toBe('Next: Rent and repairs with @ana · Today · 9:00 PM');
     expect(seTalkLine({ ...talk, onAir: true }, now)).toBe('On now: Rent and repairs with @ana');
+  });
+
+  it('says how many days were won', () => {
+    expect(seDaysWonLines({ total: 1234.5, thisWeek: 3 }).big).toBe('1,234.5');
+    expect(seDaysWonLines({ total: 2, thisWeek: 0.5 }).small.startsWith('0.5 this week.')).toBe(true);
+  });
+
+  it('leaves out cards by a muted person or with muted words', () => {
+    const base = { kind: 'ask' as const, source: 's', label: 'Ask', body: null, createdAtIso: '2026-10-27T00:00:00.000Z', href: '/', actions: [] };
+    const cards = [
+      { ...base, id: 'a', title: 'Need a ride', author: { accountId: 'u1', handle: '@one' } },
+      { ...base, id: 'b', title: 'Spare blankets', author: { accountId: 'u2', handle: '@two' } },
+      { ...base, id: 'c', title: 'Groceries', author: null },
+    ];
+    const kept = seApplyMutes(cards, [
+      { kind: 'person', target: 'u1' },
+      { kind: 'words', target: seNormalizeMuteWords('  SPARE  blankets ') },
+    ]);
+    expect(kept.map((card) => card.id)).toEqual(['c']);
   });
 });

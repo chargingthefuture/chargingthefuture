@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('lib/observability/report', () => ({ reportError: vi.fn() }));
+vi.mock('lib/mutes/repository', () => ({ listMutes: vi.fn(async () => []) }));
+vi.mock('lib/measures/action-minutes', () => ({ readDaysWon: vi.fn(async () => ({ total: 12.5, thisWeek: 1 })) }));
 vi.mock('./sources-asks', () => ({
   goalAsks: vi.fn(async () => [stub('peer-programming:1', '2026-10-26T10:00:00.000Z')]),
   relayAsks: vi.fn(async () => {

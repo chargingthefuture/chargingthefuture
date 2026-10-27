@@ -34,6 +34,7 @@ const SOURCE_NAMES: Record<string, string> = {
   'skills-hunt-mission': "today's mission",
   beacon: 'the broadcast',
   chyme: 'the Main Room',
+  'days-won': 'Days won',
 };
 
 export type SeTodayView = {
@@ -78,4 +79,14 @@ export function seTalkLine(talk: SeTodayTalk | null, now: Date = new Date()): st
   if (!talk) return null;
   if (talk.onAir) return `On now: ${talk.title} with @${talk.host}`;
   return `Next: ${talk.title} with @${talk.host} · ${seTalkWhen(talk.startIso, now)}`;
+}
+
+// "Days the Avenhood has won": the total, and this week's share of it.
+export const SE_DAYS_WON_TITLE = 'Days the Avenhood has won';
+export function seDaysWonLines(daysWon: { total: number; thisWeek: number }): { big: string; small: string } {
+  const fmt = (n: number) => n.toLocaleString('en-US', { maximumFractionDigits: 1 });
+  return {
+    big: fmt(daysWon.total),
+    small: `${fmt(daysWon.thisWeek)} this week. A day won is 8 hours members spent together in rooms and calls, or helping with each other's tasks.`,
+  };
 }

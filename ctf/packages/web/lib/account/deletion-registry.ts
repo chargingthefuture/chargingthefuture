@@ -624,6 +624,17 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     ],
   },
   {
+    slug: 'member-mutes',
+    name: 'Muted people and words',
+    dataSummary: 'The people and words you muted (your own private list; nobody is told).',
+    // Personal mute (3.1.0). Only the rows this member created are theirs; a row where somebody else
+    // muted them is that member's private list and stays, as with blocks.
+    serviceScopeSupported: true,
+    tables: [
+      del('member_mutes', 'user_id', 'The people and words you muted.'),
+    ],
+  },
+  {
     slug: 'member-blocks',
     name: 'Blocked members',
     dataSummary: 'The members you have blocked (your own private list — never shared with anyone).',
@@ -1026,6 +1037,7 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     serviceScopeSupported: false,
     tables: [
       del('login_events', 'user_id', 'Your sign-in timestamps (telemetry, not an enforcement record).'),
+      del('member_action_seconds_daily', 'user_id', 'Your daily minutes in rooms and Back Channel calls, counted toward Days won.'),
       del('admin_area_seen', 'user_id', 'Which admin areas you opened (per-admin new-item badge state).'),
       retain('account_deletion_events', 'The accountability record of the deletion itself.'),
       // A row means a Stream cleanup failed after a deletion committed and is waiting to be retried.

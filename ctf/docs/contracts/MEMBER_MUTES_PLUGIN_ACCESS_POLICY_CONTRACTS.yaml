@@ -1,0 +1,78 @@
+policies:
+  - pluginId: member-mutes
+    command: member.mute.create
+    version: 1.0.0
+    requiredRoles:
+      - member
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      ownRowsOnly: enforced
+      unlockGated: false
+    consentRequirements:
+      scopes:
+        - member_personal_control
+      fallbackLawfulBasis: legitimate_interest_safety_support
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - actor_not_authenticated
+      - missing_csrf_confirmation
+      - cross_origin_request
+
+  - pluginId: member-mutes
+    command: member.mute.remove
+    version: 1.0.0
+    requiredRoles:
+      - member
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      ownRowsOnly: enforced
+      unlockGated: false
+    consentRequirements:
+      scopes:
+        - member_personal_control
+      fallbackLawfulBasis: legitimate_interest_safety_support
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - actor_not_authenticated
+      - missing_csrf_confirmation
+      - cross_origin_request
+
+  - pluginId: member-mutes
+    command: member.mute.list
+    version: 1.0.0
+    requiredRoles:
+      - member
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      ownRowsOnly: enforced
+      unlockGated: false
+    consentRequirements:
+      scopes:
+        - member_personal_control
+      fallbackLawfulBasis: legitimate_interest_safety_support
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - actor_not_authenticated
+      - missing_csrf_confirmation
+      - cross_origin_request

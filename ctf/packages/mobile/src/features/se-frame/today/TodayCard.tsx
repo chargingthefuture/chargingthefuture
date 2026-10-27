@@ -5,7 +5,7 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 import * as Clipboard from 'expo-clipboard';
-import type { SeThemeTokens, SeTodayCard } from '@ctf/shared';
+import { SE_MUTE_WORDS, type SeThemeTokens, type SeTodayCard } from '@ctf/shared';
 import { SeAvatar } from '../../../components/shared/SeAvatar';
 import { getApiBaseUrl } from '../../../auth/authedFetch';
 import { SE_FONT } from '../fonts';
@@ -14,12 +14,40 @@ function absolute(href: string): string {
   return href.startsWith('http') ? href : `${getApiBaseUrl()}${href}`;
 }
 
+type Styles = ReturnType<typeof makeStyles>;
+
+function CardMenu({ s, card, onHide, onMute }: { s: Styles; card: SeTodayCard; onHide: () => void; onMute?: () => void }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <View style={s.menu} accessibilityRole="menu">
+      <TouchableOpacity
+        accessibilityRole="menuitem"
+        style={s.menuItem}
+        onPress={() => {
+          void Clipboard.setStringAsync(absolute(card.href)).then(() => setCopied(true));
+        }}
+      >
+        <Text style={s.menuLabel}>{copied ? 'Link copied' : 'Copy link'}</Text>
+      </TouchableOpacity>
+      <TouchableOpacity accessibilityRole="menuitem" style={s.menuItem} onPress={onHide}>
+        <Text style={s.menuLabel}>Hide</Text>
+      </TouchableOpacity>
+      {onMute && card.author ? (
+        <TouchableOpacity accessibilityRole="menuitem" style={s.menuItem} onPress={onMute}>
+          <Text style={s.menuLabel}>{SE_MUTE_WORDS.mutePerson(card.author.handle)}</Text>
+        </TouchableOpacity>
+      ) : null}
+    </View>
+  );
+}
+
 export function TodayCard({
   t,
   card,
   read,
   onRead,
   onHide,
+  onMute,
   onOpenLink,
 }: {
   t: SeThemeTokens;
@@ -27,11 +55,11 @@ export function TodayCard({
   read: boolean;
   onRead: () => void;
   onHide: () => void;
+  onMute?: () => void;
   onOpenLink: (_href: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [menu, setMenu] = useState(false);
-  const [copied, setCopied] = useState(false);
   const color = t.kind[card.kind];
   const s = makeStyles(t);
 
@@ -52,7 +80,7 @@ export function TodayCard({
         ) : null}
         <TouchableOpacity
           accessibilityRole="button"
-          accessibilityLabel="More: copy link, hide"
+          accessibilityLabel={onMute ? 'More: copy link, hide, mute' : 'More: copy link, hide'}
           accessibilityState={{ expanded: menu }}
           onPress={() => setMenu((value) => !value)}
           style={s.menuButton}
@@ -64,22 +92,7 @@ export function TodayCard({
           </Svg>
         </TouchableOpacity>
       </View>
-      {menu ? (
-        <View style={s.menu} accessibilityRole="menu">
-          <TouchableOpacity
-            accessibilityRole="menuitem"
-            style={s.menuItem}
-            onPress={() => {
-              void Clipboard.setStringAsync(absolute(card.href)).then(() => setCopied(true));
-            }}
-          >
-            <Text style={s.menuLabel}>{copied ? 'Link copied' : 'Copy link'}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity accessibilityRole="menuitem" style={s.menuItem} onPress={onHide}>
-            <Text style={s.menuLabel}>Hide</Text>
-          </TouchableOpacity>
-        </View>
-      ) : null}
+      {menu ? <CardMenu s={s} card={card} onHide={onHide} onMute={onMute} /> : null}
       <TouchableOpacity
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}

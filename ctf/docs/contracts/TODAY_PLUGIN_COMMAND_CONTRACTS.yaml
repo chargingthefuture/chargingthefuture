@@ -43,6 +43,9 @@ contracts:
       - skills_hunt_rounds
       - skills_hunt_missions
       - skills_hunt_mission_progress
+      - member_action_seconds_daily
+      - foundation_call_sessions
+      - member_mutes
       - chyme_rooms
       - chyme_room_members
       - chyme_guest_listeners

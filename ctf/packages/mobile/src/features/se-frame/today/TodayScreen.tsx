@@ -1,5 +1,5 @@
 // Today in 3.1 on Android, the copy of the web's today-screen.tsx: the broadcast while it is live,
-// the rooms, then the day's cards newest first. The done count stays hidden until the member
+// Days won, the rooms, then the day's cards newest first. The done count stays hidden until the member
 // has opened a card.
 
 import React, { useState } from 'react';
@@ -8,16 +8,21 @@ import {
   SE_ROOM_MAIN_AUDIENCE,
   SE_ROOM_WEAVERS_AUDIENCE,
   SE_ROOM_WORDS_MAIN,
+  SE_DAYS_WON_TITLE,
+  SE_MUTE_WORDS,
   SE_TODAY_FILTERS,
+  seDaysWonLines,
   seRoomPeopleLine,
   seTalkLine,
   seTodayView,
   type SeThemeTokens,
   type SeToday,
+  type SeTodayCard,
   type SeTodayFilter,
   type SeTodayRoom,
 } from '@ctf/shared';
 import { useSeRooms } from '../rooms/SeRooms';
+import { authedFetchJson } from '../../../auth/authedFetch';
 import type { FeatureKey } from '../../../navigation/screens';
 import { SE_FONT } from '../fonts';
 import { TodayCard } from './TodayCard';
@@ -50,10 +55,22 @@ function RoomCard({ t, room }: { t: SeThemeTokens; room: SeTodayRoom }) {
 
 type Styles = ReturnType<typeof makeStyles>;
 
+function DaysWonCard({ s, daysWon }: { s: Styles; daysWon: NonNullable<SeToday['daysWon']> }) {
+  const lines = seDaysWonLines(daysWon);
+  return (
+    <View style={s.daysWon} accessibilityLabel={SE_DAYS_WON_TITLE}>
+      <Text style={s.daysWonLabel}>{SE_DAYS_WON_TITLE}</Text>
+      <Text style={s.daysWonBig}>{lines.big}</Text>
+      <Text style={s.daysWonSmall}>{lines.small}</Text>
+    </View>
+  );
+}
+
 function LiveCards({ t, s, today, go }: { t: SeThemeTokens; s: Styles; today: SeToday | null; go: (_href: string) => void }) {
   const broadcast = today?.broadcast;
   return (
     <>
+      {today?.daysWon ? <DaysWonCard s={s} daysWon={today.daysWon} /> : null}
       {broadcast?.live ? (
         <View style={s.roomCard} accessibilityLabel="Live broadcast">
           <View style={s.row}>
@@ -115,6 +132,24 @@ export function TodayScreen({ t, accountId, onOpen }: { t: SeThemeTokens; accoun
   const [filter, setFilter] = useState<SeTodayFilter>('all');
   const go = (href: string) => openTodayLink(href, onOpen);
   const view = seTodayView(today, marks, filter);
+  const [muteNote, setMuteNote] = useState<string | null>(null);
+
+  // Mute the card's author: their cards leave Today from the next read. Nobody is told.
+  const mute = async (card: SeTodayCard) => {
+    if (!card.author) return;
+    try {
+      await authedFetchJson('/api/account/mutes', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-ctf-csrf': '1' },
+        body: JSON.stringify({ kind: 'person', target: card.author.accountId, label: card.author.handle }),
+      });
+      setMuteNote(SE_MUTE_WORDS.muted(card.author.handle));
+      mark('hidden', card.id);
+      void reload();
+    } catch (error) {
+      setMuteNote(`${SE_MUTE_WORDS.failed} ${error instanceof Error ? error.message : ''}`.trim());
+    }
+  };
 
   return (
     <>
@@ -127,6 +162,7 @@ export function TodayScreen({ t, accountId, onOpen }: { t: SeThemeTokens; accoun
       </View>
       <FilterChips s={s} filter={filter} onChange={setFilter} />
       <Notices s={s} error={error} missingLine={view.missingLine} loading={!today && loading} onRetry={() => void reload()} />
+      {muteNote ? <Text style={s.meta}>{muteNote}</Text> : null}
       {today ? (
         <View style={s.timeline}>
           <View style={s.line} />
@@ -138,6 +174,7 @@ export function TodayScreen({ t, accountId, onOpen }: { t: SeThemeTokens; accoun
               read={marks.read.includes(card.id)}
               onRead={() => mark('read', card.id)}
               onHide={() => mark('hidden', card.id)}
+              onMute={card.author ? () => void mute(card) : undefined}
               onOpenLink={go}
             />
           ))}
@@ -153,6 +190,10 @@ export function TodayScreen({ t, accountId, onOpen }: { t: SeThemeTokens; accoun
 
 function makeStyles(t: SeThemeTokens) {
   return StyleSheet.create({
+    daysWon: { gap: 2, padding: 16, borderRadius: 20, backgroundColor: t.hero },
+    daysWonLabel: { fontSize: 13, color: t.onHero, fontFamily: SE_FONT.sansBold },
+    daysWonBig: { fontSize: 40, lineHeight: 44, color: t.onHero, fontFamily: SE_FONT.serif },
+    daysWonSmall: { fontSize: 14, lineHeight: 20, color: t.onHero, fontFamily: SE_FONT.sans },
     roomCard: { gap: 10, padding: 16, borderRadius: 20, backgroundColor: t.card, borderWidth: 1.5, borderColor: t.line, boxShadow: `0px 3px 0px ${t.line}` },
     row: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 },
     liveBadge: { paddingVertical: 4, paddingHorizontal: 9, borderRadius: 999, overflow: 'hidden', backgroundColor: t.liveBadge, color: t.onLiveBadge, fontSize: 11, letterSpacing: 1.1, fontFamily: SE_FONT.sansBold },

@@ -4758,6 +4758,24 @@ ALTER TABLE IF EXISTS legacy_profile_redirects ADD COLUMN IF NOT EXISTS created_
 -- refuses it on production only with "inconsistent types deduced for parameter". That refused
 -- every sign-in from 2026-09-20 to 2026-09-24; post/0038 (from writes) and post/0039 (from visits)
 -- rebuild those days.
+-- Action minutes (3.1.0, Measures): seconds a member was connected in a room or a Back Channel,
+-- per day and source. Days won and retention add Foundation calls and confirmed PeerProgramming
+-- tasks from their own tables.
+CREATE TABLE IF NOT EXISTS member_action_seconds_daily (
+  user_id TEXT NOT NULL,
+  usage_date DATE NOT NULL,
+  source TEXT NOT NULL,
+  seconds INTEGER NOT NULL DEFAULT 0,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (user_id, usage_date, source)
+);
+ALTER TABLE IF EXISTS member_action_seconds_daily ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS member_action_seconds_daily ADD COLUMN IF NOT EXISTS usage_date DATE NOT NULL DEFAULT CURRENT_DATE;
+ALTER TABLE IF EXISTS member_action_seconds_daily ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS member_action_seconds_daily ADD COLUMN IF NOT EXISTS seconds INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE IF EXISTS member_action_seconds_daily ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_member_action_seconds_daily_date ON member_action_seconds_daily(usage_date);
+
 CREATE TABLE IF NOT EXISTS login_events (
   user_id TEXT NOT NULL,
   source VARCHAR(50) NOT NULL DEFAULT 'webapp',
@@ -7378,6 +7396,21 @@ ALTER TABLE IF EXISTS member_plugin_presence ADD COLUMN IF NOT EXISTS updated_at
 CREATE UNIQUE INDEX IF NOT EXISTS member_plugin_presence_unique_ref_idx
   ON member_plugin_presence (user_id, plugin_slug, ref_type, ref_id);
 CREATE INDEX IF NOT EXISTS member_plugin_presence_user_id_idx ON member_plugin_presence (user_id);
+
+-- member_mutes: personal mute (3.1.0). A member mutes a person (target = their account id, label =
+-- the handle shown at the time) or a word or phrase (target = the lower-cased words). Today leaves
+-- out cards by that person or containing those words. Nobody is told; a mute is not a block.
+CREATE TABLE IF NOT EXISTS member_mutes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id TEXT NOT NULL,
+  kind TEXT NOT NULL CHECK (kind IN ('person', 'words')),
+  target TEXT NOT NULL,
+  label TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT member_mutes_unique UNIQUE (user_id, kind, target)
+);
+ALTER TABLE IF EXISTS member_mutes ADD COLUMN IF NOT EXISTS label TEXT;
+CREATE INDEX IF NOT EXISTS idx_member_mutes_user ON member_mutes(user_id);
 
 -- member_blocks: product-wide, cross-cutting member blocking (issue #809, owner-signed model
 -- 2026-06-24). One member (blocker_user_id) blocks another (blocked_user_id). A block is created
