@@ -47,6 +47,7 @@ contracts:
       - ti_radio_slots
       - contributor_access_config
       - contributor_access_eligibility
+      - quora_deletion_survey_responses
     purpose: member_daily_overview
     retentionClass: none_read_only
     idempotency: true

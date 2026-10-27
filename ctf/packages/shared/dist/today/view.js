@@ -17,6 +17,7 @@ const SOURCE_NAMES = {
     announcements: 'announcements',
     'directory-invites': 'invitations',
     'what-works': 'What Works',
+    'quora-survey': 'the Quora survey',
     mood: 'Mood',
     numbers: 'numbers',
     'beacon-replays': 'replays',

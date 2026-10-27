@@ -16,6 +16,7 @@ vi.mock('./sources-stories', () => ({
   announcementStories: vi.fn(async () => []),
   inviteStories: vi.fn(async () => []),
   whatWorksStory: vi.fn(async () => []),
+  surveyCard: vi.fn(async () => []),
 }));
 vi.mock('./sources-live', () => ({
   moodCard: vi.fn(async () => []),

@@ -26,6 +26,7 @@ const SOURCE_NAMES: Record<string, string> = {
   announcements: 'announcements',
   'directory-invites': 'invitations',
   'what-works': 'What Works',
+  'quora-survey': 'the Quora survey',
   mood: 'Mood',
   numbers: 'numbers',
   'beacon-replays': 'replays',
