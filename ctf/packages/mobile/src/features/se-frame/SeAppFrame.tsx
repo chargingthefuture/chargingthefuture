@@ -6,6 +6,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { BackHandler, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SE_AVEN_DEFINITION, SE_AVENHOOD, SE_AVENHOOD_DEFINITION, seTheme, type SeTab, type SeThemeTokens } from '@ctf/shared';
 import { useAuth } from '../../auth/auth-context';
+import { SeAvatar } from '../../components/shared/SeAvatar';
 import { SeTabBar } from './SeTabBar';
 import { SE_FONT } from './fonts';
 import { useInterfaceVersion } from './interface-version';
@@ -68,7 +69,10 @@ export function SeAppFrame({ onOpenAccount }: { onOpenAccount: () => void }) {
         {tab === 'me' ? (
           <>
             <View style={s.card}>
-              <Text style={s.handle}>{handle}</Text>
+              <View style={s.meRow}>
+                {user ? <SeAvatar accountId={user.id} size={56} /> : null}
+                <Text style={s.handle}>{handle}</Text>
+              </View>
             </View>
             <View style={s.card}>
               <Text style={s.cardLabel}>About</Text>
@@ -148,6 +152,7 @@ function makeStyles(t: SeThemeTokens) {
     cardLabel: { fontSize: 12, color: t.soft, fontFamily: SE_FONT.sansBold },
     emptyTitle: { fontSize: 22, color: t.ink, fontFamily: SE_FONT.serif },
     emptyText: { fontSize: 15, lineHeight: 21, color: t.soft, fontFamily: SE_FONT.sans },
+    meRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
     handle: { fontSize: 17, color: t.ink, fontFamily: SE_FONT.sansBold },
     buttonRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 12 },
     secondaryButton: {

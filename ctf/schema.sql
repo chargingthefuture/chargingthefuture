@@ -402,7 +402,6 @@ CREATE TABLE IF NOT EXISTS chyme_room_members (
   room_id UUID NOT NULL REFERENCES chyme_rooms(id) ON DELETE CASCADE,
   user_id TEXT NOT NULL,
   username TEXT NULL,
-  avatar_url TEXT NULL,
   role TEXT NOT NULL CHECK (role IN ('speaker', 'listener')),
   hand_raised BOOLEAN NOT NULL DEFAULT FALSE,
   mic_on BOOLEAN NULL,
@@ -424,7 +423,6 @@ CREATE TABLE IF NOT EXISTS chyme_messages (
   room_id UUID NOT NULL REFERENCES chyme_rooms(id) ON DELETE CASCADE,
   user_id TEXT NOT NULL,
   username TEXT NULL,
-  avatar_url TEXT NULL,
   text TEXT NOT NULL CHECK (char_length(text) BETWEEN 1 AND 1000),
   sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -433,7 +431,6 @@ CREATE TABLE IF NOT EXISTS chyme_messages (
 ALTER TABLE IF EXISTS chyme_messages ADD COLUMN IF NOT EXISTS room_id UUID;
 ALTER TABLE IF EXISTS chyme_messages ADD COLUMN IF NOT EXISTS user_id TEXT;
 ALTER TABLE IF EXISTS chyme_messages ADD COLUMN IF NOT EXISTS username TEXT;
-ALTER TABLE IF EXISTS chyme_messages ADD COLUMN IF NOT EXISTS avatar_url TEXT;
 ALTER TABLE IF EXISTS chyme_messages ADD COLUMN IF NOT EXISTS text TEXT;
 ALTER TABLE IF EXISTS chyme_messages ADD COLUMN IF NOT EXISTS sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 CREATE INDEX IF NOT EXISTS idx_chyme_messages_room_sent_at ON chyme_messages(room_id, sent_at DESC);

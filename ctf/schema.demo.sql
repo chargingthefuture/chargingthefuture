@@ -417,7 +417,6 @@ CREATE TABLE IF NOT EXISTS chyme_room_members (
   room_id UUID NOT NULL REFERENCES chyme_rooms(id) ON DELETE CASCADE,
   user_id TEXT NOT NULL,
   username TEXT NULL,
-  avatar_url TEXT NULL,
   role TEXT NOT NULL CHECK (role IN ('speaker', 'listener')),
   hand_raised BOOLEAN NOT NULL DEFAULT FALSE,
   mic_on BOOLEAN NULL,
@@ -439,7 +438,6 @@ CREATE TABLE IF NOT EXISTS chyme_messages (
   room_id UUID NOT NULL REFERENCES chyme_rooms(id) ON DELETE CASCADE,
   user_id TEXT NOT NULL,
   username TEXT NULL,
-  avatar_url TEXT NULL,
   text TEXT NOT NULL CHECK (char_length(text) BETWEEN 1 AND 1000),
   sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -448,7 +446,6 @@ CREATE TABLE IF NOT EXISTS chyme_messages (
 ALTER TABLE IF EXISTS chyme_messages ADD COLUMN IF NOT EXISTS room_id UUID;
 ALTER TABLE IF EXISTS chyme_messages ADD COLUMN IF NOT EXISTS user_id TEXT;
 ALTER TABLE IF EXISTS chyme_messages ADD COLUMN IF NOT EXISTS username TEXT;
-ALTER TABLE IF EXISTS chyme_messages ADD COLUMN IF NOT EXISTS avatar_url TEXT;
 ALTER TABLE IF EXISTS chyme_messages ADD COLUMN IF NOT EXISTS text TEXT;
 ALTER TABLE IF EXISTS chyme_messages ADD COLUMN IF NOT EXISTS sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 CREATE INDEX IF NOT EXISTS idx_chyme_messages_room_sent_at ON chyme_messages(room_id, sent_at DESC);
@@ -10686,4 +10683,17 @@ ALTER TABLE IF EXISTS foundation_capacity_policy_events DROP COLUMN IF EXISTS ma
 
 ALTER TABLE IF EXISTS demo.foundation_capacity_policies DROP COLUMN IF EXISTS max_searches_per_minute;
 ALTER TABLE IF EXISTS demo.foundation_capacity_policy_events DROP COLUMN IF EXISTS max_searches_per_minute;
+
+
+-- ── post migration: 0069_chyme_drop_avatar_url.sql ──
+-- Drop avatar_url from Chyme's room members and room messages.
+--
+-- Why (owner decision, 3.1.0): members show only as a picture generated from their account id, and
+-- no uploaded photo is shown or kept. Every write already stored NULL here and nothing read it. The
+-- demo schema's copies go too. Safe to re-run: every statement is guarded by IF EXISTS.
+ALTER TABLE IF EXISTS chyme_room_members DROP COLUMN IF EXISTS avatar_url;
+ALTER TABLE IF EXISTS chyme_messages DROP COLUMN IF EXISTS avatar_url;
+
+ALTER TABLE IF EXISTS demo.chyme_room_members DROP COLUMN IF EXISTS avatar_url;
+ALTER TABLE IF EXISTS demo.chyme_messages DROP COLUMN IF EXISTS avatar_url;
 

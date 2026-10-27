@@ -19,7 +19,7 @@ contracts:
         type: boolean
       participants:
         type: array
-        description: Each participant carries userId, username, avatarUrl, role, handRaised, micOn (boolean, or null when their app has not reported), joinedAtIso and lastSeenAtIso.
+        description: Each participant carries userId, username, role, handRaised, micOn (boolean, or null when their app has not reported), joinedAtIso and lastSeenAtIso.
       guestCount:
         type: number
     dataAccess:

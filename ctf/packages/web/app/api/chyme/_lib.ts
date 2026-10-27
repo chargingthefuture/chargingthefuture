@@ -14,7 +14,6 @@ import { getContributorAccessConfig, isMemberEligible } from 'lib/contributor-ac
 export type ChymeApiIdentity = {
   userId: string;
   username: string | null;
-  avatarUrl: string | null;
 };
 
 export type ChymeApiGate =
@@ -47,7 +46,6 @@ export async function requireChymeAccess(): Promise<ChymeApiGate> {
   const identity: ChymeApiIdentity = {
     userId: authDecision.userId,
     username: authDecision.username,
-    avatarUrl: null,
   };
 
   return {
@@ -172,7 +170,7 @@ export async function requireChymeAdminAccess(): Promise<ChymeApiGate> {
   return {
     allowed: true,
     auth: authDecision,
-    identity: { userId: authDecision.userId, username: authDecision.username, avatarUrl: null },
+    identity: { userId: authDecision.userId, username: authDecision.username },
   };
 }
 

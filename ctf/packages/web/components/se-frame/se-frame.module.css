@@ -100,6 +100,12 @@
   color: var(--se-soft);
 }
 
+.meRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .handle {
   font-size: 17px;
   font-weight: 700;

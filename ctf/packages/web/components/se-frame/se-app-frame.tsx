@@ -5,6 +5,7 @@ import Link from 'next/link';
 import '@fontsource-variable/dm-sans/opsz.css';
 import { SE_AVEN_DEFINITION, SE_AVENHOOD, SE_AVENHOOD_DEFINITION, SE_TABS, type SeTab } from '@ctf/shared';
 import type { ShellCurrentUser } from '../community-shell/shell-types';
+import { SeAvatar } from '../shared/se-avatar';
 import { SeTabBar } from './se-tab-bar';
 import { seThemeVars } from './se-theme-vars';
 import { useInterfaceSwitch } from './use-interface-switch';
@@ -73,7 +74,10 @@ function MeScreen({ currentUser, onBack, saving }: { currentUser: ShellCurrentUs
     <>
       <ScreenHeader title="Me" />
       <section className={styles.card}>
-        <span className={styles.handle}>{currentUser.displayName}</span>
+        <div className={styles.meRow}>
+          <SeAvatar accountId={currentUser.userId} size={56} />
+          <span className={styles.handle}>{currentUser.displayName}</span>
+        </div>
       </section>
       <section className={styles.card}>
         <p className={styles.cardLabel}>About</p>

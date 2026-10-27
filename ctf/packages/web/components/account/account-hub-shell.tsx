@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import type { CSSProperties, ReactNode } from 'react';
-import { UserButton } from '@clerk/nextjs';
+import { SeUserButton } from '@/components/shared/se-user-button';
 import { ChevronRight, Database, HeartHandshake, ShieldCheck, ShieldOff, Sparkles, UserCircle } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { getAccountDataTokens } from '@/components/account-data/account-data-shared';
@@ -52,7 +52,7 @@ export function AccountHubShell({ username, trust }: { username: string | null; 
           </p>
         </header>
 
-        {/* Identity — name, username, photo, email (managed by the account provider) */}
+        {/* Identity — name, username, email (managed by the account provider) */}
         <section style={cardStyle}>
           <div style={sectionLabel}>Identity</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -61,11 +61,11 @@ export function AccountHubShell({ username, trust }: { username: string | null; 
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 16, fontWeight: 700 }}>{handle}</div>
-              <div style={{ fontSize: 13, color: tok.SUBTLE }}>Your name, username, photo, and email</div>
+              <div style={{ fontSize: 13, color: tok.SUBTLE }}>Your name, username, and email</div>
             </div>
             {/* Clerk's account menu is the one place identity basics are edited. */}
-            <span title="Manage your name, username, photo, and email" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <UserButton />
+            <span title="Manage your name, username, and email" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <SeUserButton />
             </span>
           </div>
         </section>

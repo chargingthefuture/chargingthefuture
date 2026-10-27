@@ -9,7 +9,7 @@
 
 | | |
 |---|---|
-| **Surface** | `/account/data` (Your Data & Privacy), and `/account` for AD-10 |
+| **Surface** | `/account/data` (Your Data & Privacy), and `/account` for AD-9 and AD-10 |
 | **Visibility** | Any signed-in identity (including unlock-pending) |
 | **Roles to test** | member |
 | **Surfaces** | web (phone-width layout) |
@@ -194,6 +194,20 @@ instead of saying the sign-in is gone. The leftover account is cleared through t
 `Delete Account (manual)` workflow.
 **Result:** web ☐ · android ☐ — notes:
 
+## AD-9 · Every member shows a generated picture, never an uploaded photo
+
+**Role:** member · **Precondition:** signed in on an account that has a profile photo set in Clerk.
+**Steps:**
+1. Open `/`. Look at the profile card on the right rail (wide screen) and the account button on the
+   phone-width top bar.
+2. Open `/account`. Look at the Identity card's account button, then open it and choose Manage
+   account.
+3. Sign out, sign in as a second member, and repeat step 1.
+**Expected:** Each place shows a small landscape or a cut-paper picture in earth colors, never the Clerk photo. The same
+member gets the same pattern in every place and after a reload; the second member's differs. Clerk's
+menu and Manage account show no photo and no upload or remove control. The Identity card reads
+"Your name, username, and email".
+
 ## AD-10 · Switch to 3.1 and back to 3.0
 
 **Role:** member · **Precondition:** signed in and approved, on 3.0.
@@ -205,7 +219,7 @@ instead of saying the sign-in is gone. The leftover account is cleared through t
 5. Open `/apps/directory/invites` and one invite's page from it, then come back to `/`.
 6. On the Me tab, tap **Back to 3.0**.
 **Expected:** Step 1 lands on the 3.1 home: forest green and gold, dark, the date above "Today in the
-Avenhood", and the tab bar. Each tab shows its title; Me shows your handle and Back to 3.0, and the
+Avenhood", and the tab bar. Each tab shows its title; Me shows your picture, your handle and Back to 3.0, and the
 others say the screen is still being built. The address carries the tab (`/?tab=people`), and back
 returns to the tab before. Tapping Avenhood opens and closes its definition under the title; the
 About card on Me shows the same definition and what an Aven is. The invite wall and the invite page open and work as before. Back to 3.0
