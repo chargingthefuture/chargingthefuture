@@ -5,7 +5,7 @@ import { reportError } from 'lib/observability/report';
 
 // GET /api/today: everything the 3.1 Today screen draws, in one answer. Approved members only (the
 // default tier), the same bar as every feature it reads from. A source that fails is left out and
-// named in `unavailable`; only a failure of the read as a whole answers 503.
+// named in `unavailable`; only a failure of the entire read answers 503.
 
 export const dynamic = 'force-dynamic';
 
