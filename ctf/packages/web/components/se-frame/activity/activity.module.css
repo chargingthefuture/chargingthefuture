@@ -1,0 +1,91 @@
+/* Activity in 3.1. Colors come from the frame's custom properties (se-theme-vars.ts). No red
+   badges: "New" uses the theme's own colors. */
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.groupTitle {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--se-soft);
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 44px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1.5px solid var(--se-hair);
+  background: var(--se-card);
+  color: var(--se-ink);
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.summary {
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--se-soft);
+}
+
+.isNew {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--se-btn);
+  color: var(--se-on-btn);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.text {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.4;
+  color: var(--se-soft);
+}
+
+.linkButton {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--se-ink);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.allRead {
+  align-self: flex-start;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1.5px solid var(--se-line);
+  background: var(--se-card);
+  color: var(--se-ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: 0 2px 0 var(--se-line);
+  cursor: pointer;
+}
+
+.row:focus-visible,
+.linkButton:focus-visible,
+.allRead:focus-visible {
+  outline: 2px solid var(--se-pick);
+  outline-offset: 2px;
+}

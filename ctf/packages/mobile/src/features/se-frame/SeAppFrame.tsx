@@ -2,7 +2,7 @@
 // per tab, the open room and its bar, and the tab bar along the bottom.
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { BackHandler, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { BackHandler, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SE_AVENHOOD, SE_AVENHOOD_DEFINITION, seTheme, type SeTab, type SeThemeChoice, type SeThemeTokens } from '@ctf/shared';
 import { useAuth } from '../../auth/auth-context';
 import { SeTabBar } from './SeTabBar';
@@ -12,6 +12,8 @@ import { TodayScreen } from './today/TodayScreen';
 import { MeScreen } from './me/MeScreen';
 import { useSeTheme } from './useSeTheme';
 import { NewScreen } from './new/NewScreen';
+import { ActivityScreen } from './activity/ActivityScreen';
+import { PeopleScreen } from './people/PeopleScreen';
 import { SeRoomBar, SeRoomHosts } from './rooms/SeRoomScreen';
 import { SeRoomsProvider, useSeRooms } from './rooms/SeRooms';
 import type { FeatureKey } from '../../navigation/screens';
@@ -75,7 +77,7 @@ function SeAppFrameBody({ onOpenAccount, onOpen }: FrameProps) {
       <ScrollView contentContainerStyle={s.screen} style={rooms.shown ? s.hidden : null}>
         <FrameHeader s={s} tab={tab} />
 
-        <TabScreen t={t} s={s} tab={tab} user={user} theme={theme} onTheme={setTheme} onBack={back} saving={saving} onOpenAccount={onOpenAccount} onOpen={onOpen} />
+        <TabScreen t={t} tab={tab} user={user} theme={theme} onTheme={setTheme} onBack={back} saving={saving} onOpenAccount={onOpenAccount} onOpen={onOpen} />
 
         {error ? (
           <Text accessibilityRole="alert" style={s.error}>
@@ -94,7 +96,6 @@ type Styles = ReturnType<typeof makeStyles>;
 
 type TabScreenProps = {
   t: SeThemeTokens;
-  s: Styles;
   tab: SeTab;
   user: { id: string; username?: string | null; isAdmin?: boolean } | null;
   theme: SeThemeChoice;
@@ -105,7 +106,7 @@ type TabScreenProps = {
   onOpen: (_key: FeatureKey) => void;
 };
 
-function TabScreen({ t, s, tab, user, theme, onTheme, onBack, saving, onOpenAccount, onOpen }: TabScreenProps) {
+function TabScreen({ t, tab, user, theme, onTheme, onBack, saving, onOpenAccount, onOpen }: TabScreenProps) {
   if (tab === 'me') {
     return (
       <MeScreen
@@ -123,7 +124,8 @@ function TabScreen({ t, s, tab, user, theme, onTheme, onBack, saving, onOpenAcco
   }
   if (tab === 'today') return user ? <TodayScreen t={t} accountId={user.id} onOpen={onOpen} /> : null;
   if (tab === 'new') return <NewScreen t={t} onOpen={onOpen} />;
-  return <NotBuiltCard s={s} onBack={onBack} saving={saving} />;
+  if (tab === 'activity') return <ActivityScreen t={t} onOpen={onOpen} />;
+  return <PeopleScreen t={t} onOpen={onOpen} />;
 }
 
 function FrameHeader({ s, tab }: { s: Styles; tab: SeTab }) {
@@ -156,30 +158,6 @@ function FrameHeader({ s, tab }: { s: Styles; tab: SeTab }) {
   );
 }
 
-function NotBuiltCard({ s, onBack, saving }: { s: Styles; onBack: () => void; saving: boolean }) {
-  return (
-    <View style={s.card}>
-      <Text style={s.emptyTitle}>This screen is still being built.</Text>
-      <Text style={s.emptyText}>Everything you use today is in 3.0, unchanged.</Text>
-      <SecondaryButton s={s} label="Back to 3.0" onPress={onBack} disabled={saving} />
-    </View>
-  );
-}
-
-function SecondaryButton({ s, label, onPress, disabled }: { s: Styles; label: string; onPress: () => void; disabled: boolean }) {
-  return (
-    <TouchableOpacity
-      accessibilityRole="button"
-      accessibilityState={{ disabled }}
-      onPress={onPress}
-      disabled={disabled}
-      style={[s.secondaryButton, disabled ? s.disabled : null]}
-    >
-      <Text style={s.secondaryLabel}>{label}</Text>
-    </TouchableOpacity>
-  );
-}
-
 function makeStyles(t: SeThemeTokens) {
   return StyleSheet.create({
     frame: { flex: 1, backgroundColor: t.bg },
@@ -189,7 +167,6 @@ function makeStyles(t: SeThemeTokens) {
     header: { gap: 2 },
     eyebrow: { fontSize: 13, color: t.soft, fontFamily: SE_FONT.sans },
     title: { fontSize: 30, lineHeight: 33, color: t.ink, fontFamily: SE_FONT.serif },
-    card: { gap: 10, padding: 14, borderRadius: 18, backgroundColor: t.card, borderWidth: 1.5, borderColor: t.hair, alignItems: 'flex-start' },
     term: { textDecorationLine: 'underline', textDecorationStyle: 'dotted' },
     definition: {
       marginTop: 8,
@@ -204,20 +181,6 @@ function makeStyles(t: SeThemeTokens) {
       color: t.ink,
       fontFamily: SE_FONT.sans,
     },
-    emptyTitle: { fontSize: 22, color: t.ink, fontFamily: SE_FONT.serif },
-    emptyText: { fontSize: 15, lineHeight: 21, color: t.soft, fontFamily: SE_FONT.sans },
-    secondaryButton: {
-      minHeight: 44,
-      paddingHorizontal: 16,
-      justifyContent: 'center',
-      borderRadius: 999,
-      borderWidth: 1.5,
-      borderColor: t.line,
-      backgroundColor: t.card,
-      boxShadow: `0px 2px 0px ${t.line}`,
-    },
-    secondaryLabel: { fontSize: 14, color: t.ink, fontFamily: SE_FONT.sansBold },
-    disabled: { opacity: 0.6 },
     error: { fontSize: 14, color: t.kind.ask, fontFamily: SE_FONT.sans },
   });
 }

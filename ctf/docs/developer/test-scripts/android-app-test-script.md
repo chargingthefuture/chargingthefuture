@@ -270,6 +270,9 @@ Expect a small landscape or cut-paper picture, never the photo, and the same pic
 7. Open Me and run AD-14 as on the web: Send and History open ServiceCredits in the browser, Receive
    copies your handle, the colors change at once and stay after closing and reopening the app, and
    there is no Android app link (you are in it).
+8. Open Activity and run AD-15 as on the web; an item for a part of the app the Android app does not
+   carry opens in the browser.
+9. Open People and run AD-16 as on the web; Profile and Request a quote open in the browser.
 
 ## AN-8 — Blocked members
 

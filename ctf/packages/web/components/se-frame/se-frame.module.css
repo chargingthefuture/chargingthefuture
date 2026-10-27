@@ -62,50 +62,6 @@
   color: var(--se-ink);
 }
 
-.emptyCard {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 14px;
-  border-radius: 18px;
-  background: var(--se-card);
-  border: 1.5px solid var(--se-hair);
-  align-items: flex-start;
-}
-
-.emptyTitle {
-  margin: 0;
-  font-family: 'Newsreader Variable', Newsreader, Georgia, serif;
-  font-size: 22px;
-  font-weight: 600;
-}
-
-.emptyText {
-  margin: 0;
-  font-size: 15px;
-  line-height: 1.4;
-  color: var(--se-soft);
-}
-
-.secondaryButton {
-  min-height: 44px;
-  padding: 0 16px;
-  border-radius: 999px;
-  border: 1.5px solid var(--se-line);
-  background: var(--se-card);
-  color: var(--se-ink);
-  font: inherit;
-  font-size: 14px;
-  font-weight: 700;
-  box-shadow: 0 2px 0 var(--se-line);
-  cursor: pointer;
-}
-
-.secondaryButton:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-
 .error {
   margin: 0;
   font-size: 14px;
@@ -169,7 +125,6 @@
 
 .tab:focus-visible,
 .newButton:focus-visible,
-.secondaryButton:focus-visible,
 .termButton:focus-visible {
   outline: 2px solid var(--se-pick);
   outline-offset: 2px;

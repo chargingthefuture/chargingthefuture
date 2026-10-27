@@ -1,0 +1,129 @@
+/* People in 3.1. Colors come from the frame's custom properties (se-theme-vars.ts). Offerings use
+   the Offer kind's color, filled; Directory listings are outlined. */
+.search {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1.5px solid var(--se-line);
+  background: var(--se-card);
+  color: var(--se-ink);
+  font: inherit;
+  font-size: 16px;
+}
+
+.filters,
+.skills,
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.filter,
+.button,
+.primary {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1.5px solid var(--se-line);
+  background: var(--se-card);
+  color: var(--se-ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.filter[aria-checked='true'],
+.primary {
+  background: var(--se-btn);
+  color: var(--se-on-btn);
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 18px;
+  background: var(--se-card);
+  border: 1.5px solid var(--se-hair);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.who {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.name {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.meta {
+  margin: 0;
+  font-size: 14px;
+  color: var(--se-soft);
+}
+
+.offering,
+.listed {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  border: 1.5px solid var(--se-kind-offer);
+}
+
+.offering {
+  background: var(--se-kind-offer);
+  color: var(--se-bg);
+  font-weight: 700;
+}
+
+.listed {
+  color: var(--se-ink);
+}
+
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.linkButton {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--se-ink);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.search:focus-visible,
+.filter:focus-visible,
+.button:focus-visible,
+.primary:focus-visible,
+.linkButton:focus-visible {
+  outline: 2px solid var(--se-pick);
+  outline-offset: 2px;
+}

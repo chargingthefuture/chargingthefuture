@@ -10,3 +10,5 @@ export * from './today/types';
 export * from './today/view';
 export * from './today/rooms';
 export * from './today/new';
+export * from './today/activity';
+export * from './today/people';
