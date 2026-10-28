@@ -132,10 +132,24 @@ to the env flag, then the default. With no admin setting and no env override, th
    2026-06-16; it was missing from this section until 2026-08-18 even though it has shipped since,
    which is why the public user guide described PeerProgramming as text-only. The Android app has
    the same call since 2026-10-06 (an earlier Android version ran from 2026-06-23 to 2026-07-20).
-2. Camera and microphone start enabled, so joining puts the member on screen; mute, camera toggle,
-   and leave controls are on the call, and leaving returns to the Session tab. When the camera or
-   microphone does not start, a short notice above the tiles says which one and why: blocked for
-   this site (with how to allow it), not found, or the browser's own reason.
+2. Before joining, the web call shows "Check your camera and microphone": the member's own camera,
+   Microphone on/off, Camera on/off, Blur background, then **Join session** or Back (3.1.0, owner-
+   approved plan). Camera and microphone start enabled, so joining puts the member on screen; mute,
+   camera toggle, Blur background, Picture in picture and leave controls are on the call, and leaving
+   returns to the Session tab. When the camera or microphone does not start, a short notice says
+   which one and why: blocked for this site (with how to allow it), not found, or the browser's own
+   reason.
+   - **Blur background** blurs what is behind the member on their own camera. The blur model and its
+     WebAssembly are served by this app from `/video-filters`, copied out of the installed
+     `@stream-io/video-filters-web` package at dev and build time (`scripts/copy-video-filters.mjs`),
+     so nothing is fetched from a third-party server. A browser that cannot run it shows no button.
+   - **Picture in picture** moves the other member's video into its own window that stays on top.
+     Where the browser lets a page do it on its own (Chrome, for a call hidden behind another tab or
+     app), it happens without the button.
+   - **Block and report** under another member's tile: after a confirm, blocks them and files a safety
+     report in one step (`POST /api/account/blocks` with `safetyConcern`), then leaves the call.
+   Shared pieces: `components/shared/call-safety.tsx`; the check screen is `pp-call-lobby.tsx`.
+   Android: these three are on hold until the web app is done.
 3. One call per cohort, members only: `POST /api/peer-programming/session/join` resolves the cohort
    from the signed-in member and the call id is derived from the cohort id, so every member of a
    cohort lands in the same call and no one can join another cohort's call. A member listening in on
@@ -397,6 +411,7 @@ Demo schema (`ctf/scripts/seedDemo.mjs`, `seedPeerProgrammingGoalBoard`): finds 
 
 ## Change Log
 
+- 2026-10-28: **Call check, blur, picture in picture, block and report (3.1.0, plan task 10).** The web call opens on a camera and microphone check before joining; Blur background, Picture in picture and Block and report are on the call. Blur files are served from the app. No route, schema or contract change.
 - 2026-10-17: **Demo seed fills the goal board.** In the demo schema every account saw "You are not in a
   cohort yet", because the seed placed accounts only in the weekly `Demo-A` cohort, while the board reads
   the standing cohort (single-open-cohort mode is on by default) and opening it places nobody. The demo

@@ -56,3 +56,44 @@ contracts:
     purpose: member_daily_overview
     retentionClass: none_read_only
     idempotency: true
+  - pluginId: today
+    command: today.public.read
+    version: 1.0.0
+    description: Read Today for a visitor who is not signed in (GET /api/today/public). Public cards only, with no names.
+    inputSchema: {}
+    outputSchema:
+      today:
+        type: object
+        properties:
+          generatedAtIso:
+            type: string
+          broadcast:
+            type: object
+            nullable: true
+          rooms:
+            type: array
+            maxItems: 1
+          cards:
+            type: array
+            maxItems: 30
+          unavailable:
+            type: array
+    dataAccess:
+      - trust_transport_requests
+      - skill_up_cohorts
+      - directory_profile_skills
+      - skills_taxonomy_skills
+      - beacon_events
+      - skills_hunt_rounds
+      - skills_hunt_missions
+      - skills_hunt_mission_progress
+      - member_action_seconds_daily
+      - foundation_call_sessions
+      - peer_programming_goal_tasks
+      - chyme_rooms
+      - chyme_room_members
+      - chyme_guest_listeners
+      - ti_radio_slots
+    purpose: public_daily_overview
+    retentionClass: none_read_only
+    idempotency: true

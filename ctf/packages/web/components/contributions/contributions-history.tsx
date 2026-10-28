@@ -24,12 +24,14 @@ function HistoryItem({ item, t }: { item: ContributionSubmission; t: Contributio
         <span style={{ fontSize: 11, color: t.MUTED }}>{shortDate(item.createdAt)}</span>
       </div>
       {showCredits && <div style={{ fontSize: 12, color: t.ACCENT, fontWeight: 600 }}>+{item.creditsGranted.toLocaleString()} SC received</div>}
+      {item.status === 'confirmed' && item.creditsHeld ? (
+        <div style={{ fontSize: 12, color: t.MUTED, marginTop: 6 }}>Your thank-you credits arrive once Unlock is approved.</div>
+      ) : null}
     </div>
   );
 }
 
-// The history list body (without the section header), used in the desktop right rail and the
-// phone-width history tab. Renders the private-contributions note under the list.
+// The history list, with the private-contributions note under it.
 export function ContributionsHistoryList({ submissions, t }: { submissions: ContributionSubmission[]; t: ContributionsTokens }) {
   return (
     <>
@@ -43,12 +45,7 @@ export function ContributionsHistoryList({ submissions, t }: { submissions: Cont
   );
 }
 
-/**
- * Empty-history composition (no contributions yet). `onContribute` switches the caller to the
- * contribute view — supply it only where that leads somewhere (the mobile tabbed layout, where the
- * contribute options live on a separate tab). Omit it on desktop, where the contribute cards are
- * already on the same screen, so we don't show a button that points at what's already visible.
- */
+// Empty-history composition (no contributions yet). `onContribute` switches to the Contribute tab.
 export function ContributionsEmptyHistory({ t, onContribute }: { t: ContributionsTokens; onContribute?: () => void }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '48px 24px', textAlign: 'center' }}>
@@ -57,7 +54,7 @@ export function ContributionsEmptyHistory({ t, onContribute }: { t: Contribution
       </div>
       <h3 style={{ margin: '0 0 8px', fontSize: 17, fontWeight: 600, color: t.TITLE }}>No contributions yet</h3>
       <p style={{ margin: onContribute ? '0 0 24px' : 0, fontSize: 13, color: t.MUTED, lineHeight: 1.7, maxWidth: 380 }}>
-        If you&apos;re able to help, there are three ways to do it — a gift card, a Quora comment, or a GitHub star. The platform stays free either way.
+        If you are able to help, an Amazon gift card goes toward hosting. The app stays free either way.
       </p>
       {onContribute ? (
         <button
@@ -65,7 +62,7 @@ export function ContributionsEmptyHistory({ t, onContribute }: { t: Contribution
           onClick={onContribute}
           style={{ padding: '10px 28px', borderRadius: 8, background: t.ACCENT, border: 'none', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
         >
-          See how to contribute
+          Send a gift card
         </button>
       ) : null}
     </div>

@@ -211,7 +211,7 @@ const fallbackPluginRegistry: PluginRegistryItem[] = [
   {
     slug: 'contributions',
     name: 'Contributions',
-    summary: 'Voluntary fundraiser drives — gift-card, Quora-comment, and GitHub-star contributions with service-credit thank-you grants.',
+    summary: 'Send an Amazon gift card toward hosting, any time of year, and receive ServiceCredits as a thank-you.',
     availabilityState: 'implemented_shell',
     navRank: 210,
     isVisible: true,

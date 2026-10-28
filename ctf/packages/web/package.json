@@ -4,9 +4,9 @@
   "private": true,
   "packageManager": "pnpm@9.12.0",
   "scripts": {
-    "dev": "NEXT_TELEMETRY_DISABLED=1 next dev",
-    "build": "NEXT_TELEMETRY_DISABLED=1 NODE_OPTIONS=--max-old-space-size=8192 NEXT_PRIVATE_MAX_WORKER_THREADS=1 SENTRY_SUPPRESS_GLOBAL_ERROR_HANDLER_FILE_WARNING=1 next build",
-    "build:ci": "NEXT_TELEMETRY_DISABLED=1 CTF_SKIP_SENTRY_NEXTJS=1 NODE_OPTIONS=--max-old-space-size=8192 NEXT_PRIVATE_MAX_WORKER_THREADS=1 SENTRY_SUPPRESS_GLOBAL_ERROR_HANDLER_FILE_WARNING=1 next build",
+    "dev": "node scripts/copy-video-filters.mjs && NEXT_TELEMETRY_DISABLED=1 next dev",
+    "build": "node scripts/copy-video-filters.mjs && NEXT_TELEMETRY_DISABLED=1 NODE_OPTIONS=--max-old-space-size=8192 NEXT_PRIVATE_MAX_WORKER_THREADS=1 SENTRY_SUPPRESS_GLOBAL_ERROR_HANDLER_FILE_WARNING=1 next build",
+    "build:ci": "node scripts/copy-video-filters.mjs && NEXT_TELEMETRY_DISABLED=1 CTF_SKIP_SENTRY_NEXTJS=1 NODE_OPTIONS=--max-old-space-size=8192 NEXT_PRIVATE_MAX_WORKER_THREADS=1 SENTRY_SUPPRESS_GLOBAL_ERROR_HANDLER_FILE_WARNING=1 next build",
     "lint": "eslint app components lib instrumentation.ts sentry.edge.config.ts sentry.server.config.ts eslint.config.mjs --max-warnings=0",
     "start": "NEXT_TELEMETRY_DISABLED=1 next start -p ${PORT:-3000}",
     "check:all": "pnpm run lint && pnpm run typecheck && pnpm run build",

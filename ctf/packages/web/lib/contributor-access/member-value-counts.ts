@@ -1,4 +1,6 @@
+import { SE_UNLOCK_OPEN_DAYS } from '@ctf/shared';
 import { queryDb } from 'lib/db/postgres';
+import { listUnlockedUserIds } from 'lib/shared/unlock-interface';
 import type { ContributorValueEventKey } from './weights';
 import { VALUE_EVENT_SOURCES, aggregateExpression, type ValueEventSource } from './value-events';
 
@@ -28,13 +30,14 @@ async function tableExists(table: string): Promise<boolean> {
 async function guardedMemberRows(
   tables: string | string[],
   sql: string,
+  params: unknown[] = [],
 ): Promise<{ member_id: string; v: string | null }[]> {
   try {
     const needed = Array.isArray(tables) ? tables : [tables];
     for (const table of needed) {
       if (!(await tableExists(table))) return [];
     }
-    const result = await queryDb<{ member_id: string; v: string | null }>(sql);
+    const result = await queryDb<{ member_id: string; v: string | null }>(sql, params);
     return result.rows;
   } catch {
     return [];
@@ -48,18 +51,38 @@ async function guardedMemberRows(
 //
 // Each all-time query is derived from an event's row SQL plus its aggregate, which is exactly what
 // each hand-written query here used to spell out.
+//
+// A row with somebody on the receiving side counts only when that person is trusted ($1): approved
+// through Unlock and past their first SE_UNLOCK_OPEN_DAYS days (3.1.0 plan, Access). A row with
+// nobody on the other side (a gift card, an accepted nomination) counts as before.
 function allTimeSql(source: ValueEventSource): string {
   return `SELECT member_id, ${aggregateExpression(source.aggregate)}::text AS v
             FROM (${source.rowSql}) AS rows
            WHERE member_id IS NOT NULL
+             AND (other_id IS NULL OR other_id = ANY($1::text[]))
            GROUP BY member_id`;
 }
 
+// The members whose received value counts toward somebody else's badge: approved, and signed in
+// for the first time at least SE_UNLOCK_OPEN_DAYS days ago.
+export async function computeTrustedReceivers(firstLogins: Map<string, string>): Promise<string[]> {
+  const cutoff = Date.now() - SE_UNLOCK_OPEN_DAYS * 86_400_000;
+  const settled = [...firstLogins.entries()]
+    .filter(([, first]) => {
+      const at = new Date(first).getTime();
+      return Number.isFinite(at) && at <= cutoff;
+    })
+    .map(([memberId]) => memberId);
+  if (settled.length === 0) return [];
+  const approved = await listUnlockedUserIds(settled);
+  return settled.filter((memberId) => approved.has(memberId));
+}
+
 // All-time per-member counts for every value event. Members with no events do not appear.
-export async function computeMemberEventCounts(): Promise<MemberEventCounts> {
+export async function computeMemberEventCounts(trustedReceivers: string[]): Promise<MemberEventCounts> {
   const counts: MemberEventCounts = new Map();
   const rowSets = await Promise.all(
-    VALUE_EVENT_SOURCES.map((source) => guardedMemberRows(source.tables, allTimeSql(source))),
+    VALUE_EVENT_SOURCES.map((source) => guardedMemberRows(source.tables, allTimeSql(source), [trustedReceivers])),
   );
   VALUE_EVENT_SOURCES.forEach((q, index) => {
     for (const row of rowSets[index]) {
@@ -85,7 +108,10 @@ export async function computeMemberEventCounts(): Promise<MemberEventCounts> {
 // tasks table covers the join). Foundation call sessions are deliberately NOT
 // read here: their per-member counts already feed the score internally, and keeping the sensitive
 // table out of the diversity read minimizes its access surface (rule 132).
-export async function computeMemberCounterpartyCounts(): Promise<Map<string, number>> {
+//
+// Only trusted counterparties count (see computeTrustedReceivers), the same rule as the score.
+export async function computeMemberCounterpartyCounts(trustedReceivers: string[]): Promise<Map<string, number>> {
+  const trusted = new Set(trustedReceivers);
   const pairQueries: { tables: string; sql: string }[] = [
     {
       tables: 'service_credits_transfers',
@@ -156,6 +182,7 @@ export async function computeMemberCounterpartyCounts(): Promise<Map<string, num
   for (const rows of rowSets) {
     for (const row of rows) {
       if (!row.member_id || !row.other_id || row.member_id === row.other_id) continue;
+      if (!trusted.has(row.other_id)) continue;
       const set = pairs.get(row.member_id) ?? new Set<string>();
       set.add(row.other_id);
       pairs.set(row.member_id, set);

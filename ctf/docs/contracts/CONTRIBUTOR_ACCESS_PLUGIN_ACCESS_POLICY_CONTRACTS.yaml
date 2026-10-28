@@ -97,6 +97,31 @@ policies:
       - no_earned_eligibility
 
   - pluginId: contributor-access
+    command: contributor-access.member.grant
+    version: 1.0.0
+    requiredRoles:
+      - admin
+    attributePolicies:
+      tenancy: same_workspace
+      csrfHeader: required
+    consentRequirements:
+      scopes:
+        - contributor_access_admin
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - insufficient_role
+      - csrf_denied
+      - member_not_found
+      - revoked_for_cause
+
+  - pluginId: contributor-access
     command: contributor-access.member.reinstate
     version: 1.0.0
     requiredRoles:

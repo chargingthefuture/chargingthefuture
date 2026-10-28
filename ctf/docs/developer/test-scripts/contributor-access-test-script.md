@@ -534,7 +534,7 @@ Result: web ☐
 1. Open the config editor section.
 2. Note the visible fields.
 
-**Expected:** The editor shows: score threshold, minimum account age (days), minimum distinct plugins, minimum distinct counterparties, minimum eligible members to open channel, and per-event weight overrides. There are fifteen events to override. Contributions is two rows since 2026-10-06: "Contributions gift card confirmed (per USD)" and "Contributions comment or star confirmed (per unit of set value)", both 0.1 by default; if a weight had been saved for the gift-card row before the split and none for the comment-or-star row, the comment-or-star row shows that same saved weight rather than 0.1, so nobody's standing moved when comments and stars stopped being counted as dollars. PeerProgramming goal card that helped, was added on 2026-09-25 with a default of 3: a goal-board card one member did for another that the goal's owner marked "It helped" (PeerProgramming test script, PP-21). Two were removed on 2026-09-20: Beacon broadcast engagement, because reacting under a broadcast is talk rather than something given, and WhatWorks endorsements, because an endorsement is an upvote and the thing of value in WhatWorks is the recommendation — listing a tool, which stays. PeerProgramming posting reads a default of 1 rather than 2. No row for either removed event appears anywhere in the editor. It also shows the channel open/closed toggle and the channel status card (eligible count vs minimum, OPEN/CLOSED badge, synced Stream member count or "unavailable"). All values match the system defaults (threshold 100, age 90 days, 3 plugins, 5 counterparties, 10 min eligible) if the config has never been written.
+**Expected:** The editor shows: score threshold, minimum account age (days), minimum distinct plugins, minimum distinct counterparties, minimum eligible members to open channel, and per-event weight overrides. There are fifteen events to override. Contributions is two rows since 2026-10-06: "Contributions gift card confirmed (per USD)" and "Contributions comment or star confirmed (per unit of set value)", both 0.1 by default; if a weight had been saved for the gift-card row before the split and none for the comment-or-star row, the comment-or-star row shows that same saved weight rather than 0.1, so nobody's standing moved when comments and stars stopped being counted as dollars. Contributions has taken gift cards only since 2026-10-27, so every comment-or-star row predates that day; the row stays because those confirmed claims still count. PeerProgramming goal card that helped, was added on 2026-09-25 with a default of 3: a goal-board card one member did for another that the goal's owner marked "It helped" (PeerProgramming test script, PP-21). Two were removed on 2026-09-20: Beacon broadcast engagement, because reacting under a broadcast is talk rather than something given, and WhatWorks endorsements, because an endorsement is an upvote and the thing of value in WhatWorks is the recommendation — listing a tool, which stays. PeerProgramming posting reads a default of 1 rather than 2. No row for either removed event appears anywhere in the editor. It also shows the channel open/closed toggle and the channel status card (eligible count vs minimum, OPEN/CLOSED badge, synced Stream member count or "unavailable"). All values match the system defaults (threshold 100, age 90 days, 3 plugins, 5 counterparties, 10 min eligible) if the config has never been written.
 
 Result: web ☐ mobile-responsive ☐
 
@@ -614,6 +614,38 @@ Result: web ☐
 2. Navigate to `/admin/adoption` (Weavers of the Commons section).
 
 **Expected:** The user is redirected to `/apps`. No admin content renders.
+
+Result: web ☐
+
+---
+
+### CA-A14 — Give the badge by hand
+**Role:** admin | **Surfaces:** web (mobile-width)
+
+**Precondition:** One member who does not hold the badge, and one member revoked for cause.
+
+**Steps:**
+1. On `/admin/adoption`, Weavers of the Commons, type the first member's `@username` into "Give the badge" and press it.
+2. Do it again for the same member.
+3. Type the revoked member's username and press it.
+4. Type a username nobody has.
+
+**Expected:** Step 1 adds the member to Eligible members with today's date. Step 2 changes nothing. Step 3 shows "This member was revoked for cause. Reinstate them instead." Step 4 shows "No member with the username or account id …". The next weekly recompute keeps the member granted in step 1.
+
+Result: web ☐
+
+---
+
+### CA-A15 — Value from a new or unapproved member does not count
+**Role:** admin | **Surfaces:** web (database read)
+
+**Precondition:** Member A sends credits to member B, who is not approved through Unlock or first signed in less than 14 days ago.
+
+**Steps:**
+1. Run the weekly recompute.
+2. Read A's row in `contributor_access_eligibility`.
+
+**Expected:** The send to B is not in A's `reason_snapshot` counts and B is not counted among A's counterparties. Once B is approved and past day 14, the next recompute counts it.
 
 Result: web ☐
 

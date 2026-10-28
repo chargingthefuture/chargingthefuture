@@ -1,54 +1,45 @@
-// Contributions repository — voluntary fundraiser drives. Members claim a contribution
-// (gift card sent to the owner over Signal, a Quora comment, or a GitHub star); the owner
-// confirms it and the platform thanks them with ServiceCredits via the canonical
-// service-credits mintGrant() path. This module NEVER writes service_credits tables directly,
-// and it never reads or writes any unlock_* table.
+// Contributions repository — Amazon gift cards, open all year. A member enters the card's amount
+// and code; the code is stored encrypted and erased when the owner confirms or rejects the claim. On
+// confirm the platform thanks the member with ServiceCredits through the canonical service-credits
+// mintGrant() path. This module NEVER writes service_credits tables directly, and it never reads or
+// writes any unlock_* table.
 
 import type { PoolClient } from 'pg';
 import { queryDb, withDbTransaction } from 'lib/db/postgres';
 import { mintGrant } from 'lib/shared/credits-interface';
+import { isUserUnlocked } from 'lib/shared/unlock-interface';
+import { decryptGiftCardCode, encryptGiftCardCode, type DecryptedCode } from './code-crypto';
 import type {
   ContributionKind,
   ContributionStatus,
   ContributionSubmission,
   ContributionSubmissionAdminView,
-  ContributionsCycle,
   ContributionsQueueFilters,
   ContributionsRuntimeConfig,
-  CreateContributionsCycleInput,
   CreateContributionSubmissionInput,
-  FundraiserSnapshot,
-  GiftCardMethod,
   ReviewContributionSubmissionInput,
   UpdateContributionsConfigInput,
-  UpdateContributionsCycleInput,
 } from './types';
 
-export const CONTRIBUTION_KINDS: readonly ContributionKind[] = ['gift_card', 'quora_comment', 'github_star'];
-export const GIFT_CARD_METHODS: readonly GiftCardMethod[] = ['amazon', 'apple', 'dennys'];
 export const CONTRIBUTION_STATUSES: readonly ContributionStatus[] = ['pending', 'confirmed', 'rejected'];
 
 // Gift-card claims are integer dollars, 1 to 500 (owner decision, 2026-08-09). Real gift cards do not
-// come in fractions of a dollar, so nothing is lost by refusing them, and it keeps a claim amount
-// something a member can say out loud. The floor is not what keeps credit grants entire — see
-// roundCredits below for that — the two rules are independent on purpose.
+// come in fractions of a dollar, and it keeps a claim amount something a member can say out loud.
 export const GIFT_CARD_MIN_USD = 1;
 export const GIFT_CARD_MAX_USD = 500;
+
+// Amazon claim codes are letters and digits, usually 14 or 15 with dashes. The bounds are loose so a
+// code typed with spaces or a different grouping still goes through; spaces are removed and letters
+// upper-cased before it is sealed.
+const CODE_PATTERN = /^[A-Z0-9-]{6,40}$/;
 
 const GRANT_REASON = 'contributions_confirmed';
 
 // Deleting Contributions data removes the submissions but keeps the ServiceCredits grant record, so
-// the once-per-member star limit and the per-drive cap also read that record (#2977); otherwise
-// deleting and resubmitting reset both. The grant's ticket carries what the checks need:
-// `contribution-<submissionId>:<kind>:<cycleId or none>`. Grants made before this change carry only
-// the submission id and are counted from the submissions alone.
-function grantTicketId(submissionId: string, kind: string, cycleId: string | null): string {
-  return `contribution-${submissionId}:${kind}:${cycleId ?? 'none'}`;
+// the yearly cap reads that record too (#2977); otherwise deleting and resubmitting would reset it.
+function grantTicketId(submissionId: string): string {
+  return `contribution-${submissionId}:gift_card`;
 }
-
-const KEPT_STAR_GRANT_SQL = `SELECT 1 FROM service_credits_governance_events
-       WHERE event_type = 'mint_grant' AND target_user_id = $1 AND reason = '${GRANT_REASON}'
-         AND governance_ticket_id LIKE 'contribution-%:github_star:%'`;
 
 // --- row types (NUMERIC columns arrive from pg as strings) -------------------------------
 
@@ -56,16 +47,14 @@ type SubmissionRow = {
   id: string;
   user_id: string;
   kind: ContributionKind;
-  method: GiftCardMethod | null;
+  method: string | null;
   claimed_amount_usd: string | null;
-  signal_contact: string | null;
-  quora_post_url: string | null;
-  github_profile_url: string | null;
+  has_code: boolean;
+  credits_held: boolean;
   status: ContributionStatus;
   confirmed_amount_usd: string | null;
   credits_granted: string;
   credit_governance_event_id: string | null;
-  cycle_id: string | null;
   reviewed_by_user_id: string | null;
   reviewed_at: Date | null;
   review_note: string | null;
@@ -73,34 +62,18 @@ type SubmissionRow = {
   updated_at: Date;
 };
 
-type CycleRow = {
-  id: string;
-  starts_at: Date;
-  ends_at: Date;
-  fiat_goal_usd: string;
-  quora_comment_goal: number;
-  github_star_goal: number;
-  created_by_user_id: string | null;
-  created_at: Date;
-  updated_at: Date;
-};
-
 type ConfigRow = {
   credits_per_usd: string;
-  non_monetary_unit_value_usd: string;
-  per_user_cycle_credit_cap: string;
-  banner_snooze_months: number;
-  banner_enabled: boolean;
-  signal_instructions: string;
+  per_user_year_credit_cap: string;
   updated_by_user_id: string | null;
   updated_at: Date | null;
 };
 
+// The code column is never selected into a row; only whether one is still stored.
 const SUBMISSION_COLUMNS = `
-  id, user_id, kind, method, claimed_amount_usd, signal_contact, quora_post_url,
-  github_profile_url, status, confirmed_amount_usd, credits_granted,
-  credit_governance_event_id, cycle_id, reviewed_by_user_id, reviewed_at, review_note,
-  created_at, updated_at`;
+  id, user_id, kind, method, claimed_amount_usd, (gift_card_code_encrypted IS NOT NULL) AS has_code,
+  (credits_held_at IS NOT NULL) AS credits_held, status, confirmed_amount_usd, credits_granted, credit_governance_event_id, reviewed_by_user_id,
+  reviewed_at, review_note, created_at, updated_at`;
 
 function mapSubmission(row: SubmissionRow): ContributionSubmission {
   return {
@@ -109,13 +82,11 @@ function mapSubmission(row: SubmissionRow): ContributionSubmission {
     kind: row.kind,
     method: row.method,
     claimedAmountUsd: row.claimed_amount_usd === null ? null : Number(row.claimed_amount_usd),
-    quoraPostUrl: row.quora_post_url,
-    githubProfileUrl: row.github_profile_url,
     status: row.status,
     confirmedAmountUsd: row.confirmed_amount_usd === null ? null : Number(row.confirmed_amount_usd),
     creditsGranted: Number(row.credits_granted),
+    creditsHeld: row.credits_held,
     creditGovernanceEventId: row.credit_governance_event_id,
-    cycleId: row.cycle_id,
     reviewedByUserId: row.reviewed_by_user_id,
     reviewedAt: row.reviewed_at ? row.reviewed_at.toISOString() : null,
     reviewNote: row.review_note,
@@ -125,33 +96,12 @@ function mapSubmission(row: SubmissionRow): ContributionSubmission {
 }
 
 function mapSubmissionForAdmin(row: SubmissionRow): ContributionSubmissionAdminView {
-  return {
-    ...mapSubmission(row),
-    signalContact: row.signal_contact,
-  };
-}
-
-function mapCycle(row: CycleRow): ContributionsCycle {
-  return {
-    id: row.id,
-    startsAt: row.starts_at.toISOString(),
-    endsAt: row.ends_at.toISOString(),
-    fiatGoalUsd: Number(row.fiat_goal_usd),
-    quoraCommentGoal: row.quora_comment_goal,
-    githubStarGoal: row.github_star_goal,
-    createdByUserId: row.created_by_user_id,
-    createdAt: row.created_at.toISOString(),
-    updatedAt: row.updated_at.toISOString(),
-  };
+  return { ...mapSubmission(row), hasCode: row.has_code };
 }
 
 const DEFAULT_CONFIG: ContributionsRuntimeConfig = {
   creditsPerUsd: 10,
-  nonMonetaryUnitValueUsd: 1,
-  perUserCycleCreditCap: 300,
-  bannerSnoozeMonths: 2,
-  bannerEnabled: true,
-  signalInstructions: '',
+  perUserYearCreditCap: 300,
   updatedByUserId: null,
   updatedAt: null,
 };
@@ -160,14 +110,9 @@ function mapConfig(row: ConfigRow | undefined): ContributionsRuntimeConfig {
   if (!row) {
     return DEFAULT_CONFIG;
   }
-
   return {
     creditsPerUsd: Number(row.credits_per_usd),
-    nonMonetaryUnitValueUsd: Number(row.non_monetary_unit_value_usd),
-    perUserCycleCreditCap: Number(row.per_user_cycle_credit_cap),
-    bannerSnoozeMonths: row.banner_snooze_months,
-    bannerEnabled: row.banner_enabled,
-    signalInstructions: row.signal_instructions,
+    perUserYearCreditCap: Number(row.per_user_year_credit_cap),
     updatedByUserId: row.updated_by_user_id,
     updatedAt: row.updated_at ? row.updated_at.toISOString() : null,
   };
@@ -175,90 +120,23 @@ function mapConfig(row: ConfigRow | undefined): ContributionsRuntimeConfig {
 
 // --- validation helpers -------------------------------------------------------------------
 
-function isHttpUrl(candidate: string): boolean {
-  try {
-    const parsed = new URL(candidate);
-    return parsed.protocol === 'https:' || parsed.protocol === 'http:';
-  } catch {
-    return false;
-  }
-}
-
-// The gift-card CODE is never collected or stored. There is deliberately no code field in the
-// schema or the input types; this guard rejects any request payload that tries to smuggle a
-// code-like field in anyway.
-const CODE_LIKE_KEY = /(code|pin|serial|voucher|card.?number)/i;
-
-export function assertNoGiftCardCodeFields(rawBody: Record<string, unknown>): void {
-  for (const key of Object.keys(rawBody)) {
-    if (CODE_LIKE_KEY.test(key)) {
-      throw new Error('gift_card_code_rejected');
-    }
-  }
-}
-
-function isValidGiftCardAmount(amount: unknown): amount is number {
+export function isValidGiftCardAmount(amount: unknown): amount is number {
   return typeof amount === 'number'
     && Number.isInteger(amount)
     && amount >= GIFT_CARD_MIN_USD
     && amount <= GIFT_CARD_MAX_USD;
 }
 
-function isValidSignalContact(contact: unknown): boolean {
-  if (typeof contact !== 'string') {
-    return false;
-  }
-
-  const trimmed = contact.trim();
-  return trimmed.length > 0 && trimmed.length <= 300;
-}
-
-function validateGiftCardFields(input: CreateContributionSubmissionInput): void {
-  if (!input.method || !GIFT_CARD_METHODS.includes(input.method)) {
-    throw new Error('invalid_method');
-  }
-
-  if (!isValidGiftCardAmount(input.claimedAmountUsd)) {
-    throw new Error('invalid_amount');
-  }
-
-  if (!isValidSignalContact(input.signalContact)) {
-    throw new Error('signal_contact_required');
-  }
-}
-
-function validateNonMonetaryFields(input: CreateContributionSubmissionInput): void {
-  if (input.method !== undefined || input.claimedAmountUsd !== undefined || input.signalContact !== undefined) {
-    throw new Error('invalid_payload');
-  }
-
-  const url = input.kind === 'quora_comment' ? input.quoraPostUrl : input.githubProfileUrl;
-  if (url !== undefined && (typeof url !== 'string' || !isHttpUrl(url))) {
-    throw new Error('invalid_url');
-  }
-}
-
-export function validateCreateSubmission(input: CreateContributionSubmissionInput): void {
-  if (!CONTRIBUTION_KINDS.includes(input.kind)) {
-    throw new Error('invalid_kind');
-  }
-
-  if (input.kind === 'gift_card') {
-    if (input.quoraPostUrl !== undefined || input.githubProfileUrl !== undefined) {
-      throw new Error('invalid_payload');
-    }
-    validateGiftCardFields(input);
-    return;
-  }
-
-  validateNonMonetaryFields(input);
+export function normalizeGiftCardCode(code: unknown): string | null {
+  if (typeof code !== 'string') return null;
+  const normalized = code.replace(/\s+/g, '').toUpperCase();
+  return CODE_PATTERN.test(normalized) ? normalized : null;
 }
 
 // --- runtime config ------------------------------------------------------------------------
 
 const CONFIG_SELECT = `
-  SELECT credits_per_usd::text, non_monetary_unit_value_usd::text, per_user_cycle_credit_cap::text,
-         banner_snooze_months, banner_enabled, signal_instructions, updated_by_user_id, updated_at
+  SELECT credits_per_usd::text, per_user_year_credit_cap::text, updated_by_user_id, updated_at
   FROM contributions_runtime_config
   WHERE id = TRUE
   LIMIT 1`;
@@ -273,216 +151,48 @@ async function getContributionsConfigWithClient(client: PoolClient): Promise<Con
   return mapConfig(result.rows[0]);
 }
 
-function assertPositiveIfPresent(value: number | undefined, code: string): void {
+function assertPositiveIfPresent(value: number | undefined): void {
   if (value !== undefined && (!Number.isFinite(value) || value <= 0)) {
-    throw new Error(code);
+    throw new Error('invalid_payload');
   }
 }
 
 export async function updateContributionsConfig(input: UpdateContributionsConfigInput): Promise<ContributionsRuntimeConfig> {
-  assertPositiveIfPresent(input.creditsPerUsd, 'invalid_payload');
-  assertPositiveIfPresent(input.nonMonetaryUnitValueUsd, 'invalid_payload');
-  assertPositiveIfPresent(input.perUserCycleCreditCap, 'invalid_payload');
-  if (input.bannerSnoozeMonths !== undefined && (!Number.isInteger(input.bannerSnoozeMonths) || input.bannerSnoozeMonths <= 0)) {
-    throw new Error('invalid_payload');
-  }
+  assertPositiveIfPresent(input.creditsPerUsd);
+  assertPositiveIfPresent(input.perUserYearCreditCap);
 
   const current = await getContributionsConfig();
   const result = await queryDb<ConfigRow>(
-    `INSERT INTO contributions_runtime_config (
-       id, credits_per_usd, non_monetary_unit_value_usd, per_user_cycle_credit_cap,
-       banner_snooze_months, banner_enabled, signal_instructions, updated_by_user_id, updated_at
-     )
-     VALUES (TRUE, $1, $2, $3, $4, $5, $6, $7, NOW())
+    `INSERT INTO contributions_runtime_config (id, credits_per_usd, per_user_year_credit_cap, updated_by_user_id, updated_at)
+     VALUES (TRUE, $1, $2, $3, NOW())
      ON CONFLICT (id) DO UPDATE SET
        credits_per_usd = EXCLUDED.credits_per_usd,
-       non_monetary_unit_value_usd = EXCLUDED.non_monetary_unit_value_usd,
-       per_user_cycle_credit_cap = EXCLUDED.per_user_cycle_credit_cap,
-       banner_snooze_months = EXCLUDED.banner_snooze_months,
-       banner_enabled = EXCLUDED.banner_enabled,
-       signal_instructions = EXCLUDED.signal_instructions,
+       per_user_year_credit_cap = EXCLUDED.per_user_year_credit_cap,
        updated_by_user_id = EXCLUDED.updated_by_user_id,
        updated_at = NOW()
-     RETURNING credits_per_usd::text, non_monetary_unit_value_usd::text, per_user_cycle_credit_cap::text,
-       banner_snooze_months, banner_enabled, signal_instructions, updated_by_user_id, updated_at`,
-    [
-      input.creditsPerUsd ?? current.creditsPerUsd,
-      input.nonMonetaryUnitValueUsd ?? current.nonMonetaryUnitValueUsd,
-      input.perUserCycleCreditCap ?? current.perUserCycleCreditCap,
-      input.bannerSnoozeMonths ?? current.bannerSnoozeMonths,
-      input.bannerEnabled ?? current.bannerEnabled,
-      input.signalInstructions ?? current.signalInstructions,
-      input.actorUserId,
-    ],
+     RETURNING credits_per_usd::text, per_user_year_credit_cap::text, updated_by_user_id, updated_at`,
+    [input.creditsPerUsd ?? current.creditsPerUsd, input.perUserYearCreditCap ?? current.perUserYearCreditCap, input.actorUserId],
   );
 
   return mapConfig(result.rows[0]);
 }
 
-// --- fundraiser cycles -----------------------------------------------------------------------
-
-const CYCLE_COLUMNS = `
-  id, starts_at, ends_at, fiat_goal_usd::text, quora_comment_goal, github_star_goal,
-  created_by_user_id, created_at, updated_at`;
-
-export async function getCurrentCycle(): Promise<ContributionsCycle | null> {
-  const result = await queryDb<CycleRow>(
-    `SELECT ${CYCLE_COLUMNS}
-     FROM contributions_cycles
-     WHERE starts_at <= NOW() AND ends_at > NOW()
-     ORDER BY starts_at DESC
-     LIMIT 1`,
-  );
-
-  const row = result.rows[0];
-  return row ? mapCycle(row) : null;
-}
-
-export async function listCycles(limit = 50): Promise<ContributionsCycle[]> {
-  const result = await queryDb<CycleRow>(
-    `SELECT ${CYCLE_COLUMNS}
-     FROM contributions_cycles
-     ORDER BY starts_at DESC
-     LIMIT $1`,
-    [Math.min(Math.max(limit, 1), 200)],
-  );
-
-  return result.rows.map(mapCycle);
-}
-
-function validateCycleWindow(startsAt: string | undefined, endsAt: string | undefined): void {
-  for (const candidate of [startsAt, endsAt]) {
-    if (candidate !== undefined && Number.isNaN(Date.parse(candidate))) {
-      throw new Error('invalid_payload');
-    }
-  }
-
-  if (startsAt !== undefined && endsAt !== undefined && Date.parse(endsAt) <= Date.parse(startsAt)) {
-    throw new Error('invalid_cycle_window');
-  }
-}
-
-function validateCycleGoals(input: { fiatGoalUsd?: number; quoraCommentGoal?: number; githubStarGoal?: number }): void {
-  if (input.fiatGoalUsd !== undefined && (!Number.isFinite(input.fiatGoalUsd) || input.fiatGoalUsd < 0)) {
-    throw new Error('invalid_payload');
-  }
-
-  for (const goal of [input.quoraCommentGoal, input.githubStarGoal]) {
-    if (goal !== undefined && (!Number.isInteger(goal) || goal < 0)) {
-      throw new Error('invalid_payload');
-    }
-  }
-}
-
-export async function createCycle(input: CreateContributionsCycleInput): Promise<ContributionsCycle> {
-  validateCycleWindow(input.startsAt, input.endsAt);
-  validateCycleGoals(input);
-
-  const result = await queryDb<CycleRow>(
-    `INSERT INTO contributions_cycles (
-       starts_at, ends_at, fiat_goal_usd, quora_comment_goal, github_star_goal, created_by_user_id
-     )
-     VALUES ($1, $2, $3, $4, $5, $6)
-     RETURNING ${CYCLE_COLUMNS}`,
-    [input.startsAt, input.endsAt, input.fiatGoalUsd, input.quoraCommentGoal, input.githubStarGoal, input.actorUserId],
-  );
-
-  return mapCycle(result.rows[0]);
-}
-
-export async function updateCycle(input: UpdateContributionsCycleInput): Promise<ContributionsCycle | null> {
-  validateCycleWindow(input.startsAt, input.endsAt);
-  validateCycleGoals(input);
-
-  const result = await queryDb<CycleRow>(
-    `UPDATE contributions_cycles
-     SET
-       starts_at = COALESCE($2, starts_at),
-       ends_at = COALESCE($3, ends_at),
-       fiat_goal_usd = COALESCE($4, fiat_goal_usd),
-       quora_comment_goal = COALESCE($5, quora_comment_goal),
-       github_star_goal = COALESCE($6, github_star_goal),
-       updated_at = NOW()
-     WHERE id = $1
-     RETURNING ${CYCLE_COLUMNS}`,
-    [
-      input.cycleId,
-      input.startsAt ?? null,
-      input.endsAt ?? null,
-      input.fiatGoalUsd ?? null,
-      input.quoraCommentGoal ?? null,
-      input.githubStarGoal ?? null,
-    ],
-  );
-
-  const row = result.rows[0];
-  return row ? mapCycle(row) : null;
-}
-
 // --- member submissions ------------------------------------------------------------------------
 
-// [method, claimed_amount_usd, signal_contact, quora_post_url, github_profile_url] per kind.
-function kindSpecificInsertValues(input: CreateContributionSubmissionInput): (string | number | null)[] {
-  if (input.kind === 'gift_card') {
-    return [input.method ?? null, input.claimedAmountUsd ?? null, input.signalContact?.trim() ?? null, null, null];
-  }
-
-  if (input.kind === 'quora_comment') {
-    return [null, null, null, input.quoraPostUrl ?? null, null];
-  }
-
-  return [null, null, null, null, input.githubProfileUrl ?? null];
-}
-
-/**
- * True when this member already holds a confirmed github_star contribution that earned credits
- * (credits_granted > 0), across all cycles. A github_star is a once-per-member-ever thank-you, so
- * this gate stops star/unstar gaming. A rejected star, or a confirmed-but-zero-credit star (e.g.
- * clamped by the per-cycle cap), does NOT lock the member out — honest retries must still work.
- */
-export async function hasCreditedGithubStar(userId: string): Promise<boolean> {
-  const result = await queryDb<{ exists: boolean }>(
-    `SELECT EXISTS (
-       SELECT 1 FROM contributions_submissions
-       WHERE user_id = $1 AND kind = 'github_star' AND status = 'confirmed' AND credits_granted > 0
-     ) OR EXISTS (${KEPT_STAR_GRANT_SQL}) AS exists`,
-    [userId],
-  );
-
-  return result.rows[0]?.exists ?? false;
-}
-
-async function hasCreditedGithubStarWithClient(client: PoolClient, userId: string, excludeSubmissionId: string): Promise<boolean> {
-  const result = await client.query<{ exists: boolean }>(
-    `SELECT EXISTS (
-       SELECT 1 FROM contributions_submissions
-       WHERE user_id = $1 AND kind = 'github_star' AND status = 'confirmed'
-         AND credits_granted > 0 AND id <> $2
-     ) OR EXISTS (${KEPT_STAR_GRANT_SQL} AND governance_ticket_id NOT LIKE 'contribution-' || $2 || ':%') AS exists`,
-    [userId, excludeSubmissionId],
-  );
-
-  return result.rows[0]?.exists ?? false;
-}
-
 export async function createSubmission(input: CreateContributionSubmissionInput): Promise<ContributionSubmission> {
-  validateCreateSubmission(input);
-
-  // A github_star is creditable at most once per member, ever. Reject a new star claim outright
-  // when the member already has a confirmed, credit-earning star. Gift cards and Quora comments
-  // are unaffected (they remain repeatable).
-  if (input.kind === 'github_star' && (await hasCreditedGithubStar(input.userId))) {
-    throw new Error('github_star_already_credited');
+  if (!isValidGiftCardAmount(input.claimedAmountUsd)) {
+    throw new Error('invalid_amount');
+  }
+  const code = normalizeGiftCardCode(input.code);
+  if (!code) {
+    throw new Error('invalid_code');
   }
 
-  const cycle = await getCurrentCycle();
   const result = await queryDb<SubmissionRow>(
-    `INSERT INTO contributions_submissions (
-       user_id, kind, method, claimed_amount_usd, signal_contact, quora_post_url, github_profile_url, cycle_id
-     )
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    `INSERT INTO contributions_submissions (user_id, kind, method, claimed_amount_usd, gift_card_code_encrypted)
+     VALUES ($1, 'gift_card', 'amazon', $2, $3)
      RETURNING ${SUBMISSION_COLUMNS}`,
-    [input.userId, input.kind, ...kindSpecificInsertValues(input), cycle?.id ?? null],
+    [input.userId, input.claimedAmountUsd, encryptGiftCardCode(code, input.userId)],
   );
 
   return mapSubmission(result.rows[0]);
@@ -499,121 +209,6 @@ export async function listOwnSubmissions(userId: string): Promise<ContributionSu
   );
 
   return result.rows.map(mapSubmission);
-}
-
-// --- fundraiser snapshot + banner ---------------------------------------------------------------
-
-type ProgressRow = {
-  fiat_confirmed_usd: string;
-  quora_comments_confirmed: string;
-  github_stars_confirmed: string;
-  contributor_count: string;
-};
-
-async function isBannerVisibleForUser(userId: string, bannerEnabled: boolean, hasCycle: boolean): Promise<boolean> {
-  if (!bannerEnabled || !hasCycle) {
-    return false;
-  }
-
-  const result = await queryDb<{ snoozed_until: Date | null }>(
-    `SELECT snoozed_until FROM contributions_banner_state WHERE user_id = $1 LIMIT 1`,
-    [userId],
-  );
-
-  const snoozedUntil = result.rows[0]?.snoozed_until ?? null;
-  return snoozedUntil === null || snoozedUntil.getTime() <= Date.now();
-}
-
-async function recordBannerShown(userId: string): Promise<void> {
-  await queryDb(
-    `INSERT INTO contributions_banner_state (user_id, last_shown_at, updated_at)
-     VALUES ($1, NOW(), NOW())
-     ON CONFLICT (user_id) DO UPDATE SET last_shown_at = NOW(), updated_at = NOW()`,
-    [userId],
-  );
-}
-
-const EMPTY_PROGRESS: ProgressRow = {
-  fiat_confirmed_usd: '0',
-  quora_comments_confirmed: '0',
-  github_stars_confirmed: '0',
-  contributor_count: '0',
-};
-
-async function fetchCycleProgress(cycleId: string | null): Promise<ProgressRow> {
-  if (!cycleId) {
-    return EMPTY_PROGRESS;
-  }
-
-  // Stars count members, not rows. A star is creditable once per member ever, and the goal on the
-  // progress bar is "how many people starred" — but a member can still end up with two confirmed
-  // star rows, because the block at submission time only looks at stars that are already confirmed.
-  // Send two before either is reviewed and both get confirmed, the second with 0 credits. Counting
-  // rows would show that member twice and overstate the community total, so count distinct members.
-  // Quora comments are the opposite on purpose: they are repeatable, and every confirmed comment is
-  // a real contribution, so those stay a row count.
-  const result = await queryDb<ProgressRow>(
-    `SELECT
-       COALESCE(SUM(confirmed_amount_usd) FILTER (WHERE kind = 'gift_card'), 0)::text AS fiat_confirmed_usd,
-       COUNT(*) FILTER (WHERE kind = 'quora_comment')::text AS quora_comments_confirmed,
-       COUNT(DISTINCT user_id) FILTER (WHERE kind = 'github_star')::text AS github_stars_confirmed,
-       COUNT(DISTINCT user_id)::text AS contributor_count
-     FROM contributions_submissions
-     WHERE status = 'confirmed' AND cycle_id = $1`,
-    [cycleId],
-  );
-
-  return result.rows[0] ?? EMPTY_PROGRESS;
-}
-
-// The open drive and the gift-card money confirmed in it, with nothing written. The admin Expenses
-// screen (/admin/expenses) reads this to suggest a money goal that covers the running costs;
-// getFundraiserSnapshot below also records a banner view, so it is not the one to call from there.
-export async function getCurrentCycleMoneyRaised(): Promise<{ cycle: ContributionsCycle | null; fiatConfirmedUsd: number }> {
-  const cycle = await getCurrentCycle();
-  const progress = await fetchCycleProgress(cycle ? cycle.id : null);
-  return { cycle, fiatConfirmedUsd: Number(progress.fiat_confirmed_usd) };
-}
-
-export async function getFundraiserSnapshot(userId: string): Promise<FundraiserSnapshot> {
-  const config = await getContributionsConfig();
-  const cycle = await getCurrentCycle();
-  const progress = await fetchCycleProgress(cycle ? cycle.id : null);
-
-  const bannerVisible = await isBannerVisibleForUser(userId, config.bannerEnabled, cycle !== null);
-  if (bannerVisible) {
-    await recordBannerShown(userId);
-  }
-
-  const githubStarAlreadyCredited = await hasCreditedGithubStar(userId);
-
-  return {
-    cycle,
-    fiatConfirmedUsd: Number(progress.fiat_confirmed_usd),
-    quoraCommentsConfirmed: Number(progress.quora_comments_confirmed),
-    githubStarsConfirmed: Number(progress.github_stars_confirmed),
-    contributorCount: Number(progress.contributor_count),
-    bannerVisible,
-    // bannerEnabled (feature on/off, independent of the per-member snooze) lets the mobile UI tell
-    // "snoozed" (show the small emoji reminder) from "turned off" (show nothing at all).
-    bannerEnabled: config.bannerEnabled,
-    githubStarAlreadyCredited,
-  };
-}
-
-// Returns nothing on purpose. The snooze length is an internal config knob and the command contract
-// says the member is never told how long they have been snoozed for, so there is no snooze horizon
-// here for a future caller to pass along by accident.
-export async function dismissBanner(userId: string): Promise<void> {
-  const config = await getContributionsConfig();
-  await queryDb(
-    `INSERT INTO contributions_banner_state (user_id, snoozed_until, updated_at)
-     VALUES ($1, NOW() + ($2::text || ' months')::interval, NOW())
-     ON CONFLICT (user_id) DO UPDATE SET
-       snoozed_until = NOW() + ($2::text || ' months')::interval,
-       updated_at = NOW()`,
-    [userId, String(config.bannerSnoozeMonths)],
-  );
 }
 
 // --- admin review ---------------------------------------------------------------------------------
@@ -641,60 +236,45 @@ export async function listSubmissions(filters: ContributionsQueueFilters = {}): 
   return result.rows.map(mapSubmissionForAdmin);
 }
 
-function resolveConfirmedAmount(
-  row: SubmissionRow,
-  input: ReviewContributionSubmissionInput,
-  config: ContributionsRuntimeConfig,
-): number {
-  if (row.kind === 'gift_card') {
-    // Same integer-dollar rule the member's claim had to clear. The admin types what was actually
-    // redeemed, which can differ from the claim, so it is checked here too rather than trusted.
-    const amount = input.confirmedAmountUsd;
-    if (!isValidGiftCardAmount(amount)) {
-      throw new Error('confirmed_amount_required');
-    }
-    return amount;
-  }
+export type RevealedCode = { found: false } | ({ found: true; userId: string } & DecryptedCode);
 
-  const amount = input.confirmedAmountUsd ?? config.nonMonetaryUnitValueUsd;
-  if (!Number.isFinite(amount) || amount <= 0) {
-    throw new Error('invalid_amount');
+// One claim's code, for the admin redeeming it. A reviewed claim has no code left to show.
+export async function revealSubmissionCode(submissionId: string): Promise<RevealedCode> {
+  const result = await queryDb<{ user_id: string; gift_card_code_encrypted: string | null }>(
+    `SELECT user_id, gift_card_code_encrypted FROM contributions_submissions WHERE id = $1`,
+    [submissionId],
+  );
+  const row = result.rows[0];
+  if (!row) return { found: false };
+  if (!row.gift_card_code_encrypted) {
+    return { found: true, userId: row.user_id, ok: false, reason: 'No code is stored for this claim: it was erased when the claim was reviewed, or the claim came in over Signal.' };
   }
-  return amount;
+  return { found: true, userId: row.user_id, ...decryptGiftCardCode(row.gift_card_code_encrypted, row.user_id) };
 }
 
-// Credits are an integer unit, so a grant is rounded before it is stored or minted.
-//
-// Nothing upstream guarantees this on its own. Credits are `confirmedAmountUsd × creditsPerUsd`, and
-// `creditsPerUsd` is an admin-editable number with no requirement to be an integer or to divide
-// evenly into a dollar — set it to 3 and an integer-dollar claim still lands on a third of a credit. The
-// per-cycle cap can be fractional too, so the clamp below can produce a fraction from inputs that
-// were both entire. `credits_granted` and the ledger balance are unconstrained NUMERIC columns, so a
-// fraction would persist exactly rather than being cleaned up by the database. Rounding here is the
-// one place that holds regardless of what the rate is set to.
-//
-// Rounded, not truncated: at the boundary the member gets the nearer number rather than always the
-// lower one. A grant that rounds to 0 still confirms the claim with 0 credits, which is the same
-// outcome the cap clamp already produces and is documented on applyConfirmReview.
+// Credits are an integer unit, so a grant is rounded before it is stored or minted. creditsPerUsd is
+// admin-editable with no requirement to divide a dollar evenly, and the cap can be fractional, so
+// this is the one place that holds whatever they are set to. A grant that rounds to 0 still confirms
+// the claim with 0 credits.
 function roundCredits(credits: number): number {
   return Math.round(credits);
 }
 
-async function computeCycleCappedGrant(
+async function computeYearCappedGrant(
   client: PoolClient,
-  params: { userId: string; cycleId: string | null; computedCredits: number; cap: number },
+  params: { userId: string; computedCredits: number; cap: number },
 ): Promise<number> {
   const result = await client.query<{ already_granted: string }>(
-    // The larger of the two records: the submissions (complete before a deletion) and the kept
-    // ServiceCredits grants (complete for grants since #2977, and kept after a deletion).
+    // The larger of the two records over the last 365 days: the submissions (complete before a
+    // deletion) and the kept ServiceCredits grants (kept after a deletion).
     `SELECT GREATEST(
        (SELECT COALESCE(SUM(credits_granted), 0) FROM contributions_submissions
-         WHERE user_id = $1 AND status = 'confirmed' AND cycle_id IS NOT DISTINCT FROM $2),
+         WHERE user_id = $1 AND status = 'confirmed' AND reviewed_at >= NOW() - INTERVAL '365 days'),
        (SELECT COALESCE(SUM(amount), 0) FROM service_credits_governance_events
          WHERE event_type = 'mint_grant' AND target_user_id = $1 AND reason = '${GRANT_REASON}'
-           AND governance_ticket_id LIKE 'contribution-%:' || COALESCE($2::text, 'none'))
+           AND created_at >= NOW() - INTERVAL '365 days')
      )::text AS already_granted`,
-    [params.userId, params.cycleId],
+    [params.userId],
   );
 
   const alreadyGranted = Number(result.rows[0]?.already_granted ?? 0);
@@ -713,9 +293,10 @@ async function applyReviewUpdate(
     confirmedAmountUsd: number | null;
     creditsGranted: number;
     creditGovernanceEventId: string | null;
-    cycleId: string | null;
+    creditsHeld?: boolean;
   },
 ): Promise<SubmissionRow> {
+  // The code is erased in the same statement that records the review.
   const result = await client.query<SubmissionRow>(
     `UPDATE contributions_submissions
      SET
@@ -726,7 +307,8 @@ async function applyReviewUpdate(
        confirmed_amount_usd = $5,
        credits_granted = $6,
        credit_governance_event_id = $7,
-       cycle_id = $8,
+       credits_held_at = CASE WHEN $8::boolean THEN NOW() ELSE NULL END,
+       gift_card_code_encrypted = NULL,
        updated_at = NOW()
      WHERE id = $1
      RETURNING ${SUBMISSION_COLUMNS}`,
@@ -738,7 +320,7 @@ async function applyReviewUpdate(
       params.confirmedAmountUsd,
       params.creditsGranted,
       params.creditGovernanceEventId,
-      params.cycleId,
+      params.creditsHeld ?? false,
     ],
   );
 
@@ -746,51 +328,53 @@ async function applyReviewUpdate(
 }
 
 /**
- * Confirm a locked, still-pending contribution claim. Credits = confirmedAmountUsd x
- * credits_per_usd, clamped by the per-user-per-cycle cap; a positive grant goes through the
- * canonical service-credits mintGrant() (idempotency key `contribution-<submissionId>`). A grant
- * clamped to 0 still confirms the submission with credits_granted = 0.
+ * Confirm a locked, still-pending claim. Credits = confirmedAmountUsd x credits_per_usd, clamped by
+ * the per-member cap over the last 365 days; a positive grant goes through the canonical
+ * service-credits mintGrant() (idempotency key `contribution-<submissionId>`).
  */
 async function applyConfirmReview(
   client: PoolClient,
   row: SubmissionRow,
   input: ReviewContributionSubmissionInput,
 ): Promise<SubmissionRow> {
+  // The admin types what was actually redeemed, which can differ from the claim, so it is checked
+  // against the same integer-dollar rule rather than trusted.
+  const confirmedAmountUsd = input.confirmedAmountUsd;
+  if (!isValidGiftCardAmount(confirmedAmountUsd)) {
+    throw new Error('confirmed_amount_required');
+  }
+
+  // Not yet approved in Unlock: the claim is confirmed and its credits are held. Approval runs
+  // grantHeldContributionCredits, which works the grant out then, under the cap as it stands then.
+  if (!(await isUserUnlocked(row.user_id))) {
+    return applyReviewUpdate(client, {
+      submissionId: input.submissionId,
+      status: 'confirmed',
+      actorUserId: input.actorUserId,
+      reviewNote: input.reviewNote ?? null,
+      confirmedAmountUsd,
+      creditsGranted: 0,
+      creditGovernanceEventId: null,
+      creditsHeld: true,
+    });
+  }
+
   const config = await getContributionsConfigWithClient(client);
-  const confirmedAmountUsd = resolveConfirmedAmount(row, input, config);
-  const cycleId = row.cycle_id ?? (await getCurrentCycle())?.id ?? null;
-
-  // Once-per-member-ever github_star: if this member already holds a different confirmed,
-  // credit-earning star, confirming this one grants 0 credits (we still mark it confirmed and
-  // record the reason). This is defense in depth — the create gate already blocks a duplicate
-  // star at submission time — and it never double-grants.
-  const githubStarAlreadyCredited =
-    row.kind === 'github_star' && (await hasCreditedGithubStarWithClient(client, row.user_id, row.id));
-
-  const computedCredits = githubStarAlreadyCredited ? 0 : confirmedAmountUsd * config.creditsPerUsd;
-  const creditsGranted = await computeCycleCappedGrant(client, {
+  const creditsGranted = await computeYearCappedGrant(client, {
     userId: row.user_id,
-    cycleId,
-    computedCredits,
-    cap: config.perUserCycleCreditCap,
+    computedCredits: confirmedAmountUsd * config.creditsPerUsd,
+    cap: config.perUserYearCreditCap,
   });
-
-  const reviewNote = githubStarAlreadyCredited
-    ? [input.reviewNote, 'No credits: member already received credits for an earlier GitHub star (once-per-member limit).']
-        .filter((part): part is string => Boolean(part && part.trim()))
-        .join(' ')
-    : input.reviewNote ?? null;
 
   let governanceEventId: string | null = null;
   if (creditsGranted > 0) {
-    // Canonical mint path — the only way Contributions touches ServiceCredits. mintGrant is
-    // idempotent on its key, so a retried confirm cannot double-grant.
+    // mintGrant is idempotent on its key, so a retried confirm cannot double-grant.
     const grant = await mintGrant({
       actorId: input.actorUserId,
       targetUserId: row.user_id,
       amount: creditsGranted,
       grantReason: GRANT_REASON,
-      governanceTicketId: grantTicketId(input.submissionId, row.kind, cycleId),
+      governanceTicketId: grantTicketId(input.submissionId),
       idempotencyKey: `contribution-${input.submissionId}`,
     });
     governanceEventId = grant.governanceEventId;
@@ -800,47 +384,16 @@ async function applyConfirmReview(
     submissionId: input.submissionId,
     status: 'confirmed',
     actorUserId: input.actorUserId,
-    reviewNote,
+    reviewNote: input.reviewNote ?? null,
     confirmedAmountUsd,
     creditsGranted,
     creditGovernanceEventId: governanceEventId,
-    cycleId,
   });
 }
 
 /**
- * Save the link the admin entered on review into the column for this claim's kind. An omitted or
- * blank link keeps what the member sent. A gift card has no link, so one sent for it is refused.
- */
-async function applyReviewUrl(client: PoolClient, row: SubmissionRow, url: string | undefined): Promise<void> {
-  if (url === undefined) {
-    return;
-  }
-  if (typeof url !== 'string' || row.kind === 'gift_card') {
-    throw new Error('invalid_payload');
-  }
-
-  const trimmed = url.trim();
-  if (!trimmed) {
-    return;
-  }
-  if (!isHttpUrl(trimmed)) {
-    throw new Error('invalid_url');
-  }
-
-  const column = row.kind === 'quora_comment' ? 'quora_post_url' : 'github_profile_url';
-  await client.query(
-    `UPDATE contributions_submissions SET ${column} = $2, updated_at = NOW() WHERE id = $1`,
-    [row.id, trimmed],
-  );
-}
-
-/**
- * Confirm or reject a pending contribution claim. Exactly-once: the row is locked and must
- * still be 'pending'. On confirm, credits = confirmedAmountUsd x credits_per_usd, clamped by
- * the per-user-per-cycle cap; a positive grant goes through the canonical service-credits
- * mintGrant() (idempotency key `contribution-<submissionId>`). A grant clamped to 0 still
- * confirms the submission with credits_granted = 0. Rejection grants nothing.
+ * Confirm or reject a pending claim. Exactly once: the row is locked and must still be 'pending'.
+ * Either way the stored code is erased. Rejection grants nothing.
  */
 export async function reviewSubmission(input: ReviewContributionSubmissionInput): Promise<ContributionSubmissionAdminView | null> {
   return withDbTransaction(async (client) => {
@@ -861,8 +414,6 @@ export async function reviewSubmission(input: ReviewContributionSubmissionInput)
       throw new Error('already_reviewed');
     }
 
-    await applyReviewUrl(client, row, input.url);
-
     if (input.action === 'reject') {
       const updated = await applyReviewUpdate(client, {
         submissionId: input.submissionId,
@@ -872,7 +423,6 @@ export async function reviewSubmission(input: ReviewContributionSubmissionInput)
         confirmedAmountUsd: null,
         creditsGranted: 0,
         creditGovernanceEventId: null,
-        cycleId: row.cycle_id,
       });
       return mapSubmissionForAdmin(updated);
     }
@@ -882,12 +432,55 @@ export async function reviewSubmission(input: ReviewContributionSubmissionInput)
   });
 }
 
-// --- audit log ----------------------------------------------------------------------------------
+// --- Unlock approval catch-up ----------------------------------------------------------------
 
 /**
- * Append an audit row. Callers must never put signal_contact (or any other personal contact
- * detail) into metadata. Banner dismissal is deliberately not audited.
+ * Grant the credits held on a member's confirmed claims, now that Unlock has approved them. Each
+ * held claim is granted in turn under the same cap and rate a confirm uses, with the same
+ * idempotency key, so a second run grants nothing twice. Returns how many claims were granted.
  */
+export async function grantHeldContributionCredits(userId: string, actorUserId: string): Promise<number> {
+  return withDbTransaction(async (client) => {
+    const held = await client.query<SubmissionRow>(
+      `SELECT ${SUBMISSION_COLUMNS} FROM contributions_submissions
+        WHERE user_id = $1 AND status = 'confirmed' AND credits_held_at IS NOT NULL
+        ORDER BY reviewed_at FOR UPDATE`,
+      [userId],
+    );
+    if (held.rows.length === 0) return 0;
+    const config = await getContributionsConfigWithClient(client);
+    for (const row of held.rows) {
+      const creditsGranted = await computeYearCappedGrant(client, {
+        userId,
+        computedCredits: Number(row.confirmed_amount_usd ?? 0) * config.creditsPerUsd,
+        cap: config.perUserYearCreditCap,
+      });
+      let governanceEventId: string | null = null;
+      if (creditsGranted > 0) {
+        const grant = await mintGrant({
+          actorId: actorUserId,
+          targetUserId: userId,
+          amount: creditsGranted,
+          grantReason: GRANT_REASON,
+          governanceTicketId: grantTicketId(row.id),
+          idempotencyKey: `contribution-${row.id}`,
+        });
+        governanceEventId = grant.governanceEventId;
+      }
+      await client.query(
+        `UPDATE contributions_submissions
+            SET credits_granted = $2, credit_governance_event_id = $3, credits_held_at = NULL, updated_at = NOW()
+          WHERE id = $1`,
+        [row.id, creditsGranted, governanceEventId],
+      );
+    }
+    return held.rows.length;
+  });
+}
+
+// --- audit log ----------------------------------------------------------------------------------
+
+/** Append an audit row. Callers must never put a gift card code into metadata. */
 export async function insertContributionsAudit(input: {
   actorUserId: string | null;
   action: string;

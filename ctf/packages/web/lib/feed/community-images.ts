@@ -1,5 +1,6 @@
 import type { PoolClient } from 'pg';
 import { queryDb } from 'lib/db/postgres';
+import { stripPictureMetadata } from 'lib/images/strip-metadata';
 
 // Pictures on Commons posts. Admins only to post (owner decision, 2026-09-25): the owner explains the
 // product with screenshots, and the Commons is where those are shown now that Quora erases the accounts
@@ -63,12 +64,14 @@ export async function insertCommunityPostImage(
   image: CommunityPostImageUpload | null | undefined,
 ): Promise<void> {
   if (!image) return;
+  // Location and camera data are removed here as well as in the browser (lib/images/strip-metadata.ts).
+  const bytes = stripPictureMetadata(image.bytes);
   await client.query(
     `
       INSERT INTO feed_community_post_images (post_id, content_type, bytes, byte_size, width, height, alt_text)
       VALUES ($1::uuid, $2, $3, $4, $5, $6, $7)
     `,
-    [postId, image.contentType, Buffer.from(image.bytes), image.bytes.byteLength, image.width, image.height, image.altText],
+    [postId, image.contentType, Buffer.from(bytes), bytes.byteLength, image.width, image.height, image.altText],
   );
 }
 
@@ -123,5 +126,6 @@ export async function readCommunityPostImage(
     [postId, publicOnly],
   );
   const row = result.rows[0];
-  return row ? { contentType: row.content_type, bytes: row.bytes } : null;
+  // Stripped on the way out too, so pictures stored before the server removed metadata are covered.
+  return row ? { contentType: row.content_type, bytes: Buffer.from(stripPictureMetadata(row.bytes)) } : null;
 }

@@ -3,12 +3,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Gift } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
-import type { ContributionSubmission } from '@/lib/contributions/types';
 import {
   FONT_FAMILY,
   getContributionsTokens,
   type ContributionsTokens,
-  type FundraiserResponse,
   type SubmissionCreateResponse,
   type SubmissionsResponse,
 } from './contributions-shared';
@@ -16,87 +14,58 @@ import { AppLoading } from '@/components/shared/app-loading';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { PluginAdminButton } from '@/components/shared/plugin-admin-button';
 import { RefreshButton } from '@/components/shared/refresh-button';
-import { goalsFromFundraiser, GoalRow } from './contributions-drive-progress';
-import { ContributionPaths, type PathsProps, type SubmitGiftCardInput } from './contributions-paths';
+import { ContributionsGiftForm } from './contributions-gift-form';
 import { ContributionsHistoryList, ContributionsEmptyHistory } from './contributions-history';
-import { ContributionsConfirmation } from './contributions-confirmation';
 import { failureText, responseFailureText } from 'lib/errors/client-failure';
 import { reportError } from 'lib/observability/report';
 
-
-type View = 'main' | 'confirmation';
-type MobileTab = 'drive' | 'contribute' | 'history';
+type MobileTab = 'contribute' | 'history';
 
 const CSRF_HEADERS = { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' } as const;
 
-const LOAD_FALLBACK = 'We could not load the contribution drive. Try again in a moment.';
-const SUBMIT_FALLBACK = 'We could not record your contribution. Try again in a moment.';
+const LOAD_FALLBACK = 'We could not load Contributions. Try again in a moment.';
+const SUBMIT_FALLBACK = 'We could not record your gift card. Try again in a moment.';
+const INTRO =
+  'The app is free and stays free. Hosting is paid out of pocket, so if you are able, an Amazon gift card helps keep it online.';
 
 // A failure the route answered. Its text is what the route said (member-safe), so the screen shows it
 // as is; a request that never answered is a plain Error and goes through failureText, which reports it.
 class RouteAnsweredError extends Error {}
 
-// Fetches the drive and the member's submissions in parallel and parses both. Kept at module scope so
-// the loadData callback stays small; it throws on a failed response and the caller handles aborts.
-async function fetchContributionsData(
-  signal?: AbortSignal,
-): Promise<{ fundraiser: FundraiserResponse; submissions: ContributionSubmission[] }> {
-  const [fundraiserRes, submissionsRes] = await Promise.all([
-    fetch('/api/contributions/fundraiser', { cache: 'no-store', signal }),
-    fetch('/api/contributions/submission', { cache: 'no-store', signal }),
-  ]);
-  const failed = !fundraiserRes.ok ? fundraiserRes : !submissionsRes.ok ? submissionsRes : null;
-  if (failed) {
-    const text = await responseFailureText(failed, LOAD_FALLBACK, 'member');
-    reportError(new Error(`Contributions load answered HTTP ${failed.status}: ${text}`), {
+async function fetchContributionsData(signal?: AbortSignal): Promise<SubmissionsResponse> {
+  const res = await fetch('/api/contributions/submission', { cache: 'no-store', signal });
+  if (!res.ok) {
+    const text = await responseFailureText(res, LOAD_FALLBACK, 'member');
+    reportError(new Error(`Contributions load answered HTTP ${res.status}: ${text}`), {
       area: 'contributions',
       op: 'member_load',
-      extra: { url: failed.url, status: failed.status },
+      extra: { url: res.url, status: res.status },
     });
     throw new RouteAnsweredError(text);
   }
-  const fundraiserData = (await fundraiserRes.json()) as FundraiserResponse;
-  const submissionsData = (await submissionsRes.json()) as SubmissionsResponse;
-  return { fundraiser: fundraiserData, submissions: submissionsData.submissions ?? [] };
+  return (await res.json()) as SubmissionsResponse;
 }
 
-export function ContributionsShell({ isAdmin }: { isAdmin?: boolean } = {}) {
-  const { theme } = useTheme();
-  const t = getContributionsTokens(theme);
-
+function useContributionsData() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [fundraiser, setFundraiser] = useState<FundraiserResponse | null>(null);
-  const [submissions, setSubmissions] = useState<ContributionSubmission[]>([]);
-
-  const [view, setView] = useState<View>('main');
-  const [mobileTab, setMobileTab] = useState<MobileTab>('drive');
-  const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [data, setData] = useState<SubmissionsResponse | null>(null);
 
   const loadData = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchContributionsData(signal);
-      if (signal?.aborted) {
-        return;
-      }
-      setFundraiser(data.fundraiser);
-      setSubmissions(data.submissions);
+      const next = await fetchContributionsData(signal);
+      if (!signal?.aborted) setData(next);
     } catch (e) {
-      if ((e as Error).name === 'AbortError') {
-        return;
-      }
+      if ((e as Error).name === 'AbortError') return;
       setError(
         e instanceof RouteAnsweredError
           ? e.message
           : failureText(e, { area: 'contributions', op: 'member_load', fallback: LOAD_FALLBACK, audience: 'member' }),
       );
     } finally {
-      if (!signal?.aborted) {
-        setLoading(false);
-      }
+      if (!signal?.aborted) setLoading(false);
     }
   }, []);
 
@@ -106,28 +75,38 @@ export function ContributionsShell({ isAdmin }: { isAdmin?: boolean } = {}) {
     return () => controller.abort();
   }, [loadData]);
 
-  const submit = useCallback(
-    async (body: Record<string, unknown>, showConfirmation: boolean) => {
+  return { loading, error, data, loadData };
+}
+
+async function postGiftCard(input: { claimedAmountUsd: number; code: string }): Promise<void> {
+  const res = await fetch('/api/contributions/submission', { method: 'POST', headers: CSRF_HEADERS, body: JSON.stringify(input) });
+  const payload = (await res.json().catch(() => null)) as SubmissionCreateResponse | null;
+  if (!res.ok || !payload?.ok) {
+    // Usually the member's own input (an amount out of range, a code that is not a code); the route
+    // reports its own 5xx answers, so this shows the route's text without a second report.
+    throw new RouteAnsweredError(payload?.message ?? SUBMIT_FALLBACK);
+  }
+}
+
+export function ContributionsShell({ isAdmin }: { isAdmin?: boolean } = {}) {
+  const { theme } = useTheme();
+  const t = getContributionsTokens(theme);
+  const { loading, error, data, loadData } = useContributionsData();
+
+  const [mobileTab, setMobileTab] = useState<MobileTab>('contribute');
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [formKey, setFormKey] = useState(0);
+
+  const onSubmit = useCallback(
+    async (input: { claimedAmountUsd: number; code: string }) => {
       setSubmitting(true);
       setSubmitError(null);
       try {
-        const res = await fetch('/api/contributions/submission', {
-          method: 'POST',
-          headers: CSRF_HEADERS,
-          body: JSON.stringify(body),
-        });
-        const payload = (await res.json().catch(() => null)) as SubmissionCreateResponse | null;
-        if (!res.ok || !payload?.ok) {
-          // A refused submission is usually the member's own input (a bad link, an amount out of range);
-          // the route reports its own 5xx answers, so this shows the route's text without a second report.
-          throw new RouteAnsweredError(payload?.message ?? SUBMIT_FALLBACK);
-        }
+        await postGiftCard(input);
         await loadData();
-        if (showConfirmation) {
-          setView('confirmation');
-        } else {
-          setMobileTab('history');
-        }
+        setFormKey((key) => key + 1);
+        setMobileTab('history');
       } catch (e) {
         setSubmitError(
           e instanceof RouteAnsweredError
@@ -141,123 +120,39 @@ export function ContributionsShell({ isAdmin }: { isAdmin?: boolean } = {}) {
     [loadData],
   );
 
-  const onSubmitGiftCard = useCallback(
-    (input: SubmitGiftCardInput) => {
-      void submit({ kind: 'gift_card', method: input.method, claimedAmountUsd: input.claimedAmountUsd, signalContact: input.signalContact }, true);
-    },
-    [submit],
-  );
-  const onSubmitQuora = useCallback(
-    (quoraPostUrl: string | undefined) => {
-      void submit({ kind: 'quora_comment', ...(quoraPostUrl ? { quoraPostUrl } : {}) }, false);
-    },
-    [submit],
-  );
-  const onSubmitGithub = useCallback(
-    (githubProfileUrl: string | undefined) => {
-      void submit({ kind: 'github_star', ...(githubProfileUrl ? { githubProfileUrl } : {}) }, false);
-    },
-    [submit],
-  );
-
-  if (loading && !fundraiser) {
+  if (loading && !data) {
     return <AppLoading />;
   }
 
-  if (error || !fundraiser) {
-    return <ErrorState t={t} message={error ?? 'Drive unavailable.'} onRetry={() => void loadData()} isMobile={true} />;
+  if (error || !data) {
+    return <ErrorState t={t} message={error ?? LOAD_FALLBACK} onRetry={() => void loadData()} />;
   }
-
-  const goals = goalsFromFundraiser(fundraiser.fundraiser);
-  const githubStarAlreadyCredited = fundraiser.fundraiser.githubStarAlreadyCredited;
-
-  if (view === 'confirmation') {
-    const confirmation = (
-      <ContributionsConfirmation
-        t={t}
-        isMobile={true}
-        ownerSignalUrl={fundraiser.ownerSignalUrl}
-        signalInstructions={fundraiser.signalInstructions}
-        onViewHistory={() => {
-          setView('main');
-          setMobileTab('history');
-        }}
-        onBackToHub={() => setView('main')}
-      />
-    );
-    return <MobileFrame t={t} isAdmin={isAdmin}>{confirmation}</MobileFrame>;
-  }
-
-  const pathsProps = {
-    t,
-    creditsPerUsd: fundraiser.creditsPerUsd,
-    creditsPerAction: fundraiser.creditsPerActionSc,
-    githubStarAlreadyCredited,
-    submitting,
-    error: submitError,
-    onSubmitGiftCard,
-    onSubmitQuora,
-    onSubmitGithub,
-  };
 
   return (
     <MobileFrame t={t} tab={mobileTab} onTab={setMobileTab} onRefresh={() => loadData()} isAdmin={isAdmin}>
-      <MainTabContent
-        t={t}
-        mobileTab={mobileTab}
-        goals={goals}
-        pathsProps={pathsProps}
-        submissions={submissions}
-        onContribute={() => setMobileTab('contribute')}
-      />
+      <div style={{ flex: 1, overflowY: 'auto', padding: 14 }}>
+        {mobileTab === 'contribute' ? (
+          <>
+            <p style={{ fontSize: 13, color: t.MUTED, lineHeight: 1.7, margin: '0 0 16px' }}>{INTRO}</p>
+            <ContributionsGiftForm
+              key={formKey}
+              t={t}
+              open={data.open}
+              minUsd={data.minUsd}
+              maxUsd={data.maxUsd}
+              creditsPerUsd={data.creditsPerUsd}
+              submitting={submitting}
+              error={submitError}
+              onSubmit={(input) => void onSubmit(input)}
+            />
+          </>
+        ) : data.submissions.length === 0 ? (
+          <ContributionsEmptyHistory t={t} onContribute={() => setMobileTab('contribute')} />
+        ) : (
+          <ContributionsHistoryList submissions={data.submissions} t={t} />
+        )}
+      </div>
     </MobileFrame>
-  );
-}
-
-// The three main-view tabs (drive progress, the contribute paths, and the member's history). Only the
-// active tab's block renders; the others return nothing.
-function MainTabContent({
-  t,
-  mobileTab,
-  goals,
-  pathsProps,
-  submissions,
-  onContribute,
-}: {
-  t: ContributionsTokens;
-  mobileTab: MobileTab;
-  goals: ReturnType<typeof goalsFromFundraiser>;
-  pathsProps: PathsProps;
-  submissions: ContributionSubmission[];
-  onContribute: () => void;
-}) {
-  return (
-    <>
-      {mobileTab === 'drive' && (
-        <div style={{ flex: 1, overflowY: 'auto', padding: 14 }}>
-          <p style={{ fontSize: 13, color: t.MUTED, lineHeight: 1.7, margin: '0 0 16px' }}>
-            If everyone who&apos;s able gave a little, the platform&apos;s costs would be covered — and it stays free for everyone.
-          </p>
-          {goals.map((g) => (
-            <GoalRow key={g.key} goal={g} t={t} />
-          ))}
-        </div>
-      )}
-      {mobileTab === 'contribute' && (
-        <div style={{ flex: 1, overflowY: 'auto', padding: 14 }}>
-          <ContributionPaths {...pathsProps} />
-        </div>
-      )}
-      {mobileTab === 'history' && (
-        <div style={{ flex: 1, overflowY: 'auto', padding: 14 }}>
-          {submissions.length === 0 ? (
-            <ContributionsEmptyHistory t={t} onContribute={onContribute} />
-          ) : (
-            <ContributionsHistoryList submissions={submissions} t={t} />
-          )}
-        </div>
-      )}
-    </>
   );
 }
 
@@ -265,7 +160,6 @@ function MainTabContent({
 
 function MobileFrame({ t, children, tab, onTab, onRefresh, isAdmin }: { t: ContributionsTokens; children: React.ReactNode; tab?: MobileTab; onTab?: (tab: MobileTab) => void; onRefresh?: () => Promise<void>; isAdmin?: boolean }) {
   const tabs: { key: MobileTab; label: string }[] = [
-    { key: 'drive', label: 'Drive' },
     { key: 'contribute', label: 'Contribute' },
     { key: 'history', label: 'My history' },
   ];
@@ -289,7 +183,7 @@ function MobileFrame({ t, children, tab, onTab, onRefresh, isAdmin }: { t: Contr
           </div>
           <span style={{ fontSize: 17, fontWeight: 700, color: t.TITLE }}>Contributions</span>
         </div>
-        <div style={{ fontSize: 12, color: t.MUTED, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Community support drive</div>
+        <div style={{ fontSize: 12, color: t.MUTED, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Amazon gift cards, any time of year</div>
       </div>
       {tab && onTab && (
         <div style={{ display: 'flex', borderBottom: `1px solid ${t.BORDER_SOLID}`, flexShrink: 0 }}>
@@ -310,7 +204,7 @@ function MobileFrame({ t, children, tab, onTab, onRefresh, isAdmin }: { t: Contr
   );
 }
 
-function ErrorState({ t, message, onRetry }: { t: ContributionsTokens; message: string; onRetry: () => void; isMobile: boolean }) {
+function ErrorState({ t, message, onRetry }: { t: ContributionsTokens; message: string; onRetry: () => void }) {
   const body = (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 40, textAlign: 'center', gap: 14 }}>
       <Gift size={28} color={t.ACCENT} />

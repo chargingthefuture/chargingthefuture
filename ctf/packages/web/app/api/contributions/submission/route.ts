@@ -7,21 +7,21 @@ import {
   requireContributionsUserAccess,
 } from '../_lib';
 import {
-  assertNoGiftCardCodeFields,
+  GIFT_CARD_MAX_USD,
+  GIFT_CARD_MIN_USD,
   createSubmission,
+  getContributionsConfig,
   listOwnSubmissions,
 } from 'lib/contributions/repository';
-import type { ContributionKind, GiftCardMethod } from 'lib/contributions/types';
+import { codeEncryptionReady } from 'lib/contributions/code-crypto';
 
 type SubmissionBody = {
-  kind?: ContributionKind;
-  method?: GiftCardMethod;
   claimedAmountUsd?: number;
-  signalContact?: string;
-  quoraPostUrl?: string;
-  githubProfileUrl?: string;
+  code?: string;
 };
 
+// An Amazon gift card: its amount and its code. The code is sealed before it is stored and never
+// returned, logged or audited.
 export async function POST(request: Request) {
   const gate = await requireContributionsUserAccess();
   if (!gate.allowed) {
@@ -37,29 +37,20 @@ export async function POST(request: Request) {
   if (!parsed.ok) {
     return parsed.response;
   }
-  const rawBody = parsed.body;
+  const body = parsed.body as SubmissionBody;
 
   try {
-    // Gift-card codes are never accepted by the platform; reject any code-like field outright.
-    assertNoGiftCardCodeFields(rawBody);
-
-    const body = rawBody as SubmissionBody;
     const submission = await createSubmission({
       userId: gate.auth.userId,
-      kind: body.kind as ContributionKind,
-      method: body.method,
-      claimedAmountUsd: body.claimedAmountUsd,
-      signalContact: body.signalContact,
-      quoraPostUrl: body.quoraPostUrl,
-      githubProfileUrl: body.githubProfileUrl,
+      claimedAmountUsd: body.claimedAmountUsd as number,
+      code: typeof body.code === 'string' ? body.code : '',
     });
 
-    // Audit metadata deliberately excludes signal_contact (personal data).
     await auditBestEffort('submission_create', {
       actorUserId: gate.auth.userId,
       action: 'contributions.submission.create',
       targetSubmissionId: submission.id,
-      metadata: { kind: submission.kind, method: submission.method, cycleId: submission.cycleId },
+      metadata: { kind: submission.kind, method: submission.method, claimedAmountUsd: submission.claimedAmountUsd },
     });
 
     return NextResponse.json({ ok: true, submission }, { status: 201 });
@@ -68,6 +59,8 @@ export async function POST(request: Request) {
   }
 }
 
+// The member's own claims, and what the form needs: whether gift cards are being taken, the amount
+// range, and how many thank-you credits a dollar brings.
 export async function GET() {
   const gate = await requireContributionsUserAccess();
   if (!gate.allowed) {
@@ -75,8 +68,15 @@ export async function GET() {
   }
 
   try {
-    const submissions = await listOwnSubmissions(gate.auth.userId);
-    return NextResponse.json({ ok: true, submissions });
+    const [submissions, config] = await Promise.all([listOwnSubmissions(gate.auth.userId), getContributionsConfig()]);
+    return NextResponse.json({
+      ok: true,
+      submissions,
+      open: codeEncryptionReady(),
+      minUsd: GIFT_CARD_MIN_USD,
+      maxUsd: GIFT_CARD_MAX_USD,
+      creditsPerUsd: config.creditsPerUsd,
+    });
   } catch (error) {
     return contributionsErrorResponse(error, 'Contribution history unavailable.', 'submission_list_own');
   }

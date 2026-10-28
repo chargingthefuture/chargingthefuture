@@ -238,20 +238,22 @@ the fallback. So builds, tests, and the call flow work with it unset. Note the A
 also needs an EAS native build (the `expo-notifications` config plugin) — native push does not work
 in Expo Go regardless of this env var.
 
-### Contributions plugin: owner Signal contact
+### Contributions plugin: the gift card code key
 
 | Variable | Layer | Used by | Purpose |
 |---|---|---|---|
-| `CONTRIBUTIONS_OWNER_SIGNAL_URL` | Server | web (Node) | The owner's Signal contact (a `signal.me` URL or phone number) shown to signed-in members on the contribution confirmation screen so they know where to send a gift-card code. |
+| `CONTRIBUTIONS_CODE_KEY` | Server | web (Node) | Seals each Amazon gift card code a member enters (AES-256-GCM; the key is the SHA-256 of this value) until the System Architect confirms or rejects the claim, when the code is erased. Owner approval to add it: 2026-10-27. |
+| `CONTRIBUTIONS_OWNER_SIGNAL_URL` | Server | nothing | No longer read since 2026-10-27, when codes moved into the app. Kept in Infisical until the owner removes it. |
 
-- Managed in Infisical (the single source of truth), `production` environment.
-- **Server-only.** It is deliberately **not** prefixed `NEXT_PUBLIC_`, so it never enters the
-  client bundle; it is read server-side only (`lib/contributions/owner-signal-env.ts`) and surfaced
-  to the browser only through the `GET /api/contributions/fundraiser` response field `ownerSignalUrl`.
-- **Optional.** When unset or empty the API returns `ownerSignalUrl: null` and the confirmation
-  screen falls back to the admin-editable `signal_instructions` copy, so the screen never breaks.
-- **Never commit or log the value.** It holds personal contact info; do not print it in logs,
-  errors, or job summaries.
+- Managed in Infisical (the single source of truth), `production` environment. Server-only, read
+  by `lib/contributions/code-crypto.ts` alone, never logged.
+- **Setting it from a phone.** Any long random password of 32 characters or more, from a password
+  generator, pasted as the value. It is never written anywhere else.
+- **Optional, but the form waits for it.** Unset or shorter than 32 characters means the app takes
+  no codes: the member screen says gift cards are paused, rather than storing a code it could not
+  protect.
+- **Changing it** leaves any code still waiting for review unreadable; the admin queue says so on
+  that claim. Change it only with the queue empty.
 
 ### Chyme: Stream Video minute budget and room caps (2026-09-19)
 
