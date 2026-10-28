@@ -1,5 +1,6 @@
+import dynamic from 'next/dynamic';
 import { redirect } from 'next/navigation';
-import { CommunityShell, type ShellVerification } from '../components/community-shell/community-shell';
+import type { ShellVerification } from '../components/community-shell/community-shell';
 import type { ShellCurrentUser } from '../components/community-shell/shell-types';
 import type { TrustUserExtension } from '../lib/trust/types';
 import { resolveRequestIdentity, type RequestIdentity } from '../lib/auth/request-identity';
@@ -12,9 +13,13 @@ import { getGdpShellStats } from '../lib/gdp/repository';
 import { listPluginRegistry, filterPluginsForViewer } from '../lib/plugins/repository';
 import { readTrustSelfExtensionOrStored } from '../lib/trust/repository';
 import { getHostedSignInUrl } from '../lib/auth/provider-env';
-import { SeAppFrame } from '../components/se-frame/se-app-frame';
 import { getUserInterfaceVersion } from '../lib/account/ui-preferences-repository';
 import type { SeInterfaceVersion } from '@ctf/shared';
+
+// A member sees 3.0 or 3.1, never both, so each loads only when it is the one shown (3.1 speed
+// budget: the 3.1 first load does not carry the 3.0 hub's code).
+const CommunityShell = dynamic(() => import('../components/community-shell/community-shell').then((m) => m.CommunityShell));
+const SeAppFrame = dynamic(() => import('../components/se-frame/se-app-frame').then((m) => m.SeAppFrame));
 
 function buildShellUser(userId: string, username: string | null): ShellCurrentUser {
   const safeUsername = username && username !== 'guest' ? username : null;

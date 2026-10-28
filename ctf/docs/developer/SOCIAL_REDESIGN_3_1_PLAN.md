@@ -140,6 +140,8 @@ Unlock stops being the gate for most of the app.
 - Time to unlock (sign-up to address, address to approval) on the adoption tab.
 - Speed: under 3 seconds from a cold start to the first card, under 1 second warm, on a low-cost
   Android phone over a slow connection. One Today request; the last Today is kept on the phone.
+  Checked before a release by the Speed Budget workflow (`speed-budget.yml`, script
+  `ctf/scripts/speed-budget/measure-today.cjs`) on signed-out Today.
 - Sentry Session Replay on by default with all text, input and pictures masked; ids stripped from
   page addresses, breadcrumbs without text, no request bodies; disclosed on the privacy page.
 
