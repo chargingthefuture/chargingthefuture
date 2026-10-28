@@ -100,13 +100,13 @@ Full policy, the deprecated stop-for-design machinery (history), and worked exam
 ## One Design, One Color per Site (owner decision, 2026-10-14)
 
 The name shown everywhere is Skills Economy (owner decision, 2026-10-13). Charging The Future
-appears only in the domain names, never as a displayed name: page titles, headers, footers,
+appears only in the old domain names, which redirect to lagatos.com (owner decision, 2026-10-28), never as a displayed name: page titles, headers, footers,
 notification titles, feed titles, generated text and the prompts that write it all say Skills
 Economy. Published posts keep the name they were written with. The legal operator name in
 `app/terms/policy-content.ts` (`OPERATOR_NAME`) is the owner's call and is not changed with the rest.
 
 The project's websites share one design, each in its own color, so a visitor can tell which part
-they are in: farahbrunache.com (One Percent, the paid tier) is forest green, chargingthefuture.com
+they are in: farahbrunache.com (One Percent, the paid tier) is forest green, lagatos.com
 (the free tier) burgundy, and the blog black and white with coral. Titles are Newsreader and text
 DM Sans, self-hosted everywhere. The app keeps its own look: its text is Figtree, self-hosted
 (owner decision, 2026-10-27, replacing Inter and the 3.1 frame's DM Sans), and it carries the
@@ -120,7 +120,7 @@ in the header, `public/brand/` and the web and Android icons. The wallpapers
 (`ctf/scripts/wallpapers/`) are a choice of colors rather than a brand color: the original
 teal-to-purple stays, with burgundy, coral and green beside it. The mission line is "Exit their
 economy, exit the psyop."; "Live,
-Work & Prevail" is retired, and older posts keep it. The domains stay as they are. No site loads
+Work & Prevail" is retired, and older posts keep it. The app is at app.lagatos.com and the landing page at lagatos.com (owner decision, 2026-10-28); chargingthefuture.com and app.chargingthefuture.com redirect there. No site loads
 anything from Google: fonts are self-hosted and video players load only when somebody taps play.
 
 # Monorepo Layout
@@ -478,7 +478,7 @@ said outward narrows to three things that cover the rest between them:
    post like "help me find a room" can be answered by anybody, and its chat and calls carry a
    small part of what the other plugins do.
 2. **The Peace Battle 2 page** on the blog. It is the pitch and the lead link in comments, in
-   Commons posts and on Quora, ahead of chargingthefuture.com. Its Enact section points at
+   Commons posts and on Quora, ahead of lagatos.com. Its Enact section points at
    Workforce, the goal board and One Percent and at nothing else.
 3. **One Percent**, the paid tier, for somebody who wants more than self-service.
 

@@ -29,17 +29,17 @@ export function motdArticleUrl(slug: string): string {
 
 /**
  * The Peace Battle 2 page, under its short address. It is the lead link in every message (owner
- * decision, 2026-10-02: the page is the pitch, ahead of chargingthefuture.com), so it sits in the
+ * decision, 2026-10-02: the page is the pitch, ahead of lagatos.com), so it sits in the
  * opening line rather than at the foot where a reader who stops early never reaches it.
  */
 export const QUORA_MOTD_PEACE_BATTLE_URL = `${QUORA_MOTD_BLOG_BASE}/pb2`;
 
-export const ONE_PERCENT_WORKFORCE_URL = 'https://app.chargingthefuture.com/apps/workforce?view=one-percent';
-export const GOAL_BOARD_URL = 'https://app.chargingthefuture.com/apps/peer-programming?tab=goals';
+export const ONE_PERCENT_WORKFORCE_URL = 'https://app.lagatos.com/apps/workforce?view=one-percent';
+export const GOAL_BOARD_URL = 'https://app.lagatos.com/apps/peer-programming?tab=goals';
 export const ONE_PERCENT_PAID_TIER_URL = 'https://farahbrunache.com';
-export const SKILLS_HUNT_URL = 'https://app.chargingthefuture.com/apps/skills-hunt';
+export const SKILLS_HUNT_URL = 'https://app.lagatos.com/apps/skills-hunt';
 /** The front page, where a visitor taps what they need and sees how many people could help. */
-export const FRONT_PAGE_URL = 'https://chargingthefuture.com';
+export const FRONT_PAGE_URL = 'https://lagatos.com';
 
 /**
  * Workforce needs an approved account, and most people reading a post on Quora do not have one.

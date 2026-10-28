@@ -359,7 +359,7 @@ export async function listBeaconEventLogs(
 // post in the mobile feed or in Commons can tap it and land on the broadcast; a path fragment only
 // works if the reader already knows the domain and types it in. Same shape as the announcement link
 // lines in `lib/feed/repository.ts`.
-const BEACON_APP_URL = 'https://app.chargingthefuture.com/apps/beacon';
+const BEACON_APP_URL = 'https://app.lagatos.com/apps/beacon';
 
 // Auto-post a "live now" notice to the Commons on go-live. Idempotent: if the event already carries a
 // live-post id we skip. Returns the post id (or null when nothing was posted). A Commons failure is

@@ -9,7 +9,7 @@ import {
 // A name somebody vouches for carries more weight here than any post does, and it still counts
 // after the account that asked for it is gone.
 //
-// Each message names one need from the list on chargingthefuture.com, the needs a visitor taps to
+// Each message names one need from the list on lagatos.com, the needs a visitor taps to
 // see how many people in the Directory could help. A need that matches nobody there is recorded in
 // directory_unmet_needs, so when the report (`ctf/scripts/sql/landing_unmet_needs_report.sql`)
 // shows one need asked for most, the message for that need is the one to edit or add first.
@@ -38,7 +38,7 @@ export const QUORA_MOTD_RECOMMEND: QuoraMotdMessage[] = [
     title: 'Who do you know who can help somebody eat this week?',
     body: [
       'A cook, somebody who runs a pantry, somebody who knows which places hand out groceries without a form. One person is enough.',
-      'On chargingthefuture.com a visitor taps Food and sees how many people in the Directory could help. Nobody sees who they are, and they do not see who is counted. The count only moves when somebody is added.',
+      'On lagatos.com a visitor taps Food and sees how many people in the Directory could help. Nobody sees who they are, and they do not see who is counted. The count only moves when somebody is added.',
       'If you have an account, nominate the person you thought of in SkillsHunt: ' + SKILLS_HUNT_URL,
       'If you do not, send them this post.',
       'Full post: ' + motdArticleUrl('see-who-could-help-without-an-account'),
@@ -49,7 +49,7 @@ export const QUORA_MOTD_RECOMMEND: QuoraMotdMessage[] = [
     action: 'recommend',
     title: 'Who do you know who listens well?',
     body: [
-      'Someone to talk to is one of the needs on chargingthefuture.com. It does not take a license. It takes somebody who will hear it out without explaining it away.',
+      'Someone to talk to is one of the needs on lagatos.com. It does not take a license. It takes somebody who will hear it out without explaining it away.',
       'You already know who that is for you. Recommend one person.',
       'If you have an account, nominate them in SkillsHunt. You do not have to be certain about them, and a person reviews every nomination: ' + SKILLS_HUNT_URL,
       'If you do not, send them this post.',
@@ -61,7 +61,7 @@ export const QUORA_MOTD_RECOMMEND: QuoraMotdMessage[] = [
     action: 'recommend',
     title: 'Who do you know who understands a lease, a court form or a benefits letter?',
     body: [
-      'Legal help is one of the needs a visitor can tap on chargingthefuture.com. It does not have to be a lawyer. A paralegal, a court clerk, somebody who has filed their own case and knows the forms.',
+      'Legal help is one of the needs a visitor can tap on lagatos.com. It does not have to be a lawyer. A paralegal, a court clerk, somebody who has filed their own case and knows the forms.',
       'Who do you know who can do that? One name.',
       'If you have an account, nominate them in SkillsHunt with their Quora profile: ' + SKILLS_HUNT_URL,
       'If you do not, send them this post.',
@@ -74,7 +74,7 @@ export const QUORA_MOTD_RECOMMEND: QuoraMotdMessage[] = [
     title: 'Who do you know who could help somebody find a room?',
     body: [
       'Somebody with a room to rent, somebody who manages a building, somebody who knows which landlords do not run a background check. One person.',
-      'Housing is one of the needs on chargingthefuture.com, and a name somebody vouches for is worth more than a listing nobody can check.',
+      'Housing is one of the needs on lagatos.com, and a name somebody vouches for is worth more than a listing nobody can check.',
       'If you have an account, nominate them in SkillsHunt: ' + SKILLS_HUNT_URL,
       'If you do not, send them this post.',
       'Full post: ' + motdArticleUrl('see-who-could-help-without-an-account'),
@@ -85,7 +85,7 @@ export const QUORA_MOTD_RECOMMEND: QuoraMotdMessage[] = [
     action: 'recommend',
     title: 'Who do you know who works in health care?',
     body: [
-      'A nurse, a doctor, a pharmacist, a medical assistant, somebody who knows which clinic takes walk-ins without insurance. Health care is one of the needs on chargingthefuture.com.',
+      'A nurse, a doctor, a pharmacist, a medical assistant, somebody who knows which clinic takes walk-ins without insurance. Health care is one of the needs on lagatos.com.',
       'Who do you know? One name.',
       'If you have an account, nominate them in SkillsHunt: ' + SKILLS_HUNT_URL,
       'If you do not, send them this post.',
@@ -97,7 +97,7 @@ export const QUORA_MOTD_RECOMMEND: QuoraMotdMessage[] = [
     action: 'recommend',
     title: 'Who do you know who could watch somebody\'s children for an afternoon?',
     body: [
-      'A parent who cannot leave the children with anyone cannot get to the interview, the hearing or the appointment. Childcare is one of the needs a visitor can tap on chargingthefuture.com.',
+      'A parent who cannot leave the children with anyone cannot get to the interview, the hearing or the appointment. Childcare is one of the needs a visitor can tap on lagatos.com.',
       'Who do you know who has done it, for pay or for family? Recommend one person.',
       'If you have an account, nominate them in SkillsHunt: ' + SKILLS_HUNT_URL,
       'If you do not, send them this post.',
@@ -109,7 +109,7 @@ export const QUORA_MOTD_RECOMMEND: QuoraMotdMessage[] = [
     action: 'recommend',
     title: 'Who do you know who can drive?',
     body: [
-      'A ride to a shift, to court, to a clinic across town. A ride is one of the needs on chargingthefuture.com, and the person who can give one is often somebody nobody thought to ask.',
+      'A ride to a shift, to court, to a clinic across town. A ride is one of the needs on lagatos.com, and the person who can give one is often somebody nobody thought to ask.',
       'Who do you know with a car and an afternoon? One name.',
       'If you have an account, nominate them in SkillsHunt: ' + SKILLS_HUNT_URL,
       'If you do not, send them this post.',
@@ -121,7 +121,7 @@ export const QUORA_MOTD_RECOMMEND: QuoraMotdMessage[] = [
     action: 'recommend',
     title: 'When the count says nobody, the need is written down',
     body: [
-      'On chargingthefuture.com a visitor taps what they need and sees how many people in the Directory could help. When the answer is nobody, the page records the need, and nothing about the visitor, so I can go looking for somebody.',
+      'On lagatos.com a visitor taps what they need and sees how many people in the Directory could help. When the answer is nobody, the page records the need, and nothing about the visitor, so I can go looking for somebody.',
       'You may already know the somebody. Pick one need from the list, a job, food, someone to talk to, legal help, housing, health care, childcare or a ride, and think of one person who can help with it.',
       'If you have an account, nominate them in SkillsHunt: ' + SKILLS_HUNT_URL,
       'If you do not, send them the front page: ' + FRONT_PAGE_URL,

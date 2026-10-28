@@ -92,7 +92,7 @@ Two things may differ, and nothing else:
    coordinates are the worked example. Hide that element with `data-capture-hide` — take the thing
    out, do not redraw the page without it.
 2. **The deep link.** The picture gains the screen's own address underneath
-   (`https://app.chargingthefuture.com/apps/<slug>`), because a picture travels away from the app
+   (`https://app.lagatos.com/apps/<slug>`), because a picture travels away from the app
    and has to say where to come back to.
 
 So do not "improve" anything on the way into a picture. If the screen says `+3 pts`, the picture
@@ -116,7 +116,7 @@ Branding follows `ctf/docs/BRAND_VOICE_LEXICON.md`: the product is **Skills Econ
    the app header, the share control itself, anything private on that screen.
 2. **Give it the deep link.** The capture takes a `footer` and draws it under the screen, into
    html2canvas's clone rather than the live DOM, so a picture that travels alone says where to go.
-   Use the real deep link (`https://app.chargingthefuture.com/apps/<slug>`), not the homepage.
+   Use the real deep link (`https://app.lagatos.com/apps/<slug>`), not the homepage.
 3. **Show it on the screen that asked for it.** The control puts the picture in the panel under
    the button. It never navigates.
 4. **Share is the control.** `navigator.share({ files })` on its own press, so the browser's

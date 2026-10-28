@@ -305,7 +305,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Shown to members, so it names no setting. The cause (missing publishable key or OAuth
         // client id in the build) is a build problem a member cannot fix.
         "Sign-in isn't available",
-        "This copy of the app can't sign you in. Install the latest version, or sign in on the web at app.chargingthefuture.com.",
+        "This copy of the app can't sign you in. Install the latest version, or sign in on the web at app.lagatos.com.",
       );
       return;
     }

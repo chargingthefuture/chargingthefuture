@@ -356,7 +356,7 @@ same sector and country blocks, in the same order and the same colors — and be
 renders the member screen itself, that is also one to one with what a member sees. Two things are missing on
 purpose and nothing else is: the app's own top bar (back arrow, Live chip, refresh) and the share
 control itself. Step 4 — under the page content the picture carries
-`https://app.chargingthefuture.com/apps/gross-domestic-product` and a line saying the figures are
+`https://app.lagatos.com/apps/gross-domestic-product` and a line saying the figures are
 as they stood when the picture was taken. Step 5 — the sheet opens every time, closing it says
 nothing and leaves the picture on screen, and Done puts the picture away.
 

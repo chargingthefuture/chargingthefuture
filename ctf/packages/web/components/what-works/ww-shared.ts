@@ -46,7 +46,7 @@ export function pageCountFor(itemCount: number, perPage: number): number {
 }
 
 // The external long-form explainer the right-rail footnote points at (owner-confirmed).
-export const LOOK_MA_URL = 'https://www.chargingthefuture.com/look-ma';
+export const LOOK_MA_URL = 'https://lagatos.com/look-ma';
 
 export type WhatWorksProduct = {
   id: string;

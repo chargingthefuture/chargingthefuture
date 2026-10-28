@@ -28,8 +28,8 @@ export function getClickLogTokens(theme: ThemeName): ClickLogTokens {
 // recognize a short chip label can read the long version before picking. Both are opened through
 // the shared ShareLink popup — open in a new tab or copy the link — so reading the list never
 // replaces the page of an incident the member is part-way through logging.
-export const CLICK_LOG_PROBLEMS_PAGE_URL = "https://www.chargingthefuture.com/look-ma";
-export const CLICK_LOG_SCHEMES_PAGE_URL = "https://www.chargingthefuture.com/schemes";
+export const CLICK_LOG_PROBLEMS_PAGE_URL = "https://lagatos.com/look-ma";
+export const CLICK_LOG_SCHEMES_PAGE_URL = "https://lagatos.com/schemes";
 
 // A link to the public page that describes one list of tags in full. Shown next to the picker
 // question and opened through the shared ShareLink popup (rule 130).
@@ -45,13 +45,13 @@ export type ClickLogTagReference = {
 export const CLICK_LOG_PROBLEM_REFERENCE: ClickLogTagReference = {
   url: CLICK_LOG_PROBLEMS_PAGE_URL,
   label: "Full list",
-  title: "The full problems list on chargingthefuture.com",
+  title: "The full problems list on lagatos.com",
 };
 
 export const CLICK_LOG_SCHEME_REFERENCE: ClickLogTagReference = {
   url: CLICK_LOG_SCHEMES_PAGE_URL,
   label: "Full list",
-  title: "The full schemes list on chargingthefuture.com",
+  title: "The full schemes list on lagatos.com",
 };
 
 export const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
