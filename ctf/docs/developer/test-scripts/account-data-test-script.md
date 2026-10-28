@@ -366,3 +366,17 @@ reload too). Step 2 lists @B; a card with "blankets" in it leaves Today; after U
 return. Step 3: B sees nothing; B can still see A's cards, and nothing else between them changes (a
 mute is not a block).
 **Result:** web ☐ — notes:
+
+## AD-19 · Today for a visitor who is not signed in
+
+**Role:** signed out; then a member · **Precondition:** an open ride request, an open SocketRelay ask
+and a PeerProgramming goal exist.
+**Steps:**
+1. Signed out, open `/today`.
+2. Tap **Listen in** on the Main Room card, then come back and tap **Sign in**.
+3. Signed in, open `/today`.
+**Expected:** Step 1 shows "Today in the Avenhood", a Sign in button, Days won, the Main Room card and
+public cards: rides wanted, Skill Up cohorts, SkillsHunt, numbers, replays. No card shows a name, and
+no SocketRelay ask, goal, listing, announcement, invitation or Mood card appears. The card menu has
+no Mute. Step 2 opens the public listen page, then the sign-in page. Step 3 lands on the home page.
+**Result:** web ☐ — notes:

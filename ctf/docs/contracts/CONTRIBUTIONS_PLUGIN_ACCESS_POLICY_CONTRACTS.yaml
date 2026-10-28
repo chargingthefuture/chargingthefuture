@@ -6,15 +6,18 @@
 #   not-yet-verified member can contribute and hold the thank-you credits; they simply cannot
 #   spend them inside verification-gated plugins until they finish Unlock (deliberate owner
 #   decision, 2026-06-10).
-# - Credits granted on confirmation are thank-you grants, never redeemable for real money.
-# - Gift-card codes are never accepted, stored, or logged by any command. Members are told to
-#   send codes to the owner over Signal only.
+# - Contributions takes Amazon gift cards only, open all year. The code is entered in the app,
+#   stored encrypted under the server-only CONTRIBUTIONS_CODE_KEY with the member's account id
+#   bound in, shown only to an admin one claim at a time (audited), and erased on review.
+# - With CONTRIBUTIONS_CODE_KEY unset the app takes no codes (503 contributions_paused).
+# - Credits granted on confirmation are thank-you grants of ServiceCredits, an internal credits
+#   unit, never redeemable for money.
 # - Access to the platform is never gated on contributing; declining or never contributing
 #   has no effect on any feature.
 policies:
   - pluginId: contributions
     command: contributions.submission.create
-    version: 1.0.0
+    version: 2.0.0
     requiredRoles:
       - member
       - contributor
@@ -24,8 +27,10 @@ policies:
       activeSessionRequired: true
       minUnlockTier: any_authenticated
       submitterScopeOnly: true
-      giftCardCodeFieldsRejected: enforced
-      signalContactRequiredForGiftCard: enforced
+      giftCardCodeEncryptedAtRest: enforced
+      giftCardCodeNeverReturnedOrLogged: enforced
+      codeKeyRequired: enforced
+      csrfHeaderAndSameOrigin: enforced
     consentRequirements:
       scopes:
         - contributions_submit
@@ -39,14 +44,15 @@ policies:
       requiresAdditionalAudit: true
     denyConditions:
       - unauthenticated_session
-      - invalid_kind_or_method
+      - csrf_denied
+      - invalid_payload
       - amount_out_of_bounds
-      - missing_signal_contact_for_gift_card
-      - gift_card_code_field_present
+      - invalid_gift_card_code
+      - contributions_paused
 
   - pluginId: contributions
     command: contributions.status.get
-    version: 1.0.0
+    version: 2.0.0
     requiredRoles:
       - member
       - contributor
@@ -71,66 +77,13 @@ policies:
       - unauthenticated_session
 
   - pluginId: contributions
-    command: contributions.fundraiser.get
-    version: 1.0.0
-    requiredRoles:
-      - member
-      - contributor
-      - moderator
-      - admin
-    attributePolicies:
-      activeSessionRequired: true
-      minUnlockTier: any_authenticated
-      aggregateProgressOnly: enforced
-    consentRequirements:
-      scopes:
-        - contributions_read_progress
-      fallbackLawfulBasis: legitimate_interest
-    regionRestrictions:
-      allowedTransferMechanisms:
-        - local_processing
-        - scc
-    highRiskFlags:
-      containsPHI: false
-      requiresAdditionalAudit: false
-    denyConditions:
-      - unauthenticated_session
-
-  - pluginId: contributions
-    command: contributions.banner.dismiss
-    version: 1.0.0
-    requiredRoles:
-      - member
-      - contributor
-      - moderator
-      - admin
-    attributePolicies:
-      activeSessionRequired: true
-      minUnlockTier: any_authenticated
-      ownRowsOnly: enforced
-      silentSnooze: enforced
-    consentRequirements:
-      scopes:
-        - contributions_banner_state
-      fallbackLawfulBasis: legitimate_interest
-    regionRestrictions:
-      allowedTransferMechanisms:
-        - local_processing
-        - scc
-    highRiskFlags:
-      containsPHI: false
-      requiresAdditionalAudit: false
-    denyConditions:
-      - unauthenticated_session
-
-  - pluginId: contributions
     command: contributions.admin.submission.list
-    version: 1.0.0
+    version: 2.0.0
     requiredRoles:
       - admin
     attributePolicies:
       adminOnlyQueueAccess: required
-      signalContactVisibleToAdminOnly: enforced
+      giftCardCodeNeverListed: enforced
     consentRequirements:
       scopes:
         - contributions_admin_read
@@ -146,15 +99,47 @@ policies:
       - insufficient_role
 
   - pluginId: contributions
-    command: contributions.admin.submission.review
+    command: contributions.admin.code.reveal
     version: 1.0.0
+    requiredRoles:
+      - admin
+    attributePolicies:
+      adminOnlyCodeAccess: required
+      oneClaimPerRequest: enforced
+      everyRevealAudited: enforced
+      codeNeverInAuditOrLogs: enforced
+      noStoreCaching: enforced
+      csrfHeaderAndSameOrigin: enforced
+    consentRequirements:
+      scopes:
+        - contributions_admin_read
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - insufficient_role
+      - csrf_denied
+      - submission_not_found
+      - code_not_stored
+      - code_key_missing_or_changed
+
+  - pluginId: contributions
+    command: contributions.admin.submission.review
+    version: 2.0.0
     requiredRoles:
       - admin
     attributePolicies:
       adminOnlyModerationDecision: required
       pendingStatusRequired: enforced
       confirmExactlyOnce: enforced
-      perUserCycleCreditCap: enforced
+      perUserYearCreditCap: enforced
+      giftCardCodeErasedOnReview: enforced
+      csrfHeaderAndSameOrigin: enforced
       creditGrantDelegatedToServiceCredits: enforced
       idempotencyKeyRequired: true
     consentRequirements:
@@ -172,11 +157,12 @@ policies:
       - insufficient_role
       - submission_not_found
       - submission_not_pending
-      - missing_confirmed_amount_for_gift_card
+      - missing_confirmed_amount
+      - mint_budget_exceeded
 
   - pluginId: contributions
     command: contributions.admin.config.get
-    version: 1.0.0
+    version: 2.0.0
     requiredRoles:
       - admin
     attributePolicies:
@@ -197,13 +183,13 @@ policies:
 
   - pluginId: contributions
     command: contributions.admin.config.update
-    version: 1.0.0
+    version: 2.0.0
     requiredRoles:
       - admin
     attributePolicies:
       adminOnlyConfigAccess: required
       positiveNumericKnobs: enforced
-      noRealContactDetailsInSeedOrDefaults: enforced
+      csrfHeaderAndSameOrigin: enforced
     consentRequirements:
       scopes:
         - contributions_admin_write
@@ -218,50 +204,3 @@ policies:
     denyConditions:
       - insufficient_role
       - invalid_config_value
-
-  - pluginId: contributions
-    command: contributions.admin.cycle.create
-    version: 1.0.0
-    requiredRoles:
-      - admin
-    attributePolicies:
-      adminOnlyCycleManagement: required
-      validWindowRequired: enforced
-    consentRequirements:
-      scopes:
-        - contributions_admin_write
-      fallbackLawfulBasis: legitimate_interest
-    regionRestrictions:
-      allowedTransferMechanisms:
-        - local_processing
-        - scc
-    highRiskFlags:
-      containsPHI: false
-      requiresAdditionalAudit: true
-    denyConditions:
-      - insufficient_role
-      - invalid_cycle_window
-
-  - pluginId: contributions
-    command: contributions.admin.cycle.update
-    version: 1.0.0
-    requiredRoles:
-      - admin
-    attributePolicies:
-      adminOnlyCycleManagement: required
-      validWindowRequired: enforced
-    consentRequirements:
-      scopes:
-        - contributions_admin_write
-      fallbackLawfulBasis: legitimate_interest
-    regionRestrictions:
-      allowedTransferMechanisms:
-        - local_processing
-        - scc
-    highRiskFlags:
-      containsPHI: false
-      requiresAdditionalAudit: true
-    denyConditions:
-      - insufficient_role
-      - cycle_not_found
-      - invalid_cycle_window

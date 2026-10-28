@@ -13,21 +13,10 @@ import {
 
 type ConfigBody = {
   creditsPerUsd?: number;
-  nonMonetaryUnitValueUsd?: number;
-  perUserCycleCreditCap?: number;
-  bannerSnoozeMonths?: number;
-  bannerEnabled?: boolean;
-  signalInstructions?: string;
+  perUserYearCreditCap?: number;
 };
 
-const CONFIG_FIELDS = [
-  'creditsPerUsd',
-  'nonMonetaryUnitValueUsd',
-  'perUserCycleCreditCap',
-  'bannerSnoozeMonths',
-  'bannerEnabled',
-  'signalInstructions',
-] as const satisfies readonly (keyof ConfigBody)[];
+const CONFIG_FIELDS = ['creditsPerUsd', 'perUserYearCreditCap'] as const satisfies readonly (keyof ConfigBody)[];
 
 export async function GET() {
   const gate = await requireContributionsAdminAccess();
@@ -65,11 +54,7 @@ export async function PUT(request: Request) {
     const config = await updateContributionsConfig({
       actorUserId: gate.auth.userId,
       creditsPerUsd: body.creditsPerUsd,
-      nonMonetaryUnitValueUsd: body.nonMonetaryUnitValueUsd,
-      perUserCycleCreditCap: body.perUserCycleCreditCap,
-      bannerSnoozeMonths: body.bannerSnoozeMonths,
-      bannerEnabled: body.bannerEnabled,
-      signalInstructions: body.signalInstructions,
+      perUserYearCreditCap: body.perUserYearCreditCap,
     });
 
     await auditBestEffort('admin_config_update', {
@@ -81,10 +66,7 @@ export async function PUT(request: Request) {
         changedKnobs,
         resultingConfig: {
           creditsPerUsd: config.creditsPerUsd,
-          nonMonetaryUnitValueUsd: config.nonMonetaryUnitValueUsd,
-          perUserCycleCreditCap: config.perUserCycleCreditCap,
-          bannerSnoozeMonths: config.bannerSnoozeMonths,
-          bannerEnabled: config.bannerEnabled,
+          perUserYearCreditCap: config.perUserYearCreditCap,
         },
       },
     });

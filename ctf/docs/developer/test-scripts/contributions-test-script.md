@@ -8,12 +8,12 @@
 | **Plugin** | Contributions (`contributions`) |
 | **Visibility** | Member (any authenticated member; no Unlock tier required) |
 | **Roles to test** | member, admin |
-| **Surfaces** | Web (`/apps/contributions`, `/admin/contributions`, fundraiser banner in Hub) |
+| **Surfaces** | Web (`/apps/contributions`, `/admin/contributions`) |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-contributions-feature-inventory.md` |
-| **Generated** | 2026-08-06 (commit 4cfc88690) · 2026-10-17: demo seed adds a pending gift-card claim and confirms the demo star with credits — smoke 2, CONT-5, CONT-6, CONT-8 · 2026-10-17: demo seed hands the seeded Quora comment and star claims back to the seeded account after an owner change — CONT-6, CONT-8 |
+| **Generated** | 2026-08-06 (commit 4cfc88690) · 2026-10-27: rewritten for Amazon gift cards only, open all year — the code is entered in the app, stored encrypted, revealed to the admin and erased on review; drives, banner, Quora, GitHub and Signal cases removed |
 
-> **Android note:** The Android surface was removed 2026-07-20 (rule 105, PR #1742). This plugin is now web-only (installable PWA). All cases are web-only. The parity section documents this explicitly.
+> **Android note:** The Android surface was removed 2026-07-20 (rule 105, PR #1742). This plugin is web-only (installable PWA). All cases are web-only.
 
 ---
 
@@ -22,7 +22,8 @@
 - Mark each result ✅ pass / ❌ fail / ⛔ blocked.
 - A ❌ becomes a row in the Bug Reporting plugin — record the case ID, surface, what happened, and what was expected.
 - Run **Core smoke** at the start of every test session before anything else.
-- Run `pnpm --dir ctf seed:demo` once before the session to get the demo cycle and demo claims into a known state.
+- Run `pnpm --dir ctf seed:demo` once before the session. It gives each demo account one confirmed Amazon gift card ($10, 100 credits) and one pending ($25). Seeded claims carry no code.
+- Cases that send a gift card need `CONTRIBUTIONS_CODE_KEY` set on the server (at least 32 characters). Use a made-up code such as `TEST-ABCD-1234`; never a real card.
 
 ---
 
@@ -31,335 +32,192 @@
 These are the checks that must pass before any further testing is meaningful.
 
 **1. Member can reach the contributions page**
-Sign in as a member. Navigate to `/apps/contributions`. The page loads — it does not show a 404, a sign-in wall, or a loading spinner that never resolves.
+Sign in as a member. Navigate to `/apps/contributions`. The page loads with two tabs, Contribute and My history — not a 404, a sign-in wall, or a spinner that never resolves.
 web ☐
 
-**2. Fundraiser progress is visible**
-On `/apps/contributions`, collective totals are visible: USD raised, number of Quora comments, number of GitHub stars, and contributor count. These are aggregate numbers — no individual member names appear. The demo seed gives the demo owner three claims: a pending Amazon gift card, a confirmed Quora comment and a confirmed, credited GitHub star.
+**2. The gift card form is shown**
+On the Contribute tab, the Amazon gift card form shows an amount field filled in with `10`, a gift card code field, a lock note saying the code is stored encrypted and erased once the System Architect has confirmed or rejected it, and a Send gift card button. There is no drive, goal, progress bar or banner anywhere on the page.
 web ☐
 
-**3. Admin can reach the admin dashboard**
-Sign in as an admin. Navigate to `/admin/contributions`. The page loads showing at least a review queue section, a drive section, and a settings section.
+**3. Admin can reach the admin screen**
+Sign in as an admin. Navigate to `/admin/contributions`. The page loads with two tabs, Submission queue and Settings.
 web ☐
 
-**4. Signed-out users cannot access member or admin routes**
-Sign out. Navigate to `/apps/contributions`. The page does not render member content (redirect to sign-in or public shell only). Navigate to `/admin/contributions`. Same — no admin content renders.
+**4. Signed-out users cannot reach member or admin content**
+Sign out. Navigate to `/apps/contributions`: only the signed-out view shows, explaining the three steps and asking to sign in. Navigate to `/admin/contributions`: no admin content renders.
 web ☐
 
 ---
 
 ## Member walkthrough
 
-### CONT-1 — Fundraiser snapshot loads with live credit valuations
+### CONT-1 — The thank-you rate on the form matches the settings
 
 **Role:** Member
 **Surfaces:** Web (`/apps/contributions`)
 **Precondition:** Seed has run. Signed in as a member.
 
 **Steps:**
-1. Navigate to `/apps/contributions`.
-2. Find the section that shows how contributions are thanked (ServiceCredits).
-3. Note the SC-per-dollar figure shown and the SC-per-comment-or-star figure shown.
-4. In a separate tab, sign in as admin and go to `/admin/contributions` → Settings.
-5. Note the "Credits per USD" and "Credits per comment or star" values in the admin settings.
+1. Navigate to `/apps/contributions`, Contribute tab.
+2. Read the number of ServiceCredits per dollar in the lock note under the code field.
+3. In a separate tab, sign in as admin and go to `/admin/contributions` → Settings.
+4. Read "Credits per dollar".
 
 **Expected:**
-The member-facing copy shows the same numbers as the admin settings. If admin settings show 10 SC per USD and 10 SC per comment or star, the member page shows exactly those numbers — not hardcoded values that differ.
+The two numbers match. Changing the setting (CONT-A8) and reloading the member page changes the number in the lock note.
 
 **Result:** web ☐
 
 ---
 
-### CONT-2 — Submit a gift-card contribution claim
+### CONT-2 — Send a gift card
 
 **Role:** Member
 **Surfaces:** Web (`/apps/contributions`)
-**Precondition:** Signed in as a member. A demo cycle with window covering today exists (seeded).
+**Precondition:** Signed in as a member. `CONTRIBUTIONS_CODE_KEY` is set.
 
 **Steps:**
-1. Navigate to `/apps/contributions`.
-2. In the "How would you like to help?" section, choose the gift card path (click "Choose this" or equivalent affordance on the gift card card).
-3. Confirm the form appears directly below the cards (not at the bottom of the page).
-4. Select "Amazon" as the card type.
-5. Enter `25` in the amount field.
-6. Enter a placeholder Signal contact (e.g. `https://signal.me/#p/test`).
-7. Confirm there is a warning visible on the form that says never to post a gift-card code in the Commons.
-8. Confirm there is no field in the form asking for a gift-card code.
-9. Submit the form.
+1. Navigate to `/apps/contributions`, Contribute tab.
+2. Enter `25` in the amount field.
+3. Enter `test abcd 1234` in the gift card code field.
+4. Press Send gift card.
 
 **Expected:**
-- The form accepts the submission and moves to a confirmation screen.
-- The confirmation screen shows the owner's Signal contact (either from the `ownerSignalUrl` field or the Signal instructions copy) and repeats the warning not to post the code in the Commons.
-- No "code" field exists anywhere on the form or confirmation.
+- The button reads "Sending…" while it works, then the screen moves to My history.
+- The newest claim reads "Gift card (Amazon $25)", "Waiting for review", with today's date.
+- The code appears nowhere on the member screen, now or after a reload.
+- Back on the Contribute tab the form is cleared, with the amount back at `10`.
 
 **Result:** web ☐
 
 ---
 
-### CONT-3 — Gift-card form validation rejects out-of-range amounts
+### CONT-3 — The form refuses an amount out of range or a code that is not a code
+
+**Role:** Member
+**Surfaces:** Web (`/apps/contributions`, API)
+**Precondition:** Signed in as a member. `CONTRIBUTIONS_CODE_KEY` is set.
+
+**Steps:**
+1. Clear the amount field and type `0`, then `501`, then `12.50`.
+2. With amount `10`, leave the code empty.
+3. Send `POST /api/contributions/submission` with header `x-ctf-csrf: 1` and body `{"claimedAmountUsd":12.5,"code":"TESTABCD1234"}`.
+4. Send the same with body `{"claimedAmountUsd":10,"code":"ab"}`.
+
+**Expected:**
+- For `0` and `501` a red line under the field gives the range 1 to 500, and the button stays off. Typing `12.50` leaves only digits in the field (`1250`), which is also out of range.
+- With an empty code the button stays off.
+- Step 3 answers 400 `contributions_invalid_amount`. Step 4 answers 400 `contributions_invalid_code`.
+- No claim is created in any case.
+
+**Result:** web ☐
+
+---
+
+### CONT-4 — Paused card when no encryption key is set
+
+**Role:** Member
+**Surfaces:** Web (`/apps/contributions`, API)
+**Precondition:** A test environment where `CONTRIBUTIONS_CODE_KEY` is unset. Signed in as a member.
+
+**Steps:**
+1. Navigate to `/apps/contributions`, Contribute tab.
+2. Send `POST /api/contributions/submission` with header `x-ctf-csrf: 1` and body `{"claimedAmountUsd":10,"code":"TESTABCD1234"}`.
+3. Open the My history tab.
+
+**Expected:**
+- The form is replaced by "Gift cards are paused for now" and "Nothing is needed from you. This screen takes gift cards again once it is switched back on." There is no code field.
+- Step 2 answers 503 `contributions_paused` and no claim is created.
+- My history still shows earlier claims.
+
+**Result:** web ☐
+
+---
+
+### CONT-5 — My history shows the member's own claims
 
 **Role:** Member
 **Surfaces:** Web (`/apps/contributions`)
-**Precondition:** Signed in as a member. Gift-card path is selected.
+**Precondition:** Seed has run. Signed in as a demo account.
 
 **Steps:**
-1. Open the gift-card form.
-2. Try submitting with amount `0`.
-3. Try submitting with amount `501`.
-4. Try submitting with amount `12.50`.
-5. Try submitting with amount `0.001`.
-6. Try submitting without a Signal contact.
+1. Open the My history tab.
 
 **Expected:**
-- Amount `0` is rejected with a validation error before submission reaches the server.
-- Amount `501` is rejected with a validation error.
-- `12.50` and `0.001` are both rejected, and the message says integer dollars with no cents — gift-card amounts are entire US dollars from 1 to 500.
-- Missing Signal contact is rejected with a validation error.
-- In every case the form stays open and no claim is created.
-- The amount field's label reads "Card value ($1 to $500, no cents)", and on a phone the keypad it opens has no decimal point.
+- The confirmed $10 gift card shows "Confirmed" and "+100 SC received". The pending $25 one shows "Waiting for review".
+- Newest first. Only this member's claims appear.
+- A note under the list says contributions are private between the member and the platform owner, with no public donor lists.
+- A claim made before 2026-10-27 as a Quora comment or GitHub star, if the account has one, still shows under that name. A rejected claim shows "Not matched".
 
 **Result:** web ☐
 
 ---
 
-### CONT-3b — A confirmed contribution never grants a fraction of a credit
-
-**Role:** Admin
-**Surfaces:** Web (`/admin/contributions`, API)
-**Precondition:** Signed in as an admin, with one pending gift-card claim in the queue.
-
-**Steps:**
-1. Go to `/admin/contributions` → Settings and set "Credits per USD" to `3`. Save. (A rate that does not divide evenly into a dollar is the point of this case — at the default rate of 10 the problem is invisible.)
-2. Go to the review queue and open the pending gift-card claim.
-3. Confirm it with a confirmed value of `10`.
-4. Read the credits granted on the reviewed claim, and the member's ServiceCredits balance.
-5. Try confirming another gift-card claim with a confirmed value of `12.50`.
-6. Put "Credits per USD" back to its original value when you are done.
-
-**Steps to check the stored value directly (optional):**
-7. In the database, read `credits_granted` for the claim you confirmed in step 3.
-
-**Expected:**
-- The confirm in step 3 succeeds and grants an integer number of credits — 30 at a rate of 3. No decimal appears in the granted figure, on the claim or in the member's balance.
-- `credits_granted` in step 7 is an integer. A value like `29.999` or `30.5` is the bug this case exists for.
-- Step 5 is rejected: the confirmed value for a gift card is integer dollars, 1 to 500, the same rule the member's claim had to clear.
-- A grant that rounds down to 0 still marks the claim confirmed, with 0 credits granted — that is the same outcome as a claim capped to 0, not an error.
-
-**Result:** web ☐
-
----
-
-### CONT-4 — Submit a Quora comment contribution claim
+### CONT-6 — Empty history
 
 **Role:** Member
 **Surfaces:** Web (`/apps/contributions`)
-**Precondition:** Signed in as a member.
+**Precondition:** Signed in as a member with no claims (for example a second demo owner).
 
 **Steps:**
-1. Navigate to `/apps/contributions`.
-2. Choose the Quora comment path.
-3. Try submitting without a Quora post URL.
-4. Confirm the form shows a help line directing members to ask in the Commons if they cannot find their link.
-5. Enter a valid URL (e.g. `https://qr.ae/test123`).
-6. Submit.
+1. Open the My history tab.
+2. Press Send a gift card.
 
 **Expected:**
-- Submitting without a URL is blocked by a validation error.
-- After entering a URL the submission succeeds and shows a confirmation.
-- The help line referencing the Commons is visible before submission.
+"No contributions yet" with a line saying an Amazon gift card goes toward hosting and the app stays free either way. The button switches to the Contribute tab.
 
 **Result:** web ☐
 
 ---
 
-### CONT-5 — Submit a GitHub star contribution claim
+### CONT-7 — Unauthenticated user cannot send a gift card
 
-**Role:** Member
+**Role:** Unauthenticated
+**Surfaces:** Web (API)
+**Precondition:** Signed out.
+
+**Steps:**
+1. Send `POST /api/contributions/submission` with header `x-ctf-csrf: 1` and body `{"claimedAmountUsd":10,"code":"TESTABCD1234"}` and no session.
+
+**Expected:**
+401 or 403. No claim is created.
+
+**Result:** web ☐
+
+---
+
+### CONT-8 — A member who has not finished Unlock can still contribute
+
+**Role:** Member (signed in, Unlock not finished)
 **Surfaces:** Web (`/apps/contributions`)
-**Precondition:** Signed in as a member whose account has no prior credited GitHub star (a fresh demo member such as the tester member account; the demo owner's seeded star is already credited).
+**Precondition:** `CONTRIBUTIONS_CODE_KEY` is set.
 
 **Steps:**
-1. Navigate to `/apps/contributions`.
-2. Choose the GitHub star path.
-3. Confirm the GitHub star card/path is not grayed out (this member has no credited star).
-4. Try submitting without a GitHub profile URL.
-5. Confirm the form shows a help line directing members to ask in the Commons if they cannot find their profile link.
-6. Enter a GitHub profile URL (e.g. `https://github.com/testuser`).
-7. Submit.
+1. Sign in as a member whose Unlock is not approved.
+2. Navigate to `/apps/contributions` and send a gift card as in CONT-2.
+3. Check the member's Unlock status afterwards.
 
 **Expected:**
-- Submitting without a URL is blocked by validation.
-- After entering a URL the submission succeeds and shows a confirmation.
+- The page opens and the claim is accepted (owner decision, 2026-06-10).
+- The Unlock status is unchanged.
 
 **Result:** web ☐
 
 ---
 
-### CONT-6 — GitHub star path is grayed out after a credited star
-
-**Role:** Member
-**Surfaces:** Web (`/apps/contributions`)
-**Precondition:** Signed in as a member who already has a confirmed GitHub star with `credits_granted > 0`. (The demo owner's seeded star is confirmed with 10 credits.)
-
-**Steps:**
-1. Navigate to `/apps/contributions`.
-2. Look at the GitHub star path/card.
-
-**Expected:**
-The GitHub star path is visually grayed out or disabled. Attempting to select it either does nothing or shows a message explaining the star has already been credited. The fundraiser snapshot field `githubStarAlreadyCredited` is `true` for this member.
-
-**Result:** web ☐
-
----
-
-### CONT-7 — GitHub star cannot be re-submitted via API after a credited star
+### CONT-9 — Non-admin member cannot reach admin routes
 
 **Role:** Member
 **Surfaces:** Web (API)
-**Precondition:** Member already has a confirmed GitHub star with `credits_granted > 0`.
+**Precondition:** Signed in as a non-admin member. Note the id of any claim.
 
 **Steps:**
-1. In browser DevTools (or a REST client using the session cookie), send:
-   `POST /api/contributions/submission`
-   with header `x-ctf-csrf: 1` and body `{"kind":"github_star","githubProfileUrl":"https://github.com/testuser"}`.
+1. Send `GET /api/contributions/admin/submissions`.
+2. Send `POST /api/contributions/admin/submissions/<id>/code` with header `x-ctf-csrf: 1`.
+3. Send `GET /api/contributions/admin/config`.
 
 **Expected:**
-The server returns HTTP 409 with error code `contributions_github_star_already_credited`. No new submission row is created.
-
-**Result:** web ☐
-
----
-
-### CONT-8 — Claim history shows member's own submissions
-
-**Role:** Member
-**Surfaces:** Web (`/apps/contributions`)
-**Precondition:** Seed has run. Signed in as the demo member who has the three seeded claims (pending gift card, confirmed Quora comment, confirmed GitHub star).
-
-**Steps:**
-1. Navigate to `/apps/contributions`.
-2. Find the contribution history section (may be a tab labeled "My history" or a rail on desktop).
-3. Review the list of claims.
-
-**Expected:**
-- Three claims are visible: one pending Amazon gift card, one confirmed Quora comment, one confirmed GitHub star.
-- Each shows its status clearly (Waiting for review / Confirmed).
-- No other member's claims appear.
-- The `signalContact` value from the gift-card claim is not shown anywhere on the member view.
-
-**Result:** web ☐
-
----
-
-### CONT-9 — Fundraiser banner appears for authenticated member
-
-**Role:** Member
-**Surfaces:** Web (Hub, wherever the banner is integrated)
-**Precondition:** Signed in as a member. Admin has banner enabled (default). Member has not snoozed the banner (fresh seed state).
-
-**Steps:**
-1. Navigate to the Hub (the main signed-in landing area).
-2. Look for the fundraiser banner at the top of the Hub content area.
-
-**Expected:**
-The fundraiser banner is visible. It shows collective drive progress and a way to open the contributions page. A "Not now" or dismiss control is visible (the `SHOW_DISMISS_BUTTON` flag must be enabled for this case — if the button is hidden in the current build, note that and mark this case blocked ⛔).
-
-**Result:** web ☐
-
----
-
-### CONT-10 — Dismissing the banner on desktop hides it
-
-**Role:** Member
-**Surfaces:** Web (desktop width)
-**Precondition:** Banner is visible. `SHOW_DISMISS_BUTTON` is enabled. Member has not snoozed.
-
-**Steps:**
-1. On a desktop-width browser window, locate the fundraiser banner in the Hub.
-2. Click "Not now" (or the dismiss control).
-3. Observe the banner area immediately.
-4. Refresh the page.
-
-**Expected:**
-- After dismissing, the banner disappears on desktop. No emoji or strip remains in its place.
-- After refresh, the banner is still gone (snooze is stored server-side, not just in memory).
-
-**Result:** web ☐
-
----
-
-### CONT-11 — Dismissing the banner collapses it to a 🎁 chip in the Commons chip row
-
-**Role:** Member
-**Surfaces:** Web (phone width)
-**Precondition:** Banner is visible. `SHOW_DISMISS_BUTTON` is enabled. Member has not snoozed. Use a narrow browser window or real phone.
-
-**Steps:**
-1. At phone width, locate the fundraiser banner in the Hub.
-2. Click "Not now".
-3. Observe the banner area, the top bar, and the chip row above the message box.
-
-**Expected:**
-- The full banner collapses.
-- A small 🎁 (gift emoji) chip appears in the Commons chip row, immediately after the 🔔 notifications chip.
-- No 🎁 appears in the top bar.
-- The chip is tappable and opens the contributions plugin.
-- The large banner strip is no longer shown.
-
-**Result:** web ☐
-
----
-
-### CONT-12 — Unauthenticated user cannot submit a claim
-
-**Role:** Signed-out
-**Surfaces:** Web (API)
-**Precondition:** Not signed in.
-
-**Steps:**
-1. Send `POST /api/contributions/submission` with header `x-ctf-csrf: 1` and body `{"kind":"quora_comment","quoraPostUrl":"https://qr.ae/test"}` — no auth cookie.
-
-**Expected:**
-The server returns 401 or 403. No submission is created.
-
-**Result:** web ☐
-
----
-
-### CONT-12b — A member who has not finished Unlock can still contribute
-
-Contributions is one of exactly three features excepted from the Unlock gate (owner decision,
-2026-06-10, recorded in the plugin inventory). Everything else in the app requires Unlock approval,
-so this is worth testing directly: if it ever silently starts requiring approval, the fundraiser
-goes quiet for the members most likely to be new, and nothing else would report it.
-
-**Role:** Member (signed in, Unlock NOT approved)
-**Surfaces:** Web
-**Precondition:** Signed in with an account that has no approved Unlock submission.
-
-**Steps:**
-1. Open `/apps/contributions`.
-2. Submit a Quora comment contribution claim.
-
-**Expected:**
-The page renders rather than denying access, and the claim is accepted. Any thank-you credits are
-held but cannot be spent in verification-gated plugins until Unlock is finished.
-
-**Result:** web ☐
-
----
-
-### CONT-13 — Non-admin member cannot access admin routes
-
-**Role:** Member (non-admin)
-**Surfaces:** Web (API)
-**Precondition:** Signed in as a regular member (not admin).
-
-**Steps:**
-1. Send `GET /api/contributions/admin/submissions` with header `x-ctf-csrf: 1` and the member's session cookie.
-
-**Expected:**
-The server returns 403. The `signalContact` values of other members are not returned.
+All three answer 403. No code is returned.
 
 **Result:** web ☐
 
@@ -367,446 +225,247 @@ The server returns 403. The `signalContact` values of other members are not retu
 
 ## Admin walkthrough
 
-### CONT-A1 — Admin review queue shows all pending submissions with Signal contact
+### CONT-A1 — The queue lists claims without codes
 
 **Role:** Admin
-**Surfaces:** Web (`/admin/contributions`)
-**Precondition:** Seed has run. At least one pending gift-card claim exists (seeded).
+**Surfaces:** Web (`/admin/contributions`, API)
+**Precondition:** Seed has run, and CONT-2 has sent one gift card.
 
 **Steps:**
-1. Sign in as admin.
-2. Navigate to `/admin/contributions`.
-3. Open the review queue. If there is a status filter, leave it on "pending" or "all".
-4. Find the seeded pending Amazon gift-card claim.
-5. Inspect the details shown for that claim.
+1. Open the Submission queue tab.
+2. Send `GET /api/contributions/admin/submissions` and read the response.
 
 **Expected:**
-- The queue shows pending claims.
-- The gift-card claim row shows a Signal contact value (the placeholder from the seed).
-- The Signal contact is visible only here, not on any member-facing page.
-- No gift-card code field or column exists anywhere in the queue UI.
+- Each row shows the member id, "Gift card (Amazon $N)", the amount, the date and a status. The tab shows the number of pending claims.
+- The response carries `hasCode` on each item and no code anywhere.
 
 **Result:** web ☐
 
 ---
 
-### CONT-A2 — Admin can filter the queue by status
+### CONT-A2 — Filter and search the queue
 
 **Role:** Admin
 **Surfaces:** Web (`/admin/contributions`)
-**Precondition:** Seed has run. Claims in mixed statuses exist.
+**Precondition:** Seed has run.
 
 **Steps:**
-1. In the review queue, filter by "confirmed".
-2. Check that only confirmed claims appear.
-3. Filter by "rejected".
-4. Check that only rejected claims appear.
-5. Filter by "pending".
-6. Check that only pending claims appear.
+1. Choose Pending, then Confirmed, then Rejected, then All.
+2. Type part of a member id in the search.
 
 **Expected:**
-Each filter shows only claims with the matching status. No cross-status leakage.
+Each filter shows only claims in that status; All shows every claim. The search narrows the list to matching rows.
 
 **Result:** web ☐
 
 ---
 
-### CONT-A3 — Admin confirms a pending gift-card claim and credits are granted
+### CONT-A3 — Show the gift card code
 
 **Role:** Admin
-**Surfaces:** Web (`/admin/contributions`)
-**Precondition:** At least one pending gift-card claim exists. (Use the seeded Amazon claim, or submit a new one as a member first.)
+**Surfaces:** Web (`/admin/contributions`, API)
+**Precondition:** The claim sent in CONT-2 is pending. `CONTRIBUTIONS_CODE_KEY` is unchanged since it was sent.
 
 **Steps:**
-1. Open the review queue and find a pending gift-card claim.
-2. Click the confirm action.
-3. Enter `20` as the confirmed USD amount.
-4. Submit the confirmation.
-5. Check the claim's status in the queue.
-6. Navigate to the member's ServiceCredits wallet (in the ServiceCredits plugin or admin view) to verify credits were granted.
+1. Open that claim in the queue.
+2. Press Show gift card code.
+3. Press Copy and paste the result somewhere private.
+4. Read the newest rows of `contributions_audit_log`.
 
 **Expected:**
-- The claim status changes to "confirmed".
-- `confirmedAmountUsd` is 20.
-- `creditsGranted` = 20 × `creditsPerUsd` (e.g. 20 × 10 = 200 SC), unless clamped by the per-cycle cap.
-- The `creditGovernanceEventId` field is populated (non-null) — confirming the ServiceCredits mint path ran.
-- Attempting to confirm the same claim a second time is rejected (the review can only happen once).
-- The audit row written for the confirm records the reviewed member as `targetUserId` in its metadata alongside the admin who acted (check `contributions_audit_log` if you are verifying the audit trail).
+- The button reads "Reading…", then the code appears as `TESTABCD1234` (spaces removed, letters upper-cased) with a Copy button.
+- The pasted text matches.
+- One audit row `contributions.admin.code.reveal` with the claim id and metadata `{ targetUserId, revealed: true }`. The code is not in the row.
 
 **Result:** web ☐
 
 ---
 
-### CONT-A4 — Confirming a gift-card claim requires a confirmed amount
+### CONT-A4 — No code to show
+
+**Role:** Admin
+**Surfaces:** Web (`/admin/contributions`, API)
+**Precondition:** Seed has run.
+
+**Steps:**
+1. Open a seeded pending claim.
+2. Send `POST /api/contributions/admin/submissions/<id>/code` with header `x-ctf-csrf: 1` for that claim.
+3. Send the same for a confirmed claim.
+
+**Expected:**
+- The panel says "No code is stored for this claim." in place of the button.
+- Steps 2 and 3 answer 409 `contributions_code_unavailable` with a reason saying no code is stored. Each still writes an audit row with `revealed: false`.
+
+**Result:** web ☐
+
+---
+
+### CONT-A5 — Confirm a gift card: credits granted and the code erased
+
+**Role:** Admin
+**Surfaces:** Web (`/admin/contributions`)
+**Precondition:** The claim from CONT-2 is pending with its code. Credits per dollar is 10.
+
+**Steps:**
+1. Open the claim. The amount redeemed is filled in as `25`, with "→ 250 SC" beside it.
+2. Add a note and press Confirm.
+3. Open the claim again, and as the member open My history.
+4. Send `POST /api/contributions/admin/submissions/<id>/code` with header `x-ctf-csrf: 1`.
+
+**Expected:**
+- The claim shows Confirmed with the note; the Show gift card code button is gone.
+- The member sees "Confirmed" and "+250 SC received" (less if the yearly limit applies, CONT-A9), and their ServiceCredits balance rises by the same amount.
+- Step 4 answers 409 `contributions_code_unavailable`: the code was erased by the confirm.
+- One audit row `contributions.admin.submission.confirm` with `targetUserId`, `confirmedAmountUsd`, `creditsGranted` and `creditGovernanceEventId`, and no code.
+
+**Result:** web ☐
+
+---
+
+### CONT-A6 — Reject a gift card: nothing granted and the code erased
+
+**Role:** Admin
+**Surfaces:** Web (`/admin/contributions`)
+**Precondition:** Send another gift card as in CONT-2 so a pending claim with a code exists.
+
+**Steps:**
+1. Open the claim, add a note and press Reject.
+2. Repeat step 4 of CONT-A5 for this claim.
+
+**Expected:**
+- The claim shows Rejected; the member sees "Not matched" and no credits.
+- The reveal answers 409 `contributions_code_unavailable`.
+- One audit row `contributions.admin.submission.reject`, with no code.
+
+**Result:** web ☐
+
+---
+
+### CONT-A7 — Confirm needs a valid amount, and a claim is reviewed once
 
 **Role:** Admin
 **Surfaces:** Web (API)
-**Precondition:** A pending gift-card claim exists. Admin is signed in.
+**Precondition:** One pending claim and one confirmed claim.
 
 **Steps:**
-1. Send `POST /api/contributions/admin/submissions/<submissionId>/review` with header `x-ctf-csrf: 1`, body `{"action":"confirm"}` — no `confirmedAmountUsd`.
+1. Send `POST /api/contributions/admin/submissions/<pending id>/review` with header `x-ctf-csrf: 1` and body `{"action":"confirm"}`.
+2. Send the same with `{"action":"confirm","confirmedAmountUsd":12.5}`.
+3. Send `{"action":"confirm","confirmedAmountUsd":10}` for the confirmed claim.
 
 **Expected:**
-The server returns 400 or 422 (missing required field). The claim stays pending.
+- Steps 1 and 2 answer 400 `contributions_confirmed_amount_required`; the claim stays pending with its code.
+- Step 3 answers 409 `contributions_already_reviewed`; nothing changes and no credits are granted.
 
 **Result:** web ☐
 
 ---
 
-### CONT-A5 — Admin confirms a Quora comment claim — amount defaults from config
-
-**Role:** Admin
-**Surfaces:** Web (`/admin/contributions`)
-**Precondition:** A pending Quora comment claim exists.
-
-**Steps:**
-1. Find a pending Quora comment claim in the queue.
-2. Confirm it without supplying a custom USD amount.
-3. Check the resulting `confirmedAmountUsd` and `creditsGranted` on the claim.
-
-**Expected:**
-`confirmedAmountUsd` equals `nonMonetaryUnitValueUsd` from the config (default 1 USD). `creditsGranted` = 1 × `creditsPerUsd` (default 10 SC), unless clamped by cap.
-
-**Result:** web ☐
-
----
-
-### CONT-A5a — A link edited on review is saved with the claim
-
-**Role:** Admin
-**Surfaces:** Web (`/admin/contributions`)
-**Precondition:** A pending Quora comment claim exists.
-
-**Steps:**
-1. Open the pending Quora comment claim in the queue.
-2. Replace the text in "Quora post URL (editable — paste from notifications)" with `https://qr.ae/edited`.
-3. Confirm the claim, then reload the queue and open it again.
-4. Send `POST /api/contributions/admin/submissions/<id>/review` with header `x-ctf-csrf: 1` and body `{"action":"confirm","url":"not a link"}` for another pending Quora or GitHub claim.
-5. Send the same request with body `{"action":"confirm","confirmedAmountUsd":10,"url":"https://qr.ae/x"}` for a pending gift-card claim.
-
-**Expected:**
-- After step 3 the claim shows `https://qr.ae/edited` as its Quora post link.
-- Step 4 returns 400 `contributions_invalid_url` and the claim stays pending.
-- Step 5 returns 400 `contributions_invalid_payload` and the claim stays pending.
-
-**Result:** web ☐
-
----
-
-### CONT-A5b — A confirmed comment or star never counts as money given
-
-**Role:** Admin
-**Surfaces:** Web (`/apps/contributions`, `/apps/weekly-performance`)
-**Precondition:** The current week's Weekly Performance cards are visible. Note "Contributions Confirmed USD" and "Contributions Non Money Confirmed" for this week, and the USD raised on `/apps/contributions`.
-
-**Steps:**
-1. Confirm one pending Quora comment claim (or GitHub star claim) without a custom amount, as in CONT-A5.
-2. Reload `/apps/contributions` and read the USD raised.
-3. Refresh the Weekly Performance dashboard for the current week.
-4. Confirm one pending gift-card claim for 20 USD and refresh both screens again.
-
-**Expected:**
-- After step 1, USD raised on `/apps/contributions` and the "Contributions Confirmed USD" card are unchanged. Only real money counts toward a dollar figure; the comment's `confirmedAmountUsd` is the set value used for credits, not money.
-- "Contributions Non Money Confirmed" goes up by 1 (read in contributions, not USD).
-- After step 4, USD raised and "Contributions Confirmed USD" both go up by 20, and the non-money card does not move.
-
-**Result:** web ☐
-
----
-
-### CONT-A6 — Admin rejects a pending claim — no credits granted
-
-**Role:** Admin
-**Surfaces:** Web (`/admin/contributions`)
-**Precondition:** A pending claim exists.
-
-**Steps:**
-1. Find a pending claim in the queue.
-2. Click the reject action. Optionally enter a review note.
-3. Submit the rejection.
-4. Check the claim's status and credits.
-
-**Expected:**
-- Status changes to "rejected".
-- `creditsGranted` is 0.
-- No ServiceCredits are minted.
-- The claim cannot be reviewed again.
-- The audit row for the rejection records the reviewed member as `targetUserId` in its metadata, same as the confirm path.
-
-**Result:** web ☐
-
----
-
-### CONT-A7 — Confirming an already-reviewed claim is rejected
-
-**Role:** Admin
-**Surfaces:** Web (API)
-**Precondition:** A claim that is already confirmed or rejected exists.
-
-**Steps:**
-1. Send `POST /api/contributions/admin/submissions/<alreadyReviewedId>/review` with header `x-ctf-csrf: 1` and body `{"action":"confirm","confirmedAmountUsd":10}`.
-
-**Expected:**
-The server returns an error (400 or 409 — the claim is not pending). The existing status does not change. Credits are not double-granted.
-
-**Result:** web ☐
-
----
-
-### CONT-A8 — Per-cycle credit cap is enforced
-
-**Role:** Admin
-**Surfaces:** Web (API)
-**Precondition:** A member has already received credits in the current cycle equal to or near the per-cycle cap (default 300 SC). Create this state: confirm enough gift-card claims for one member to reach ~290 SC for the cycle, then prepare one more pending claim for the same member.
-
-**Steps:**
-1. Confirm the additional claim that would push the member over 300 SC.
-2. Check `creditsGranted` on the newly confirmed claim.
-
-**Expected:**
-`creditsGranted` is clamped so the member's total for the cycle does not exceed 300 SC. The claim still shows status "confirmed"; only the credit amount is reduced. If the cap was already exactly met, `creditsGranted` is 0 and the claim is still confirmed.
-
-**Result:** web ☐
-
----
-
-### CONT-A8b — A confirm over the ServiceCredits mint budget is refused plainly
-
-**Role:** Admin
-**Surfaces:** Web (`/admin/contributions`)
-**Precondition:** The ServiceCredits per-period mint budget is turned on and nearly used up (the ServiceCredits admin dashboard shows "mint budget remaining" below what the next confirm would grant). A pending gift-card claim exists whose grant is larger than what remains.
-
-**Steps:**
-1. In the review queue, confirm the pending claim with its confirmed amount.
-2. Read the message on the queue screen.
-3. Filter the queue to Pending.
-
-**Expected:**
-- The message says the ServiceCredits mint budget for this period is used up and the contribution is still pending. The API answer is 409 with code `contributions_mint_budget_exceeded`.
-- The claim is still listed as pending with no credits granted.
-- "Contribution review unavailable." at step 2 is the bug from #2979.
-
-**Result:** web ☐
-
----
-
-### CONT-A9 — Confirming a duplicate GitHub star grants 0 credits
-
-**Role:** Admin
-**Surfaces:** Web (API)
-**Precondition:** A member already has one confirmed GitHub star with `credits_granted > 0`. A second GitHub star submission from the same member exists in the queue (submitted while the first was still pending, or forced into the DB for testing).
-
-**Steps:**
-1. Open `/apps/contributions` as any member and write down the "Stars" number on the drive progress bar.
-2. Find the second GitHub star claim for that member in the admin queue.
-3. Confirm it.
-4. Reload `/apps/contributions` and read the "Stars" number again.
-
-**Expected:**
-- The claim status becomes "confirmed".
-- `creditsGranted` is 0.
-- The mint path is not called (no new `creditGovernanceEventId` from this claim).
-- A review note or similar record explains the duplicate star rule.
-- The "Stars" number on the progress bar is **unchanged** from step 1. The bar counts how many
-  members starred, not how many star rows exist, so a member's second confirmed star must not move
-  it. (A rise of 1 here is the bug fixed in #2143 coming back.)
-
-**Result:** web ☐
-
----
-
-### CONT-A10 — Admin creates a new fundraiser cycle
+### CONT-A8 — Settings: credits per dollar and the yearly limit
 
 **Role:** Admin
 **Surfaces:** Web (`/admin/contributions`)
 **Precondition:** Signed in as admin.
 
 **Steps:**
-1. Navigate to `/admin/contributions` → Drive management section.
-2. Create a new cycle with start date one month from today, end date four months from today, fiat goal 200 USD, Quora comment goal 100, GitHub star goal 50.
-3. Save.
-4. Verify the cycle appears in the drive list with the values entered.
+1. Open Settings. Read "Credits per dollar" and "Most credits per member over 365 days".
+2. Set Credits per dollar to `3` and press Save settings.
+3. Reload the page, and as a member reload the Contribute tab.
+4. Send `PUT /api/contributions/admin/config` with header `x-ctf-csrf: 1` and body `{"creditsPerUsd":0}`.
+5. Put the settings back.
 
 **Expected:**
-The new cycle is saved and displayed with correct start/end dates and all three goals. No error is shown.
+- Defaults are 10 and 300. The button reads "Saving…" then the values stay after reload.
+- The member's lock note shows 3 ServiceCredits per dollar.
+- Step 4 is refused and the stored value does not change.
+- One `contributions.admin.config.update` audit row per save, naming only the fields sent.
 
 **Result:** web ☐
 
 ---
 
-### CONT-A10b — Opening the Drive tab early does not wipe the cycle goals
+### CONT-A9 — The 365-day limit caps thank-you credits
+
+**Role:** Admin and member
+**Surfaces:** Web (`/admin/contributions`)
+**Precondition:** Settings at 10 credits per dollar and a limit of `300`. A member with no confirmed gift card in the last 365 days sends two gift cards of $25.
+
+**Steps:**
+1. Confirm the first claim at `25`.
+2. Confirm the second at `25`.
+3. Send a third and confirm it at `25`.
+
+**Expected:**
+- The first grants 250 credits, the second 50 (300 − 250), the third 0.
+- The third still shows Confirmed, with no credits line in My history. It is not an error.
+
+**Result:** web ☐
+
+---
+
+### CONT-A10 — Credits are never a fraction
 
 **Role:** Admin
 **Surfaces:** Web (`/admin/contributions`)
-**Precondition:** Signed in as admin, with an existing cycle whose three goals are all non-zero (CONT-A10 leaves one). Note the three goal values before you start.
+**Precondition:** One pending claim with a code.
 
 **Steps:**
-1. Throttle the connection in browser dev tools (Network → Slow 3G) so the dashboard's data takes a few seconds to arrive. This is the point of the case — the bug only appears while the cycle is still loading.
-2. Load `/admin/contributions` and tap the **Drive** tab immediately, before the page finishes loading.
-3. Wait for loading to finish and look at the three goal boxes.
-4. Without editing anything, save.
-5. Reload `/apps/contributions` as a member and read the drive progress targets.
+1. Set Credits per dollar to `0.333` and save.
+2. Confirm the claim at `10`.
+3. Put Credits per dollar back.
 
 **Expected:**
-- After loading finishes, the three goal boxes show the cycle's real values — not empty boxes.
-- The save leaves all three goals unchanged, matching what you noted in the precondition.
-- Empty boxes at step 3, or goals that read 0 at step 5, is the bug from #2137: the form kept its first-render empty values and the save wrote 0 over each real goal.
-- Typing 0 into a goal box on purpose and saving still stores 0. That is a valid goal, not the bug.
+The claim grants 3 credits (3.33 rounded), and the member's balance rises by an integer. A grant that rounds to 0 still confirms the claim with 0 credits.
 
 **Result:** web ☐
 
 ---
 
-### CONT-A10c — After a drive ends, the Drive tab starts a new one
+### CONT-A11 — A confirm over the ServiceCredits mint budget is refused plainly
 
 **Role:** Admin
 **Surfaces:** Web (`/admin/contributions`)
-**Precondition:** Signed in as admin. Exactly one drive exists and it is active, with at least one confirmed contribution. No upcoming drive exists.
+**Precondition:** The ServiceCredits per-period mint budget is on and nearly used up. One pending claim whose grant would pass it.
 
 **Steps:**
-1. Open the **Drive** tab and set the end date to yesterday. Save. This ends the drive.
-2. Reload `/admin/contributions` and open the **Drive** tab again.
-3. Enter a start date of today, an end date one month from today and three non-zero goals. Save.
-4. Open `/apps/contributions` as a member and read the drive progress bars.
+1. Confirm the claim.
 
 **Expected:**
-- At step 2 the card title reads "Start a drive" and the form is empty. It does not show the ended drive.
-- Step 3 creates a second drive; the ended drive keeps its own dates.
-- At step 4 the progress bars start from zero for the new drive, not from the ended drive's totals.
-- A card titled "Active drive" at step 2 holding the ended drive's dates is the bug from #2978.
+The queue shows a message saying the mint budget for this period is used up and the contribution is still pending. The claim stays pending and Show gift card code still works.
 
 **Result:** web ☐
 
 ---
 
-### CONT-A11 — Cycle with end before start is rejected
+### CONT-A12 — Code reveal and review need the CSRF header
 
 **Role:** Admin
 **Surfaces:** Web (API)
-**Precondition:** Signed in as admin.
+**Precondition:** One pending claim with a code.
 
 **Steps:**
-1. Send `POST /api/contributions/admin/cycles` with header `x-ctf-csrf: 1` and body `{"startsAt":"2027-06-01T00:00:00Z","endsAt":"2027-05-01T00:00:00Z","fiatGoalUsd":100}`.
+1. Send `POST /api/contributions/admin/submissions/<id>/code` without the `x-ctf-csrf: 1` header.
+2. Send `POST /api/contributions/admin/submissions/<id>/review` with body `{"action":"reject"}` without the header.
+3. Send `POST /api/contributions/submission` as a member with a valid body without the header.
 
 **Expected:**
-The server returns 400 or 422. No cycle is created. The `ends_at > starts_at` constraint is enforced.
+All three answer 403 `contributions_csrf_denied`. No code is shown, nothing is reviewed and no claim is created.
 
 **Result:** web ☐
 
 ---
 
-### CONT-A12 — Admin edits an existing cycle
+### CONT-A13 — A changed key leaves a waiting code unreadable
 
 **Role:** Admin
 **Surfaces:** Web (`/admin/contributions`)
-**Precondition:** At least one cycle exists (the seeded demo cycle works).
+**Precondition:** A test environment. One pending claim with a code, sent under the current `CONTRIBUTIONS_CODE_KEY`.
 
 **Steps:**
-1. Open the drive management section.
-2. Edit the seeded cycle: change the fiat goal to 150 USD.
-3. Save.
+1. Change `CONTRIBUTIONS_CODE_KEY` and restart the app.
+2. Open the claim and press Show gift card code.
 
 **Expected:**
-The cycle shows the updated fiat goal (150 USD). Other fields are unchanged.
-
-**Result:** web ☐
-
----
-
-### CONT-A13 — Admin updates runtime configuration
-
-**Role:** Admin
-**Surfaces:** Web (`/admin/contributions`)
-**Precondition:** Signed in as admin.
-
-**Steps:**
-1. Navigate to the Settings section of the admin dashboard.
-2. Note the current "Credits per comment or star" control value.
-3. Change it to a different value (e.g. if it shows 10, change to 20).
-4. Save.
-5. Navigate to `/apps/contributions` (member view) and check the credits-per-action figure shown.
-
-**Expected:**
-- Settings save without error.
-- The member-facing page now shows the updated SC-per-comment-or-star value (matching the new setting).
-- The admin settings display the helper line showing the underlying USD value that the control converts to before saving.
-- The audit row written for this save names only the setting that was actually edited. Its metadata
-  has a `changedKnobs` list holding just that one field, and the full set of values after the save
-  sits separately under `resultingConfig` (check `contributions_audit_log` if you are verifying the
-  audit trail). A `changedKnobs` list naming every setting means the row cannot tell an edit from a
-  value that was simply carried over.
-
-**Result:** web ☐
-
----
-
-### CONT-A14 — Banner can be disabled via admin settings
-
-**Role:** Admin
-**Surfaces:** Web
-**Precondition:** Banner is currently enabled.
-
-**Steps:**
-1. In admin settings, turn the banner off (set `bannerEnabled` to false). Save.
-2. Sign in as a member (or open an incognito tab as the member).
-3. Navigate to the Hub.
-
-**Expected:**
-The fundraiser banner does not appear. The 🎁 emoji also does not appear (banner is off entirely, not just snoozed). The member's contributions page still works normally.
-
-**Result:** web ☐
-
----
-
-### CONT-A15 — Admin sets custom Signal instructions copy
-
-**Role:** Admin
-**Surfaces:** Web (`/admin/contributions`)
-**Precondition:** Signed in as admin.
-
-**Steps:**
-1. In admin settings, update the "Signal instructions" text to `"Send the gift card to @testowner on Signal."`.
-2. Save.
-3. As a member, submit a gift-card claim.
-4. Check the post-submit confirmation screen.
-
-**Expected:**
-The confirmation screen shows the updated Signal instructions text (or the `ownerSignalUrl` if that env var is set — if both are present, the URL takes precedence and the instructions are fallback copy). No real contact details from seed data appear.
-
-**Result:** web ☐
-
----
-
-### CONT-A16 — Banner snooze months config is internal — not shown to member
-
-**Role:** Admin / Member
-**Surfaces:** Web
-**Precondition:** Signed in as admin.
-
-**Steps:**
-1. In admin settings, change `bannerSnoozeMonths` to 1.
-2. Save.
-3. Sign in as a member and dismiss the banner.
-4. Check — there is no countdown, no mention of "1 month", and no snooze-length copy anywhere on the member-facing surface.
-
-**Expected:**
-The snooze duration is never shown to the member. The banner simply disappears (desktop) or collapses to the emoji (phone width) with no guilt copy and no timer displayed.
-
-**Result:** web ☐
-
----
-
-### CONT-A17 — CSRF header is required for mutations
-
-**Role:** Any authenticated user
-**Surfaces:** Web (API)
-**Precondition:** Signed in as a member.
-
-**Steps:**
-1. Send `POST /api/contributions/submission` with a valid session cookie and valid body `{"kind":"quora_comment","quoraPostUrl":"https://qr.ae/test"}` but **without** the `x-ctf-csrf: 1` header.
-
-**Expected:**
-The server returns 403 or 400. No submission is created.
+The panel shows a reason saying the code does not decrypt with the current key because the key was changed after it was sent. The audit row records `revealed: false`. Reject still works and erases the stored value.
 
 **Result:** web ☐
 
@@ -814,9 +473,7 @@ The server returns 403 or 400. No submission is created.
 
 ## Parity check (web ↔ android)
 
-The Android surface was **removed on 2026-07-20** (rule 105, PR #1742). The plugin is now web-only, delivered as an installable PWA. There is no Android parity to verify.
-
-For completeness: the parity contract entry in `config/plugin-parity-contracts.json` still carries the `contributions` entry. Confirm that the entry's `webOnly` or equivalent flag reflects the removal — if it still declares Android parity as required, file a bug against the parity config, not against the plugin behavior.
+The Android surface was **removed on 2026-07-20** (rule 105, PR #1742). The plugin is web-only, delivered as an installable PWA. There is no Android parity to verify.
 
 | Case | Web | Android |
 |---|---|---|
@@ -826,23 +483,39 @@ For completeness: the parity contract entry in `config/plugin-parity-contracts.j
 
 ## Known gaps — do not file these as bugs
 
-- **Confirmed seed claim has no ledger event.** The demo confirmed Quora comment claim shows `credits_granted = 10` but `credit_governance_event_id` is null because the seed does not run the real mint path. This is expected in demo data. Do not file a bug if the admin view shows a null governance event ID for that specific seeded row.
-- **Metrics have no dashboard wiring.** The five `contributions_*` canonical metrics exist but are not connected to any visible dashboard. No bug to file.
-- **Cycle window partial-edit validation.** Editing only one end of a cycle window is validated against the supplied value only, not the stored opposite end. The owner is the sole writer; this is an accepted limitation.
-- **`getFundraiserSnapshot` records `last_shown_at` on read.** A read-path write happens on every fundraiser snapshot load. If this causes a performance concern, it is a known debt item, not a bug.
-- **`SHOW_DISMISS_BUTTON` flag.** The "Not now" dismiss button on the fundraiser banner may be hidden in the current build (the flag defaults to hidden per the 2026-07-01 change log entry, then restored per 2026-07-18). If the button is not visible, cases CONT-9, CONT-10, and CONT-11 are blocked ⛔ — note the flag state and do not file the missing button as a bug unless the flag is confirmed to be set to show.
-- **Mobile admin is read-only for drive and config.** Creating or editing a drive cycle and editing config knobs is done on the web admin dashboard only — but this gap is now moot since the Android surface has been fully removed.
-- **`bannerSnoozeMonths` default migration.** If testing against a database that was created before 2026-07-19, the production config row may still carry the old 6-month default. A one-time migration was included in the change log; if the value shows as 6 in a freshly seeded environment, that is a seed/migration issue to investigate but is called out here as a known transition artifact.
+- **Seeded claims have no code.** The seed has no encryption key, so seeded pending claims show "No code is stored for this claim." Send a claim through the app to test the reveal.
+- **Confirmed seed claims have no ledger event.** They show credits granted but `credit_governance_event_id` is null because the seed does not run the real mint path.
+- **Metrics have no dashboard wiring.** The `contributions_*` canonical metrics exist but are not connected to a visible dashboard.
 
-### CT-KEPT — Deleting Contributions data keeps the star limit (added 2026-10-17)
+### CT-KEPT — Deleting Contributions data does not reset the yearly limit (added 2026-10-17, rewritten 2026-10-27)
 
 **Role:** A member and an admin · **Surface:** web
 
 **Steps:**
-1. As the member, submit a GitHub star; as admin, confirm it so credits are granted.
-2. As the member, delete Contributions data from the account area.
-3. Submit a GitHub star again; as admin, confirm it.
+1. With a limit of 300 and 10 credits per dollar, the member sends a $30 gift card; the admin confirms it at `30` (300 credits).
+2. The member deletes Contributions data from the account area.
+3. The member sends another gift card; the admin confirms it.
 
-**Expected:** The second star earns no credits, with the note that the member already received credits for an earlier GitHub star. The drive cap counts the first grant too.
+**Expected:** My history is empty after step 2. The claim in step 3 confirms with 0 credits: the limit counts the kept ServiceCredits grant from step 1 even though the claim row is gone.
 
 Result: web ☐
+
+### CONT-A14 — Credits held until Unlock approval
+
+**Role:** a member not yet approved in Unlock; admin · **Surfaces:** web
+
+**Steps:**
+1. As the member, send a $10 gift card.
+2. As the admin, confirm it at $10.
+3. As the member, open My history.
+4. As the admin, approve the member in Unlock (`/admin/unlock`).
+5. As the member, open My history and the ServiceCredits wallet.
+
+**Expected:**
+- After step 2 the claim reads Confirmed, the admin queue says "Thank-you credits are held until this
+  member is approved in Unlock.", and no credits move.
+- Step 3 shows "Your thank-you credits arrive once Unlock is approved."
+- After step 4 the claim shows "+100 SC received" (at 10 per dollar) and the held line is gone; the
+  wallet has the credits. Approving the member again grants nothing a second time.
+
+web ☐

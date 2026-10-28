@@ -41,9 +41,9 @@ synthetic peers:
   taxonomy skills), so Browse is no longer empty. The owner has Directory skills for the
   "skills I could offer" picker, a two-party thread with peer 1, and one open quote request
   in the `requested` state.
-- Contributions: one always-current fundraiser drive (its window is refreshed relative to
-  the run time on every re-run) plus two owner claims — a confirmed Quora comment with its
-  credit grant, and a pending GitHub star.
+- Contributions: two owner claims, both Amazon gift cards — a confirmed $10 card with its
+  thank-you credits, and a pending $25 card. Neither carries a code (the seed has no
+  encryption key). There are no drives since 2026-10-27.
 - Recurring Activity: one active activity (owner ↔ peer 1, free of charge, no amount) and
   one pending activity declared by peer 2 with the owner as counterparty, so the owner can
   test the confirm/decline action.
@@ -164,7 +164,7 @@ The seed changes only insert into tables and columns that already exist in
 `directory_user_extension`, `workforce_profiles`, `trust_user_extension`,
 `what_works_problems` / `what_works_products` / `what_works_endorsements`,
 `directory_profile_skills`, `foundation_user_extension` / `foundation_provider_skills` /
-`foundation_quote_requests`, `contributions_cycles` / `contributions_submissions`,
+`foundation_quote_requests`, `contributions_submissions` (`contributions_cycles` until it was dropped on 2026-10-27),
 `recurring_activities`). No table, column, constraint, index, or contract is added or
 changed, so no `schema.sql` migration is required (recorded here per
 `.claude/rules/122-schema-drift-predeployment-rules.mdc`).

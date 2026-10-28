@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { CheckCircle, X, ChevronRight } from 'lucide-react';
+import { CheckCircle, X, ChevronRight, Eye } from 'lucide-react';
 import type { ContributionSubmissionAdminView, ContributionsRuntimeConfig } from '@/lib/contributions/types';
 import {
   shortDate,
@@ -10,7 +10,7 @@ import {
   submissionLabel,
   type ContributionsTokens,
 } from '../contributions-shared';
-import type { QueueFilter } from './contributions-admin-shared';
+import { revealCode, type QueueFilter } from './contributions-admin-shared';
 
 const FILTERS: { key: QueueFilter; label: string }[] = [
   { key: 'all', label: 'All' },
@@ -19,7 +19,7 @@ const FILTERS: { key: QueueFilter; label: string }[] = [
   { key: 'rejected', label: 'Rejected' },
 ];
 
-type ReviewInput = { action: 'confirm' | 'reject'; confirmedAmountUsd?: number; reviewNote?: string; url?: string };
+type ReviewInput = { action: 'confirm' | 'reject'; confirmedAmountUsd?: number; reviewNote?: string };
 
 export type QueueProps = {
   t: ContributionsTokens;
@@ -48,22 +48,8 @@ function inputStyle(t: ContributionsTokens, width?: number | string): React.CSSP
   };
 }
 
-function initialUrl(row: ContributionSubmissionAdminView): string {
-  return row.quoraPostUrl ?? row.githubProfileUrl ?? '';
-}
-
-function initialConfirmedValue(
-  row: ContributionSubmissionAdminView,
-  config: ContributionsRuntimeConfig | null,
-  isGiftCard: boolean,
-): string {
-  if (row.confirmedAmountUsd != null) {
-    return String(row.confirmedAmountUsd);
-  }
-  if (isGiftCard) {
-    return String(row.claimedAmountUsd ?? '');
-  }
-  return String(config?.nonMonetaryUnitValueUsd ?? 1);
+function initialConfirmedValue(row: ContributionSubmissionAdminView): string {
+  return String(row.confirmedAmountUsd ?? row.claimedAmountUsd ?? '');
 }
 
 function resultingCredits(confirmedValue: string, config: ContributionsRuntimeConfig | null): number {
@@ -72,32 +58,53 @@ function resultingCredits(confirmedValue: string, config: ContributionsRuntimeCo
   return Number.isFinite(numericValue) ? Math.round(numericValue * creditsPerUsd) : 0;
 }
 
-function ReviewUrlField({
-  t,
-  row,
-  urlField,
-  setUrlField,
-  isPending,
-}: {
-  t: ContributionsTokens;
-  row: ContributionSubmissionAdminView;
-  urlField: string;
-  setUrlField: (value: string) => void;
-  isPending: boolean;
-}) {
-  const isQuora = row.kind === 'quora_comment';
+// The code is read only when the admin asks, one claim at a time, and each read is audited. It is
+// erased on review, so a reviewed claim has none to show.
+function CodeRow({ t, row }: { t: ContributionsTokens; row: ContributionSubmissionAdminView }) {
+  const [code, setCode] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  if (!row.hasCode) {
+    return <div style={{ marginBottom: 12, fontSize: 12, color: t.MUTED }}>No code is stored for this claim.</div>;
+  }
+
+  async function show() {
+    setBusy(true);
+    setError(null);
+    try {
+      setCode(await revealCode(row.id));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'The code could not be read.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div style={{ marginBottom: 12 }}>
-      <label style={{ fontSize: 11, color: t.MUTED, display: 'block', marginBottom: 5 }}>
-        {isQuora ? 'Quora post URL (editable — paste from notifications)' : 'GitHub profile URL (editable — paste from notifications)'}
-      </label>
-      <input
-        value={urlField}
-        onChange={(e) => setUrlField(e.target.value)}
-        placeholder={isQuora ? 'https://quora.com/…' : 'https://github.com/…'}
-        disabled={!isPending}
-        style={inputStyle(t, 400)}
-      />
+      {code ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <code style={{ fontSize: 15, letterSpacing: 1, color: t.TITLE, userSelect: 'all' }}>{code}</code>
+          <button
+            type="button"
+            onClick={() => void navigator.clipboard?.writeText(code)}
+            style={{ minHeight: 32, padding: '4px 12px', borderRadius: 7, background: 'transparent', border: `1px solid ${t.BORDER_SOLID}`, color: t.TEXT, fontSize: 12, cursor: 'pointer' }}
+          >
+            Copy
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => void show()}
+          disabled={busy}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, minHeight: 32, padding: '4px 12px', borderRadius: 7, background: 'transparent', border: `1px solid ${t.BORDER_SOLID}`, color: t.TEXT, fontSize: 12, cursor: busy ? 'default' : 'pointer' }}
+        >
+          <Eye size={12} /> {busy ? 'Reading…' : 'Show gift card code'}
+        </button>
+      )}
+      {error ? <div role="alert" style={{ fontSize: 12, color: '#EF4444', marginTop: 6 }}>{error}</div> : null}
     </div>
   );
 }
@@ -108,25 +115,21 @@ function ConfirmedValueRow({
   setConfirmedValue,
   resultingSc,
   isPending,
-  isGiftCard,
 }: {
   t: ContributionsTokens;
   confirmedValue: string;
   setConfirmedValue: (value: string) => void;
   resultingSc: number;
   isPending: boolean;
-  isGiftCard: boolean;
 }) {
-  // Gift cards are dollars with no cents, 1 to 500, and the server rejects anything else — so say the rule
-  // here rather than letting the admin find it on submit. A comment or star has no such rule: the
-  // field carries the configured USD-equivalent, which is free to be fractional.
+  // Dollars with no cents, 1 to 500; the server rejects anything else, so the rule is said here.
   return (
     <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
       <label htmlFor="contrib-q-confirmed-value" style={{ fontSize: 11, color: t.MUTED, flexShrink: 0 }}>
-        {isGiftCard ? 'Confirmed value (USD, 1–500, no cents)' : 'Confirmed value (USD)'}
+        Amount redeemed (USD, 1–500, no cents)
       </label>
-      <input id="contrib-q-confirmed-value" value={confirmedValue} onChange={(e) => setConfirmedValue(e.target.value)} inputMode={isGiftCard ? 'numeric' : 'decimal'} disabled={!isPending} style={inputStyle(t, 80)} />
-      <span style={{ fontSize: 11, color: t.MUTED }}>→ {resultingSc.toLocaleString()} SC (credits granted automatically, subject to per-cycle cap)</span>
+      <input id="contrib-q-confirmed-value" value={confirmedValue} onChange={(e) => setConfirmedValue(e.target.value)} inputMode="numeric" disabled={!isPending} style={inputStyle(t, 80)} />
+      <span style={{ fontSize: 11, color: t.MUTED }}>→ {resultingSc.toLocaleString()} SC (granted on confirm, up to the 365-day limit). Confirm or reject erases the code.</span>
     </div>
   );
 }
@@ -169,6 +172,7 @@ function ReviewActions({
     return (
       <div style={{ fontSize: 12, color: t.MUTED }}>
         Already reviewed{row.reviewNote ? ` — ${row.reviewNote}` : ''}.
+        {row.creditsHeld ? ' Thank-you credits are held until this member is approved in Unlock.' : ''}
       </div>
     );
   }
@@ -207,20 +211,11 @@ function ReviewPanel({
   reviewing: boolean;
   onReview: (submissionId: string, input: ReviewInput) => void;
 }) {
-  const isGiftCard = row.kind === 'gift_card';
-  const isUrlKind = row.kind === 'quora_comment' || row.kind === 'github_star';
-  const [urlField, setUrlField] = useState(initialUrl(row));
-  const [confirmedValue, setConfirmedValue] = useState(initialConfirmedValue(row, config, isGiftCard));
+  const [confirmedValue, setConfirmedValue] = useState(initialConfirmedValue(row));
   const [note, setNote] = useState(row.reviewNote ?? '');
 
   const resultingSc = resultingCredits(confirmedValue, config);
   const isPending = row.status === 'pending';
-
-  // Sent only when the admin changed it, so an untouched field never rewrites the member's link.
-  function editedUrl(): string | undefined {
-    const trimmed = urlField.trim();
-    return isUrlKind && trimmed && trimmed !== initialUrl(row) ? trimmed : undefined;
-  }
 
   function confirm() {
     const amount = Number(confirmedValue);
@@ -228,20 +223,17 @@ function ReviewPanel({
       action: 'confirm',
       confirmedAmountUsd: Number.isFinite(amount) ? amount : undefined,
       reviewNote: note.trim() ? note.trim() : undefined,
-      url: editedUrl(),
     });
   }
 
   function reject() {
-    onReview(row.id, { action: 'reject', reviewNote: note.trim() ? note.trim() : undefined, url: editedUrl() });
+    onReview(row.id, { action: 'reject', reviewNote: note.trim() ? note.trim() : undefined });
   }
 
   return (
     <div style={{ padding: '14px 24px 18px 36px', background: `${t.ACCENT}05`, borderTop: `1px solid ${t.BORDER_SOLID}` }}>
-      {isUrlKind && (
-        <ReviewUrlField t={t} row={row} urlField={urlField} setUrlField={setUrlField} isPending={isPending} />
-      )}
-      <ConfirmedValueRow t={t} confirmedValue={confirmedValue} setConfirmedValue={setConfirmedValue} resultingSc={resultingSc} isPending={isPending} isGiftCard={isGiftCard} />
+      {isPending ? <CodeRow t={t} row={row} /> : null}
+      <ConfirmedValueRow t={t} confirmedValue={confirmedValue} setConfirmedValue={setConfirmedValue} resultingSc={resultingSc} isPending={isPending} />
       <ReviewNoteRow t={t} note={note} setNote={setNote} isPending={isPending} />
       <ReviewActions t={t} row={row} reviewing={reviewing} isPending={isPending} confirm={confirm} reject={reject} />
     </div>
@@ -309,7 +301,6 @@ export function ContributionsAdminQueue(props: QueueProps) {
                     <div style={{ fontSize: 12, color: t.MUTED, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {submissionLabel(row)} · {claimedValueLabel(row)} · {shortDate(row.createdAt)}
                     </div>
-                    {row.signalContact && <div style={{ fontSize: 11, color: t.MUTED, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Signal: {row.signalContact}</div>}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                     <span style={{ fontSize: 11, fontWeight: 600, color: sc, background: `${sc}15`, padding: '2px 8px', borderRadius: 20 }}>{statusLabel(row.status)}</span>

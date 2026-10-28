@@ -890,13 +890,11 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
   {
     slug: 'contributions',
     name: 'Contributions',
-    dataSummary: 'Your contribution claims (including the Signal contact you provided) and fundraiser banner snooze state.',
+    dataSummary: 'Your gift card claims, including any code still waiting for review (stored encrypted).',
     serviceScopeSupported: true,
     tables: [
-      del('contributions_submissions', 'user_id', 'Your contribution claims, including the Signal contact you provided.'),
-      del('contributions_banner_state', 'user_id', 'Your fundraiser banner snooze state.'),
-      retain('contributions_audit_log', 'Audit log; retained for compliance. Contains no Signal contact values.'),
-      retain('contributions_cycles', 'Global funding cycles; created_by is the admin audit.'),
+      del('contributions_submissions', 'user_id', 'Your gift card claims, including any code still waiting for review.'),
+      retain('contributions_audit_log', 'Audit log; retained for compliance. Contains no gift card codes.'),
       retain('contributions_runtime_config', 'Global settings and the admin audit of who changed them.'),
       // Granted credits live in the ServiceCredits ledger and follow that plugin's policy below.
     ],
