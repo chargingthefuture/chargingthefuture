@@ -17,6 +17,7 @@ import {
 import type { SocketRelayRequestStatus } from 'lib/socket-relay/types';
 import { parseRequestInput } from 'lib/socket-relay/parse-input';
 import { reportError } from 'lib/observability/report';
+import { contentRefusedResponse, isRefusedByStream } from 'lib/integrations/stream-content-check';
 import { failureReason } from 'lib/errors/failure';
 
 const REQUEST_STATUSES: SocketRelayRequestStatus[] = ['open', 'claimed', 'closed', 'canceled'];
@@ -110,6 +111,9 @@ export async function POST(request: Request) {
   const payloadDeny = await validateCreateRequestPayload(input);
   if (payloadDeny) {
     return payloadDeny;
+  }
+  if (await isRefusedByStream({ entityType: 'socket-relay-ask', creatorAccountId: gate.auth.userId, texts: [input.title, input.details ?? ''] })) {
+    return contentRefusedResponse();
   }
 
   const idempotencyKey = resolveIdempotencyKey(body, gate.auth.userId);

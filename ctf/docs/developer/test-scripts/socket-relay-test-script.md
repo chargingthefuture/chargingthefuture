@@ -833,3 +833,14 @@ country. It can be fulfilled, edited and closed exactly like one made in SocketR
 2. After day 14 with no address sent, post again. Then send an address and post again.
 **Expected:** Step 1 posts; SocketRelay's own screens still need approval. Step 2 is refused with `unlock_paused` until the address is sent, then posts.
 **Result:** web ☐ android ☐ — notes:
+
+### SR-23 · An ask with harmful words is refused (3.1)
+**Role:** an approved member · **Surfaces:** web (mobile-width)
+**Precondition:** the Stream moderation setup workflow has been run with apply.
+**Steps:**
+1. Open + New → Ask, or the SocketRelay page.
+2. Post an ask whose title threatens somebody. Then post an ordinary ask.
+**Expected:** The harmful one is not posted and the screen says "This was not posted: the automatic
+check found something harmful in it. Reword it and try again, or report a mistake through bug
+reporting." The ordinary one posts as usual. If Stream is down, both post.
+**Result:** web ☐ — notes:
