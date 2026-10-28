@@ -411,6 +411,8 @@ Demo schema (`ctf/scripts/seedDemo.mjs`, `seedPeerProgrammingGoalBoard`): finds 
 
 ## Change Log
 
+- 2026-10-28: **Stream AI moderation on new goals (3.1.0 plan).** `POST /api/peer-programming/goals` checks the title and tasks. The words are sent to Stream's AI moderation check before saving (`lib/integrations/stream-content-check.ts`, config `se:posts`, rules set by `stream-moderation-setup.yml`): when Stream answers remove the post is refused with 422 `content_refused` and the member is told to reword it; harm Stream rates high is flagged in Stream's review queue and still published. When Stream is not set up or cannot be reached the post is saved and the failure is reported. Pictures are not sent, because Stream cannot fetch them from behind sign-in.
+
 - 2026-10-28: **Call check, blur, picture in picture, block and report (3.1.0, plan task 10).** The web call opens on a camera and microphone check before joining; Blur background, Picture in picture and Block and report are on the call. Blur files are served from the app. No route, schema or contract change.
 - 2026-10-17: **Demo seed fills the goal board.** In the demo schema every account saw "You are not in a
   cohort yet", because the seed placed accounts only in the weekly `Demo-A` cohort, while the board reads
