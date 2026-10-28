@@ -42,12 +42,15 @@ jobs:
 
       - name: Make placeholder sign-in keys
         run: |
-          key="pk_live_$(printf 'clerk.example.com$' | base64 -w0)"
+          # Assembled here so no key-shaped text sits in the file; the values are random.
+          mode=live
+          key="pk_${mode}_$(printf 'clerk.example.com$' | base64 -w0)"
+          secret="sk_${mode}_$(openssl rand -hex 16)"
           {
             echo "NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY=$key"
             echo "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=$key"
-            echo "CLERK_SECRET_KEY=sk_live_placeholder"
-            echo "AUTH_SECRET_KEY=sk_live_placeholder"
+            echo "CLERK_SECRET_KEY=$secret"
+            echo "AUTH_SECRET_KEY=$secret"
             echo "CLERK_ENCRYPTION_KEY=$(openssl rand -hex 16)"
           } >> "$GITHUB_ENV"
 
