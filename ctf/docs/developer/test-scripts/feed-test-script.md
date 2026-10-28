@@ -121,7 +121,7 @@ signed-out visitor, and an approved member | **Surface:** web
 1. In the Announcements channel (or All), locate an announcement card.
 2. Confirm the card uses the accent color `#84CC16` and Lucide icons (Megaphone or equivalent), not emoji icons.
 3. Confirm there is no "GetStream ⚡" badge anywhere on the card.
-4. If the announcement has a linked plugin slug, confirm the card body contains an "Open \<Plugin\>:" link pointing to `https://app.chargingthefuture.com/apps/<slug>`.
+4. If the announcement has a linked plugin slug, confirm the card body contains an "Open \<Plugin\>:" link pointing to `https://app.lagatos.com/apps/<slug>`.
 5. Confirm the name on the card reads **Farah** — not "Survivor Hub" — and that the shield "Official" badge still sits beside it (added 2026-08-09). The name says who wrote it, the badge says it is official; both must be present.
 6. Confirm the round avatar on the card reads **F**, the first letter of that name, and that no card anywhere in the stream shows the old fixed **SH** glyph. Scroll a peer post into view and confirm its avatar is likewise the first letter of its author's handle.
 
@@ -744,7 +744,7 @@ FD-12b), with at least one reaction on it.
 **Expected:**
 - Status in admin list changes to `published`.
 - The announcement appears in the member-visible Announcements channel (not silently excluded).
-- If a linked plugin slug was set, the announcement body in the member feed contains "Open \<Plugin\>: https://app.chargingthefuture.com/apps/\<slug\>".
+- If a linked plugin slug was set, the announcement body in the member feed contains "Open \<Plugin\>: https://app.lagatos.com/apps/\<slug\>".
 
 **Result:** web ☐
 

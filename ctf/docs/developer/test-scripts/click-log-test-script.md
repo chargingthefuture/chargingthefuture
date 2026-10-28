@@ -207,8 +207,8 @@ message. Two incidents may carry the same note, so an edit never fails for match
    "Which schemes were used?".
 5. Repeat step 2 inside the edit form of an existing incident that has a location.
 **Expected:** Each link opens the shared share-link popup, not the page itself. The popup shows
-the entire address as selectable text — `https://www.chargingthefuture.com/look-ma` for problems,
-`https://www.chargingthefuture.com/schemes` for schemes — with "Copy link" (which confirms
+the entire address as selectable text — `https://lagatos.com/look-ma` for problems,
+`https://lagatos.com/schemes` for schemes — with "Copy link" (which confirms
 "Copied!") and "Open in new tab". Opening the page leaves the ClickLog tab as it was: the note
 you wrote and the tags you picked are still there, and nothing was submitted. Escape or a tap
 outside closes the popup and returns focus to the link. The same two links appear in the edit

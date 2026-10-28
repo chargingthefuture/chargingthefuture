@@ -272,7 +272,7 @@ with a second account that has no claimed listing.
    on this screen rather than replacing it, and nothing navigates away. Check it against the tab
    behind it: same card, same trade block, same ladder, same routes, same closing paragraph about
    the figures being speculative, and the deep link
-   `https://app.chargingthefuture.com/apps/workforce?view=one-percent` underneath. **Read the two
+   `https://app.lagatos.com/apps/workforce?view=one-percent` underneath. **Read the two
    "Your own numbers" fields in the picture: they must show 250 and 0.5 in normal text, not the
    grayed-out example figures** — a picture showing numbers the member did not type is the failure
    this step exists to catch. Now clear both fields and take a second picture: the fields read as
@@ -360,7 +360,7 @@ surface). The only admin write is the config save.
    the Community tab.
 **Expected:** Step 3's picture carries the four tiles and the summary exactly as the member Overview
 renders them — same numbers, same wording, same order — with
-`https://app.chargingthefuture.com/apps/workforce` underneath. Step 4's carries the intro, every
+`https://app.lagatos.com/apps/workforce` underneath. Step 4's carries the intro, every
 team with its responsibilities, sectors and member count, and
 `…/apps/workforce?view=community-planning` underneath; **no member name appears anywhere in it,
 including in the teams expanded in step 4** — the counts stay, the people do not. That is what this

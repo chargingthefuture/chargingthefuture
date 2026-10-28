@@ -613,7 +613,7 @@ Result: web ☐
 **Precondition:** None. Use a private window with no session, at phone width.
 
 **Steps:**
-1. Open `https://app.chargingthefuture.com/apps/fireside`.
+1. Open `https://app.lagatos.com/apps/fireside`.
 2. Read the page top to bottom.
 3. Press "Read the conversation".
 4. Go back and press "Create a free account".

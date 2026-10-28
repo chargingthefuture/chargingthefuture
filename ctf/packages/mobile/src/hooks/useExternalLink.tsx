@@ -11,7 +11,7 @@ import {
  * - Absolute URLs to the same domain are internal
  * - All other URLs are external
  */
-function isInternalLink(url: string, baseURL: string = 'https://chargingthefuture.com'): boolean {
+function isInternalLink(url: string, baseURL: string = 'https://lagatos.com'): boolean {
   if (url.startsWith('/')) return true;
   
   try {

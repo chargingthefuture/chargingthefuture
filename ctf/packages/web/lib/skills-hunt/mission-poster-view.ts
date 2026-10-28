@@ -127,6 +127,6 @@ export function buildMissionPosterView(
     roundLine: roundLine(round, timeZone),
     missions: rows,
     emptyLine: rows.length === 0 ? 'This round has no open missions right now.' : null,
-    joinLine: 'Join SkillsHunt at chargingthefuture.com — nominate people with the skills a sector is short of.',
+    joinLine: 'Join SkillsHunt at lagatos.com — nominate people with the skills a sector is short of.',
   };
 }

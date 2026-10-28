@@ -33,6 +33,9 @@ export const dynamic = 'force-dynamic';
 
 // The landing site and the blog read this from the browser, so only those origins are named.
 const ALLOWED_ORIGINS = new Set([
+  'https://lagatos.com',
+  'https://www.lagatos.com',
+  // The old addresses redirect to lagatos.com; kept while a cached page may still call from them.
   'https://chargingthefuture.com',
   'https://www.chargingthefuture.com',
   'https://chargingthefuture.github.io',

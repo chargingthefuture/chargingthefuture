@@ -28,7 +28,7 @@ import { captureScreen } from "lib/share/capture-screen";
 import { failureText, responseFailureText } from "lib/errors/client-failure";
 import { reportError } from "lib/observability/report";
 
-const GDP_DEEP_LINK = "https://app.chargingthefuture.com/apps/gross-domestic-product";
+const GDP_DEEP_LINK = "https://app.lagatos.com/apps/gross-domestic-product";
 const GDP_MEMBER_PATH = "/apps/gross-domestic-product";
 const GDP_ADMIN_PATH = "/admin/gdp";
 

@@ -26,7 +26,7 @@ describe('toPublicBeaconReplay', () => {
   it('points at the app recording route and leaves out the host and the stored file address', () => {
     const replay = toPublicBeaconReplay(event);
     expect(replay.mediaUrl).toBe(
-      'https://app.chargingthefuture.com/api/beacon/replays/6f1c2d3e-4a5b-4c6d-8e7f-901234567890/recording',
+      'https://app.lagatos.com/api/beacon/replays/6f1c2d3e-4a5b-4c6d-8e7f-901234567890/recording',
     );
     expect(JSON.stringify(replay)).not.toContain('user_host');
     expect(JSON.stringify(replay)).not.toContain('signature=abc');

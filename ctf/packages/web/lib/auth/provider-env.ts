@@ -188,7 +188,7 @@ export function isLoopProneSignInTarget(value: string | undefined): boolean {
  *
  * Clerk keys look like `pk_test_<base64>` / `pk_live_<base64>`, where the
  * payload decodes to the Frontend API host followed by a `$` sentinel — e.g.
- * `clerk.app.chargingthefuture.com$` or `sure-oarfish-90.clerk.accounts.dev$`.
+ * `clerk.app.lagatos.com$` or `sure-oarfish-90.clerk.accounts.dev$`.
  *
  * `atob` is used for decoding because it is available in browsers, the Next.js
  * edge (middleware) runtime, and Node 18+ — the three runtimes this module is

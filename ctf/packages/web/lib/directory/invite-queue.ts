@@ -69,7 +69,7 @@ type QueueDbRow = {
 // The owner queues like everybody else: their listing gets one invitation in the same format and
 // leaves the queue when it is written, on the same footing as every other listing.
 
-const DIRECTORY_PROFILE_BASE = 'https://app.chargingthefuture.com/apps/directory/profile/';
+const DIRECTORY_PROFILE_BASE = 'https://app.lagatos.com/apps/directory/profile/';
 
 // Advocacy is a placeholder skill. It was applied to people whose public writing showed only that
 // they speak up for Targeted Individuals, with no trade stated anywhere, so it stands in for a
