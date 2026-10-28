@@ -121,6 +121,17 @@ Lifecycle/governance references applied:
     `chyme_readings_config` table, and one mount line in each of `chyme-public-shell.tsx` and
     `chyme-live-shell.tsx`.
 
+- **Mute for me (3.1.0, Personal controls).** Under another member's tile in a room, "Mute for me"
+  stops that person's audio for this member alone; "Unmute for me" brings it back. Nobody is told,
+  and the speaker can still be heard by everybody else. It is the member's own person mute
+  (`member_mutes`, read and written through `/api/account/mutes`), so a person muted on a Today card
+  is silent in every room too, and Me → Muted lists and lifts both. Web (`chyme-personal-mute.tsx`);
+  Android is on hold until the web app is done.
+- **The room rule (3.1.0).** The 3.1 room screen shows the rule on both rooms the System Architect
+  hosts: stay on topic, economics and collective action, and somebody who keeps going off topic can
+  be removed from the room while their account is not affected (`SE_ROOM_RULE` in `@ctf/shared`).
+  Removal is the existing admin Remove, scoped to one room and lifted per room.
+
 ## Admin Features
 
 Admin and member views link to each other (rule 131): the Chyme member page's top bar shows an
@@ -434,6 +445,7 @@ decision the owner has not made, or owned elsewhere. Nothing here is code work l
 
 ## Change Log
 
+- 2026-10-28: **Mute for me and the room rule (3.1.0, plan task 10).** A member can stop hearing one speaker, kept as their own person mute so it holds in every room and on Today; the room plays everyone else (`ParticipantsAudio` gets the room's sessions without the muted people). The 3.1 room screen shows the room rule. No route, schema or contract change: the mute uses the existing `/api/account/mutes` routes.
 - 2026-10-27: **Action minutes (3.1.0, Measures).** Each presence heartbeat and hand toggle credits the member's own seconds to `member_action_seconds_daily` (`chyme-room`), and each Back Channel heartbeat credits the gap to both people (`back-channel`), beside the existing minute meter. These are the minutes Days won and retention count. No route or contract change.
 - 2026-10-27: **Chyme inside the 3.1 frame (plan task 7).** The 3.1 frame opens a room in place (§1.5 item 5b of the non-plugin inventory): `ChymeLiveShell` is split into the session hook `useChymeRoomSession` and the drawing `ChymeLiveShellView` (Android: `ChymeLiveRoomView` beside `ChymeLiveRoom`), so the frame holds the session and the call survives a tab change. The join, leave and Back Channel labels read from `chyme-words.tsx` (web and Android); 3.0 keeps Join Room, Leave and Back Channel, and 3.1 says Listen in, Leave quietly and Bring someone in. `countRoomMembers(roomKey)` in `lib/chyme/repository.ts` counts a room's members without creating it, for Today's Weavers card. No route, schema or contract change.
 - 2026-10-27: **Room chat removed (3.1.0, owner decision).** Members talk in Today cards, where exchanges are recorded, so the room is audio only. Removed: `GET`/`POST /api/chyme/messages`, `DELETE /api/chyme/messages/[messageId]`, the public `GET /api/chyme/public/messages`, the web and Android chat panels and signed-out read-only chat, the room header's Chat button, the repository's chat functions and types, the Stream chat channel the join created, and the seeds. `chyme_messages` is dropped (`ctf/db/migrations/post/0071_chyme_drop_messages.sql`, demo schema too) and leaves the deletion registry. Contracts `chyme.messages.list`, `chyme.message.send`, `chyme.message.delete` and `chyme.public.messages.read` are removed. Tips, the Back Channel, presence, hand-raise and the readings loop are unchanged. The Stream user cleanup on deletion stays, because Stream still holds copies made before 2026-10-16.

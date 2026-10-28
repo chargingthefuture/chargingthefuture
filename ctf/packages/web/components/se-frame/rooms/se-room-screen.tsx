@@ -13,7 +13,7 @@ import type { CurrentUser } from '@/components/chyme/chyme-shared';
 import { useSeRooms } from './se-rooms';
 import styles from './rooms.module.css';
 
-// One room inside the 3.1 frame: its own header, the talk that is on or next, the notice that
+// One room inside the 3.1 frame: its own header, the talk that is on or next, the room rule, the notice that
 // guests may be listening, the quiet state, and then the Chyme room itself in the 3.1 words. The
 // session lives here, so the call keeps running while the screen is hidden behind another tab.
 
@@ -26,6 +26,7 @@ function RoomHeader({ view, onMinimize }: { view: SeRoomView; onMinimize: () => 
       <h1 className={styles.title}>{view.name}</h1>
       <p className={styles.meta}>{view.audience}</p>
       {view.talkLine ? <p className={styles.talk}>{view.talkLine}</p> : null}
+      <p className={styles.meta}>{view.rule}</p>
     </header>
   );
 }
