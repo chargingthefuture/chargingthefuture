@@ -172,6 +172,7 @@ function ReviewActions({
     return (
       <div style={{ fontSize: 12, color: t.MUTED }}>
         Already reviewed{row.reviewNote ? ` — ${row.reviewNote}` : ''}.
+        {row.creditsHeld ? ' Thank-you credits are held until this member is approved in Unlock.' : ''}
       </div>
     );
   }

@@ -6860,6 +6860,9 @@ CREATE TABLE IF NOT EXISTS contributions_submissions (
   confirmed_amount_usd NUMERIC,
   credits_granted NUMERIC NOT NULL DEFAULT 0,
   credit_governance_event_id TEXT,
+  -- Set when the claim was confirmed while the member was not yet approved in Unlock: the credits
+  -- are held, and granted (and this cleared) by the Unlock approval catch-up.
+  credits_held_at TIMESTAMPTZ,
   reviewed_by_user_id TEXT,
   reviewed_at TIMESTAMPTZ,
   review_note TEXT,
@@ -6876,6 +6879,7 @@ ALTER TABLE IF EXISTS contributions_submissions ADD COLUMN IF NOT EXISTS status 
 ALTER TABLE IF EXISTS contributions_submissions ADD COLUMN IF NOT EXISTS confirmed_amount_usd NUMERIC;
 ALTER TABLE IF EXISTS contributions_submissions ADD COLUMN IF NOT EXISTS credits_granted NUMERIC NOT NULL DEFAULT 0;
 ALTER TABLE IF EXISTS contributions_submissions ADD COLUMN IF NOT EXISTS credit_governance_event_id TEXT;
+ALTER TABLE IF EXISTS contributions_submissions ADD COLUMN IF NOT EXISTS credits_held_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS contributions_submissions ADD COLUMN IF NOT EXISTS reviewed_by_user_id TEXT;
 ALTER TABLE IF EXISTS contributions_submissions ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS contributions_submissions ADD COLUMN IF NOT EXISTS review_note TEXT;
@@ -6883,6 +6887,8 @@ ALTER TABLE IF EXISTS contributions_submissions ADD COLUMN IF NOT EXISTS created
 ALTER TABLE IF EXISTS contributions_submissions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 CREATE INDEX IF NOT EXISTS idx_contributions_submissions_user ON contributions_submissions(user_id);
 CREATE INDEX IF NOT EXISTS idx_contributions_submissions_status ON contributions_submissions(status);
+CREATE INDEX IF NOT EXISTS idx_contributions_submissions_held
+  ON contributions_submissions(user_id) WHERE credits_held_at IS NOT NULL;
 DO $contributions_submissions_amounts_check$
 BEGIN
   IF NOT EXISTS (

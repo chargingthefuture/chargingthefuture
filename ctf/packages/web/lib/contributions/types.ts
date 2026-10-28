@@ -12,6 +12,8 @@ export type ContributionSubmission = {
   status: ContributionStatus;
   confirmedAmountUsd: number | null;
   creditsGranted: number;
+  // Confirmed while the member was not yet approved in Unlock: the credits arrive on approval.
+  creditsHeld: boolean;
   creditGovernanceEventId: string | null;
   reviewedByUserId: string | null;
   reviewedAt: string | null;

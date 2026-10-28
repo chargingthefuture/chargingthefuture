@@ -143,7 +143,7 @@ contracts:
   - pluginId: contributions
     command: contributions.admin.submission.review
     version: 2.0.0
-    description: Confirm or reject a pending claim, exactly once. Either way the stored code is erased in the same statement. On confirm, the credit grant (confirmedAmountUsd x credits_per_usd, clamped by the per-member cap over the last 365 days, then rounded to an integer number of credits) is delegated to the service-credits plugin's canonical governance.mint.grant command (idempotency key contribution-<submissionId>); contributions never writes service_credits tables directly.
+    description: Confirm or reject a pending claim, exactly once. Either way the stored code is erased in the same statement. On confirm, the credit grant (confirmedAmountUsd x credits_per_usd, clamped by the per-member cap over the last 365 days, then rounded to an integer number of credits) is delegated to the service-credits plugin's canonical governance.mint.grant command (idempotency key contribution-<submissionId>); contributions never writes service_credits tables directly. When the member has not finished Unlock, confirm records the claim with creditsGranted 0 and stamps credits_held_at instead of minting; Unlock approval mints each held claim through the same command and key and clears the stamp (grantHeldContributionCredits).
     inputSchema:
       submissionId:
         type: string
