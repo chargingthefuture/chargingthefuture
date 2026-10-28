@@ -30,6 +30,12 @@ This plugin must:
 1. Submit a Quora profile URL.
 2. Validate and normalize URL before persistence.
 3. Replace previous pending submission for the same user deterministically.
+4. Finish by any of three routes (3.1.0 plan, Access). Under the address field, "No live Quora
+   account?" offers a "Finish with <handle>" button for each account the member reported as deleted
+   or suspended in the Quora account removals survey (or a link to the survey when they reported
+   none), and points to the Knowledge Library, where bringing in Quora writing with its profile
+   address opens the submission. Each route lands in the same pending queue; the System Architect
+   approves each, usually within a day. The Today banner names all three.
 
 ### 1.2 Staged Access Experience
 
@@ -365,6 +371,13 @@ incentive is an internal token grant. No surface renders a ServiceCredits amount
 6. `reward_withheld_at` — set when the verification reward is held by the duplicate-identity guard (another account already holds this normalized Quora URL's reward); awaits an admin determination and is excluded from the reconcile backlog.
 7. `reward_revoked_at` — set when an admin claws a reward back (the determination "loser", or a perp); the account is dropped to `rejected` + `locked_support_only` and the row is excluded from the reconcile backlog.
 
+8. `finish_route` — `quora_profile` (default), `removed_account` or `knowledge_library` (CHECK
+   constraint), and `finish_evidence_id`, the survey response id or Knowledge Library contribution id
+   behind it (migration `post/0077`). The admin card says which route finished it and links the
+   survey answers or the contributions; a removed account's address is no longer live. A removed
+   account's address is not written to the Quora URL history again, because the survey already
+   recorded the closure there.
+
 Index `idx_unlock_verification_submissions_url_normalized` on `quora_profile_url_normalized` backs the guard's per-URL lookups (who else claimed this identity, and which account currently holds its reward).
 
 ## 5) Security, Privacy, and Compliance Controls
@@ -489,6 +502,7 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
 
 ## 9) Change Log
 
+- 2026-10-28: **Unlock finishes by any of three routes (3.1.0 plan, Access).** A live Quora profile address, a removed account reported in the Quora account removals survey, or Quora writing brought into the Knowledge Library. `unlock_verification_submissions` gains `finish_route` and `finish_evidence_id` (migration `post/0077`); `createOrUpdateUnlockSubmission` takes both and skips the URL history write for a removed account. The Unlock screen adds "No live Quora account?" (`components/unlock/unlock-other-routes.tsx`), the admin card names the route with a link to its evidence, and `SE_UNLOCK_WORDS.routes` names the three. The removed-account route is `POST /api/quora-deletion-survey/verification` with `removedHandle`; the Knowledge Library route records itself from `linkSharedWritingToUnlock`.
 - 2026-10-28: **Contributions in the approval catch-up.** Approval grants the thank-you credits held on gift cards confirmed while the member waited; the catch-up audit row gains `contributionsGranted`.
 - 2026-10-27: **3.1 open sign-up use (owner decision).** Two new tiers in `evaluatePluginAccess`: `signed_in` (any signed-in member; account restrictions still apply) and `signed_in_posting` (approved, or not yet approved and either within the first 14 days or with an address sent or help asked; otherwise 403 `unlock_paused`). New `GET /api/unlock/standing` (`unlock.standing.get`, `lib/unlock/standing.ts`) answers approved, the day count from the first sign-in, paused, and whether the banner can be closed (first 7 days); the shared words are `SE_UNLOCK_WORDS` in `@ctf/shared`. A member on 3.1 is no longer sent to `/plugin/unlock` from the home page (web) or walled (Android); the 3.1 frame shows the Unlock banner instead. `check-unlock-tier-exceptions.mjs` now catches both new tiers. The exception list and CLAUDE.md name the sixth exception, "3.1 open sign-up use": Today, posting an ask, Mood, ClickLog, What Works and Activity.
 - 2026-10-16: **The sign-up row says when the sign-in ban did not go through (code-review #2804, owner

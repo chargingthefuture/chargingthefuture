@@ -106,7 +106,8 @@ At `/admin/quora-deletion-survey`, an admin can:
 | Route | Method | Access | What it does |
 |---|---|---|---|
 | `/api/quora-deletion-survey/responses` | POST | Any signed-in member | Stores one survey response and its account rows against the member's id, then writes each reported closure to that member's account history. Same-origin CSRF header and a per-IP brake of 5 submissions per hour. |
-| `/api/quora-deletion-survey/verification` | POST | Any signed-in member | Starts Unlock verification from the confirmation screen using the link to the account the member still holds. Creates a pending submission only, and does nothing for a member who already has one. Same session, CSRF, and per-IP brake as the submit route. |
+| `/api/quora-deletion-survey/verification` | POST | Any signed-in member | Starts Unlock verification from the confirmation screen using the link to the account the member still holds, or, with `removedHandle`, from one of the accounts they reported as deleted or suspended (the Unlock screen's removed-account route; the submission carries `finish_route` `removed_account` and the response id). Creates a pending submission only, and does nothing for a member who already has one. Same session, CSRF, and per-IP brake as the submit route. |
+| `/api/quora-deletion-survey/verification` | GET | Any signed-in member | The member's own reported removed accounts (deleted or suspended), one per handle, and whether they still need Unlock. Read by the Unlock screen. |
 | `/api/quora-deletion-survey/admin/responses` | GET | Admin | The newest 500 responses with their account rows, plus the three totals. |
 | `/api/quora-deletion-survey/admin/export` | GET | Admin | The entire survey as CSV, one row per reported removal. |
 
@@ -379,6 +380,8 @@ this is not a plugin. The steps that matter:
   `metadata.source` naming the survey on submissions that came this way.
 
 ## Change Log
+
+- 2026-10-28: **A removed account can finish Unlock (3.1.0 plan, Access).** The Unlock screen lists the accounts a member reported as deleted or suspended (`GET /api/quora-deletion-survey/verification`, `quora-deletion-survey.verification.removed-accounts.list`) with a "Finish with <handle>" button that posts `removedHandle` to the verification route. Only a handle the member reported is accepted; the address is built from the handle (`profileUrlForHandle`) and the submission records the response id. No survey schema change.
 
 - 2026-10-27: **A one-time card on Today in 3.1.** Today shows a Story card linking to `/survey/quora-account-deletions` until the member has answered (`hasSurveyResponse(userId)` in `lib/quora-deletion-survey/repository.ts`, an EXISTS on `quora_deletion_survey_responses`). No route, schema or contract change here.
 - 2026-10-05: **A year the form offers is a year the table accepts.** The year list and the parser
