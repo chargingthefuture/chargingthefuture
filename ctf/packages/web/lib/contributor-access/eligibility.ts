@@ -3,6 +3,7 @@ import {
   computeMemberCounterpartyCounts,
   computeMemberEventCounts,
   computeMemberFirstLogin,
+  computeTrustedReceivers,
   type MemberEventCounts,
 } from './member-value-counts';
 import { getContributorAccessConfig, type ContributorAccessConfig } from './repository';
@@ -119,8 +120,12 @@ export type ComputeEligibilityResult = {
 // signals and coasts.
 export async function computeEligibility(): Promise<ComputeEligibilityResult> {
   const config = await getContributorAccessConfig();
-  const [counts, counterpartyCounts, firstLogins]: [MemberEventCounts, Map<string, number>, Map<string, string>] =
-    await Promise.all([computeMemberEventCounts(), computeMemberCounterpartyCounts(), computeMemberFirstLogin()]);
+  const firstLogins = await computeMemberFirstLogin();
+  const trustedReceivers = await computeTrustedReceivers(firstLogins);
+  const [counts, counterpartyCounts]: [MemberEventCounts, Map<string, number>] = await Promise.all([
+    computeMemberEventCounts(trustedReceivers),
+    computeMemberCounterpartyCounts(trustedReceivers),
+  ]);
 
   let evaluated = 0;
   for (const [userId, memberCounts] of counts) {

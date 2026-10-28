@@ -86,6 +86,26 @@ auditEvents:
     timestamp: rfc3339
     actorId: principal
     pluginId: contributor-access
+    command: contributor-access.member.grant
+    commandVersion: 1.0.0
+    purpose: eligibility_moderation
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - contributor_access_eligibility
+    targetContext:
+      memberId: member_user_id
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: contributor-access
     command: contributor-access.member.reinstate
     commandVersion: 1.0.0
     purpose: eligibility_moderation

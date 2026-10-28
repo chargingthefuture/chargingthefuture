@@ -78,7 +78,9 @@ no DMs) — and the **"Weavers of the Commons" badge** on Directory.
 ## Admin Features
 
 1. Eligible-members list (user id, username, first-earned date, revoke flag) with for-cause
-   revoke (non-empty reason required, confirm before it lands) and reinstate.
+   revoke (non-empty reason required, confirm before it lands) and reinstate. Above the list, a
+   "Give the badge" field takes a username or account id and grants the badge by hand: current
+   members get it once, since 3.1 counts only value received from approved, settled members.
 2. Config editor for the owner-tunable eligibility rules: score threshold, minimum account age,
    minimum distinct plugins, minimum distinct counterparties, the eligible-member minimum required
    before the gated channel opens, and per-event weights over the fixed value-event key list. The
@@ -122,6 +124,11 @@ Admin routes (admin-only via `requireContributorAccessAdmin`; every allow **and*
 - `POST /api/contributor-access/admin/reinstate` — body `{ userId }`; clears the revocation and
   restores `eligible` (it was previously earned — `first_earned_at` is permanent); same guarded
   membership sync re-adds the member; audits `contributor-access.member.reinstate`.
+- `POST /api/contributor-access/admin/grant` — body `{ who }` (a username, with or without @, or
+  an account id); sets `eligible` and `first_earned_at` by hand, unchanged for a member who already
+  holds it; 404 `contributor_access_not_found` when nobody matches, 409 `contributor_access_revoked`
+  for a member revoked for cause (reinstate is the way back); same guarded membership sync; audits
+  `contributor-access.member.grant`.
 
 Member channel routes (gate: approved member + `channel_open` + the eligibility flag, or the
 admin role; every deny is a bare 404 with no channel trace — the no-shaming rule; mutations
@@ -250,6 +257,13 @@ Counterparty diversity reads the two-sided events' real counterparty columns:
 deliberately excluded from the diversity read to minimize access to the sensitive table (their
 counts still feed the score internally).
 
+Only trusted receivers count (3.1.0 plan, Access). A trusted member is approved through Unlock
+(`unlock_verification_submissions.access_tier = 'approved_full'`) and first signed in at least
+`SE_UNLOCK_OPEN_DAYS` (14) days ago. Every value event's row carries `other_id`, the member on the
+receiving side (NULL where nobody is: gift cards, nominations, tools, Skill Up, cohort posts); a row
+whose `other_id` is set and not trusted adds nothing to the score, and an untrusted counterparty is
+not counted toward `min_counterparties`. The daily count and the dashboard ignore `other_id`.
+
 ## Security, Privacy, and Compliance Controls
 
 - **Categorical flag only — no score is ever surfaced**, to members or admins. The internal score
@@ -359,6 +373,14 @@ fill on the first recompute / config save / member post.
   evidence; revisit only with strong cause).
 
 ## Change Log
+
+- 2026-10-28: **Weavers counts only value received from approved members who are not new (3.1.0
+  plan, Access).** The value-event rows carry the receiving member as `other_id`; the recompute keeps
+  a row only when nobody is on the other side or that member is approved and past their first 14
+  days, and the counterparty gate counts only those members. New `POST
+  /api/contributor-access/admin/grant` and a "Give the badge" field on the admin section, so current
+  members get the badge by hand once. The daily count and the dashboard read the same rows and are
+  unchanged.
 
 - 2026-10-16: **The badge admin moves with the daily exchange onto the Adoption screen (owner
   decision).** The Weavers of the Commons sections now sit inside the Daily exchange section of

@@ -71,8 +71,11 @@ export type ValueEventSource = {
   // Every table the row SQL touches. A missing one makes the event contribute nothing rather than
   // failing the reading.
   tables: string[];
-  // Rows of (member_id, at, value, ref). `value` is only read by the sum aggregate and `ref` only
-  // by the distinct-ref one, so the others select a constant for them.
+  // Rows of (member_id, at, value, ref, other_id). `value` is only read by the sum aggregate and
+  // `ref` only by the distinct-ref one, so the others select a constant for them. `other_id` is the
+  // member on the receiving side, or NULL when nobody is (a gift card, an accepted nomination). Only
+  // the badge reads it: Weavers counts value received from approved members who are not new
+  // themselves (3.1.0 plan, Access).
   rowSql: string;
   aggregate: ValueEventAggregate;
   occurrences: ValueEventOccurrences;
@@ -84,7 +87,8 @@ export const VALUE_EVENT_SOURCES: ValueEventSource[] = [
     // A call answered is time given to the person who rang.
     delivers: true,
     tables: ['foundation_call_sessions'],
-    rowSql: `SELECT callee_user_id AS member_id, answered_at AS at, 1::numeric AS value, NULL::text AS ref
+    rowSql: `SELECT callee_user_id AS member_id, answered_at AS at, 1::numeric AS value, NULL::text AS ref,
+                    caller_user_id AS other_id
                FROM foundation_call_sessions
               WHERE ring_status = 'answered' AND blocks_charged > 0 AND callee_user_id IS NOT NULL`,
     aggregate: 'count',
@@ -96,7 +100,7 @@ export const VALUE_EVENT_SOURCES: ValueEventSource[] = [
     delivers: true,
     tables: ['socket_relay_fulfillments'],
     rowSql: `SELECT fulfiller_user_id AS member_id, COALESCE(closed_at, updated_at) AS at,
-                    1::numeric AS value, NULL::text AS ref
+                    1::numeric AS value, NULL::text AS ref, requester_user_id AS other_id
                FROM socket_relay_fulfillments
               WHERE close_reason = 'successful'`,
     aggregate: 'count',
@@ -107,7 +111,8 @@ export const VALUE_EVENT_SOURCES: ValueEventSource[] = [
     // A ride, confirmed by both sides.
     delivers: true,
     tables: ['trust_transport_trips'],
-    rowSql: `SELECT provider_user_id AS member_id, completed_at AS at, 1::numeric AS value, NULL::text AS ref
+    rowSql: `SELECT provider_user_id AS member_id, completed_at AS at, 1::numeric AS value, NULL::text AS ref,
+                    requester_user_id AS other_id
                FROM trust_transport_trips
               WHERE status = 'completed' AND requester_completion_confirmed_at IS NOT NULL
                 AND provider_completion_confirmed_at IS NOT NULL`,
@@ -120,7 +125,7 @@ export const VALUE_EVENT_SOURCES: ValueEventSource[] = [
     delivers: true,
     tables: ['lighthouse_matches'],
     rowSql: `SELECT host_user_id AS member_id, COALESCE(completed_at, updated_at) AS at,
-                    1::numeric AS value, NULL::text AS ref
+                    1::numeric AS value, NULL::text AS ref, seeker_user_id AS other_id
                FROM lighthouse_matches
               WHERE status = 'completed'`,
     aggregate: 'count',
@@ -131,7 +136,8 @@ export const VALUE_EVENT_SOURCES: ValueEventSource[] = [
     // Credits leave one member and reach another.
     delivers: true,
     tables: ['service_credits_transfers'],
-    rowSql: `SELECT sender_user_id AS member_id, completed_at AS at, 1::numeric AS value, NULL::text AS ref
+    rowSql: `SELECT sender_user_id AS member_id, completed_at AS at, 1::numeric AS value, NULL::text AS ref,
+                    recipient_user_id AS other_id
                FROM service_credits_transfers
               WHERE status = 'completed' AND origin_plugin = 'chyme'
                 AND sender_user_id <> recipient_user_id`,
@@ -143,7 +149,8 @@ export const VALUE_EVENT_SOURCES: ValueEventSource[] = [
     // Credits leave one member and reach another.
     delivers: true,
     tables: ['service_credits_transfers'],
-    rowSql: `SELECT sender_user_id AS member_id, completed_at AS at, 1::numeric AS value, NULL::text AS ref
+    rowSql: `SELECT sender_user_id AS member_id, completed_at AS at, 1::numeric AS value, NULL::text AS ref,
+                    recipient_user_id AS other_id
                FROM service_credits_transfers
               WHERE status = 'completed' AND origin_plugin = 'service-credits'
                 AND sender_user_id <> recipient_user_id`,
@@ -161,7 +168,7 @@ export const VALUE_EVENT_SOURCES: ValueEventSource[] = [
     delivers: true,
     tables: ['contributions_submissions'],
     rowSql: `SELECT user_id AS member_id, reviewed_at AS at,
-                    COALESCE(confirmed_amount_usd, 0)::numeric AS value, NULL::text AS ref
+                    COALESCE(confirmed_amount_usd, 0)::numeric AS value, NULL::text AS ref, NULL::text AS other_id
                FROM contributions_submissions
               WHERE status = 'confirmed' AND kind = 'gift_card'`,
     aggregate: 'sum',
@@ -177,7 +184,7 @@ export const VALUE_EVENT_SOURCES: ValueEventSource[] = [
     delivers: true,
     tables: ['contributions_submissions'],
     rowSql: `SELECT user_id AS member_id, reviewed_at AS at,
-                    COALESCE(confirmed_amount_usd, 0)::numeric AS value, NULL::text AS ref
+                    COALESCE(confirmed_amount_usd, 0)::numeric AS value, NULL::text AS ref, NULL::text AS other_id
                FROM contributions_submissions
               WHERE status = 'confirmed' AND kind <> 'gift_card'`,
     aggregate: 'sum',
@@ -188,7 +195,8 @@ export const VALUE_EVENT_SOURCES: ValueEventSource[] = [
     // An accepted nomination becomes a listing for a real person who was not findable before.
     delivers: true,
     tables: ['skills_hunt_submissions'],
-    rowSql: `SELECT submitter_user_id AS member_id, reviewed_at AS at, 1::numeric AS value, NULL::text AS ref
+    rowSql: `SELECT submitter_user_id AS member_id, reviewed_at AS at, 1::numeric AS value, NULL::text AS ref,
+                    NULL::text AS other_id
                FROM skills_hunt_submissions
               WHERE status = 'accepted' AND deleted_at IS NULL`,
     aggregate: 'count',
@@ -199,7 +207,8 @@ export const VALUE_EVENT_SOURCES: ValueEventSource[] = [
     // An approved tool is something other members go and use.
     delivers: true,
     tables: ['what_works_products'],
-    rowSql: `SELECT suggested_by AS member_id, reviewed_at AS at, 1::numeric AS value, NULL::text AS ref
+    rowSql: `SELECT suggested_by AS member_id, reviewed_at AS at, 1::numeric AS value, NULL::text AS ref,
+                    NULL::text AS other_id
                FROM what_works_products
               WHERE status = 'approved' AND suggested_by IS NOT NULL AND suggested_by <> 'deleted_member'`,
     aggregate: 'count',
@@ -210,7 +219,8 @@ export const VALUE_EVENT_SOURCES: ValueEventSource[] = [
     // The learner received the teaching rather than gave it.
     delivers: false,
     tables: ['skill_up_enrollments'],
-    rowSql: `SELECT user_id AS member_id, updated_at AS at, 1::numeric AS value, NULL::text AS ref
+    rowSql: `SELECT user_id AS member_id, updated_at AS at, 1::numeric AS value, NULL::text AS ref,
+                    NULL::text AS other_id
                FROM skill_up_enrollments
               WHERE status = 'completed'`,
     aggregate: 'count',
@@ -221,7 +231,8 @@ export const VALUE_EVENT_SOURCES: ValueEventSource[] = [
     // The trainer taught somebody.
     delivers: true,
     tables: ['skill_up_disbursements'],
-    rowSql: `SELECT recipient_user_id AS member_id, created_at AS at, 1::numeric AS value, NULL::text AS ref
+    rowSql: `SELECT recipient_user_id AS member_id, created_at AS at, 1::numeric AS value, NULL::text AS ref,
+                    NULL::text AS other_id
                FROM skill_up_disbursements
               WHERE disbursement_type = 'trainer_payout'`,
     aggregate: 'count',
@@ -233,11 +244,13 @@ export const VALUE_EVENT_SOURCES: ValueEventSource[] = [
     // A tie both sides confirm they are sustaining.
     delivers: true,
     tables: ['recurring_activities'],
-    rowSql: `SELECT owner_user_id AS member_id, confirmed_at AS at, 1::numeric AS value, id::text AS ref
+    rowSql: `SELECT owner_user_id AS member_id, confirmed_at AS at, 1::numeric AS value, id::text AS ref,
+                    counterparty_user_id AS other_id
                FROM recurring_activities
               WHERE status = 'active' AND confirmed_at IS NOT NULL
               UNION ALL
-             SELECT counterparty_user_id AS member_id, confirmed_at AS at, 1::numeric AS value, id::text AS ref
+             SELECT counterparty_user_id AS member_id, confirmed_at AS at, 1::numeric AS value, id::text AS ref,
+                    owner_user_id AS other_id
                FROM recurring_activities
               WHERE status = 'active' AND confirmed_at IS NOT NULL`,
     aggregate: 'count',
@@ -248,7 +261,8 @@ export const VALUE_EVENT_SOURCES: ValueEventSource[] = [
     // Posting in a cohort. Kept in the badge at a weight of 1 because a session exposes somebody there to extract, but nobody receives a thing from a message.
     delivers: false,
     tables: ['peer_programming_messages'],
-    rowSql: `SELECT author_user_id AS member_id, created_at AS at, 1::numeric AS value, NULL::text AS ref
+    rowSql: `SELECT author_user_id AS member_id, created_at AS at, 1::numeric AS value, NULL::text AS ref,
+                    NULL::text AS other_id
                FROM peer_programming_messages`,
     aggregate: 'distinctWeek',
     occurrences: 'distinctMembers',
@@ -262,8 +276,9 @@ export const VALUE_EVENT_SOURCES: ValueEventSource[] = [
     key: 'value.peer_programming_tasks_helped',
     delivers: true,
     tables: ['peer_programming_goal_tasks', 'peer_programming_goals'],
-    rowSql: `SELECT member_id, at, 1::numeric AS value, ref
+    rowSql: `SELECT member_id, at, 1::numeric AS value, ref, other_id
                FROM (SELECT t.taken_by_user_id AS member_id, t.kept_at AS at, t.id::text AS ref,
+                            g.owner_user_id AS other_id,
                             ROW_NUMBER() OVER (
                               PARTITION BY g.owner_user_id, t.taken_by_user_id, DATE_TRUNC('week', t.kept_at)
                               ORDER BY t.kept_at, t.id
