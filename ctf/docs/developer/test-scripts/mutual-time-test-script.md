@@ -664,3 +664,14 @@ The following cases must behave identically in a desktop browser and a phone-wid
 1b. **A survey with no close time waits for the admin.** Nothing chooses a time on its own. The rolling window keeps an unattended survey usable, but it stays open until an admin presses "Close and choose the time" (owner decision, 2026-08-12).
 2. **Full 24-hour candidate grid.** All 48 half-hour starts per day are candidates. The admin cannot restrict the daily hour range. A future refinement may add daily hour bounds.
 3. **No reminder or notification when a time is chosen.** Members must re-open the link themselves to see the result. A push/notification tie-in is a possible follow-up, not a current feature.
+
+### MT-16 — Add the chosen time to the calendar (3.1)
+**Role:** a member | **Surfaces:** web (mobile-width)
+
+**Steps:**
+1. Open a Mutual Time page closed with a time chosen.
+2. Press "Add to calendar".
+
+**Expected:** The phone offers to add an hour-long event at the chosen time, titled with the event's title, linking to where the meeting is held. Nothing asks to read the calendar.
+
+Result: web ☐

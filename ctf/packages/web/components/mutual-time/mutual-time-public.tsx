@@ -1,6 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { AddToCalendarButton } from '@/components/shared/add-to-calendar';
+import { MUTUAL_TIME_MEETING_MINUTES } from 'lib/mutual-time/constants';
 import { CalendarClock, Copy, Check, Globe, ChevronDown, Clock, Lock, ArrowUpRight } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
@@ -223,6 +225,19 @@ function ResultView({ event, tz, canVote, t }: { event: MutualTimePublicEvent; t
             <a href={event.meetingPluginRoute} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 10, background: `${t.ACCENT}20`, border: `1px solid ${t.ACCENT}55`, color: t.ACCENT, fontSize: 14, fontWeight: 700, textDecoration: 'none' }}>
               <Clock size={15} /> Go to {event.meetingPluginName}
             </a>
+            <div style={{ marginTop: 12 }}>
+              <AddToCalendarButton
+                color={t.ACCENT}
+                event={{
+                  uid: `mutual-time-${event.slug}`,
+                  title: event.title ?? `Meeting in ${event.meetingPluginName}`,
+                  startIso: event.resultSlotStartIso,
+                  endIso: new Date(new Date(event.resultSlotStartIso).getTime() + MUTUAL_TIME_MEETING_MINUTES * 60_000).toISOString(),
+                  description: `We are meeting in ${event.meetingPluginName}.`,
+                  url: event.meetingPluginRoute,
+                }}
+              />
+            </div>
             {!canVote && (
               <div style={{ marginTop: 24, padding: '14px 18px', borderRadius: 14, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, fontSize: 13, color: t.SUBTLE, textAlign: 'left' }}>
                 You didn&apos;t vote, but you&apos;re still welcome to join. Head to <strong style={{ color: t.ACCENT }}>{event.meetingPluginName}</strong> at the time above — the meeting is there, and listeners are always welcome.
