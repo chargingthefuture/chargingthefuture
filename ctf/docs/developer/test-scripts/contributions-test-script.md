@@ -499,3 +499,23 @@ The Android surface was **removed on 2026-07-20** (rule 105, PR #1742). The plug
 **Expected:** My history is empty after step 2. The claim in step 3 confirms with 0 credits: the limit counts the kept ServiceCredits grant from step 1 even though the claim row is gone.
 
 Result: web ☐
+
+### CONT-A14 — Credits held until Unlock approval
+
+**Role:** a member not yet approved in Unlock; admin · **Surfaces:** web
+
+**Steps:**
+1. As the member, send a $10 gift card.
+2. As the admin, confirm it at $10.
+3. As the member, open My history.
+4. As the admin, approve the member in Unlock (`/admin/unlock`).
+5. As the member, open My history and the ServiceCredits wallet.
+
+**Expected:**
+- After step 2 the claim reads Confirmed, the admin queue says "Thank-you credits are held until this
+  member is approved in Unlock.", and no credits move.
+- Step 3 shows "Your thank-you credits arrive once Unlock is approved."
+- After step 4 the claim shows "+100 SC received" (at 10 per dollar) and the held line is gone; the
+  wallet has the credits. Approving the member again grants nothing a second time.
+
+web ☐

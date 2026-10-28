@@ -94,6 +94,13 @@ The admin screen (`/admin/contributions`, "Contributions Admin") has two tabs.
   `contribution-<submissionId>`. A grant clamped or rounded to 0 still confirms with
   `credits_granted = 0`. If the ServiceCredits mint budget for the period would be passed, the
   confirm is refused and the claim stays pending with its code.
+- **Held until Unlock approval (3.1.0 plan, Access).** A claim confirmed for a member not yet approved
+  in Unlock grants nothing at the time: it is confirmed with `credits_granted = 0` and stamped
+  `credits_held_at`. The member's history says "Your thank-you credits arrive once Unlock is
+  approved." and the admin queue says the credits are held. When Unlock approves the member, the
+  approval catch-up (`runUnlockApprovalCatchUp` → `grantHeldContributionCredits`) grants each held
+  claim under the same rate, yearly limit and idempotency key a confirm uses, and clears the stamp.
+  The gift card form says the credits arrive once Unlock is finished.
 - **Reject** grants nothing. Both confirm and reject erase the stored code in the same statement.
 - **Settings.** Two numbers under ServiceCredits: "Credits per dollar" (default 10) and "Most
   credits per member over 365 days" (default 300). Both must be positive.
@@ -146,6 +153,9 @@ additionally require the admin role (`ensureContributionsAdmin`).
   - `status TEXT NOT NULL DEFAULT 'pending'` CHECK in (`pending`, `confirmed`, `rejected`)
   - `confirmed_amount_usd NUMERIC`, `credits_granted NUMERIC NOT NULL DEFAULT 0`,
     `credit_governance_event_id TEXT` (the service-credits governance event backing the grant)
+  - `credits_held_at TIMESTAMPTZ` (`post/0076`): set when the claim was confirmed while the member was
+    not yet approved in Unlock; cleared when the approval catch-up grants the credits. Partial index
+    `idx_contributions_submissions_held` on `user_id` where it is set.
   - `reviewed_by_user_id TEXT`, `reviewed_at TIMESTAMPTZ`, `review_note TEXT`
   - `created_at`, `updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`
   - Indexes: `idx_contributions_submissions_user (user_id)`,
@@ -273,6 +283,7 @@ NOT EXISTS` per column) in `ctf/schema.sql`; the demo schema is regenerated into
 
 ## Change Log
 
+- 2026-10-28: **Thank-you credits held until Unlock approval (3.1.0 plan, Access).** `credits_held_at` (`post/0076`); confirm holds the credits for a member not yet approved, and the Unlock approval catch-up grants them. Submissions carry `creditsHeld`.
 - 2026-10-27: **Amazon gift cards only, open all year (3.1.0 plan, Contributions row; owner-approved plan `ctf/docs/developer/SOCIAL_REDESIGN_3_1_PLAN.md`).** Contributions no longer runs drives. There are no goals, progress bars or banner, and the 🎁 gift chip in the Commons chip rail is gone. Quora comment and GitHub star claims are gone: older rows keep their kind, and pending ones were closed as rejected with a note. The member now types the gift card code in the app instead of sending it over Signal, so the Signal contact field, the owner's Signal link and the Signal instructions are gone. The code is stored encrypted (AES-256-GCM, key from `CONTRIBUTIONS_CODE_KEY`, the member's account id bound in), shown to the admin one claim at a time through the new audited `POST /api/contributions/admin/submissions/[submissionId]/code`, and erased when the claim is confirmed or rejected. Without the key the form shows a paused card and nothing is stored. The thank-you credit cap now runs over the last 365 days (`per_user_year_credit_cap`, carrying the old per-drive value) instead of per drive. Routes removed: `/api/contributions/fundraiser`, `/api/contributions/banner/dismiss`, `/api/contributions/admin/cycles`, `/api/contributions/admin/cycles/[cycleId]`. Migration `post/0075_contributions_gift_cards_only.sql` drops `contributions_cycles`, `contributions_banner_state` and the Signal, link, drive and banner columns. The Expenses screen's suggested-drive-goal card is gone. The twice-yearly "Contribute if you can" post is unchanged. Admin screens are called System Architect in member copy. Contracts, test script and guide section rewritten to match.
 - 2026-10-17: **Deleting Contributions data no longer resets the star limit or the drive cap (#2977, owner decision).** Both read only `contributions_submissions`, which a Contributions deletion removes while the credits stay granted. They now also read the kept ServiceCredits grant record (`service_credits_governance_events`, `mint_grant`, reason `contributions_confirmed`): a grant's ticket is now `contribution-<submissionId>:<kind>:<cycleId or none>`, the star check looks for a kept `github_star` grant, and the drive cap uses the larger of the submissions total and the kept grants for that drive. The idempotency key is unchanged. Grants made before this change carry only the submission id and are counted from the submissions alone. No schema change. Test script CT-KEPT.
 - 2026-10-17: **Demo seed hands the Quora comment and GitHub star claims back to their account** (`ctf/scripts/demo-seed/33-contributions.mjs`). `seedDemo.mjs` keeps the owner's fixed claim ids and its upsert leaves `user_id` alone, so a demo schema first seeded with a different `DEMO_OWNER_ID` kept both claims under that earlier account: My history showed no Confirmed claim and the star was not shown as thanked (CONT-6, CONT-8). Demo data only; no route, schema or screen change.

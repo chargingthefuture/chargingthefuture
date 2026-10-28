@@ -24,6 +24,9 @@ function HistoryItem({ item, t }: { item: ContributionSubmission; t: Contributio
         <span style={{ fontSize: 11, color: t.MUTED }}>{shortDate(item.createdAt)}</span>
       </div>
       {showCredits && <div style={{ fontSize: 12, color: t.ACCENT, fontWeight: 600 }}>+{item.creditsGranted.toLocaleString()} SC received</div>}
+      {item.status === 'confirmed' && item.creditsHeld ? (
+        <div style={{ fontSize: 12, color: t.MUTED, marginTop: 6 }}>Your thank-you credits arrive once Unlock is approved.</div>
+      ) : null}
     </div>
   );
 }
