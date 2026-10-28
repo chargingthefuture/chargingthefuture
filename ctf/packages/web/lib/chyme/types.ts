@@ -43,6 +43,9 @@ export type ChymeQuotaState = {
 export type ChymeViewerState = {
   isAdmin: boolean;
   role: ChymeRole;
+  // A signed-in member not yet approved in Unlock, in the Main Room: they listen and cannot speak
+  // or raise a hand (3.1.0, Access). Set by the room read; absent means false.
+  listenOnly?: boolean;
 };
 
 export type ChymeRoomResponse = {

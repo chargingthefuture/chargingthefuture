@@ -775,3 +775,14 @@ as before: Join Room, Leave and Back Channel.
 **Expected:** Days won rises by about (2 × 10 + 2 × 5) ÷ 480. A member who leaves the room stops
 counting at once; time with the app open and not in a room or call adds nothing.
 **Result:** web ☐ android ☐ — notes:
+
+### CH-29 · Listening in the Main Room before Unlock is done (3.1)
+**Role:** a signed-in member not yet approved, an approved member · **Surfaces:** web
+**Steps:**
+1. As the member not yet approved, open the Main Room from Today and join.
+2. Look for the raise-hand button and the speaker controls.
+3. Try to open any other room.
+**Expected:** Step 1 joins as a listener and the room says "Listening. Speaking opens once Unlock
+is done." Step 2 shows neither. Step 3 is refused as before. The approved member hears the room and
+speaks as usual.
+**Result:** web ☐ — notes:
