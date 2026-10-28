@@ -44,7 +44,7 @@ SocketRelay is a request-and-fulfillment plugin with profile management, request
    app, with no exceptions. The picker stays disabled until the member ticks "I understand that an
    inappropriate picture is an automatic ban, with no exceptions." A description of the picture is
    required. The browser scales the picture to 1600 pixels on its long side and re-encodes it, which
-   drops the camera and location data a phone writes into a photo. The feed card shows the picture
+   drops the camera and location data a phone writes into a photo. The server removes that data again when storing and when serving (`lib/images/strip-metadata.ts`), so a request that skips the browser is covered too. The feed card shows the picture
    under the details. When editing, the owner can replace the picture or remove it with the X on the
    preview. The request is saved first; if only the picture fails, the form says the request is up and
    the picture needs another try.
@@ -250,6 +250,7 @@ alongside the legacy `category`) and fulfillment outcomes for dev validation.
 
 ## 9) Change Log
 
+- 2026-10-28: **Location data removed on the server (3.1.0, Personal controls).** Request pictures lose their location and camera data when stored and when served (`stripPictureMetadata`).
 - 2026-10-27: **Open to signed-in members in 3.1 (owner decision, Access).** Posting a request (`POST /api/socket-relay/requests`) now goes through `requireSocketRelayPostAccess`, the `signed_in_posting` tier: open to an approved member, or to one not yet approved inside the first 14 days or waiting on their address; after that it answers 403 `unlock_paused`. Every other SocketRelay route stays approved-only. Listed under "3.1 open sign-up use".
 - 2026-10-27: **Asks from + New in 3.1.** The 3.1 frame's + New → Ask posts through `POST /api/socket-relay/requests` with `isPublic: true`, one tag (the suggestion's group, or Help) and no city, state or country. No route, schema or contract change.
 - 2026-10-17: **Demo seed ties the "Help moving a few boxes" Direct Line back together** (`ctf/scripts/demo-seed/42-socket-relay.mjs`). `seedDemo.mjs` matches that request on its idempotency key, so it can keep an id from an earlier seed, and its fulfillment upsert leaves the helper and the request link alone. On a demo schema first seeded with a different `DEMO_OWNER_ID` the Direct Line had no row naming the request. The module now points each account's fulfillment at that account and at the request carrying the key, and the request back at the fulfillment. Demo data only; no route, schema or screen change.

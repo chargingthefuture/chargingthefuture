@@ -459,7 +459,8 @@ and digits, from the invite file or from a card's link) and its Quora handle.
 9. On `/admin/directory/invite-queue`, the people who have an invitation are not in the queue.
 **Expected:** A visitor never sees more of a private invitation than a name and its opening words. A
 public one, already on the blog, reads in the open. Any signed-in account reads every invitation; the
-Directory itself still needs approval. An invitation never outlives its listing.
+Directory itself still needs approval. An invitation never outlives its listing. An invitation's
+picture, saved with any photo-info viewer, carries no location or camera data.
 **Result:** web ☐ mobile ☐ — notes:
 
 ---
