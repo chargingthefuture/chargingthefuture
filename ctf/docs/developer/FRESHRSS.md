@@ -86,7 +86,7 @@ list. It holds three feeds and nothing else: this blog, the owner's demo-video c
 feed collected by `chargingthefuture/rss-feeds` at
 `https://chargingthefuture.github.io/rss-feeds/youtube/mutilpe.xml`, added 2026-09-23; the
 collected feeds moved out of the blog repository on 2026-09-24), and the recorded broadcasts
-(`https://app.chargingthefuture.com/api/beacon/replays/feed`, added 2026-09-29, listed on the blog at
+(`https://app.lagatos.com/api/beacon/replays/feed`, added 2026-09-29, listed on the blog at
 `/streams`). The workflow `FreshRSS — Give new accounts the default feeds` writes all three, because
 the file it writes replaces the one on the disk.
 

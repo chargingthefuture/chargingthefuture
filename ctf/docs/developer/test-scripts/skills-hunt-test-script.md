@@ -1223,7 +1223,7 @@ midnight UTC.
 **Expected:** The dates on the picture are the same calendar days the Rounds tab shows. Before
 2026-10-01 the picture used UTC and could read a day off. The small label at the top of the picture
 reads "SKILLS ECONOMY · SKILLSHUNT" (not "Charging the Future"), and the web address at the bottom
-still reads chargingthefuture.com.
+still reads lagatos.com.
 
 Result: web ☐
 

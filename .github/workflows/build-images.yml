@@ -18,10 +18,10 @@ name: Render — Build and push Docker images
 #   Infisical/Render at runtime does NOTHING for the client; to change any of
 #   these you must update the GitHub Actions secret here and re-run this workflow
 #   so the value is re-baked into a fresh image.
-#   NEXT_PUBLIC_APP_URL               — production URL, e.g. https://app.chargingthefuture.com
+#   NEXT_PUBLIC_APP_URL               — production URL, e.g. https://app.lagatos.com
 #   NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY  — Clerk publishable key (pk_live_…); must match the domain the app is served on (Clerk production keys are domain-locked)
 #   NEXT_PUBLIC_AUTH_SIGN_IN_URL      — Clerk hosted Account Portal sign-in URL,
-#       e.g. https://accounts.app.chargingthefuture.com/sign-in. Do NOT set this
+#       e.g. https://accounts.app.lagatos.com/sign-in. Do NOT set this
 #       to /sign-in (or any URL on the app's own domain): the in-app /sign-in
 #       page only forwards to this URL, so a same-host value loops forever
 #       (ERR_TOO_MANY_REDIRECTS). If unset/misconfigured the app derives the

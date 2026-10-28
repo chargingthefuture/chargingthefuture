@@ -326,3 +326,5 @@ nowhere, and the spam one nowhere.
 1. Open What Works, mark a tool Helpful, suggest a tool and propose a problem.
 **Expected:** All of it works. The admin screens still refuse this member.
 **Result:** web ☐ — notes:
+
+> Address note (2026-10-28): the app is now at app.lagatos.com and the landing page at lagatos.com; links in the steps above that name chargingthefuture.com redirect there.

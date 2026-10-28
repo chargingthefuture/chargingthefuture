@@ -95,7 +95,7 @@ https://u.expo.dev/<EXPO_MOBILE_PROJECT_ID>
 
 ### `NEXT_PUBLIC_APP_URL`
 
-The deployed web/API base URL, https, no trailing slash (e.g. `https://chargingthefuture.com`).
+The deployed web/API base URL, https, no trailing slash (e.g. `https://lagatos.com`).
 
 ### Clerk keys
 
@@ -133,7 +133,7 @@ Run from the `ctf` directory:
 ```bash
 cd ctf
 NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY=pk_live_example \
-NEXT_PUBLIC_APP_URL=https://chargingthefuture.com \
+NEXT_PUBLIC_APP_URL=https://lagatos.com \
 EXPO_MOBILE_PROJECT_ID=proj_123 \
 EXPO_MOBILE_UPDATES_URL=https://u.expo.dev/proj_123 \
 pnpm --filter @ctf/mobile run check:mobile-env

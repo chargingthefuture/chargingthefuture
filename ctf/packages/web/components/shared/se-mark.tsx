@@ -4,7 +4,7 @@ import { useId } from 'react';
 
 // Skills Economy brand mark — the "Stack" (skill progression) logo: three ascending rounded bars
 // filled with a burgundy gradient. Burgundy is the free tier's color across the project's sites
-// (chargingthefuture.com wears it; farahbrunache.com, the paid tier, is forest green), so the mark
+// (lagatos.com wears it; farahbrunache.com, the paid tier, is forest green), so the mark
 // ties the app to that family; it was teal→purple until 2026-10-14. Vector source: design/logo-options concept-d-stack-mark
 // (Concept D, chosen 2026-07-26). Rendered inline so it stays crisp at every chip size and inherits
 // no external asset. Each instance gets a unique gradient id (useId) so multiple marks on one page

@@ -458,7 +458,7 @@ policies:
       privateInvitesBeyondNewestTen: count_only
       contactRestrictedOwnersExcludedFromCount: required
       antiScrapingThreshold: enforced
-      corsOrigins: chargingthefuture.com_www_and_github_pages_only
+      corsOrigins: lagatos.com_www_and_github_pages_only
     consentRequirements:
       scopes:
         - directory_public_projection

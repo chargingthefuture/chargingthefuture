@@ -16,7 +16,7 @@ splitting was constrained by Clerk's domain binding (one Clerk instance per
 domain), and v3 ships to the single production domain.
 
 - **Frontend + Backend**: one Next.js app (`ctf-web`) on Render.
-- **Domain**: the production domain (e.g. `app.chargingthefuture.com`).
+- **Domain**: the production domain (e.g. `app.lagatos.com`).
 - **Clerk Identity**: one production Clerk instance bound to that domain.
 - **Release gating**: feature flags (Unleash + OpenFeature), not separate
   environments — see the Feature Flags section below.

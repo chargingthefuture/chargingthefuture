@@ -15,7 +15,7 @@ import { assemble, buildCues, writeCaptions } from './lib/assemble.mjs';
 import { signInDemoAccount } from './lib/sign-in.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const appUrl = (process.env.DEMO_APP_URL || 'https://app.chargingthefuture.com').replace(/\/$/, '');
+const appUrl = (process.env.DEMO_APP_URL || 'https://app.lagatos.com').replace(/\/$/, '');
 const outDir = process.env.DEMO_OUT_DIR || join(here, 'out');
 const workRoot = join(outDir, '.work');
 

@@ -290,7 +290,7 @@ Result: web ☐
 2. Follow the button next to it.
 3. Sign in as an approved member, reopen the same link, and look above the voting form.
 
-**Expected:** Both views show "We'll meet in <plugin>" — for example "We'll meet in Chyme" — with a "Go to <plugin>" button beside it. The button opens that plugin's page in the app (for example `/apps/chyme`, which is `https://app.chargingthefuture.com/apps/chyme` in production). This shows before the survey closes, not only after.
+**Expected:** Both views show "We'll meet in <plugin>" — for example "We'll meet in Chyme" — with a "Go to <plugin>" button beside it. The button opens that plugin's page in the app (for example `/apps/chyme`, which is `https://app.lagatos.com/apps/chyme` in production). This shows before the survey closes, not only after.
 
 Result: web ☐ mobile ☐
 

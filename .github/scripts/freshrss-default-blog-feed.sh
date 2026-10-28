@@ -54,7 +54,7 @@ demo_feed="https://chargingthefuture.github.io/rss-feeds/youtube/mutilpe.xml"
 demo_site="https://chargingthefuture.github.io/rss-feeds/"
 # Every recorded broadcast, served by the app so a replay appears the moment it
 # is ready. The blog's streams page lists the same recordings.
-streams_feed="https://app.chargingthefuture.com/api/beacon/replays/feed"
+streams_feed="https://app.lagatos.com/api/beacon/replays/feed"
 streams_site="https://chargingthefuture.github.io/chargingthefuture/streams"
 target=/var/www/FreshRSS/data/opml.xml
 

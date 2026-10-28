@@ -205,7 +205,7 @@ export function buildReportImageElement(view: TrendReportView, generatedOn: stri
         ))}
       </div>
       <div style={{ display: 'flex', fontSize: 15, color: SUBTLE, marginTop: 18 }}>
-        Skills Economy · chargingthefuture.com · report made {generatedOn}
+        Skills Economy · lagatos.com · report made {generatedOn}
       </div>
     </div>
   );

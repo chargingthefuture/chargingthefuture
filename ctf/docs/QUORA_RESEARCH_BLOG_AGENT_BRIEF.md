@@ -28,7 +28,7 @@ most wrong claims come from treating one as if it were the other.
 Public form, linkable from anywhere:
 
 ```
-https://app.chargingthefuture.com/survey/quora-account-deletions
+https://app.lagatos.com/survey/quora-account-deletions
 ```
 
 Reading it needs no account. Submitting needs a free sign-in — that keeps bulk junk out of a table

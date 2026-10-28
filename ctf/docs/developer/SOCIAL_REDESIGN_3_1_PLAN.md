@@ -200,7 +200,7 @@ Ongoing support after the holidays.
 
 ## Domain
 
-lagatos.com becomes the address; chargingthefuture.com redirects to it. Sign-in domains, hosting,
+lagatos.com becomes the address; lagatos.com redirects to it. Sign-in domains, hosting,
 email sender, Android app links and blog links move with it.
 
 ## Tasks, in order
