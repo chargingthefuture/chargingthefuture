@@ -331,3 +331,14 @@ the guide, and on the Main Room card when it is the next talk ("Next: <subject> 
 with the route's own reason. Step 3 shows "Booking a talk needs Unlock approval." and a link to
 Unlock, and no list of times.
 **Result:** web ☐ android ☐ — notes:
+
+### TR-15 — Add a booked talk to the calendar (3.1)
+**Role:** a member | **Surfaces:** web (mobile-width)
+
+**Steps:**
+1. Open /ti-radio, a booked slot that is not on air.
+2. Press "Add to calendar".
+
+**Expected:** The phone offers to add an event with the talk's title, start and end, the host, and a link to /ti-radio. An on-air slot and an open slot have no button. Nothing asks to read the calendar.
+
+Result: web ☐

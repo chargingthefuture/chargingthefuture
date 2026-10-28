@@ -786,3 +786,14 @@ counting at once; time with the app open and not in a room or call adds nothing.
 is done." Step 2 shows neither. Step 3 is refused as before. The approved member hears the room and
 speaks as usual.
 **Result:** web ☐ — notes:
+
+### CH-30 — Add an upcoming talk to the calendar (3.1)
+**Role:** a member | **Surfaces:** web (mobile-width)
+
+**Steps:**
+1. Open the upcoming discussions under the rooms, and the Main Room card on Today.
+2. Press "Add to calendar" on a talk that has not started.
+
+**Expected:** The phone offers to add the talk with its start, end and host. A talk on air has no button. Nothing asks to read the calendar.
+
+Result: web ☐
