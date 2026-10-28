@@ -7,6 +7,7 @@
 import type { PoolClient } from 'pg';
 import { queryDb, withDbTransaction } from 'lib/db/postgres';
 import { mintGrant } from 'lib/shared/credits-interface';
+import { isUserUnlocked } from 'lib/shared/unlock-interface';
 import { decryptGiftCardCode, encryptGiftCardCode, type DecryptedCode } from './code-crypto';
 import type {
   ContributionKind,
@@ -49,6 +50,7 @@ type SubmissionRow = {
   method: string | null;
   claimed_amount_usd: string | null;
   has_code: boolean;
+  credits_held: boolean;
   status: ContributionStatus;
   confirmed_amount_usd: string | null;
   credits_granted: string;
@@ -70,7 +72,7 @@ type ConfigRow = {
 // The code column is never selected into a row; only whether one is still stored.
 const SUBMISSION_COLUMNS = `
   id, user_id, kind, method, claimed_amount_usd, (gift_card_code_encrypted IS NOT NULL) AS has_code,
-  status, confirmed_amount_usd, credits_granted, credit_governance_event_id, reviewed_by_user_id,
+  (credits_held_at IS NOT NULL) AS credits_held, status, confirmed_amount_usd, credits_granted, credit_governance_event_id, reviewed_by_user_id,
   reviewed_at, review_note, created_at, updated_at`;
 
 function mapSubmission(row: SubmissionRow): ContributionSubmission {
@@ -83,6 +85,7 @@ function mapSubmission(row: SubmissionRow): ContributionSubmission {
     status: row.status,
     confirmedAmountUsd: row.confirmed_amount_usd === null ? null : Number(row.confirmed_amount_usd),
     creditsGranted: Number(row.credits_granted),
+    creditsHeld: row.credits_held,
     creditGovernanceEventId: row.credit_governance_event_id,
     reviewedByUserId: row.reviewed_by_user_id,
     reviewedAt: row.reviewed_at ? row.reviewed_at.toISOString() : null,
@@ -290,6 +293,7 @@ async function applyReviewUpdate(
     confirmedAmountUsd: number | null;
     creditsGranted: number;
     creditGovernanceEventId: string | null;
+    creditsHeld?: boolean;
   },
 ): Promise<SubmissionRow> {
   // The code is erased in the same statement that records the review.
@@ -303,6 +307,7 @@ async function applyReviewUpdate(
        confirmed_amount_usd = $5,
        credits_granted = $6,
        credit_governance_event_id = $7,
+       credits_held_at = CASE WHEN $8::boolean THEN NOW() ELSE NULL END,
        gift_card_code_encrypted = NULL,
        updated_at = NOW()
      WHERE id = $1
@@ -315,6 +320,7 @@ async function applyReviewUpdate(
       params.confirmedAmountUsd,
       params.creditsGranted,
       params.creditGovernanceEventId,
+      params.creditsHeld ?? false,
     ],
   );
 
@@ -336,6 +342,21 @@ async function applyConfirmReview(
   const confirmedAmountUsd = input.confirmedAmountUsd;
   if (!isValidGiftCardAmount(confirmedAmountUsd)) {
     throw new Error('confirmed_amount_required');
+  }
+
+  // Not yet approved in Unlock: the claim is confirmed and its credits are held. Approval runs
+  // grantHeldContributionCredits, which works the grant out then, under the cap as it stands then.
+  if (!(await isUserUnlocked(row.user_id))) {
+    return applyReviewUpdate(client, {
+      submissionId: input.submissionId,
+      status: 'confirmed',
+      actorUserId: input.actorUserId,
+      reviewNote: input.reviewNote ?? null,
+      confirmedAmountUsd,
+      creditsGranted: 0,
+      creditGovernanceEventId: null,
+      creditsHeld: true,
+    });
   }
 
   const config = await getContributionsConfigWithClient(client);
@@ -408,6 +429,52 @@ export async function reviewSubmission(input: ReviewContributionSubmissionInput)
 
     const updated = await applyConfirmReview(client, row, input);
     return mapSubmissionForAdmin(updated);
+  });
+}
+
+// --- Unlock approval catch-up ----------------------------------------------------------------
+
+/**
+ * Grant the credits held on a member's confirmed claims, now that Unlock has approved them. Each
+ * held claim is granted in turn under the same cap and rate a confirm uses, with the same
+ * idempotency key, so a second run grants nothing twice. Returns how many claims were granted.
+ */
+export async function grantHeldContributionCredits(userId: string, actorUserId: string): Promise<number> {
+  return withDbTransaction(async (client) => {
+    const held = await client.query<SubmissionRow>(
+      `SELECT ${SUBMISSION_COLUMNS} FROM contributions_submissions
+        WHERE user_id = $1 AND status = 'confirmed' AND credits_held_at IS NOT NULL
+        ORDER BY reviewed_at FOR UPDATE`,
+      [userId],
+    );
+    if (held.rows.length === 0) return 0;
+    const config = await getContributionsConfigWithClient(client);
+    for (const row of held.rows) {
+      const creditsGranted = await computeYearCappedGrant(client, {
+        userId,
+        computedCredits: Number(row.confirmed_amount_usd ?? 0) * config.creditsPerUsd,
+        cap: config.perUserYearCreditCap,
+      });
+      let governanceEventId: string | null = null;
+      if (creditsGranted > 0) {
+        const grant = await mintGrant({
+          actorId: actorUserId,
+          targetUserId: userId,
+          amount: creditsGranted,
+          grantReason: GRANT_REASON,
+          governanceTicketId: grantTicketId(row.id),
+          idempotencyKey: `contribution-${row.id}`,
+        });
+        governanceEventId = grant.governanceEventId;
+      }
+      await client.query(
+        `UPDATE contributions_submissions
+            SET credits_granted = $2, credit_governance_event_id = $3, credits_held_at = NULL, updated_at = NOW()
+          WHERE id = $1`,
+        [row.id, creditsGranted, governanceEventId],
+      );
+    }
+    return held.rows.length;
   });
 }
 
