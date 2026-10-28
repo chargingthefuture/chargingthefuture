@@ -313,8 +313,6 @@ export async function createOrUpdateUnlockSubmission(input: CreateUnlockSubmissi
        url_set_by_admin_user_id,
        url_set_by_admin_at,
        finish_route,
-       finish_evidence_id,
-       finish_route,
        finish_evidence_id
      )
      VALUES (
