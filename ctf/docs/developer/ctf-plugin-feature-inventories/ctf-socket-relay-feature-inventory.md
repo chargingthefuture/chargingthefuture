@@ -250,6 +250,8 @@ alongside the legacy `category`) and fulfillment outcomes for dev validation.
 
 ## 9) Change Log
 
+- 2026-10-28: **Stream AI moderation on new asks (3.1.0 plan).** `POST /api/socket-relay/requests` checks the title and details. The words are sent to Stream's AI moderation check before saving (`lib/integrations/stream-content-check.ts`, config `se:posts`, rules set by `stream-moderation-setup.yml`): when Stream answers remove the post is refused with 422 `content_refused` and the member is told to reword it; harm Stream rates high is flagged in Stream's review queue and still published. When Stream is not set up or cannot be reached the post is saved and the failure is reported. Pictures are not sent, because Stream cannot fetch them from behind sign-in.
+
 - 2026-10-28: **Location data removed on the server (3.1.0, Personal controls).** Request pictures lose their location and camera data when stored and when served (`stripPictureMetadata`).
 - 2026-10-27: **Open to signed-in members in 3.1 (owner decision, Access).** Posting a request (`POST /api/socket-relay/requests`) now goes through `requireSocketRelayPostAccess`, the `signed_in_posting` tier: open to an approved member, or to one not yet approved inside the first 14 days or waiting on their address; after that it answers 403 `unlock_paused`. Every other SocketRelay route stays approved-only. Listed under "3.1 open sign-up use".
 - 2026-10-27: **Asks from + New in 3.1.** The 3.1 frame's + New → Ask posts through `POST /api/socket-relay/requests` with `isPublic: true`, one tag (the suggestion's group, or Help) and no city, state or country. No route, schema or contract change.
