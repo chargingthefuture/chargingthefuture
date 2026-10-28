@@ -19,6 +19,7 @@ import { reportError } from 'lib/observability/report';
 // check-plugin-boundaries.mjs enforces. That is why this file is the one doing it.
 import { grantHeldSharedWritingCredits } from 'lib/comic/approval-catch-up';
 import { announceHeldReplies } from 'lib/fireside/approval-catch-up';
+import { grantHeldContributionCredits } from 'lib/contributions/repository';
 
 /** What each plugin did about the approval, for the audit row the caller writes. */
 export type UnlockApprovalCatchUp = {
@@ -35,6 +36,8 @@ export type UnlockApprovalCatchUp = {
    * writing accepted while they were not verified yet, which the grant passed over at the time.
    */
   comicSharedWritingGranted: number;
+  /** How many confirmed gift cards had their held thank-you credits granted. */
+  contributionsGranted: number;
 };
 
 /**
@@ -51,6 +54,7 @@ export type UnlockApprovalCatchUp = {
 export async function runUnlockApprovalCatchUp(userId: string, approvedByUserId: string): Promise<UnlockApprovalCatchUp> {
   let firesidePeopleTold = 0;
   let comicSharedWritingGranted = 0;
+  let contributionsGranted = 0;
 
   try {
     firesidePeopleTold = await announceHeldReplies(userId);
@@ -65,5 +69,11 @@ export async function runUnlockApprovalCatchUp(userId: string, approvedByUserId:
     reportError(error, { area: 'unlock-approval-catch-up', op: 'comic_held_contribution_credits' });
   }
 
-  return { firesidePeopleTold, comicSharedWritingGranted };
+  try {
+    contributionsGranted = await grantHeldContributionCredits(userId, approvedByUserId);
+  } catch (error) {
+    reportError(error, { area: 'unlock-approval-catch-up', op: 'contributions_held_credits' });
+  }
+
+  return { firesidePeopleTold, comicSharedWritingGranted, contributionsGranted };
 }
