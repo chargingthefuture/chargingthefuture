@@ -50,6 +50,23 @@ policies:
       answer is visible and a response can be lined up against that member's Unlock submission;
       storing who answered is not permission to print it.
   - pluginId: quora-deletion-survey
+    command: quora-deletion-survey.verification.removed-accounts.list
+    version: 1.0.0
+    requiredRoles: [user]
+    minUnlockTier: any_authenticated
+    requiresAuthentication: true
+    attributePolicies:
+      requireUsername: false
+      readOnly: true
+      ownAccountOnly: lists only the session user's own reported accounts
+    consentRequirements: []
+    denyConditions:
+      - not_signed_in
+      - persistence_unavailable
+    notes: >-
+      Read by the Unlock screen for a member who has not finished Unlock, so it has the same tier
+      as the verification command it feeds.
+  - pluginId: quora-deletion-survey
     command: quora-deletion-survey.verification.link
     version: 1.0.0
     requiredRoles: [user]
@@ -61,6 +78,7 @@ policies:
       rateLimit: shares the submit brake of 5 per IP per hour
       ownAccountOnly: the submission is created for the session's own user id and no other
       noOverwrite: refused as already_on_file when any Unlock submission exists for the member
+      removedHandleOwnOnly: a removedHandle must be one of the member's own reported removed accounts
     consentRequirements:
       - >-
         The member presses a button on the confirmation screen to start this; it never runs as
@@ -72,6 +90,7 @@ policies:
       - rate_limited
       - invalid_payload
       - invalid_url
+      - not_reported
       - failed
     notes: >-
       The same tier as the submit command, for the same reason: it is the first step toward

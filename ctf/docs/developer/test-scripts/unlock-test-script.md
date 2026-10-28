@@ -790,3 +790,18 @@ account is at risk. Step 4: "Sent. Waiting for approval." and posting works agai
 People shows "People opens once Unlock is done" until approval. 3.0 still sends the member to the
 Unlock screen as before.
 **Result:** web ☐ android ☐ — notes:
+
+### UNLOCK-M7 · Finish Unlock with a removed Quora account (3.1)
+**Role:** a signed-in member with no Unlock submission · **Surfaces:** web
+**Precondition:** the member answered the Quora account removals survey and reported one account as
+deleted.
+1. Open `/plugin/unlock` and find "No live Quora account?".
+2. Press "Finish with <handle>".
+3. As admin, open `/admin/unlock` and find the member's card.
+**Expected:** Step 1 shows a button for the reported account (a member who reported none sees a link
+to the survey instead, and every member sees the Knowledge Library line). Step 2 moves the screen to
+the waiting state. Step 3 shows the card with "Removed Quora account, reported in the account
+removals survey" and a link to the survey answers. A member who brings Quora writing into the
+Knowledge Library with its profile address gets a card saying it was finished by Knowledge Library
+writing instead. The Today banner names all three routes.
+**Result:** web ☐ — notes:

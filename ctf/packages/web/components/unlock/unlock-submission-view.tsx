@@ -5,6 +5,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 import { getUnlockTokens, UNLOCK_BENEFITS } from "./unlock-shared";
 import { UnlockQuoraHelp } from "./unlock-quora-help";
+import { UnlockOtherRoutes } from "./unlock-other-routes";
 import { SurveyInviteNote } from "@/components/shared/survey-invite-note";
 
 const WHY = [
@@ -23,6 +24,7 @@ export function UnlockSubmissionView({
   submitting,
   error,
   isAdmin,
+  onFinished,
 }: {
   url: string;
   onUrlChange: (value: string) => void;
@@ -30,6 +32,7 @@ export function UnlockSubmissionView({
   submitting: boolean;
   error: string | null;
   isAdmin?: boolean;
+  onFinished: () => Promise<void>;
 }) {
   const canSubmit = url.trim().length > 0 && !submitting;
   const { theme } = useTheme();
@@ -84,6 +87,7 @@ export function UnlockSubmissionView({
               <Send size={16} /> {submitting ? "Submitting…" : "Submit for Verification"}
             </button>
 
+            <UnlockOtherRoutes onFinished={onFinished} />
             <UnlockQuoraHelp />
             <SurveyInviteNote accent={tok.ACCENT} muted={tok.MUTED} title={tok.TITLE} />
           </div>

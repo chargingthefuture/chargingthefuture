@@ -303,7 +303,8 @@ Built on `feat/comic-ai-assistant`; all server-only routes (no rendered surface)
   (`requireComicSharedWritingAccess`, `minUnlockTier: 'any_authenticated'` — deliberately looser than
   the rest of comic, which stays `approved_full`). Optionally carries `quoraProfileUrl`: when the
   member has **no Quora URL on file**, it opens a **pending** Unlock submission from it (never an
-  approval) audited as `unlock.verification.submit` with `source: comic_knowledge_contribution`.
+  approval) audited as `unlock.verification.submit` with `source: comic_knowledge_contribution`,
+  recording `finish_route` `knowledge_library` and the contribution id on the submission.
   A URL on the spam denylist gets the same app-wide block (`applyDenylistBlockIfSpam`, shared with
   `POST /api/unlock/submission`) and is audited `deny`/`spam_denylisted`.
   Best-effort and run *after* the contribution is stored, so a failure cannot lose the writing; a
@@ -790,6 +791,8 @@ buckets are not reproduced — only real provenance (engine / intent / safety ca
 `nlu_confidence`, surfaced as "Not yet scored" when null) is shown.
 
 ## Change Log
+
+- 2026-10-28: **A Knowledge Library contribution is one of the three ways to finish Unlock (3.1.0 plan, Access).** The submission `linkSharedWritingToUnlock` opens now records `finish_route` `knowledge_library` and the contribution id, so the Unlock reviewer sees where it came from. The Unlock screen points members here. No comic schema or route change.
 
 - 2026-10-16: **Accepting writing that matches a switched-off library entry no longer reports it as
   present (owner decision; code-review #2726).** The accept step pointed an entry at the existing

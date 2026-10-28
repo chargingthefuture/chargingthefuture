@@ -77,6 +77,8 @@ export async function linkSharedWritingToUnlock(input: {
       userId: input.userId,
       quoraProfileUrl: raw,
       quoraProfileUrlNormalized: normalized,
+      finishRoute: 'knowledge_library',
+      finishEvidenceId: input.contributionId,
     });
 
     // A URL on the spam denylist comes back marked spam. It gets the same app-wide block the Unlock
