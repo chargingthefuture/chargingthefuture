@@ -10,6 +10,7 @@ import type {
   RevokeUnlockRewardInput,
   UnlockAccessTier,
   UnlockDashboardSnapshot,
+  UnlockFinishRoute,
   UnlockQueueFilters,
   UnlockReviewStatus,
   UnlockStatus,
@@ -47,6 +48,9 @@ type UnlockSubmissionRow = {
   reward_revoked_at: Date | null;
   url_set_by_admin_user_id: string | null;
   url_set_by_admin_at: Date | null;
+  // Absent on reads that do not select them; the mapper reads that as the live-profile route.
+  finish_route?: UnlockFinishRoute;
+  finish_evidence_id?: string | null;
   // Only present on the admin queue list (a per-URL COUNT). Undefined elsewhere.
   shared_url_account_count?: string;
   // Only present on the admin queue list: how many times this member changed their Quora URL.
@@ -87,6 +91,11 @@ function mapUnlockDashboardSnapshot(row: Partial<UnlockDashboardRow> = {}): Unlo
   };
 }
 
+// Reads that do not select the route columns stand for the live-profile route.
+function mapFinishRoute(row: UnlockSubmissionRow): Pick<UnlockSubmission, 'finishRoute' | 'finishEvidenceId'> {
+  return { finishRoute: row.finish_route ?? 'quora_profile', finishEvidenceId: row.finish_evidence_id ?? null };
+}
+
 function mapUnlockSubmission(row: UnlockSubmissionRow): UnlockSubmission {
   return {
     id: row.id,
@@ -105,6 +114,7 @@ function mapUnlockSubmission(row: UnlockSubmissionRow): UnlockSubmission {
     rewardRevokedAt: row.reward_revoked_at ? row.reward_revoked_at.toISOString() : null,
     urlSetByAdminUserId: row.url_set_by_admin_user_id ?? null,
     urlSetByAdminAt: row.url_set_by_admin_at ? row.url_set_by_admin_at.toISOString() : null,
+    ...mapFinishRoute(row),
     ...(row.shared_url_account_count !== undefined
       ? { sharedUrlAccountCount: Number(row.shared_url_account_count) }
       : {}),
@@ -301,7 +311,11 @@ export async function createOrUpdateUnlockSubmission(input: CreateUnlockSubmissi
        access_tier,
        unlock_window_expires_at,
        url_set_by_admin_user_id,
-       url_set_by_admin_at
+       url_set_by_admin_at,
+       finish_route,
+       finish_evidence_id,
+       finish_route,
+       finish_evidence_id
      )
      VALUES (
        $1,
@@ -311,7 +325,9 @@ export async function createOrUpdateUnlockSubmission(input: CreateUnlockSubmissi
        $6,
        NOW() + (($4::text || ' hours')::interval),
        $7,
-       CASE WHEN $7::text IS NULL THEN NULL ELSE NOW() END
+       CASE WHEN $7::text IS NULL THEN NULL ELSE NOW() END,
+       $8,
+       $9
      )
      ON CONFLICT (user_id) DO UPDATE
      SET
@@ -321,6 +337,8 @@ export async function createOrUpdateUnlockSubmission(input: CreateUnlockSubmissi
        -- an admin re-entering one sets it again. It says where the stored URL came from, nothing more.
        url_set_by_admin_user_id = EXCLUDED.url_set_by_admin_user_id,
        url_set_by_admin_at = EXCLUDED.url_set_by_admin_at,
+       finish_route = EXCLUDED.finish_route,
+       finish_evidence_id = EXCLUDED.finish_evidence_id,
        review_status = EXCLUDED.review_status,
        access_tier = EXCLUDED.access_tier,
        unlock_window_expires_at = NOW() + (($4::text || ' hours')::interval),
@@ -354,6 +372,8 @@ export async function createOrUpdateUnlockSubmission(input: CreateUnlockSubmissi
        reward_revoked_at,
        url_set_by_admin_user_id,
        url_set_by_admin_at,
+       finish_route,
+       finish_evidence_id,
        created_at,
        updated_at`,
     [
@@ -364,11 +384,16 @@ export async function createOrUpdateUnlockSubmission(input: CreateUnlockSubmissi
       initialReviewStatus,
       initialAccessTier,
       adminUserId,
+      input.finishRoute ?? 'quora_profile',
+      input.finishEvidenceId ?? null,
     ],
   );
 
   // The trail names whoever actually typed it, so an admin entry is never filed under the member's own
-  // id, and a first submission is recorded as the baseline of the trail.
+  // id, and a first submission is recorded as the baseline of the trail. A removed account is already
+  // on the trail as a closure marker from the survey, and its address is no longer live, so it is not
+  // written again as if it were.
+  if (input.finishRoute === 'removed_account') return mapUnlockSubmission(result.rows[0]);
   await appendQuoraUrlHistory({
     userId: input.userId,
     previousUrl: previousStored.url,
@@ -421,6 +446,8 @@ export async function listUnlockSubmissions(filters: UnlockQueueFilters = {}): P
        s.reward_revoked_at,
        s.url_set_by_admin_user_id,
        s.url_set_by_admin_at,
+       s.finish_route,
+       s.finish_evidence_id,
        s.created_at,
        s.updated_at,
        (SELECT COUNT(*)
@@ -464,6 +491,8 @@ export async function listApprovedUnincentivizedSubmissions(limit = 100): Promis
        reward_revoked_at,
        url_set_by_admin_user_id,
        url_set_by_admin_at,
+       finish_route,
+       finish_evidence_id,
        created_at,
        updated_at
      FROM unlock_verification_submissions
@@ -510,6 +539,8 @@ export async function reviewUnlockSubmission(input: ReviewUnlockSubmissionInput)
        reward_revoked_at,
        url_set_by_admin_user_id,
        url_set_by_admin_at,
+       finish_route,
+       finish_evidence_id,
        created_at,
        updated_at`,
     [input.reviewStatus, accessTier, input.actorUserId, input.reviewNote ?? null, input.submissionId],
@@ -670,6 +701,8 @@ export async function updateUnlockSubmissionQuoraUrl(
        reward_revoked_at,
        url_set_by_admin_user_id,
        url_set_by_admin_at,
+       finish_route,
+       finish_evidence_id,
        created_at,
        updated_at`,
     [submissionId, quoraProfileUrl, quoraProfileUrlNormalized, adminUserId],
@@ -714,7 +747,7 @@ export async function getUnlockSubmissionById(submissionId: number): Promise<Unl
        id, user_id, quora_profile_url, quora_profile_url_normalized, review_status, access_tier,
        unlock_window_expires_at, reminder_stage, reviewed_by_user_id, reviewed_at, review_note,
        incentive_granted_at, reward_withheld_at, reward_revoked_at,
-       url_set_by_admin_user_id, url_set_by_admin_at, created_at, updated_at
+       url_set_by_admin_user_id, url_set_by_admin_at, finish_route, finish_evidence_id, created_at, updated_at
      FROM unlock_verification_submissions
      WHERE id = $1
      LIMIT 1`,
@@ -733,7 +766,7 @@ export async function getUnlockSubmissionByUserId(userId: string): Promise<Unloc
        id, user_id, quora_profile_url, quora_profile_url_normalized, review_status, access_tier,
        unlock_window_expires_at, reminder_stage, reviewed_by_user_id, reviewed_at, review_note,
        incentive_granted_at, reward_withheld_at, reward_revoked_at,
-       url_set_by_admin_user_id, url_set_by_admin_at, created_at, updated_at
+       url_set_by_admin_user_id, url_set_by_admin_at, finish_route, finish_evidence_id, created_at, updated_at
      FROM unlock_verification_submissions
      WHERE user_id = $1
      LIMIT 1`,
@@ -810,7 +843,7 @@ export async function revokeUnlockSubmissionReward(
        id, user_id, quora_profile_url, quora_profile_url_normalized, review_status, access_tier,
        unlock_window_expires_at, reminder_stage, reviewed_by_user_id, reviewed_at, review_note,
        incentive_granted_at, reward_withheld_at, reward_revoked_at,
-       url_set_by_admin_user_id, url_set_by_admin_at, created_at, updated_at`,
+       url_set_by_admin_user_id, url_set_by_admin_at, finish_route, finish_evidence_id, created_at, updated_at`,
     [input.submissionId, input.actorUserId, input.reviewNote ?? null],
   );
 

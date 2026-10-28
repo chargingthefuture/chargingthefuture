@@ -146,6 +146,42 @@ commands:
       header. Sending twice stores two responses; the admin totals count that as a repeat
       respondent rather than hiding it.
   - pluginId: quora-deletion-survey
+    command: quora-deletion-survey.verification.removed-accounts.list
+    version: 1.0.0
+    # GET /api/quora-deletion-survey/verification
+    #
+    # The Unlock screen's second route (3.1.0 plan, Access): the removed accounts this member
+    # reported (action account_deleted or account_suspended), one per handle, and whether they still
+    # need Unlock. Only their own answers; Cache-Control no-store.
+    inputSchema:
+      type: object
+      properties: {}
+    outputSchema:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        needsUnlock:
+          type: boolean
+        removedAccounts:
+          type: array
+          items:
+            type: object
+            properties:
+              handle:
+                type: string
+        code:
+          type: string
+          enum: [quora_deletion_survey.persistence_unavailable]
+          description: Present only on a refusal (503).
+    dataAccess:
+      - quora_deletion_survey_responses (select, the member's own)
+      - quora_deletion_survey_accounts (select, the member's own)
+      - unlock_verification_submissions (select, through lib/shared/unlock-interface.ts)
+    purpose: verification_handoff
+    retentionClass: verification_record
+    idempotency: true
+  - pluginId: quora-deletion-survey
     command: quora-deletion-survey.verification.link
     version: 1.0.0
     # POST /api/quora-deletion-survey/verification
@@ -154,14 +190,22 @@ commands:
     # failure here can never lose it. It creates a pending Unlock submission from the live account
     # the member named and approves nobody. It does nothing for a member who already has a
     # submission on file, re-checked immediately before the write.
+    #
+    # Since 2026-10-28 (3.1.0 plan, Access) the body may name removedHandle instead: one of the
+    # accounts this member reported as deleted or suspended. The submission then carries
+    # finish_route removed_account and the survey response id as finish_evidence_id, its address is
+    # built from the handle, and the Quora URL history is not written again (the closure marker is
+    # already there). A handle the member did not report is refused (400 invalid_payload).
     inputSchema:
       type: object
-      required: [quoraProfileUrl]
       properties:
         quoraProfileUrl:
           type: string
           minLength: 1
-          description: Trimmed. An empty value is refused before anything is read; a value that does not normalize to a Quora profile link is refused as invalid.
+          description: Trimmed. Required unless removedHandle is given. An empty value is refused before anything is read; a value that does not normalize to a Quora profile link is refused as invalid.
+        removedHandle:
+          type: string
+          description: Trimmed. A handle from this member's own reported removed accounts; takes precedence over quoraProfileUrl.
     outputSchema:
       type: object
       properties:
@@ -187,6 +231,8 @@ commands:
       - unlock_verification_submissions (select, insert or update; through lib/shared/unlock-interface.ts)
       - unlock_audit_log (insert, as an ordinary unlock.verification.submit with metadata.source = quora_deletion_survey)
       - quora_deletion_survey_audit_log (insert, on the outcomes listed in the audit contract)
+      - quora_deletion_survey_responses (select, the member's own, for removedHandle)
+      - quora_deletion_survey_accounts (select, the member's own, for removedHandle)
     purpose: verification_handoff
     retentionClass: verification_record
     idempotency: true

@@ -1674,6 +1674,8 @@ CREATE TABLE IF NOT EXISTS unlock_verification_submissions (
   -- corrected it for them, and when. See the guarded ALTERs further down for the full note.
   url_set_by_admin_user_id TEXT,
   url_set_by_admin_at TIMESTAMPTZ,
+  finish_route TEXT NOT NULL DEFAULT 'quora_profile',
+  finish_evidence_id TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -1884,6 +1886,20 @@ ALTER TABLE IF EXISTS unlock_verification_submissions ADD COLUMN IF NOT EXISTS u
 -- that difference. Cleared the moment the member submits their own URL over the top.
 ALTER TABLE IF EXISTS unlock_verification_submissions ADD COLUMN IF NOT EXISTS url_set_by_admin_user_id TEXT;
 ALTER TABLE IF EXISTS unlock_verification_submissions ADD COLUMN IF NOT EXISTS url_set_by_admin_at TIMESTAMPTZ;
+-- Which of the three routes finished Unlock (3.1.0 plan, Access): a live Quora profile address
+-- ('quora_profile'), a removed account the member reported in the Quora account removals survey
+-- ('removed_account', evidence = the survey response id), or Quora writing brought into the
+-- Knowledge Library ('knowledge_library', evidence = the contribution id). The reviewer reads it to
+-- know what to check: a removed account has no live profile to open.
+ALTER TABLE IF EXISTS unlock_verification_submissions ADD COLUMN IF NOT EXISTS finish_route TEXT NOT NULL DEFAULT 'quora_profile';
+ALTER TABLE IF EXISTS unlock_verification_submissions ADD COLUMN IF NOT EXISTS finish_evidence_id TEXT;
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'unlock_verification_submissions_finish_route_check' AND connamespace = current_schema()::regnamespace) THEN
+    ALTER TABLE unlock_verification_submissions ADD CONSTRAINT unlock_verification_submissions_finish_route_check
+      CHECK (finish_route IN ('quora_profile', 'removed_account', 'knowledge_library'));
+  END IF;
+END $$;
 -- Duplicate CREATE TABLE blocks for unlock_audit_log and unlock_runtime_config
 -- were removed here; the canonical definitions are above (unlock_audit_log
 -- keeps its richer column set). The ALTER ... ADD COLUMN reconciliation for
@@ -10784,3 +10800,6 @@ ALTER TABLE IF EXISTS demo.contributions_submissions ADD COLUMN IF NOT EXISTS cr
 CREATE INDEX IF NOT EXISTS idx_contributions_submissions_held
   ON contributions_submissions(user_id) WHERE credits_held_at IS NOT NULL;
 
+
+-- ── post migration: 0077_unlock_finish_routes.sql ──
+-- [demo-skip: names production (public.) tables directly; it repairs production data and has no meaning here]
