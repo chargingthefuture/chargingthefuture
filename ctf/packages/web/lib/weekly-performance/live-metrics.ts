@@ -2,51 +2,25 @@ import { queryDb } from 'lib/db/postgres';
 import { failureReason } from 'lib/errors/failure';
 import { reportError } from 'lib/observability/report';
 import { buildLiveGdpReport } from 'lib/shared/gdp-interface';
-import { VALUE_EVENT_SOURCES, occurrencesExpression, type ValueEventSource } from 'lib/contributor-access/value-events';
-import { EVENT_SOURCE_PLUGIN, type ContributorValueEventKey } from 'lib/contributor-access/weights';
 import {
   countActiveMembersInWeek,
   countMemberDaysInWeek,
   elapsedDaysInWeek,
 } from 'lib/engagement/member-activity';
 
-// Live weekly numbers — rebuilt around the per-plugin value-metric decision record
-// (ctf/docs/developer/PLUGIN_VALUE_METRICS.md, owner-locked 2026-07-18).
-//
-// The dashboard's shape, in card order:
+// Live weekly numbers. The dashboard's shape, in card order:
 //   1. Two GOAL rows — the two numbers the entire platform is driving toward:
 //      GDP Community Value Index (goal: $300B) and Workforce recruited (goal: 2,000,000).
 //      Both are STATE metrics (a current total, not a windowed event count), so week-over-week
 //      needs memory: each read of the current week upserts the live value into
 //      weekly_performance_goal_snapshots, and past weeks report their stored snapshot.
-//   2. The per-plugin VALUE EVENTS — each plugin's defining action, the event that means the
-//      plugin was used as intended (a completed trip, a hosted stay, a confirmed contribution…).
-//      Read from the one shared definition in lib/contributor-access/value-events.ts, windowed on
-//      the event's own timestamp, so any week reports its real count.
-//   3. Honest ADOPTION rows: how many members are actually turning up — active members (the plain
-//      headcount for the week) and daily active members (the average across the week's days) — and
-//      the other side of that, deleted accounts: members who ended their entire account this week,
-//      never someone who stayed and cleared one plugin's data — plus
-//      the no-value-to-others plugins the owner wants visible: Directory (findable members), Mood
-//      (check-ins + average, aggregate only), ClickLog (aggregate incidents + distinct loggers —
-//      never per-member detail).
+//   2. ADOPTION rows about turnout: active members (the plain headcount for the week), signed in
+//      per day (the average across the week's days), and deleted accounts.
 //
-// Dropped from the old set (owner decision): feed counts and SkillUp enrollments-started (intent,
-// not delivered value — replaced by completions), and on 2026-09-20 WhatWorks endorsements (an
-// upvote) and Beacon engagement (talk), which left the shared list. Skills Taxonomy carries no
-// dashboard stats at all. Sign-in activity is still not VALUE — logging in is not a plugin's defining action — but the
-// dashboard has to answer "how many people showed up this week", so the turnout rows are carried as
-// adoption (owner report, 2026-08-15). Both read the shared member-day set in
-// lib/engagement/member-activity.ts, which counts a member as active on a day when the sign-in
-// record holds a row for them that day (owner decision, 2026-08-27).
-//
-// The Foundation row is an aggregate count on this admin-only surface; per rule 132 the underlying
-// participation is sensitive (wellbeing/payment), so it must never appear on a public surface or as
-// any per-member figure.
-//
-// Every query is guarded on table existence and never throws: a missing table or a transient error
-// contributes 0 rather than failing the entire dashboard. All table and column names below are fixed
-// literals — no user input is interpolated into SQL.
+// The per-plugin weekly counts (each plugin's value event, and the Directory, Mood and ClickLog
+// rows) retired in 3.1.0 (owner-approved plan, Measures). Days won, retention and time to unlock on
+// the adoption tab (lib/measures/) measure what members do instead. The value events themselves stay
+// in lib/contributor-access/value-events.ts, which the Weavers badge and the daily exchange read.
 
 type LiveMetric = {
   metricKey: string;
@@ -99,71 +73,14 @@ async function guardedScalar(tables: string | string[], sql: string, weekStart: 
   return value == null ? 0 : Number(value);
 }
 
-// The week window is [weekStart, weekStart + 7 days). Counting on each row's own event timestamp
-// anchors every number to the week the value was actually delivered in.
-
-// COUNT(*) of a table's rows whose date column falls in the week window, with an optional fixed filter.
-function windowCount(table: string, dateColumn: string, filter = ''): (weekStart: string) => Promise<number> {
-  const extra = filter ? `AND ${filter}` : '';
-  return (weekStart: string) =>
-    guardedScalar(
-      table,
-      `SELECT COUNT(*)::text AS v FROM ${table}
-       WHERE ${dateColumn} >= $1::date AND ${dateColumn} < $1::date + INTERVAL '7 days' ${extra}`,
-      weekStart,
-    );
-}
-
-// ── Value events ───────────────────────────────────────────────────────────────
-
-// One card per value event, read from the shared definition in
-// lib/contributor-access/value-events.ts — the same rows the Weavers of the Commons badge and the
-// daily exchange count read (owner directive, 2026-09-21). This dashboard used to carry its own
-// copy of each event's SQL, which is how it kept counting two events the 2026-09-20 decision had
-// removed. Now adding, removing or redefining a value event happens in one file and every reading
-// follows. The dashboard's question is how many times an event happened in the week, so each card
-// applies the event's occurrence rule (rows, distinct members, distinct ties, or a sum of gift-card dollars)
-// to the rows whose own timestamp falls in the window.
-
-// The unit each card is read in. A dashboard concern, so it lives here rather than in the shared
-// definition.
-const VALUE_EVENT_UNITS: Record<ContributorValueEventKey, string> = {
-  'value.foundation_calls_answered': 'calls',
-  'value.socket_relay_requests_fulfilled': 'requests',
-  'value.trust_transport_trips_completed': 'trips',
-  'value.lighthouse_stays_completed': 'stays',
-  'value.chyme_tips_sent': 'tips',
-  'value.service_credits_peer_sends': 'sends',
-  'value.contributions_confirmed_usd': 'USD',
-  'value.contributions_non_money_confirmed': 'contributions',
-  'value.skills_hunt_nominations_accepted': 'nominations',
-  'value.what_works_tools_approved': 'tools',
-  'value.skill_up_completions': 'completions',
-  'value.skill_up_trainer_payouts': 'payouts',
-  'value.recurring_ties_confirmed': 'ties',
-  'value.peer_programming_active_posters': 'members',
-  'value.peer_programming_tasks_helped': 'cards',
-};
-
-function valueEventInWeek(source: ValueEventSource): (weekStart: string) => Promise<number> {
-  return (weekStart: string) =>
-    guardedScalar(
-      source.tables,
-      `SELECT (${occurrencesExpression(source.occurrences)})::text AS v
-         FROM (${source.rowSql}) AS rows
-        WHERE rows.at >= $1::date AND rows.at < $1::date + INTERVAL '7 days'`,
-      weekStart,
-    );
-}
-
 // ── Adoption rows (honest non-value metrics) ──────────────────────────────────
 
 // Two adoption readings about turnout, both built from the shared member-day set in
 // lib/engagement/member-activity.ts — a (member, UTC day) pair for every day a member signed in,
 // taken from the sign-in record `login_events` and nothing else (owner decision, 2026-08-27). What a
-// member did once they were here is a different question and is already answered by the per-plugin
-// cards above, from each plugin's own rows; folding those into the headcount makes a number that
-// moves when a plugin changes what it writes and cannot be compared across weeks. If a reading here
+// member did once they were here is a different question, answered by action minutes
+// (lib/measures/); folding it into the headcount makes a number that moves when a plugin changes
+// what it writes and cannot be compared across weeks. If a reading here
 // looks low, the sign-in record is what to check, not this definition — see
 // ctf/scripts/sql/active-members-audit.sql, which prints the record's span next to the week's count.
 // Aggregate only — never a per-member figure.
@@ -206,38 +123,6 @@ const accountsDeleted = (weekStart: string) =>
     weekStart,
   );
 
-// Directory: findable members — claimed, active, non-deleted profiles holding at least one skill.
-// Claim time is not stored, so this is the cumulative count of such profiles created by week end
-// (their CURRENT claimed/active state) — the same cumulative pattern the old members.total used.
-const directoryFindableMembers = (weekStart: string) =>
-  guardedScalar(
-    ['directory_profiles', 'directory_profile_skills'],
-    `SELECT COUNT(*)::text AS v FROM directory_profiles p
-     WHERE p.claimed_by_user_id IS NOT NULL
-       AND p.created_at < $1::date + INTERVAL '7 days'
-       AND EXISTS (SELECT 1 FROM directory_profile_skills s WHERE s.profile_id = p.id)`,
-    weekStart,
-  );
-
-// Mood: adoption, aggregate only — never an individual reading.
-const moodCheckins = windowCount('mood_submissions', 'submitted_at');
-const moodAverage = (weekStart: string) =>
-  guardedScalar(
-    'mood_submissions',
-    `SELECT ROUND(AVG(mood_value)::numeric, 2)::text AS v FROM mood_submissions
-     WHERE submitted_at >= $1::date AND submitted_at < $1::date + INTERVAL '7 days'`,
-    weekStart,
-  );
-
-// ClickLog: adoption, aggregate only — a private personal tally, so never per-member detail.
-const clickLogIncidents = windowCount('click_log_incidents', 'created_at');
-const clickLogActiveLoggers = (weekStart: string) =>
-  guardedScalar(
-    'click_log_incidents',
-    `SELECT COUNT(DISTINCT user_id)::text AS v FROM click_log_incidents
-     WHERE created_at >= $1::date AND created_at < $1::date + INTERVAL '7 days'`,
-    weekStart,
-  );
 
 // ── Goal rows (state metrics with weekly snapshots) ───────────────────────────
 
@@ -378,7 +263,7 @@ type MetricSpec = {
   compute: (weekStart: string) => Promise<number>;
 };
 
-// Order here is the card order on the dashboard: goals, value events, adoption.
+// Order here is the card order on the dashboard: goals, then adoption.
 const METRIC_SPECS: MetricSpec[] = [
   {
     metricKey: 'goal.gdp_value_index',
@@ -393,20 +278,9 @@ const METRIC_SPECS: MetricSpec[] = [
     compute: (weekStart) =>
       goalMetricForWeek('goal.workforce_recruited', weekStart, () => liveWorkforceRecruited(weekStart)),
   },
-  ...VALUE_EVENT_SOURCES.map((source) => ({
-    metricKey: source.key,
-    metricUnit: VALUE_EVENT_UNITS[source.key],
-    sourcePlugin: EVENT_SOURCE_PLUGIN[source.key],
-    compute: valueEventInWeek(source),
-  })),
   { metricKey: 'adoption.active_members', metricUnit: 'members', sourcePlugin: 'platform', compute: activeMembers },
   { metricKey: 'adoption.daily_active_members', metricUnit: 'per day', sourcePlugin: 'platform', compute: dailyActiveMembers },
   { metricKey: 'adoption.accounts_deleted', metricUnit: 'accounts', sourcePlugin: 'platform', compute: accountsDeleted },
-  { metricKey: 'adoption.directory_findable_members', metricUnit: 'members', sourcePlugin: 'directory', compute: directoryFindableMembers },
-  { metricKey: 'adoption.mood_checkins', metricUnit: 'check-ins', sourcePlugin: 'mood', compute: moodCheckins },
-  { metricKey: 'adoption.mood_average', metricUnit: '', sourcePlugin: 'mood', compute: moodAverage },
-  { metricKey: 'adoption.click_log_incidents', metricUnit: 'incidents', sourcePlugin: 'click-log', compute: clickLogIncidents },
-  { metricKey: 'adoption.click_log_active_loggers', metricUnit: 'members', sourcePlugin: 'click-log', compute: clickLogActiveLoggers },
 ];
 
 // Compute one metric, reporting rather than hiding a read that failed. The 0 keeps the dashboard

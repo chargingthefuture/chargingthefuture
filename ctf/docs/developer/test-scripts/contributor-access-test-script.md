@@ -25,6 +25,10 @@
 - Nothing to re-test from the 2026-08-09 Commons rename: the Commons API routes moved from
   `/api/hub/*` to `/api/commons/*` and `lib/hub/` became `lib/commons/`, so this plugin's
   inventory was updated only where it names one of those paths. No step below changes.
+- Nothing to re-test from the 3.1.0 retirement of the Weekly Performance per-plugin cards
+  (2026-10-28): the value events this plugin counts stay in `lib/contributor-access/value-events.ts`
+  and nothing here read the dashboard, so the inventory changed only where it said the dashboard
+  showed them. No step below changes.
 
 ---
 

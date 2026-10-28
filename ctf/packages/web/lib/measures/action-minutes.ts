@@ -28,7 +28,7 @@ export async function creditActionSeconds(client: PoolClient, userId: string, so
 
 // Every member's action minutes per UTC day, from all three sources. Interpolated into the reads
 // below; $1 is the first day counted (inclusive).
-const DAILY_MINUTES_CTE = `
+export const DAILY_MINUTES_CTE = `
   minutes AS (
     SELECT user_id, usage_date AS day, seconds / 60.0 AS m
       FROM member_action_seconds_daily WHERE usage_date >= $1::date

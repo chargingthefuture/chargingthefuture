@@ -4,9 +4,10 @@ import { VALUE_EVENT_SOURCES, aggregateExpression, type ValueEventSource } from 
 
 // Contributor Access — per-member ALL-TIME counts of the fifteen value events.
 //
-// Each query counts the SAME events as lib/weekly-performance/live-metrics.ts (same tables, same
-// fixed filters), with two differences: no week window (all-time), and grouped per the member who
-// DELIVERED the value (provider/host/fulfiller/sender/author — not the receiver). Every query is
+// Each query counts the events defined in ./value-events.ts (same tables, same fixed filters; the
+// Weekly Performance dashboard's per-plugin cards that once showed them retired in 3.1.0), all-time
+// rather than per week, and grouped per the member who DELIVERED the value
+// (provider/host/fulfiller/sender/author — not the receiver). Every query is
 // guarded on table existence and never throws: a missing table or a read error contributes nothing.
 // All table and column names are fixed literals — no user input is interpolated into SQL.
 //
