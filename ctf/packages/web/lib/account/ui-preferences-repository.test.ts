@@ -8,9 +8,9 @@ import { getUserUiPreferences, setUserUiPreferences } from './ui-preferences-rep
 describe('user UI preferences', () => {
   beforeEach(() => queryDb.mockReset());
 
-  it('reads 3.0 and the default theme when the member has no row', async () => {
+  it('reads 3.1 and the default theme when the member has no row', async () => {
     queryDb.mockResolvedValue({ rows: [] });
-    await expect(getUserUiPreferences('user_1')).resolves.toEqual({ theme: 'default', interfaceVersion: '3.0' });
+    await expect(getUserUiPreferences('user_1')).resolves.toEqual({ theme: 'default', interfaceVersion: '3.1' });
   });
 
   it('reads a saved 3.1', async () => {
@@ -18,9 +18,9 @@ describe('user UI preferences', () => {
     await expect(getUserUiPreferences('user_1')).resolves.toEqual({ theme: 'comic', interfaceVersion: '3.1' });
   });
 
-  it('treats an unknown stored version as 3.0', async () => {
+  it('treats an unknown stored version as 3.1, the default', async () => {
     queryDb.mockResolvedValue({ rows: [{ theme: 'default', interface_version: '9.9' }] });
-    await expect(getUserUiPreferences('user_1')).resolves.toMatchObject({ interfaceVersion: '3.0' });
+    await expect(getUserUiPreferences('user_1')).resolves.toMatchObject({ interfaceVersion: '3.1' });
   });
 
   it('saving only the interface leaves the theme to the stored value', async () => {

@@ -380,3 +380,13 @@ public cards: rides wanted, Skill Up cohorts, SkillsHunt, numbers, replays. No c
 no SocketRelay ask, goal, listing, announcement, invitation or Mood card appears. The card menu has
 no Mute. Step 2 opens the public listen page, then the sign-in page. Step 3 lands on the home page.
 **Result:** web ☐ — notes:
+
+## AD-20 · 3.1 is the default (launch, 2026-10-28)
+**Role:** a member who never switched, a member on 3.0, a signed-out visitor · **Surfaces:** web, android
+**Steps:**
+1. As a member who never opened Settings, open the app.
+2. As a member who was on 3.0 before the launch, open the app, then go back to 3.0 in Settings and reload.
+3. Signed out, open `/`.
+**Expected:** Step 1 shows the 3.1 frame. Step 2 shows 3.1 first, and 3.0 after going back, which stays.
+Step 3 lands on `/today`, Today as anybody can read it, with Sign in.
+**Result:** web ☐ android ☐ — notes:
