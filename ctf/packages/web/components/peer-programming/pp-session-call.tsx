@@ -1,10 +1,11 @@
 'use client';
 
-// Live video session for a PeerProgramming cohort. Joins the cohort's GetStream
-// (Stream) video call using credentials minted by POST /api/peer-programming/session/join,
-// and renders one video tile per participant. Camera and microphone start enabled so
-// joining puts the member on screen; they can mute/stop from the controls.
-import { useEffect, useMemo, useState } from 'react';
+// Live video session for a PeerProgramming cohort, on the cohort's GetStream (Stream) video call using
+// credentials minted by POST /api/peer-programming/session/join. The member first sees their own
+// camera, with the camera, microphone and background blur to set (pp-call-lobby.tsx), then joins and
+// gets one tile per participant. On another member's tile: Block and report. Picture in picture
+// keeps the call in its own window, and the browser opens it there on its own when it supports that.
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   StreamVideo,
   StreamVideoClient,
@@ -18,6 +19,8 @@ import { Mic, MicOff, Video as VideoIcon, VideoOff, PhoneOff } from 'lucide-reac
 import { useTheme } from '@/hooks/useTheme';
 import { getPeerProgrammingTokens, type PeerProgrammingTokens } from './pp-shared';
 import { reportError } from 'lib/observability/report';
+import { BlockAndReportButton, BlurBackgroundToggle, CallFiltersProvider, openPictureInPicture } from '@/components/shared/call-safety';
+import { PeerProgrammingCallLobby } from './pp-call-lobby';
 
 const CALL_TYPE = 'default';
 
@@ -89,7 +92,7 @@ export function PeerProgrammingSessionCall({
   const t = getPeerProgrammingTokens(theme);
   const [client, setClient] = useState<StreamVideoClient | null>(null);
   const [call, setCall] = useState<Call | null>(null);
-  const [status, setStatus] = useState<'connecting' | 'joined' | 'error'>('connecting');
+  const [status, setStatus] = useState<'connecting' | 'lobby' | 'joined' | 'error'>('connecting');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [deviceNotices, setDeviceNotices] = useState<string[]>([]);
 
@@ -105,14 +108,14 @@ export function PeerProgrammingSessionCall({
 
     void (async () => {
       try {
-        await activeCall.join({ create: true });
+        // The devices start before joining so the member can check them first.
         const cameraNotice = await startDevice('camera', () => activeCall.camera.enable(), credentials.streamCallId);
         const micNotice = await startDevice('microphone', () => activeCall.microphone.enable(), credentials.streamCallId);
         if (canceled) return;
         setDeviceNotices([cameraNotice, micNotice].filter((notice): notice is string => notice !== null));
         setClient(videoClient);
         setCall(activeCall);
-        setStatus('joined');
+        setStatus('lobby');
       } catch (error) {
         if (canceled) return;
         reportError(error, {
@@ -134,7 +137,19 @@ export function PeerProgrammingSessionCall({
     };
   }, [credentials.streamApiKey, credentials.streamToken, credentials.streamUserId, credentials.streamCallId, displayName]);
 
-  if (status !== 'joined' || !client || !call) {
+  const join = async () => {
+    if (!call) return;
+    try {
+      await call.join({ create: true });
+      setStatus('joined');
+    } catch (error) {
+      reportError(error, { area: 'peer-programming', op: 'session_join_client', extra: { callId: credentials.streamCallId } });
+      setErrorMessage(error instanceof Error ? error.message : 'Could not connect to the live session.');
+      setStatus('error');
+    }
+  };
+
+  if (status === 'connecting' || status === 'error' || !client || !call) {
     return (
       <div style={{ padding: '60px 0', borderRadius: 16, background: 'rgba(255,255,255,0.02)', border: `1px solid ${t.ACCENT}30`, textAlign: 'center' }}>
         <VideoIcon size={48} style={{ color: t.ACCENT, display: 'block', margin: '0 auto 12px' }} />
@@ -151,7 +166,16 @@ export function PeerProgrammingSessionCall({
   return (
     <StreamVideo client={client}>
       <StreamCall call={call}>
-        <PeerProgrammingSessionStage onLeave={onLeave} deviceNotices={deviceNotices} />
+        <CallFiltersProvider area="peer-programming">
+          {status === 'lobby' ? (
+            <>
+              <style>{PARTICIPANT_TILE_CSS}</style>
+              <PeerProgrammingCallLobby deviceNotices={deviceNotices} onJoin={join} onCancel={onLeave} />
+            </>
+          ) : (
+            <PeerProgrammingSessionStage onLeave={onLeave} deviceNotices={deviceNotices} />
+          )}
+        </CallFiltersProvider>
       </StreamCall>
     </StreamVideo>
   );
@@ -188,6 +212,8 @@ function PeerProgrammingSessionStage({ onLeave, deviceNotices }: { onLeave: () =
     }
     return Array.from(byUser.values());
   }, [participants]);
+  const remoteTile = useRef<HTMLDivElement | null>(null);
+  const [pipNotice, setPipNotice] = useAutoPictureInPicture(remoteTile);
 
   return (
     <div>
@@ -206,12 +232,34 @@ function PeerProgrammingSessionStage({ onLeave, deviceNotices }: { onLeave: () =
       ))}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 }}>
         {uniqueParticipants.map((participant) => (
-          <div key={participant.sessionId} className="pp-participant-tile" style={{ borderRadius: 12, overflow: 'hidden', border: `1px solid ${t.ACCENT}25`, background: '#000', aspectRatio: '4 / 3' }}>
-            <ParticipantView participant={participant} />
+          <div key={participant.sessionId} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div
+              ref={participant.isLocalParticipant || remoteTile.current ? undefined : remoteTile}
+              className="pp-participant-tile"
+              style={{ borderRadius: 12, overflow: 'hidden', border: `1px solid ${t.ACCENT}25`, background: '#000', aspectRatio: '4 / 3' }}
+            >
+              <ParticipantView participant={participant} />
+            </div>
+            {participant.isLocalParticipant ? null : (
+              <BlockAndReportButton accountId={accountIdOf(participant.userId)} name={participant.name || 'this member'} onDone={onLeave} color="#F87171" />
+            )}
           </div>
         ))}
       </div>
-      <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 20 }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginTop: 16 }}>
+        <BlurBackgroundToggle color={t.ACCENT} border={`${t.ACCENT}40`} />
+        {uniqueParticipants.length > 1 ? (
+          <button
+            type="button"
+            onClick={() => void openPictureInPicture(remoteTile.current).then(setPipNotice)}
+            style={{ minHeight: 40, padding: '6px 14px', borderRadius: 999, border: `1px solid ${t.ACCENT}40`, background: 'transparent', color: t.ACCENT, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+          >
+            Picture in picture
+          </button>
+        ) : null}
+      </div>
+      {pipNotice ? <div role="status" style={{ marginTop: 8, fontSize: 12, color: t.SUBTLE, textAlign: 'center' }}>{pipNotice}</div> : null}
+      <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 16 }}>
         <button type="button" onClick={() => void microphone.toggle()} aria-label={micOff ? 'Unmute' : 'Mute'} style={controlStyle(micOff, t)}>
           {micOff ? <MicOff size={18} /> : <Mic size={18} />}
         </button>
@@ -224,6 +272,31 @@ function PeerProgrammingSessionStage({ onLeave, deviceNotices }: { onLeave: () =
       </div>
     </div>
   );
+}
+
+// PeerProgramming Stream ids are `pp-<accountId>` (lib/peer-programming/stream.ts).
+function accountIdOf(streamUserId: string): string {
+  return streamUserId.startsWith('pp-') ? streamUserId.slice('pp-'.length) : streamUserId;
+}
+
+// Picture in picture by default: where the browser lets a page open it on its own (Chrome, for a
+// video call that is hidden behind another tab or app), the other member's video moves to its own
+// window. Elsewhere the button does it.
+function useAutoPictureInPicture(tile: React.RefObject<HTMLDivElement | null>): [string | null, (notice: string | null) => void] {
+  const [notice, setNotice] = useState<string | null>(null);
+  useEffect(() => {
+    const session = typeof navigator !== 'undefined' ? navigator.mediaSession : undefined;
+    if (!session) return;
+    const action = 'enterpictureinpicture' as MediaSessionAction;
+    try {
+      session.setActionHandler(action, () => void openPictureInPicture(tile.current).then(setNotice));
+    } catch {
+      return; // This browser does not offer it; the button still works.
+    }
+    // Only reached when the handler was set, so clearing it is supported too.
+    return () => session.setActionHandler(action, null);
+  }, [tile]);
+  return [notice, setNotice];
 }
 
 function controlStyle(active: boolean, t: PeerProgrammingTokens): React.CSSProperties {
