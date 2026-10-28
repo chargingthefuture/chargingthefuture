@@ -3,22 +3,23 @@ import { CHYME_ERROR_CODE } from 'lib/chyme/constants';
 import { logChymeAudit } from 'lib/chyme/audit';
 import { getRoomState } from 'lib/chyme/repository';
 import { reportError } from 'lib/observability/report';
-import { requireChymeRoomAccess } from '../_lib';
+import { requireChymeMemberRoomAccess } from '../_lib';
 
 export async function GET(request: Request) {
-  const gate = await requireChymeRoomAccess(request);
+  const gate = await requireChymeMemberRoomAccess(request);
   if (!gate.allowed) {
     return gate.response;
   }
 
   try {
-    const room = await getRoomState(gate.identity, gate.roomKey, gate.auth.isAdmin);
+    const state = await getRoomState(gate.identity, gate.roomKey, gate.auth.isAdmin);
+    const room = { ...state, viewer: { ...state.viewer, listenOnly: gate.listenOnly } };
     logChymeAudit({
       pluginId: 'chyme',
       command: 'chyme.room.state.fetch',
       actorId: gate.auth.userId,
       status: 'allow',
-      reason: 'approved_user_or_admin',
+      reason: gate.listenOnly ? 'listening_before_unlock' : 'approved_user_or_admin',
       target: {
         roomId: room.roomId,
         roomKey: room.roomKey,

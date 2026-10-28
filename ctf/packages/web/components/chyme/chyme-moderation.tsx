@@ -151,12 +151,13 @@ export function ChymeSpeakModeToggle({ moderation }: { moderation: ChymeModerati
 }
 
 // In place of the microphone control for a member who is listening in hand-raise mode.
-export function ChymeListeningNotice() {
+// `beforeUnlock`: a member not yet approved in Unlock listens and cannot ask to speak yet.
+export function ChymeListeningNotice({ beforeUnlock = false }: { beforeUnlock?: boolean } = {}) {
   const { theme } = useTheme();
   const t = getChymeTokens(theme);
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 12, background: t.INPUT_BG, border: `1px solid ${t.BORDER_STRONG}`, color: t.SUBTLE, fontSize: 13, lineHeight: 1.4 }}>
-      <MicOff size={16} /> Listening — raise your hand to ask to speak
+      <MicOff size={16} /> {beforeUnlock ? 'Listening. Speaking opens once Unlock is done.' : 'Listening — raise your hand to ask to speak'}
     </div>
   );
 }

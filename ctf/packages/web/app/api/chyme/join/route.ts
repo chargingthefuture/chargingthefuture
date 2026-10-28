@@ -6,11 +6,12 @@ import { logChymeAudit } from 'lib/chyme/audit';
 import { reportError } from 'lib/observability/report';
 import { streamFailureMessage } from 'lib/shared/stream-error-text';
 import { setCallMemberRole } from 'lib/chyme/stream-moderation';
+import { setMemberRole } from 'lib/chyme/moderation';
 import type { ChymeRoomResponse } from 'lib/chyme/types';
-import { requireChymeRoomAccess, ensureMutationCsrf } from '../_lib';
+import { requireChymeMemberRoomAccess, ensureMutationCsrf } from '../_lib';
 
 export async function POST(request: Request) {
-  const gate = await requireChymeRoomAccess(request);
+  const gate = await requireChymeMemberRoomAccess(request);
   if (!gate.allowed) {
     return gate.response;
   }
@@ -65,14 +66,14 @@ export async function POST(request: Request) {
     }
 
     const activeRoom = await markRoomCallJoined(gate.identity, gate.roomKey, gate.auth.isAdmin);
-    await applyJoinerCallRole(activeRoom, gate.auth.userId);
+    await applyJoinRole(activeRoom, gate.auth.userId, gate.listenOnly);
 
     logChymeAudit({
       pluginId: 'chyme',
       command: 'chyme.call.join',
       actorId: gate.auth.userId,
       status: 'allow',
-      reason: 'approved_user_or_admin',
+      reason: gate.listenOnly ? 'listening_before_unlock' : 'approved_user_or_admin',
       target: {
         roomId: activeRoom.roomId,
         roomKey: activeRoom.roomKey,
@@ -87,6 +88,7 @@ export async function POST(request: Request) {
         ok: true,
         roomId: activeRoom.roomId,
         roomKey: activeRoom.roomKey,
+        listenOnly: gate.listenOnly,
         ...credentials,
       },
       { status: 200 },
@@ -129,6 +131,14 @@ export async function POST(request: Request) {
       { status: 500 },
     );
   }
+}
+
+// A member not yet approved in Unlock is a listener in the room and on the call, so they cannot
+// publish. Everybody else gets the role the room's speak mode calls for.
+async function applyJoinRole(room: ChymeRoomResponse, userId: string, listenOnly: boolean): Promise<void> {
+  if (!listenOnly) return applyJoinerCallRole(room, userId);
+  await setMemberRole(room.roomKey, userId, 'listener');
+  await setCallMemberRole(room.roomKey, userId, 'listener');
 }
 
 // Hand-raise mode's server-side half for a member who joins after the switch: give them the role

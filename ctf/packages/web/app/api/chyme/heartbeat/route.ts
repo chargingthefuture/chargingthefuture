@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { CHYME_ERROR_CODE } from 'lib/chyme/constants';
 import { ChymeRemovedError, ChymeRoomFullError, touchRoomPresence } from 'lib/chyme/repository';
 import { reportError } from 'lib/observability/report';
-import { requireChymeRoomAccess, ensureMutationCsrf } from '../_lib';
+import { requireChymeMemberRoomAccess, ensureMutationCsrf } from '../_lib';
 
 // Presence heartbeat: the audio room pings this on an interval while a member is in the call so
 // their last_seen_at stays fresh and they keep counting as present. No audit log — it is a
@@ -21,7 +21,7 @@ async function readMicOn(request: Request): Promise<boolean | undefined> {
 }
 
 export async function POST(request: Request) {
-  const gate = await requireChymeRoomAccess(request);
+  const gate = await requireChymeMemberRoomAccess(request);
   if (!gate.allowed) {
     return gate.response;
   }
