@@ -494,3 +494,14 @@ rather than two copies to keep in step. The admin landing also lists **Shared Wr
 an archive costs real memory, so an account cannot do it in a loop.
 
 **Result:** web ☐
+
+### CMC-M20 · A contribution with a profile address finishes Unlock through the Knowledge Library
+**Role:** a signed-in member with no Unlock submission · **Surfaces:** web
+
+1. On `/knowledge`, send a piece of Quora writing with its profile address.
+2. As admin, open `/admin/unlock` and find the member's card.
+
+**Expected:** The card says it was finished by Quora writing brought into the Knowledge Library,
+with a link to the contributions.
+
+**Result:** web ☐
