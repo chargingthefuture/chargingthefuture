@@ -6470,15 +6470,16 @@ $comic_answer_ratings_rating_check$;
 -- across devices. Anonymous visitors rely on localStorage only. `theme` is 'default'
 -- (the original dark UI) or 'comic' (the comic-book dark theme). `interface_version` is which
 -- interface the member sees: '3.0' (the shipped app) or '3.1' (the social redesign), switched in
--- Settings; everyone starts on '3.0'.
+-- Settings; everyone starts on '3.1' since its launch (2026-10-28).
 CREATE TABLE IF NOT EXISTS user_ui_preferences (
   user_id TEXT PRIMARY KEY,
   theme TEXT NOT NULL DEFAULT 'default',
-  interface_version TEXT NOT NULL DEFAULT '3.0' CHECK (interface_version IN ('3.0', '3.1')),
+  interface_version TEXT NOT NULL DEFAULT '3.1' CHECK (interface_version IN ('3.0', '3.1')),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ALTER TABLE IF EXISTS user_ui_preferences ADD COLUMN IF NOT EXISTS theme TEXT NOT NULL DEFAULT 'default';
-ALTER TABLE IF EXISTS user_ui_preferences ADD COLUMN IF NOT EXISTS interface_version TEXT NOT NULL DEFAULT '3.0';
+ALTER TABLE IF EXISTS user_ui_preferences ADD COLUMN IF NOT EXISTS interface_version TEXT NOT NULL DEFAULT '3.1';
+ALTER TABLE IF EXISTS user_ui_preferences ALTER COLUMN interface_version SET DEFAULT '3.1';
 ALTER TABLE IF EXISTS user_ui_preferences ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 DO $user_ui_preferences_interface_version_check$
 BEGIN

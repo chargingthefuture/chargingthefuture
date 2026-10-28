@@ -6468,15 +6468,16 @@ $comic_answer_ratings_rating_check$;
 -- across devices. Anonymous visitors rely on localStorage only. `theme` is 'default'
 -- (the original dark UI) or 'comic' (the comic-book dark theme). `interface_version` is which
 -- interface the member sees: '3.0' (the shipped app) or '3.1' (the social redesign), switched in
--- Settings; everyone starts on '3.0'.
+-- Settings; everyone starts on '3.1' since its launch (2026-10-28).
 CREATE TABLE IF NOT EXISTS user_ui_preferences (
   user_id TEXT PRIMARY KEY,
   theme TEXT NOT NULL DEFAULT 'default',
-  interface_version TEXT NOT NULL DEFAULT '3.0' CHECK (interface_version IN ('3.0', '3.1')),
+  interface_version TEXT NOT NULL DEFAULT '3.1' CHECK (interface_version IN ('3.0', '3.1')),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ALTER TABLE IF EXISTS user_ui_preferences ADD COLUMN IF NOT EXISTS theme TEXT NOT NULL DEFAULT 'default';
-ALTER TABLE IF EXISTS user_ui_preferences ADD COLUMN IF NOT EXISTS interface_version TEXT NOT NULL DEFAULT '3.0';
+ALTER TABLE IF EXISTS user_ui_preferences ADD COLUMN IF NOT EXISTS interface_version TEXT NOT NULL DEFAULT '3.1';
+ALTER TABLE IF EXISTS user_ui_preferences ALTER COLUMN interface_version SET DEFAULT '3.1';
 ALTER TABLE IF EXISTS user_ui_preferences ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 DO $user_ui_preferences_interface_version_check$
 BEGIN
@@ -10803,3 +10804,23 @@ CREATE INDEX IF NOT EXISTS idx_contributions_submissions_held
 
 -- ── post migration: 0077_unlock_finish_routes.sql ──
 -- [demo-skip: names production (public.) tables directly; it repairs production data and has no meaning here]
+
+-- ── post migration: 0078_launch_3_1.sql ──
+-- post/0078: 3.1 is the default (owner decision, 2026-10-28, the launch).
+--
+-- New rows default to 3.1, and every member saved on 3.0 moves to 3.1. A stored 3.0 could not say
+-- whether somebody chose it or only saved a theme while 3.0 was the default, so the launch moves
+-- all of them; anybody can go back to 3.0 in Settings. Production and the demo schema. Safe to
+-- re-run, though a re-run would move back anybody who chose 3.0 again since.
+
+ALTER TABLE IF EXISTS user_ui_preferences ALTER COLUMN interface_version SET DEFAULT '3.1';
+UPDATE user_ui_preferences SET interface_version = '3.1', updated_at = NOW() WHERE interface_version = '3.0';
+
+ALTER TABLE IF EXISTS demo.user_ui_preferences ALTER COLUMN interface_version SET DEFAULT '3.1';
+DO $$
+BEGIN
+  IF to_regclass('demo.user_ui_preferences') IS NOT NULL THEN
+    UPDATE demo.user_ui_preferences SET interface_version = '3.1', updated_at = NOW() WHERE interface_version = '3.0';
+  END IF;
+END $$;
+
