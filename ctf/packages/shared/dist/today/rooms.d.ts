@@ -15,7 +15,9 @@ export type SeRoomView = {
     joined: boolean;
     quiet: boolean;
     minimizeLabel: string;
+    rule: string;
 };
+export declare const SE_ROOM_RULE = "Stay on topic: economics and collective action. Somebody who keeps going off topic can be removed from the room; their account is not affected.";
 export declare function seRoomView(scope: SeRoomScope, room: {
     joined: boolean;
     name: string | null;

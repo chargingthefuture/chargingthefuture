@@ -29,7 +29,13 @@ export type SeRoomView = {
   // Nobody in the room and the member not in it: show the quiet state.
   quiet: boolean;
   minimizeLabel: string;
+  // The rule on the rooms the System Architect hosts, which are both rooms.
+  rule: string;
 };
+
+// Somebody removed from a room for breaking it keeps their account; removal is from that room only.
+export const SE_ROOM_RULE =
+  'Stay on topic: economics and collective action. Somebody who keeps going off topic can be removed from the room; their account is not affected.';
 
 const ROOM_NAMES: Record<SeRoomScope, string> = { main: 'Main Room', contributors: 'Weavers of the Commons' };
 
@@ -44,6 +50,7 @@ export function seRoomView(scope: SeRoomScope, room: { joined: boolean; name: st
     joined: room.joined,
     quiet: !room.joined && room.count === 0,
     minimizeLabel: room.joined ? 'Keep listening and browse' : 'Back',
+    rule: SE_ROOM_RULE,
   };
 }
 
