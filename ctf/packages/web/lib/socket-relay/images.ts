@@ -2,6 +2,7 @@ import type { PoolClient } from 'pg';
 import { queryDb, withDbTransaction } from 'lib/db/postgres';
 import type { CommunityImageContentType } from 'lib/feed/community-images';
 import type { SocketRelayRequestImage } from './types';
+import { stripPictureMetadata } from 'lib/images/strip-metadata';
 
 // One picture per SocketRelay request (owner decision, 2026-10-02): SocketRelay is a classifieds board,
 // and a listing for a chair or a bike is read faster with a photo of it. Stored against the request in
@@ -75,6 +76,8 @@ export async function saveRequestImage(
     if ((owner.rowCount ?? 0) === 0) throw new Error('request_not_found');
     if (!isAdmin && owner.rows[0].owner_user_id !== actorUserId) throw new Error('not_owner');
 
+    // Location and camera data are removed here as well as in the browser (lib/images/strip-metadata.ts).
+    const bytes = stripPictureMetadata(image.bytes);
     const saved = await client.query<ImageMetaRow>(
       `INSERT INTO socket_relay_request_images
          (request_id, uploaded_by_user_id, content_type, bytes, byte_size, width, height, alt_text, rules_acknowledged_at, created_at)
@@ -85,7 +88,7 @@ export async function saveRequestImage(
          height = EXCLUDED.height, alt_text = EXCLUDED.alt_text,
          rules_acknowledged_at = EXCLUDED.rules_acknowledged_at, created_at = EXCLUDED.created_at
        RETURNING request_id::text AS request_id, width, height, alt_text, created_at`,
-      [requestId, actorUserId, image.contentType, Buffer.from(image.bytes), image.bytes.byteLength, image.width, image.height, image.altText],
+      [requestId, actorUserId, image.contentType, Buffer.from(bytes), bytes.byteLength, image.width, image.height, image.altText],
     );
     await client.query(`UPDATE socket_relay_requests SET updated_at = NOW() WHERE id = $1::uuid`, [requestId]);
     return {
@@ -126,5 +129,7 @@ export async function readRequestImage(requestId: string): Promise<{ contentType
     `SELECT content_type, bytes FROM socket_relay_request_images WHERE request_id = $1::uuid LIMIT 1`,
     [requestId],
   );
-  return result.rows[0] ? { contentType: result.rows[0].content_type, bytes: result.rows[0].bytes } : null;
+  // Stripped on the way out too, so pictures stored before the server removed metadata are covered.
+  const row = result.rows[0];
+  return row ? { contentType: row.content_type, bytes: Buffer.from(stripPictureMetadata(row.bytes)) } : null;
 }

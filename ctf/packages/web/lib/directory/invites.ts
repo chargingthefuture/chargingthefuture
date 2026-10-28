@@ -3,6 +3,7 @@ import { queryDb } from 'lib/db/postgres';
 import { getAppUrl } from 'lib/auth/provider-env';
 import type { CommunityImageContentType } from 'lib/feed/community-images';
 import { INVITE_CODE_RE, normalizeInviteHandle, quoraHandleFromUrl, type DirectoryInviteInput } from './invite-input';
+import { stripPictureMetadata } from 'lib/images/strip-metadata';
 
 // Invitations to people listed in the Directory (owner decision, 2026-10-15).
 //
@@ -179,7 +180,8 @@ export async function upsertDirectoryInvite(input: DirectoryInviteInput): Promis
       input.bodyMarkdown,
       input.publishedOn,
       input.directoryProfileId,
-      input.image ? Buffer.from(input.image.bytes) : null,
+      // Location and camera data are removed before storing (lib/images/strip-metadata.ts).
+      input.image ? Buffer.from(stripPictureMetadata(input.image.bytes)) : null,
       input.image?.contentType ?? null,
       input.image?.alt ?? null,
       input.isPublic,
@@ -260,7 +262,8 @@ export async function readDirectoryInviteImage(slug: string): Promise<{ contentT
     [slug],
   );
   const row = result.rows[0];
-  return row ? { contentType: row.image_type, bytes: row.image } : null;
+  // Stripped on the way out too, so pictures stored before the server removed metadata are covered.
+  return row ? { contentType: row.image_type, bytes: Buffer.from(stripPictureMetadata(row.image)) } : null;
 }
 
 /** Counts of public and private invites, for the signed-out page. */
