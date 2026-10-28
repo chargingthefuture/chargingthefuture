@@ -20,7 +20,7 @@
     radial-gradient(circle at 85% 5%, rgba(14, 165, 233, 0.15), transparent 28%),
     var(--ctf-bg);
   color: var(--ctf-text-shell);
-  font-family: Inter, system-ui, -apple-system, sans-serif;
+  font-family: 'Figtree Variable', system-ui, -apple-system, sans-serif;
 }
 
 /*
@@ -2115,7 +2115,7 @@
 }
 
 /* Compact wordmark for the signed-in bar. Turning the section tabs into icons freed room beside the
-   mark, but not enough for the signed-out lockup: measured in Chromium at the app's own Inter, that
+   mark, but not enough for the signed-out lockup: measured in Chromium at the app's own font, that
    lockup is 85px wide and an admin on a 375px phone has 65px to spare. Setting the two words on their
    own lines instead of one is 50px (54px since the wordmark moved to 12px Newsreader on 2026-10-14,
    measured the same way), which fits every phone width with room left over — so the product

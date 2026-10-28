@@ -398,7 +398,7 @@ export function WorkforceShell({ isAdmin }: { isAdmin?: boolean }) {
           background: t.BG,
           alignItems: 'center',
           justifyContent: 'center',
-          fontFamily: "'Inter', system-ui, sans-serif",
+          fontFamily: "'Figtree Variable', system-ui, sans-serif",
           color: '#EF4444',
           fontSize: 14,
           padding: 24,
@@ -436,7 +436,7 @@ export function WorkforceShell({ isAdmin }: { isAdmin?: boolean }) {
     // position: sticky, the same way the shared MobileScreenHeader does.
     // ctf-self-responsive opts out of the global mobile de-flex so this stays a flex column.
     return (
-      <div className="ctf-self-responsive" style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT }}>
+      <div className="ctf-self-responsive" style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', background: t.BG, fontFamily: "'Figtree Variable', system-ui, sans-serif", color: t.TEXT }}>
         <div style={{ background: t.HEADER, borderBottom: `1px solid ${t.BORDER}`, flexShrink: 0, position: 'sticky', top: 0, zIndex: 40 }}>
           {/* flexWrap: this row carries the plugin actions plus the three global ones, which
               together overflow a 390px phone — the last control was clipped off the right

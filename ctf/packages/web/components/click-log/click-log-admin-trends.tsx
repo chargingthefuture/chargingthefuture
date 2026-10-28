@@ -55,7 +55,7 @@ export function ClickLogAdminTrends() {
   const view = report ? buildTrendReportView(report, { includeAreas: true }) : null;
 
   return (
-    <div style={{ minHeight: "100vh", background: TREND_BG, color: TREND_TEXT, fontFamily: "'Inter', system-ui, sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: TREND_BG, color: TREND_TEXT, fontFamily: "'Figtree Variable', system-ui, sans-serif" }}>
       <MobileScreenHeader
         title="ClickLog Trends"
         icon={<AlertTriangle size={18} color={TREND_ACCENT} />}

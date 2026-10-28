@@ -9,7 +9,7 @@ import { PublicShellWorldwide } from '@/components/plugins/public-shell-worldwid
 
 // Palette from the SkillUpPublic / MobileSkillUpPublic design mockups,
 // served through the shared theme tokens (default theme returns the exact shipped hex).
-const FONT_FAMILY = "'Inter', system-ui, sans-serif";
+const FONT_FAMILY = "'Figtree Variable', system-ui, sans-serif";
 
 const HIGHLIGHTS = ['Free for all survivors', 'Earn badges and completion bonuses', 'Trainer-led cohorts'];
 

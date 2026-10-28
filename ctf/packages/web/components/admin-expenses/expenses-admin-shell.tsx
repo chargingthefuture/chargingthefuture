@@ -207,7 +207,7 @@ export function ExpensesAdminShell() {
   }
 
   return (
-    <div style={{ minHeight: '100dvh', background: t.BG, color: t.TITLE, fontFamily: "'Inter',system-ui,sans-serif" }}>
+    <div style={{ minHeight: '100dvh', background: t.BG, color: t.TITLE, fontFamily: "'Figtree Variable',system-ui,sans-serif" }}>
       <MobileScreenHeader title="Expenses" accent={t.ACCENT} icon={<Receipt size={18} color={t.ACCENT} />} />
       {/* No in-page title card: the header above names the screen (rule 131, owner report 2026-07-27). */}
       <div style={{ maxWidth: 900, margin: '0 auto', padding: '16px 16px 48px' }}>

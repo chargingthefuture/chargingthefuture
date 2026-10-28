@@ -53,6 +53,7 @@ import { withDbTransaction } from 'lib/db/postgres';
 import { STREAM_VIDEO_SURFACE, chymeRoomSurface } from 'lib/stream-quota/constants';
 import { resolveChymeQuotaPolicy, type ChymeQuotaPolicy } from 'lib/stream-quota/policy';
 import { readStreamVideoQuotaBand, recordStreamVideoUsage } from 'lib/stream-quota/usage';
+import { creditActionSeconds } from 'lib/measures/action-minutes';
 
 // Thrown by markRoomCallJoined when the room already holds as many members as the cap in force
 // allows. The join route answers 409 with the message; the client shows it in place of the stage.
@@ -660,6 +661,8 @@ export async function touchRoomPresence(
     // Each heartbeat is one participant's connected time since the last one; this is the minute
     // meter's only input for members, so it is written here and nowhere else on the member path.
     await recordStreamVideoUsage(client, chymeRoomSurface(roomKey), credited);
+    // The same seconds are the member's own action minutes (Days won, retention).
+    await creditActionSeconds(client, identity.userId, 'chyme-room', credited);
   });
 }
 
@@ -695,7 +698,9 @@ export async function setRoomMemberHandRaised(
       `,
       [room.id, identity.userId, raised, String(CHYME_PRESENCE_TTL_SECONDS)],
     );
-    await recordStreamVideoUsage(client, chymeRoomSurface(roomKey), Number(bumped.rows[0]?.credited_seconds ?? 0));
+    const handSeconds = Number(bumped.rows[0]?.credited_seconds ?? 0);
+    await recordStreamVideoUsage(client, chymeRoomSurface(roomKey), handSeconds);
+    await creditActionSeconds(client, identity.userId, 'chyme-room', handSeconds);
     const [participants, policy, guestCount] = await Promise.all([
       listRoomParticipants(client, room.id),
       readQuotaPolicy(client),

@@ -12,6 +12,8 @@ export type WhatWorksProblem = {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  // 'pending' while a member's proposal waits for review. Who proposed it is never part of this type.
+  review_status: 'pending' | 'approved';
 };
 
 export type WhatWorksProduct = {

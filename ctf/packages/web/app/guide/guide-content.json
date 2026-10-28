@@ -221,17 +221,19 @@
   {
    "id": "what-works",
    "title": "WhatWorks",
-   "updated": "2026-08-02",
+   "updated": "2026-10-27",
    "summary": "WhatWorks is a shared list of tools that survivors say help with specific problems.",
    "body": [
     "Browse tools organized by problem. Each tool shows its name, a short note about why it works, how many survivors found it helpful, and a link to get it.",
     "Mark a tool as helpful if it worked for you. Your endorsement adds to the count other survivors see. You can change your mind and remove your endorsement anytime.",
-    "Suggest a new tool for a problem you know about. Give the product name, a link to buy or access it, and an optional note. Your suggestion goes to review before it appears on the list."
+    "Suggest a new tool for a problem you know about. Give the product name, a link to buy or access it, and an optional note. Your suggestion goes to review before it appears on the list.",
+    "If the problem you have is not on the list, propose it under the suggest form. Problems already listed that sound the same appear as you type, so you can add to one of those instead. A proposed problem waits for review, and a duplicate is merged into the one already listed."
    ],
    "howTo": [
     "Open the WhatWorks app while signed in. Problems and their tools load with names, why-it-works notes, helpful counts, and purchase links.",
     "Pick a tool and mark it helpful if it helped you. The count goes up by one. Toggle it off to remove your endorsement.",
-    "To suggest a tool, choose a problem, enter the product name and purchase link, add a note if you want, and submit. The suggestion waits for review before appearing on the shared list."
+    "To suggest a tool, choose a problem, enter the product name and purchase link, add a note if you want, and submit. The suggestion waits for review before appearing on the shared list.",
+    "To propose a problem, type it in a few words under the suggest form, check the matches that appear, and tap Propose it."
    ]
   },
   {

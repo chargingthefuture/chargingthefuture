@@ -9,6 +9,7 @@ import { BackChevronButton } from '@/lib/nav/back-history';
 import { useTheme } from '@/hooks/useTheme';
 import { getWhatWorksTokens, type SuggestDraft, type WhatWorksProblemOption, type WhatWorksTokens } from './ww-shared';
 import { WhatWorksSuggestGuidance } from './ww-suggest-guidance';
+import { WhatWorksProposeProblem } from './ww-propose-problem';
 
 type Props = {
   problems: WhatWorksProblemOption[];
@@ -42,7 +43,7 @@ function Field({ label, required, children }: { label: string; required?: boolea
 // Success confirmation shown after a suggestion is submitted for review.
 function SuggestSuccess({ t, onBack, onAddAnother }: { t: WhatWorksTokens; onBack?: () => void; onAddAnother: () => void }) {
   return (
-    <div style={{ width: '100%', height: '100dvh', maxHeight: '100%', background: t.BG, fontFamily: "'Inter',system-ui", color: t.TITLE, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+    <div style={{ width: '100%', height: '100dvh', maxHeight: '100%', background: t.BG, fontFamily: "'Figtree Variable',system-ui", color: t.TITLE, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
       <div style={{ maxWidth: 460, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18, padding: '0 32px' }}>
         <div style={{ width: 72, height: 72, borderRadius: '50%', background: `${t.ACCENT}15`, border: `1px solid ${t.ACCENT}30`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <CheckCircle size={34} color={t.ACCENT} />
@@ -98,7 +99,7 @@ type SuggestFormProps = {
 // The suggest layout: header bar, the entry form, and the guidance panel.
 function SuggestForm({ t, inputStyle, problems, isFirst, error, problemId, setProblemId, name, setName, link, setLink, why, setWhy, ready, submitting, onSubmit, onBack }: SuggestFormProps) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', maxHeight: '100%', background: t.BG, fontFamily: "'Inter',system-ui", color: t.TITLE, overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', maxHeight: '100%', background: t.BG, fontFamily: "'Figtree Variable',system-ui", color: t.TITLE, overflow: 'hidden' }}>
       <div style={{ height: 56, borderBottom: `1px solid ${t.BORDER_SOLID}`, display: 'flex', alignItems: 'center', padding: '0 16px', gap: 12, background: t.HEADER, flexShrink: 0 }}>
         <BackChevronButton accent={t.ACCENT} size={36} />
         <ListChecks size={18} color={t.ACCENT} />
@@ -146,7 +147,7 @@ function SuggestForm({ t, inputStyle, problems, isFirst, error, problemId, setPr
                 </select>
                 <ChevronDown size={15} color={t.MUTED} style={{ flexShrink: 0 }} />
               </div>
-              <div style={{ fontSize: 11, color: t.MUTED, marginTop: 6, lineHeight: 1.5 }}>Pick an existing problem. New problems are added by admins to avoid duplicates.</div>
+              <div style={{ fontSize: 11, color: t.MUTED, marginTop: 6, lineHeight: 1.5 }}>Pick an existing problem. Not listed? Propose it below the form.</div>
             </Field>
 
             <Field label="Product name" required>
@@ -166,6 +167,7 @@ function SuggestForm({ t, inputStyle, problems, isFirst, error, problemId, setPr
 
             <SuggestSubmitButton t={t} ready={ready} submitting={submitting} />
           </form>
+          <WhatWorksProposeProblem onPick={setProblemId} />
         </div>
 
         <WhatWorksSuggestGuidance />

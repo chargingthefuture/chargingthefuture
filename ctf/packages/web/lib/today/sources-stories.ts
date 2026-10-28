@@ -2,10 +2,11 @@ import type { SeTodayCard } from '@ctf/shared';
 import { listFeedTimeline } from 'lib/feed/repository';
 import { listLatestDirectoryInviteCards } from 'lib/directory/invites';
 import { getReaderList } from 'lib/what-works/repository';
+import { hasSurveyResponse } from 'lib/quora-deletion-survey/repository';
 import { action, card, clip, startOfTodayIso, type TodayViewer } from './card';
 
-// Stories: announcements from the System Architect, the newest Directory invitations, and one
-// thing that worked for somebody, a different one each day.
+// Stories: announcements from the System Architect, the newest Directory invitations, one thing
+// that worked for somebody, a different one each day, and the Quora survey card until answered.
 
 export async function announcementStories(viewer: TodayViewer): Promise<SeTodayCard[]> {
   const { items } = await listFeedTimeline(viewer.userId, viewer.isAdmin ? 'admin' : null, { page: 1, pageSize: 3 }, { channel: 'announcements' });
@@ -63,6 +64,25 @@ export async function whatWorksStory(viewer: TodayViewer, now = new Date()): Pro
       createdAtIso: startOfTodayIso(now),
       href,
       actions: [action('helped-me', 'It helped me too', href), action('open', 'See the problem', href)],
+    }),
+  ];
+}
+
+// The Quora account removals survey, once: shown until the member answers it (or hides the card).
+export async function surveyCard(viewer: TodayViewer, now = new Date()): Promise<SeTodayCard[]> {
+  if (await hasSurveyResponse(viewer.userId)) return [];
+  const href = '/survey/quora-account-deletions';
+  return [
+    card({
+      source: 'quora-survey',
+      sourceId: 'once',
+      kind: 'story',
+      label: 'Story · Quora account removals',
+      title: 'Has Quora removed an account of yours?',
+      body: 'A short survey: which accounts, when, and what they were writing about. It asks for no way to reach you.',
+      createdAtIso: startOfTodayIso(now),
+      href,
+      actions: [action('open', 'Answer the survey', href)],
     }),
   ];
 }

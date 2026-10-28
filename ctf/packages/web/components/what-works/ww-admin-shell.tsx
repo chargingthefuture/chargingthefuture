@@ -13,6 +13,7 @@ import { adminMutate, type AdminProblem, type AdminProduct } from './ww-admin-sh
 import { getWhatWorksTokens } from './ww-shared';
 import { WhatWorksAdminProducts } from './ww-admin-products';
 import { WhatWorksAdminProblems } from './ww-admin-problems';
+import { WhatWorksAdminProposals } from './ww-admin-proposals';
 import { WhatWorksAuditPanel } from './ww-audit-panel';
 import { responseFailureText } from 'lib/errors/client-failure';
 
@@ -204,7 +205,7 @@ export function WhatWorksAdminShell() {
         minHeight: '100dvh',
         background: t.BG,
         color: t.TITLE,
-        fontFamily: "'Inter',system-ui,sans-serif",
+        fontFamily: "'Figtree Variable',system-ui,sans-serif",
       }}
     >
       <MobileScreenHeader title="WhatWorks Admin" accent={t.ACCENT} icon={<ThumbsUp size={18} color={t.ACCENT} />} actions={<PluginUserShellButton href="/apps/what-works" accent={t.ACCENT} />} />
@@ -237,6 +238,7 @@ export function WhatWorksAdminShell() {
               onEdit={editProduct}
               onDelete={deleteProduct}
             />
+            <WhatWorksAdminProposals listed={problems} onChanged={loadProblems} />
             <WhatWorksAdminProblems
               problems={problems}
               busyId={busyId}

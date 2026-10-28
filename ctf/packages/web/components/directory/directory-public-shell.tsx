@@ -12,7 +12,7 @@ import { PublicShellWorldwide } from '@/components/plugins/public-shell-worldwid
 import { INVITE_WALL_WHY, type InviteCard, type PublicInvites } from './directory-invite-format';
 import { INVITE_LINK_CLASS, InviteCardView } from './directory-invite-card';
 
-const FONT_FAMILY = "'Inter', system-ui, sans-serif";
+const FONT_FAMILY = "'Figtree Variable', system-ui, sans-serif";
 const LOAD_ERROR = 'Could not load the invitations.';
 
 type DirectoryPublicShellProps = PublicVisitorShellProps & {

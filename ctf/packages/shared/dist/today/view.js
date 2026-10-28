@@ -17,12 +17,15 @@ const SOURCE_NAMES = {
     announcements: 'announcements',
     'directory-invites': 'invitations',
     'what-works': 'What Works',
+    'quora-survey': 'the Quora survey',
     mood: 'Mood',
     numbers: 'numbers',
     'beacon-replays': 'replays',
     'skills-hunt': 'the Wanted card',
+    'skills-hunt-mission': "today's mission",
     beacon: 'the broadcast',
     chyme: 'the Main Room',
+    'days-won': 'Days won',
 };
 export function seTodayView(today, marks, filter) {
     const kinds = SE_TODAY_FILTERS.find((item) => item.key === filter)?.kinds ?? null;
@@ -59,4 +62,13 @@ export function seTalkLine(talk, now = new Date()) {
     if (talk.onAir)
         return `On now: ${talk.title} with @${talk.host}`;
     return `Next: ${talk.title} with @${talk.host} · ${seTalkWhen(talk.startIso, now)}`;
+}
+// "Days the Avenhood has won": the total, and this week's share of it.
+export const SE_DAYS_WON_TITLE = 'Days the Avenhood has won';
+export function seDaysWonLines(daysWon) {
+    const fmt = (n) => n.toLocaleString('en-US', { maximumFractionDigits: 1 });
+    return {
+        big: fmt(daysWon.total),
+        small: `${fmt(daysWon.thisWeek)} this week. A day won is 8 hours members spent together in rooms and calls, or helping with each other's tasks.`,
+    };
 }

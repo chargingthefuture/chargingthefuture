@@ -9,7 +9,7 @@ import { PublicShellWorldwide } from '@/components/plugins/public-shell-worldwid
 
 // Chrome palette comes from getMoodTokens (default branch = the shipped
 // MoodPublic / MobileMoodPublic mockup values).
-const FONT_FAMILY = "'Inter', system-ui, sans-serif";
+const FONT_FAMILY = "'Figtree Variable', system-ui, sans-serif";
 
 const PRIVACY = ['Never shown to others', 'Aggregate only', 'No public profile'];
 // The mood faces are a static, non-interactive marketing preview of the check-in

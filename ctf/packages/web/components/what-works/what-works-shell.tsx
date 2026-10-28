@@ -190,7 +190,7 @@ export function WhatWorksShell() {
   // the (legitimate) empty-list suggest state.
   if (!showSuggest && error && problems.length === 0) {
     return (
-      <div style={{ display: 'flex', height: '100dvh', background: BG, color: TEXT, fontFamily: "'Inter', system-ui, sans-serif", alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+      <div style={{ display: 'flex', height: '100dvh', background: BG, color: TEXT, fontFamily: "'Figtree Variable', system-ui, sans-serif", alignItems: 'center', justifyContent: 'center', padding: 24 }}>
         <div style={{ maxWidth: 420, textAlign: 'center' }}>
           <div style={{ fontSize: 15, color: '#fecaca', marginBottom: 12 }}>{error}</div>
           <button
@@ -219,7 +219,7 @@ export function WhatWorksShell() {
   }
 
   return (
-    <div style={{ minHeight: '100dvh', background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TITLE }}>
+    <div style={{ minHeight: '100dvh', background: t.BG, fontFamily: "'Figtree Variable', system-ui, sans-serif", color: t.TITLE }}>
       <WhatWorksShellHeader
         isAdmin={isAdmin}
         query={query}

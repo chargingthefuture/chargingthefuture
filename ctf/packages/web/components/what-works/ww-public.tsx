@@ -59,7 +59,7 @@ export function WhatWorksPublic({ signInUrl, signUpUrl }: { signInUrl: string; s
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', maxHeight: '100%', background: t.BG, fontFamily: "'Inter',system-ui", color: t.TITLE, overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', maxHeight: '100%', background: t.BG, fontFamily: "'Figtree Variable',system-ui", color: t.TITLE, overflow: 'hidden' }}>
       <div style={{ height: 52, borderBottom: `1px solid ${t.BORDER_SOLID}`, display: 'flex', alignItems: 'center', padding: '0 28px', gap: 10, flexShrink: 0, background: t.HEADER }}>
         <ListChecks size={18} color={t.ACCENT} />
         <span style={{ fontSize: 16, fontWeight: 700 }}>What Works</span>

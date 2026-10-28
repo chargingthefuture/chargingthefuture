@@ -39,7 +39,7 @@ export function AppLoading({ delayMs = 300 }: { delayMs?: number }) {
       role="status"
       aria-live="polite"
       aria-label="Loading"
-      style={{ display: 'flex', minHeight: '100dvh', width: '100%', background: '#0F1117', alignItems: 'center', justifyContent: 'center', textAlign: 'center', fontFamily: "'Inter', system-ui, sans-serif" }}
+      style={{ display: 'flex', minHeight: '100dvh', width: '100%', background: '#0F1117', alignItems: 'center', justifyContent: 'center', textAlign: 'center', fontFamily: "'Figtree Variable', system-ui, sans-serif" }}
     >
       <div style={{ padding: '0 32px' }}>
         <div style={{ ...lineStyle, marginBottom: 16 }}>Exit Their Economy</div>

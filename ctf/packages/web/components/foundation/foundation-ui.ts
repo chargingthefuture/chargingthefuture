@@ -3,7 +3,7 @@ import { getAppAccent, type ThemeName } from "@/lib/theme/theme-tokens";
 import { getPluginShellTokens, type PluginShellTokens } from "@/components/shared/plugin-shell-theme";
 
 export const COLOR = "#F59E0B";
-export const FONT = "'Inter', system-ui, sans-serif";
+export const FONT = "'Figtree Variable', system-ui, sans-serif";
 
 // Theme-aware color tokens for the Foundation shell chrome. The default theme keeps the exact
 // values the shell already shipped (accent stays Foundation's shipped #EF4444); comic uses the

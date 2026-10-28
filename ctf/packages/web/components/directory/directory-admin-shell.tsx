@@ -775,7 +775,7 @@ interface EditDrawerViewProps {
 
 function EditDrawerView({ p, saving, onClose, onSave, children }: EditDrawerViewProps) {
   return (
-    <div style={{ minHeight: "100vh", background: BG, fontFamily: "'Inter', system-ui, sans-serif", color: TEXT, display: "flex", flexDirection: "column" }}>
+    <div style={{ minHeight: "100vh", background: BG, fontFamily: "'Figtree Variable', system-ui, sans-serif", color: TEXT, display: "flex", flexDirection: "column" }}>
       <div style={{ position: "sticky", top: 0, zIndex: 20, padding: "12px 16px", borderBottom: `1px solid ${BORDER}`, background: "#0D0F14", display: "flex", alignItems: "center", gap: 10 }}>
         <div style={{ width: 34, height: 34, borderRadius: 9, background: `${COLOR}20`, border: `1px solid ${COLOR}35`, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <Edit2 size={15} color={COLOR} />
@@ -969,7 +969,7 @@ function PendingSkillProposalsLink() {
 function ProfileListView(props: ProfileListViewProps) {
   const { profilesCount, unclaimedCount, query, setQuery, filter, setFilter, loading, error, profiles, page, pageCount, onPageChange, saving, onEdit, onTakedown, onDelete } = props;
   return (
-    <div style={{ minHeight: "100vh", background: BG, fontFamily: "'Inter', system-ui, sans-serif", color: TEXT, display: "flex", flexDirection: "column" }}>
+    <div style={{ minHeight: "100vh", background: BG, fontFamily: "'Figtree Variable', system-ui, sans-serif", color: TEXT, display: "flex", flexDirection: "column" }}>
       <div style={{ position: "sticky", top: 0, zIndex: 20, padding: "12px 16px 10px", borderBottom: `1px solid ${BORDER}`, background: "#0D0F14" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
           <BackChevronButton accent={COLOR} />

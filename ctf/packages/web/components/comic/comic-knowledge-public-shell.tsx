@@ -20,7 +20,7 @@ export function ComicKnowledgePublicShell({ signInUrl }: { signInUrl: string }) 
   const t = getComicTokens(theme);
 
   return (
-    <main style={{ minHeight: '100dvh', background: t.BG, color: t.TITLE, fontFamily: "'Inter',system-ui,sans-serif" }}>
+    <main style={{ minHeight: '100dvh', background: t.BG, color: t.TITLE, fontFamily: "'Figtree Variable',system-ui,sans-serif" }}>
       <div style={{ maxWidth: 720, margin: '0 auto', padding: '32px 16px 56px' }}>
         {/* This shell builds its own header rather than using MobileScreenHeader, whose right-hand
             cluster (report a bug, account settings, the account menu) is all signed-in chrome that

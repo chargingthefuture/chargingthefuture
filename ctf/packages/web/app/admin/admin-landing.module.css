@@ -10,7 +10,7 @@
   min-height: 100dvh;
   background: var(--ctf-bg, #0f1117);
   color: var(--ctf-text, #d5d9e2);
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: 'Figtree Variable', system-ui, sans-serif;
 }
 
 .inner {

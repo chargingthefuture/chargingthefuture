@@ -10,7 +10,7 @@ import { getAppAccent } from 'lib/theme/theme-tokens';
 import { useTheme } from '@/hooks/useTheme';
 
 const READER_URL = 'https://rss.chargingthefuture.com';
-const FONT_FAMILY = "'Inter', system-ui, sans-serif";
+const FONT_FAMILY = "'Figtree Variable', system-ui, sans-serif";
 
 type NoteProps = { title: string; children: React.ReactNode; tokens: ReturnType<typeof getPluginShellTokens> };
 

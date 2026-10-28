@@ -11,7 +11,7 @@ import { reportError } from 'lib/observability/report';
 
 // Layout from the WorkforcePublic / MobileWorkforcePublic design mockups; chrome colors come from
 // the shared Workforce theme tokens (default theme returns the exact shipped hex).
-const FONT_FAMILY = "'Inter', system-ui, sans-serif";
+const FONT_FAMILY = "'Figtree Variable', system-ui, sans-serif";
 
 type WorkforceSnapshot = { recruited: number; sectorGaps: number };
 

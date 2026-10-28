@@ -35,7 +35,7 @@ export function UnlockSubmissionView({
   const { theme } = useTheme();
   const tok = getUnlockTokens(theme);
   return (
-    <div style={{ width: "100%", minHeight: "100vh", background: tok.BG, fontFamily: "'Inter',system-ui", color: tok.TITLE, display: "flex", flexDirection: "column" }}>
+    <div style={{ width: "100%", minHeight: "100vh", background: tok.BG, fontFamily: "'Figtree Variable',system-ui", color: tok.TITLE, display: "flex", flexDirection: "column" }}>
       <div style={{ height: 56, borderBottom: `1px solid ${tok.BORDER}`, display: "flex", alignItems: "center", padding: "0 28px", gap: 12, background: tok.HEADER, flexShrink: 0 }}>
         <UnlockIcon size={18} color={tok.ACCENT} />
         <div style={{ flex: 1, minWidth: 0 }}>

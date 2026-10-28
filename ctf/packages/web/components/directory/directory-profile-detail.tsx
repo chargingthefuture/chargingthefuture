@@ -614,7 +614,7 @@ export function DirectoryProfileDetail({
   const pendingSkills = p.pendingSkills ?? [];
 
   return (
-    <div style={{ width: "100%", height: "100dvh", overflow: "hidden", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT, display: "flex", flexDirection: "column" }}>
+    <div style={{ width: "100%", height: "100dvh", overflow: "hidden", background: t.BG, fontFamily: "'Figtree Variable', system-ui, sans-serif", color: t.TEXT, display: "flex", flexDirection: "column" }}>
       <ProfileHeader tokens={t} onBack={onBack} profileId={p.id} />
 
       <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>

@@ -287,7 +287,7 @@ export function ComicKnowledgeShell({ askForQuoraUrl = false }: { askForQuoraUrl
   const c = useKnowledgeSharedWriting(askForQuoraUrl);
 
   return (
-    <main style={{ minHeight: '100dvh', background: t.BG, color: t.TITLE, fontFamily: "'Inter',system-ui,sans-serif" }}>
+    <main style={{ minHeight: '100dvh', background: t.BG, color: t.TITLE, fontFamily: "'Figtree Variable',system-ui,sans-serif" }}>
       <MobileScreenHeader title="Knowledge library" accent={t.ACCENT} icon={<Upload size={18} color={t.ACCENT} />} />
       <div style={{ maxWidth: 760, margin: '0 auto', padding: '24px 16px 48px' }}>
         <p style={{ fontSize: 15, lineHeight: 1.65, color: t.TEXT, marginTop: 0 }}>

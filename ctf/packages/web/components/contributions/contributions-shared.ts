@@ -21,7 +21,7 @@ export function getContributionsTokens(theme: ThemeName): ContributionsTokens {
   return { ...getPluginShellTokens(ACCENT_DEFAULT, theme), SURFACE: '#161B27', BORDER_SOLID: '#1E2A3A' };
 }
 
-export const FONT_FAMILY = "'Inter', system-ui, sans-serif";
+export const FONT_FAMILY = "'Figtree Variable', system-ui, sans-serif";
 
 export const STATUS_OK = '#22C55E';
 export const STATUS_PENDING = '#F59E0B';

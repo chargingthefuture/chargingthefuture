@@ -146,7 +146,7 @@ const TABS: { key: Tab; label: string }[] = [
 // Full-height error message, shown when the room fails to load.
 function PeerProgrammingErrorState({ error }: { error: string }) {
   return (
-    <div style={{ width: "100%", minHeight: "100vh", background: BG, display: "flex", alignItems: "center", justifyContent: "center", color: "#EF4444", fontFamily: "Inter, system-ui, sans-serif" }}>
+    <div style={{ width: "100%", minHeight: "100vh", background: BG, display: "flex", alignItems: "center", justifyContent: "center", color: "#EF4444", fontFamily: "'Figtree Variable', system-ui, sans-serif" }}>
       {error}
     </div>
   );
@@ -423,7 +423,7 @@ export function PeerProgrammingShell({ isAdmin }: { isAdmin?: boolean } = {}) {
   if (error) return <PeerProgrammingErrorState error={error} />;
 
   return (
-    <div style={{ minHeight: "100vh", background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT }}>
+    <div style={{ minHeight: "100vh", background: t.BG, fontFamily: "'Figtree Variable', system-ui, sans-serif", color: t.TEXT }}>
       <PeerProgrammingHeader t={t} isAdmin={isAdmin} tab={tab} onSelectTab={setTab} onRefresh={reloadRoom} />
       <PeerProgrammingTabContent
         tab={tab}

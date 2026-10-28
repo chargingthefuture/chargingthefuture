@@ -37,7 +37,7 @@ export type CaptureOptions = {
   background: string;
 };
 
-const FOOTER_FONT = 'Inter, system-ui, sans-serif';
+const FOOTER_FONT = "'Figtree Variable', system-ui, sans-serif";
 
 // The footer is added to html2canvas's *clone* of the document, never to the live screen: the
 // person watching does not see a line appear and vanish, and a failed capture cannot leave one

@@ -9,7 +9,7 @@ import { PublicShellWorldwide } from '@/components/plugins/public-shell-worldwid
 
 // Chrome palette comes from getTrustTokens (default theme returns the exact shipped
 // TrustPublic / MobileTrustPublic mockup values, so the default UI is pixel-identical).
-const FONT_FAMILY = "'Inter', system-ui, sans-serif";
+const FONT_FAMILY = "'Figtree Variable', system-ui, sans-serif";
 
 // Static description of the signals Trust aggregates (marketing copy). Every item must map to a
 // signal `buildTrustEvidence` actually emits — never identity verification (there is none), never a
