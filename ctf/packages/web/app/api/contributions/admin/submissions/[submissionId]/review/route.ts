@@ -19,7 +19,6 @@ type ReviewBody = {
   action?: 'confirm' | 'reject';
   confirmedAmountUsd?: number;
   reviewNote?: string;
-  url?: string;
 };
 
 export async function POST(request: Request, { params }: RouteParams) {
@@ -58,14 +57,13 @@ export async function POST(request: Request, { params }: RouteParams) {
       action: body.action,
       confirmedAmountUsd: body.confirmedAmountUsd,
       reviewNote: body.reviewNote,
-      url: body.url,
     });
 
     if (!submission) {
       return NextResponse.json({ ok: false, code: 'contributions_not_found', message: 'Contribution not found.' }, { status: 404 });
     }
 
-    // Audit metadata deliberately excludes signal_contact (personal data).
+    // Audit metadata never carries the code; it is erased by the review itself.
     await auditBestEffort('admin_submission_review', {
       actorUserId: gate.auth.userId,
       action: body.action === 'confirm' ? 'contributions.admin.submission.confirm' : 'contributions.admin.submission.reject',
@@ -78,7 +76,6 @@ export async function POST(request: Request, { params }: RouteParams) {
         confirmedAmountUsd: submission.confirmedAmountUsd,
         creditsGranted: submission.creditsGranted,
         creditGovernanceEventId: submission.creditGovernanceEventId,
-        cycleId: submission.cycleId,
       },
     });
 

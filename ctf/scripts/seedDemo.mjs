@@ -155,7 +155,6 @@ const ID = {
   taxSkill1: 'ddd00000-0000-4000-8000-000000000032',
   taxSkill2: 'ddd00000-0000-4000-8000-000000000033',
   quoteRequest: 'ddd00000-0000-4000-8000-000000000034',
-  contribCycle: 'ddd00000-0000-4000-8000-000000000035',
   contribSubmission1: 'ddd00000-0000-4000-8000-000000000036',
   contribSubmission2: 'ddd00000-0000-4000-8000-000000000037',
   raActive: 'ddd00000-0000-4000-8000-000000000038',
@@ -1419,53 +1418,38 @@ async function seedWhatWorks(c) {
 }
 
 async function seedContributions(c) {
-  // One fundraiser drive that is always current: the window is refreshed relative
-  // to NOW() on every re-run, so the member page always finds an active cycle.
-  // Goals are drive targets, not recorded money.
-  await c.query(
-    `INSERT INTO contributions_cycles
-     (id, starts_at, ends_at, fiat_goal_usd, quora_comment_goal, github_star_goal, created_by_user_id)
-     VALUES ($1::uuid, NOW() - INTERVAL '7 days', NOW() + INTERVAL '21 days', 500, 20, 50, $2)
-     ON CONFLICT (id) DO UPDATE SET
-       starts_at = EXCLUDED.starts_at,
-       ends_at = EXCLUDED.ends_at,
-       fiat_goal_usd = EXCLUDED.fiat_goal_usd,
-       quora_comment_goal = EXCLUDED.quora_comment_goal,
-       github_star_goal = EXCLUDED.github_star_goal,
-       updated_at = NOW()`,
-    [ID.contribCycle, ADMIN],
-  );
-
-  // Claims for each personal account: one confirmed Quora comment (with its
-  // thank-you credit grant) and one pending GitHub star awaiting review. No
-  // gift-card claim here — that kind requires a personal Signal contact. Personal
+  // Claims for each personal account: one confirmed Amazon gift card (with its thank-you credit grant)
+  // and one waiting for review. Neither carries a code: a reviewed claim's code is erased, and the
+  // seed has no encryption key to seal one, so the pending claim shows "No code is stored". Personal
   // accounts only, so a second demo owner's "my contributions" list stays empty on purpose.
   for (const uid of PERSONAL_ACCOUNTS) {
     await c.query(
       `INSERT INTO contributions_submissions
-       (id, user_id, kind, quora_post_url, status, confirmed_amount_usd, credits_granted,
-        cycle_id, reviewed_by_user_id, reviewed_at, review_note)
-       VALUES ($1::uuid, $2, 'quora_comment',
-         'https://quora.com/demo-answer-link', 'confirmed', 1, 10,
-         $3::uuid, $4, NOW() - INTERVAL '2 days', 'Comment verified on the linked answer.')
+       (id, user_id, kind, method, claimed_amount_usd, status, confirmed_amount_usd, credits_granted,
+        reviewed_by_user_id, reviewed_at, review_note)
+       VALUES ($1::uuid, $2, 'gift_card', 'amazon', 10, 'confirmed', 10, 100,
+         $3, NOW() - INTERVAL '2 days', 'Redeemed.')
        ON CONFLICT (id) DO UPDATE SET
+         kind = EXCLUDED.kind,
+         method = EXCLUDED.method,
+         claimed_amount_usd = EXCLUDED.claimed_amount_usd,
          status = EXCLUDED.status,
+         confirmed_amount_usd = EXCLUDED.confirmed_amount_usd,
          credits_granted = EXCLUDED.credits_granted,
-         cycle_id = EXCLUDED.cycle_id,
          updated_at = NOW()`,
-      [personalId(uid, ID.contribSubmission1), uid, ID.contribCycle, ADMIN],
+      [personalId(uid, ID.contribSubmission1), uid, ADMIN],
     );
 
     await c.query(
-      `INSERT INTO contributions_submissions
-       (id, user_id, kind, github_profile_url, status, cycle_id)
-       VALUES ($1::uuid, $2, 'github_star',
-         'https://github.com/demo-participant', 'pending', $3::uuid)
+      `INSERT INTO contributions_submissions (id, user_id, kind, method, claimed_amount_usd, status)
+       VALUES ($1::uuid, $2, 'gift_card', 'amazon', 25, 'pending')
        ON CONFLICT (id) DO UPDATE SET
+         kind = EXCLUDED.kind,
+         method = EXCLUDED.method,
+         claimed_amount_usd = EXCLUDED.claimed_amount_usd,
          status = EXCLUDED.status,
-         cycle_id = EXCLUDED.cycle_id,
          updated_at = NOW()`,
-      [personalId(uid, ID.contribSubmission2), uid, ID.contribCycle],
+      [personalId(uid, ID.contribSubmission2), uid],
     );
   }
 

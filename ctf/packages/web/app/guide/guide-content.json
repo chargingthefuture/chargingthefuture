@@ -301,17 +301,17 @@
   {
    "id": "contributions",
    "title": "Contributions",
-   "updated": "2026-08-09",
-   "summary": "Contributions is where you submit gifts, comments, or code work to support the platform and see how the fundraiser is going.",
+   "updated": "2026-10-27",
+   "summary": "Contributions is where you can send an Amazon gift card to help pay for hosting, any time of year, and see the gift cards you have sent.",
    "body": [
-    "You can submit three kinds of contributions: a gift card (Amazon, Apple, or Denny's) from $1 to $500, a link to a Quora comment you wrote, or a link to your GitHub profile. For gift cards, you tell the platform your Signal contact and the dollar amount, but you send the actual code to the owner over Signal—never post the code in the Commons or it won't count. For Quora comments and GitHub profiles, the link is required so the owner can find and confirm your work.",
-    "The platform keeps track of your contributions and shows you whether each one is pending, confirmed, or rejected. You can also see the current fundraiser cycle and how close the community is to its goals—total dollars raised, total comments, total stars, and how many people have contributed.",
-    "You can dismiss the fundraiser banner for two months if you want. It collapses to a small gift emoji in the Commons, so the reminder stays small and out of the way. The full banner comes back after two months. Contributing does not require any Unlock verification and never changes your Unlock status."
+    "The app is free and stays free. Hosting is paid out of pocket, so if you are able, you can send an Amazon gift card from $1 to $500, in dollars with no cents. You type the amount and the code from the card into the app. The code is stored encrypted, and it is erased once the System Architect has redeemed it and confirmed or rejected your gift card. You never see the code again after you send it.",
+    "A confirmed gift card earns you ServiceCredits as a thank-you, a set number per dollar. The form shows the current number. There is a limit on how many thank-you credits one member receives over 365 days, so a gift card past that limit is still confirmed with no credits. ServiceCredits are the app's internal credits unit and are never money.",
+    "The My history tab lists every gift card you have sent, newest first, with its status: Waiting for review, Confirmed, or Not matched, and the credits you received. Contributions are private between you and the platform owner: there is no donor list and no public total. If the form says gift cards are paused, nothing is needed from you; it takes gift cards again once it is switched back on. Contributing does not require Unlock verification and never changes your Unlock status."
    ],
    "howTo": [
-    "Sign in and go to /apps/contributions. You'll see the current fundraiser progress and collective totals.",
-    "Pick a contribution type (gift card, Quora comment, or GitHub profile) and fill in the form with the required information.",
-    "If you're submitting a gift card, send the code to the owner over Signal, not in the app."
+    "Sign in and go to /apps/contributions.",
+    "On the Contribute tab, enter the amount in US dollars and the gift card code, then press Send gift card.",
+    "Open My history to see whether your gift card is waiting for review, confirmed, or not matched, and the ServiceCredits you received."
    ]
   },
   {

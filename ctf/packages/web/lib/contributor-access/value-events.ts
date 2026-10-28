@@ -155,9 +155,9 @@ export const VALUE_EVENT_SOURCES: ValueEventSource[] = [
     // Real money, confirmed. Nobody is on the other side of the row, but something material arrived.
     //
     // Gift cards only. A gift card is the one kind that is money, and only money counts toward a
-    // dollar figure. A Quora comment or a GitHub star also has a number in `confirmed_amount_usd`,
-    // but it is the admin's set value per non-money contribution (`non_monetary_unit_value_usd`,
-    // which turns into credits), not money anybody received. Those rows are the next event.
+    // dollar figure. A Quora comment or a GitHub star (taken until 2026-10-27) also has a number in
+    // `confirmed_amount_usd`, but it was the admin's set value per non-money contribution, not money
+    // anybody received. Those rows are the next event.
     delivers: true,
     tables: ['contributions_submissions'],
     rowSql: `SELECT user_id AS member_id, reviewed_at AS at,
@@ -169,7 +169,7 @@ export const VALUE_EVENT_SOURCES: ValueEventSource[] = [
   },
   {
     key: 'value.contributions_non_money_confirmed',
-    // A confirmed Quora comment or GitHub star. Before these were split out they were summed into
+    // A confirmed Quora comment or GitHub star, from before Contributions took gift cards only. Before these were split out they were summed into
     // the dollar event above, which read the set value per contribution as dollars. The badge and
     // the daily count still score them exactly as before: the same set value, at the same default
     // weight, inheriting the dollar event's weight override until an admin sets one of its own

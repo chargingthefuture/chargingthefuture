@@ -16,8 +16,6 @@ import type { ExpenseInput } from 'lib/admin-expenses/parse';
 import { EXPENSES_ACCENT, localToday, mutateExpense, toInput } from './expenses-shared';
 import { ExpenseForm } from './expense-form';
 import { ExpensesOverview } from './expenses-overview';
-import { FundraisingCard } from './fundraising-card';
-import { fundraisingAsPlainText, suggestFundraisingGoal, type DriveProgress } from 'lib/admin-expenses/fundraising';
 import { ExpensesAudit } from './expenses-audit';
 import { GpuBillCard } from './gpu-bill-card';
 import { measuredGpuMonthlyCents, type GpuBillState } from 'lib/admin-expenses/gpu-bill-shared';
@@ -121,8 +119,6 @@ export function ExpensesAdminShell() {
   const [tab, setTab] = useState<Tab>('costs');
   const [expenses, setExpenses] = useState<Expense[] | null>(null);
   const [approvedMembers, setApprovedMembers] = useState(0);
-  const [drive, setDrive] = useState<DriveProgress | null>(null);
-  const [driveError, setDriveError] = useState<string | null>(null);
   const [gpuBill, setGpuBill] = useState<GpuBillState | null>(null);
   const [gpuBillError, setGpuBillError] = useState<string | null>(null);
   const [readingBill, setReadingBill] = useState(false);
@@ -141,15 +137,11 @@ export function ExpensesAdminShell() {
       const data = (await res.json()) as {
         expenses?: Expense[];
         approvedMembers?: number;
-        drive?: DriveProgress | null;
-        driveError?: string | null;
         gpuBill?: GpuBillState | null;
         gpuBillError?: string | null;
       };
       setExpenses(data.expenses ?? []);
       setApprovedMembers(data.approvedMembers ?? 0);
-      setDrive(data.drive ?? null);
-      setDriveError(data.driveError ?? null);
       setGpuBill(data.gpuBill ?? null);
       setGpuBillError(data.gpuBillError ?? null);
     } catch (caught) {
@@ -167,8 +159,6 @@ export function ExpensesAdminShell() {
     () => (expenses ? summarizeExpenses(expenses, approvedMembers, today, gpuMeasuredCents) : null),
     [expenses, approvedMembers, today, gpuMeasuredCents],
   );
-  // No suggestion while the drive could not be read: a figure for "no drive open" would be wrong then.
-  const suggestion = useMemo(() => (summary && !driveError ? suggestFundraisingGoal(summary, drive) : null), [summary, drive, driveError]);
 
   async function run(id: string, action: () => ReturnType<typeof mutateExpense>): Promise<boolean> {
     setBusyId(id);
@@ -208,8 +198,7 @@ export function ExpensesAdminShell() {
   async function copy() {
     if (!summary) return;
     try {
-      const fundraising = suggestion ? `\n${fundraisingAsPlainText(suggestion).join('\n')}` : '';
-      await navigator.clipboard.writeText(`${expensesAsPlainText(summary, today)}${fundraising}`);
+      await navigator.clipboard.writeText(expensesAsPlainText(summary, today));
       setCopied(true);
       window.setTimeout(() => setCopied(false), 2500);
     } catch (caught) {
@@ -249,10 +238,7 @@ export function ExpensesAdminShell() {
               tokens={t}
               summary={summary}
               afterTotals={
-                <>
-                  <FundraisingCard tokens={t} suggestion={suggestion} error={driveError} />
-                  <GpuBillCard tokens={t} bill={gpuBill} error={gpuBillError} busy={readingBill} onReadNow={() => void readBillNow()} />
-                </>
+                <GpuBillCard tokens={t} bill={gpuBill} error={gpuBillError} busy={readingBill} onReadNow={() => void readBillNow()} />
               }
               actions={{
                 busyId,
