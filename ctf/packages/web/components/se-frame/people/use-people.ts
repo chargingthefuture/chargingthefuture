@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import type { SePeoplePage } from '@ctf/shared';
+import { SE_PEOPLE_WORDS, type SePeoplePage } from '@ctf/shared';
 
 // One page of People. The page number lives in the address (?tab=people&page=2) so a page can be
 // linked and the back button works.
@@ -32,7 +32,8 @@ export function usePeople(page: number, offeringOnly: boolean, query: string, at
     const timer = window.setTimeout(() => {
       fetch(`/api/people?${params.toString()}`, { cache: 'no-store' })
         .then(async (res) => {
-          const body = (await res.json().catch(() => null)) as { people?: SePeoplePage; message?: string } | null;
+          const body = (await res.json().catch(() => null)) as { people?: SePeoplePage; message?: string; reason?: string } | null;
+          if (body?.reason === 'unlock_required') throw new Error(SE_PEOPLE_WORDS.needsUnlock);
           if (!res.ok || !body?.people) throw new Error(`${body?.message ?? 'The server returned an error.'} (HTTP ${res.status})`);
           if (active) setState({ kind: 'ready', people: body.people });
         })

@@ -9,11 +9,11 @@ export type WhatWorksApiGate =
   | { allowed: true; auth: AllowDecision }
   | { allowed: false; response: NextResponse };
 
-// Reading, suggesting, and endorsing share this gate. It inherits the default
-// minUnlockTier 'approved_full', so it is open to fully-verified survivors (and admins) —
-// not to pending or support-only members.
+// Reading, suggesting, and endorsing share this gate. Open to every signed-in member in 3.1
+// (SOCIAL_REDESIGN_3_1_PLAN, Access: "Signed in ... What Works"); the account restriction check
+// still applies.
 export async function requireWhatWorksAccess(): Promise<WhatWorksApiGate> {
-  const decision = await evaluatePluginAccess({ requireUsername: false });
+  const decision = await evaluatePluginAccess({ requireUsername: false, minUnlockTier: 'signed_in' });
   if (!decision.allowed) {
     return { allowed: false, response: NextResponse.json(decision, { status: decision.status }) };
   }

@@ -488,6 +488,7 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
 
 ## 9) Change Log
 
+- 2026-10-27: **3.1 open sign-up use (owner decision).** Two new tiers in `evaluatePluginAccess`: `signed_in` (any signed-in member; account restrictions still apply) and `signed_in_posting` (approved, or not yet approved and either within the first 14 days or with an address sent or help asked; otherwise 403 `unlock_paused`). New `GET /api/unlock/standing` (`unlock.standing.get`, `lib/unlock/standing.ts`) answers approved, the day count from the first sign-in, paused, and whether the banner can be closed (first 7 days); the shared words are `SE_UNLOCK_WORDS` in `@ctf/shared`. A member on 3.1 is no longer sent to `/plugin/unlock` from the home page (web) or walled (Android); the 3.1 frame shows the Unlock banner instead. `check-unlock-tier-exceptions.mjs` now catches both new tiers. The exception list and CLAUDE.md name the sixth exception, "3.1 open sign-up use": Today, posting an ask, Mood, ClickLog, What Works and Activity.
 - 2026-10-16: **The sign-up row says when the sign-in ban did not go through (code-review #2804, owner
   decision).** A ban the auth provider refused was recorded and the row still said the account was
   signed out of everything. `unlock_banned_accounts` gains `provider_applied`; the ban route and the

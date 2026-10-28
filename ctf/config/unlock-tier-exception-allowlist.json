@@ -1,5 +1,5 @@
 {
-  "_comment": "The COMPLETE list of surfaces allowed to run with minUnlockTier 'any_authenticated' \u2014 usable by a signed-in member who has NOT been approved in Unlock. Unlock approval is what grants access to this app: every other surface requires it, and a new one should use the 'approved_full' default. Enforced by ctf/scripts/check-unlock-tier-exceptions.mjs; CI fails on any call site missing here, and on any entry that has stopped using the bypass, so the list can only shrink on its own. kind 'machinery' = the Unlock gate cannot function if this is gated (the flow itself, the account area, bug reporting, small feeds a gated screen needs to render). kind 'exception' = a real capability deliberately opened to unapproved members by a dated owner decision, and every one needs 'feature' and 'decision'. There are exactly five such features, named below. ADDING A SIXTH IS THE OWNER'S DECISION, NEVER A BUILD STEP \u2014 ask first; the answer for a new surface is almost always 'approved_full'.",
+  "_comment": "The COMPLETE list of surfaces allowed to run with minUnlockTier 'any_authenticated' \u2014 usable by a signed-in member who has NOT been approved in Unlock. Unlock approval is what grants access to this app: every other surface requires it, and a new one should use the 'approved_full' default. Enforced by ctf/scripts/check-unlock-tier-exceptions.mjs; CI fails on any call site missing here, and on any entry that has stopped using the bypass, so the list can only shrink on its own. kind 'machinery' = the Unlock gate cannot function if this is gated (the flow itself, the account area, bug reporting, small feeds a gated screen needs to render). kind 'exception' = a real capability deliberately opened to unapproved members by a dated owner decision, and every one needs 'feature' and 'decision'. There are six such features, named below; the sixth, '3.1 open sign-up use' (owner decision, 2026-10-27), covers the 'signed_in' and 'signed_in_posting' tiers. ADDING ANOTHER IS THE OWNER'S DECISION, NEVER A BUILD STEP \u2014 ask first; the answer for a new surface is almost always 'approved_full'.",
   "version": 1,
   "exceptions": [
     {
@@ -109,6 +109,48 @@
       "feature": "Directory invite wall",
       "decision": "2026-10-15",
       "reason": "Reading the invitations to people listed in the Directory, in full, by any signed-in account. The invites are how people arrive from Quora, and seeing who has been invited is the reason to make an account. Reading needs a sign-in so the list is not public, which is why the invites left the blog; approval is not required because the people reading are mostly the people invited. Only the invite wall reads this gate: its page at /apps/directory/invites and its API routes (GET /api/directory/invites and GET /api/directory/invites/[slug]/image). The Directory itself, its search and every listing still need full approval. The invitations already published on the blog before 2026-10-15 are marked public and readable signed out, picture included; that part needs no account at all, so it is not part of this exception."
+    },
+    {
+      "file": "ctf/packages/web/app/api/today/route.ts",
+      "kind": "exception",
+      "feature": "3.1 open sign-up use",
+      "decision": "2026-10-27",
+      "reason": "Today, the 3.1 home read, at 'signed_in'. Reading stays open to every signed-in member, after the 14 days too (owner-approved plan ctf/docs/developer/SOCIAL_REDESIGN_3_1_PLAN.md, Access). Account restrictions still apply."
+    },
+    {
+      "file": "ctf/packages/web/app/api/socket-relay/_lib.ts",
+      "kind": "exception",
+      "feature": "3.1 open sign-up use",
+      "decision": "2026-10-27",
+      "reason": "requireSocketRelayPostAccess at 'signed_in_posting', used only by POST /api/socket-relay/requests: posting an ask from + New. Open while approved, inside the first 14 days, or waiting on an address; pauses after day 14 until Unlock is done. Every other SocketRelay route stays approved-only."
+    },
+    {
+      "file": "ctf/packages/web/lib/mood/_lib.ts",
+      "kind": "exception",
+      "feature": "3.1 open sign-up use",
+      "decision": "2026-10-27",
+      "reason": "Mood at 'signed_in': a member's own check-in, open to every signed-in member and after the 14 days."
+    },
+    {
+      "file": "ctf/packages/web/app/api/click-log/_lib.ts",
+      "kind": "exception",
+      "feature": "3.1 open sign-up use",
+      "decision": "2026-10-27",
+      "reason": "ClickLog at 'signed_in': a member's private log, open to every signed-in member and after the 14 days. The owner trends surface keeps its admin check."
+    },
+    {
+      "file": "ctf/packages/web/app/api/what-works/_lib.ts",
+      "kind": "exception",
+      "feature": "3.1 open sign-up use",
+      "decision": "2026-10-27",
+      "reason": "What Works member gate at 'signed_in': reading, suggesting, endorsing and proposing problems. The admin gate in the same file is unchanged."
+    },
+    {
+      "file": "ctf/packages/web/app/api/notifications/_lib.ts",
+      "kind": "exception",
+      "feature": "3.1 open sign-up use",
+      "decision": "2026-10-27",
+      "reason": "A member's own notifications, shown as Activity in 3.1, at 'signed_in' (was support_only)."
     }
   ]
 }

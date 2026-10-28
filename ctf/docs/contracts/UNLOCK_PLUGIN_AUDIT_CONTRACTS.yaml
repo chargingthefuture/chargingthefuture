@@ -44,6 +44,28 @@ auditEvents:
     timestamp: rfc3339
     actorId: principal
     pluginId: unlock
+    command: unlock.standing.get
+    commandVersion: 1.0.0
+    purpose: onboarding_support_access
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - unlock_verification_submissions
+      - unlock_help_requests
+      - login_events
+    targetContext:
+      userId: user_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: unlock
     command: unlock.admin.submission.list
     commandVersion: 1.0.0
     purpose: moderation_queue

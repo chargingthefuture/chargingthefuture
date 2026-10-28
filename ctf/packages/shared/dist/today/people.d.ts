@@ -23,6 +23,7 @@ export declare const SE_PEOPLE_WORDS: {
     quote: string;
     empty: string;
     failed: string;
+    needsUnlock: string;
     tryAgain: string;
     loading: string;
     previous: string;

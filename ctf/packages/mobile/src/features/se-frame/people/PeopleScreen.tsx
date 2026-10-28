@@ -5,7 +5,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SE_PEOPLE_PAGE_SIZE, SE_PEOPLE_WORDS as W, sePersonLinks, type SePeoplePage, type SePerson, type SeThemeTokens } from '@ctf/shared';
-import { authedFetchJson } from '../../../auth/authedFetch';
+import { authedFetch } from '../../../auth/authedFetch';
 import { SeAvatar } from '../../../components/shared/SeAvatar';
 import type { FeatureKey } from '../../../navigation/screens';
 import { openTodayLink } from '../today/openTodayLink';
@@ -23,8 +23,11 @@ function usePeople(page: number, offeringOnly: boolean, query: string, attempt: 
     if (offeringOnly) params.set('offering', '1');
     if (query.trim()) params.set('q', query.trim());
     const timer = setTimeout(() => {
-      authedFetchJson<{ people: SePeoplePage }>(`/api/people?${params.toString()}`)
-        .then((body) => {
+      authedFetch(`/api/people?${params.toString()}`)
+        .then(async (res) => {
+          const body = (await res.json().catch(() => null)) as { people?: SePeoplePage; message?: string; reason?: string } | null;
+          if (body?.reason === 'unlock_required') throw new Error(W.needsUnlock);
+          if (!res.ok || !body?.people) throw new Error(`${body?.message ?? 'The server returned an error.'} (HTTP ${res.status})`);
           if (active) setState({ kind: 'ready', people: body.people });
         })
         .catch((error: unknown) => {

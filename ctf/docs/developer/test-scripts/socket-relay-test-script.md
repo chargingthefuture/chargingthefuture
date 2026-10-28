@@ -823,3 +823,10 @@ web ☐
 **Expected:** The request is there, public, with the tag "Getting around" and no city, state or
 country. It can be fulfilled, edited and closed exactly like one made in SocketRelay.
 **Result:** web ☐ android ☐ — notes:
+
+### SR-22 · Posting an ask before Unlock is done (3.1)
+**Role:** a signed-in member not yet approved, on 3.1 · **Surfaces:** web, android
+1. Inside the first 14 days, post an ask from + New. Then open SocketRelay itself.
+2. After day 14 with no address sent, post again. Then send an address and post again.
+**Expected:** Step 1 posts; SocketRelay's own screens still need approval. Step 2 is refused with `unlock_paused` until the address is sent, then posts.
+**Result:** web ☐ android ☐ — notes:

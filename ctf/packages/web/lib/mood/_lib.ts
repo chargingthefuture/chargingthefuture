@@ -3,8 +3,9 @@ import { evaluatePluginAccess } from '../auth/server-authz';
 import { checkMutationOrigin } from '../auth/csrf';
 import { MOOD_ERROR_CODE } from './constants';
 
+// Open to every signed-in member in 3.1, and after the 14 days (SOCIAL_REDESIGN_3_1_PLAN, Access).
 export async function requireMoodAccess() {
-  const decision = await evaluatePluginAccess({ requireUsername: false });
+  const decision = await evaluatePluginAccess({ requireUsername: false, minUnlockTier: 'signed_in' });
   if (!decision.allowed) {
     return { allowed: false as const, response: NextResponse.json(decision, { status: decision.status }) };
   }

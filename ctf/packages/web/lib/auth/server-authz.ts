@@ -1,6 +1,7 @@
 import { resolveRequestIdentity } from './request-identity';
 import { pluginAuthDeny, type PluginDenyResponse } from './deny-taxonomy';
 import { getUnlockAccessTier } from 'lib/unlock/access';
+import { getUnlockStanding } from 'lib/unlock/standing';
 import { getAccountRestrictionStatus } from './account-restrictions';
 
 export type AllowDecision = {
@@ -30,7 +31,11 @@ export type PluginAuthDecision = AllowDecision | PluginDenyResponse;
 // ctf/config/unlock-tier-exception-allowlist.json, CI fails on any call site missing from
 // it (ctf/scripts/check-unlock-tier-exceptions.mjs), and adding a line is the owner's
 // decision to make rather than a build step. Ask first.
-type MinUnlockTier = 'approved_full' | 'support_only' | 'any_authenticated';
+// 'signed_in' and 'signed_in_posting' are the 3.1 open tiers (SOCIAL_REDESIGN_3_1_PLAN, Access):
+// reading and private tools for any signed-in member, and posting for one who is approved or still
+// inside the first 14 days (or has sent their address). Unlike 'any_authenticated' they still apply
+// the account restriction check. Every call site is on ctf/config/unlock-tier-exception-allowlist.json.
+type MinUnlockTier = 'approved_full' | 'support_only' | 'any_authenticated' | 'signed_in' | 'signed_in_posting';
 
 type EvaluatePluginAccessOptions = {
   requiredRoles?: string[];
@@ -96,8 +101,13 @@ async function resolveUnlockTierDeny(
   normalizedRole: string | null,
   minUnlockTier: MinUnlockTier,
 ): Promise<PluginDenyResponse | null> {
-  if (normalizedRole === 'admin' || minUnlockTier === 'any_authenticated') {
+  if (normalizedRole === 'admin' || minUnlockTier === 'any_authenticated' || minUnlockTier === 'signed_in') {
     return null;
+  }
+  if (minUnlockTier === 'signed_in_posting') {
+    if ((await getUnlockAccessTier(userId)) === 'approved_full') return null;
+    const standing = await getUnlockStanding(userId);
+    return standing.paused ? pluginAuthDeny.forbiddenPolicy('unlock_paused') : null;
   }
   // A not-yet-verified member who asked for help (or came back a second day) resolves to
   // `locked_support_only` here rather than to no tier at all, so the Commons admits them through the
