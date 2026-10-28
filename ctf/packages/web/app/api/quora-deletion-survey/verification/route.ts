@@ -6,7 +6,10 @@ import {
 } from '../_lib';
 import { insertSurveyAudit } from 'lib/quora-deletion-survey/repository';
 import {
+  linkRemovedAccountToUnlock,
   linkSurveyRespondentToUnlock,
+  listReportedRemovedAccounts,
+  surveyRespondentNeedsUnlock,
   type SurveyUnlockLinkOutcome,
 } from 'lib/quora-deletion-survey/unlock-link';
 import {
@@ -23,15 +26,18 @@ import { failureReason } from 'lib/errors/failure';
 // that is already saved. It creates a pending submission, approves nobody, and does nothing at all
 // for a member who already has a submission on file.
 //
-// The accounts they reported as closed are not handled here — those go onto the account history on
-// submission, for every respondent, whether or not they ever reach this route.
+// The accounts they reported as closed go onto the account history on submission, for every
+// respondent, whether or not they ever reach this route. One of them can also finish Unlock (3.1.0
+// plan, Access): the body names it as removedHandle instead of a live address, and GET lists them
+// for the Unlock screen.
 
 type VerificationBody = {
   quoraProfileUrl?: unknown;
+  removedHandle?: unknown;
 };
 
 type ReadResult =
-  | { ok: true; value: { quoraProfileUrl: string } }
+  | { ok: true; value: { quoraProfileUrl: string } | { removedHandle: string } }
   | { ok: false; response: NextResponse };
 
 function invalidPayload(message: string, reason?: string): NextResponse {
@@ -52,6 +58,11 @@ async function readVerificationBody(request: Request): Promise<ReadResult> {
     };
   }
 
+  const removedHandle = typeof body.removedHandle === 'string' ? body.removedHandle.trim() : '';
+  if (removedHandle.length > 0) {
+    return { ok: true, value: { removedHandle } };
+  }
+
   const quoraProfileUrl =
     typeof body.quoraProfileUrl === 'string' ? body.quoraProfileUrl.trim() : '';
   if (quoraProfileUrl.length === 0) {
@@ -68,6 +79,9 @@ async function readVerificationBody(request: Request): Promise<ReadResult> {
 function refusalResponse(outcome: SurveyUnlockLinkOutcome): NextResponse | null {
   if (outcome.status === 'invalid_url') {
     return invalidPayload('That does not look like a Quora profile link.');
+  }
+  if (outcome.status === 'not_reported') {
+    return invalidPayload('That account is not one you reported as removed in the survey.');
   }
   if (outcome.status === 'failed') {
     return NextResponse.json(
@@ -117,10 +131,10 @@ export async function POST(request: Request) {
   }
 
   try {
-    const outcome = await linkSurveyRespondentToUnlock({
-      userId: gate.auth.userId,
-      quoraProfileUrl: read.value.quoraProfileUrl,
-    });
+    const outcome =
+      'removedHandle' in read.value
+        ? await linkRemovedAccountToUnlock({ userId: gate.auth.userId, handle: read.value.removedHandle })
+        : await linkSurveyRespondentToUnlock({ userId: gate.auth.userId, quoraProfileUrl: read.value.quoraProfileUrl });
 
     const refusal = refusalResponse(outcome);
     if (refusal) {
@@ -142,6 +156,37 @@ export async function POST(request: Request) {
         ok: false,
         code: QUORA_SURVEY_ERROR_CODE.persistenceUnavailable,
         message: 'Verification could not be started. Your survey answer is already recorded.',
+        reason: failureReason(error),
+      },
+      { status: 503 },
+    );
+  }
+}
+
+// The removed accounts this member reported, for the Unlock screen's second route, and whether they
+// still need Unlock at all. Their own answers only; the handle is shown back to the member who typed it.
+export async function GET() {
+  const gate = await requireSurveyRespondentAccess();
+  if (!gate.allowed) {
+    return gate.response;
+  }
+
+  try {
+    const [needsUnlock, accounts] = await Promise.all([
+      surveyRespondentNeedsUnlock(gate.auth.userId),
+      listReportedRemovedAccounts(gate.auth.userId),
+    ]);
+    return NextResponse.json(
+      { ok: true, needsUnlock, removedAccounts: accounts.map((account) => ({ handle: account.handle })) },
+      { headers: { 'Cache-Control': 'no-store' } },
+    );
+  } catch (error) {
+    reportError(error, { area: 'quora-deletion-survey', op: 'verification-removed-accounts' });
+    return NextResponse.json(
+      {
+        ok: false,
+        code: QUORA_SURVEY_ERROR_CODE.persistenceUnavailable,
+        message: 'Your reported accounts could not be read.',
         reason: failureReason(error),
       },
       { status: 503 },

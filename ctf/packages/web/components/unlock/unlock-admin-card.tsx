@@ -211,6 +211,36 @@ function CardAdminEnteredNote({ s }: { s: UnlockSubmission }) {
   );
 }
 
+// Which route finished Unlock (3.1.0 plan, Access). A removed account has no live profile to open,
+// so the card says where to look instead.
+const FINISH_ROUTE_NOTE: Record<Exclude<UnlockSubmission['finishRoute'], 'quora_profile'>, { text: string; href: string; link: string }> = {
+  removed_account: {
+    text: 'Removed Quora account, reported in the account removals survey. The address above is no longer live.',
+    href: '/admin/quora-deletion-survey',
+    link: 'Open the survey answers',
+  },
+  knowledge_library: {
+    text: 'Finished by Quora writing brought into the Knowledge Library.',
+    href: '/admin/comic/shared-writing',
+    link: 'Open the contributions',
+  },
+};
+
+function CardFinishRouteNote({ s }: { s: UnlockSubmission }) {
+  const { theme } = useTheme();
+  const t = getUnlockTokens(theme);
+  if (s.finishRoute === 'quora_profile') return null;
+  const note = FINISH_ROUTE_NOTE[s.finishRoute];
+  return (
+    <div style={{ fontSize: 11, fontWeight: 600, color: t.ACCENT, marginBottom: 8 }}>
+      {note.text}{' '}
+      <a href={note.href} style={{ color: t.ACCENT, textDecoration: 'underline' }}>
+        {note.link}
+      </a>
+    </div>
+  );
+}
+
 function CardHeader({ s, editor, history }: { s: UnlockSubmission; editor: UnlockEditorState; history: UnlockHistoryState }) {
   const { theme } = useTheme();
   const t = getUnlockTokens(theme);
@@ -224,6 +254,7 @@ function CardHeader({ s, editor, history }: { s: UnlockSubmission; editor: Unloc
         </a>
       </div>
       <CardAdminEnteredNote s={s} />
+      <CardFinishRouteNote s={s} />
       {/* Action pills and buttons wrap onto as many rows as they need, below the URL. */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <button type="button" aria-label="Edit URL" title="Edit URL" onClick={() => editor.start(s)} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', borderRadius: 6, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, color: t.MUTED, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>

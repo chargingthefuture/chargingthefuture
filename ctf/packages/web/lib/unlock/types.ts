@@ -32,6 +32,11 @@ export type UnlockSubmission = {
   // for them" are not the same claim.
   urlSetByAdminUserId: string | null;
   urlSetByAdminAt: string | null;
+  // Which of the three routes finished it (3.1.0 plan, Access) and the record behind it: a Quora
+  // account removals survey response id, or a Knowledge Library contribution id. Null for the live
+  // profile route.
+  finishRoute: UnlockFinishRoute;
+  finishEvidenceId: string | null;
   // How many accounts (including this one) have claimed the same normalized Quora URL. Only populated
   // by the admin queue list; 1 means no duplicate. Undefined where not computed.
   sharedUrlAccountCount?: number;
@@ -65,6 +70,11 @@ export type RevokeUnlockRewardInput = {
   reviewNote?: string;
 };
 
+// How a member finishes Unlock: a live Quora profile address; the address of a removed account they
+// reported in the Quora account removals survey; or the address of the account whose writing they
+// brought into the Knowledge Library.
+export type UnlockFinishRoute = 'quora_profile' | 'removed_account' | 'knowledge_library';
+
 export type CreateUnlockSubmissionInput = {
   userId: string;
   quoraProfileUrl: string;
@@ -73,6 +83,9 @@ export type CreateUnlockSubmissionInput = {
   // one, asked for help, and an admin looked them up by hand. Absent on the member's own submission,
   // which is what clears the stamp if they later submit their own URL over an admin-entered one.
   addedByAdminUserId?: string;
+  // Absent means the live profile route.
+  finishRoute?: UnlockFinishRoute;
+  finishEvidenceId?: string | null;
 };
 
 export type ReviewUnlockSubmissionInput = {

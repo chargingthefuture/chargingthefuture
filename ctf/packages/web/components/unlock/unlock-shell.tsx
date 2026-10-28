@@ -67,6 +67,7 @@ export function UnlockShell({ isAdmin }: { isAdmin?: boolean } = {}) {
         submitting={submitting}
         error={error}
         isAdmin={isAdmin}
+        onFinished={() => loadStatus()}
       />
     );
   }
