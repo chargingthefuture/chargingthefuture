@@ -207,3 +207,9 @@ of these, it is already tracked, not a new bug:
 - Multiple devices (multiple `clientId`s) for one member are allowed by the schema; the cooldown is
   one-per-member via the pseudonym, so devices share one cooldown. There is no screen to reconcile or
   merge mood history across devices.
+
+### MD-10 · Mood before Unlock is done (3.1)
+**Role:** a signed-in member not yet approved, on 3.1 · **Surfaces:** web, android
+1. Open Mood and check in.
+**Expected:** The check-in works. It still works after day 14. A restricted account is refused.
+**Result:** web ☐ android ☐ — notes:

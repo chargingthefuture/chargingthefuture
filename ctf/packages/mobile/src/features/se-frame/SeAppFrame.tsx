@@ -11,6 +11,7 @@ import { useInterfaceVersion } from './interface-version';
 import { TodayScreen } from './today/TodayScreen';
 import { MeScreen } from './me/MeScreen';
 import { useSeTheme } from './useSeTheme';
+import { UnlockBanner } from './UnlockBanner';
 import { NewScreen } from './new/NewScreen';
 import { ActivityScreen } from './activity/ActivityScreen';
 import { PeopleScreen } from './people/PeopleScreen';
@@ -76,6 +77,7 @@ function SeAppFrameBody({ onOpenAccount, onOpen }: FrameProps) {
     <View style={s.frame}>
       <ScrollView contentContainerStyle={s.screen} style={rooms.shown ? s.hidden : null}>
         <FrameHeader s={s} tab={tab} />
+        <UnlockBanner t={t} onOpenUnlock={() => onOpen('unlock')} />
 
         <TabScreen t={t} tab={tab} user={user} theme={theme} onTheme={setTheme} onBack={back} saving={saving} onOpenAccount={onOpenAccount} onOpen={onOpen} />
 

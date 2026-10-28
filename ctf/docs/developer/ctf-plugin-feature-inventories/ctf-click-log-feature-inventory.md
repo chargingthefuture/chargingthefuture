@@ -324,6 +324,7 @@ Android pixel pass to `MobileClickLog.tsx` remains tracked in `PRODUCTION_READIN
 
 ## Change Log
 
+- 2026-10-27: **Open to signed-in members in 3.1 (owner decision, Access).** `requireClickLogAccess` now uses the `signed_in` tier: a member's private log is open before Unlock is done and stays open after day 14. The owner trends surface keeps its admin check. Listed under "3.1 open sign-up use".
 - 2026-10-16: **An admin deleting another member's incident is recorded (code-review #2806, owner decision).** The delete route let an admin remove any member's incident and recorded it only as a log line. It now also writes a row to the new `click_log_admin_audit_trail` (`insertClickLogAdminAudit` in `lib/click-log/repository.ts`). A member deleting their own incident writes none. The admin audit gate now reads routes with an `isAdmin` branch, which is how it found this.
 - 2026-10-15: **The empty state says what is shared (owner-approved copy fix, #2798).** It ended with "All data is only visible to you.", while a tagged incident is always shared with the owner, an untagged one can be shared by choice, and grouped totals may be published (`share-copy.ts`). The sentence now says notes stay private, that tagged incidents and any the member chooses to share send the owner only the date, rough area, and tags, and that grouped totals may be published.
 - 2026-10-12: **A sharing default that fails to load says so.** The preferences hook dropped a

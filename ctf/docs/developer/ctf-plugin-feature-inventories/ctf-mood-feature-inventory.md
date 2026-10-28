@@ -135,6 +135,7 @@ Seed script requirement: Provide a deterministic plugin seed script with dummy d
 
 ## 9) Change Log
 
+- 2026-10-27: **Open to signed-in members in 3.1 (owner decision, Access).** `requireMoodAccess` now uses the `signed_in` tier: any signed-in member, approved or not, can use Mood, and it stays open after day 14. Account restrictions still apply. Listed on the Unlock exception list under "3.1 open sign-up use".
 - 2026-10-27: **`readMoodEligibilityForUser(userId)`** (`lib/mood/repository.ts`) answers whether a member is due a check-in without creating their pseudonym: no pseudonym means never checked in, so eligible. Used by the 3.1 Today card, so opening Today creates no Mood data for a member who has not used Mood. The check-in itself is unchanged.
 - 2026-10-17: Demo seed module `ctf/scripts/demo-seed/22-mood.mjs` fills the demo Community Pulse past its minimum sample (test case MD-5).
 - 2026-10-16: **The community pulse hides a day with fewer than 3 check-ins (owner decision,

@@ -132,6 +132,12 @@ async function readHubTier(
   }
 }
 
+// The 3.1 frame for a signed-in member who chose it, or null to carry on with 3.0.
+async function renderFrameIfChosen(userId: string | null, identity: { username?: string | null } | null, isAdmin: boolean) {
+  if (!userId || (await readInterfaceVersion(userId)) !== '3.1') return null;
+  return <SeAppFrame currentUser={buildShellUser(userId, identity?.username ?? null)} isAdmin={isAdmin} />;
+}
+
 async function readInterfaceVersion(userId: string): Promise<SeInterfaceVersion> {
   try {
     return await getUserInterfaceVersion(userId);
@@ -179,6 +185,12 @@ export default async function HomePage() {
   // one thing they can still do: sign in as their other account, or delete this identity.
   await redirectIfAccountClosed(userId, isAdmin);
 
+  // A member who switched to 3.1 in Settings sees the new frame instead of the 3.0 shell, approved
+  // or not: in 3.1 the app is open before Unlock is done, and the frame carries the Unlock banner
+  // (owner decision, 2026-10-27). A failed read keeps them on 3.0, the shipped app, and is reported.
+  const frame = await renderFrameIfChosen(userId, identity, isAdmin);
+  if (frame) return frame;
+
   const { tier, failed: tierReadFailed } = await readHubTier(userId);
 
   if (!tierReadFailed && shouldRedirectToUnlock({ userId, isAdmin, tier })) {
@@ -192,12 +204,6 @@ export default async function HomePage() {
   const currentUser = userId
     ? buildShellUser(userId, identity?.username ?? null)
     : buildShellUser('guest', null);
-
-  // A member who switched to 3.1 in Settings sees the new frame instead of the 3.0 shell. A failed
-  // read keeps them on 3.0, the shipped app, and is reported.
-  if (userId && (await readInterfaceVersion(userId)) === '3.1') {
-    return <SeAppFrame currentUser={currentUser} isAdmin={isAdmin} />;
-  }
 
   const trust = await resolveTrust(userId, currentUser.userId);
 

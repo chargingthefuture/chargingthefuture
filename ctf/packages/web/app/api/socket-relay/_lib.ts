@@ -18,6 +18,17 @@ export async function requireSocketRelayReadAccess(): Promise<SocketRelayApiGate
   return { allowed: true, auth: decision };
 }
 
+// Posting an ask from + New in 3.1: open to a signed-in member who is approved, or not yet approved
+// but inside the first 14 days or waiting on their address (SOCIAL_REDESIGN_3_1_PLAN, Access). Every
+// other SocketRelay route keeps the read gate above.
+export async function requireSocketRelayPostAccess(): Promise<SocketRelayApiGate> {
+  const decision = await evaluatePluginAccess({ requireUsername: false, minUnlockTier: 'signed_in_posting' });
+  if (!decision.allowed) {
+    return { allowed: false, response: NextResponse.json(decision, { status: decision.status }) };
+  }
+  return { allowed: true, auth: decision };
+}
+
 export async function requireSocketRelayAdminAccess(): Promise<SocketRelayApiGate> {
   const gate = await requireSocketRelayReadAccess();
   if (!gate.allowed) {

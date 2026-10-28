@@ -2,13 +2,11 @@ import { NextResponse } from 'next/server';
 import { evaluatePluginAccess } from 'lib/auth/server-authz';
 import { checkMutationOrigin } from 'lib/auth/csrf';
 
-// Unlock gate for ClickLog, matching every other plugin: only a fully-approved (`approved_full`)
-// member — or an admin — may use ClickLog. Without this, a signed-in but not-yet-unlocked user could
-// create, read, or delete incidents by calling the API directly, even though the `/apps/click-log`
-// page is already gated. `evaluatePluginAccess` defaults to `minUnlockTier: 'approved_full'` and
-// resolves identity + unlock tier server-side.
+// Gate for ClickLog. A member's log is private to them, so in 3.1 it is open to every signed-in
+// member, approved or not, and stays open after the 14 days (SOCIAL_REDESIGN_3_1_PLAN, Access). The
+// account restriction check still applies.
 export async function requireClickLogAccess() {
-  const decision = await evaluatePluginAccess({ requireUsername: false });
+  const decision = await evaluatePluginAccess({ requireUsername: false, minUnlockTier: 'signed_in' });
   if (!decision.allowed) {
     return { allowed: false as const, response: NextResponse.json(decision, { status: decision.status }) };
   }

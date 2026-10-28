@@ -6,12 +6,12 @@ export type NotificationsGate =
   | { allowed: true; auth: AllowDecision }
   | { allowed: false; response: NextResponse };
 
-// Notifications are member-scoped. Match the Hub gate (support-only tier and up) so any signed-in
-// member — including not-yet-verified support-only members — can read their own feed and preferences.
+// Notifications are member-scoped: a member's own feed and preferences, which 3.1 shows as Activity.
+// Any signed-in member can read their own (SOCIAL_REDESIGN_3_1_PLAN, Access).
 export async function requireNotificationsAccess(): Promise<NotificationsGate> {
   const authDecision = await evaluatePluginAccess({
     requireUsername: false,
-    minUnlockTier: 'support_only',
+    minUnlockTier: 'signed_in',
   });
 
   if (!authDecision.allowed) {

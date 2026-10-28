@@ -428,3 +428,9 @@ of these, it is already tracked, not a new bug:
 > _Tag addition (2026-08-21, second of the day): one new scheme, The Good Day, Bad Day (`good-day-bad-day`). No test steps change; in CL-7, confirm it appears in the scheme picker search (type "good day")._
 
 > _Tag additions (2026-08-21, third of the day): one new scheme, The Forced Homecoming (`forced-homecoming`), and one new problem, "Falsely labeled mentally ill or dangerous" (`false-mental-health-label`). No test steps change; in CL-7, confirm both appear in their pickers (search "homecoming" and "labeled")._
+
+### CL-11 · ClickLog before Unlock is done (3.1)
+**Role:** a signed-in member not yet approved, on 3.1 · **Surfaces:** web, android
+1. Open ClickLog and log something.
+**Expected:** It saves and stays private, before and after day 14. A restricted account is refused.
+**Result:** web ☐ android ☐ — notes:
