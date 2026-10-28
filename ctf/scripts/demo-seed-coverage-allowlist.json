@@ -20,7 +20,6 @@
     "comic_admin_audit_trail": "audit trail: the app writes it as people act; no demo screen reads it as content",
     "comic_review_queue": "admin or moderation record: the review queue for Knowledge Library contributions; not shown on member screens",
     "contributions_audit_log": "audit trail: the app writes it as people act; no demo screen reads it as content",
-    "contributions_banner_state": "system bookkeeping: written by background jobs or request handling, never shown as content",
     "contributor_access_audit_trail": "audit trail: the app writes it as people act; no demo screen reads it as content",
     "directory_admin_audit_trail": "audit trail: the app writes it as people act; no demo screen reads it as content",
     "directory_deletion_events": "derived or logged data: computed or recorded by the app from activity, not seeded directly",

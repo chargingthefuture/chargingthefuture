@@ -205,6 +205,9 @@ web ☐
 - After step 6 the card shows no picture and the request is still up.
 - A direct `PUT /api/socket-relay/requests/:id/image` without `acknowledged=1` returns 400; one from a
   member who does not own the request returns 403; a file that is not a PNG, JPEG or WebP returns 400.
+- A JPEG with location data sent straight to that route (skipping the browser) comes back from
+  `GET /api/socket-relay/requests/:id/image` with no location or camera data (check it with any
+  photo-info viewer); the picture itself looks the same.
 
 web ☐
 

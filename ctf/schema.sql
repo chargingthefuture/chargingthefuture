@@ -2971,7 +2971,7 @@ INSERT INTO ctf_plugin_registry (plugin_slug, display_name, summary, availabilit
   ('click-log',          'ClickLog',             'Safety check-in and incident logging — location optional. Log what happened, check in when you''re safe.','implemented_shell', 180, TRUE),
   ('trust',              'Trust',                'Community reputation and verification. Trust signals built through real participation — your credibility, visible and portable.','implemented_shell', 190, TRUE),
   ('what-works',          'WhatWorks',            'One shared, survivor-verified list of tools — organized by the exact problems survivors face. No ads, no affiliates.','implemented_shell', 200, TRUE),
-  ('contributions',      'Contributions',        'Voluntary fundraiser drives — gift-card, Quora-comment, and GitHub-star contributions with service-credit thank-you grants.',        'implemented_shell', 210, TRUE),
+  ('contributions',      'Contributions',        'Send an Amazon gift card toward hosting, any time of year, and receive ServiceCredits as a thank-you.',        'implemented_shell', 210, TRUE),
   ('bug-reporting',      'Bug Reporting',        'In-app problem reports that flow to a private triage repo; raw text stays private and a human approves any fix.','planned', 220, FALSE),
   ('beacon',             'Beacon',               'Live one-way broadcasts from Farah. Watch publicly with just a link; sign in to chat and react.','implemented_shell', 230, TRUE),
   ('recurring-activity', 'Recurring Activity',   'Acknowledge an ongoing activity with another member — one tap, no amounts to report. Recognition of your everyday ties, never a bill.','implemented_shell', 240, TRUE),
@@ -6844,73 +6844,22 @@ ALTER TABLE IF EXISTS quora_live_census_audit_log ADD COLUMN IF NOT EXISTS creat
 CREATE INDEX IF NOT EXISTS idx_quora_live_census_audit_created_at
   ON quora_live_census_audit_log(created_at DESC);
 
--- === contributions plugin (voluntary fundraiser drives) ===
--- Fundraiser cycles: each row is one time window (~3 months, owner-controlled) with
--- owner-editable goals on the three external surfaces (fiat gift cards, Quora comments,
--- GitHub stars). The "current cycle" is the row whose window contains now() (latest if
--- windows overlap).
-CREATE TABLE IF NOT EXISTS contributions_cycles (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  starts_at TIMESTAMPTZ NOT NULL,
-  ends_at TIMESTAMPTZ NOT NULL,
-  fiat_goal_usd NUMERIC NOT NULL DEFAULT 0,
-  quora_comment_goal INTEGER NOT NULL DEFAULT 0,
-  github_star_goal INTEGER NOT NULL DEFAULT 0,
-  created_by_user_id TEXT,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-ALTER TABLE IF EXISTS contributions_cycles ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS contributions_cycles ADD COLUMN IF NOT EXISTS starts_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE IF EXISTS contributions_cycles ADD COLUMN IF NOT EXISTS ends_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE IF EXISTS contributions_cycles ADD COLUMN IF NOT EXISTS fiat_goal_usd NUMERIC NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS contributions_cycles ADD COLUMN IF NOT EXISTS quora_comment_goal INTEGER NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS contributions_cycles ADD COLUMN IF NOT EXISTS github_star_goal INTEGER NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS contributions_cycles ADD COLUMN IF NOT EXISTS created_by_user_id TEXT;
-ALTER TABLE IF EXISTS contributions_cycles ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE IF EXISTS contributions_cycles ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-CREATE INDEX IF NOT EXISTS idx_contributions_cycles_window ON contributions_cycles(starts_at, ends_at);
-DO $contributions_cycles_window_check$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'contributions_cycles_window_check' AND constraint_schema = current_schema()
-  ) THEN
-    ALTER TABLE contributions_cycles
-      ADD CONSTRAINT contributions_cycles_window_check CHECK (ends_at > starts_at);
-  END IF;
-END
-$contributions_cycles_window_check$;
-DO $contributions_cycles_goals_check$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'contributions_cycles_goals_check' AND constraint_schema = current_schema()
-  ) THEN
-    ALTER TABLE contributions_cycles
-      ADD CONSTRAINT contributions_cycles_goals_check
-      CHECK (fiat_goal_usd >= 0 AND quora_comment_goal >= 0 AND github_star_goal >= 0);
-  END IF;
-END
-$contributions_cycles_goals_check$;
-
--- Contribution claims. The gift-card CODE is never collected or stored anywhere in the
--- platform — the member sends it to the owner over Signal, outside the app. signal_contact
--- is the member's own Signal URL or phone number (personal data; deleted with the account).
+-- === contributions plugin (Amazon gift cards, open all year) ===
+-- Contribution claims. A gift card is entered in the app: the code is stored encrypted
+-- (gift_card_code_encrypted, AES-256-GCM under CONTRIBUTIONS_CODE_KEY) and erased when the claim is
+-- confirmed or rejected. kind keeps 'quora_comment' and 'github_star' for claims made before
+-- 2026-10-27; new claims are 'gift_card' only.
 CREATE TABLE IF NOT EXISTS contributions_submissions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id TEXT NOT NULL,
   kind TEXT NOT NULL CHECK (kind IN ('gift_card', 'quora_comment', 'github_star')),
   method TEXT,
   claimed_amount_usd NUMERIC,
-  signal_contact TEXT,
-  quora_post_url TEXT,
-  github_profile_url TEXT,
+  gift_card_code_encrypted TEXT,
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'rejected')),
   confirmed_amount_usd NUMERIC,
   credits_granted NUMERIC NOT NULL DEFAULT 0,
   credit_governance_event_id TEXT,
-  cycle_id UUID,
   reviewed_by_user_id TEXT,
   reviewed_at TIMESTAMPTZ,
   review_note TEXT,
@@ -6922,14 +6871,11 @@ ALTER TABLE IF EXISTS contributions_submissions ADD COLUMN IF NOT EXISTS user_id
 ALTER TABLE IF EXISTS contributions_submissions ADD COLUMN IF NOT EXISTS kind TEXT;
 ALTER TABLE IF EXISTS contributions_submissions ADD COLUMN IF NOT EXISTS method TEXT;
 ALTER TABLE IF EXISTS contributions_submissions ADD COLUMN IF NOT EXISTS claimed_amount_usd NUMERIC;
-ALTER TABLE IF EXISTS contributions_submissions ADD COLUMN IF NOT EXISTS signal_contact TEXT;
-ALTER TABLE IF EXISTS contributions_submissions ADD COLUMN IF NOT EXISTS quora_post_url TEXT;
-ALTER TABLE IF EXISTS contributions_submissions ADD COLUMN IF NOT EXISTS github_profile_url TEXT;
+ALTER TABLE IF EXISTS contributions_submissions ADD COLUMN IF NOT EXISTS gift_card_code_encrypted TEXT;
 ALTER TABLE IF EXISTS contributions_submissions ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending';
 ALTER TABLE IF EXISTS contributions_submissions ADD COLUMN IF NOT EXISTS confirmed_amount_usd NUMERIC;
 ALTER TABLE IF EXISTS contributions_submissions ADD COLUMN IF NOT EXISTS credits_granted NUMERIC NOT NULL DEFAULT 0;
 ALTER TABLE IF EXISTS contributions_submissions ADD COLUMN IF NOT EXISTS credit_governance_event_id TEXT;
-ALTER TABLE IF EXISTS contributions_submissions ADD COLUMN IF NOT EXISTS cycle_id UUID;
 ALTER TABLE IF EXISTS contributions_submissions ADD COLUMN IF NOT EXISTS reviewed_by_user_id TEXT;
 ALTER TABLE IF EXISTS contributions_submissions ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS contributions_submissions ADD COLUMN IF NOT EXISTS review_note TEXT;
@@ -6953,57 +6899,19 @@ BEGIN
   END IF;
 END
 $contributions_submissions_amounts_check$;
--- A gift-card claim must carry the member's Signal contact (the only way the owner can match
--- a code received over Signal to the claim). Non-monetary kinds never set it.
-DO $contributions_submissions_gift_card_signal_check$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.check_constraints
-    WHERE constraint_name = 'contributions_submissions_gift_card_signal_check' AND constraint_schema = current_schema()
-  ) THEN
-    ALTER TABLE contributions_submissions
-      ADD CONSTRAINT contributions_submissions_gift_card_signal_check
-      CHECK (kind <> 'gift_card' OR NULLIF(signal_contact, '') IS NOT NULL);
-  END IF;
-END
-$contributions_submissions_gift_card_signal_check$;
--- cycle_id stays NULLABLE on purpose: a claim made while no drive is active has no cycle. The
--- foreign key only constrains non-null values.
-DO $contributions_submissions_cycle_fk$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.table_constraints
-    WHERE constraint_name = 'contributions_submissions_cycle_id_fkey' AND constraint_schema = current_schema()
-      AND constraint_type = 'FOREIGN KEY'
-  ) THEN
-    ALTER TABLE contributions_submissions
-      ADD CONSTRAINT contributions_submissions_cycle_id_fkey
-      FOREIGN KEY (cycle_id) REFERENCES contributions_cycles(id);
-  END IF;
-END
-$contributions_submissions_cycle_fk$;
 
--- Runtime configuration singleton (id BOOLEAN PRIMARY KEY DEFAULT TRUE, same pattern as
--- service_credits_treasury_config; fields are individual columns like unlock_runtime_config).
--- banner_snooze_months is an internal knob and is never surfaced to members.
+-- Runtime configuration singleton (id BOOLEAN PRIMARY KEY DEFAULT TRUE). per_user_year_credit_cap
+-- is the most thank-you credits one member is granted over the last 365 days.
 CREATE TABLE IF NOT EXISTS contributions_runtime_config (
   id BOOLEAN PRIMARY KEY DEFAULT TRUE,
   credits_per_usd NUMERIC NOT NULL DEFAULT 10,
-  non_monetary_unit_value_usd NUMERIC NOT NULL DEFAULT 1,
-  per_user_cycle_credit_cap NUMERIC NOT NULL DEFAULT 300,
-  banner_snooze_months INTEGER NOT NULL DEFAULT 2,
-  banner_enabled BOOLEAN NOT NULL DEFAULT TRUE,
-  signal_instructions TEXT NOT NULL DEFAULT '',
+  per_user_year_credit_cap NUMERIC NOT NULL DEFAULT 300,
   updated_by_user_id TEXT,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ALTER TABLE IF EXISTS contributions_runtime_config ADD COLUMN IF NOT EXISTS id BOOLEAN DEFAULT TRUE;
 ALTER TABLE IF EXISTS contributions_runtime_config ADD COLUMN IF NOT EXISTS credits_per_usd NUMERIC NOT NULL DEFAULT 10;
-ALTER TABLE IF EXISTS contributions_runtime_config ADD COLUMN IF NOT EXISTS non_monetary_unit_value_usd NUMERIC NOT NULL DEFAULT 1;
-ALTER TABLE IF EXISTS contributions_runtime_config ADD COLUMN IF NOT EXISTS per_user_cycle_credit_cap NUMERIC NOT NULL DEFAULT 300;
-ALTER TABLE IF EXISTS contributions_runtime_config ADD COLUMN IF NOT EXISTS banner_snooze_months INTEGER NOT NULL DEFAULT 2;
-ALTER TABLE IF EXISTS contributions_runtime_config ADD COLUMN IF NOT EXISTS banner_enabled BOOLEAN NOT NULL DEFAULT TRUE;
-ALTER TABLE IF EXISTS contributions_runtime_config ADD COLUMN IF NOT EXISTS signal_instructions TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS contributions_runtime_config ADD COLUMN IF NOT EXISTS per_user_year_credit_cap NUMERIC NOT NULL DEFAULT 300;
 ALTER TABLE IF EXISTS contributions_runtime_config ADD COLUMN IF NOT EXISTS updated_by_user_id TEXT;
 ALTER TABLE IF EXISTS contributions_runtime_config ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 DO $contributions_runtime_config_positive_check$
@@ -7014,34 +6922,12 @@ BEGIN
   ) THEN
     ALTER TABLE contributions_runtime_config
       ADD CONSTRAINT contributions_runtime_config_positive_check
-      CHECK (
-        credits_per_usd > 0 AND
-        non_monetary_unit_value_usd > 0 AND
-        per_user_cycle_credit_cap > 0 AND
-        banner_snooze_months > 0
-      );
+      CHECK (credits_per_usd > 0 AND per_user_year_credit_cap > 0);
   END IF;
 END
 $contributions_runtime_config_positive_check$;
--- Migrate the banner snooze from the original 6-month default to 2 months (owner request,
--- 2026-07-18). Only touches a row still holding the old default; the snooze length is not surfaced
--- in the admin UI, so any stored 6 is that leftover default, safe to move to the new default.
-UPDATE contributions_runtime_config SET banner_snooze_months = 2, updated_at = NOW() WHERE banner_snooze_months = 6;
 
--- Per-user fundraiser banner state. Dismissing the banner silently snoozes it for
--- banner_snooze_months; nothing is shown to the member about the snooze length.
-CREATE TABLE IF NOT EXISTS contributions_banner_state (
-  user_id TEXT PRIMARY KEY,
-  snoozed_until TIMESTAMPTZ,
-  last_shown_at TIMESTAMPTZ,
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-ALTER TABLE IF EXISTS contributions_banner_state ADD COLUMN IF NOT EXISTS snoozed_until TIMESTAMPTZ;
-ALTER TABLE IF EXISTS contributions_banner_state ADD COLUMN IF NOT EXISTS last_shown_at TIMESTAMPTZ;
-ALTER TABLE IF EXISTS contributions_banner_state ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-
--- Audit log (same shape family as unlock_audit_log). Banner dismissal is deliberately NOT
--- logged (low value, privacy). signal_contact values are never written into metadata.
+-- Audit log (same shape family as unlock_audit_log). A gift card code is never written into metadata.
 CREATE TABLE IF NOT EXISTS contributions_audit_log (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   actor_user_id TEXT,

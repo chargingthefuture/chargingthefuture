@@ -226,6 +226,7 @@ email sender, Android app links and blog links move with it.
 12. Contributions rework. Blocked by 8. Owner-review lane.
 13. What Works duplicates and review; SkillsHunt leaderboard removal and missions; Quora census card.
     Blocked by 6.
-14. Android screens for every plugin, matching web. Runs alongside 6 to 13.
+14. Android screens for every plugin, matching web. On hold until the web app is done (owner
+    decision, 2026-10-27); until then 3.1 work is built for the web only.
 15. Speed budget check before release. Blocked by 6.
 16. Domain move to lagatos.com. Last; no code dependency.
