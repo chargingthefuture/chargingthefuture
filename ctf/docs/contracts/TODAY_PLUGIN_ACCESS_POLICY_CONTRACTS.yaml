@@ -37,3 +37,34 @@ policies:
       - actor_not_authenticated
       - actor_not_approved
       - account_restricted
+  - pluginId: today
+    command: today.public.read
+    version: 1.0.0
+    requiredRoles: []
+    attributePolicies:
+      tenancy: public
+      minUnlockTier: none
+      readsOnly: true
+      rateLimit: public_read_per_ip
+      sources:
+        - trust-transport available requests (no title, no places, no name)
+        - skill-up open cohorts with seats
+        - workforce dashboard counts
+        - beacon live event and replays
+        - skills-hunt active round and the day's mission
+        - chyme public main room state and the next TI Radio talk
+        - days won (a total, no member)
+      excluded:
+        - anything with a member's name or text (goals, socket-relay, lighthouse, announcements, invitations)
+        - mood, the quora survey card, the weavers room, mutes
+    consentRequirements:
+      scopes: []
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - rate_limited
