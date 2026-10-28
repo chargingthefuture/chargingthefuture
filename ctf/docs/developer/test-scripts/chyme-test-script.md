@@ -776,6 +776,20 @@ as before: Join Room, Leave and Back Channel.
 counting at once; time with the app open and not in a room or call adds nothing.
 **Result:** web ☐ android ☐ — notes:
 
+### CH-28 · Mute for me, and the room rule
+**Role:** three members · **Surfaces:** web
+**Steps:**
+1. All three join the Main Room in 3.1 and unmute. As the first member, read the room header, then
+   tap **Mute for me** under the second member's tile.
+2. The second member speaks; the third member listens too.
+3. As the first member, open Me → Muted, then tap **Unmute for me** under the second member's tile.
+**Expected:** The header shows "Stay on topic: economics and collective action. Somebody who keeps
+going off topic can be removed from the room; their account is not affected." After step 1 the
+first member no longer hears the second; the third still does, and neither of the others is told.
+The button reads **Unmute for me**. Me → Muted lists the second member as a muted person, and
+their Today cards are left out for the first member. After step 3 the first member hears them again.
+**Result:** web ☐ — notes:
+
 ### CH-30 — Add an upcoming talk to the calendar (3.1)
 **Role:** a member | **Surfaces:** web (mobile-width)
 
