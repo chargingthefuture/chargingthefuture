@@ -18,7 +18,6 @@ import { ShellChatPanel } from './shell-chat-panel';
 import { GatedChatPanel } from './gated-chat-panel';
 import { ShellAppsPanel } from './shell-apps-panel';
 import { ShellRightRail } from './shell-right-rail';
-import { ContributionsBanner } from '../contributions/contributions-banner';
 import { UnlockVerifyBanner } from './unlock-verify-banner';
 import { CommonsUnlockFocusContext } from './commons-unlock-focus';
 import { HelpControl } from '../bug-reports/help-control';
@@ -418,7 +417,6 @@ function ShellMainContent({
     <main className={`${styles.panel} ${styles.content}`}>
       {/* App-wide fundraiser banner — non-blocking, top of the content area, signed-in only.
           The banner self-hides unless a drive is active and visible for this member. */}
-      {isAuthenticated ? <ContributionsBanner /> : null}
       {/* Not-yet-verified members (notably the early-Commons A/B treatment bucket) get a persistent
           prompt to submit their Quora URL right here, with a nudge to ask in the Commons if stuck. */}
       {isAuthenticated && verification ? (

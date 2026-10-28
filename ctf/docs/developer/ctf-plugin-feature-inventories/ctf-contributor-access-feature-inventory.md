@@ -380,9 +380,10 @@ fill on the first recompute / config save / member post.
 - 2026-10-06 — Contributions split into a money event and a non-money event (owner decision; issue
   #2982). Only real money counts toward a dollar figure. `value.contributions_confirmed_usd` summed
   `confirmed_amount_usd` over every confirmed submission, and for a Quora comment or GitHub star that
-  column holds the admin's set value per non-money contribution (`non_monetary_unit_value_usd`,
-  default 1), so each comment or star was being read as a confirmed dollar on the Weekly Performance
-  card. The dollar event is now gift cards only, and comments and stars are a fifteenth event,
+  column held the admin's set value per non-money contribution (default 1; the setting was removed
+  on 2026-10-27, and every comment and star row dates from before then, when Contributions began
+  taking Amazon gift cards only), so each comment or star was being read as a confirmed dollar on
+  the Weekly Performance card. The dollar event is now gift cards only, and comments and stars are a fifteenth event,
   `value.contributions_non_money_confirmed` (plugin `contributions`, delivering, `sum` aggregate,
   `rows` on the dashboard). No member's score moves: the new event sums the same set value at the
   same default weight of 0.1, the distinct-plugins gate still sees one plugin, and the daily
