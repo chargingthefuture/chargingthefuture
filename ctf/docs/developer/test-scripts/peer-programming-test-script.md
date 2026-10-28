@@ -575,6 +575,29 @@ Result: web ☐
 
 ---
 
+### PP-23 — Check before joining, blur, picture in picture, block and report (added 2026-10-28)
+
+**Role:** two members of one cohort · **Surfaces:** web
+
+**Steps:**
+1. Open the Session tab and tap **Join Session**.
+2. Turn the microphone off and on, the camera off and on, and tap **Blur background**.
+3. Tap **Join session**. The second member joins the same way.
+4. Tap **Picture in picture**, then switch to another tab.
+5. Under the second member's tile tap **Block and report**, then **Yes**.
+
+**Expected:**
+- Step 1 shows "Check your camera and microphone" with your own camera, before anyone can see you.
+- In step 2 each button says its state; the blur softens what is behind you. The browser's network
+  panel shows the blur files loading from this site's `/video-filters/`, never another server.
+- After step 4 the other member's video stays in a small window on top.
+- After step 5 you leave the call, the second member is in your blocked list (Account → Blocked), and
+  the System Architect's safety queue has a report from you.
+
+web ☐
+
+---
+
 ## Admin walkthrough
 
 ### PP-A1 — Set or update the weekly topic
