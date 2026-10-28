@@ -151,6 +151,13 @@
       "feature": "3.1 open sign-up use",
       "decision": "2026-10-27",
       "reason": "A member's own notifications, shown as Activity in 3.1, at 'signed_in' (was support_only)."
+    },
+    {
+      "file": "ctf/packages/web/app/api/chyme/_lib.ts",
+      "kind": "exception",
+      "feature": "3.1 open sign-up use",
+      "decision": "2026-10-28",
+      "reason": "requireChymeMemberRoomAccess at 'signed_in' for the Main Room only: reading the room, joining as a listener, the heartbeat and leaving. A member not yet approved joins with the listener role and sees no raise-hand or speaker controls; speaking, chat, every other room and the admin routes stay approved-only (owner-approved plan ctf/docs/developer/SOCIAL_REDESIGN_3_1_PLAN.md, Access; confirmed by the owner 2026-10-28)."
     }
   ]
 }

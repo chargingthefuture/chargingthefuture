@@ -98,20 +98,18 @@ export function formatWeekRange(week: WpWeek): string {
   return `${startLabel}–${endLabel}, ${end.year}`;
 }
 
-// The dashboard's three sections, keyed by metric-key prefix (see live-metrics.ts card order):
-// goals the platform drives toward, each plugin's delivered-value event, and honest adoption rows.
-export type WpMetricGroup = "goal" | "value" | "adoption" | "other";
+// The dashboard's sections, keyed by metric-key prefix (see live-metrics.ts card order): goals the
+// platform drives toward, and adoption rows about turnout.
+export type WpMetricGroup = "goal" | "adoption" | "other";
 
 export function metricGroup(key: string): WpMetricGroup {
   if (key.startsWith("goal.")) return "goal";
-  if (key.startsWith("value.")) return "value";
   if (key.startsWith("adoption.")) return "adoption";
   return "other";
 }
 
 export const METRIC_GROUP_HEADINGS: Record<WpMetricGroup, string> = {
   goal: "Goals",
-  value: "Value delivered",
   adoption: "Adoption",
   other: "Other",
 };
@@ -127,21 +125,26 @@ export function isRiseGoodFor(metricKey: string): boolean {
 }
 
 // Acronyms the generic title-caser would mangle ("Gdp" → "GDP").
-const LABEL_ACRONYMS: Record<string, string> = { Gdp: "GDP", Usd: "USD" };
+const LABEL_ACRONYMS: Record<string, string> = { Gdp: "GDP" };
+
+// Cards whose plain key would read wrong. The sign-in count is "Signed in per day" (3.1.0 plan,
+// Measures); its key stays so past weeks and the metric registry keep lining up.
+const LABEL_OVERRIDES: Record<string, string> = { "adoption.daily_active_members": "Signed in per day" };
 
 // Turn a dotted/snake/camel metric key into a readable label (no label column exists). The group
-// prefix (goal./value./adoption.) is dropped — the section heading already says it — and any other
+// prefix (goal./adoption.) is dropped — the section heading already says it — and any other
 // namespace dot is treated as a separator, so "engagement.active_members" reads as
 // "Engagement Active Members" rather than "Engagement.Active Members".
 export function humanizeMetricKey(key: string): string {
-  const withoutGroup = key.replace(/^(goal|value|adoption)\./, "");
+  if (LABEL_OVERRIDES[key]) return LABEL_OVERRIDES[key];
+  const withoutGroup = key.replace(/^(goal|adoption)\./, "");
   return withoutGroup
     .replace(/[._-]+/g, " ")
     .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
     .replace(/\s+/g, " ")
     .trim()
     .replace(/\b\w/g, (c) => c.toUpperCase())
-    .replace(/\b(Gdp|Usd)\b/g, (word) => LABEL_ACRONYMS[word] ?? word);
+    .replace(/\bGdp\b/g, (word) => LABEL_ACRONYMS[word] ?? word);
 }
 
 export function formatMetricValue(value: number, unit: string): string {

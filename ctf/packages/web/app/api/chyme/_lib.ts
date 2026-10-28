@@ -10,6 +10,7 @@ import {
   type ChymeRoomScope,
 } from 'lib/chyme/constants';
 import { getContributorAccessConfig, isMemberEligible } from 'lib/contributor-access/repository';
+import { getUnlockAccessTier } from 'lib/unlock/access';
 
 export type ChymeApiIdentity = {
   userId: string;
@@ -120,6 +121,35 @@ export async function requireChymeRoomAccess(request: Request): Promise<ChymeRoo
     identity: gate.identity,
     scope,
     roomKey: chymeRoomKeyForScope(scope),
+  };
+}
+
+export type ChymeMemberRoomGate =
+  | (Extract<ChymeRoomGate, { allowed: true }> & { listenOnly: boolean })
+  | Extract<ChymeRoomGate, { allowed: false }>;
+
+// Reading, joining, leaving and staying in a room (3.1.0, Access; owner decision 2026-10-27, "3.1
+// open sign-up use"). A signed-in member not yet approved in Unlock may listen in the Main Room:
+// they join as a listener and cannot speak or raise a hand (the hand route keeps the approved gate).
+// The Weavers room is unchanged: approved and eligible only.
+export async function requireChymeMemberRoomAccess(request: Request): Promise<ChymeMemberRoomGate> {
+  const scope = readChymeRoomScope(request);
+  if (scope === 'contributors') {
+    const gate = await requireChymeRoomAccess(request);
+    return gate.allowed ? { ...gate, listenOnly: false } : gate;
+  }
+  const decision = await evaluatePluginAccess({ requireUsername: false, minUnlockTier: 'signed_in' });
+  if (!decision.allowed) {
+    return { allowed: false, response: NextResponse.json(decision, { status: decision.status }) };
+  }
+  const listenOnly = !decision.isAdmin && (await getUnlockAccessTier(decision.userId)) !== 'approved_full';
+  return {
+    allowed: true,
+    auth: decision,
+    identity: { userId: decision.userId, username: decision.username },
+    scope,
+    roomKey: chymeRoomKeyForScope(scope),
+    listenOnly,
   };
 }
 

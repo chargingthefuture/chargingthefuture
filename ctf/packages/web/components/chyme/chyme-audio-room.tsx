@@ -641,7 +641,10 @@ function ChymeTileActions({
 }) {
   return (
     <>
-      <ChymeSpeakerActions clerkUserId={clerkUserId} name={name} backChannel={backChannel} backChannelEnabled={backChannelEnabled} />
+      {/* Tips and the Back Channel need Unlock approval, so a member listening before it has neither. */}
+      {moderation.viewer.listenOnly ? null : (
+        <ChymeSpeakerActions clerkUserId={clerkUserId} name={name} backChannel={backChannel} backChannelEnabled={backChannelEnabled} />
+      )}
       {moderation.viewer.isAdmin ? <ChymeModeratorActions clerkUserId={clerkUserId} name={name} moderation={moderation} /> : null}
     </>
   );
@@ -663,7 +666,9 @@ function ChymeAudioControls({
   // In hand-raise mode a listener cannot speak: the microphone control is replaced by the notice,
   // and the microphone is turned off the moment the role says listener (an admin moved them back,
   // or the room switched modes), so the change takes effect without waiting for a tap.
-  const listening = moderation.speakMode === 'hand_raise' && !moderation.viewer.isAdmin && moderation.viewer.role !== 'speaker';
+  const beforeUnlock = Boolean(moderation.viewer.listenOnly);
+  const listening =
+    beforeUnlock || (moderation.speakMode === 'hand_raise' && !moderation.viewer.isAdmin && moderation.viewer.role !== 'speaker');
   useEffect(() => {
     if (!listening) return;
     void microphone.disable().catch(() => {
@@ -679,7 +684,8 @@ function ChymeAudioControls({
       onToggleHand={onToggleHand}
       joinReady
       onLeave={onLeave}
-      micControl={listening ? <ChymeListeningNotice /> : undefined}
+      micControl={listening ? <ChymeListeningNotice beforeUnlock={beforeUnlock} /> : undefined}
+      hideHand={beforeUnlock}
       extra={moderation.viewer.isAdmin ? <ChymeSpeakModeToggle moderation={moderation} /> : undefined}
     />
   );

@@ -31,6 +31,7 @@ export function ChymeControls({
   onLeave,
   micControl,
   extra,
+  hideHand = false,
 }: {
   muted: boolean;
   onToggleMute: () => void;
@@ -42,6 +43,8 @@ export function ChymeControls({
   micControl?: ReactNode;
   // Rendered after the hand control — the admin's speak-mode switch.
   extra?: ReactNode;
+  // A member who cannot ask to speak (not yet approved in Unlock) has no hand control.
+  hideHand?: boolean;
 }) {
   const { theme } = useTheme();
   const t = getChymeTokens(theme);
@@ -59,10 +62,12 @@ export function ChymeControls({
           {muted ? 'Unmute' : 'Mute'}
         </button>
       )}
-      <button onClick={onToggleHand} style={handStyle}>
-        <Hand size={16} />
-        {handRaised ? 'Lower Hand' : 'Raise Hand'}
-      </button>
+      {hideHand ? null : (
+        <button onClick={onToggleHand} style={handStyle}>
+          <Hand size={16} />
+          {handRaised ? 'Lower Hand' : 'Raise Hand'}
+        </button>
+      )}
       {extra}
       <div style={{ flex: 1 }} />
       <div style={{ fontSize: 12, color: t.FAINT, display: 'flex', alignItems: 'center', gap: 6 }}>

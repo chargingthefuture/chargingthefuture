@@ -147,7 +147,7 @@ export function WeeklyPerformanceMetricCards({
 }) {
   const { theme } = useTheme();
   const t = getTokens(theme);
-  const groups: WpMetricGroup[] = ["goal", "value", "adoption", "other"];
+  const groups: WpMetricGroup[] = ["goal", "adoption", "other"];
   let colorIndex = 0;
   return (
     <div style={{ marginBottom: 24 }}>

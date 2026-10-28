@@ -14,7 +14,7 @@ policies:
       - admin
     attributePolicies:
       tenancy: same_workspace
-      approvalGate: approved_user_or_admin
+      approvalGate: approved_user_or_admin; in the Main Room a signed-in member not yet approved in Unlock is let in to listen only (3.1 open sign-up use, 2026-10-28)
       roomMembershipUpsertAllowed: true
     consentRequirements:
       scopes:
@@ -73,7 +73,7 @@ policies:
       - admin
     attributePolicies:
       tenancy: same_workspace
-      approvalGate: approved_user_or_admin
+      approvalGate: approved_user_or_admin; in the Main Room a signed-in member not yet approved in Unlock is let in to listen only (3.1 open sign-up use, 2026-10-28)
       streamConfigurationRequired: true
     consentRequirements:
       scopes:

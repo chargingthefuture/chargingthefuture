@@ -87,22 +87,9 @@ contracts:
     dataAccess:
       - canonical_metrics_registry
       - weekly_performance_goal_snapshots
-      - foundation_call_sessions
-      - trust_transport_trips
-      - lighthouse_matches
-      - socket_relay_fulfillments
-      - service_credits_transfers
-      - contributions_submissions
-      - skills_hunt_submissions
-      - what_works_products
-      - skill_up_enrollments
-      - skill_up_disbursements
-      - recurring_activities
-      - peer_programming_messages
+      # Workforce recruited goal: the count of all Directory profiles.
       - directory_profiles
-      - directory_profile_skills
-      - mood_submissions
-      - click_log_incidents
+      # Active members and signed in per day: the sign-in record, aggregate counts only.
       - login_events
       # Full-account deletions a member chose, for the deleted-accounts adoption row. Aggregate
       # count only — no member is ever named.
@@ -135,22 +122,9 @@ contracts:
     dataAccess:
       - canonical_metrics_registry
       - weekly_performance_goal_snapshots
-      - foundation_call_sessions
-      - trust_transport_trips
-      - lighthouse_matches
-      - socket_relay_fulfillments
-      - service_credits_transfers
-      - contributions_submissions
-      - skills_hunt_submissions
-      - what_works_products
-      - skill_up_enrollments
-      - skill_up_disbursements
-      - recurring_activities
-      - peer_programming_messages
+      # Workforce recruited goal: the count of all Directory profiles.
       - directory_profiles
-      - directory_profile_skills
-      - mood_submissions
-      - click_log_incidents
+      # Active members and signed in per day: the sign-in record, aggregate counts only.
       - login_events
       # Full-account deletions a member chose, for the deleted-accounts adoption row. Aggregate
       # count only — no member is ever named.
@@ -189,6 +163,16 @@ contracts:
     idempotency: true
 
 changelog:
+  - date: 2026-10-28
+    change: >-
+      3.1.0 Measures: the per-plugin weekly counts retired from the dashboard, so the metrics and
+      comparison reads no longer touch the plugin tables behind them (Foundation, TrustTransport,
+      LightHouse, SocketRelay, ServiceCredits, Contributions, SkillsHunt, WhatWorks, SkillUp,
+      Recurring Activity, PeerProgramming, Directory skills, Mood and ClickLog). dataAccess now lists
+      only what is still read: the goal snapshots, directory_profiles for the Workforce goal,
+      login_events for the two turnout rows, and account_deletion_events. The GDP goal still comes
+      from the GDP plugin's live report. The daily active members row is labeled signed in per day;
+      its key is unchanged.
   - date: 2026-07-19
     change: >-
       Removed the weekly-performance.report.export command (owner request to delete the export
