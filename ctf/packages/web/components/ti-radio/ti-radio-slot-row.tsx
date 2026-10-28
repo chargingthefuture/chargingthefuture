@@ -3,6 +3,7 @@
 import { Radio, Plus, Lock } from 'lucide-react';
 import type { PluginShellTokens } from '@/components/shared/plugin-shell-theme';
 import type { TiRadioGuideSlot } from 'lib/ti-radio/types';
+import { AddToCalendarButton } from '@/components/shared/add-to-calendar';
 import { formatRange } from './ti-radio-shared';
 
 type Props = {
@@ -81,6 +82,19 @@ function BookedSlot({
         <div style={{ fontSize: 12, color: t.MUTED, marginTop: 6, overflowWrap: 'anywhere' }}>{booking.description}</div>
       )}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
+        {!slot.isOnAir && (
+          <AddToCalendarButton
+            color={t.ACCENT}
+            event={{
+              uid: `ti-radio-${booking.id}`,
+              title: booking.title,
+              startIso: slot.slotStartIso,
+              endIso: slot.slotEndIso,
+              description: `Hosted by ${booking.hostUsername} in the Main Room.`,
+              url: '/ti-radio',
+            }}
+          />
+        )}
         {booking.isViewerHost && !slot.isOnAir && (
           <button
             type="button"

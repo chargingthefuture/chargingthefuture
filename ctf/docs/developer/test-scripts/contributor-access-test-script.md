@@ -615,6 +615,38 @@ Result: web ☐
 
 ---
 
+### CA-A14 — Give the badge by hand
+**Role:** admin | **Surfaces:** web (mobile-width)
+
+**Precondition:** One member who does not hold the badge, and one member revoked for cause.
+
+**Steps:**
+1. On `/admin/adoption`, Weavers of the Commons, type the first member's `@username` into "Give the badge" and press it.
+2. Do it again for the same member.
+3. Type the revoked member's username and press it.
+4. Type a username nobody has.
+
+**Expected:** Step 1 adds the member to Eligible members with today's date. Step 2 changes nothing. Step 3 shows "This member was revoked for cause. Reinstate them instead." Step 4 shows "No member with the username or account id …". The next weekly recompute keeps the member granted in step 1.
+
+Result: web ☐
+
+---
+
+### CA-A15 — Value from a new or unapproved member does not count
+**Role:** admin | **Surfaces:** web (database read)
+
+**Precondition:** Member A sends credits to member B, who is not approved through Unlock or first signed in less than 14 days ago.
+
+**Steps:**
+1. Run the weekly recompute.
+2. Read A's row in `contributor_access_eligibility`.
+
+**Expected:** The send to B is not in A's `reason_snapshot` counts and B is not counted among A's counterparties. Once B is approved and past day 14, the next recompute counts it.
+
+Result: web ☐
+
+---
+
 ## Parity check (web ↔ android)
 
 Android was removed on 2026-07-20 (rule 105, PR #1742). There is no Android surface to compare. All parity checks in this script are web desktop ↔ web mobile-responsive only.

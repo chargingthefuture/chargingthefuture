@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { SE_DAYS_WON_TITLE, SE_MUTE_WORDS, SE_TODAY_FILTERS, seDaysWonLines, seTodayView, type SeToday, type SeTodayCard, type SeTodayFilter } from '@ctf/shared';
+import Link from 'next/link';
 import { BroadcastCard, RoomCard } from './room-card';
 import { TodayCard } from './today-card';
 import { useToday, type TodayMarks } from './use-today';
@@ -21,12 +22,25 @@ function DaysWonCard({ daysWon }: { daysWon: NonNullable<SeToday['daysWon']> }) 
   );
 }
 
-function LiveCards({ today }: { today: SeToday | null }) {
+// A visitor who is not signed in listens on the public room page instead of inside the frame.
+function GuestRoomLink() {
+  return (
+    <section className={styles.daysWon} aria-label="Main Room">
+      <span className={styles.daysWonLabel}>Main Room</span>
+      <span className={styles.daysWonSmall}>Anyone can listen, no account needed.</span>
+      <Link href="/apps/chyme" className={styles.actionButton}>
+        Listen in
+      </Link>
+    </section>
+  );
+}
+
+function LiveCards({ today, guest }: { today: SeToday | null; guest: boolean }) {
   return (
     <>
       {today?.daysWon ? <DaysWonCard daysWon={today.daysWon} /> : null}
       {today?.broadcast?.live ? <BroadcastCard broadcast={today.broadcast} /> : null}
-      {today?.rooms.map((room) => <RoomCard key={room.key} room={room} />)}
+      {guest ? (today ? <GuestRoomLink /> : null) : today?.rooms.map((room) => <RoomCard key={room.key} room={room} />)}
     </>
   );
 }
@@ -70,7 +84,7 @@ type TimelineProps = {
   view: ReturnType<typeof seTodayView>;
   marks: TodayMarks;
   mark: (kind: keyof TodayMarks, id: string) => void;
-  onMute: (card: SeTodayCard) => void;
+  onMute?: (card: SeTodayCard) => void;
 };
 
 function Timeline({ view, marks, mark, onMute }: TimelineProps) {
@@ -84,7 +98,7 @@ function Timeline({ view, marks, mark, onMute }: TimelineProps) {
           read={marks.read.includes(card.id)}
           onRead={() => mark('read', card.id)}
           onHide={() => mark('hidden', card.id)}
-          onMute={card.author ? () => onMute(card) : undefined}
+          onMute={card.author && onMute ? () => onMute(card) : undefined}
         />
       ))}
       <div className={styles.caughtUp}>
@@ -95,7 +109,8 @@ function Timeline({ view, marks, mark, onMute }: TimelineProps) {
   );
 }
 
-export function TodayScreen({ accountId }: { accountId: string }) {
+// `accountId` null: a visitor who is not signed in reads the public Today (no names, no mute).
+export function TodayScreen({ accountId }: { accountId: string | null }) {
   const { today, loading, error, marks, mark, reload } = useToday(accountId);
   const [filter, setFilter] = useState<SeTodayFilter>('all');
   const view = seTodayView(today, marks, filter);
@@ -118,7 +133,7 @@ export function TodayScreen({ accountId }: { accountId: string }) {
 
   return (
     <>
-      <LiveCards today={today} />
+      <LiveCards today={today} guest={accountId === null} />
       <div className={styles.listHead}>
         <h2 className={styles.listTitle}>Today&apos;s cards</h2>
         {view.doneLine ? <span className={styles.doneCount}>{view.doneLine}</span> : null}
@@ -130,7 +145,7 @@ export function TodayScreen({ accountId }: { accountId: string }) {
           {muteNote}
         </p>
       ) : null}
-      {today ? <Timeline view={view} marks={marks} mark={mark} onMute={(card) => void mute(card)} /> : null}
+      {today ? <Timeline view={view} marks={marks} mark={mark} onMute={accountId ? (card) => void mute(card) : undefined} /> : null}
     </>
   );
 }

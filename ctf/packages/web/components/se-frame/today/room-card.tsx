@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { AddToCalendarButton, talkCalendarEvent } from '@/components/shared/add-to-calendar';
 import {
   SE_ROOM_MAIN_AUDIENCE,
   SE_ROOM_WEAVERS_AUDIENCE,
@@ -46,6 +47,9 @@ export function RoomCard({ room }: { room: SeTodayRoom }) {
         <span className={styles.roomMeta}>· {AUDIENCE[room.key]}</span>
       </div>
       {talkLine ? <span className={styles.roomTitle}>{talkLine}</span> : null}
+      {room.nextTalk && !room.nextTalk.onAir ? (
+        <AddToCalendarButton color="var(--se-ink)" borderColor="var(--se-line)" event={talkCalendarEvent(room.nextTalk)} style={{ alignSelf: 'flex-start' }} />
+      ) : null}
       <span className={styles.roomMeta}>{seRoomPeopleLine(room.members, room.guests)}</span>
       <button type="button" className={styles.primaryButton} onClick={() => open(scope, room.nextTalk)}>
         {room.live ? SE_ROOM_WORDS_MAIN.join : 'Open the room'}

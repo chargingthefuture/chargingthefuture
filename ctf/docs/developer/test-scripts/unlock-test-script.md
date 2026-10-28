@@ -340,6 +340,9 @@ approval grants nothing more (`comicSharedWritingGranted: 0`). The approval succ
 fails; a failed grant is reported. See CMC-A1b in the comic test script.
 **Result:** web ☐ — notes:
 
+The same approval also sends any Contributions thank-you credits held while the member was not
+verified; the audit row carries `contributionsGranted`. See CONT-A14 in the contributions test script.
+
 ### UNLOCK-A4 · Edit a submission's Quora URL
 **Role:** admin / reviewer · **Surfaces:** web (admin surface)
 **Steps:**

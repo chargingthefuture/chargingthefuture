@@ -133,7 +133,8 @@ export function ContributionsGiftForm({ t, open, minUsd, maxUsd, creditsPerUsd, 
         <Lock size={14} color={t.MUTED} style={{ flexShrink: 0, marginTop: 2 }} />
         <span>
           The code is stored encrypted and erased once the System Architect has confirmed or rejected it. Once confirmed you
-          receive {creditsPerUsd.toLocaleString()} ServiceCredits per dollar as a thank-you.
+          receive {creditsPerUsd.toLocaleString()} ServiceCredits per dollar as a thank-you; if you have
+          not finished Unlock yet, they arrive once you have.
         </span>
       </div>
 
