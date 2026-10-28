@@ -8,6 +8,7 @@ export * from './design/se-words';
 export * from './design/se-me';
 export * from './today/types';
 export * from './today/view';
+export * from './calendar/ics';
 export * from './today/rooms';
 export * from './today/new';
 export * from './today/activity';

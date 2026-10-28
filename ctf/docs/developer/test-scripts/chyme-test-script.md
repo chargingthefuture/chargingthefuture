@@ -775,3 +775,14 @@ as before: Join Room, Leave and Back Channel.
 **Expected:** Days won rises by about (2 × 10 + 2 × 5) ÷ 480. A member who leaves the room stops
 counting at once; time with the app open and not in a room or call adds nothing.
 **Result:** web ☐ android ☐ — notes:
+
+### CH-30 — Add an upcoming talk to the calendar (3.1)
+**Role:** a member | **Surfaces:** web (mobile-width)
+
+**Steps:**
+1. Open the upcoming discussions under the rooms, and the Main Room card on Today.
+2. Press "Add to calendar" on a talk that has not started.
+
+**Expected:** The phone offers to add the talk with its start, end and host. A talk on air has no button. Nothing asks to read the calendar.
+
+Result: web ☐
