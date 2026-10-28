@@ -7,6 +7,8 @@ export const SE_ROOM_WORDS_MAIN = {
     guestNotice: 'Guests may be listening. Anyone can hear this room without an account.',
 };
 export const SE_ROOM_WORDS_WEAVERS = { ...SE_ROOM_WORDS_MAIN, guestNotice: null };
+// Somebody removed from a room for breaking it keeps their account; removal is from that room only.
+export const SE_ROOM_RULE = 'Stay on topic: economics and collective action. Somebody who keeps going off topic can be removed from the room; their account is not affected.';
 const ROOM_NAMES = { main: 'Main Room', contributors: 'Weavers of the Commons' };
 // What the room screen shows, shared by web and Android. `count` is null until the room is read.
 export function seRoomView(scope, room, talkLine) {
@@ -19,6 +21,7 @@ export function seRoomView(scope, room, talkLine) {
         joined: room.joined,
         quiet: !room.joined && room.count === 0,
         minimizeLabel: room.joined ? 'Keep listening and browse' : 'Back',
+        rule: SE_ROOM_RULE,
     };
 }
 export function seRoomWords(scope) {

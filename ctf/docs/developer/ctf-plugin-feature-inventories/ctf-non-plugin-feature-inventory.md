@@ -203,7 +203,7 @@
 1. A member mutes a person (from a card's ••• menu, "Mute @handle") or words (Me → Muted). Today
    leaves out cards by a muted person or whose title or text contains muted words (`seApplyMutes` in
    `@ctf/shared`, applied in `lib/today/build.ts`; a failed read of the mutes shows every card).
-   Nobody is told; a mute is not a block and changes nothing else. Speaker mute in rooms comes later.
+   Nobody is told; a mute is not a block and changes nothing else. In a Chyme room, "Mute for me" under a speaker adds the same person mute, and the room stops playing that person for this member (Chyme inventory).
 2. Routes, under the account area's gate like blocks (`requireAccountAccess`):
    - `GET /api/account/mutes` — the member's own mutes, newest first.
    - `POST /api/account/mutes` — `{ kind: 'person', target: accountId, label? }` or
@@ -446,7 +446,7 @@ Owner decision, 2026-09-26. The owner pays the running costs of Skills Economy a
 ## 5) Change Log
 
 - 2026-10-28: **3.1 speed budget (plan task 15).** Signed-out Today measured on a phone-width browser with its CPU slowed 4 times over a simulated slow 4G link (`ctf/scripts/speed-budget/measure-today.cjs`, run by `speed-budget.yml`): first card 3.87 s cold on main, about 1.9 to 2.7 s after this change; warm about 0.55 s. Changes: Session Replay is added after the page has loaded (`lib/observability/sentry-replay.ts`), the New, Me, Activity and People tabs and the room screens load when first opened, `/` loads the 3.0 hub or the 3.1 frame and not both, and the wordmark serif uses the weight-only Newsreader file (58 KB, not 132 KB).
-
+- 2026-10-28: **Speaker mute in rooms (§1.6a).** A person mute now also silences that person in Chyme rooms, and "Mute for me" under a speaker adds one.
 - 2026-10-28: **Today for visitors who are not signed in (§1.5 item 5h).** `/today` and `GET /api/today/public`: public cards only, no names, limited per address.
 - 2026-10-27: **Expenses no longer suggests a Contributions money goal.** Contributions now takes Amazon gift cards all year with no drives, goals or progress (Contributions inventory, same date), so the card under the three figures that suggested a drive goal is gone, along with `drive` and `driveError` on `GET /api/admin/expenses`, the matching lines in Copy as text, and `getCurrentCycleMoneyRaised()` in `lib/contributions/repository.ts`. The twice-yearly "Contribute if you can" draft is unchanged. No schema change here; the Contributions migration drops `contributions_cycles`.
 - 2026-10-27: **Access in 3.1 (§1.5 item 5g, plan task 9, owner decision).** Members on 3.1 use the app before Unlock is done, with the Unlock banner; Today and Activity read at `signed_in`, posting an ask at `signed_in_posting`. `requireNotificationsAccess` moved from `support_only` to `signed_in`.
