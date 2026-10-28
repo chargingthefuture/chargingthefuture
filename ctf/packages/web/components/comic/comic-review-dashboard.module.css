@@ -6,7 +6,7 @@
   grid-template-columns: 72px 300px minmax(480px, 1fr) 280px;
   height: 100vh;
   background: var(--ctf-bg, #0F1117);
-  font-family: Inter, system-ui, -apple-system, sans-serif;
+  font-family: 'Figtree Variable', system-ui, -apple-system, sans-serif;
   color: var(--ctf-text, #D5D9E2);
   overflow: hidden;
 }
@@ -18,7 +18,7 @@
   background: #0F1117;
   align-items: center;
   justify-content: center;
-  font-family: Inter, system-ui, sans-serif;
+  font-family: 'Figtree Variable', system-ui, sans-serif;
 }
 
 .loadingInner {

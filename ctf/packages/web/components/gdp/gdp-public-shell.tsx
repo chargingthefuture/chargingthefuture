@@ -7,7 +7,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { getGdpTokens } from './gdp-shared';
 import { PublicShellWorldwide } from '@/components/plugins/public-shell-worldwide';
 
-const FONT_FAMILY = "'Inter', system-ui, sans-serif";
+const FONT_FAMILY = "'Figtree Variable', system-ui, sans-serif";
 
 function MobileGDPPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
   const { theme } = useTheme();

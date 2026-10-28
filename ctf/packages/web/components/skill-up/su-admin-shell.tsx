@@ -777,7 +777,7 @@ export function SkillUpAdminShell({
         minHeight: '100dvh',
         background: t.BG,
         color: t.TITLE,
-        fontFamily: "'Inter',system-ui,sans-serif",
+        fontFamily: "'Figtree Variable',system-ui,sans-serif",
       }}
     >
       <MobileScreenHeader title="SkillUp Admin" accent={t.ACCENT} icon={<TrendingUp size={18} color={t.ACCENT} />} actions={<PluginUserShellButton href="/apps/skill-up" accent={t.ACCENT} />} />

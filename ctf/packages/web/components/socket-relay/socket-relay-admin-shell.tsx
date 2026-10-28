@@ -191,7 +191,7 @@ export function SocketRelayAdminShell({
         minHeight: '100dvh',
         background: t.BG,
         color: t.TITLE,
-        fontFamily: "'Inter',system-ui,sans-serif",
+        fontFamily: "'Figtree Variable',system-ui,sans-serif",
       }}
     >
       <MobileScreenHeader title="SocketRelay Admin" accent={t.ACCENT} icon={<Radio size={18} color={t.ACCENT} />} actions={<PluginUserShellButton href="/apps/socket-relay" accent={t.ACCENT} />} />

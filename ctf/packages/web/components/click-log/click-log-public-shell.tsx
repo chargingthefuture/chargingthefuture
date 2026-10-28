@@ -10,7 +10,7 @@ import { PublicShellWorldwide } from '@/components/plugins/public-shell-worldwid
 // Palette from the ClickLogPublic / MobileClickLogPublic design mockups, now sourced from the
 // theme-aware ClickLog tokens (default theme keeps the shipped hex values).
 
-const FONT_FAMILY = "'Inter', system-ui, sans-serif";
+const FONT_FAMILY = "'Figtree Variable', system-ui, sans-serif";
 
 function MobileClickLogPublic({ signInUrl, verifyUrl }: { signInUrl: string; verifyUrl?: string }) {
   const { theme } = useTheme();

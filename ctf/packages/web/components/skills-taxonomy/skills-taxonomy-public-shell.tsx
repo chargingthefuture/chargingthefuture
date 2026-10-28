@@ -10,7 +10,7 @@ import { PublicShellWorldwide } from '@/components/plugins/public-shell-worldwid
 
 // Palette from the SkillsTaxonomyPublic / MobileSkillsTaxonomyPublic mockups, resolved through the
 // theme-aware Skills Taxonomy tokens (default theme keeps the shipped hex values).
-const FONT_FAMILY = "'Inter', system-ui, sans-serif";
+const FONT_FAMILY = "'Figtree Variable', system-ui, sans-serif";
 
 type TaxonomyCounts = { skills: number; jobTitles: number; sectors: number };
 

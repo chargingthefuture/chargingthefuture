@@ -7,7 +7,7 @@ import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link
 import { getWhatWorksTokens } from './ww-shared';
 import { PublicShellWorldwide } from '@/components/plugins/public-shell-worldwide';
 
-const FONT_FAMILY = "'Inter', system-ui, sans-serif";
+const FONT_FAMILY = "'Figtree Variable', system-ui, sans-serif";
 
 // The mockup's "A look at the list" preview hardcoded sample survivor reviews
 // (specific products, quoted notes, verified counts). A public visitor has no

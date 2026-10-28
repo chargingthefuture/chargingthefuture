@@ -10,7 +10,7 @@ import { PublicShellWorldwide } from '@/components/plugins/public-shell-worldwid
 // Palette from the SkillsHuntPublic / MobileSkillsHuntPublic design mockups, served via the
 // shared theme tokens (default theme keeps the shipped hex: bg #0F1117, accent #FACC15,
 // text #D5D9E2).
-const FONT_FAMILY = "'Inter', system-ui, sans-serif";
+const FONT_FAMILY = "'Figtree Variable', system-ui, sans-serif";
 
 const NOMINATE_FIELDS = ['Quora Profile URL', 'Full Name', 'Bio', 'Country', 'Skills'];
 

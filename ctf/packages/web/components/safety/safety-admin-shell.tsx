@@ -255,7 +255,7 @@ export function SafetyAdminShell() {
         minHeight: '100dvh',
         background: t.BG,
         color: t.TITLE,
-        fontFamily: "'Inter',system-ui,sans-serif",
+        fontFamily: "'Figtree Variable',system-ui,sans-serif",
       }}
     >
       <MobileScreenHeader title="Safety Admin" accent={t.ACCENT} icon={<ShieldAlert size={18} color={t.ACCENT} />} actions={<PluginUserShellButton href="/" accent={t.ACCENT} label="App home" />} />

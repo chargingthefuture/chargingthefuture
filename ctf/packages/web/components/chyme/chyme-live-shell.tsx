@@ -292,7 +292,7 @@ export function ChymeLiveShellView({ session, currentUser, roomScope }: { sessio
   }
 
   return (
-    <div style={{ minHeight: '100dvh', width: '100%', background: t.BG, fontFamily: "'Inter', system-ui, sans-serif", color: t.TEXT, display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100dvh', width: '100%', background: t.BG, fontFamily: "'Figtree Variable', system-ui, sans-serif", color: t.TEXT, display: 'flex', flexDirection: 'column' }}>
       <ChymeHeader
         participantCount={room?.participants.length ?? 0}
         isLive={Boolean(room)}

@@ -29,7 +29,7 @@ export function ServiceCreditsAdminShell() {
         minHeight: '100dvh',
         background: t.BG,
         color: t.TITLE,
-        fontFamily: "'Inter',system-ui,sans-serif",
+        fontFamily: "'Figtree Variable',system-ui,sans-serif",
       }}
     >
       <MobileScreenHeader title="ServiceCredits Admin" accent={t.ACCENT} icon={<Coins size={18} color={t.ACCENT} />} actions={<PluginUserShellButton href="/apps/service-credits" accent={t.ACCENT} />} />

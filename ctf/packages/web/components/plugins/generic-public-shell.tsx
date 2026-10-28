@@ -32,7 +32,7 @@ export function GenericPublicShell({ pluginName, signInUrl, verifyUrl }: PublicV
         justifyContent: 'center',
         minHeight: '100dvh',
         background: BG,
-        fontFamily: "'Inter', system-ui, sans-serif",
+        fontFamily: "'Figtree Variable', system-ui, sans-serif",
         color: TEXT,
         padding: '32px 20px',
         textAlign: 'center',

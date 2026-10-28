@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import '@fontsource-variable/dm-sans/opsz.css';
 import { SE_AVENHOOD, SE_AVENHOOD_DEFINITION, SE_TABS, type SeTab, type SeThemeChoice } from '@ctf/shared';
 import type { ShellCurrentUser } from '../community-shell/shell-types';
 import { SeTabBar } from './se-tab-bar';

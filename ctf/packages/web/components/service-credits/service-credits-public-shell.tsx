@@ -11,7 +11,7 @@ import { PublicShellWorldwide } from '@/components/plugins/public-shell-worldwid
 // Palette from the ServiceCreditsPublic / MobileServiceCreditsPublic design mockups.
 // Chrome colors come from getServiceCreditsTokens; the earn green stays a raw status swatch.
 const EARN_GREEN = '#22C55E';
-const FONT_FAMILY = "'Inter', system-ui, sans-serif";
+const FONT_FAMILY = "'Figtree Variable', system-ui, sans-serif";
 
 // The earn/spend lists describe how the Skills Economy works (program rules), not per-user balances or
 // fabricated transactions, so they are safe to render in a signed-out public shell. They are derived

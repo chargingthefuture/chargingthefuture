@@ -249,7 +249,7 @@ export function TrustTransportAdminShell({
         minHeight: '100dvh',
         background: t.BG,
         color: t.TITLE,
-        fontFamily: "'Inter',system-ui,sans-serif",
+        fontFamily: "'Figtree Variable',system-ui,sans-serif",
       }}
     >
       <MobileScreenHeader title="TrustTransport Admin" accent={t.ACCENT} icon={<ShieldCheck size={18} color={t.ACCENT} />} actions={<PluginUserShellButton href="/apps/trust-transport" accent={t.ACCENT} />} />

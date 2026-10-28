@@ -108,8 +108,9 @@ Economy. Published posts keep the name they were written with. The legal operato
 The project's websites share one design, each in its own color, so a visitor can tell which part
 they are in: farahbrunache.com (One Percent, the paid tier) is forest green, chargingthefuture.com
 (the free tier) burgundy, and the blog black and white with coral. Titles are Newsreader and text
-DM Sans, self-hosted everywhere. The app keeps its own look; it carries the family only in the
-phone bar's wordmark (Newsreader, a light burgundy) and the SE mark's burgundy gradient, on web
+DM Sans, self-hosted everywhere. The app keeps its own look: its text is Figtree, self-hosted
+(owner decision, 2026-10-27, replacing Inter and the 3.1 frame's DM Sans), and it carries the
+family only in the phone bar's wordmark (Newsreader, a light burgundy) and the SE mark's burgundy gradient, on web
 (`components/shared/se-mark.tsx`, `community-shell.module.css`) and Android
 (`components/shell/ShellChrome.tsx`). Change those together.
 

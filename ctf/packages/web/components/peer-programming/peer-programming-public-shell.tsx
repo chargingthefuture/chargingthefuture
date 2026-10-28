@@ -9,7 +9,7 @@ import { getPeerProgrammingTokens } from './pp-shared';
 
 // Palette from the PeerProgrammingPublic / MobilePeerProgrammingPublic design mockups,
 // served through the shared theme tokens (default theme returns the exact shipped hex).
-const FONT_FAMILY = "'Inter', system-ui, sans-serif";
+const FONT_FAMILY = "'Figtree Variable', system-ui, sans-serif";
 
 // The mockup shows blurred sample cohort cards behind a lock overlay. A public
 // shell has no session and there is no public cohort feed, so the locked region

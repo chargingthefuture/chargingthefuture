@@ -160,7 +160,7 @@ export function UnlockAdminShell({
         minHeight: '100dvh',
         background: t.BG,
         color: t.TITLE,
-        fontFamily: "'Inter',system-ui,sans-serif",
+        fontFamily: "'Figtree Variable',system-ui,sans-serif",
       }}
     >
       {/* Unlock's member surface is /plugin/unlock, NOT /apps/unlock (the plugin is registered

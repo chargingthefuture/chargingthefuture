@@ -26,7 +26,7 @@ export function getContributionsTokens(theme: ThemeName): ContributionsTokens {
   return { ...getPluginShellTokens(ACCENT_DEFAULT, theme), SURFACE: '#161B27', BORDER_SOLID: '#1E2A3A' };
 }
 
-export const FONT_FAMILY = "'Inter', system-ui, sans-serif";
+export const FONT_FAMILY = "'Figtree Variable', system-ui, sans-serif";
 
 // Goal-bar accent colors from the mockups (fixed per metric, theme-independent).
 export const GOAL_COLORS = {

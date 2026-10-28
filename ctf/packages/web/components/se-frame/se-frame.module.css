@@ -4,7 +4,7 @@
   min-height: 100dvh;
   background: var(--se-bg);
   color: var(--se-ink);
-  font-family: 'DM Sans Variable', 'DM Sans', system-ui, sans-serif;
+  font-family: 'Figtree Variable', system-ui, sans-serif;
 }
 
 .screen {
