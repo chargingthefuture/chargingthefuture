@@ -108,6 +108,21 @@
   font-weight: 700;
 }
 
+.signInButton {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 999px;
+  background: var(--se-btn);
+  color: var(--se-on-btn);
+  border: 1.5px solid var(--se-line);
+  box-shadow: 0 3px 0 var(--se-line);
+  font-weight: 700;
+  text-decoration: none;
+}
+
 .newButton {
   justify-self: center;
   width: 52px;
@@ -124,6 +139,7 @@
 }
 
 .tab:focus-visible,
+.signInButton:focus-visible,
 .newButton:focus-visible,
 .termButton:focus-visible {
   outline: 2px solid var(--se-pick);
