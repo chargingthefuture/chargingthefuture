@@ -3,8 +3,9 @@ import type { Metadata, Viewport } from 'next';
 // Google. One variable file covers every weight; @fontsource registers it as "Figtree Variable".
 import '@fontsource-variable/figtree/wght.css';
 // The wordmark's serif, shared with chargingthefuture.com, farahbrunache.com and the blog so the app
-// reads as the same family. Only the phone bar's wordmark uses it.
-import '@fontsource-variable/newsreader/opsz.css';
+// reads as the same family. The weight-only file (58 KB) rather than the one with the optical-size
+// axis (132 KB): the larger one was the biggest single item in the 3.1 first load.
+import '@fontsource-variable/newsreader/wght.css';
 import { ClerkProvider } from '@clerk/nextjs';
 import { AuthProvider } from '@/hooks/useAuth';
 import { NavHistoryTracker } from '@/lib/nav/back-history';

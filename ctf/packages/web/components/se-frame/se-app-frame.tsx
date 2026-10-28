@@ -1,21 +1,27 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useState } from 'react';
 import { SE_AVENHOOD, SE_AVENHOOD_DEFINITION, SE_TABS, type SeTab, type SeThemeChoice } from '@ctf/shared';
 import type { ShellCurrentUser } from '../community-shell/shell-types';
 import { SeTabBar } from './se-tab-bar';
 import { TodayScreen } from './today/today-screen';
-import { MeScreen } from './me/me-screen';
 import { useSeTheme } from './use-se-theme';
 import { UnlockBanner } from './unlock-banner';
-import { NewScreen } from './new/new-screen';
-import { ActivityScreen } from './activity/activity-screen';
-import { PeopleScreen } from './people/people-screen';
-import { SeRoomBar, SeRoomHosts } from './rooms/se-room-screen';
 import { SeRoomsProvider, useSeRooms } from './rooms/se-rooms';
 import { seThemeVars } from './se-theme-vars';
 import { useInterfaceSwitch } from './use-interface-switch';
 import styles from './se-frame.module.css';
+
+// Today is the first card a member sees, so only Today is in the first load (3.1 speed budget:
+// under 3 seconds cold on a low-cost phone). The other tabs, and the room screens with their call
+// code, load the first time they are opened.
+const NewScreen = dynamic(() => import('./new/new-screen').then((m) => m.NewScreen));
+const MeScreen = dynamic(() => import('./me/me-screen').then((m) => m.MeScreen));
+const ActivityScreen = dynamic(() => import('./activity/activity-screen').then((m) => m.ActivityScreen));
+const PeopleScreen = dynamic(() => import('./people/people-screen').then((m) => m.PeopleScreen));
+const SeRoomHosts = dynamic(() => import('./rooms/se-room-screen').then((m) => m.SeRoomHosts), { ssr: false });
+const SeRoomBar = dynamic(() => import('./rooms/se-room-screen').then((m) => m.SeRoomBar), { ssr: false });
 
 // The 3.1 app frame: one screen per tab, the tab bar along the bottom. The tab is kept in the
 // address (?tab=people) so the back button and a shared link land on the same tab.
@@ -134,8 +140,12 @@ function SeAppFrameBody({ currentUser, isAdmin }: FrameProps) {
           </p>
         ) : null}
       </main>
-      <SeRoomHosts currentUser={currentUser} />
-      <SeRoomBar />
+      {rooms.opened.length > 0 ? (
+        <>
+          <SeRoomHosts currentUser={currentUser} />
+          <SeRoomBar />
+        </>
+      ) : null}
       <SeTabBar active={tab} onSelect={select} />
     </div>
   );
