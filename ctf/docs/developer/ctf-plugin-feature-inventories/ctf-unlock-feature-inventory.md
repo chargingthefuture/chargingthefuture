@@ -160,8 +160,9 @@ to guess which group a wall of silence puts them in.
 4. After an approval, run the plugin catch-up (`runUnlockApprovalCatchUp` in
    `lib/shared/unlock-approval-interface.ts`), best-effort: Fireside tells people a held reply
    answered them, and the knowledge library grants the credits for writing accepted before the
-   member was verified. The audit row `unlock.admin.submission.approval_catch_up` records
-   `firesidePeopleTold` and `comicSharedWritingGranted`.
+   member was verified, and Contributions grants the thank-you credits held on gift cards confirmed
+   before approval. The audit row `unlock.admin.submission.approval_catch_up` records
+   `firesidePeopleTold`, `comicSharedWritingGranted` and `contributionsGranted`.
 
 ### 2.3 Auditability and Operations
 
@@ -488,6 +489,7 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
 
 ## 9) Change Log
 
+- 2026-10-28: **Contributions in the approval catch-up.** Approval grants the thank-you credits held on gift cards confirmed while the member waited; the catch-up audit row gains `contributionsGranted`.
 - 2026-10-27: **3.1 open sign-up use (owner decision).** Two new tiers in `evaluatePluginAccess`: `signed_in` (any signed-in member; account restrictions still apply) and `signed_in_posting` (approved, or not yet approved and either within the first 14 days or with an address sent or help asked; otherwise 403 `unlock_paused`). New `GET /api/unlock/standing` (`unlock.standing.get`, `lib/unlock/standing.ts`) answers approved, the day count from the first sign-in, paused, and whether the banner can be closed (first 7 days); the shared words are `SE_UNLOCK_WORDS` in `@ctf/shared`. A member on 3.1 is no longer sent to `/plugin/unlock` from the home page (web) or walled (Android); the 3.1 frame shows the Unlock banner instead. `check-unlock-tier-exceptions.mjs` now catches both new tiers. The exception list and CLAUDE.md name the sixth exception, "3.1 open sign-up use": Today, posting an ask, Mood, ClickLog, What Works and Activity.
 - 2026-10-16: **The sign-up row says when the sign-in ban did not go through (code-review #2804, owner
   decision).** A ban the auth provider refused was recorded and the row still said the account was

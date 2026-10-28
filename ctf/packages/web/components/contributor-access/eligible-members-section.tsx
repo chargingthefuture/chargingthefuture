@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import type { ContributorAccessTokens } from './contributor-access-shared';
 
 // Eligible members list with revoke/reinstate actions. Categorical fields only — the API returns
@@ -20,22 +21,59 @@ function formatWhen(iso: string | null): string {
   return new Date(then).toLocaleDateString();
 }
 
+// Give the badge by hand: current members get it once, since the recompute now counts only value
+// received from approved members who are past their first days (3.1.0 plan, Access).
+function GrantByHandForm({ t, busy, onGrant }: { t: ContributorAccessTokens; busy: boolean; onGrant: (who: string) => Promise<void> }) {
+  const [who, setWho] = useState('');
+  return (
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (!who.trim()) return;
+        void onGrant(who.trim()).then(() => setWho(''));
+      }}
+      style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}
+    >
+      <label htmlFor="weavers-grant" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>
+        Username or account id
+      </label>
+      <input
+        id="weavers-grant"
+        value={who}
+        onChange={(event) => setWho(event.target.value)}
+        placeholder="@username or account id"
+        style={{ flex: '1 1 180px', minHeight: 36, padding: '6px 10px', borderRadius: 8, border: `1px solid ${t.BORDER_SOLID}`, background: t.SURFACE, color: t.TITLE, fontSize: 13 }}
+      />
+      <button
+        type="submit"
+        disabled={busy || !who.trim()}
+        style={{ minHeight: 36, padding: '6px 12px', borderRadius: 8, background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.3)', color: '#22C55E', fontSize: 12, fontWeight: 600, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.6 : 1 }}
+      >
+        Give the badge
+      </button>
+    </form>
+  );
+}
+
 export function EligibleMembersSection({
   t,
   members,
   busyId,
   onRevoke,
   onReinstate,
+  onGrant,
 }: {
   t: ContributorAccessTokens;
   members: EligibleMember[];
   busyId: string | null;
   onRevoke: (userId: string) => void;
   onReinstate: (userId: string) => void;
+  onGrant: (who: string) => Promise<void>;
 }) {
   return (
     <section style={{ marginBottom: 20 }}>
       <h2 style={{ fontSize: 14, fontWeight: 800, color: t.TITLE, margin: '0 0 8px' }}>Eligible members</h2>
+      <GrantByHandForm t={t} busy={busyId === 'grant'} onGrant={onGrant} />
       {members.length === 0 ? (
         <div style={{ padding: '24px 16px', textAlign: 'center', color: t.MUTED, fontSize: 13, borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
           Nobody has earned eligibility yet. The weekly recompute admits members as they qualify.
