@@ -25,6 +25,7 @@ import { useChymeHeartbeat } from './use-chyme-heartbeat';
 import { useChymeWords } from './chyme-words';
 import { ChymeListeningNotice, ChymeModeratorActions, ChymeSpeakModeToggle, type ChymeModerationContext } from './chyme-moderation';
 import { reportError } from 'lib/observability/report';
+import { ChymeMuteForMeButton, RoomMutesProvider, accountIdOfStreamUser, useRoomMutesState } from './chyme-personal-mute';
 import type { ChymeJoinResponse } from 'lib/chyme/types';
 
 // Chyme is open social audio (early-Clubhouse style): everyone who joins can
@@ -389,6 +390,13 @@ function ChymeAudioRoomLive({
     });
   };
 
+  // The member's own mutes: a muted person's audio is left out of what this browser plays.
+  const roomMutes = useRoomMutesState();
+  const audibleParticipants = useMemo(
+    () => participants.filter((p) => !roomMutes.mutedAccountIds.has(accountIdOfStreamUser(p.userId) ?? '')),
+    [participants, roomMutes.mutedAccountIds],
+  );
+
   // One tile per user. A member with a lingering/extra Stream session would otherwise show
   // up twice on stage; collapse to a single tile per userId, preferring the local session.
   const uniqueParticipants = useMemo(() => {
@@ -425,18 +433,21 @@ function ChymeAudioRoomLive({
           ))}
         </div>
       )}
-      {/* Plays every participant's audio track (all sessions). Headless — renders only <audio>. */}
-      <ParticipantsAudio participants={participants} />
+      {roomMutes.error ? <div role="alert" style={{ color: t.FAINT, fontSize: 12, marginTop: 12 }}>{roomMutes.error}</div> : null}
+      {/* Plays every participant's audio track (all sessions) except people this member muted. */}
+      <ParticipantsAudio participants={audibleParticipants} />
     </>
   );
 
   return (
+    <RoomMutesProvider value={roomMutes}>
     <ChymeAudioFrame
       isMobile={true}
       onLeave={onLeave}
       stage={stage}
       controls={<ChymeAudioControls onLeave={onLeave} handRaised={handRaised} onToggleHand={onToggleHand} moderation={moderation} />}
     />
+    </RoomMutesProvider>
   );
 }
 
@@ -545,6 +556,7 @@ function ChymeSpeakerActions({
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap', justifyContent: 'center' }}>
       <ChymeTipButton recipientUserId={clerkUserId} recipientName={name} />
+      <ChymeMuteForMeButton accountId={clerkUserId} name={name} />
       {backChannelEnabled ? (
         <ChymeBackChannelButton recipientUserId={clerkUserId} controller={backChannel} />
       ) : null}

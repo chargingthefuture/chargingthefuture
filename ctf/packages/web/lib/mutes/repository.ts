@@ -1,7 +1,8 @@
 import type { SeMute } from '@ctf/shared';
 import { queryDb } from 'lib/db/postgres';
 
-// Personal mute: a member's own list of muted people and words. Read by Today to leave cards out.
+// Personal mute: a member's own list of muted people and words. Read by Today to leave cards out, and
+// by Chyme rooms (through GET /api/account/mutes) to stop playing a muted person.
 // Nobody is told; nothing else reads it.
 
 export const MAX_MUTES = 100;
