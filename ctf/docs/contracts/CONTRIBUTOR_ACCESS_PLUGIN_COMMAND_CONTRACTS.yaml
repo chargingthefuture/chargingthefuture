@@ -129,6 +129,37 @@ contracts:
     idempotency: false
 
   - pluginId: contributor-access
+    command: contributor-access.member.grant
+    version: 1.0.0
+    description: >-
+      Give a member the badge by hand (3.1.0 plan, Access: current members get it once). who is a
+      username, with or without @, or an account id. Sets eligible and first_earned_at; a member who
+      already holds it is unchanged. A member revoked for cause is refused (409
+      contributor_access_revoked); reinstate is the way back. 404 contributor_access_not_found when
+      nobody matches. When the gated channel is open, a guarded membership sync follows; a Stream
+      failure is returned as channelSyncWarning. CSRF-confirmed mutation.
+    inputSchema:
+      who:
+        type: string
+        required: true
+    outputSchema:
+      ok:
+        type: boolean
+      userId:
+        type: string
+      channelSyncWarning:
+        type: string
+        required: false
+    dataAccess:
+      - users
+      - contributor_access_eligibility
+      - contributor_access_config
+      - contributor_access_audit_trail
+    purpose: eligibility_moderation
+    retentionClass: audit_long_lived
+    idempotency: true
+
+  - pluginId: contributor-access
     command: contributor-access.member.reinstate
     version: 1.1.0
     description: >-
@@ -163,7 +194,10 @@ contracts:
       Performance (owner-locked decision record ctf/docs/developer/PLUGIN_VALUE_METRICS.md), per
       member, all-time; applies the owner-tuned weights, the score threshold, and the gates
       (account age from the first login_events row, distinct plugins, distinct counterparties
-      across the two-sided events). Additive only - it admits newly-qualified members and never
+      across the two-sided events). A row with a member on the receiving side counts only when
+      that member is approved through Unlock (access_tier approved_full) and first signed in at
+      least SE_UNLOCK_OPEN_DAYS (14) days ago; the counterparty gate counts only those members too
+      (3.1.0 plan, Access). Additive only - it admits newly-qualified members and never
       revokes on signal decay. Guarded by INTERNAL_SERVICE_SECRET (bearer); never member or browser
       callable; called weekly by .github/workflows/contributor-access-recompute.yml. Foundation
       per-member counts feed the math internally and are never exposed (rule 132). Reads no
@@ -199,6 +233,7 @@ contracts:
       - feed_community_post_reactions
       - feed_community_replies
       - login_events
+      - unlock_verification_submissions
     purpose: eligibility_recompute
     retentionClass: derived_long_lived
     idempotency: true

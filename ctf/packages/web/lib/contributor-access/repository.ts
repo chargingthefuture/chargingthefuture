@@ -200,6 +200,35 @@ export async function reinstateEligibility(userId: string): Promise<boolean> {
   return result.rows.length > 0;
 }
 
+// The badge given by hand: current members get it once when 3.1 starts counting only value from
+// approved, settled members (3.1.0 plan, Access). Resolves a username (with or without @) or an
+// account id. Returns the account id granted, 'not_found' when nobody matches, or 'revoked' when the
+// member was revoked for cause, which only reinstate lifts. Granting someone who already holds the
+// badge changes nothing. The weekly recompute never takes it away: it only ever admits.
+export async function grantEligibilityByHand(
+  who: string,
+  grantedBy: string,
+): Promise<{ userId: string } | 'not_found' | 'revoked'> {
+  const handle = who.trim().replace(/^@/, '');
+  const found = await queryDb<{ id: string }>(
+    `SELECT id::text AS id FROM users WHERE id::text = $1 OR LOWER(username) = LOWER($1) LIMIT 1`,
+    [handle],
+  );
+  const userId = found.rows[0]?.id;
+  if (!userId) return 'not_found';
+  const result = await queryDb<{ user_id: string; revoked_for_cause: boolean }>(
+    `INSERT INTO contributor_access_eligibility (user_id, eligible, first_earned_at, reason_snapshot, computed_at)
+     VALUES ($1, TRUE, NOW(), jsonb_build_object('grantedByHand', TRUE, 'grantedBy', $2::text), NOW())
+     ON CONFLICT (user_id) DO UPDATE SET
+       eligible = CASE WHEN contributor_access_eligibility.revoked_for_cause THEN FALSE ELSE TRUE END,
+       first_earned_at = COALESCE(contributor_access_eligibility.first_earned_at,
+         CASE WHEN contributor_access_eligibility.revoked_for_cause THEN NULL ELSE NOW() END)
+     RETURNING user_id, revoked_for_cause`,
+    [userId, grantedBy],
+  );
+  return result.rows[0]?.revoked_for_cause ? 'revoked' : { userId };
+}
+
 // Best-effort audit write — an audit failure must never fail the admin action itself; the action's
 // own error handling reports real errors.
 export async function insertContributorAccessAudit(input: {

@@ -172,6 +172,15 @@ export function ContributorAccessAdminSections({
     [mutate],
   );
 
+  const grant = useCallback(
+    async (who: string) => {
+      setBusyId('grant');
+      await mutate('/api/contributor-access/admin/grant', { who }, 'Unable to give the badge.');
+      setBusyId(null);
+    },
+    [mutate],
+  );
+
   const saveConfig = useCallback(
     async (update: ContributorAccessConfigView) => {
       setSaving(true);
@@ -199,8 +208,9 @@ export function ContributorAccessAdminSections({
       <h2 id="weavers-heading" style={{ fontSize: 16, fontWeight: 800, color: t.TITLE, margin: '0 0 6px' }}>Weavers of the Commons</h2>
       <p style={{ fontSize: 13, color: t.MUTED, lineHeight: 1.6, marginBottom: 16 }}>
         Members earn a single categorical standing — eligible or not-yet — through steady, broad contribution across
-        plugins. The weekly recompute only ever admits; revoking is for cause only, never for going quiet. No badge
-        score is shown anywhere, to admins or members.
+        plugins. Value counts only when it reaches an approved member past their first two weeks. The weekly
+        recompute only ever admits; revoking is for cause only, never for going quiet. No badge score is shown
+        anywhere, to admins or members.
       </p>
 
       {error ? (
@@ -217,7 +227,7 @@ export function ContributorAccessAdminSections({
 
       {loadState === 'ready' && config ? (
         <>
-          <EligibleMembersSection t={t} members={members} busyId={busyId} onRevoke={(id) => void revoke(id)} onReinstate={(id) => void reinstate(id)} />
+          <EligibleMembersSection t={t} members={members} busyId={busyId} onRevoke={(id) => void revoke(id)} onReinstate={(id) => void reinstate(id)} onGrant={grant} />
           <ConfigEditorSection key={config.threshold + JSON.stringify(config.weights) + String(config.channelOpen)} t={t} config={config} eligibleCount={eligibleCount} badgeOnlyKeys={badgeOnlyKeys} weightOrder={weightOrder} saving={saving} onSave={(update) => void saveConfig(update)} />
           <StatusCard t={t} eligibleCount={eligibleCount} needed={config.minEligibleToOpenChannel} channelOpen={config.channelOpen} channelMemberCount={channelMemberCount} />
         </>
