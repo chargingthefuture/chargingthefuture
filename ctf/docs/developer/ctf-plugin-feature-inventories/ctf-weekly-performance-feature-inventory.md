@@ -154,33 +154,21 @@ Goals (state metrics — the current-week read stores a snapshot, past weeks rep
 - `goal.gdp_value_index` — Community Value Index, toward the 300B goal (from the GDP plugin's live report).
 - `goal.workforce_recruited` — active, non-deleted Directory profiles, toward the 2,000,000 goal.
 
-Value delivered (each plugin's defining action, windowed on the event's own timestamp). Since
-2026-09-21 these cards are generated from the shared value-event definition in
-`lib/contributor-access/value-events.ts` — the same rows the Weavers of the Commons badge and the
-daily exchange count read — and each card applies the event's occurrence rule (`rows`,
-`distinctMembers`, `distinctRef`, or `sum`) to the rows whose own timestamp falls in the week. There
-is no dashboard-side copy of the SQL; changing a value event changes every reading at once:
-
-- `value.foundation_calls_answered` — answered Foundation calls with at least one block charged (aggregate only, rule 132).
-- `value.socket_relay_requests_fulfilled` — SocketRelay fulfillments the requester closed as successful.
-- `value.trust_transport_trips_completed` — trips both sides confirmed complete.
-- `value.lighthouse_stays_completed` — Lighthouse matches now in `completed`.
-- `value.chyme_tips_sent` — completed ServiceCredits transfers originated by Chyme (never self-to-self).
-- `value.service_credits_peer_sends` — completed direct peer sends originated by ServiceCredits.
-- `value.contributions_confirmed_usd` — confirmed gift-card dollars this week (a sum, not a row count). Gift cards only: a comment or star is not money and never counts here.
-- `value.contributions_non_money_confirmed` — confirmed Quora comments and GitHub stars this week, read in "contributions" (a row count, never dollars).
-- `value.skills_hunt_nominations_accepted` — nominations a moderator accepted.
-- `value.what_works_tools_approved` — approved tools contributed.
-- `value.skill_up_completions` / `value.skill_up_trainer_payouts` — completed enrollments and trainer payouts.
-- `value.recurring_ties_confirmed` — ties the counterparty confirmed (one per tie, though the shared rows credit both sides).
-- `value.peer_programming_active_posters` — distinct members who posted in their cohort.
-- `value.peer_programming_tasks_helped` — goal-board cards the goal's owner marked as helped (at most three per owner-and-helper pair per week).
+The per-plugin weekly counts are gone (3.1.0, owner-approved plan
+`ctf/docs/developer/SOCIAL_REDESIGN_3_1_PLAN.md`, Measures). The dashboard used to carry a "Value
+delivered" section, one card per plugin's defining value event, and Directory, Mood and ClickLog
+adoption rows. Days won, retention, the retention charts and time to unlock on the Adoption tab
+(`lib/measures/`, recorded in the non-plugin inventory) measure what members do instead. The value
+events themselves stay in `lib/contributor-access/value-events.ts`, which the Weavers of the Commons
+badge and the daily exchange read.
 
 Adoption (honest non-value rows):
 
-- `adoption.active_members` — how many different members did something in the app during the week: the plain
-  turnout headcount, and the number "Daily Active Members" is easiest to misread as.
-- `adoption.daily_active_members` — average number of members active on a day of the week: member-days divided
+- `adoption.active_members` — how many different members signed in during the week: the plain
+  turnout headcount, and the number "Signed in per day" is easiest to misread as.
+- `adoption.daily_active_members`, labeled "Signed in per day" since 3.1.0 (the key is unchanged, so past
+  weeks and the metric registry still line up) — average number of members who signed in on a day of the
+  week: member-days divided
   by the days of the window that have already started (1–7), so the live current week averages over the days it
   has actually had and every past week divides by 7. The divisor is computed in UTC, matching the day boundary
   the member-days are bucketed on.
@@ -212,7 +200,7 @@ path alike — so the day is recorded whatever the member opens next.
 rows (a ClickLog incident, a Commons post, a command-trail entry), so a member with Tuesday rows plainly used
 the app on Tuesday. That is true and it is still not this number. Turning up is one thing and is what these two
 rows measure; what a member did once they were here is a different thing, already measured per plugin by that
-plugin's own rows in the cards above. Folding the second into the first makes a headcount that moves when a
+member's action minutes (`lib/measures/`), shown on the Adoption tab. Folding the second into the first makes a headcount that moves when a
 plugin changes what it writes, cannot be compared across weeks, and quietly counts whatever the platform itself
 writes carrying a member id. A low reading here is a fact about the sign-in record: if it is wrong, fix the
 write, not the definition. `ctf/scripts/sql/active-members-audit.sql` is the tool for that — pasted into the
@@ -230,21 +218,29 @@ terminal to run a script from.
 
 Both rows are aggregate only — never a per-member figure — and both are adoption, not value: turning up is not
 a plugin's defining action and carries no positive weight in value scoring.
-- `adoption.directory_findable_members` — claimed, active, skilled Directory profiles by week end (cumulative).
-- `adoption.mood_checkins` / `adoption.mood_average` — Mood check-ins and their average (aggregate only — never an individual reading).
-- `adoption.click_log_incidents` / `adoption.click_log_active_loggers` — ClickLog incidents and distinct loggers (aggregate only).
 
-V2's "verified" and "approved" member counts are intentionally omitted: V3's `users` table is the Clerk mirror with no dependable verification/approval timestamp, so a time-correct per-week value can't be computed (real-data-only). Metric card labels are humanized from the key: the group prefix is dropped and the rest is title-cased, so `adoption.active_members` reads "Active Members" and `adoption.daily_active_members` reads "Daily Active Members".
+V2's "verified" and "approved" member counts are intentionally omitted: V3's `users` table is the Clerk mirror with no dependable verification/approval timestamp, so a time-correct per-week value can't be computed (real-data-only). Metric card labels are humanized from the key: the group prefix is dropped and the rest is title-cased, so `adoption.active_members` reads "Active Members". One key has a fixed label instead (`LABEL_OVERRIDES` in `components/weekly-performance/wp-shared.ts`): `adoption.daily_active_members` reads "Signed in per day". The sign-in record section's stat reads "Signed in per day" too.
 
 ## 7) Gaps and Known Technical Debt
 
 1. Non-financial metric dictionary and formulas live in code; no canonical governance document captures the dictionary outside the implementation.
 2. The `operations` role now passes the admin gate (week-selection) alongside `admin`, matching the access-policy contract `requiredRoles: [admin, operations]`. The read routes use the same gate since 2026-10-14 (#2832); before that they admitted any approved member.
-3. Mood-related comparison fields are excluded from the current dictionary; whether to reintroduce them is an outstanding product question.
-4. Contract gap: the shipped `PUT /api/weekly-performance/admin/week-selection` route (audit command `weekly-performance.admin.week.select`) is not represented in `docs/contracts/WEEKLY_PERFORMANCE_PLUGIN_COMMAND_CONTRACTS.yaml`, which lists only `week.list`, `week.get`, `metrics.get`, and `comparison.get`. The week-selection command should be added to the command/access/audit contracts.
+3. Contract gap: the shipped `PUT /api/weekly-performance/admin/week-selection` route (audit command `weekly-performance.admin.week.select`) is not represented in `docs/contracts/WEEKLY_PERFORMANCE_PLUGIN_COMMAND_CONTRACTS.yaml`, which lists only `week.list`, `week.get`, `metrics.get`, and `comparison.get`. The week-selection command should be added to the command/access/audit contracts.
 
 ## 8) Change Log
 
+- 2026-10-28: **Per-plugin weekly counts retired; the sign-in count is "Signed in per day" (3.1.0
+  plan, Measures).** `lib/weekly-performance/live-metrics.ts` no longer computes the Value delivered
+  cards (every `value.*` key) or the `adoption.directory_findable_members`,
+  `adoption.mood_checkins`, `adoption.mood_average`, `adoption.click_log_incidents` and
+  `adoption.click_log_active_loggers` rows, and the dashboard drops the Value delivered heading.
+  What stays: the two goals, active members, signed in per day and deleted accounts. The sign-in
+  card's key stays `adoption.daily_active_members`; a label override in `wp-shared.ts` makes it read
+  "Signed in per day", and the sign-in record section's stat reads the same. The metrics and
+  comparison reads now touch only the goal snapshots, `directory_profiles`, `login_events` and
+  `account_deletion_events` (plus the GDP plugin's live report); the command contract's
+  `dataAccess` lists and `ctf/config/canonical_metrics.yaml` are trimmed to match. The value events
+  stay in `lib/contributor-access/value-events.ts` for the Weavers badge and the daily exchange.
 - 2026-10-16: **Weekly Performance moves onto the Adoption screen (owner decision).** The admin
   tiles Daily Exchange and Badge, Weekly Performance and Weekly Performance: Sign-in Record are
   replaced by one tile, Adoption, pinned first on the admin index. `/admin/adoption` shows the steps
@@ -732,7 +728,7 @@ V2's "verified" and "approved" member counts are intentionally omitted: V3's `us
 - [ ] Final v1 export/report scope.
 - [ ] Final Android operator parity breadth.
 - [ ] Final non-financial metric set for v1 GA.
-- [ ] Final mood-field inclusion decision for comparison outputs.
+- [x] Final mood-field inclusion decision for comparison outputs: no; the Mood rows retired from the dashboard in 3.1.0 (2026-10-28).
 
 ### Change Log
 

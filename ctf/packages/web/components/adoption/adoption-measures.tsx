@@ -4,11 +4,13 @@ import { useCallback, useEffect, useState } from 'react';
 import { ClipboardCopy } from 'lucide-react';
 import type { PluginShellTokens } from '@/components/shared/plugin-shell-theme';
 import type { DaysWon, Retention, TimeToUnlock } from 'lib/measures/action-minutes';
+import type { RetentionCohorts } from 'lib/measures/retention-cohorts';
+import { RetentionCharts } from './retention-charts';
 
 // The 3.1 measures (owner-approved plan, Measures): Days won, retention measured from sign-up, and
 // time to unlock. Counts only. A control copies the reading as plain text for a phone.
 
-type Reading = { daysWon: DaysWon; retention: Retention; timeToUnlock: TimeToUnlock };
+type Reading = { daysWon: DaysWon; retention: Retention; timeToUnlock: TimeToUnlock; cohorts?: RetentionCohorts };
 
 function days(value: number | null): string {
   return value === null ? '—' : `${value} days`;
@@ -67,6 +69,7 @@ export function AdoptionMeasures({ tokens: t }: { tokens: PluginShellTokens }) {
           {line}
         </p>
       ))}
+      {reading?.cohorts ? <RetentionCharts t={t} data={reading.cohorts} /> : null}
     </section>
   );
 }

@@ -1,8 +1,9 @@
 // Contributor Access — value-event keys and default weights.
 //
-// The fifteen `value.*` event keys are the events that count as giving something. They began as a
-// mirror of lib/weekly-performance/live-metrics.ts (the decision record
-// ctf/docs/developer/PLUGIN_VALUE_METRICS.md) and no longer match it exactly. Two were removed on
+// The fifteen `value.*` event keys are the events that count as giving something. They began as the
+// Weekly Performance dashboard's per-plugin cards (the decision record
+// ctf/docs/developer/PLUGIN_VALUE_METRICS.md); those cards retired in 3.1.0, and these keys stay
+// for the Weavers badge and the daily exchange. Two were removed on
 // 2026-09-20, for one reason: the measure these keys feed separates people who give from people who
 // only register an opinion, and somebody extracting rather than giving would otherwise accrue
 // points for turning up.
@@ -13,8 +14,8 @@
 //     or resource and others mark whether it worked. So the listing is what is weighted
 //     (`value.what_works_tools_approved`), and agreeing with one is not.
 //
-// Weekly Performance's Value section reads this same list (owner directive, 2026-09-21), so it no
-// longer carries either of them; its Adoption rows are where turning up is counted.
+// Weekly Performance no longer shows these events (its per-plugin cards retired in 3.1.0); its
+// Adoption rows are where turning up is counted.
 //
 // PeerProgramming posting stays, at a weight of 1, for the reason the owner gave: a cohort session
 // is a learning and collaboration setting like SkillUp, and somebody there to extract is exposed by

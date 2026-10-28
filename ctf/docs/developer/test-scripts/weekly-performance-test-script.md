@@ -45,7 +45,7 @@ Admin-only analytics plugin — these are the can't-ship-broken checks. Admin / 
    computed from that week's activity — there is no "metrics appear when the week closes" placeholder
    and no week status to wait on. The current week is marked **Live**; past weeks are plain historical
    windows with no "Closed" badge. With no activity yet the cards read zero, which is still a real
-   value. Any two weeks compare (week 1 vs week 53): event and adoption rows recompute live from the
+   value. Any two weeks compare (week 1 vs week 53): the adoption rows recompute live from the
    upstream tables for any window, so past weeks recalculate when data changes. (Exception: the two
    Goal rows are state totals snapshotted weekly — captured daily by the scheduled
    goal-snapshot workflow, so a week has its reading even if nobody opened the dashboard; a week from
@@ -94,7 +94,8 @@ As the plain member, call each read route directly — `GET /api/weekly-performa
 **Expected:** The first line reads "Your sign-in today is on record" in green with a UTC time; if it
 reads "NOT recorded" in red, the database's own error text is shown under it and the dashboard's
 Active Members rows will be wrong for the same reason. "Members today" is at least 1 (you), "Active
-this week" at least 1, and today's row in the fourteen-day list is at least 1. "Copy the reading"
+this week" at least 1, "Signed in per day" reads the same figure as the dashboard's Signed in per day
+card for the current week, and today's row in the fourteen-day list is at least 1. "Copy the reading"
 puts the same figures on the clipboard as plain text. The member's request is denied with
 `missing_required_role`. "inconsistent types deduced for parameter $1" under a red first line means the
 member id is no longer cast to text in the write (fixed 2026-09-24); that is a regression, file it.
@@ -125,28 +126,22 @@ is no "set active week" action and no per-week status.
 ### WP-A3 · Metrics and week-over-week comparison
 **Role:** admin / operations · **Surfaces:** web (desktop), web (mobile-responsive)
 **Steps:**
-1. Open a week's metric cards. The set is the owner-locked value-metric table
-   (`ctf/docs/developer/PLUGIN_VALUE_METRICS.md`), grouped on web under three headings:
+1. Open a week's metric cards. They are grouped on web under two headings:
    **Goals** — GDP Community Value Index (progress bar toward the 300B goal) and Workforce recruited
-   (progress bar toward 2,000,000); **Value delivered** — one card per plugin's defining event
-   (Foundation answered calls, SocketRelay successful closes, TrustTransport completed trips,
-   Lighthouse completed stays, Chyme tips, ServiceCredits direct peer sends, Contributions confirmed
-   USD (confirmed gift cards only), Contributions non-money confirmed (confirmed Quora comments and
-   GitHub stars, read in "contributions", never in USD), SkillsHunt accepted nominations, WhatWorks approved tools, SkillUp
-   completions + trainer payouts, Recurring Activity confirmed ties, PeerProgramming distinct
-   posters, PeerProgramming goal cards that helped (read in "cards") — the fifteen events of the
-   shared value-event list, so no endorsement or Beacon card appears); **Adoption** — Active Members, Daily Active
-   Members, Accounts Deleted, Directory findable members, Mood check-ins + average, ClickLog
-   incidents + distinct
-   loggers. The Active Members card reads "N members": how many different members signed in
-   during the selected week. The Daily Active Members card reads "N per day": the average
-   number of members active on a day of that week; on the current week it divides by the days of the
+   (progress bar toward 2,000,000); **Adoption** — Active Members, Signed in per day, Accounts
+   Deleted. There is **no** "Value delivered" heading and no per-plugin card (no Foundation,
+   SocketRelay, TrustTransport, Lighthouse, Chyme, ServiceCredits, Contributions, SkillsHunt,
+   WhatWorks, SkillUp, Recurring Activity or PeerProgramming card), and no Directory findable
+   members, Mood or ClickLog card: those retired in 3.1.0, and the Adoption tab's Days won,
+   retention and retention charts measure what members do instead. The Active Members card reads
+   "N members": how many different members signed in during the selected week. The Signed in per
+   day card reads "N per day": the average number of members who signed in on a day of that week; on the current week it divides by the days of the
    week so far, on a past week by the full 7. Both count a member as active on a day when the sign-in
    record (`login_events`) holds a row for them that day, and nothing else (owner decision,
    2026-08-27). Everyone reaches the app through Clerk, and the sign-in is recorded when Clerk
    identity is resolved, so it lands whether the member opens a plugin, an admin page, or nothing at
-   all beyond signing in. Which plugin a member used is not part of this: these two cards can read lower than the ClickLog or Mood cards on the same screen, and that
-   is correct rather than a bug — those count what members did, these count who signed in. If a week
+   all beyond signing in. Which plugin a member used is not part of this: these two cards count who signed in, not what
+   members did once here. If a week
    reads zero or looks too low, two things say why. Check the server log for
    `[weekly-performance.live-metrics] could not read …` — a card whose read failed or whose table is
    missing renders as 0, and that line is what tells you the 0 is not a real count. Then run
@@ -192,8 +187,8 @@ is no "set active week" action and no per-week status.
    that is not a Monday (e.g. `2026-10-07`): each answers 400 with a message naming
    `weekStartDate`. A bad `compareWeekStartDate` answers 400 `invalid_comparison_window`, naming
    that parameter.
-**Expected:** Metric cards render humanized labels from `metric_key` (acronyms read correctly: GDP,
-USD) and real values computed live for the selected week window from upstream tables. The two Goal
+**Expected:** Metric cards render humanized labels from `metric_key` (GDP reads as GDP; the
+sign-in card reads "Signed in per day" though its key is `adoption.daily_active_members`) and real values computed live for the selected week window from upstream tables. The two Goal
 cards show a compact value (e.g. "1.2K"), a progress bar, and "% of the 300B/2M goal"; opening the
 current week also records that week's goal snapshot, so next week's comparison has a prior value.
 The current week shows a **Live** marker; past weeks show none. The comparison shows per-metric
@@ -253,8 +248,6 @@ already tracked, not a new bug:
 
 - The non-financial metric dictionary and formulas live in code; no governance document captures
   the dictionary outside the implementation.
-- Mood-related comparison fields are excluded from the current dictionary; whether to reintroduce
-  them is an open product question.
 - Contract gap: the shipped `PUT /api/weekly-performance/admin/week-selection` route (audit command
   `weekly-performance.admin.week.select`) is not yet represented in the command contract YAML,
   which lists only `week.list`, `week.get`, `metrics.get`, and `comparison.get`.

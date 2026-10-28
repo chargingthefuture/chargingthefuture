@@ -349,7 +349,8 @@ The weights themselves are edited in the Weavers of the Commons section below th
 
 ### 1.16a Measures: action minutes, Days won, retention and time to unlock (3.1.0)
 
-Owner-approved plan (`SOCIAL_REDESIGN_3_1_PLAN.md`, Measures). Code: `lib/measures/action-minutes.ts`.
+Owner-approved plan (`SOCIAL_REDESIGN_3_1_PLAN.md`, Measures). Code: `lib/measures/action-minutes.ts`,
+`lib/measures/retention-cohorts.ts`.
 
 1. **Action minutes.** Minutes connected in a room or a call, 30 for a PeerProgramming task its
    author kept as helped (`peer_programming_goal_tasks.helped`, `kept_at`), and 10 for a "This helped
@@ -372,10 +373,23 @@ Owner-approved plan (`SOCIAL_REDESIGN_3_1_PLAN.md`, Measures). Code: `lib/measur
    median days from first sign-in to sending it, how many were approved, and the median days from
    sending to approval.
 5. **`GET /api/admin/measures`** — admin read, read-only, counts only: `{ ok, daysWon, retention,
-   timeToUnlock }`; 503 with the reason when the read fails. The Adoption screen shows it as "Days
+   timeToUnlock, cohorts }`; 503 with the reason when the read fails. The Adoption screen shows it as "Days
    won and retention" under the steps toward 384, with Copy as text.
-6. Not yet: the layer-cake and retention-curve charts, retiring the per-plugin weekly counts, and
-   renaming the sign-in count to "signed in per day".
+6. **Retention charts** (`readRetentionCohorts`, drawn by `components/adoption/retention-charts.tsx`
+   under the measures on the Adoption screen). A member is active in a week when they had a day with
+   30 or more action minutes in it; sign-up is their first `login_events` row. `cohorts` is
+   `{ cohorts, sizes, layers, curves }`: the sign-up months (the last 5, plus Earlier when anybody
+   signed up before them) with how many signed up in each; `layers`, the Monday of each of the last
+   12 weeks with members active that week per sign-up month; and `curves`, for each of the last 5
+   months, the share of its sign-ups active in week 0 to 11 after signing up, for the weeks the month
+   has lived through. Two charts: "Active each week, by sign-up month" (a layer cake, the weeks'
+   bars stacked by sign-up month) and "Share still active, by weeks since signing up" (one curve
+   per month). Each has a legend and a hover label on every mark, and "Show as a table" puts the same
+   numbers in a table. Counts only, never a named member.
+7. Done in 3.1.0 (2026-10-28): the per-plugin weekly counts retired from the Weekly Performance
+   dashboard (every `value.*` card and the Directory, Mood and ClickLog adoption rows), and the
+   sign-in count reads "Signed in per day" (key `adoption.daily_active_members` unchanged). See the
+   Weekly Performance inventory.
 
 ### 1.17 Expenses (admin, what the app costs to run)
 
@@ -445,6 +459,7 @@ Owner decision, 2026-09-26. The owner pays the running costs of Skills Economy a
 
 ## 5) Change Log
 
+- 2026-10-28: **Retention charts and the per-plugin weekly counts retired (§1.16a, plan Measures).** `GET /api/admin/measures` also returns `cohorts` (`lib/measures/retention-cohorts.ts`), drawn on the Adoption screen as a layer cake (members active each of the last 12 weeks, stacked by sign-up month) and retention curves (share of each of the last 5 sign-up months active in weeks 0 to 11), with a legend, hover labels and "Show as a table". Weekly Performance drops its per-plugin cards and the Directory, Mood and ClickLog rows, and its sign-in count reads "Signed in per day".
 - 2026-10-28: **Speaker mute in rooms (§1.6a).** A person mute now also silences that person in Chyme rooms, and "Mute for me" under a speaker adds one.
 - 2026-10-28: **Today for visitors who are not signed in (§1.5 item 5h).** `/today` and `GET /api/today/public`: public cards only, no names, limited per address.
 - 2026-10-27: **Expenses no longer suggests a Contributions money goal.** Contributions now takes Amazon gift cards all year with no drives, goals or progress (Contributions inventory, same date), so the card under the three figures that suggested a drive goal is gone, along with `drive` and `driveError` on `GET /api/admin/expenses`, the matching lines in Copy as text, and `getCurrentCycleMoneyRaised()` in `lib/contributions/repository.ts`. The twice-yearly "Contribute if you can" draft is unchanged. No schema change here; the Contributions migration drops `contributions_cycles`.

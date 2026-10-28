@@ -235,8 +235,9 @@ max message length 4000 — one-time setup via `ctf/scripts/setupGatedChannelTyp
 app, production and staging), channel `ctf-contributors`, member ids `feed-<userId>` (the same
 Stream identity the Commons uses).
 
-Upstream reads (engine only, `ctf/packages/web/lib/contributor-access/`): the same tables and
-fixed filters as `lib/weekly-performance/live-metrics.ts`, all-time and grouped per the member who
+Upstream reads (engine only, `ctf/packages/web/lib/contributor-access/`): the tables and fixed
+filters defined in `lib/contributor-access/value-events.ts` (Weekly Performance no longer shows
+these events; its per-plugin cards retired in 3.1.0), all-time and grouped per the member who
 delivered the value — `foundation_call_sessions` (callee), `socket_relay_fulfillments`
 (fulfiller), `trust_transport_trips` (provider), `lighthouse_matches` (host),
 `service_credits_transfers` (sender; chyme tips and direct sends separately by `origin_plugin`),
