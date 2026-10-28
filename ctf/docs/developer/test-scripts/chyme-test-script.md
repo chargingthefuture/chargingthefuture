@@ -789,3 +789,14 @@ first member no longer hears the second; the third still does, and neither of th
 The button reads **Unmute for me**. Me → Muted lists the second member as a muted person, and
 their Today cards are left out for the first member. After step 3 the first member hears them again.
 **Result:** web ☐ — notes:
+
+### CH-30 — Add an upcoming talk to the calendar (3.1)
+**Role:** a member | **Surfaces:** web (mobile-width)
+
+**Steps:**
+1. Open the upcoming discussions under the rooms, and the Main Room card on Today.
+2. Press "Add to calendar" on a talk that has not started.
+
+**Expected:** The phone offers to add the talk with its start, end and host. A talk on air has no button. Nothing asks to read the calendar.
+
+Result: web ☐

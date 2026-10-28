@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { AddToCalendarButton } from '@/components/shared/add-to-calendar';
 import { CalendarClock, Radio } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { getChymeTokens } from './chyme-shared';
@@ -111,6 +112,20 @@ function ChymeUpcomingBody({ state, t }: { state: UpcomingState; t: ReturnType<t
           ) : null}
           <div style={{ fontSize: 12.5, fontWeight: 600, color: t.TITLE, lineHeight: 1.3, overflowWrap: 'anywhere' }}>{slot.title}</div>
           <div style={{ fontSize: 11, color: t.SUBTLE }}>Hosted by @{slot.hostUsername}</div>
+          {slot.isOnAir ? null : (
+            <AddToCalendarButton
+              color={t.ACCENT}
+              style={{ marginTop: 4, alignSelf: 'flex-start', minHeight: 28, padding: '4px 8px', fontSize: 11 }}
+              event={{
+                uid: `ti-radio-${slot.slotStartIso}`,
+                title: slot.title,
+                startIso: slot.slotStartIso,
+                endIso: slot.slotEndIso,
+                description: `Hosted by @${slot.hostUsername} in the Main Room.`,
+                url: '/ti-radio',
+              }}
+            />
+          )}
         </li>
       ))}
     </ul>
