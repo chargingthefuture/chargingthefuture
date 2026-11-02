@@ -1,0 +1,223 @@
+/* The puzzles screen in 3.1. Colors come from the frame's custom properties (se-theme-vars.ts). */
+.screen {
+  padding-bottom: 48px;
+}
+
+.group,
+.play,
+.choices {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.play {
+  gap: 12px;
+}
+
+.groupTitle {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--se-soft);
+}
+
+.row,
+.choice {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 44px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1.5px solid var(--se-hair);
+  background: var(--se-card);
+  color: var(--se-ink);
+  font: inherit;
+  font-size: 15px;
+  line-height: 1.4;
+  text-align: left;
+  cursor: pointer;
+}
+
+.choice:disabled {
+  cursor: default;
+}
+
+.rowTitle {
+  font-weight: 600;
+}
+
+.rowMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--se-soft);
+}
+
+.solved {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--se-kind-game);
+  color: var(--se-on-btn);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.kind {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--se-kind-game);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ask,
+.text,
+.from {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.4;
+  color: var(--se-soft);
+}
+
+.quote {
+  margin: 0;
+  padding: 14px 16px;
+  border-left: 3px solid var(--se-kind-game);
+  border-radius: 12px;
+  background: var(--se-sunk);
+  font-family: 'Newsreader Variable', Newsreader, Georgia, serif;
+  font-size: 18px;
+  line-height: 1.45;
+}
+
+.gap {
+  display: inline-block;
+  min-width: 4em;
+  color: var(--se-kind-game);
+  font-weight: 700;
+}
+
+.line {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.lineNumber {
+  flex: 0 0 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--se-sunk);
+  color: var(--se-ink);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 24px;
+  text-align: center;
+}
+
+.right {
+  border-color: #2f8a4f;
+  box-shadow: inset 0 0 0 1.5px #2f8a4f;
+}
+
+.wrong {
+  border-color: var(--se-soft);
+  opacity: 0.7;
+}
+
+.result {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: var(--se-card);
+  border: 1.5px solid var(--se-line);
+  animation: slide-up 200ms ease-out;
+}
+
+@keyframes slide-up {
+  from {
+    transform: translateY(12px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .result {
+    animation: none;
+  }
+}
+
+.resultActions,
+.pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.pager {
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--se-soft);
+}
+
+.primary,
+.secondary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 999px;
+  font: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.primary {
+  border: none;
+  background: var(--se-btn);
+  color: var(--se-on-btn);
+}
+
+.secondary {
+  border: 1.5px solid var(--se-line);
+  background: transparent;
+  color: var(--se-ink);
+}
+
+.linkButton {
+  align-self: flex-start;
+  min-height: 44px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--se-ink);
+  font: inherit;
+  font-size: 14px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.linkButton:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.row:focus-visible,
+.choice:focus-visible,
+.primary:focus-visible,
+.secondary:focus-visible,
+.linkButton:focus-visible {
+  outline: 2px solid var(--se-pick);
+  outline-offset: 2px;
+}

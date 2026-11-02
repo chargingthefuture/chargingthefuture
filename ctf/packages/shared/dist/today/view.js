@@ -5,7 +5,7 @@ export const SE_TODAY_FILTERS = [
     { key: 'all', label: 'All', kinds: null },
     { key: 'asks', label: 'Asks', kinds: ['ask'] },
     { key: 'offers', label: 'Offers', kinds: ['offer'] },
-    { key: 'stories', label: 'Stories', kinds: ['story', 'replay'] },
+    { key: 'stories', label: 'Stories', kinds: ['story', 'replay', 'game'] },
     { key: 'matches', label: 'Matches', kinds: ['match'] },
 ];
 const SOURCE_NAMES = {
@@ -23,6 +23,7 @@ const SOURCE_NAMES = {
     'beacon-replays': 'replays',
     'skills-hunt': 'the Wanted card',
     'skills-hunt-mission': "today's mission",
+    'blog-stories': "today's stories",
     beacon: 'the broadcast',
     chyme: 'the Main Room',
     'days-won': 'Days won',

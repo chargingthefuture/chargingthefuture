@@ -3,6 +3,7 @@ import { reportError } from 'lib/observability/report';
 import type { TodayViewer } from './card';
 import { goalAsks, relayAsks, rideAsks } from './sources-asks';
 import { cohortOffers, placeOffers } from './sources-offers';
+import { blogStories } from './sources-blog';
 import { announcementStories, inviteStories, surveyCard, whatWorksStory } from './sources-stories';
 import { broadcast, missionCard, moodCard, numbersCard, replayCards, wantedCard } from './sources-live';
 import { mainRoom, nextTalk, weaversRoom } from './sources-rooms';
@@ -40,6 +41,7 @@ export async function buildToday(viewer: TodayViewer, now = new Date()): Promise
     { name: 'announcements', read: () => announcementStories(viewer) },
     { name: 'directory-invites', read: () => inviteStories() },
     { name: 'what-works', read: () => whatWorksStory(viewer, now) },
+    { name: 'blog-stories', read: () => blogStories(now) },
     { name: 'quora-survey', read: () => surveyCard(viewer, now) },
     { name: 'mood', read: () => moodCard(viewer, now) },
     { name: 'numbers', read: () => numbersCard(now) },
