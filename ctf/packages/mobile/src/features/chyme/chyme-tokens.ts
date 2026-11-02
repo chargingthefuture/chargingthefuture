@@ -6,7 +6,8 @@
 // The comic theme on the web squares every corner (globals.css sets border-radius: 0 on every
 // element under the comic theme), so `radius` returns 0 there and the web value otherwise.
 
-import { useMemo } from 'react';
+import { createContext, useContext, useMemo } from 'react';
+import type { SeThemeTokens } from '@ctf/shared';
 import { useTheme, getAppAccent, type ThemeName } from '../../theme';
 import { openWebPage } from '../../navigation/openWebPage';
 import { reportError } from '../../observability/report';
@@ -84,9 +85,37 @@ export function getChymeTokens(theme: ThemeName): ChymeTokens {
   return { ...shell, BG: '#04160A', HEADER: '#030d05', RAIL: '#030d05', TITLE: '#F0FDF4', BORDER: '#052e16' };
 }
 
+// Lets a 3.1 screen draw Chyme's parts in the 3.1 colors (the Android copy of the web's
+// chyme-tokens-context.tsx); without a provider every part keeps Chyme's own colors.
+export const ChymeTokensContext = createContext<ChymeTokens | null>(null);
+
 export function useChymeTokens(): ChymeTokens {
   const { theme } = useTheme();
-  return useMemo(() => getChymeTokens(theme), [theme]);
+  const override = useContext(ChymeTokensContext);
+  const own = useMemo(() => getChymeTokens(theme), [theme]);
+  return override ?? own;
+}
+
+// Chyme's token names filled from the member's 3.1 theme, as the web's seChymeTokens does.
+export function seChymeTokens(t: SeThemeTokens): ChymeTokens {
+  return {
+    ACCENT: t.btn,
+    BG: t.bg,
+    HEADER: t.bg,
+    RAIL: t.bg,
+    TEXT: t.ink,
+    TITLE: t.ink,
+    SUBTLE: t.soft,
+    MUTED: t.soft,
+    FAINT: t.soft,
+    BORDER: t.hair,
+    BORDER_STRONG: t.hair,
+    INPUT_BG: t.sunk,
+    ACCENT_TINT_15: `${t.btn}26`,
+    ACCENT_TINT_40: `${t.btn}66`,
+    isComic: false,
+    radius: keep,
+  };
 }
 
 export function useShellTokens(): ChymeTokens {

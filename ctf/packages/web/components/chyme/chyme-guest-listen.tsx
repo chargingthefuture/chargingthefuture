@@ -12,8 +12,7 @@ import {
   type StreamVideoParticipant,
 } from '@stream-io/video-react-sdk';
 import { Radio } from 'lucide-react';
-import { useTheme } from '@/hooks/useTheme';
-import { getChymeTokens } from './chyme-shared';
+import { useChymeTokens } from './chyme-tokens-context';
 import { reportError } from 'lib/observability/report';
 import { chymeAttendanceLine } from 'lib/chyme/capacity-line';
 import { CHYME_ERROR_CODE } from 'lib/chyme/constants';
@@ -491,8 +490,7 @@ function unlockAudioPlayback(): void {
 }
 
 function ListenButton({ accent, counts, onTap }: { accent: string; counts: GuestRoomCounts; onTap: () => void }) {
-  const { theme } = useTheme();
-  const t = getChymeTokens(theme);
+  const t = useChymeTokens();
   return (
     <button
       type="button"
@@ -515,8 +513,7 @@ function ListenButton({ accent, counts, onTap }: { accent: string; counts: Guest
 // Exported so the public shell can show the same note when the room is live but no guest identity
 // could be minted — one look for "you are not hearing this room, and here is why".
 export function GuestNote({ accent, text, detail }: { accent: string; text: string; detail?: string | null }) {
-  const { theme } = useTheme();
-  const t = getChymeTokens(theme);
+  const t = useChymeTokens();
   return (
     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '14px 18px', borderRadius: 12, background: `${accent}12`, border: `1px solid ${accent}30`, color: t.SUBTLE, fontSize: 13 }}>
       <Radio size={16} style={{ color: accent, flexShrink: 0, marginTop: 2 }} />
@@ -533,8 +530,7 @@ export function GuestNote({ accent, text, detail }: { accent: string; text: stri
 function GuestAudioSink({ accent, counts }: { accent: string; counts: GuestRoomCounts }) {
   const { useParticipants } = useCallStateHooks();
   const participants = useParticipants();
-  const { theme } = useTheme();
-  const t = getChymeTokens(theme);
+  const t = useChymeTokens();
   // One tile per identity, the local session preferred, exactly as the member room collapses its
   // list: a member with a lingering extra Stream session would otherwise appear twice.
   const uniqueParticipants = useMemo(() => {
@@ -576,8 +572,7 @@ function GuestHearingAid({ accent }: { accent: string }) {
   const call = useCall();
   const { useIsAutoplayBlocked } = useCallStateHooks();
   const blocked = useIsAutoplayBlocked();
-  const { theme } = useTheme();
-  const t = getChymeTokens(theme);
+  const t = useChymeTokens();
   const retry = () => {
     unlockAudioPlayback();
     void call?.resumeAudio().catch((error: unknown) => {
@@ -609,8 +604,7 @@ function GuestHearingAid({ accent }: { accent: string }) {
 // The same tiles the member room draws (avatar ring, headphones badge for a listener, status pill),
 // without the member-only actions: a guest cannot tip, raise a hand, or open a Back Channel.
 function GuestStage({ participants }: { participants: StreamVideoParticipant[] }) {
-  const { theme } = useTheme();
-  const t = getChymeTokens(theme);
+  const t = useChymeTokens();
   return (
     <div>
       <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: t.FAINT, textTransform: 'uppercase', marginBottom: 16 }}>

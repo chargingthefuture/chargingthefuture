@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AddToCalendarButton } from '@/components/shared/add-to-calendar';
 import { CalendarClock, Radio } from 'lucide-react';
-import { useTheme } from '@/hooks/useTheme';
-import { getChymeTokens } from './chyme-shared';
+import type { ChymeTokens } from './chyme-shared';
+import { useChymeTokens } from './chyme-tokens-context';
 import { formatUpcomingWhen, pickUpcoming, type ChymeUpcomingSlot } from 'lib/chyme/upcoming';
 
 // Scheduled rooms, MVP (owner decision, 2026-09-19): Chyme shows what is coming up on the TI Radio
@@ -38,8 +38,7 @@ async function readUpcoming(): Promise<UpcomingState> {
 // The list itself, in the room's chrome. `refreshKey` re-reads when the page's refresh control is
 // pressed.
 export function ChymeUpcoming({ refreshKey = 0, compact = false }: { refreshKey?: number; compact?: boolean }) {
-  const { theme } = useTheme();
-  const t = getChymeTokens(theme);
+  const t = useChymeTokens();
   const [state, setState] = useState<UpcomingState>({ kind: 'loading' });
 
   const load = useCallback(async () => {
@@ -69,7 +68,7 @@ export function ChymeUpcoming({ refreshKey = 0, compact = false }: { refreshKey?
   );
 }
 
-function ChymeUpcomingBody({ state, t }: { state: UpcomingState; t: ReturnType<typeof getChymeTokens> }) {
+function ChymeUpcomingBody({ state, t }: { state: UpcomingState; t: ChymeTokens }) {
   if (state.kind === 'loading') {
     return <div style={{ fontSize: 12, color: t.FAINT }}>Reading the guide…</div>;
   }
