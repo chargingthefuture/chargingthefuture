@@ -1,26 +1,38 @@
 {
-  "generatedAt": "2026-11-02T09:53:07.162Z",
+  "generatedAt": "2026-05-19T05:35:46.027Z",
   "mode": "warn",
-  "status": "blocked",
-  "notes": [
-    "Android export directory missing: packages/mobile/dist/android. Run android build first."
-  ],
+  "status": "warning",
+  "notes": [],
   "budgetFile": "config/performance-budgets.json",
   "results": [
     {
       "metric": "web.jsBytes",
-      "value": 7856544,
+      "value": 3450174,
       "warningMax": 3670016,
       "blockMax": 4718592,
-      "status": "blocked"
+      "status": "ok"
     },
     {
       "metric": "web.cssBytes",
-      "value": 426135,
+      "value": 340555,
       "warningMax": 524288,
       "blockMax": 786432,
       "status": "ok"
+    },
+    {
+      "metric": "android.totalBytes",
+      "value": 13171824,
+      "warningMax": 15728640,
+      "blockMax": 23068672,
+      "status": "ok"
+    },
+    {
+      "metric": "android.jsBundleBytes",
+      "value": 9093638,
+      "warningMax": 6291456,
+      "blockMax": 9437184,
+      "status": "warning"
     }
   ],
-  "markdown": "## Performance Budget Audit\n\n- Mode: **warn**\n- Budget file: **config/performance-budgets.json**\n\n| Metric | Value | Warning max | Block max | Status |\n|---|---:|---:|---:|---|\n| web.jsBytes | 7.49 MB | 3.50 MB | 4.50 MB | blocked |\n| web.cssBytes | 0.41 MB | 0.50 MB | 0.75 MB | ok |\n"
+  "markdown": "## Performance Budget Audit\n\n- Mode: **warn**\n- Budget file: **config/performance-budgets.json**\n\n| Metric | Value | Warning max | Block max | Status |\n|---|---:|---:|---:|---|\n| web.jsBytes | 3.29 MB | 3.50 MB | 4.50 MB | ok |\n| web.cssBytes | 0.32 MB | 0.50 MB | 0.75 MB | ok |\n| android.totalBytes | 12.56 MB | 15.00 MB | 22.00 MB | ok |\n| android.jsBundleBytes | 8.67 MB | 6.00 MB | 9.00 MB | warning |\n"
 }
