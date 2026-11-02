@@ -78,9 +78,8 @@ no DMs) — and the **"Weavers of the Commons" badge** on Directory.
 ## Admin Features
 
 1. Eligible-members list (user id, username, first-earned date, revoke flag) with for-cause
-   revoke (non-empty reason required, confirm before it lands) and reinstate. Above the list, a
-   "Give the badge" field takes a username or account id and grants the badge by hand: current
-   members get it once, since 3.1 counts only value received from approved, settled members.
+   revoke (non-empty reason required, confirm before it lands) and reinstate. There is no way to
+   give the badge by hand: nobody, the owner included, gets it except by meeting the rules.
 2. Config editor for the owner-tunable eligibility rules: score threshold, minimum account age,
    minimum distinct plugins, minimum distinct counterparties, the eligible-member minimum required
    before the gated channel opens, and per-event weights over the fixed value-event key list. The
@@ -124,11 +123,6 @@ Admin routes (admin-only via `requireContributorAccessAdmin`; every allow **and*
 - `POST /api/contributor-access/admin/reinstate` — body `{ userId }`; clears the revocation and
   restores `eligible` (it was previously earned — `first_earned_at` is permanent); same guarded
   membership sync re-adds the member; audits `contributor-access.member.reinstate`.
-- `POST /api/contributor-access/admin/grant` — body `{ who }` (a username, with or without @, or
-  an account id); sets `eligible` and `first_earned_at` by hand, unchanged for a member who already
-  holds it; 404 `contributor_access_not_found` when nobody matches, 409 `contributor_access_revoked`
-  for a member revoked for cause (reinstate is the way back); same guarded membership sync; audits
-  `contributor-access.member.grant`.
 
 Member channel routes (gate: approved member + `channel_open` + the eligibility flag, or the
 admin role; every deny is a bare 404 with no channel trace — the no-shaming rule; mutations
@@ -374,6 +368,17 @@ fill on the first recompute / config save / member post.
   evidence; revisit only with strong cause).
 
 ## Change Log
+
+- 2026-11-02: **The badge can no longer be given by hand, and Contributions comments and stars no
+  longer count (owner decision).** The badge's own rule is that nobody gets it without meeting the
+  rules, the owner included, so `POST /api/contributor-access/admin/grant`, its "Give the badge"
+  field, `grantEligibilityByHand` and the `contributor-access.member.grant` command, access policy
+  and audit entries are removed. Contributions takes Amazon gift cards only, so the
+  `value.contributions_non_money_confirmed` event, its weight row in the config editor, and the
+  weight inheritance from the gift-card key that only it used are removed; there are now fourteen
+  value events, twelve of them delivering. A saved weight for the removed key is ignored. A member
+  whose score included confirmed comments or stars keeps the badge if they hold it, because the
+  weekly recompute only ever admits. No schema change.
 
 - 2026-10-28: **Weavers counts only value received from approved members who are not new (3.1.0
   plan, Access).** The value-event rows carry the receiving member as `other_id`; the recompute keeps

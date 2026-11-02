@@ -1,5 +1,6 @@
 // One card in Today, the Android copy of the web's today-card.tsx: tapping the text opens it in
-// place, the buttons open the item, and the ••• menu holds Copy link and Hide.
+// place, the buttons open the item, and the ••• menu holds Copy link and Hide. The timeline dot
+// marks it done, and tapping it again marks it not done.
 
 import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -45,7 +46,7 @@ export function TodayCard({
   t,
   card,
   read,
-  onRead,
+  onToggleDone,
   onHide,
   onMute,
   onOpenLink,
@@ -53,7 +54,7 @@ export function TodayCard({
   t: SeThemeTokens;
   card: SeTodayCard;
   read: boolean;
-  onRead: () => void;
+  onToggleDone: () => void;
   onHide: () => void;
   onMute?: () => void;
   onOpenLink: (_href: string) => void;
@@ -65,19 +66,25 @@ export function TodayCard({
 
   return (
     <View style={s.card}>
-      <View style={[s.dot, { backgroundColor: color }]} />
+      <TouchableOpacity
+        accessibilityRole="checkbox"
+        accessibilityState={{ checked: read }}
+        accessibilityLabel={read ? `Done: ${card.title}. Tap to mark not done` : `Mark done: ${card.title}`}
+        hitSlop={8}
+        onPress={onToggleDone}
+        style={[s.dot, { backgroundColor: color }]}
+      >
+        {read ? (
+          <Svg width={14} height={14} viewBox="0 0 24 24">
+            <Path d="M5 12l5 5 9-10" stroke={t.bg} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+          </Svg>
+        ) : null}
+      </TouchableOpacity>
       <View style={s.head}>
         {card.author ? <SeAvatar accountId={card.author.accountId} size={28} /> : null}
         {card.author ? <Text style={s.handle}>{card.author.handle}</Text> : null}
         <Text style={[s.label, { color }]}>{card.label}</Text>
         <View style={s.spacer} />
-        {read ? (
-          <View style={[s.check, { backgroundColor: color }]} accessibilityRole="image" accessibilityLabel="Read">
-            <Svg width={14} height={14} viewBox="0 0 24 24">
-              <Path d="M5 12l5 5 9-10" stroke={t.bg} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" fill="none" />
-            </Svg>
-          </View>
-        ) : null}
         <TouchableOpacity
           accessibilityRole="button"
           accessibilityLabel={onMute ? 'More: copy link, hide, mute' : 'More: copy link, hide'}
@@ -96,10 +103,7 @@ export function TodayCard({
       <TouchableOpacity
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}
-        onPress={() => {
-          setOpen((value) => !value);
-          onRead();
-        }}
+        onPress={() => setOpen((value) => !value)}
         style={s.text}
       >
         <Text style={s.title}>{card.title}</Text>
@@ -116,10 +120,7 @@ export function TodayCard({
               key={item.kind + item.label}
               accessibilityRole="link"
               style={s.action}
-              onPress={() => {
-                onRead();
-                onOpenLink(item.href);
-              }}
+              onPress={() => onOpenLink(item.href)}
             >
               <Text style={s.actionLabel}>{item.label}</Text>
             </TouchableOpacity>
@@ -133,12 +134,11 @@ export function TodayCard({
 function makeStyles(t: SeThemeTokens) {
   return StyleSheet.create({
     card: { gap: 10, padding: 14, borderRadius: 18, backgroundColor: t.card, borderWidth: 1.5, borderColor: t.hair },
-    dot: { position: 'absolute', left: -40, top: 12, width: 28, height: 28, borderRadius: 14 },
+    dot: { position: 'absolute', left: -40, top: 12, width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
     head: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     handle: { fontSize: 13, color: t.ink, fontFamily: SE_FONT.sansSemi },
     label: { fontSize: 12, fontFamily: SE_FONT.sansBold, flexShrink: 1 },
     spacer: { flex: 1 },
-    check: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
     menuButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
     menu: { alignSelf: 'flex-end', padding: 6, borderRadius: 14, backgroundColor: t.card, borderWidth: 1.5, borderColor: t.line, boxShadow: `0px 3px 0px ${t.line}` },
     menuItem: { minHeight: 44, paddingHorizontal: 12, justifyContent: 'center' },

@@ -7,6 +7,7 @@ import { SeAvatar } from '../../shared/se-avatar';
 import styles from './today.module.css';
 
 // One card in Today. Tapping the text opens it in place; the buttons open the item where it lives.
+// The timeline dot marks it done, and tapping it again marks it not done.
 // The ••• menu holds Copy link, Hide and, on a card with an author, Mute; report joins it with the
 // rest of the safety controls.
 
@@ -63,25 +64,35 @@ function CardMenu({ card, onHide, onMute }: { card: SeTodayCard; onHide: () => v
 export function TodayCard({
   card,
   read,
-  onRead,
+  onToggleDone,
   onHide,
   onMute,
 }: {
   card: SeTodayCard;
   read: boolean;
-  onRead: () => void;
+  onToggleDone: () => void;
   onHide: () => void;
   onMute?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const color = `var(--se-kind-${card.kind})`;
-  const toggle = () => {
-    setOpen((value) => !value);
-    onRead();
-  };
+  const toggle = () => setOpen((value) => !value);
   return (
     <article className={styles.card}>
-      <span className={styles.dot} style={{ background: color }} aria-hidden="true" />
+      <button
+        type="button"
+        className={styles.dot}
+        style={{ background: color }}
+        aria-pressed={read}
+        aria-label={read ? `Done: ${card.title}. Tap to mark not done` : `Mark done: ${card.title}`}
+        onClick={onToggleDone}
+      >
+        {read ? (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--se-bg)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M5 12l5 5 9-10" />
+              </svg>
+        ) : null}
+      </button>
       <div className={styles.cardHead}>
         {card.author ? <SeAvatar accountId={card.author.accountId} size={28} /> : null}
         {card.author ? <span className={styles.handle}>{card.author.handle}</span> : null}
@@ -89,13 +100,6 @@ export function TodayCard({
           {card.label}
         </span>
         <span className={styles.spacer} />
-        {read ? (
-          <span className={styles.check} role="img" aria-label="Read" style={{ background: color }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--se-bg)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M5 12l5 5 9-10" />
-            </svg>
-          </span>
-        ) : null}
         <CardMenu card={card} onHide={onHide} onMute={onMute} />
       </div>
       <button type="button" className={styles.textButton} aria-expanded={open} onClick={toggle}>
@@ -105,7 +109,7 @@ export function TodayCard({
       {card.actions.length > 0 ? (
         <div className={styles.actions}>
           {card.actions.map((item) => (
-            <Link key={item.kind + item.label} href={item.href} className={styles.actionButton} onClick={onRead}>
+            <Link key={item.kind + item.label} href={item.href} className={styles.actionButton}>
               {item.label}
             </Link>
           ))}

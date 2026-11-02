@@ -112,7 +112,7 @@ Unlock stops being the gate for most of the app.
 - The Directory stays behind verification. Verification keeps out spam, bots, trolls and ordinary
   criminals; it is not meant as protection from the networks that compiled the list of survivors.
 - Weavers of the Commons counts only value received from approved members who are not new
-  themselves. Current members get the badge by hand once.
+  themselves. Nobody gets the badge by hand, the owner included (owner decision, 2026-11-02).
 - Thank-you credits for unverified members are held until Unlock approval.
 
 ## Personal controls and safety
