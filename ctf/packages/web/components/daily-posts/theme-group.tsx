@@ -24,6 +24,7 @@ type Props = {
   onTick: (itemKey: string, done: boolean) => Promise<string | null>;
   onThemes: (slug: string, themes: DailyPostThemeId[] | null) => Promise<string | null>;
   sorting?: boolean;
+  onExclude?: (slug: string) => Promise<string | null>;
 };
 
 function nextIndex(posts: DailyPostItem[], ticks: TickMap): number {
@@ -39,7 +40,7 @@ function nextIndex(posts: DailyPostItem[], ticks: TickMap): number {
   return posts.length === 0 ? -1 : (latestIndex + 1) % posts.length;
 }
 
-export function ThemeGroup({ t, label, posts, today, ticks, onTick, onThemes, sorting = false }: Props) {
+export function ThemeGroup({ t, label, posts, today, ticks, onTick, onThemes, onExclude, sorting = false }: Props) {
   const next = nextIndex(posts, ticks);
   const pages = Math.max(1, Math.ceil(posts.length / PAGE_SIZE));
   const [page, setPage] = useState(next >= 0 ? Math.floor(next / PAGE_SIZE) : 0);
@@ -84,9 +85,15 @@ export function ThemeGroup({ t, label, posts, today, ticks, onTick, onThemes, so
               onTick={(done) => onTick(`post:${post.slug}`, done)}
             >
               {sorting ? (
-                <ThemePicker t={t} post={post} onSave={(themes) => onThemes(post.slug, themes)} />
+                <ThemePicker t={t} post={post} onSave={(themes) => onThemes(post.slug, themes)} onExclude={onExclude ? () => onExclude(post.slug) : undefined} />
               ) : editing === post.slug ? (
-                <ThemePicker t={t} post={post} onSave={(themes) => onThemes(post.slug, themes)} onClose={() => setEditing(null)} />
+                <ThemePicker
+                  t={t}
+                  post={post}
+                  onSave={(themes) => onThemes(post.slug, themes)}
+                  onClose={() => setEditing(null)}
+                  onExclude={onExclude ? () => onExclude(post.slug) : undefined}
+                />
               ) : (
                 <button
                   type="button"

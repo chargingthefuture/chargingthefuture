@@ -5404,6 +5404,7 @@ CREATE INDEX IF NOT EXISTS idx_admin_expenses_audit_trail_lookup
 --   admin_daily_post_theme_choices  a post whose theme groups the owner set by hand. themes replaces
 --                                   the groups its own links put it in; an empty array leaves it in
 --                                   none.
+--   admin_daily_post_exclusions     a post left out of the rotation, its groups and Today's stories.
 --   admin_daily_posts_audit_trail   every change on the screen (rule 131).
 CREATE TABLE IF NOT EXISTS admin_daily_post_ticks (
   item_key TEXT NOT NULL,
@@ -5427,6 +5428,15 @@ ALTER TABLE IF EXISTS admin_daily_post_templates ADD COLUMN IF NOT EXISTS title 
 ALTER TABLE IF EXISTS admin_daily_post_templates ADD COLUMN IF NOT EXISTS body TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS admin_daily_post_templates ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS admin_daily_post_templates ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+-- admin_daily_post_exclusions: blog posts the owner left out of the rotation (Daily Posts, owner
+-- request 2026-11-02). A post here stays on the blog; it leaves the Daily Posts rotation, its theme
+-- groups and Today's story cards until it is brought back. Names no member. Safe to re-run.
+CREATE TABLE IF NOT EXISTS admin_daily_post_exclusions (
+  post_slug TEXT PRIMARY KEY,
+  excluded_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS admin_daily_post_exclusions ADD COLUMN IF NOT EXISTS excluded_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
 CREATE TABLE IF NOT EXISTS admin_daily_post_theme_choices (
   post_slug TEXT PRIMARY KEY,
@@ -7403,6 +7413,39 @@ CREATE TABLE IF NOT EXISTS question_match_messages (
 ALTER TABLE IF EXISTS question_match_messages ADD COLUMN IF NOT EXISTS read_at TIMESTAMPTZ;
 CREATE INDEX IF NOT EXISTS idx_question_match_messages_pair ON question_match_messages(user_low, user_high, created_at);
 CREATE INDEX IF NOT EXISTS idx_question_match_messages_high ON question_match_messages(user_high);
+
+-- question_matching_settings: whether a member is matched in 21 Questions. No row means on. Off
+-- leaves their answers out of every match, theirs and everyone else's, from the next read; the
+-- answers themselves are kept. Answering never changes it; only the member's own toggle does.
+CREATE TABLE IF NOT EXISTS question_matching_settings (
+  user_id TEXT PRIMARY KEY,
+  matching_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS question_matching_settings ADD COLUMN IF NOT EXISTS matching_enabled BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE IF EXISTS question_matching_settings ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+-- question_answer_audit: a record of every 21 Questions answer, every attempt to give a different
+-- answer to a question already answered (the first answer stands, so the attempt is refused), and
+-- every time matching is turned off or on. Read by the owner with
+-- scripts/sql/twenty_one_questions_audit.sql, the same way SkillUp's skill log is read: somebody who
+-- keeps switching matching on and off, or keeps trying other answers, may be fishing for matches
+-- to reach people. Append-only; account deletion removes the member's rows with their answers.
+CREATE TABLE IF NOT EXISTS question_answer_audit (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id TEXT NOT NULL,
+  action TEXT NOT NULL CHECK (action IN ('answered', 'answer_refused', 'matching_off', 'matching_on')),
+  question_id TEXT,
+  choice SMALLINT,
+  -- The answer that stands, on an answer_refused row.
+  prior_choice SMALLINT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS question_answer_audit ADD COLUMN IF NOT EXISTS question_id TEXT;
+ALTER TABLE IF EXISTS question_answer_audit ADD COLUMN IF NOT EXISTS choice SMALLINT;
+ALTER TABLE IF EXISTS question_answer_audit ADD COLUMN IF NOT EXISTS prior_choice SMALLINT;
+ALTER TABLE IF EXISTS question_answer_audit ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_question_answer_audit_user ON question_answer_audit (user_id, created_at DESC);
 
 -- member_mutes: personal mute (3.1.0). A member mutes a person (target = their account id, label =
 -- the handle shown at the time) or a word or phrase (target = the lower-cased words). Today leaves
@@ -10956,4 +10999,57 @@ CREATE TABLE IF NOT EXISTS question_match_messages (
 ALTER TABLE IF EXISTS question_match_messages ADD COLUMN IF NOT EXISTS read_at TIMESTAMPTZ;
 CREATE INDEX IF NOT EXISTS idx_question_match_messages_pair ON question_match_messages(user_low, user_high, created_at);
 CREATE INDEX IF NOT EXISTS idx_question_match_messages_high ON question_match_messages(user_high);
+
+
+-- ── post migration: 0080_question_matching_settings.sql ──
+-- Safe to re-run.
+-- question_matching_settings: whether a member is matched in 21 Questions. No row means on. Off
+-- leaves their answers out of every match, theirs and everyone else's, from the next read; the
+-- answers themselves are kept. Answering never changes it; only the member's own toggle does.
+-- schema.sql creates the same table; this file brings an existing database up to date without
+-- waiting on a schema run, as 0079 did for the other 21 Questions tables.
+CREATE TABLE IF NOT EXISTS question_matching_settings (
+  user_id TEXT PRIMARY KEY,
+  matching_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS question_matching_settings ADD COLUMN IF NOT EXISTS matching_enabled BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE IF EXISTS question_matching_settings ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+
+-- ── post migration: 0081_question_answer_audit.sql ──
+-- Safe to re-run.
+-- schema.sql creates the same table; this file brings an existing database up to date.
+-- question_answer_audit: a record of every 21 Questions answer, every attempt to give a different
+-- answer to a question already answered (the first answer stands, so the attempt is refused), and
+-- every time matching is turned off or on. Read by the owner with
+-- scripts/sql/twenty_one_questions_audit.sql, the same way SkillUp's skill log is read: somebody who
+-- keeps switching matching on and off, or keeps trying other answers, may be fishing for matches
+-- to reach people. Append-only; account deletion removes the member's rows with their answers.
+CREATE TABLE IF NOT EXISTS question_answer_audit (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id TEXT NOT NULL,
+  action TEXT NOT NULL CHECK (action IN ('answered', 'answer_refused', 'matching_off', 'matching_on')),
+  question_id TEXT,
+  choice SMALLINT,
+  -- The answer that stands, on an answer_refused row.
+  prior_choice SMALLINT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS question_answer_audit ADD COLUMN IF NOT EXISTS question_id TEXT;
+ALTER TABLE IF EXISTS question_answer_audit ADD COLUMN IF NOT EXISTS choice SMALLINT;
+ALTER TABLE IF EXISTS question_answer_audit ADD COLUMN IF NOT EXISTS prior_choice SMALLINT;
+ALTER TABLE IF EXISTS question_answer_audit ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_question_answer_audit_user ON question_answer_audit (user_id, created_at DESC);
+
+
+-- ── post migration: 0082_daily_post_exclusions.sql ──
+-- admin_daily_post_exclusions: blog posts the owner left out of the rotation (Daily Posts, owner
+-- request 2026-11-02). A post here stays on the blog; it leaves the Daily Posts rotation, its theme
+-- groups and Today's story cards until it is brought back. Names no member. Safe to re-run.
+CREATE TABLE IF NOT EXISTS admin_daily_post_exclusions (
+  post_slug TEXT PRIMARY KEY,
+  excluded_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS admin_daily_post_exclusions ADD COLUMN IF NOT EXISTS excluded_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 

@@ -73,6 +73,13 @@ export function parseTickInput(body: Record<string, unknown>): { ok: true; itemK
   return { ok: true, itemKey, date, done };
 }
 
+export function parseExclusionInput(body: Record<string, unknown>): { ok: true; slug: string; excluded: boolean } | { ok: false; message: string } {
+  const { slug, excluded } = body;
+  if (typeof slug !== 'string' || !slug || slug.length > 300) return { ok: false, message: "slug must be the post's slug." };
+  if (typeof excluded !== 'boolean') return { ok: false, message: 'excluded must be true or false.' };
+  return { ok: true, slug, excluded };
+}
+
 export function parseThemeChoiceInput(
   body: Record<string, unknown>,
 ): { ok: true; slug: string; themes: DailyPostThemeId[] | null } | { ok: false; message: string } {

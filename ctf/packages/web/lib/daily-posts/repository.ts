@@ -101,6 +101,20 @@ export async function setThemeChoice(postSlug: string, themes: DailyPostThemeId[
   );
 }
 
+/** The slugs of the posts left out of the rotation, its theme groups and Today's stories. */
+export async function listExclusions(): Promise<Set<string>> {
+  const result = await queryDb<{ post_slug: string }>(`SELECT post_slug FROM admin_daily_post_exclusions`);
+  return new Set(result.rows.map((row) => row.post_slug));
+}
+
+/** Leave a post out, or bring it back. True when something changed. */
+export async function setExclusion(postSlug: string, excluded: boolean): Promise<boolean> {
+  const result = excluded
+    ? await queryDb(`INSERT INTO admin_daily_post_exclusions (post_slug) VALUES ($1) ON CONFLICT (post_slug) DO NOTHING`, [postSlug])
+    : await queryDb(`DELETE FROM admin_daily_post_exclusions WHERE post_slug = $1`, [postSlug]);
+  return (result.rowCount ?? 0) > 0;
+}
+
 export type DailyPostsAuditEvent = {
   actorId: string;
   command:
@@ -108,8 +122,9 @@ export type DailyPostsAuditEvent = {
     | 'admin.daily_posts.template.create'
     | 'admin.daily_posts.template.update'
     | 'admin.daily_posts.template.delete'
-    | 'admin.daily_posts.theme_choice.set';
-  targetType: 'tick' | 'template' | 'theme_choice';
+    | 'admin.daily_posts.theme_choice.set'
+    | 'admin.daily_posts.exclusion.set';
+  targetType: 'tick' | 'template' | 'theme_choice' | 'exclusion';
   targetId: string;
   metadata: Record<string, unknown>;
 };

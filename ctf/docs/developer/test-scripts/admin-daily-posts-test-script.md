@@ -107,6 +107,20 @@
 - Step 1: Unsorted is already open, and every post in it shows its title and the ten group choices.
 - Step 2: the post leaves Unsorted and appears in the ticked group.
 
+### DP-6b — Leaving a post out of the rotation
+
+**Role:** Admin
+**Steps:**
+1. Under Today's blog posts, tap **Leave out of rotation** on one post.
+2. In Themes, open **Groups** on another post and tap **Leave out of rotation (it stays on the blog)**.
+3. Scroll to **Left out** at the bottom and tap **Bring back** on the first one.
+4. Open Today in the app on a day one of the left-out posts was due as a story.
+
+**Expected:**
+- Steps 1 and 2: the post disappears from Today's blog posts and from every theme group, and appears under Left out with its number and title. It is still on the blog.
+- Step 3: the post leaves Left out and is back in its groups, and in Today's blog posts on its own day.
+- Step 4: that day shows one story card fewer; the other stories are the same as before.
+
 ### DP-7 — Not an admin
 
 **Role:** Approved member

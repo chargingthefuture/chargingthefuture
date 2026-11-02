@@ -35,6 +35,10 @@ export function deleteTemplate(id: string) {
   return send<{ ok: true }>(`/api/admin/daily-posts/templates/${id}`, 'DELETE');
 }
 
+export function saveExclusion(slug: string, excluded: boolean) {
+  return send<{ excluded: boolean }>('/api/admin/daily-posts/exclusions', 'POST', { slug, excluded });
+}
+
 export function saveThemeChoice(slug: string, themes: DailyPostThemeId[] | null) {
   return send<{ themes: DailyPostThemeId[] | null }>('/api/admin/daily-posts/theme-choices', 'POST', { slug, themes });
 }

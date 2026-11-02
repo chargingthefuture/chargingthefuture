@@ -9,6 +9,7 @@ import { getPluginShellTokens } from '@/components/shared/plugin-shell-theme';
 import { getAppAccent } from 'lib/theme/theme-tokens';
 import { DAILY_POST_THEMES, type DailyPostThemeId } from 'lib/daily-posts/themes';
 import { CopyRow } from './copy-row';
+import { ExcludeButton } from './exclude-button';
 import { TemplatesSection } from './templates-section';
 import { ThemeGroup } from './theme-group';
 import * as api from './api';
@@ -79,7 +80,18 @@ export function DailyPostsShell(props: Props) {
     return null;
   }, []);
 
-  const unsorted = useMemo(() => posts.filter((post) => post.themes.length === 0), [posts]);
+  const onExclude = useCallback(async (slug: string, excluded: boolean): Promise<string | null> => {
+    const result = await api.saveExclusion(slug, excluded);
+    if (!result.ok) return result.message;
+    setPosts((current) => current.map((post) => (post.slug === slug ? { ...post, excluded } : post)));
+    return null;
+  }, []);
+  const leaveOut = useCallback((slug: string) => onExclude(slug, true), [onExclude]);
+
+  const inRotation = useMemo(() => posts.filter((post) => !post.excluded), [posts]);
+  const leftOut = useMemo(() => posts.filter((post) => post.excluded), [posts]);
+  const unsorted = useMemo(() => inRotation.filter((post) => post.themes.length === 0), [inRotation]);
+  const todays = rotation.filter((post) => !leftOut.some((out) => out.slug === post.slug));
   const doneOf = (key: string) => (ticks[key] ?? [])[0] === today;
 
   return (
@@ -99,7 +111,7 @@ export function DailyPostsShell(props: Props) {
         <Section t={t} title="Today's blog posts" note="Every post comes round once in 30 days, so a reader who visits within 30 days sees them all.">
           {postsError && <ErrorLine text={postsError} />}
           <div style={{ display: 'grid', gap: 6 }}>
-            {rotation.map((post) => (
+            {todays.map((post) => (
               <CopyRow
                 key={post.slug}
                 t={t}
@@ -107,7 +119,9 @@ export function DailyPostsShell(props: Props) {
                 text={post.pasteText}
                 doneToday={doneOf(`post:${post.slug}`)}
                 onTick={(done) => onTick(`post:${post.slug}`, done)}
-              />
+              >
+                <ExcludeButton t={t} label="Leave out of rotation" onPress={() => leaveOut(post.slug)} />
+              </CopyRow>
             ))}
           </div>
         </Section>
@@ -118,21 +132,37 @@ export function DailyPostsShell(props: Props) {
 
         <Section t={t} title="Themes" note="Each post sits in every group whose part of the app it links. Unsorted posts link none: tick their groups and Save. Next is where the group's last posting day stopped.">
           {unsorted.length > 0 && (
-            <ThemeGroup t={t} label="Unsorted" sorting posts={unsorted} today={today} ticks={ticks} onTick={onTick} onThemes={onThemes} />
+            <ThemeGroup t={t} label="Unsorted" sorting posts={unsorted} today={today} ticks={ticks} onTick={onTick} onThemes={onThemes} onExclude={leaveOut} />
           )}
           {DAILY_POST_THEMES.map((group) => (
             <ThemeGroup
               key={group.id}
               t={t}
               label={group.label}
-              posts={posts.filter((post) => post.themes.includes(group.id))}
+              posts={inRotation.filter((post) => post.themes.includes(group.id))}
               today={today}
               ticks={ticks}
               onTick={onTick}
               onThemes={onThemes}
+              onExclude={leaveOut}
             />
           ))}
         </Section>
+
+        {leftOut.length > 0 && (
+          <Section t={t} title="Left out" note="Out of the rotation, the groups and Today's stories. They stay on the blog.">
+            <div style={{ display: 'grid', gap: 6 }}>
+              {leftOut.map((post) => (
+                <div key={post.slug} style={{ background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, borderRadius: 10, padding: '8px 10px' }}>
+                  <div style={{ fontSize: 13, color: t.TEXT }}>
+                    No. {post.number} · {post.title}
+                  </div>
+                  <ExcludeButton t={t} label="Bring back" onPress={() => onExclude(post.slug, false)} />
+                </div>
+              ))}
+            </div>
+          </Section>
+        )}
       </div>
     </div>
   );

@@ -5406,6 +5406,7 @@ CREATE INDEX IF NOT EXISTS idx_admin_expenses_audit_trail_lookup
 --   admin_daily_post_theme_choices  a post whose theme groups the owner set by hand. themes replaces
 --                                   the groups its own links put it in; an empty array leaves it in
 --                                   none.
+--   admin_daily_post_exclusions     a post left out of the rotation, its groups and Today's stories.
 --   admin_daily_posts_audit_trail   every change on the screen (rule 131).
 CREATE TABLE IF NOT EXISTS admin_daily_post_ticks (
   item_key TEXT NOT NULL,
@@ -5429,6 +5430,15 @@ ALTER TABLE IF EXISTS admin_daily_post_templates ADD COLUMN IF NOT EXISTS title 
 ALTER TABLE IF EXISTS admin_daily_post_templates ADD COLUMN IF NOT EXISTS body TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS admin_daily_post_templates ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS admin_daily_post_templates ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+-- admin_daily_post_exclusions: blog posts the owner left out of the rotation (Daily Posts, owner
+-- request 2026-11-02). A post here stays on the blog; it leaves the Daily Posts rotation, its theme
+-- groups and Today's story cards until it is brought back. Names no member. Safe to re-run.
+CREATE TABLE IF NOT EXISTS admin_daily_post_exclusions (
+  post_slug TEXT PRIMARY KEY,
+  excluded_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS admin_daily_post_exclusions ADD COLUMN IF NOT EXISTS excluded_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
 CREATE TABLE IF NOT EXISTS admin_daily_post_theme_choices (
   post_slug TEXT PRIMARY KEY,
