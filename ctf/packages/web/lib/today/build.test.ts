@@ -28,6 +28,9 @@ vi.mock('./sources-live', () => ({
   missionCard: vi.fn(async () => []),
   broadcast: vi.fn(async () => null),
 }));
+vi.mock('./sources-questions', () => ({ questionCards: vi.fn(async () => []) }));
+vi.mock('./sources-blog', () => ({ blogStories: vi.fn(async () => []) }));
+vi.mock('./sources-daily', () => ({ dailyPuzzleCard: vi.fn(async () => []) }));
 vi.mock('./sources-rooms', () => ({
   nextTalk: vi.fn(async () => null),
   mainRoom: vi.fn(async () => ({ key: 'main', name: 'Main Room', live: false, members: 0, guests: 0, href: '/apps/chyme', nextTalk: null })),

@@ -54,6 +54,7 @@ contracts:
       - contributor_access_eligibility
       - quora_deletion_survey_responses
       - question_answers
+      - question_matching_settings
       - question_match_messages
       - member_blocks
       - account_restrictions
@@ -123,6 +124,40 @@ contracts:
     retentionClass: until_account_deletion
     idempotency: true
   - pluginId: today
+    command: today.questions.matching.read
+    version: 1.0.0
+    description: Read whether the member is matched in 21 Questions and how many questions they answered (GET /api/today/questions/matching). No row means on; the toggle shows from the first answer.
+    inputSchema: {}
+    outputSchema:
+      answered:
+        type: integer
+      enabled:
+        type: boolean
+    dataAccess:
+      - question_answers
+      - question_matching_settings
+    purpose: twenty_one_questions_matching
+    retentionClass: none_read_only
+    idempotency: true
+  - pluginId: today
+    command: today.questions.matching.set
+    version: 1.0.0
+    description: Turn 21 Questions matching on or off (POST /api/today/questions/matching), 20 a minute. Off takes the member out of every match, theirs and everyone else's, from the next read and keeps their answers. The only way matching changes; answering never does.
+    inputSchema:
+      enabled:
+        type: boolean
+    outputSchema:
+      answered:
+        type: integer
+      enabled:
+        type: boolean
+    dataAccess:
+      - question_answers
+      - question_matching_settings
+    purpose: twenty_one_questions_matching
+    retentionClass: until_account_deletion
+    idempotency: true
+  - pluginId: today
     command: today.questions.messages.read
     version: 1.0.0
     description: Read the conversation inside a 21 Questions match card and mark the other member's messages read (GET /api/today/questions/matches/[accountId]/messages). Only between a current match.
@@ -135,6 +170,7 @@ contracts:
         maxItems: 50
     dataAccess:
       - question_answers
+      - question_matching_settings
       - question_match_messages
       - member_blocks
       - account_restrictions
@@ -156,6 +192,7 @@ contracts:
         type: object
     dataAccess:
       - question_answers
+      - question_matching_settings
       - question_match_messages
       - member_blocks
       - account_restrictions

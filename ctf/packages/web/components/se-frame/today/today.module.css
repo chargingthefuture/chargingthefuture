@@ -289,6 +289,10 @@
   color: var(--se-soft);
 }
 
+.bodyLines {
+  white-space: pre-line;
+}
+
 .bodyClosed {
   display: -webkit-box;
   -webkit-line-clamp: 3;

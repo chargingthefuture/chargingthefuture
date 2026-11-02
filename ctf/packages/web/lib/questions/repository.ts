@@ -4,7 +4,9 @@ import { queryDb } from 'lib/db/postgres';
 // 21 Questions (3.1.0 plan, task 18): a member's answers, the members who answered enough of the
 // same questions the same way, and the messages between two matched members. Answers are final.
 // A match never includes a person either side has blocked, or whose account is restricted from
-// contact; the routes check the same before a message is sent.
+// contact; the routes check the same before a message is sent. A member who turned matching off is
+// in nobody's matches and sees none, from the next read: matches are worked out on every read and
+// kept nowhere, so there is no list to clear.
 
 export const MATCHES_SHOWN = 5;
 export const MESSAGES_SHOWN = 50;
@@ -14,7 +16,9 @@ const NOT_BLOCKED_OR_RESTRICTED = `
     WHERE (mb.blocker_user_id = $1 AND mb.blocked_user_id = b.user_id)
        OR (mb.blocker_user_id = b.user_id AND mb.blocked_user_id = $1))
   AND NOT EXISTS (SELECT 1 FROM account_restrictions r
-    WHERE r.user_id = b.user_id AND r.is_restricted AND r.restriction_scope IN ('all', 'contact'))`;
+    WHERE r.user_id = b.user_id AND r.is_restricted AND r.restriction_scope IN ('all', 'contact'))
+  AND NOT EXISTS (SELECT 1 FROM question_matching_settings s
+    WHERE s.user_id IN ($1, b.user_id) AND NOT s.matching_enabled)`;
 
 export type MatchRow = { userId: string; same: number; both: number; sameQuestionIds: string[] };
 
@@ -38,6 +42,28 @@ export async function saveAnswer(userId: string, questionId: string, choice: num
     [userId, questionId, choice],
   );
   return (result.rowCount ?? 0) > 0;
+}
+
+export type MatchingState = { answered: number; enabled: boolean };
+
+// How many questions the member answered, and whether they are matched. No row means on.
+export async function readMatchingState(userId: string): Promise<MatchingState> {
+  const result = await queryDb<{ answered: number; enabled: boolean | null }>(
+    `SELECT (SELECT COUNT(*)::int FROM question_answers WHERE user_id = $1) AS answered,
+            (SELECT matching_enabled FROM question_matching_settings WHERE user_id = $1) AS enabled`,
+    [userId],
+  );
+  const row = result.rows[0];
+  return { answered: row?.answered ?? 0, enabled: row?.enabled ?? true };
+}
+
+// Only the member's own toggle calls this; answering a question never does.
+export async function setMatchingEnabled(userId: string, enabled: boolean): Promise<void> {
+  await queryDb(
+    `INSERT INTO question_matching_settings (user_id, matching_enabled, updated_at) VALUES ($1, $2, NOW())
+     ON CONFLICT (user_id) DO UPDATE SET matching_enabled = EXCLUDED.matching_enabled, updated_at = NOW()`,
+    [userId, enabled],
+  );
 }
 
 async function readMatches(userId: string, otherUserId: string | null, limit: number): Promise<MatchRow[]> {

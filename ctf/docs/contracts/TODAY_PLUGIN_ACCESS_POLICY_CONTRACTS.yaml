@@ -22,7 +22,7 @@ policies:
         - beacon live event and replays
         - skills-hunt active round
         - chyme public main room state
-        - 21 questions: the viewer's own answers and matches (no blocked or contact-restricted member)
+        - 21 questions: the viewer's own answers and matches (no blocked or contact-restricted member, nobody with matching off, none while the viewer's own matching is off)
     consentRequirements:
       scopes:
         - platform_terms
@@ -95,6 +95,59 @@ policies:
       - actor_not_authenticated
       - actor_not_approved
       - account_restricted
+  - pluginId: today
+    command: today.questions.matching.read
+    version: 1.0.0
+    requiredRoles:
+      - member
+    attributePolicies:
+      tenancy: same_workspace
+      minUnlockTier: approved_full
+      readsOnly: true
+      csrf: not_applicable
+      relationship: none
+    consentRequirements:
+      scopes:
+        - platform_terms
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - actor_not_authenticated
+      - actor_not_approved
+      - account_restricted
+  - pluginId: today
+    command: today.questions.matching.set
+    version: 1.0.0
+    requiredRoles:
+      - member
+    attributePolicies:
+      tenancy: same_workspace
+      minUnlockTier: approved_full
+      readsOnly: false
+      csrf: required
+      relationship: none
+    consentRequirements:
+      scopes:
+        - platform_terms
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - actor_not_authenticated
+      - actor_not_approved
+      - account_restricted
+      - rate_limited
   - pluginId: today
     command: today.questions.messages.read
     version: 1.0.0

@@ -626,7 +626,7 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
   {
     slug: 'twenty-one-questions',
     name: '21 Questions',
-    dataSummary: 'Your answers to 21 Questions, and every conversation in a match card you were part of.',
+    dataSummary: 'Your answers to 21 Questions, whether you are matched, and every conversation in a match card you were part of.',
     // 21 Questions (3.1.0). A conversation belongs to both people in it; it goes with either account,
     // since what is left of it would be one side of a talk with nobody.
     serviceScopeSupported: true,
@@ -634,6 +634,7 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       del('question_answers', 'user_id', 'Your answers.'),
       del('question_match_messages', 'user_low', 'Conversations in your match cards.'),
       del('question_match_messages', 'user_high', 'Conversations in your match cards.'),
+      del('question_matching_settings', 'user_id', 'Whether you are matched.'),
     ],
   },
   {

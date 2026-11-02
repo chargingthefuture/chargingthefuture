@@ -136,7 +136,7 @@ export function TodayCard({
       >
         <Text style={s.title}>{card.title}</Text>
         {card.body ? (
-          <Text style={s.body} numberOfLines={open ? undefined : 3}>
+          <Text style={s.body} numberOfLines={open || card.source === 'questions' ? undefined : 3}>
             {card.body}
           </Text>
         ) : null}

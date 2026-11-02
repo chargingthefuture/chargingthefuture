@@ -7406,6 +7406,17 @@ ALTER TABLE IF EXISTS question_match_messages ADD COLUMN IF NOT EXISTS read_at T
 CREATE INDEX IF NOT EXISTS idx_question_match_messages_pair ON question_match_messages(user_low, user_high, created_at);
 CREATE INDEX IF NOT EXISTS idx_question_match_messages_high ON question_match_messages(user_high);
 
+-- question_matching_settings: whether a member is matched in 21 Questions. No row means on. Off
+-- leaves their answers out of every match, theirs and everyone else's, from the next read; the
+-- answers themselves are kept. Answering never changes it; only the member's own toggle does.
+CREATE TABLE IF NOT EXISTS question_matching_settings (
+  user_id TEXT PRIMARY KEY,
+  matching_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS question_matching_settings ADD COLUMN IF NOT EXISTS matching_enabled BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE IF EXISTS question_matching_settings ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
 -- member_mutes: personal mute (3.1.0). A member mutes a person (target = their account id, label =
 -- the handle shown at the time) or a word or phrase (target = the lower-cased words). Today leaves
 -- out cards by that person or containing those words. Nobody is told; a mute is not a block.

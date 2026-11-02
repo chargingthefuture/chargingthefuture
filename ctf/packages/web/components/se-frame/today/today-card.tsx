@@ -12,6 +12,12 @@ import styles from './today.module.css';
 // The ••• menu holds Copy link, Hide and, on a card with an author, Mute; report joins it with the
 // rest of the safety controls.
 
+// The 21 Questions card keeps its lines and is never cut short: it says how matching works.
+function bodyClass(card: SeTodayCard, open: boolean): string {
+  if (card.source === 'questions') return `${styles.body} ${styles.bodyLines}`;
+  return open ? styles.body : `${styles.body} ${styles.bodyClosed}`;
+}
+
 function absolute(href: string): string {
   return href.startsWith('http') ? href : `${window.location.origin}${href}`;
 }
@@ -108,7 +114,7 @@ export function TodayCard({
       </div>
       <button type="button" className={styles.textButton} aria-expanded={open} onClick={toggle}>
         <span className={styles.cardTitle}>{card.title}</span>
-        {card.body ? <span className={open ? styles.body : `${styles.body} ${styles.bodyClosed}`}>{card.body}</span> : null}
+        {card.body ? <span className={bodyClass(card, open)}>{card.body}</span> : null}
       </button>
       {isQuestionsCard(card) ? <QuestionsPanel card={card} open={open} onOpen={() => setOpen(true)} onChanged={onChanged ?? (() => undefined)} /> : null}
       {card.actions.length > 0 ? (
