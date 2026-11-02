@@ -38,13 +38,15 @@ function Answer({ s, puzzle }: { s: GameStyles; puzzle: SeDailyPuzzle }) {
   return <Text style={s.text}>One short way: {path.map((word) => word.toUpperCase()).join(' → ')}</Text>;
 }
 
-function Done({ s, puzzle, result }: { s: GameStyles; puzzle: SeDailyPuzzle; result: number }) {
+function Done({ s, puzzle, result, onBack }: { s: GameStyles; puzzle: SeDailyPuzzle; result: number; onBack: () => void }) {
   const [copied, setCopied] = useState<string | null>(null);
   const share = seDailyShareText(puzzle, result);
   const copy = () => {
     Clipboard.setStringAsync(share)
       .then(() => setCopied('Copied.'))
-      .catch((error: unknown) => setCopied(`Not copied: ${error instanceof Error ? error.message : String(error)}.`));
+      .catch((error: unknown) =>
+        setCopied(`Not copied: ${error instanceof Error ? error.message : 'the phone refused'}. The line above can be selected and copied.`),
+      );
   };
   return (
     <View style={s.result} accessibilityLiveRegion="polite">
@@ -53,16 +55,21 @@ function Done({ s, puzzle, result }: { s: GameStyles; puzzle: SeDailyPuzzle; res
       <Text selectable style={s.shareLine}>
         {share}
       </Text>
-      <TouchableOpacity accessibilityRole="button" style={[s.primary, { alignSelf: 'flex-start' }]} onPress={copy}>
-        <Text style={s.primaryText}>Copy to share</Text>
-      </TouchableOpacity>
+      <View style={s.row}>
+        <TouchableOpacity accessibilityRole="button" style={s.primary} onPress={copy}>
+          <Text style={s.primaryText}>Copy to share</Text>
+        </TouchableOpacity>
+        <TouchableOpacity accessibilityRole="button" style={s.secondary} onPress={onBack}>
+          <Text style={s.secondaryText}>Back to Today</Text>
+        </TouchableOpacity>
+      </View>
       {copied ? <Text style={s.text}>{copied}</Text> : null}
       <Text style={s.text}>Tomorrow: {SE_DAILY_TITLES[seDailyPuzzle(tomorrow(puzzle.day)).kind].title.toLowerCase()}.</Text>
     </View>
   );
 }
 
-export function DailyScreen() {
+export function DailyScreen({ onBack }: { onBack: () => void }) {
   const { theme } = useSeTheme();
   const t = seTheme(theme.color, theme.mode);
   const s = makeGameStyles(t);
@@ -72,6 +79,9 @@ export function DailyScreen() {
   const words = SE_DAILY_TITLES[puzzle.kind];
   return (
     <ScrollView style={s.screen} contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
+      <TouchableOpacity accessibilityRole="link" style={s.linkButton} onPress={onBack}>
+        <Text style={s.link}>Back to Today</Text>
+      </TouchableOpacity>
       <View>
         <Text style={s.eyebrow}>Puzzle of the day · No. {puzzle.number}</Text>
         <Text accessibilityRole="header" style={s.title}>
@@ -84,7 +94,7 @@ export function DailyScreen() {
           <Play s={s} t={t} puzzle={puzzle} onDone={finish} />
         </View>
       ) : (
-        <Done s={s} puzzle={puzzle} result={result} />
+        <Done s={s} puzzle={puzzle} result={result} onBack={onBack} />
       )}
       {notKept ? <Text style={s.text}>This phone refused to remember the result ({notKept}).</Text> : null}
     </ScrollView>

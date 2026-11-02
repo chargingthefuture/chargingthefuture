@@ -1,5 +1,6 @@
-// The Android copy of the web's use-today.ts: reads /api/today, keeps the last answer on the phone
-// so Today draws at once on the next open, and keeps read and hidden marks per member.
+// The Android copy of the web's use-today.ts: reads /api/today (or /api/today/public for a visitor
+// who is not signed in), keeps the last answer on the phone so Today draws at once on the next open,
+// and keeps read and hidden marks per member ('guest' for a visitor).
 
 import { useCallback, useEffect, useState } from 'react';
 import { File, Paths } from 'expo-file-system';
@@ -44,7 +45,10 @@ async function readMessage(res: Response, fallback: string): Promise<string> {
   return fallback;
 }
 
-export function useToday(accountId: string) {
+// `accountId` null: a visitor who is not signed in. Their copy and marks are kept under 'guest'.
+export function useToday(accountId: string | null) {
+  const owner = accountId ?? 'guest';
+  const url = accountId ? '/api/today' : '/api/today/public';
   const [today, setToday] = useState<SeToday | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -55,28 +59,28 @@ export function useToday(accountId: string) {
     setError(null);
     const fallback = 'Could not load Today.';
     try {
-      const res = await authedFetch('/api/today');
+      const res = await authedFetch(url);
       if (!res.ok) {
         setError(await readMessage(res, fallback));
         return;
       }
       const body = (await res.json()) as { today: SeToday };
       setToday(body.today);
-      writeJson(`se-today-${accountId}`, body.today);
+      writeJson(`se-today-${owner}`, body.today);
     } catch (caught) {
       reportError(caught, { area: 'today', op: 'load' });
       setError(fallback);
     } finally {
       setLoading(false);
     }
-  }, [accountId]);
+  }, [url, owner]);
 
   useEffect(() => {
     let live = true;
     void (async () => {
       const [cached, savedMarks] = await Promise.all([
-        readJson<SeToday>(`se-today-${accountId}`),
-        readJson<TodayMarks>(`se-today-marks-${accountId}`),
+        readJson<SeToday>(`se-today-${owner}`),
+        readJson<TodayMarks>(`se-today-marks-${owner}`),
       ]);
       if (!live) return;
       if (cached) setToday((current) => current ?? cached);
@@ -86,18 +90,18 @@ export function useToday(accountId: string) {
     return () => {
       live = false;
     };
-  }, [accountId, load]);
+  }, [owner, load]);
 
   const mark = useCallback(
     (kind: keyof TodayMarks, cardId: string) => {
       setMarks((current) => {
         if (current[kind].includes(cardId)) return current;
         const next = { ...current, [kind]: [...current[kind], cardId].slice(-300) };
-        writeJson(`se-today-marks-${accountId}`, next);
+        writeJson(`se-today-marks-${owner}`, next);
         return next;
       });
     },
-    [accountId],
+    [owner],
   );
 
   // Done is a toggle on the card's timeline dot, so a card marked by mistake can be unmarked.
@@ -107,11 +111,11 @@ export function useToday(accountId: string) {
         const has = current[kind].includes(cardId);
         const list = has ? current[kind].filter((id) => id !== cardId) : [...current[kind], cardId].slice(-300);
         const next = { ...current, [kind]: list };
-        writeJson(`se-today-marks-${accountId}`, next);
+        writeJson(`se-today-marks-${owner}`, next);
         return next;
       });
     },
-    [accountId],
+    [owner],
   );
 
   return { today, loading, error, marks, mark, toggle, reload: load };

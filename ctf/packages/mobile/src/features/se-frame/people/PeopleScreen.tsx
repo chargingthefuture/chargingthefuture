@@ -10,6 +10,7 @@ import { SeAvatar } from '../../../components/shared/SeAvatar';
 import type { FeatureKey } from '../../../navigation/screens';
 import { openTodayLink } from '../today/openTodayLink';
 import { SE_FONT } from '../fonts';
+import { useScrollFrameToTop } from '../frame-scroll';
 
 type State = { kind: 'loading' } | { kind: 'error'; message: string } | { kind: 'ready'; people: SePeoplePage };
 type Styles = ReturnType<typeof makeStyles>;
@@ -132,6 +133,12 @@ export function PeopleScreen({ t, onOpen }: { t: SeThemeTokens; onOpen: (_key: F
   const [query, setQuery] = useState('');
   const [attempt, setAttempt] = useState(0);
   const state = usePeople(page, offeringOnly, query, attempt);
+  const scrollToTop = useScrollFrameToTop();
+  // A new page starts at its top, as the web does.
+  const turnPage = (next: number) => {
+    setPage(next);
+    scrollToTop();
+  };
   const go: Go = (href) => openTodayLink(href, onOpen);
   return (
     <>
@@ -150,7 +157,7 @@ export function PeopleScreen({ t, onOpen }: { t: SeThemeTokens; onOpen: (_key: F
         <Button s={s} label={W.everyone} primary={!offeringOnly} onPress={() => (setOfferingOnly(false), setPage(1))} />
         <Button s={s} label={W.offeringNow} primary={offeringOnly} onPress={() => (setOfferingOnly(true), setPage(1))} />
       </View>
-      <Results s={s} state={state} go={go} onPage={setPage} onRetry={() => setAttempt((n) => n + 1)} />
+      <Results s={s} state={state} go={go} onPage={turnPage} onRetry={() => setAttempt((n) => n + 1)} />
     </>
   );
 }

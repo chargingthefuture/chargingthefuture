@@ -2,7 +2,7 @@
 
 import { CalendarPlus } from 'lucide-react';
 import type { CSSProperties } from 'react';
-import { seCalendarFileName, seCalendarIcs, type SeCalendarEvent, type SeTodayTalk } from '@ctf/shared';
+import { seCalendarFileName, seCalendarIcs, type SeCalendarEvent } from '@ctf/shared';
 
 // Add to calendar (3.1.0 plan): hands the phone an .ics file for one talk or booked call, and the
 // phone offers to add it. The app never reads a calendar.
@@ -54,16 +54,4 @@ export function AddToCalendarButton({
       <CalendarPlus size={13} aria-hidden="true" /> Add to calendar
     </button>
   );
-}
-
-// A talk in the Main Room, as the Today card and the room carry it.
-export function talkCalendarEvent(talk: SeTodayTalk): SeCalendarEvent {
-  return {
-    uid: `talk-${talk.startIso}`,
-    title: talk.title,
-    startIso: talk.startIso,
-    endIso: talk.endIso,
-    description: `Hosted by ${talk.host} in the Main Room.`,
-    url: '/ti-radio',
-  };
 }

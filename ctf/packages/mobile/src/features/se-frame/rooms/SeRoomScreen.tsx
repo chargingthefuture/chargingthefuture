@@ -30,6 +30,7 @@ function RoomHeader({ s, view, onMinimize }: { s: Styles; view: SeRoomView; onMi
       </Text>
       <Text style={s.meta}>{view.audience}</Text>
       {view.talkLine ? <Text style={s.talk}>{view.talkLine}</Text> : null}
+      <Text style={s.meta}>{view.rule}</Text>
     </View>
   );
 }

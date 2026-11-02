@@ -23,7 +23,8 @@ import {
 import { Newsreader_500Medium, Newsreader_600SemiBold } from '@expo-google-fonts/newsreader';
 // The 3.1 screens' text face (src/features/se-frame/fonts.ts).
 import { DMSans_400Regular, DMSans_600SemiBold, DMSans_700Bold } from '@expo-google-fonts/dm-sans';
-import { InterfaceVersionProvider, SeAppFrame, useInterfaceVersion } from './src/features/se-frame';
+import { DailyScreen } from './src/features/games';
+import { InterfaceVersionProvider, PublicToday, SeAppFrame, useInterfaceVersion } from './src/features/se-frame';
 import { AuthProvider, useAuth } from './src/auth/auth-context';
 import { ThemeProvider, useTheme } from './src/theme';
 import { LoadingScreen } from './src/components/shared/LoadingScreen';
@@ -227,6 +228,46 @@ function NewFrameShell({
   );
 }
 
+type StandaloneInput = {
+  selected: FeatureKey;
+  isAuthenticated: boolean;
+  interfaceVersion: string;
+  user: { id?: string; username?: string | null } | null;
+  back: () => void;
+  open: (_key: FeatureKey) => void;
+  openAccount: () => void;
+};
+
+// The 3.1 screens that draw their own frame, outside the 3.0 shell, or null for the shell.
+function standaloneScreen({ selected, isAuthenticated, interfaceVersion, user, back, open, openAccount }: StandaloneInput) {
+  // The puzzle of the day: full screen in the 3.1 look, with its own Back to Today, as the web's
+  // /games is, not inside the 3.0 header.
+  if (selected === 'games') {
+    return (
+      <View style={styles.container}>
+        <DailyScreen onBack={back} />
+        <StatusBar style="light" />
+      </View>
+    );
+  }
+  // A visitor who is not signed in sees the public Today on the home screen, as the web sends a
+  // signed-out visitor from / to /today.
+  if (!isAuthenticated && interfaceVersion === '3.1' && selected === 'apps') {
+    return (
+      <View style={styles.container}>
+        <PublicToday onOpen={open} />
+        <StatusBar style="light" />
+      </View>
+    );
+  }
+  // A member who switched to 3.1 sees the new frame on the home screen, as the web does at `/`. The
+  // account screens it links to keep the 3.0 shell for now.
+  if (showsNewFrame(isAuthenticated, interfaceVersion, selected)) {
+    return <NewFrameShell user={user} onOpenAccount={openAccount} onOpen={open} />;
+  }
+  return null;
+}
+
 function AppShell() {
   const { isLoading, isAuthenticated, user } = useAuth();
   const { tokens } = useTheme();
@@ -293,9 +334,8 @@ function AppShell() {
 
   // A member who switched to 3.1 sees the new frame on the home screen, as the web does at `/`. The
   // account screens it links to keep the 3.0 shell for now.
-  if (showsNewFrame(isAuthenticated, interfaceVersion, selected)) {
-    return <NewFrameShell user={user} onOpenAccount={openAccount} onOpen={open} />;
-  }
+  const standalone = standaloneScreen({ selected, isAuthenticated, interfaceVersion, user, back, open, openAccount });
+  if (standalone) return standalone;
 
   return (
     <View style={[styles.container, { backgroundColor: tokens.bg }]}>

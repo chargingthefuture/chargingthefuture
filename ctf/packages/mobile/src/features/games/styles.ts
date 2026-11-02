@@ -10,7 +10,7 @@ export function makeGameStyles(t: SeThemeTokens) {
   const pill = { minHeight: 44, paddingHorizontal: 18, justifyContent: 'center' as const, borderRadius: 999 };
   return StyleSheet.create({
     screen: { flex: 1, backgroundColor: t.bg },
-    content: { gap: 18, padding: 16, paddingBottom: 48 },
+    content: { gap: 18, paddingTop: 20, paddingHorizontal: 16, paddingBottom: 48 },
     eyebrow: { fontSize: 13, color: t.soft, fontFamily: SE_FONT.sans },
     title: { fontSize: 30, lineHeight: 33, color: t.ink, fontFamily: SE_FONT.serif },
     play: { gap: 12 },
