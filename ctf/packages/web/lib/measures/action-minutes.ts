@@ -27,26 +27,31 @@ export async function creditActionSeconds(client: PoolClient, userId: string, so
   );
 }
 
-// Every member's action minutes per UTC day, from all three sources. Interpolated into the reads
-// below; $1 is the first day counted (inclusive).
-const DAILY_MINUTES_CTE = `
+// Every member's action minutes per UTC day, from all three sources, as two CTEs (minutes, daily)
+// to interpolate after WITH. `from` is the placeholder of the first day counted (inclusive); the
+// reads below pass $1, the retention charts their own.
+export function dailyMinutesCte(from = '$1'): string {
+  return `
   minutes AS (
     SELECT user_id, usage_date AS day, seconds / 60.0 AS m
-      FROM member_action_seconds_daily WHERE usage_date >= $1::date
+      FROM member_action_seconds_daily WHERE usage_date >= ${from}::date
     UNION ALL
     SELECT side.user_id, (s.answered_at AT TIME ZONE 'UTC')::date,
            LEAST(EXTRACT(EPOCH FROM (s.ended_at - s.answered_at)) / 60.0, 240)
       FROM foundation_call_sessions s
       CROSS JOIN LATERAL (VALUES (s.caller_user_id), (s.callee_user_id)) AS side(user_id)
      WHERE s.answered_at IS NOT NULL AND s.ended_at IS NOT NULL AND s.ended_at > s.answered_at
-       AND side.user_id IS NOT NULL AND (s.answered_at AT TIME ZONE 'UTC')::date >= $1::date
+       AND side.user_id IS NOT NULL AND (s.answered_at AT TIME ZONE 'UTC')::date >= ${from}::date
     UNION ALL
     SELECT taken_by_user_id, (kept_at AT TIME ZONE 'UTC')::date, ${CONFIRMED_TASK_MINUTES}
       FROM peer_programming_goal_tasks
      WHERE helped = TRUE AND kept_at IS NOT NULL AND taken_by_user_id IS NOT NULL
-       AND (kept_at AT TIME ZONE 'UTC')::date >= $1::date
+       AND (kept_at AT TIME ZONE 'UTC')::date >= ${from}::date
   ),
   daily AS (SELECT user_id, day, SUM(m) AS minutes FROM minutes GROUP BY user_id, day)`;
+}
+
+const DAILY_MINUTES_CTE = dailyMinutesCte();
 
 export type DaysWon = { total: number; thisWeek: number };
 

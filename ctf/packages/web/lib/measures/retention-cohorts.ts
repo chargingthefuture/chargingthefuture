@@ -1,4 +1,5 @@
 import { queryDb } from 'lib/db/postgres';
+import { dailyMinutesCte } from './action-minutes';
 import type { Signups } from './signups';
 
 // Retention by sign-up month, for the adoption tab's two charts (owner-approved plan, Measures):
@@ -6,11 +7,11 @@ import type { Signups } from './signups';
 // retention curves (the share of each month's sign-ups who signed in N weeks after signing up).
 // Counts only, never a named member.
 //
-// These charts count sign-ins (login_events), owner decision 2026-11-02, and say so. A sign-in is not
-// "active": active means action minutes, which the Retained, Came back and Every day lines count,
-// and the two are never labeled as each other. The charts first counted a week with a
-// 30-action-minute day, but action minutes have only been recorded since 2026-10-27, so every week
-// before that read 0.
+// Each chart carries two readings side by side, never labeled as each other (owner decisions,
+// 2026-11-02): signed in (a login_events row that week) and active (a day with 30 or more action
+// minutes that week, the same day the Retained count uses). A sign-in alone can flatter the
+// picture, so it is always shown against active. Action minutes have only been recorded since
+// 2026-10-27, so active reads 0 for every week before that.
 //
 // Sign-up is the account's creation date at the auth provider, the same roster the Unlock admin
 // counts, without demo/test accounts. The sign-in record starts at a member's first recorded
@@ -27,19 +28,21 @@ export type RetentionCohorts = {
   // member signed up before them.
   cohorts: string[];
   sizes: Record<string, number>;
-  // Monday of each week, oldest first, with members who signed in that week per cohort.
-  layers: { week: string; signedIn: Record<string, number> }[];
-  // Recent month cohorts only: share who signed in (0 to 1) in weeks 0..CURVE_WEEKS-1 since sign-up. Each
+  // Monday of each week, oldest first, with members who signed in that week per cohort, and how
+  // many members were active that week in all.
+  layers: { week: string; signedIn: Record<string, number>; active: number }[];
+  // Recent month cohorts only: share who signed in and share active (0 to 1) in weeks 0..CURVE_WEEKS-1 since sign-up. Each
   // week's share is over the members who have fully lived through that week, so a member who
   // signed up late in the month is not counted as absent in a week they have not reached.
-  curves: { cohort: string; points: { week: number; share: number }[] }[];
+  curves: { cohort: string; points: { week: number; signedInShare: number; activeShare: number }[] }[];
   // Where sign-up dates came from: the auth provider's account list, or (when it could not be read)
   // each member's first recorded sign-in, with the reason.
   source: Signups['source'];
 };
 
 type LayerRow = { cohort: string; week: string; signedIn: number };
-type CurveRow = { cohort: string; week: number; signedIn: number; eligible: number };
+type ActiveRow = { week: string; active: number };
+type CurveRow = { cohort: string; week: number; signedIn: number; active: number; eligible: number };
 type SizeRow = { cohort: string; members: number };
 
 function monday(date: Date): Date {
@@ -66,7 +69,7 @@ function bucket(cohort: string, months: string[]): string {
 // Pure shaping, kept apart from the reads so it is tested without a database.
 export function shapeRetention(
   now: Date,
-  rows: { layers: LayerRow[]; curves: CurveRow[]; sizes: SizeRow[] },
+  rows: { layers: LayerRow[]; active?: ActiveRow[]; curves: CurveRow[]; sizes: SizeRow[] },
   source: RetentionCohorts['source'] = { kind: 'provider' },
 ): RetentionCohorts {
   const months = recentMonths(now);
@@ -82,18 +85,26 @@ export function shapeRetention(
   const layers = Array.from({ length: LAYER_WEEKS }, (_, i) => {
     const d = new Date(firstWeek);
     d.setUTCDate(d.getUTCDate() + 7 * i);
-    return { week: iso(d), signedIn: Object.fromEntries(cohorts.map((c) => [c, 0])) as Record<string, number> };
+    return { week: iso(d), signedIn: Object.fromEntries(cohorts.map((c) => [c, 0])) as Record<string, number>, active: 0 };
   });
   for (const row of rows.layers) {
     const layer = layers.find((l) => l.week === row.week);
     const key = bucket(row.cohort, months);
     if (layer && key in layer.signedIn) layer.signedIn[key] += Number(row.signedIn);
   }
+  for (const row of rows.active ?? []) {
+    const layer = layers.find((l) => l.week === row.week);
+    if (layer) layer.active += Number(row.active);
+  }
 
   const curves = months.map((cohort) => {
     const points = rows.curves
       .filter((r) => r.cohort === cohort && Number(r.eligible) > 0 && Number(r.week) < CURVE_WEEKS)
-      .map((r) => ({ week: Number(r.week), share: Number(r.signedIn) / Number(r.eligible) }))
+      .map((r) => ({
+        week: Number(r.week),
+        signedInShare: Number(r.signedIn) / Number(r.eligible),
+        activeShare: Number(r.active ?? 0) / Number(r.eligible),
+      }))
       .sort((x, y) => x.week - y.week);
     return { cohort, points };
   });
@@ -117,8 +128,10 @@ export async function readRetentionCohorts(signups: Signups, now = new Date()): 
        SELECT DISTINCT l.user_id, (l.created_at AT TIME ZONE 'UTC')::date AS day
          FROM login_events l JOIN signups s ON s.user_id = l.user_id
         WHERE l.created_at >= $3::date
-     )`;
-  const [layers, curves] = await Promise.all([
+     ),
+     ${dailyMinutesCte('$3')},
+     active_days AS (SELECT d.user_id, d.day FROM daily d JOIN signups s ON s.user_id = d.user_id WHERE d.minutes >= 30)`;
+  const [layers, active, curves] = await Promise.all([
     queryDb<LayerRow>(
       `${base}
        SELECT s.cohort, to_char(date_trunc('week', d.day), 'YYYY-MM-DD') AS week, COUNT(DISTINCT d.user_id)::int AS "signedIn"
@@ -126,8 +139,14 @@ export async function readRetentionCohorts(signups: Signups, now = new Date()): 
         WHERE d.day >= $4::date GROUP BY 1, 2`,
       params,
     ),
+    queryDb<ActiveRow>(
+      `${base}
+       SELECT to_char(date_trunc('week', day), 'YYYY-MM-DD') AS week, COUNT(DISTINCT user_id)::int AS active
+         FROM active_days WHERE day >= $4::date GROUP BY 1`,
+      params,
+    ),
     // One row per sign-up month and week since sign-up: the members who have fully lived through
-    // that week, and how many of them signed in during it.
+    // that week, how many of them signed in during it, and how many were active in it.
     queryDb<CurveRow>(
       `${base},
        weeks AS (SELECT generate_series(0, ${CURVE_WEEKS - 1}) AS week),
@@ -141,7 +160,12 @@ export async function readRetentionCohorts(signups: Signups, now = new Date()): 
                 SELECT 1 FROM seen d
                  WHERE d.user_id = e.user_id
                    AND FLOOR((d.day - (e.signed_up_at AT TIME ZONE 'UTC')::date) / 7) = e.week
-              ))::int AS "signedIn"
+              ))::int AS "signedIn",
+              COUNT(*) FILTER (WHERE EXISTS (
+                SELECT 1 FROM active_days a
+                 WHERE a.user_id = e.user_id
+                   AND FLOOR((a.day - (e.signed_up_at AT TIME ZONE 'UTC')::date) / 7) = e.week
+              ))::int AS active
          FROM eligible e GROUP BY 1, 2`,
       params.slice(0, 3),
     ),
@@ -153,7 +177,7 @@ export async function readRetentionCohorts(signups: Signups, now = new Date()): 
   }
   return shapeRetention(
     now,
-    { layers: layers.rows, curves: curves.rows, sizes: [...sizes].map(([cohort, members]) => ({ cohort, members })) },
+    { layers: layers.rows, active: active.rows, curves: curves.rows, sizes: [...sizes].map(([cohort, members]) => ({ cohort, members })) },
     signups.source,
   );
 }

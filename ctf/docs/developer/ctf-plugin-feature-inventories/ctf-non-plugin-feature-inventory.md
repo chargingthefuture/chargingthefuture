@@ -384,19 +384,20 @@ read; the charts then say so with the reason.
    Every day, Sent an address, Approved), each with its number on the right and a short line under it
    saying what it counts. Copy as text still copies one line per measure.
 6. **Retention charts** (`readRetentionCohorts`, drawn by `components/adoption/retention-charts.tsx`
-   under the measures on the Adoption screen). The charts count members who signed in each week
-   (`login_events`; owner decision, 2026-11-02 — action minutes are recorded only from 2026-10-27,
-   so every earlier week read 0); sign-up is the account's creation date. A sign-in is never
-   labeled "active": active means action minutes (Retained, Came back, Every day), and the charts,
-   their hover labels and the `signedIn` field names say "signed in". `cohorts` is
+   under the measures on the Adoption screen). Each chart draws two readings side by side and never
+   labels one as the other (owner decisions, 2026-11-02): **signed in** (a `login_events` row that
+   week) and **active** (a day with 30 or more action minutes that week). A sign-in count alone
+   flatters, so active is always beside it. Action minutes are recorded only from 2026-10-27, so
+   active reads 0 before then. Sign-up is the account's creation date. `cohorts` is
    `{ cohorts, sizes, layers, curves, source }`, `source` saying whether sign-ups came from the
    provider or fell back to first sign-in: the sign-up months (the last 5, plus Earlier when anybody
    signed up before them) with how many signed up in each; `layers`, the Monday of each of the last
-   12 weeks with members who signed in that week per sign-up month; and `curves`, for each of the last 5
-   months, the share of its sign-ups who signed in during week 0 to 11 after signing up, for the weeks the month
-   has lived through. Two charts: "Signed in each week, by sign-up month" (a layer cake, the weeks'
-   bars stacked by sign-up month) and "Share still signing in, by weeks since signing up" (one curve
-   per month). Each has a legend and a hover label on every mark, and "Show as a table" puts the same
+   12 weeks with members who signed in that week per sign-up month (`signedIn`) and the week's
+   active total (`active`); and `curves`, for each of the last 5 months, the share of its sign-ups
+   who signed in (`signedInShare`) and who were active (`activeShare`) in week 0 to 11 after signing up, for the weeks the month
+   has lived through. Two charts: "Signed in and active each week, by sign-up month" (a layer cake,
+   the weeks' sign-in bars stacked by sign-up month, with an orange line for the active total) and "Share signed in and active, by weeks since signing up" (per month,
+   a solid signed-in curve and a dashed active curve); each chart has a key for the two readings. Each has a legend and a hover label on every mark, and "Show as a table" puts the same
    numbers in a table. Counts only, never a named member.
 7. Done in 3.1.0 (2026-10-28): the per-plugin weekly counts retired from the Weekly Performance
    dashboard (every `value.*` card and the Directory, Mood and ClickLog adoption rows), and the
@@ -471,7 +472,7 @@ Owner decision, 2026-09-26. The owner pays the running costs of Skills Economy a
 
 ## 5) Change Log
 
-- 2026-11-02: **Retention charts count sign-ins, from every sign-up; the measures read as rows (§1.16a).** Owner report: the charts were empty although the owner signs in every day, and the cohorts added up to fewer people than had signed up. Two causes: a week counted only with a 30-action-minute day, and action minutes are recorded only from 2026-10-27; and sign-ups came from `login_events`, which misses accounts made before it was kept. The charts now count members who signed in each week and are labeled that way ("Signed in each week", "Share still signing in"), kept apart from active, which stays action minutes; and group members by account creation date from the auth provider without demo/test accounts (`lib/measures/signups.ts`, `listSignupDates`), falling back to first sign-in with the reason shown. Retained uses the same sign-up list. The "Days won and retention" block is one row per measure instead of a paragraph; Copy as text is unchanged.
+- 2026-11-02: **Retention charts count sign-ins, from every sign-up; the measures read as rows (§1.16a).** Owner report: the charts were empty although the owner signs in every day, and the cohorts added up to fewer people than had signed up. Two causes: a week counted only with a 30-action-minute day, and action minutes are recorded only from 2026-10-27; and sign-ups came from `login_events`, which misses accounts made before it was kept. Each chart now draws signed in (a sign-in that week) and active (a 30-action-minute day) side by side, labeled apart, because a sign-in count alone flatters; the table view carries both columns; and group members by account creation date from the auth provider without demo/test accounts (`lib/measures/signups.ts`, `listSignupDates`), falling back to first sign-in with the reason shown. Retained uses the same sign-up list. The "Days won and retention" block is one row per measure instead of a paragraph; Copy as text is unchanged.
 
 - 2026-10-28: **3.1 launched (owner decision).** `SE_DEFAULT_INTERFACE_VERSION` is `'3.1'` on web and Android; migration `post/0078` makes `'3.1'` the column default and moves every stored `'3.0'` to `'3.1'`, so everybody starts on 3.1 and can go back to 3.0 in Settings. A signed-out visitor to `/` is sent to `/today`, the public Today; a failed version read shows 3.1.
 

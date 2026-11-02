@@ -127,9 +127,9 @@ is no "set active week" action and no per-week status.
 **Role:** admin / operations · **Surfaces:** web (desktop), web (mobile-responsive)
 **Steps:**
 1. Open a week's metric cards. They are grouped on web under two headings:
-   **Goals** — GDP Community Value Index (progress bar toward the 300B goal) and Workforce recruited
-   (progress bar toward 2,000,000); **Adoption** — Active Members, Signed in per day, Accounts
-   Deleted. There is **no** "Value delivered" heading and no per-plugin card (no Foundation,
+   **Goals** — Workforce recruited (progress bar toward 2,000,000); **Adoption** — Active Members
+   and Signed in per day. There is **no** GDP Community Value Index card (the GDP plugin shows it on
+   its own tile) and **no** Accounts Deleted card (both removed 2026-11-02). There is **no** "Value delivered" heading and no per-plugin card (no Foundation,
    SocketRelay, TrustTransport, Lighthouse, Chyme, ServiceCredits, Contributions, SkillsHunt,
    WhatWorks, SkillUp, Recurring Activity or PeerProgramming card), and no Directory findable
    members, Mood or ClickLog card: those retired in 3.1.0, and the Adoption tab's Days won,
@@ -153,10 +153,10 @@ is no "set active week" action and no per-week status.
    `source = 'backfill_launch_gap'`, which is how to tell a reconstructed day from one recorded live.
    The Workforce Recruited goal card is the count of every Directory profile (every removal is a
    hard delete since 2026-09-21); it must never read 0 while the Directory has listings. The "This
-   week vs last week" chart shows the counts only — the two goal rows are not drawn there, because
+   week vs last week" chart shows the counts only — the goal row is not drawn there, because
    at their scale nothing else was visible. A goal card whose prior week has no stored snapshot
    reads "No prior-week snapshot" rather than a delta. Open a past week from before 2026-07-18
-   (when goal snapshots began): both goal cards read "Not captured" with no progress bar and the
+   (when goal snapshots began): the goal card reads "Not captured" with no progress bar and the
    line "No snapshot was stored for this week" — never 0.
    Until 2026-09-21 the table also carried a v2 foreign key to the `users` mirror, which v3 never
    writes, so every member who joined after v2 stopped was refused a sign-in row on every request and
@@ -165,16 +165,9 @@ is no "set active week" action and no per-week status.
    from launch onward that reads zero on these cards while the Directory count moved is now a real
    quiet week, not a refused write. If the metrics read itself fails, the dashboard no longer sits on
    "Weekly numbers are loading" — it says what failed and the status it got.
-   The Accounts Deleted card reads "N accounts": members who ended their entire account in that week.
-   Check what it does NOT count. Delete one plugin's data from the account screen and leave the
-   account open: the card must not move — that member is still here. Delete an entire account through
-   the account screen: the card goes up by one on the week that deletion ran. Clear a duplicate or a
-   test account through the manual `Delete Account (manual)` workflow: the card must not move, because
-   nobody chose to leave; the event row that run writes carries `summary.initiatedBy = 'operator'` and
-   is skipped. Deleting the same account twice can never add two. If the week-over-week line under the
-   card shows a rise, it is red with an up arrow — up is bad on this one card only. A week with
-   no change ("0 vs last week") is gray with no arrow, on this card and every other.
-   All three are aggregates — no member is ever named. There are NO other login/engagement cards, NO feed cards, NO
+   A week-over-week rise on any card is green with an up arrow, a fall red with a down arrow, and a
+   week with no change ("0 vs last week") is gray with no arrow.
+   All of them are aggregates — no member is ever named. There are NO other login/engagement cards, NO feed cards, NO
    SkillUp enrollments-started card, and nothing for GentlePulse or Skills Taxonomy. No
    revenue/MRR/ARR/CLV.
 2. Supply a compare week so the route returns a comparison
@@ -187,9 +180,9 @@ is no "set active week" action and no per-week status.
    that is not a Monday (e.g. `2026-10-07`): each answers 400 with a message naming
    `weekStartDate`. A bad `compareWeekStartDate` answers 400 `invalid_comparison_window`, naming
    that parameter.
-**Expected:** Metric cards render humanized labels from `metric_key` (GDP reads as GDP; the
-sign-in card reads "Signed in per day" though its key is `adoption.daily_active_members`) and real values computed live for the selected week window from upstream tables. The two Goal
-cards show a compact value (e.g. "1.2K"), a progress bar, and "% of the 300B/2M goal"; opening the
+**Expected:** Metric cards render humanized labels from `metric_key` (the
+sign-in card reads "Signed in per day" though its key is `adoption.daily_active_members`) and real values computed live for the selected week window from upstream tables. The Goal
+card shows a compact value (e.g. "1.2K"), a progress bar, and "% of the 2M goal"; opening the
 current week also records that week's goal snapshot, so next week's comparison has a prior value.
 The current week shows a **Live** marker; past weeks show none. The comparison shows per-metric
 deltas (this week vs last week); a declining metric shows a downward-trend indicator. Reads audit
