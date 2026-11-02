@@ -5,6 +5,11 @@ routes, tables and contracts; plugin names stay in the code and are not shown to
 is the build reference. Each task below is its own pull request, and each updates the inventories,
 contracts and rules it touches in the same change.
 
+The approved design for these screens is the Design canvas "Skills Economy 3.1.0 Screens"
+(https://claude.ai/artifact/JxDoZdU4zTYwS7QwNXqyx4, owner decision 2026-11-02). Where it has a
+board for a screen, the screen is built to that board on web and Android; `CLAUDE.md`, Design Pass
+Gating, says how it ranks against production.
+
 ## What changes and why
 
 The app looked like a work tool: one screen per plugin, 27 tiles to learn. 3.1.0 becomes a small
