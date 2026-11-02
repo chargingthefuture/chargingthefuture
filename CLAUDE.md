@@ -536,7 +536,7 @@ next run. The test is whether it has one.
 
 ## Agent Slash Commands (Critical — all agents, every repo)
 
-Owner directive, 2026-08-17, extended 2026-09-22; `/bpr` renamed `/br` on 2026-09-26. Five routines live in `.claude/commands/`. Each one is the standing way to do its kind of work, and the owner does not have to type the slash command for it to apply — the request itself is the trigger.
+Owner directive, 2026-08-17, extended 2026-09-22 and 2026-11-02; `/bpr` renamed `/br` on 2026-09-26. Six routines live in `.claude/commands/`. Each one is the standing way to do its kind of work, and the owner does not have to type the slash command for it to apply — the request itself is the trigger.
 
 | Command | File | Applies when |
 |---|---|---|
@@ -545,6 +545,7 @@ Owner directive, 2026-08-17, extended 2026-09-22; `/bpr` renamed `/br` on 2026-0
 | `/cr` | [`.claude/commands/cr.md`](.claude/commands/cr.md) | Open code-review findings need working. |
 | `/fix` | [`.claude/commands/fix.md`](.claude/commands/fix.md) | The owner points at a sentence that does not read right. |
 | `/fl` | [`.claude/commands/fl.md`](.claude/commands/fl.md) | The owner asks whether this chat can be archived. |
+| `/q` | [`.claude/commands/q.md`](.claude/commands/q.md) | The owner wants the next open issue in the private `chargingthefuture/prompts` repository done. |
 
 Eight more do by hand what a scheduled workflow does with the Anthropic API, for the months the
 account has no credit (owner decision, 2026-10-03). The workflows stay as they are and go red on
