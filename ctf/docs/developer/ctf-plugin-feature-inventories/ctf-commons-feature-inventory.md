@@ -220,6 +220,8 @@ There is no `seedHub.mjs`; the Commons channel's data layer is seeded by the Fee
 
 ## Change Log
 
+- 2026-10-28: **Stream AI moderation on new Commons posts (3.1.0 plan).** `POST /api/commons/messages` checks the text. The words are sent to Stream's AI moderation check before saving (`lib/integrations/stream-content-check.ts`, config `se:posts`, rules set by `stream-moderation-setup.yml`): when Stream answers remove the post is refused with 422 `content_refused` and the member is told to reword it; harm Stream rates high is flagged in Stream's review queue and still published. When Stream is not set up or cannot be reached the post is saved and the failure is reported. Pictures are not sent, because Stream cannot fetch them from behind sign-in.
+
 - 2026-10-28: **Location data removed on the server (3.1.0, Personal controls).** Commons pictures lose their location and camera data when stored and when served (`stripPictureMetadata`), not only in the browser.
 - 2026-10-26: **Generated pictures, no uploaded photos (3.1.0, owner decision).** `CommonsMessage` loses `avatarUrl`, which was always null. The shell's right-rail card and Clerk's account button (icon rail, phone bar and the account page, `components/shared/se-user-button.tsx`; the account page no longer says "photo") show the member's picture generated from their account id (`seAvatar` in `@ctf/shared`). Clerk's photos and its upload and remove buttons are hidden on every Clerk screen in the app (`CLERK_NO_PHOTOS` in `app/layout.tsx`). Android's top-bar account button draws the same picture (`mobile/src/components/shared/SeAvatar.tsx`) and the app no longer reads the token's `picture` claim.
 

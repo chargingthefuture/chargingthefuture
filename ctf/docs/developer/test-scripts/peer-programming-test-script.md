@@ -842,3 +842,14 @@ on Android through AN-PP in `android-app-test-script.md`.
 > _Android removal (2026-08-18): every `android` surface tag, step, and precondition was removed from this script to match the inventory. The Android screens were deleted on 2026-07-20 and testers kept treating the leftover tags as untested work. No web step changed._
 >
 > _Android back in scope (2026-10-06, owner decision): the header, Surfaces row, parity check and known gap 4 now point to AN-PP in `android-app-test-script.md` for the Android steps. No web step changed._
+
+### PP-24 — A goal with harmful words is refused (added 2026-10-28)
+**Role:** an approved member · **Surfaces:** web (mobile-width)
+**Precondition:** the Stream moderation setup workflow has been run with apply.
+**Steps:**
+1. Open the goal board.
+2. Post a goal whose title threatens somebody. Then post an ordinary goal.
+**Expected:** The harmful one is not posted and the screen says "This was not posted: the automatic
+check found something harmful in it. Reword it and try again, or report a mistake through bug
+reporting." The ordinary one posts as usual. If Stream is down, both post.
+**Result:** web ☐ — notes:

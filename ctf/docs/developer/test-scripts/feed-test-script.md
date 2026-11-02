@@ -1400,3 +1400,14 @@ The following cases are the highest-signal functional checks that must remain co
 **Expected:** The draft is refused as invalid. The same request without `regions` is accepted.
 
 Result: web ☐
+
+### FD-27 — A Commons post with harmful words is refused (added 2026-10-28)
+**Role:** an approved member · **Surfaces:** web (mobile-width)
+**Precondition:** the Stream moderation setup workflow has been run with apply.
+**Steps:**
+1. Open the Commons.
+2. Post a message that threatens somebody. Then post an ordinary message.
+**Expected:** The harmful one is not posted and the screen says "This was not posted: the automatic
+check found something harmful in it. Reword it and try again, or report a mistake through bug
+reporting." The ordinary one posts as usual. If Stream is down, both post.
+**Result:** web ☐ — notes:

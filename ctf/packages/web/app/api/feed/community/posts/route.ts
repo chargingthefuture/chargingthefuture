@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { contentRefusedResponse, isRefusedByStream } from 'lib/integrations/stream-content-check';
 import { ensureMutationCsrf, requireFeedReadAccess } from '../../_lib';
 import { FEED_ERROR_CODE } from 'lib/feed/constants';
 import { logFeedAudit } from 'lib/feed/audit';
@@ -95,6 +96,9 @@ export async function POST(request: Request) {
     return parsed.error;
   }
   const input = parsed.data;
+  if (await isRefusedByStream({ entityType: 'commons-post', creatorAccountId: gate.auth.userId, texts: [input.body] })) {
+    return contentRefusedResponse();
+  }
 
   try {
     const result = await createFeedCommunityPost(gate.auth.userId, input, gate.auth.username ?? null);

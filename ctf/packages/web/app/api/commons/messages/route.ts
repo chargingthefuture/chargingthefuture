@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { contentRefusedResponse, isRefusedByStream } from 'lib/integrations/stream-content-check';
 import { reportError } from 'lib/observability/report';
 import { jsonWithEtag } from 'lib/http/json-with-etag';
 import type { CommonsMessagesResponse, CommonsMessage } from 'lib/commons/types';
@@ -337,6 +338,9 @@ export async function POST(request: Request) {
     return validated.error;
   }
   const { text, input, echoedQuote } = validated;
+  if (await isRefusedByStream({ entityType: 'commons-post', creatorAccountId: gate.auth.userId, texts: [text] })) {
+    return contentRefusedResponse();
+  }
 
   try {
     // A message posted from the Hub input is a peer-to-peer community post.

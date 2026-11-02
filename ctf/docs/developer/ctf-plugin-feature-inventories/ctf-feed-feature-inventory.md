@@ -365,6 +365,8 @@ All three feed channels (announcements, questions, community) are shipped on web
 
 ## 11) Change Log
 
+- 2026-10-28: **Stream AI moderation on new community posts (3.1.0 plan).** `POST /api/feed/community/posts` checks the body. The words are sent to Stream's AI moderation check before saving (`lib/integrations/stream-content-check.ts`, config `se:posts`, rules set by `stream-moderation-setup.yml`): when Stream answers remove the post is refused with 422 `content_refused` and the member is told to reword it; harm Stream rates high is flagged in Stream's review queue and still published. When Stream is not set up or cannot be reached the post is saved and the failure is reported. Pictures are not sent, because Stream cannot fetch them from behind sign-in.
+
 - 2026-10-17: **Announcement region targeting is rejected (#2970, owner decision).** The timeline queries already match roles exactly (a member sees `member` and `all`; an admin also sees `admin`), but no query compares a region, so an announcement aimed at one region showed to every member. `validateAnnouncementDraftInput` now refuses a draft with a non-empty `targeting.regions`. No screen sets targeting. Test script FD-REGION.
 - 2026-10-17: **`feed.announcement.targeting.validate` is removed with its route (#2892).** See the Announcements inventory.
 

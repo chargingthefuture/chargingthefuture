@@ -352,6 +352,7 @@ contracts:
     command: feed.community.post.create
     version: 1.0.0
     description: >-
+      Before saving, the words are sent to Stream's AI moderation check (config se:posts, lib/integrations/stream-content-check.ts); when Stream answers remove, the post is refused with 422 content_refused and nothing is saved. When Stream is not set up or cannot be reached the post is saved and the failure is reported.
       Create a community support post visible in the feed community channel. Body length and link
       count are capped as anti-spam: members up to 1200 characters and 3 links; admins up to 4000
       characters and 20 links (so the owner's detailed welcome/help posts are not blocked). Raw HTML

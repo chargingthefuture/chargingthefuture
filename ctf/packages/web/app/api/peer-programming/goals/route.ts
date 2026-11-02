@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { contentRefusedResponse, isRefusedByStream } from 'lib/integrations/stream-content-check';
 import { ensureMutationCsrf, peerProgrammingErrorResponse, requirePeerProgrammingReadAccess } from 'lib/peer-programming/_lib';
 import {
   PEER_PROGRAMMING_ERROR_CODE,
@@ -91,6 +92,16 @@ async function auditGoalCreate(actorId: string, goalId: string, taskCount: numbe
   }
 }
 
+// The goal from the request body, parsed, and refused when Stream's check says remove.
+async function readGoal(request: Request, userId: string): Promise<ParsedGoal> {
+  const json = await readJsonBody(request);
+  if (!json.ok) return { ok: false, response: json.response };
+  const parsed = parseGoal(json.body);
+  if (!parsed.ok) return parsed;
+  const refused = await isRefusedByStream({ entityType: 'peer-programming-goal', creatorAccountId: userId, texts: [parsed.title, ...parsed.tasks] });
+  return refused ? { ok: false, response: contentRefusedResponse() } : parsed;
+}
+
 // Post a goal, with its first tasks. A member can have up to PEER_PROGRAMMING_MAX_OPEN_GOALS open.
 export async function POST(request: Request) {
   const csrfDeny = ensureMutationCsrf(request);
@@ -98,9 +109,7 @@ export async function POST(request: Request) {
   const gate = await requirePeerProgrammingReadAccess();
   if (!gate.allowed) return gate.response;
 
-  const json = await readJsonBody(request);
-  if (!json.ok) return json.response;
-  const parsed = parseGoal(json.body);
+  const parsed = await readGoal(request, gate.auth.userId);
   if (!parsed.ok) return parsed.response;
 
   try {
