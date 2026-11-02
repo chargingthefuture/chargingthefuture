@@ -9,7 +9,7 @@
 
 | | |
 |---|---|
-| **Surface** | `/account/data` (Your Data & Privacy), `/account` for AD-9 and AD-10, the 3.1 Today screen for AD-11, rooms in 3.1 for AD-12, + New for AD-13, Me for AD-14, Activity for AD-15, People for AD-16, Days won for AD-17, mute for AD-18, `/games` for AD-22 and 21 Questions for AD-23 |
+| **Surface** | `/account/data` (Your Data & Privacy), `/account` for AD-9 and AD-10, the 3.1 Today screen for AD-11, rooms in 3.1 for AD-12, + New for AD-13, Me for AD-14, Activity for AD-15, People for AD-16, Days won for AD-17, mute for AD-18, `/games` for AD-22 and 21 Questions for AD-23 and web pages from Android for AD-24 |
 | **Surface** | `/account/data` (Your Data & Privacy), `/account` for AD-9 and AD-10, the 3.1 Today screen for AD-11, rooms in 3.1 for AD-12, + New for AD-13, Me for AD-14, Activity for AD-15, People for AD-16, Days won for AD-17, mute for AD-18 and `/games` for AD-22 |
 | **Visibility** | Any signed-in identity (including unlock-pending) |
 | **Roles to test** | member |
@@ -431,3 +431,13 @@ picture, ladder in turn). No sign-in is asked for. On Android, step 2 opens the 
 where somebody lives. Step 3 shows "You and @B answered N of M the same" and the message in the
 card. Step 4 shows the new message in Activity and in the card, marked "1 new message" until opened.
 The Wanted and mission cards are under Asks, not Matches. Step 5 removes the Match card for both.
+
+## AD-24 · Web pages open over the Android app
+**Role:** a member on 3.1 · **Surfaces:** android
+**Steps:**
+1. On Today, tap a button on a card from a plugin the app does not carry (an ask, a story, a What Works card).
+2. Close the panel with its X.
+3. From Unlock, open the Commons link; from Me, open the survey.
+**Expected:** Step 1 opens the page in a panel over the app, with the page title in its bar, not in a
+separate browser app. Step 2 returns to Today where it was. Step 3 opens each page the same way.
+**Result:** web ☐ android ☐ — notes:

@@ -228,8 +228,12 @@ email sender, Android app links and blog links move with it.
 12. Contributions rework. Blocked by 8. Owner-review lane.
 13. What Works duplicates and review; SkillsHunt leaderboard removal and missions; Quora census card.
     Blocked by 6.
-14. Android screens for every plugin, matching web. On hold until the web app is done (owner
-    decision, 2026-10-27); until then 3.1 work is built for the web only.
+14. Android for the plugins it does not carry. Owner decision 2026-11-02, replacing full parity:
+    3.0 stays on Android; 3.1 on Android keeps its own screens (Today, rooms, People, + New,
+    Activity, Me, 21 Questions, the puzzle of the day) and the four carried plugins; every other
+    plugin's web page opens in a browser panel over the app, and the member arrives signed in, with
+    no second sign-in. Two pieces: the panel (done 2026-11-02), then the sign-in hand-off
+    (owner-review lane).
 15. Speed budget check before release. Blocked by 6.
 16. Domain move to lagatos.com. Last; no code dependency.
 17. The daily puzzle (decided 2026-10-26 to come after the first release; tabled until then, owner
