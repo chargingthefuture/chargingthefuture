@@ -1,6 +1,6 @@
 # The reader (FreshRSS)
 
-A feed reader at `rss.chargingthefuture.com`, on Render, for members who would rather not run one
+A feed reader at `rss.lagatos.com`, on Render, for members who would rather not run one
 themselves. Signing in goes through the app's own auth provider, so nobody sets a second password
 and a ban at the provider closes the reader too, within the sign-in length below.
 
@@ -99,6 +99,22 @@ Moving the article and subscription data to Postgres would allow the nightly dum
 (`backup-formance.yml`). It was raised and not done: a reader that polls keeps a serverless
 database awake for most of the day, which is billed compute, and a managed one is a flat monthly
 cost. Recorded here so the next person knows it was a decision rather than an oversight.
+
+## The address
+
+The reader is at `rss.lagatos.com` (moved from `rss.chargingthefuture.com` with the rest of the
+domains, owner decision 2026-10-28). The app's Open the reader button points there. Three settings
+outside this repository have to name the same address, or the reader does not open or sign-in
+fails:
+
+1. Render, service `ctf-freshrss`, Settings, Custom Domains: `rss.lagatos.com` is listed and
+   verified. The domain's DNS has the CNAME record Render shows there.
+2. The auth provider's sign-in application for the reader (the one whose client id is the service's
+   `OIDC_CLIENT_ID`): `https://rss.lagatos.com/i/oidc/` is an allowed redirect address. FreshRSS
+   returns members to `/i/oidc/` on whatever address they opened it at, so an application that
+   allows only the old address refuses every sign-in at the new one.
+3. FreshRSS itself, Administration, System configuration: the base address, when it is set, is
+   `https://rss.lagatos.com`.
 
 ## Known limits, so they are not rediscovered
 

@@ -9,7 +9,7 @@ import { getPluginShellTokens } from '@/components/shared/plugin-shell-theme';
 import { getAppAccent } from 'lib/theme/theme-tokens';
 import { useTheme } from '@/hooks/useTheme';
 
-const READER_URL = 'https://rss.chargingthefuture.com';
+const READER_URL = 'https://rss.lagatos.com';
 const FONT_FAMILY = "'Figtree Variable', system-ui, sans-serif";
 
 type NoteProps = { title: string; children: React.ReactNode; tokens: ReturnType<typeof getPluginShellTokens> };
@@ -86,7 +86,7 @@ export function ReaderShell() {
             <ExternalLink size={16} color="#0B0B0B" />
           </a>
           <p style={{ margin: 0, fontSize: 12, color: t.MUTED }}>
-            Opens rss.chargingthefuture.com. Sign in there with this same account — there is no second password to set.
+            Opens rss.lagatos.com. Sign in there with this same account — there is no second password to set.
           </p>
         </div>
 
