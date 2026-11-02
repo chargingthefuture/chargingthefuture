@@ -1238,10 +1238,8 @@ export async function listDirectoryForMember(
     // member sees every live profile (including carried-over unclaimed profiles), so there
     // is no requirement that the viewer first create their own profile.
     //
-    // `deleted_at IS NULL` is the only liveness test, here and everywhere else. The table
-    // used to carry an `is_active` flag beside it and the two disagreed: a member deleting
-    // their own listing cleared the flag, account deletion stamped the timestamp, and a
-    // query testing one of them kept showing rows the other had removed.
+    // Every row is live: a listing that goes away is deleted outright, so there is no
+    // tombstone to test (post/0033 dropped `is_active` and `deleted_at`).
     const offset = (pagination.page - 1) * pagination.pageSize;
     const normalizedFilters = normalizeListFilters(filters);
 

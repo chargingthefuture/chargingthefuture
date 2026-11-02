@@ -2,9 +2,9 @@ import type { SePeoplePage, SePerson } from '@ctf/shared';
 import { queryDb } from 'lib/db/postgres';
 
 // People in 3.1: a page of Directory profiles with what each one lists and, for a claimed profile,
-// the skills its owner offers through Foundation. Live profiles only (`deleted_at IS NULL`), the
-// same liveness test as the Directory. "Offering now" keeps only the profiles whose owner offers at
-// least one skill; those come first in every view.
+// the skills its owner offers through Foundation. Every row is live: a Directory listing that goes
+// away is deleted outright (post/0033 dropped the old tombstone columns). "Offering now" keeps only
+// the profiles whose owner offers at least one skill; those come first in every view.
 
 type PersonRow = {
   id: string;
@@ -41,8 +41,7 @@ const PEOPLE_SQL = `
     COUNT(*) OVER ()::text AS total
   FROM directory_profiles p
   LEFT JOIN skills_taxonomy_job_titles jt ON jt.id = p.job_title_id
-  WHERE p.deleted_at IS NULL
-    AND ($1::boolean = FALSE OR ${OFFERS})
+  WHERE ($1::boolean = FALSE OR ${OFFERS})
     AND (
       $2::text IS NULL
       OR lower(concat_ws(' ', p.first_name, p.last_name, p.headline, jt.name)) LIKE $2::text
