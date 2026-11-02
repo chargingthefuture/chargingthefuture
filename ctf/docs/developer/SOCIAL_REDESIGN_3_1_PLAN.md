@@ -237,7 +237,8 @@ email sender, Android app links and blog links move with it.
     for everyone, built from that day's story card, so the game and the reading are the same thing.
     The member assembles the story's picture or excerpt, or picks from answer choices that turn green
     when right, with the result sliding up from the bottom; finishing turns it into the story's card
-    with Read and Next. Blocked by 6.
+    with Read and Next. Blocked by 6. Built 2026-11-02 on the web: five stories a day from the blog
+    and Quora answers, one puzzle per post from its own text, at `/games`; Android follows in 14.
 18. 21 Questions (same decision). Short daily questions answered by two members, then continued
     inside the card, never in a separate chat. The questions come from a filtered list: no home or
     family prompts. Blocked by 6 and 8.

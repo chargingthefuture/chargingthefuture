@@ -9,7 +9,7 @@
 
 | | |
 |---|---|
-| **Surface** | `/account/data` (Your Data & Privacy), `/account` for AD-9 and AD-10, the 3.1 Today screen for AD-11, rooms in 3.1 for AD-12, + New for AD-13, Me for AD-14, Activity for AD-15, People for AD-16, Days won for AD-17 and mute for AD-18 |
+| **Surface** | `/account/data` (Your Data & Privacy), `/account` for AD-9 and AD-10, the 3.1 Today screen for AD-11, rooms in 3.1 for AD-12, + New for AD-13, Me for AD-14, Activity for AD-15, People for AD-16, Days won for AD-17, mute for AD-18 and `/games` for AD-22 |
 | **Visibility** | Any signed-in identity (including unlock-pending) |
 | **Roles to test** | member |
 | **Surfaces** | web (phone-width layout) |
@@ -399,4 +399,18 @@ Step 3 lands on `/today`, Today as anybody can read it, with Sign in.
 3. Tap the dot again.
 **Expected:** Step 1 opens the card and the item without marking it done. Step 2 puts a check in the
 dot and the done count goes up by one. Step 3 removes the check and the count goes back down.
+**Result:** web ☐ android ☐ — notes:
+
+## AD-22 · Stories and puzzles
+**Role:** a visitor who is not signed in, then a member on 3.1 · **Surfaces:** web
+**Steps:**
+1. Open Today and pick the Stories filter.
+2. Tap Play on the "puzzles from today's stories" card.
+3. Open a puzzle and answer it: tap a word, a title, or the four lines in order.
+4. Tap Next puzzle, then All puzzles, then Older at the foot of the list.
+5. Close the page, open `/games` again.
+**Expected:** Step 1 shows five Story cards marked "from the blog" or "from Quora", each with Read
+it and Play its puzzle, and the Game card. Step 3 shows Right, or marks the correct answer; Read the
+post opens the blog post. Step 4 shows ten puzzles a page with "Page N of M". Step 5 shows Solved on
+every puzzle answered right. No sign-in is asked for at any step.
 **Result:** web ☐ android ☐ — notes:

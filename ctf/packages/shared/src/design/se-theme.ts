@@ -17,7 +17,7 @@ export const SE_THEME_LABELS: Record<SeThemeColor, string> = {
 };
 
 // The kinds of card in Today. Each has one accent; the card shape is the same for all.
-export type SeCardKind = 'ask' | 'offer' | 'story' | 'match' | 'mood' | 'numbers' | 'replay';
+export type SeCardKind = 'ask' | 'offer' | 'story' | 'match' | 'mood' | 'numbers' | 'replay' | 'game';
 
 export type SeKindColors = Record<SeCardKind, string>;
 
@@ -49,6 +49,7 @@ const LIGHT_KINDS: SeKindColors = {
   mood: '#6a4c8c',
   numbers: '#2d6b70',
   replay: '#2a1a1d',
+  game: '#8a3a64',
 };
 
 const DARK_KINDS: SeKindColors = {
@@ -59,6 +60,7 @@ const DARK_KINDS: SeKindColors = {
   mood: '#c3a6e0',
   numbers: '#7fc1c4',
   replay: '#e8dcd4',
+  game: '#e59ac2',
 };
 
 const SAND_LIGHT = {

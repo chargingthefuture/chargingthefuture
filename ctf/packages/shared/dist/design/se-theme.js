@@ -18,6 +18,7 @@ const LIGHT_KINDS = {
     mood: '#6a4c8c',
     numbers: '#2d6b70',
     replay: '#2a1a1d',
+    game: '#8a3a64',
 };
 const DARK_KINDS = {
     ask: '#f2a07f',
@@ -27,6 +28,7 @@ const DARK_KINDS = {
     mood: '#c3a6e0',
     numbers: '#7fc1c4',
     replay: '#e8dcd4',
+    game: '#e59ac2',
 };
 const SAND_LIGHT = {
     bg: '#f6efe8',
