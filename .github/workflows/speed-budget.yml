@@ -1,0 +1,78 @@
+# The 3.1 speed budget, checked before a release (ctf/docs/developer/SOCIAL_REDESIGN_3_1_PLAN.md,
+# task 15): under 3 seconds from a cold start to the first card and under 1 second warm, on a
+# low-cost phone over a slow connection. Builds the web app, starts it, and measures signed-out
+# Today with ctf/scripts/speed-budget/measure-today.cjs. The table is in the job summary.
+#
+# The sign-in keys below are placeholders made up on the runner so the app starts; nothing signs
+# in and no secret is used. Run it from the Actions tab before each release.
+name: Speed Budget — 3.1 Today
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: speed-budget
+  cancel-in-progress: true
+
+jobs:
+  measure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+          cache-dependency-path: ctf/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --dir ctf
+
+      - name: Make placeholder sign-in keys
+        run: |
+          # Assembled here so no key-shaped text sits in the file; the values are random.
+          mode=live
+          key="pk_${mode}_$(printf 'clerk.example.com$' | base64 -w0)"
+          secret="sk_${mode}_$(openssl rand -hex 16)"
+          {
+            echo "NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY=$key"
+            echo "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=$key"
+            echo "CLERK_SECRET_KEY=$secret"
+            echo "AUTH_SECRET_KEY=$secret"
+            echo "CLERK_ENCRYPTION_KEY=$(openssl rand -hex 16)"
+          } >> "$GITHUB_ENV"
+
+      - name: Build the web app
+        run: pnpm --dir ctf --filter @ctf/web run build:ci
+
+      - name: Install the measuring browser
+        run: |
+          npm install --no-save --prefix ctf/scripts/speed-budget playwright@1.56.1
+          npx --prefix ctf/scripts/speed-budget playwright install --with-deps chromium
+
+      - name: Start the app
+        working-directory: ctf/packages/web
+        run: |
+          nohup npx next start -p 3123 > "$RUNNER_TEMP/next.log" 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -s -o /dev/null -w "%{http_code}" http://localhost:3123/today | grep -q 200; then exit 0; fi
+            sleep 2
+          done
+          echo "The app did not answer on /today within a minute. Last lines of its log:"
+          tail -20 "$RUNNER_TEMP/next.log"
+          exit 1
+
+      - name: Measure signed-out Today
+        run: node ctf/scripts/speed-budget/measure-today.cjs http://localhost:3123
