@@ -1,6 +1,6 @@
 // Contributor Access — value-event keys and default weights.
 //
-// The fifteen `value.*` event keys are the events that count as giving something. They began as the
+// The fourteen `value.*` event keys are the events that count as giving something. They began as the
 // Weekly Performance dashboard's per-plugin cards (the decision record
 // ctf/docs/developer/PLUGIN_VALUE_METRICS.md); those cards retired in 3.1.0, and these keys stay
 // for the Weavers badge and the daily exchange. Two were removed on
@@ -27,11 +27,11 @@
 // Only the owner confirms it, so at most three per owner-and-helper pair per week count — see
 // value-events.ts — and the badge's five-counterparty gate stops one pair earning it alone.
 //
-// Contributions is two keys, split on 2026-10-06 (owner decision): only real money counts toward a
-// dollar figure, so `value.contributions_confirmed_usd` is gift cards alone, and confirmed Quora
-// comments and GitHub stars are `value.contributions_non_money_confirmed`. The split changes no
-// member's score — see WEIGHT_INHERITS_FROM below.
-//
+// Contributions is one key, `value.contributions_confirmed_usd`: confirmed gift cards, summed in
+// real dollars. Contributions takes Amazon gift cards only, so the second key it had for confirmed
+// Quora comments and GitHub stars was removed on 2026-11-02 (owner decision). Members who already
+// hold the badge keep it; the weekly recompute only ever admits.
+
 // The eligibility engine counts these events per member; this file only names them and assigns
 // default weights.
 //
@@ -50,7 +50,6 @@ export type ContributorValueEventKey =
   | 'value.chyme_tips_sent'
   | 'value.service_credits_peer_sends'
   | 'value.contributions_confirmed_usd'
-  | 'value.contributions_non_money_confirmed'
   | 'value.skills_hunt_nominations_accepted'
   | 'value.what_works_tools_approved'
   | 'value.skill_up_completions'
@@ -68,7 +67,6 @@ export const EVENT_SOURCE_PLUGIN: Record<ContributorValueEventKey, string> = {
   'value.chyme_tips_sent': 'chyme',
   'value.service_credits_peer_sends': 'service-credits',
   'value.contributions_confirmed_usd': 'contributions',
-  'value.contributions_non_money_confirmed': 'contributions',
   'value.skills_hunt_nominations_accepted': 'skills-hunt',
   'value.what_works_tools_approved': 'what-works',
   'value.skill_up_completions': 'skill-up',
@@ -91,7 +89,6 @@ export const EVENT_LABEL: Record<ContributorValueEventKey, string> = {
   'value.chyme_tips_sent': 'Chyme peer tip sent',
   'value.service_credits_peer_sends': 'ServiceCredits direct peer send',
   'value.contributions_confirmed_usd': 'Contributions gift card confirmed (per USD)',
-  'value.contributions_non_money_confirmed': 'Contributions comment or star confirmed (per unit of set value)',
   'value.skills_hunt_nominations_accepted': 'SkillsHunt nomination accepted',
   'value.what_works_tools_approved': 'WhatWorks tool approved',
   'value.skill_up_completions': 'SkillUp enrollment completed',
@@ -102,9 +99,7 @@ export const EVENT_LABEL: Record<ContributorValueEventKey, string> = {
 };
 
 // Contributions is a SUM, not a row count. Gift cards are summed in real dollars, so that weight is
-// per dollar: 0.1 per USD = 1 point per 10 USD confirmed. Comments and stars are summed in the set
-// value each one was confirmed at (default 1, not money), at the same 0.1, which is what they
-// earned when they were still summed into the dollar key.
+// per dollar: 0.1 per USD = 1 point per 10 USD confirmed.
 export const DEFAULT_WEIGHTS: Record<ContributorValueEventKey, number> = {
   'value.lighthouse_stays_completed': 25,
   'value.skill_up_completions': 10,
@@ -120,31 +115,14 @@ export const DEFAULT_WEIGHTS: Record<ContributorValueEventKey, number> = {
   'value.chyme_tips_sent': 1,
   'value.service_credits_peer_sends': 1,
   'value.contributions_confirmed_usd': 0.1,
-  'value.contributions_non_money_confirmed': 0.1,
 };
 
-// A key with no override of its own takes another key's override. The non-money Contributions key
-// was part of the dollar key until 2026-10-06, so an override the owner had set on the dollar key
-// already applied to comments and stars; without this the split would quietly move them back to the
-// default weight. Once an admin saves a weight for the non-money key itself, that one wins.
-const WEIGHT_INHERITS_FROM: Partial<Record<ContributorValueEventKey, ContributorValueEventKey>> = {
-  'value.contributions_non_money_confirmed': 'value.contributions_confirmed_usd',
-};
-
-function overrideFor(key: ContributorValueEventKey, overrides: Record<string, unknown>): number | null {
-  const raw = overrides[key];
-  return typeof raw === 'number' && Number.isFinite(raw) ? raw : null;
-}
-
-// Effective weight for one event key: the config override when present and a finite number, then
-// the override of the key it inherits from, otherwise the default.
+// Effective weight for one event key: the config override when present and a finite number,
+// otherwise the default. An override saved for a key that no longer exists is ignored.
 export function effectiveWeight(
   key: ContributorValueEventKey,
   overrides: Record<string, unknown>,
 ): number {
-  const own = overrideFor(key, overrides);
-  if (own !== null) return own;
-  const parent = WEIGHT_INHERITS_FROM[key];
-  const inherited = parent ? overrideFor(parent, overrides) : null;
-  return inherited ?? DEFAULT_WEIGHTS[key];
+  const raw = overrides[key];
+  return typeof raw === 'number' && Number.isFinite(raw) ? raw : DEFAULT_WEIGHTS[key];
 }
