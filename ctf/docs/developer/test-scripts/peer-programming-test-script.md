@@ -373,7 +373,7 @@ Result: web ☐
 
 ---
 
-### PP-14 — Weekly assignment places an active member into standing Cohort 1
+### PP-14 — Weekly assignment places a signed-in member into standing Cohort 1
 
 **Role:** member, admin · **Surfaces:** web
 
@@ -816,7 +816,7 @@ on Android through AN-PP in `android-app-test-script.md`.
 | PP-10 | Join Session launches video call |
 | PP-12 | Member with no cohort sees empty state, not a crash |
 | PP-13 | Refresh reloads room without full-screen loading flash |
-| PP-14 | Weekly assignment (not merely opening the page) places an active member into standing Cohort 1 |
+| PP-14 | Weekly assignment (not merely opening the page) places a signed-in member into standing Cohort 1 |
 | PP-15 | Another member takes a task, posts a result, and the owner is notified |
 | PP-16 | Keep holds a result with the helper's name; Send back reopens the task and drops the count |
 | PP-17 | Several goals switched from the row above the board; up to 10 open at once |

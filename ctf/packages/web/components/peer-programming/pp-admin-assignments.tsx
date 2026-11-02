@@ -36,7 +36,7 @@ export function PeerProgrammingAdminAssignments({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <p style={{ fontSize: 12, color: t.MUTED, margin: 0, lineHeight: 1.5 }}>
-        Forms cohorts of up to 12 people from this week&rsquo;s active members and records an in-app
+        Forms cohorts of up to 12 people from the members who signed in this week and records an in-app
         notification for each assignment. Running again for the same week is safe — assignments and
         notifications are idempotent.
       </p>
@@ -109,8 +109,7 @@ export function PeerProgrammingAdminAssignments({
               lineHeight: 1.5,
             }}
           >
-            No active members were found for this week, so no cohort was formed. Members are counted
-            as active once they have signed in within the last 7 days. Use the manual user-id list
+            No members signed in this week, so no cohort was formed. A member counts once they have signed in within the last 7 days. Use the manual user-id list
             above to form a cohort right now.
           </div>
         ) : (
@@ -125,7 +124,7 @@ export function PeerProgrammingAdminAssignments({
               lineHeight: 1.5,
             }}
           >
-            Done. Active members selected: {lastResult.membersSelected}. Cohorts created or updated:{' '}
+            Done. Signed-in members selected: {lastResult.membersSelected}. Cohorts created or updated:{' '}
             {lastResult.cohortsCreated}. Notifications recorded: {lastResult.notificationsCreated}.
           </div>
         )

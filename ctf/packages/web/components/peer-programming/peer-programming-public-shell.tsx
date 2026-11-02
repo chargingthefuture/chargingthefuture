@@ -41,7 +41,7 @@ function MobilePeerProgrammingPublic({ signInUrl, verifyUrl }: { signInUrl: stri
           <span style={{ fontSize: 20, fontWeight: 800 }}>PeerProgramming</span>
         </div>
         <span style={{ padding: '3px 12px', borderRadius: 20, background: t.ACCENT + '20', border: `1px solid ${t.ACCENT}40`, fontSize: 11, color: t.ACCENT, fontWeight: 600, width: 'fit-content' }}>Deterministic global cohorts</span>
-        <p style={{ margin: 0, fontSize: 14, color: t.SUBTLE, lineHeight: 1.5 }}>A global mastermind with a goal board: each member posts their goals, and everyone helps each other reach them. Weekly cohorts of up to 12 people, open worldwide. Active members are placed automatically each week — no competitive selection.</p>
+        <p style={{ margin: 0, fontSize: 14, color: t.SUBTLE, lineHeight: 1.5 }}>A global mastermind with a goal board: each member posts their goals, and everyone helps each other reach them. Weekly cohorts of up to 12 people, open worldwide. Members who sign in during the week are placed automatically — no competitive selection.</p>
         <PublicShellWorldwide color={t.MUTED} />
         <a href={verifyUrl ?? signInUrl} style={{ padding: '14px', borderRadius: 12, background: t.ACCENT, border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', textDecoration: 'none', textAlign: 'center' }}>{verifyUrl ? 'Finish verifying' : 'Join Skills Economy — Free'}</a>
       </div>

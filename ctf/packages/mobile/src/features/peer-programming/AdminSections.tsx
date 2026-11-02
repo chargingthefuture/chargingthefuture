@@ -103,7 +103,7 @@ export function SingleOpenCohortSection({ mode, saving, onSet }: {
     <AdminSection>
       <SectionTitle text="Single standing Cohort 1 mode" />
       <SectionLead>
-        While there are too few active members to fill weekly cohorts of up to 12 people, everyone shares one standing,
+        While there are too few signed-in members to fill weekly cohorts of up to 12 people, everyone shares one standing,
         always-open Cohort 1 instead of being split into tiny rooms. Turn it off to resume the weekly split into C1, C2, C3.
       </SectionLead>
       {mode ? (

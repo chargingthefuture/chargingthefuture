@@ -85,7 +85,7 @@ export function CohortsTab({ room, openCohortId, switching, isAdmin, onOpenCohor
       <PPHero
         id="ppCohortsHero"
         title="Weekly Global Masterminds"
-        line="Active members get placed each week — sign in during the week and you're in a cohort. No competitive selection."
+        line="Sign in during the week and you're placed in a cohort. No competitive selection."
       />
       <View style={styles.stack}>
         {!room.myCohortId ? <NotAssigned /> : room.cohort ? <AssignedCohort room={room} memberCount={myCount} onJoin={onJoinSession} /> : null}

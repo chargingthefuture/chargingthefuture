@@ -55,7 +55,7 @@ they were only reading — a box asks them to write how it went, in their own wo
 
 The plugin, stated precisely:
 
-1. Selects active members (signed in within the last 7 days) and places them in cohorts each week,
+1. Selects the members who signed in within the last 7 days and places them in cohorts each week,
 2. Targets 12 members per cohort; participation is voluntary, so about 5 typically take part,
 3. Writes an in-app notification for every placement, keyed so a repeated run never notifies twice,
 4. Runs one live video call per cohort, members only, in the web app,
@@ -68,7 +68,7 @@ The plugin, stated precisely:
 
 ### Single standing, always-open Cohort 1 mode (low-population, admin-flippable)
 
-When there are not enough active members to fill weekly cohorts of twelve, the plugin runs in a
+When there are not enough signed-in members to fill weekly cohorts of twelve, the plugin runs in a
 single standing, always-open Cohort 1 mode instead of splitting members into tiny one-person rooms.
 The effective mode is resolved by the async resolver `isSingleOpenCohortModeEnabled()` (and
 `resolveSingleOpenCohortMode()`, which also reports the source) in
@@ -297,14 +297,14 @@ These admin routes are now surfaced by a real admin UI on web (the former Androi
 
 ### Shared Data Dependency: active-member signal (`login_events`)
 
-Weekly cohort assignment selects "active members" from the shared `login_events` table
+Weekly cohort assignment selects signed-in members from the shared `login_events` table
 (`lib/engagement/login-activity.ts`), which is the single dedicated sign-in table also
 read by the Weekly Performance review — this plugin does not own it and must not create a
 duplicate. The table is populated by `recordLoginEvent`, called from the Clerk identity
 layer (`resolveRequestIdentity`) for every authenticated request and deduplicated to one
 row per member per UTC day. It used to be called from the plugin access gate, which meant
 a member's day went unrecorded unless a plugin access check ran on that request. Before this writer existed the table was always empty, so the default
-assignment run found zero active members and could never form a cohort; an admin can still
+assignment run found zero signed-in members and could never form a cohort; an admin can still
 form a cohort immediately with the manual user-id override.
 
 The sign-in record is the entire definition of "active" here, as it is on the Weekly
@@ -410,6 +410,14 @@ Demo schema (`ctf/scripts/seedDemo.mjs`, `seedPeerProgrammingGoalBoard`): finds 
 6. The Android app carries every PeerProgramming screen the web has, the admin screen included (2026-10-08). No automated test harness exists for live Stream calls — verification on web and on Android (AN-PP in `android-app-test-script.md`) is manual.
 
 ## Change Log
+
+- 2026-11-02: **Signed in, not active (owner decision).** Cohorts are formed from the members who
+  signed in within the last 7 days, and the copy now says so: active means a day with 30 or more
+  action minutes, which this selection does not use. Web and Android: the cohorts tab line reads
+  "Sign in during the week and you're placed in a cohort."; the public page reads "Members who sign
+  in during the week are placed automatically"; the admin run reads "the members who signed in this
+  week", "Signed-in members selected" and "No members signed in this week"; the standing Cohort 1
+  note reads "too few signed-in members". The user guide line follows. Selection is unchanged.
 
 - 2026-10-28: **Stream AI moderation on new goals (3.1.0 plan).** `POST /api/peer-programming/goals` checks the title and tasks. The words are sent to Stream's AI moderation check before saving (`lib/integrations/stream-content-check.ts`, config `se:posts`, rules set by `stream-moderation-setup.yml`): when Stream answers remove the post is refused with 422 `content_refused` and the member is told to reword it; harm Stream rates high is flagged in Stream's review queue and still published. When Stream is not set up or cannot be reached the post is saved and the failure is reported. Pictures are not sent, because Stream cannot fetch them from behind sign-in.
 
