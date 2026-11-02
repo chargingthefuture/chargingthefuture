@@ -4,7 +4,7 @@ import { listUnlockedUserIds } from 'lib/shared/unlock-interface';
 import type { ContributorValueEventKey } from './weights';
 import { VALUE_EVENT_SOURCES, aggregateExpression, type ValueEventSource } from './value-events';
 
-// Contributor Access — per-member ALL-TIME counts of the fifteen value events.
+// Contributor Access — per-member ALL-TIME counts of the fourteen value events.
 //
 // Each query counts the events defined in ./value-events.ts (same tables, same fixed filters; the
 // Weekly Performance dashboard's per-plugin cards that once showed them retired in 3.1.0), all-time
