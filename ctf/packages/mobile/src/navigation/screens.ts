@@ -22,7 +22,9 @@ export type FeatureKey =
   | 'account-data'
   | 'blocked-members'
   | 'unlock'
-  | 'recurring-activity';
+  | 'recurring-activity'
+  // The 3.1 puzzles, opened from Today's Game and Story cards (web /games).
+  | 'games';
 
 // The account screens: the gear opens Your account (web /account), and Account & Data, Blocked
 // members, Verification (Unlock) and Recurring activity sit under it, as /account/data,
@@ -55,6 +57,7 @@ export const SCREEN_TITLES: Record<SharedHeaderKey, string> = {
   foundation: 'Foundation',
   'foundation-admin': 'Foundation Admin',
   account: 'Your account',
+  games: 'Puzzles',
 };
 
 const PLUGIN_KEYS = ['chyme', 'beacon', 'peer-programming', 'foundation'] as const;

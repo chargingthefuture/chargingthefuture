@@ -402,7 +402,7 @@ dot and the done count goes up by one. Step 3 removes the check and the count go
 **Result:** web ☐ android ☐ — notes:
 
 ## AD-22 · Stories and puzzles
-**Role:** a visitor who is not signed in, then a member on 3.1 · **Surfaces:** web
+**Role:** a visitor who is not signed in, then a member on 3.1 · **Surfaces:** web, android (signed in)
 **Steps:**
 1. Open Today and pick the Stories filter.
 2. Tap Play on the "puzzles from today's stories" card.
@@ -412,5 +412,6 @@ dot and the done count goes up by one. Step 3 removes the check and the count go
 **Expected:** Step 1 shows five Story cards marked "from the blog" or "from Quora", each with Read
 it and Play its puzzle, and the Game card. Step 3 shows Right, or marks the correct answer; Read the
 post opens the blog post. Step 4 shows ten puzzles a page with "Page N of M". Step 5 shows Solved on
-every puzzle answered right. No sign-in is asked for at any step.
+every puzzle answered right. No sign-in is asked for at any step. On Android, step 2 opens Puzzles
+in the app, Play its puzzle opens on that story's puzzle, and Read the post opens the browser.
 **Result:** web ☐ android ☐ — notes:
