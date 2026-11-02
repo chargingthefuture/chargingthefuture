@@ -10,6 +10,7 @@
 | | |
 |---|---|
 | **Surface** | `/account/data` (Your Data & Privacy), `/account` for AD-9 and AD-10, the 3.1 Today screen for AD-11, rooms in 3.1 for AD-12, + New for AD-13, Me for AD-14, Activity for AD-15, People for AD-16, Days won for AD-17, mute for AD-18, `/games` for AD-22 and 21 Questions for AD-23, 21 Questions matching for AD-24 |
+| **Surface** | `/account/data` (Your Data & Privacy), `/account` for AD-9 and AD-10, the 3.1 Today screen for AD-11, rooms in 3.1 for AD-12, + New for AD-13, Me for AD-14, Activity for AD-15, People for AD-16, Days won for AD-17, mute for AD-18, `/games` for AD-22 and 21 Questions for AD-23 and web pages from Android for AD-24 and AD-25 |
 | **Surface** | `/account/data` (Your Data & Privacy), `/account` for AD-9 and AD-10, the 3.1 Today screen for AD-11, rooms in 3.1 for AD-12, + New for AD-13, Me for AD-14, Activity for AD-15, People for AD-16, Days won for AD-17, mute for AD-18 and `/games` for AD-22 |
 | **Visibility** | Any signed-in identity (including unlock-pending) |
 | **Roles to test** | member |
@@ -447,3 +448,23 @@ answered count; the toggle is on, with the line about what Off does under it. St
 cards, and the card says matching is off and how to turn it back on. Step 4 shows no Match card for A,
 and a message to A is refused. Step 5 leaves the toggle off on Me and the card still says matching is
 off. Step 6 brings the Match cards back for both, with the same answers.
+## AD-24 · Web pages open over the Android app
+**Role:** a member on 3.1 · **Surfaces:** android
+**Steps:**
+1. On Today, tap a button on a card from a plugin the app does not carry (an ask, a story, a What Works card).
+2. Close the panel with its X.
+3. From Unlock, open the Commons link; from Me, open the survey.
+**Expected:** Step 1 opens the page in a panel over the app, with the page title in its bar, not in a
+separate browser app. Step 2 returns to Today where it was. Step 3 opens each page the same way.
+**Result:** web ☐ android ☐ — notes:
+
+## AD-25 · Arriving signed in from Android
+**Role:** an approved member signed in on Android, signed out in the phone's Chrome · **Surfaces:** android
+**Steps:**
+1. On Today, tap a card button that opens a web page (an ask, a What Works card).
+2. Close the panel, wait two minutes, and tap a different one.
+3. Sign out on Android, sign in as a member who is not yet approved, and repeat step 1.
+**Expected:** Steps 1 and 2 show "Signing you in…" for a moment, then the page, signed in as the
+same member, with no sign-in screen. The address bar never shows a ticket. Step 3 opens the page
+without signing in, and the page asks for sign-in itself.
+**Result:** web ☐ android ☐ — notes:

@@ -7,9 +7,8 @@
 // element under the comic theme), so `radius` returns 0 there and the web value otherwise.
 
 import { useMemo } from 'react';
-import { Linking } from 'react-native';
 import { useTheme, getAppAccent, type ThemeName } from '../../theme';
-import { getApiBaseUrl } from '../../auth/authedFetch';
+import { openWebPage } from '../../navigation/openWebPage';
 import { reportError } from '../../observability/report';
 
 export type ChymeTokens = {
@@ -106,14 +105,7 @@ export function initials(name: string): string {
 }
 
 // The web links to its own pages (the TI Radio guide, the Weavers explainer). The app opens the same
-// page of the web app in the browser.
+// page of the web app in a browser panel over the app.
 export function openWebPath(path: string): void {
-  let url: string;
-  try {
-    url = `${getApiBaseUrl()}${path}`;
-  } catch (configError) {
-    reportError(configError, { area: 'chyme', op: 'open_on_web' });
-    return;
-  }
-  void Linking.openURL(url).catch((linkError: unknown) => reportError(linkError, { area: 'chyme', op: 'open_on_web' }));
+  openWebPage(path, 'chyme').catch((linkError: unknown) => reportError(linkError, { area: 'chyme', op: 'open_on_web' }));
 }
