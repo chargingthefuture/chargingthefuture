@@ -12,12 +12,11 @@ import {
   formatMetricValue,
   getWeeklyPerformanceTokens,
   humanizeMetricKey,
-  isRiseGoodFor,
   metricGroup,
 } from "./wp-shared";
 
 // Data-series palette (one color per metric card) — kept raw like every chart palette.
-const CARD_COLORS = ["#A78BFA", "#22C55E", "#6366F1", "#06B6D4", "#EC4899", "#F97316"];
+const CARD_COLORS = ["#22C55E", "#6366F1", "#06B6D4", "#F97316"];
 
 // delta = current − prior, joined by metricKey from the comparison payload.
 //
@@ -39,15 +38,12 @@ function compactNumber(value: number): string {
   return Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 1 }).format(value);
 }
 
-// How to draw a week-over-week delta. The arrow follows the direction the number moved; the color
-// follows whether that direction is good for this metric — almost everything here is better when it
-// rises, but more deleted accounts is a rise and is not good news. No change is neither: it gets the
-// muted color and no arrow, for every metric.
-function deltaTone(delta: number, metricKey: string, mutedColor: string): { arrow: "up" | "down" | null; color: string } {
+// How to draw a week-over-week delta. Every card here is better when it rises, so a rise is green
+// and a fall red. No change gets the muted color and no arrow.
+function deltaTone(delta: number, mutedColor: string): { arrow: "up" | "down" | null; color: string } {
   if (delta === 0) return { arrow: null, color: mutedColor };
   const rising = delta > 0;
-  const good = isRiseGoodFor(metricKey) ? rising : !rising;
-  return { arrow: rising ? "up" : "down", color: good ? "#22C55E" : "#F87171" };
+  return { arrow: rising ? "up" : "down", color: rising ? "#22C55E" : "#F87171" };
 }
 
 type WpTokens = ReturnType<typeof getWeeklyPerformanceTokens>;
@@ -84,7 +80,7 @@ function GoalProgressBar({ progress, goalTarget, color, t }: { progress: number;
 }
 
 function DeltaLine({ delta, metric, t }: { delta: number; metric: WpMetric; t: WpTokens }) {
-  const tone = deltaTone(delta, metric.metricKey, t.MUTED);
+  const tone = deltaTone(delta, t.MUTED);
   let arrow = null;
   if (tone.arrow === "up") arrow = <TrendingUp size={11} />;
   else if (tone.arrow === "down") arrow = <TrendingDown size={11} />;
@@ -162,7 +158,7 @@ export function WeeklyPerformanceMetricCards({
             <div
               style={{
                 display: "grid",
-                // Goal cards are the headline pair — give them room; the rest tile compactly.
+                // Goal cards are the headline — give them room; the rest tile compactly.
                 gridTemplateColumns: group === "goal" ? "repeat(auto-fit, minmax(260px, 1fr))" : "repeat(auto-fit, minmax(200px, 1fr))",
                 gap: 12,
               }}

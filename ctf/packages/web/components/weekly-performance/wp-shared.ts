@@ -114,22 +114,14 @@ export const METRIC_GROUP_HEADINGS: Record<WpMetricGroup, string> = {
   other: "Other",
 };
 
-// Almost every card on this dashboard is better when it goes up, so a rise is drawn green. These
-// are the keys where that is backwards: more of this is worse, and a green "+3 vs last week" would
-// read as good news. The delta arrow still points the way the number moved; only the color follows
-// whether the move is good.
-const LOWER_IS_BETTER_METRIC_KEYS = new Set(["adoption.accounts_deleted"]);
-
-export function isRiseGoodFor(metricKey: string): boolean {
-  return !LOWER_IS_BETTER_METRIC_KEYS.has(metricKey);
-}
-
-// Acronyms the generic title-caser would mangle ("Gdp" → "GDP").
-const LABEL_ACRONYMS: Record<string, string> = { Gdp: "GDP" };
-
-// Cards whose plain key would read wrong. The sign-in count is "Signed in per day" (3.1.0 plan,
-// Measures); its key stays so past weeks and the metric registry keep lining up.
-const LABEL_OVERRIDES: Record<string, string> = { "adoption.daily_active_members": "Signed in per day" };
+// Cards whose plain key would read wrong. Both adoption cards count sign-ins, and a sign-in is not
+// "active" (active means a day with 30+ action minutes), so they read "Signed in" and "Signed in
+// per day" (3.1.0 plan, Measures; owner decision, 2026-11-02). Their keys stay so past weeks and
+// the metric registry keep lining up.
+const LABEL_OVERRIDES: Record<string, string> = {
+  "adoption.active_members": "Signed in",
+  "adoption.daily_active_members": "Signed in per day",
+};
 
 // Turn a dotted/snake/camel metric key into a readable label (no label column exists). The group
 // prefix (goal./adoption.) is dropped — the section heading already says it — and any other
@@ -143,8 +135,7 @@ export function humanizeMetricKey(key: string): string {
     .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
     .replace(/\s+/g, " ")
     .trim()
-    .replace(/\b\w/g, (c) => c.toUpperCase())
-    .replace(/\bGdp\b/g, (word) => LABEL_ACRONYMS[word] ?? word);
+    .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 export function formatMetricValue(value: number, unit: string): string {

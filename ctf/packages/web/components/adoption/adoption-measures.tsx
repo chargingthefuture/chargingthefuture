@@ -16,6 +16,7 @@ function days(value: number | null): string {
   return value === null ? '—' : `${value} days`;
 }
 
+// The copied text keeps one line per measure, so it pastes cleanly into a message.
 export function measuresText(r: Reading): string[] {
   return [
     `Days won: ${r.daysWon.total} in total, ${r.daysWon.thisWeek} in the last 7 days (action minutes ÷ 480)`,
@@ -23,6 +24,33 @@ export function measuresText(r: Reading): string[] {
     `Came back: ${r.retention.cameBack} signed in this week after two or more weeks away`,
     `Every day: ${r.retention.everyDay} had 30 action minutes on each of the last 7 days`,
     `Time to unlock (last 90 days): ${r.timeToUnlock.sent} sent an address, median ${days(r.timeToUnlock.daysToSend)} after their first sign-in; ${r.timeToUnlock.approved} approved, median ${days(r.timeToUnlock.daysToApprove)} after sending`,
+  ];
+}
+
+// On screen each measure is a row: its name, the number, and one short line saying what it counts,
+// so the numbers can be read at a glance instead of out of a paragraph.
+type MeasureRow = { label: string; value: string; note: string };
+
+function measureRows(r: Reading): MeasureRow[] {
+  return [
+    { label: 'Days won', value: `${r.daysWon.total}`, note: `${r.daysWon.thisWeek} in the last 7 days. Action minutes ÷ 480.` },
+    {
+      label: 'Retained',
+      value: `${r.retention.retained} of ${r.retention.eligible}`,
+      note: `${r.retention.retainedShare}%, target 20%. Signed up 4+ weeks ago and had a 30-action-minute day in the last 4 weeks.`,
+    },
+    { label: 'Came back', value: `${r.retention.cameBack}`, note: 'Signed in this week after two or more weeks away.' },
+    { label: 'Every day', value: `${r.retention.everyDay}`, note: '30 action minutes on each of the last 7 days.' },
+    {
+      label: 'Sent an address',
+      value: `${r.timeToUnlock.sent}`,
+      note: `Last 90 days. Median ${days(r.timeToUnlock.daysToSend)} after their first sign-in.`,
+    },
+    {
+      label: 'Approved',
+      value: `${r.timeToUnlock.approved}`,
+      note: `Last 90 days. Median ${days(r.timeToUnlock.daysToApprove)} after sending.`,
+    },
   ];
 }
 
@@ -42,6 +70,22 @@ function useMeasures() {
     void load();
   }, [load]);
   return state;
+}
+
+function MeasureList({ t, rows }: { t: PluginShellTokens; rows: MeasureRow[] }) {
+  return (
+    <dl style={{ margin: 0 }}>
+      {rows.map((row, index) => (
+        <div key={row.label} style={{ padding: '10px 0', borderTop: index === 0 ? 'none' : `1px solid ${t.BORDER}` }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
+            <dt style={{ flex: 1, fontSize: 14, color: t.TEXT }}>{row.label}</dt>
+            <dd style={{ margin: 0, fontSize: 18, fontWeight: 700, color: t.TITLE, fontVariantNumeric: 'tabular-nums' }}>{row.value}</dd>
+          </div>
+          <p style={{ margin: '2px 0 0', fontSize: 12, lineHeight: 1.4, color: t.SUBTLE }}>{row.note}</p>
+        </div>
+      ))}
+    </dl>
+  );
 }
 
 export function AdoptionMeasures({ tokens: t }: { tokens: PluginShellTokens }) {
@@ -64,11 +108,7 @@ export function AdoptionMeasures({ tokens: t }: { tokens: PluginShellTokens }) {
       </div>
       {error ? <p role="alert" style={{ margin: 0, fontSize: 14, color: t.TITLE }}>Could not read the measures: {error}</p> : null}
       {!reading && !error ? <p style={{ margin: 0, fontSize: 14, color: t.SUBTLE }}>Reading…</p> : null}
-      {lines.map((line) => (
-        <p key={line} style={{ margin: '6px 0 0', fontSize: 14, lineHeight: 1.5, color: t.TEXT }}>
-          {line}
-        </p>
-      ))}
+      {reading ? <MeasureList t={t} rows={measureRows(reading)} /> : null}
       {reading?.cohorts ? <RetentionCharts t={t} data={reading.cohorts} /> : null}
     </section>
   );

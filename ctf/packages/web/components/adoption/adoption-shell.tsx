@@ -15,7 +15,7 @@ import { AdoptionMeasures } from './adoption-measures';
 // Adoption: every admin reading of whether members are working with each other, on one screen
 // (owner decision, 2026-10-16). The steps toward 384 sit on top, then Days won and retention (3.1),
 // then the daily exchange and the Weavers badge, then Weekly Performance, then the sign-in record
-// behind its Active Members rows.
+// behind its Signed in rows.
 // These were three separate admin screens before.
 export function AdoptionShell() {
   const { theme } = useTheme();

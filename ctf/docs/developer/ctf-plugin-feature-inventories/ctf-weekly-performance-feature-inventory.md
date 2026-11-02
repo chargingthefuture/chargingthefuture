@@ -144,14 +144,13 @@ Weekly performance metrics are derived from upstream plugin tables (feed, login 
 Live numbers: weekly numbers are **always** computed live, matching the V2 dashboard, which aggregated on read for any selected week. There is no "close the week" step and no stored snapshot to wait for. `getWeekMetrics` returns `computeLiveWeekMetrics` (`lib/weekly-performance/live-metrics.ts`) for every week, counting the week window directly from upstream tables. The current week is labeled "Live" and keeps moving (silent 60s polling + focus refetch on web); every earlier week is a settled historical window with no "closed" state. The `weekly_performance_metrics` table and the `weekly-performance.metrics.get` route are unchanged; the read is simply always live (the table is no longer consulted for the dashboard).
 
 The shipped metric set is the one locked on 2026-07-18 in `ctf/docs/developer/PLUGIN_VALUE_METRICS.md`, plus the
-daily-active-members adoption row added 2026-08-15 and the deleted-accounts adoption row added 2026-08-28. Nothing revenue/financial is included (revenue, MRR, ARR, CLV)
+daily-active-members adoption row added 2026-08-15. The GDP Community Value Index goal and the deleted-accounts adoption row (added 2026-08-28) were removed on 2026-11-02. Nothing revenue/financial is included (revenue, MRR, ARR, CLV)
 — V3 is free to end users, so those have no meaning. Every metric is scoped to
 `[week_start, week_start + 7 days)` unless noted, and each query is table-existence-guarded so a missing table
 contributes 0 rather than failing the read. Card order on the dashboard is the order below.
 
 Goals (state metrics — the current-week read stores a snapshot, past weeks report their stored row):
 
-- `goal.gdp_value_index` — Community Value Index, toward the 300B goal (from the GDP plugin's live report).
 - `goal.workforce_recruited` — active, non-deleted Directory profiles, toward the 2,000,000 goal.
 
 The per-plugin weekly counts are gone (3.1.0, owner-approved plan
@@ -172,18 +171,6 @@ Adoption (honest non-value rows):
   by the days of the window that have already started (1–7), so the live current week averages over the days it
   has actually had and every past week divides by 7. The divisor is computed in UTC, matching the day boundary
   the member-days are bucketed on.
-- `adoption.accounts_deleted` — how many members ended their entire account during the week: the counterpart to
-  the two turnout rows above, and the one card on the dashboard that is worse when it rises (its week-over-week
-  figure is drawn red on a rise and green on a fall; the arrow still points the way the number moved). Counted
-  from `account_deletion_events` on `completed_at`, per member rather than per row, so a repeated event for one
-  account can never read as two people leaving. Two things are deliberately excluded, because either would read
-  as people leaving when they did not: a per-plugin "delete my data" (`scope = 'service'` — that member still
-  has an account and cleared one plugin's data), and an operator-run removal (the manual
-  `Delete Account (manual)` workflow clearing a duplicate or a demo test account). The second is only separable
-  because the deletion orchestrator now records who asked, in the event's `summary.initiatedBy`
-  (`member` | `operator`); an account-scope row otherwise looks identical either way. Rows written before that
-  field existed carry no marker and count as the member's own, which is what nearly all of them are. Aggregate
-  only — never a per-member figure, and no member is ever named.
 
 Both turnout rows are built from the shared member-day set in `lib/engagement/member-activity.ts`. A member-day
 is a (member, UTC day) pair on which the sign-in record holds a row for that member. That record is
@@ -219,7 +206,7 @@ terminal to run a script from.
 Both rows are aggregate only — never a per-member figure — and both are adoption, not value: turning up is not
 a plugin's defining action and carries no positive weight in value scoring.
 
-V2's "verified" and "approved" member counts are intentionally omitted: V3's `users` table is the Clerk mirror with no dependable verification/approval timestamp, so a time-correct per-week value can't be computed (real-data-only). Metric card labels are humanized from the key: the group prefix is dropped and the rest is title-cased, so `adoption.active_members` reads "Active Members". One key has a fixed label instead (`LABEL_OVERRIDES` in `components/weekly-performance/wp-shared.ts`): `adoption.daily_active_members` reads "Signed in per day". The sign-in record section's stat reads "Signed in per day" too.
+V2's "verified" and "approved" member counts are intentionally omitted: V3's `users` table is the Clerk mirror with no dependable verification/approval timestamp, so a time-correct per-week value can't be computed (real-data-only). Metric card labels are humanized from the key: the group prefix is dropped and the rest is title-cased, so `goal.workforce_recruited` reads "Workforce Recruited". Two keys have a fixed label instead (`LABEL_OVERRIDES` in `components/weekly-performance/wp-shared.ts`), because both count sign-ins and a sign-in is not active (active means a day with 30+ action minutes): `adoption.active_members` reads "Signed in" and `adoption.daily_active_members` reads "Signed in per day". The sign-in record section's stats read "Signed in this week" and "Signed in per day".
 
 ## 7) Gaps and Known Technical Debt
 
@@ -228,6 +215,20 @@ V2's "verified" and "approved" member counts are intentionally omitted: V3's `us
 3. Contract gap: the shipped `PUT /api/weekly-performance/admin/week-selection` route (audit command `weekly-performance.admin.week.select`) is not represented in `docs/contracts/WEEKLY_PERFORMANCE_PLUGIN_COMMAND_CONTRACTS.yaml`, which lists only `week.list`, `week.get`, `metrics.get`, and `comparison.get`. The week-selection command should be added to the command/access/audit contracts.
 
 ## 8) Change Log
+
+- 2026-11-02: **GDP goal and deleted accounts removed (owner decision).** The GDP Community Value
+  Index card left the Goals section: the GDP plugin shows it on its own tile. The
+  `adoption.accounts_deleted` card was removed as a metric the owner does not use. `live-metrics.ts`
+  computes Workforce recruited, active members and signed in per day only; `GOAL_METRIC_KEYS` and
+  the goal capture route store the Workforce reading only; `goal-constants.ts` drops the 300B goal;
+  `wp-shared.ts` drops the lower-is-better set and the GDP label fix, which nothing else used; the
+  remaining cards keep their colors. The metrics and comparison contracts no longer read
+  `account_deletion_events`, and `canonical_metrics.yaml` drops `wp_adoption_accounts_deleted` and
+  `wp_goal_gdp_value_index_weekly_snapshot`. Past GDP rows in `weekly_performance_goal_snapshots`
+  stay as they are and nothing reads them. The `adoption.active_members` card now reads "Signed
+  in" (it read "Active Members"), and the sign-in record's "Active this week" stat reads "Signed in
+  this week": both count sign-ins, and active means a day with 30+ action minutes. Keys and
+  calculations are unchanged.
 
 - 2026-10-28: **Per-plugin weekly counts retired; the sign-in count is "Signed in per day" (3.1.0
   plan, Measures).** `lib/weekly-performance/live-metrics.ts` no longer computes the Value delivered

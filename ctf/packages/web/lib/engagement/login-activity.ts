@@ -113,7 +113,7 @@ export function recordLoginEvent(userId: string): void {
 
 // The cohort run's reader of "who has been active lately" goes through the shared member-day set in
 // lib/engagement/member-activity.ts, which counts the sign-in record above and nothing else (owner
-// decision, 2026-08-27) — the same set the dashboard's Active Members rows read, so the two cannot
+// decision, 2026-08-27) — the same set the dashboard's Signed in rows read, so the two cannot
 // disagree about who turned up. It also means the write above is load-bearing: a member whose row
 // never lands is missing from both, which is why its failure is logged rather than swallowed.
 
