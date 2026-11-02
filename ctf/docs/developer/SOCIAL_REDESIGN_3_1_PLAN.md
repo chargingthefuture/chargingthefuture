@@ -232,3 +232,12 @@ email sender, Android app links and blog links move with it.
     decision, 2026-10-27); until then 3.1 work is built for the web only.
 15. Speed budget check before release. Blocked by 6.
 16. Domain move to lagatos.com. Last; no code dependency.
+17. The daily puzzle (decided 2026-10-26 to come after the first release; tabled until then, owner
+    decision 2026-11-02 to keep it on this list). A Game card on Today: one puzzle a day, the same
+    for everyone, built from that day's story card, so the game and the reading are the same thing.
+    The member assembles the story's picture or excerpt, or picks from answer choices that turn green
+    when right, with the result sliding up from the bottom; finishing turns it into the story's card
+    with Read and Next. Blocked by 6.
+18. 21 Questions (same decision). Short daily questions answered by two members, then continued
+    inside the card, never in a separate chat. The questions come from a filtered list: no home or
+    family prompts. Blocked by 6 and 8.
