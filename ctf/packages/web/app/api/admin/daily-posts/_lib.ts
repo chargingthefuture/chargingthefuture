@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { evaluatePluginAccess, type AllowDecision } from 'lib/auth/server-authz';
 import { checkMutationOrigin } from 'lib/auth/csrf';
+import { isDailyPostThemeId, type DailyPostThemeId } from 'lib/daily-posts/themes';
 
 export type DailyPostsApiGate = { allowed: true; auth: AllowDecision } | { allowed: false; response: NextResponse };
 
@@ -62,4 +63,22 @@ export function parseTemplateInput(body: Record<string, unknown>): { ok: true; t
   if (title.length > TITLE_MAX) return { ok: false, message: `The title is ${title.length} characters; the limit is ${TITLE_MAX}.` };
   if (text.length > BODY_MAX) return { ok: false, message: `The text is ${text.length} characters; the limit is ${BODY_MAX}.` };
   return { ok: true, title, text };
+}
+
+export function parseTickInput(body: Record<string, unknown>): { ok: true; itemKey: string; date: string; done: boolean } | { ok: false; message: string } {
+  const { itemKey, date, done } = body;
+  if (typeof itemKey !== 'string' || !ITEM_KEY_PATTERN.test(itemKey)) return { ok: false, message: 'itemKey must be post:<slug>, template:<id> or pb2.' };
+  if (typeof date !== 'string' || !DATE_PATTERN.test(date)) return { ok: false, message: 'date must be YYYY-MM-DD.' };
+  if (typeof done !== 'boolean') return { ok: false, message: 'done must be true or false.' };
+  return { ok: true, itemKey, date, done };
+}
+
+export function parseThemeChoiceInput(
+  body: Record<string, unknown>,
+): { ok: true; slug: string; themes: DailyPostThemeId[] | null } | { ok: false; message: string } {
+  const { slug, themes } = body;
+  if (typeof slug !== 'string' || !slug || slug.length > 300) return { ok: false, message: "slug must be the post's slug." };
+  if (themes === null) return { ok: true, slug, themes: null };
+  if (!Array.isArray(themes) || !themes.every(isDailyPostThemeId)) return { ok: false, message: 'themes must be a list of theme ids, or null.' };
+  return { ok: true, slug, themes: [...new Set(themes)] };
 }
