@@ -84,10 +84,11 @@ type TimelineProps = {
   view: ReturnType<typeof seTodayView>;
   marks: TodayMarks;
   mark: (kind: keyof TodayMarks, id: string) => void;
+  toggle: (kind: keyof TodayMarks, id: string) => void;
   onMute?: (card: SeTodayCard) => void;
 };
 
-function Timeline({ view, marks, mark, onMute }: TimelineProps) {
+function Timeline({ view, marks, mark, toggle, onMute }: TimelineProps) {
   return (
     <div className={styles.timeline}>
       <span className={styles.line} aria-hidden="true" />
@@ -96,7 +97,7 @@ function Timeline({ view, marks, mark, onMute }: TimelineProps) {
           key={card.id}
           card={card}
           read={marks.read.includes(card.id)}
-          onRead={() => mark('read', card.id)}
+          onToggleDone={() => toggle('read', card.id)}
           onHide={() => mark('hidden', card.id)}
           onMute={card.author && onMute ? () => onMute(card) : undefined}
         />
@@ -111,7 +112,7 @@ function Timeline({ view, marks, mark, onMute }: TimelineProps) {
 
 // `accountId` null: a visitor who is not signed in reads the public Today (no names, no mute).
 export function TodayScreen({ accountId }: { accountId: string | null }) {
-  const { today, loading, error, marks, mark, reload } = useToday(accountId);
+  const { today, loading, error, marks, mark, toggle, reload } = useToday(accountId);
   const [filter, setFilter] = useState<SeTodayFilter>('all');
   const view = seTodayView(today, marks, filter);
   const [muteNote, setMuteNote] = useState<string | null>(null);
@@ -145,7 +146,7 @@ export function TodayScreen({ accountId }: { accountId: string | null }) {
           {muteNote}
         </p>
       ) : null}
-      {today ? <Timeline view={view} marks={marks} mark={mark} onMute={accountId ? (card) => void mute(card) : undefined} /> : null}
+      {today ? <Timeline view={view} marks={marks} mark={mark} toggle={toggle} onMute={accountId ? (card) => void mute(card) : undefined} /> : null}
     </>
   );
 }
