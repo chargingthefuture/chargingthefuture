@@ -207,6 +207,7 @@ No seed yet. A follow-up seed can insert a couple of sample notifications for a 
   service worker and subscribes this device when a member turns a category on (best-effort; a note
   shows if the browser can't, and the in-app feed is unaffected). Requires the VAPID env keys; a no-op
   without them.
+- 2026-11-02: The assistant tells a member when a person approves or corrects the answer to their question (`comic.answer.published`, category `activity`, deduped on the answer turn), linking to Ask the architect in + New.
 - 2026-07-20: Safety producers (category `safety`), each emitted from its route via `notifySafe`,
   deduped on the underlying row id, never self-notifying: LightHouse notifies the host of a new stay
   request (`lighthouse.match.requested`); SocketRelay notifies the requester when their request is

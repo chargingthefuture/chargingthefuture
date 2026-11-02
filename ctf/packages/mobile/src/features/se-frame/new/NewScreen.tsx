@@ -1,14 +1,15 @@
 // + New on Android, the copy of the web (web components/se-frame/new/new-screen.tsx). Ask is posted
 // here; Talk books a TI Radio slot; an Offer or a Story opens where it is made (in the app for
-// Foundation, in the browser for the rest).
+// Foundation, in a browser panel for the rest); Ask the architect sends a question to the assistant.
 
 import React, { useMemo, type ReactNode } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { SE_ASK_WORDS, SE_OFFER_CHOICES, SE_OFFER_WORDS, SE_STORY_WORDS, SE_TALK_WORDS, type SeThemeTokens } from '@ctf/shared';
+import { SE_ARCHITECT_WORDS, SE_ASK_WORDS, SE_OFFER_CHOICES, SE_OFFER_WORDS, SE_STORY_WORDS, SE_TALK_WORDS, type SeThemeTokens } from '@ctf/shared';
 import type { FeatureKey } from '../../../navigation/screens';
 import { openTodayLink } from '../today/openTodayLink';
 import { SE_FONT } from '../fonts';
 import { AskForm } from './AskForm';
+import { ArchitectSection } from './ArchitectSection';
 import { TalkForm } from './TalkForm';
 
 type Styles = ReturnType<typeof makeStyles>;
@@ -52,6 +53,9 @@ export function NewScreen({ t, onOpen }: { t: SeThemeTokens; onOpen: (_key: Feat
       </Section>
       <Section s={s} title={SE_TALK_WORDS.title} intro={SE_TALK_WORDS.intro}>
         <TalkForm t={t} onOpen={onOpen} />
+      </Section>
+      <Section s={s} title={SE_ARCHITECT_WORDS.title} intro={SE_ARCHITECT_WORDS.intro}>
+        <ArchitectSection t={t} onOpen={onOpen} />
       </Section>
     </>
   );

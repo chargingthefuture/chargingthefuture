@@ -629,7 +629,7 @@ this counter and export exist so the data is ready the moment the owner chooses 
 
 ## Web and Android Delivery Status
 
-Delivery: **web + mobile-responsive complete**. **Android (React Native) surface removed 2026-07-20 (rule 105, PR #1742)** — this feature is now web-only, served by the installable web app (PWA). (Note: the native Commons/Chyme chat that remains on Android is covered by the Chyme inventory; the `@comic` AI-assistant surfaces are web-only.)
+Delivery: **web + mobile-responsive complete**. Since 2026-11-02 the 3.1 frame's + New carries Ask the architect on web and Android, the only Android surface of this plugin. **The rest of the Android (React Native) surface was removed 2026-07-20 (rule 105, PR #1742)** — this feature is now web-only, served by the installable web app (PWA). (Note: the native Commons/Chyme chat that remains on Android is covered by the Chyme inventory; the `@comic` AI-assistant surfaces are web-only.)
 
 - **Web backend: complete (foundation).** Schema (`comic_*` tables), library
   (`lib/comic/{types,constants,audit,rasa,policy,repository}.ts`), server-only API
@@ -791,6 +791,8 @@ buckets are not reproduced — only real provenance (engine / intent / safety ca
 `nlu_confidence`, surfaced as "Not yet scored" when null) is shown.
 
 ## Change Log
+
+- 2026-11-02: **@comic in 3.1: Ask the architect (3.1.0 plan, Commons row).** Owner report: the 3.1 frame had no way to reach the assistant, since Commons, where 3.0 asks with `@comic`, is not part of 3.1. + New now has an **Ask the architect** section on web (`components/se-frame/new/architect-section.tsx`, `use-architect.ts`) and Android (`src/features/se-frame/new/ArchitectSection.tsx`): a question box that sends the question to `POST /api/comic/message` with the `@comic` mention (`seArchitectMessage` in `@ctf/shared` `today/new.ts`, 590 characters so the message stays within the 600 limit), then the member's own questions from `GET /api/comic/conversation`, each marked Being checked until a person approves or corrects the answer, with the answer, its linked plugins and Helpful / Not helpful (`POST /api/comic/answers/[turnId]/rate`). Approving or correcting an answer in the review queue now tells the asker in Activity (`comic.answer.published`, category `activity`, deduped on the answer turn, linking to + New; `askerOfTurn` in `lib/comic/repository.ts`, best effort so a failed notice never undoes the review). Approved members only, as before. No new route, table or contract.
 
 - 2026-10-28: **A Knowledge Library contribution is one of the three ways to finish Unlock (3.1.0 plan, Access).** The submission `linkSharedWritingToUnlock` opens now records `finish_route` `knowledge_library` and the contribution id, so the Unlock reviewer sees where it came from. The Unlock screen points members here. No comic schema or route change.
 
