@@ -9,6 +9,9 @@ import type { DailyPostItem, ShellTokens, TickMap } from './types';
 // One theme: its posts in number order, each with the last day it was posted. "Next" marks the
 // post after the one posted most recently in this group, so a themed day picks up where the last
 // one stopped. Paged, never one long list (accessibility rule, rule 100).
+//
+// Unsorted (sorting) opens by default with every post's group choices showing, so a post is placed
+// with a tick and Save, and leaves Unsorted once it is in a group.
 
 const PAGE_SIZE = 15;
 
@@ -20,6 +23,7 @@ type Props = {
   ticks: TickMap;
   onTick: (itemKey: string, done: boolean) => Promise<string | null>;
   onThemes: (slug: string, themes: DailyPostThemeId[] | null) => Promise<string | null>;
+  sorting?: boolean;
 };
 
 function nextIndex(posts: DailyPostItem[], ticks: TickMap): number {
@@ -35,7 +39,7 @@ function nextIndex(posts: DailyPostItem[], ticks: TickMap): number {
   return posts.length === 0 ? -1 : (latestIndex + 1) % posts.length;
 }
 
-export function ThemeGroup({ t, label, posts, today, ticks, onTick, onThemes }: Props) {
+export function ThemeGroup({ t, label, posts, today, ticks, onTick, onThemes, sorting = false }: Props) {
   const next = nextIndex(posts, ticks);
   const pages = Math.max(1, Math.ceil(posts.length / PAGE_SIZE));
   const [page, setPage] = useState(next >= 0 ? Math.floor(next / PAGE_SIZE) : 0);
@@ -54,7 +58,7 @@ export function ThemeGroup({ t, label, posts, today, ticks, onTick, onThemes }: 
   } as const;
 
   return (
-    <details style={{ marginBottom: 8, border: `1px solid ${t.BORDER_SOLID}`, borderRadius: 12, padding: '10px 12px', background: t.SURFACE }}>
+    <details open={sorting} style={{ marginBottom: 8, border: `1px solid ${t.BORDER_SOLID}`, borderRadius: 12, padding: '10px 12px', background: t.SURFACE }}>
       <summary style={{ cursor: 'pointer', fontSize: 14.5, fontWeight: 700, color: t.TITLE }}>
         {label} <span style={{ fontWeight: 500, color: t.MUTED, fontSize: 12.5 }}>· {posts.length}</span>
       </summary>
@@ -79,7 +83,9 @@ export function ThemeGroup({ t, label, posts, today, ticks, onTick, onThemes }: 
               highlight={isNext}
               onTick={(done) => onTick(`post:${post.slug}`, done)}
             >
-              {editing === post.slug ? (
+              {sorting ? (
+                <ThemePicker t={t} post={post} onSave={(themes) => onThemes(post.slug, themes)} />
+              ) : editing === post.slug ? (
                 <ThemePicker t={t} post={post} onSave={(themes) => onThemes(post.slug, themes)} onClose={() => setEditing(null)} />
               ) : (
                 <button

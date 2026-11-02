@@ -24,11 +24,11 @@ be right before somebody goes, not to prove the reader works, which its own serv
    and nothing else is added for you. One says the reader cannot reach back before you start and does not notify you. One says
    what a place on it costs.
    The intro, the button and each card have clear space between them, and the line naming
-   rss.chargingthefuture.com sits just under the button. If the cards touch, stop.
+   rss.lagatos.com sits just under the button. If the cards touch, stop.
 4. Read the cost card to the end. It says losing a place is not a ban, that the account in this app
    is untouched, and that not finishing the check never costs anybody their account. If any of those
    three is missing, stop — that is the line the product cannot get wrong.
-5. Press **Open the reader**. It opens rss.chargingthefuture.com in a new tab and this tab stays
+5. Press **Open the reader**. It opens rss.lagatos.com in a new tab and this tab stays
    where it was.
 6. As the unapproved member, open the apps list and press Reader. The Unlock nudge appears rather
    than the page. This plugin is not an exception and must not behave like one.
@@ -80,7 +80,7 @@ survivors that being slow costs them their place. Recorded as an owner decision,
 1. Read the line under the button.
 2. Press **Open the reader**.
 
-**Expect:** The line names rss.chargingthefuture.com and says the sign-in is this same account, so
+**Expect:** The line names rss.lagatos.com and says the sign-in is this same account, so
 nobody meets the other address without warning. The button opens a new tab and the app's tab is
 unchanged.
 
@@ -113,7 +113,7 @@ and finish verifying it. Nothing on it says a free account is all it takes.
 
 ### RD-5 — The reader keeps its sign-in
 
-**Role:** approved member · **Surfaces:** the reader at rss.chargingthefuture.com, on a phone
+**Role:** approved member · **Surfaces:** the reader at rss.lagatos.com, on a phone
 **Precondition:** The workflow `FreshRSS — Set how long a reader sign-in lasts` has run since the
 last change to `ctf/ops/freshrss/sign-in.env`.
 

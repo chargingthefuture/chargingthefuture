@@ -11,7 +11,8 @@ type Props = {
   t: ShellTokens;
   post: DailyPostItem;
   onSave: (themes: DailyPostThemeId[] | null) => Promise<string | null>;
-  onClose: () => void;
+  /** Absent for a post in Unsorted, where the picker stays open until the post is placed. */
+  onClose?: () => void;
 };
 
 export function ThemePicker({ t, post, onSave, onClose }: Props) {
@@ -24,7 +25,7 @@ export function ThemePicker({ t, post, onSave, onClose }: Props) {
     const failure = await onSave(themes);
     setBusy(false);
     if (failure) setMessage(failure);
-    else onClose();
+    else onClose?.();
   }
 
   function toggle(id: DailyPostThemeId) {
@@ -63,9 +64,11 @@ export function ThemePicker({ t, post, onSave, onClose }: Props) {
             Use the post&apos;s links
           </button>
         )}
-        <button type="button" disabled={busy} style={buttonStyle} onClick={onClose}>
-          Cancel
-        </button>
+        {onClose && (
+          <button type="button" disabled={busy} style={buttonStyle} onClick={onClose}>
+            Cancel
+          </button>
+        )}
       </div>
       {message && (
         <p role="alert" style={{ fontSize: 12, color: '#F87171', margin: '6px 0 0' }}>
