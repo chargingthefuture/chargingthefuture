@@ -115,3 +115,29 @@ export function seAskSuggestions(typed, limit = 6) {
         return SE_HOLIDAY_ASKS.map((group) => ({ text: group.asks[0], group: group.group })).slice(0, limit);
     return all.filter((item) => words.every((word) => item.text.toLowerCase().includes(word))).slice(0, limit);
 }
+// + New → Ask the architect (3.1.0 plan: @comic becomes Ask the architect). A question about the app
+// or about finding help goes to the assistant; a person reads every answer before the member sees
+// it, so the member is told it is being checked, then sees the answer here and in Activity.
+export const SE_ARCHITECT_WORDS = {
+    title: 'Ask the architect',
+    intro: 'A question about the app, or about where to find help. A person reads every answer before you see it.',
+    question: 'Your question',
+    submit: 'Ask',
+    submitting: 'Sending…',
+    failed: 'The question was not sent.',
+    sent: 'Sent. A person checks the answer first; it appears here and in Activity.',
+    yours: 'Your questions',
+    pending: 'Being checked',
+    loading: 'Loading your questions…',
+    loadFailed: 'Your questions could not be loaded.',
+    helpful: 'Helpful',
+    notHelpful: 'Not helpful',
+    rated: 'Rating saved.',
+    rateFailed: 'The rating was not saved.',
+};
+// The assistant takes 600 characters a message, and the @comic mention uses seven of them.
+export const SE_ARCHITECT_MAX_QUESTION = 590;
+// The assistant only answers a message that names it, as the 3.0 chat did with @comic.
+export function seArchitectMessage(question) {
+    return `@comic ${question.trim()}`;
+}

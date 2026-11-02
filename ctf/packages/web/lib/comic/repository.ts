@@ -1361,3 +1361,12 @@ export async function rateComicAnswer(
     };
   });
 }
+
+// The member who asked the question a bot turn answers, for telling them an answer is ready.
+export async function askerOfTurn(turnId: string): Promise<string | null> {
+  const result = await queryDb<{ user_id: string }>(
+    `SELECT c.user_id FROM comic_turns t JOIN comic_conversations c ON c.id = t.conversation_id WHERE t.id = $1`,
+    [turnId],
+  );
+  return result.rows[0]?.user_id ?? null;
+}

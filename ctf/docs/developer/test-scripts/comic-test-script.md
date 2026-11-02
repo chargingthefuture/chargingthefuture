@@ -505,3 +505,18 @@ an archive costs real memory, so an account cannot do it in a loop.
 with a link to the contributions.
 
 **Result:** web ☐
+
+### CMC-M21 · Ask the architect in 3.1
+**Role:** an approved member on 3.1, then the admin · **Surfaces:** web, android
+
+1. Open + New, scroll to Ask the architect, type a question about the app and tap Ask.
+2. As admin, open the assistant's review queue and approve the drafted answer.
+3. As the member, open Activity, then + New again.
+4. Tap Helpful on the answer.
+
+**Expected:** Step 1 says the question was sent and that a person checks the answer first, and the
+question shows under it as Being checked; no unchecked answer is ever shown. Step 3 shows "Your
+question to the architect has an answer." in Activity, and the answer under the question in + New,
+with any linked plugins. Step 4 saves the rating.
+
+**Result:** web ☐ android ☐
