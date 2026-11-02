@@ -68,6 +68,31 @@ function doneLabel(card: SeTodayCard, done: boolean): string {
   return done ? `Done: ${card.title}. Tap to mark not done` : `Mark done: ${card.title}`;
 }
 
+type DotProps = { t: SeThemeTokens; s: ReturnType<typeof makeStyles>; card: SeTodayCard; read: boolean; color: string; onToggleDone: () => void };
+
+// The timeline dot. A card the server marks done (a 21 Questions answer) stays done: the answer is final.
+function DoneDot({ t, s, card, read, color, onToggleDone }: DotProps) {
+  const locked = card.done === true;
+  const done = read || locked;
+  return (
+    <TouchableOpacity
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked: done, disabled: locked }}
+      accessibilityLabel={doneLabel(card, done)}
+      hitSlop={8}
+      onPress={locked ? undefined : onToggleDone}
+      disabled={locked}
+      style={[s.dot, { backgroundColor: color }]}
+    >
+      {done ? (
+        <Svg width={14} height={14} viewBox="0 0 24 24">
+          <Path d="M5 12l5 5 9-10" stroke={t.bg} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+        </Svg>
+      ) : null}
+    </TouchableOpacity>
+  );
+}
+
 export function TodayCard({
   t,
   card,
@@ -92,26 +117,10 @@ export function TodayCard({
   const [menu, setMenu] = useState(false);
   const color = t.kind[card.kind];
   const s = makeStyles(t);
-  // A card the server marks done (a 21 Questions answer) stays done: the answer is final.
-  const done = read || card.done === true;
 
   return (
     <View style={s.card}>
-      <TouchableOpacity
-        accessibilityRole="checkbox"
-        accessibilityState={{ checked: done, disabled: card.done === true }}
-        accessibilityLabel={doneLabel(card, done)}
-        hitSlop={8}
-        onPress={card.done ? undefined : onToggleDone}
-        disabled={card.done === true}
-        style={[s.dot, { backgroundColor: color }]}
-      >
-        {done ? (
-          <Svg width={14} height={14} viewBox="0 0 24 24">
-            <Path d="M5 12l5 5 9-10" stroke={t.bg} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" fill="none" />
-          </Svg>
-        ) : null}
-      </TouchableOpacity>
+      <DoneDot t={t} s={s} card={card} read={read} color={color} onToggleDone={onToggleDone} />
       <View style={s.head}>
         {card.author ? (
           <>

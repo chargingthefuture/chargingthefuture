@@ -5,7 +5,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Switch, Text, View } from 'react-native';
 import { SE_MATCHING_WORDS as W, seMatchingToggleShown, type SeMatchingState, type SeThemeTokens } from '@ctf/shared';
-import { authedFetchJson } from '../../../auth/authedFetch';
+import { authedFetch, authedFetchJson } from '../../../auth/authedFetch';
+import { reportError } from '../../../observability/report';
 import { SE_FONT } from '../fonts';
 
 const URL = '/api/today/questions/matching';
@@ -14,11 +15,17 @@ function useMatching(refreshKey: string | undefined) {
   const [state, setState] = useState<SeMatchingState | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // A member who cannot use 21 Questions (not approved yet) gets 401 or 403: no toggle, nothing to
+  // report. Any other failure also hides the toggle, and is reported so it is not lost.
   const load = useCallback(async () => {
     try {
-      const data = await authedFetchJson<SeMatchingState>(URL);
+      const res = await authedFetch(URL);
+      if (res.status === 401 || res.status === 403) return setState(null);
+      const data = (await res.json().catch(() => null)) as (SeMatchingState & { message?: string }) | null;
+      if (!res.ok || !data) throw new Error(data?.message ?? `Matching could not be read (HTTP ${res.status}).`);
       setState({ answered: data.answered, enabled: data.enabled });
-    } catch {
+    } catch (failure) {
+      reportError(failure, { area: 'questions', op: 'read_matching' });
       setState(null);
     }
   }, []);
