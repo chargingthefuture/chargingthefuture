@@ -55,7 +55,7 @@ they were only reading — a box asks them to write how it went, in their own wo
 
 The plugin, stated precisely:
 
-1. Selects active members (signed in within the last 7 days) and places them in cohorts each week,
+1. Selects the members who signed in within the last 7 days and places them in cohorts each week,
 2. Targets 12 members per cohort; participation is voluntary, so about 5 typically take part,
 3. Writes an in-app notification for every placement, keyed so a repeated run never notifies twice,
 4. Runs one live video call per cohort, members only, in the web app,
@@ -68,7 +68,7 @@ The plugin, stated precisely:
 
 ### Single standing, always-open Cohort 1 mode (low-population, admin-flippable)
 
-When there are not enough active members to fill weekly cohorts of twelve, the plugin runs in a
+When there are not enough signed-in members to fill weekly cohorts of twelve, the plugin runs in a
 single standing, always-open Cohort 1 mode instead of splitting members into tiny one-person rooms.
 The effective mode is resolved by the async resolver `isSingleOpenCohortModeEnabled()` (and
 `resolveSingleOpenCohortMode()`, which also reports the source) in
@@ -297,14 +297,14 @@ These admin routes are now surfaced by a real admin UI on web (the former Androi
 
 ### Shared Data Dependency: active-member signal (`login_events`)
 
-Weekly cohort assignment selects "active members" from the shared `login_events` table
+Weekly cohort assignment selects signed-in members from the shared `login_events` table
 (`lib/engagement/login-activity.ts`), which is the single dedicated sign-in table also
 read by the Weekly Performance review — this plugin does not own it and must not create a
 duplicate. The table is populated by `recordLoginEvent`, called from the Clerk identity
 layer (`resolveRequestIdentity`) for every authenticated request and deduplicated to one
 row per member per UTC day. It used to be called from the plugin access gate, which meant
 a member's day went unrecorded unless a plugin access check ran on that request. Before this writer existed the table was always empty, so the default
-assignment run found zero active members and could never form a cohort; an admin can still
+assignment run found zero signed-in members and could never form a cohort; an admin can still
 form a cohort immediately with the manual user-id override.
 
 The sign-in record is the entire definition of "active" here, as it is on the Weekly

@@ -2,7 +2,7 @@ import { queryDb } from 'lib/db/postgres';
 
 // What "active" means on this platform, in one place.
 //
-// A member is active on a day when the sign-in record holds a row for them on that day. That record
+// A member counts as signed in on a day when the sign-in record holds a row for them that day. That record
 // is `login_events`, and it is the entire definition (owner decision, 2026-08-27). Every reading
 // below — the dashboard's Signed in and Signed in per day rows, and PeerProgramming's
 // cohort-forming active set — counts that table and nothing else.

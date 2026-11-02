@@ -10,14 +10,13 @@ function RunResult({ result }: { result: AssignmentRunResult }) {
   if (result.membersSelected === 0) {
     return (
       <Banner tone="warning">
-        No active members were found for this week, so no cohort was formed. Members are counted as active once they
-        have signed in within the last 7 days. Use the manual user-id list above to form a cohort right now.
+        No members signed in this week, so no cohort was formed. A member counts once they have signed in within the last 7 days. Use the manual user-id list above to form a cohort right now.
       </Banner>
     );
   }
   return (
     <Banner tone="notice">
-      Done. Active members selected: {result.membersSelected}. Cohorts created or updated: {result.cohortsCreated}.
+      Done. Signed-in members selected: {result.membersSelected}. Cohorts created or updated: {result.cohortsCreated}.
       Notifications recorded: {result.notificationsCreated}.
     </Banner>
   );
@@ -41,7 +40,7 @@ export function AdminAssignments({ busy, lastResult, onRun }: {
   return (
     <View style={styles.stack}>
       <SectionLead marginBottom={0}>
-        Forms cohorts of up to 12 people from this week’s active members and records an in-app notification for each
+        Forms cohorts of up to 12 people from the members who signed in this week and records an in-app notification for each
         assignment. Running again for the same week is safe — assignments and notifications are idempotent.
       </SectionLead>
       <TickBox checked={useOverride} onChange={setUseOverride} label="Use a manual user-id list instead of the last-7-days active set" />
