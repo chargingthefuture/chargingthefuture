@@ -9,7 +9,7 @@ import { currentWeekStart } from 'lib/weekly-performance/live-metrics';
 
 // The sign-in record, read as a health check for the admin Sign-in record screen.
 //
-// Active Members and Daily Active Members on the Weekly Performance dashboard count `login_events`
+// Signed in and Signed in per day on the Weekly Performance dashboard count `login_events`
 // and nothing else (owner decision, 2026-08-27). When those rows read zero, the question is never
 // "is the definition wrong" but "is the record being written", and until this existed the only
 // ways to answer it were the server log, which nobody reads, and SQL pasted into the Neon

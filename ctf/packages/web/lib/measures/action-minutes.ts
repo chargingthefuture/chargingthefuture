@@ -1,5 +1,6 @@
 import type { PoolClient } from 'pg';
 import { queryDb } from 'lib/db/postgres';
+import type { Signups } from './signups';
 
 // Action minutes (3.1.0, owner-approved plan, Measures). Minutes connected in a room or a call, 30
 // for a task its author confirmed, and 10 for a "This helped me" its author confirmed (nothing
@@ -26,26 +27,31 @@ export async function creditActionSeconds(client: PoolClient, userId: string, so
   );
 }
 
-// Every member's action minutes per UTC day, from all three sources. Interpolated into the reads
-// below; $1 is the first day counted (inclusive).
-export const DAILY_MINUTES_CTE = `
+// Every member's action minutes per UTC day, from all three sources, as two CTEs (minutes, daily)
+// to interpolate after WITH. `from` is the placeholder of the first day counted (inclusive); the
+// reads below pass $1, the retention charts their own.
+export function dailyMinutesCte(from = '$1'): string {
+  return `
   minutes AS (
     SELECT user_id, usage_date AS day, seconds / 60.0 AS m
-      FROM member_action_seconds_daily WHERE usage_date >= $1::date
+      FROM member_action_seconds_daily WHERE usage_date >= ${from}::date
     UNION ALL
     SELECT side.user_id, (s.answered_at AT TIME ZONE 'UTC')::date,
            LEAST(EXTRACT(EPOCH FROM (s.ended_at - s.answered_at)) / 60.0, 240)
       FROM foundation_call_sessions s
       CROSS JOIN LATERAL (VALUES (s.caller_user_id), (s.callee_user_id)) AS side(user_id)
      WHERE s.answered_at IS NOT NULL AND s.ended_at IS NOT NULL AND s.ended_at > s.answered_at
-       AND side.user_id IS NOT NULL AND (s.answered_at AT TIME ZONE 'UTC')::date >= $1::date
+       AND side.user_id IS NOT NULL AND (s.answered_at AT TIME ZONE 'UTC')::date >= ${from}::date
     UNION ALL
     SELECT taken_by_user_id, (kept_at AT TIME ZONE 'UTC')::date, ${CONFIRMED_TASK_MINUTES}
       FROM peer_programming_goal_tasks
      WHERE helped = TRUE AND kept_at IS NOT NULL AND taken_by_user_id IS NOT NULL
-       AND (kept_at AT TIME ZONE 'UTC')::date >= $1::date
+       AND (kept_at AT TIME ZONE 'UTC')::date >= ${from}::date
   ),
   daily AS (SELECT user_id, day, SUM(m) AS minutes FROM minutes GROUP BY user_id, day)`;
+}
+
+const DAILY_MINUTES_CTE = dailyMinutesCte();
 
 export type DaysWon = { total: number; thisWeek: number };
 
@@ -67,19 +73,19 @@ export async function readDaysWon(now = new Date()): Promise<DaysWon> {
   };
 }
 
-// Retention, measured from sign-up (a member's first sign-in):
+// Retention, measured from sign-up (the account's creation date; see lib/measures/signups.ts):
 // - Retained: one day with 30 or more action minutes in the last 4 weeks (target 20%), among members
 //   who signed up at least 4 weeks ago.
 // - Came back: signed in this week after two or more weeks away.
 // - Every day: 30 action minutes on each of the last 7 days.
 export type Retention = { eligible: number; retained: number; retainedShare: number; cameBack: number; everyDay: number };
 
-export async function readRetention(now = new Date()): Promise<Retention> {
+export async function readRetention(signups: Signups, now = new Date()): Promise<Retention> {
   const day = (offset: number) => new Date(now.getTime() - offset * 86_400_000).toISOString().slice(0, 10);
   const result = await queryDb<{ eligible: number; retained: number; came_back: number; every_day: number }>(
     `WITH ${DAILY_MINUTES_CTE},
-     firsts AS (SELECT user_id, MIN(created_at) AS first_seen FROM login_events GROUP BY user_id),
-     eligible AS (SELECT user_id FROM firsts WHERE first_seen < $1::date),
+     signups AS (SELECT * FROM unnest($4::text[], $5::timestamptz[]) AS s(user_id, signed_up_at)),
+     eligible AS (SELECT user_id FROM signups WHERE signed_up_at < $1::date),
      full_days AS (SELECT user_id, day FROM daily WHERE minutes >= 30),
      recent AS (SELECT DISTINCT user_id FROM login_events WHERE created_at >= $2::date),
      earlier AS (
@@ -90,7 +96,7 @@ export async function readRetention(now = new Date()): Promise<Retention> {
        (SELECT COUNT(DISTINCT e.user_id) FROM eligible e JOIN full_days f ON f.user_id = e.user_id)::int AS retained,
        (SELECT COUNT(*) FROM recent r JOIN earlier b ON b.user_id = r.user_id WHERE b.last_before < $3::date)::int AS came_back,
        (SELECT COUNT(*) FROM (SELECT user_id FROM full_days WHERE day >= $2::date GROUP BY user_id HAVING COUNT(*) >= 7) s)::int AS every_day`,
-    [day(28), day(6), day(20)],
+    [day(28), day(6), day(20), signups.ids, signups.dates],
   );
   return toRetention(result.rows[0] ?? { eligible: 0, retained: 0, came_back: 0, every_day: 0 });
 }

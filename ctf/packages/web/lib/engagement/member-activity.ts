@@ -4,7 +4,7 @@ import { queryDb } from 'lib/db/postgres';
 //
 // A member is active on a day when the sign-in record holds a row for them on that day. That record
 // is `login_events`, and it is the entire definition (owner decision, 2026-08-27). Every reading
-// below — the dashboard's Active Members and Daily Active Members rows, and PeerProgramming's
+// below — the dashboard's Signed in and Signed in per day rows, and PeerProgramming's
 // cohort-forming active set — counts that table and nothing else.
 //
 // Which plugin somebody used is not part of this and never has been, in v2 or v3: everyone reaches

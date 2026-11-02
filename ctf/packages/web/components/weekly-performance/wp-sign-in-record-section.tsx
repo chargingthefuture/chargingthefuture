@@ -7,7 +7,7 @@ import type { RecordLoginEventOutcome } from 'lib/engagement/login-activity';
 import type { SignInRecordHealth } from 'lib/engagement/sign-in-record';
 import { getWeeklyPerformanceTokens, type WeeklyPerformanceTokens } from './wp-shared';
 
-// The sign-in record behind Active Members and Signed in per day, as a health check an admin
+// The sign-in record behind the Signed in and Signed in per day cards, as a health check an admin
 // can read from a phone. Opening the section runs the sign-in write for the admin and shows what
 // the database did with it, then the record itself: today, the current week as the dashboard
 // computes it, and the last fourteen days. Aggregate only; the one per-member fact shown is the
@@ -112,7 +112,7 @@ function SignInRecordBody({
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 14 }}>
         <Stat label="Members today" value={String(health.membersToday)} tokens={tokens} />
-        <Stat label="Active this week" value={String(week.activeMembers)} tokens={tokens} />
+        <Stat label="Signed in this week" value={String(week.activeMembers)} tokens={tokens} />
         <Stat label="Signed in per day" value={String(week.dailyActiveMembers)} tokens={tokens} />
         <Stat label="Members on record" value={String(health.totalMembers)} tokens={tokens} />
       </div>
@@ -205,7 +205,7 @@ export function WeeklyPerformanceSignInRecordSection() {
     <div style={{ color: t.TEXT }}>
       <div>
         <p style={{ fontSize: 13, color: t.SUBTLE, margin: '0 0 14px', lineHeight: 1.5 }}>
-          Active Members and Signed in per day count this record and nothing else: one row per
+          Signed in and Signed in per day count this record and nothing else: one row per
           member per day they signed in. Opening this section records your own sign-in and shows
           what the database did with it, so a zero on the dashboard is answered here.
         </p>

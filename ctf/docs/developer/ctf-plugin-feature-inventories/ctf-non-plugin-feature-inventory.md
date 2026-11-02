@@ -350,7 +350,13 @@ The weights themselves are edited in the Weavers of the Commons section below th
 ### 1.16a Measures: action minutes, Days won, retention and time to unlock (3.1.0)
 
 Owner-approved plan (`SOCIAL_REDESIGN_3_1_PLAN.md`, Measures). Code: `lib/measures/action-minutes.ts`,
-`lib/measures/retention-cohorts.ts`.
+`lib/measures/retention-cohorts.ts`, `lib/measures/signups.ts`.
+
+Sign-up dates come from the auth provider's account list without demo/test accounts
+(`listSignupDates` in `lib/unlock/signups.ts`, the roster the Unlock admin counts), read once per
+request by `readSignups`. `login_events` starts at a member's first recorded sign-in and misses
+everybody who signed up before it was kept, so it is only the fallback when the provider cannot be
+read; the charts then say so with the reason.
 
 1. **Action minutes.** Minutes connected in a room or a call, 30 for a PeerProgramming task its
    author kept as helped (`peer_programming_goal_tasks.helped`, `kept_at`), and 10 for a "This helped
@@ -365,7 +371,7 @@ Owner-approved plan (`SOCIAL_REDESIGN_3_1_PLAN.md`, Measures). Code: `lib/measur
 2. **Days won** = all members' action minutes ÷ 480, in total and over the last 7 days
    (`readDaysWon`). Today carries it as `daysWon` and shows "Days the Avenhood has won" at the top
    (web and Android).
-3. **Retention** (`readRetention`), from sign-up (a member's first `login_events` row): Retained =
+3. **Retention** (`readRetention`), from sign-up (the account's creation date): Retained =
    members who signed up 4+ weeks ago with a 30-action-minute day in the last 4 weeks (target 20%);
    Came back = signed in this week after two or more weeks away; Every day = 30 action minutes on
    each of the last 7 days.
@@ -374,17 +380,24 @@ Owner-approved plan (`SOCIAL_REDESIGN_3_1_PLAN.md`, Measures). Code: `lib/measur
    sending to approval.
 5. **`GET /api/admin/measures`** — admin read, read-only, counts only: `{ ok, daysWon, retention,
    timeToUnlock, cohorts }`; 503 with the reason when the read fails. The Adoption screen shows it as "Days
-   won and retention" under the steps toward 384, with Copy as text.
+   won and retention" under the steps toward 384: one row per measure (Days won, Retained, Came back,
+   Every day, Sent an address, Approved), each with its number on the right and a short line under it
+   saying what it counts. Copy as text still copies one line per measure.
 6. **Retention charts** (`readRetentionCohorts`, drawn by `components/adoption/retention-charts.tsx`
-   under the measures on the Adoption screen). A member is active in a week when they had a day with
-   30 or more action minutes in it; sign-up is their first `login_events` row. `cohorts` is
-   `{ cohorts, sizes, layers, curves }`: the sign-up months (the last 5, plus Earlier when anybody
+   under the measures on the Adoption screen). Each chart draws two readings side by side and never
+   labels one as the other (owner decisions, 2026-11-02): **signed in** (a `login_events` row that
+   week) and **active** (a day with 30 or more action minutes that week). A sign-in count alone
+   flatters, so active is always beside it. Action minutes are recorded only from 2026-10-27, so
+   active reads 0 before then. Sign-up is the account's creation date. `cohorts` is
+   `{ cohorts, sizes, layers, curves, source }`, `source` saying whether sign-ups came from the
+   provider or fell back to first sign-in: the sign-up months (the last 5, plus Earlier when anybody
    signed up before them) with how many signed up in each; `layers`, the Monday of each of the last
-   12 weeks with members active that week per sign-up month; and `curves`, for each of the last 5
-   months, the share of its sign-ups active in week 0 to 11 after signing up, for the weeks the month
-   has lived through. Two charts: "Active each week, by sign-up month" (a layer cake, the weeks'
-   bars stacked by sign-up month) and "Share still active, by weeks since signing up" (one curve
-   per month). Each has a legend and a hover label on every mark, and "Show as a table" puts the same
+   12 weeks with members who signed in that week per sign-up month (`signedIn`) and the week's
+   active total (`active`); and `curves`, for each of the last 5 months, the share of its sign-ups
+   who signed in (`signedInShare`) and who were active (`activeShare`) in week 0 to 11 after signing up, for the weeks the month
+   has lived through. Two charts: "Signed in and active each week, by sign-up month" (a layer cake,
+   the weeks' sign-in bars stacked by sign-up month, with an orange line for the active total) and "Share signed in and active, by weeks since signing up" (per month,
+   a solid signed-in curve and a dashed active curve); each chart has a key for the two readings. Each has a legend and a hover label on every mark, and "Show as a table" puts the same
    numbers in a table. Counts only, never a named member.
 7. Done in 3.1.0 (2026-10-28): the per-plugin weekly counts retired from the Weekly Performance
    dashboard (every `value.*` card and the Directory, Mood and ClickLog adoption rows), and the
@@ -459,6 +472,7 @@ Owner decision, 2026-09-26. The owner pays the running costs of Skills Economy a
 
 ## 5) Change Log
 
+- 2026-11-02: **Retention charts count sign-ins, from every sign-up; the measures read as rows (§1.16a).** Owner report: the charts were empty although the owner signs in every day, and the cohorts added up to fewer people than had signed up. Two causes: a week counted only with a 30-action-minute day, and action minutes are recorded only from 2026-10-27; and sign-ups came from `login_events`, which misses accounts made before it was kept. Each chart now draws signed in (a sign-in that week) and active (a 30-action-minute day) side by side, labeled apart, because a sign-in count alone flatters; the table view carries both columns, and the legend reads "Aug: 14 signed up" so sign-ups are not read as sign-ins; and group members by account creation date from the auth provider without demo/test accounts (`lib/measures/signups.ts`, `listSignupDates`), falling back to first sign-in with the reason shown. Retained uses the same sign-up list. The "Days won and retention" block is one row per measure instead of a paragraph; Copy as text is unchanged.
 - 2026-10-29: **Stream moderation setup runs in the app.** `POST /api/internal/stream/moderation-setup?mode=plan|check|apply&target=production|staging|both` (CRON_SECRET bearer, `lib/integrations/stream-moderation-setup.ts`) reads or applies chat auto-translation and the `se:posts` and `chat:messaging` moderation configs with the app's own Stream keys, and answers what is short of the target per Stream app, never a key. `stream-moderation-setup.yml` now only calls it; `ctf/scripts/stream-moderation-setup.mjs` is removed. The workflow's Infisical login was refused, and GitHub holds no Stream key.
 - 2026-11-02: **Done on the timeline dot (owner report).** On Today, web and Android, the colored dot beside a card is now the done control and a toggle: tap to mark done (a check appears in the dot), tap again to undo. Opening a card or pressing its buttons no longer marks it done, since a newcomer taps a card expecting it to open. The check that sat in the card's header is gone.
 
