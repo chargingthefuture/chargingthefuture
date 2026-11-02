@@ -1,8 +1,10 @@
 name: Stream — Moderation and Translation Setup
 
 # Stream AI moderation and chat auto-translation (3.1.0 plan, Personal controls and safety), owned
-# by code instead of dashboard clicks. Runs ctf/scripts/stream-moderation-setup.mjs, which owns the
-# target state: chat auto-translation on, and the moderation configs se:posts (the app's posts and
+# by code instead of dashboard clicks. Calls the app's POST /api/internal/stream/moderation-setup,
+# which applies the target state with the app's own Stream keys
+# (ctf/packages/web/lib/integrations/stream-moderation-setup.ts), so this workflow holds no Stream
+# key: chat auto-translation on, and the moderation configs se:posts (the app's posts and
 # pictures) and chat:messaging (Stream chat channels) with AI text removing critical harm and
 # flagging high, and AI pictures removing every label Stream offers at 90% confidence.
 #
@@ -14,8 +16,8 @@ name: Stream — Moderation and Translation Setup
 # Run it from the browser: Actions tab → "Stream — Moderation and Translation Setup" → Run workflow.
 # Plan first, then apply.
 #
-# Secrets come from Infisical; when it cannot be reached, the GitHub Actions secrets of the same
-# names are the fallback, and the log names the source, never a value.
+# Needs two GitHub Actions secrets the other app calls already use: NEXT_PUBLIC_APP_URL and
+# CRON_SECRET. The log shows what is short of the target and what was done, never a key.
 
 on:
   workflow_dispatch:
@@ -48,53 +50,32 @@ jobs:
     name: Moderation configs and auto-translation
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-
-      - name: Install pnpm
-        run: npm install -g pnpm
-
-      - name: Install dependencies
-        run: |
-          cd ctf
-          pnpm install
-
-      - name: Inject secrets from Infisical
-        id: infisical
-        continue-on-error: true
-        uses: Infisical/secrets-action@v1.0.16
-        with:
-          client-id: ${{ secrets.INFISICAL_CLIENT_ID }}
-          client-secret: ${{ secrets.INFISICAL_CLIENT_SECRET }}
-          project-slug: ${{ secrets.INFISICAL_PROJECT_SLUG }}
-          env-slug: prod
-          domain: ${{ secrets.INFISICAL_URL }}
-          secret-path: /
-          recursive: true
-
-      - name: Run the setup
+      - name: Run the setup in the app
         env:
           MODE: ${{ inputs.mode || 'check' }}
           TARGET: ${{ inputs.target || 'production' }}
-          INFISICAL_OUTCOME: ${{ steps.infisical.outcome }}
-          FALLBACK_STREAM_API_KEY: ${{ secrets.STREAM_API_KEY }}
-          FALLBACK_STREAM_API_SECRET: ${{ secrets.STREAM_API_SECRET }}
-          FALLBACK_STREAM_API_KEY_STAGING: ${{ secrets.STREAM_API_KEY_STAGING }}
-          FALLBACK_STREAM_API_SECRET_STAGING: ${{ secrets.STREAM_API_SECRET_STAGING }}
+          APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
-          echo "Infisical step outcome: $INFISICAL_OUTCOME"
-          for name in STREAM_API_KEY STREAM_API_SECRET STREAM_API_KEY_STAGING STREAM_API_SECRET_STAGING; do
-            fallback_var="FALLBACK_$name"
-            if [ -n "${!name:-}" ]; then
-              echo "$name: from Infisical"
-            elif [ -n "${!fallback_var:-}" ]; then
-              export "$name=${!fallback_var}"
-              echo "$name: from GitHub Actions secrets (fallback)"
-            else
-              echo "$name: not set in either store"
-            fi
-          done
-          node ctf/scripts/stream-moderation-setup.mjs "--mode=$MODE" "--target=$TARGET"
+          if [ -z "${APP_URL:-}" ] || [ -z "${CRON_SECRET:-}" ]; then
+            echo "::error::NEXT_PUBLIC_APP_URL or CRON_SECRET is not set in GitHub Actions secrets."
+            exit 1
+          fi
+          code=$(curl -sS -o /tmp/stream-setup.json -w '%{http_code}' -X POST \
+            "${APP_URL%/}/api/internal/stream/moderation-setup?mode=${MODE}&target=${TARGET}" \
+            -H "Authorization: Bearer ${CRON_SECRET}")
+          echo "HTTP ${code}"
+          jq -r '
+            if .apps then
+              (.apps[] | "\n\(.app): " +
+                (if .configured | not then "no Stream keys in the app for this one, so it was not read."
+                 elif .error then "Stream refused or could not be reached: \(.error)"
+                 else "\(.imageLabels | length) picture label(s) offered.\n" +
+                   (if (.shortBefore | length) == 0 then "Already at the target."
+                    else "Short of the target:\n  - " + (.shortBefore | join("\n  - ")) end) +
+                   (if .shortAfter == null then ""
+                    elif (.shortAfter | length) == 0 then "\nApplied and read back: at the target."
+                    else "\nStill short after apply:\n  - " + (.shortAfter | join("\n  - ")) end)
+                 end))
+            else .message end' /tmp/stream-setup.json
+          [ "$code" = "200" ] && [ "$(jq -r '.ok' /tmp/stream-setup.json)" = "true" ]
