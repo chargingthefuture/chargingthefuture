@@ -20,14 +20,13 @@ import {
 } from '@/lib/auth/clerk-env';
 import { SENTRY_DSN_GLOBAL, resolveWebSentryDsn } from '@/lib/observability/sentry-config';
 import './globals.css';
+import { shareCardMetadata } from '@/lib/seo/share-card';
 
-// No sharing-preview metadata (owner decision, 2026-08-25). We used to publish og:title and a
-// twitter:card carrying the site title, so a pasted link on other sites was rewritten to show that
-// phrase instead of the address. On Quora that turned a post listing several app links into the
-// same sentence repeated once per link, and the reader could no longer tell where any of them went.
-// The addresses are short and self-explaining on their own (/guide, /apps/socketrelay), so a plain
-// URL reads better than a masked one. SITE_TITLE stays the browser tab title only — do not add
-// openGraph or twitter blocks back without the owner asking for them.
+// Link cards (owner decision, 2026-11-02, replacing the 2026-08-25 removal). Every page's card is
+// titled with its own address, lowercase (lib/seo/share-card.ts): app.lagatos.com here and on any
+// page without its own, app.lagatos.com/apps/<slug> under /apps and /plugin, and the static pages
+// set theirs. Never one shared phrase on every link: that is what made a post listing several app
+// links read as the same sentence repeated. SITE_TITLE stays the browser tab title only.
 const SITE_TITLE = 'Skills Economy (SE); Exit their economy, exit the psyop.';
 const SITE_DESCRIPTION = 'A skills-based community economy for survivors — mutual support, real participation, no outside systems needed.';
 
@@ -35,6 +34,7 @@ export const metadata: Metadata = {
   title: SITE_TITLE,
   description: SITE_DESCRIPTION,
   applicationName: 'Skills Economy',
+  ...shareCardMetadata('/'),
   // Installable PWA (owner decision, 2026-07-20): the manifest + service worker make the web app
   // installable to the home screen on Android and iOS, so the mobile-responsive web app covers the
   // entire product on phones. appleWebApp enables the standalone (no browser chrome) mode on iOS.
