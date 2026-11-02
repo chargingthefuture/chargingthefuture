@@ -1,4 +1,11 @@
+import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
+import { shareCardForRequest } from '@/lib/seo/share-card-request';
+
+// Each page's link card is titled with its own address (lib/seo/share-card.ts).
+export async function generateMetadata(): Promise<Metadata> {
+  return shareCardForRequest();
+}
 
 /**
  * Wraps every routed `/plugin/*` screen in the shared app viewport so plugin

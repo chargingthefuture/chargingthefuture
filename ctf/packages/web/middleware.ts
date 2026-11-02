@@ -2,6 +2,7 @@ import { clerkMiddleware } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import { getClerkRuntimeOptions } from './lib/auth/clerk-env';
 import { IDENTITY_STAMP_HEADER, getIdentityStamp } from './lib/auth/identity-stamp';
+import { PATHNAME_HEADER } from './lib/seo/share-card';
 
 // Identity headers that the app reads in `lib/auth/request-identity.ts`. The
 // middleware is the only thing allowed to set them, so we always clear whatever
@@ -88,6 +89,9 @@ export default clerkMiddleware(async (auth, request) => {
     requestHeaders.delete(header);
   }
 
+  // The page's address, for its link card title (lib/seo/share-card.ts). Always set here, so a
+  // value sent by the client is replaced.
+  requestHeaders.set(PATHNAME_HEADER, request.nextUrl.pathname);
   requestHeaders.set('x-ctf-authenticated', userId ? 'true' : 'false');
   requestHeaders.set('x-ctf-auth-provider', 'clerk');
   if (userId) {

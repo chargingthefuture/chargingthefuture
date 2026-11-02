@@ -1,8 +1,13 @@
+import type { Metadata } from 'next';
 import { evaluatePluginAccess } from 'lib/auth/server-authz';
 import { getHostedSignInUrl } from 'lib/auth/provider-env';
 import { needsQuoraProfileUrl } from 'lib/comic/shared-writing-unlock-link';
 import { ComicKnowledgeShell } from '@/components/comic/comic-knowledge-shell';
 import { ComicKnowledgePublicShell } from '@/components/comic/comic-knowledge-public-shell';
+import { shareCardMetadata } from '@/lib/seo/share-card';
+
+// The link card carries this page's own address (lib/seo/share-card.ts).
+export const metadata: Metadata = shareCardMetadata('/knowledge');
 
 export const dynamic = 'force-dynamic';
 

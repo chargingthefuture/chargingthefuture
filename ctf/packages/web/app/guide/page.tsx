@@ -5,6 +5,7 @@ import guideData from './guide-content.json';
 import type { UserGuide } from './guide-types';
 import styles from './guide.module.css';
 import { ScrollToHash } from './scroll-to-hash';
+import { shareCardMetadata } from '@/lib/seo/share-card';
 
 // Public user guide at /guide — a static server component with no auth gate, reachable by
 // signed-out visitors (the middleware only sets identity headers and never protects routes), so the
@@ -15,6 +16,7 @@ export const metadata: Metadata = {
   title: 'How to use it — Skills Economy',
   description:
     'A plain-language guide to every part of the Skills Economy community platform: what each app does and how to use it.',
+  ...shareCardMetadata('/guide'),
 };
 
 const guide = guideData as UserGuide;
