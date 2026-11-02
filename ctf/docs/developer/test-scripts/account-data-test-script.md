@@ -390,3 +390,13 @@ no Mute. Step 2 opens the public listen page, then the sign-in page. Step 3 land
 **Expected:** Step 1 shows the 3.1 frame. Step 2 shows 3.1 first, and 3.0 after going back, which stays.
 Step 3 lands on `/today`, Today as anybody can read it, with Sign in.
 **Result:** web ☐ android ☐ — notes:
+
+## AD-21 · Done on the timeline dot, and undone
+**Role:** a member on 3.1 · **Surfaces:** web, android
+**Steps:**
+1. On Today, tap a card's text, then one of its buttons and come back.
+2. Tap the colored dot beside the card.
+3. Tap the dot again.
+**Expected:** Step 1 opens the card and the item without marking it done. Step 2 puts a check in the
+dot and the done count goes up by one. Step 3 removes the check and the count goes back down.
+**Result:** web ☐ android ☐ — notes:
