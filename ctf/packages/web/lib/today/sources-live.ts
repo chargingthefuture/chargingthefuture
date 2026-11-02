@@ -80,7 +80,7 @@ export async function wantedCard(): Promise<SeTodayCard[]> {
     card({
       source: 'skills-hunt',
       sourceId: round.id,
-      kind: 'match',
+      kind: 'ask',
       label: 'Wanted · this round',
       title: round.name,
       body: round.description,
@@ -108,7 +108,7 @@ export async function missionCard(now = new Date()): Promise<SeTodayCard[]> {
     card({
       source: 'skills-hunt-mission',
       sourceId: `${mission.id}:${startOfTodayIso(now).slice(0, 10)}`,
-      kind: 'match',
+      kind: 'ask',
       label: "Wanted · today's mission",
       title: mission.title,
       body: mission.description ? `${mission.description} ${found}` : found,

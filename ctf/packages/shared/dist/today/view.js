@@ -23,6 +23,7 @@ const SOURCE_NAMES = {
     'beacon-replays': 'replays',
     'skills-hunt': 'the Wanted card',
     'skills-hunt-mission': "today's mission",
+    questions: '21 Questions',
     beacon: 'the broadcast',
     chyme: 'the Main Room',
     'days-won': 'Days won',

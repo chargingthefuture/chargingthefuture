@@ -19,8 +19,10 @@ Rule 114 baseline: Today uses one canonical profile by `user_id`. There is no To
 
 ## 3) Plugin Extension Fields
 
-Today stores nothing in the database. It reads other features' tables and writes no row, and its
-Mood read does not create a Mood pseudonym.
+Today's cards store nothing in the database: they read other features' tables, and the Mood read
+does not create a Mood pseudonym. The one exception is 21 Questions (3.1.0 plan, task 18), whose
+controls sit inside Today's cards: `question_answers` (a member's answers, the first one stands) and
+`question_match_messages` (the conversation inside a match card, stored once per pair, low id first).
 
 On the member's own device it keeps two things: the last Today answer, so the screen draws at once,
 and the cards the member opened or hid. Web keeps them in this browser's storage under
@@ -29,9 +31,11 @@ Neither leaves the device, and signing out of the device or clearing the app's d
 
 ## 4) Deletion Scopes
 
-- Service deletion: nothing to delete on the server.
-- Full account deletion: nothing to delete on the server; each source's own contract covers its rows.
+- Service deletion: the member's `question_answers` rows, and every `question_match_messages` row
+  where they are `user_low` or `user_high` (registry entry `twenty-one-questions`).
+- Full account deletion: the same 21 Questions rows; each card source's own contract covers its rows.
 
 ## 5) Retention
 
-No server-side retention. The on-device copy is replaced on every read.
+21 Questions rows are kept until the account is deleted. Nothing else is kept on the server; the
+on-device copy is replaced on every read.

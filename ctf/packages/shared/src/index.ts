@@ -15,3 +15,4 @@ export * from './today/activity';
 export * from './today/people';
 export * from './today/unlock';
 export * from './today/mutes';
+export * from './questions/bank';
