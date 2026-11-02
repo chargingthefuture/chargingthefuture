@@ -1,0 +1,261 @@
+/* The puzzle of the day in 3.1. Colors come from the frame's custom properties (se-theme-vars.ts). */
+.screen {
+  padding-bottom: 48px;
+}
+
+.play,
+.choices {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.play {
+  gap: 12px;
+}
+
+.choice {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 44px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1.5px solid var(--se-hair);
+  background: var(--se-card);
+  color: var(--se-ink);
+  font: inherit;
+  font-size: 15px;
+  line-height: 1.4;
+  text-align: left;
+  cursor: pointer;
+}
+
+.choice:disabled {
+  cursor: default;
+}
+
+.ask,
+.text {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.4;
+  color: var(--se-soft);
+}
+
+.quote {
+  margin: 0;
+  padding: 14px 16px;
+  border-left: 3px solid var(--se-kind-game);
+  border-radius: 12px;
+  background: var(--se-sunk);
+  font-family: 'Newsreader Variable', Newsreader, Georgia, serif;
+  font-size: 18px;
+  line-height: 1.45;
+}
+
+.wrong {
+  border-color: var(--se-soft);
+  opacity: 0.7;
+}
+
+.result {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: var(--se-card);
+  border: 1.5px solid var(--se-line);
+  animation: slide-up 200ms ease-out;
+}
+
+@keyframes slide-up {
+  from {
+    transform: translateY(12px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .result {
+    animation: none;
+  }
+}
+
+.resultActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.primary,
+.secondary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 999px;
+  font: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.primary {
+  border: none;
+  background: var(--se-btn);
+  color: var(--se-on-btn);
+}
+
+.secondary {
+  border: 1.5px solid var(--se-line);
+  background: transparent;
+  color: var(--se-ink);
+}
+
+.linkButton {
+  align-self: flex-start;
+  min-height: 44px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--se-ink);
+  font: inherit;
+  font-size: 14px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.linkButton:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.choice:focus-visible,
+.primary:focus-visible,
+.secondary:focus-visible,
+.linkButton:focus-visible {
+  outline: 2px solid var(--se-pick);
+  outline-offset: 2px;
+}
+
+/* The puzzle of the day. */
+.wordCard,
+.fullPicture {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.bigWord {
+  font-family: 'Newsreader Variable', Newsreader, Georgia, serif;
+  font-size: 32px;
+  font-weight: 600;
+  color: var(--se-ink);
+}
+
+.picture {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.strip {
+  display: block;
+  width: 100%;
+  aspect-ratio: 5 / 1;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  overflow: hidden;
+  background: none;
+  cursor: pointer;
+}
+
+.stripPicked {
+  border-color: var(--se-pick);
+  transform: scale(0.98);
+}
+
+.strip:focus-visible {
+  outline: 2px solid var(--se-pick);
+  outline-offset: 2px;
+}
+
+.fullPicture svg {
+  aspect-ratio: 1;
+  border-radius: 12px;
+}
+
+.ladder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.rung {
+  min-width: 140px;
+  padding: 8px 14px;
+  border-radius: 12px;
+  border: 1.5px solid var(--se-hair);
+  background: var(--se-card);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  text-align: center;
+  color: var(--se-ink);
+}
+
+.rungEnd {
+  border-style: dashed;
+  color: var(--se-kind-game);
+}
+
+.ladderForm {
+  display: flex;
+  gap: 8px;
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1.5px solid var(--se-hair);
+  background: var(--se-card);
+  color: var(--se-ink);
+  font: inherit;
+  font-size: 18px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.input:focus-visible {
+  outline: 2px solid var(--se-pick);
+  outline-offset: 2px;
+}
+
+.shareLine {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--se-sunk);
+  font-size: 14px;
+  user-select: all;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

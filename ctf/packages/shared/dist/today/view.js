@@ -5,7 +5,7 @@ export const SE_TODAY_FILTERS = [
     { key: 'all', label: 'All', kinds: null },
     { key: 'asks', label: 'Asks', kinds: ['ask'] },
     { key: 'offers', label: 'Offers', kinds: ['offer'] },
-    { key: 'stories', label: 'Stories', kinds: ['story', 'replay'] },
+    { key: 'stories', label: 'Stories', kinds: ['story', 'replay', 'game'] },
     { key: 'matches', label: 'Matches', kinds: ['match'] },
 ];
 const SOURCE_NAMES = {
@@ -24,6 +24,8 @@ const SOURCE_NAMES = {
     'skills-hunt': 'the Wanted card',
     'skills-hunt-mission': "today's mission",
     questions: '21 Questions',
+    'blog-stories': "today's stories",
+    games: "today's puzzle",
     beacon: 'the broadcast',
     chyme: 'the Main Room',
     'days-won': 'Days won',

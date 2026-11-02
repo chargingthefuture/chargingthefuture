@@ -1,4 +1,6 @@
 import type { SeToday, SeTodayBroadcast, SeTodayCard, SeTodayRoom } from '@ctf/shared';
+import { blogStories } from './sources-blog';
+import { dailyPuzzleCard } from './sources-daily';
 import { reportError } from 'lib/observability/report';
 import { cohortOffers } from './sources-offers';
 import { broadcast, missionCard, numbersCard, replayCards, wantedCard } from './sources-live';
@@ -51,6 +53,8 @@ export async function buildPublicToday(now = new Date()): Promise<SeToday> {
     { name: 'trust-transport', read: publicRideAsks },
     { name: 'skill-up', read: () => cohortOffers() },
     { name: 'numbers', read: () => numbersCard(now) },
+    { name: 'blog-stories', read: () => blogStories(now) },
+    { name: 'games', read: () => dailyPuzzleCard(now) },
     { name: 'beacon-replays', read: () => replayCards() },
     { name: 'skills-hunt', read: () => wantedCard() },
     { name: 'skills-hunt-mission', read: () => missionCard(now) },

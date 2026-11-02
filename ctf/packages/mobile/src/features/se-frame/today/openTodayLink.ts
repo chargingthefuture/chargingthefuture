@@ -1,4 +1,4 @@
-// Where a Today link goes on Android: the four features the app carries open in the app; every
+// Where a Today link goes on Android: the four features the app carries, and the puzzle of the day, open in the app; every
 // other address opens the web page in the browser, as the rest of the app already does.
 
 import { Linking } from 'react-native';
@@ -10,6 +10,7 @@ const IN_APP: Record<string, FeatureKey> = {
   '/apps/beacon': 'beacon',
   '/apps/peer-programming': 'peer-programming',
   '/apps/foundation': 'foundation',
+  '/games': 'games',
 };
 
 export function openTodayLink(href: string, open: (_key: FeatureKey) => void) {

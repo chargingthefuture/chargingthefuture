@@ -9,7 +9,8 @@
 
 | | |
 |---|---|
-| **Surface** | `/account/data` (Your Data & Privacy), `/account` for AD-9 and AD-10, the 3.1 Today screen for AD-11, rooms in 3.1 for AD-12, + New for AD-13, Me for AD-14, Activity for AD-15, People for AD-16, Days won for AD-17 and mute for AD-18, 21 Questions for AD-23 |
+| **Surface** | `/account/data` (Your Data & Privacy), `/account` for AD-9 and AD-10, the 3.1 Today screen for AD-11, rooms in 3.1 for AD-12, + New for AD-13, Me for AD-14, Activity for AD-15, People for AD-16, Days won for AD-17, mute for AD-18, `/games` for AD-22 and 21 Questions for AD-23 |
+| **Surface** | `/account/data` (Your Data & Privacy), `/account` for AD-9 and AD-10, the 3.1 Today screen for AD-11, rooms in 3.1 for AD-12, + New for AD-13, Me for AD-14, Activity for AD-15, People for AD-16, Days won for AD-17, mute for AD-18 and `/games` for AD-22 |
 | **Visibility** | Any signed-in identity (including unlock-pending) |
 | **Roles to test** | member |
 | **Surfaces** | web (phone-width layout) |
@@ -401,6 +402,23 @@ Step 3 lands on `/today`, Today as anybody can read it, with Sign in.
 dot and the done count goes up by one. Step 3 removes the check and the count goes back down.
 **Result:** web ☐ android ☐ — notes:
 
+## AD-22 · Stories and the puzzle of the day
+**Role:** a visitor who is not signed in, then a member on 3.1 · **Surfaces:** web, android (signed in)
+**Steps:**
+1. Open Today and pick the Stories filter.
+2. Tap Play on the "Puzzle of the day" card.
+3. Play it: pick the word for the meaning, swap strips until the picture is back in order, or type words one
+   letter apart until the last word is reached (try Hint and Undo once).
+4. Tap Copy to share and paste the line somewhere.
+5. Close the page and open `/games` again; then open it on the next day.
+**Expected:** Step 1 shows five Story cards marked "from the blog" or "from Quora", each with Read it
+only, and the Puzzle of the day card with its number. Nothing in the puzzle comes from a blog post.
+Step 3 never ends in failure: a wrong word is marked and another can be picked, and the ladder
+accepts any number of steps. Step 4's line gives the puzzle number and how it went, never the answer.
+Step 5 shows Done with the same result the same day, and the next kind of puzzle the next day (word,
+picture, ladder in turn). No sign-in is asked for. On Android, step 2 opens the puzzle in the app.
+**Result:** web ☐ android ☐ — notes:
+
 ## AD-23 · 21 Questions
 **Role:** two approved members, A and B, on 3.1 · **Surfaces:** web, android
 **Steps:**
@@ -413,4 +431,3 @@ dot and the done count goes up by one. Step 3 removes the check and the count go
 where somebody lives. Step 3 shows "You and @B answered N of M the same" and the message in the
 card. Step 4 shows the new message in Activity and in the card, marked "1 new message" until opened.
 The Wanted and mission cards are under Asks, not Matches. Step 5 removes the Match card for both.
-**Result:** web ☐ android ☐ — notes:
