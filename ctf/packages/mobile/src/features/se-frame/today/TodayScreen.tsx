@@ -25,6 +25,7 @@ import { useSeRooms } from '../rooms/SeRooms';
 import { authedFetchJson } from '../../../auth/authedFetch';
 import type { FeatureKey } from '../../../navigation/screens';
 import { SE_FONT } from '../fonts';
+import { MatchingToggle } from './MatchingToggle';
 import { TodayCard } from './TodayCard';
 import { openTodayLink } from './openTodayLink';
 import { useToday } from './useToday';
@@ -161,6 +162,7 @@ export function TodayScreen({ t, accountId, onOpen }: { t: SeThemeTokens; accoun
         {view.doneLine ? <Text style={s.meta}>{view.doneLine}</Text> : null}
       </View>
       <FilterChips s={s} filter={filter} onChange={setFilter} />
+      {filter === 'matches' ? <MatchingToggle t={t} refreshKey={today?.generatedAtIso} onChanged={() => void reload()} /> : null}
       <Notices s={s} error={error} missingLine={view.missingLine} loading={!today && loading} onRetry={() => void reload()} />
       {muteNote ? <Text style={s.meta}>{muteNote}</Text> : null}
       {today ? (

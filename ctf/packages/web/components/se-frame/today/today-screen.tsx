@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { SE_DAYS_WON_TITLE, SE_MUTE_WORDS, SE_TODAY_FILTERS, seDaysWonLines, seTodayView, type SeToday, type SeTodayCard, type SeTodayFilter } from '@ctf/shared';
 import Link from 'next/link';
+import { MatchingToggle } from './matching-toggle';
 import { BroadcastCard, RoomCard } from './room-card';
 import { TodayCard } from './today-card';
 import { useToday, type TodayMarks } from './use-today';
@@ -142,6 +143,7 @@ export function TodayScreen({ accountId }: { accountId: string | null }) {
         {view.doneLine ? <span className={styles.doneCount}>{view.doneLine}</span> : null}
       </div>
       <FilterChips filter={filter} onChange={setFilter} />
+      {accountId && filter === 'matches' ? <MatchingToggle refreshKey={today?.generatedAtIso} onChanged={() => void reload()} /> : null}
       <Notices error={error} missingLine={view.missingLine} loading={!today && loading} onRetry={() => void reload()} />
       {muteNote ? (
         <p role="status" className={styles.noticeQuiet}>

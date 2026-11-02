@@ -20,6 +20,7 @@ export type SeTodayCard = {
     createdAtIso: string;
     href: string;
     actions: SeTodayAction[];
+    done?: boolean;
 };
 export type SeTodayTalk = {
     title: string;

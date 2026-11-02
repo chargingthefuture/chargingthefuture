@@ -191,6 +191,10 @@
 }
 
 /* A bigger tap area than the dot itself, so a thumb finds it. */
+.dot:disabled {
+  cursor: default;
+}
+
 .dot::after {
   content: '';
   position: absolute;
@@ -287,6 +291,10 @@
   font-size: 14px;
   line-height: 1.45;
   color: var(--se-soft);
+}
+
+.bodyLines {
+  white-space: pre-line;
 }
 
 .bodyClosed {

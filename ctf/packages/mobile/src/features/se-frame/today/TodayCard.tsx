@@ -63,6 +63,36 @@ function CardActions({ s, card, onOpenLink }: { s: Styles; card: SeTodayCard; on
   );
 }
 
+function doneLabel(card: SeTodayCard, done: boolean): string {
+  if (card.done) return `Done: ${card.title}`;
+  return done ? `Done: ${card.title}. Tap to mark not done` : `Mark done: ${card.title}`;
+}
+
+type DotProps = { t: SeThemeTokens; s: ReturnType<typeof makeStyles>; card: SeTodayCard; read: boolean; color: string; onToggleDone: () => void };
+
+// The timeline dot. A card the server marks done (a 21 Questions answer) stays done: the answer is final.
+function DoneDot({ t, s, card, read, color, onToggleDone }: DotProps) {
+  const locked = card.done === true;
+  const done = read || locked;
+  return (
+    <TouchableOpacity
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked: done, disabled: locked }}
+      accessibilityLabel={doneLabel(card, done)}
+      hitSlop={8}
+      onPress={locked ? undefined : onToggleDone}
+      disabled={locked}
+      style={[s.dot, { backgroundColor: color }]}
+    >
+      {done ? (
+        <Svg width={14} height={14} viewBox="0 0 24 24">
+          <Path d="M5 12l5 5 9-10" stroke={t.bg} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+        </Svg>
+      ) : null}
+    </TouchableOpacity>
+  );
+}
+
 export function TodayCard({
   t,
   card,
@@ -90,20 +120,7 @@ export function TodayCard({
 
   return (
     <View style={s.card}>
-      <TouchableOpacity
-        accessibilityRole="checkbox"
-        accessibilityState={{ checked: read }}
-        accessibilityLabel={read ? `Done: ${card.title}. Tap to mark not done` : `Mark done: ${card.title}`}
-        hitSlop={8}
-        onPress={onToggleDone}
-        style={[s.dot, { backgroundColor: color }]}
-      >
-        {read ? (
-          <Svg width={14} height={14} viewBox="0 0 24 24">
-            <Path d="M5 12l5 5 9-10" stroke={t.bg} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" fill="none" />
-          </Svg>
-        ) : null}
-      </TouchableOpacity>
+      <DoneDot t={t} s={s} card={card} read={read} color={color} onToggleDone={onToggleDone} />
       <View style={s.head}>
         {card.author ? (
           <>
@@ -136,7 +153,7 @@ export function TodayCard({
       >
         <Text style={s.title}>{card.title}</Text>
         {card.body ? (
-          <Text style={s.body} numberOfLines={open ? undefined : 3}>
+          <Text style={s.body} numberOfLines={open || card.source === 'questions' ? undefined : 3}>
             {card.body}
           </Text>
         ) : null}

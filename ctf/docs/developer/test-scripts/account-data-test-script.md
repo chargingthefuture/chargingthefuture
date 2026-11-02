@@ -9,6 +9,7 @@
 
 | | |
 |---|---|
+| **Surface** | `/account/data` (Your Data & Privacy), `/account` for AD-9 and AD-10, the 3.1 Today screen for AD-11, rooms in 3.1 for AD-12, + New for AD-13, Me for AD-14, Activity for AD-15, People for AD-16, Days won for AD-17, mute for AD-18, `/games` for AD-22 and 21 Questions for AD-23, 21 Questions matching for AD-24 |
 | **Surface** | `/account/data` (Your Data & Privacy), `/account` for AD-9 and AD-10, the 3.1 Today screen for AD-11, rooms in 3.1 for AD-12, + New for AD-13, Me for AD-14, Activity for AD-15, People for AD-16, Days won for AD-17, mute for AD-18, `/games` for AD-22 and 21 Questions for AD-23 and web pages from Android for AD-24 and AD-25 |
 | **Surface** | `/account/data` (Your Data & Privacy), `/account` for AD-9 and AD-10, the 3.1 Today screen for AD-11, rooms in 3.1 for AD-12, + New for AD-13, Me for AD-14, Activity for AD-15, People for AD-16, Days won for AD-17, mute for AD-18 and `/games` for AD-22 |
 | **Visibility** | Any signed-in identity (including unlock-pending) |
@@ -427,11 +428,30 @@ picture, ladder in turn). No sign-in is asked for. On Android, step 2 opens the 
 3. As A, read Today again and tap Talk here on the Match card. Send a message.
 4. As B, open Activity, then the Match card on Today.
 5. As B, block A, then read Today again.
-**Expected:** Step 1 says Saved and shows the next question; no question asks about home, family or
+**Expected:** Step 1 says Saved; the card stays with its dot checked, the buttons gone and "You picked:" with the answer, the dot cannot be unchecked, and a question missed on an earlier day shows as its own catching-up card; no question asks about home, family or
 where somebody lives. Step 3 shows "You and @B answered N of M the same" and the message in the
 card. Step 4 shows the new message in Activity and in the card, marked "1 new message" until opened.
 The Wanted and mission cards are under Asks, not Matches. Step 5 removes the Match card for both.
 
+## AD-24 · 21 Questions matching on and off
+**Role:** two approved members, A and B, on 3.1, who match (AD-23), and C, approved, with no answers · **Surfaces:** web, android
+**Steps:**
+1. As C, open Today, pick the Matches filter, then open Me.
+2. As A, pick the Matches filter on Today and read the 21 Questions card.
+3. As A, turn off Match me with members who answer like me under Matches.
+4. As B, read Today again under Matches.
+5. As A, answer another question, then open Me.
+6. As A, turn the toggle back on from Me, then read Today again. As B, read Today again.
+**Expected:** Step 1 shows no matching toggle in either place. Step 2's card explains that answering is
+the opt-in, that reaching out and replying are optional, and how to stop being matched, then the
+answered count; the toggle is on, with the line about what Off does under it. Step 3 removes A's Match
+cards, and the card says matching is off and how to turn it back on. Step 4 shows no Match card for A,
+and a message to A is refused. Step 5 leaves the toggle off on Me and the card still says matching is
+off. Step 6 brings the Match cards back for both, with the same answers.
+Step 7 (owner, Neon SQL Editor): run `ctf/scripts/sql/twenty_one_questions_audit.sql` query 2 with A's
+account id. It lists A's answers, then matching_off from step 3 and matching_on from step 6, newest first.
+As A, tapping a different answer on a question already answered adds an answer_refused row and keeps the
+first answer.
 ## AD-24 · Web pages open over the Android app
 **Role:** a member on 3.1 · **Surfaces:** android
 **Steps:**
