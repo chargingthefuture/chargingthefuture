@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { evaluatePluginAccess } from 'lib/auth/server-authz';
 import { readDaysWon, readRetention, readTimeToUnlock } from 'lib/measures/action-minutes';
 import { readRetentionCohorts } from 'lib/measures/retention-cohorts';
+import { readSignups } from 'lib/measures/signups';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
 
@@ -18,11 +19,12 @@ export async function GET() {
   }
   try {
     const now = new Date();
+    const signups = await readSignups();
     const [daysWon, retention, timeToUnlock, cohorts] = await Promise.all([
       readDaysWon(now),
-      readRetention(now),
+      readRetention(signups, now),
       readTimeToUnlock(now),
-      readRetentionCohorts(now),
+      readRetentionCohorts(signups, now),
     ]);
     return NextResponse.json({ ok: true, daysWon, retention, timeToUnlock, cohorts }, { headers: { 'cache-control': 'private, no-store' } });
   } catch (error) {

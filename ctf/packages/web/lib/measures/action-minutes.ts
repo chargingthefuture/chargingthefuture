@@ -1,5 +1,6 @@
 import type { PoolClient } from 'pg';
 import { queryDb } from 'lib/db/postgres';
+import type { Signups } from './signups';
 
 // Action minutes (3.1.0, owner-approved plan, Measures). Minutes connected in a room or a call, 30
 // for a task its author confirmed, and 10 for a "This helped me" its author confirmed (nothing
@@ -28,7 +29,7 @@ export async function creditActionSeconds(client: PoolClient, userId: string, so
 
 // Every member's action minutes per UTC day, from all three sources. Interpolated into the reads
 // below; $1 is the first day counted (inclusive).
-export const DAILY_MINUTES_CTE = `
+const DAILY_MINUTES_CTE = `
   minutes AS (
     SELECT user_id, usage_date AS day, seconds / 60.0 AS m
       FROM member_action_seconds_daily WHERE usage_date >= $1::date
@@ -67,19 +68,19 @@ export async function readDaysWon(now = new Date()): Promise<DaysWon> {
   };
 }
 
-// Retention, measured from sign-up (a member's first sign-in):
+// Retention, measured from sign-up (the account's creation date; see lib/measures/signups.ts):
 // - Retained: one day with 30 or more action minutes in the last 4 weeks (target 20%), among members
 //   who signed up at least 4 weeks ago.
 // - Came back: signed in this week after two or more weeks away.
 // - Every day: 30 action minutes on each of the last 7 days.
 export type Retention = { eligible: number; retained: number; retainedShare: number; cameBack: number; everyDay: number };
 
-export async function readRetention(now = new Date()): Promise<Retention> {
+export async function readRetention(signups: Signups, now = new Date()): Promise<Retention> {
   const day = (offset: number) => new Date(now.getTime() - offset * 86_400_000).toISOString().slice(0, 10);
   const result = await queryDb<{ eligible: number; retained: number; came_back: number; every_day: number }>(
     `WITH ${DAILY_MINUTES_CTE},
-     firsts AS (SELECT user_id, MIN(created_at) AS first_seen FROM login_events GROUP BY user_id),
-     eligible AS (SELECT user_id FROM firsts WHERE first_seen < $1::date),
+     signups AS (SELECT * FROM unnest($4::text[], $5::timestamptz[]) AS s(user_id, signed_up_at)),
+     eligible AS (SELECT user_id FROM signups WHERE signed_up_at < $1::date),
      full_days AS (SELECT user_id, day FROM daily WHERE minutes >= 30),
      recent AS (SELECT DISTINCT user_id FROM login_events WHERE created_at >= $2::date),
      earlier AS (
@@ -90,7 +91,7 @@ export async function readRetention(now = new Date()): Promise<Retention> {
        (SELECT COUNT(DISTINCT e.user_id) FROM eligible e JOIN full_days f ON f.user_id = e.user_id)::int AS retained,
        (SELECT COUNT(*) FROM recent r JOIN earlier b ON b.user_id = r.user_id WHERE b.last_before < $3::date)::int AS came_back,
        (SELECT COUNT(*) FROM (SELECT user_id FROM full_days WHERE day >= $2::date GROUP BY user_id HAVING COUNT(*) >= 7) s)::int AS every_day`,
-    [day(28), day(6), day(20)],
+    [day(28), day(6), day(20), signups.ids, signups.dates],
   );
   return toRetention(result.rows[0] ?? { eligible: 0, retained: 0, came_back: 0, every_day: 0 });
 }

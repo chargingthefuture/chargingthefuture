@@ -87,6 +87,19 @@ async function listProviderAccounts(): Promise<{ accounts: ProviderAccount[]; tr
   }
 }
 
+// Every sign-up the auth provider holds, as account id and sign-up time, without the demo/test
+// accounts an admin has taken out of the counts. The retention charts on the adoption tab group
+// members by this date: the sign-in record only starts at a member's first recorded sign-in, so it
+// misses everybody who signed up before it was kept. Throws when the provider cannot be read; the
+// caller decides what to fall back to.
+export async function listSignupDates(): Promise<{ userId: string; signedUpAt: string }[]> {
+  const [roster, excluded] = await Promise.all([listProviderAccounts(), listUnlockExcludedAccounts()]);
+  const excludedIds = new Set(excluded.map((entry) => entry.userId));
+  return roster.accounts
+    .filter((account) => !excludedIds.has(account.userId))
+    .map((account) => ({ userId: account.userId, signedUpAt: account.createdAt }));
+}
+
 // The accounts that asked to be forgotten. Their plugin data — the Unlock submission included — is
 // gone, but `account_deletion_events` is retained as the accountability record, so it is the one place
 // left that says this account is a former member rather than someone who never got started. Without

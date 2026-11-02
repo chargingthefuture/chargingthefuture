@@ -1,11 +1,20 @@
 import { queryDb } from 'lib/db/postgres';
-import { DAILY_MINUTES_CTE } from './action-minutes';
+import type { Signups } from './signups';
 
 // Retention by sign-up month, for the adoption tab's two charts (owner-approved plan, Measures):
 // the layer cake (members active each week, stacked by the month they signed up) and the retention
-// curves (the share of each month's sign-ups active N weeks after signing up). A member is active in
-// a week when they had a day with 30 or more action minutes in it, the same day the Retained count
-// uses. Sign-up is a member's first sign-in. Counts only, never a named member.
+// curves (the share of each month's sign-ups active N weeks after signing up). Counts only, never a
+// named member.
+//
+// A member is active in a week when they signed in that week (login_events), owner decision
+// 2026-11-02. The charts first counted a week with a 30-action-minute day, but action minutes have
+// only been recorded since 2026-10-27, so every week before that read 0 and a member who signs in
+// every day did not show at all. The Retained, Came back and Every day lines keep action minutes.
+//
+// Sign-up is the account's creation date at the auth provider, the same roster the Unlock admin
+// counts, without demo/test accounts. The sign-in record starts at a member's first recorded
+// sign-in and misses everybody who signed up before it was kept. If the provider cannot be read,
+// the charts fall back to the first recorded sign-in and say so (lib/measures/signups.ts).
 
 export const RECENT_COHORTS = 5;
 export const LAYER_WEEKS = 12;
@@ -23,6 +32,9 @@ export type RetentionCohorts = {
   // week's share is over the members who have fully lived through that week, so a member who
   // signed up late in the month is not counted as inactive in a week they have not reached.
   curves: { cohort: string; points: { week: number; share: number }[] }[];
+  // Where sign-up dates came from: the auth provider's account list, or (when it could not be read)
+  // each member's first recorded sign-in, with the reason.
+  source: Signups['source'];
 };
 
 type LayerRow = { cohort: string; week: string; active: number };
@@ -54,6 +66,7 @@ function bucket(cohort: string, months: string[]): string {
 export function shapeRetention(
   now: Date,
   rows: { layers: LayerRow[]; curves: CurveRow[]; sizes: SizeRow[] },
+  source: RetentionCohorts['source'] = { kind: 'provider' },
 ): RetentionCohorts {
   const months = recentMonths(now);
   const sizes: Record<string, number> = {};
@@ -84,49 +97,62 @@ export function shapeRetention(
     return { cohort, points };
   });
 
-  return { cohorts, sizes, layers, curves };
+  return { cohorts, sizes, layers, curves, source };
 }
 
-export async function readRetentionCohorts(now = new Date()): Promise<RetentionCohorts> {
+export async function readRetentionCohorts(signups: Signups, now = new Date()): Promise<RetentionCohorts> {
   const months = recentMonths(now);
   const layerStart = monday(now);
   layerStart.setUTCDate(layerStart.getUTCDate() - 7 * (LAYER_WEEKS - 1));
   const from = new Date(Math.min(layerStart.getTime(), new Date(`${months[0]}-01T00:00:00Z`).getTime()));
-  const params = [iso(from), iso(layerStart)];
-  const base = `WITH ${DAILY_MINUTES_CTE},
-     firsts AS (SELECT user_id, MIN(created_at) AS first_seen FROM login_events GROUP BY user_id),
-     full_days AS (SELECT d.user_id, d.day, f.first_seen FROM daily d JOIN firsts f ON f.user_id = d.user_id WHERE d.minutes >= 30)`;
-  const [layers, curves, sizes] = await Promise.all([
+  // $1 account ids, $2 their sign-up times, $3 the first day read, $4 the first layer week.
+  const params = [signups.ids, signups.dates, iso(from), iso(layerStart)];
+  const base = `WITH signups AS (
+       SELECT s.user_id, s.signed_up_at,
+              to_char(date_trunc('month', s.signed_up_at AT TIME ZONE 'UTC'), 'YYYY-MM') AS cohort
+         FROM unnest($1::text[], $2::timestamptz[]) AS s(user_id, signed_up_at)
+     ),
+     seen AS (
+       SELECT DISTINCT l.user_id, (l.created_at AT TIME ZONE 'UTC')::date AS day
+         FROM login_events l JOIN signups s ON s.user_id = l.user_id
+        WHERE l.created_at >= $3::date
+     )`;
+  const [layers, curves] = await Promise.all([
     queryDb<LayerRow>(
       `${base}
-       SELECT to_char(date_trunc('month', first_seen), 'YYYY-MM') AS cohort,
-              to_char(date_trunc('week', day), 'YYYY-MM-DD') AS week, COUNT(DISTINCT user_id)::int AS active
-         FROM full_days WHERE day >= $2::date GROUP BY 1, 2`,
+       SELECT s.cohort, to_char(date_trunc('week', d.day), 'YYYY-MM-DD') AS week, COUNT(DISTINCT d.user_id)::int AS active
+         FROM seen d JOIN signups s ON s.user_id = d.user_id
+        WHERE d.day >= $4::date GROUP BY 1, 2`,
       params,
     ),
     // One row per sign-up month and week since sign-up: the members who have fully lived through
-    // that week, and how many of them were active in it.
+    // that week, and how many of them signed in during it.
     queryDb<CurveRow>(
       `${base},
        weeks AS (SELECT generate_series(0, ${CURVE_WEEKS - 1}) AS week),
        eligible AS (
-         SELECT f.user_id, to_char(date_trunc('month', f.first_seen), 'YYYY-MM') AS cohort, w.week
-           FROM firsts f CROSS JOIN weeks w
-          WHERE f.first_seen >= $1::date AND f.first_seen + (w.week + 1) * INTERVAL '7 days' <= NOW()
+         SELECT s.user_id, s.cohort, s.signed_up_at, w.week
+           FROM signups s CROSS JOIN weeks w
+          WHERE s.signed_up_at >= $3::date AND s.signed_up_at + (w.week + 1) * INTERVAL '7 days' <= NOW()
        )
        SELECT e.cohort, e.week, COUNT(*)::int AS eligible,
               COUNT(*) FILTER (WHERE EXISTS (
-                SELECT 1 FROM full_days d
+                SELECT 1 FROM seen d
                  WHERE d.user_id = e.user_id
-                   AND FLOOR((d.day - (d.first_seen AT TIME ZONE 'UTC')::date) / 7) = e.week
+                   AND FLOOR((d.day - (e.signed_up_at AT TIME ZONE 'UTC')::date) / 7) = e.week
               ))::int AS active
          FROM eligible e GROUP BY 1, 2`,
-      [params[0]],
-    ),
-    queryDb<SizeRow>(
-      `SELECT to_char(date_trunc('month', first_seen), 'YYYY-MM') AS cohort, COUNT(*)::int AS members
-         FROM (SELECT MIN(created_at) AS first_seen FROM login_events GROUP BY user_id) f GROUP BY 1`,
+      params.slice(0, 3),
     ),
   ]);
-  return shapeRetention(now, { layers: layers.rows, curves: curves.rows, sizes: sizes.rows });
+  const sizes = new Map<string, number>();
+  for (const date of signups.dates) {
+    const cohort = date.slice(0, 7);
+    sizes.set(cohort, (sizes.get(cohort) ?? 0) + 1);
+  }
+  return shapeRetention(
+    now,
+    { layers: layers.rows, curves: curves.rows, sizes: [...sizes].map(([cohort, members]) => ({ cohort, members })) },
+    signups.source,
+  );
 }

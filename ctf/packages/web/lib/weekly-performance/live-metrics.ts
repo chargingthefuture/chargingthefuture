@@ -1,7 +1,6 @@
 import { queryDb } from 'lib/db/postgres';
 import { failureReason } from 'lib/errors/failure';
 import { reportError } from 'lib/observability/report';
-import { buildLiveGdpReport } from 'lib/shared/gdp-interface';
 import {
   countActiveMembersInWeek,
   countMemberDaysInWeek,
@@ -9,13 +8,14 @@ import {
 } from 'lib/engagement/member-activity';
 
 // Live weekly numbers. The dashboard's shape, in card order:
-//   1. Two GOAL rows — the two numbers the entire platform is driving toward:
-//      GDP Community Value Index (goal: $300B) and Workforce recruited (goal: 2,000,000).
-//      Both are STATE metrics (a current total, not a windowed event count), so week-over-week
-//      needs memory: each read of the current week upserts the live value into
-//      weekly_performance_goal_snapshots, and past weeks report their stored snapshot.
-//   2. ADOPTION rows about turnout: active members (the plain headcount for the week), signed in
-//      per day (the average across the week's days), and deleted accounts.
+//   1. One GOAL row: Workforce recruited (goal: 2,000,000). It is a STATE metric (a current total,
+//      not a windowed event count), so week-over-week needs memory: each read of the current week
+//      upserts the live value into weekly_performance_goal_snapshots, and past weeks report their
+//      stored snapshot. The GDP Community Value Index left this dashboard on 2026-11-02 (owner
+//      decision): the GDP plugin has its own tile and shows it there.
+//   2. ADOPTION rows about turnout: active members (the plain headcount for the week) and signed in
+//      per day (the average across the week's days). The deleted-accounts row was removed on the
+//      same day (owner decision).
 //
 // The per-plugin weekly counts (each plugin's value event, and the Directory, Mood and ClickLog
 // rows) retired in 3.1.0 (owner-approved plan, Measures). Days won, retention and time to unlock on
@@ -29,7 +29,7 @@ type LiveMetric = {
   sourcePlugin: string;
 };
 
-export const GOAL_METRIC_KEYS = ['goal.gdp_value_index', 'goal.workforce_recruited'] as const;
+export const GOAL_METRIC_KEYS = ['goal.workforce_recruited'] as const;
 
 async function tableExists(table: string): Promise<boolean> {
   const reg = await queryDb<{ reg: string | null }>(`SELECT to_regclass($1)::text AS reg`, [`public.${table}`]);
@@ -98,45 +98,12 @@ const dailyActiveMembers = async (weekStart: string) => {
   return Math.round((memberDays / elapsedDaysInWeek(weekStart)) * 100) / 100;
 };
 
-// Deleted accounts: how many members ended their entire account during the week — the turnout rows'
-// counterpart, and the only row here that is bad when it rises.
-//
-// Two things are deliberately left out, because both would make this read as people leaving when
-// they did not:
-//   - A per-plugin "delete my data" (`scope = 'service'`). That member still has an account and is
-//     still here; they cleared one plugin. Only full-account deletions (`scope = 'account'`) count.
-//   - An operator-run removal. The manual `Delete Account (manual)` workflow clears duplicate and
-//     demo test accounts, and writes the same account-scope row as a member's own deletion, so the
-//     orchestrator marks who asked (`summary.initiatedBy`) and only the member's own choice counts.
-//     Rows written before that marker existed carry none and count as the member's own, which is
-//     what nearly all of them are.
-//
-// Counted on `completed_at`, the moment the deletion actually ran, and counted per member rather
-// than per row so a repeated event for one account can never read as two people leaving.
-const accountsDeleted = (weekStart: string) =>
-  guardedScalar(
-    'account_deletion_events',
-    `SELECT COUNT(DISTINCT user_id)::text AS v FROM account_deletion_events
-     WHERE scope = 'account' AND status = 'completed'
-       AND COALESCE(summary->>'initiatedBy', 'member') <> 'operator'
-       AND completed_at >= $1::date AND completed_at < $1::date + INTERVAL '7 days'`,
-    weekStart,
-  );
-
-
 // ── Goal rows (state metrics with weekly snapshots) ───────────────────────────
 
-// Current live values. GDP: the Community Value Index (an estimate, never money/price) from the
-// same builder the GDP plugin serves. Workforce: recruited = the count of all Directory profiles —
-// the registry definition of workforce_recruited_current_count. Every way a listing goes away is a
-// hard delete (post/0033 dropped the is_active and deleted_at tombstones), so a row present is a
-// member recruited; there is no liveness filter left to apply.
-async function liveGdpValueIndex(): Promise<number> {
-  const report = await buildLiveGdpReport();
-  const row = report.metrics.find((m) => m.metricKey === 'gdp_value_index');
-  return row ? row.metricValue : 0;
-}
-
+// Current live value. Workforce: recruited = the count of all Directory profiles — the registry
+// definition of workforce_recruited_current_count. Every way a listing goes away is a hard delete
+// (post/0033 dropped the is_active and deleted_at tombstones), so a row present is a member
+// recruited; there is no liveness filter left to apply.
 function liveWorkforceRecruited(weekStart: string): Promise<number> {
   // The trailing ($1::date IS NOT NULL) is always true — it only consumes the week parameter
   // guardedScalar binds, since this is a current-state count with no window.
@@ -210,7 +177,6 @@ async function writeGoalSnapshot(metricKey: string, weekStartDate: string, value
 
 // The live reading behind each goal row, keyed the same as GOAL_METRIC_KEYS.
 const GOAL_LIVE_READERS: Record<(typeof GOAL_METRIC_KEYS)[number], (weekStart: string) => Promise<number>> = {
-  'goal.gdp_value_index': () => liveGdpValueIndex(),
   'goal.workforce_recruited': (weekStart) => liveWorkforceRecruited(weekStart),
 };
 
@@ -266,12 +232,6 @@ type MetricSpec = {
 // Order here is the card order on the dashboard: goals, then adoption.
 const METRIC_SPECS: MetricSpec[] = [
   {
-    metricKey: 'goal.gdp_value_index',
-    metricUnit: 'index',
-    sourcePlugin: 'gdp',
-    compute: (weekStart) => goalMetricForWeek('goal.gdp_value_index', weekStart, liveGdpValueIndex),
-  },
-  {
     metricKey: 'goal.workforce_recruited',
     metricUnit: 'members',
     sourcePlugin: 'workforce',
@@ -280,7 +240,6 @@ const METRIC_SPECS: MetricSpec[] = [
   },
   { metricKey: 'adoption.active_members', metricUnit: 'members', sourcePlugin: 'platform', compute: activeMembers },
   { metricKey: 'adoption.daily_active_members', metricUnit: 'per day', sourcePlugin: 'platform', compute: dailyActiveMembers },
-  { metricKey: 'adoption.accounts_deleted', metricUnit: 'accounts', sourcePlugin: 'platform', compute: accountsDeleted },
 ];
 
 // Compute one metric, reporting rather than hiding a read that failed. The 0 keeps the dashboard

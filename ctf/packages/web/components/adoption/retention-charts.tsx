@@ -140,7 +140,13 @@ export function RetentionCharts({ t, data }: { t: PluginShellTokens; data: Reten
   return (
     <div>
       <p style={heading}>Active each week, by sign-up month</p>
-      <p style={{ margin: 0, fontSize: 12, color: t.SUBTLE }}>Active means a day with 30 or more action minutes that week.</p>
+      <p style={{ margin: 0, fontSize: 12, color: t.SUBTLE }}>Active means they signed in that week.</p>
+      {data.source.kind === 'first_sign_in' ? (
+        <p role="status" style={{ margin: '4px 0 0', fontSize: 12, color: t.SUBTLE }}>
+          The sign-up list could not be read, so members are grouped by their first recorded sign-in and anyone who never
+          signed in since it was kept is missing: {data.source.reason}
+        </p>
+      ) : null}
       <Legend t={t} data={data} />
       {table ? <CohortTable t={t} data={data} /> : <LayerCake t={t} data={data} />}
       <p style={heading}>Share still active, by weeks since signing up</p>

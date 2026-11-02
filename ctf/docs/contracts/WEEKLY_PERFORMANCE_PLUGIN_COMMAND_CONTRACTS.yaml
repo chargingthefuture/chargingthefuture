@@ -91,9 +91,6 @@ contracts:
       - directory_profiles
       # Active members and signed in per day: the sign-in record, aggregate counts only.
       - login_events
-      # Full-account deletions a member chose, for the deleted-accounts adoption row. Aggregate
-      # count only — no member is ever named.
-      - account_deletion_events
     purpose: operational_metrics_review
     retentionClass: derived_short_lived
     idempotency: true
@@ -126,9 +123,6 @@ contracts:
       - directory_profiles
       # Active members and signed in per day: the sign-in record, aggregate counts only.
       - login_events
-      # Full-account deletions a member chose, for the deleted-accounts adoption row. Aggregate
-      # count only — no member is ever named.
-      - account_deletion_events
     purpose: operational_metrics_comparison
     retentionClass: derived_short_lived
     idempotency: true
@@ -137,16 +131,13 @@ contracts:
     command: weekly-performance.goal-snapshot.capture
     version: 1.0.0
     description: >-
-      Internal, schedule-driven capture of the two goal readings (GDP Community Value Index toward
-      300B; Workforce recruited toward 2,000,000) into weekly_performance_goal_snapshots for the
-      current week. Goal metrics are state totals - past weeks cannot be recomputed - so each week
+      Internal, schedule-driven capture of the goal reading (Workforce recruited toward 2,000,000)
+      into weekly_performance_goal_snapshots for the current week. Goal metrics are state totals - past weeks cannot be recomputed - so each week
       needs at least one stored reading; the daily workflow calling this command makes goal history
       independent of anyone opening the dashboard. Guarded by INTERNAL_SERVICE_SECRET (bearer);
       never member or browser callable. Each goal is read live and its snapshot row upserted (last
       capture of the week wins). A goal that was not stored answers 503 with code
-      goal_snapshot_not_stored and each goal's reason, so the scheduled run fails visibly. The GDP
-      reading comes from the GDP plugin's live report - see the GDP contracts for that command's own
-      reads.
+      goal_snapshot_not_stored and each goal's reason, so the scheduled run fails visibly.
     inputSchema: {}
     outputSchema:
       ok:
@@ -163,6 +154,12 @@ contracts:
     idempotency: true
 
 changelog:
+  - date: 2026-11-02
+    change: >-
+      The GDP Community Value Index goal and the deleted-accounts adoption row left the dashboard
+      (owner decision): the GDP plugin shows its index on its own tile, and the deleted-accounts
+      count was not wanted. The metrics and comparison reads no longer touch
+      account_deletion_events, and the goal capture stores the Workforce reading only.
   - date: 2026-10-28
     change: >-
       3.1.0 Measures: the per-plugin weekly counts retired from the dashboard, so the metrics and

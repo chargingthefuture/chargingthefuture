@@ -350,7 +350,13 @@ The weights themselves are edited in the Weavers of the Commons section below th
 ### 1.16a Measures: action minutes, Days won, retention and time to unlock (3.1.0)
 
 Owner-approved plan (`SOCIAL_REDESIGN_3_1_PLAN.md`, Measures). Code: `lib/measures/action-minutes.ts`,
-`lib/measures/retention-cohorts.ts`.
+`lib/measures/retention-cohorts.ts`, `lib/measures/signups.ts`.
+
+Sign-up dates come from the auth provider's account list without demo/test accounts
+(`listSignupDates` in `lib/unlock/signups.ts`, the roster the Unlock admin counts), read once per
+request by `readSignups`. `login_events` starts at a member's first recorded sign-in and misses
+everybody who signed up before it was kept, so it is only the fallback when the provider cannot be
+read; the charts then say so with the reason.
 
 1. **Action minutes.** Minutes connected in a room or a call, 30 for a PeerProgramming task its
    author kept as helped (`peer_programming_goal_tasks.helped`, `kept_at`), and 10 for a "This helped
@@ -365,7 +371,7 @@ Owner-approved plan (`SOCIAL_REDESIGN_3_1_PLAN.md`, Measures). Code: `lib/measur
 2. **Days won** = all members' action minutes ÷ 480, in total and over the last 7 days
    (`readDaysWon`). Today carries it as `daysWon` and shows "Days the Avenhood has won" at the top
    (web and Android).
-3. **Retention** (`readRetention`), from sign-up (a member's first `login_events` row): Retained =
+3. **Retention** (`readRetention`), from sign-up (the account's creation date): Retained =
    members who signed up 4+ weeks ago with a 30-action-minute day in the last 4 weeks (target 20%);
    Came back = signed in this week after two or more weeks away; Every day = 30 action minutes on
    each of the last 7 days.
@@ -374,11 +380,15 @@ Owner-approved plan (`SOCIAL_REDESIGN_3_1_PLAN.md`, Measures). Code: `lib/measur
    sending to approval.
 5. **`GET /api/admin/measures`** — admin read, read-only, counts only: `{ ok, daysWon, retention,
    timeToUnlock, cohorts }`; 503 with the reason when the read fails. The Adoption screen shows it as "Days
-   won and retention" under the steps toward 384, with Copy as text.
+   won and retention" under the steps toward 384: one row per measure (Days won, Retained, Came back,
+   Every day, Sent an address, Approved), each with its number on the right and a short line under it
+   saying what it counts. Copy as text still copies one line per measure.
 6. **Retention charts** (`readRetentionCohorts`, drawn by `components/adoption/retention-charts.tsx`
-   under the measures on the Adoption screen). A member is active in a week when they had a day with
-   30 or more action minutes in it; sign-up is their first `login_events` row. `cohorts` is
-   `{ cohorts, sizes, layers, curves }`: the sign-up months (the last 5, plus Earlier when anybody
+   under the measures on the Adoption screen). A member is active in a week when they signed in that
+   week (`login_events`; owner decision, 2026-11-02 — action minutes are recorded only from
+   2026-10-27, so every earlier week read 0); sign-up is the account's creation date. `cohorts` is
+   `{ cohorts, sizes, layers, curves, source }`, `source` saying whether sign-ups came from the
+   provider or fell back to first sign-in: the sign-up months (the last 5, plus Earlier when anybody
    signed up before them) with how many signed up in each; `layers`, the Monday of each of the last
    12 weeks with members active that week per sign-up month; and `curves`, for each of the last 5
    months, the share of its sign-ups active in week 0 to 11 after signing up, for the weeks the month
@@ -458,6 +468,8 @@ Owner decision, 2026-09-26. The owner pays the running costs of Skills Economy a
 ---
 
 ## 5) Change Log
+
+- 2026-11-02: **Retention charts count sign-ins, from every sign-up; the measures read as rows (§1.16a).** Owner report: the charts were empty although the owner signs in every day, and the cohorts added up to fewer people than had signed up. Two causes: a week counted only with a 30-action-minute day, and action minutes are recorded only from 2026-10-27; and sign-ups came from `login_events`, which misses accounts made before it was kept. The charts now count a member active in a week they signed in, and group members by account creation date from the auth provider without demo/test accounts (`lib/measures/signups.ts`, `listSignupDates`), falling back to first sign-in with the reason shown. Retained uses the same sign-up list. The "Days won and retention" block is one row per measure instead of a paragraph; Copy as text is unchanged.
 
 - 2026-10-28: **3.1 launched (owner decision).** `SE_DEFAULT_INTERFACE_VERSION` is `'3.1'` on web and Android; migration `post/0078` makes `'3.1'` the column default and moves every stored `'3.0'` to `'3.1'`, so everybody starts on 3.1 and can go back to 3.0 in Settings. A signed-out visitor to `/` is sent to `/today`, the public Today; a failed version read shows 3.1.
 
