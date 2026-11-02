@@ -1,6 +1,6 @@
 import type { ContributorValueEventKey } from './weights';
 
-// The fifteen value events, defined once, in the shape every reading needs.
+// The fourteen value events, defined once, in the shape every reading needs.
 //
 // Three things read these events and they must never disagree:
 //
@@ -32,8 +32,7 @@ import type { ContributorValueEventKey } from './weights';
 export type ValueEventAggregate =
   // One point per row. Most events.
   | 'count'
-  // Sum of the row's `value` column. Contributions, whose weight is per dollar (gift cards) or per
-  // unit of the set value per non-money contribution (comments and stars).
+  // Sum of the row's `value` column. Contributions gift cards, whose weight is per dollar.
   | 'sum'
   // Distinct calendar weeks the member appeared in. PeerProgramming counts a member once per week.
   | 'distinctWeek'
@@ -164,7 +163,7 @@ export const VALUE_EVENT_SOURCES: ValueEventSource[] = [
     // Gift cards only. A gift card is the one kind that is money, and only money counts toward a
     // dollar figure. A Quora comment or a GitHub star (taken until 2026-10-27) also has a number in
     // `confirmed_amount_usd`, but it was the admin's set value per non-money contribution, not money
-    // anybody received. Those rows are the next event.
+    // anybody received, and those rows count toward nothing.
     delivers: true,
     tables: ['contributions_submissions'],
     rowSql: `SELECT user_id AS member_id, reviewed_at AS at,
@@ -173,22 +172,6 @@ export const VALUE_EVENT_SOURCES: ValueEventSource[] = [
               WHERE status = 'confirmed' AND kind = 'gift_card'`,
     aggregate: 'sum',
     occurrences: 'sum',
-  },
-  {
-    key: 'value.contributions_non_money_confirmed',
-    // A confirmed Quora comment or GitHub star, from before Contributions took gift cards only. Before these were split out they were summed into
-    // the dollar event above, which read the set value per contribution as dollars. The badge and
-    // the daily count still score them exactly as before: the same set value, at the same default
-    // weight, inheriting the dollar event's weight override until an admin sets one of its own
-    // (see WEIGHT_INHERITS_FROM in weights.ts). The dashboard counts them as rows, never as dollars.
-    delivers: true,
-    tables: ['contributions_submissions'],
-    rowSql: `SELECT user_id AS member_id, reviewed_at AS at,
-                    COALESCE(confirmed_amount_usd, 0)::numeric AS value, NULL::text AS ref, NULL::text AS other_id
-               FROM contributions_submissions
-              WHERE status = 'confirmed' AND kind <> 'gift_card'`,
-    aggregate: 'sum',
-    occurrences: 'rows',
   },
   {
     key: 'value.skills_hunt_nominations_accepted',

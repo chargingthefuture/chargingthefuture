@@ -172,15 +172,6 @@ export function ContributorAccessAdminSections({
     [mutate],
   );
 
-  const grant = useCallback(
-    async (who: string) => {
-      setBusyId('grant');
-      await mutate('/api/contributor-access/admin/grant', { who }, 'Unable to give the badge.');
-      setBusyId(null);
-    },
-    [mutate],
-  );
-
   const saveConfig = useCallback(
     async (update: ContributorAccessConfigView) => {
       setSaving(true);
@@ -227,7 +218,7 @@ export function ContributorAccessAdminSections({
 
       {loadState === 'ready' && config ? (
         <>
-          <EligibleMembersSection t={t} members={members} busyId={busyId} onRevoke={(id) => void revoke(id)} onReinstate={(id) => void reinstate(id)} onGrant={grant} />
+          <EligibleMembersSection t={t} members={members} busyId={busyId} onRevoke={(id) => void revoke(id)} onReinstate={(id) => void reinstate(id)} />
           <ConfigEditorSection key={config.threshold + JSON.stringify(config.weights) + String(config.channelOpen)} t={t} config={config} eligibleCount={eligibleCount} badgeOnlyKeys={badgeOnlyKeys} weightOrder={weightOrder} saving={saving} onSave={(update) => void saveConfig(update)} />
           <StatusCard t={t} eligibleCount={eligibleCount} needed={config.minEligibleToOpenChannel} channelOpen={config.channelOpen} channelMemberCount={channelMemberCount} />
         </>
