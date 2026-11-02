@@ -128,7 +128,7 @@ function Notices({ s, error, missingLine, loading, onRetry }: { s: Styles; error
 
 export function TodayScreen({ t, accountId, onOpen }: { t: SeThemeTokens; accountId: string; onOpen: (_key: FeatureKey) => void }) {
   const s = makeStyles(t);
-  const { today, loading, error, marks, mark, reload } = useToday(accountId);
+  const { today, loading, error, marks, mark, toggle, reload } = useToday(accountId);
   const [filter, setFilter] = useState<SeTodayFilter>('all');
   const go = (href: string) => openTodayLink(href, onOpen);
   const view = seTodayView(today, marks, filter);
@@ -172,7 +172,7 @@ export function TodayScreen({ t, accountId, onOpen }: { t: SeThemeTokens; accoun
               t={t}
               card={card}
               read={marks.read.includes(card.id)}
-              onRead={() => mark('read', card.id)}
+              onToggleDone={() => toggle('read', card.id)}
               onHide={() => mark('hidden', card.id)}
               onMute={card.author ? () => void mute(card) : undefined}
               onOpenLink={go}
