@@ -519,7 +519,7 @@ Reader is a feed reader on a server this project pays for, for people who would 
 
 A feed reader collects what sites publish, in the order they published it, and nothing decides what you see first. This one runs on a server the project pays for, so there is nothing to install or set up: you sign in with the same account you use here.
 
-The Reader tile opens a short page that says what the reader is and what a place on it costs, with an 'Open the reader' button that goes to rss.chargingthefuture.com in a new tab. A line under the button names that address and says the sign-in is this same account.
+The Reader tile opens a short page that says what the reader is and what a place on it costs, with an 'Open the reader' button that goes to rss.lagatos.com in a new tab. A line under the button names that address and says the sign-in is this same account.
 
 A new reader account starts with two feeds and nothing else added for you: this project's blog, and the owner's channel of demo videos of the app. Everything else you read, you add yourself. Your list is yours — there is no shared list, and nobody else on the reader can see what you subscribe to.
 
@@ -531,7 +531,7 @@ A place on the reader is something you get by finishing Unlock or by contributin
 
 1. Sign in and open Reader from the apps list; the tile carries a newspaper mark. It needs an approved account — before that, the tile opens the Unlock nudge instead.
 2. Read the three cards: what a new account starts with, what the reader cannot do, and what a place on it costs.
-3. Press 'Open the reader'. It opens rss.chargingthefuture.com in a new tab, and you sign in there with this same account.
+3. Press 'Open the reader'. It opens rss.lagatos.com in a new tab, and you sign in there with this same account.
 4. Add anything else you read there. The blog, the demo-video channel and the recorded broadcasts are already in a new account.
 
 ## Reporting a problem

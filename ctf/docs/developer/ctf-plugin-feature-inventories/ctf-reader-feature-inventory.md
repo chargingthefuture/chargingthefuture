@@ -5,7 +5,7 @@
 Reader is a tile and one page in this app. It is not the reader.
 
 The reader itself is a separate service — FreshRSS, on its own address at
-rss.chargingthefuture.com, on a server this project pays for. It has its own database, its own
+rss.lagatos.com, on a server this project pays for. It has its own database, its own
 accounts and its own admin screens, and this repository holds none of them. Signing in there goes
 through the same auth provider this app uses, so a member needs no second password and a ban at the
 provider closes the reader too, within the reader's sign-in length (seven days; see
@@ -25,7 +25,7 @@ already have.
 ## User Features
 
 - A tile in the apps list called Reader, opening a page that explains the reader in plain words.
-- An "Open the reader" button that goes to rss.chargingthefuture.com in a new tab, with a line
+- An "Open the reader" button that goes to rss.lagatos.com in a new tab, with a line
   underneath naming the address it opens and saying the sign-in is this same account.
 - A statement of what a new reader account starts with: this blog, the owner's demo-video
   channel and the recorded broadcasts, and nothing else added for you (the channel joined the
@@ -102,6 +102,7 @@ somebody reads is not evidence anybody should be publishing.
 
 ## Change Log
 
+- 2026-11-02 — The reader's address is rss.lagatos.com (owner report: the reader failed after the domain change, since rss.chargingthefuture.com no longer leads to it). The Open the reader button, the line under it, the user guide, the test script and `FRESHRSS.md` name the new address. The service settings the move needs outside this repository are listed in `FRESHRSS.md`, "The address".
 - 2026-10-15 — The generic public preview, which is what a signed-out visitor to `/apps/reader` sees, said a free account is all it takes. Reader needs Unlock approval like every plugin but Fireside (`pluginPageMinUnlockTier`), so the sentence in `generic-public-shell.tsx` now says the app opens once you have an account and finish verifying it (owner-approved copy fix, #2889).
 - 2026-10-03 — The "What you get" card named two default feeds after the recorded broadcasts
   became the third on 2026-09-29 (owner report). The card, the user guide step and the test
