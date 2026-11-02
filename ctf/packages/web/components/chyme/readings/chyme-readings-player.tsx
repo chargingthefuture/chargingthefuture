@@ -2,8 +2,7 @@
 
 import { Pause, Play } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { useTheme } from '@/hooks/useTheme';
-import { getChymeTokens } from '@/components/chyme/chyme-shared';
+import { useChymeTokens } from '@/components/chyme/chyme-tokens-context';
 import { BLOG_READINGS_URL, loopPositionAt, nextIndex, parseBlogReadings, sourceAt, type ReadingsTrack } from 'lib/chyme/readings/schedule';
 
 // The readings loop (a temporary module, owner decision 2026-09-28; see lib/chyme/readings/repository.ts).
@@ -205,8 +204,7 @@ type ReadingsCardProps = {
 };
 
 function ReadingsCard({ current, playing, starting, wentLive, problem, onToggle, children }: ReadingsCardProps) {
-  const { theme } = useTheme();
-  const t = getChymeTokens(theme);
+  const t = useChymeTokens();
   return (
     <div style={{ marginTop: 12, borderRadius: 10, border: `1px solid ${t.BORDER}`, padding: '14px', textAlign: 'left' }}>
       <div style={{ fontSize: 13, fontWeight: 700, color: t.TITLE, marginBottom: 4 }}>While you wait for someone to go live</div>

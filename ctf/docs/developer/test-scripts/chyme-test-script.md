@@ -810,3 +810,18 @@ their Today cards are left out for the first member. After step 3 the first memb
 **Expected:** The phone offers to add the talk with its start, end and host. A talk on air has no button. Nothing asks to read the calendar.
 
 Result: web ☐
+
+### Signed-out room page in the 3.1 look
+
+**Role:** a visitor who is not signed in · **Surfaces:** web, android
+
+1. On the signed-out Today, tap Listen in on the Main Room card.
+2. Tap Sign in, then go back; tap Back to Today.
+
+**Expected:** Step 1 shows Back to Today, "Main Room", "Open to everyone" and the room rule, a card
+with "Live audio rooms for survivors", the hosting note and one Sign in button, then Coming up on TI
+Radio, Live Rooms with refresh, and the room or the readings loop, all in the member's 3.1 colors,
+with no green Chyme header. Listening still needs no account. Step 2 opens sign-in, and Back to Today
+returns to the signed-out Today. The signed-in Chyme screens look as before.
+
+Result: web ☐ android ☐

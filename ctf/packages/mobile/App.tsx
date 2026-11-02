@@ -24,6 +24,7 @@ import { Newsreader_500Medium, Newsreader_600SemiBold } from '@expo-google-fonts
 // The 3.1 screens' text face (src/features/se-frame/fonts.ts).
 import { DMSans_400Regular, DMSans_600SemiBold, DMSans_700Bold } from '@expo-google-fonts/dm-sans';
 import { DailyScreen } from './src/features/games';
+import { ChymeRoom } from './src/features/chyme';
 import { InterfaceVersionProvider, PublicToday, SeAppFrame, useInterfaceVersion } from './src/features/se-frame';
 import { AuthProvider, useAuth } from './src/auth/auth-context';
 import { ThemeProvider, useTheme } from './src/theme';
@@ -246,6 +247,16 @@ function standaloneScreen({ selected, isAuthenticated, interfaceVersion, user, b
     return (
       <View style={styles.container}>
         <DailyScreen onBack={back} />
+        <StatusBar style="light" />
+      </View>
+    );
+  }
+  // A visitor who is not signed in listens to the Main Room on its own 3.1 page, full screen with
+  // Back to Today, as the web's signed-out room page is.
+  if (!isAuthenticated && interfaceVersion === '3.1' && selected === 'chyme') {
+    return (
+      <View style={styles.container}>
+        <ChymeRoom onBack={back} />
         <StatusBar style="light" />
       </View>
     );

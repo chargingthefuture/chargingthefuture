@@ -1,18 +1,21 @@
 /**
  * ChymePublicScreen — the Chyme page for a signed-out visitor, copied from the web (web
- * components/chyme/chyme-public-shell.tsx): its own green header with the back control, the
- * invitation card with Sign In, what is coming up on TI Radio, then the Live Rooms row with Leave
- * (while listening) and refresh, and the room: listen without an account, or the plain reason when
- * that is not possible.
+ * components/chyme/chyme-public-shell.tsx), in the 3.1 look: Back to Today, the Main Room with who
+ * it is open to and its rule, the invitation card with Sign in, what is coming up on TI Radio, then
+ * the Live Rooms row with Leave (while listening) and refresh, and the room: listen without an
+ * account, or the plain reason when that is not possible. Chyme's parts read the 3.1 colors through
+ * ChymeTokensContext.
  */
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { ChevronLeft, LogIn, LogOut, Radio, RefreshCw } from 'lucide-react-native';
-import { HOSTING_NOT_ENDORSEMENT_SHORT } from '@ctf/shared';
+import { LogOut, RefreshCw } from 'lucide-react-native';
+import { HOSTING_NOT_ENDORSEMENT_SHORT, SE_ROOM_MAIN_AUDIENCE, SE_ROOM_RULE, seTheme, type SeThemeTokens } from '@ctf/shared';
+import { useSeTheme } from '../se-frame/useSeTheme';
+import { SE_FONT } from '../se-frame/fonts';
 import { interFamily } from '../../components/ui';
 import { useAuth } from '../../auth/auth-context';
-import { useChymeTokens, type ChymeTokens } from './chyme-tokens';
-import { GradientFill, Spin } from './chyme-join-bar';
+import { ChymeTokensContext, seChymeTokens, type ChymeTokens } from './chyme-tokens';
+import { Spin } from './chyme-join-bar';
 import { ChymeUpcoming } from './chyme-upcoming';
 import { ChymeReadingsPlayer } from './chyme-readings-player';
 import { ChymeGuestListen, GuestNote } from './chyme-guest-listen';
@@ -20,37 +23,37 @@ import { getPublicRoom, type LiveState } from './chyme-public-api';
 
 type Listen = { listening: boolean; onListeningChange: (_l: boolean) => void; leaveKey: number };
 
-function Header({ onBack, t }: { onBack: () => void; t: ChymeTokens }) {
+// The 3.1 header, as the web's signed-out room page has it: Back to Today, the room's name, who it
+// is open to and its rule.
+function Header({ onBack, se }: { onBack: () => void; se: SeThemeTokens }) {
   return (
     <View style={styles.header}>
-      <GradientFill from={t.ACCENT} to="#16A34A" id="chyme-public-header" horizontal />
-      <TouchableOpacity onPress={onBack} accessibilityRole="button" accessibilityLabel="Back to apps" style={[styles.back, { borderRadius: t.radius(8) }]}>
-        <ChevronLeft size={18} color={t.TEXT} />
+      <TouchableOpacity onPress={onBack} accessibilityRole="link" style={styles.backLink}>
+        <Text style={[styles.backText, { color: se.ink }]}>Back to Today</Text>
       </TouchableOpacity>
-      <Radio size={16} color="#fff" />
-      <View style={styles.flex}>
-        <Text style={styles.headerTitle}>Chyme</Text>
-        <Text style={styles.headerSub}>Live audio for survivors</Text>
-      </View>
+      <Text style={[styles.eyebrow, { color: se.soft }]}>Chyme · live audio</Text>
+      <Text accessibilityRole="header" style={[styles.title, { color: se.ink }]}>
+        Main Room
+      </Text>
+      <Text style={[styles.eyebrow, { color: se.soft }]}>{SE_ROOM_MAIN_AUDIENCE}</Text>
+      <Text style={[styles.eyebrow, { color: se.soft }]}>{SE_ROOM_RULE}</Text>
     </View>
   );
 }
 
-function Invitation({ onSignIn, t }: { onSignIn: () => void; t: ChymeTokens }) {
+// Listening needs no account; signing in is for speaking, reacting and hosting.
+function Invitation({ onSignIn, se }: { onSignIn: () => void; se: SeThemeTokens }) {
   return (
-    <View style={[styles.invite, { borderRadius: t.radius(14), borderColor: `${t.ACCENT}30`, backgroundColor: `${t.ACCENT}06` }]}>
-      <View style={styles.badgeRow}>
-        <View style={[styles.badge, { borderRadius: t.radius(20), backgroundColor: `${t.ACCENT}15`, borderColor: `${t.ACCENT}30` }]}>
-          <View style={[styles.badgeDot, { borderRadius: t.radius(2.5), backgroundColor: t.ACCENT }]} />
-          <Text style={[styles.badgeText, { color: t.ACCENT }]}>LIVE AUDIO</Text>
-        </View>
-      </View>
-      <Text style={[styles.inviteTitle, { color: t.TITLE }]}>Live audio rooms for survivors</Text>
-      <Text style={[styles.inviteBody, { color: t.MUTED }]}>Listen in for free. Sign in to speak, react, or host your own room.</Text>
-      <Text style={[styles.inviteNote, { color: t.MUTED }]}>{HOSTING_NOT_ENDORSEMENT_SHORT}</Text>
-      <TouchableOpacity onPress={onSignIn} accessibilityRole="button" style={[styles.signIn, { borderRadius: t.radius(9), backgroundColor: t.ACCENT }]}>
-        <LogIn size={13} color="#fff" />
-        <Text style={styles.signInText}>Sign In</Text>
+    <View style={[styles.invite, { borderColor: se.hair, backgroundColor: se.card }]}>
+      <Text style={[styles.inviteTitle, { color: se.ink }]}>Live audio rooms for survivors</Text>
+      <Text style={[styles.inviteBody, { color: se.soft }]}>Listen in for free. Sign in to speak, react, or host your own room.</Text>
+      <Text style={[styles.inviteNote, { color: se.soft }]}>{HOSTING_NOT_ENDORSEMENT_SHORT}</Text>
+      <TouchableOpacity
+        onPress={onSignIn}
+        accessibilityRole="button"
+        style={[styles.signIn, { backgroundColor: se.btn, borderColor: se.line, boxShadow: `0px 3px 0px ${se.line}` }]}
+      >
+        <Text style={[styles.signInText, { color: se.onBtn }]}>Sign in</Text>
       </TouchableOpacity>
     </View>
   );
@@ -144,17 +147,20 @@ function usePublicRoom() {
 }
 
 export function ChymePublicScreen({ onBack }: { onBack: () => void }) {
-  const t = useChymeTokens();
+  const { theme } = useSeTheme();
+  const se = seTheme(theme.color, theme.mode);
+  const t = useMemo(() => seChymeTokens(se), [se]);
   const { signIn } = useAuth();
   const { live, refreshing, refreshKey, onRoomGone, refresh } = usePublicRoom();
   const [listening, setListening] = useState(false);
   const [leaveKey, setLeaveKey] = useState(0);
   const onSignIn = () => void signIn();
   return (
-    <View style={[styles.screen, { backgroundColor: t.BG }]}>
-      <Header onBack={onBack} t={t} />
+    <ChymeTokensContext.Provider value={t}>
+    <View style={[styles.screen, { backgroundColor: se.bg }]}>
       <ScrollView style={styles.flex} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <Invitation onSignIn={onSignIn} t={t} />
+        <Header onBack={onBack} se={se} />
+        <Invitation onSignIn={onSignIn} se={se} />
         <View style={styles.body}>
           <View style={[styles.upcoming, { borderRadius: t.radius(10), borderColor: t.BORDER }]}>
             <ChymeUpcoming refreshKey={refreshKey} compact />
@@ -164,38 +170,26 @@ export function ChymePublicScreen({ onBack }: { onBack: () => void }) {
         </View>
       </ScrollView>
     </View>
+    </ChymeTokensContext.Provider>
   );
 }
 
 const styles = StyleSheet.create({
-  // Takes back the app's content padding: the web page runs edge to edge.
-  screen: { flex: 1, marginHorizontal: -12, marginTop: -10 },
+  screen: { flex: 1 },
   flex: { flex: 1 },
   scroll: { flexGrow: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10, paddingHorizontal: 16, overflow: 'hidden' },
-  back: {
-    width: 32,
-    height: 32,
-    marginRight: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.14)',
-  },
-  headerTitle: { fontSize: 14, color: '#fff', fontFamily: interFamily('700') },
-  headerSub: { fontSize: 10, color: 'rgba(255,255,255,0.7)', fontFamily: interFamily('400') },
-  invite: { marginTop: 10, marginHorizontal: 12, padding: 14, borderWidth: 1 },
-  badgeRow: { flexDirection: 'row', marginBottom: 8 },
-  badge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 2, paddingHorizontal: 8, borderWidth: 1 },
-  badgeDot: { width: 5, height: 5 },
-  badgeText: { fontSize: 10, fontFamily: interFamily('700') },
-  inviteTitle: { fontSize: 14, lineHeight: 19.6, marginBottom: 6, fontFamily: interFamily('700') },
-  inviteBody: { fontSize: 12, lineHeight: 18, marginBottom: 12, fontFamily: interFamily('400') },
-  inviteNote: { fontSize: 11, lineHeight: 16.5, marginBottom: 12, fontFamily: interFamily('400') },
-  signIn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, padding: 9 },
-  signInText: { color: '#fff', fontSize: 12, fontFamily: interFamily('700') },
-  body: { flex: 1, paddingVertical: 10, paddingHorizontal: 12, gap: 8 },
+  header: { gap: 2, paddingTop: 20, paddingHorizontal: 16 },
+  backLink: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center' },
+  backText: { fontSize: 14, textDecorationLine: 'underline', fontFamily: SE_FONT.sans },
+  eyebrow: { fontSize: 13, lineHeight: 18, fontFamily: SE_FONT.sans },
+  title: { fontSize: 30, lineHeight: 33, fontFamily: SE_FONT.serif },
+  invite: { marginTop: 18, marginHorizontal: 16, paddingVertical: 14, paddingHorizontal: 16, gap: 8, borderRadius: 18, borderWidth: 1.5 },
+  inviteTitle: { fontSize: 16, fontFamily: SE_FONT.sansBold },
+  inviteBody: { fontSize: 15, lineHeight: 21, fontFamily: SE_FONT.sans },
+  inviteNote: { fontSize: 13, lineHeight: 19, fontFamily: SE_FONT.sans },
+  signIn: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center', paddingHorizontal: 18, borderRadius: 999, borderWidth: 1.5 },
+  signInText: { fontSize: 15, fontFamily: SE_FONT.sansBold },
+  body: { flex: 1, paddingTop: 18, paddingBottom: 48, paddingHorizontal: 16, gap: 8 },
   upcoming: { borderWidth: 1, overflow: 'hidden' },
   rowHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   rowLabel: { fontSize: 11, letterSpacing: 0.88, textTransform: 'uppercase', fontFamily: interFamily('700') },
