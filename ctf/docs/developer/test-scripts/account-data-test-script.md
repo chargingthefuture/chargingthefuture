@@ -401,17 +401,19 @@ Step 3 lands on `/today`, Today as anybody can read it, with Sign in.
 dot and the done count goes up by one. Step 3 removes the check and the count goes back down.
 **Result:** web ☐ android ☐ — notes:
 
-## AD-22 · Stories and puzzles
+## AD-22 · Stories and the puzzle of the day
 **Role:** a visitor who is not signed in, then a member on 3.1 · **Surfaces:** web, android (signed in)
 **Steps:**
 1. Open Today and pick the Stories filter.
-2. Tap Play on the "puzzles from today's stories" card.
-3. Open a puzzle and answer it: tap a word, a title, or the four lines in order.
-4. Tap Next puzzle, then All puzzles, then Older at the foot of the list.
-5. Close the page, open `/games` again.
-**Expected:** Step 1 shows five Story cards marked "from the blog" or "from Quora", each with Read
-it and Play its puzzle, and the Game card. Step 3 shows Right, or marks the correct answer; Read the
-post opens the blog post. Step 4 shows ten puzzles a page with "Page N of M". Step 5 shows Solved on
-every puzzle answered right. No sign-in is asked for at any step. On Android, step 2 opens Puzzles
-in the app, Play its puzzle opens on that story's puzzle, and Read the post opens the browser.
+2. Tap Play on the "Puzzle of the day" card.
+3. Play it: pick the word for the meaning, swap strips until the picture is back in order, or type words one
+   letter apart until the last word is reached (try Hint and Undo once).
+4. Tap Copy to share and paste the line somewhere.
+5. Close the page and open `/games` again; then open it on the next day.
+**Expected:** Step 1 shows five Story cards marked "from the blog" or "from Quora", each with Read it
+only, and the Puzzle of the day card with its number. Nothing in the puzzle comes from a blog post.
+Step 3 never ends in failure: a wrong word is marked and another can be picked, and the ladder
+accepts any number of steps. Step 4's line gives the puzzle number and how it went, never the answer.
+Step 5 shows Done with the same result the same day, and the next kind of puzzle the next day (word,
+picture, ladder in turn). No sign-in is asked for. On Android, step 2 opens the puzzle in the app.
 **Result:** web ☐ android ☐ — notes:

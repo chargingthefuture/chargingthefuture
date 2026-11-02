@@ -24,6 +24,7 @@ const SOURCE_NAMES = {
     'skills-hunt': 'the Wanted card',
     'skills-hunt-mission': "today's mission",
     'blog-stories': "today's stories",
+    games: "today's puzzle",
     beacon: 'the broadcast',
     chyme: 'the Main Room',
     'days-won': 'Days won',

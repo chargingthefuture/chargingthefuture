@@ -233,12 +233,13 @@ email sender, Android app links and blog links move with it.
 15. Speed budget check before release. Blocked by 6.
 16. Domain move to lagatos.com. Last; no code dependency.
 17. The daily puzzle (decided 2026-10-26 to come after the first release; tabled until then, owner
-    decision 2026-11-02 to keep it on this list). A Game card on Today: one puzzle a day, the same
-    for everyone, built from that day's story card, so the game and the reading are the same thing.
-    The member assembles the story's picture or excerpt, or picks from answer choices that turn green
-    when right, with the result sliding up from the bottom; finishing turns it into the story's card
-    with Read and Next. Blocked by 6. Built 2026-11-02 on the web: five stories a day from the blog
-    and Quora answers, one puzzle per post from its own text, at `/games`, and the same screen on Android.
+    decision 2026-11-02 to keep it on this list). One puzzle a day, the same for everyone, played the
+    way a daily word game is played: a minute or so, a result to share, a new one tomorrow. Owner
+    decision 2026-11-02: never built from the blog's posts or anything members wrote; the puzzles
+    take turns between the word of the day, the picture of the day (an original drawn landscape cut
+    into strips) and a word ladder. No timer, streak, ranking or failing. Built 2026-11-02 at
+    `/games`, with the Puzzle of the day card on Today, on web and Android; the blog-post puzzles
+    built first the same day were removed.
 18. 21 Questions (same decision). Short daily questions answered by two members, then continued
     inside the card, never in a separate chat. The questions come from a filtered list: no home or
     family prompts. Blocked by 6 and 8.
