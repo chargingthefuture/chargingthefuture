@@ -32,3 +32,15 @@ export function seCalendarFileName(title) {
     const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60);
     return `${slug || 'event'}.ics`;
 }
+// A talk in the Main Room, as the Today card and the room carry it, for Add to calendar on web and
+// Android alike. The address is a path; each platform makes it absolute.
+export function seTalkCalendarEvent(talk) {
+    return {
+        uid: `talk-${talk.startIso}`,
+        title: talk.title,
+        startIso: talk.startIso,
+        endIso: talk.endIso,
+        description: `Hosted by ${talk.host} in the Main Room.`,
+        url: '/ti-radio',
+    };
+}

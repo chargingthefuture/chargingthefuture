@@ -13,6 +13,7 @@ import {
   SE_TODAY_FILTERS,
   seDaysWonLines,
   seRoomPeopleLine,
+  seTalkCalendarEvent,
   seTalkLine,
   seTodayView,
   type SeThemeTokens,
@@ -23,6 +24,7 @@ import {
 } from '@ctf/shared';
 import { useSeRooms } from '../rooms/SeRooms';
 import { authedFetchJson } from '../../../auth/authedFetch';
+import { AddToCalendarButton } from '../../../components/shared/AddToCalendarButton';
 import type { FeatureKey } from '../../../navigation/screens';
 import { SE_FONT } from '../fonts';
 import { MatchingToggle } from './MatchingToggle';
@@ -46,6 +48,7 @@ function RoomCard({ t, room }: { t: SeThemeTokens; room: SeTodayRoom }) {
         <Text style={s.meta}>· {AUDIENCE[room.key]}</Text>
       </View>
       {talkLine ? <Text style={s.roomTitle}>{talkLine}</Text> : null}
+      {room.nextTalk && !room.nextTalk.onAir ? <AddToCalendarButton color={t.ink} borderColor={t.line} event={seTalkCalendarEvent(room.nextTalk)} /> : null}
       <Text style={s.meta}>{seRoomPeopleLine(room.members, room.guests)}</Text>
       <TouchableOpacity accessibilityRole="button" onPress={() => open(scope, room.nextTalk)} style={s.primary}>
         <Text style={s.primaryLabel}>{room.live ? SE_ROOM_WORDS_MAIN.join : 'Open the room'}</Text>
@@ -67,7 +70,22 @@ function DaysWonCard({ s, daysWon }: { s: Styles; daysWon: NonNullable<SeToday['
   );
 }
 
-function LiveCards({ t, s, today, go }: { t: SeThemeTokens; s: Styles; today: SeToday | null; go: (_href: string) => void }) {
+// A visitor who is not signed in listens on the public room page instead of inside the frame.
+function GuestRoomLink({ s, go }: { s: Styles; go: (_href: string) => void }) {
+  return (
+    <View style={s.daysWon} accessibilityLabel="Main Room">
+      <Text style={s.daysWonLabel}>Main Room</Text>
+      <Text style={s.daysWonSmall}>Anyone can listen, no account needed.</Text>
+      <TouchableOpacity accessibilityRole="link" onPress={() => go('/apps/chyme')} style={s.primary}>
+        <Text style={s.primaryLabel}>Listen in</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+type LiveProps = { t: SeThemeTokens; s: Styles; today: SeToday | null; go: (_href: string) => void; guest: boolean };
+
+function LiveCards({ t, s, today, go, guest }: LiveProps) {
   const broadcast = today?.broadcast;
   return (
     <>
@@ -84,7 +102,7 @@ function LiveCards({ t, s, today, go }: { t: SeThemeTokens; s: Styles; today: Se
           </TouchableOpacity>
         </View>
       ) : null}
-      {today?.rooms.map((room) => <RoomCard key={room.key} t={t} room={room} />)}
+      {guest ? (today ? <GuestRoomLink s={s} go={go} /> : null) : today?.rooms.map((room) => <RoomCard key={room.key} t={t} room={room} />)}
     </>
   );
 }
@@ -127,7 +145,8 @@ function Notices({ s, error, missingLine, loading, onRetry }: { s: Styles; error
   );
 }
 
-export function TodayScreen({ t, accountId, onOpen }: { t: SeThemeTokens; accountId: string; onOpen: (_key: FeatureKey) => void }) {
+// `accountId` null: a visitor who is not signed in reads the public Today (no names, no mute).
+export function TodayScreen({ t, accountId, onOpen }: { t: SeThemeTokens; accountId: string | null; onOpen: (_key: FeatureKey) => void }) {
   const s = makeStyles(t);
   const { today, loading, error, marks, mark, toggle, reload } = useToday(accountId);
   const [filter, setFilter] = useState<SeTodayFilter>('all');
@@ -154,7 +173,7 @@ export function TodayScreen({ t, accountId, onOpen }: { t: SeThemeTokens; accoun
 
   return (
     <>
-      <LiveCards t={t} s={s} today={today} go={go} />
+      <LiveCards t={t} s={s} today={today} go={go} guest={accountId === null} />
       <View style={s.listHead}>
         <Text accessibilityRole="header" style={s.listTitle}>
           Today&apos;s cards
@@ -162,7 +181,7 @@ export function TodayScreen({ t, accountId, onOpen }: { t: SeThemeTokens; accoun
         {view.doneLine ? <Text style={s.meta}>{view.doneLine}</Text> : null}
       </View>
       <FilterChips s={s} filter={filter} onChange={setFilter} />
-      {filter === 'matches' ? <MatchingToggle t={t} refreshKey={today?.generatedAtIso} onChanged={() => void reload()} /> : null}
+      {accountId && filter === 'matches' ? <MatchingToggle t={t} refreshKey={today?.generatedAtIso} onChanged={() => void reload()} /> : null}
       <Notices s={s} error={error} missingLine={view.missingLine} loading={!today && loading} onRetry={() => void reload()} />
       {muteNote ? <Text style={s.meta}>{muteNote}</Text> : null}
       {today ? (
@@ -176,7 +195,7 @@ export function TodayScreen({ t, accountId, onOpen }: { t: SeThemeTokens; accoun
               read={marks.read.includes(card.id)}
               onToggleDone={() => toggle('read', card.id)}
               onHide={() => mark('hidden', card.id)}
-              onMute={card.author ? () => void mute(card) : undefined}
+              onMute={accountId && card.author ? () => void mute(card) : undefined}
               onOpenLink={go}
               onChanged={() => void reload()}
             />

@@ -1,12 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { AddToCalendarButton, talkCalendarEvent } from '@/components/shared/add-to-calendar';
+import { AddToCalendarButton } from '@/components/shared/add-to-calendar';
 import {
   SE_ROOM_MAIN_AUDIENCE,
   SE_ROOM_WEAVERS_AUDIENCE,
   SE_ROOM_WORDS_MAIN,
   seRoomPeopleLine,
+  seTalkCalendarEvent,
   seTalkLine,
   type SeTodayBroadcast,
   type SeTodayRoom,
@@ -48,7 +49,7 @@ export function RoomCard({ room }: { room: SeTodayRoom }) {
       </div>
       {talkLine ? <span className={styles.roomTitle}>{talkLine}</span> : null}
       {room.nextTalk && !room.nextTalk.onAir ? (
-        <AddToCalendarButton color="var(--se-ink)" borderColor="var(--se-line)" event={talkCalendarEvent(room.nextTalk)} style={{ alignSelf: 'flex-start' }} />
+        <AddToCalendarButton color="var(--se-ink)" borderColor="var(--se-line)" event={seTalkCalendarEvent(room.nextTalk)} style={{ alignSelf: 'flex-start' }} />
       ) : null}
       <span className={styles.roomMeta}>{seRoomPeopleLine(room.members, room.guests)}</span>
       <button type="button" className={styles.primaryButton} onClick={() => open(scope, room.nextTalk)}>

@@ -30,6 +30,8 @@ function dayQuestionCards(day: string, answers: Map<string, number>, matching: b
         body: seQuestionCardBody(answered, out, matching, choice === undefined ? null : (question.choices[choice] ?? null)),
         createdAtIso,
         href: '/',
+      // Answered and talked in on the card itself, so no button opens anything else.
+      actions: [],
       }),
       done: choice !== undefined,
     };
@@ -70,6 +72,7 @@ function matchCard(
     author: who,
     createdAtIso: talk?.lastAtIso ?? createdAtIso,
     href: '/',
+    actions: [],
   });
 }
 

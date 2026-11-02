@@ -38,7 +38,7 @@ type FeatureViewContext = {
 };
 
 export function buildFeatureViews(ctx: FeatureViewContext): FeatureRenderers {
-  const { open, refreshToken, ppCohortId, openPpRoom } = ctx;
+  const { open, back, refreshToken, ppCohortId, openPpRoom } = ctx;
   return {
     apps: () => <AppsList onOpen={open} />,
     // onBack serves the signed-out public page, which draws its own header with a back control.
@@ -55,7 +55,8 @@ export function buildFeatureViews(ctx: FeatureViewContext): FeatureRenderers {
     ),
     foundation: () => <Foundation onOpenRecurring={ctx.openRecurringFromFoundation} />,
     'foundation-admin': () => <FoundationAdmin />,
-    games: () => <DailyScreen />,
+    // Drawn full screen by App.tsx, outside the 3.0 shell; this entry only completes the table.
+    games: () => <DailyScreen onBack={back} />,
     ...accountViews(ctx),
   };
 }

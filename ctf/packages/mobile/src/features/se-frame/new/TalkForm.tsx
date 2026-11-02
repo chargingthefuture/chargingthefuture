@@ -13,7 +13,6 @@ import { SE_FONT } from '../fonts';
 // The same limits the web form and the route hold (lib/ti-radio/constants.ts).
 const MAX_TITLE = 120;
 const MAX_DESCRIPTION = 500;
-const SHOWN_SLOTS = 12;
 
 type GuideSlot = { slotStartIso: string; slotEndIso: string; state: 'open' | 'booked'; isOnAir: boolean };
 type Guide = { slots: GuideSlot[]; viewer: { canHost: boolean } };
@@ -72,7 +71,7 @@ function TalkFields({ s, guide, reload }: { s: Styles; guide: Guide; reload: () 
   const [error, setError] = useState<string | null>(null);
   const [booked, setBooked] = useState<string | null>(null);
 
-  const open = guide.slots.filter((item) => item.state === 'open' && !item.isOnAir).slice(0, SHOWN_SLOTS);
+  const open = guide.slots.filter((item) => item.state === 'open' && !item.isOnAir);
   if (open.length === 0 && !booked) return <Text style={s.text}>{W.noOpen}</Text>;
 
   async function submit() {
@@ -102,6 +101,7 @@ function TalkFields({ s, guide, reload }: { s: Styles; guide: Guide; reload: () 
     <View style={s.form}>
       {booked ? <Text style={s.done}>{seTalkBooked(seSlotDay(booked))}</Text> : null}
       <Text style={s.label}>{W.when}</Text>
+      {slot ? null : <Text style={s.text}>{W.choose}</Text>}
       <View style={s.slots}>
         {open.map((item) => {
           const picked = item.slotStartIso === slot;

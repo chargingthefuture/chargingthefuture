@@ -1,6 +1,6 @@
 // Which interface the signed-in member sees, 3.0 or 3.1, read from and saved to the same
 // /api/account/ui-preferences the web uses, so the choice follows the account across web and
-// Android. Until the read answers, and whenever it fails, the member stays on 3.0.
+// Android. Until the read answers, and whenever it fails, the member sees the default (3.1).
 
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { isSeInterfaceVersion, SE_DEFAULT_INTERFACE_VERSION, type SeInterfaceVersion } from '@ctf/shared';

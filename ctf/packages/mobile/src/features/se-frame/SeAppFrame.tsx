@@ -1,7 +1,7 @@
 // The 3.1 app frame, the Android copy of the web (components/se-frame/se-app-frame.tsx): one screen
 // per tab, the open room and its bar, and the tab bar along the bottom.
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BackHandler, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SE_AVENHOOD, SE_AVENHOOD_DEFINITION, seTheme, type SeTab, type SeThemeChoice, type SeThemeTokens } from '@ctf/shared';
 import { useAuth } from '../../auth/auth-context';
@@ -12,6 +12,7 @@ import { TodayScreen } from './today/TodayScreen';
 import { MeScreen } from './me/MeScreen';
 import { useSeTheme } from './useSeTheme';
 import { UnlockBanner } from './UnlockBanner';
+import { SeFrameScrollContext } from './frame-scroll';
 import { NewScreen } from './new/NewScreen';
 import { ActivityScreen } from './activity/ActivityScreen';
 import { PeopleScreen } from './people/PeopleScreen';
@@ -72,12 +73,15 @@ function SeAppFrameBody({ onOpenAccount, onOpen }: FrameProps) {
     [minimize],
   );
   const back = () => void switchTo('3.0');
+  const scrollRef = useRef<ScrollView>(null);
+  const scrollToTop = useCallback(() => scrollRef.current?.scrollTo({ y: 0, animated: false }), []);
 
   return (
     <View style={s.frame}>
-      <ScrollView contentContainerStyle={s.screen} style={rooms.shown ? s.hidden : null}>
-        <FrameHeader s={s} tab={tab} />
+      <SeFrameScrollContext.Provider value={scrollToTop}>
+      <ScrollView ref={scrollRef} contentContainerStyle={s.screen} style={rooms.shown ? s.hidden : null}>
         <UnlockBanner t={t} onOpenUnlock={() => onOpen('unlock')} />
+        <FrameHeader s={s} tab={tab} />
 
         <TabScreen t={t} tab={tab} user={user} theme={theme} onTheme={setTheme} onBack={back} saving={saving} onOpenAccount={onOpenAccount} onOpen={onOpen} />
 
@@ -87,6 +91,7 @@ function SeAppFrameBody({ onOpenAccount, onOpen }: FrameProps) {
           </Text>
         ) : null}
       </ScrollView>
+      </SeFrameScrollContext.Provider>
       {user ? <SeRoomHosts t={t} user={{ userId: user.id, username: user.username ?? null }} /> : null}
       <SeRoomBar t={t} />
       <SeTabBar t={t} active={tab} onSelect={select} />
@@ -132,6 +137,8 @@ function TabScreen({ t, tab, user, theme, onTheme, onBack, saving, onOpenAccount
 
 function FrameHeader({ s, tab }: { s: Styles; tab: SeTab }) {
   const [definitionOpen, setDefinitionOpen] = useState(false);
+  // Me has no title, as on the web: the member's own picture and handle head it.
+  if (tab === 'me') return null;
   if (tab !== 'today') {
     return (
       <View style={s.header}>

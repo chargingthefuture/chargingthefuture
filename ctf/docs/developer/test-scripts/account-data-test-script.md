@@ -10,7 +10,7 @@
 | | |
 |---|---|
 | **Surface** | `/account/data` (Your Data & Privacy), `/account` for AD-9 and AD-10, the 3.1 Today screen for AD-11, rooms in 3.1 for AD-12, + New for AD-13, Me for AD-14, Activity for AD-15, People for AD-16, Days won for AD-17, mute for AD-18, `/games` for AD-22 and 21 Questions for AD-23, 21 Questions matching for AD-24 |
-| **Surface** | `/account/data` (Your Data & Privacy), `/account` for AD-9 and AD-10, the 3.1 Today screen for AD-11, rooms in 3.1 for AD-12, + New for AD-13, Me for AD-14, Activity for AD-15, People for AD-16, Days won for AD-17, mute for AD-18, `/games` for AD-22 and 21 Questions for AD-23 and web pages from Android for AD-24 and AD-25 |
+| **Surface** | `/account/data` (Your Data & Privacy), `/account` for AD-9 and AD-10, the 3.1 Today screen for AD-11, rooms in 3.1 for AD-12, + New for AD-13, Me for AD-14, Activity for AD-15, People for AD-16, Days won for AD-17, mute for AD-18, `/games` for AD-22 and 21 Questions for AD-23 and web pages from Android for AD-24 and AD-25, Android parity for AD-26 |
 | **Surface** | `/account/data` (Your Data & Privacy), `/account` for AD-9 and AD-10, the 3.1 Today screen for AD-11, rooms in 3.1 for AD-12, + New for AD-13, Me for AD-14, Activity for AD-15, People for AD-16, Days won for AD-17, mute for AD-18 and `/games` for AD-22 |
 | **Visibility** | Any signed-in identity (including unlock-pending) |
 | **Roles to test** | member |
@@ -472,4 +472,21 @@ separate browser app. Step 2 returns to Today where it was. Step 3 opens each pa
 **Expected:** Steps 1 and 2 show "Signing you in…" for a moment, then the page, signed in as the
 same member, with no sign-in screen. The address bar never shows a ticket. Step 3 opens the page
 without signing in, and the page asks for sign-in itself.
+**Result:** web ☐ android ☐ — notes:
+
+## AD-26 · Android 3.1 matches the web
+**Role:** a visitor signed out, then a member on 3.1 · **Surfaces:** android
+**Steps:**
+1. Open the app signed out.
+2. Sign in; on Today, find a room card with a talk coming up and tap Add to calendar.
+3. Open the room; read its header.
+4. Open the puzzle of the day, finish it, tap Back to Today.
+5. Open + New → Talk; open Me; open People and tap Next.
+**Expected:** Step 1 shows "Today in the Avenhood" with a Sign in button, the cards with no names,
+and a Main Room card with Listen in, not the 3.0 apps list. Step 2 opens the share sheet with a
+calendar file. Step 3 shows the room rule under the talk. Step 4 shows the puzzle full screen in
+the 3.1 colors with Back to Today at the top and beside Copy to share, and returns to Today. Step 5:
+Talk lists every open time under "Choose a time"; Me has no title; People's next page starts at the
+top. The Unlock banner, when shown, sits above the Today header. 21 Questions cards have no Open
+button.
 **Result:** web ☐ android ☐ — notes:
