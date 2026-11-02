@@ -635,6 +635,7 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       del('question_match_messages', 'user_low', 'Conversations in your match cards.'),
       del('question_match_messages', 'user_high', 'Conversations in your match cards.'),
       del('question_matching_settings', 'user_id', 'Whether you are matched.'),
+      del('question_answer_audit', 'user_id', 'The record of your answers and of matching turned off or on.'),
     ],
   },
   {

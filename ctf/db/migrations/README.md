@@ -87,3 +87,4 @@ up to the v3 spec: point the `DATABASE_URL` secret at the clone and run the work
 | `post/0078_launch_3_1.sql` | post | The 3.1 launch: `user_ui_preferences.interface_version` defaults to '3.1', and every row on '3.0' moves to '3.1', in production and the demo schema. A member can go back to 3.0 in Settings. Not safe to re-run after members have chosen 3.0 again. |
 | `post/0079_twenty_one_questions.sql` | post | 21 Questions: `question_answers` (a member's answers, the first one stands) and `question_match_messages` (the conversation inside a match card). Safe to re-run. |
 | `post/0080_question_matching_settings.sql` | post | 21 Questions: `question_matching_settings`, whether a member is matched (no row means on). Safe to re-run. |
+| `post/0081_question_answer_audit.sql` | post | 21 Questions: `question_answer_audit`, the record of answers, refused attempts to change one, and matching turned off or on. Safe to re-run. |

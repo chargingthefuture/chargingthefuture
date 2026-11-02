@@ -23,7 +23,9 @@ Today's cards store nothing in the database: they read other features' tables, a
 does not create a Mood pseudonym. The one exception is 21 Questions (3.1.0 plan, task 18), whose
 controls sit inside Today's cards: `question_answers` (a member's answers, the first one stands) and
 `question_match_messages` (the conversation inside a match card, stored once per pair, low id first)
-and `question_matching_settings` (whether the member is matched; no row means on).
+`question_matching_settings` (whether the member is matched; no row means on) and
+`question_answer_audit` (each answer, each refused attempt to change one, and matching turned off or
+on, read by the owner to spot somebody fishing for matches).
 
 On the member's own device it keeps two things: the last Today answer, so the screen draws at once,
 and the cards the member opened or hid. Web keeps them in this browser's storage under
@@ -32,7 +34,8 @@ Neither leaves the device, and signing out of the device or clearing the app's d
 
 ## 4) Deletion Scopes
 
-- Service deletion: the member's `question_answers` and `question_matching_settings` rows, and every
+- Service deletion: the member's `question_answers`, `question_matching_settings` and
+  `question_answer_audit` rows, and every
   `question_match_messages` row where they are `user_low` or `user_high` (registry entry
   `twenty-one-questions`).
 - Full account deletion: the same 21 Questions rows; each card source's own contract covers its rows.

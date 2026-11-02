@@ -448,6 +448,10 @@ answered count; the toggle is on, with the line about what Off does under it. St
 cards, and the card says matching is off and how to turn it back on. Step 4 shows no Match card for A,
 and a message to A is refused. Step 5 leaves the toggle off on Me and the card still says matching is
 off. Step 6 brings the Match cards back for both, with the same answers.
+Step 7 (owner, Neon SQL Editor): run `ctf/scripts/sql/twenty_one_questions_audit.sql` query 2 with A's
+account id. It lists A's answers, then matching_off from step 3 and matching_on from step 6, newest first.
+As A, tapping a different answer on a question already answered adds an answer_refused row and keeps the
+first answer.
 ## AD-24 · Web pages open over the Android app
 **Role:** a member on 3.1 · **Surfaces:** android
 **Steps:**

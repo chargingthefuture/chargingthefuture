@@ -52,6 +52,7 @@ auditEvents:
       reason: policy_reason_code
     dataClassesAccessed:
       - question_answers
+      - question_answer_audit
     targetContext:
       workspaceId: workspace_identifier
     requestId: request_identifier
@@ -91,6 +92,7 @@ auditEvents:
       reason: policy_reason_code
     dataClassesAccessed:
       - question_matching_settings
+      - question_answer_audit
     targetContext:
       workspaceId: workspace_identifier
     requestId: request_identifier

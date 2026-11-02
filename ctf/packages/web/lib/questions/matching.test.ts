@@ -5,8 +5,8 @@ import { SE_MATCHING_WORDS, SE_QUESTIONS, seMatchingToggleShown, seQuestionCardB
 // queries read; the match query is answered in code, and the matching setting is applied only when
 // the SQL sent carries the clause that reads it, so a query that drops the setting fails here.
 
-type Store = { answers: Map<string, Map<string, number>>; off: Map<string, boolean> };
-const store: Store = { answers: new Map(), off: new Map() };
+type Store = { answers: Map<string, Map<string, number>>; off: Map<string, boolean>; audit: string[] };
+const store: Store = { answers: new Map(), off: new Map(), audit: [] };
 
 const SETTING_CLAUSE = /question_matching_settings s\s+WHERE s\.user_id IN \(\$1, b\.user_id\) AND NOT s\.matching_enabled/;
 
@@ -33,12 +33,20 @@ function answer(sql: string, params: unknown[]) {
   if (sql.includes('INSERT INTO question_answers')) {
     const [, questionId, choice] = params as [string, string, number];
     const mine = store.answers.get(userId) ?? new Map<string, number>();
-    if (mine.has(questionId)) return { rowCount: 0 };
-    store.answers.set(userId, mine.set(questionId, choice));
-    return { rowCount: 1 };
+    const prior = mine.get(questionId);
+    if (prior === undefined) {
+      store.answers.set(userId, mine.set(questionId, choice));
+      if (sql.includes('INSERT INTO question_answer_audit')) store.audit.push(`${userId} answered ${questionId} ${choice}`);
+      return [{ saved: true }];
+    }
+    if (prior !== choice && sql.includes('INSERT INTO question_answer_audit')) store.audit.push(`${userId} answer_refused ${questionId} ${choice} (stands ${prior})`);
+    return [{ saved: false }];
   }
   if (sql.includes('INSERT INTO question_matching_settings')) {
-    store.off.set(userId, !(params[1] as boolean));
+    const enabled = params[1] as boolean;
+    const was = !store.off.get(userId);
+    store.off.set(userId, !enabled);
+    if (was !== enabled && sql.includes('INSERT INTO question_answer_audit')) store.audit.push(`${userId} matching_${enabled ? 'on' : 'off'}`);
     return { rowCount: 1 };
   }
   if (sql.includes('FROM question_matching_settings WHERE user_id = $1')) {
@@ -70,6 +78,7 @@ describe('21 Questions matching setting', () => {
   beforeEach(() => {
     store.answers.clear();
     store.off.clear();
+    store.audit.length = 0;
   });
 
   it('is on for a member who never touched it', async () => {
@@ -107,6 +116,30 @@ describe('21 Questions matching setting', () => {
     await setMatchingEnabled('ann', false);
     await saveAnswer('ann', q2.id, 1);
     expect(await readMatchingState('ann')).toEqual({ answered: 2, enabled: false });
+  });
+});
+
+describe('21 Questions audit record', () => {
+  beforeEach(() => {
+    store.answers.clear();
+    store.off.clear();
+    store.audit.length = 0;
+  });
+
+  it('records each answer and each refused attempt to change one, not a repeat of the same answer', async () => {
+    expect(await saveAnswer('ann', q1.id, 0)).toBe(true);
+    expect(await saveAnswer('ann', q1.id, 0)).toBe(false);
+    expect(await saveAnswer('ann', q1.id, 2)).toBe(false);
+    expect(store.audit).toEqual([`ann answered ${q1.id} 0`, `ann answer_refused ${q1.id} 2 (stands 0)`]);
+    expect(store.answers.get('ann')?.get(q1.id)).toBe(0);
+  });
+
+  it('records matching turned off and on, and nothing when it does not change', async () => {
+    await setMatchingEnabled('ann', true);
+    await setMatchingEnabled('ann', false);
+    await setMatchingEnabled('ann', false);
+    await setMatchingEnabled('ann', true);
+    expect(store.audit).toEqual(['ann matching_off', 'ann matching_on']);
   });
 });
 

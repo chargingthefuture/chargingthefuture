@@ -34,14 +34,24 @@ export async function listAnswers(userId: string): Promise<Map<string, number>> 
   return new Map(result.rows.map((row) => [row.question_id, row.choice]));
 }
 
-// False when the question was already answered: the first answer stands.
+// False when the question was already answered: the first answer stands. Every answer goes into
+// question_answer_audit, and so does a refused attempt to give a different one, with the answer
+// that stands; sending the same answer again records nothing.
 export async function saveAnswer(userId: string, questionId: string, choice: number): Promise<boolean> {
-  const result = await queryDb(
-    `INSERT INTO question_answers (user_id, question_id, choice) VALUES ($1, $2, $3)
-     ON CONFLICT (user_id, question_id) DO NOTHING`,
+  const result = await queryDb<{ saved: boolean }>(
+    `WITH prior AS (SELECT choice FROM question_answers WHERE user_id = $1 AND question_id = $2),
+          ins AS (
+            INSERT INTO question_answers (user_id, question_id, choice) VALUES ($1, $2, $3)
+            ON CONFLICT (user_id, question_id) DO NOTHING RETURNING 1),
+          audit AS (
+            INSERT INTO question_answer_audit (user_id, action, question_id, choice, prior_choice)
+            SELECT $1, CASE WHEN EXISTS (SELECT 1 FROM ins) THEN 'answered' ELSE 'answer_refused' END, $2, $3,
+                   (SELECT choice FROM prior)
+             WHERE EXISTS (SELECT 1 FROM ins) OR (SELECT choice FROM prior) IS DISTINCT FROM $3::smallint)
+     SELECT EXISTS (SELECT 1 FROM ins) AS saved`,
     [userId, questionId, choice],
   );
-  return (result.rowCount ?? 0) > 0;
+  return result.rows[0]?.saved ?? false;
 }
 
 export type MatchingState = { answered: number; enabled: boolean };
@@ -57,11 +67,17 @@ export async function readMatchingState(userId: string): Promise<MatchingState> 
   return { answered: row?.answered ?? 0, enabled: row?.enabled ?? true };
 }
 
-// Only the member's own toggle calls this; answering a question never does.
+// Only the member's own toggle calls this; answering a question never does. A real change (no row
+// counts as on) goes into question_answer_audit as matching_off or matching_on.
 export async function setMatchingEnabled(userId: string, enabled: boolean): Promise<void> {
   await queryDb(
-    `INSERT INTO question_matching_settings (user_id, matching_enabled, updated_at) VALUES ($1, $2, NOW())
-     ON CONFLICT (user_id) DO UPDATE SET matching_enabled = EXCLUDED.matching_enabled, updated_at = NOW()`,
+    `WITH prior AS (SELECT matching_enabled FROM question_matching_settings WHERE user_id = $1),
+          up AS (
+            INSERT INTO question_matching_settings (user_id, matching_enabled, updated_at) VALUES ($1, $2, NOW())
+            ON CONFLICT (user_id) DO UPDATE SET matching_enabled = EXCLUDED.matching_enabled, updated_at = NOW())
+     INSERT INTO question_answer_audit (user_id, action)
+     SELECT $1, CASE WHEN $2 THEN 'matching_on' ELSE 'matching_off' END
+      WHERE COALESCE((SELECT matching_enabled FROM prior), TRUE) <> $2`,
     [userId, enabled],
   );
 }
