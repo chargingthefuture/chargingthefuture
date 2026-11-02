@@ -72,11 +72,26 @@ function useMeasures() {
   return state;
 }
 
+function MeasureList({ t, rows }: { t: PluginShellTokens; rows: MeasureRow[] }) {
+  return (
+    <dl style={{ margin: 0 }}>
+      {rows.map((row, index) => (
+        <div key={row.label} style={{ padding: '10px 0', borderTop: index === 0 ? 'none' : `1px solid ${t.BORDER}` }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
+            <dt style={{ flex: 1, fontSize: 14, color: t.TEXT }}>{row.label}</dt>
+            <dd style={{ margin: 0, fontSize: 18, fontWeight: 700, color: t.TITLE, fontVariantNumeric: 'tabular-nums' }}>{row.value}</dd>
+          </div>
+          <p style={{ margin: '2px 0 0', fontSize: 12, lineHeight: 1.4, color: t.SUBTLE }}>{row.note}</p>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
 export function AdoptionMeasures({ tokens: t }: { tokens: PluginShellTokens }) {
   const { reading, error } = useMeasures();
   const [copied, setCopied] = useState(false);
   const lines = reading ? measuresText(reading) : [];
-  const rows = reading ? measureRows(reading) : [];
   return (
     <section aria-label="Measures" style={{ marginTop: 24, padding: 16, borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER}` }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
@@ -93,19 +108,7 @@ export function AdoptionMeasures({ tokens: t }: { tokens: PluginShellTokens }) {
       </div>
       {error ? <p role="alert" style={{ margin: 0, fontSize: 14, color: t.TITLE }}>Could not read the measures: {error}</p> : null}
       {!reading && !error ? <p style={{ margin: 0, fontSize: 14, color: t.SUBTLE }}>Reading…</p> : null}
-      {rows.length > 0 ? (
-        <dl style={{ margin: 0 }}>
-          {rows.map((row, index) => (
-            <div key={row.label} style={{ padding: '10px 0', borderTop: index === 0 ? 'none' : `1px solid ${t.BORDER}` }}>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
-                <dt style={{ flex: 1, fontSize: 14, color: t.TEXT }}>{row.label}</dt>
-                <dd style={{ margin: 0, fontSize: 18, fontWeight: 700, color: t.TITLE, fontVariantNumeric: 'tabular-nums' }}>{row.value}</dd>
-              </div>
-              <p style={{ margin: '2px 0 0', fontSize: 12, lineHeight: 1.4, color: t.SUBTLE }}>{row.note}</p>
-            </div>
-          ))}
-        </dl>
-      ) : null}
+      {reading ? <MeasureList t={t} rows={measureRows(reading)} /> : null}
       {reading?.cohorts ? <RetentionCharts t={t} data={reading.cohorts} /> : null}
     </section>
   );

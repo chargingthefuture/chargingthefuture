@@ -66,20 +66,18 @@ function bucket(cohort: string, months: string[]): string {
   return months.includes(cohort) ? cohort : EARLIER;
 }
 
-// Pure shaping, kept apart from the reads so it is tested without a database.
-export function shapeRetention(
-  now: Date,
-  rows: { layers: LayerRow[]; active?: ActiveRow[]; curves: CurveRow[]; sizes: SizeRow[] },
-  source: RetentionCohorts['source'] = { kind: 'provider' },
-): RetentionCohorts {
-  const months = recentMonths(now);
+type ShapeRows = { layers: LayerRow[]; active?: ActiveRow[]; curves: CurveRow[]; sizes: SizeRow[] };
+
+function shapeSizes(rows: SizeRow[], months: string[]): Record<string, number> {
   const sizes: Record<string, number> = {};
-  for (const row of rows.sizes) {
+  for (const row of rows) {
     const key = bucket(row.cohort, months);
     sizes[key] = (sizes[key] ?? 0) + Number(row.members);
   }
-  const cohorts = [...(sizes[EARLIER] ? [EARLIER] : []), ...months];
+  return sizes;
+}
 
+function shapeLayers(now: Date, rows: ShapeRows, cohorts: string[], months: string[]): RetentionCohorts['layers'] {
   const firstWeek = monday(now);
   firstWeek.setUTCDate(firstWeek.getUTCDate() - 7 * (LAYER_WEEKS - 1));
   const layers = Array.from({ length: LAYER_WEEKS }, (_, i) => {
@@ -96,9 +94,12 @@ export function shapeRetention(
     const layer = layers.find((l) => l.week === row.week);
     if (layer) layer.active += Number(row.active);
   }
+  return layers;
+}
 
-  const curves = months.map((cohort) => {
-    const points = rows.curves
+function shapeCurves(rows: CurveRow[], months: string[]): RetentionCohorts['curves'] {
+  return months.map((cohort) => {
+    const points = rows
       .filter((r) => r.cohort === cohort && Number(r.eligible) > 0 && Number(r.week) < CURVE_WEEKS)
       .map((r) => ({
         week: Number(r.week),
@@ -108,8 +109,18 @@ export function shapeRetention(
       .sort((x, y) => x.week - y.week);
     return { cohort, points };
   });
+}
 
-  return { cohorts, sizes, layers, curves, source };
+// Pure shaping, kept apart from the reads so it is tested without a database.
+export function shapeRetention(
+  now: Date,
+  rows: ShapeRows,
+  source: RetentionCohorts['source'] = { kind: 'provider' },
+): RetentionCohorts {
+  const months = recentMonths(now);
+  const sizes = shapeSizes(rows.sizes, months);
+  const cohorts = [...(sizes[EARLIER] ? [EARLIER] : []), ...months];
+  return { cohorts, sizes, layers: shapeLayers(now, rows, cohorts, months), curves: shapeCurves(rows.curves, months), source };
 }
 
 export async function readRetentionCohorts(signups: Signups, now = new Date()): Promise<RetentionCohorts> {
