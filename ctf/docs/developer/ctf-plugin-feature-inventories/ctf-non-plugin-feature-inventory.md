@@ -459,6 +459,8 @@ Owner decision, 2026-09-26. The owner pays the running costs of Skills Economy a
 
 ## 5) Change Log
 
+- 2026-10-29: **Stream moderation setup runs in the app.** `POST /api/internal/stream/moderation-setup?mode=plan|check|apply&target=production|staging|both` (CRON_SECRET bearer, `lib/integrations/stream-moderation-setup.ts`) reads or applies chat auto-translation and the `se:posts` and `chat:messaging` moderation configs with the app's own Stream keys, and answers what is short of the target per Stream app, never a key. `stream-moderation-setup.yml` now only calls it; `ctf/scripts/stream-moderation-setup.mjs` is removed. The workflow's Infisical login was refused, and GitHub holds no Stream key.
+
 - 2026-10-28: **3.1 launched (owner decision).** `SE_DEFAULT_INTERFACE_VERSION` is `'3.1'` on web and Android; migration `post/0078` makes `'3.1'` the column default and moves every stored `'3.0'` to `'3.1'`, so everybody starts on 3.1 and can go back to 3.0 in Settings. A signed-out visitor to `/` is sent to `/today`, the public Today; a failed version read shows 3.1.
 
 - 2026-10-28: **Retention charts and the per-plugin weekly counts retired (§1.16a, plan Measures).** `GET /api/admin/measures` also returns `cohorts` (`lib/measures/retention-cohorts.ts`), drawn on the Adoption screen as a layer cake (members active each of the last 12 weeks, stacked by sign-up month) and retention curves (share of each of the last 5 sign-up months active in weeks 0 to 11), with a legend, hover labels and "Show as a table". Weekly Performance drops its per-plugin cards and the Directory, Mood and ClickLog rows, and its sign-in count reads "Signed in per day".
