@@ -495,6 +495,7 @@ Manual test steps: `ctf/docs/developer/test-scripts/admin-daily-posts-test-scrip
 
 ## 5) Change Log
 
+- 2026-11-02: **Android opens web pages in a panel over the app.** Owner decision, replacing plan task 14's full Android parity: a page of the web app that Android does not carry (a Today link to another plugin, the Commons from Unlock, the Quora survey, Chyme's web guides) opens in a browser panel over the app (`src/navigation/openWebPage.ts`, Chrome Custom Tabs through `expo-web-browser`), so closing it returns to the app; if the panel cannot open, the phone's browser opens instead. No route, table or contract.
 - 2026-11-02: **21 Questions (§1.5, 5j; plan task 18).** A question a day with answers on the card, Match cards for members with three or more answers the same, and the conversation inside the card. New tables `question_answers` and `question_match_messages` (migration `0079_twenty_one_questions.sql`), three routes under `/api/today/questions`; Android Today has the same controls (`QuestionsPanel.tsx`). SkillsHunt's cards move from Matches to Asks.
 - 2026-11-02: **Puzzle of the day replaces the blog-post puzzles (§1.5, 5i).** Owner decision: no puzzle is built from blog posts. One puzzle a day for everyone, taking turns between the word of the day, the picture of the day and a word ladder, on web and Android; the Story cards keep Read it only. No route, table or contract.
 - 2026-11-02: **Puzzles on Android (§1.5, 5i).** The `/games` screen on Android, opened in the app from Today's Game and Story cards. No route, table or contract.

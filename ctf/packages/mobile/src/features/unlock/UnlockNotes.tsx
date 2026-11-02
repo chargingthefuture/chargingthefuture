@@ -5,11 +5,11 @@
 //     opens that page in the browser.
 
 import React, { useMemo, useState } from 'react';
-import { Alert, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { ArchiveX, ShieldAlert } from 'lucide-react-native';
 import { useTheme, type ThemeTokens } from '../../theme';
 import { interFamily } from '../../components/ui';
-import { getApiBaseUrl } from '../../auth/authedFetch';
+import { openWebPage } from '../../navigation/openWebPage';
 import { reportError } from '../../observability/report';
 import { getUnlockTokens, type UnlockTokens } from './unlock-tokens';
 
@@ -49,7 +49,7 @@ export function UnlockBanPolicy() {
 
 async function openSurvey(): Promise<void> {
   try {
-    await Linking.openURL(`${getApiBaseUrl()}${QUORA_SURVEY_PUBLIC_PATH}`);
+    await openWebPage(QUORA_SURVEY_PUBLIC_PATH, 'unlock');
   } catch (caught) {
     reportError(caught, { area: 'unlock', op: 'open_survey' });
     Alert.alert('Unable to open', 'We could not open the survey in your browser.');
