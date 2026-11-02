@@ -10,7 +10,8 @@ name: Keep Auto-Merge PRs Moving
 # main starts this workflow again for the next one.
 #
 # Left alone, and picked up by /pr instead: drafts, PRs without auto-merge (the owner-review lane)
-# and PRs with a merge conflict. A PR whose last checks failed still gets its turn, after the ones
+# and PRs with a merge conflict (a conflict only in change logs is settled by
+# resolve-changelog-conflicts.yml). A PR whose last checks failed still gets its turn, after the ones
 # that passed: not every check is required to merge, and the failure may come from an older main.
 on:
   push:
