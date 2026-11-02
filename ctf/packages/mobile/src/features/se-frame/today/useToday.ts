@@ -100,5 +100,19 @@ export function useToday(accountId: string) {
     [accountId],
   );
 
-  return { today, loading, error, marks, mark, reload: load };
+  // Done is a toggle on the card's timeline dot, so a card marked by mistake can be unmarked.
+  const toggle = useCallback(
+    (kind: keyof TodayMarks, cardId: string) => {
+      setMarks((current) => {
+        const has = current[kind].includes(cardId);
+        const list = has ? current[kind].filter((id) => id !== cardId) : [...current[kind], cardId].slice(-300);
+        const next = { ...current, [kind]: list };
+        writeJson(`se-today-marks-${accountId}`, next);
+        return next;
+      });
+    },
+    [accountId],
+  );
+
+  return { today, loading, error, marks, mark, toggle, reload: load };
 }

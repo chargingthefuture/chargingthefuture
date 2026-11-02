@@ -182,6 +182,19 @@
   width: 28px;
   height: 28px;
   border-radius: 50%;
+  border: none;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+/* A bigger tap area than the dot itself, so a thumb finds it. */
+.dot::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
 }
 
 .cardHead {
@@ -205,15 +218,6 @@
   flex: 1;
 }
 
-.check {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: none;
-}
 
 .menuWrap {
   position: relative;
