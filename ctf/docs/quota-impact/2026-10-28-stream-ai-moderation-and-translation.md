@@ -40,6 +40,11 @@ Failures are reported to Sentry and the server log under area `moderation`. Flag
 items appear in Stream's moderation review queue. The weekly `stream-moderation-setup.yml` check
 goes red when either Stream app drifts from the target configs.
 
+2026-11-02: Stream answered the picture-label read (its moderation rules list) with "this endpoint
+needs a feature flag" on production, which stopped the setup before anything was written. The
+setup now applies the text rules and auto-translation, leaves the picture rules as they are, and
+reports that Stream has to switch on the moderation rules feature for that app. Usage is unchanged.
+
 ## Validation
 
 Since 2026-10-29 the setup runs inside the app with its own Stream keys, through
