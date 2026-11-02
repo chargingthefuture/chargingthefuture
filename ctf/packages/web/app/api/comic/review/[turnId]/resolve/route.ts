@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireComicAdminAccess } from '../../../_lib';
 import { COMIC_ERROR_CODE } from 'lib/comic/constants';
 import { recordComicAdminAudit, reviewActionFailure } from 'lib/comic/audit';
-import { resolveComicReview } from 'lib/comic/repository';
+import { askerOfTurn, resolveComicReview } from 'lib/comic/repository';
+import { notifySafe } from 'lib/notifications/repository';
 import type { ComicReviewResolveInput } from 'lib/comic/types';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
@@ -33,6 +34,28 @@ const INVALID_RESOLUTION_CODES = new Set([
   'reason_too_long',
   'approve_requires_content',
 ]);
+
+// An approved or corrected answer is now visible to the member who asked; tell them in Activity,
+// pointing at Ask the architect in + New, where 3.1 shows their questions and answers. Best effort:
+// a failed notice never undoes the review.
+async function tellAsker(turnId: string, status: string): Promise<void> {
+  if (status !== 'approved' && status !== 'corrected') return;
+  try {
+    const asker = await askerOfTurn(turnId);
+    if (!asker) return;
+    await notifySafe({
+      userId: asker,
+      sourcePlugin: 'comic',
+      notificationType: 'comic.answer.published',
+      category: 'activity',
+      summary: 'Your question to the architect has an answer.',
+      linkPath: '/?tab=new#se-new-architect',
+      targetRef: turnId,
+    });
+  } catch (error) {
+    reportError(error, { area: 'comic', op: 'answer_published_notice' });
+  }
+}
 
 // Map a thrown repository error code to its response. Unknown codes fall through to the 503.
 function mapResolveError(code: string): NextResponse {
@@ -130,6 +153,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ tur
         trainingExampleId: result.trainingExampleId,
       },
     });
+
+    await tellAsker(result.turnId, result.status);
 
     return NextResponse.json(
       {
