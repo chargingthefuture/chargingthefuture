@@ -52,7 +52,7 @@ export type SeTodayView = {
 export function seTodayView(today: SeToday | null, marks: SeTodayMarks, filter: SeTodayFilter): SeTodayView {
   const kinds = SE_TODAY_FILTERS.find((item) => item.key === filter)?.kinds ?? null;
   const cards = (today?.cards ?? []).filter((card) => !marks.hidden.includes(card.id) && (!kinds || kinds.includes(card.kind)));
-  const done = cards.filter((card) => marks.read.includes(card.id)).length;
+  const done = cards.filter((card) => card.done || marks.read.includes(card.id)).length;
   const missing = (today?.unavailable ?? []).map((name) => SOURCE_NAMES[name] ?? name);
   return {
     cards,

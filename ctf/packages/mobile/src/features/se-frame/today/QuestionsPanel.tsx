@@ -155,7 +155,7 @@ type PanelProps = { t: SeThemeTokens; card: SeTodayCard; open: boolean; onOpen: 
 // The question card shows its answers at once; a match card shows the conversation once opened.
 export function QuestionsPanel({ t, card, open, onOpen, onChanged }: PanelProps) {
   const s = makeStyles(t);
-  if (card.source === 'questions') return <QuestionChoices s={s} card={card} onChanged={onChanged} />;
+  if (card.source === 'questions') return card.done ? null : <QuestionChoices s={s} card={card} onChanged={onChanged} />;
   if (open) return <Conversation s={s} t={t} card={card} />;
   return (
     <TouchableOpacity accessibilityRole="button" style={s.send} onPress={onOpen}>

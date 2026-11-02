@@ -124,11 +124,11 @@ export function isQuestionsCard(card: SeTodayCard): boolean {
   return card.source === 'questions' || card.source === 'questions-match';
 }
 
-// The question card shows its answers at once; a match card shows the conversation once opened.
+// The question card shows its answers at once until one is picked (the card then says which); a match card shows the conversation once opened.
 type PanelProps = { card: SeTodayCard; open: boolean; onOpen: () => void; onChanged: () => void };
 
 export function QuestionsPanel({ card, open, onOpen, onChanged }: PanelProps) {
-  if (card.source === 'questions') return <QuestionChoices card={card} onChanged={onChanged} />;
+  if (card.source === 'questions') return card.done ? null : <QuestionChoices card={card} onChanged={onChanged} />;
   if (open) return <Conversation card={card} />;
   return (
     <div className={styles.actions}>

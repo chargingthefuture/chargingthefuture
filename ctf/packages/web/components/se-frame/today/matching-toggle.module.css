@@ -1,0 +1,44 @@
+/* The 21 Questions matching toggle, on Today and on Me. Colors come from the frame's custom properties. */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 18px;
+  background: var(--se-card);
+  border: 1.5px solid var(--se-hair);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.toggleText {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--se-ink);
+}
+
+.hint {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--se-soft);
+}
+
+.switch {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  accent-color: var(--se-btn);
+  cursor: pointer;
+}
+
+.switch:focus-visible {
+  outline: 2px solid var(--se-btn);
+  outline-offset: 2px;
+}

@@ -16,6 +16,7 @@ export * from './today/people';
 export * from './today/unlock';
 export * from './today/mutes';
 export * from './questions/bank';
+export * from './questions/matching';
 export * from './stories/release';
 export * from './games/daily';
 export * from './games/ladder';
