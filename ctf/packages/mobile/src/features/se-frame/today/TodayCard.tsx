@@ -10,12 +10,15 @@ import { SE_MUTE_WORDS, type SeThemeTokens, type SeTodayCard } from '@ctf/shared
 import { SeAvatar } from '../../../components/shared/SeAvatar';
 import { getApiBaseUrl } from '../../../auth/authedFetch';
 import { SE_FONT } from '../fonts';
+import { QuestionsPanel, isQuestionsCard } from './QuestionsPanel';
 
 function absolute(href: string): string {
   return href.startsWith('http') ? href : `${getApiBaseUrl()}${href}`;
 }
 
 type Styles = ReturnType<typeof makeStyles>;
+
+const noop = () => undefined;
 
 function CardMenu({ s, card, onHide, onMute }: { s: Styles; card: SeTodayCard; onHide: () => void; onMute?: () => void }) {
   const [copied, setCopied] = useState(false);
@@ -42,6 +45,24 @@ function CardMenu({ s, card, onHide, onMute }: { s: Styles; card: SeTodayCard; o
   );
 }
 
+function CardActions({ s, card, onOpenLink }: { s: Styles; card: SeTodayCard; onOpenLink: (_href: string) => void }) {
+  if (card.actions.length === 0) return null;
+  return (
+    <View style={s.actions}>
+      {card.actions.map((item) => (
+        <TouchableOpacity
+          key={item.kind + item.label}
+          accessibilityRole="link"
+          style={s.action}
+          onPress={() => onOpenLink(item.href)}
+        >
+          <Text style={s.actionLabel}>{item.label}</Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+}
+
 export function TodayCard({
   t,
   card,
@@ -50,6 +71,7 @@ export function TodayCard({
   onHide,
   onMute,
   onOpenLink,
+  onChanged,
 }: {
   t: SeThemeTokens;
   card: SeTodayCard;
@@ -58,6 +80,8 @@ export function TodayCard({
   onHide: () => void;
   onMute?: () => void;
   onOpenLink: (_href: string) => void;
+  // A card that changes something (a 21 Questions answer) asks Today to read again.
+  onChanged?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [menu, setMenu] = useState(false);
@@ -81,8 +105,12 @@ export function TodayCard({
         ) : null}
       </TouchableOpacity>
       <View style={s.head}>
-        {card.author ? <SeAvatar accountId={card.author.accountId} size={28} /> : null}
-        {card.author ? <Text style={s.handle}>{card.author.handle}</Text> : null}
+        {card.author ? (
+          <>
+            <SeAvatar accountId={card.author.accountId} size={28} />
+            <Text style={s.handle}>{card.author.handle}</Text>
+          </>
+        ) : null}
         <Text style={[s.label, { color }]}>{card.label}</Text>
         <View style={s.spacer} />
         <TouchableOpacity
@@ -113,20 +141,8 @@ export function TodayCard({
           </Text>
         ) : null}
       </TouchableOpacity>
-      {card.actions.length > 0 ? (
-        <View style={s.actions}>
-          {card.actions.map((item) => (
-            <TouchableOpacity
-              key={item.kind + item.label}
-              accessibilityRole="link"
-              style={s.action}
-              onPress={() => onOpenLink(item.href)}
-            >
-              <Text style={s.actionLabel}>{item.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      ) : null}
+      {isQuestionsCard(card) ? <QuestionsPanel t={t} card={card} open={open} onOpen={() => setOpen(true)} onChanged={onChanged ?? noop} /> : null}
+      <CardActions s={s} card={card} onOpenLink={onOpenLink} />
     </View>
   );
 }

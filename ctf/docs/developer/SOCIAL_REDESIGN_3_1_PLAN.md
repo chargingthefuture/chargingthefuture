@@ -242,4 +242,4 @@ email sender, Android app links and blog links move with it.
     inside the card, never in a separate chat. The questions come from a filtered list: no home or
     family prompts. Blocked by 6 and 8. Built 2026-11-02 on the web: answers on the question card under
     Matches, a Match card for three or more answers the same, the talk inside the card; SkillsHunt's
-    cards moved to Asks. Android follows in 14.
+    cards moved to Asks. Android Today has the same controls.

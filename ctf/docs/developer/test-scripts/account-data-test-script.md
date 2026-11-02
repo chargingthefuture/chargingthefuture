@@ -402,7 +402,7 @@ dot and the done count goes up by one. Step 3 removes the check and the count go
 **Result:** web ☐ android ☐ — notes:
 
 ## AD-23 · 21 Questions
-**Role:** two approved members, A and B, on 3.1 · **Surfaces:** web
+**Role:** two approved members, A and B, on 3.1 · **Surfaces:** web, android
 **Steps:**
 1. As A, open Today and pick the Matches filter. Tap an answer on the 21 Questions card.
 2. Keep answering until the card is gone or says catching up, then do the same as B with the same answers on three questions.
