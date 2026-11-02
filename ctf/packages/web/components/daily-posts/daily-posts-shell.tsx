@@ -116,9 +116,9 @@ export function DailyPostsShell(props: Props) {
           <TemplatesSection t={t} initial={templates} today={today} ticks={ticks} onTick={onTick} />
         </Section>
 
-        <Section t={t} title="Themes" note="Each post sits in every group whose part of the app it links. Next is where the group's last posting day stopped.">
+        <Section t={t} title="Themes" note="Each post sits in every group whose part of the app it links. Unsorted posts link none: tick their groups and Save. Next is where the group's last posting day stopped.">
           {unsorted.length > 0 && (
-            <ThemeGroup t={t} label="Unsorted" posts={unsorted} today={today} ticks={ticks} onTick={onTick} onThemes={onThemes} />
+            <ThemeGroup t={t} label="Unsorted" sorting posts={unsorted} today={today} ticks={ticks} onTick={onTick} onThemes={onThemes} />
           )}
           {DAILY_POST_THEMES.map((group) => (
             <ThemeGroup

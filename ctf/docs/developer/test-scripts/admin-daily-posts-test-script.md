@@ -96,6 +96,17 @@
 - Step 3–4: the post now appears in both groups, and its Groups link says "(set by hand)".
 - Step 5: the post is back in only the groups its own links give.
 
+### DP-6a — Placing an Unsorted post
+
+**Role:** Admin
+**Steps:**
+1. Find Unsorted at the top of Themes (shown only while some post links no part of the app).
+2. On one post, tick a group and tap **Save**.
+
+**Expected:**
+- Step 1: Unsorted is already open, and every post in it shows its title and the ten group choices.
+- Step 2: the post leaves Unsorted and appears in the ticked group.
+
 ### DP-7 — Not an admin
 
 **Role:** Approved member
