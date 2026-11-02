@@ -17,7 +17,7 @@ import {
 // Contributor Access — the eligibility engine (working badge name "Keeper of the Commons";
 // doc-comment only, no member-facing copy in this slice).
 //
-// Computes one categorical decision per member — eligible or not-yet — from the fifteen per-plugin
+// Computes one categorical decision per member — eligible or not-yet — from the fourteen per-plugin
 // value events (the same events Weekly Performance counts, per member, all-time) plus the gates:
 // account age, distinct plugins, distinct counterparties, and clean standing (not revoked for
 // cause). The recompute is ADDITIVE ONLY: a member who is already eligible stays eligible — the
