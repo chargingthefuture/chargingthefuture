@@ -16,6 +16,7 @@ Render (1170 × 2532, the iPhone Lock Screen size):
 ```
 
 Layout rules the owner set: the top 660 px stay dark for the clock; every section is two columns; no one-line titles under a
-command, only the description; no explainer lines under a heading; the footer is the `/clear`
-line alone. Everything must fit above 2532 px, so a new card means tightening the others, not
-dropping below the bottom edge. The PNG is not committed; it is a deliverable sent in chat.
+command, only the description, and that description is one line at most (owner directive,
+2026-11-02); no explainer lines under a heading; the footer is the `/clear`
+line alone. Everything must end above about 2050 px, where the Home Screen's page dots and dock start (owner
+directive, 2026-11-02), so a new card means tightening the others, not dropping below that line. The PNG is not committed; it is a deliverable sent in chat.
