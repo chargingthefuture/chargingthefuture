@@ -1,5 +1,9 @@
 # Quora Message of the Day
 
+Shown on screen as PB2 Message of the Day. Since 2026-11-02 it is the first section of the admin Daily
+Posts screen (`/admin/daily-posts`), which copies today's message; the page at
+`/admin/quora-message-of-the-day` still lists the coming days.
+
 One post a day for the Skills Economy space (`https://skillseconomy.quora.com`), written in advance
 so that an account with a short life still says one complete thing before it goes.
 

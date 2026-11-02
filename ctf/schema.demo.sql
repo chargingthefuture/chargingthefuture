@@ -5394,6 +5394,76 @@ ALTER TABLE IF EXISTS admin_expenses_audit_trail ADD COLUMN IF NOT EXISTS create
 CREATE INDEX IF NOT EXISTS idx_admin_expenses_audit_trail_lookup
   ON admin_expenses_audit_trail (created_at DESC, actor_id, command);
 
+-- Daily Posts (added 2026-11-02): the admin screen at /admin/daily-posts that offers blog posts
+-- for pasting into the Quora space, in a 30-day rotation and in theme groups, beside the PB2
+-- message of the day and the owner's own reusable templates. Nothing here names a member.
+--   admin_daily_post_ticks          one row per thing pasted per day. item_key is 'post:<slug>',
+--                                   'template:<id>' or 'pb2'; posted_on is the owner's calendar day
+--                                   (Eastern). A tick is removed by tapping it again.
+--   admin_daily_post_templates      the owner's own posts that are not on the blog, kept for reuse.
+--   admin_daily_post_theme_choices  a post whose theme groups the owner set by hand. themes replaces
+--                                   the groups its own links put it in; an empty array leaves it in
+--                                   none.
+--   admin_daily_posts_audit_trail   every change on the screen (rule 131).
+CREATE TABLE IF NOT EXISTS admin_daily_post_ticks (
+  item_key TEXT NOT NULL,
+  posted_on DATE NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (item_key, posted_on)
+);
+ALTER TABLE IF EXISTS admin_daily_post_ticks ADD COLUMN IF NOT EXISTS item_key TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS admin_daily_post_ticks ADD COLUMN IF NOT EXISTS posted_on DATE NOT NULL DEFAULT CURRENT_DATE;
+ALTER TABLE IF EXISTS admin_daily_post_ticks ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+CREATE TABLE IF NOT EXISTS admin_daily_post_templates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title TEXT NOT NULL,
+  body TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS admin_daily_post_templates ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS admin_daily_post_templates ADD COLUMN IF NOT EXISTS title TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS admin_daily_post_templates ADD COLUMN IF NOT EXISTS body TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS admin_daily_post_templates ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS admin_daily_post_templates ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+CREATE TABLE IF NOT EXISTS admin_daily_post_theme_choices (
+  post_slug TEXT PRIMARY KEY,
+  themes TEXT[] NOT NULL DEFAULT '{}',
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS admin_daily_post_theme_choices ADD COLUMN IF NOT EXISTS post_slug TEXT;
+ALTER TABLE IF EXISTS admin_daily_post_theme_choices ADD COLUMN IF NOT EXISTS themes TEXT[] NOT NULL DEFAULT '{}';
+ALTER TABLE IF EXISTS admin_daily_post_theme_choices ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+CREATE TABLE IF NOT EXISTS admin_daily_posts_audit_trail (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  actor_id TEXT NOT NULL,
+  command TEXT NOT NULL,
+  policy_status TEXT NOT NULL,
+  reason TEXT NOT NULL,
+  target_type TEXT NOT NULL,
+  target_id TEXT NOT NULL,
+  result TEXT NOT NULL DEFAULT 'success',
+  error_category TEXT,
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS admin_daily_posts_audit_trail ADD COLUMN IF NOT EXISTS id UUID;
+ALTER TABLE IF EXISTS admin_daily_posts_audit_trail ADD COLUMN IF NOT EXISTS actor_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS admin_daily_posts_audit_trail ADD COLUMN IF NOT EXISTS command TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS admin_daily_posts_audit_trail ADD COLUMN IF NOT EXISTS policy_status TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS admin_daily_posts_audit_trail ADD COLUMN IF NOT EXISTS reason TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS admin_daily_posts_audit_trail ADD COLUMN IF NOT EXISTS target_type TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS admin_daily_posts_audit_trail ADD COLUMN IF NOT EXISTS target_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE IF EXISTS admin_daily_posts_audit_trail ADD COLUMN IF NOT EXISTS result TEXT NOT NULL DEFAULT 'success';
+ALTER TABLE IF EXISTS admin_daily_posts_audit_trail ADD COLUMN IF NOT EXISTS error_category TEXT;
+ALTER TABLE IF EXISTS admin_daily_posts_audit_trail ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE IF EXISTS admin_daily_posts_audit_trail ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_admin_daily_posts_audit_trail_lookup
+  ON admin_daily_posts_audit_trail (created_at DESC, actor_id, command);
+
 -- The RunPod drafting bill, one row per endpoint per UTC day (added 2026-10-01), read from
 -- rest.runpod.io/v1/billing/endpoints by lib/admin-expenses/gpu-bill.ts on a daily schedule and from
 -- the "Read the bill now" control on /admin/expenses. Only this product's own endpoints are read (the
