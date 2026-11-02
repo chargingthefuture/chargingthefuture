@@ -9,6 +9,7 @@
 
 | | |
 |---|---|
+| **Surface** | `/account/data` (Your Data & Privacy), `/account` for AD-9 and AD-10, the 3.1 Today screen for AD-11, rooms in 3.1 for AD-12, + New for AD-13, Me for AD-14, Activity for AD-15, People for AD-16, Days won for AD-17, mute for AD-18, `/games` for AD-22 and 21 Questions for AD-23 |
 | **Surface** | `/account/data` (Your Data & Privacy), `/account` for AD-9 and AD-10, the 3.1 Today screen for AD-11, rooms in 3.1 for AD-12, + New for AD-13, Me for AD-14, Activity for AD-15, People for AD-16, Days won for AD-17, mute for AD-18 and `/games` for AD-22 |
 | **Visibility** | Any signed-in identity (including unlock-pending) |
 | **Roles to test** | member |
@@ -417,3 +418,16 @@ accepts any number of steps. Step 4's line gives the puzzle number and how it we
 Step 5 shows Done with the same result the same day, and the next kind of puzzle the next day (word,
 picture, ladder in turn). No sign-in is asked for. On Android, step 2 opens the puzzle in the app.
 **Result:** web ☐ android ☐ — notes:
+
+## AD-23 · 21 Questions
+**Role:** two approved members, A and B, on 3.1 · **Surfaces:** web, android
+**Steps:**
+1. As A, open Today and pick the Matches filter. Tap an answer on the 21 Questions card.
+2. Keep answering until the card is gone or says catching up, then do the same as B with the same answers on three questions.
+3. As A, read Today again and tap Talk here on the Match card. Send a message.
+4. As B, open Activity, then the Match card on Today.
+5. As B, block A, then read Today again.
+**Expected:** Step 1 says Saved and shows the next question; no question asks about home, family or
+where somebody lives. Step 3 shows "You and @B answered N of M the same" and the message in the
+card. Step 4 shows the new message in Activity and in the card, marked "1 new message" until opened.
+The Wanted and mission cards are under Asks, not Matches. Step 5 removes the Match card for both.

@@ -86,9 +86,10 @@ type TimelineProps = {
   mark: (kind: keyof TodayMarks, id: string) => void;
   toggle: (kind: keyof TodayMarks, id: string) => void;
   onMute?: (card: SeTodayCard) => void;
+  onChanged: () => void;
 };
 
-function Timeline({ view, marks, mark, toggle, onMute }: TimelineProps) {
+function Timeline({ view, marks, mark, toggle, onMute, onChanged }: TimelineProps) {
   return (
     <div className={styles.timeline}>
       <span className={styles.line} aria-hidden="true" />
@@ -100,6 +101,7 @@ function Timeline({ view, marks, mark, toggle, onMute }: TimelineProps) {
           onToggleDone={() => toggle('read', card.id)}
           onHide={() => mark('hidden', card.id)}
           onMute={card.author && onMute ? () => onMute(card) : undefined}
+          onChanged={onChanged}
         />
       ))}
       <div className={styles.caughtUp}>
@@ -146,7 +148,7 @@ export function TodayScreen({ accountId }: { accountId: string | null }) {
           {muteNote}
         </p>
       ) : null}
-      {today ? <Timeline view={view} marks={marks} mark={mark} toggle={toggle} onMute={accountId ? (card) => void mute(card) : undefined} /> : null}
+      {today ? <Timeline view={view} marks={marks} mark={mark} toggle={toggle} onMute={accountId ? (card) => void mute(card) : undefined} onChanged={() => void reload()} /> : null}
     </>
   );
 }

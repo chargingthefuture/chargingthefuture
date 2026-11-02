@@ -53,6 +53,10 @@ contracts:
       - contributor_access_config
       - contributor_access_eligibility
       - quora_deletion_survey_responses
+      - question_answers
+      - question_match_messages
+      - member_blocks
+      - account_restrictions
     purpose: member_daily_overview
     retentionClass: none_read_only
     idempotency: true
@@ -97,3 +101,65 @@ contracts:
     purpose: public_daily_overview
     retentionClass: none_read_only
     idempotency: true
+  - pluginId: today
+    command: today.questions.answer
+    version: 1.0.0
+    description: Answer a 21 Questions question that is out (POST /api/today/questions/answers). The first answer stands.
+    inputSchema:
+      questionId:
+        type: string
+      choice:
+        type: integer
+        minimum: 0
+    outputSchema:
+      saved:
+        type: boolean
+      next:
+        type: string
+        nullable: true
+    dataAccess:
+      - question_answers
+    purpose: twenty_one_questions_answer
+    retentionClass: until_account_deletion
+    idempotency: true
+  - pluginId: today
+    command: today.questions.messages.read
+    version: 1.0.0
+    description: Read the conversation inside a 21 Questions match card and mark the other member's messages read (GET /api/today/questions/matches/[accountId]/messages). Only between a current match.
+    inputSchema:
+      accountId:
+        type: string
+    outputSchema:
+      messages:
+        type: array
+        maxItems: 50
+    dataAccess:
+      - question_answers
+      - question_match_messages
+      - member_blocks
+      - account_restrictions
+    purpose: twenty_one_questions_conversation
+    retentionClass: until_account_deletion
+    idempotency: true
+  - pluginId: today
+    command: today.questions.messages.send
+    version: 1.0.0
+    description: Send a message inside a 21 Questions match card (POST /api/today/questions/matches/[accountId]/messages), 1 to 500 characters, 60 an hour. Only between a current match; the other member is told in Activity.
+    inputSchema:
+      accountId:
+        type: string
+      body:
+        type: string
+        maxLength: 500
+    outputSchema:
+      message:
+        type: object
+    dataAccess:
+      - question_answers
+      - question_match_messages
+      - member_blocks
+      - account_restrictions
+      - notifications
+    purpose: twenty_one_questions_conversation
+    retentionClass: until_account_deletion
+    idempotency: false

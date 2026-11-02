@@ -176,6 +176,7 @@ export function TodayScreen({ t, accountId, onOpen }: { t: SeThemeTokens; accoun
               onHide={() => mark('hidden', card.id)}
               onMute={card.author ? () => void mute(card) : undefined}
               onOpenLink={go}
+              onChanged={() => void reload()}
             />
           ))}
           <View style={s.caughtUp}>

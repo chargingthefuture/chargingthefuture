@@ -1449,5 +1449,6 @@ The following cases must produce identical behavior on both surfaces. Rerun them
 **Expected:** Each day shows one "Wanted · today's mission" card with the mission's title, its
 description and "N of M found so far" (the community's count against the goal), and a Suggest
 someone button that opens SkillsHunt. The mission changes from one day to the next. An archived
-mission never shows; with no active round there is no card.
+mission never shows; with no active round there is no card. Since 2026-11-02 both SkillsHunt cards
+are under the Asks filter on Today, not Matches.
 **Result:** web ☐ android ☐ — notes:

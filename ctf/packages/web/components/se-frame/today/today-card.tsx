@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { SE_MUTE_WORDS, type SeTodayCard } from '@ctf/shared';
 import { SeAvatar } from '../../shared/se-avatar';
+import { QuestionsPanel, isQuestionsCard } from './questions-panel';
 import styles from './today.module.css';
 
 // One card in Today. Tapping the text opens it in place; the buttons open the item where it lives.
@@ -67,12 +68,15 @@ export function TodayCard({
   onToggleDone,
   onHide,
   onMute,
+  onChanged,
 }: {
   card: SeTodayCard;
   read: boolean;
   onToggleDone: () => void;
   onHide: () => void;
   onMute?: () => void;
+  // A card that changes something (a 21 Questions answer) asks Today to read again.
+  onChanged?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const color = `var(--se-kind-${card.kind})`;
@@ -106,6 +110,7 @@ export function TodayCard({
         <span className={styles.cardTitle}>{card.title}</span>
         {card.body ? <span className={open ? styles.body : `${styles.body} ${styles.bodyClosed}`}>{card.body}</span> : null}
       </button>
+      {isQuestionsCard(card) ? <QuestionsPanel card={card} open={open} onOpen={() => setOpen(true)} onChanged={onChanged ?? (() => undefined)} /> : null}
       {card.actions.length > 0 ? (
         <div className={styles.actions}>
           {card.actions.map((item) => (

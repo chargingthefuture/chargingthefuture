@@ -8,6 +8,7 @@ import { dailyPuzzleCard } from './sources-daily';
 import { announcementStories, inviteStories, surveyCard, whatWorksStory } from './sources-stories';
 import { broadcast, missionCard, moodCard, numbersCard, replayCards, wantedCard } from './sources-live';
 import { mainRoom, nextTalk, weaversRoom } from './sources-rooms';
+import { questionCards } from './sources-questions';
 import { readDaysWon } from 'lib/measures/action-minutes';
 import { listMutes } from 'lib/mutes/repository';
 import { seApplyMutes } from '@ctf/shared';
@@ -39,6 +40,7 @@ export async function buildToday(viewer: TodayViewer, now = new Date()): Promise
     { name: 'trust-transport', read: () => rideAsks(viewer) },
     { name: 'lighthouse', read: () => placeOffers(viewer) },
     { name: 'skill-up', read: () => cohortOffers() },
+    { name: 'questions', read: () => questionCards(viewer, now) },
     { name: 'announcements', read: () => announcementStories(viewer) },
     { name: 'directory-invites', read: () => inviteStories() },
     { name: 'what-works', read: () => whatWorksStory(viewer, now) },

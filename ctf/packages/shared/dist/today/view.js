@@ -23,6 +23,7 @@ const SOURCE_NAMES = {
     'beacon-replays': 'replays',
     'skills-hunt': 'the Wanted card',
     'skills-hunt-mission': "today's mission",
+    questions: '21 Questions',
     'blog-stories': "today's stories",
     games: "today's puzzle",
     beacon: 'the broadcast',
