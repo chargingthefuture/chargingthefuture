@@ -39,6 +39,10 @@ const ADMIN_AREAS: { href: string; name: string; slug?: string }[] = [
   { href: '/admin/chyme/readings', name: 'Chyme: Readings Loop' },
   { href: '/admin/click-log', name: 'ClickLog Trends' },
   { href: '/admin/contributions', name: 'Contributions' },
+  // The day's posting list for the Quora space: the PB2 message of the day, today's share of the
+  // blog posts (each comes round once in 30 days), the owner's reusable templates, and the posts
+  // grouped by theme. Each copy ticks itself off for the day.
+  { href: '/admin/daily-posts', name: 'Daily Posts' },
   { href: '/admin/directory', name: 'Directory' },
   // Everybody listed in the Directory who does not have an invite post on the blog yet, with
   // their skills, and a control that copies the list as plain text. It had no row here, which
@@ -90,10 +94,6 @@ const ADMIN_AREAS: { href: string; name: string; slug?: string }[] = [
   // coded by what they say. The survey records only what was removed, so the two answer different
   // questions and are read together.
   { href: '/admin/quora-live-census', name: 'Quora Live Account Census' },
-  // One post a day for the Skills Economy space, written in advance so a short-lived account can
-  // say one complete thing in the minutes it has. The ask rotates between the three Peace Battle 2
-  // actions and nothing repeats until the pool is exhausted.
-  { href: '/admin/quora-message-of-the-day', name: 'Quora Message of the Day' },
   { href: '/admin/safety', name: 'Safety Reports' },
   { href: '/admin/service-credits', name: 'ServiceCredits' },
   { href: '/admin/skills-hunt', name: 'SkillsHunt' },

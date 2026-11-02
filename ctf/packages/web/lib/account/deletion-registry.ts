@@ -1050,6 +1050,7 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       retain('account_restrictions_audit', 'The audit trail of restriction decisions; retained for compliance.'),
       // The owner's running-costs screen (admin only); actor_id is the admin who changed a line.
       retain('admin_expenses_audit_trail', 'Admin action audit log; retained for compliance.'),
+      retain('admin_daily_posts_audit_trail', 'Admin action audit log; retained for compliance.'),
     ],
   },
   {

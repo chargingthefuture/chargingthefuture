@@ -97,7 +97,8 @@ export function QuoraMotdShell({ today, upcoming, poolSize }: Props) {
   return (
     <div style={{ background: t.BG, minHeight: '100vh', color: t.TEXT }}>
       <MobileScreenHeader
-        title="Message of the day"
+        title="PB2 Message of the Day"
+        backHref="/admin/daily-posts"
         accent={t.ACCENT}
         icon={<Megaphone size={18} color={t.ACCENT} />}
       />
