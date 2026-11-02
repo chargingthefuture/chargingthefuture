@@ -12,7 +12,7 @@ import { BlockedMembers } from '../features/blocks';
 import { AccountHub } from '../features/account';
 import { RecurringActivity } from '../features/recurring-activity';
 import { Unlock } from '../features/unlock';
-import { GamesScreen } from '../features/games';
+import { DailyScreen } from '../features/games';
 import type { FeatureKey } from './screens';
 
 type FeatureRenderers = Record<FeatureKey, () => ReactElement>;
@@ -55,7 +55,7 @@ export function buildFeatureViews(ctx: FeatureViewContext): FeatureRenderers {
     ),
     foundation: () => <Foundation onOpenRecurring={ctx.openRecurringFromFoundation} />,
     'foundation-admin': () => <FoundationAdmin />,
-    games: () => <GamesScreen />,
+    games: () => <DailyScreen />,
     ...accountViews(ctx),
   };
 }

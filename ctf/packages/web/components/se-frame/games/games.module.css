@@ -1,9 +1,8 @@
-/* The puzzles screen in 3.1. Colors come from the frame's custom properties (se-theme-vars.ts). */
+/* The puzzle of the day in 3.1. Colors come from the frame's custom properties (se-theme-vars.ts). */
 .screen {
   padding-bottom: 48px;
 }
 
-.group,
 .play,
 .choices {
   display: flex;
@@ -15,14 +14,6 @@
   gap: 12px;
 }
 
-.groupTitle {
-  margin: 0;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--se-soft);
-}
-
-.row,
 .choice {
   display: flex;
   flex-direction: column;
@@ -44,38 +35,8 @@
   cursor: default;
 }
 
-.rowTitle {
-  font-weight: 600;
-}
-
-.rowMeta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--se-soft);
-}
-
-.solved {
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: var(--se-kind-game);
-  color: var(--se-on-btn);
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.kind {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--se-kind-game);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
 .ask,
-.text,
-.from {
+.text {
   margin: 0;
   font-size: 15px;
   line-height: 1.4;
@@ -91,36 +52,6 @@
   font-family: 'Newsreader Variable', Newsreader, Georgia, serif;
   font-size: 18px;
   line-height: 1.45;
-}
-
-.gap {
-  display: inline-block;
-  min-width: 4em;
-  color: var(--se-kind-game);
-  font-weight: 700;
-}
-
-.line {
-  flex-direction: row;
-  align-items: flex-start;
-  gap: 10px;
-}
-
-.lineNumber {
-  flex: 0 0 24px;
-  height: 24px;
-  border-radius: 999px;
-  background: var(--se-sunk);
-  color: var(--se-ink);
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 24px;
-  text-align: center;
-}
-
-.right {
-  border-color: #2f8a4f;
-  box-shadow: inset 0 0 0 1.5px #2f8a4f;
 }
 
 .wrong {
@@ -156,18 +87,11 @@
   }
 }
 
-.resultActions,
-.pager {
+.resultActions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 10px;
-}
-
-.pager {
-  justify-content: space-between;
-  font-size: 13px;
-  color: var(--se-soft);
 }
 
 .primary,
@@ -213,11 +137,125 @@
   cursor: default;
 }
 
-.row:focus-visible,
 .choice:focus-visible,
 .primary:focus-visible,
 .secondary:focus-visible,
 .linkButton:focus-visible {
   outline: 2px solid var(--se-pick);
   outline-offset: 2px;
+}
+
+/* The puzzle of the day. */
+.wordCard,
+.fullPicture {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.bigWord {
+  font-family: 'Newsreader Variable', Newsreader, Georgia, serif;
+  font-size: 32px;
+  font-weight: 600;
+  color: var(--se-ink);
+}
+
+.picture {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.strip {
+  display: block;
+  width: 100%;
+  aspect-ratio: 5 / 1;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  overflow: hidden;
+  background: none;
+  cursor: pointer;
+}
+
+.stripPicked {
+  border-color: var(--se-pick);
+  transform: scale(0.98);
+}
+
+.strip:focus-visible {
+  outline: 2px solid var(--se-pick);
+  outline-offset: 2px;
+}
+
+.fullPicture svg {
+  aspect-ratio: 1;
+  border-radius: 12px;
+}
+
+.ladder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.rung {
+  min-width: 140px;
+  padding: 8px 14px;
+  border-radius: 12px;
+  border: 1.5px solid var(--se-hair);
+  background: var(--se-card);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  text-align: center;
+  color: var(--se-ink);
+}
+
+.rungEnd {
+  border-style: dashed;
+  color: var(--se-kind-game);
+}
+
+.ladderForm {
+  display: flex;
+  gap: 8px;
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1.5px solid var(--se-hair);
+  background: var(--se-card);
+  color: var(--se-ink);
+  font: inherit;
+  font-size: 18px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.input:focus-visible {
+  outline: 2px solid var(--se-pick);
+  outline-offset: 2px;
+}
+
+.shareLine {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--se-sunk);
+  font-size: 14px;
+  user-select: all;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }

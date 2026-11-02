@@ -23,7 +23,7 @@ export type FeatureKey =
   | 'blocked-members'
   | 'unlock'
   | 'recurring-activity'
-  // The 3.1 puzzles, opened from Today's Game and Story cards (web /games).
+  // The 3.1 puzzle of the day, opened from Today's Puzzle of the day card (web /games).
   | 'games';
 
 // The account screens: the gear opens Your account (web /account), and Account & Data, Blocked
@@ -57,7 +57,7 @@ export const SCREEN_TITLES: Record<SharedHeaderKey, string> = {
   foundation: 'Foundation',
   'foundation-admin': 'Foundation Admin',
   account: 'Your account',
-  games: 'Puzzles',
+  games: 'Puzzle of the day',
 };
 
 const PLUGIN_KEYS = ['chyme', 'beacon', 'peer-programming', 'foundation'] as const;

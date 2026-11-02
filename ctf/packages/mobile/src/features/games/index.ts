@@ -1,2 +1,1 @@
-export { GamesScreen } from './GamesScreen';
-export { setPendingStory } from './pending';
+export { DailyScreen } from './DailyScreen';
