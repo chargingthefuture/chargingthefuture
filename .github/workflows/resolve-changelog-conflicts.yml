@@ -1,0 +1,80 @@
+name: Resolve Change-Log Conflicts
+
+# Settles the merge conflict that stalls open PRs most often: two PRs each add a line at the top of
+# the same change log (a plugin inventory, a test script, the workflows README or the migrations
+# README), the first merges, and the second can no longer merge until somebody adds both lines by
+# hand. Nothing in a local check can catch it, because it only exists after the sibling merges.
+#
+# On every push to main, each open PR from this repository that GitHub reports as conflicted is
+# merged with main here, with those files told to keep both sides' lines (git's built-in "union"
+# merge). When that leaves nothing in conflict, the merge is pushed to the PR, which starts its
+# checks again. When any other file still conflicts, the PR is left as it was for /pr: a code
+# conflict needs somebody to read both sides. Nothing is ever forced.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    # A fallback for a missed push event, every hour at :41, off every other cron here.
+    - cron: "41 * * * *"
+
+concurrency:
+  group: resolve-changelog-conflicts
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  resolve:
+    name: Merge main into conflicted PRs where only change logs conflict
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          # The PAT, not GITHUB_TOKEN: a push made with GITHUB_TOKEN does not start CI.
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Merge main where only change logs conflict
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::error::GH_PAT is not set, so no PR can be updated."
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Only these files are merged by keeping both sides. Everything they hold is a list of
+          # dated lines or rows, where keeping both sides is the right answer.
+          {
+            echo "ctf/docs/developer/ctf-plugin-feature-inventories/*.md merge=union"
+            echo "ctf/docs/developer/test-scripts/*.md merge=union"
+            echo ".github/workflows/README.md merge=union"
+            echo "ctf/db/migrations/README.md merge=union"
+          } > .git/info/attributes
+
+          prs=$(gh api "repos/$REPO/pulls?state=open&per_page=100" --paginate \
+            --jq ".[] | select(.draft | not) | select(.head.repo.full_name == \"$REPO\") | \"\(.number) \(.head.ref)\"")
+          [ -n "$prs" ] || { echo "No open PRs."; exit 0; }
+
+          while read -r number ref; do
+            state=$(gh api "repos/$REPO/pulls/$number" --jq '.mergeable_state')
+            if [ "$state" != "dirty" ]; then
+              continue
+            fi
+            git fetch -q origin "$ref" main
+            git checkout -q -B "pr-$number" "origin/$ref"
+            if git merge -q --no-edit -m "Merge main (change logs kept from both sides)" origin/main; then
+              git push -q origin "HEAD:$ref"
+              echo "#$number: merged main and pushed; only change logs had conflicted."
+            else
+              conflicted=$(git diff --name-only --diff-filter=U | tr '\n' ' ')
+              git merge --abort
+              echo "#$number: left for /pr; still conflicted in: $conflicted"
+            fi
+          done <<< "$prs"
