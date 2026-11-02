@@ -2,14 +2,15 @@ import { queryDb } from 'lib/db/postgres';
 import type { Signups } from './signups';
 
 // Retention by sign-up month, for the adoption tab's two charts (owner-approved plan, Measures):
-// the layer cake (members active each week, stacked by the month they signed up) and the retention
-// curves (the share of each month's sign-ups active N weeks after signing up). Counts only, never a
-// named member.
+// the layer cake (members who signed in each week, stacked by the month they signed up) and the
+// retention curves (the share of each month's sign-ups who signed in N weeks after signing up).
+// Counts only, never a named member.
 //
-// A member is active in a week when they signed in that week (login_events), owner decision
-// 2026-11-02. The charts first counted a week with a 30-action-minute day, but action minutes have
-// only been recorded since 2026-10-27, so every week before that read 0 and a member who signs in
-// every day did not show at all. The Retained, Came back and Every day lines keep action minutes.
+// These charts count sign-ins (login_events), owner decision 2026-11-02, and say so. A sign-in is not
+// "active": active means action minutes, which the Retained, Came back and Every day lines count,
+// and the two are never labeled as each other. The charts first counted a week with a
+// 30-action-minute day, but action minutes have only been recorded since 2026-10-27, so every week
+// before that read 0.
 //
 // Sign-up is the account's creation date at the auth provider, the same roster the Unlock admin
 // counts, without demo/test accounts. The sign-in record starts at a member's first recorded
@@ -26,19 +27,19 @@ export type RetentionCohorts = {
   // member signed up before them.
   cohorts: string[];
   sizes: Record<string, number>;
-  // Monday of each week, oldest first, with members active that week per cohort.
-  layers: { week: string; active: Record<string, number> }[];
-  // Recent month cohorts only: share active (0 to 1) in weeks 0..CURVE_WEEKS-1 since sign-up. Each
+  // Monday of each week, oldest first, with members who signed in that week per cohort.
+  layers: { week: string; signedIn: Record<string, number> }[];
+  // Recent month cohorts only: share who signed in (0 to 1) in weeks 0..CURVE_WEEKS-1 since sign-up. Each
   // week's share is over the members who have fully lived through that week, so a member who
-  // signed up late in the month is not counted as inactive in a week they have not reached.
+  // signed up late in the month is not counted as absent in a week they have not reached.
   curves: { cohort: string; points: { week: number; share: number }[] }[];
   // Where sign-up dates came from: the auth provider's account list, or (when it could not be read)
   // each member's first recorded sign-in, with the reason.
   source: Signups['source'];
 };
 
-type LayerRow = { cohort: string; week: string; active: number };
-type CurveRow = { cohort: string; week: number; active: number; eligible: number };
+type LayerRow = { cohort: string; week: string; signedIn: number };
+type CurveRow = { cohort: string; week: number; signedIn: number; eligible: number };
 type SizeRow = { cohort: string; members: number };
 
 function monday(date: Date): Date {
@@ -81,18 +82,18 @@ export function shapeRetention(
   const layers = Array.from({ length: LAYER_WEEKS }, (_, i) => {
     const d = new Date(firstWeek);
     d.setUTCDate(d.getUTCDate() + 7 * i);
-    return { week: iso(d), active: Object.fromEntries(cohorts.map((c) => [c, 0])) as Record<string, number> };
+    return { week: iso(d), signedIn: Object.fromEntries(cohorts.map((c) => [c, 0])) as Record<string, number> };
   });
   for (const row of rows.layers) {
     const layer = layers.find((l) => l.week === row.week);
     const key = bucket(row.cohort, months);
-    if (layer && key in layer.active) layer.active[key] += Number(row.active);
+    if (layer && key in layer.signedIn) layer.signedIn[key] += Number(row.signedIn);
   }
 
   const curves = months.map((cohort) => {
     const points = rows.curves
       .filter((r) => r.cohort === cohort && Number(r.eligible) > 0 && Number(r.week) < CURVE_WEEKS)
-      .map((r) => ({ week: Number(r.week), share: Number(r.active) / Number(r.eligible) }))
+      .map((r) => ({ week: Number(r.week), share: Number(r.signedIn) / Number(r.eligible) }))
       .sort((x, y) => x.week - y.week);
     return { cohort, points };
   });
@@ -120,7 +121,7 @@ export async function readRetentionCohorts(signups: Signups, now = new Date()): 
   const [layers, curves] = await Promise.all([
     queryDb<LayerRow>(
       `${base}
-       SELECT s.cohort, to_char(date_trunc('week', d.day), 'YYYY-MM-DD') AS week, COUNT(DISTINCT d.user_id)::int AS active
+       SELECT s.cohort, to_char(date_trunc('week', d.day), 'YYYY-MM-DD') AS week, COUNT(DISTINCT d.user_id)::int AS "signedIn"
          FROM seen d JOIN signups s ON s.user_id = d.user_id
         WHERE d.day >= $4::date GROUP BY 1, 2`,
       params,
@@ -140,7 +141,7 @@ export async function readRetentionCohorts(signups: Signups, now = new Date()): 
                 SELECT 1 FROM seen d
                  WHERE d.user_id = e.user_id
                    AND FLOOR((d.day - (e.signed_up_at AT TIME ZONE 'UTC')::date) / 7) = e.week
-              ))::int AS active
+              ))::int AS "signedIn"
          FROM eligible e GROUP BY 1, 2`,
       params.slice(0, 3),
     ),

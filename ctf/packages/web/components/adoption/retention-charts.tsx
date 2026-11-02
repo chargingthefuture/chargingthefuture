@@ -42,12 +42,12 @@ function Legend({ t, data }: { t: PluginShellTokens; data: RetentionCohorts }) {
 }
 
 function LayerCake({ t, data }: { t: PluginShellTokens; data: RetentionCohorts }) {
-  const totals = data.layers.map((l) => Object.values(l.active).reduce((a, b) => a + b, 0));
+  const totals = data.layers.map((l) => Object.values(l.signedIn).reduce((a, b) => a + b, 0));
   const max = Math.max(1, ...totals);
   const slot = PLOT_W / data.layers.length;
   const barW = Math.max(4, slot - 4);
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label="Members active each week, stacked by sign-up month">
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label="Members who signed in each week, stacked by sign-up month">
       <line x1={PAD.left} x2={W - PAD.right} y1={PAD.top + PLOT_H} y2={PAD.top + PLOT_H} stroke={t.BORDER} />
       <text x={PAD.left - 4} y={PAD.top + 8} textAnchor="end" fontSize="10" fill={t.SUBTLE}>{max}</text>
       <text x={PAD.left - 4} y={PAD.top + PLOT_H} textAnchor="end" fontSize="10" fill={t.SUBTLE}>0</text>
@@ -57,13 +57,13 @@ function LayerCake({ t, data }: { t: PluginShellTokens; data: RetentionCohorts }
         return (
           <g key={layer.week}>
             {data.cohorts.map((c) => {
-              const n = layer.active[c] ?? 0;
+              const n = layer.signedIn[c] ?? 0;
               if (n === 0) return null;
               const h = (n / max) * PLOT_H;
               y -= h;
               return (
                 <rect key={c} x={x} y={y} width={barW} height={Math.max(h - 2, 1)} rx={2} fill={colorFor(data.cohorts, c)}>
-                  <title>{`Week of ${weekLabel(layer.week)}: ${n} active who signed up ${monthLabel(c)}`}</title>
+                  <title>{`Week of ${weekLabel(layer.week)}: ${n} signed in who signed up ${monthLabel(c)}`}</title>
                 </rect>
               );
             })}
@@ -82,7 +82,7 @@ function Curves({ t, data }: { t: PluginShellTokens; data: RetentionCohorts }) {
   const x = (w: number) => PAD.left + (w / (weeks - 1)) * PLOT_W;
   const y = (share: number) => PAD.top + (1 - share) * PLOT_H;
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label="Share of each sign-up month active in each week since signing up">
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label="Share of each sign-up month who signed in each week since signing up">
       <line x1={PAD.left} x2={W - PAD.right} y1={y(0)} y2={y(0)} stroke={t.BORDER} />
       <text x={PAD.left - 4} y={y(1) + 8} textAnchor="end" fontSize="10" fill={t.SUBTLE}>100%</text>
       <text x={PAD.left - 4} y={y(0)} textAnchor="end" fontSize="10" fill={t.SUBTLE}>0</text>
@@ -96,7 +96,7 @@ function Curves({ t, data }: { t: PluginShellTokens; data: RetentionCohorts }) {
             <polyline points={curve.points.map((p) => `${x(p.week)},${y(p.share)}`).join(' ')} fill="none" stroke={color} strokeWidth={2} />
             {curve.points.map((p) => (
               <circle key={p.week} cx={x(p.week)} cy={y(p.share)} r={4} fill={color} stroke={t.SURFACE} strokeWidth={2}>
-                <title>{`${monthLabel(curve.cohort)} sign-ups, week ${p.week}: ${Math.round(p.share * 100)}% active`}</title>
+                <title>{`${monthLabel(curve.cohort)} sign-ups, week ${p.week}: ${Math.round(p.share * 100)}% signed in`}</title>
               </circle>
             ))}
           </g>
@@ -124,7 +124,7 @@ function CohortTable({ t, data }: { t: PluginShellTokens; data: RetentionCohorts
             <tr key={l.week}>
               <td style={{ ...cell, textAlign: 'left' }}>{weekLabel(l.week)}</td>
               {data.cohorts.map((c) => (
-                <td key={c} style={cell}>{l.active[c] ?? 0}</td>
+                <td key={c} style={cell}>{l.signedIn[c] ?? 0}</td>
               ))}
             </tr>
           ))}
@@ -139,8 +139,8 @@ export function RetentionCharts({ t, data }: { t: PluginShellTokens; data: Reten
   const heading = { margin: '16px 0 4px', fontSize: 13, fontWeight: 700, color: t.TITLE };
   return (
     <div>
-      <p style={heading}>Active each week, by sign-up month</p>
-      <p style={{ margin: 0, fontSize: 12, color: t.SUBTLE }}>Active means they signed in that week.</p>
+      <p style={heading}>Signed in each week, by sign-up month</p>
+      <p style={{ margin: 0, fontSize: 12, color: t.SUBTLE }}>Counts members who signed in at least once that week. A sign-in is not activity: Retained, Came back and Every day above count action minutes.</p>
       {data.source.kind === 'first_sign_in' ? (
         <p role="status" style={{ margin: '4px 0 0', fontSize: 12, color: t.SUBTLE }}>
           The sign-up list could not be read, so members are grouped by their first recorded sign-in and anyone who never
@@ -149,7 +149,7 @@ export function RetentionCharts({ t, data }: { t: PluginShellTokens; data: Reten
       ) : null}
       <Legend t={t} data={data} />
       {table ? <CohortTable t={t} data={data} /> : <LayerCake t={t} data={data} />}
-      <p style={heading}>Share still active, by weeks since signing up</p>
+      <p style={heading}>Share still signing in, by weeks since signing up</p>
       {table ? null : <Curves t={t} data={data} />}
       {table ? (
         <p style={{ margin: 0, fontSize: 12, color: t.SUBTLE }}>

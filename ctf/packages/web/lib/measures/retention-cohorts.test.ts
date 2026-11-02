@@ -21,23 +21,23 @@ describe('retention cohorts', () => {
     expect(shaped.layers[LAYER_WEEKS - 1].week).toBe('2026-10-26');
   });
 
-  it('stacks the weekly actives by cohort and turns curve counts into shares', () => {
+  it('stacks the weekly sign-ins by cohort and turns curve counts into shares', () => {
     const shaped = shapeRetention(NOW, {
       layers: [
-        { cohort: '2026-09', week: '2026-10-26', active: 3 },
-        { cohort: '2025-12', week: '2026-10-26', active: 2 },
+        { cohort: '2026-09', week: '2026-10-26', signedIn: 3 },
+        { cohort: '2025-12', week: '2026-10-26', signedIn: 2 },
       ],
       curves: [
-        { cohort: '2026-09', week: 0, active: 0, eligible: 10 },
-        { cohort: '2026-09', week: 1, active: 5, eligible: 10 },
-        { cohort: '2026-09', week: 4, active: 1, eligible: 4 },
+        { cohort: '2026-09', week: 0, signedIn: 0, eligible: 10 },
+        { cohort: '2026-09', week: 1, signedIn: 5, eligible: 10 },
+        { cohort: '2026-09', week: 4, signedIn: 1, eligible: 4 },
       ],
       sizes: [
         { cohort: '2025-12', members: 2 },
         { cohort: '2026-09', members: 10 },
       ],
     });
-    const last = shaped.layers[LAYER_WEEKS - 1].active;
+    const last = shaped.layers[LAYER_WEEKS - 1].signedIn;
     expect(last['2026-09']).toBe(3);
     expect(last[EARLIER]).toBe(2);
     const september = shaped.curves.find((c) => c.cohort === '2026-09');
