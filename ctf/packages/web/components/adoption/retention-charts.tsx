@@ -65,7 +65,7 @@ function Legend({ t, data }: { t: PluginShellTokens; data: RetentionCohorts }) {
       {data.cohorts.map((c) => (
         <span key={c} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: t.TEXT }}>
           <span aria-hidden style={{ width: 10, height: 10, borderRadius: 3, background: colorFor(data.cohorts, c) }} />
-          {monthLabel(c)} ({data.sizes[c] ?? 0})
+          {monthLabel(c)}: {data.sizes[c] ?? 0} signed up
         </span>
       ))}
     </div>

@@ -13,7 +13,8 @@ import {
 //      upserts the live value into weekly_performance_goal_snapshots, and past weeks report their
 //      stored snapshot. The GDP Community Value Index left this dashboard on 2026-11-02 (owner
 //      decision): the GDP plugin has its own tile and shows it there.
-//   2. ADOPTION rows about turnout: active members (the plain headcount for the week) and signed in
+//   2. ADOPTION rows about turnout, both sign-ins and labeled that way: signed in (the plain headcount
+//      for the week, key adoption.active_members) and signed in
 //      per day (the average across the week's days). The deleted-accounts row was removed on the
 //      same day (owner decision).
 //
@@ -85,11 +86,12 @@ async function guardedScalar(tables: string | string[], sql: string, weekStart: 
 // ctf/scripts/sql/active-members-audit.sql, which prints the record's span next to the week's count.
 // Aggregate only — never a per-member figure.
 
-// Active members: how many different people turned up at all this week. This is the plain headcount
+// Signed in (key adoption.active_members): how many different people signed in this week. This is the plain headcount
 // the average below is easy to misread as.
 const activeMembers = (weekStart: string) => countActiveMembersInWeek(weekStart);
 
-// Daily active members: the average number of members active on a day of this week. The divisor is
+// Signed in per day (key adoption.daily_active_members): the average number of members who signed
+// in on a day of this week. The divisor is
 // the number of days of the window that have already started (1–7), so the live current week reports
 // the average of the days it has actually had instead of a figure watered down by days that have not
 // happened yet; every past week divides by the full 7.

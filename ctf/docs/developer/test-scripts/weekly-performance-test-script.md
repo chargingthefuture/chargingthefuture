@@ -93,7 +93,7 @@ As the plain member, call each read route directly — `GET /api/weekly-performa
 3. As a plain member, request `/api/weekly-performance/admin/sign-in-record`.
 **Expected:** The first line reads "Your sign-in today is on record" in green with a UTC time; if it
 reads "NOT recorded" in red, the database's own error text is shown under it and the dashboard's
-Active Members rows will be wrong for the same reason. "Members today" is at least 1 (you), "Active
+Signed in rows will be wrong for the same reason. "Members today" is at least 1 (you), "Signed in
 this week" at least 1, "Signed in per day" reads the same figure as the dashboard's Signed in per day
 card for the current week, and today's row in the fourteen-day list is at least 1. "Copy the reading"
 puts the same figures on the clipboard as plain text. The member's request is denied with
@@ -127,13 +127,13 @@ is no "set active week" action and no per-week status.
 **Role:** admin / operations · **Surfaces:** web (desktop), web (mobile-responsive)
 **Steps:**
 1. Open a week's metric cards. They are grouped on web under two headings:
-   **Goals** — Workforce recruited (progress bar toward 2,000,000); **Adoption** — Active Members
+   **Goals** — Workforce recruited (progress bar toward 2,000,000); **Adoption** — Signed in
    and Signed in per day. There is **no** GDP Community Value Index card (the GDP plugin shows it on
    its own tile) and **no** Accounts Deleted card (both removed 2026-11-02). There is **no** "Value delivered" heading and no per-plugin card (no Foundation,
    SocketRelay, TrustTransport, Lighthouse, Chyme, ServiceCredits, Contributions, SkillsHunt,
    WhatWorks, SkillUp, Recurring Activity or PeerProgramming card), and no Directory findable
    members, Mood or ClickLog card: those retired in 3.1.0, and the Adoption tab's Days won,
-   retention and retention charts measure what members do instead. The Active Members card reads
+   retention and retention charts measure what members do instead. The Signed in card (key `adoption.active_members`; it read "Active Members" until 2026-11-02, and a sign-in is not active) reads
    "N members": how many different members signed in during the selected week. The Signed in per
    day card reads "N per day": the average number of members who signed in on a day of that week; on the current week it divides by the days of the
    week so far, on a past week by the full 7. Both count a member as active on a day when the sign-in

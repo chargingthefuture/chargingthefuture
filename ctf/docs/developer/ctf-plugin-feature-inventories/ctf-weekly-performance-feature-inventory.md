@@ -206,7 +206,7 @@ terminal to run a script from.
 Both rows are aggregate only — never a per-member figure — and both are adoption, not value: turning up is not
 a plugin's defining action and carries no positive weight in value scoring.
 
-V2's "verified" and "approved" member counts are intentionally omitted: V3's `users` table is the Clerk mirror with no dependable verification/approval timestamp, so a time-correct per-week value can't be computed (real-data-only). Metric card labels are humanized from the key: the group prefix is dropped and the rest is title-cased, so `adoption.active_members` reads "Active Members". One key has a fixed label instead (`LABEL_OVERRIDES` in `components/weekly-performance/wp-shared.ts`): `adoption.daily_active_members` reads "Signed in per day". The sign-in record section's stat reads "Signed in per day" too.
+V2's "verified" and "approved" member counts are intentionally omitted: V3's `users` table is the Clerk mirror with no dependable verification/approval timestamp, so a time-correct per-week value can't be computed (real-data-only). Metric card labels are humanized from the key: the group prefix is dropped and the rest is title-cased, so `goal.workforce_recruited` reads "Workforce Recruited". Two keys have a fixed label instead (`LABEL_OVERRIDES` in `components/weekly-performance/wp-shared.ts`), because both count sign-ins and a sign-in is not active (active means a day with 30+ action minutes): `adoption.active_members` reads "Signed in" and `adoption.daily_active_members` reads "Signed in per day". The sign-in record section's stats read "Signed in this week" and "Signed in per day".
 
 ## 7) Gaps and Known Technical Debt
 
@@ -225,7 +225,10 @@ V2's "verified" and "approved" member counts are intentionally omitted: V3's `us
   remaining cards keep their colors. The metrics and comparison contracts no longer read
   `account_deletion_events`, and `canonical_metrics.yaml` drops `wp_adoption_accounts_deleted` and
   `wp_goal_gdp_value_index_weekly_snapshot`. Past GDP rows in `weekly_performance_goal_snapshots`
-  stay as they are and nothing reads them.
+  stay as they are and nothing reads them. The `adoption.active_members` card now reads "Signed
+  in" (it read "Active Members"), and the sign-in record's "Active this week" stat reads "Signed in
+  this week": both count sign-ins, and active means a day with 30+ action minutes. Keys and
+  calculations are unchanged.
 
 - 2026-10-28: **Per-plugin weekly counts retired; the sign-in count is "Signed in per day" (3.1.0
   plan, Measures).** `lib/weekly-performance/live-metrics.ts` no longer computes the Value delivered
