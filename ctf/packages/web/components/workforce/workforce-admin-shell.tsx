@@ -28,7 +28,7 @@ const fieldStyle = (t: WorkforceTokens) =>
     boxSizing: 'border-box',
   }) as const;
 
-const WORKFORCE_DEEP_LINK = 'https://app.chargingthefuture.com/apps/workforce';
+const WORKFORCE_DEEP_LINK = 'https://app.lagatos.com/apps/workforce';
 
 function StatBlock({ label, value, accent }: { label: string; value: number; accent?: string }) {
   const { theme } = useTheme();

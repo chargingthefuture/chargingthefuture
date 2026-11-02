@@ -159,7 +159,7 @@ const COMMONS_SIGNAL_BODY = [
   ),
   para(
     'Matthew’s Skills Economy profile (members only):',
-    'https://app.chargingthefuture.com/apps/directory/profile/658d846b-d090-4d3e-9e4a-1176b4df37fa',
+    'https://app.lagatos.com/apps/directory/profile/658d846b-d090-4d3e-9e4a-1176b4df37fa',
   ),
 ].join('\n\n');
 

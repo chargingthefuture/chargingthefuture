@@ -11,7 +11,7 @@
   - All `/api/what-works/*` routes and the `what_works_*` tables.
   - Android/Expo feature at `packages/mobile/src/features/what-works`.
 - Explicitly does **not** own:
-  - The external "Look Ma" explainer at `https://www.chargingthefuture.com/look-ma` (a marketing
+  - The external "Look Ma" explainer at `https://lagatos.com/look-ma` (a marketing
     landing page; WhatWorks only links out to it from the right-rail footnote).
   - Any per-survivor/published personal lists (single shared list only, by design — "for now").
   - Cross-plugin reads. WhatWorks curates its own problems; it does not read another plugin's data.

@@ -14,7 +14,7 @@ import { listPluginRegistry, filterPluginsForViewer } from '../lib/plugins/repos
 import { readTrustSelfExtensionOrStored } from '../lib/trust/repository';
 import { getHostedSignInUrl } from '../lib/auth/provider-env';
 import { getUserInterfaceVersion } from '../lib/account/ui-preferences-repository';
-import type { SeInterfaceVersion } from '@ctf/shared';
+import { SE_DEFAULT_INTERFACE_VERSION, type SeInterfaceVersion } from '@ctf/shared';
 
 // A member sees 3.0 or 3.1, never both, so each loads only when it is the one shown (3.1 speed
 // budget: the 3.1 first load does not carry the 3.0 hub's code).
@@ -137,7 +137,7 @@ async function readHubTier(
   }
 }
 
-// The 3.1 frame for a signed-in member who chose it, or null to carry on with 3.0.
+// The 3.1 frame for a signed-in member, unless they went back to 3.0 in Settings (null then).
 async function renderFrameIfChosen(userId: string | null, identity: { username?: string | null } | null, isAdmin: boolean) {
   if (!userId || (await readInterfaceVersion(userId)) !== '3.1') return null;
   return <SeAppFrame currentUser={buildShellUser(userId, identity?.username ?? null)} isAdmin={isAdmin} />;
@@ -148,7 +148,7 @@ async function readInterfaceVersion(userId: string): Promise<SeInterfaceVersion>
     return await getUserInterfaceVersion(userId);
   } catch (error: unknown) {
     reportError(error, { area: 'home', op: 'interface_version_read' });
-    return '3.0';
+    return SE_DEFAULT_INTERFACE_VERSION;
   }
 }
 
@@ -190,9 +190,11 @@ export default async function HomePage() {
   // one thing they can still do: sign in as their other account, or delete this identity.
   await redirectIfAccountClosed(userId, isAdmin);
 
-  // A member who switched to 3.1 in Settings sees the new frame instead of the 3.0 shell, approved
-  // or not: in 3.1 the app is open before Unlock is done, and the frame carries the Unlock banner
-  // (owner decision, 2026-10-27). A failed read keeps them on 3.0, the shipped app, and is reported.
+  // 3.1 is the default since its launch (owner decision, 2026-10-28). A signed-out visitor sees
+  // Today as everybody can read it. A signed-in member sees the frame, approved or not: in 3.1 the
+  // app is open before Unlock is done and the frame carries the Unlock banner. Only a member who went
+  // back to 3.0 in Settings gets the 3.0 shell below. A failed read is reported and shows 3.1.
+  if (!userId) redirect('/today');
   const frame = await renderFrameIfChosen(userId, identity, isAdmin);
   if (frame) return frame;
 

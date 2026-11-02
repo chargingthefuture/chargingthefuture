@@ -67,7 +67,7 @@ SELECT
   p.id AS profile_id,
   nullif(trim(concat_ws(' ', p.first_name, p.last_name)), '') AS name,
   p.profile_url AS quora_url,
-  'https://app.chargingthefuture.com/apps/directory/profile/' || p.id::text AS directory_url,
+  'https://app.lagatos.com/apps/directory/profile/' || p.id::text AS directory_url,
   nullif(concat_ws(', ', nullif(p.city, ''), nullif(p.state, ''), nullif(p.country, '')), '') AS location,
   sec.name AS sector,
   jt.name AS job_title,

@@ -285,7 +285,7 @@ Expect a small landscape or cut-paper picture, never the photo, and the same pic
 ## AN-9 — "The rest of the app is on the web"
 
 1. Confirm the subtle footer line under the content points members to the web app
-   (`app.chargingthefuture.com`) for everything outside the Chyme keep-list.
+   (`app.lagatos.com`) for everything outside the Chyme keep-list.
 
 ## What is intentionally NOT in the Android app
 

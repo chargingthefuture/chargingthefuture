@@ -4,7 +4,7 @@ import type { BeaconEvent } from './repository';
 // carries what a listener needs and nothing about who ran the broadcast: no host user id, no Stream
 // call id, no Commons post ids.
 
-export const BEACON_APP_ORIGIN = 'https://app.chargingthefuture.com';
+export const BEACON_APP_ORIGIN = 'https://app.lagatos.com';
 export const BEACON_WATCH_URL = `${BEACON_APP_ORIGIN}/apps/beacon`;
 // The blog page that lists every recorded broadcast. The podcast feed's channel link points here.
 export const BLOG_STREAMS_PAGE_URL = 'https://chargingthefuture.github.io/chargingthefuture/streams';

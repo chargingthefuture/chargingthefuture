@@ -1837,7 +1837,7 @@ async function composeAnnouncementFeedBody(body: string, linkedPluginSlugs: stri
     if (!resolved) {
       continue;
     }
-    const url = `https://app.chargingthefuture.com${getPluginRoute(resolved.slug)}`;
+    const url = `https://app.lagatos.com${getPluginRoute(resolved.slug)}`;
     lines.push(`Open ${resolved.name}: ${url}`);
   }
   if (lines.length === 0) {

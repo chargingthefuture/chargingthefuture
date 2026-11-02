@@ -44,7 +44,7 @@ type Payload = {
 // The screen's own address, not just the plugin's: the rail is a horizontal scroller and this tab
 // sits at the far end of it, so a picture that linked to /apps/workforce would land a reader on
 // the Overview and leave them to find the thing they were sent for.
-const ONE_PERCENT_DEEP_LINK = 'https://app.chargingthefuture.com/apps/workforce?view=one-percent';
+const ONE_PERCENT_DEEP_LINK = 'https://app.lagatos.com/apps/workforce?view=one-percent';
 
 function usd(value: number): string {
   return `$${value.toLocaleString('en-US')}`;

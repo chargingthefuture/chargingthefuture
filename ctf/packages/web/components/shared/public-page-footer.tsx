@@ -13,7 +13,7 @@ const linkStyle: React.CSSProperties = {
 
 const LINKS: { href: string; label: string }[] = [
   { href: '/', label: 'The app' },
-  { href: 'https://chargingthefuture.com', label: 'ChargingTheFuture.com' },
+  { href: 'https://lagatos.com', label: 'lagatos.com' },
   { href: '/terms', label: 'Terms & Privacy' },
   { href: '/guidelines', label: 'Community guidelines' },
   { href: '/accessibility', label: 'Accessibility' },

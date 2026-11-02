@@ -40,7 +40,7 @@ Three things follow, and they are why each message is written the way it is:
   Battle 2 page and One Percent (see "Feature freeze, and one message" in `CLAUDE.md`).
 - A fourth ask, not on the Peace Battle 2 page, joined the rotation on 2026-10-16 at the owner's
   request: recommend one person. Each of its messages names one need from the list on
-  chargingthefuture.com (a job, food, someone to talk to, legal help, housing, health care,
+  lagatos.com (a job, food, someone to talk to, legal help, housing, health care,
   childcare, a ride) and asks who the reader knows who can help with it. A name somebody vouches
   for carries more weight than any post, and it still counts after the account is banned. Members
   nominate the person in SkillsHunt; a reader without an account sends them the post.
@@ -55,7 +55,7 @@ Three things follow, and they are why each message is written the way it is:
 
 Every post opens with which day of the protest it is and the Peace Battle 2 page under its short
 address (`/pb2`), built by `motdDayLine` in `lib/quora-motd/types.ts`. The page is the lead link,
-ahead of chargingthefuture.com, so it sits in the first line rather than at the foot.
+ahead of lagatos.com, so it sits in the first line rather than at the foot.
 
 The day is the count the page's own clock shows: complete days since Friday 18 September 2026 at
 7:00 PM Eastern, so it changes at 7:00 PM Eastern, when the clock's does, and never reads below

@@ -51,7 +51,7 @@ type CommunityPlanningReport = {
 
 // The tab's own address, so a reader lands on the teams rather than the Workforce Overview.
 const COMMUNITY_PLANNING_DEEP_LINK =
-  'https://app.chargingthefuture.com/apps/workforce?view=community-planning';
+  'https://app.lagatos.com/apps/workforce?view=community-planning';
 
 function TeamCard({ team, t }: { team: CommunityPlanningTeam; t: WorkforceTokens }) {
   const [open, setOpen] = useState(false);

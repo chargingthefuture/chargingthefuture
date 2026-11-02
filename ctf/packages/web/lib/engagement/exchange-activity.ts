@@ -23,13 +23,13 @@ import { EVENT_LABEL, EVENT_SOURCE_PLUGIN, effectiveWeight } from 'lib/contribut
 // One difference, stated rather than hidden. The badge scores every event, because it is already
 // gated on five distinct counterparties and a member who only talks can never clear that however
 // long they keep talking. The daily count has no such gate — a single event would put somebody on
-// the day's roster — so it draws only on the events marked as delivering something: thirteen of the
-// fifteen. Finishing a course somebody else taught and posting in a cohort are both real, and
+// the day's roster — so it draws only on the events marked as delivering something: twelve of the
+// fourteen. Finishing a course somebody else taught and posting in a cohort are both real, and
 // neither is a thing another member received.
 //
 // Read-only. The per-day figure is a count of people; the roster carries a member id and that day's
 // score and nothing else. No per-event breakdown is returned for a named member, because Foundation
-// answered calls are among the fifteen and rule 132 keeps that participation internal.
+// answered calls are among the fourteen and rule 132 keeps that participation internal.
 //
 // Reaching 384 in a day needs more than 384 approved members on the books, since nobody delivers
 // every day. The target is a day's attendance, so the roster it draws from has to be larger than

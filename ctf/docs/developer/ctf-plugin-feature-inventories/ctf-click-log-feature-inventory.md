@@ -48,8 +48,8 @@ ClickLog provides a simple, auditable incident counter and logging system for us
   trend reporting.
 - Read the full problems list and the full schemes list while tagging: each picker carries a
   "Full list" link beside its question — the problems picker points at
-  `https://www.chargingthefuture.com/look-ma`, the schemes picker at
-  `https://www.chargingthefuture.com/schemes`. Both open in the shared share-link popup (the same
+  `https://lagatos.com/look-ma`, the schemes picker at
+  `https://lagatos.com/schemes`. Both open in the shared share-link popup (the same
   control used everywhere else in the app), which shows the entire address, opens it in a new tab,
   or copies it — so reading the long description of a problem or a scheme never replaces the page
   and never loses the incident the member is part-way through logging. The same links appear in
@@ -535,8 +535,8 @@ Android pixel pass to `MobileClickLog.tsx` remains tracked in `PRODUCTION_READIN
 - 2026-08-14: **Both tag pickers now link to the public list that describes their tags in full
   (owner request).** The chip labels are short by necessity, so a member who does not recognize
   one had nowhere to read the long version. Each picker question now carries a "Full list" link:
-  problems → `https://www.chargingthefuture.com/look-ma`, schemes →
-  `https://www.chargingthefuture.com/schemes`. Both go through the shared `ShareLink` popup
+  problems → `https://lagatos.com/look-ma`, schemes →
+  `https://lagatos.com/schemes`. Both go through the shared `ShareLink` popup
   (rule 130) rather than a plain link, so the page opens in a new tab or the address is copied —
   the incident being logged is never replaced. Applied in the log form and the history editor;
   UI only, no schema, API, or contract change.

@@ -26,8 +26,8 @@ export function PublicPageNav() {
       <a href="/" style={linkStyle}>
         ← Back to the app
       </a>
-      <a href="https://chargingthefuture.com" style={linkStyle}>
-        ChargingTheFuture.com
+      <a href="https://lagatos.com" style={linkStyle}>
+        lagatos.com
       </a>
     </nav>
   );

@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from 'next';
 // Self-host the app's typeface, Figtree, so it renders the same offline and nothing is fetched from
 // Google. One variable file covers every weight; @fontsource registers it as "Figtree Variable".
 import '@fontsource-variable/figtree/wght.css';
-// The wordmark's serif, shared with chargingthefuture.com, farahbrunache.com and the blog so the app
+// The wordmark's serif, shared with lagatos.com, farahbrunache.com and the blog so the app
 // reads as the same family. The weight-only file (58 KB) rather than the one with the optical-size
 // axis (132 KB): the larger one was the biggest single item in the 3.1 first load.
 import '@fontsource-variable/newsreader/wght.css';

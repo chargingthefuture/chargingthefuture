@@ -44,7 +44,7 @@ export function buildContributionsCallDraft({ signedUp, summary, appUrl }: Contr
     return { ok: false, reason: 'No monthly cost is recorded on /admin/expenses.' };
   }
   const perPersonCents = middle(summary.perMemberLowCents, summary.perMemberHighCents);
-  const link = `${(appUrl ?? 'https://app.chargingthefuture.com').replace(/\/+$/, '')}/apps/contributions`;
+  const link = `${(appUrl ?? 'https://app.lagatos.com').replace(/\/+$/, '')}/apps/contributions`;
 
   const body = [
     'Fund, Comment or Favorite',

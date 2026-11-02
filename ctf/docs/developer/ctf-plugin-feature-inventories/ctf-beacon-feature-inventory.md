@@ -93,7 +93,7 @@ feed; when the event ends, Beacon auto-posts the recording to the Commons as a r
   delivers the URL via webhook. Beacon stores the URL and posts the replay to the Commons.
 - **Commons integration** reuses the existing feed/announcement path: a "🔴 Live now" entry on go-live
   and a "▶️ Watch the replay" entry when the recording is ready. Both carry the full web address
-  `https://app.chargingthefuture.com/apps/beacon`, so the reader can tap straight through instead of
+  `https://app.lagatos.com/apps/beacon`, so the reader can tap straight through instead of
   having to work out the domain from a bare path.
 
 ## User Features (viewer surface, `/apps/beacon`)
@@ -112,7 +112,7 @@ feed; when the event ends, Beacon auto-posts the recording to the Commons as a r
 7. **Every past broadcast, listed and subscribable.** The blog's streams page
    (`https://chargingthefuture.github.io/chargingthefuture/streams`) lists every recorded broadcast,
    newest first, with a player for each, and anybody can watch there without an account. The same
-   list is a podcast feed at `https://app.chargingthefuture.com/api/beacon/replays/feed`, which a feed
+   list is a podcast feed at `https://app.lagatos.com/api/beacon/replays/feed`, which a feed
    reader or podcast app can follow; a new replay is in it as soon as its recording is ready. The
    viewer at `/apps/beacon` still shows only the latest replay.
 
@@ -551,7 +551,7 @@ stops. HLS is used for public viewers so scale does not multiply WebRTC cost.
 - 2026-08-12: **The Commons notices link straight to Beacon.** The auto-posted "🔴 Live now" and
   "▶️ Watch the replay" entries said "at `/apps/beacon`" — a piece of a web address, which nobody can
   tap and which only works for a reader who already knows the domain. Both now carry the full address
-  `https://app.chargingthefuture.com/apps/beacon`, matching the announcement link lines in
+  `https://app.lagatos.com/apps/beacon`, matching the announcement link lines in
   `lib/feed/repository.ts`. Copy-only change in `postBeaconLiveNotice` / `postBeaconReplayNotice`
   (`lib/beacon/repository.ts`); no schema, contract, route, or API change.
 - 2026-08-10: **A broadcast run from a phone now reaches viewers and produces a replay.** The public

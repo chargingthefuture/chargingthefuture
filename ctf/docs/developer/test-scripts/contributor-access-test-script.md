@@ -10,7 +10,7 @@
 | **Surfaces** | Web (desktop), Web (mobile-responsive) |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-contributor-access-feature-inventory.md` |
-| **Generated** | 2026-08-05 (commit efb8d7710) · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-10-04 manual note: `CONTRIBUTOR_ACCESS_PROFILE_AND_DELETION_CONTRACT.md` written (reactions, posts and the eligibility row deleted with the account; the audit trail retained) — no test change · 2026-10-12 manual note: a failed internal recompute now answers 500 with `code: contributor_access_recompute_failed` and the reason in `message`, which the workflow log prints — no test change |
+| **Generated** | 2026-08-05 (commit efb8d7710) · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-10-04 manual note: `CONTRIBUTOR_ACCESS_PROFILE_AND_DELETION_CONTRACT.md` written (reactions, posts and the eligibility row deleted with the account; the audit trail retained) — no test change · 2026-10-12 manual note: a failed internal recompute now answers 500 with `code: contributor_access_recompute_failed` and the reason in `message`, which the workflow log prints — no test change · 2026-11-02 manual update: CA-A14 now checks there is no way to give the badge by hand; CA-A8 reads fourteen weight rows, Contributions gift cards only |
 
 > **Android note:** The Android (React Native) surface was removed 2026-07-20 (rule 105, PR #1742). This plugin is web-only. No android checkboxes appear in this script.
 
@@ -534,7 +534,7 @@ Result: web ☐
 1. Open the config editor section.
 2. Note the visible fields.
 
-**Expected:** The editor shows: score threshold, minimum account age (days), minimum distinct plugins, minimum distinct counterparties, minimum eligible members to open channel, and per-event weight overrides. There are fifteen events to override. Contributions is two rows since 2026-10-06: "Contributions gift card confirmed (per USD)" and "Contributions comment or star confirmed (per unit of set value)", both 0.1 by default; if a weight had been saved for the gift-card row before the split and none for the comment-or-star row, the comment-or-star row shows that same saved weight rather than 0.1, so nobody's standing moved when comments and stars stopped being counted as dollars. Contributions has taken gift cards only since 2026-10-27, so every comment-or-star row predates that day; the row stays because those confirmed claims still count. PeerProgramming goal card that helped, was added on 2026-09-25 with a default of 3: a goal-board card one member did for another that the goal's owner marked "It helped" (PeerProgramming test script, PP-21). Two were removed on 2026-09-20: Beacon broadcast engagement, because reacting under a broadcast is talk rather than something given, and WhatWorks endorsements, because an endorsement is an upvote and the thing of value in WhatWorks is the recommendation — listing a tool, which stays. PeerProgramming posting reads a default of 1 rather than 2. No row for either removed event appears anywhere in the editor. It also shows the channel open/closed toggle and the channel status card (eligible count vs minimum, OPEN/CLOSED badge, synced Stream member count or "unavailable"). All values match the system defaults (threshold 100, age 90 days, 3 plugins, 5 counterparties, 10 min eligible) if the config has never been written.
+**Expected:** The editor shows: score threshold, minimum account age (days), minimum distinct plugins, minimum distinct counterparties, minimum eligible members to open channel, and per-event weight overrides. There are fourteen events to override. Contributions is one row, "Contributions gift card confirmed (per USD)", 0.1 by default; there is no comment-or-star row, because Contributions takes Amazon gift cards only (row removed 2026-11-02). PeerProgramming goal card that helped, was added on 2026-09-25 with a default of 3: a goal-board card one member did for another that the goal's owner marked "It helped" (PeerProgramming test script, PP-21). Two were removed on 2026-09-20: Beacon broadcast engagement, because reacting under a broadcast is talk rather than something given, and WhatWorks endorsements, because an endorsement is an upvote and the thing of value in WhatWorks is the recommendation — listing a tool, which stays. PeerProgramming posting reads a default of 1 rather than 2. No row for either removed event appears anywhere in the editor. It also shows the channel open/closed toggle and the channel status card (eligible count vs minimum, OPEN/CLOSED badge, synced Stream member count or "unavailable"). All values match the system defaults (threshold 100, age 90 days, 3 plugins, 5 counterparties, 10 min eligible) if the config has never been written.
 
 Result: web ☐ mobile-responsive ☐
 
@@ -619,18 +619,13 @@ Result: web ☐
 
 ---
 
-### CA-A14 — Give the badge by hand
+### CA-A14 — The badge cannot be given by hand
 **Role:** admin | **Surfaces:** web (mobile-width)
 
-**Precondition:** One member who does not hold the badge, and one member revoked for cause.
-
 **Steps:**
-1. On `/admin/adoption`, Weavers of the Commons, type the first member's `@username` into "Give the badge" and press it.
-2. Do it again for the same member.
-3. Type the revoked member's username and press it.
-4. Type a username nobody has.
+1. On `/admin/adoption`, open Weavers of the Commons and look above Eligible members.
 
-**Expected:** Step 1 adds the member to Eligible members with today's date. Step 2 changes nothing. Step 3 shows "This member was revoked for cause. Reinstate them instead." Step 4 shows "No member with the username or account id …". The next weekly recompute keeps the member granted in step 1.
+**Expected:** There is no "Give the badge" field and no other control that adds a member to the list. Members appear only when the weekly recompute admits them.
 
 Result: web ☐
 

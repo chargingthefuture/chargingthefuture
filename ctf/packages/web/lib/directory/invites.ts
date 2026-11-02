@@ -23,7 +23,7 @@ export const DIRECTORY_INVITE_PAGE_SIZE = 10;
 export const DIRECTORY_INVITE_PUBLIC_CARD_COUNT = 10;
 
 // The cards are read by the landing site and the blog, so their links are absolute.
-const DEFAULT_APP_ORIGIN = 'https://app.chargingthefuture.com';
+const DEFAULT_APP_ORIGIN = 'https://app.lagatos.com';
 
 export type DirectoryInviteCard = {
   name: string;
