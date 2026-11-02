@@ -8,25 +8,32 @@ import { author, card, clip, startOfTodayIso, type TodayViewer } from './card';
 // (today's, then any earlier one missed), and a Match card for each member who answered at least
 // three the same, with the conversation inside the card. The card's own controls answer and send;
 // the card carries only what the screen needs to find the question or the person. A member who
-// turned matching off still gets the question card, which says so, and no Match cards.
+// turned matching off still gets the question card, which says so, and no Match cards. Today's
+// question card stays once answered, done, with the answer picked, so the day's work stays in
+// view; a question missed on an earlier day then gets its own catching-up card beside it.
 
-function questionCard(day: string, answers: Map<string, number>, matching: boolean, createdAtIso: string): SeTodayCard[] {
+function dayQuestionCards(day: string, answers: Map<string, number>, matching: boolean, createdAtIso: string): SeTodayCard[] {
+  const today = seQuestionOfDay(day);
   const next = seNextQuestion(day, new Set(answers.keys()));
-  if (!next) return [];
   const out = seQuestionsOut(day);
   const answered = SE_QUESTIONS.slice(0, out).filter((question) => answers.has(question.id)).length;
-  return [
-    card({
-      source: 'questions',
-      sourceId: next.id,
-      kind: 'match',
-      label: next.id === seQuestionOfDay(day).id ? "21 Questions · today's question" : '21 Questions · catching up',
-      title: next.text,
-      body: seQuestionCardBody(answered, out, matching),
-      createdAtIso,
-      href: '/',
-    }),
-  ];
+  const shown = [today, ...(next && next.id !== today.id ? [next] : [])];
+  return shown.map((question) => {
+    const choice = answers.get(question.id);
+    return {
+      ...card({
+        source: 'questions',
+        sourceId: question.id,
+        kind: 'match',
+        label: question.id === today.id ? "21 Questions · today's question" : '21 Questions · catching up',
+        title: question.text,
+        body: seQuestionCardBody(answered, out, matching, choice === undefined ? null : (question.choices[choice] ?? null)),
+        createdAtIso,
+        href: '/',
+      }),
+      done: choice !== undefined,
+    };
+  });
 }
 
 function sameLine(match: MatchRow, answers: Map<string, number>): string {
@@ -76,5 +83,5 @@ export async function questionCards(viewer: TodayViewer, now = new Date()): Prom
   const ids = matches.map((match) => match.userId);
   const [names, talks] = await Promise.all([resolveUsernames(ids), summarizeConversations(viewer.userId, ids)]);
   const matchCards = matches.map((match) => matchCard(match, names.get(match.userId), talks.get(match.userId), answers, createdAtIso));
-  return [...questionCard(createdAtIso.slice(0, 10), answers, enabled, createdAtIso), ...matchCards];
+  return [...dayQuestionCards(createdAtIso.slice(0, 10), answers, enabled, createdAtIso), ...matchCards];
 }

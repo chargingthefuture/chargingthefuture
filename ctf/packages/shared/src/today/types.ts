@@ -27,6 +27,9 @@ export type SeTodayCard = {
   // Where the full feature opens.
   href: string;
   actions: SeTodayAction[];
+  // Set by the server when the member already did what the card asks (a 21 Questions answer): the
+  // card stays and shows done, and the dot cannot mark it not done.
+  done?: boolean;
 };
 
 // The next booked TI Radio talk, held in the Main Room. `onAir` while its 90 minutes are running.

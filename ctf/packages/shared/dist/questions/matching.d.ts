@@ -13,4 +13,4 @@ export declare const SE_MATCHING_WORDS: {
     readonly off: "Matching is off. Your answers are not used to match you. Turn it back on in Matches.";
 };
 export declare function seMatchingToggleShown(state: SeMatchingState | null): boolean;
-export declare function seQuestionCardBody(answered: number, out: number, enabled: boolean): string;
+export declare function seQuestionCardBody(answered: number, out: number, enabled: boolean, picked?: string | null): string;

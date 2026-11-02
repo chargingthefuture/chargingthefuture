@@ -15,9 +15,10 @@ export const SE_MATCHING_WORDS = {
 export function seMatchingToggleShown(state) {
     return state !== null && state.answered > 0;
 }
-// The question card's body, one line each, ending with how many are answered.
-export function seQuestionCardBody(answered, out, enabled) {
+// The question card's body, one line each, ending with how many are answered. Once today's question
+// is answered the card stays, done, and opens with the answer the member picked.
+export function seQuestionCardBody(answered, out, enabled, picked = null) {
     const W = SE_MATCHING_WORDS;
     const lines = enabled ? [W.optIn, W.reachOut, W.optOut] : [W.off];
-    return [...lines, `${answered} of ${out} answered so far.`].join('\n');
+    return [...(picked ? [`You picked: ${picked}`] : []), ...lines, `${answered} of ${out} answered so far.`].join('\n');
 }

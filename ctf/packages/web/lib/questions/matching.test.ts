@@ -160,6 +160,10 @@ describe('the matching toggle and the question card', () => {
     ]);
   });
 
+  it('opens with the answer picked once the question is answered', () => {
+    expect(seQuestionCardBody(3, 5, true, 'Teach someone').split('\n')[0]).toBe('You picked: Teach someone');
+  });
+
   it('says matching is off on the card while it is off', () => {
     expect(seQuestionCardBody(2, 5, false).split('\n')).toEqual([SE_MATCHING_WORDS.off, '2 of 5 answered so far.']);
   });

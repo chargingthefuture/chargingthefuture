@@ -428,7 +428,7 @@ picture, ladder in turn). No sign-in is asked for. On Android, step 2 opens the 
 3. As A, read Today again and tap Talk here on the Match card. Send a message.
 4. As B, open Activity, then the Match card on Today.
 5. As B, block A, then read Today again.
-**Expected:** Step 1 says Saved and shows the next question; no question asks about home, family or
+**Expected:** Step 1 says Saved; the card stays with its dot checked, the buttons gone and "You picked:" with the answer, the dot cannot be unchecked, and a question missed on an earlier day shows as its own catching-up card; no question asks about home, family or
 where somebody lives. Step 3 shows "You and @B answered N of M the same" and the message in the
 card. Step 4 shows the new message in Activity and in the card, marked "1 new message" until opened.
 The Wanted and mission cards are under Asks, not Matches. Step 5 removes the Match card for both.

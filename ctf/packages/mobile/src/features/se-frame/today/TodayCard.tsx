@@ -63,6 +63,11 @@ function CardActions({ s, card, onOpenLink }: { s: Styles; card: SeTodayCard; on
   );
 }
 
+function doneLabel(card: SeTodayCard, done: boolean): string {
+  if (card.done) return `Done: ${card.title}`;
+  return done ? `Done: ${card.title}. Tap to mark not done` : `Mark done: ${card.title}`;
+}
+
 export function TodayCard({
   t,
   card,
@@ -87,18 +92,21 @@ export function TodayCard({
   const [menu, setMenu] = useState(false);
   const color = t.kind[card.kind];
   const s = makeStyles(t);
+  // A card the server marks done (a 21 Questions answer) stays done: the answer is final.
+  const done = read || card.done === true;
 
   return (
     <View style={s.card}>
       <TouchableOpacity
         accessibilityRole="checkbox"
-        accessibilityState={{ checked: read }}
-        accessibilityLabel={read ? `Done: ${card.title}. Tap to mark not done` : `Mark done: ${card.title}`}
+        accessibilityState={{ checked: done, disabled: card.done === true }}
+        accessibilityLabel={doneLabel(card, done)}
         hitSlop={8}
-        onPress={onToggleDone}
+        onPress={card.done ? undefined : onToggleDone}
+        disabled={card.done === true}
         style={[s.dot, { backgroundColor: color }]}
       >
-        {read ? (
+        {done ? (
           <Svg width={14} height={14} viewBox="0 0 24 24">
             <Path d="M5 12l5 5 9-10" stroke={t.bg} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" fill="none" />
           </Svg>

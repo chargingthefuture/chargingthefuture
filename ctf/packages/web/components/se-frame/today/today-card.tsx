@@ -18,6 +18,11 @@ function bodyClass(card: SeTodayCard, open: boolean): string {
   return open ? styles.body : `${styles.body} ${styles.bodyClosed}`;
 }
 
+function doneLabel(card: SeTodayCard, done: boolean): string {
+  if (card.done) return `Done: ${card.title}`;
+  return done ? `Done: ${card.title}. Tap to mark not done` : `Mark done: ${card.title}`;
+}
+
 function absolute(href: string): string {
   return href.startsWith('http') ? href : `${window.location.origin}${href}`;
 }
@@ -86,6 +91,8 @@ export function TodayCard({
 }) {
   const [open, setOpen] = useState(false);
   const color = `var(--se-kind-${card.kind})`;
+  // A card the server marks done (a 21 Questions answer) stays done: the answer is final.
+  const done = read || card.done === true;
   const toggle = () => setOpen((value) => !value);
   return (
     <article className={styles.card}>
@@ -93,11 +100,12 @@ export function TodayCard({
         type="button"
         className={styles.dot}
         style={{ background: color }}
-        aria-pressed={read}
-        aria-label={read ? `Done: ${card.title}. Tap to mark not done` : `Mark done: ${card.title}`}
-        onClick={onToggleDone}
+        aria-pressed={done}
+        aria-label={doneLabel(card, done)}
+        onClick={card.done ? undefined : onToggleDone}
+        disabled={card.done === true}
       >
-        {read ? (
+        {done ? (
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--se-bg)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M5 12l5 5 9-10" />
               </svg>
