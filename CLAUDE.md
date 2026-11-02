@@ -88,6 +88,16 @@ start so no rewrite is ever needed (owner directive, 2026-08-04).
 
 **Production-era policy (owner-directed, 2026-06-17): production is the single source of truth; the design gate is loosened; the design repo and Replit design agent are deprecated.** We no longer maintain two design versions. Do **not** stop for a design pass, do **not** require a mockup in the `design/` submodule before building UI, and do **not** announce `DESIGN PASS REQUIRED`. The `design/` submodule and `ctf/agents/design.agent.md` are **reference/inspiration only** (design guide, tokens, component patterns) — not authoritative, not synced.
 
+- **3.1 screens follow the approved design canvas (owner decision, 2026-11-02).** The approved 3.1
+  design is the Design canvas "Skills Economy 3.1.0 Screens":
+  https://claude.ai/artifact/JxDoZdU4zTYwS7QwNXqyx4. Where it has a board for a screen (Today light
+  and dark, a card opened in place, the live room, + New, Me, a quiet day, signed-out Today, the
+  Unlock banner, People locked and verified, Activity, the room bar, share picture, scheduling a
+  talk, after the Unlock deadline, broadcast, more cards, What Works add and admin, Settings and the
+  census card, the theme picker, Talk locked), build that screen to it on web and Android alike.
+  Read the board before building or changing the screen; the canvas wins over an older build of
+  the same screen, and production wins where the canvas has no board. Its fonts load from Google
+  only inside the canvas; the app self-hosts them as it already does.
 - **New surface?** Build it yourself, following (in order): the design guide / design system, the look and structure of already-shipped sibling screens, and the plugin inventory. Cover the real states (loading/empty/error/populated) and the mobile-responsive layout; keep it consistent with shipped screens.
 - **Hard guardrail (critical): never overwrite approved production design or copy without explicit owner approval.** When a task is to add or fix something, be additive/surgical — change only what the task requires and leave surrounding shipped copy/layout exactly as it ships. Production wins over any old `design/` mockup; never "restore" a screen to an old mockup. If you think shipped copy/design is wrong, surface it to the owner and get approval before changing it.
 
