@@ -26,7 +26,7 @@ the messaging channels carry little traffic.
 Low at today's volume. Stream bills AI moderation by checks and translation by characters; both
 scale with posts, not with members online. If either grows past the plan's allowance, run the
 setup workflow's plan mode to see the configs and turn translation off with one change to
-`stream-moderation-setup.mjs`.
+`ctf/packages/web/lib/integrations/stream-moderation-setup.ts`.
 
 ## Fallback and Degradation Plan
 
@@ -41,6 +41,11 @@ items appear in Stream's moderation review queue. The weekly `stream-moderation-
 goes red when either Stream app drifts from the target configs.
 
 ## Validation
+
+Since 2026-10-29 the setup runs inside the app with its own Stream keys, through
+`POST /api/internal/stream/moderation-setup`; the workflow calls it with `CRON_SECRET` and holds no
+Stream key, because the workflow's Infisical login was refused. Usage is unchanged.
+
 
 `stream-moderation-setup.yml` in plan mode reads both configs and the translation setting and
 prints what is short. Test cases SR-23, PP-24 and FD-27 cover a refused post and an ordinary one.

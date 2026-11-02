@@ -459,6 +459,7 @@ Owner decision, 2026-09-26. The owner pays the running costs of Skills Economy a
 
 ## 5) Change Log
 
+- 2026-10-29: **Stream moderation setup runs in the app.** `POST /api/internal/stream/moderation-setup?mode=plan|check|apply&target=production|staging|both` (CRON_SECRET bearer, `lib/integrations/stream-moderation-setup.ts`) reads or applies chat auto-translation and the `se:posts` and `chat:messaging` moderation configs with the app's own Stream keys, and answers what is short of the target per Stream app, never a key. `stream-moderation-setup.yml` now only calls it; `ctf/scripts/stream-moderation-setup.mjs` is removed. The workflow's Infisical login was refused, and GitHub holds no Stream key.
 - 2026-11-02: **Done on the timeline dot (owner report).** On Today, web and Android, the colored dot beside a card is now the done control and a toggle: tap to mark done (a check appears in the dot), tap again to undo. Opening a card or pressing its buttons no longer marks it done, since a newcomer taps a card expecting it to open. The check that sat in the card's header is gone.
 
 - 2026-10-28: **3.1 launched (owner decision).** `SE_DEFAULT_INTERFACE_VERSION` is `'3.1'` on web and Android; migration `post/0078` makes `'3.1'` the column default and moves every stored `'3.0'` to `'3.1'`, so everybody starts on 3.1 and can go back to 3.0 in Settings. A signed-out visitor to `/` is sent to `/today`, the public Today; a failed version read shows 3.1.
