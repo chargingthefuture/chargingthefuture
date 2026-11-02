@@ -13,6 +13,8 @@ export type DailyPostItem = {
   /** The groups its own links put it in, shown when the owner edits the choice. */
   linkThemes: DailyPostThemeId[];
   chosen: boolean;
+  /** Left out of the rotation, its theme groups and Today's stories; it stays on the blog. */
+  excluded: boolean;
 };
 
 export type DailyPostTemplateItem = { id: string; title: string; body: string };

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { DAILY_POST_THEMES, type DailyPostThemeId } from 'lib/daily-posts/themes';
+import { ExcludeButton } from './exclude-button';
 import type { DailyPostItem, ShellTokens } from './types';
 
 // Choose the groups one post appears in. More than one can be ticked. "Use the post's links" drops
@@ -13,9 +14,11 @@ type Props = {
   onSave: (themes: DailyPostThemeId[] | null) => Promise<string | null>;
   /** Absent for a post in Unsorted, where the picker stays open until the post is placed. */
   onClose?: () => void;
+  /** Leave the post out of the rotation, its groups and Today's stories. */
+  onExclude?: () => Promise<string | null>;
 };
 
-export function ThemePicker({ t, post, onSave, onClose }: Props) {
+export function ThemePicker({ t, post, onSave, onClose, onExclude }: Props) {
   const [picked, setPicked] = useState<Set<DailyPostThemeId>>(new Set(post.themes));
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -70,6 +73,7 @@ export function ThemePicker({ t, post, onSave, onClose }: Props) {
           </button>
         )}
       </div>
+      {onExclude && <ExcludeButton t={t} label="Leave out of rotation (it stays on the blog)" onPress={onExclude} />}
       {message && (
         <p role="alert" style={{ fontSize: 12, color: '#F87171', margin: '6px 0 0' }}>
           {message}
