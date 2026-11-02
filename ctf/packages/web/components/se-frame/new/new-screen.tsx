@@ -1,13 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { SE_ASK_WORDS, SE_OFFER_CHOICES, SE_OFFER_WORDS, SE_STORY_WORDS, SE_TALK_WORDS } from '@ctf/shared';
+import { SE_ARCHITECT_WORDS, SE_ASK_WORDS, SE_OFFER_CHOICES, SE_OFFER_WORDS, SE_STORY_WORDS, SE_TALK_WORDS } from '@ctf/shared';
 import { AskForm } from './ask-form';
+import { ArchitectSection } from './architect-section';
 import { TalkForm } from './talk-form';
 import styles from './new.module.css';
 
 // + New: what a member can start. Ask is posted here; Talk books a TI Radio slot; an Offer or a
-// Story opens where it is made.
+// Story opens where it is made; Ask the architect sends a question to the assistant.
 
 function Section({ id, title, intro, children }: { id: string; title: string; intro: string; children: React.ReactNode }) {
   return (
@@ -44,6 +45,9 @@ export function NewScreen() {
       </Section>
       <Section id="se-new-talk" title={SE_TALK_WORDS.title} intro={SE_TALK_WORDS.intro}>
         <TalkForm />
+      </Section>
+      <Section id="se-new-architect" title={SE_ARCHITECT_WORDS.title} intro={SE_ARCHITECT_WORDS.intro}>
+        <ArchitectSection />
       </Section>
     </>
   );

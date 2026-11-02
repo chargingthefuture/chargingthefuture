@@ -149,7 +149,7 @@ Unlock stops being the gate for most of the app.
 
 | Plugin | In 3.1.0 |
 | --- | --- |
-| Commons | Dissolves into Today. Announcements become one pinned card; @comic becomes Ask the architect; the gated channel becomes the Weavers room |
+| Commons | Dissolves into Today. Announcements become one pinned card; @comic becomes Ask the architect (in + New, built 2026-11-02); the gated channel becomes the Weavers room |
 | Direct Lines | The name and separate chat screens go; conversations open inside their cards |
 | PeerProgramming | Goals and tasks are Ask cards; board columns go; cohorts show as a "with you this week" card |
 | SocketRelay, LightHouse, Mutual Time, TrustTransport | Cards in Today, full features opened in place; made through + New (Ask or Offer). LightHouse listings are sage Offer cards; listing a place is + New → Offer → A place to stay. A member's own listings and requests are under Me → Yours. No tiles in Me |

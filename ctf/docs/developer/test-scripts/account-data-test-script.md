@@ -340,6 +340,7 @@ skill shows once. Step 2 keeps only people offering something, then everyone aga
 to people with that skill in their name, headline, job title or listing. Step 3 opens the Foundation
 provider page and the Directory profile. Request a quote never shows for someone offering nothing.
 Step 4 shows the route's refusal reason instead of any person.
+Opening People never shows "Could not read People" while the app and its database are up.
 **Result:** web ☐ — notes:
 
 ## AD-17 · Days won, and the measures on Adoption
