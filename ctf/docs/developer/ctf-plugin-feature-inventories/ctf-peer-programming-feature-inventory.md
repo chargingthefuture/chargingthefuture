@@ -411,6 +411,14 @@ Demo schema (`ctf/scripts/seedDemo.mjs`, `seedPeerProgrammingGoalBoard`): finds 
 
 ## Change Log
 
+- 2026-11-02: **Signed in, not active (owner decision).** Cohorts are formed from the members who
+  signed in within the last 7 days, and the copy now says so: active means a day with 30 or more
+  action minutes, which this selection does not use. Web and Android: the cohorts tab line reads
+  "Sign in during the week and you're placed in a cohort."; the public page reads "Members who sign
+  in during the week are placed automatically"; the admin run reads "the members who signed in this
+  week", "Signed-in members selected" and "No members signed in this week"; the standing Cohort 1
+  note reads "too few signed-in members". The user guide line follows. Selection is unchanged.
+
 - 2026-10-28: **Stream AI moderation on new goals (3.1.0 plan).** `POST /api/peer-programming/goals` checks the title and tasks. The words are sent to Stream's AI moderation check before saving (`lib/integrations/stream-content-check.ts`, config `se:posts`, rules set by `stream-moderation-setup.yml`): when Stream answers remove the post is refused with 422 `content_refused` and the member is told to reword it; harm Stream rates high is flagged in Stream's review queue and still published. When Stream is not set up or cannot be reached the post is saved and the failure is reported. Pictures are not sent, because Stream cannot fetch them from behind sign-in.
 
 - 2026-10-28: **Call check, blur, picture in picture, block and report (3.1.0, plan task 10).** The web call opens on a camera and microphone check before joining; Blur background, Picture in picture and Block and report are on the call. Blur files are served from the app. No route, schema or contract change.
