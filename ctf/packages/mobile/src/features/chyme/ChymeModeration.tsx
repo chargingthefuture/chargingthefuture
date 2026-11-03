@@ -7,7 +7,7 @@
  * Every action posts to /api/chyme/admin/*; the server records it and applies it in the Stream
  * call. When Stream did not apply it the route says so in `streamNotice`, shown under the control.
  */
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Hand, MicOff, UserMinus, Volume2 } from 'lucide-react-native';
 import { interFamily } from '../../components/ui';
@@ -26,7 +26,7 @@ import { useChymeTokens } from './chyme-tokens';
 export type MobileModerationContext = {
   roomScope: ChymeRoomScope;
   speakMode: ChymeSpeakMode;
-  viewer: { isAdmin: boolean; role: ChymeRole };
+  viewer: { isAdmin: boolean; role: ChymeRole; listenOnly?: boolean };
   memberRoles: ReadonlyMap<string, ChymeRole>;
 };
 
@@ -155,3 +155,22 @@ const styles = StyleSheet.create({
   listening: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10, paddingHorizontal: 14, borderWidth: 1 },
   listeningText: { flexShrink: 1, fontSize: 13, lineHeight: 18, fontFamily: interFamily('400') },
 });
+
+// Whether the member may speak right now, as the web works it out (chymeSpeakRules in
+// chyme-moderation.tsx). Before Unlock they listen and cannot raise a hand; in hand-raise mode a
+// member who is not an admin listens until an admin lets them speak.
+export function chymeSpeakRules(moderation: MobileModerationContext): { beforeUnlock: boolean; listening: boolean } {
+  const beforeUnlock = Boolean(moderation.viewer.listenOnly);
+  const handRaiseListener = moderation.speakMode === 'hand_raise' && !moderation.viewer.isAdmin && moderation.viewer.role !== 'speaker';
+  return { beforeUnlock, listening: beforeUnlock || handRaiseListener };
+}
+
+// The microphone goes off the moment the member is listening, without waiting for a tap.
+export function useMicOffWhileListening(listening: boolean, microphone: { disable: () => Promise<unknown> }) {
+  useEffect(() => {
+    if (!listening) return;
+    void microphone.disable().catch(() => {
+      /* no-trace: already off, or no microphone; the server-side role holds either way */
+    });
+  }, [listening, microphone]);
+}

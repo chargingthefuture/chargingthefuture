@@ -11,7 +11,8 @@ import { useToday, type TodayMarks } from './use-today';
 import styles from './today.module.css';
 
 // Today in 3.1: Days won, the broadcast while it is live, the rooms, then the day's cards newest first.
-// What a filter shows and when the done count appears is shared with Android (seTodayView).
+// What a filter shows is shared with Android (seTodayView). There is no done count: the timeline dot
+// marks one card, and nothing totals them, so nobody is pushed to get through the day.
 
 // "How it's counted" opens the definition in place, under the line.
 function DaysWonCard({ daysWon }: { daysWon: NonNullable<SeToday['daysWon']> }) {
@@ -148,7 +149,6 @@ export function TodayScreen({ accountId }: { accountId: string }) {
       <LiveCards today={today} />
       <div className={styles.listHead}>
         <h2 className={styles.listTitle}>Today&apos;s cards</h2>
-        {view.doneLine ? <span className={styles.doneCount}>{view.doneLine}</span> : null}
       </div>
       <FilterChips filter={filter} onChange={setFilter} />
       {filter === 'matches' ? <MatchingToggle refreshKey={today?.generatedAtIso} onChanged={() => void reload()} /> : null}

@@ -25,6 +25,9 @@ export type SeWeekDay = {
 };
 export declare function seWeekDays(talks: SeTodayTalk[], now?: Date): SeWeekDay[];
 export declare function seTalkTimes(talk: SeTodayTalk): string;
+export declare function seTalkSpan(talk: SeTodayTalk): string;
+export declare function seTalkOnAirLine(talk: SeTodayTalk): string;
+export declare function seRoomSince(startIso: string): string;
 export declare function seTalkHostLine(talk: SeTodayTalk, now?: Date): string;
 export declare function seRoomCountsLine(room: Pick<SeTodayRoom, 'members' | 'guests' | 'speakers'>): string;
 export declare function seWeaversLine(room: Pick<SeTodayRoom, 'members'>): string;

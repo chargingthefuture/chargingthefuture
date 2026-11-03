@@ -81,7 +81,7 @@ type TileActionsProps = {
   moderation: MobileModerationContext;
 };
 
-function TileActions({ clerkUserId, name, backChannel, moderation }: TileActionsProps) {
+export function TileActions({ clerkUserId, name, backChannel, moderation }: TileActionsProps) {
   return (
     <>
       <View style={styles.actions}>

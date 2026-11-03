@@ -396,6 +396,9 @@ stops. HLS is used for public viewers so scale does not multiply WebRTC cost.
 
 ## Change Log
 
+- 2026-11-03: The podcast feed's channel title is its own address,
+  `https://app.lagatos.com/api/beacon/replays/feed`, in place of a name (owner directive: a link
+  preview and a feed reader show the plain address, so a shared link says where it goes).
 - 2026-10-15: **The host's Stream credential is short-lived and scoped to the event (code-review
   #2663).** The host was registered on Stream Chat with the app-wide `admin` role, in a Stream app
   shared with the other plugins, and given a token with no expiry that was also the RTMP stream key
