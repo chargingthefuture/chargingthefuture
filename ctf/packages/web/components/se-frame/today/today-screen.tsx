@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { SE_DAYS_WON_TITLE, SE_MUTE_WORDS, SE_TODAY_FILTERS, seDaysWonLines, seTodayView, type SeToday, type SeTodayCard, type SeTodayFilter } from '@ctf/shared';
-import Link from 'next/link';
 import { MatchingToggle } from './matching-toggle';
 import { BroadcastCard, RoomCard } from './room-card';
 import { TodayCard } from './today-card';
@@ -23,25 +22,12 @@ function DaysWonCard({ daysWon }: { daysWon: NonNullable<SeToday['daysWon']> }) 
   );
 }
 
-// A visitor who is not signed in listens on the public room page instead of inside the frame.
-function GuestRoomLink() {
-  return (
-    <section className={styles.daysWon} aria-label="Main Room">
-      <span className={styles.daysWonLabel}>Main Room</span>
-      <span className={styles.daysWonSmall}>Anyone can listen, no account needed.</span>
-      <Link href="/apps/chyme" className={styles.actionButton}>
-        Listen in
-      </Link>
-    </section>
-  );
-}
-
-function LiveCards({ today, guest }: { today: SeToday | null; guest: boolean }) {
+function LiveCards({ today }: { today: SeToday | null }) {
   return (
     <>
       {today?.daysWon ? <DaysWonCard daysWon={today.daysWon} /> : null}
       {today?.broadcast?.live ? <BroadcastCard broadcast={today.broadcast} /> : null}
-      {guest ? (today ? <GuestRoomLink /> : null) : today?.rooms.map((room) => <RoomCard key={room.key} room={room} />)}
+      {today?.rooms.map((room) => <RoomCard key={room.key} room={room} />)}
     </>
   );
 }
@@ -113,8 +99,8 @@ function Timeline({ view, marks, mark, toggle, onMute, onChanged }: TimelineProp
   );
 }
 
-// `accountId` null: a visitor who is not signed in reads the public Today (no names, no mute).
-export function TodayScreen({ accountId }: { accountId: string | null }) {
+// A visitor who is not signed in gets GuestToday (guest-today.tsx) instead.
+export function TodayScreen({ accountId }: { accountId: string }) {
   const { today, loading, error, marks, mark, toggle, reload } = useToday(accountId);
   const [filter, setFilter] = useState<SeTodayFilter>('all');
   const view = seTodayView(today, marks, filter);
@@ -137,20 +123,20 @@ export function TodayScreen({ accountId }: { accountId: string | null }) {
 
   return (
     <>
-      <LiveCards today={today} guest={accountId === null} />
+      <LiveCards today={today} />
       <div className={styles.listHead}>
         <h2 className={styles.listTitle}>Today&apos;s cards</h2>
         {view.doneLine ? <span className={styles.doneCount}>{view.doneLine}</span> : null}
       </div>
       <FilterChips filter={filter} onChange={setFilter} />
-      {accountId && filter === 'matches' ? <MatchingToggle refreshKey={today?.generatedAtIso} onChanged={() => void reload()} /> : null}
+      {filter === 'matches' ? <MatchingToggle refreshKey={today?.generatedAtIso} onChanged={() => void reload()} /> : null}
       <Notices error={error} missingLine={view.missingLine} loading={!today && loading} onRetry={() => void reload()} />
       {muteNote ? (
         <p role="status" className={styles.noticeQuiet}>
           {muteNote}
         </p>
       ) : null}
-      {today ? <Timeline view={view} marks={marks} mark={mark} toggle={toggle} onMute={accountId ? (card) => void mute(card) : undefined} onChanged={() => void reload()} /> : null}
+      {today ? <Timeline view={view} marks={marks} mark={mark} toggle={toggle} onMute={(card) => void mute(card)} onChanged={() => void reload()} /> : null}
     </>
   );
 }

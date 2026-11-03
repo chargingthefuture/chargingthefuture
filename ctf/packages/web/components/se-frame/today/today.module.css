@@ -437,3 +437,53 @@
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+/* Today for a visitor who is not signed in (guest-today.tsx). */
+.heroButton {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  min-height: 46px;
+  margin-top: 6px;
+  padding: 0 20px;
+  border-radius: 999px;
+  background: var(--se-on-hero);
+  color: var(--se-hero);
+  border: 1.5px solid var(--se-line);
+  box-shadow: 0 3px 0 var(--se-line);
+  font-weight: 700;
+  font-size: 15px;
+  text-decoration: none;
+}
+
+.guestDot {
+  position: absolute;
+  left: -40px;
+  top: 12px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+}
+
+.lockedCard {
+  gap: 6px;
+  background: var(--se-sunk);
+  border-style: dashed;
+  border-color: var(--se-soft);
+}
+
+.nextRoom {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nextRoomWhen {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.heroButton:focus-visible {
+  outline: 2px solid var(--se-pick);
+  outline-offset: 2px;
+}

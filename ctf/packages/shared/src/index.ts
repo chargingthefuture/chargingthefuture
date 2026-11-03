@@ -22,3 +22,4 @@ export * from './games/daily';
 export * from './games/ladder';
 export * from './games/scene';
 export * from './games/words';
+export * from './today/guest';
