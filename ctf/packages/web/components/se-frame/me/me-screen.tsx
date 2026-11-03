@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useAuth } from '@/hooks/useAuth';
+import { reportError } from '@/lib/observability/report';
 import {
   SE_AVEN_DEFINITION,
   SE_AVENHOOD,
@@ -119,7 +121,40 @@ function SettingsCard({ theme, onTheme, onBack, saving }: SettingsProps) {
           {W.androidApp}
         </a>
       </nav>
+      <SignOutButton />
     </section>
+  );
+}
+
+// Sign out of this device, back to signed-out Today.
+function SignOutButton() {
+  const { signOut } = useAuth();
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const run = async () => {
+    if (!window.confirm(`${W.signOutConfirm} ${W.signOutConfirmText}`)) return;
+    setPending(true);
+    setError(null);
+    try {
+      await signOut({ redirectUrl: '/' });
+    } catch (err) {
+      reportError(err, { area: 'se-frame', op: 'me_sign_out' });
+      const reason = err instanceof Error && err.message ? ` (${err.message})` : '';
+      setError(`${W.signOutFailed}${reason}`);
+      setPending(false);
+    }
+  };
+  return (
+    <>
+      <button type="button" className={styles.pillButton} onClick={() => void run()} disabled={pending}>
+        {pending ? W.signingOut : W.signOut}
+      </button>
+      {error ? (
+        <p role="alert" className={styles.text}>
+          {error}
+        </p>
+      ) : null}
+    </>
   );
 }
 

@@ -33,6 +33,11 @@ export declare const SE_ME_WORDS: {
     survey: string;
     wallpapers: string;
     androidApp: string;
+    signOut: string;
+    signingOut: string;
+    signOutConfirm: string;
+    signOutConfirmText: string;
+    signOutFailed: string;
     architect: string;
     architectText: string;
 };
