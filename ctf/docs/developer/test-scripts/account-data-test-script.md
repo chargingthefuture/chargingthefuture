@@ -414,7 +414,7 @@ request and a Skill Up cohort exist; once with the Main Room live, once with it 
 **Expected:** Step 1 matches the approved "Today, signed out" board: "Skills Economy" with Sign in at
 the top; Days won with "Skills Economy is where the Avenhood meets…" and Sign up; the room card;
 "Today's cards" with "Read only"; asks and offers from "A member" with Sign up to answer, stories with
-Read it; a dashed People card that says it opens once a member is verified; and a bar along the
+Read it; a dashed People card that says it opens once a member is reviewed; and a bar along the
 bottom, "Free. Use one part, ignore the rest." with Sign up. No card shows a name and there is no
 card menu. Step 2 starts listening right there on the card, with no account. Step 3 says "Quiet
 right now", offers the readings, and shows the next room with Add to calendar. Step 4 opens sign-up,
