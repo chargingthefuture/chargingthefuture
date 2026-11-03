@@ -102,7 +102,7 @@ export const SE_THEMES: Record<SeThemeColor, Record<SeThemeMode, SeThemeTokens>>
     },
   },
   coral: {
-    light: { ...SAND_LIGHT, hero: '#2a1a1d', onHero: '#f7ece4', pick: '#f0a39a', btn: '#2a1a1d', onBtn: '#fffaf6' },
+    light: { ...SAND_LIGHT, hero: '#2a1a1d', onHero: '#f7ece4', pick: '#f0a39a', btn: '#f0a39a', onBtn: '#2a1a1d' },
     dark: {
       bg: '#121010', card: '#1d1918', sunk: '#2a2422', ink: '#f1e4dc', soft: '#b8aaa6', hair: '#3a3230', line: '#4d4441',
       hero: '#2a1a1d', onHero: '#f7ece4', pick: '#f0a39a', btn: '#f0a39a', onBtn: '#121010',
