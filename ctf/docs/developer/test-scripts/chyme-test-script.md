@@ -763,8 +763,12 @@ hit one of these, it is already tracked, not a new bug:
 1. On 3.1, open the Main Room from Today and run the account-data script's AD-12.
 2. Switch back to 3.0 and open Chyme.
 **Expected:** Step 1 passes AD-12: the room opens in place, joins muted, shows the guest notice, keeps
-the call while moving between tabs, and leaves from the bar. Step 2 shows the 3.0 Chyme page exactly
-as before: Join Room, Leave and Back Channel.
+the call while moving between tabs, and leaves from the bar. The room appears once: its name, count
+and rule sit in the 3.1 header, the readings loop appears once (in "Quiet right now" while nobody is
+in the room), and there is no second "Chyme Main Room" header, "Signed in as" line, "Join a Room"
+prompt or green block below it; everything is in the member's 3.1 colors, with every title readable.
+Step 2 shows the 3.0 Chyme page exactly as before: its own header, Join Room, Leave, Back Channel and
+Chyme's green.
 **Result:** web ☐ android ☐ — notes:
 
 ### CH-27 · Room and Back Channel time counts toward Days won
