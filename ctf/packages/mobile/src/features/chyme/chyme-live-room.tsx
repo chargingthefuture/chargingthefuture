@@ -81,12 +81,16 @@ export function ChymeLiveRoomView({
   user,
   backChannel,
   onBackChannelEnabled,
+  embedded = false,
 }: {
   state: ChymeRoomState;
   scope: ChymeRoomScope;
   user: CurrentUser;
   backChannel: MobileBackChannelController | null;
   onBackChannelEnabled?: (_enabled: boolean) => void;
+  // Inside the 3.1 room screen, which has its own header, room count and readings loop: the
+  // empty-room prompt, the room header and the readings here are left out so nothing shows twice.
+  embedded?: boolean;
 }) {
   const t = useChymeTokens();
   const { room, call } = state;
@@ -99,7 +103,7 @@ export function ChymeLiveRoomView({
   if (state.locked) return <LockedExplainer t={t} />;
 
   return (
-    <View style={[styles.shell, { backgroundColor: t.BG }]}>
+    <View style={[embedded ? styles.embedded : styles.shell, { backgroundColor: t.BG }]}>
       <ChymeJoinBar
         loading={state.loading}
         joinState={call.joinState}
@@ -109,8 +113,8 @@ export function ChymeLiveRoomView({
         refreshing={state.refreshing}
       />
       {state.error ? <ErrorBanner error={state.error} t={t} /> : null}
-      {!room && !state.loading ? <JoinRoomPrompt t={t} /> : null}
-      {room ? <ChymeRoomView state={state} room={room} user={user} scope={scope} backChannel={backChannelEnabled ? backChannel : null} /> : null}
+      {!room && !state.loading && !embedded ? <JoinRoomPrompt t={t} /> : null}
+      {room ? <ChymeRoomView state={state} room={room} user={user} scope={scope} backChannel={backChannelEnabled ? backChannel : null} embedded={embedded} /> : null}
     </View>
   );
 }
@@ -118,6 +122,7 @@ export function ChymeLiveRoomView({
 const styles = StyleSheet.create({
   // The web room fills at least the screen height (minHeight 100dvh) and centers the prompt in what is left.
   shell: { width: '100%', minHeight: Dimensions.get('window').height },
+  embedded: { width: '100%' },
   locked: { width: '100%', alignItems: 'center', justifyContent: 'center', paddingVertical: 32, paddingHorizontal: 20 },
   lockedInner: { maxWidth: 420, alignItems: 'center', gap: 14 },
   lockedTitle: { fontSize: 20, textAlign: 'center', fontFamily: interFamily('800') },
