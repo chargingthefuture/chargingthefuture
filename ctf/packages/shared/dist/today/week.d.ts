@@ -1,0 +1,30 @@
+import type { SeTodayRoom, SeTodayTalk } from './types';
+export declare const SE_TODAY_ROOM_WORDS: {
+    listen: string;
+    bring: string;
+    open: string;
+    mainAudience: string;
+    weaversAudience: string;
+    quietNow: string;
+    quiet: string;
+    bringText: string;
+    bringPath: string;
+    copied: string;
+    copyFailed: string;
+    weekLabel: string;
+    noTalks: string;
+};
+export type SeWeekDay = {
+    key: string;
+    letter: string;
+    date: number;
+    label: string;
+    today: boolean;
+    past: boolean;
+    talks: SeTodayTalk[];
+};
+export declare function seWeekDays(talks: SeTodayTalk[], now?: Date): SeWeekDay[];
+export declare function seTalkTimes(talk: SeTodayTalk): string;
+export declare function seTalkHostLine(talk: SeTodayTalk, now?: Date): string;
+export declare function seRoomCountsLine(room: Pick<SeTodayRoom, 'members' | 'guests' | 'speakers'>): string;
+export declare function seWeaversLine(room: Pick<SeTodayRoom, 'members'>): string;

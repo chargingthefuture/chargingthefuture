@@ -18,6 +18,10 @@ contracts:
             nullable: true
           rooms:
             type: array
+            description: Each room carries speakers and up to five account ids in faces, speakers first.
+          week:
+            type: array
+            description: TI Radio talks booked from now through the next 7 days, oldest first.
           cards:
             type: array
             maxItems: 30
@@ -79,6 +83,10 @@ contracts:
           rooms:
             type: array
             maxItems: 1
+            description: The Main Room, with speakers; faces is always empty signed out.
+          week:
+            type: array
+            description: TI Radio talks booked from now through the next 7 days, oldest first.
           cards:
             type: array
             maxItems: 30

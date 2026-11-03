@@ -33,7 +33,8 @@ vi.mock('./sources-blog', () => ({ blogStories: vi.fn(async () => []) }));
 vi.mock('./sources-daily', () => ({ dailyPuzzleCard: vi.fn(async () => []) }));
 vi.mock('./sources-rooms', () => ({
   nextTalk: vi.fn(async () => null),
-  mainRoom: vi.fn(async () => ({ key: 'main', name: 'Main Room', live: false, members: 0, guests: 0, href: '/apps/chyme', nextTalk: null })),
+  weekTalks: vi.fn(async () => []),
+  mainRoom: vi.fn(async () => ({ key: 'main', name: 'Main Room', live: false, members: 0, guests: 0, speakers: 0, faces: [], href: '/apps/chyme', nextTalk: null })),
   weaversRoom: vi.fn(async () => null),
 }));
 

@@ -48,6 +48,10 @@ export type SeTodayRoom = {
   // Signed-in members in the room, and signed-out guests listening (always 0 in Weavers).
   members: number;
   guests: number;
+  // Members on the stage right now, and up to five account ids (speakers first) for the faces on
+  // the card. Signed-out Today gets no faces.
+  speakers: number;
+  faces: string[];
   href: string;
   // Main Room only.
   nextTalk: SeTodayTalk | null;
@@ -63,6 +67,9 @@ export type SeToday = {
   daysWon: { total: number; thisWeek: number } | null;
   broadcast: SeTodayBroadcast | null;
   rooms: SeTodayRoom[];
+  // The talks booked in the Main Room from now through the next 7 days, oldest first, for the week
+  // strip.
+  week: SeTodayTalk[];
   cards: SeTodayCard[];
   // Sources that failed to read this time, named so the screen can say so rather than look empty.
   unavailable: string[];
