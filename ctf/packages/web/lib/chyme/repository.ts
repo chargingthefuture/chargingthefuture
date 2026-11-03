@@ -427,13 +427,17 @@ export async function getPublicRoomLiveState(): Promise<ChymePublicRoomLiveState
   });
 }
 
-// How many members are in a room right now, without creating it. Today reads this for the Weavers
-// room card; a room nobody has opened yet answers 0.
-export async function countRoomMembers(roomKey: string): Promise<number> {
+// Who is in a room right now, without creating it, for the room cards on Today: how many members,
+// how many of them are speaking, and up to five account ids, speakers first, for the faces. The
+// faces are never shown signed out. A room nobody has opened yet answers 0.
+export async function readRoomFaces(roomKey: string = CHYME_MAIN_ROOM_KEY): Promise<{ members: number; speakers: number; faces: string[] }> {
   return withDbTransaction(async (client) => {
     const room = await getRoomReadOnly(client, roomKey);
-    if (!room) return 0;
-    return (await listRoomParticipants(client, room.id)).length;
+    if (!room) return { members: 0, speakers: 0, faces: [] };
+    const participants = await listRoomParticipants(client, room.id);
+    const speakers = participants.filter((item) => item.role === 'speaker');
+    const listeners = participants.filter((item) => item.role !== 'speaker');
+    return { members: participants.length, speakers: speakers.length, faces: [...speakers, ...listeners].slice(0, 5).map((item) => item.userId) };
   });
 }
 

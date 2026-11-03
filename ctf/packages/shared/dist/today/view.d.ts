@@ -17,14 +17,15 @@ export type SeTodayView = {
     caughtUpLine: string;
 };
 export declare function seTodayView(today: SeToday | null, marks: SeTodayMarks, filter: SeTodayFilter): SeTodayView;
-export declare function seRoomPeopleLine(members: number, guests: number): string;
 export declare function seTalkWhen(startIso: string, now?: Date): string;
 export declare function seTalkLine(talk: SeTodayTalk | null, now?: Date): string | null;
 export declare const SE_DAYS_WON_TITLE = "Days the Avenhood has won";
+export declare const SE_DAYS_WON_HOW = "How it's counted";
 export declare function seDaysWonLines(daysWon: {
     total: number;
     thisWeek: number;
 }): {
     big: string;
     small: string;
+    how: string;
 };

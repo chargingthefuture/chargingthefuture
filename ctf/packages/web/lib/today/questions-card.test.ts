@@ -46,7 +46,7 @@ describe("Today's 21 Questions card", () => {
     for (const question of SE_QUESTIONS.slice(0, 3)) answers.set(question.id, 0);
     const cards = await questionCards(viewer, thirdDay);
     expect(cards).toHaveLength(1);
-    const today = { generatedAtIso: '', presence: null, daysWon: null, broadcast: null, rooms: [], cards, unavailable: [] };
+    const today = { generatedAtIso: '', presence: null, daysWon: null, broadcast: null, rooms: [], week: [], cards, unavailable: [] };
     expect(seTodayView(today, { read: [], hidden: [] }, 'matches').doneLine).toBe('1 of 1 done');
   });
 });

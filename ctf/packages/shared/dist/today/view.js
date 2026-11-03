@@ -42,11 +42,6 @@ export function seTodayView(today, marks, filter) {
         caughtUpLine: cards.length === 0 ? 'Nothing here yet.' : "You're caught up.",
     };
 }
-export function seRoomPeopleLine(members, guests) {
-    if (members + guests === 0)
-        return 'Quiet right now';
-    return `${members} in the room${guests ? `, ${guests} listening as guests` : ''}`;
-}
 // "Today · 9:00 PM", "Tomorrow · 9:00 PM" or "Mon, Nov 2 · 9:00 PM", in the reader's own timezone.
 export function seTalkWhen(startIso, now = new Date()) {
     const start = new Date(startIso);
@@ -68,10 +63,12 @@ export function seTalkLine(talk, now = new Date()) {
 }
 // "Days the Avenhood has won": the total, and this week's share of it.
 export const SE_DAYS_WON_TITLE = 'Days the Avenhood has won';
+export const SE_DAYS_WON_HOW = "How it's counted";
 export function seDaysWonLines(daysWon) {
     const fmt = (n) => n.toLocaleString('en-US', { maximumFractionDigits: 1 });
     return {
         big: fmt(daysWon.total),
-        small: `${fmt(daysWon.thisWeek)} this week. A day won is 8 hours members spent together in rooms and calls, or helping with each other's tasks.`,
+        small: `Our progress this week: ${fmt(daysWon.thisWeek)} days won.`,
+        how: "A day won is 8 hours members spent together in rooms and calls, or helping with each other's tasks, added up across everybody.",
     };
 }

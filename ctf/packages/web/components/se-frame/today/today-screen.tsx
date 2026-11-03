@@ -1,23 +1,30 @@
 'use client';
 
 import { useState } from 'react';
-import { SE_DAYS_WON_TITLE, SE_MUTE_WORDS, SE_TODAY_FILTERS, seDaysWonLines, seTodayView, type SeToday, type SeTodayCard, type SeTodayFilter } from '@ctf/shared';
+import { SE_DAYS_WON_HOW, SE_DAYS_WON_TITLE, SE_MUTE_WORDS, SE_TODAY_FILTERS, seDaysWonLines, seTodayView, type SeToday, type SeTodayCard, type SeTodayFilter } from '@ctf/shared';
 import { MatchingToggle } from './matching-toggle';
 import { BroadcastCard, RoomCard } from './room-card';
 import { TodayCard } from './today-card';
+import { WeekStrip } from './week-strip';
 import { useToday, type TodayMarks } from './use-today';
 import styles from './today.module.css';
 
 // Today in 3.1: Days won, the broadcast while it is live, the rooms, then the day's cards newest first.
 // What a filter shows and when the done count appears is shared with Android (seTodayView).
 
+// "How it's counted" opens the definition in place, under the line.
 function DaysWonCard({ daysWon }: { daysWon: NonNullable<SeToday['daysWon']> }) {
   const lines = seDaysWonLines(daysWon);
+  const [how, setHow] = useState(false);
   return (
     <section aria-label={SE_DAYS_WON_TITLE} className={styles.daysWon}>
       <span className={styles.daysWonLabel}>{SE_DAYS_WON_TITLE}</span>
       <span className={styles.daysWonBig}>{lines.big}</span>
       <span className={styles.daysWonSmall}>{lines.small}</span>
+      <button type="button" className={styles.howButton} aria-expanded={how} onClick={() => setHow((value) => !value)}>
+        {SE_DAYS_WON_HOW}
+      </button>
+      {how ? <span className={styles.daysWonSmall}>{lines.how}</span> : null}
     </section>
   );
 }
@@ -26,6 +33,7 @@ function LiveCards({ today }: { today: SeToday | null }) {
   return (
     <>
       {today?.daysWon ? <DaysWonCard daysWon={today.daysWon} /> : null}
+      {today ? <WeekStrip talks={today.week ?? []} /> : null}
       {today?.broadcast?.live ? <BroadcastCard broadcast={today.broadcast} /> : null}
       {today?.rooms.map((room) => <RoomCard key={room.key} room={room} />)}
     </>

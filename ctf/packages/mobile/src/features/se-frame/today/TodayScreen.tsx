@@ -5,67 +5,42 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import {
-  SE_ROOM_MAIN_AUDIENCE,
-  SE_ROOM_WEAVERS_AUDIENCE,
-  SE_ROOM_WORDS_MAIN,
+  SE_DAYS_WON_HOW,
   SE_DAYS_WON_TITLE,
   SE_MUTE_WORDS,
   SE_TODAY_FILTERS,
   seDaysWonLines,
-  seRoomPeopleLine,
-  seTalkCalendarEvent,
-  seTalkLine,
   seTodayView,
   type SeThemeTokens,
   type SeToday,
   type SeTodayCard,
   type SeTodayFilter,
-  type SeTodayRoom,
 } from '@ctf/shared';
-import { useSeRooms } from '../rooms/SeRooms';
 import { authedFetchJson } from '../../../auth/authedFetch';
-import { AddToCalendarButton } from '../../../components/shared/AddToCalendarButton';
 import type { FeatureKey } from '../../../navigation/screens';
 import { SE_FONT } from '../fonts';
 import { MatchingToggle } from './MatchingToggle';
+import { RoomCard } from './RoomCards';
+import { WeekStrip } from './WeekStrip';
 import { TodayCard } from './TodayCard';
 import { openTodayLink } from './openTodayLink';
 import { useToday } from './useToday';
 
-const AUDIENCE: Record<SeTodayRoom['key'], string> = { main: SE_ROOM_MAIN_AUDIENCE, weavers: SE_ROOM_WEAVERS_AUDIENCE };
-
-// Opens the room inside the frame, so the call keeps running while the member reads Today.
-function RoomCard({ t, room }: { t: SeThemeTokens; room: SeTodayRoom }) {
-  const s = makeStyles(t);
-  const { open } = useSeRooms();
-  const talkLine = seTalkLine(room.nextTalk);
-  const scope = room.key === 'weavers' ? 'contributors' : 'main';
-  return (
-    <View style={s.roomCard} accessibilityLabel={room.name}>
-      <View style={s.row}>
-        {room.live ? <Text style={s.liveBadge}>LIVE</Text> : null}
-        <Text style={s.roomName}>{room.name}</Text>
-        <Text style={s.meta}>· {AUDIENCE[room.key]}</Text>
-      </View>
-      {talkLine ? <Text style={s.roomTitle}>{talkLine}</Text> : null}
-      {room.nextTalk && !room.nextTalk.onAir ? <AddToCalendarButton color={t.ink} borderColor={t.line} event={seTalkCalendarEvent(room.nextTalk)} /> : null}
-      <Text style={s.meta}>{seRoomPeopleLine(room.members, room.guests)}</Text>
-      <TouchableOpacity accessibilityRole="button" onPress={() => open(scope, room.nextTalk)} style={s.primary}>
-        <Text style={s.primaryLabel}>{room.live ? SE_ROOM_WORDS_MAIN.join : 'Open the room'}</Text>
-      </TouchableOpacity>
-    </View>
-  );
-}
-
 type Styles = ReturnType<typeof makeStyles>;
 
+// "How it's counted" opens the definition in place, under the line.
 function DaysWonCard({ s, daysWon }: { s: Styles; daysWon: NonNullable<SeToday['daysWon']> }) {
   const lines = seDaysWonLines(daysWon);
+  const [how, setHow] = useState(false);
   return (
     <View style={s.daysWon} accessibilityLabel={SE_DAYS_WON_TITLE}>
-      <Text style={s.daysWonLabel}>{SE_DAYS_WON_TITLE}</Text>
+      <Text style={s.daysWonLabel}>{SE_DAYS_WON_TITLE.toUpperCase()}</Text>
       <Text style={s.daysWonBig}>{lines.big}</Text>
       <Text style={s.daysWonSmall}>{lines.small}</Text>
+      <TouchableOpacity accessibilityRole="button" accessibilityState={{ expanded: how }} onPress={() => setHow((value) => !value)} style={s.how}>
+        <Text style={s.howLabel}>{SE_DAYS_WON_HOW}</Text>
+      </TouchableOpacity>
+      {how ? <Text style={s.daysWonSmall}>{lines.how}</Text> : null}
     </View>
   );
 }
@@ -77,6 +52,7 @@ function LiveCards({ t, s, today, go }: LiveProps) {
   return (
     <>
       {today?.daysWon ? <DaysWonCard s={s} daysWon={today.daysWon} /> : null}
+      {today ? <WeekStrip t={t} talks={today.week ?? []} /> : null}
       {broadcast?.live ? (
         <View style={s.roomCard} accessibilityLabel="Live broadcast">
           <View style={s.row}>
@@ -199,10 +175,12 @@ export function TodayScreen({ t, accountId, onOpen }: { t: SeThemeTokens; accoun
 
 function makeStyles(t: SeThemeTokens) {
   return StyleSheet.create({
-    daysWon: { gap: 2, padding: 16, borderRadius: 20, backgroundColor: t.hero },
-    daysWonLabel: { fontSize: 13, color: t.onHero, fontFamily: SE_FONT.sansBold },
-    daysWonBig: { fontSize: 40, lineHeight: 44, color: t.onHero, fontFamily: SE_FONT.serif },
-    daysWonSmall: { fontSize: 14, lineHeight: 20, color: t.onHero, fontFamily: SE_FONT.sans },
+    daysWon: { gap: 6, paddingTop: 20, paddingHorizontal: 20, paddingBottom: 18, borderRadius: 22, backgroundColor: t.hero, boxShadow: `0px 4px 0px ${t.line}` },
+    daysWonLabel: { fontSize: 12, letterSpacing: 1.4, opacity: 0.85, color: t.onHero, fontFamily: SE_FONT.sansBold },
+    daysWonBig: { fontSize: 76, lineHeight: 80, color: t.pick, fontFamily: SE_FONT.serif },
+    daysWonSmall: { fontSize: 15, lineHeight: 21, color: t.onHero, fontFamily: SE_FONT.sans },
+    how: { alignSelf: 'flex-start', minHeight: 32, justifyContent: 'center' },
+    howLabel: { fontSize: 13, opacity: 0.9, color: t.onHero, textDecorationLine: 'underline', fontFamily: SE_FONT.sans },
     roomCard: { gap: 10, padding: 16, borderRadius: 20, backgroundColor: t.card, borderWidth: 1.5, borderColor: t.line, boxShadow: `0px 3px 0px ${t.line}` },
     row: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 },
     liveBadge: { paddingVertical: 4, paddingHorizontal: 9, borderRadius: 999, overflow: 'hidden', backgroundColor: t.liveBadge, color: t.onLiveBadge, fontSize: 11, letterSpacing: 1.1, fontFamily: SE_FONT.sansBold },

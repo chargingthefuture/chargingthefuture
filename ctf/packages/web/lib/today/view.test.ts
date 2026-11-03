@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { seApplyMutes, seDaysWonLines, seNormalizeMuteWords, seRoomPeopleLine, seTalkLine, seTodayView, type SeToday } from '@ctf/shared';
+import { seApplyMutes, seDaysWonLines, seNormalizeMuteWords, seTalkLine, seTodayView, type SeToday } from '@ctf/shared';
 
 const card = (id: string, kind: 'ask' | 'offer' | 'story') => ({
   id,
@@ -20,6 +20,7 @@ const today: SeToday = {
   daysWon: null,
   broadcast: null,
   rooms: [],
+  week: [],
   cards: [card('a', 'ask'), card('b', 'offer'), card('c', 'story')],
   unavailable: ['trust-transport', 'chyme'],
 };
@@ -40,11 +41,6 @@ describe('seTodayView', () => {
     expect(seTodayView(today, { read: [], hidden: [] }, 'all').missingLine).toBe('Could not load rides, the Main Room this time.');
   });
 
-  it('says how many are in a room', () => {
-    expect(seRoomPeopleLine(0, 0)).toBe('Quiet right now');
-    expect(seRoomPeopleLine(2, 3)).toBe('2 in the room, 3 listening as guests');
-  });
-
   it('says which talk is on or next', () => {
     const now = new Date('2026-10-27T12:00:00');
     const talk = { title: 'Rent and repairs', host: 'ana', startIso: new Date('2026-10-27T21:00:00').toISOString(), endIso: new Date('2026-10-27T22:30:00').toISOString(), onAir: false };
@@ -55,7 +51,7 @@ describe('seTodayView', () => {
 
   it('says how many days were won', () => {
     expect(seDaysWonLines({ total: 1234.5, thisWeek: 3 }).big).toBe('1,234.5');
-    expect(seDaysWonLines({ total: 2, thisWeek: 0.5 }).small.startsWith('0.5 this week.')).toBe(true);
+    expect(seDaysWonLines({ total: 2, thisWeek: 0.5 }).small).toBe('Our progress this week: 0.5 days won.');
   });
 
   it('leaves out cards by a muted person or with muted words', () => {
