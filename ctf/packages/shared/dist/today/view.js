@@ -1,6 +1,6 @@
 // What the Today screen shows from a Today answer, shared by web and Android: the filter chips,
-// which cards a filter and the member's hidden marks leave, the done count, and plain names for any
-// source that failed to load.
+// which cards a filter and the member's hidden marks leave, and plain names for any source that
+// failed to load.
 export const SE_TODAY_FILTERS = [
     { key: 'all', label: 'All', kinds: null },
     { key: 'asks', label: 'Asks', kinds: ['ask'] },
@@ -33,11 +33,9 @@ const SOURCE_NAMES = {
 export function seTodayView(today, marks, filter) {
     const kinds = SE_TODAY_FILTERS.find((item) => item.key === filter)?.kinds ?? null;
     const cards = (today?.cards ?? []).filter((card) => !marks.hidden.includes(card.id) && (!kinds || kinds.includes(card.kind)));
-    const done = cards.filter((card) => card.done || marks.read.includes(card.id)).length;
     const missing = (today?.unavailable ?? []).map((name) => SOURCE_NAMES[name] ?? name);
     return {
         cards,
-        doneLine: done > 0 ? `${done} of ${cards.length} done` : null,
         missingLine: missing.length > 0 ? `Could not load ${missing.join(', ')} this time.` : null,
         caughtUpLine: cards.length === 0 ? 'Nothing here yet.' : "You're caught up.",
     };

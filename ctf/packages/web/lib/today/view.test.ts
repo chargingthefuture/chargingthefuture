@@ -26,11 +26,6 @@ const today: SeToday = {
 };
 
 describe('seTodayView', () => {
-  it('hides the done count until a card has been opened', () => {
-    expect(seTodayView(today, { read: [], hidden: [] }, 'all').doneLine).toBeNull();
-    expect(seTodayView(today, { read: ['a'], hidden: [] }, 'all').doneLine).toBe('1 of 3 done');
-  });
-
   it('leaves out hidden cards and filters by kind', () => {
     const view = seTodayView(today, { read: [], hidden: ['b'] }, 'all');
     expect(view.cards.map((c) => c.id)).toEqual(['a', 'c']);

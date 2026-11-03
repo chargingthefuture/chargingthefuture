@@ -12,7 +12,6 @@ export declare const SE_TODAY_FILTERS: ReadonlyArray<{
 }>;
 export type SeTodayView = {
     cards: SeTodayCard[];
-    doneLine: string | null;
     missingLine: string | null;
     caughtUpLine: string;
 };
