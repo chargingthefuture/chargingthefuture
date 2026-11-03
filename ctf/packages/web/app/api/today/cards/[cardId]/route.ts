@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
 type Context = { params: Promise<{ cardId: string }> };
 
 export async function GET(_request: Request, context: Context) {
-  const gate = await requireCardsAccess();
+  const gate = await requireCardsAccess('read');
   if (!gate.allowed) return gate.response;
   const cardId = await cardIdFrom(context);
   if (!cardId) return invalidCard();

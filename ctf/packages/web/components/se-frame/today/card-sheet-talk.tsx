@@ -97,7 +97,7 @@ function PartnerChips({ partner, pairs, onPartner }: { partner: string; pairs: S
 
 function Composer({ talk, partnerId, hint }: { talk: CardConversation; partnerId: string | null; hint: string }) {
   const [draft, setDraft] = useState('');
-  if (talk.locked) return <p className={styles.hint}>{SE_CARD_WORDS.unlockLine}</p>;
+  if (talk.locked) return <p className={styles.hint}>{talk.lockLine}</p>;
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (draft.trim() && (await talk.write(draft.trim(), partnerId))) setDraft('');

@@ -549,7 +549,7 @@ button.
 **Result:** web ☐ android ☐ — notes:
 
 ## AD-27 · A Today card opened in place, answers and Just us two
-**Role:** two approved members, A and B, on 3.1; C, signed in and not yet approved in Unlock · **Surfaces:** web, android
+**Role:** two approved members, A and B, on 3.1; C, signed in and not yet approved in Unlock, inside their first 14 days · **Surfaces:** web, android
 **Steps:**
 1. As A, post an ask on the PeerProgramming goal board, then open Today and tap the ask's title.
 2. As B, open Today, tap I can help on A's ask.
@@ -574,6 +574,10 @@ Activity notice. Step 8 shows "Reported. An admin reads every report." twice, an
 screen lists two reports naming the card id, the second with the message text; Share opens the
 share sheet (web without one: Link copied). Step 9 hides each from the other's answers and
 messages, and a Just us two message or Talk here between them is refused with "one of you has
-blocked the other". Step 10 shows the sheet read-only with "Writing in a card opens once Unlock is
-done." in place of the composer; the 21 Questions card still expands in place.
+blocked the other". Step 10, with C inside their first 14 days, lets C answer, write in
+public, ask for Just us two and report, the same as an approved member; the 21 Questions card still
+expands in place. With C past day 14 and no address sent, the sheet reads normally and any write turns
+it read-only with "Writing in a card is paused until Unlock is done. Reading stays open, and your
+account is never removed for this." With `CARDS_OPEN_BEFORE_UNLOCK` set to false, C sees "Writing in a
+card opens once Unlock is done." instead, from the first write.
 **Result:** web ☐ android ☐ — notes:

@@ -55,6 +55,7 @@ export declare const SE_CARD_WORDS: {
     noMessages: string;
     noPairMessages: string;
     unlockLine: string;
+    pausedLine: string;
     loading: string;
     share: string;
     linkCopied: string;
@@ -67,3 +68,4 @@ export declare const SE_CARD_WORDS: {
     you: string;
 };
 export declare function seCardSheetLine(card: Pick<SeTodayCard, 'kind' | 'label' | 'createdAtIso'>): string;
+export declare function seCardLockLine(reason: unknown): string | null;

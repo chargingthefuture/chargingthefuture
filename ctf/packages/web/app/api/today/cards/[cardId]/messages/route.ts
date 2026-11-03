@@ -73,7 +73,7 @@ async function write(cardId: string, userId: string, input: Input): Promise<Next
 export async function POST(request: Request, context: Context) {
   const csrf = ensureMutationCsrf(request);
   if (csrf) return csrf;
-  const gate = await requireCardsAccess();
+  const gate = await requireCardsAccess('write');
   if (!gate.allowed) return gate.response;
   const userId = gate.auth.userId;
   const cardId = await cardIdFrom(context);

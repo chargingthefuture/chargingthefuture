@@ -35,7 +35,7 @@ async function agree(cardId: string, userId: string, partnerId: string): Promise
 export async function POST(request: Request, context: Context) {
   const csrf = ensureMutationCsrf(request);
   if (csrf) return csrf;
-  const gate = await requireCardsAccess();
+  const gate = await requireCardsAccess('write');
   if (!gate.allowed) return gate.response;
   const userId = gate.auth.userId;
   const cardId = await cardIdFrom(context);

@@ -71,6 +71,7 @@ export const SE_CARD_WORDS = {
     noMessages: 'No messages yet. Say what you can do, or ask what you need to know.',
     noPairMessages: 'Nothing here yet. Times, places and details go here.',
     unlockLine: 'Writing in a card opens once Unlock is done.',
+    pausedLine: 'Writing in a card is paused until Unlock is done. Reading stays open, and your account is never removed for this.',
     loading: 'Loading the conversation…',
     share: 'Share',
     linkCopied: 'Link copied',
@@ -89,4 +90,13 @@ export function seCardSheetLine(card) {
     const time = at.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZoneName: 'short' });
     const kind = KIND_WORDS[card.kind] ?? card.label.split(' · ')[0];
     return `${kind} · ${day} at ${time}`;
+}
+// The line a card shows when a write is refused for Unlock: not approved yet (cards closed before
+// Unlock), or paused after day 14. Null for any other refusal.
+export function seCardLockLine(reason) {
+    if (reason === 'unlock_required')
+        return SE_CARD_WORDS.unlockLine;
+    if (reason === 'unlock_paused')
+        return SE_CARD_WORDS.pausedLine;
+    return null;
 }

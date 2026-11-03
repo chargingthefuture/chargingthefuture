@@ -211,7 +211,7 @@ policies:
       - member
     attributePolicies:
       tenancy: same_workspace
-      minUnlockTier: approved_full
+      minUnlockTier: signed_in
       readsOnly: true
       csrf: not_applicable
       relationship: none
@@ -228,7 +228,6 @@ policies:
       requiresAdditionalAudit: false
     denyConditions:
       - actor_not_authenticated
-      - actor_not_approved
       - account_restricted
       - invalid_card_id
   - pluginId: today
@@ -238,7 +237,7 @@ policies:
       - member
     attributePolicies:
       tenancy: same_workspace
-      minUnlockTier: approved_full
+      minUnlockTier: signed_in_posting
       readsOnly: false
       csrf: required
       relationship: none
@@ -255,7 +254,7 @@ policies:
       requiresAdditionalAudit: false
     denyConditions:
       - actor_not_authenticated
-      - actor_not_approved
+      - unlock_paused_after_day_14
       - account_restricted
       - invalid_card_id
       - rate_limited
@@ -266,7 +265,7 @@ policies:
       - member
     attributePolicies:
       tenancy: same_workspace
-      minUnlockTier: approved_full
+      minUnlockTier: signed_in_posting
       readsOnly: false
       csrf: required
       relationship: pair_agreed_not_blocked_for_private
@@ -283,7 +282,7 @@ policies:
       requiresAdditionalAudit: false
     denyConditions:
       - actor_not_authenticated
-      - actor_not_approved
+      - unlock_paused_after_day_14
       - account_restricted
       - invalid_card_id
       - rate_limited
@@ -294,7 +293,7 @@ policies:
       - member
     attributePolicies:
       tenancy: same_workspace
-      minUnlockTier: approved_full
+      minUnlockTier: signed_in_posting
       readsOnly: false
       csrf: required
       relationship: participant_not_blocked
@@ -311,7 +310,7 @@ policies:
       requiresAdditionalAudit: false
     denyConditions:
       - actor_not_authenticated
-      - actor_not_approved
+      - unlock_paused_after_day_14
       - account_restricted
       - invalid_card_id
       - rate_limited
@@ -322,7 +321,7 @@ policies:
       - member
     attributePolicies:
       tenancy: same_workspace
-      minUnlockTier: approved_full
+      minUnlockTier: signed_in_posting
       readsOnly: false
       csrf: required
       relationship: requested_not_blocked
@@ -339,7 +338,7 @@ policies:
       requiresAdditionalAudit: false
     denyConditions:
       - actor_not_authenticated
-      - actor_not_approved
+      - unlock_paused_after_day_14
       - account_restricted
       - invalid_card_id
       - rate_limited
@@ -350,7 +349,7 @@ policies:
       - member
     attributePolicies:
       tenancy: same_workspace
-      minUnlockTier: approved_full
+      minUnlockTier: signed_in_posting
       readsOnly: false
       csrf: required
       relationship: none
@@ -367,7 +366,7 @@ policies:
       requiresAdditionalAudit: false
     denyConditions:
       - actor_not_authenticated
-      - actor_not_approved
+      - unlock_paused_after_day_14
       - account_restricted
       - invalid_card_id
       - rate_limited

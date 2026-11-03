@@ -111,7 +111,7 @@ function PartnerChips({ s, partner, pairs, onPartner }: Pick<TalkProps, 's' | 'o
 
 function Composer({ t, s, talk, partnerId, hint }: { t: SeThemeTokens; s: CardSheetStyles; talk: CardConversation; partnerId: string | null; hint: string }) {
   const [draft, setDraft] = useState('');
-  if (talk.locked) return <Text style={s.hint}>{SE_CARD_WORDS.unlockLine}</Text>;
+  if (talk.locked) return <Text style={s.hint}>{talk.lockLine}</Text>;
   const disabled = talk.busy || !draft.trim();
   const submit = async () => {
     if (draft.trim() && (await talk.write(draft.trim(), partnerId))) setDraft('');

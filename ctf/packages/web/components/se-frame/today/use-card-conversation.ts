@@ -1,11 +1,11 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import type { SeCardAnswerKind, SeCardConversation } from '@ctf/shared';
+import { seCardLockLine, type SeCardAnswerKind, type SeCardConversation } from '@ctf/shared';
 
 // The conversation behind a card's sheet: read once on open, and replaced by what every write
-// answers with. A member not approved yet is refused with reason unlock_required; the sheet then
-// shows the card read-only.
+// answers with. A write refused for Unlock (unlock_required, or unlock_paused after day 14) turns
+// the sheet read-only with the line that says why.
 
 const CSRF = { 'content-type': 'application/json', 'x-ctf-csrf': '1' };
 
@@ -14,6 +14,8 @@ type Reply = { conversation?: SeCardConversation; message?: string; reason?: str
 export type CardConversation = {
   conversation: SeCardConversation | null;
   locked: boolean;
+  // Why writing is closed: not approved (cards closed before Unlock), or paused after day 14.
+  lockLine: string;
   note: string | null;
   busy: boolean;
   answer: (kind: SeCardAnswerKind) => Promise<void>;
@@ -36,7 +38,8 @@ async function call(path: string, body?: unknown): Promise<{ ok: boolean; status
 
 export function useCardConversation(cardId: string, firstAnswer: SeCardAnswerKind | null): CardConversation {
   const [conversation, setConversation] = useState<SeCardConversation | null>(null);
-  const [locked, setLocked] = useState(false);
+  const [lockLine, setLockLine] = useState<string | null>(null);
+  const locked = lockLine !== null;
   const [note, setNote] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -45,7 +48,8 @@ export function useCardConversation(cardId: string, firstAnswer: SeCardAnswerKin
       setBusy(true);
       const result = await call(cardPath(cardId, rest), body);
       setBusy(false);
-      if (result.data?.reason === 'unlock_required') return (setLocked(true), false);
+      const lock = seCardLockLine(result.data?.reason);
+      if (lock) return (setLockLine(lock), false);
       if (!result.ok) return (setNote(result.data?.message ?? failed), false);
       setNote(null);
       if (result.data?.conversation) setConversation(result.data.conversation);
@@ -64,6 +68,7 @@ export function useCardConversation(cardId: string, firstAnswer: SeCardAnswerKin
   return {
     conversation,
     locked,
+    lockLine: lockLine ?? '',
     note,
     busy,
     answer: async (kind) => void (await run('/answers', { kind }, 'The answer was not saved: the app could not be reached.')),

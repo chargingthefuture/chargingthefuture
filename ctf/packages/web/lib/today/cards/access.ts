@@ -7,12 +7,24 @@ import { checkRateLimit } from '../../security/rate-limit';
 import { reportError } from '../../observability/report';
 import { readCardId } from './ids';
 
-// Card conversations on Today are for approved members (the default tier), like the rest of Today's
-// writing: an answer or a message reaches other members, and Just us two is a conversation between
-// two people. A member who is not approved yet gets the refusal with reason unlock_required, and
-// the sheet shows the card read-only with one line saying writing opens once Unlock is done.
-export async function requireCardsAccess() {
-  const decision = await evaluatePluginAccess({ requireUsername: false });
+// Who may read and write in a card (owner decision, 2026-11-03, part of "3.1 open sign-up use"):
+// with CARDS_OPEN_BEFORE_UNLOCK on, any signed-in member reads (`signed_in`, like Today) and writes
+// (`signed_in_posting`: approved, inside the first 14 days, or waiting on an address; after day 14
+// a write is refused with unlock_paused until Unlock is done). It is a trial of whether writing
+// early keeps people: set it to false and every card route goes back to approved members only
+// (unlock_required), with nothing else to change. Removing the trial means deleting this switch,
+// the two tiers below and their allowlist entry in config/unlock-tier-exception-allowlist.json.
+export const CARDS_OPEN_BEFORE_UNLOCK = true;
+
+export type CardsAccessMode = 'read' | 'write';
+
+function cardsTier(mode: CardsAccessMode) {
+  if (!CARDS_OPEN_BEFORE_UNLOCK) return 'approved_full' as const;
+  return mode === 'read' ? ('signed_in' as const) : ('signed_in_posting' as const);
+}
+
+export async function requireCardsAccess(mode: CardsAccessMode) {
+  const decision = await evaluatePluginAccess({ requireUsername: false, minUnlockTier: cardsTier(mode) });
   if (!decision.allowed) {
     return { allowed: false as const, response: NextResponse.json(decision, { status: decision.status }) };
   }
