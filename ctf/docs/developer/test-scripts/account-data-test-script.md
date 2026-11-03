@@ -244,8 +244,7 @@ on your board, a LightHouse listing, an announcement).
 talk that is on ("On now: …") or next ("Next: … · Today · 9:00 PM") when one is booked, and the day's cards,
 newest first; after the reload the cards appear at once from the saved copy and then refresh. No
 card shows a street address, a city on a request, or where a ride goes. Step 2 opens the card's full
-text and closes it, a check mark appears on it, and "1 of N done" appears above the chips (it was
-not there before). Step 3 shows only that kind. Step 4 copies the card's address, and the hidden card
+text and closes it, and a check mark appears on it; no "N of N done" count appears anywhere. Step 3 shows only that kind. Step 4 copies the card's address, and the hidden card
 is gone and stays gone after a reload. Step 5 opens the room inside 3.1 (AD-12). If a source fails, a
 line under the chips names it and the rest of the cards still show. A member who is not a Weaver of
 the Commons never sees a Weavers card or any line naming it. Step 6: the survey card is gone once the survey is answered.

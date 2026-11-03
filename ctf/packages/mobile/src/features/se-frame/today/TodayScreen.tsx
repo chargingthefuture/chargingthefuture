@@ -1,6 +1,5 @@
 // Today in 3.1 on Android, the copy of the web's today-screen.tsx: the broadcast while it is live,
-// Days won, the rooms, then the day's cards newest first. The done count stays hidden until the member
-// has opened a card.
+// Days won, the rooms, then the day's cards newest first. There is no done count, as on the web.
 
 import React, { useState } from 'react';
 import { Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -147,7 +146,6 @@ export function TodayScreen({ t, accountId, onOpen }: { t: SeThemeTokens; accoun
         <Text accessibilityRole="header" style={s.listTitle}>
           Today&apos;s cards
         </Text>
-        {view.doneLine ? <Text style={s.meta}>{view.doneLine}</Text> : null}
       </View>
       <FilterChips s={s} filter={filter} onChange={setFilter} />
       {filter === 'matches' ? <MatchingToggle t={t} refreshKey={today?.generatedAtIso} onChanged={() => void reload()} /> : null}
