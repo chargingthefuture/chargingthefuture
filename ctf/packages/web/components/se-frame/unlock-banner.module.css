@@ -1,0 +1,205 @@
+/* The Unlock banner, to the approved boards: a pick-colored card while the app is open, the card
+   color once posting is paused. Text on pick stays dark in every theme (--se-on-pick). */
+.banner,
+.paused {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  border-radius: 20px;
+}
+
+.banner {
+  background: var(--se-pick);
+  color: var(--se-on-pick);
+  border: 1.5px solid var(--se-on-pick);
+  box-shadow: 0 3px 0 var(--se-on-pick);
+}
+
+.paused {
+  background: var(--se-card);
+  color: var(--se-ink);
+  border: 1.5px solid var(--se-line);
+  box-shadow: 0 3px 0 var(--se-line);
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.day {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.track {
+  flex: 1;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--se-pick-field);
+  border: 1.5px solid var(--se-on-pick);
+  overflow: hidden;
+}
+
+.fill {
+  display: block;
+  height: 100%;
+  background: var(--se-on-pick);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.close {
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1.5px solid currentColor;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.title {
+  margin: 0;
+  font-family: 'Newsreader Variable', Newsreader, Georgia, serif;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.paused .title {
+  font-size: 21px;
+}
+
+.text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.label {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  min-height: 46px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1.5px solid var(--se-on-pick);
+  background: var(--se-pick-field);
+  color: var(--se-on-pick);
+  font: inherit;
+  font-size: 14px;
+}
+
+.paused .input {
+  border-color: var(--se-line);
+  background: var(--se-bg);
+  color: var(--se-ink);
+}
+
+.add {
+  min-height: 46px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1.5px solid var(--se-on-pick);
+  background: var(--se-hero);
+  color: var(--se-on-hero);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.paused .add {
+  border-color: var(--se-line);
+  background: var(--se-btn);
+  color: var(--se-on-btn);
+}
+
+.add:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.small {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.smaller {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.link,
+.linkButton,
+.askLink {
+  color: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.linkButton,
+.askLink {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.askLink {
+  align-self: flex-start;
+  min-height: 32px;
+  font-size: 13px;
+}
+
+.error {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.close:focus-visible,
+.input:focus-visible,
+.add:focus-visible,
+.link:focus-visible,
+.linkButton:focus-visible,
+.askLink:focus-visible {
+  outline: 2px solid var(--se-on-pick);
+  outline-offset: 2px;
+}
+
+.paused .close:focus-visible,
+.paused .input:focus-visible,
+.paused .add:focus-visible,
+.paused .askLink:focus-visible {
+  outline-color: var(--se-pick);
+}
