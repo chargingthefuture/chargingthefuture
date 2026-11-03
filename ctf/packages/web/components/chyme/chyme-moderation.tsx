@@ -1,7 +1,7 @@
 'use client';
 
 import { useChymeTokens } from './chyme-tokens-context';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Hand, MicOff, UserMinus, Volume2 } from 'lucide-react';
 import { requestJson } from './chyme-shared';
 import type { ChymeRole, ChymeViewerState } from 'lib/chyme/types';
@@ -157,4 +157,23 @@ export function ChymeListeningNotice({ beforeUnlock = false }: { beforeUnlock?: 
       <MicOff size={16} /> {beforeUnlock ? 'Listening. Speaking opens once Unlock is done.' : 'Listening — raise your hand to ask to speak'}
     </div>
   );
+}
+
+// Whether the member may speak right now. Before Unlock they listen and cannot raise a hand; in
+// hand-raise mode a member who is not an admin listens until an admin lets them speak.
+export function chymeSpeakRules(moderation: ChymeModerationContext): { beforeUnlock: boolean; listening: boolean } {
+  const beforeUnlock = Boolean(moderation.viewer.listenOnly);
+  const handRaiseListener = moderation.speakMode === 'hand_raise' && !moderation.viewer.isAdmin && moderation.viewer.role !== 'speaker';
+  return { beforeUnlock, listening: beforeUnlock || handRaiseListener };
+}
+
+// The microphone goes off the moment the member is listening (an admin moved them back, or the room
+// switched modes), so the change takes effect without waiting for a tap.
+export function useMicOffWhileListening(listening: boolean, microphone: { disable: () => Promise<unknown> }) {
+  useEffect(() => {
+    if (!listening) return;
+    void microphone.disable().catch(() => {
+      /* no-trace: already off, or no microphone; the server-side role holds either way */
+    });
+  }, [listening, microphone]);
 }

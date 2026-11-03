@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
 import { AddToCalendarButton } from '@/components/shared/add-to-calendar';
 import {
@@ -13,6 +12,7 @@ import {
   type SeTodayRoom,
 } from '@ctf/shared';
 import { SeAvatar } from '../../shared/se-avatar';
+import { useBringSomeoneIn } from '../../shared/use-bring-someone-in';
 import { useSeRooms } from '../rooms/se-rooms';
 import styles from './today.module.css';
 
@@ -47,27 +47,6 @@ function Faces({ faces }: { faces: string[] }) {
       ))}
     </span>
   );
-}
-
-// "Bring someone in" shares the signed-out Today, where anybody can listen without an account: the
-// phone's share sheet where there is one, the clipboard otherwise.
-function useBringSomeoneIn() {
-  const [note, setNote] = useState<string | null>(null);
-  const bring = async () => {
-    const url = `${window.location.origin}${W.bringPath}`;
-    try {
-      if (navigator.share) {
-        await navigator.share({ text: W.bringText, url });
-        return;
-      }
-      await navigator.clipboard.writeText(`${W.bringText} ${url}`);
-      setNote(W.copied);
-    } catch (error) {
-      // A share sheet closed without sharing is not a failure; anything else is said on the card.
-      if ((error as { name?: string } | null)?.name !== 'AbortError') setNote(W.copyFailed);
-    }
-  };
-  return { note, bring };
 }
 
 function MainRoomCard({ room }: { room: SeTodayRoom }) {

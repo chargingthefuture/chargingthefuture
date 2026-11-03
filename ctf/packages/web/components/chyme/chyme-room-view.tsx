@@ -11,6 +11,7 @@ import type { ChymeJoinResponse, ChymeRoomResponse } from 'lib/chyme/types';
 import type { ChymeConnectionState } from './chyme-audio-room';
 import type { ChymeModerationContext } from './chyme-moderation';
 import { chymeParticipantLine } from 'lib/chyme/capacity-line';
+import { SeRoomIdle, SeRoomStateNotices } from './se-room/se-room-idle';
 
 // The live audio room pulls in the Stream Video SDK, which is browser-only, so
 // it is loaded on the client and never server-rendered.
@@ -26,7 +27,8 @@ export type ChymeRoomViewProps = {
   onLeave: () => void;
   roomScope: 'main' | 'contributors';
   onConnectionChange?: (state: ChymeConnectionState) => void;
-  // Drawn inside the 3.1 room screen, which shows the readings loop itself.
+  // Drawn inside the 3.1 room screen, to the "Live room" board (se-room/), which shows the readings
+  // loop itself.
   embedded?: boolean;
 };
 
@@ -59,8 +61,8 @@ function ChymeQuotaNotice({ notice, band }: { notice: string | null; band: Chyme
 // The room before the member joins the call: the stage, and the readings loop while it is switched
 // on and the main room is idle (temporary module, 2026-09-28). The main room opens by itself, so this
 // is where members land; joining the call unmounts it, which stops the sound.
-function ChymeIdleStage({ room, currentUserId, roomScope, embedded }: { room: ChymeRoomResponse; currentUserId: string; roomScope: ChymeRoomViewProps['roomScope']; embedded?: boolean }) {
-  const showReadings = roomScope === 'main' && !room.callActive && !embedded;
+function ChymeIdleStage({ room, currentUserId, roomScope }: { room: ChymeRoomResponse; currentUserId: string; roomScope: ChymeRoomViewProps['roomScope'] }) {
+  const showReadings = roomScope === 'main' && !room.callActive;
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
       {showReadings ? (
@@ -124,8 +126,8 @@ export function ChymeRoomView(props: ChymeRoomViewProps) {
         </>
       )}
 
-      <ChymeQuotaNotice notice={room.quota.notice} band={room.quota.band} />
-      {room.speakMode === 'hand_raise' ? (
+      {props.embedded ? <SeRoomStateNotices room={room} /> : <ChymeQuotaNotice notice={room.quota.notice} band={room.quota.band} />}
+      {room.speakMode === 'hand_raise' && !props.embedded ? (
         <div role="status" style={{ margin: '12px 24px 0', padding: '8px 14px', borderRadius: 10, fontSize: 12, lineHeight: 1.5, background: 'rgba(234,179,8,0.10)', border: '1px solid rgba(234,179,8,0.3)', color: '#FDE68A' }}>
           Hand-raise mode: everyone listens until an admin lets them speak. Raise your hand to ask.
         </div>
@@ -142,9 +144,12 @@ export function ChymeRoomView(props: ChymeRoomViewProps) {
           backChannelAllowed={room.quota.backChannelAllowed}
           onConnectionChange={props.onConnectionChange}
           moderation={moderation}
+          embedded={props.embedded}
         />
+      ) : props.embedded ? (
+        <SeRoomIdle room={room} currentUserId={currentUser.userId} roomScope={props.roomScope} />
       ) : (
-        <ChymeIdleStage room={room} currentUserId={currentUser.userId} roomScope={props.roomScope} embedded={props.embedded} />
+        <ChymeIdleStage room={room} currentUserId={currentUser.userId} roomScope={props.roomScope} />
       )}
     </>
   );

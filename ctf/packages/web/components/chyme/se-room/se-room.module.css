@@ -1,0 +1,339 @@
+/* The live room inside the 3.1 frame, to the approved board "Live room": who is speaking, who is
+   listening, the notices, the bar at the bottom and the More sheet. Colors come from the frame's
+   custom properties (components/se-frame/se-theme-vars.ts), so it works in every color and mode. */
+
+.room {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  color: var(--se-ink);
+}
+
+.status {
+  margin: 0;
+  font-size: 13px;
+  color: var(--se-soft);
+}
+
+.notice {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 14px;
+  background: var(--se-sunk);
+  color: var(--se-soft);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.notice[data-tone='warn'] {
+  border: 1.5px solid var(--se-line);
+  color: var(--se-ink);
+}
+
+.speaking {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.speaker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.ring {
+  position: relative;
+  box-sizing: border-box;
+  width: 84px;
+  height: 84px;
+  padding: 4px;
+  border-radius: 50%;
+  border: 3px solid var(--se-hair);
+}
+
+.ring[data-mic='on'] {
+  border-color: var(--se-btn);
+}
+
+.ring[data-talking='true'] {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--se-btn) 25%, transparent);
+}
+
+.face {
+  position: relative;
+  display: flex;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.marked {
+  position: relative;
+  display: flex;
+}
+
+.hand {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--se-pick);
+  color: var(--se-on-pick);
+}
+
+.speakerName,
+.listenerName {
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.speakerName {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.speakerState {
+  font-size: 11px;
+  color: var(--se-soft);
+}
+
+.listening {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.listeningLabel {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--se-soft);
+}
+
+.listeners {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.listener {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.listenerName {
+  font-size: 12px;
+}
+
+.guests {
+  align-self: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--se-sunk);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 999px;
+  background: var(--se-card);
+  border: 1.5px solid var(--se-line);
+  box-shadow: 0 3px 0 var(--se-line);
+}
+
+.grow {
+  flex: 1;
+}
+
+.pill,
+.join {
+  min-height: 48px;
+  padding: 0 18px;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pill {
+  border: 1.5px solid var(--se-hair);
+  background: transparent;
+  color: var(--se-ink);
+}
+
+.join {
+  border: 1.5px solid var(--se-line);
+  background: var(--se-btn);
+  color: var(--se-on-btn);
+  box-shadow: 0 2px 0 var(--se-line);
+}
+
+.round,
+.mic {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.round {
+  width: 48px;
+  height: 48px;
+  border: 1.5px solid var(--se-hair);
+  background: transparent;
+  color: var(--se-ink);
+}
+
+.round[aria-pressed='true'] {
+  border-color: var(--se-line);
+  background: var(--se-pick);
+  color: var(--se-on-pick);
+}
+
+.mic {
+  width: 52px;
+  height: 52px;
+  border: 1.5px solid var(--se-line);
+  background: var(--se-btn);
+  color: var(--se-on-btn);
+  box-shadow: 0 2px 0 var(--se-line);
+}
+
+.mic[data-on='true'] {
+  background: var(--se-card);
+  color: var(--se-ink);
+}
+
+.join:disabled,
+.mic:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.note {
+  margin: 0;
+  align-self: center;
+  font-size: 13px;
+  color: var(--se-soft);
+}
+
+.sheetLayer {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.backdrop {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  border: 0;
+  background: color-mix(in srgb, var(--se-ink) 40%, transparent);
+  cursor: pointer;
+}
+
+.sheet {
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 560px;
+  max-height: 80dvh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 16px 24px;
+  border-radius: 22px 22px 0 0;
+  background: var(--se-bg);
+  color: var(--se-ink);
+  border: 1.5px solid var(--se-line);
+  border-bottom: 0;
+}
+
+.sheetHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sheetTitle {
+  margin: 0;
+  flex: 1;
+  font-family: 'Newsreader Variable', Newsreader, Georgia, serif;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.sheetLabel {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--se-soft);
+}
+
+.people {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.person {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: var(--se-card);
+  border: 1.5px solid var(--se-hair);
+}
+
+.personName {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.personActions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.pill:focus-visible,
+.join:focus-visible,
+.round:focus-visible,
+.mic:focus-visible,
+.backdrop:focus-visible {
+  outline: 2px solid var(--se-pick);
+  outline-offset: 2px;
+}
