@@ -496,6 +496,8 @@
 /* "How it's counted" on Days won, and the week strip under it (approved board "Today"). */
 .howButton {
   align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
   min-height: 32px;
   padding: 0;
   border: 0;
