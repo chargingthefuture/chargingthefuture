@@ -15,7 +15,6 @@ const SOURCE_NAMES = {
     lighthouse: 'places to stay',
     'skill-up': 'cohorts',
     announcements: 'announcements',
-    'directory-invites': 'invitations',
     'what-works': 'What Works',
     'quora-survey': 'the Quora survey',
     mood: 'Mood',

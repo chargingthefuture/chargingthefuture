@@ -36,7 +36,6 @@ contracts:
       - lighthouse_properties
       - skill_up_cohorts
       - feed_announcements
-      - directory_invites
       - what_works_problems
       - what_works_products
       - mood_client_identities

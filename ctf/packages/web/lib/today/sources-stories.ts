@@ -1,11 +1,10 @@
 import type { SeTodayCard } from '@ctf/shared';
 import { listFeedTimeline } from 'lib/feed/repository';
-import { listLatestDirectoryInviteCards } from 'lib/directory/invites';
 import { getReaderList } from 'lib/what-works/repository';
 import { hasSurveyResponse } from 'lib/quora-deletion-survey/repository';
 import { action, card, clip, startOfTodayIso, type TodayViewer } from './card';
 
-// Stories: announcements from the System Architect, the newest Directory invitations, one thing
+// Stories: announcements from the System Architect, one thing
 // that worked for somebody, a different one each day, and the Quora survey card until answered.
 
 export async function announcementStories(viewer: TodayViewer): Promise<SeTodayCard[]> {
@@ -25,23 +24,6 @@ export async function announcementStories(viewer: TodayViewer): Promise<SeTodayC
         actions: [],
       }),
     );
-}
-
-export async function inviteStories(): Promise<SeTodayCard[]> {
-  const invites = await listLatestDirectoryInviteCards(3);
-  return invites.map((invite) =>
-    card({
-      source: 'directory-invite',
-      sourceId: invite.url,
-      kind: 'story',
-      label: 'Story · an invitation',
-      title: `An invitation to ${invite.name}`,
-      body: clip(invite.opening, 220),
-      createdAtIso: new Date(invite.date).toISOString(),
-      href: invite.url,
-      actions: [action('open', 'Read it', invite.url)],
-    }),
-  );
 }
 
 export async function whatWorksStory(viewer: TodayViewer, now = new Date()): Promise<SeTodayCard[]> {

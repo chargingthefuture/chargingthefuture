@@ -37,9 +37,6 @@ const ANSWER_WORDS = {
     'helped-me': 'says this helped',
 };
 const KIND_WORDS = { ask: 'Ask', offer: 'Offer', story: 'Story' };
-// A source whose link opens something narrower than the place it lives says what it opens, so the
-// link in the sheet matches the card's own button: an invite card's Read it opens the invitation.
-const OPEN_WORDS = { 'directory-invite': 'Read the invitation' };
 // Where each source's item lives, for the "Open in …" link in the sheet.
 const SOURCE_NAMES = {
     'peer-programming': 'PeerProgramming',
@@ -83,7 +80,7 @@ export const SE_CARD_WORDS = {
     reportMessage: 'Report this message',
     reported: 'Reported. An admin reads every report.',
     close: 'Close',
-    openIn: (source) => OPEN_WORDS[source] ?? (SOURCE_NAMES[source] ? `Open in ${SOURCE_NAMES[source]}` : 'Open where it lives'),
+    openIn: (source) => (SOURCE_NAMES[source] ? `Open in ${SOURCE_NAMES[source]}` : 'Open where it lives'),
     you: 'You',
 };
 // "Ask · October 26, 2026 at 11:40 AM CDT", the line under the author in the sheet.

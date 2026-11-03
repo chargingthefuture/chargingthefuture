@@ -87,10 +87,6 @@ const ANSWER_WORDS: Record<SeCardAnswerKind, string> = {
 
 const KIND_WORDS: Partial<Record<SeCardKind, string>> = { ask: 'Ask', offer: 'Offer', story: 'Story' };
 
-// A source whose link opens something narrower than the place it lives says what it opens, so the
-// link in the sheet matches the card's own button: an invite card's Read it opens the invitation.
-const OPEN_WORDS: Record<string, string> = { 'directory-invite': 'Read the invitation' };
-
 // Where each source's item lives, for the "Open in …" link in the sheet.
 const SOURCE_NAMES: Record<string, string> = {
   'peer-programming': 'PeerProgramming',
@@ -135,7 +131,7 @@ export const SE_CARD_WORDS = {
   reportMessage: 'Report this message',
   reported: 'Reported. An admin reads every report.',
   close: 'Close',
-  openIn: (source: string) => OPEN_WORDS[source] ?? (SOURCE_NAMES[source] ? `Open in ${SOURCE_NAMES[source]}` : 'Open where it lives'),
+  openIn: (source: string) => (SOURCE_NAMES[source] ? `Open in ${SOURCE_NAMES[source]}` : 'Open where it lives'),
   you: 'You',
 };
 
