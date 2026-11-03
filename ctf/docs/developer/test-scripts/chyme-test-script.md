@@ -786,6 +786,14 @@ Chyme's green.
 **Expected:** Step 1: a round back button, LIVE, a round More; "Main Room · open to everyone", the talk's title in large serif type, "On TI Radio, hosted by <host>, <start> to <end> <zone>", and the rule pill "Room rule: stay on topic, economics and collective action. Read it". Speaking shows each speaker in a ring with their name and "speaking" or "muted"; "Listening · N" shows the others as smaller faces, with a hand mark on anybody whose hand is up; the bar reads Listen in and Bring someone in. Step 2: the full rule opens in place and closes again. Step 3: the header gains "Since <time> <zone>"; the member appears under Listening as You; "Guests may be listening" sits above the bar; the bar shows Leave quietly, Bring someone in, Raise hand and Unmute. Step 4: unmuting moves the member under Speaking and the button reads Mute; the hand mark follows the toggle. In hand-raise mode, or before Unlock, the microphone button is dimmed and a notice says why; before Unlock there is no Raise hand. Step 5: the share sheet (or, on a computer, "Link copied") offers the signed-out Today. Step 6: the sheet lists Refresh the room and each other person with Tip, Mute for me (web), and Back Channel. Step 7: the dark bar shows up to two speakers' faces, the title, "<name> is speaking · you are listening"; Raise hand raises the hand (the room shows it when reopened); the title opens the room; Leave quietly ends the call and the bar goes. Step 8: More also has the speak-mode switch, and each person has Let speak or Listening (hand-raise mode), Mute and Remove. Step 9: every part reads clearly in the new colors. The 3.0 Chyme page is unchanged (CH-26 step 2).
 **Result:** web ☐ android ☐ — notes:
 
+### CH-26a · Chyme's buttons are readable in every 3.1 color
+**Role:** a visitor, then a member · **Surfaces:** web, android
+**Steps:**
+1. Signed out with the phone set to dark, open Today while the Main Room is quiet. Then set the phone to light.
+2. Signed in, open the quiet Main Room in each of the four colors, light and dark.
+**Expected:** "Play readings" and its icon, Listen, Try again and "Tap to hear the room" are easy to read in every case: dark text on a light button and light text on a dark one, never white on cream. The 3.0 Chyme page keeps its green with white text.
+**Result:** web ☐ android ☐ — notes:
+
 ### CH-27 · Room and Back Channel time counts toward Days won
 **Role:** two members, admin · **Surfaces:** web, android
 **Steps:**

@@ -208,6 +208,7 @@ export function ChymeGuestListen({
   // Bumped by the page's Leave control. Each new value stops the listen: see the effect below.
   leaveKey?: number;
 }) {
+  const onAccent = useChymeTokens().ON_ACCENT;
   // The room's counts as of the last word from the server: the page's own read to start with, then
   // the listen answer, then each heartbeat. Held here rather than read from the props so the line
   // counts this listener from the moment they are admitted instead of waiting for a page refresh.
@@ -436,7 +437,7 @@ export function ChymeGuestListen({
             setStatus('connecting');
             setArmed(true);
           }}
-          style={{ width: '100%', padding: '12px 18px', borderRadius: 12, background: accent, border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
+          style={{ width: '100%', padding: '12px 18px', borderRadius: 12, background: accent, border: 'none', color: onAccent, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
         >
           Try again
         </button>
@@ -573,6 +574,7 @@ function GuestHearingAid({ accent }: { accent: string }) {
   const { useIsAutoplayBlocked } = useCallStateHooks();
   const blocked = useIsAutoplayBlocked();
   const t = useChymeTokens();
+  const onAccent = t.ON_ACCENT;
   const retry = () => {
     unlockAudioPlayback();
     void call?.resumeAudio().catch((error: unknown) => {
@@ -585,7 +587,7 @@ function GuestHearingAid({ accent }: { accent: string }) {
         <button
           type="button"
           onClick={retry}
-          style={{ width: '100%', padding: '12px 18px', borderRadius: 12, background: accent, border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
+          style={{ width: '100%', padding: '12px 18px', borderRadius: 12, background: accent, border: 'none', color: onAccent, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
         >
           Tap to hear the room
         </button>
