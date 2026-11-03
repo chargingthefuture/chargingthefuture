@@ -35,6 +35,8 @@ export type SeTodayRoom = {
     live: boolean;
     members: number;
     guests: number;
+    speakers: number;
+    faces: string[];
     href: string;
     nextTalk: SeTodayTalk | null;
 };
@@ -52,6 +54,7 @@ export type SeToday = {
     } | null;
     broadcast: SeTodayBroadcast | null;
     rooms: SeTodayRoom[];
+    week: SeTodayTalk[];
     cards: SeTodayCard[];
     unavailable: string[];
 };

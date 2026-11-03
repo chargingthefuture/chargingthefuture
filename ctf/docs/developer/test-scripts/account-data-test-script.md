@@ -350,12 +350,36 @@ Opening People never shows "Could not read People" while the app and its databas
 1. Open Today and note "Days the Avenhood has won".
 2. Both members join the Main Room and stay 20 minutes. Then reload Today.
 3. As the admin, open `/admin/adoption` and read "Days won and retention". Tap **Copy as text**.
-**Expected:** Step 1 shows the total and "N this week. A day won is 8 hours members spent together
-in rooms and calls, or helping with each other's tasks." Step 2 raises the total by about 40 minutes
+**Expected:** Step 1 shows the total large, "Our progress this week: N days won." and "How it's
+counted", which opens "A day won is 8 hours members spent together in rooms and calls, or helping
+with each other's tasks, added up across everybody." under it. Step 2 raises the total by about 40 minutes
 ÷ 480 (0.1 after rounding). Step 3 shows Days won, Retained (with the share and the 20% target),
 Came back, Every day and time to unlock as counts only, with no member named; Copy as text pastes the
 same lines. A failed read shows "Could not read the measures:" with the reason.
 **Result:** web ☐ — notes:
+
+## AD-17a · The week strip and the room cards on Today
+
+**Role:** two approved members, one of them a Weavers of the Commons badge holder · **Precondition:**
+on 3.1; a talk is booked in the Main Room for later this week. **Surfaces:** web, android
+**Steps:**
+1. Open Today and look under Days won.
+2. Tap the day of the booked talk, then a day with nothing booked, then a day already gone.
+3. With one member speaking in the Main Room and the other listening, open Today as the badge holder.
+4. Tap **Bring someone in**.
+5. Tap **Listen in**, then go back to Today and tap **Open** on the Weavers row.
+**Expected:** Step 1 shows the week from Monday to Sunday with today filled in, and a dot under each
+day with a talk booked. Step 2 shows that day's date with the talk's title, host and times in the
+reader's own timezone; a day with nothing booked says "Nothing booked in the Main Room that day."; a
+day already gone cannot be chosen. Step 3 shows the Main Room card with LIVE, "Main Room · open to
+everyone", the talk's title, "Hosted by <host> · <start> to <end> <zone>", the faces of the people
+in the room and "1 speaking, 1 listening" (guests count as listening), and the Weavers row with a
+lock, "Private, badge holders only · quiet now" or "· N here", and Open. A member who is not a badge
+holder sees no Weavers row. Signed out, the Main Room card shows no faces. Step 4 opens the phone's
+share sheet (or copies the link on a computer, saying "Link copied") with "Listen in to the Main Room
+on Skills Economy. No account needed." and the signed-out Today address. Step 5 opens each room
+inside the app.
+**Result:** web ☐ android ☐ — notes:
 
 ## AD-18 · Personal mute
 

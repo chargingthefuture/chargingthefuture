@@ -7,7 +7,7 @@ import { blogStories } from './sources-blog';
 import { dailyPuzzleCard } from './sources-daily';
 import { announcementStories, inviteStories, surveyCard, whatWorksStory } from './sources-stories';
 import { broadcast, missionCard, moodCard, numbersCard, replayCards, wantedCard } from './sources-live';
-import { mainRoom, nextTalk, weaversRoom } from './sources-rooms';
+import { mainRoom, nextTalk, weekTalks, weaversRoom } from './sources-rooms';
 import { questionCards } from './sources-questions';
 import { readDaysWon } from 'lib/measures/action-minutes';
 import { listMutes } from 'lib/mutes/repository';
@@ -54,10 +54,13 @@ export async function buildToday(viewer: TodayViewer, now = new Date()): Promise
     { name: 'skills-hunt-mission', read: () => missionCard(now) },
   ];
 
-  const [cardLists, live, room, weavers, daysWon, mutes] = await Promise.all([
+  const week = weekTalks(now);
+  const [cardLists, live, room, weekList, weavers, daysWon, mutes] = await Promise.all([
     Promise.all(sources.map((source) => settle(source.name, source.read, unavailable))),
     settle<SeTodayBroadcast | null>('beacon', () => broadcast(), unavailable),
-    settle<SeTodayRoom>('chyme', () => mainRoom(nextTalk(now)), unavailable),
+    settle<SeTodayRoom>('chyme', () => mainRoom(nextTalk(week), true), unavailable),
+    // A schedule that fails to read leaves the strip empty rather than the room missing.
+    settle('ti-radio', () => week, []),
     // Reported but never named on screen: a member who may not enter is not told the room exists.
     settle<SeTodayRoom | null>('weavers', () => weaversRoom(viewer), []),
     settle('days-won', () => readDaysWon(now), unavailable),
@@ -75,6 +78,7 @@ export async function buildToday(viewer: TodayViewer, now = new Date()): Promise
     daysWon: daysWon ?? null,
     broadcast: live ?? null,
     rooms: [room, weavers].filter((item): item is SeTodayRoom => Boolean(item)),
+    week: weekList ?? [],
     cards,
     unavailable,
   };

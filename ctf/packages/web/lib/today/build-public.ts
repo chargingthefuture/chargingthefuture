@@ -4,7 +4,7 @@ import { dailyPuzzleCard } from './sources-daily';
 import { reportError } from 'lib/observability/report';
 import { cohortOffers } from './sources-offers';
 import { broadcast, missionCard, numbersCard, replayCards, wantedCard } from './sources-live';
-import { mainRoom, nextTalk } from './sources-rooms';
+import { mainRoom, nextTalk, weekTalks } from './sources-rooms';
 import { readDaysWon } from 'lib/measures/action-minutes';
 import { listAvailableRequests as listRideRequests } from 'lib/trust-transport/repository';
 import { action, card } from './card';
@@ -59,10 +59,13 @@ export async function buildPublicToday(now = new Date()): Promise<SeToday> {
     { name: 'skills-hunt', read: () => wantedCard() },
     { name: 'skills-hunt-mission', read: () => missionCard(now) },
   ];
-  const [cardLists, live, room, daysWon] = await Promise.all([
+  const week = weekTalks(now);
+  const [cardLists, live, room, weekList, daysWon] = await Promise.all([
     Promise.all(sources.map((source) => settle(source.name, source.read, unavailable))),
     settle<SeTodayBroadcast | null>('beacon', () => broadcast(), unavailable),
-    settle<SeTodayRoom>('chyme', () => mainRoom(nextTalk(now)), unavailable),
+    settle<SeTodayRoom>('chyme', () => mainRoom(nextTalk(week), false), unavailable),
+    // A schedule that fails to read leaves the strip empty rather than the room missing.
+    settle('ti-radio', () => week, []),
     settle('days-won', () => readDaysWon(now), unavailable),
   ]);
   const cards = cardLists
@@ -76,6 +79,7 @@ export async function buildPublicToday(now = new Date()): Promise<SeToday> {
     daysWon: daysWon ?? null,
     broadcast: live ?? null,
     rooms: room ? [room] : [],
+    week: weekList ?? [],
     cards,
     unavailable,
   };
