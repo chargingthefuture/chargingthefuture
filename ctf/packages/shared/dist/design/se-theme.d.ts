@@ -27,6 +27,7 @@ export type SeThemeTokens = {
     onPick: string;
     pickField: string;
     btn: string;
+    wordmark: string;
     onBtn: string;
     live: string;
     liveBadge: string;

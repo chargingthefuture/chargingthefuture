@@ -46,7 +46,7 @@ function makeStyles(t: SeThemeTokens) {
     frame: { flex: 1, backgroundColor: t.bg },
     screen: { gap: 18, paddingTop: 20, paddingHorizontal: 16, paddingBottom: 120 },
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-    wordmark: { fontSize: 22, color: t.btn, fontFamily: SE_FONT.serif },
+    wordmark: { fontSize: 22, color: t.wordmark, fontFamily: SE_FONT.serif },
     signIn: { minHeight: 44, justifyContent: 'center' },
     signInLabel: { fontSize: 14, color: t.ink, textDecorationLine: 'underline', fontFamily: SE_FONT.sansSemi },
     bar: {
