@@ -24,6 +24,7 @@ import { MatchingToggle } from './MatchingToggle';
 import { RoomCard } from './RoomCards';
 import { WeekStrip } from './WeekStrip';
 import { TodayCard } from './TodayCard';
+import { sendTodayFeedback } from './sendFeedback';
 import { openTodayLink } from './openTodayLink';
 import { useToday } from './useToday';
 
@@ -163,8 +164,14 @@ export function TodayScreen({ t, accountId, onOpen }: { t: SeThemeTokens; accoun
               card={card}
               viewerId={accountId}
               read={marks.read.includes(card.id)}
-              onToggleDone={() => toggle('read', card.id)}
-              onHide={() => mark('hidden', card.id)}
+              onToggleDone={() => {
+                if (!marks.read.includes(card.id)) sendTodayFeedback(card, 'done');
+                toggle('read', card.id);
+              }}
+              onHide={() => {
+                sendTodayFeedback(card, 'not_for_me');
+                mark('hidden', card.id);
+              }}
               onMute={card.author ? () => void mute(card) : undefined}
               onOpenLink={go}
               onChanged={() => void reload()}

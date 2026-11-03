@@ -132,6 +132,13 @@
       "reason": "requireCardsAccess for the Today card conversations under /api/today/cards/[cardId]: reading at 'signed_in', and answering, writing, Just us two and Report at 'signed_in_posting' (open while approved, inside the first 14 days, or waiting on an address; paused after day 14 until Unlock is done). A trial of whether writing early keeps people: CARDS_OPEN_BEFORE_UNLOCK = false puts every card route back to approved members only."
     },
     {
+      "file": "ctf/packages/web/app/api/today/feedback/route.ts",
+      "kind": "exception",
+      "feature": "3.1 open sign-up use",
+      "decision": "2026-11-03",
+      "reason": "POST /api/today/feedback at 'signed_in', the tier Today is read at: a member who marks a Today card done or picks Not for me adds one to a daily total for that card's source and kind. No account id is stored, so the count says which kinds of cards are finished or passed on and nothing about who. Account restrictions still apply. The admin read of the totals is a separate route, GET /api/admin/today-feedback, at the default tier."
+    },
+    {
       "file": "ctf/packages/web/lib/mood/_lib.ts",
       "kind": "exception",
       "feature": "3.1 open sign-up use",

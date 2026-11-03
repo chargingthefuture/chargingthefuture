@@ -5,6 +5,7 @@ import { SE_DAYS_WON_HOW, SE_DAYS_WON_TITLE, SE_DAYS_WON_WHY, SE_MUTE_WORDS, SE_
 import { MatchingToggle } from './matching-toggle';
 import { BroadcastCard, RoomCard } from './room-card';
 import { TodayCard } from './today-card';
+import { sendTodayFeedback } from './send-feedback';
 import { WeekStrip } from './week-strip';
 import { useToday, type TodayMarks } from './use-today';
 import styles from './today.module.css';
@@ -100,8 +101,14 @@ function Timeline({ viewerId, view, marks, mark, toggle, onMute, onChanged }: Ti
           card={card}
           viewerId={viewerId}
           read={marks.read.includes(card.id)}
-          onToggleDone={() => toggle('read', card.id)}
-          onHide={() => mark('hidden', card.id)}
+          onToggleDone={() => {
+            if (!marks.read.includes(card.id)) sendTodayFeedback(card, 'done');
+            toggle('read', card.id);
+          }}
+          onHide={() => {
+            sendTodayFeedback(card, 'not_for_me');
+            mark('hidden', card.id);
+          }}
           onMute={card.author && onMute ? () => onMute(card) : undefined}
           onChanged={onChanged}
         />
