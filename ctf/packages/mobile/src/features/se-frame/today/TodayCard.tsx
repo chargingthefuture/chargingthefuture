@@ -2,8 +2,8 @@
 // tapping the text opens the card in place as a sheet (CardSheet.tsx), and an answer button (I can
 // help, I know someone, I'd like this, It helped me too) records the answer and opens the sheet;
 // other buttons open the item. Every other card expands in place as before. The ••• menu holds Copy
-// link, Hide and, on a card with an author, Mute and Report. The timeline dot marks it done, and
-// tapping it again marks it not done.
+// link, Not for me (the card leaves Today on this device) and, on a card with an author, Mute and
+// Report. The timeline dot marks it done, and tapping it again marks it not done.
 
 import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -50,7 +50,7 @@ async function reportCard(card: SeTodayCard): Promise<string> {
 }
 
 function menuLabel(onMute: unknown, canReport: boolean): string {
-  const items = ['copy link', 'hide', ...(onMute ? ['mute'] : []), ...(canReport ? ['report'] : [])];
+  const items = ['copy link', 'not for me', ...(onMute ? ['mute'] : []), ...(canReport ? ['report'] : [])];
   return `More: ${items.join(', ')}`;
 }
 
@@ -71,7 +71,7 @@ function CardMenu({ s, card, canReport, onHide, onMute }: MenuProps) {
         <Text style={s.menuLabel}>{copied ? 'Link copied' : 'Copy link'}</Text>
       </TouchableOpacity>
       <TouchableOpacity accessibilityRole="menuitem" style={s.menuItem} onPress={onHide}>
-        <Text style={s.menuLabel}>Hide</Text>
+        <Text style={s.menuLabel}>{SE_CARD_WORDS.notForMe}</Text>
       </TouchableOpacity>
       {onMute && card.author ? (
         <TouchableOpacity accessibilityRole="menuitem" style={s.menuItem} onPress={onMute}>

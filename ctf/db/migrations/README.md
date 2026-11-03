@@ -90,3 +90,4 @@ up to the v3 spec: point the `DATABASE_URL` secret at the clone and run the work
 | `post/0081_question_answer_audit.sql` | post | 21 Questions: `question_answer_audit`, the record of answers, refused attempts to change one, and matching turned off or on. Safe to re-run. |
 | `post/0082_daily_post_exclusions.sql` | post | Daily Posts: `admin_daily_post_exclusions`, the blog posts left out of the rotation and Today's stories. Safe to re-run. |
 | `post/0083_card_conversations.sql` | post | Card conversations on Today: `card_answers` (a member's answer on a card, once per kind), `card_messages` (public messages, and Just us two messages with the pair stored lower id first) and `card_pair_requests` (a Just us two request and when it was agreed). Safe to re-run. |
+| `post/0084_today_card_feedback_counts.sql` | post | Today: `today_card_feedback_counts`, daily totals of cards marked done or Not for me by source and kind, with no account id. Safe to re-run. |

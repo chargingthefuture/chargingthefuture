@@ -35,6 +35,11 @@ member's answer on a card: can help, knows someone, would like this, this helped
 and when the other agreed). A report made from a card goes into the existing `member_safety_reports`
 table, which the safety contract covers.
 
+`today_card_feedback_counts` is the third: a daily total per card source, card kind and signal
+(`done` or `not_for_me`), added to when a member marks a card done or picks Not for me. It holds no
+account id and nothing about who tapped, so no row in it belongs to anybody and there is nothing in
+it to delete when an account is deleted.
+
 On the member's own device it keeps two things: the last Today answer, so the screen draws at once,
 and the cards the member opened or hid. Web keeps them in this browser's storage under
 `se-today-v1:<user_id>` and `se-today-marks-v1:<user_id>`; Android keeps them in the app's own files.
@@ -51,10 +56,12 @@ Neither leaves the device, and signing out of the device or clearing the app's d
   `today-card-conversations`). Public messages other members wrote under a card stay.
 - Full account deletion: the same 21 Questions and card conversation rows; each card source's own
   contract covers its rows.
+- `today_card_feedback_counts` is not touched by either: it stores no account id, so no row can be
+  traced to the member.
 
 ## 5) Retention
 
 21 Questions and card conversation rows are kept until the account is deleted. When the item a
 card came from is removed, its card leaves Today and its conversation is no longer shown; the rows
-stay until their authors' accounts are deleted. Nothing else is kept on the server; the
+stay until their authors' accounts are deleted. The feedback totals are kept as counts; the admin screen reads the last 30 days. Nothing else is kept on the server; the
 on-device copy is replaced on every read.
