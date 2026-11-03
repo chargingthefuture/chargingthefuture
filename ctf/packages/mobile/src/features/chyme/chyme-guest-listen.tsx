@@ -246,7 +246,7 @@ export function ChymeGuestListen(props: ListenProps) {
       <View style={styles.column}>
         <GuestNote accent={accent} text="Couldn't connect to the live room." detail={errorDetail} />
         <TouchableOpacity onPress={arm} accessibilityRole="button" style={[styles.retry, { borderRadius: t.radius(12), backgroundColor: accent }]}>
-          <Text style={styles.retryText}>Try again</Text>
+          <Text style={[styles.retryText, { color: t.ON_ACCENT }]}>Try again</Text>
         </TouchableOpacity>
       </View>
     );

@@ -220,7 +220,7 @@ function ReadingsCard({ current, playing, starting, wentLive, problem, onToggle,
           type="button"
           onClick={onToggle}
           aria-label={playing ? 'Stop the recording' : 'Play the recording'}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 999, border: 'none', background: t.ACCENT, color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 999, border: 'none', background: t.ACCENT, color: t.ON_ACCENT, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
         >
           {playing ? <Pause size={14} /> : <Play size={14} />}
           {playing ? 'Stop' : 'Play readings'}

@@ -27,6 +27,8 @@ export type ChymeTokens = {
   INPUT_BG: string;
   ACCENT_TINT_15: string;
   ACCENT_TINT_40: string;
+  // Text and icons on a filled accent button.
+  ON_ACCENT: string;
   isComic: boolean;
   radius: (_web: number) => number;
 };
@@ -54,6 +56,7 @@ export function getShellTokens(theme: ThemeName): ChymeTokens {
       INPUT_BG: '#141414',
       ACCENT_TINT_15: `${accent}26`,
       ACCENT_TINT_40: `${accent}66`,
+      ON_ACCENT: '#fff',
       isComic: true,
       radius: square,
     };
@@ -73,6 +76,7 @@ export function getShellTokens(theme: ThemeName): ChymeTokens {
     INPUT_BG: 'rgba(255,255,255,0.04)',
     ACCENT_TINT_15: 'rgba(34,197,94,0.15)',
     ACCENT_TINT_40: 'rgba(34,197,94,0.4)',
+    ON_ACCENT: '#fff',
     isComic: false,
     radius: keep,
   };
@@ -113,6 +117,7 @@ export function seChymeTokens(t: SeThemeTokens): ChymeTokens {
     INPUT_BG: t.sunk,
     ACCENT_TINT_15: `${t.btn}26`,
     ACCENT_TINT_40: `${t.btn}66`,
+    ON_ACCENT: t.onBtn,
     isComic: false,
     radius: keep,
   };

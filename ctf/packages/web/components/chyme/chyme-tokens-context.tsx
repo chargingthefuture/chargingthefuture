@@ -37,6 +37,7 @@ export function seChymeTokens(t: SeThemeTokens): ChymeTokens {
     INPUT_BG: t.sunk,
     SURFACE: t.card,
     BORDER_SOLID: t.hair,
+    ON_ACCENT: t.onBtn,
     ACCENT_TINT_10: `${accent}1A`,
     ACCENT_TINT_15: `${accent}26`,
     ACCENT_TINT_30: `${accent}4D`,
