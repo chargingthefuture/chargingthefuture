@@ -1,9 +1,8 @@
 'use client';
 
+import { useChymeTokens } from './chyme-tokens-context';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { reportError } from 'lib/observability/report';
-import { useTheme } from '@/hooks/useTheme';
-import { getChymeTokens } from './chyme-shared';
 
 // A member's own mute of a speaker (3.1.0 plan, Personal controls). Their audio stops playing for
 // this member alone and nobody is told. It is the same person mute Today uses (member_mutes, kind
@@ -104,8 +103,7 @@ export function accountIdOfStreamUser(streamUserId: string): string | null {
 }
 
 export function ChymeMuteForMeButton({ accountId, name }: { accountId: string; name: string }) {
-  const { theme } = useTheme();
-  const color = getChymeTokens(theme).MUTED;
+  const color = useChymeTokens().MUTED;
   const { mutedAccountIds, mute, unmute } = useRoomMutes();
   const [busy, setBusy] = useState(false);
   const muted = mutedAccountIds.has(accountId);

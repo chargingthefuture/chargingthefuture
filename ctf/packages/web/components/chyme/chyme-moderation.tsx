@@ -1,9 +1,9 @@
 'use client';
 
+import { useChymeTokens } from './chyme-tokens-context';
 import { useCallback, useState } from 'react';
 import { Hand, MicOff, UserMinus, Volume2 } from 'lucide-react';
-import { useTheme } from '@/hooks/useTheme';
-import { getChymeTokens, requestJson } from './chyme-shared';
+import { requestJson } from './chyme-shared';
 import type { ChymeRole, ChymeViewerState } from 'lib/chyme/types';
 
 // Moderation controls (owner decision, 2026-09-19). An admin in the room sees, under every other
@@ -86,8 +86,7 @@ export function ChymeModeratorActions({
   name: string;
   moderation: ChymeModerationContext;
 }) {
-  const { theme } = useTheme();
-  const t = getChymeTokens(theme);
+  const t = useChymeTokens();
   const { busy, notice, run } = useModerationAction(moderation.roomScope);
   const role = moderation.memberRoles.get(clerkUserId) ?? 'listener';
   const handRaise = moderation.speakMode === 'hand_raise';
@@ -130,8 +129,7 @@ export function ChymeModeratorActions({
 
 // The speak-mode switch in the control row, for an admin only.
 export function ChymeSpeakModeToggle({ moderation }: { moderation: ChymeModerationContext }) {
-  const { theme } = useTheme();
-  const t = getChymeTokens(theme);
+  const t = useChymeTokens();
   const { busy, notice, run } = useModerationAction(moderation.roomScope);
   const handRaise = moderation.speakMode === 'hand_raise';
   return (
@@ -153,8 +151,7 @@ export function ChymeSpeakModeToggle({ moderation }: { moderation: ChymeModerati
 // In place of the microphone control for a member who is listening in hand-raise mode.
 // `beforeUnlock`: a member not yet approved in Unlock listens and cannot ask to speak yet.
 export function ChymeListeningNotice({ beforeUnlock = false }: { beforeUnlock?: boolean } = {}) {
-  const { theme } = useTheme();
-  const t = getChymeTokens(theme);
+  const t = useChymeTokens();
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 12, background: t.INPUT_BG, border: `1px solid ${t.BORDER_STRONG}`, color: t.SUBTLE, fontSize: 13, lineHeight: 1.4 }}>
       <MicOff size={16} /> {beforeUnlock ? 'Listening. Speaking opens once Unlock is done.' : 'Listening — raise your hand to ask to speak'}

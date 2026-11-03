@@ -1,8 +1,7 @@
 'use client';
 
+import { useChymeTokens } from './chyme-tokens-context';
 import { Mic, RefreshCw } from 'lucide-react';
-import { useTheme } from '@/hooks/useTheme';
-import { getChymeTokens } from './chyme-shared';
 import type { ChymeConnectionState } from './chyme-audio-room';
 import { useChymeWords } from './chyme-words';
 
@@ -47,8 +46,7 @@ export function ChymeSidebar({
   onRefresh: () => void;
   refreshing?: boolean;
 }) {
-  const { theme } = useTheme();
-  const t = getChymeTokens(theme);
+  const t = useChymeTokens();
   const words = useChymeWords();
   const pill = joinPill(joinState, connection, t.ACCENT, words.join);
 

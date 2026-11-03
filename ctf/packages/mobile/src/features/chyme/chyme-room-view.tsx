@@ -85,6 +85,8 @@ type ViewProps = {
   user: CurrentUser;
   scope: ChymeRoomScope;
   backChannel: MobileBackChannelController | null;
+  // Drawn inside the 3.1 room screen, which shows the room name, count and readings loop itself.
+  embedded?: boolean;
 };
 
 function useModeration(room: ChymeRoomResponse, scope: ChymeRoomScope): MobileModerationContext {
@@ -99,7 +101,7 @@ function useModeration(room: ChymeRoomResponse, scope: ChymeRoomScope): MobileMo
   );
 }
 
-export function ChymeRoomView({ state, room, user, scope, backChannel }: ViewProps) {
+export function ChymeRoomView({ state, room, user, scope, backChannel, embedded = false }: ViewProps) {
   const t = useChymeTokens();
   const raisedHandUserIds = useMemo(() => new Set(room.participants.filter((p) => p.handRaised).map((p) => p.userId)), [room.participants]);
   const moderation = useModeration(room, scope);
@@ -108,7 +110,7 @@ export function ChymeRoomView({ state, room, user, scope, backChannel }: ViewPro
 
   return (
     <>
-      <RoomHeader room={room} user={user} t={t} />
+      {embedded ? null : <RoomHeader room={room} user={user} t={t} />}
       <QuotaNotice room={room} t={t} />
       <HandRaiseNotice room={room} t={t} />
       {inCall && call.joinInfo ? (
@@ -124,7 +126,7 @@ export function ChymeRoomView({ state, room, user, scope, backChannel }: ViewPro
         />
       ) : (
         <View>
-          {scope === 'main' && !room.callActive ? (
+          {scope === 'main' && !room.callActive && !embedded ? (
             <View style={styles.readings}>
               <ChymeReadingsPlayer />
             </View>
