@@ -2,27 +2,32 @@
 .daysWon {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 16px;
-  border-radius: 20px;
+  gap: 6px;
+  padding: 20px 20px 18px;
+  border-radius: 22px;
   background: var(--se-hero);
   color: var(--se-on-hero);
+  box-shadow: 0 4px 0 var(--se-line);
 }
 
 .daysWonLabel {
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.85;
 }
 
 .daysWonBig {
   font-family: 'Newsreader Variable', Newsreader, Georgia, serif;
-  font-size: 40px;
+  font-size: 76px;
   font-weight: 600;
-  line-height: 1.1;
+  line-height: 1;
+  color: var(--se-pick);
 }
 
 .daysWonSmall {
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.4;
 }
 
@@ -484,6 +489,194 @@
 }
 
 .heroButton:focus-visible {
+  outline: 2px solid var(--se-pick);
+  outline-offset: 2px;
+}
+
+/* "How it's counted" on Days won, and the week strip under it (approved board "Today"). */
+.howButton {
+  align-self: flex-start;
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  opacity: 0.9;
+  cursor: pointer;
+}
+
+.week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.weekDay {
+  min-height: 44px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--se-ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.weekDay:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.weekLetter {
+  font-size: 11px;
+  color: var(--se-soft);
+}
+
+.weekDate {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.weekToday {
+  background: var(--se-btn);
+  color: var(--se-on-btn);
+}
+
+.weekPicked {
+  outline: 1.5px solid var(--se-line);
+}
+
+.weekDot,
+.weekNoDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+}
+
+.weekDot {
+  background: var(--se-live-badge);
+}
+
+.weekPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--se-card);
+  border: 1.5px solid var(--se-hair);
+}
+
+.weekPanelDay {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.weekTalk {
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+/* The Main Room card's stage and buttons, and the Weavers row. */
+.stageRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.faces {
+  display: flex;
+}
+
+.face {
+  display: flex;
+  border-radius: 50%;
+  border: 2px solid var(--se-card);
+  overflow: hidden;
+}
+
+.face + .face {
+  margin-left: -10px;
+}
+
+.roomButtons {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.grow {
+  flex: 1;
+}
+
+.quietButton {
+  min-height: 46px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1.5px solid var(--se-hair);
+  background: transparent;
+  color: var(--se-ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.weavers .quietButton {
+  min-height: 40px;
+  padding: 0 14px;
+  font-size: 13px;
+}
+
+.weavers {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: var(--se-card);
+  border: 1.5px solid var(--se-hair);
+}
+
+.lock {
+  width: 34px;
+  height: 34px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--se-sunk);
+  color: var(--se-ink);
+}
+
+.weaversText {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.weaversLine {
+  font-size: 12px;
+  color: var(--se-soft);
+}
+
+.howButton:focus-visible,
+.weekDay:focus-visible,
+.quietButton:focus-visible {
   outline: 2px solid var(--se-pick);
   outline-offset: 2px;
 }
