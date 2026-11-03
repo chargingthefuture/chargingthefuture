@@ -257,17 +257,17 @@ the Commons never sees a Weavers card or any line naming it. Step 6: the survey 
 **Steps:**
 1. On Today, tap the Main Room card's button while nobody is in the room.
 2. Tap **Listen in**. Then tap the Today, People and Me tabs in turn.
-3. Tap the bar above the tab bar. Then tap **Back**/**Keep listening and browse** at the top.
-4. On the bar, tap **Leave quietly**.
+3. Tap the title on the bar above the tab bar. Then tap **Back to Today** (the round back button) at the top.
+4. On the bar, tap **Leave quietly** (the round close button).
 5. Sign in as the Weaver and open the Weavers of the Commons card on Today.
 **Expected:** Step 1 opens the room inside the app (no page change): "Main Room", "Open to everyone",
 the talk line when one is booked, and "Quiet right now" with the readings player. Step 2 joins muted
-and shows "Guests may be listening. Anyone can hear this room without an account."; the buttons read
-Leave quietly and Bring someone in (on another member's tile). Moving between tabs keeps the audio
-going, and a bar above the tab bar shows the room's name and how many are in it. Step 3 opens the
+and shows "Guests may be listening"; the bar at the bottom reads Leave quietly, with Bring someone in
+(which shares the signed-out Today), Raise hand and Unmute. Moving between tabs keeps the audio
+going, and a bar above the tab bar shows the room's title, who is speaking and "you are listening". Step 3 opens the
 room again, then puts it back in the bar. Step 4 leaves the call and the bar goes away. Step 5 shows
-the card only to the Weaver; the room reads "Private to Weavers of the Commons" and has no guest
-notice. The 3.0 Chyme page still reads Join Room, Leave and Back Channel.
+the card only to the Weaver; the room reads "Private, badge holders only", has no guest notice and
+no Bring someone in. The 3.0 Chyme page still reads Join Room, Leave and Back Channel.
 **Result:** web ☐ — notes:
 
 ## AD-13 · + New: Talk, Ask, Offer and Story

@@ -15,6 +15,7 @@ import { ChymeReadingsPlayer } from './chyme-readings-player';
 import type { MobileModerationContext } from './ChymeModeration';
 import type { MobileBackChannelController } from './useChymeBackChannel';
 import type { ChymeRoomState } from './useChymeRoomState';
+import { SeRoomIdle, SeRoomStateNotices } from './se-room/SeRoomIdle';
 
 export type CurrentUser = { userId: string; username: string | null };
 
@@ -85,7 +86,8 @@ type ViewProps = {
   user: CurrentUser;
   scope: ChymeRoomScope;
   backChannel: MobileBackChannelController | null;
-  // Drawn inside the 3.1 room screen, which shows the room name, count and readings loop itself.
+  // Drawn inside the 3.1 room screen, to the "Live room" board (se-room/), which shows the room
+  // name, count and readings loop itself.
   embedded?: boolean;
 };
 
@@ -111,8 +113,14 @@ export function ChymeRoomView({ state, room, user, scope, backChannel, embedded 
   return (
     <>
       {embedded ? null : <RoomHeader room={room} user={user} t={t} />}
-      <QuotaNotice room={room} t={t} />
-      <HandRaiseNotice room={room} t={t} />
+      {embedded ? (
+        <SeRoomStateNotices room={room} />
+      ) : (
+        <>
+          <QuotaNotice room={room} t={t} />
+          <HandRaiseNotice room={room} t={t} />
+        </>
+      )}
       {inCall && call.joinInfo ? (
         <ChymeAudioRoom
           joinInfo={call.joinInfo}
@@ -123,10 +131,13 @@ export function ChymeRoomView({ state, room, user, scope, backChannel, embedded 
           backChannel={backChannel}
           onConnectionChange={call.setConnection}
           moderation={moderation}
+          embedded={embedded}
         />
+      ) : embedded ? (
+        <SeRoomIdle room={room} currentUserId={user.userId} scope={scope} />
       ) : (
         <View>
-          {scope === 'main' && !room.callActive && !embedded ? (
+          {scope === 'main' && !room.callActive ? (
             <View style={styles.readings}>
               <ChymeReadingsPlayer />
             </View>

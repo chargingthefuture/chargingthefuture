@@ -48,6 +48,22 @@ function clock(iso, zone = false) {
 export function seTalkTimes(talk) {
     return `${clock(talk.startIso)} to ${clock(talk.endIso, true)}`;
 }
+// "1:30 to 3:00 PM CDT": as seTalkTimes, with the first AM or PM left out when both ends share it.
+export function seTalkSpan(talk) {
+    const start = clock(talk.startIso);
+    const end = clock(talk.endIso, true);
+    const period = /\s(AM|PM)$/.exec(start);
+    const first = period && new RegExp(`\\s${period[1]}(\\s|$)`).test(end) ? start.slice(0, period.index) : start;
+    return `${first} to ${end}`;
+}
+// The line under the talk's title in the live room: "On TI Radio, hosted by teodor_b, 1:30 to 3:00 PM CDT".
+export function seTalkOnAirLine(talk) {
+    return `On TI Radio, hosted by ${talk.host}, ${seTalkSpan(talk)}`;
+}
+// "Since 1:53 PM CDT", from when the live room's call session started.
+export function seRoomSince(startIso) {
+    return `Since ${clock(startIso, true)}`;
+}
 // "Hosted by teodor_b · 1:30 PM to 3:00 PM CDT", with the day in front when it is not today.
 export function seTalkHostLine(talk, now = new Date()) {
     const start = new Date(talk.startIso);

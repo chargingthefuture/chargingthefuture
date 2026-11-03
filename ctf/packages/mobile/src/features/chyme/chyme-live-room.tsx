@@ -6,6 +6,7 @@
 import React, { useEffect } from 'react';
 import { Dimensions, StyleSheet, Text, View } from 'react-native';
 import { Radio } from 'lucide-react-native';
+import { SE_LIVE_ROOM_WORDS } from '@ctf/shared';
 import { interFamily } from '../../components/ui';
 import type { ChymeRoomScope } from './ChymeApi';
 import { openWebPath, useChymeTokens, type ChymeTokens } from './chyme-tokens';
@@ -58,6 +59,12 @@ function JoinRoomPrompt({ t }: { t: ChymeTokens }) {
   );
 }
 
+// In the 3.1 room, in place of the Join row while the room is first read.
+function EmbeddedLoading({ loading, t }: { loading: boolean; t: ChymeTokens }) {
+  if (!loading) return null;
+  return <Text style={[styles.loading, { color: t.FAINT }]}>{SE_LIVE_ROOM_WORDS.loading}</Text>;
+}
+
 export function ChymeLiveRoom({
   scope,
   user,
@@ -88,8 +95,9 @@ export function ChymeLiveRoomView({
   user: CurrentUser;
   backChannel: MobileBackChannelController | null;
   onBackChannelEnabled?: (_enabled: boolean) => void;
-  // Inside the 3.1 room screen, which has its own header, room count and readings loop: the
-  // empty-room prompt, the room header and the readings here are left out so nothing shows twice.
+  // Inside the 3.1 room screen, which has its own header, room count and readings loop: the Join
+  // row, the empty-room prompt, the room header and the readings here are left out so nothing shows
+  // twice, and the room is drawn to the "Live room" board (se-room/).
   embedded?: boolean;
 }) {
   const t = useChymeTokens();
@@ -104,14 +112,18 @@ export function ChymeLiveRoomView({
 
   return (
     <View style={[embedded ? styles.embedded : styles.shell, { backgroundColor: t.BG }]}>
-      <ChymeJoinBar
-        loading={state.loading}
-        joinState={call.joinState}
-        connection={call.connection}
-        onJoin={() => void call.join()}
-        onRefresh={() => void state.refresh()}
-        refreshing={state.refreshing}
-      />
+      {embedded ? (
+        <EmbeddedLoading loading={state.loading && !room} t={t} />
+      ) : (
+        <ChymeJoinBar
+          loading={state.loading}
+          joinState={call.joinState}
+          connection={call.connection}
+          onJoin={() => void call.join()}
+          onRefresh={() => void state.refresh()}
+          refreshing={state.refreshing}
+        />
+      )}
       <RoomContent t={t} state={state} scope={scope} user={user} backChannel={backChannelEnabled ? backChannel : null} embedded={embedded} />
     </View>
   );
@@ -141,7 +153,8 @@ function RoomContent({ t, state, scope, user, backChannel, embedded }: RoomConte
 const styles = StyleSheet.create({
   // The web room fills at least the screen height (minHeight 100dvh) and centers the prompt in what is left.
   shell: { width: '100%', minHeight: Dimensions.get('window').height },
-  embedded: { width: '100%' },
+  embedded: { width: '100%', gap: 16 },
+  loading: { fontSize: 13, fontFamily: interFamily('400') },
   locked: { width: '100%', alignItems: 'center', justifyContent: 'center', paddingVertical: 32, paddingHorizontal: 20 },
   lockedInner: { maxWidth: 420, alignItems: 'center', gap: 14 },
   lockedTitle: { fontSize: 20, textAlign: 'center', fontFamily: interFamily('800') },

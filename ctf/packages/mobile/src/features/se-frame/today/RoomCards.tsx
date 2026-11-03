@@ -2,8 +2,8 @@
 // board: the Main Room card with its talk, who hosts it and when, the faces on the stage, Listen in
 // and Bring someone in; and Weavers of the Commons as one row for the members who may enter it.
 
-import React, { useMemo, useState } from 'react';
-import { Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useMemo } from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
 import {
   SE_TODAY_ROOM_WORDS as W,
@@ -16,8 +16,7 @@ import {
 } from '@ctf/shared';
 import { AddToCalendarButton } from '../../../components/shared/AddToCalendarButton';
 import { SeAvatar } from '../../../components/shared/SeAvatar';
-import { webPageUrl } from '../../../navigation/openWebPage';
-import { reportError } from '../../../observability/report';
+import { useBringSomeoneIn } from '../../../components/shared/useBringSomeoneIn';
 import { useSeRooms } from '../rooms/SeRooms';
 import { SE_FONT } from '../fonts';
 
@@ -34,21 +33,6 @@ function Faces({ s, faces }: { s: Styles; faces: string[] }) {
       ))}
     </View>
   );
-}
-
-// "Bring someone in" opens the phone's share sheet with the signed-out Today, where anybody can
-// listen without an account.
-function useBringSomeoneIn() {
-  const [note, setNote] = useState<string | null>(null);
-  const bring = async () => {
-    try {
-      await Share.share({ message: `${W.bringText} ${webPageUrl(W.bringPath)}` });
-    } catch (error) {
-      reportError(error, { area: 'today', op: 'bring_someone_in' });
-      setNote(W.copyFailed);
-    }
-  };
-  return { note, bring };
 }
 
 function MainRoomCard({ t, room }: { t: SeThemeTokens; room: SeTodayRoom }) {
