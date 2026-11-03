@@ -112,7 +112,8 @@ and tapping it opens the Beacon viewer. The replay is posted only once (never do
 4. Open `https://app.lagatos.com/api/beacon/replays/not-an-id/recording`.
 **Expected:** Step 1 lists every recorded broadcast, newest first, 20 to a page, with the range shown
 and the page number in the address. Step 2 plays the recording with no sign-in. Step 3 is accepted
-by the reader and shows one item per replay, newest first, each with a playable attachment. Step 4
+by the reader, listed under its own address `https://app.lagatos.com/api/beacon/replays/feed`
+rather than a name, and shows one item per replay, newest first, each with a playable attachment. Step 4
 answers "No recorded broadcast has that id." with a 404. A draft or live event never appears in the
 list or the feed.
 5. After the next run of the Actions workflow "Beacon — Keep a copy of each recording" (or run it by

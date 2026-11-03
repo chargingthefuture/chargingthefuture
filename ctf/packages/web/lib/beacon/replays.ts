@@ -119,7 +119,9 @@ export function buildBeaconReplayFeedXml(replays: PublicBeaconReplay[], builtAt:
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" xmlns:atom="http://www.w3.org/2005/Atom">',
     '  <channel>',
-    '    <title>Skills Economy: recorded broadcasts</title>',
+    // The feed's own address: a link preview and a feed reader show this title, and the address
+    // says exactly where the link goes.
+    `    <title>${escapeXml(BEACON_REPLAY_FEED_URL)}</title>`,
     `    <link>${escapeXml(BLOG_STREAMS_PAGE_URL)}</link>`,
     `    <atom:link href="${escapeXml(BEACON_REPLAY_FEED_URL)}" rel="self" type="application/rss+xml" />`,
     '    <description>Every live broadcast from the Skills Economy app, recorded and listed newest first. Each one can also be watched in the app with no sign-in.</description>',
