@@ -21,6 +21,10 @@ export declare function seTalkWhen(startIso: string, now?: Date): string;
 export declare function seTalkLine(talk: SeTodayTalk | null, now?: Date): string | null;
 export declare const SE_DAYS_WON_TITLE = "Days the Avenhood has won";
 export declare const SE_DAYS_WON_HOW = "How it's counted";
+export declare const SE_DAYS_WON_WHY: {
+    label: string;
+    href: string;
+};
 export declare function seDaysWonLines(daysWon: {
     total: number;
     thisWeek: number;

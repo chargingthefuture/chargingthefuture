@@ -3,10 +3,11 @@
 // has opened a card.
 
 import React, { useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import {
   SE_DAYS_WON_HOW,
   SE_DAYS_WON_TITLE,
+  SE_DAYS_WON_WHY,
   SE_MUTE_WORDS,
   SE_TODAY_FILTERS,
   seDaysWonLines,
@@ -41,6 +42,11 @@ function DaysWonCard({ s, daysWon }: { s: Styles; daysWon: NonNullable<SeToday['
         <Text style={s.howLabel}>{SE_DAYS_WON_HOW}</Text>
       </TouchableOpacity>
       {how ? <Text style={s.daysWonSmall}>{lines.how}</Text> : null}
+      {how ? (
+        <TouchableOpacity accessibilityRole="link" onPress={() => void Linking.openURL(SE_DAYS_WON_WHY.href)} style={s.how}>
+          <Text style={s.howLabel}>{SE_DAYS_WON_WHY.label}</Text>
+        </TouchableOpacity>
+      ) : null}
     </View>
   );
 }
