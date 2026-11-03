@@ -208,7 +208,6 @@ export function ChymeGuestListen({
   // Bumped by the page's Leave control. Each new value stops the listen: see the effect below.
   leaveKey?: number;
 }) {
-  const onAccent = useChymeTokens().ON_ACCENT;
   // The room's counts as of the last word from the server: the page's own read to start with, then
   // the listen answer, then each heartbeat. Held here rather than read from the props so the line
   // counts this listener from the moment they are admitted instead of waiting for a page refresh.
@@ -426,22 +425,17 @@ export function ChymeGuestListen({
   }
   if (status === 'error') {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <GuestNote accent={accent} text="Couldn't connect to the live room." detail={errorDetail} />
-        <button
-          type="button"
-          onClick={() => {
-            unlockAudioPlayback();
-            setErrorDetail(null);
-            setCredentials(null);
-            setStatus('connecting');
-            setArmed(true);
-          }}
-          style={{ width: '100%', padding: '12px 18px', borderRadius: 12, background: accent, border: 'none', color: onAccent, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
-        >
-          Try again
-        </button>
-      </div>
+      <GuestRetry
+        accent={accent}
+        detail={errorDetail}
+        onRetry={() => {
+          unlockAudioPlayback();
+          setErrorDetail(null);
+          setCredentials(null);
+          setStatus('connecting');
+          setArmed(true);
+        }}
+      />
     );
   }
   if (status !== 'joined' || !client || !call) {
@@ -560,6 +554,23 @@ function GuestAudioSink({ accent, counts }: { accent: string; counts: GuestRoomC
       </div>
       <GuestHearingAid accent={accent} />
       <GuestStage participants={uniqueParticipants} />
+    </div>
+  );
+}
+
+// The connection failed: what went wrong, and Try again.
+function GuestRetry({ accent, detail, onRetry }: { accent: string; detail: string | null; onRetry: () => void }) {
+  const t = useChymeTokens();
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <GuestNote accent={accent} text="Couldn't connect to the live room." detail={detail} />
+      <button
+        type="button"
+        onClick={onRetry}
+        style={{ width: '100%', padding: '12px 18px', borderRadius: 12, background: accent, border: 'none', color: t.ON_ACCENT, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
+      >
+        Try again
+      </button>
     </div>
   );
 }
