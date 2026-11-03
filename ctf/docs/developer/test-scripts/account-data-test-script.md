@@ -351,8 +351,9 @@ Opening People never shows "Could not read People" while the app and its databas
 2. Both members join the Main Room and stay 20 minutes. Then reload Today.
 3. As the admin, open `/admin/adoption` and read "Days won and retention". Tap **Copy as text**.
 **Expected:** Step 1 shows the total large, "Our progress this week: N days won." and "How it's
-counted", which opens "A day won is 8 hours members spent together in rooms and calls, or helping
-with each other's tasks, added up across everybody." under it. Step 2 raises the total by about 40 minutes
+counted", which opens "Time members spent together in rooms and calls, or helping with each
+other's tasks. That is less time on Specterati schemes, and more time for all of us reaching our own
+definition of happiness." under it. Step 2 raises the total by about 40 minutes
 ÷ 480 (0.1 after rounding). Step 3 shows Days won, Retained (with the share and the 20% target),
 Came back, Every day and time to unlock as counts only, with no member named; Copy as text pastes the
 same lines. A failed read shows "Could not read the measures:" with the reason.
@@ -365,6 +366,8 @@ same lines. A failed read shows "Could not read the measures:" with the reason.
 1. Open Me and choose each color, first with Dark, then with Light.
 **Expected:** Every color shows its own color on the buttons, the selected chips and the + button in
 both modes: Coral is coral with dark text in light and dark alike, never near-black.
+Signed out, the "Skills Economy" name at the top of Today is easy to read in every color; in Coral
+light it is dark, not coral.
 ## AD-17a · The week strip and the room cards on Today
 
 **Role:** two approved members, one of them a Weavers of the Commons badge holder · **Precondition:**
@@ -386,6 +389,22 @@ holder sees no Weavers row. Signed out, the Main Room card shows no faces. Step 
 share sheet (or copies the link on a computer, saying "Link copied") with "Listen in to the Main Room
 on Skills Economy. No account needed." and the signed-out Today address. Step 5 opens each room
 inside the app.
+**Result:** web ☐ android ☐ — notes:
+
+## AD-17c · Burgundy by default, and signed out
+
+**Role:** a visitor, then a member · **Surfaces:** web, android
+**Steps:**
+1. On a phone that has never opened the app, open the app signed out.
+2. Sign in, open Me and pick Coral. Sign out again.
+3. Set the phone to light, then to dark, while signed out.
+**Expected:** Step 1 shows signed-out Today in burgundy, light or dark as the phone is set, with the
+hero line ending "That is less time on Specterati schemes, and more time for all of us reaching our
+own definition of happiness. Free. Exit their economy, exit the psyop." Step 2 keeps Coral while
+signed in; signing out uses **Sign out** at the end of Me's Settings, which asks "Sign out of this
+device?" first and lands on signed-out Today, burgundy again. Step 3 switches signed-out Today and
+the room page between burgundy light and burgundy dark. A member who never picked a color sees
+burgundy, dark, once signed in.
 **Result:** web ☐ android ☐ — notes:
 
 ## AD-18 · Personal mute
@@ -414,7 +433,7 @@ request and a Skill Up cohort exist; once with the Main Room live, once with it 
 **Expected:** Step 1 matches the approved "Today, signed out" board: "Skills Economy" with Sign in at
 the top; Days won with "Skills Economy is where the Avenhood meets…" and Sign up; the room card;
 "Today's cards" with "Read only"; asks and offers from "A member" with Sign up to answer, stories with
-Read it; a dashed People card that says it opens once a member is verified; and a bar along the
+Read it; a dashed People card that says it opens once a member is reviewed; and a bar along the
 bottom, "Free. Use one part, ignore the rest." with Sign up. No card shows a name and there is no
 card menu. Step 2 starts listening right there on the card, with no account. Step 3 says "Quiet
 right now", offers the readings, and shows the next room with Add to calendar. Step 4 opens sign-up,

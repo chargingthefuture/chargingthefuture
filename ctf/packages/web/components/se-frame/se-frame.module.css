@@ -157,7 +157,7 @@
   font-family: 'Newsreader Variable', Newsreader, Georgia, serif;
   font-size: 22px;
   font-weight: 600;
-  color: var(--se-btn);
+  color: var(--se-wordmark);
 }
 
 .guestSignIn {

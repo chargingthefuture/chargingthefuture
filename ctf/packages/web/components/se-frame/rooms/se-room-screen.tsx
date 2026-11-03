@@ -1,15 +1,17 @@
 'use client';
 
-import { useEffect } from 'react';
-import { SE_ROOM_QUIET, SE_ROOM_QUIET_TEXT, seRoomView, seRoomWords, seTalkLine, type SeRoomView } from '@ctf/shared';
+import { useEffect, useMemo } from 'react';
+import { SE_ROOM_QUIET, SE_ROOM_QUIET_TEXT, seRoomView, seRoomWords, seTalkLine, seTheme, type SeRoomView } from '@ctf/shared';
 import {
   ChymeLiveShellView,
   useChymeRoomSession,
   type ChymeRoomScope,
 } from '@/components/chyme/chyme-live-shell';
+import { ChymeTokensContext, seChymeTokens } from '@/components/chyme/chyme-tokens-context';
 import { ChymeWordsProvider } from '@/components/chyme/chyme-words';
 import { ChymeReadingsPlayer } from '@/components/chyme/readings/chyme-readings-player';
 import type { CurrentUser } from '@/components/chyme/chyme-shared';
+import { useSeTheme } from '../use-se-theme';
 import { useSeRooms } from './se-rooms';
 import styles from './rooms.module.css';
 
@@ -73,22 +75,29 @@ function SeRoomScreen({ scope, currentUser, visible }: { scope: ChymeRoomScope; 
       <RoomNotices view={view} />
       <div className={styles.room}>
         <ChymeWordsProvider words={view.words}>
-          <ChymeLiveShellView session={session} currentUser={currentUser} roomScope={scope} />
+          <ChymeLiveShellView session={session} currentUser={currentUser} roomScope={scope} embedded />
         </ChymeWordsProvider>
       </div>
     </section>
   );
 }
 
+// Chyme's parts (the readings loop, the stage, the call) drawn in the member's 3.1 colors.
+function SeRoomColors({ children }: { children: React.ReactNode }) {
+  const { theme } = useSeTheme();
+  const tokens = useMemo(() => seChymeTokens(seTheme(theme.color, theme.mode)), [theme.color, theme.mode]);
+  return <ChymeTokensContext.Provider value={tokens}>{children}</ChymeTokensContext.Provider>;
+}
+
 // Every room the member has open, mounted; only the one being looked at is visible.
 export function SeRoomHosts({ currentUser }: { currentUser: CurrentUser }) {
   const { opened, shown } = useSeRooms();
   return (
-    <>
+    <SeRoomColors>
       {opened.map((scope) => (
         <SeRoomScreen key={scope} scope={scope} currentUser={currentUser} visible={shown === scope} />
       ))}
-    </>
+    </SeRoomColors>
   );
 }
 

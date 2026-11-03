@@ -20,6 +20,7 @@ export function seThemeVars(color?: SeThemeColor, mode?: SeThemeMode): CSSProper
     '--se-pick-field': t.pickField,
     '--se-btn': t.btn,
     '--se-on-btn': t.onBtn,
+    '--se-wordmark': t.wordmark,
     '--se-live': t.live,
     '--se-live-badge': t.liveBadge,
     '--se-on-live-badge': t.onLiveBadge,

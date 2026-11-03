@@ -1,5 +1,6 @@
 'use client';
 
+import { useChymeTokens } from './chyme-tokens-context';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   StreamVideo,
@@ -14,8 +15,7 @@ import {
   type StreamVideoParticipant,
 } from '@stream-io/video-react-sdk';
 import { Mic, Headphones } from 'lucide-react';
-import { useTheme } from '@/hooks/useTheme';
-import { getChymeTokens, chymeHandle, initials, type CurrentUser } from './chyme-shared';
+import { chymeHandle, initials, type CurrentUser } from './chyme-shared';
 import { ChymeControls } from './chyme-controls';
 import { ChymeTipButton } from './chyme-tip-dialog';
 import { useBackChannel, type BackChannelController } from './chyme-back-channel';
@@ -109,8 +109,7 @@ export function ChymeAudioRoom({ joinInfo, currentUser, onLeave, raisedHandUserI
   const [call, setCall] = useState<Call | null>(null);
   const [status, setStatus] = useState<'connecting' | 'joined' | 'error' | 'unsupported'>('connecting');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const { theme } = useTheme();
-  const t = getChymeTokens(theme);
+  const t = useChymeTokens();
   // Back Channel is a main-room feature only for now (its invites are scoped to the main room's
   // presence). In the private room it is disabled, so the polling is off and no UI is rendered.
   const backChannelEnabled = roomScope === 'main' && backChannelAllowed;
@@ -317,8 +316,7 @@ function ChymeAudioFrame({
   isMobile: boolean;
   onLeave: () => void;
 }) {
-  const { theme } = useTheme();
-  const t = getChymeTokens(theme);
+  const t = useChymeTokens();
   const words = useChymeWords();
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
@@ -365,8 +363,7 @@ function ChymeAudioRoomLive({
   useEffect(() => {
     onConnectionChange?.(connection);
   }, [connection, onConnectionChange]);
-  const { theme } = useTheme();
-  const t = getChymeTokens(theme);
+  const t = useChymeTokens();
   // Hand-raise is tracked locally so the toggle is reliable for the person pressing it: their own
   // tile shows ✋ and the button reads "Lower Hand" until they lower it. The state is ALSO persisted
   // server-side (POST /api/chyme/hand) so it rides on the member's presence row and everyone else
@@ -471,8 +468,7 @@ export function ChymeSpeakerAvatar({
   audioActive: boolean;
   handRaised: boolean;
 }) {
-  const { theme } = useTheme();
-  const t = getChymeTokens(theme);
+  const t = useChymeTokens();
   return (
     <div style={{ position: 'relative' }}>
       <div
@@ -523,8 +519,7 @@ export function ChymeSpeakerAvatar({
 
 // The pill under the name: "listening" for a guest, otherwise "speaking"/"muted" by audio state.
 export function ChymeSpeakerStatusBadge({ isGuest, audioActive }: { isGuest: boolean; audioActive: boolean }) {
-  const { theme } = useTheme();
-  const t = getChymeTokens(theme);
+  const t = useChymeTokens();
   return (
     <span
       style={{
@@ -579,8 +574,7 @@ function ChymeSpeakerTile({
   backChannelEnabled: boolean;
   moderation: ChymeModerationContext;
 }) {
-  const { theme } = useTheme();
-  const t = getChymeTokens(theme);
+  const t = useChymeTokens();
   const isSelf = Boolean(participant.isLocalParticipant);
   // Signed-out guests join as listen-only (their Stream id is minted as `chyme-guest-…`). They can
   // never publish, so a mic icon is misleading — show a headphones "listening" indicator instead.

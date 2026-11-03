@@ -3,17 +3,16 @@
 // along the bottom with Sign up.
 
 import React, { useMemo } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { SE_GUEST_WORDS as W, seTheme, type SeThemeTokens } from '@ctf/shared';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View, useColorScheme } from 'react-native';
+import { seSignedOutTheme, SE_GUEST_WORDS as W, seTheme, type SeThemeTokens } from '@ctf/shared';
 import { useAuth } from '../../auth/auth-context';
 import type { FeatureKey } from '../../navigation/screens';
 import { SE_FONT } from './fonts';
 import { GuestToday } from './today/GuestToday';
-import { useSeTheme } from './useSeTheme';
 import { SeRoomsProvider } from './rooms/SeRooms';
 
 export function PublicToday({ onOpen }: { onOpen: (_key: FeatureKey) => void }) {
-  const { theme } = useSeTheme();
+  const theme = seSignedOutTheme(useColorScheme() === 'dark');
   const t = seTheme(theme.color, theme.mode);
   const s = useMemo(() => makeStyles(t), [t]);
   const { signIn } = useAuth();
@@ -47,7 +46,7 @@ function makeStyles(t: SeThemeTokens) {
     frame: { flex: 1, backgroundColor: t.bg },
     screen: { gap: 18, paddingTop: 20, paddingHorizontal: 16, paddingBottom: 120 },
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-    wordmark: { fontSize: 22, color: t.btn, fontFamily: SE_FONT.serif },
+    wordmark: { fontSize: 22, color: t.wordmark, fontFamily: SE_FONT.serif },
     signIn: { minHeight: 44, justifyContent: 'center' },
     signInLabel: { fontSize: 14, color: t.ink, textDecorationLine: 'underline', fontFamily: SE_FONT.sansSemi },
     bar: {

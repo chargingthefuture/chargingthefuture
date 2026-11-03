@@ -6,6 +6,10 @@ export declare const SE_DEFAULT_THEME: {
     color: SeThemeColor;
     mode: SeThemeMode;
 };
+export declare function seSignedOutTheme(prefersDark: boolean): {
+    color: SeThemeColor;
+    mode: SeThemeMode;
+};
 export declare const SE_THEME_LABELS: Record<SeThemeColor, string>;
 export type SeCardKind = 'ask' | 'offer' | 'story' | 'match' | 'mood' | 'numbers' | 'replay' | 'game';
 export type SeKindColors = Record<SeCardKind, string>;
@@ -23,6 +27,7 @@ export type SeThemeTokens = {
     onPick: string;
     pickField: string;
     btn: string;
+    wordmark: string;
     onBtn: string;
     live: string;
     liveBadge: string;

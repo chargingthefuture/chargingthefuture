@@ -3,8 +3,8 @@
 // the System Architect entry. Links to parts of the app the Android app does not carry open in the
 // browser.
 
-import React, { useEffect, useMemo, useState } from 'react';
-import { Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Alert, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import {
   SE_AVEN_DEFINITION,
@@ -20,6 +20,7 @@ import {
   type SeThemeChoice,
   type SeThemeTokens,
 } from '@ctf/shared';
+import { useAuth } from '../../../auth/auth-context';
 import { authedFetchJson } from '../../../auth/authedFetch';
 import { SeAvatar } from '../../../components/shared/SeAvatar';
 import { reportError } from '../../../observability/report';
@@ -145,7 +146,44 @@ function SettingsCard({ s, go, theme, onTheme, onBack, saving, onOpenAccount }: 
           <Text style={s.linkLabel}>{label}</Text>
         </TouchableOpacity>
       ))}
+      <SignOutButton s={s} />
     </View>
+  );
+}
+
+// Sign out of this device, back to signed-out Today, the same as the web.
+function SignOutButton({ s }: { s: Styles }) {
+  const { signOut } = useAuth();
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const run = useCallback(async () => {
+    setPending(true);
+    setError(null);
+    try {
+      await signOut();
+    } catch (err) {
+      reportError(err, { area: 'se-frame', op: 'me_sign_out' });
+      const reason = err instanceof Error && err.message ? ` (${err.message})` : '';
+      setError(`${W.signOutFailed}${reason}`);
+      setPending(false);
+    }
+  }, [signOut]);
+  const confirm = () =>
+    Alert.alert(W.signOutConfirm, W.signOutConfirmText, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: W.signOut, style: 'destructive', onPress: () => void run() },
+    ]);
+  return (
+    <>
+      <TouchableOpacity accessibilityRole="button" accessibilityState={{ disabled: pending }} disabled={pending} onPress={confirm} style={[s.pill, pending ? s.disabled : null]}>
+        <Text style={s.pillLabel}>{pending ? W.signingOut : W.signOut}</Text>
+      </TouchableOpacity>
+      {error ? (
+        <Text accessibilityRole="alert" style={s.text}>
+          {error}
+        </Text>
+      ) : null}
+    </>
   );
 }
 

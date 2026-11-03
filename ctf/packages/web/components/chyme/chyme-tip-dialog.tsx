@@ -1,9 +1,9 @@
 "use client";
 
+import { useChymeTokens } from './chyme-tokens-context';
 import { useEffect, useState } from "react";
 import { Coins, X } from "lucide-react";
-import { useTheme } from "@/hooks/useTheme";
-import { getChymeTokens, requestJson } from "./chyme-shared";
+import { requestJson } from "./chyme-shared";
 
 // A fresh idempotency key for one tip. Falls back for a non-secure context where
 // crypto.randomUUID is unavailable.
@@ -25,8 +25,7 @@ export function ChymeTipButton({
   recipientName: string;
 }) {
   const [open, setOpen] = useState(false);
-  const { theme } = useTheme();
-  const t = getChymeTokens(theme);
+  const t = useChymeTokens();
   return (
     <>
       <button
@@ -78,8 +77,7 @@ function ChymeTipDialog({
   // response that never arrived, carries the same key, so the server returns the first transfer
   // instead of sending the credits again. Changing the amount makes it a different tip with a new key.
   const [tipKey, setTipKey] = useState(newTipKey);
-  const { theme } = useTheme();
-  const t = getChymeTokens(theme);
+  const t = useChymeTokens();
 
   const numeric = Number(amount);
   const canSend = !submitting && !success && amount.length > 0 && !Number.isNaN(numeric) && numeric > 0;

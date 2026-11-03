@@ -1,10 +1,10 @@
 'use client';
 
+import { useChymeTokens } from './chyme-tokens-context';
 import { useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { Lock } from 'lucide-react';
-import { useTheme } from '@/hooks/useTheme';
-import { getChymeTokens, chymeHandle, type CurrentUser } from './chyme-shared';
+import { chymeHandle, type CurrentUser } from './chyme-shared';
 import { ChymeStage } from './chyme-stage';
 import { ChymeReadingsPlayer } from '@/components/chyme/readings/chyme-readings-player';
 import type { ChymeJoinResponse, ChymeRoomResponse } from 'lib/chyme/types';
@@ -26,6 +26,8 @@ export type ChymeRoomViewProps = {
   onLeave: () => void;
   roomScope: 'main' | 'contributors';
   onConnectionChange?: (state: ChymeConnectionState) => void;
+  // Drawn inside the 3.1 room screen, which shows the readings loop itself.
+  embedded?: boolean;
 };
 
 // The member-facing quota line, under the room header. Only while the Stream quota policy has
@@ -57,8 +59,8 @@ function ChymeQuotaNotice({ notice, band }: { notice: string | null; band: Chyme
 // The room before the member joins the call: the stage, and the readings loop while it is switched
 // on and the main room is idle (temporary module, 2026-09-28). The main room opens by itself, so this
 // is where members land; joining the call unmounts it, which stops the sound.
-function ChymeIdleStage({ room, currentUserId, roomScope }: { room: ChymeRoomResponse; currentUserId: string; roomScope: ChymeRoomViewProps['roomScope'] }) {
-  const showReadings = roomScope === 'main' && !room.callActive;
+function ChymeIdleStage({ room, currentUserId, roomScope, embedded }: { room: ChymeRoomResponse; currentUserId: string; roomScope: ChymeRoomViewProps['roomScope']; embedded?: boolean }) {
+  const showReadings = roomScope === 'main' && !room.callActive && !embedded;
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
       {showReadings ? (
@@ -73,8 +75,7 @@ function ChymeIdleStage({ room, currentUserId, roomScope }: { room: ChymeRoomRes
 
 export function ChymeRoomView(props: ChymeRoomViewProps) {
   const { room, currentUser, joinInfo, joinReady } = props;
-  const { theme } = useTheme();
-  const t = getChymeTokens(theme);
+  const t = useChymeTokens();
 
   // Clerk user ids of members whose hand is raised, derived from the polled room state. Passed to
   // the audio room so each stage tile shows a persistent raised hand for everyone but the local
@@ -100,6 +101,8 @@ export function ChymeRoomView(props: ChymeRoomViewProps) {
 
   return (
     <>
+      {props.embedded ? null : (
+        <>
       <div style={{ padding: '20px 24px 16px', borderBottom: `1px solid ${t.BORDER}`, flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
           <div style={{ flex: 1 }}>
@@ -118,6 +121,8 @@ export function ChymeRoomView(props: ChymeRoomViewProps) {
           </div>
         </div>
       </div>
+        </>
+      )}
 
       <ChymeQuotaNotice notice={room.quota.notice} band={room.quota.band} />
       {room.speakMode === 'hand_raise' ? (
@@ -139,7 +144,7 @@ export function ChymeRoomView(props: ChymeRoomViewProps) {
           moderation={moderation}
         />
       ) : (
-        <ChymeIdleStage room={room} currentUserId={currentUser.userId} roomScope={props.roomScope} />
+        <ChymeIdleStage room={room} currentUserId={currentUser.userId} roomScope={props.roomScope} embedded={props.embedded} />
       )}
     </>
   );

@@ -1,5 +1,6 @@
 'use client';
 
+import { useSignedOutTheme } from '../use-signed-out-theme';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import {
@@ -21,7 +22,6 @@ import { ChymeGuestListen, GuestNote } from '@/components/chyme/chyme-guest-list
 import { ChymeReadingsPlayer } from '@/components/chyme/readings/chyme-readings-player';
 import { ChymeTokensContext, seChymeTokens } from '@/components/chyme/chyme-tokens-context';
 import { SeAvatar } from '@/components/shared/se-avatar';
-import { useSeTheme } from '../use-se-theme';
 import { useGuestRoom } from './use-guest-room';
 import { useToday } from './use-today';
 import styles from './today.module.css';
@@ -29,7 +29,7 @@ import styles from './today.module.css';
 // Today for a visitor who is not signed in, built to the approved "Today, signed out" board: Days
 // won with what Skills Economy is and Sign up, the Main Room with Listen as a guest in place (or, on
 // a quiet day, the readings and the next room), the day's cards read only, asks and offers from "A
-// member" with Sign up to answer, and People locked until a member is verified.
+// member" with Sign up to answer, and People locked until a member is reviewed.
 
 function Hero({ today, signUpUrl }: { today: SeToday | null; signUpUrl: string }) {
   const big = today?.daysWon ? seDaysWonLines(today.daysWon).big : null;
@@ -52,7 +52,7 @@ function Listening({ participantCount, guestCount, listenAllowed, listenUnavaila
   listenUnavailable: string | null;
   onGone: () => void;
 }) {
-  const { theme } = useSeTheme();
+  const theme = useSignedOutTheme();
   const tokens = useMemo(() => seChymeTokens(seTheme(theme.color, theme.mode)), [theme.color, theme.mode]);
   return (
     <ChymeTokensContext.Provider value={tokens}>
@@ -89,7 +89,7 @@ function LiveRoom({ talk, room, onGone }: { talk: SeTodayTalk | null; room: Extr
 }
 
 function QuietRoom({ talk, onLive }: { talk: SeTodayTalk | null; onLive: () => void }) {
-  const { theme } = useSeTheme();
+  const theme = useSignedOutTheme();
   const tokens = useMemo(() => seChymeTokens(seTheme(theme.color, theme.mode)), [theme.color, theme.mode]);
   return (
     <section aria-label="Rooms" className={styles.roomCard}>

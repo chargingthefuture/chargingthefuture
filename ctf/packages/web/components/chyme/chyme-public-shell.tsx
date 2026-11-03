@@ -1,5 +1,6 @@
 'use client';
 
+import { useSignedOutTheme } from '@/components/se-frame/use-signed-out-theme';
 import { LogOut, RefreshCw } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import type { PublicVisitorShellProps } from '@/components/plugins/public-visitor-registry';
@@ -8,7 +9,6 @@ import { ChymeUpcoming } from '@/components/chyme/chyme-upcoming';
 import { ChymeReadingsPlayer } from '@/components/chyme/readings/chyme-readings-player';
 import Link from 'next/link';
 import { HOSTING_NOT_ENDORSEMENT_SHORT, SE_ROOM_MAIN_AUDIENCE, SE_ROOM_RULE, seTheme } from '@ctf/shared';
-import { useSeTheme } from '@/components/se-frame/use-se-theme';
 import { seThemeVars } from '@/components/se-frame/se-theme-vars';
 import frame from '@/components/se-frame/se-frame.module.css';
 import { ChymeTokensContext, seChymeTokens, useChymeTokens } from './chyme-tokens-context';
@@ -155,7 +155,7 @@ function ChymePublicView({
   listen: GuestListenControl;
   onLeave: () => void;
 }) {
-  const { theme: seChoice } = useSeTheme();
+  const seChoice = useSignedOutTheme();
   const se = seTheme(seChoice.color, seChoice.mode);
   const t = seChymeTokens(se);
   return (
