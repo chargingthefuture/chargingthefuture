@@ -11,7 +11,15 @@ export const MESSAGES_SHOWN = 100;
 export const ANSWERS_SHOWN = 200;
 
 export type AnswerRow = { accountId: string; kind: SeCardAnswerKind; createdAt: Date };
-export type MessageRow = { id: string; authorId: string; body: string; createdAt: Date; pairLow: string | null; pairHigh: string | null };
+export type MessageRow = {
+  id: string;
+  authorId: string;
+  body: string;
+  createdAt: Date;
+  editedAt: Date | null;
+  pairLow: string | null;
+  pairHigh: string | null;
+};
 export type PairRow = { low: string; high: string; requesterId: string; agreedAt: Date | null };
 
 // Shown to the viewer ($1): nobody blocked either way, nobody they muted.
@@ -23,10 +31,18 @@ function visibleTo(column: string): string {
       WHERE mm.user_id = $1 AND mm.kind = 'person' AND mm.target = ${column})`;
 }
 
-type RawMessage = { id: string; author_id: string; body: string; created_at: Date; pair_low: string | null; pair_high: string | null };
+type RawMessage = { id: string; author_id: string; body: string; created_at: Date; edited_at: Date | null; pair_low: string | null; pair_high: string | null };
 
 function toMessage(row: RawMessage): MessageRow {
-  return { id: row.id, authorId: row.author_id, body: row.body, createdAt: new Date(row.created_at), pairLow: row.pair_low, pairHigh: row.pair_high };
+  return {
+    id: row.id,
+    authorId: row.author_id,
+    body: row.body,
+    createdAt: new Date(row.created_at),
+    editedAt: row.edited_at ? new Date(row.edited_at) : null,
+    pairLow: row.pair_low,
+    pairHigh: row.pair_high,
+  };
 }
 
 export async function listAnswers(viewerId: string, cardId: string): Promise<AnswerRow[]> {
@@ -41,7 +57,7 @@ export async function listAnswers(viewerId: string, cardId: string): Promise<Ans
 
 export async function listPublicMessages(viewerId: string, cardId: string): Promise<MessageRow[]> {
   const result = await queryDb<RawMessage>(
-    `SELECT id, author_id, body, created_at, pair_low, pair_high FROM card_messages
+    `SELECT id, author_id, body, created_at, edited_at, pair_low, pair_high FROM card_messages
       WHERE card_id = $2 AND pair_low IS NULL AND (author_id = $1 OR (${visibleTo('author_id')}))
       ORDER BY created_at DESC LIMIT ${MESSAGES_SHOWN}`,
     [viewerId, cardId],
@@ -65,7 +81,7 @@ export async function listPairs(viewerId: string, cardId: string): Promise<PairR
 // Messages in the viewer's agreed Just us two conversations on the card, newest last.
 export async function listPairMessages(viewerId: string, cardId: string): Promise<MessageRow[]> {
   const result = await queryDb<RawMessage>(
-    `SELECT m.id, m.author_id, m.body, m.created_at, m.pair_low, m.pair_high
+    `SELECT m.id, m.author_id, m.body, m.created_at, m.edited_at, m.pair_low, m.pair_high
        FROM card_messages m
        JOIN card_pair_requests r
          ON r.card_id = m.card_id AND r.user_low = m.pair_low AND r.user_high = m.pair_high AND r.agreed_at IS NOT NULL
@@ -92,6 +108,38 @@ export async function insertMessage(cardId: string, authorId: string, body: stri
     `INSERT INTO card_messages (card_id, author_id, body, pair_low, pair_high) VALUES ($1, $2, $3, $4, $5)`,
     [cardId, authorId, body, low, high],
   );
+}
+
+// Only the author changes or removes a message, and only on the card it was written on. False when
+// there was no such message of theirs. Messages are matched by id as text, so an id that is not a
+// UUID finds nothing rather than failing the query.
+export async function editOwnMessage(cardId: string, messageId: string, authorId: string, body: string): Promise<boolean> {
+  const result = await queryDb(
+    `UPDATE card_messages SET body = $4, edited_at = NOW()
+      WHERE id::text = $1 AND card_id = $2 AND author_id = $3 RETURNING id`,
+    [messageId, cardId, authorId, body],
+  );
+  return (result.rowCount ?? 0) > 0;
+}
+
+export async function deleteOwnMessage(cardId: string, messageId: string, authorId: string): Promise<boolean> {
+  const result = await queryDb(
+    `DELETE FROM card_messages WHERE id::text = $1 AND card_id = $2 AND author_id = $3 RETURNING id`,
+    [messageId, cardId, authorId],
+  );
+  return (result.rowCount ?? 0) > 0;
+}
+
+// The other member of a Just us two message the author wrote, or null for a public one or none.
+export async function findOwnMessagePartner(cardId: string, messageId: string, authorId: string): Promise<{ found: boolean; partnerId: string | null }> {
+  const result = await queryDb<{ pair_low: string | null; pair_high: string | null }>(
+    `SELECT pair_low, pair_high FROM card_messages WHERE id::text = $1 AND card_id = $2 AND author_id = $3`,
+    [messageId, cardId, authorId],
+  );
+  const row = result.rows[0];
+  if (!row) return { found: false, partnerId: null };
+  if (!row.pair_low) return { found: true, partnerId: null };
+  return { found: true, partnerId: row.pair_low === authorId ? row.pair_high : row.pair_low };
 }
 
 export async function findPair(cardId: string, a: string, b: string): Promise<PairRow | null> {
@@ -142,7 +190,7 @@ export async function isParticipant(cardId: string, accountId: string): Promise<
 // A message the reporter can read: public on the card, or in a Just us two they are part of.
 export async function findReadableMessage(cardId: string, messageId: string, readerId: string): Promise<MessageRow | null> {
   const result = await queryDb<RawMessage>(
-    `SELECT id, author_id, body, created_at, pair_low, pair_high FROM card_messages
+    `SELECT id, author_id, body, created_at, edited_at, pair_low, pair_high FROM card_messages
       WHERE id::text = $1 AND card_id = $2 AND (pair_low IS NULL OR pair_low = $3 OR pair_high = $3)`,
     [messageId, cardId, readerId],
   );

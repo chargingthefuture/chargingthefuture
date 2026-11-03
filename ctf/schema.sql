@@ -7482,6 +7482,7 @@ CREATE TABLE IF NOT EXISTS card_messages (
   pair_low TEXT,
   pair_high TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  edited_at TIMESTAMPTZ,
   CONSTRAINT card_messages_pair_both CHECK ((pair_low IS NULL) = (pair_high IS NULL)),
   CONSTRAINT card_messages_pair_order CHECK (pair_low IS NULL OR pair_low < pair_high),
   CONSTRAINT card_messages_author_in_pair CHECK (pair_low IS NULL OR author_id IN (pair_low, pair_high))
@@ -7493,6 +7494,7 @@ ALTER TABLE IF EXISTS card_messages ADD COLUMN IF NOT EXISTS body TEXT;
 ALTER TABLE IF EXISTS card_messages ADD COLUMN IF NOT EXISTS pair_low TEXT;
 ALTER TABLE IF EXISTS card_messages ADD COLUMN IF NOT EXISTS pair_high TEXT;
 ALTER TABLE IF EXISTS card_messages ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS card_messages ADD COLUMN IF NOT EXISTS edited_at TIMESTAMPTZ;
 CREATE INDEX IF NOT EXISTS idx_card_messages_card ON card_messages(card_id, pair_low, pair_high, created_at);
 CREATE INDEX IF NOT EXISTS idx_card_messages_author ON card_messages(author_id);
 CREATE INDEX IF NOT EXISTS idx_card_messages_pair_high ON card_messages(pair_high) WHERE pair_high IS NOT NULL;

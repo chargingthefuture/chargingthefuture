@@ -1,9 +1,10 @@
 // The conversation half of a card's sheet, the Android copy of the web's card-sheet-talk.tsx: the
 // Public / Just us two switch, the messages, the requests to talk just you two, and the composer.
-// Text only for now.
+// Text only for now. A member's own message carries Edit (changes it in place, then shows Edited)
+// and Delete (asks first, then removes it for everyone).
 
 import React, { useState } from 'react';
-import { Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { SE_CARD_MESSAGE_MAX, SE_CARD_WORDS, seAgo, type SeCardMessage, type SeCardPairThread, type SeThemeTokens } from '@ctf/shared';
 import type { CardSheetStyles } from './cardSheetStyles';
@@ -29,9 +30,51 @@ function LinkButton({ s, label, disabled, onPress }: { s: CardSheetStyles; label
   );
 }
 
+function OwnActions({ s, message, talk, onEdit }: { s: CardSheetStyles; message: SeCardMessage; talk: CardConversation; onEdit: () => void }) {
+  const remove = () =>
+    Alert.alert(SE_CARD_WORDS.delete, SE_CARD_WORDS.deleteConfirm, [
+      { text: SE_CARD_WORDS.cancel, style: 'cancel' },
+      { text: SE_CARD_WORDS.delete, style: 'destructive', onPress: () => void talk.remove(message.id) },
+    ]);
+  return (
+    <>
+      {!talk.locked ? <LinkButton s={s} label={SE_CARD_WORDS.edit} disabled={talk.busy} onPress={onEdit} /> : null}
+      <LinkButton s={s} label={SE_CARD_WORDS.delete} disabled={talk.busy} onPress={remove} />
+    </>
+  );
+}
+
+function EditBubble({ s, message, talk, onDone }: { s: CardSheetStyles; message: SeCardMessage; talk: CardConversation; onDone: () => void }) {
+  const [draft, setDraft] = useState(message.body);
+  const text = draft.trim();
+  const save = async () => {
+    if (text === message.body) return onDone();
+    if (await talk.edit(message.id, text)) onDone();
+  };
+  return (
+    <View style={[s.bubbleRow, s.bubbleRowMine, s.bubbleRowEditing]}>
+      <TextInput
+        accessibilityLabel={SE_CARD_WORDS.editLabel}
+        style={s.editBox}
+        value={draft}
+        maxLength={SE_CARD_MESSAGE_MAX}
+        multiline
+        autoFocus
+        onChangeText={setDraft}
+      />
+      <View style={s.meta}>
+        <LinkButton s={s} label={SE_CARD_WORDS.cancel} onPress={onDone} />
+        <LinkButton s={s} label={SE_CARD_WORDS.save} disabled={talk.busy || !text} onPress={() => void save()} />
+      </View>
+    </View>
+  );
+}
+
 function Bubble({ s, message, talk, onTalk, publicThread }: BubbleProps) {
   const [reported, setReported] = useState(false);
+  const [editing, setEditing] = useState(false);
   const others = !message.mine && !talk.locked;
+  if (editing && message.mine) return <EditBubble s={s} message={message} talk={talk} onDone={() => setEditing(false)} />;
   return (
     <View style={[s.bubbleRow, message.mine ? s.bubbleRowMine : null]}>
       <View style={[s.bubble, message.mine ? s.bubbleMine : null]}>
@@ -40,7 +83,9 @@ function Bubble({ s, message, talk, onTalk, publicThread }: BubbleProps) {
       <View style={s.meta}>
         <Text style={s.metaText}>
           {message.mine ? SE_CARD_WORDS.you : message.handle} · {seAgo(message.createdAtIso)}
+          {message.editedAtIso ? ` · ${SE_CARD_WORDS.edited}` : ''}
         </Text>
+        {message.mine ? <OwnActions s={s} message={message} talk={talk} onEdit={() => setEditing(true)} /> : null}
         {others && publicThread ? <LinkButton s={s} label={SE_CARD_WORDS.askPair} onPress={() => onTalk(message.authorId)} /> : null}
         {others ? (
           <LinkButton

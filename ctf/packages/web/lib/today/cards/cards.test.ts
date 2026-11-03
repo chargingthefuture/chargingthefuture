@@ -13,7 +13,7 @@ const handles = new Map<string, string | null>([
 ]);
 
 function message(id: string, authorId: string, pair: [string, string] | null): MessageRow {
-  return { id, authorId, body: `body ${id}`, createdAt: at, pairLow: pair?.[0] ?? null, pairHigh: pair?.[1] ?? null };
+  return { id, authorId, body: `body ${id}`, createdAt: at, editedAt: null, pairLow: pair?.[0] ?? null, pairHigh: pair?.[1] ?? null };
 }
 
 describe('card ids', () => {
@@ -84,6 +84,13 @@ describe('shapeConversation', () => {
     ]);
     expect(shaped.pairs[0].messages.map((m) => [m.id, m.mine])).toEqual([['p1', true]]);
     expect(shaped.pairs[1].messages).toEqual([]);
+  });
+
+  it('says when a message was changed, and nothing for one never changed', () => {
+    const edited = new Date('2026-11-03T12:00:00Z');
+    const changed = { ...rows, publicMessages: [{ ...rows.publicMessages[0], editedAt: edited }] };
+    expect(shapeConversation('lighthouse:1', 'acc_a', changed, handles).messages[0].editedAtIso).toBe(edited.toISOString());
+    expect(shapeConversation('lighthouse:1', 'acc_a', rows, handles).messages[0].editedAtIso).toBeNull();
   });
 
   it('says who waits on whom', () => {

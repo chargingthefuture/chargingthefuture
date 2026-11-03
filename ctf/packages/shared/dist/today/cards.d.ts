@@ -19,6 +19,7 @@ export type SeCardMessage = {
     mine: boolean;
     body: string;
     createdAtIso: string;
+    editedAtIso: string | null;
 };
 export type SeCardPairState = 'waiting' | 'asked-me' | 'open';
 export type SeCardPairThread = {
@@ -63,6 +64,13 @@ export declare const SE_CARD_WORDS: {
     report: string;
     notForMe: string;
     reportMessage: string;
+    edit: string;
+    save: string;
+    cancel: string;
+    delete: string;
+    edited: string;
+    editLabel: string;
+    deleteConfirm: string;
     reported: string;
     close: string;
     openIn: (source: string) => string;

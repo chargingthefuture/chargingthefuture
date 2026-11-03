@@ -6,7 +6,8 @@ import type { CardConversation } from './use-card-conversation';
 import styles from './card-sheet.module.css';
 
 // The conversation half of a card's sheet: the Public / Just us two switch, the messages, the
-// requests to talk just you two, and the composer. Text only for now.
+// requests to talk just you two, and the composer. Text only for now. A member's own message carries
+// Edit (changes it in place, then shows Edited) and Delete (asks first, then removes it for everyone).
 
 type TalkProps = {
   talk: CardConversation;
@@ -16,14 +17,61 @@ type TalkProps = {
   onTalk: (accountId: string) => void;
 };
 
+function OwnActions({ message, talk, onEdit }: { message: SeCardMessage; talk: CardConversation; onEdit: () => void }) {
+  const remove = () => {
+    if (window.confirm(SE_CARD_WORDS.deleteConfirm)) void talk.remove(message.id);
+  };
+  return (
+    <>
+      {!talk.locked ? (
+        <button type="button" className={styles.linkButton} disabled={talk.busy} onClick={onEdit}>
+          {SE_CARD_WORDS.edit}
+        </button>
+      ) : null}
+      <button type="button" className={styles.linkButton} disabled={talk.busy} onClick={remove}>
+        {SE_CARD_WORDS.delete}
+      </button>
+    </>
+  );
+}
+
+function EditBubble({ message, talk, onDone }: { message: SeCardMessage; talk: CardConversation; onDone: () => void }) {
+  const [draft, setDraft] = useState(message.body);
+  const text = draft.trim();
+  const save = async () => {
+    if (text === message.body) return onDone();
+    if (await talk.edit(message.id, text)) onDone();
+  };
+  return (
+    <div className={`${styles.bubbleRow} ${styles.bubbleRowMine} ${styles.bubbleRowEditing}`}>
+      <label className={styles.field}>
+        <span className={styles.srOnly}>{SE_CARD_WORDS.editLabel}</span>
+        <textarea className={styles.editBox} value={draft} maxLength={SE_CARD_MESSAGE_MAX} autoFocus onChange={(event) => setDraft(event.target.value)} />
+      </label>
+      <span className={styles.bubbleMeta}>
+        <button type="button" className={styles.linkButton} onClick={onDone}>
+          {SE_CARD_WORDS.cancel}
+        </button>
+        <button type="button" className={styles.linkButton} disabled={talk.busy || !text} onClick={() => void save()}>
+          {SE_CARD_WORDS.save}
+        </button>
+      </span>
+    </div>
+  );
+}
+
 function Bubble({ message, talk, onTalk, publicThread }: { message: SeCardMessage; talk: CardConversation; onTalk: (id: string) => void; publicThread: boolean }) {
   const [reported, setReported] = useState(false);
+  const [editing, setEditing] = useState(false);
   const report = async () => setReported(await talk.report({ messageId: message.id }));
+  if (editing && message.mine) return <EditBubble message={message} talk={talk} onDone={() => setEditing(false)} />;
   return (
     <div className={message.mine ? `${styles.bubbleRow} ${styles.bubbleRowMine}` : styles.bubbleRow}>
       <p className={message.mine ? `${styles.bubble} ${styles.bubbleMine}` : styles.bubble}>{message.body}</p>
       <span className={styles.bubbleMeta}>
         {message.mine ? SE_CARD_WORDS.you : message.handle} · {seAgo(message.createdAtIso)}
+        {message.editedAtIso ? ` · ${SE_CARD_WORDS.edited}` : ''}
+        {message.mine ? <OwnActions message={message} talk={talk} onEdit={() => setEditing(true)} /> : null}
         {!message.mine && publicThread && !talk.locked ? (
           <button type="button" className={styles.linkButton} onClick={() => onTalk(message.authorId)}>
             {SE_CARD_WORDS.askPair}
