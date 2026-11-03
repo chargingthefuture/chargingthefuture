@@ -347,3 +347,41 @@ contracts:
     purpose: card_conversation
     retentionClass: until_account_deletion
     idempotency: false
+  - pluginId: today
+    command: today.feedback.record
+    version: 1.0.0
+    description: "Count a Today card marked done (only the change to done, never back to not done) or Not for me: add one to the UTC day's total for the card's source and kind. Stores no account id and nothing about who marked it. 300 an hour per member. (POST /api/today/feedback)."
+    inputSchema:
+      source:
+        type: string
+        pattern: "^[a-z][a-z0-9-]{0,39}$"
+      kind:
+        type: string
+        enum: [ask, offer, story, match, mood, numbers, replay, game]
+      signal:
+        type: string
+        enum: [done, not_for_me]
+    outputSchema:
+      ok:
+        type: boolean
+    dataAccess:
+      - today_card_feedback_counts
+    purpose: today_card_feedback
+    retentionClass: derived_medium_lived
+    idempotency: false
+  - pluginId: today
+    command: today.feedback.admin.read
+    version: 1.0.0
+    description: "The last 30 days of Done and Not for me totals per card source and kind, with the share that is Not for me, most marks first, for the Adoption admin screen. Admin-only and read-only; counts only. (GET /api/admin/today-feedback)."
+    inputSchema: {}
+    outputSchema:
+      days:
+        type: integer
+      lines:
+        type: array
+        description: "Each line: source, kind, done, notForMe, total, notForMeShare (a percent, rounded)."
+    dataAccess:
+      - today_card_feedback_counts
+    purpose: today_card_feedback
+    retentionClass: none_read_only
+    idempotency: true

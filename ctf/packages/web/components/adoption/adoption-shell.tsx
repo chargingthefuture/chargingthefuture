@@ -11,11 +11,12 @@ import { WeeklyPerformanceSection } from '@/components/weekly-performance/weekly
 import { WeeklyPerformanceSignInRecordSection } from '@/components/weekly-performance/wp-sign-in-record-section';
 import { AdoptionSteps } from './adoption-steps';
 import { AdoptionMeasures } from './adoption-measures';
+import { CardFeedbackSection } from './card-feedback-section';
 
 // Adoption: every admin reading of whether members are working with each other, on one screen
 // (owner decision, 2026-10-16). The steps toward 384 sit on top, then Days won and retention (3.1),
-// then the daily exchange and the Weavers badge, then Weekly Performance, then the sign-in record
-// behind its Signed in rows.
+// then what members finish and pass on in Today, then the daily exchange and the Weavers badge,
+// then Weekly Performance, then the sign-in record behind its Signed in rows.
 // These were three separate admin screens before.
 export function AdoptionShell() {
   const { theme } = useTheme();
@@ -37,6 +38,8 @@ export function AdoptionShell() {
         <AdoptionSteps reading={reading} failed={error !== null} tokens={t} />
 
         <AdoptionMeasures tokens={t} />
+
+        <CardFeedbackSection tokens={t} />
 
         <DailyExchangeSection reading={reading} error={error} onReload={reload} />
 

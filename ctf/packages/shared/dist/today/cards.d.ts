@@ -61,6 +61,7 @@ export declare const SE_CARD_WORDS: {
     linkCopied: string;
     more: string;
     report: string;
+    notForMe: string;
     reportMessage: string;
     reported: string;
     close: string;

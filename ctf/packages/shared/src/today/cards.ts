@@ -128,6 +128,7 @@ export const SE_CARD_WORDS = {
   linkCopied: 'Link copied',
   more: 'More: report',
   report: 'Report',
+  notForMe: 'Not for me',
   reportMessage: 'Report this message',
   reported: 'Reported. An admin reads every report.',
   close: 'Close',
