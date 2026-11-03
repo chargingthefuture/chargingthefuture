@@ -87,6 +87,6 @@ export function seDaysWonLines(daysWon: { total: number; thisWeek: number }): { 
   return {
     big: fmt(daysWon.total),
     small: `Our progress this week: ${fmt(daysWon.thisWeek)} days won.`,
-    how: "A day won is 8 hours members spent together in rooms and calls, or helping with each other's tasks, added up across everybody.",
+    how: "Time members spent together in rooms and calls, or helping with each other's tasks. That is less time on Specterati schemes, and more time for all of us reaching our own definition of happiness.",
   };
 }

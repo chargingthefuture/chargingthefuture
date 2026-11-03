@@ -351,8 +351,9 @@ Opening People never shows "Could not read People" while the app and its databas
 2. Both members join the Main Room and stay 20 minutes. Then reload Today.
 3. As the admin, open `/admin/adoption` and read "Days won and retention". Tap **Copy as text**.
 **Expected:** Step 1 shows the total large, "Our progress this week: N days won." and "How it's
-counted", which opens "A day won is 8 hours members spent together in rooms and calls, or helping
-with each other's tasks, added up across everybody." under it. Step 2 raises the total by about 40 minutes
+counted", which opens "Time members spent together in rooms and calls, or helping with each
+other's tasks. That is less time on Specterati schemes, and more time for all of us reaching our own
+definition of happiness." under it. Step 2 raises the total by about 40 minutes
 ÷ 480 (0.1 after rounding). Step 3 shows Days won, Retained (with the share and the 20% target),
 Came back, Every day and time to unlock as counts only, with no member named; Copy as text pastes the
 same lines. A failed read shows "Could not read the measures:" with the reason.
