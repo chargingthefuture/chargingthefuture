@@ -4,9 +4,10 @@
 // day's cards read only, asks and offers from "A member" with Sign up to answer, and People locked.
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import {
   SE_DAYS_WON_TITLE,
+  SE_DAYS_WON_WHY,
   SE_GUEST_WORDS as W,
   seDaysWonLines,
   seGuestAnswersBySignUp,
@@ -39,6 +40,9 @@ function Hero({ s, today, onSignUp }: { s: Styles; today: SeToday | null; onSign
       <Text style={s.heroLabel}>{SE_DAYS_WON_TITLE}</Text>
       {big ? <Text style={s.heroBig}>{big}</Text> : null}
       <Text style={s.heroText}>{W.hero}</Text>
+      <TouchableOpacity accessibilityRole="link" onPress={() => void Linking.openURL(SE_DAYS_WON_WHY.href)} style={s.heroWhy}>
+        <Text style={s.heroWhyLabel}>{SE_DAYS_WON_WHY.label}</Text>
+      </TouchableOpacity>
       <TouchableOpacity accessibilityRole="button" onPress={onSignUp} style={s.heroButton}>
         <Text style={s.heroButtonLabel}>{W.signUp}</Text>
       </TouchableOpacity>
@@ -196,6 +200,8 @@ function makeStyles(t: SeThemeTokens) {
     heroLabel: { fontSize: 13, color: t.onHero, fontFamily: SE_FONT.sansBold },
     heroBig: { fontSize: 40, lineHeight: 44, color: t.onHero, fontFamily: SE_FONT.serif },
     heroText: { fontSize: 14, lineHeight: 20, color: t.onHero, fontFamily: SE_FONT.sans },
+    heroWhy: { alignSelf: 'flex-start', minHeight: 32, justifyContent: 'center' },
+    heroWhyLabel: { fontSize: 13, opacity: 0.9, color: t.onHero, textDecorationLine: 'underline', fontFamily: SE_FONT.sans },
     heroButton: { alignSelf: 'flex-start', marginTop: 6, minHeight: 46, justifyContent: 'center', paddingHorizontal: 20, borderRadius: 999, backgroundColor: t.onHero, borderWidth: 1.5, borderColor: t.line, boxShadow: `0px 3px 0px ${t.line}` },
     heroButtonLabel: { fontSize: 15, color: t.hero, fontFamily: SE_FONT.sansBold },
     roomCard: { gap: 10, padding: 16, borderRadius: 20, backgroundColor: t.card, borderWidth: 1.5, borderColor: t.line, boxShadow: `0px 3px 0px ${t.line}` },

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { SE_DAYS_WON_HOW, SE_DAYS_WON_TITLE, SE_MUTE_WORDS, SE_TODAY_FILTERS, seDaysWonLines, seTodayView, type SeToday, type SeTodayCard, type SeTodayFilter } from '@ctf/shared';
+import { SE_DAYS_WON_HOW, SE_DAYS_WON_TITLE, SE_DAYS_WON_WHY, SE_MUTE_WORDS, SE_TODAY_FILTERS, seDaysWonLines, seTodayView, type SeToday, type SeTodayCard, type SeTodayFilter } from '@ctf/shared';
 import { MatchingToggle } from './matching-toggle';
 import { BroadcastCard, RoomCard } from './room-card';
 import { TodayCard } from './today-card';
@@ -25,6 +25,11 @@ function DaysWonCard({ daysWon }: { daysWon: NonNullable<SeToday['daysWon']> }) 
         {SE_DAYS_WON_HOW}
       </button>
       {how ? <span className={styles.daysWonSmall}>{lines.how}</span> : null}
+      {how ? (
+        <a href={SE_DAYS_WON_WHY.href} target="_blank" rel="noreferrer" className={styles.howButton}>
+          {SE_DAYS_WON_WHY.label}
+        </a>
+      ) : null}
     </section>
   );
 }

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import {
   SE_DAYS_WON_TITLE,
+  SE_DAYS_WON_WHY,
   SE_GUEST_WORDS as W,
   seDaysWonLines,
   seGuestAnswersBySignUp,
@@ -38,6 +39,9 @@ function Hero({ today, signUpUrl }: { today: SeToday | null; signUpUrl: string }
       <span className={styles.daysWonLabel}>{SE_DAYS_WON_TITLE}</span>
       {big ? <span className={styles.daysWonBig}>{big}</span> : null}
       <span className={styles.daysWonSmall}>{W.hero}</span>
+      <a href={SE_DAYS_WON_WHY.href} target="_blank" rel="noreferrer" className={styles.howButton}>
+        {SE_DAYS_WON_WHY.label}
+      </a>
       <a href={signUpUrl} className={styles.heroButton}>
         {W.signUp}
       </a>

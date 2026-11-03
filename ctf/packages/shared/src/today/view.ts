@@ -82,6 +82,11 @@ export function seTalkLine(talk: SeTodayTalk | null, now: Date = new Date()): st
 // "Days the Avenhood has won": the total, and this week's share of it.
 export const SE_DAYS_WON_TITLE = 'Days the Avenhood has won';
 export const SE_DAYS_WON_HOW = "How it's counted";
+// The blog post on why the count exists, linked from the Days won card signed in and signed out.
+export const SE_DAYS_WON_WHY = {
+  label: 'Why we count it',
+  href: 'https://chargingthefuture.github.io/chargingthefuture/article/wiki-site/why-we-count-days-won',
+};
 export function seDaysWonLines(daysWon: { total: number; thisWeek: number }): { big: string; small: string; how: string } {
   const fmt = (n: number) => n.toLocaleString('en-US', { maximumFractionDigits: 1 });
   return {
