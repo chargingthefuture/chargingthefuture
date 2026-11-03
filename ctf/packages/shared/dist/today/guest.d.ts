@@ -1,0 +1,28 @@
+import type { SeTodayCard } from './types';
+export declare const SE_GUEST_WORDS: {
+    readonly brand: "Skills Economy";
+    readonly signIn: "Sign in";
+    readonly signUp: "Sign up";
+    readonly hero: "Skills Economy is where the Avenhood meets: survivors giving half an hour a day to each other's goals. Free. Exit their economy, exit the psyop.";
+    readonly live: "LIVE";
+    readonly listen: "Listen as a guest";
+    readonly listenNote: "Anyone can listen, no account needed. Sign in to speak.";
+    readonly listenUnavailable: "Listening in without an account isn't available right now.";
+    readonly quiet: "Quiet right now";
+    readonly playReadings: "Play readings";
+    readonly readingsNote: "Recorded blog posts, one after another";
+    readonly nextRoom: "Next room";
+    readonly cardsTitle: "Today's cards";
+    readonly readOnly: "Read only";
+    readonly member: "A member";
+    readonly answer: "Sign up to answer";
+    readonly peopleTitle: "People";
+    readonly peopleLocked: "Who is here and what they can do opens once a member is verified.";
+    readonly bar: "Free. Use one part, ignore the rest.";
+    readonly loading: "Loading Today…";
+    readonly failed: "Could not load Today.";
+    readonly tryAgain: "Try again";
+};
+export declare function seGuestAnswersBySignUp(card: SeTodayCard): boolean;
+export declare function seGuestStartedLine(startIso: string): string;
+export declare function seGuestNextRoomLine(startIso: string): string;

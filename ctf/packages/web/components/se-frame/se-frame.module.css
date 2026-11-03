@@ -204,3 +204,69 @@
   outline: 2px solid var(--se-pick);
   outline-offset: 2px;
 }
+
+/* Today for a visitor who is not signed in (public-today.tsx). */
+.guestHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.wordmark {
+  font-family: 'Newsreader Variable', Newsreader, Georgia, serif;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--se-btn);
+}
+
+.guestSignIn {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--se-ink);
+  font-size: 14px;
+  font-weight: 600;
+  text-underline-offset: 3px;
+}
+
+.guestBar {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: 24px;
+  max-width: 448px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 6px 6px 18px;
+  border-radius: 999px;
+  background: var(--se-card);
+  border: 1.5px solid var(--se-line);
+  box-shadow: 0 3px 0 var(--se-line);
+}
+
+.guestBarText {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.guestBarButton {
+  display: inline-flex;
+  align-items: center;
+  min-height: 46px;
+  padding: 0 18px;
+  border-radius: 999px;
+  background: var(--se-btn);
+  color: var(--se-on-btn);
+  font-weight: 700;
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.guestSignIn:focus-visible,
+.guestBarButton:focus-visible {
+  outline: 2px solid var(--se-pick);
+  outline-offset: 2px;
+}

@@ -372,17 +372,23 @@ mute is not a block).
 
 ## AD-19 · Today for a visitor who is not signed in
 
-**Role:** signed out; then a member · **Precondition:** an open ride request, an open SocketRelay ask
-and a PeerProgramming goal exist.
+**Role:** signed out; then a member · **Surfaces:** web, android · **Precondition:** an open ride
+request and a Skill Up cohort exist; once with the Main Room live, once with it quiet.
 **Steps:**
-1. Signed out, open `/today`.
-2. Tap **Listen in** on the Main Room card, then come back and tap **Sign in**.
-3. Signed in, open `/today`.
-**Expected:** Step 1 shows "Today in the Avenhood", a Sign in button, Days won, the Main Room card and
-public cards: rides wanted, Skill Up cohorts, SkillsHunt, numbers, replays. No card shows a name, and
-no SocketRelay ask, goal, listing, announcement, invitation or Mood card appears. The card menu has
-no Mute. Step 2 opens the public listen page, then the sign-in page. Step 3 lands on the home page.
-**Result:** web ☐ — notes:
+1. Signed out, open `/today` (Android: open the app signed out).
+2. With the room live, tap **Listen as a guest** on the room card.
+3. With the room quiet, look at the room card.
+4. Tap **Sign up to answer** on an ask, then **Sign in** at the top.
+5. Signed in, open `/today`.
+**Expected:** Step 1 matches the approved "Today, signed out" board: "Skills Economy" with Sign in at
+the top; Days won with "Skills Economy is where the Avenhood meets…" and Sign up; the room card;
+"Today's cards" with "Read only"; asks and offers from "A member" with Sign up to answer, stories with
+Read it; a dashed People card that says it opens once a member is verified; and a bar along the
+bottom, "Free. Use one part, ignore the rest." with Sign up. No card shows a name and there is no
+card menu. Step 2 starts listening right there on the card, with no account. Step 3 says "Quiet
+right now", offers the readings, and shows the next room with Add to calendar. Step 4 opens sign-up,
+then sign-in. Step 5 lands on the home page.
+**Result:** web ☐ android ☐ — notes:
 
 ## AD-20 · 3.1 is the default (launch, 2026-10-28)
 **Role:** a member who never switched, a member on 3.0, a signed-out visitor · **Surfaces:** web, android

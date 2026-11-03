@@ -1,26 +1,32 @@
 'use client';
 
-import { SE_AVENHOOD } from '@ctf/shared';
-import { TodayScreen } from './today/today-screen';
+import { SE_GUEST_WORDS as W } from '@ctf/shared';
+import { GuestToday } from './today/guest-today';
 import { useSeTheme } from './use-se-theme';
 import { seThemeVars } from './se-theme-vars';
 import styles from './se-frame.module.css';
 
-// The 3.1 frame's look, with Today alone and a sign-in button where the tabs would be.
-export function PublicToday({ signInUrl }: { signInUrl: string }) {
+// Today for a visitor who is not signed in, to the approved "Today, signed out" board: the Skills
+// Economy name with Sign in, the guest Today, and a bar along the bottom with Sign up.
+export function PublicToday({ signInUrl, signUpUrl }: { signInUrl: string; signUpUrl: string }) {
   const { theme } = useSeTheme();
   return (
     <div className={styles.frame} style={seThemeVars(theme.color, theme.mode)}>
       <main className={styles.screen}>
-        <header className={styles.header}>
-          <h1 className={styles.title}>Today in the {SE_AVENHOOD}</h1>
-          <p className={styles.eyebrow}>What is happening now. Sign in to post, answer and take part.</p>
+        <header className={styles.guestHeader}>
+          <span className={styles.wordmark}>{W.brand}</span>
+          <a href={signInUrl} className={styles.guestSignIn}>
+            {W.signIn}
+          </a>
         </header>
-        <a href={signInUrl} className={styles.signInButton}>
-          Sign in
-        </a>
-        <TodayScreen accountId={null} />
+        <GuestToday signUpUrl={signUpUrl} />
       </main>
+      <nav aria-label="Main" className={styles.guestBar}>
+        <span className={styles.guestBarText}>{W.bar}</span>
+        <a href={signUpUrl} className={styles.guestBarButton}>
+          {W.signUp}
+        </a>
+      </nav>
     </div>
   );
 }
