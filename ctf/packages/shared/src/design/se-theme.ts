@@ -37,6 +37,9 @@ export type SeThemeTokens = {
   onPick: string;
   pickField: string;
   btn: string;
+  // The "Skills Economy" name at the top of signed-out Today: the button color, except Coral light,
+  // whose coral buttons are too pale to read as text on cream.
+  wordmark: string;
   onBtn: string;
   live: string;
   liveBadge: string;
@@ -86,34 +89,34 @@ const SAND_LIGHT = {
 
 export const SE_THEMES: Record<SeThemeColor, Record<SeThemeMode, SeThemeTokens>> = {
   forest: {
-    light: { ...SAND_LIGHT, hero: '#1f4a37', onHero: '#f7ece4', pick: '#e3b74f', btn: '#1f4a37', onBtn: '#f6efe8' },
+    light: { ...SAND_LIGHT, hero: '#1f4a37', onHero: '#f7ece4', pick: '#e3b74f', btn: '#1f4a37', wordmark: '#1f4a37', onBtn: '#f6efe8' },
     dark: {
       bg: '#0f1a15', card: '#17251f', sunk: '#20332a', ink: '#f1e4dc', soft: '#bba8a9', hair: '#2c4438', line: '#3c5a4b',
-      hero: '#173528', onHero: '#f7ece4', pick: '#e3b74f', btn: '#e3b74f', onBtn: '#10201a',
+      hero: '#173528', onHero: '#f7ece4', pick: '#e3b74f', btn: '#e3b74f', wordmark: '#e3b74f', onBtn: '#10201a',
       live: '#6fcf8e', liveBadge: '#e5909f', onLiveBadge: '#10201a', kind: DARK_KINDS, onPick: '#2a1a1d', pickField: '#fffdfa', onKind: '#10201a',
     },
   },
   burgundy: {
-    light: { ...SAND_LIGHT, hero: '#6b1f2e', onHero: '#f7ece4', pick: '#f2c46d', btn: '#6b1f2e', onBtn: '#f7ece4' },
+    light: { ...SAND_LIGHT, hero: '#6b1f2e', onHero: '#f7ece4', pick: '#f2c46d', btn: '#6b1f2e', wordmark: '#6b1f2e', onBtn: '#f7ece4' },
     dark: {
       bg: '#170e10', card: '#24151a', sunk: '#33202a', ink: '#f1e4dc', soft: '#bba8a9', hair: '#452a30', line: '#5e3a43',
-      hero: '#4a1420', onHero: '#f7ece4', pick: '#f2c46d', btn: '#f7ece4', onBtn: '#170e10',
+      hero: '#4a1420', onHero: '#f7ece4', pick: '#f2c46d', btn: '#f7ece4', wordmark: '#f7ece4', onBtn: '#170e10',
       live: '#6fcf8e', liveBadge: '#e5909f', onLiveBadge: '#170e10', kind: DARK_KINDS, onPick: '#2a1a1d', pickField: '#fffdfa', onKind: '#170e10',
     },
   },
   coral: {
-    light: { ...SAND_LIGHT, hero: '#2a1a1d', onHero: '#f7ece4', pick: '#f0a39a', btn: '#f0a39a', onBtn: '#2a1a1d' },
+    light: { ...SAND_LIGHT, hero: '#2a1a1d', onHero: '#f7ece4', pick: '#f0a39a', btn: '#f0a39a', wordmark: '#2a1a1d', onBtn: '#2a1a1d' },
     dark: {
       bg: '#121010', card: '#1d1918', sunk: '#2a2422', ink: '#f1e4dc', soft: '#b8aaa6', hair: '#3a3230', line: '#4d4441',
-      hero: '#2a1a1d', onHero: '#f7ece4', pick: '#f0a39a', btn: '#f0a39a', onBtn: '#121010',
+      hero: '#2a1a1d', onHero: '#f7ece4', pick: '#f0a39a', btn: '#f0a39a', wordmark: '#f0a39a', onBtn: '#121010',
       live: '#6fcf8e', liveBadge: '#e5909f', onLiveBadge: '#121010', kind: DARK_KINDS, onPick: '#2a1a1d', pickField: '#fffdfa', onKind: '#121010',
     },
   },
   'teal-purple': {
-    light: { ...SAND_LIGHT, hero: '#1f5f5b', onHero: '#f7ece4', pick: '#c9b6f0', btn: '#1f5f5b', onBtn: '#f6efe8' },
+    light: { ...SAND_LIGHT, hero: '#1f5f5b', onHero: '#f7ece4', pick: '#c9b6f0', btn: '#1f5f5b', wordmark: '#1f5f5b', onBtn: '#f6efe8' },
     dark: {
       bg: '#0f0e17', card: '#1a1826', sunk: '#24223a', ink: '#efe9f6', soft: '#b2aac4', hair: '#33304a', line: '#46425f',
-      hero: '#1d3b4a', onHero: '#efe9f6', pick: '#3fb8af', btn: '#3fb8af', onBtn: '#0f0e17',
+      hero: '#1d3b4a', onHero: '#efe9f6', pick: '#3fb8af', btn: '#3fb8af', wordmark: '#3fb8af', onBtn: '#0f0e17',
       live: '#6fcf8e', liveBadge: '#e5909f', onLiveBadge: '#0f0e17', kind: DARK_KINDS, onPick: '#2a1a1d', pickField: '#fffdfa', onKind: '#0f0e17',
     },
   },
