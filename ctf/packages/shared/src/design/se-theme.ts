@@ -32,6 +32,10 @@ export type SeThemeTokens = {
   hero: string;
   onHero: string;
   pick: string;
+  // Text, borders and the address box on a pick-colored surface (the Unlock banner). Every pick is
+  // light, so these stay dark and light in both modes.
+  onPick: string;
+  pickField: string;
   btn: string;
   onBtn: string;
   live: string;
@@ -76,6 +80,8 @@ const SAND_LIGHT = {
   onLiveBadge: '#fffaf6',
   kind: LIGHT_KINDS,
   onKind: '#fffaf6',
+  onPick: '#2a1a1d',
+  pickField: '#fffdfa',
 };
 
 export const SE_THEMES: Record<SeThemeColor, Record<SeThemeMode, SeThemeTokens>> = {
@@ -84,7 +90,7 @@ export const SE_THEMES: Record<SeThemeColor, Record<SeThemeMode, SeThemeTokens>>
     dark: {
       bg: '#0f1a15', card: '#17251f', sunk: '#20332a', ink: '#f1e4dc', soft: '#bba8a9', hair: '#2c4438', line: '#3c5a4b',
       hero: '#173528', onHero: '#f7ece4', pick: '#e3b74f', btn: '#e3b74f', onBtn: '#10201a',
-      live: '#6fcf8e', liveBadge: '#e5909f', onLiveBadge: '#10201a', kind: DARK_KINDS, onKind: '#10201a',
+      live: '#6fcf8e', liveBadge: '#e5909f', onLiveBadge: '#10201a', kind: DARK_KINDS, onPick: '#2a1a1d', pickField: '#fffdfa', onKind: '#10201a',
     },
   },
   burgundy: {
@@ -92,7 +98,7 @@ export const SE_THEMES: Record<SeThemeColor, Record<SeThemeMode, SeThemeTokens>>
     dark: {
       bg: '#170e10', card: '#24151a', sunk: '#33202a', ink: '#f1e4dc', soft: '#bba8a9', hair: '#452a30', line: '#5e3a43',
       hero: '#4a1420', onHero: '#f7ece4', pick: '#f2c46d', btn: '#f7ece4', onBtn: '#170e10',
-      live: '#6fcf8e', liveBadge: '#e5909f', onLiveBadge: '#170e10', kind: DARK_KINDS, onKind: '#170e10',
+      live: '#6fcf8e', liveBadge: '#e5909f', onLiveBadge: '#170e10', kind: DARK_KINDS, onPick: '#2a1a1d', pickField: '#fffdfa', onKind: '#170e10',
     },
   },
   coral: {
@@ -100,7 +106,7 @@ export const SE_THEMES: Record<SeThemeColor, Record<SeThemeMode, SeThemeTokens>>
     dark: {
       bg: '#121010', card: '#1d1918', sunk: '#2a2422', ink: '#f1e4dc', soft: '#b8aaa6', hair: '#3a3230', line: '#4d4441',
       hero: '#2a1a1d', onHero: '#f7ece4', pick: '#f0a39a', btn: '#f0a39a', onBtn: '#121010',
-      live: '#6fcf8e', liveBadge: '#e5909f', onLiveBadge: '#121010', kind: DARK_KINDS, onKind: '#121010',
+      live: '#6fcf8e', liveBadge: '#e5909f', onLiveBadge: '#121010', kind: DARK_KINDS, onPick: '#2a1a1d', pickField: '#fffdfa', onKind: '#121010',
     },
   },
   'teal-purple': {
@@ -108,7 +114,7 @@ export const SE_THEMES: Record<SeThemeColor, Record<SeThemeMode, SeThemeTokens>>
     dark: {
       bg: '#0f0e17', card: '#1a1826', sunk: '#24223a', ink: '#efe9f6', soft: '#b2aac4', hair: '#33304a', line: '#46425f',
       hero: '#1d3b4a', onHero: '#efe9f6', pick: '#3fb8af', btn: '#3fb8af', onBtn: '#0f0e17',
-      live: '#6fcf8e', liveBadge: '#e5909f', onLiveBadge: '#0f0e17', kind: DARK_KINDS, onKind: '#0f0e17',
+      live: '#6fcf8e', liveBadge: '#e5909f', onLiveBadge: '#0f0e17', kind: DARK_KINDS, onPick: '#2a1a1d', pickField: '#fffdfa', onKind: '#0f0e17',
     },
   },
 };

@@ -20,6 +20,8 @@ export type SeThemeTokens = {
     hero: string;
     onHero: string;
     pick: string;
+    onPick: string;
+    pickField: string;
     btn: string;
     onBtn: string;
     live: string;

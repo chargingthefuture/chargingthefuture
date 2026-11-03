@@ -16,6 +16,8 @@ export function seThemeVars(color?: SeThemeColor, mode?: SeThemeMode): CSSProper
     '--se-hero': t.hero,
     '--se-on-hero': t.onHero,
     '--se-pick': t.pick,
+    '--se-on-pick': t.onPick,
+    '--se-pick-field': t.pickField,
     '--se-btn': t.btn,
     '--se-on-btn': t.onBtn,
     '--se-live': t.live,
