@@ -27,6 +27,14 @@ controls sit inside Today's cards: `question_answers` (a member's answers, the f
 `question_answer_audit` (each answer, each refused attempt to change one, and matching turned off or
 on, read by the owner to spot somebody fishing for matches).
 
+Card conversations (3.1, the board "a card opened in place") are the second exception: one store
+for every ask, offer and story card, keyed by the card id (`<source>:<id>`). `card_answers` (a
+member's answer on a card: can help, knows someone, would like this, this helped; once per kind),
+`card_messages` (public messages, and Just us two messages with the pair in `pair_low` and
+`pair_high`, lower id first) and `card_pair_requests` (who asked whom to talk just you two on a card,
+and when the other agreed). A report made from a card goes into the existing `member_safety_reports`
+table, which the safety contract covers.
+
 On the member's own device it keeps two things: the last Today answer, so the screen draws at once,
 and the cards the member opened or hid. Web keeps them in this browser's storage under
 `se-today-v1:<user_id>` and `se-today-marks-v1:<user_id>`; Android keeps them in the app's own files.
@@ -37,10 +45,16 @@ Neither leaves the device, and signing out of the device or clearing the app's d
 - Service deletion: the member's `question_answers`, `question_matching_settings` and
   `question_answer_audit` rows, and every
   `question_match_messages` row where they are `user_low` or `user_high` (registry entry
-  `twenty-one-questions`).
-- Full account deletion: the same 21 Questions rows; each card source's own contract covers its rows.
+  `twenty-one-questions`). The member's `card_answers` rows, every `card_messages` row they wrote,
+  every Just us two message where they are `pair_low` or `pair_high`, and every
+  `card_pair_requests` row where they are `user_low` or `user_high` (registry entry
+  `today-card-conversations`). Public messages other members wrote under a card stay.
+- Full account deletion: the same 21 Questions and card conversation rows; each card source's own
+  contract covers its rows.
 
 ## 5) Retention
 
-21 Questions rows are kept until the account is deleted. Nothing else is kept on the server; the
+21 Questions and card conversation rows are kept until the account is deleted. When the item a
+card came from is removed, its card leaves Today and its conversation is no longer shown; the rows
+stay until their authors' accounts are deleted. Nothing else is kept on the server; the
 on-device copy is replaced on every read.

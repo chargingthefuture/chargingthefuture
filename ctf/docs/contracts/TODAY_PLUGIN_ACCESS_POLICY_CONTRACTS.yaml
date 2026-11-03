@@ -204,3 +204,169 @@ policies:
       - account_restricted
       - not_a_current_match
       - contact_restricted
+  - pluginId: today
+    command: today.cards.conversation.read
+    version: 1.0.0
+    requiredRoles:
+      - member
+    attributePolicies:
+      tenancy: same_workspace
+      minUnlockTier: signed_in
+      readsOnly: true
+      csrf: not_applicable
+      relationship: none
+    consentRequirements:
+      scopes:
+        - platform_terms
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - actor_not_authenticated
+      - account_restricted
+      - invalid_card_id
+  - pluginId: today
+    command: today.cards.answer
+    version: 1.0.0
+    requiredRoles:
+      - member
+    attributePolicies:
+      tenancy: same_workspace
+      minUnlockTier: signed_in_posting
+      readsOnly: false
+      csrf: required
+      relationship: none
+    consentRequirements:
+      scopes:
+        - platform_terms
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - actor_not_authenticated
+      - unlock_paused_after_day_14
+      - account_restricted
+      - invalid_card_id
+      - rate_limited
+  - pluginId: today
+    command: today.cards.message.send
+    version: 1.0.0
+    requiredRoles:
+      - member
+    attributePolicies:
+      tenancy: same_workspace
+      minUnlockTier: signed_in_posting
+      readsOnly: false
+      csrf: required
+      relationship: pair_agreed_not_blocked_for_private
+    consentRequirements:
+      scopes:
+        - platform_terms
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - actor_not_authenticated
+      - unlock_paused_after_day_14
+      - account_restricted
+      - invalid_card_id
+      - rate_limited
+  - pluginId: today
+    command: today.cards.pair.ask
+    version: 1.0.0
+    requiredRoles:
+      - member
+    attributePolicies:
+      tenancy: same_workspace
+      minUnlockTier: signed_in_posting
+      readsOnly: false
+      csrf: required
+      relationship: participant_not_blocked
+    consentRequirements:
+      scopes:
+        - platform_terms
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - actor_not_authenticated
+      - unlock_paused_after_day_14
+      - account_restricted
+      - invalid_card_id
+      - rate_limited
+  - pluginId: today
+    command: today.cards.pair.agree
+    version: 1.0.0
+    requiredRoles:
+      - member
+    attributePolicies:
+      tenancy: same_workspace
+      minUnlockTier: signed_in_posting
+      readsOnly: false
+      csrf: required
+      relationship: requested_not_blocked
+    consentRequirements:
+      scopes:
+        - platform_terms
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - actor_not_authenticated
+      - unlock_paused_after_day_14
+      - account_restricted
+      - invalid_card_id
+      - rate_limited
+  - pluginId: today
+    command: today.cards.report
+    version: 1.0.0
+    requiredRoles:
+      - member
+    attributePolicies:
+      tenancy: same_workspace
+      minUnlockTier: signed_in_posting
+      readsOnly: false
+      csrf: required
+      relationship: none
+    consentRequirements:
+      scopes:
+        - platform_terms
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - actor_not_authenticated
+      - unlock_paused_after_day_14
+      - account_restricted
+      - invalid_card_id
+      - rate_limited

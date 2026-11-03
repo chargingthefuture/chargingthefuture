@@ -547,3 +547,37 @@ Talk lists every open time under "Choose a time"; Me has no title; People's next
 top. The Unlock banner, when shown, sits above the Today header. 21 Questions cards have no Open
 button.
 **Result:** web ☐ android ☐ — notes:
+
+## AD-27 · A Today card opened in place, answers and Just us two
+**Role:** two approved members, A and B, on 3.1; C, signed in and not yet approved in Unlock, inside their first 14 days · **Surfaces:** web, android
+**Steps:**
+1. As A, post an ask on the PeerProgramming goal board, then open Today and tap the ask's title.
+2. As B, open Today, tap I can help on A's ask.
+3. As B, write "I can drive Thursday" in the composer and send it.
+4. As A, open the ask. Tap Talk here beside B.
+5. As B, open the ask.
+6. As B, tap Agree. Switch to Just us two and send "Where should I pick you up?"
+7. As A, open the ask, switch to Just us two, and read. Check Activity.
+8. As B, tap ••• in the sheet and Report, then Report this message under one of A's messages. As B, tap Share.
+9. As A, block B from B's profile, then open the ask as both.
+10. As C, open Today and tap the title of any ask, offer or story. Tap a 21 Questions card's text.
+**Expected:** Step 1 opens a sheet over Today (no new page) with the author, "Ask · <date and time>",
+Share, •••, Close, the title, the body, "Open in PeerProgramming", "Conversation" with Public and Just
+us two, "Write in this card" and "Everyone can read this. Just us two opens once you both agree." Step
+2 opens the sheet with "1 person answered" and "You can help"; tapping I can help again adds nothing.
+Step 3 shows the message on the right in the button color. Step 4 shows "1 person answered", B can
+help, and B's message on the left; after Talk here, A sees "Waiting for B to agree" and B has an
+Activity notice. Step 5 shows "A asked to talk just you two · Agree". Step 6 opens Just us two for
+both, and the message is on the right for B with "Only you and A can read this." Step 7 shows the
+message to A only (a third member opening the ask sees no Just us two messages), and A has an
+Activity notice. Step 8 shows "Reported. An admin reads every report." twice, and the admin reports
+screen lists two reports naming the card id, the second with the message text; Share opens the
+share sheet (web without one: Link copied). Step 9 hides each from the other's answers and
+messages, and a Just us two message or Talk here between them is refused with "one of you has
+blocked the other". Step 10, with C inside their first 14 days, lets C answer, write in
+public, ask for Just us two and report, the same as an approved member; the 21 Questions card still
+expands in place. With C past day 14 and no address sent, the sheet reads normally and any write turns
+it read-only with "Writing in a card is paused until Unlock is done. Reading stays open, and your
+account is never removed for this." With `CARDS_OPEN_BEFORE_UNLOCK` set to false, C sees "Writing in a
+card opens once Unlock is done." instead, from the first write.
+**Result:** web ☐ android ☐ — notes:

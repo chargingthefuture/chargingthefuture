@@ -1,16 +1,30 @@
-// One card in Today, the Android copy of the web's today-card.tsx: tapping the text opens it in
-// place, the buttons open the item, and the ••• menu holds Copy link and Hide. The timeline dot
-// marks it done, and tapping it again marks it not done.
+// One card in Today, the Android copy of the web's today-card.tsx. On an ask, offer or story,
+// tapping the text opens the card in place as a sheet (CardSheet.tsx), and an answer button (I can
+// help, I know someone, I'd like this, It helped me too) records the answer and opens the sheet;
+// other buttons open the item. Every other card expands in place as before. The ••• menu holds Copy
+// link, Hide and, on a card with an author, Mute and Report. The timeline dot marks it done, and
+// tapping it again marks it not done.
 
 import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 import * as Clipboard from 'expo-clipboard';
-import { SE_MUTE_WORDS, type SeThemeTokens, type SeTodayCard } from '@ctf/shared';
+import {
+  SE_CARD_WORDS,
+  SE_MUTE_WORDS,
+  seCardAnswerKind,
+  seCardOpensSheet,
+  type SeCardAnswerKind,
+  type SeThemeTokens,
+  type SeTodayCard,
+} from '@ctf/shared';
 import { SeAvatar } from '../../../components/shared/SeAvatar';
-import { getApiBaseUrl } from '../../../auth/authedFetch';
+import { authedFetch, getApiBaseUrl } from '../../../auth/authedFetch';
+import { reportError } from '../../../observability/report';
 import { SE_FONT } from '../fonts';
 import { QuestionsPanel, isQuestionsCard } from './QuestionsPanel';
+import { CardSheet } from './CardSheet';
+import { cardPath } from './useCardConversation';
 
 function absolute(href: string): string {
   return href.startsWith('http') ? href : `${getApiBaseUrl()}${href}`;
@@ -20,8 +34,31 @@ type Styles = ReturnType<typeof makeStyles>;
 
 const noop = () => undefined;
 
-function CardMenu({ s, card, onHide, onMute }: { s: Styles; card: SeTodayCard; onHide: () => void; onMute?: () => void }) {
+async function reportCard(card: SeTodayCard): Promise<string> {
+  try {
+    const res = await authedFetch(cardPath(card.id, '/report'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
+      body: JSON.stringify({ authorId: card.author?.accountId }),
+    });
+    const data = (await res.json().catch(() => null)) as { message?: string } | null;
+    return res.ok ? SE_CARD_WORDS.reported : (data?.message ?? 'The report was not sent: the app could not be reached.');
+  } catch (error) {
+    reportError(error, { area: 'today-cards', op: 'report_card' });
+    return 'The report was not sent: the app could not be reached.';
+  }
+}
+
+function menuLabel(onMute: unknown, canReport: boolean): string {
+  const items = ['copy link', 'hide', ...(onMute ? ['mute'] : []), ...(canReport ? ['report'] : [])];
+  return `More: ${items.join(', ')}`;
+}
+
+type MenuProps = { s: Styles; card: SeTodayCard; canReport: boolean; onHide: () => void; onMute?: () => void };
+
+function CardMenu({ s, card, canReport, onHide, onMute }: MenuProps) {
   const [copied, setCopied] = useState(false);
+  const [reported, setReported] = useState<string | null>(null);
   return (
     <View style={s.menu} accessibilityRole="menu">
       <TouchableOpacity
@@ -41,24 +78,34 @@ function CardMenu({ s, card, onHide, onMute }: { s: Styles; card: SeTodayCard; o
           <Text style={s.menuLabel}>{SE_MUTE_WORDS.mutePerson(card.author.handle)}</Text>
         </TouchableOpacity>
       ) : null}
+      {canReport ? (
+        <TouchableOpacity accessibilityRole="menuitem" style={s.menuItem} disabled={reported !== null} onPress={() => void reportCard(card).then(setReported)}>
+          <Text style={s.menuLabel}>{reported ?? SE_CARD_WORDS.report}</Text>
+        </TouchableOpacity>
+      ) : null}
     </View>
   );
 }
 
-function CardActions({ s, card, onOpenLink }: { s: Styles; card: SeTodayCard; onOpenLink: (_href: string) => void }) {
+type ActionsProps = { s: Styles; card: SeTodayCard; onOpenLink: (_href: string) => void; onAnswer: ((_kind: SeCardAnswerKind) => void) | null };
+
+function CardActions({ s, card, onOpenLink, onAnswer }: ActionsProps) {
   if (card.actions.length === 0) return null;
   return (
     <View style={s.actions}>
-      {card.actions.map((item) => (
-        <TouchableOpacity
-          key={item.kind + item.label}
-          accessibilityRole="link"
-          style={s.action}
-          onPress={() => onOpenLink(item.href)}
-        >
-          <Text style={s.actionLabel}>{item.label}</Text>
-        </TouchableOpacity>
-      ))}
+      {card.actions.map((item) => {
+        const answer = onAnswer ? seCardAnswerKind(item.kind) : null;
+        return (
+          <TouchableOpacity
+            key={item.kind + item.label}
+            accessibilityRole={answer ? 'button' : 'link'}
+            style={s.action}
+            onPress={() => (answer && onAnswer ? onAnswer(answer) : onOpenLink(item.href))}
+          >
+            <Text style={s.actionLabel}>{item.label}</Text>
+          </TouchableOpacity>
+        );
+      })}
     </View>
   );
 }
@@ -93,9 +140,33 @@ function DoneDot({ t, s, card, read, color, onToggleDone }: DotProps) {
   );
 }
 
+type TextProps = { s: Styles; card: SeTodayCard; open: boolean; opensSheet: boolean; onPress: () => void };
+
+// The title and body. On an ask, offer or story they open the sheet; on other cards they expand in place.
+function CardText({ s, card, open, opensSheet, onPress }: TextProps) {
+  return (
+    <TouchableOpacity
+      accessibilityRole="button"
+      accessibilityState={opensSheet ? undefined : { expanded: open }}
+      onPress={onPress}
+      style={s.text}
+    >
+      <Text style={s.title}>{card.title}</Text>
+      {card.body ? (
+        <Text style={s.body} numberOfLines={open || card.source === 'questions' ? undefined : 3}>
+          {card.body}
+        </Text>
+      ) : null}
+    </TouchableOpacity>
+  );
+}
+
+type Sheet = { firstAnswer: SeCardAnswerKind | null } | null;
+
 export function TodayCard({
   t,
   card,
+  viewerId,
   read,
   onToggleDone,
   onHide,
@@ -105,6 +176,8 @@ export function TodayCard({
 }: {
   t: SeThemeTokens;
   card: SeTodayCard;
+  // The signed-in member, so the card offers Report only on somebody else's card.
+  viewerId: string;
   read: boolean;
   onToggleDone: () => void;
   onHide: () => void;
@@ -115,8 +188,11 @@ export function TodayCard({
 }) {
   const [open, setOpen] = useState(false);
   const [menu, setMenu] = useState(false);
+  const [sheet, setSheet] = useState<Sheet>(null);
   const color = t.kind[card.kind];
   const s = makeStyles(t);
+  const opensSheet = seCardOpensSheet(card);
+  const canReport = Boolean(card.author && card.author.accountId !== viewerId);
 
   return (
     <View style={s.card}>
@@ -132,7 +208,7 @@ export function TodayCard({
         <View style={s.spacer} />
         <TouchableOpacity
           accessibilityRole="button"
-          accessibilityLabel={onMute ? 'More: copy link, hide, mute' : 'More: copy link, hide'}
+          accessibilityLabel={menuLabel(onMute, canReport)}
           accessibilityState={{ expanded: menu }}
           onPress={() => setMenu((value) => !value)}
           style={s.menuButton}
@@ -144,22 +220,13 @@ export function TodayCard({
           </Svg>
         </TouchableOpacity>
       </View>
-      {menu ? <CardMenu s={s} card={card} onHide={onHide} onMute={onMute} /> : null}
-      <TouchableOpacity
-        accessibilityRole="button"
-        accessibilityState={{ expanded: open }}
-        onPress={() => setOpen((value) => !value)}
-        style={s.text}
-      >
-        <Text style={s.title}>{card.title}</Text>
-        {card.body ? (
-          <Text style={s.body} numberOfLines={open || card.source === 'questions' ? undefined : 3}>
-            {card.body}
-          </Text>
-        ) : null}
-      </TouchableOpacity>
+      {menu ? <CardMenu s={s} card={card} canReport={canReport} onHide={onHide} onMute={onMute} /> : null}
+      <CardText s={s} card={card} open={open} opensSheet={opensSheet} onPress={() => (opensSheet ? setSheet({ firstAnswer: null }) : setOpen((value) => !value))} />
       {isQuestionsCard(card) ? <QuestionsPanel t={t} card={card} open={open} onOpen={() => setOpen(true)} onChanged={onChanged ?? noop} /> : null}
-      <CardActions s={s} card={card} onOpenLink={onOpenLink} />
+      <CardActions s={s} card={card} onOpenLink={onOpenLink} onAnswer={opensSheet ? (kind) => setSheet({ firstAnswer: kind }) : null} />
+      {sheet ? (
+        <CardSheet t={t} card={card} viewerId={viewerId} firstAnswer={sheet.firstAnswer} onClose={() => setSheet(null)} onOpenLink={onOpenLink} />
+      ) : null}
     </View>
   );
 }

@@ -1,0 +1,398 @@
+/* A Today card opened in place: the approved 3.1 board "a card opened in place". Colors come from
+   the --se-* theme variables, so it follows every color and dark mode. */
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: color-mix(in srgb, var(--se-ink) 55%, transparent);
+  display: flex;
+  justify-content: center;
+}
+
+.scrim {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.sheet {
+  position: absolute;
+  top: 64px;
+  bottom: 0;
+  width: 100%;
+  max-width: 560px;
+  box-sizing: border-box;
+  background: var(--se-bg);
+  color: var(--se-ink);
+  border-radius: 26px 26px 0 0;
+  border-top: 1.5px solid var(--se-line);
+  padding: 10px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+}
+
+.grip {
+  align-self: center;
+  flex: none;
+  width: 44px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--se-hair);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.who {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.handle {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.when {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.round {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: 50%;
+  border: 1.5px solid var(--se-hair);
+  background: var(--se-card);
+  color: var(--se-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.menuWrap {
+  position: relative;
+}
+
+.menu {
+  position: absolute;
+  right: 0;
+  top: 46px;
+  z-index: 2;
+  min-width: 200px;
+  padding: 6px;
+  border-radius: 14px;
+  background: var(--se-card);
+  border: 1.5px solid var(--se-line);
+  box-shadow: 0 3px 0 var(--se-line);
+}
+
+.menuItem {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  color: var(--se-ink);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.title {
+  margin: 0;
+  font-family: 'Newsreader Variable', Newsreader, Georgia, serif;
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.body {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--se-soft);
+  white-space: pre-line;
+}
+
+.openIn {
+  align-self: flex-start;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--se-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.answers {
+  background: var(--se-card);
+  border: 1.5px solid var(--se-hair);
+  border-radius: 18px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.answersTitle {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.answer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.answerText {
+  flex: 1;
+  font-size: 14px;
+  min-width: 0;
+}
+
+.talkButton,
+.talkPrimary {
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1.5px solid var(--se-line);
+  background: var(--se-card);
+  color: var(--se-ink);
+  font-weight: 600;
+  font-size: 13px;
+  box-shadow: 0 2px 0 var(--se-line);
+  cursor: pointer;
+}
+
+.talkPrimary {
+  background: var(--se-btn);
+  color: var(--se-on-btn);
+  font-weight: 700;
+}
+
+.talk {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+
+.talkHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.talkTitle {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.switch,
+.chips {
+  display: flex;
+  background: var(--se-sunk);
+  border-radius: 999px;
+  padding: 3px;
+}
+
+.chips {
+  align-self: flex-start;
+  flex-wrap: wrap;
+}
+
+.switchOn,
+.switchOff {
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1.5px solid transparent;
+  background: transparent;
+  color: var(--se-soft);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.switchOn {
+  border-color: var(--se-line);
+  background: var(--se-card);
+  color: var(--se-ink);
+  font-weight: 700;
+}
+
+.messages {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.bubbleRow {
+  align-self: flex-start;
+  max-width: 78%;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bubbleRowMine {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.bubble {
+  margin: 0;
+  background: var(--se-card);
+  border: 1.5px solid var(--se-hair);
+  border-radius: 18px 18px 18px 6px;
+  padding: 10px 12px;
+  font-size: 14px;
+  line-height: 1.4;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.bubbleMine {
+  background: var(--se-btn);
+  color: var(--se-on-btn);
+  border-color: var(--se-btn);
+  border-radius: 18px 18px 6px 18px;
+}
+
+.bubbleMeta {
+  font-size: 11px;
+  color: var(--se-soft);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  align-items: center;
+}
+
+.linkButton {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  min-height: 24px;
+  color: var(--se-ink);
+  font-size: 11px;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.pill {
+  align-self: center;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--se-sunk);
+  text-align: center;
+}
+
+.pillButton {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  color: var(--se-ink);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.quiet {
+  margin: 0;
+  font-size: 13px;
+  color: var(--se-soft);
+}
+
+.composer {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.field {
+  flex: 1;
+  display: flex;
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  min-height: 46px;
+  border-radius: 999px;
+  border: 1.5px solid var(--se-hair);
+  background: var(--se-card);
+  padding: 0 16px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--se-ink);
+}
+
+.send {
+  width: 46px;
+  height: 46px;
+  flex: none;
+  border-radius: 50%;
+  border: 1.5px solid var(--se-line);
+  background: var(--se-btn);
+  color: var(--se-on-btn);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 0 var(--se-line);
+  cursor: pointer;
+}
+
+.send:disabled,
+.talkButton:disabled,
+.menuItem:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.hint {
+  margin: 0;
+  font-size: 11px;
+  color: var(--se-soft);
+  text-align: center;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
