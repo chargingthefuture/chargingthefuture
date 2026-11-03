@@ -7,7 +7,7 @@ const daysAgo = (n: number) => new Date(now.getTime() - n * 86_400_000).toISOStr
 describe('Unlock standing in 3.1', () => {
   it('counts from the first sign-in and can be closed in the first week', () => {
     const s = seUnlockStanding({ approved: false, firstSeenIso: daysAgo(0), countStopped: false }, now);
-    expect([s.day, s.closable, s.paused, s.title]).toEqual([1, true, false, 'Day 1 of 14']);
+    expect([s.day, s.closable, s.paused, s.dayLabel, s.form]).toEqual([1, true, false, 'Day 1 of 14', true]);
   });
 
   it('cannot be closed in the second week', () => {
@@ -17,7 +17,7 @@ describe('Unlock standing in 3.1', () => {
 
   it('pauses posting after day 14 unless the address was sent', () => {
     expect(seUnlockStanding({ approved: false, firstSeenIso: daysAgo(14), countStopped: false }, now).paused).toBe(true);
-    expect(seUnlockStanding({ approved: false, firstSeenIso: daysAgo(30), countStopped: true }, now).paused).toBe(false);
+    expect(seUnlockStanding({ approved: false, firstSeenIso: daysAgo(30), countStopped: true }, now)).toMatchObject({ paused: false, form: false });
   });
 
   it('says nothing to an approved member', () => {

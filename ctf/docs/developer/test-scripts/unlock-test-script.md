@@ -782,16 +782,22 @@ tracked, not a new bug:
 ### UNLOCK-M6 · The Unlock banner and the 14 days (3.1)
 **Role:** a new signed-in member, not approved, on 3.1 · **Surfaces:** web, android
 1. Open the app on day 1. Close the banner, then open the app again.
-2. On day 8, open the app.
+2. On day 9, open the app. Type `not a link` in Profile address and press Add.
 3. On day 15 with nothing sent, open the app and try to post an ask; open Mood and Today.
-4. Send a Quora profile address, then open the app again.
-5. Get approved and open the app.
-**Expected:** Step 1: the app opens (no Unlock wall) with "Day 1 of 14" and the way to finish; Close
-hides it until the next visit. Step 2: "Day 8 of 14" with no Close. Step 3: "Posting is paused until
-Unlock is done." with what stays open; the ask is refused, Mood and Today work, and nothing says the
-account is at risk. Step 4: "Sent. Waiting for approval." and posting works again. Step 5: no banner.
-People shows "People opens once Unlock is done" until approval. 3.0 still sends the member to the
-Unlock screen as before.
+4. Type a Quora profile address in the banner's box and press Add, then open the app again.
+5. As a second new member, press "Can't find it?" in the banner.
+6. Get approved and open the app.
+**Expected:** Step 1: the app opens (no Unlock wall) with a yellow banner: "DAY 1 OF 14" and a short
+progress bar, "Add your Quora profile address to finish Unlock", the Profile address box with Add,
+"add it to the census" and "bring your Quora writing" links, and "Why this step · Can't find it?";
+Close hides it until the next visit. Step 2: "DAY 9 OF 14", the bar about two thirds along, no Close,
+and the route's message about the address under the box. Step 3: the banner turns to the card
+color with "Posting is paused until you finish Unlock", what stays open, the address box and "Can't
+find it? Ask the architect"; the ask is refused, Mood and Today work, and nothing says the account
+is at risk. Step 4: the banner changes to "Sent. Waiting for approval." straight away and posting
+works again. Step 5: the banner changes to "Sent. Waiting for approval." and the Commons opens to
+that member. Step 6: no banner. People shows "People opens once Unlock is done" until approval.
+3.0 still sends the member to the Unlock screen as before.
 **Result:** web ☐ android ☐ — notes:
 
 ### UNLOCK-M7 · Finish Unlock with a removed Quora account (3.1)
