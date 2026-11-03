@@ -1,15 +1,14 @@
 'use client';
 
-import { SE_GUEST_WORDS as W } from '@ctf/shared';
+import { SE_SIGNED_OUT_THEME, SE_GUEST_WORDS as W } from '@ctf/shared';
 import { GuestToday } from './today/guest-today';
-import { useSeTheme } from './use-se-theme';
 import { seThemeVars } from './se-theme-vars';
 import styles from './se-frame.module.css';
 
 // Today for a visitor who is not signed in, to the approved "Today, signed out" board: the Skills
 // Economy name with Sign in, the guest Today, and a bar along the bottom with Sign up.
 export function PublicToday({ signInUrl, signUpUrl }: { signInUrl: string; signUpUrl: string }) {
-  const { theme } = useSeTheme();
+  const theme = SE_SIGNED_OUT_THEME;
   return (
     <div className={styles.frame} style={seThemeVars(theme.color, theme.mode)}>
       <main className={styles.screen}>

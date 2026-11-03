@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
-import {
+import { SE_SIGNED_OUT_THEME,
   SE_DAYS_WON_TITLE,
   SE_GUEST_WORDS as W,
   seDaysWonLines,
@@ -21,7 +21,6 @@ import { ChymeGuestListen, GuestNote } from '@/components/chyme/chyme-guest-list
 import { ChymeReadingsPlayer } from '@/components/chyme/readings/chyme-readings-player';
 import { ChymeTokensContext, seChymeTokens } from '@/components/chyme/chyme-tokens-context';
 import { SeAvatar } from '@/components/shared/se-avatar';
-import { useSeTheme } from '../use-se-theme';
 import { useGuestRoom } from './use-guest-room';
 import { useToday } from './use-today';
 import styles from './today.module.css';
@@ -52,7 +51,7 @@ function Listening({ participantCount, guestCount, listenAllowed, listenUnavaila
   listenUnavailable: string | null;
   onGone: () => void;
 }) {
-  const { theme } = useSeTheme();
+  const theme = SE_SIGNED_OUT_THEME;
   const tokens = useMemo(() => seChymeTokens(seTheme(theme.color, theme.mode)), [theme.color, theme.mode]);
   return (
     <ChymeTokensContext.Provider value={tokens}>
@@ -89,7 +88,7 @@ function LiveRoom({ talk, room, onGone }: { talk: SeTodayTalk | null; room: Extr
 }
 
 function QuietRoom({ talk, onLive }: { talk: SeTodayTalk | null; onLive: () => void }) {
-  const { theme } = useSeTheme();
+  const theme = SE_SIGNED_OUT_THEME;
   const tokens = useMemo(() => seChymeTokens(seTheme(theme.color, theme.mode)), [theme.color, theme.mode]);
   return (
     <section aria-label="Rooms" className={styles.roomCard}>

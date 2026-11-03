@@ -4,16 +4,15 @@
 
 import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { SE_GUEST_WORDS as W, seTheme, type SeThemeTokens } from '@ctf/shared';
+import { SE_SIGNED_OUT_THEME, SE_GUEST_WORDS as W, seTheme, type SeThemeTokens } from '@ctf/shared';
 import { useAuth } from '../../auth/auth-context';
 import type { FeatureKey } from '../../navigation/screens';
 import { SE_FONT } from './fonts';
 import { GuestToday } from './today/GuestToday';
-import { useSeTheme } from './useSeTheme';
 import { SeRoomsProvider } from './rooms/SeRooms';
 
 export function PublicToday({ onOpen }: { onOpen: (_key: FeatureKey) => void }) {
-  const { theme } = useSeTheme();
+  const theme = SE_SIGNED_OUT_THEME;
   const t = seTheme(theme.color, theme.mode);
   const s = useMemo(() => makeStyles(t), [t]);
   const { signIn } = useAuth();

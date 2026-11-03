@@ -388,6 +388,17 @@ on Skills Economy. No account needed." and the signed-out Today address. Step 5 
 inside the app.
 **Result:** web ☐ android ☐ — notes:
 
+## AD-17c · Burgundy by default, and signed out
+
+**Role:** a visitor, then a member · **Surfaces:** web, android
+**Steps:**
+1. On a phone that has never opened the app, open the app signed out.
+2. Sign in, open Me and pick Coral. Sign out again.
+**Expected:** Step 1 shows signed-out Today in burgundy, dark. Step 2 keeps Coral while signed in;
+signed out, Today and the room page are burgundy again. A member who never picked a color sees
+burgundy, dark, once signed in.
+**Result:** web ☐ android ☐ — notes:
+
 ## AD-18 · Personal mute
 
 **Role:** two approved members, A and B · **Precondition:** on 3.1; B has an ask on Today.
