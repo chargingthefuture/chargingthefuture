@@ -1,83 +1,108 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
-import { SE_ROOM_QUIET, SE_ROOM_QUIET_TEXT, seRoomView, seRoomWords, seTalkLine, seTheme, type SeRoomView } from '@ctf/shared';
+import { useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react';
+import { SE_ROOM_QUIET, SE_ROOM_QUIET_TEXT, seRoomBarLine, seRoomView, seTheme, type SeRoomView } from '@ctf/shared';
 import {
   ChymeLiveShellView,
   useChymeRoomSession,
   type ChymeRoomScope,
 } from '@/components/chyme/chyme-live-shell';
+import { ChymeEmbedContext, type ChymeEmbed, type ChymeLiveSummary } from '@/components/chyme/chyme-embed';
 import { ChymeTokensContext, seChymeTokens } from '@/components/chyme/chyme-tokens-context';
 import { ChymeWordsProvider } from '@/components/chyme/chyme-words';
 import { ChymeReadingsPlayer } from '@/components/chyme/readings/chyme-readings-player';
 import type { CurrentUser } from '@/components/chyme/chyme-shared';
 import { useSeTheme } from '../use-se-theme';
-import { useSeRooms } from './se-rooms';
+import { useSeRooms, type SeRoomSummary } from './se-rooms';
+import { SeRoomHeader } from './se-room-header';
 import styles from './rooms.module.css';
 
-// One room inside the 3.1 frame: its own header, the talk that is on or next, the room rule, the notice that
-// guests may be listening, the quiet state, and then the Chyme room itself in the 3.1 words. The
-// session lives here, so the call keeps running while the screen is hidden behind another tab.
+export { SeRoomBar } from './se-room-bar';
 
-function RoomHeader({ view, onMinimize }: { view: SeRoomView; onMinimize: () => void }) {
+// One room inside the 3.1 frame, to the board "Live room": the header (se-room-header.tsx), the
+// quiet state, then the Chyme room drawn to the board (components/chyme/se-room/). The session
+// lives here, so the call keeps running while the screen is hidden behind another tab.
+
+function QuietState({ view }: { view: SeRoomView }) {
+  if (!view.quiet) return null;
   return (
-    <header className={styles.header}>
-      <button type="button" className={styles.minimize} onClick={onMinimize}>
-        <span aria-hidden="true">⌄</span> {view.minimizeLabel}
-      </button>
-      <h1 className={styles.title}>{view.name}</h1>
-      <p className={styles.meta}>{view.audience}</p>
-      {view.talkLine ? <p className={styles.talk}>{view.talkLine}</p> : null}
-      <p className={styles.meta}>{view.rule}</p>
-    </header>
+    <div className={styles.quiet}>
+      <p className={styles.quietTitle}>{SE_ROOM_QUIET}</p>
+      <p className={styles.quietText}>{SE_ROOM_QUIET_TEXT}</p>
+      <ChymeReadingsPlayer />
+    </div>
   );
 }
 
-function RoomNotices({ view }: { view: SeRoomView }) {
-  return (
-    <>
-      {view.joined && view.words.guestNotice ? (
-        <p role="status" className={styles.notice}>
-          {view.words.guestNotice}
-        </p>
-      ) : null}
-      {view.quiet ? (
-        <div className={styles.quiet}>
-          <p className={styles.quietTitle}>{SE_ROOM_QUIET}</p>
-          <p className={styles.quietText}>{SE_ROOM_QUIET_TEXT}</p>
-          <ChymeReadingsPlayer />
-        </div>
-      ) : null}
-    </>
-  );
+function barSummary(view: SeRoomView, count: number, live: ChymeLiveSummary | null): SeRoomSummary {
+  return {
+    joined: view.joined,
+    name: view.name,
+    count,
+    title: view.heading,
+    line: live ? seRoomBarLine(live.speakers.map((speaker) => speaker.name), live.selfSpeaking) : `${count} here`,
+    faces: live ? live.speakers.slice(0, 2).map((speaker) => speaker.id) : [],
+    canRaiseHand: Boolean(live?.canRaiseHand),
+    handRaised: Boolean(live?.handRaised),
+  };
+}
+
+// Keeps the room bar told what this room is doing, and how to leave it and raise a hand from there.
+function useBarReport(scope: ChymeRoomScope, summary: SeRoomSummary, leave: () => Promise<void>, handToggle: MutableRefObject<(() => void) | null>) {
+  const { report } = useSeRooms();
+  const key = JSON.stringify(summary);
+  useEffect(() => {
+    report(scope, JSON.parse(key) as SeRoomSummary, { leave: () => void leave(), toggleHand: () => handToggle.current?.() });
+  }, [report, scope, key, leave, handToggle]);
+}
+
+// The room's view and its count, from the room read (null until it arrives) and the talk on Today.
+function useRoomView(scope: ChymeRoomScope, session: ReturnType<typeof useChymeRoomSession>) {
+  const { talks } = useSeRooms();
+  const room = session.room;
+  const joined = session.joinState === 'ready';
+  const count = room ? room.participants.length : null;
+  const view = seRoomView(scope, { joined, name: room ? room.roomName : null, count }, talks.main ?? null);
+  return { view, count: count ?? 0, live: joined || Boolean(room?.callActive) };
 }
 
 function SeRoomScreen({ scope, currentUser, visible }: { scope: ChymeRoomScope; currentUser: CurrentUser; visible: boolean }) {
-  const { report, minimize, talks } = useSeRooms();
+  const { minimize } = useSeRooms();
   const session = useChymeRoomSession(scope);
   const room = session.room;
-  const view = seRoomView(
-    scope,
-    { joined: session.joinState === 'ready', name: room ? room.roomName : null, count: room ? room.participants.length : null },
-    seTalkLine(talks.main ?? null),
-  );
-  const leave = session.handleLeave;
-  const { joined, name } = view;
-  const count = room ? room.participants.length : 0;
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [live, setLive] = useState<ChymeLiveSummary | null>(null);
+  const handToggle = useRef<(() => void) | null>(null);
+  const { view, count, live: liveNow } = useRoomView(scope, session);
+  useBarReport(scope, barSummary(view, count, live), session.handleLeave, handToggle);
 
-  useEffect(() => {
-    report(scope, { joined, name, count }, () => void leave());
-  }, [report, scope, joined, name, count, leave]);
+  const embed: ChymeEmbed = {
+    moreOpen,
+    setMoreOpen,
+    refresh: () => void session.refreshRoom(),
+    refreshing: session.refreshing,
+    join: () => void session.handleJoin(),
+    joining: session.joinState === 'joining',
+    reportLive: setLive,
+    handToggle,
+  };
 
   return (
     <section className={styles.screen} hidden={!visible} aria-label={view.name}>
-      <RoomHeader view={view} onMinimize={minimize} />
-      <RoomNotices view={view} />
-      <div className={styles.room}>
+      <SeRoomHeader
+        view={view}
+        live={liveNow}
+        startedAtIso={live?.startedAtIso ?? null}
+        onBack={minimize}
+        onMore={room ? () => setMoreOpen(true) : null}
+        moreOpen={moreOpen}
+      />
+      <QuietState view={view} />
+      <ChymeEmbedContext.Provider value={embed}>
         <ChymeWordsProvider words={view.words}>
           <ChymeLiveShellView session={session} currentUser={currentUser} roomScope={scope} embedded />
         </ChymeWordsProvider>
-      </div>
+      </ChymeEmbedContext.Provider>
     </section>
   );
 }
@@ -98,26 +123,5 @@ export function SeRoomHosts({ currentUser }: { currentUser: CurrentUser }) {
         <SeRoomScreen key={scope} scope={scope} currentUser={currentUser} visible={shown === scope} />
       ))}
     </SeRoomColors>
-  );
-}
-
-// The room in the call, while the member is somewhere else in the app.
-export function SeRoomBar() {
-  const { opened, shown, summaries, open, leave } = useSeRooms();
-  const scope = opened.find((item) => summaries[item]?.joined && item !== shown);
-  if (!scope) return null;
-  const summary = summaries[scope];
-  const words = seRoomWords(scope);
-  return (
-    <div className={styles.bar} role="region" aria-label="Room you are in">
-      <button type="button" className={styles.barOpen} onClick={() => open(scope)}>
-        <span className={styles.barDot} aria-hidden="true" />
-        <span className={styles.barName}>{summary?.name}</span>
-        <span className={styles.barCount}>{summary?.count ?? 0} here</span>
-      </button>
-      <button type="button" className={styles.barLeave} onClick={() => leave(scope)}>
-        {words.leave}
-      </button>
-    </div>
   );
 }

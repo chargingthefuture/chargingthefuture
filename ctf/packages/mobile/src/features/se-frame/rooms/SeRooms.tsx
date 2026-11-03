@@ -7,7 +7,20 @@ import React, { createContext, useCallback, useContext, useMemo, useRef, useStat
 import type { SeTodayTalk } from '@ctf/shared';
 import type { ChymeRoomScope } from '../../chyme/ChymeApi';
 
-export type SeRoomSummary = { joined: boolean; name: string; count: number };
+// What the room bar shows for a room the member is in: the title, who is speaking, up to two faces,
+// and whether the member may raise a hand.
+export type SeRoomSummary = {
+  joined: boolean;
+  name: string;
+  count: number;
+  title: string;
+  line: string;
+  faces: string[];
+  canRaiseHand: boolean;
+  handRaised: boolean;
+};
+
+export type SeRoomActions = { leave: () => void; toggleHand: () => void };
 
 type SeRoomsValue = {
   opened: ChymeRoomScope[];
@@ -16,8 +29,9 @@ type SeRoomsValue = {
   summaries: Partial<Record<ChymeRoomScope, SeRoomSummary>>;
   open: (_scope: ChymeRoomScope, _talk?: SeTodayTalk | null) => void;
   minimize: () => void;
-  report: (_scope: ChymeRoomScope, _summary: SeRoomSummary, _leave: () => void) => void;
+  report: (_scope: ChymeRoomScope, _summary: SeRoomSummary, _actions: SeRoomActions) => void;
   leave: (_scope: ChymeRoomScope) => void;
+  toggleHand: (_scope: ChymeRoomScope) => void;
 };
 
 const SeRoomsContext = createContext<SeRoomsValue | null>(null);
@@ -33,7 +47,7 @@ export function SeRoomsProvider({ children }: { children: ReactNode }) {
   const [shown, setShown] = useState<ChymeRoomScope | null>(null);
   const [talks, setTalks] = useState<SeRoomsValue['talks']>({});
   const [summaries, setSummaries] = useState<SeRoomsValue['summaries']>({});
-  const leaves = useRef<Partial<Record<ChymeRoomScope, () => void>>>({});
+  const actions = useRef<Partial<Record<ChymeRoomScope, SeRoomActions>>>({});
 
   const open = useCallback((scope: ChymeRoomScope, talk?: SeTodayTalk | null) => {
     setOpened((current) => (current.includes(scope) ? current : [...current, scope]));
@@ -50,11 +64,11 @@ export function SeRoomsProvider({ children }: { children: ReactNode }) {
     setShown(null);
   }, [shown, summaries, close]);
 
-  const report = useCallback((scope: ChymeRoomScope, summary: SeRoomSummary, leave: () => void) => {
-    leaves.current[scope] = leave;
+  const report = useCallback((scope: ChymeRoomScope, summary: SeRoomSummary, roomActions: SeRoomActions) => {
+    actions.current[scope] = roomActions;
     setSummaries((current) => {
       const before = current[scope];
-      if (before && before.joined === summary.joined && before.name === summary.name && before.count === summary.count) return current;
+      if (before && JSON.stringify(before) === JSON.stringify(summary)) return current;
       return { ...current, [scope]: summary };
     });
   }, []);
@@ -62,15 +76,19 @@ export function SeRoomsProvider({ children }: { children: ReactNode }) {
   // Leaving from the bar: the room's own leave runs, then the room is unmounted.
   const leave = useCallback(
     (scope: ChymeRoomScope) => {
-      leaves.current[scope]?.();
+      actions.current[scope]?.leave();
       close(scope);
     },
     [close],
   );
 
+  const toggleHand = useCallback((scope: ChymeRoomScope) => {
+    actions.current[scope]?.toggleHand();
+  }, []);
+
   const value = useMemo<SeRoomsValue>(
-    () => ({ opened, shown, talks, summaries, open, minimize, report, leave }),
-    [opened, shown, talks, summaries, open, minimize, report, leave],
+    () => ({ opened, shown, talks, summaries, open, minimize, report, leave, toggleHand }),
+    [opened, shown, talks, summaries, open, minimize, report, leave, toggleHand],
   );
   return <SeRoomsContext.Provider value={value}>{children}</SeRoomsContext.Provider>;
 }

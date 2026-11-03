@@ -33,7 +33,9 @@ export type ChymeRoomResponse = {
   // 'open' (every joiner may speak) or 'hand_raise' (a joiner listens until an admin lets them
   // speak). Who is reading, worked out on the server: whether they may moderate, and their own role.
   speakMode?: ChymeSpeakMode;
-  viewer?: { isAdmin: boolean; role: ChymeRole };
+  // `listenOnly`: a signed-in member not yet approved in Unlock, who listens and cannot speak or
+  // raise a hand (3.1.0, Access). Absent means false.
+  viewer?: { isAdmin: boolean; role: ChymeRole; listenOnly?: boolean };
   // How full the room is against the cap in force (the cap moves with the Stream quota band).
   capacity: { current: number; max: number };
   // What the Stream quota policy says right now: a member-facing line (null when nothing to say)

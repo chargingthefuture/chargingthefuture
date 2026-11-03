@@ -12,9 +12,13 @@ import { ChymeRoomView } from './chyme-room-view';
 import { ChymeReadingsPlayer } from '@/components/chyme/readings/chyme-readings-player';
 import type { ChymeConnectionState } from './chyme-audio-room';
 import { responseFailureText } from 'lib/errors/client-failure';
+import { SE_LIVE_ROOM_WORDS } from '@ctf/shared';
 import type { ChymeJoinResponse, ChymeRoomResponse } from 'lib/chyme/types';
 
 export type ChymeRoomScope = 'main' | 'contributors';
+
+// The space between the parts of the room inside the 3.1 room screen.
+const EMBEDDED_GAP = 16;
 
 type ChymeTokens = ReturnType<typeof useChymeTokens>;
 
@@ -241,7 +245,7 @@ type ChymeShellContentProps = {
 function ChymeShellContent(props: ChymeShellContentProps) {
   const { error, room, loading, t } = props;
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: props.embedded ? EMBEDDED_GAP : undefined }}>
       {error && <ChymeErrorBanner error={error} />}
 
       {!room && !loading && !props.embedded && <ChymeJoinRoomPrompt t={t} />}
@@ -264,6 +268,18 @@ function ChymeShellContent(props: ChymeShellContentProps) {
 
 export type ChymeRoomSession = ReturnType<typeof useChymeRoomSession>;
 
+// The page fills the screen on 3.0's Chyme page; in the 3.1 room it flows with the screen around it.
+function shellStyle(t: ChymeTokens, embedded: boolean): React.CSSProperties {
+  const base: React.CSSProperties = { width: '100%', background: t.BG, fontFamily: "'Figtree Variable', system-ui, sans-serif", color: t.TEXT, display: 'flex', flexDirection: 'column' };
+  return embedded ? { ...base, gap: EMBEDDED_GAP } : { ...base, minHeight: '100dvh' };
+}
+
+// In the 3.1 room, in place of the Join row while the room is first read.
+function ChymeEmbeddedLoading({ loading, t }: { loading: boolean; t: ChymeTokens }) {
+  if (!loading) return null;
+  return <p style={{ margin: 0, fontSize: 13, color: t.FAINT }}>{SE_LIVE_ROOM_WORDS.loading}</p>;
+}
+
 export function ChymeLiveShell({ currentUser, roomScope = 'main' }: { currentUser: CurrentUser; roomScope?: ChymeRoomScope }) {
   const session = useChymeRoomSession(roomScope);
   return <ChymeLiveShellView session={session} currentUser={currentUser} roomScope={roomScope} />;
@@ -274,7 +290,8 @@ type ChymeLiveShellViewProps = {
   currentUser: CurrentUser;
   roomScope: ChymeRoomScope;
   // Inside the 3.1 room screen, which has its own header, room count and readings loop: Chyme's
-  // header, its empty-room prompt and its readings are left out so nothing shows twice.
+  // header, its Join row, its empty-room prompt and its readings are left out so nothing shows
+  // twice, and the room is drawn to the "Live room" board (se-room/).
   embedded?: boolean;
 };
 
@@ -302,7 +319,7 @@ export function ChymeLiveShellView({ session, currentUser, roomScope, embedded =
   }
 
   return (
-    <div style={{ minHeight: embedded ? undefined : '100dvh', width: '100%', background: t.BG, fontFamily: "'Figtree Variable', system-ui, sans-serif", color: t.TEXT, display: 'flex', flexDirection: 'column' }}>
+    <div style={shellStyle(t, embedded)}>
       {embedded ? null : (
         <ChymeHeader
           participantCount={room?.participants.length ?? 0}
@@ -312,15 +329,19 @@ export function ChymeLiveShellView({ session, currentUser, roomScope, embedded =
         />
       )}
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-        <ChymeSidebar
-          loading={loading}
-          joinState={joinState}
-          connection={connection}
-          onJoin={() => void handleJoin()}
-          onRefresh={() => void refreshRoom()}
-          refreshing={refreshing}
-        />
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: embedded ? EMBEDDED_GAP : undefined }}>
+        {embedded ? (
+          <ChymeEmbeddedLoading loading={loading && !room} t={t} />
+        ) : (
+          <ChymeSidebar
+            loading={loading}
+            joinState={joinState}
+            connection={connection}
+            onJoin={() => void handleJoin()}
+            onRefresh={() => void refreshRoom()}
+            refreshing={refreshing}
+          />
+        )}
 
         <ChymeShellContent
           error={error}

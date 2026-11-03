@@ -28,7 +28,9 @@ import { postChymeHeartbeat, postChymeHand, CHYME_HEARTBEAT_STOP_CODES, type Chy
 import type { MobileBackChannelController } from './useChymeBackChannel';
 import type { MobileModerationContext } from './ChymeModeration';
 import type { ChymeConnectionState } from './useChymeRoomState';
-import { ChymeSpeakerTile } from './chyme-speaker-tile';
+import { ChymeSpeakerTile, TileActions } from './chyme-speaker-tile';
+import { SeRoomLive, SeRoomPending } from './se-room/SeRoomLive';
+import { SE_LIVE_ROOM_WORDS } from '@ctf/shared';
 import { ChymeAudioControls, ChymeLeaveButton } from './chyme-controls';
 import { useChymeTokens } from './chyme-tokens';
 import { reportError } from '../../observability/report';
@@ -134,6 +136,8 @@ type RoomProps = {
   backChannel: MobileBackChannelController | null;
   onConnectionChange: (_state: ChymeConnectionState) => void;
   moderation: MobileModerationContext;
+  // Inside the 3.1 room screen: laid out to the "Live room" board (se-room/SeRoomLive.tsx).
+  embedded?: boolean;
 };
 
 export const ChymeAudioRoom: React.FC<RoomProps> = (props) => {
@@ -146,6 +150,9 @@ export const ChymeAudioRoom: React.FC<RoomProps> = (props) => {
   useHeartbeat(props.roomScope, call, status === 'joined', onStopped);
 
   if (status !== 'joined' || !client || !call) {
+    if (props.embedded) {
+      return <SeRoomPending onLeave={props.onLeave}>{status === 'error' ? (errorMessage ?? SE_LIVE_ROOM_WORDS.connectFailed) : SE_LIVE_ROOM_WORDS.connecting}</SeRoomPending>;
+    }
     return (
       <ChymeAudioFrame
         stage={
@@ -252,8 +259,9 @@ function useHandToggle(scope: ChymeRoomScope) {
   return { handRaised, onToggleHand };
 }
 
-function ChymeAudioRoomLive(props: RoomProps) {
-  const t = useChymeTokens();
+// The live call's state: the connection, the member's raised hand, and one entry per person.
+// Shared by the 3.0 layout and the 3.1 one.
+function useLiveRoom(props: RoomProps) {
   const { useParticipants, useCallCallingState } = useCallStateHooks();
   const participants = useParticipants();
   const connection = toConnectionState(useCallCallingState());
@@ -263,6 +271,27 @@ function ChymeAudioRoomLive(props: RoomProps) {
   }, [connection, onConnectionChange]);
   const { handRaised, onToggleHand } = useHandToggle(props.roomScope);
   const unique = useUniqueParticipants(participants);
+  return { connection, handRaised, onToggleHand, unique };
+}
+
+function ChymeAudioRoomLive(props: RoomProps) {
+  const t = useChymeTokens();
+  const { connection, handRaised, onToggleHand, unique } = useLiveRoom(props);
+  if (props.embedded) {
+    return (
+      <SeRoomLive
+        participants={unique}
+        connection={connection}
+        handRaised={handRaised}
+        onToggleHand={onToggleHand}
+        raisedHandUserIds={props.raisedHandUserIds}
+        moderation={props.moderation}
+        onLeave={props.onLeave}
+        bringIn={props.roomScope === 'main'}
+        renderActions={(clerkUserId, name) => <TileActions clerkUserId={clerkUserId} name={name} backChannel={props.backChannel} moderation={props.moderation} />}
+      />
+    );
+  }
 
   const stage = (
     <>

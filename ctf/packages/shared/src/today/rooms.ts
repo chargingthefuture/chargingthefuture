@@ -1,6 +1,10 @@
 // The words the 3.1 rooms use, shared by web and Android so the two read the same. 3.0's Chyme
 // screens keep their own labels.
 
+import type { SeTodayTalk } from './types';
+import { seTalkLine } from './view';
+import { SE_TODAY_ROOM_WORDS, seTalkOnAirLine } from './week';
+
 export type SeRoomWords = {
   join: string;
   leave: string;
@@ -9,48 +13,108 @@ export type SeRoomWords = {
   guestNotice: string | null;
 };
 
+// "Bring someone in" on the live room's bar shares the signed-out Today (SE_TODAY_ROOM_WORDS), so
+// the one-to-one call keeps its own name, Back Channel, here too.
 export const SE_ROOM_WORDS_MAIN: SeRoomWords = {
   join: 'Listen in',
   leave: 'Leave quietly',
-  backChannel: 'Bring someone in',
-  guestNotice: 'Guests may be listening. Anyone can hear this room without an account.',
+  backChannel: 'Back Channel',
+  guestNotice: 'Guests may be listening',
 };
 
 export const SE_ROOM_WORDS_WEAVERS: SeRoomWords = { ...SE_ROOM_WORDS_MAIN, guestNotice: null };
+
+// The live room's own labels, from the approved board "Live room".
+export const SE_LIVE_ROOM_WORDS = {
+  back: 'Back to Today',
+  live: 'LIVE',
+  more: 'More',
+  moreTitle: 'Room',
+  close: 'Close',
+  refresh: 'Refresh the room',
+  refreshing: 'Refreshing…',
+  people: 'People in the room',
+  noPeople: 'Nobody else is in the room.',
+  readRule: 'Read it',
+  hideRule: 'Show less',
+  speaking: 'Speaking',
+  listening: 'Listening',
+  you: 'You',
+  speakingNow: 'speaking',
+  muted: 'muted',
+  guest: 'Guest',
+  handUp: 'hand raised',
+  raiseHand: 'Raise hand',
+  lowerHand: 'Lower hand',
+  unmute: 'Unmute',
+  mute: 'Mute',
+  joining: 'Joining…',
+  loading: 'Loading room…',
+  connecting: 'Connecting to the audio room…',
+  connectFailed: 'Could not connect to the audio room.',
+  listenOnlyHandRaise: 'Listening. Raise your hand to ask to speak.',
+  listenOnlyUnlock: 'Listening. Speaking opens once Unlock is done.',
+  reconnecting: 'Reconnecting to the live room… the room cannot hear you until this clears.',
+  connectionLost: 'The live connection dropped. Nobody can hear the room from this screen until you leave and join again.',
+  handRaiseMode: 'Hand-raise mode: everyone listens until an admin lets them speak. Raise your hand to ask.',
+};
 
 export type SeRoomScope = 'main' | 'contributors';
 
 export type SeRoomView = {
   words: SeRoomWords;
   name: string;
+  // The small line above the title: "Main Room · open to everyone" while a talk is on, the
+  // audience alone otherwise (the title is then the room's name).
+  eyebrowName: string | null;
   audience: string;
+  // The talk's title while it is on the air, the room's name otherwise.
+  heading: string;
   talkLine: string | null;
   joined: boolean;
   // Nobody in the room and the member not in it: show the quiet state.
   quiet: boolean;
-  minimizeLabel: string;
+  backLabel: string;
   // The rule on the rooms the System Architect hosts, which are both rooms.
   rule: string;
+  ruleShort: string;
 };
 
 // Somebody removed from a room for breaking it keeps their account; removal is from that room only.
 export const SE_ROOM_RULE =
   'Stay on topic: economics and collective action. Somebody who keeps going off topic can be removed from the room; their account is not affected.';
 
+// The rule as the live room shows it before "Read it" opens the full text.
+export const SE_ROOM_RULE_SHORT = 'Room rule: stay on topic, economics and collective action.';
+
 const ROOM_NAMES: Record<SeRoomScope, string> = { main: 'Main Room', contributors: 'Weavers of the Commons' };
 
+function capitalized(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+// The lines at the top of the room: while a talk is on the air, its title under "Main Room · open
+// to everyone" and who hosts it when; otherwise the room's name under its audience, and the next talk.
+function roomTitle(main: boolean, name: string, talk: SeTodayTalk | null) {
+  const audience = main ? SE_TODAY_ROOM_WORDS.mainAudience : SE_TODAY_ROOM_WORDS.weaversAudience;
+  const onAir = main && talk?.onAir ? talk : null;
+  if (onAir) return { eyebrowName: name, audience, heading: onAir.title, talkLine: seTalkOnAirLine(onAir) };
+  return { eyebrowName: null, audience: capitalized(audience), heading: name, talkLine: main ? seTalkLine(talk) : null };
+}
+
 // What the room screen shows, shared by web and Android. `count` is null until the room is read.
-export function seRoomView(scope: SeRoomScope, room: { joined: boolean; name: string | null; count: number | null }, talkLine: string | null): SeRoomView {
+export function seRoomView(scope: SeRoomScope, room: { joined: boolean; name: string | null; count: number | null }, talk: SeTodayTalk | null): SeRoomView {
   const main = scope === 'main';
+  const name = room.name ?? ROOM_NAMES[scope];
   return {
-    words: main ? SE_ROOM_WORDS_MAIN : SE_ROOM_WORDS_WEAVERS,
-    name: room.name ?? ROOM_NAMES[scope],
-    audience: main ? SE_ROOM_MAIN_AUDIENCE : SE_ROOM_WEAVERS_AUDIENCE,
-    talkLine: main ? talkLine : null,
+    words: seRoomWords(scope),
+    name,
+    ...roomTitle(main, name, talk),
     joined: room.joined,
     quiet: !room.joined && room.count === 0,
-    minimizeLabel: room.joined ? 'Keep listening and browse' : 'Back',
+    backLabel: SE_LIVE_ROOM_WORDS.back,
     rule: SE_ROOM_RULE,
+    ruleShort: SE_ROOM_RULE_SHORT,
   };
 }
 
@@ -58,10 +122,39 @@ export function seRoomWords(scope: SeRoomScope): SeRoomWords {
   return scope === 'main' ? SE_ROOM_WORDS_MAIN : SE_ROOM_WORDS_WEAVERS;
 }
 
+// A name as the live room shows it: "farah", without the "@" Chyme's handles carry.
+export function seRoomName(handle: string): string {
+  return handle.startsWith('@') ? handle.slice(1) : handle;
+}
+
+// "Listening · 4".
+export function seListeningLabel(count: number): string {
+  return `${SE_LIVE_ROOM_WORDS.listening} · ${count}`;
+}
+
+// Whether somebody sits under Speaking or under Listening: their microphone is on, or an admin let
+// them speak in hand-raise mode. Everybody else listens, guests included.
+export function seRoomOnStage(person: { micOn: boolean; guest: boolean; role: 'speaker' | 'listener' | null }, speakMode: 'open' | 'hand_raise'): boolean {
+  if (person.guest) return false;
+  return person.micOn || (speakMode === 'hand_raise' && person.role === 'speaker');
+}
+
+// The room bar's second line: "farah is speaking · you are listening".
+export function seRoomBarLine(speakers: string[], selfSpeaking: boolean): string {
+  const self = selfSpeaking ? 'you are speaking' : 'you are listening';
+  if (speakers.length === 0) return capitalized(self);
+  const who =
+    speakers.length === 1
+      ? `${speakers[0]} is speaking`
+      : speakers.length === 2
+        ? `${speakers[0]} and ${speakers[1]} are speaking`
+        : `${speakers[0]} and ${speakers.length - 1} others are speaking`;
+  return `${who} · ${self}`;
+}
+
 export const SE_ROOM_QUIET = 'Quiet right now';
 export const SE_ROOM_QUIET_TEXT = 'Nobody is in the room. Play a reading while you wait, or come back for the next talk.';
 export const SE_ROOM_MAIN_AUDIENCE = 'Open to everyone';
-export const SE_ROOM_WEAVERS_AUDIENCE = 'Private to Weavers of the Commons';
 
 // + New → Talk: booking a TI Radio slot, held in the Main Room.
 export const SE_TALK_WORDS = {

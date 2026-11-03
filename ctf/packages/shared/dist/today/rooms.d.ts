@@ -1,3 +1,4 @@
+import type { SeTodayTalk } from './types';
 export type SeRoomWords = {
     join: string;
     leave: string;
@@ -6,28 +7,72 @@ export type SeRoomWords = {
 };
 export declare const SE_ROOM_WORDS_MAIN: SeRoomWords;
 export declare const SE_ROOM_WORDS_WEAVERS: SeRoomWords;
+export declare const SE_LIVE_ROOM_WORDS: {
+    back: string;
+    live: string;
+    more: string;
+    moreTitle: string;
+    close: string;
+    refresh: string;
+    refreshing: string;
+    people: string;
+    noPeople: string;
+    readRule: string;
+    hideRule: string;
+    speaking: string;
+    listening: string;
+    you: string;
+    speakingNow: string;
+    muted: string;
+    guest: string;
+    handUp: string;
+    raiseHand: string;
+    lowerHand: string;
+    unmute: string;
+    mute: string;
+    joining: string;
+    loading: string;
+    connecting: string;
+    connectFailed: string;
+    listenOnlyHandRaise: string;
+    listenOnlyUnlock: string;
+    reconnecting: string;
+    connectionLost: string;
+    handRaiseMode: string;
+};
 export type SeRoomScope = 'main' | 'contributors';
 export type SeRoomView = {
     words: SeRoomWords;
     name: string;
+    eyebrowName: string | null;
     audience: string;
+    heading: string;
     talkLine: string | null;
     joined: boolean;
     quiet: boolean;
-    minimizeLabel: string;
+    backLabel: string;
     rule: string;
+    ruleShort: string;
 };
 export declare const SE_ROOM_RULE = "Stay on topic: economics and collective action. Somebody who keeps going off topic can be removed from the room; their account is not affected.";
+export declare const SE_ROOM_RULE_SHORT = "Room rule: stay on topic, economics and collective action.";
 export declare function seRoomView(scope: SeRoomScope, room: {
     joined: boolean;
     name: string | null;
     count: number | null;
-}, talkLine: string | null): SeRoomView;
+}, talk: SeTodayTalk | null): SeRoomView;
 export declare function seRoomWords(scope: SeRoomScope): SeRoomWords;
+export declare function seRoomName(handle: string): string;
+export declare function seListeningLabel(count: number): string;
+export declare function seRoomOnStage(person: {
+    micOn: boolean;
+    guest: boolean;
+    role: 'speaker' | 'listener' | null;
+}, speakMode: 'open' | 'hand_raise'): boolean;
+export declare function seRoomBarLine(speakers: string[], selfSpeaking: boolean): string;
 export declare const SE_ROOM_QUIET = "Quiet right now";
 export declare const SE_ROOM_QUIET_TEXT = "Nobody is in the room. Play a reading while you wait, or come back for the next talk.";
 export declare const SE_ROOM_MAIN_AUDIENCE = "Open to everyone";
-export declare const SE_ROOM_WEAVERS_AUDIENCE = "Private to Weavers of the Commons";
 export declare const SE_TALK_WORDS: {
     title: string;
     intro: string;
