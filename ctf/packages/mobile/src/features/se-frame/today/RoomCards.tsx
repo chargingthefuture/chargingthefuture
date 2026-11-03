@@ -17,6 +17,7 @@ import {
 import { AddToCalendarButton } from '../../../components/shared/AddToCalendarButton';
 import { SeAvatar } from '../../../components/shared/SeAvatar';
 import { webPageUrl } from '../../../navigation/openWebPage';
+import { reportError } from '../../../observability/report';
 import { useSeRooms } from '../rooms/SeRooms';
 import { SE_FONT } from '../fonts';
 
@@ -42,7 +43,8 @@ function useBringSomeoneIn() {
   const bring = async () => {
     try {
       await Share.share({ message: `${W.bringText} ${webPageUrl(W.bringPath)}` });
-    } catch {
+    } catch (error) {
+      reportError(error, { area: 'today', op: 'bring_someone_in' });
       setNote(W.copyFailed);
     }
   };
