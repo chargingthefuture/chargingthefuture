@@ -358,6 +358,13 @@ Came back, Every day and time to unlock as counts only, with no member named; Co
 same lines. A failed read shows "Could not read the measures:" with the reason.
 **Result:** web ☐ — notes:
 
+## AD-17b · The four colors in light and dark
+
+**Role:** any member · **Precondition:** on 3.1. **Surfaces:** web, android
+**Steps:**
+1. Open Me and choose each color, first with Dark, then with Light.
+**Expected:** Every color shows its own color on the buttons, the selected chips and the + button in
+both modes: Coral is coral with dark text in light and dark alike, never near-black.
 ## AD-17a · The week strip and the room cards on Today
 
 **Role:** two approved members, one of them a Weavers of the Commons badge holder · **Precondition:**
