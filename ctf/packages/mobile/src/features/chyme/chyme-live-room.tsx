@@ -112,10 +112,29 @@ export function ChymeLiveRoomView({
         onRefresh={() => void state.refresh()}
         refreshing={state.refreshing}
       />
+      <RoomContent t={t} state={state} scope={scope} user={user} backChannel={backChannelEnabled ? backChannel : null} embedded={embedded} />
+    </View>
+  );
+}
+
+type RoomContentProps = {
+  t: ChymeTokens;
+  state: ChymeRoomState;
+  scope: ChymeRoomScope;
+  user: CurrentUser;
+  backChannel: MobileBackChannelController | null;
+  embedded: boolean;
+};
+
+// The error banner, the empty-room prompt (left out when embedded), or the room.
+function RoomContent({ t, state, scope, user, backChannel, embedded }: RoomContentProps) {
+  const { room } = state;
+  return (
+    <>
       {state.error ? <ErrorBanner error={state.error} t={t} /> : null}
       {!room && !state.loading && !embedded ? <JoinRoomPrompt t={t} /> : null}
-      {room ? <ChymeRoomView state={state} room={room} user={user} scope={scope} backChannel={backChannelEnabled ? backChannel : null} embedded={embedded} /> : null}
-    </View>
+      {room ? <ChymeRoomView state={state} room={room} user={user} scope={scope} backChannel={backChannel} embedded={embedded} /> : null}
+    </>
   );
 }
 
