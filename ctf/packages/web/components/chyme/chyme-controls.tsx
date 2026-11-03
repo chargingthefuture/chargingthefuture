@@ -1,9 +1,9 @@
 'use client';
 
+import { useChymeTokens } from './chyme-tokens-context';
 import type { CSSProperties, ReactNode } from 'react';
 import { Hand, Mic, MicOff, Phone, Volume2 } from 'lucide-react';
-import { useTheme } from '@/hooks/useTheme';
-import { getChymeTokens, type ChymeTokens } from './chyme-shared';
+import { type ChymeTokens } from './chyme-shared';
 import { useChymeWords } from './chyme-words';
 
 function toggleButtonStyle(t: ChymeTokens, active: boolean, activeBg: string, activeBorder: string, activeColor: string): CSSProperties {
@@ -46,8 +46,7 @@ export function ChymeControls({
   // A member who cannot ask to speak (not yet approved in Unlock) has no hand control.
   hideHand?: boolean;
 }) {
-  const { theme } = useTheme();
-  const t = getChymeTokens(theme);
+  const t = useChymeTokens();
   const words = useChymeWords();
   const muteStyle = muted
     ? toggleButtonStyle(t, true, 'rgba(239,68,68,0.15)', 'rgba(239,68,68,0.4)', '#F87171')
