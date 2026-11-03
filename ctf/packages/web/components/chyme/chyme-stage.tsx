@@ -1,8 +1,8 @@
 'use client';
 
+import { useChymeTokens } from './chyme-tokens-context';
 import { Mic } from 'lucide-react';
-import { useTheme } from '@/hooks/useTheme';
-import { getChymeTokens, chymeHandle, initials } from './chyme-shared';
+import { chymeHandle, initials } from './chyme-shared';
 import type { ChymeParticipant, ChymeRoomResponse } from 'lib/chyme/types';
 
 // Pre-join preview of who is in the room. Once the viewer joins, the live
@@ -32,8 +32,7 @@ export function ChymeStage({
   room: ChymeRoomResponse;
   currentUserId: string;
 }) {
-  const { theme } = useTheme();
-  const t = getChymeTokens(theme);
+  const t = useChymeTokens();
   if (room.participants.length === 0) return null;
   return (
     <div style={{ padding: '20px 24px' }}>

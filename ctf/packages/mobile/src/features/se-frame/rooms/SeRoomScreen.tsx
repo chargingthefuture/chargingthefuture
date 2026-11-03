@@ -10,6 +10,7 @@ import { chymeHandle, type ChymeRoomScope } from '../../chyme/ChymeApi';
 import { ChymeLiveRoomView } from '../../chyme/chyme-live-room';
 import { ChymeReadingsPlayer } from '../../chyme/chyme-readings-player';
 import { ChymeBackChannelLayer } from '../../chyme/chyme-back-channel-layer';
+import { ChymeTokensContext, seChymeTokens } from '../../chyme/chyme-tokens';
 import { ChymeWordsProvider } from '../../chyme/chyme-words';
 import { useChymeBackChannel } from '../../chyme/useChymeBackChannel';
 import { useChymeRoomState } from '../../chyme/useChymeRoomState';
@@ -90,6 +91,7 @@ function SeRoomScreen({ t, scope, user, visible }: { t: SeThemeTokens; scope: Ch
               user={user}
               backChannel={backChannel.controller}
               onBackChannelEnabled={scope === 'main' ? backChannel.onEnabled : undefined}
+              embedded
             />
           </ChymeWordsProvider>
         </View>
@@ -102,12 +104,14 @@ function SeRoomScreen({ t, scope, user, visible }: { t: SeThemeTokens; scope: Ch
 // Every room the member has open, mounted; only the one being looked at is visible.
 export function SeRoomHosts({ t, user }: { t: SeThemeTokens; user: CurrentUser }) {
   const { opened, shown } = useSeRooms();
+  // Chyme's parts (the readings loop, the stage, the call) drawn in the member's 3.1 colors.
+  const tokens = useMemo(() => seChymeTokens(t), [t]);
   return (
-    <>
+    <ChymeTokensContext.Provider value={tokens}>
       {opened.map((scope) => (
         <SeRoomScreen key={scope} t={t} scope={scope} user={user} visible={shown === scope} />
       ))}
-    </>
+    </ChymeTokensContext.Provider>
   );
 }
 

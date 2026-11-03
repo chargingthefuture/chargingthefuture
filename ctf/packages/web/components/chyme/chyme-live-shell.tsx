@@ -1,11 +1,11 @@
 'use client';
 
+import { useChymeTokens } from './chyme-tokens-context';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Radio } from 'lucide-react';
-import { useTheme } from '@/hooks/useTheme';
 import { WeaversBadge } from '@/components/contributor-access/weavers-badge';
-import { getChymeTokens, type CurrentUser, requestJson } from './chyme-shared';
+import { type CurrentUser, requestJson } from './chyme-shared';
 import { ChymeHeader } from './chyme-header';
 import { ChymeSidebar } from './chyme-sidebar';
 import { ChymeRoomView } from './chyme-room-view';
@@ -16,7 +16,7 @@ import type { ChymeJoinResponse, ChymeRoomResponse } from 'lib/chyme/types';
 
 export type ChymeRoomScope = 'main' | 'contributors';
 
-type ChymeTokens = ReturnType<typeof getChymeTokens>;
+type ChymeTokens = ReturnType<typeof useChymeTokens>;
 
 // Everything the room needs from the shell controller: the room state, the derived
 // `locked` and `t` values, and the async handlers. Hoisted into a hook so the component itself stays
@@ -36,8 +36,7 @@ export function useChymeRoomSession(roomScope: ChymeRoomScope) {
   // is not open yet) gets a 404 from the room read, and we show the "how it's earned" explainer
   // instead — the same no-shaming pattern the gated Commons chat uses.
   const [locked, setLocked] = useState(false);
-  const { theme } = useTheme();
-  const t = getChymeTokens(theme);
+  const t = useChymeTokens();
 
   // Append the room scope to a Chyme API path so every read/write acts on the right room. The main
   // room adds nothing; the private room adds `room=contributors`.
@@ -235,6 +234,7 @@ type ChymeShellContentProps = {
   onLeave: () => void;
   roomScope: ChymeRoomScope;
   onConnectionChange: (state: ChymeConnectionState) => void;
+  embedded: boolean;
 };
 
 // The main content column: error banner, the empty "Join a Room" prompt, or the live room view.
@@ -244,7 +244,7 @@ function ChymeShellContent(props: ChymeShellContentProps) {
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
       {error && <ChymeErrorBanner error={error} />}
 
-      {!room && !loading && <ChymeJoinRoomPrompt t={t} />}
+      {!room && !loading && !props.embedded && <ChymeJoinRoomPrompt t={t} />}
 
       {room && (
         <ChymeRoomView
@@ -255,6 +255,7 @@ function ChymeShellContent(props: ChymeShellContentProps) {
           onLeave={props.onLeave}
           roomScope={props.roomScope}
           onConnectionChange={props.onConnectionChange}
+          embedded={props.embedded}
         />
       )}
     </div>
@@ -268,9 +269,18 @@ export function ChymeLiveShell({ currentUser, roomScope = 'main' }: { currentUse
   return <ChymeLiveShellView session={session} currentUser={currentUser} roomScope={roomScope} />;
 }
 
+type ChymeLiveShellViewProps = {
+  session: ChymeRoomSession;
+  currentUser: CurrentUser;
+  roomScope: ChymeRoomScope;
+  // Inside the 3.1 room screen, which has its own header, room count and readings loop: Chyme's
+  // header, its empty-room prompt and its readings are left out so nothing shows twice.
+  embedded?: boolean;
+};
+
 // The room as drawn from a session. 3.0's Chyme page owns its session; the 3.1 frame holds the
 // session itself so the call keeps running while the member moves between tabs.
-export function ChymeLiveShellView({ session, currentUser, roomScope }: { session: ChymeRoomSession; currentUser: CurrentUser; roomScope: ChymeRoomScope }) {
+export function ChymeLiveShellView({ session, currentUser, roomScope, embedded = false }: ChymeLiveShellViewProps) {
   const {
     room,
     loading,
@@ -292,13 +302,15 @@ export function ChymeLiveShellView({ session, currentUser, roomScope }: { sessio
   }
 
   return (
-    <div style={{ minHeight: '100dvh', width: '100%', background: t.BG, fontFamily: "'Figtree Variable', system-ui, sans-serif", color: t.TEXT, display: 'flex', flexDirection: 'column' }}>
-      <ChymeHeader
-        participantCount={room?.participants.length ?? 0}
-        isLive={Boolean(room)}
-        onRefresh={() => void refreshRoom()}
-        refreshing={refreshing}
-      />
+    <div style={{ minHeight: embedded ? undefined : '100dvh', width: '100%', background: t.BG, fontFamily: "'Figtree Variable', system-ui, sans-serif", color: t.TEXT, display: 'flex', flexDirection: 'column' }}>
+      {embedded ? null : (
+        <ChymeHeader
+          participantCount={room?.participants.length ?? 0}
+          isLive={Boolean(room)}
+          onRefresh={() => void refreshRoom()}
+          refreshing={refreshing}
+        />
+      )}
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         <ChymeSidebar
@@ -321,6 +333,7 @@ export function ChymeLiveShellView({ session, currentUser, roomScope }: { sessio
           onLeave={() => void handleLeave()}
           roomScope={roomScope}
           onConnectionChange={setConnection}
+          embedded={embedded}
         />
       </div>
     </div>

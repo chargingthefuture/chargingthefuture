@@ -1,15 +1,15 @@
 'use client';
 
+import { useChymeTokens } from './chyme-tokens-context';
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { Lock, Radio, Smartphone } from 'lucide-react';
 import { BackChevronButton } from '@/lib/nav/back-history';
-import { useTheme } from '@/hooks/useTheme';
 import { ChymeLiveShell, type ChymeRoomScope } from '@/components/chyme/chyme-live-shell';
 import { ChymeUpcoming } from '@/components/chyme/chyme-upcoming';
 import { WeaversBadge } from '@/components/contributor-access/weavers-badge';
 import { PluginAdminButton } from '@/components/shared/plugin-admin-button';
 import { MobileTopActions } from '@/components/shared/mobile-top-actions';
-import { getChymeTokens, type ChymeTokens } from './chyme-shared';
+import { type ChymeTokens } from './chyme-shared';
 import { HOSTING_NOT_ENDORSEMENT_SHORT } from '@ctf/shared';
 
 type ChymeShellProps = {
@@ -83,8 +83,7 @@ function ChymeRoomCard({
 }
 
 export function ChymeShell({ currentUser, isAdmin }: ChymeShellProps) {
-  const { theme } = useTheme();
-  const t = getChymeTokens(theme);
+  const t = useChymeTokens();
   const isAndroid = useIsAndroid();
 
   // Which room the rail has selected. The private "Weavers of the Commons" room is switched to here;
