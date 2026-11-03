@@ -59,7 +59,6 @@ function EditBubble({ s, message, talk, onDone }: { s: CardSheetStyles; message:
         value={draft}
         maxLength={SE_CARD_MESSAGE_MAX}
         multiline
-        autoFocus
         onChangeText={setDraft}
       />
       <View style={s.meta}>

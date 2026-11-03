@@ -46,7 +46,7 @@ function EditBubble({ message, talk, onDone }: { message: SeCardMessage; talk: C
     <div className={`${styles.bubbleRow} ${styles.bubbleRowMine} ${styles.bubbleRowEditing}`}>
       <label className={styles.field}>
         <span className={styles.srOnly}>{SE_CARD_WORDS.editLabel}</span>
-        <textarea className={styles.editBox} value={draft} maxLength={SE_CARD_MESSAGE_MAX} autoFocus onChange={(event) => setDraft(event.target.value)} />
+        <textarea className={styles.editBox} value={draft} maxLength={SE_CARD_MESSAGE_MAX} onChange={(event) => setDraft(event.target.value)} />
       </label>
       <span className={styles.bubbleMeta}>
         <button type="button" className={styles.linkButton} onClick={onDone}>
