@@ -70,22 +70,9 @@ function DaysWonCard({ s, daysWon }: { s: Styles; daysWon: NonNullable<SeToday['
   );
 }
 
-// A visitor who is not signed in listens on the public room page instead of inside the frame.
-function GuestRoomLink({ s, go }: { s: Styles; go: (_href: string) => void }) {
-  return (
-    <View style={s.daysWon} accessibilityLabel="Main Room">
-      <Text style={s.daysWonLabel}>Main Room</Text>
-      <Text style={s.daysWonSmall}>Anyone can listen, no account needed.</Text>
-      <TouchableOpacity accessibilityRole="link" onPress={() => go('/apps/chyme')} style={s.primary}>
-        <Text style={s.primaryLabel}>Listen in</Text>
-      </TouchableOpacity>
-    </View>
-  );
-}
+type LiveProps = { t: SeThemeTokens; s: Styles; today: SeToday | null; go: (_href: string) => void };
 
-type LiveProps = { t: SeThemeTokens; s: Styles; today: SeToday | null; go: (_href: string) => void; guest: boolean };
-
-function LiveCards({ t, s, today, go, guest }: LiveProps) {
+function LiveCards({ t, s, today, go }: LiveProps) {
   const broadcast = today?.broadcast;
   return (
     <>
@@ -102,7 +89,7 @@ function LiveCards({ t, s, today, go, guest }: LiveProps) {
           </TouchableOpacity>
         </View>
       ) : null}
-      {guest ? (today ? <GuestRoomLink s={s} go={go} /> : null) : today?.rooms.map((room) => <RoomCard key={room.key} t={t} room={room} />)}
+      {today?.rooms.map((room) => <RoomCard key={room.key} t={t} room={room} />)}
     </>
   );
 }
@@ -145,8 +132,8 @@ function Notices({ s, error, missingLine, loading, onRetry }: { s: Styles; error
   );
 }
 
-// `accountId` null: a visitor who is not signed in reads the public Today (no names, no mute).
-export function TodayScreen({ t, accountId, onOpen }: { t: SeThemeTokens; accountId: string | null; onOpen: (_key: FeatureKey) => void }) {
+// A visitor who is not signed in gets GuestToday (GuestToday.tsx) instead.
+export function TodayScreen({ t, accountId, onOpen }: { t: SeThemeTokens; accountId: string; onOpen: (_key: FeatureKey) => void }) {
   const s = makeStyles(t);
   const { today, loading, error, marks, mark, toggle, reload } = useToday(accountId);
   const [filter, setFilter] = useState<SeTodayFilter>('all');
@@ -173,7 +160,7 @@ export function TodayScreen({ t, accountId, onOpen }: { t: SeThemeTokens; accoun
 
   return (
     <>
-      <LiveCards t={t} s={s} today={today} go={go} guest={accountId === null} />
+      <LiveCards t={t} s={s} today={today} go={go} />
       <View style={s.listHead}>
         <Text accessibilityRole="header" style={s.listTitle}>
           Today&apos;s cards
@@ -181,7 +168,7 @@ export function TodayScreen({ t, accountId, onOpen }: { t: SeThemeTokens; accoun
         {view.doneLine ? <Text style={s.meta}>{view.doneLine}</Text> : null}
       </View>
       <FilterChips s={s} filter={filter} onChange={setFilter} />
-      {accountId && filter === 'matches' ? <MatchingToggle t={t} refreshKey={today?.generatedAtIso} onChanged={() => void reload()} /> : null}
+      {filter === 'matches' ? <MatchingToggle t={t} refreshKey={today?.generatedAtIso} onChanged={() => void reload()} /> : null}
       <Notices s={s} error={error} missingLine={view.missingLine} loading={!today && loading} onRetry={() => void reload()} />
       {muteNote ? <Text style={s.meta}>{muteNote}</Text> : null}
       {today ? (
@@ -195,7 +182,7 @@ export function TodayScreen({ t, accountId, onOpen }: { t: SeThemeTokens; accoun
               read={marks.read.includes(card.id)}
               onToggleDone={() => toggle('read', card.id)}
               onHide={() => mark('hidden', card.id)}
-              onMute={accountId && card.author ? () => void mute(card) : undefined}
+              onMute={card.author ? () => void mute(card) : undefined}
               onOpenLink={go}
               onChanged={() => void reload()}
             />
