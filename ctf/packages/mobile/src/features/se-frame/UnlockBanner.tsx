@@ -17,8 +17,6 @@ type Styles = ReturnType<typeof makeStyles>;
 export function UnlockBanner({ t, onOpenUnlock }: { t: SeThemeTokens; onOpenUnlock: () => void }) {
   const [standing, setStanding] = useState<SeUnlockStanding | null>(null);
   const [closed, setClosed] = useState(false);
-  const paused = Boolean(standing?.paused);
-  const s = useMemo(() => makeStyles(t, paused), [t, paused]);
 
   const load = useCallback(() => {
     authedFetchJson<{ standing?: SeUnlockStanding }>('/api/unlock/standing')
@@ -31,14 +29,22 @@ export function UnlockBanner({ t, onOpenUnlock }: { t: SeThemeTokens; onOpenUnlo
   useEffect(load, [load]);
 
   if (!standing || standing.approved || closed) return null;
+  return <Banner t={t} standing={standing} onOpenUnlock={onOpenUnlock} onClose={() => setClosed(true)} onSent={load} />;
+}
+
+type BannerProps = { t: SeThemeTokens; standing: SeUnlockStanding; onOpenUnlock: () => void; onClose: () => void; onSent: () => void };
+
+function Banner({ t, standing, onOpenUnlock, onClose, onSent }: BannerProps) {
+  const paused = standing.paused;
+  const s = useMemo(() => makeStyles(t, paused), [t, paused]);
   return (
     <View style={s.banner} accessibilityLabel={paused ? 'Paused until Unlock' : 'Finish Unlock'}>
-      <TopRow s={s} standing={standing} onClose={() => setClosed(true)} />
+      <TopRow s={s} standing={standing} onClose={onClose} />
       <Text style={s.title}>{standing.title}</Text>
       <Text style={s.text}>{standing.text}</Text>
-      {standing.form ? <AddressForm s={s} t={t} label={paused ? W.pausedLabel : W.label} onSent={load} /> : null}
-      {standing.form && !paused ? <OtherRoutes s={s} onOpenUnlock={onOpenUnlock} onSent={load} /> : null}
-      {paused ? <HelpButton s={s} label={W.askArchitect} onSent={load} /> : null}
+      {standing.form ? <AddressForm s={s} t={t} label={paused ? W.pausedLabel : W.label} onSent={onSent} /> : null}
+      {standing.form && !paused ? <OtherRoutes s={s} onOpenUnlock={onOpenUnlock} onSent={onSent} /> : null}
+      {paused ? <HelpButton s={s} label={W.askArchitect} onSent={onSent} /> : null}
     </View>
   );
 }

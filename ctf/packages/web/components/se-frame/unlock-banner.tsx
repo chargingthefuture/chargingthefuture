@@ -25,15 +25,19 @@ export function UnlockBanner() {
   useEffect(load, [load]);
 
   if (!standing || standing.approved || closed) return null;
+  return <Banner standing={standing} onClose={() => setClosed(true)} onSent={load} />;
+}
+
+function Banner({ standing, onClose, onSent }: { standing: SeUnlockStanding; onClose: () => void; onSent: () => void }) {
   const paused = standing.paused;
   return (
     <section aria-label={paused ? 'Paused until Unlock' : 'Finish Unlock'} className={paused ? styles.paused : styles.banner}>
-      <TopRow standing={standing} onClose={() => setClosed(true)} />
+      <TopRow standing={standing} onClose={onClose} />
       <p className={styles.title}>{standing.title}</p>
       <p className={styles.text}>{standing.text}</p>
-      {standing.form ? <AddressForm label={paused ? W.pausedLabel : W.label} onSent={load} /> : null}
-      {standing.form && !paused ? <OtherRoutes onSent={load} /> : null}
-      {paused ? <HelpButton label={W.askArchitect} className={styles.askLink} onSent={load} /> : null}
+      {standing.form ? <AddressForm label={paused ? W.pausedLabel : W.label} onSent={onSent} /> : null}
+      {standing.form && !paused ? <OtherRoutes onSent={onSent} /> : null}
+      {paused ? <HelpButton label={W.askArchitect} className={styles.askLink} onSent={onSent} /> : null}
     </section>
   );
 }
