@@ -212,3 +212,138 @@ contracts:
     purpose: twenty_one_questions_conversation
     retentionClass: until_account_deletion
     idempotency: false
+  - pluginId: today
+    command: today.cards.conversation.read
+    version: 1.0.0
+    description: "Read a Today card's sheet: who answered and how, the public messages, and the viewer's own Just us two conversations on the card with where each stands. Leaves out anybody blocked either way and anybody the viewer muted. (GET /api/today/cards/[cardId])."
+    inputSchema:
+      cardId:
+        type: string
+    outputSchema:
+      conversation:
+        type: object
+    dataAccess:
+      - card_answers
+      - card_messages
+      - card_pair_requests
+      - member_blocks
+      - member_mutes
+    purpose: card_conversation
+    retentionClass: until_account_deletion
+    idempotency: true
+  - pluginId: today
+    command: today.cards.answer
+    version: 1.0.0
+    description: "Answer a card with help, know-someone, want or helped-me; one per member per kind per card, answering again changes nothing; 30 a minute. (POST /api/today/cards/[cardId]/answers)."
+    inputSchema:
+      cardId:
+        type: string
+      kind:
+        type: string
+    outputSchema:
+      saved:
+        type: boolean
+      conversation:
+        type: object
+    dataAccess:
+      - card_answers
+      - card_messages
+      - card_pair_requests
+      - account_restrictions
+      - member_blocks
+      - member_mutes
+    purpose: card_conversation
+    retentionClass: until_account_deletion
+    idempotency: true
+  - pluginId: today
+    command: today.cards.message.send
+    version: 1.0.0
+    description: "Write in a card, 1 to 1000 characters, 60 an hour. Public, or private into an open Just us two conversation with partnerId, whose partner is told in Activity. Refused when the writer is restricted from contact or, for Just us two, either has blocked the other. (POST /api/today/cards/[cardId]/messages)."
+    inputSchema:
+      cardId:
+        type: string
+      body:
+        type: string
+      private:
+        type: boolean
+      partnerId:
+        type: string
+    outputSchema:
+      conversation:
+        type: object
+    dataAccess:
+      - card_messages
+      - card_pair_requests
+      - card_answers
+      - account_restrictions
+      - member_blocks
+      - member_mutes
+      - notifications
+    purpose: card_conversation
+    retentionClass: until_account_deletion
+    idempotency: false
+  - pluginId: today
+    command: today.cards.pair.ask
+    version: 1.0.0
+    description: "Ask a member who took part on the card to talk just you two; they are told in Activity, and it opens once they agree. Asking a member who already asked agrees to their request. 20 an hour. (POST /api/today/cards/[cardId]/pair)."
+    inputSchema:
+      cardId:
+        type: string
+      partnerId:
+        type: string
+    outputSchema:
+      conversation:
+        type: object
+    dataAccess:
+      - card_pair_requests
+      - card_answers
+      - card_messages
+      - account_restrictions
+      - member_blocks
+      - member_mutes
+      - notifications
+    purpose: card_conversation
+    retentionClass: until_account_deletion
+    idempotency: false
+  - pluginId: today
+    command: today.cards.pair.agree
+    version: 1.0.0
+    description: "Agree to a Just us two request made to the viewer on this card. 30 an hour. (POST /api/today/cards/[cardId]/pair/agree)."
+    inputSchema:
+      cardId:
+        type: string
+      partnerId:
+        type: string
+    outputSchema:
+      conversation:
+        type: object
+    dataAccess:
+      - card_pair_requests
+      - card_answers
+      - card_messages
+      - account_restrictions
+      - member_blocks
+      - member_mutes
+    purpose: card_conversation
+    retentionClass: until_account_deletion
+    idempotency: false
+  - pluginId: today
+    command: today.cards.report
+    version: 1.0.0
+    description: "Report a message the viewer can read in a card, or the card's author, into member_safety_reports with the card id and, for a message, its text cut to 500 characters. Never a self-report. 20 an hour. (POST /api/today/cards/[cardId]/report)."
+    inputSchema:
+      cardId:
+        type: string
+      messageId:
+        type: string
+      authorId:
+        type: string
+    outputSchema:
+      ok:
+        type: boolean
+    dataAccess:
+      - card_messages
+      - member_safety_reports
+    purpose: card_conversation
+    retentionClass: until_account_deletion
+    idempotency: false

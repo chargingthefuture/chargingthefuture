@@ -138,3 +138,128 @@ auditEvents:
     result:
       status: success_or_failure
       errorCategory: none_or_error_class
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: today
+    command: today.cards.conversation.read
+    commandVersion: 1.0.0
+    purpose: card_conversation
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - card_answers
+      - card_messages
+      - card_pair_requests
+    targetContext:
+      workspaceId: workspace_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: today
+    command: today.cards.answer
+    commandVersion: 1.0.0
+    purpose: card_conversation
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - card_answers
+      - card_messages
+      - card_pair_requests
+    targetContext:
+      workspaceId: workspace_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: today
+    command: today.cards.message.send
+    commandVersion: 1.0.0
+    purpose: card_conversation
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - card_messages
+      - card_pair_requests
+      - card_answers
+    targetContext:
+      workspaceId: workspace_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: today
+    command: today.cards.pair.ask
+    commandVersion: 1.0.0
+    purpose: card_conversation
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - card_pair_requests
+      - card_answers
+      - card_messages
+    targetContext:
+      workspaceId: workspace_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: today
+    command: today.cards.pair.agree
+    commandVersion: 1.0.0
+    purpose: card_conversation
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - card_pair_requests
+      - card_answers
+      - card_messages
+    targetContext:
+      workspaceId: workspace_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: today
+    command: today.cards.report
+    commandVersion: 1.0.0
+    purpose: card_conversation
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+    dataClassesAccessed:
+      - card_messages
+      - member_safety_reports
+    targetContext:
+      workspaceId: workspace_identifier
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class

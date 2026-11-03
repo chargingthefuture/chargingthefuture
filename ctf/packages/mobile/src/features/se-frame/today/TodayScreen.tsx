@@ -155,6 +155,7 @@ export function TodayScreen({ t, accountId, onOpen }: { t: SeThemeTokens; accoun
               key={card.id}
               t={t}
               card={card}
+              viewerId={accountId}
               read={marks.read.includes(card.id)}
               onToggleDone={() => toggle('read', card.id)}
               onHide={() => mark('hidden', card.id)}
