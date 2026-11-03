@@ -28,7 +28,7 @@ import styles from './today.module.css';
 // Today for a visitor who is not signed in, built to the approved "Today, signed out" board: Days
 // won with what Skills Economy is and Sign up, the Main Room with Listen as a guest in place (or, on
 // a quiet day, the readings and the next room), the day's cards read only, asks and offers from "A
-// member" with Sign up to answer, and People locked until a member is verified.
+// member" with Sign up to answer, and People locked until a member is reviewed.
 
 function Hero({ today, signUpUrl }: { today: SeToday | null; signUpUrl: string }) {
   const big = today?.daysWon ? seDaysWonLines(today.daysWon).big : null;

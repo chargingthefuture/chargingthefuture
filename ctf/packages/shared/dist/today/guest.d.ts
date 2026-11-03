@@ -17,7 +17,7 @@ export declare const SE_GUEST_WORDS: {
     readonly member: "A member";
     readonly answer: "Sign up to answer";
     readonly peopleTitle: "People";
-    readonly peopleLocked: "Who is here and what they can do opens once a member is verified.";
+    readonly peopleLocked: "Who is here and what they can do opens once a member is reviewed.";
     readonly bar: "Free. Use one part, ignore the rest.";
     readonly loading: "Loading Today…";
     readonly failed: "Could not load Today.";
