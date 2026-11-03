@@ -6,7 +6,7 @@ export declare const SE_DEFAULT_THEME: {
     color: SeThemeColor;
     mode: SeThemeMode;
 };
-export declare const SE_SIGNED_OUT_THEME: {
+export declare function seSignedOutTheme(prefersDark: boolean): {
     color: SeThemeColor;
     mode: SeThemeMode;
 };

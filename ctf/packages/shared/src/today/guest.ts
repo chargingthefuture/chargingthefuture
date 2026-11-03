@@ -8,7 +8,7 @@ export const SE_GUEST_WORDS = {
   brand: 'Skills Economy',
   signIn: 'Sign in',
   signUp: 'Sign up',
-  hero: "Skills Economy is where the Avenhood meets: survivors giving half an hour a day to each other's goals. Free. Exit their economy, exit the psyop.",
+  hero: "Skills Economy is where the Avenhood meets: survivors giving half an hour a day to each other's goals. That is less time on Specterati schemes, and more time for all of us reaching our own definition of happiness. Free. Exit their economy, exit the psyop.",
   live: 'LIVE',
   listen: 'Listen as a guest',
   listenNote: 'Anyone can listen, no account needed. Sign in to speak.',

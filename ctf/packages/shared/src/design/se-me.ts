@@ -40,6 +40,11 @@ export const SE_ME_WORDS = {
   survey: 'Quora account deletion survey',
   wallpapers: 'Wallpapers',
   androidApp: 'The Android app',
+  signOut: 'Sign out',
+  signingOut: 'Signing out…',
+  signOutConfirm: 'Sign out of this device?',
+  signOutConfirmText: 'You can sign back in at any time.',
+  signOutFailed: 'Signing out failed. Reload and try again.',
   architect: 'System Architect',
   architectText: 'Admin screens.',
 };

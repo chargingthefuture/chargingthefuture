@@ -398,8 +398,13 @@ inside the app.
 **Steps:**
 1. On a phone that has never opened the app, open the app signed out.
 2. Sign in, open Me and pick Coral. Sign out again.
-**Expected:** Step 1 shows signed-out Today in burgundy, dark. Step 2 keeps Coral while signed in;
-signed out, Today and the room page are burgundy again. A member who never picked a color sees
+3. Set the phone to light, then to dark, while signed out.
+**Expected:** Step 1 shows signed-out Today in burgundy, light or dark as the phone is set, with the
+hero line ending "That is less time on Specterati schemes, and more time for all of us reaching our
+own definition of happiness. Free. Exit their economy, exit the psyop." Step 2 keeps Coral while
+signed in; signing out uses **Sign out** at the end of Me's Settings, which asks "Sign out of this
+device?" first and lands on signed-out Today, burgundy again. Step 3 switches signed-out Today and
+the room page between burgundy light and burgundy dark. A member who never picked a color sees
 burgundy, dark, once signed in.
 **Result:** web ☐ android ☐ — notes:
 
