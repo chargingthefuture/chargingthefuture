@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SE_SIGNED_OUT_THEME, SE_THEME_COLORS, SE_THEME_MODES, SE_THEMES, seTheme, type SeCardKind } from '@ctf/shared';
+import { seSignedOutTheme, SE_THEME_COLORS, SE_THEME_MODES, SE_THEMES, seTheme, type SeCardKind } from '@ctf/shared';
 
 // WCAG contrast ratio between two #rrggbb colors.
 function luminance(hex: string): number {
@@ -45,6 +45,7 @@ describe('Skills Economy 3.1.0 themes', () => {
 
   it('defaults to burgundy, dark, and signed out always uses the default', () => {
     expect(seTheme()).toBe(SE_THEMES.burgundy.dark);
-    expect(SE_SIGNED_OUT_THEME).toEqual({ color: 'burgundy', mode: 'dark' });
+    expect(seSignedOutTheme(false)).toEqual({ color: 'burgundy', mode: 'light' });
+    expect(seSignedOutTheme(true)).toEqual({ color: 'burgundy', mode: 'dark' });
   });
 });

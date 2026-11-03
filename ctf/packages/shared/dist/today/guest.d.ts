@@ -3,7 +3,7 @@ export declare const SE_GUEST_WORDS: {
     readonly brand: "Skills Economy";
     readonly signIn: "Sign in";
     readonly signUp: "Sign up";
-    readonly hero: "Skills Economy is where the Avenhood meets: survivors giving half an hour a day to each other's goals. Free. Exit their economy, exit the psyop.";
+    readonly hero: "Skills Economy is where the Avenhood meets: survivors giving half an hour a day to each other's goals. That is less time on Specterati schemes, and more time for all of us reaching our own definition of happiness. Free. Exit their economy, exit the psyop.";
     readonly live: "LIVE";
     readonly listen: "Listen as a guest";
     readonly listenNote: "Anyone can listen, no account needed. Sign in to speak.";

@@ -1,8 +1,9 @@
 'use client';
 
+import { useSignedOutTheme } from '../use-signed-out-theme';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
-import { SE_SIGNED_OUT_THEME,
+import {
   SE_DAYS_WON_TITLE,
   SE_GUEST_WORDS as W,
   seDaysWonLines,
@@ -51,7 +52,7 @@ function Listening({ participantCount, guestCount, listenAllowed, listenUnavaila
   listenUnavailable: string | null;
   onGone: () => void;
 }) {
-  const theme = SE_SIGNED_OUT_THEME;
+  const theme = useSignedOutTheme();
   const tokens = useMemo(() => seChymeTokens(seTheme(theme.color, theme.mode)), [theme.color, theme.mode]);
   return (
     <ChymeTokensContext.Provider value={tokens}>
@@ -88,7 +89,7 @@ function LiveRoom({ talk, room, onGone }: { talk: SeTodayTalk | null; room: Extr
 }
 
 function QuietRoom({ talk, onLive }: { talk: SeTodayTalk | null; onLive: () => void }) {
-  const theme = SE_SIGNED_OUT_THEME;
+  const theme = useSignedOutTheme();
   const tokens = useMemo(() => seChymeTokens(seTheme(theme.color, theme.mode)), [theme.color, theme.mode]);
   return (
     <section aria-label="Rooms" className={styles.roomCard}>

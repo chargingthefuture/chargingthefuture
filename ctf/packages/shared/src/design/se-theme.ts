@@ -8,8 +8,11 @@ export type SeThemeMode = 'dark' | 'light';
 export const SE_THEME_COLORS: readonly SeThemeColor[] = ['forest', 'burgundy', 'coral', 'teal-purple'] as const;
 export const SE_THEME_MODES: readonly SeThemeMode[] = ['dark', 'light'] as const;
 export const SE_DEFAULT_THEME: { color: SeThemeColor; mode: SeThemeMode } = { color: 'burgundy', mode: 'dark' };
-// Signed out, every screen is drawn in the default; choosing a color is for signed-in members.
-export const SE_SIGNED_OUT_THEME: { color: SeThemeColor; mode: SeThemeMode } = SE_DEFAULT_THEME;
+// Signed out, every screen is drawn in the default color, light or dark as the device is set;
+// choosing a color is for signed-in members.
+export function seSignedOutTheme(prefersDark: boolean): { color: SeThemeColor; mode: SeThemeMode } {
+  return { color: SE_DEFAULT_THEME.color, mode: prefersDark ? 'dark' : 'light' };
+}
 
 export const SE_THEME_LABELS: Record<SeThemeColor, string> = {
   forest: 'Forest and gold',
