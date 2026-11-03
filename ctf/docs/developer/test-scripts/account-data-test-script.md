@@ -366,6 +366,8 @@ same lines. A failed read shows "Could not read the measures:" with the reason.
 1. Open Me and choose each color, first with Dark, then with Light.
 **Expected:** Every color shows its own color on the buttons, the selected chips and the + button in
 both modes: Coral is coral with dark text in light and dark alike, never near-black.
+Signed out, the "Skills Economy" name at the top of Today is easy to read in every color; in Coral
+light it is dark, not coral.
 ## AD-17a · The week strip and the room cards on Today
 
 **Role:** two approved members, one of them a Weavers of the Commons badge holder · **Precondition:**
