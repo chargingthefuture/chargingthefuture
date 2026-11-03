@@ -134,8 +134,10 @@ export function CardSheet({ card, viewerId, firstAnswer, onClose }: SheetProps &
     if (open || (await talk.ask(accountId))) setPartner(accountId);
   };
   return (
-    <div className={styles.backdrop} onClick={onClose}>
-      <section role="dialog" aria-modal="true" aria-label={`${card.label}: ${card.title}`} className={styles.sheet} onClick={(event) => event.stopPropagation()}>
+    <div className={styles.backdrop}>
+      {/* Tapping the dimmed Today behind the sheet closes it; the Close button and Escape do the same. */}
+      <button type="button" className={styles.scrim} aria-label={SE_CARD_WORDS.close} tabIndex={-1} onClick={onClose} />
+      <section role="dialog" aria-modal="true" aria-label={`${card.label}: ${card.title}`} className={styles.sheet}>
         <span className={styles.grip} aria-hidden="true" />
         <SheetHead card={card} talk={talk} viewerId={viewerId} onClose={onClose} closeRef={closeRef} />
         <div className={styles.text}>

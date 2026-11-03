@@ -10,6 +10,15 @@
   justify-content: center;
 }
 
+.scrim {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
 .sheet {
   position: absolute;
   top: 64px;
