@@ -22,7 +22,7 @@ export const SE_GUEST_WORDS = {
   member: 'A member',
   answer: 'Sign up to answer',
   peopleTitle: 'People',
-  peopleLocked: 'Who is here and what they can do opens once a member is verified.',
+  peopleLocked: 'Who is here and what they can do opens once a member is reviewed.',
   bar: 'Free. Use one part, ignore the rest.',
   loading: 'Loading Today…',
   failed: 'Could not load Today.',
