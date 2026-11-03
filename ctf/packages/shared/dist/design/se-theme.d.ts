@@ -6,6 +6,10 @@ export declare const SE_DEFAULT_THEME: {
     color: SeThemeColor;
     mode: SeThemeMode;
 };
+export declare const SE_SIGNED_OUT_THEME: {
+    color: SeThemeColor;
+    mode: SeThemeMode;
+};
 export declare const SE_THEME_LABELS: Record<SeThemeColor, string>;
 export type SeCardKind = 'ask' | 'offer' | 'story' | 'match' | 'mood' | 'numbers' | 'replay' | 'game';
 export type SeKindColors = Record<SeCardKind, string>;

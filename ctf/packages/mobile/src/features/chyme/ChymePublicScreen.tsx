@@ -9,8 +9,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LogOut, RefreshCw } from 'lucide-react-native';
-import { HOSTING_NOT_ENDORSEMENT_SHORT, SE_ROOM_MAIN_AUDIENCE, SE_ROOM_RULE, seTheme, type SeThemeTokens } from '@ctf/shared';
-import { useSeTheme } from '../se-frame/useSeTheme';
+import { SE_SIGNED_OUT_THEME, HOSTING_NOT_ENDORSEMENT_SHORT, SE_ROOM_MAIN_AUDIENCE, SE_ROOM_RULE, seTheme, type SeThemeTokens } from '@ctf/shared';
 import { SE_FONT } from '../se-frame/fonts';
 import { interFamily } from '../../components/ui';
 import { useAuth } from '../../auth/auth-context';
@@ -147,7 +146,7 @@ function usePublicRoom() {
 }
 
 export function ChymePublicScreen({ onBack }: { onBack: () => void }) {
-  const { theme } = useSeTheme();
+  const theme = SE_SIGNED_OUT_THEME;
   const se = seTheme(theme.color, theme.mode);
   const t = useMemo(() => seChymeTokens(se), [se]);
   const { signIn } = useAuth();

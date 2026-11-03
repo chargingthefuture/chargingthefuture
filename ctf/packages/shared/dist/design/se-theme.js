@@ -3,7 +3,9 @@
 // Plan: ctf/docs/developer/SOCIAL_REDESIGN_3_1_PLAN.md ("Look").
 export const SE_THEME_COLORS = ['forest', 'burgundy', 'coral', 'teal-purple'];
 export const SE_THEME_MODES = ['dark', 'light'];
-export const SE_DEFAULT_THEME = { color: 'forest', mode: 'dark' };
+export const SE_DEFAULT_THEME = { color: 'burgundy', mode: 'dark' };
+// Signed out, every screen is drawn in the default; choosing a color is for signed-in members.
+export const SE_SIGNED_OUT_THEME = SE_DEFAULT_THEME;
 export const SE_THEME_LABELS = {
     forest: 'Forest and gold',
     burgundy: 'Burgundy',
