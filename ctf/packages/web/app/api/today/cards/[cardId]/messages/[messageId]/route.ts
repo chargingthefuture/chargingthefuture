@@ -45,6 +45,12 @@ function answer(conversation: Awaited<ReturnType<typeof readConversation>>) {
   return NextResponse.json({ ok: true, conversation }, { headers: { 'cache-control': 'private, no-store' } });
 }
 
+// The new text, or null when it is empty or too long.
+function readBody(json: Record<string, unknown> | null): string | null {
+  const body = typeof json?.body === 'string' ? json.body.trim() : '';
+  return body.length === 0 || body.length > SE_CARD_MESSAGE_MAX ? null : body;
+}
+
 async function edit(cardId: string, messageId: string, userId: string, body: string): Promise<NextResponse | null> {
   const own = await findOwnMessagePartner(cardId, messageId, userId);
   if (!own.found) return cardsDenied('message_not_found', NOT_YOURS, 404);
@@ -64,9 +70,8 @@ export async function PATCH(request: Request, context: Context) {
   if (ids instanceof NextResponse) return ids;
   const limited = rateLimited(`today-cards:message-change:${userId}`, CHANGES_PER_HOUR, 3_600_000, 'Too many changes this hour. Try again later.');
   if (limited) return limited;
-  const json = await readJson(request);
-  const body = typeof json?.body === 'string' ? json.body.trim() : '';
-  if (body.length === 0 || body.length > SE_CARD_MESSAGE_MAX) return cardsDenied('invalid_message', `A message is 1 to ${SE_CARD_MESSAGE_MAX} characters.`, 400);
+  const body = readBody(await readJson(request));
+  if (!body) return cardsDenied('invalid_message', `A message is 1 to ${SE_CARD_MESSAGE_MAX} characters.`, 400);
   try {
     const refused = await edit(ids.cardId, ids.messageId, userId, body);
     if (refused) return refused;

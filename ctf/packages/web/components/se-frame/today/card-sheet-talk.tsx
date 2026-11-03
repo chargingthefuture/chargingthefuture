@@ -60,28 +60,42 @@ function EditBubble({ message, talk, onDone }: { message: SeCardMessage; talk: C
   );
 }
 
-function Bubble({ message, talk, onTalk, publicThread }: { message: SeCardMessage; talk: CardConversation; onTalk: (id: string) => void; publicThread: boolean }) {
+type BubbleProps = { message: SeCardMessage; talk: CardConversation; onTalk: (id: string) => void; publicThread: boolean };
+
+function OthersActions({ message, talk, onTalk, publicThread }: BubbleProps) {
   const [reported, setReported] = useState(false);
-  const [editing, setEditing] = useState(false);
   const report = async () => setReported(await talk.report({ messageId: message.id }));
+  if (talk.locked) return null;
+  return (
+    <>
+      {publicThread ? (
+        <button type="button" className={styles.linkButton} onClick={() => onTalk(message.authorId)}>
+          {SE_CARD_WORDS.askPair}
+        </button>
+      ) : null}
+      <button type="button" className={styles.linkButton} disabled={reported} onClick={() => void report()}>
+        {reported ? SE_CARD_WORDS.reported : SE_CARD_WORDS.reportMessage}
+      </button>
+    </>
+  );
+}
+
+function bubbleLine(message: SeCardMessage): string {
+  const who = message.mine ? SE_CARD_WORDS.you : message.handle;
+  const edited = message.editedAtIso ? ` · ${SE_CARD_WORDS.edited}` : '';
+  return `${who} · ${seAgo(message.createdAtIso)}${edited}`;
+}
+
+function Bubble(props: BubbleProps) {
+  const { message, talk } = props;
+  const [editing, setEditing] = useState(false);
   if (editing && message.mine) return <EditBubble message={message} talk={talk} onDone={() => setEditing(false)} />;
   return (
     <div className={message.mine ? `${styles.bubbleRow} ${styles.bubbleRowMine}` : styles.bubbleRow}>
       <p className={message.mine ? `${styles.bubble} ${styles.bubbleMine}` : styles.bubble}>{message.body}</p>
       <span className={styles.bubbleMeta}>
-        {message.mine ? SE_CARD_WORDS.you : message.handle} · {seAgo(message.createdAtIso)}
-        {message.editedAtIso ? ` · ${SE_CARD_WORDS.edited}` : ''}
-        {message.mine ? <OwnActions message={message} talk={talk} onEdit={() => setEditing(true)} /> : null}
-        {!message.mine && publicThread && !talk.locked ? (
-          <button type="button" className={styles.linkButton} onClick={() => onTalk(message.authorId)}>
-            {SE_CARD_WORDS.askPair}
-          </button>
-        ) : null}
-        {!message.mine && !talk.locked ? (
-          <button type="button" className={styles.linkButton} disabled={reported} onClick={() => void report()}>
-            {reported ? SE_CARD_WORDS.reported : SE_CARD_WORDS.reportMessage}
-          </button>
-        ) : null}
+        {bubbleLine(message)}
+        {message.mine ? <OwnActions message={message} talk={talk} onEdit={() => setEditing(true)} /> : <OthersActions {...props} />}
       </span>
     </div>
   );

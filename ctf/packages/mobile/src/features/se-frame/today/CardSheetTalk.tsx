@@ -70,10 +70,31 @@ function EditBubble({ s, message, talk, onDone }: { s: CardSheetStyles; message:
   );
 }
 
-function Bubble({ s, message, talk, onTalk, publicThread }: BubbleProps) {
+function OthersActions({ s, message, talk, onTalk, publicThread }: BubbleProps) {
   const [reported, setReported] = useState(false);
+  if (talk.locked) return null;
+  return (
+    <>
+      {publicThread ? <LinkButton s={s} label={SE_CARD_WORDS.askPair} onPress={() => onTalk(message.authorId)} /> : null}
+      <LinkButton
+        s={s}
+        label={reported ? SE_CARD_WORDS.reported : SE_CARD_WORDS.reportMessage}
+        disabled={reported}
+        onPress={() => void talk.report({ messageId: message.id }).then(setReported)}
+      />
+    </>
+  );
+}
+
+function bubbleLine(message: SeCardMessage): string {
+  const who = message.mine ? SE_CARD_WORDS.you : message.handle;
+  const edited = message.editedAtIso ? ` · ${SE_CARD_WORDS.edited}` : '';
+  return `${who} · ${seAgo(message.createdAtIso)}${edited}`;
+}
+
+function Bubble(props: BubbleProps) {
+  const { s, message, talk } = props;
   const [editing, setEditing] = useState(false);
-  const others = !message.mine && !talk.locked;
   if (editing && message.mine) return <EditBubble s={s} message={message} talk={talk} onDone={() => setEditing(false)} />;
   return (
     <View style={[s.bubbleRow, message.mine ? s.bubbleRowMine : null]}>
@@ -81,20 +102,8 @@ function Bubble({ s, message, talk, onTalk, publicThread }: BubbleProps) {
         <Text style={[s.bubbleText, message.mine ? s.bubbleTextMine : null]}>{message.body}</Text>
       </View>
       <View style={s.meta}>
-        <Text style={s.metaText}>
-          {message.mine ? SE_CARD_WORDS.you : message.handle} · {seAgo(message.createdAtIso)}
-          {message.editedAtIso ? ` · ${SE_CARD_WORDS.edited}` : ''}
-        </Text>
-        {message.mine ? <OwnActions s={s} message={message} talk={talk} onEdit={() => setEditing(true)} /> : null}
-        {others && publicThread ? <LinkButton s={s} label={SE_CARD_WORDS.askPair} onPress={() => onTalk(message.authorId)} /> : null}
-        {others ? (
-          <LinkButton
-            s={s}
-            label={reported ? SE_CARD_WORDS.reported : SE_CARD_WORDS.reportMessage}
-            disabled={reported}
-            onPress={() => void talk.report({ messageId: message.id }).then(setReported)}
-          />
-        ) : null}
+        <Text style={s.metaText}>{bubbleLine(message)}</Text>
+        {message.mine ? <OwnActions s={s} message={message} talk={talk} onEdit={() => setEditing(true)} /> : <OthersActions {...props} />}
       </View>
     </View>
   );
