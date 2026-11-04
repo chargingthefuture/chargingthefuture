@@ -55,6 +55,8 @@ export type SeCardMessage = {
   mine: boolean;
   body: string;
   createdAtIso: string;
+  // When the author last changed it; null when never changed.
+  editedAtIso: string | null;
 };
 
 // A Just us two conversation as the viewer sees it: they asked and wait, the other person asked
@@ -133,6 +135,13 @@ export const SE_CARD_WORDS = {
   report: 'Report',
   notForMe: 'Not for me',
   reportMessage: 'Report this message',
+  edit: 'Edit',
+  save: 'Save',
+  cancel: 'Cancel',
+  delete: 'Delete',
+  edited: 'Edited',
+  editLabel: 'Change your message',
+  deleteConfirm: 'Delete this message? It is removed for everyone and cannot be brought back.',
   reported: 'Reported. An admin reads every report.',
   close: 'Close',
   openIn: (source: string) => OPEN_WORDS[source] ?? (SOURCE_NAMES[source] ? `Open in ${SOURCE_NAMES[source]}` : 'Open where it lives'),

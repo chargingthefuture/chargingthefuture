@@ -51,6 +51,7 @@ function toMessage(row: MessageRow, viewerId: string, handles: Map<string, strin
     mine: row.authorId === viewerId,
     body: row.body,
     createdAtIso: row.createdAt.toISOString(),
+    editedAtIso: row.editedAt ? row.editedAt.toISOString() : null,
   };
 }
 

@@ -309,6 +309,24 @@
   cursor: pointer;
 }
 
+.bubbleRowEditing {
+  width: 78%;
+}
+
+.editBox {
+  width: 100%;
+  min-height: 88px;
+  border-radius: 18px 18px 6px 18px;
+  border: 1.5px solid var(--se-line);
+  background: var(--se-card);
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--se-ink);
+  resize: vertical;
+}
+
 .pill {
   align-self: center;
   font-size: 12px;

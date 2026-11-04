@@ -283,6 +283,51 @@ contracts:
     retentionClass: until_account_deletion
     idempotency: false
   - pluginId: today
+    command: today.cards.message.edit
+    version: 1.0.0
+    description: "The author changes their own message in a card, public or Just us two, 1 to 1000 characters; it is marked edited. 60 changes an hour, shared with delete. Refused when the author is restricted from contact or, for Just us two, either has blocked the other; 404 when the message is not the caller's own on that card. (PATCH /api/today/cards/[cardId]/messages/[messageId])."
+    inputSchema:
+      cardId:
+        type: string
+      messageId:
+        type: string
+      body:
+        type: string
+    outputSchema:
+      conversation:
+        type: object
+    dataAccess:
+      - card_messages
+      - card_pair_requests
+      - card_answers
+      - account_restrictions
+      - member_blocks
+      - member_mutes
+    purpose: card_conversation
+    retentionClass: until_account_deletion
+    idempotency: true
+  - pluginId: today
+    command: today.cards.message.delete
+    version: 1.0.0
+    description: "The author removes their own message from a card for everyone. Signed in is enough, so a member whose writing is paused can still take back what they wrote. 60 changes an hour, shared with edit; 404 when the message is not the caller's own on that card. (DELETE /api/today/cards/[cardId]/messages/[messageId])."
+    inputSchema:
+      cardId:
+        type: string
+      messageId:
+        type: string
+    outputSchema:
+      conversation:
+        type: object
+    dataAccess:
+      - card_messages
+      - card_pair_requests
+      - card_answers
+      - member_blocks
+      - member_mutes
+    purpose: card_conversation
+    retentionClass: until_account_deletion
+    idempotency: true
+  - pluginId: today
     command: today.cards.pair.ask
     version: 1.0.0
     description: "Ask a member who took part on the card to talk just you two; they are told in Activity, and it opens once they agree. Asking a member who already asked agrees to their request. 20 an hour. (POST /api/today/cards/[cardId]/pair)."
