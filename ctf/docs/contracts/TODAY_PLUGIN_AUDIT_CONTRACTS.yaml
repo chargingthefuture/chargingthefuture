@@ -149,9 +149,9 @@ auditEvents:
       status: allow_or_deny
       reason: policy_reason_code
     dataClassesAccessed:
-      - card_answers
-      - card_messages
-      - card_pair_requests
+      - commons_item_answers
+      - commons_item_messages
+      - commons_item_pair_requests
     targetContext:
       workspaceId: workspace_identifier
     requestId: request_identifier
@@ -170,9 +170,9 @@ auditEvents:
       status: allow_or_deny
       reason: policy_reason_code
     dataClassesAccessed:
-      - card_answers
-      - card_messages
-      - card_pair_requests
+      - commons_item_answers
+      - commons_item_messages
+      - commons_item_pair_requests
     targetContext:
       workspaceId: workspace_identifier
     requestId: request_identifier
@@ -191,9 +191,9 @@ auditEvents:
       status: allow_or_deny
       reason: policy_reason_code
     dataClassesAccessed:
-      - card_messages
-      - card_pair_requests
-      - card_answers
+      - commons_item_messages
+      - commons_item_pair_requests
+      - commons_item_answers
     targetContext:
       workspaceId: workspace_identifier
     requestId: request_identifier
@@ -212,9 +212,9 @@ auditEvents:
       status: allow_or_deny
       reason: policy_reason_code
     dataClassesAccessed:
-      - card_messages
-      - card_pair_requests
-      - card_answers
+      - commons_item_messages
+      - commons_item_pair_requests
+      - commons_item_answers
     targetContext:
       workspaceId: workspace_identifier
     requestId: request_identifier
@@ -233,9 +233,9 @@ auditEvents:
       status: allow_or_deny
       reason: policy_reason_code
     dataClassesAccessed:
-      - card_messages
-      - card_pair_requests
-      - card_answers
+      - commons_item_messages
+      - commons_item_pair_requests
+      - commons_item_answers
     targetContext:
       workspaceId: workspace_identifier
     requestId: request_identifier
@@ -254,9 +254,9 @@ auditEvents:
       status: allow_or_deny
       reason: policy_reason_code
     dataClassesAccessed:
-      - card_pair_requests
-      - card_answers
-      - card_messages
+      - commons_item_pair_requests
+      - commons_item_answers
+      - commons_item_messages
     targetContext:
       workspaceId: workspace_identifier
     requestId: request_identifier
@@ -275,9 +275,9 @@ auditEvents:
       status: allow_or_deny
       reason: policy_reason_code
     dataClassesAccessed:
-      - card_pair_requests
-      - card_answers
-      - card_messages
+      - commons_item_pair_requests
+      - commons_item_answers
+      - commons_item_messages
     targetContext:
       workspaceId: workspace_identifier
     requestId: request_identifier
@@ -296,7 +296,7 @@ auditEvents:
       status: allow_or_deny
       reason: policy_reason_code
     dataClassesAccessed:
-      - card_messages
+      - commons_item_messages
       - member_safety_reports
     targetContext:
       workspaceId: workspace_identifier

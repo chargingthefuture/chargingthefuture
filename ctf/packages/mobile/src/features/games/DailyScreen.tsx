@@ -5,7 +5,18 @@
 import React, { useState } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
-import { SE_DAILY_TITLES, seDailyPuzzle, seDailyShareText, seLadderPath, seTheme, type SeDailyPuzzle, type SeThemeTokens } from '@ctf/shared';
+import {
+  SE_DAILY_GATE_WORDS as G,
+  SE_DAILY_TITLES,
+  seDailyPuzzle,
+  seDailyShareText,
+  seLadderPath,
+  seTheme,
+  type SeDailyGate,
+  type SeDailyPuzzle,
+  type SeThemeTokens,
+} from '@ctf/shared';
+import { useAuth } from '../../auth/auth-context';
 import { useSeTheme } from '../se-frame/useSeTheme';
 import { LadderPlay, PicturePlay, WordCard, WordPlay } from './Plays';
 import { SceneSvg } from './SceneSvg';
@@ -69,14 +80,57 @@ function Done({ s, puzzle, result, onBack }: { s: GameStyles; puzzle: SeDailyPuz
   );
 }
 
+// Playing is for any signed-in member (owner decision, 2026-11-10), as on the web's /games: signed
+// out shows Sign in to play in the puzzle's place.
+function useDailyGate(): SeDailyGate {
+  const { isAuthenticated } = useAuth();
+  return isAuthenticated ? 'play' : 'sign-in';
+}
+
+function Gate({ s, gate, onSignIn }: { s: GameStyles; gate: Exclude<SeDailyGate, 'play'>; onSignIn: () => void }) {
+  const prompt = G[gate];
+  const press = gate === 'sign-in' ? onSignIn : undefined;
+  return (
+    <View style={s.result}>
+      <Text style={s.resultTitle}>{prompt.title}</Text>
+      <Text style={s.text}>{prompt.body}</Text>
+      {press && prompt.button ? (
+        <TouchableOpacity accessibilityRole="button" style={[s.primary, { alignSelf: 'flex-start' }]} onPress={press}>
+          <Text style={s.primaryText}>{prompt.button}</Text>
+        </TouchableOpacity>
+      ) : null}
+    </View>
+  );
+}
+
 export function DailyScreen({ onBack }: { onBack: () => void }) {
   const { theme } = useSeTheme();
+  const { signIn } = useAuth();
   const t = seTheme(theme.color, theme.mode);
   const s = makeGameStyles(t);
   const [day] = useState(() => new Date().toISOString().slice(0, 10));
   const puzzle = seDailyPuzzle(day);
   const { result, finish, notKept } = useDailyProgress(day);
+  const gate = useDailyGate();
   const words = SE_DAILY_TITLES[puzzle.kind];
+  if (gate !== 'play') {
+    return (
+      <ScrollView style={s.screen} contentContainerStyle={s.content}>
+        <TouchableOpacity accessibilityRole="link" style={s.linkButton} onPress={onBack}>
+          <Text style={s.link}>Back to Today</Text>
+        </TouchableOpacity>
+        <View>
+          <Text style={s.eyebrow}>Puzzle of the day · No. {puzzle.number}</Text>
+          <Text accessibilityRole="header" style={s.title}>
+            {words.title}
+          </Text>
+        </View>
+        <Text style={s.text}>{G.about}</Text>
+        <Text style={s.ask}>{words.ask}</Text>
+        <Gate s={s} gate={gate} onSignIn={() => void signIn()} />
+      </ScrollView>
+    );
+  }
   return (
     <ScrollView style={s.screen} contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
       <TouchableOpacity accessibilityRole="link" style={s.linkButton} onPress={onBack}>
