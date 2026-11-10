@@ -9,8 +9,8 @@ import { ensureMutationCsrf, requireFeedReadAccess } from '../../../feed/_lib';
 import { failureReason } from 'lib/errors/failure';
 
 // Replies on an official announcement. GET returns the thread (oldest-first) with each author
-// resolved to a display handle; POST adds the signed-in member's reply. Replies live in our own
-// database (announcement_replies), keyed on the announcement, and group under it as a thread.
+// resolved to a display handle; POST adds the signed-in member's reply. Replies are the Commons
+// conversation for the announcement in commons_item_messages, the same thread its Today card opens.
 
 type ReplyRequestBody = {
   body?: unknown;
@@ -116,7 +116,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
   try {
     const authorUsername = gate.auth.username ?? null;
-    const result = await replyToAnnouncement(gate.auth.userId, announcementId, text, authorUsername);
+    const result = await replyToAnnouncement(gate.auth.userId, announcementId, text);
     logFeedAudit({
       actorId: gate.auth.userId,
       pluginId: 'feed',

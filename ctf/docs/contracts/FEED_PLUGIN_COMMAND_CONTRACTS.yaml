@@ -519,7 +519,7 @@ contracts:
       reply:
         type: object
     dataAccess:
-      - announcement_replies
+      - commons_item_messages
       - announcements
     purpose: community_engagement
     retentionClass: transactional_long_lived
@@ -544,7 +544,7 @@ contracts:
       replies:
         type: array
     dataAccess:
-      - announcement_replies
+      - commons_item_messages
       - member_blocks
     purpose: community_engagement
     retentionClass: transactional_long_lived
@@ -578,7 +578,7 @@ contracts:
       editedAtIso:
         type: string
     dataAccess:
-      - announcement_replies
+      - commons_item_messages
     purpose: community_engagement
     retentionClass: transactional_long_lived
     idempotency: false
@@ -604,7 +604,7 @@ contracts:
       replyId:
         type: string
     dataAccess:
-      - announcement_replies
+      - commons_item_messages
     purpose: community_engagement
     retentionClass: transactional_long_lived
     idempotency: false
@@ -745,6 +745,9 @@ contracts:
       dataAccess — the query never read them, and the listing was never meant to include Q&A rows.
       v1.0.2 adds announcement_replies: replies on official announcements are member-authored Commons
       content too, and until then were the one such surface with no way to take anything down.
+      Since 2026-11-10 announcement replies live in commons_item_messages (plugin 'commons', item
+      'announcement:<id>'), and every public message under a Today card is listed too, as target
+      card-message. Just us two messages are never listed or moderated.
     inputSchema:
       hidden:
         type: boolean
@@ -760,7 +763,7 @@ contracts:
     dataAccess:
       - feed_community_posts
       - feed_community_replies
-      - announcement_replies
+      - commons_item_messages
     purpose: content_moderation
     retentionClass: transactional_long_lived
     idempotency: true
@@ -793,7 +796,7 @@ contracts:
     dataAccess:
       - feed_community_posts
       - feed_community_replies
-      - announcement_replies
+      - commons_item_messages
       - feed_questions
       - feed_answers
       - feed_admin_audit_trail
@@ -827,7 +830,7 @@ contracts:
     dataAccess:
       - feed_community_posts
       - feed_community_replies
-      - announcement_replies
+      - commons_item_messages
       - feed_questions
       - feed_answers
       - feed_admin_audit_trail

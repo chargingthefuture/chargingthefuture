@@ -15,7 +15,9 @@ export async function announcementStories(viewer: TodayViewer): Promise<SeTodayC
     .map((item) =>
       card({
         source: 'announcement',
-        sourceId: item.id,
+        // The announcement's own id, so the card's conversation is the announcement's reply thread
+        // (commons, `announcement:<id>`), the same one 3.0's announcement card shows.
+        sourceId: item.sourceAnnouncementId ?? item.id,
         kind: 'story',
         label: 'Story · from the System Architect',
         title: item.title || 'An announcement',

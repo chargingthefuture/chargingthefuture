@@ -1411,3 +1411,15 @@ Result: web ☐
 check found something harmful in it. Reword it and try again, or report a mistake through bug
 reporting." The ordinary one posts as usual. If Stream is down, both post.
 **Result:** web ☐ — notes:
+
+### FD-28 — An announcement's replies are one thread in 3.0 and 3.1, and card messages can be hidden (added 2026-11-10)
+**Role:** two members (A and B) and an admin · **Surfaces:** web
+**Steps:**
+1. As A on 3.0, reply to a published announcement in the Commons.
+2. As B on 3.1, open that announcement's card on Today.
+3. As B, write a public message in the card.
+4. As the admin, open Commons moderation and find B's message; hide it, then restore it.
+5. As A, open a Today card where A and B talk just you two, and look for that private message in the moderation queue.
+**Expected:** Step 2 shows A's reply in the card. Step 3's message shows under the announcement for A on 3.0. Step 4 lists B's message as "Card message" on the announcement; hiding removes it from both versions and restoring brings it back. Step 5: the private message is never in the queue.
+**Result:** web ☐ — notes:
+
