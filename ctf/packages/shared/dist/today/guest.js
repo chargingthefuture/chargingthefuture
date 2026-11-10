@@ -24,6 +24,9 @@ export const SE_GUEST_WORDS = {
     loading: 'Loading Today…',
     failed: 'Could not load Today.',
     tryAgain: 'Try again',
+    // The tag on a card or number read from sample data, and the one line under the cards that says why.
+    demo: 'Demo',
+    sampleNote: 'Some content is sample data to protect member privacy.',
 };
 // An ask or an offer is answered by a member; a visitor sees who as "A member" and a Sign up button.
 export function seGuestAnswersBySignUp(card) {
