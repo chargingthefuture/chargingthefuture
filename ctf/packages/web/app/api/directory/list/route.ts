@@ -5,6 +5,7 @@ import { listDirectoryForMember, parsePaginationParams } from 'lib/directory/rep
 import { logDirectoryAudit } from 'lib/directory/audit';
 import { getWeaversBadgeHolders } from 'lib/contributor-access/badge';
 import { reportError } from 'lib/observability/report';
+import { findUserIdsByUsername, resolveMemberIdentities } from 'lib/identity/resolve-usernames';
 
 function getFilters(url: string) {
   const params = new URL(url).searchParams;
@@ -26,7 +27,11 @@ export async function GET(request: Request) {
   const pagination = parsePaginationParams(request.url);
 
   try {
-    const payload = await listDirectoryForMember(pagination, getFilters(request.url));
+    const filters = getFilters(request.url);
+    // A member is found by username too (owner decision, 2026-11-10): Clerk is asked which accounts'
+    // usernames contain the term, and their claimed profiles join the matches.
+    const usernameUserIds = filters.q ? await findUserIdsByUsername(filters.q) : [];
+    const payload = await listDirectoryForMember(pagination, { ...filters, usernameUserIds });
 
     // "Weavers of the Commons" contributor badge — one guarded set-lookup for the entire page.
     // Only a claimed profile (bound to a real user) can carry the field; community-generated
@@ -35,11 +40,16 @@ export async function GET(request: Request) {
     const claimedIds = payload.items
       .map((item) => item.claimedByUserId)
       .filter((id): id is string => id != null);
-    const badgeHolders = await getWeaversBadgeHolders(claimedIds);
+    // Each claimed profile also carries its member's username, from Clerk, shown beside the name.
+    const [badgeHolders, identities] = await Promise.all([getWeaversBadgeHolders(claimedIds), resolveMemberIdentities(claimedIds)]);
     const items = payload.items.map((item) =>
       item.claimedByUserId == null
         ? item
-        : { ...item, hasWeaversBadge: badgeHolders.has(item.claimedByUserId) },
+        : {
+            ...item,
+            hasWeaversBadge: badgeHolders.has(item.claimedByUserId),
+            username: identities.get(item.claimedByUserId)?.username ?? null,
+          },
     );
 
     logDirectoryAudit({

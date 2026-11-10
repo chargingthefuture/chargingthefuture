@@ -4,6 +4,7 @@ import { useState } from "react";
 import { CheckCircle, Shield } from "lucide-react";
 import { ACCEPTED_APPS, describeMutualCreditFloor, type WalletData, idempotencyKey } from "./sc-shared";
 import { MarkRecurringControl } from "@/components/shared/mark-recurring-control";
+import { RecipientPicker } from "./sc-recipient-picker";
 import { useTheme } from '@/hooks/useTheme';
 import { getServiceCreditsTokens } from './sc-shared';
 
@@ -173,7 +174,7 @@ function SendForm({ wallet, onSent }: { wallet: WalletData | null; onSent: () =>
   return (
     <div style={{ padding: "16px", borderRadius: 14, marginBottom: 16, background: `${t.ACCENT}08`, border: `1px solid ${t.ACCENT}20` }}>
       <label htmlFor="sc-recipient" style={inputLabel}>Recipient</label>
-      <input id="sc-recipient" value={recipient} onChange={(e) => edit(setRecipient)(e.target.value)} aria-label="Recipient username or ID" placeholder="Survivor username or ID…" style={inputField} />
+      <RecipientPicker value={recipient} onChange={edit(setRecipient)} inputStyle={inputField} mutedColor={t.MUTED} />
       <RailSelector rail={rail} onChange={edit(setRail)} wallet={wallet} />
       <label htmlFor="sc-amount" style={inputLabel}>Amount</label>
       <input id="sc-amount" value={amount} onChange={(e) => edit(setAmount)(e.target.value)} type="number" min="1" aria-label="Amount in credits" placeholder="Amount (e.g. 50)" style={inputField} />

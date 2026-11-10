@@ -1114,6 +1114,9 @@ type ListFilters = {
   jobTitleId?: string | null;
   skillId?: string | null;
   q?: string | null;
+  // Accounts whose username contains the search term (found in Clerk by the list route): their
+  // claimed profiles match the search too, so a member can be found by username.
+  usernameUserIds?: string[];
 };
 
 function buildSearchTerm(q: string | null | undefined): string | null {
@@ -1140,12 +1143,16 @@ function normalizeListFilters(filters: ListFilters): {
   jobTitleId: string | null;
   skillId: string | null;
   searchTerm: string | null;
+  usernameUserIds: string[];
 } {
+  const searchTerm = buildSearchTerm(filters.q);
   return {
     sectorId: filters.sectorId ?? null,
     jobTitleId: filters.jobTitleId ?? null,
     skillId: filters.skillId ?? null,
-    searchTerm: buildSearchTerm(filters.q),
+    searchTerm,
+    // Only with a search term: with none, every profile is listed anyway.
+    usernameUserIds: searchTerm ? (filters.usernameUserIds ?? []) : [],
   };
 }
 
@@ -1299,6 +1306,7 @@ export async function listDirectoryForMember(
               WHERE dpps_q.profile_id::text = p.id::text
                 AND regexp_replace(lower(COALESCE(dpps_q.skill_label, '')), '[^a-z0-9]+', ' ', 'g') LIKE $4::text
             )
+            OR p.claimed_by_user_id = ANY($5::text[])
           )
       `,
       [
@@ -1306,6 +1314,7 @@ export async function listDirectoryForMember(
         normalizedFilters.jobTitleId,
         normalizedFilters.skillId,
         normalizedFilters.searchTerm,
+        normalizedFilters.usernameUserIds,
       ],
     );
 
@@ -1383,6 +1392,7 @@ export async function listDirectoryForMember(
               WHERE dpps_q.profile_id::text = p.id::text
                 AND regexp_replace(lower(COALESCE(dpps_q.skill_label, '')), '[^a-z0-9]+', ' ', 'g') LIKE $4::text
             )
+            OR p.claimed_by_user_id = ANY($7::text[])
           )
         ORDER BY p.updated_at DESC
         OFFSET $5 LIMIT $6
@@ -1394,6 +1404,7 @@ export async function listDirectoryForMember(
         normalizedFilters.searchTerm,
         offset,
         pagination.pageSize,
+        normalizedFilters.usernameUserIds,
       ],
     );
 
