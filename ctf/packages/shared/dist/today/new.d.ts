@@ -1,8 +1,22 @@
-export declare const SE_ASK_WORDS: {
-    title: string;
+export declare const SE_NEW_SHEET_WORDS: {
+    label: string;
+    close: string;
+    guidelines: string;
+    guidelinesHref: string;
+    heading: string;
     intro: string;
+    kinds: string;
+    architect: string;
+};
+export type SeNewKind = 'ask' | 'offer' | 'story' | 'talk' | 'architect';
+export declare const SE_NEW_KINDS: ReadonlyArray<{
+    key: Exclude<SeNewKind, 'architect'>;
+    label: string;
+}>;
+export declare const SE_ASK_WORDS: {
     what: string;
     details: string;
+    optional: string;
     hint: string;
     suggestions: string;
     submit: string;
@@ -11,12 +25,23 @@ export declare const SE_ASK_WORDS: {
     failed: string;
     defaultTag: string;
 };
+export declare const SE_ASK_TASK_WORDS: {
+    add: string;
+    task: string;
+    another: string;
+    remove: string;
+    none: string;
+    note: string;
+    posted: string;
+    failed: string;
+};
+export declare const SE_ASK_MAX_TASKS = 30;
+export declare const SE_ASK_MAX_TASK_LENGTH = 300;
+export declare function seAskTasks(tasks: readonly string[]): string[];
 export declare const SE_OFFER_WORDS: {
-    title: string;
     intro: string;
 };
 export declare const SE_STORY_WORDS: {
-    title: string;
     intro: string;
     open: string;
     href: string;
@@ -36,6 +61,10 @@ export type SeAskSuggestion = {
     group: string;
 };
 export declare function seAskSuggestions(typed: string, limit?: number): SeAskSuggestion[];
+export declare function seAskSuggestionParts(typed: string, text: string): {
+    lead: string;
+    rest: string;
+};
 export declare const SE_ARCHITECT_WORDS: {
     readonly title: "Ask the architect";
     readonly intro: "A question about the app, or about where to find help. A person reads every answer before you see it.";

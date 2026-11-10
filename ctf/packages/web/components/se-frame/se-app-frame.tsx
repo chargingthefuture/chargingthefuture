@@ -79,24 +79,26 @@ export function SeAppFrame({ currentUser, isAdmin }: FrameProps) {
   );
 }
 
-const TAB_TITLES: Partial<Record<SeTab, string>> = { people: 'People', new: 'New', activity: 'Activity' };
+// + New has no title here: it is a sheet with its own heading (approved board "New post").
+const TAB_TITLES: Partial<Record<SeTab, string>> = { people: 'People', activity: 'Activity' };
 
 type TabScreenProps = FrameProps & {
   tab: SeTab;
   theme: SeThemeChoice;
   onTheme: (_next: SeThemeChoice) => void;
   onBack: () => void;
+  onClose: () => void;
   saving: boolean;
 };
 
-function TabScreen({ tab, currentUser, isAdmin, theme, onTheme, onBack, saving }: TabScreenProps) {
+function TabScreen({ tab, currentUser, isAdmin, theme, onTheme, onBack, onClose, saving }: TabScreenProps) {
   const title = TAB_TITLES[tab];
   return (
     <>
       {tab === 'today' ? <TodayHeader /> : null}
       {title ? <ScreenHeader title={title} /> : null}
       {tab === 'today' ? <TodayScreen accountId={currentUser.userId} /> : null}
-      {tab === 'new' ? <NewScreen /> : null}
+      {tab === 'new' ? <NewScreen onClose={onClose} /> : null}
       {tab === 'me' ? <MeScreen currentUser={currentUser} isAdmin={isAdmin} theme={theme} onTheme={onTheme} onBack={onBack} saving={saving} /> : null}
       {tab === 'activity' ? <ActivityScreen /> : null}
       {tab === 'people' ? <PeopleScreen /> : null}
@@ -133,7 +135,7 @@ function SeAppFrameBody({ currentUser, isAdmin }: FrameProps) {
     <div className={styles.frame} style={seThemeVars(theme.color, theme.mode)}>
       <main className={styles.screen} hidden={rooms.shown !== null}>
         <UnlockBanner />
-        <TabScreen tab={tab} currentUser={currentUser} isAdmin={isAdmin} theme={theme} onTheme={setTheme} onBack={back} saving={saving} />
+        <TabScreen tab={tab} currentUser={currentUser} isAdmin={isAdmin} theme={theme} onTheme={setTheme} onBack={back} onClose={() => select('today')} saving={saving} />
         {error ? (
           <p role="alert" className={styles.error}>
             {error}

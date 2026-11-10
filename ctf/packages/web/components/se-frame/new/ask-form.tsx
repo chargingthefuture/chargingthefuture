@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { SE_ASK_WORDS as W, seAskSuggestions, type SeAskSuggestion } from '@ctf/shared';
 import styles from './new.module.css';
+import sheet from './sheet.module.css';
+import { AskTasks, SuggestionText, useAskTasks } from './ask-tasks';
 
 // + New → Ask: posted as a public SocketRelay request with no place on it, through the route
 // SocketRelay's own form uses. Suggestions from the holiday list appear while typing.
@@ -25,10 +27,10 @@ function Suggestions({ typed, onPick }: { typed: string; onPick: (_item: SeAskSu
   const items = seAskSuggestions(typed);
   if (items.length === 0) return null;
   return (
-    <div className={styles.suggestions} aria-label={W.suggestions}>
+    <div className={sheet.suggestList} role="group" aria-label={W.suggestions}>
       {items.map((item) => (
-        <button key={item.text} type="button" className={styles.chip} onClick={() => onPick(item)}>
-          {item.text}
+        <button key={item.text} type="button" className={sheet.suggestItem} onClick={() => onPick(item)}>
+          <SuggestionText typed={typed} text={item.text} />
         </button>
       ))}
     </div>
@@ -37,6 +39,7 @@ function Suggestions({ typed, onPick }: { typed: string; onPick: (_item: SeAskSu
 
 export function AskForm() {
   const [title, setTitle] = useState('');
+  const goal = useAskTasks();
   const [details, setDetails] = useState('');
   const [tag, setTag] = useState(W.defaultTag);
   const [busy, setBusy] = useState(false);
@@ -60,9 +63,22 @@ export function AskForm() {
     }
   }
 
-  const disabled = busy || !title.trim() || !details.trim();
+  // With small tasks the ask is posted as a goal on the member's PeerProgramming board instead.
+  async function submitGoal(event: React.FormEvent) {
+    event.preventDefault();
+    setBusy(true);
+    setError(null);
+    const failure = await goal.post(title.trim());
+    setBusy(false);
+    if (failure) return setError(failure);
+    setTitle('');
+    setDetails('');
+    setTag(W.defaultTag);
+  }
+
+  const disabled = busy || !title.trim();
   return (
-    <form className={styles.form} onSubmit={(event) => void submit(event)}>
+    <form className={styles.form} onSubmit={(event) => void (goal.tasks ? submitGoal(event) : submit(event))}>
       {posted ? (
         <p role="status" className={styles.done}>
           {W.posted}
@@ -71,7 +87,7 @@ export function AskForm() {
       <label className={styles.label} htmlFor="se-ask-title">
         {W.what}
       </label>
-      <input id="se-ask-title" className={styles.input} value={title} maxLength={MAX_TITLE} onChange={(event) => setTitle(event.target.value)} required />
+      <input id="se-ask-title" className={`${styles.input} ${sheet.pill}`} value={title} maxLength={MAX_TITLE} onChange={(event) => setTitle(event.target.value)} required />
       <Suggestions
         typed={title}
         onPick={(item) => {
@@ -80,17 +96,17 @@ export function AskForm() {
         }}
       />
       <label className={styles.label} htmlFor="se-ask-details">
-        {W.details}
+        {W.details} <span className={sheet.optional}>{W.optional}</span>
       </label>
       <textarea
         id="se-ask-details"
-        className={styles.input}
-        rows={3}
+        className={`${styles.input} ${sheet.area}`}
+        rows={2}
         value={details}
         maxLength={MAX_DETAILS}
         aria-describedby="se-ask-hint"
         onChange={(event) => setDetails(event.target.value)}
-        required
+        disabled={goal.tasks !== null}
       />
       <p id="se-ask-hint" className={styles.text}>
         {W.hint}
@@ -100,6 +116,7 @@ export function AskForm() {
           {error}
         </p>
       ) : null}
+      <AskTasks state={goal} />
       <button type="submit" className={styles.submit} disabled={disabled}>
         {busy ? W.submitting : W.submit}
       </button>
