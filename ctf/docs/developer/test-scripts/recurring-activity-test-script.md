@@ -94,6 +94,22 @@ Result: web ☐
 
 ---
 
+### RA-3b — Pick the other member by name or username (added 2026-11-10)
+
+**Role:** member (owner)
+**Surfaces:** web, android
+**Precondition:** Signed in. Another member has a claimed Directory profile and a username.
+
+**Steps:**
+1. Open the create form and type two letters of the other member's name in the picker.
+2. Clear it and type part of their username.
+
+**Expected:** The placeholder reads "Search members by name or username…". Both searches list the member as "Name · @username", and picking them fills the counterparty.
+
+Result: web ☐ android ☐
+
+---
+
 ### RA-4 — Declare a ServiceCredits activity with a declared value
 
 **Role:** member (owner)
