@@ -37,7 +37,7 @@
 6. Open the screen again the next day (Eastern).
 
 **Expected:**
-- Step 1: a live topic labeled with its line, with three talking points; four blurbs, one per line (Peace Battle 2, Peace Battle 2 conference, Finding skills and One Percent, Staying connected); and eleven platform rows in three groups (Full posts, Blurbs, Lives and videos), with a count of how many are done. No row names a part of the app.
+- Step 1: a live topic labeled with its line, with three talking points; five blurbs, one per line (Peace Battle 2, Peace Battle 2 conference, Finding skills and One Percent, Why I am not on Quora, Staying connected); and thirteen platform rows in four groups (Full posts, Blurbs, Pictures, Lives and videos), with a count of how many are done. No row names a part of the app.
 - Step 2: the note holds the title, the three points as a list, and the link on its own line; the topic shows a green tick.
 - Step 3: the note holds the blurb and the link on its own line; the blurb shows a green tick.
 - Step 4: Quora shows a green tick and the count goes up by one after the reload.
