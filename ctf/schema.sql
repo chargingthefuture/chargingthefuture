@@ -7482,6 +7482,7 @@ CREATE TABLE IF NOT EXISTS card_messages (
   pair_low TEXT,
   pair_high TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  edited_at TIMESTAMPTZ,
   CONSTRAINT card_messages_pair_both CHECK ((pair_low IS NULL) = (pair_high IS NULL)),
   CONSTRAINT card_messages_pair_order CHECK (pair_low IS NULL OR pair_low < pair_high),
   CONSTRAINT card_messages_author_in_pair CHECK (pair_low IS NULL OR author_id IN (pair_low, pair_high))
@@ -7493,6 +7494,7 @@ ALTER TABLE IF EXISTS card_messages ADD COLUMN IF NOT EXISTS body TEXT;
 ALTER TABLE IF EXISTS card_messages ADD COLUMN IF NOT EXISTS pair_low TEXT;
 ALTER TABLE IF EXISTS card_messages ADD COLUMN IF NOT EXISTS pair_high TEXT;
 ALTER TABLE IF EXISTS card_messages ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS card_messages ADD COLUMN IF NOT EXISTS edited_at TIMESTAMPTZ;
 CREATE INDEX IF NOT EXISTS idx_card_messages_card ON card_messages(card_id, pair_low, pair_high, created_at);
 CREATE INDEX IF NOT EXISTS idx_card_messages_author ON card_messages(author_id);
 CREATE INDEX IF NOT EXISTS idx_card_messages_pair_high ON card_messages(pair_high) WHERE pair_high IS NOT NULL;
@@ -7513,6 +7515,24 @@ ALTER TABLE IF EXISTS card_pair_requests ADD COLUMN IF NOT EXISTS created_at TIM
 ALTER TABLE IF EXISTS card_pair_requests ADD COLUMN IF NOT EXISTS agreed_at TIMESTAMPTZ;
 CREATE INDEX IF NOT EXISTS idx_card_pair_requests_low ON card_pair_requests(user_low);
 CREATE INDEX IF NOT EXISTS idx_card_pair_requests_high ON card_pair_requests(user_high);
+
+-- today_card_feedback_counts: how many times a day members marked a Today card done or picked Not
+-- for me, by the card's source and kind. A total only: no account id and nothing about who tapped,
+-- so there is nothing in it to delete when an account is deleted. Read by the Adoption admin
+-- screen's "What members finish and pass on" section.
+CREATE TABLE IF NOT EXISTS today_card_feedback_counts (
+  day DATE NOT NULL,
+  source TEXT NOT NULL CHECK (char_length(source) BETWEEN 1 AND 40),
+  kind TEXT NOT NULL CHECK (char_length(kind) BETWEEN 1 AND 20),
+  signal TEXT NOT NULL CHECK (signal IN ('done', 'not_for_me')),
+  count INTEGER NOT NULL DEFAULT 0 CHECK (count >= 0),
+  PRIMARY KEY (day, source, kind, signal)
+);
+ALTER TABLE IF EXISTS today_card_feedback_counts ADD COLUMN IF NOT EXISTS day DATE;
+ALTER TABLE IF EXISTS today_card_feedback_counts ADD COLUMN IF NOT EXISTS source TEXT;
+ALTER TABLE IF EXISTS today_card_feedback_counts ADD COLUMN IF NOT EXISTS kind TEXT;
+ALTER TABLE IF EXISTS today_card_feedback_counts ADD COLUMN IF NOT EXISTS signal TEXT;
+ALTER TABLE IF EXISTS today_card_feedback_counts ADD COLUMN IF NOT EXISTS count INTEGER NOT NULL DEFAULT 0;
 
 -- today_card_windows: how long an ask or an offer stays on Today (owner decisions, 2026-11-03),
 -- keyed by the card id (`<source>:<id>`, e.g. `socket-relay:123`). One row only once the poster

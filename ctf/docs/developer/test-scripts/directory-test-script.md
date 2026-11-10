@@ -447,11 +447,11 @@ and digits, from the invite file or from a card's link) and its Quora handle.
    card like step 1, ten a page, with **Finish verifying**. With a screen reader, the avatar is not
    announced and the name is. Tab through: each link shows a focus ring. **Read the invitation** opens
    that invitation in full at the top (title, the screenshot only if an older invitation has one,
-   text, Quora address written out, **See the live listing**, which opens the person's Directory
+   text, Quora address written out, **<name> in the Directory**, which opens the person's Directory
    listing). `/apps/directory/invites?page=2` works the same.
 7. As an approved member, open `/apps/directory`. The Directory shows as before, with **Read the
    invitations** under the profile button. `/apps/directory?invite=<code>` opens the wall with that
-   invitation in full, first, and **See the live listing** opens the listing. An older link,
+   invitation in full, first, and **<name> in the Directory** opens the listing. An older link,
    `/apps/directory?invite=<handle>`, opens the same invitation. **Read the invitation** on a card
    leads to `?invite=<code>`.
 8. As an admin, delete or take down the listing one invitation is about. The invitation is gone from

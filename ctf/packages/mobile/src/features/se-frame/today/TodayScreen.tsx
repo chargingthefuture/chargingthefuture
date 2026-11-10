@@ -1,6 +1,5 @@
 // Today in 3.1 on Android, the copy of the web's today-screen.tsx: the broadcast while it is live,
-// Days won, the rooms, then the day's cards newest first. The done count stays hidden until the member
-// has opened a card.
+// Days won, the rooms, then the day's cards newest first. There is no done count, as on the web.
 
 import React, { useState } from 'react';
 import { Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -24,6 +23,7 @@ import { MatchingToggle } from './MatchingToggle';
 import { RoomCard } from './RoomCards';
 import { WeekStrip } from './WeekStrip';
 import { TodayCard } from './TodayCard';
+import { sendTodayFeedback } from './sendFeedback';
 import { openTodayLink } from './openTodayLink';
 import { useToday } from './useToday';
 
@@ -147,7 +147,6 @@ export function TodayScreen({ t, accountId, onOpen }: { t: SeThemeTokens; accoun
         <Text accessibilityRole="header" style={s.listTitle}>
           Today&apos;s cards
         </Text>
-        {view.doneLine ? <Text style={s.meta}>{view.doneLine}</Text> : null}
       </View>
       <FilterChips s={s} filter={filter} onChange={setFilter} />
       {filter === 'matches' ? <MatchingToggle t={t} refreshKey={today?.generatedAtIso} onChanged={() => void reload()} /> : null}
@@ -163,8 +162,14 @@ export function TodayScreen({ t, accountId, onOpen }: { t: SeThemeTokens; accoun
               card={card}
               viewerId={accountId}
               read={marks.read.includes(card.id)}
-              onToggleDone={() => toggle('read', card.id)}
-              onHide={() => mark('hidden', card.id)}
+              onToggleDone={() => {
+                if (!marks.read.includes(card.id)) sendTodayFeedback(card, 'done');
+                toggle('read', card.id);
+              }}
+              onHide={() => {
+                sendTodayFeedback(card, 'not_for_me');
+                mark('hidden', card.id);
+              }}
               onMute={card.author ? () => void mute(card) : undefined}
               onOpenLink={go}
               onChanged={() => void reload()}

@@ -425,22 +425,17 @@ export function ChymeGuestListen({
   }
   if (status === 'error') {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <GuestNote accent={accent} text="Couldn't connect to the live room." detail={errorDetail} />
-        <button
-          type="button"
-          onClick={() => {
-            unlockAudioPlayback();
-            setErrorDetail(null);
-            setCredentials(null);
-            setStatus('connecting');
-            setArmed(true);
-          }}
-          style={{ width: '100%', padding: '12px 18px', borderRadius: 12, background: accent, border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
-        >
-          Try again
-        </button>
-      </div>
+      <GuestRetry
+        accent={accent}
+        detail={errorDetail}
+        onRetry={() => {
+          unlockAudioPlayback();
+          setErrorDetail(null);
+          setCredentials(null);
+          setStatus('connecting');
+          setArmed(true);
+        }}
+      />
     );
   }
   if (status !== 'joined' || !client || !call) {
@@ -563,6 +558,23 @@ function GuestAudioSink({ accent, counts }: { accent: string; counts: GuestRoomC
   );
 }
 
+// The connection failed: what went wrong, and Try again.
+function GuestRetry({ accent, detail, onRetry }: { accent: string; detail: string | null; onRetry: () => void }) {
+  const t = useChymeTokens();
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <GuestNote accent={accent} text="Couldn't connect to the live room." detail={detail} />
+      <button
+        type="button"
+        onClick={onRetry}
+        style={{ width: '100%', padding: '12px 18px', borderRadius: 12, background: accent, border: 'none', color: t.ON_ACCENT, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
+      >
+        Try again
+      </button>
+    </div>
+  );
+}
+
 // The audio tracks arrive seconds after the tap, and the SDK starts each one with play() outside
 // any gesture. When the phone browser refuses that (its autoplay rule), the SDK records the element
 // as blocked and this shows one button whose tap retries them all, which the rule allows. Below it,
@@ -573,6 +585,7 @@ function GuestHearingAid({ accent }: { accent: string }) {
   const { useIsAutoplayBlocked } = useCallStateHooks();
   const blocked = useIsAutoplayBlocked();
   const t = useChymeTokens();
+  const onAccent = t.ON_ACCENT;
   const retry = () => {
     unlockAudioPlayback();
     void call?.resumeAudio().catch((error: unknown) => {
@@ -585,7 +598,7 @@ function GuestHearingAid({ accent }: { accent: string }) {
         <button
           type="button"
           onClick={retry}
-          style={{ width: '100%', padding: '12px 18px', borderRadius: 12, background: accent, border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
+          style={{ width: '100%', padding: '12px 18px', borderRadius: 12, background: accent, border: 'none', color: onAccent, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
         >
           Tap to hear the room
         </button>

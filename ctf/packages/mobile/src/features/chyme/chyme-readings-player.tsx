@@ -198,8 +198,8 @@ function ReadingsCard({ current, playback, wentLive }: { current: ReadingsTrack 
           accessibilityLabel={playing ? 'Stop the recording' : 'Play the recording'}
           style={[styles.play, { borderRadius: t.radius(999), backgroundColor: t.ACCENT }]}
         >
-          {playing ? <Pause size={14} color="#fff" /> : <Play size={14} color="#fff" />}
-          <Text style={styles.playText}>{playing ? 'Stop' : 'Play readings'}</Text>
+          {playing ? <Pause size={14} color={t.ON_ACCENT} /> : <Play size={14} color={t.ON_ACCENT} />}
+          <Text style={[styles.playText, { color: t.ON_ACCENT }]}>{playing ? 'Stop' : 'Play readings'}</Text>
         </TouchableOpacity>
         {current ? <Text numberOfLines={1} style={[styles.trackTitle, { color: t.TITLE }]}>{current.title}</Text> : null}
       </View>

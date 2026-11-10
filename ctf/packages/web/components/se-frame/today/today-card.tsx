@@ -13,7 +13,8 @@ import styles from './today.module.css';
 // (card-sheet.tsx), and an answer button (I can help, I know someone, I'd like this, It helped me
 // too) records the answer and opens the sheet; other buttons open the item where it lives. Every
 // other card expands in place as before. The timeline dot marks it done, and tapping it again marks
-// it not done. The ••• menu holds Copy link, Hide and, on a card with an author, Mute and Report.
+// it not done. The ••• menu holds Copy link, Not for me (the card leaves Today on this device) and,
+// on a card with an author, Mute and Report.
 
 // The 21 Questions card keeps its lines and is never cut short: it says how matching works.
 function bodyClass(card: SeTodayCard, open: boolean): string {
@@ -41,7 +42,7 @@ async function reportCard(card: SeTodayCard): Promise<string> {
 }
 
 function menuLabel(onMute: unknown, canReport: boolean): string {
-  const items = ['copy link', 'hide', ...(onMute ? ['mute'] : []), ...(canReport ? ['report'] : [])];
+  const items = ['copy link', 'not for me', ...(onMute ? ['mute'] : []), ...(canReport ? ['report'] : [])];
   return `More: ${items.join(', ')}`;
 }
 
@@ -82,7 +83,7 @@ function CardMenu({ card, viewerId, onHide, onMute }: MenuProps) {
             {copied ? 'Link copied' : 'Copy link'}
           </button>
           <button type="button" role="menuitem" className={styles.menuItem} onClick={onHide}>
-            Hide
+            {SE_CARD_WORDS.notForMe}
           </button>
           {onMute && card.author ? (
             <button type="button" role="menuitem" className={styles.menuItem} onClick={onMute}>

@@ -425,7 +425,7 @@ Android admin present (2026-06-06): `AdminLighthouse.tsx` + `admin-api.ts` added
 
 ## 9) Change Log
 
-- 2026-11-03: **Places to stay on Today stay 14 days, with a renew (non-plugin inventory 5l).** An active listing stays on Today 14 days from when it was posted or last changed; the host's own listings now show on their own Today, and the host can keep one up 14 more days from the card or from the day-14 notice ("Still offering this?") with `POST /api/today/cards/[cardId]/renew`. An offer is not closed from Today. Leaving Today changes nothing on the listing. No LightHouse table or route changed.
+- 2026-11-03: **Places to stay on Today stay 14 days, with a renew (non-plugin inventory 5m).** An active listing stays on Today 14 days from when it was posted or last changed; the host's own listings now show on their own Today, and the host can keep one up 14 more days from the card or from the day-14 notice ("Still offering this?") with `POST /api/today/cards/[cardId]/renew`. An offer is not closed from Today. Leaving Today changes nothing on the listing. No LightHouse table or route changed.
 
 - 2026-10-17: **Only an admin changes whether a listing shows (code review #2819, owner decision).** The host edit route kept the stored `is_active` when the body left it out, but a host who sent `isActive: true` could still put back a listing an admin had hidden. `updateProperty` now takes `isActive` only from an admin (`keepStoredWhenOmitted` gets the caller's admin flag); a host's value is ignored and the edit saves with the listing's visibility unchanged. The host form has no visibility control, so nothing a host sees changes. Test: `lib/lighthouse/property-visibility.test.ts`.
 

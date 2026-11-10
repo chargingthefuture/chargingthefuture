@@ -68,6 +68,8 @@ function talkStyles(t: SeThemeTokens) {
     meta: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 10 },
     metaText: { fontSize: 11, color: t.soft, fontFamily: SE_FONT.sans },
     linkButton: { minHeight: 24, justifyContent: 'center' },
+    bubbleRowEditing: { width: '78%' },
+    editBox: { alignSelf: 'stretch', minHeight: 88, borderWidth: 1.5, borderColor: t.line, backgroundColor: t.card, borderTopLeftRadius: 18, borderTopRightRadius: 18, borderBottomRightRadius: 6, borderBottomLeftRadius: 18, paddingVertical: 10, paddingHorizontal: 12, fontSize: 14, lineHeight: 20, color: t.ink, fontFamily: SE_FONT.sans, textAlignVertical: 'top' },
     linkLabel: { fontSize: 11, color: t.ink, fontFamily: SE_FONT.sansSemi, textDecorationLine: 'underline' },
     pill: { alignSelf: 'center', flexDirection: 'row', alignItems: 'center', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 999, backgroundColor: t.sunk },
     pillText: { fontSize: 12, color: t.ink, fontFamily: SE_FONT.sansSemi },

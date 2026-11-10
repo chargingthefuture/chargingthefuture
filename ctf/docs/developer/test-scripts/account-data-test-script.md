@@ -244,8 +244,7 @@ on your board, a LightHouse listing, an announcement).
 talk that is on ("On now: …") or next ("Next: … · Today · 9:00 PM") when one is booked, and the day's cards,
 newest first; after the reload the cards appear at once from the saved copy and then refresh. No
 card shows a street address, a city on a request, or where a ride goes. Step 2 opens the card's full
-text and closes it, a check mark appears on it, and "1 of N done" appears above the chips (it was
-not there before). Step 3 shows only that kind. Step 4 copies the card's address, and the hidden card
+text and closes it, and a check mark appears on it; no "N of N done" count appears anywhere. Step 3 shows only that kind. Step 4 copies the card's address, and the hidden card
 is gone and stays gone after a reload. Step 5 opens the room inside 3.1 (AD-12). If a source fails, a
 line under the chips names it and the rest of the cards still show. A member who is not a Weaver of
 the Commons never sees a Weavers card or any line naming it. Step 6: the survey card is gone once the survey is answered.
@@ -582,7 +581,26 @@ account is never removed for this." With `CARDS_OPEN_BEFORE_UNLOCK` set to false
 card opens once Unlock is done." instead, from the first write.
 **Result:** web ☐ android ☐ — notes:
 
-## AD-28 · How long cards stay on Today
+## AD-28 · Done and Not for me are counted with no names
+**Role:** an approved member A on 3.1; C, signed in and not yet approved in Unlock; an admin · **Surfaces:** web, android (the admin step is web only)
+**Steps:**
+1. As A, open Today and tap ••• on an ask card.
+2. As A, tap Not for me.
+3. As A, tap the timeline dot on a story card, then tap it again, then once more.
+4. As A, turn off the network, tap the dot on another card, and tap Not for me on a third.
+5. As C, mark one card done.
+6. As the admin, open Adoption (`/admin/adoption`) and find "What members finish and pass on". Tap Copy as text and paste it into a note.
+7. As the admin, read the newest `today_card_feedback_counts` rows in the Neon dashboard.
+**Expected:** Step 1 shows Copy link, Not for me and, on a card with an author, Mute and Report; no
+menu says Hide, and no new button is on the card face. Step 2 takes the card off Today on this
+device. Step 3 marks the story done, not done, then done, and counts two Done marks (only the change
+to done counts). Step 4 changes both cards on screen exactly as with the network on, and shows no
+error; nothing is counted for them. Step 5 is counted the same as A's. Step 6 shows a row per source
+and kind, for example "socket-relay · ask" with Not for me 1 and Not for me share 100%, most marks
+first, and the pasted text has one line per row and says counts only, nobody named. Step 7 shows
+rows with a day, source, kind, signal and count, and no column naming who tapped.
+
+## AD-30 · How long cards stay on Today
 **Role:** member A (posting) and member B (reading) on 3.1 · **Surfaces:** web, android
 **Steps:**
 1. As A, open + New → Ask. Fill in what you need, choose "By when?" → A date, pick a date three weeks
@@ -610,8 +628,8 @@ a skill · learners wanted" (or "a trainer and learners wanted" while no trainer
 once registration closes, with no renew offered.
 **Result:** web ☐ android ☐ — notes:
 
-## AD-29 · Card windows go with the account
-**Role:** member A from AD-28 · **Surfaces:** web
+## AD-31 · Card windows go with the account
+**Role:** member A from AD-30 · **Surfaces:** web
 **Steps:**
 1. As A, delete the account (or only Card conversations on Today) from the account area.
 **Expected:** Every `today_card_windows` row with A as `owner_user_id` is gone; the listing names "The

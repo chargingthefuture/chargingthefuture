@@ -5,12 +5,14 @@ import { SE_DAYS_WON_HOW, SE_DAYS_WON_TITLE, SE_DAYS_WON_WHY, SE_MUTE_WORDS, SE_
 import { MatchingToggle } from './matching-toggle';
 import { BroadcastCard, RoomCard } from './room-card';
 import { TodayCard } from './today-card';
+import { sendTodayFeedback } from './send-feedback';
 import { WeekStrip } from './week-strip';
 import { useToday, type MarkKind, type TodayMarks } from './use-today';
 import styles from './today.module.css';
 
 // Today in 3.1: Days won, the broadcast while it is live, the rooms, then the day's cards newest first.
-// What a filter shows and when the done count appears is shared with Android (seTodayView).
+// What a filter shows is shared with Android (seTodayView). There is no done count: the timeline dot
+// marks one card, and nothing totals them, so nobody is pushed to get through the day.
 
 // "How it's counted" opens the definition in place, under the line.
 function DaysWonCard({ daysWon }: { daysWon: NonNullable<SeToday['daysWon']> }) {
@@ -100,8 +102,14 @@ function Timeline({ viewerId, view, marks, mark, toggle, onMute, onChanged }: Ti
           card={card}
           viewerId={viewerId}
           read={marks.read.includes(card.id)}
-          onToggleDone={() => toggle('read', card.id)}
-          onHide={() => mark('hidden', card.id)}
+          onToggleDone={() => {
+            if (!marks.read.includes(card.id)) sendTodayFeedback(card, 'done');
+            toggle('read', card.id);
+          }}
+          onHide={() => {
+            sendTodayFeedback(card, 'not_for_me');
+            mark('hidden', card.id);
+          }}
           onMute={card.author && onMute ? () => onMute(card) : undefined}
           onChanged={onChanged}
         />
@@ -141,7 +149,6 @@ export function TodayScreen({ accountId }: { accountId: string }) {
       <LiveCards today={today} />
       <div className={styles.listHead}>
         <h2 className={styles.listTitle}>Today&apos;s cards</h2>
-        {view.doneLine ? <span className={styles.doneCount}>{view.doneLine}</span> : null}
       </div>
       <FilterChips filter={filter} onChange={setFilter} />
       {filter === 'matches' ? <MatchingToggle refreshKey={today?.generatedAtIso} onChanged={() => void reload()} /> : null}

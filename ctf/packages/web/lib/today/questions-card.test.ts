@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { SE_QUESTIONS, seQuestionOfDay, seTodayView } from '@ctf/shared';
+import { SE_QUESTIONS, seQuestionOfDay } from '@ctf/shared';
 
 // Today's 21 Questions card stays once answered: done, with the answer picked, so the day's work
 // stays in view. A question missed on an earlier day gets its own catching-up card beside it.
@@ -41,12 +41,11 @@ describe("Today's 21 Questions card", () => {
     expect(cards[1].done).toBe(false);
   });
 
-  it('counts the answered card as done on Today', async () => {
+  it('marks the answered card done on Today', async () => {
     answers.clear();
     for (const question of SE_QUESTIONS.slice(0, 3)) answers.set(question.id, 0);
     const cards = await questionCards(viewer, thirdDay);
     expect(cards).toHaveLength(1);
-    const today = { generatedAtIso: '', presence: null, daysWon: null, broadcast: null, rooms: [], week: [], cards, unavailable: [] };
-    expect(seTodayView(today, { read: [], hidden: [] }, 'matches').doneLine).toBe('1 of 1 done');
+    expect(cards[0].done).toBe(true);
   });
 });

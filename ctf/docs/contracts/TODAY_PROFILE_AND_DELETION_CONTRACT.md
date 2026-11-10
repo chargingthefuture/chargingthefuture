@@ -35,7 +35,12 @@ member's answer on a card: can help, knows someone, would like this, this helped
 and when the other agreed). A report made from a card goes into the existing `member_safety_reports`
 table, which the safety contract covers.
 
-How long an ask or offer stays on Today is the third: `today_card_windows`, one row per card id,
+`today_card_feedback_counts` is the third: a daily total per card source, card kind and signal
+(`done` or `not_for_me`), added to when a member marks a card done or picks Not for me. It holds no
+account id and nothing about who tapped, so no row in it belongs to anybody and there is nothing in
+it to delete when an account is deleted.
+
+How long an ask or offer stays on Today is the fourth: `today_card_windows`, one row per card id,
 written only once its poster set something. It holds the poster's account id, the deadline chosen
 in + New, the end of a renewed 14 days and when it was renewed, and, when the poster closed the ask
 from Today, the outcome (`done` or `not_done`) and when. It holds nothing anybody wrote.
@@ -57,10 +62,12 @@ Neither leaves the device, and signing out of the device or clearing the app's d
   (same entry). Public messages other members wrote under a card stay.
 - Full account deletion: the same 21 Questions, card conversation and card window rows; each card source's own
   contract covers its rows.
+- `today_card_feedback_counts` is not touched by either: it stores no account id, so no row can be
+  traced to the member.
 
 ## 5) Retention
 
 21 Questions, card conversation and card window rows are kept until the account is deleted. When the item a
 card came from is removed, its card leaves Today and its conversation is no longer shown; the rows
-stay until their authors' accounts are deleted. Nothing else is kept on the server; the
+stay until their authors' accounts are deleted. The feedback totals are kept as counts; the admin screen reads the last 30 days. Nothing else is kept on the server; the
 on-device copy is replaced on every read.

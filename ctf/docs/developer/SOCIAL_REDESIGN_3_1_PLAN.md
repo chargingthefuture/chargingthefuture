@@ -261,7 +261,7 @@ Built 2026-11-03 on web and Android. Asks stay until met, closed or due; with no
 a one-tap renew from a notice in Activity. Offers get the same 14 days and renew. Skill Up cohorts stay
 while open for registration. Everything else stays 7 days, and the day's own cards work as before. A
 card marked done leaves from the member's next day. Leaving Today closes nothing. Detail: the
-non-plugin inventory, 5l.
+non-plugin inventory, 5m.
 
 ## Later, not built
 

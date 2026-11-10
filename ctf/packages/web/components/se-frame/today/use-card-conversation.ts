@@ -23,14 +23,25 @@ export type CardConversation = {
   ask: (partnerId: string) => Promise<boolean>;
   agree: (partnerId: string) => Promise<void>;
   report: (target: { messageId: string } | { authorId: string }) => Promise<boolean>;
+  // The member's own message: change its text, or remove it for everyone.
+  edit: (messageId: string, body: string) => Promise<boolean>;
+  remove: (messageId: string) => Promise<boolean>;
 };
 
 export function cardPath(cardId: string, rest = ''): string {
   return `/api/today/cards/${encodeURIComponent(cardId)}${rest}`;
 }
 
-async function call(path: string, body?: unknown): Promise<{ ok: boolean; status: number; data: Reply | null }> {
-  const init: RequestInit = body === undefined ? { cache: 'no-store' } : { method: 'POST', headers: CSRF, body: JSON.stringify(body) };
+type Method = 'POST' | 'PATCH' | 'DELETE';
+
+function requestInit(body: unknown, method: Method | undefined): RequestInit {
+  if (method === 'DELETE') return { method, headers: CSRF };
+  if (body === undefined) return { cache: 'no-store' };
+  return { method: method ?? 'POST', headers: CSRF, body: JSON.stringify(body) };
+}
+
+async function call(path: string, body?: unknown, method?: Method): Promise<{ ok: boolean; status: number; data: Reply | null }> {
+  const init = requestInit(body, method);
   const res = await fetch(path, init).catch(() => null);
   const data = (await res?.json().catch(() => null)) as Reply | null;
   return { ok: Boolean(res?.ok), status: res?.status ?? 0, data };
@@ -44,9 +55,9 @@ export function useCardConversation(cardId: string, firstAnswer: SeCardAnswerKin
   const [busy, setBusy] = useState(false);
 
   const run = useCallback(
-    async (rest: string, body: unknown, failed: string): Promise<boolean> => {
+    async (rest: string, body: unknown, failed: string, method?: Method): Promise<boolean> => {
       setBusy(true);
-      const result = await call(cardPath(cardId, rest), body);
+      const result = await call(cardPath(cardId, rest), body, method);
       setBusy(false);
       const lock = seCardLockLine(result.data?.reason);
       if (lock) return (setLockLine(lock), false);
@@ -77,5 +88,9 @@ export function useCardConversation(cardId: string, firstAnswer: SeCardAnswerKin
     ask: (partnerId) => run('/pair', { partnerId }, 'The request was not sent: the app could not be reached.'),
     agree: async (partnerId) => void (await run('/pair/agree', { partnerId }, 'The agreement was not saved: the app could not be reached.')),
     report: (target) => run('/report', target, 'The report was not sent: the app could not be reached.'),
+    edit: (messageId, body) =>
+      run(`/messages/${encodeURIComponent(messageId)}`, { body }, 'The change was not saved: the app could not be reached.', 'PATCH'),
+    remove: (messageId) =>
+      run(`/messages/${encodeURIComponent(messageId)}`, undefined, 'The message was not deleted: the app could not be reached.', 'DELETE'),
   };
 }

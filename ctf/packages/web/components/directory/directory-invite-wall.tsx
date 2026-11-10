@@ -62,7 +62,7 @@ function InviteArticle({ invite, t }: { invite: FullInvite; t: DirectoryTokens }
       <SimpleMarkdown source={invite.bodyMarkdown} palette={palette} />
       <footer style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, color: t.SUBTLE, borderTop: `1px solid ${t.BORDER}`, paddingTop: 10 }}>
         {invite.directoryProfileUrl ? (
-          <Link href={invite.directoryProfileUrl} className={INVITE_LINK_CLASS} style={{ color: t.ACCENT, fontWeight: 600, width: 'fit-content' }}>See the live listing</Link>
+          <Link href={invite.directoryProfileUrl} className={INVITE_LINK_CLASS} style={{ color: t.ACCENT, fontWeight: 600, width: 'fit-content' }}>{invite.name} in the Directory</Link>
         ) : null}
         <span style={{ overflowWrap: 'anywhere' }}>
           {invite.name} on Quora:{' '}

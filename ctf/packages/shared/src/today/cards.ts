@@ -55,6 +55,8 @@ export type SeCardMessage = {
   mine: boolean;
   body: string;
   createdAtIso: string;
+  // When the author last changed it; null when never changed.
+  editedAtIso: string | null;
 };
 
 // A Just us two conversation as the viewer sees it: they asked and wait, the other person asked
@@ -87,6 +89,10 @@ const ANSWER_WORDS: Record<SeCardAnswerKind, string> = {
 
 const KIND_WORDS: Partial<Record<SeCardKind, string>> = { ask: 'Ask', offer: 'Offer', story: 'Story' };
 
+// A source whose link opens something narrower than the place it lives says what it opens, so the
+// link in the sheet matches the card's own button: an invite card's Read it opens the invitation.
+const OPEN_WORDS: Record<string, string> = { 'directory-invite': 'Read the invitation' };
+
 // Where each source's item lives, for the "Open in …" link in the sheet.
 const SOURCE_NAMES: Record<string, string> = {
   'peer-programming': 'PeerProgramming',
@@ -98,7 +104,6 @@ const SOURCE_NAMES: Record<string, string> = {
   'skill-up': 'SkillUp',
   'what-works': 'WhatWorks',
   'blog-story': 'the blog',
-  'directory-invite': 'the Directory',
   'quora-survey': 'the survey',
 };
 
@@ -128,10 +133,18 @@ export const SE_CARD_WORDS = {
   linkCopied: 'Link copied',
   more: 'More: report',
   report: 'Report',
+  notForMe: 'Not for me',
   reportMessage: 'Report this message',
+  edit: 'Edit',
+  save: 'Save',
+  cancel: 'Cancel',
+  delete: 'Delete',
+  edited: 'Edited',
+  editLabel: 'Change your message',
+  deleteConfirm: 'Delete this message? It is removed for everyone and cannot be brought back.',
   reported: 'Reported. An admin reads every report.',
   close: 'Close',
-  openIn: (source: string) => (SOURCE_NAMES[source] ? `Open in ${SOURCE_NAMES[source]}` : 'Open where it lives'),
+  openIn: (source: string) => OPEN_WORDS[source] ?? (SOURCE_NAMES[source] ? `Open in ${SOURCE_NAMES[source]}` : 'Open where it lives'),
   you: 'You',
 };
 

@@ -24,7 +24,7 @@ function HearingAid({ accent }: { accent: string }) {
     <View style={styles.column8}>
       {blocked ? (
         <TouchableOpacity onPress={retry} accessibilityRole="button" style={[styles.hear, { borderRadius: t.radius(12), backgroundColor: accent }]}>
-          <Text style={styles.hearText}>Tap to hear the room</Text>
+          <Text style={[styles.hearText, { color: t.ON_ACCENT }]}>Tap to hear the room</Text>
         </TouchableOpacity>
       ) : null}
       <Text onPress={retry} accessibilityRole="button" style={[styles.help, { color: t.MUTED }]}>

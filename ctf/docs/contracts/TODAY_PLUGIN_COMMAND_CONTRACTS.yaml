@@ -285,6 +285,51 @@ contracts:
     retentionClass: until_account_deletion
     idempotency: false
   - pluginId: today
+    command: today.cards.message.edit
+    version: 1.0.0
+    description: "The author changes their own message in a card, public or Just us two, 1 to 1000 characters; it is marked edited. 60 changes an hour, shared with delete. Refused when the author is restricted from contact or, for Just us two, either has blocked the other; 404 when the message is not the caller's own on that card. (PATCH /api/today/cards/[cardId]/messages/[messageId])."
+    inputSchema:
+      cardId:
+        type: string
+      messageId:
+        type: string
+      body:
+        type: string
+    outputSchema:
+      conversation:
+        type: object
+    dataAccess:
+      - card_messages
+      - card_pair_requests
+      - card_answers
+      - account_restrictions
+      - member_blocks
+      - member_mutes
+    purpose: card_conversation
+    retentionClass: until_account_deletion
+    idempotency: true
+  - pluginId: today
+    command: today.cards.message.delete
+    version: 1.0.0
+    description: "The author removes their own message from a card for everyone. Signed in is enough, so a member whose writing is paused can still take back what they wrote. 60 changes an hour, shared with edit; 404 when the message is not the caller's own on that card. (DELETE /api/today/cards/[cardId]/messages/[messageId])."
+    inputSchema:
+      cardId:
+        type: string
+      messageId:
+        type: string
+    outputSchema:
+      conversation:
+        type: object
+    dataAccess:
+      - card_messages
+      - card_pair_requests
+      - card_answers
+      - member_blocks
+      - member_mutes
+    purpose: card_conversation
+    retentionClass: until_account_deletion
+    idempotency: true
+  - pluginId: today
     command: today.cards.pair.ask
     version: 1.0.0
     description: "Ask a member who took part on the card to talk just you two; they are told in Activity, and it opens once they agree. Asking a member who already asked agrees to their request. 20 an hour. (POST /api/today/cards/[cardId]/pair)."
@@ -349,6 +394,44 @@ contracts:
     purpose: card_conversation
     retentionClass: until_account_deletion
     idempotency: false
+  - pluginId: today
+    command: today.feedback.record
+    version: 1.0.0
+    description: "Count a Today card marked done (only the change to done, never back to not done) or Not for me: add one to the UTC day's total for the card's source and kind. Stores no account id and nothing about who marked it. 300 an hour per member. (POST /api/today/feedback)."
+    inputSchema:
+      source:
+        type: string
+        pattern: "^[a-z][a-z0-9-]{0,39}$"
+      kind:
+        type: string
+        enum: [ask, offer, story, match, mood, numbers, replay, game]
+      signal:
+        type: string
+        enum: [done, not_for_me]
+    outputSchema:
+      ok:
+        type: boolean
+    dataAccess:
+      - today_card_feedback_counts
+    purpose: today_card_feedback
+    retentionClass: derived_medium_lived
+    idempotency: false
+  - pluginId: today
+    command: today.feedback.admin.read
+    version: 1.0.0
+    description: "The last 30 days of Done and Not for me totals per card source and kind, with the share that is Not for me, most marks first, for the Adoption admin screen. Admin-only and read-only; counts only. (GET /api/admin/today-feedback)."
+    inputSchema: {}
+    outputSchema:
+      days:
+        type: integer
+      lines:
+        type: array
+        description: "Each line: source, kind, done, notForMe, total, notForMeShare (a percent, rounded)."
+    dataAccess:
+      - today_card_feedback_counts
+    purpose: today_card_feedback
+    retentionClass: none_read_only
+    idempotency: true
   - pluginId: today
     command: today.cards.close
     version: 1.0.0

@@ -27,6 +27,7 @@ export type ChymeTokens = PluginShellTokens & {
   ACCENT_TINT_15: string; // logo/avatar background tint (default 0.15)
   ACCENT_TINT_30: string; // back-button border tint (default 0.3)
   ACCENT_TINT_40: string; // logo/avatar border tint (default 0.4)
+  ON_ACCENT: string; // text and icons on a filled accent button
 };
 
 export function getChymeTokens(theme: ThemeName): ChymeTokens {
@@ -38,6 +39,7 @@ export function getChymeTokens(theme: ThemeName): ChymeTokens {
       ACCENT_TINT_15: `${accent}26`,
       ACCENT_TINT_30: `${accent}4D`,
       ACCENT_TINT_40: `${accent}66`,
+      ON_ACCENT: '#fff',
     };
   }
   return {
@@ -51,6 +53,7 @@ export function getChymeTokens(theme: ThemeName): ChymeTokens {
     ACCENT_TINT_15: 'rgba(34,197,94,0.15)',
     ACCENT_TINT_30: 'rgba(34,197,94,0.3)',
     ACCENT_TINT_40: 'rgba(34,197,94,0.4)',
+    ON_ACCENT: '#fff',
   };
 }
 
