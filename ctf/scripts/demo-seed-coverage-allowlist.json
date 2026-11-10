@@ -90,7 +90,6 @@
   "notYetSeeded": [
     "above",
     "account_external_cleanup_retries",
-    "announcement_replies",
     "announcement_revisions",
     "beacon_events",
     "chyme_back_channel_calls",

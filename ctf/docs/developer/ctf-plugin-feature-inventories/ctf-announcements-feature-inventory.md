@@ -169,15 +169,7 @@ Domain tables (as they exist in `ctf/schema.sql`):
    `announcement_id` FK → `announcements(id)` `ON DELETE CASCADE`. Mirrors
    `feed_community_post_reactions`. Columns: `id`, `announcement_id`, `user_id`, `emoji`,
    `created_at`.
-7. `announcement_replies` — member replies grouped under an announcement as a thread.
-   `announcement_id` FK → `announcements(id)` `ON DELETE CASCADE`; indexed
-   `idx_announcement_replies_announcement(announcement_id, created_at)`. Mirrors
-   `feed_community_replies`, adding `author_username` (captured at reply time for handle display).
-   Columns: `id`, `announcement_id`, `author_user_id`, `author_username`, `body`,
-   `moderation_status`, `moderation_reason`, `moderated_by_user_id`, `moderated_at`, `edited_at`,
-   `created_at`, `updated_at`. The three `moderation_*` columns carry an admin's hide decision (the
-   shared hide/restore writer in `lib/feed/moderation.ts` sets all three); `edited_at` is set when
-   the author rewrites their own reply and is what the thread's "edited" mark reads.
+7. Replies (owner decision, 2026-11-10): no table of their own. An announcement's replies are the Commons conversation for item `announcement:<announcement id>` in `commons_item_messages` (see the Commons inventory), the same thread the announcement's Today card opens in 3.1. Public messages only (no Just us two pair). Each keeps its id, author, words, times and moderation state (`moderation_status`, `moderation_reason`, `moderated_by_user_id`, `moderated_at`); the handle is resolved from the author's username when the thread is read. `announcement_replies` was copied and dropped by `post/0090_announcement_replies_to_commons.sql`.
 
 Targeting reuses the shared `feed_item_targets` table (feed and announcements
 are coupled), not a separate `announcement_targets` table. The previously
@@ -247,6 +239,7 @@ Delivery: **web + mobile-responsive complete**. **Android (React Native) surface
 
 ## 11) Change Log
 
+- 2026-11-10: **Replies moved into the shared conversation store.** Owner decision: 3.0 and 3.1 share one backend, so an announcement's replies and its Today card's conversation are one thread. `post/0090` copies every reply into `commons_item_messages` (Commons, `announcement:<id>`) with its id and moderation state, checks the copy, and drops `announcement_replies`. Routes and screens are unchanged; the thread's handles come from usernames. The 3.1 announcement card is keyed by the announcement's id.
 - 2026-10-17: **The targeting check route is removed (code review #2892, owner decision).** `POST /api/announcements/admin/targeting/validate` had no caller and answered `{ ok, targeting }` where its contract promised `{ valid, normalizedTargeting }`. The route, `validateAnnouncementTargeting` (its only caller), and the `announcements.targeting.validate` / `feed.announcement.targeting.validate` contract entries are removed, with its rows in the orphan-route and admin-audit allowlists. Drafts keep normalizing targeting when they are saved.
 
 - 2026-10-12: **Read and dismiss answer a bad announcement id as a bad id, not an outage (#2891).** A malformed id failed the `::uuid` cast inside the query and an unknown id on dismiss threw `announcement_not_found`; both were reported as errors and answered 503. An unknown id on read went the other way: the insert into `announcement_user_state` (no foreign key to `announcements`) stored a read row for an announcement that does not exist and answered 200. Both routes now reject an id `normalizeUuid` does not accept with 400 `invalidPayload` and map `announcement_not_found` to 404 `notFound` without reporting it. `markAnnouncementRead` now inserts from `announcements`, so an unknown id writes nothing and throws `announcement_not_found` like `dismissAnnouncement`. The `announcements.read.mark` command contract lists `announcements` in `dataAccess`. No schema change.

@@ -35,6 +35,7 @@ const QUEUE_TARGET_LABEL: Record<FeedModerationQueueRow['target'], string> = {
   post: 'Post',
   reply: 'Reply',
   'announcement-reply': 'Announcement reply',
+  'card-message': 'Card message',
   question: 'Question',
   answer: 'Answer',
 };
@@ -398,8 +399,8 @@ function QueueRowCard({
         <HideToggleButton isHidden={isHidden} busy={busy} hideLabel="Hide" onClick={() => onToggle(row, !isHidden)} />
         {row.parentId && row.target !== 'post' ? (
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, color: t.MUTED }}>
-            <MessageSquare size={12} /> on {row.target === 'announcement-reply' ? 'announcement' : 'post'}{' '}
-            {row.parentId.slice(0, 8)}
+            <MessageSquare size={12} /> on {row.target === 'announcement-reply' ? 'announcement' : row.target === 'card-message' ? 'card' : 'post'}{' '}
+            {row.target === 'card-message' ? row.parentId.slice(0, 40) : row.parentId.slice(0, 8)}
           </span>
         ) : null}
       </div>
