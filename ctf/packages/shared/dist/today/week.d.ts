@@ -23,7 +23,8 @@ export type SeWeekDay = {
     past: boolean;
     talks: SeTodayTalk[];
 };
-export declare function seWeekDays(talks: SeTodayTalk[], now?: Date): SeWeekDay[];
+export declare function seDayKey(d: Date): string;
+export declare function seWeekDays(talks: SeTodayTalk[], now?: Date, fromToday?: boolean): SeWeekDay[];
 export declare function seTalkTimes(talk: SeTodayTalk): string;
 export declare function seTalkSpan(talk: SeTodayTalk): string;
 export declare function seTalkOnAirLine(talk: SeTodayTalk): string;

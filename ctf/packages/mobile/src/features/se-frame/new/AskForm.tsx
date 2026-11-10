@@ -6,6 +6,8 @@ import React, { useMemo, useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SE_ASK_WORDS as W, SE_CARD_LIFETIME_WORDS as L, seAskDueIso, seAskSuggestions, type SeAskDue, type SeThemeTokens } from '@ctf/shared';
 import { authedFetchJson } from '../../../auth/authedFetch';
+import { AskTasks, SuggestionText, useAskTasks } from './AskTasks';
+import { makeSheetStyles } from './sheetStyles';
 import { SE_FONT } from '../fonts';
 import { AskByWhen } from './AskByWhen';
 
@@ -18,7 +20,9 @@ function randomKey(): string {
 
 export function AskForm({ t }: { t: SeThemeTokens }) {
   const s = useMemo(() => makeStyles(t), [t]);
+  const sh = useMemo(() => makeSheetStyles(t), [t]);
   const [title, setTitle] = useState('');
+  const goal = useAskTasks();
   const [details, setDetails] = useState('');
   const [tag, setTag] = useState(W.defaultTag);
   const [busy, setBusy] = useState(false);
@@ -54,13 +58,25 @@ export function AskForm({ t }: { t: SeThemeTokens }) {
     }
   }
 
-  const disabled = busy || !title.trim() || !details.trim();
+  // With small tasks the ask is posted as a goal on the member's PeerProgramming board instead.
+  async function submitGoal() {
+    setBusy(true);
+    setError(null);
+    const failure = await goal.post(title.trim());
+    setBusy(false);
+    if (failure) return setError(failure);
+    setTitle('');
+    setDetails('');
+    setTag(W.defaultTag);
+  }
+
+  const disabled = busy || !title.trim();
   return (
     <View style={s.form}>
       {posted ? <Text style={s.done}>{W.posted}</Text> : null}
       <Text style={s.label}>{W.what}</Text>
-      <TextInput accessibilityLabel={W.what} style={s.input} value={title} maxLength={MAX_TITLE} onChangeText={setTitle} />
-      <View style={s.chips} accessibilityLabel={W.suggestions}>
+      <TextInput accessibilityLabel={W.what} style={sh.pill} value={title} maxLength={MAX_TITLE} onChangeText={setTitle} />
+      <View style={sh.suggestList} accessibilityLabel={W.suggestions}>
         {seAskSuggestions(title).map((item) => (
           <TouchableOpacity
             key={item.text}
@@ -69,14 +85,24 @@ export function AskForm({ t }: { t: SeThemeTokens }) {
               setTitle(item.text);
               setTag(item.group);
             }}
-            style={s.chip}
+            style={sh.suggestItem}
           >
-            <Text style={s.chipLabel}>{item.text}</Text>
+            <SuggestionText sh={sh} typed={title} text={item.text} />
           </TouchableOpacity>
         ))}
       </View>
-      <Text style={s.label}>{W.details}</Text>
-      <TextInput accessibilityLabel={W.details} style={[s.input, s.multiline]} value={details} maxLength={MAX_DETAILS} onChangeText={setDetails} multiline />
+      <Text style={s.label}>
+        {W.details} <Text style={sh.optional}>{W.optional}</Text>
+      </Text>
+      <TextInput
+        accessibilityLabel={`${W.details} ${W.optional}`}
+        style={[sh.area, goal.tasks ? sh.areaOff : null]}
+        value={details}
+        maxLength={MAX_DETAILS}
+        onChangeText={setDetails}
+        editable={goal.tasks === null}
+        multiline
+      />
       <Text style={s.text}>{W.hint}</Text>
       <AskByWhen t={t} due={due} date={date} onDue={setDue} onDate={setDate} />
       {error ? (
@@ -84,11 +110,12 @@ export function AskForm({ t }: { t: SeThemeTokens }) {
           {error}
         </Text>
       ) : null}
+      <AskTasks sh={sh} text={s.text} done={s.done} state={goal} />
       <TouchableOpacity
         accessibilityRole="button"
         accessibilityState={{ disabled }}
         disabled={disabled}
-        onPress={() => void submit()}
+        onPress={() => void (goal.tasks ? submitGoal() : submit())}
         style={[s.submit, disabled ? s.disabled : null]}
       >
         <Text style={s.submitLabel}>{busy ? W.submitting : W.submit}</Text>
@@ -102,26 +129,10 @@ function makeStyles(t: SeThemeTokens) {
     form: { gap: 8, alignSelf: 'stretch' },
     text: { fontSize: 15, lineHeight: 21, color: t.soft, fontFamily: SE_FONT.sans },
     label: { fontSize: 13, color: t.ink, fontFamily: SE_FONT.sansBold },
-    input: {
-      minHeight: 44,
-      paddingVertical: 10,
-      paddingHorizontal: 12,
-      borderRadius: 12,
-      borderWidth: 1.5,
-      borderColor: t.line,
-      backgroundColor: t.bg,
-      color: t.ink,
-      fontSize: 16,
-      fontFamily: SE_FONT.sans,
-    },
-    multiline: { minHeight: 88, textAlignVertical: 'top' },
-    chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-    chip: { minHeight: 40, justifyContent: 'center', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 999, borderWidth: 1.5, borderColor: t.hair, backgroundColor: t.bg },
-    chipLabel: { fontSize: 13, color: t.ink, fontFamily: SE_FONT.sans },
     error: { fontSize: 14, color: t.ink, fontFamily: SE_FONT.sansBold },
     done: { paddingVertical: 10, paddingHorizontal: 12, borderRadius: 12, borderWidth: 1.5, borderColor: t.hair, fontSize: 14, color: t.ink, fontFamily: SE_FONT.sans },
     submit: {
-      minHeight: 46,
+      minHeight: 54,
       marginTop: 4,
       alignItems: 'center',
       justifyContent: 'center',
@@ -129,9 +140,9 @@ function makeStyles(t: SeThemeTokens) {
       borderWidth: 1.5,
       borderColor: t.line,
       backgroundColor: t.btn,
-      boxShadow: `0px 3px 0px ${t.line}`,
+      boxShadow: `0px 4px 0px ${t.line}`,
     },
-    submitLabel: { fontSize: 15, color: t.onBtn, fontFamily: SE_FONT.sansBold },
+    submitLabel: { fontSize: 16, color: t.onBtn, fontFamily: SE_FONT.sansBold },
     disabled: { opacity: 0.6 },
   });
 }

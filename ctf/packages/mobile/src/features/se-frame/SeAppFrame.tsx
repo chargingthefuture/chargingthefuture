@@ -22,10 +22,10 @@ import type { FeatureKey } from '../../navigation/screens';
 
 const TODAY_DATE = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
-const TITLES: Record<SeTab, string> = {
+// + New has no title here: it is a sheet with its own heading, as on the web.
+const TITLES: Record<Exclude<SeTab, 'new'>, string> = {
   today: `Today in the ${SE_AVENHOOD}`,
   people: 'People',
-  new: 'New',
   activity: 'Activity',
   me: 'Me',
 };
@@ -83,7 +83,7 @@ function SeAppFrameBody({ onOpenAccount, onOpen }: FrameProps) {
         <UnlockBanner t={t} onOpenUnlock={() => onOpen('unlock')} />
         <FrameHeader s={s} tab={tab} />
 
-        <TabScreen t={t} tab={tab} user={user} theme={theme} onTheme={setTheme} onBack={back} saving={saving} onOpenAccount={onOpenAccount} onOpen={onOpen} />
+        <TabScreen t={t} tab={tab} user={user} theme={theme} onTheme={setTheme} onBack={back} onClose={() => select('today')} saving={saving} onOpenAccount={onOpenAccount} onOpen={onOpen} />
 
         {error ? (
           <Text accessibilityRole="alert" style={s.error}>
@@ -108,12 +108,13 @@ type TabScreenProps = {
   theme: SeThemeChoice;
   onTheme: (_next: SeThemeChoice) => void;
   onBack: () => void;
+  onClose: () => void;
   saving: boolean;
   onOpenAccount: () => void;
   onOpen: (_key: FeatureKey) => void;
 };
 
-function TabScreen({ t, tab, user, theme, onTheme, onBack, saving, onOpenAccount, onOpen }: TabScreenProps) {
+function TabScreen({ t, tab, user, theme, onTheme, onBack, onClose, saving, onOpenAccount, onOpen }: TabScreenProps) {
   if (tab === 'me') {
     return (
       <MeScreen
@@ -130,15 +131,16 @@ function TabScreen({ t, tab, user, theme, onTheme, onBack, saving, onOpenAccount
     );
   }
   if (tab === 'today') return user ? <TodayScreen t={t} accountId={user.id} onOpen={onOpen} /> : null;
-  if (tab === 'new') return <NewScreen t={t} onOpen={onOpen} />;
+  if (tab === 'new') return <NewScreen t={t} onOpen={onOpen} onClose={onClose} />;
   if (tab === 'activity') return <ActivityScreen t={t} onOpen={onOpen} />;
   return <PeopleScreen t={t} onOpen={onOpen} />;
 }
 
 function FrameHeader({ s, tab }: { s: Styles; tab: SeTab }) {
   const [definitionOpen, setDefinitionOpen] = useState(false);
-  // Me has no title, as on the web: the member's own picture and handle head it.
-  if (tab === 'me') return null;
+  // Me has no title, as on the web: the member's own picture and handle head it. + New is a sheet
+  // with its own heading.
+  if (tab === 'me' || tab === 'new') return null;
   if (tab !== 'today') {
     return (
       <View style={s.header}>
