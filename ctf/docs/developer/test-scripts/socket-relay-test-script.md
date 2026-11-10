@@ -126,6 +126,8 @@ web ☐
 - On success the new request appears in the feed with the correct tags, the poster's `@username`, and
   its "City, State, Country" location (only the parts that were set).
 - The request shows no price / "Free" — not "$0".
+- Details are optional: a request posted with a title and no details (from this form, or as an ask
+  from 3.1's + New) is accepted, and its card shows the title alone with no empty details line.
 
 web ☐
 
