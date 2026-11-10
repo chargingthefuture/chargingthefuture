@@ -1,4 +1,4 @@
-import type { SeCardKind, SeTodayAction, SeTodayAuthor, SeTodayCard } from '@ctf/shared';
+import { seCardId, type SeCardKind, type SeTodayAction, type SeTodayAuthor, type SeTodayCard } from '@ctf/shared';
 
 // Shared helpers for the Today sources: one card shape, and short text so a card stays a card.
 
@@ -32,7 +32,7 @@ export function card(input: {
   actions?: SeTodayAction[];
 }): SeTodayCard {
   return {
-    id: `${input.source}:${input.sourceId}`,
+    id: seCardId(input.source, input.sourceId),
     kind: input.kind,
     source: input.source,
     label: input.label,

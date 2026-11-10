@@ -425,6 +425,7 @@ Android admin present (2026-06-06): `AdminLighthouse.tsx` + `admin-api.ts` added
 
 ## 9) Change Log
 
+- 2026-11-10: **The place's conversation on the listing page.** It shows under the listing's About in the listing detail. Owner decision (an exception to the 3.0 screen freeze): the conversation under this plugin's Today card shows on the plugin's own page too, through the same panel the card's sheet uses on Today (`CardConversationPanel` / `CardConversationToggle` in `components/se-frame/today/card-conversation-panel.tsx`), reading and writing the same conversation through `/api/today/cards/[cardId]`, so 3.0 and 3.1 show one conversation. No route or table changed.
 - 2026-10-17: **Only an admin changes whether a listing shows (code review #2819, owner decision).** The host edit route kept the stored `is_active` when the body left it out, but a host who sent `isActive: true` could still put back a listing an admin had hidden. `updateProperty` now takes `isActive` only from an admin (`keepStoredWhenOmitted` gets the caller's admin flag); a host's value is ignored and the edit saves with the listing's visibility unchanged. The host form has no visibility control, so nothing a host sees changes. Test: `lib/lighthouse/property-visibility.test.ts`.
 
 - 2026-10-14: **Hidden listings stay hidden, chat waits for the host, and stay requests and credit sends cannot double (#2811, #2817, #2819, #2826, #2827, #2828, #2830).**

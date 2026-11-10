@@ -10,6 +10,7 @@ import { failureText, responseFailureText } from 'lib/errors/client-failure';
 import { getDirectoryTokens, onAccentText, type DirectoryTokens } from './shared';
 import { INVITE_WALL_WHY, formatInviteDate, type FullInvite, type InvitePage } from './directory-invite-format';
 import { INVITE_LINK_CLASS, InviteAvatar, InviteCardView } from './directory-invite-card';
+import { CardConversationToggle } from '@/components/se-frame/today/card-conversation-panel';
 
 const LOAD_ERROR = 'Could not load the invitations.';
 const WALL_PATH = '/apps/directory/invites';
@@ -72,6 +73,8 @@ function InviteArticle({ invite, t }: { invite: FullInvite; t: DirectoryTokens }
           <a href={invite.blogUrl} target="_blank" rel="noopener noreferrer" className={INVITE_LINK_CLASS} style={{ color: t.ACCENT, width: 'fit-content' }}>Published on the blog</a>
         ) : null}
       </footer>
+      {/* The conversation under this invitation's card on Today, the same one in 3.0 and 3.1. */}
+      {invite.inviteCode ? <CardConversationToggle source="directory-invite" sourceId={invite.inviteCode} /> : null}
     </article>
   );
 }

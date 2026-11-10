@@ -255,6 +255,7 @@ Seeded content:
 
 ## Change Log
 
+- 2026-11-10: **An invitation's conversation on the invite wall.** A "Conversation" button in the opened invitation opens it; it is held by Commons. Today's invitation cards are now keyed by the invite code (`inviteSourceId` in `lib/today/sources-stories.ts`) rather than the full address, so the wall can open the same conversation. Owner decision (an exception to the 3.0 screen freeze): the conversation under this plugin's Today card shows on the plugin's own page too, through the same panel the card's sheet uses on Today (`CardConversationPanel` / `CardConversationToggle` in `components/se-frame/today/card-conversation-panel.tsx`), reading and writing the same conversation through `/api/today/cards/[cardId]`, so 3.0 and 3.1 show one conversation. No route or table changed.
 - 2026-11-03: **The listing link in a full invitation names the person (owner report).** "See the live listing" sat directly above the Quora line and read as a label for the Quora address. It now reads "<name> in the Directory", beside "<name> on Quora:", same `/apps/directory/profile/<id>` address.
 - 2026-10-28: **Location data removed from invitation pictures (3.1.0, Personal controls).** `upsertDirectoryInvite` and the image read pass the picture through `stripPictureMetadata`.
 - 2026-10-17: Demo seed module `ctf/scripts/demo-seed/12-directory.mjs` covers the badge holder (DIR-8), a pending review skill chip (DIR-3) and the invitation wall as a member sees it (DIR-12) in the demo schema. Demo schema only; no product change.

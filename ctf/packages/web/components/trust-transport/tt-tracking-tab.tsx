@@ -9,6 +9,7 @@ import { responseFailureText } from "@/lib/errors/client-failure";
 import { getTrustTransportTokens, ttSettlementLabel, type TripRequest, type TtOffer } from "./tt-shared";
 import { acceptedCurrenciesBadgeLabel } from "@/components/shared/accepted-currency-picker";
 import { SettlementFailedNotice } from "./tt-settlement-notice";
+import { CardConversationToggle } from "@/components/se-frame/today/card-conversation-panel";
 
 const TERMINAL_STATUSES = new Set(["completed", "canceled"]);
 
@@ -344,6 +345,8 @@ function TrackingCard({ request, onChat, onAccepted, onCancelled, onCompletionCo
       ) : null}
       <DirectLineButton awaitingDriver={model.awaitingDriver} hasMarginBottom={model.cancellable} onClick={() => onChat(request)} />
       {model.cancellable && <CancelRequestButton requestId={request.id} onCancelled={onCancelled} />}
+      {/* The conversation under this ride's card on Today, the same one in 3.0 and 3.1. */}
+      <CardConversationToggle source="trust-transport" sourceId={request.id} />
     </div>
   );
 }

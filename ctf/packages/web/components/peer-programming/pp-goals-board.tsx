@@ -5,6 +5,7 @@ import { Target } from "lucide-react";
 import { CardControls, NewGoalForm, SmallButton, YourGoalPanel, nameOf, useTokens } from "./pp-goals-parts";
 import { ALL_GOALS, GoalChips, NEW_GOAL, chipGoals, goalColor } from "./pp-goals-chips";
 import type { Board, BoardGoal, BoardTask, TaskAction } from "./pp-goals-api";
+import { CardConversationPanel } from "@/components/se-frame/today/card-conversation-panel";
 
 // The board is laid out as three columns of cards, one card per task. A row of goals above it narrows
 // the columns to one goal, or shows every goal at once. A member picks any single card; nothing on the
@@ -169,6 +170,8 @@ export function GoalsBoardView({ board, busy, onAction, onEditTask, onAddTask, o
       {!board.ended && selectedGoal && selectedGoal.ownerUserId === board.viewerUserId && (
         <YourGoalPanel key={selectedGoal.id} goal={selectedGoal} busy={busy} onAddTask={onAddTask} onClose={onClose} />
       )}
+      {/* The conversation under this goal's card on Today, the same one in 3.0 and 3.1. */}
+      {selectedGoal ? <CardConversationPanel key={`talk-${selectedGoal.id}`} source="peer-programming" sourceId={selectedGoal.id} /> : null}
       <div style={{ display: "flex", gap: 10, overflowX: "auto", scrollSnapType: "x mandatory", paddingBottom: 6, alignItems: "flex-start" }}>
         <Column title="Up for grabs" empty="Nothing open right now. Add your goal and its cards." cards={columns.grabs} {...props} />
         <Column title="Doing" empty="Nobody is holding a card." cards={columns.doing} {...props} />

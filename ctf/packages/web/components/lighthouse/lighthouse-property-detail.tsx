@@ -7,6 +7,7 @@ import { BlockMemberButton } from "@/components/blocks/block-member-button";
 import { acceptedCurrencyLabels, formatRentParts, getLighthouseTokens, listingAcceptsCredits, type CurrencyMap, type LighthouseTokens, type Property } from "./shared";
 import { failureText } from 'lib/errors/client-failure';
 import { LIGHTHOUSE_ERROR_CODE } from 'lib/lighthouse/constants';
+import { CardConversationPanel } from "@/components/se-frame/today/card-conversation-panel";
 
 // The chips row under the title: property type, location, and a credits flag when accepted.
 function ListingBadges({ l, t }: { l: Property; t: LighthouseTokens }) {
@@ -127,6 +128,8 @@ export function LighthousePropertyDetail({
                 <div style={{ fontSize: 14, color: t.SUBTLE, lineHeight: 1.6, marginBottom: 24 }}>{l.description}</div>
               </>
             )}
+            {/* The conversation under this place's card on Today, the same one in 3.0 and 3.1. */}
+            <CardConversationPanel source="lighthouse" sourceId={l.id} />
           </div>
           <div style={{ width: 280, flexShrink: 0 }}>
             <div style={{ padding: "24px", borderRadius: 16, background: "rgba(255,255,255,0.03)", border: `1px solid ${t.ACCENT}25` }}>

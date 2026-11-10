@@ -8,6 +8,7 @@ import { acceptedCurrenciesBadgeLabel } from "@/components/shared/accepted-curre
 import { ShareLink } from "@/components/shared/share-link";
 import { useTheme } from '@/hooks/useTheme';
 import { getSocketRelayTokens, type SocketRelayTokens } from './sr-shared';
+import { CardConversationToggle } from "@/components/se-frame/today/card-conversation-panel";
 
 const editButtonStyle = { padding: "8px 14px", borderRadius: 8, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "#9CA3AF", fontSize: 12, fontWeight: 600, cursor: "pointer" } as const;
 
@@ -192,6 +193,10 @@ function RequestCard({
           after two or three words (owner report). */}
       <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "flex-end", alignItems: "center", gap: 8, marginTop: 12, marginLeft: 52 }}>
         <CardAction status={r.status} expired={expired} isOwn={isOwn} reclaimBlocked={reclaimBlocked} submitting={submitting} onClaim={() => onClaim(r.id)} onEdit={() => onEdit(r)} onRepost={() => onRepost(r.id)} />
+      </div>
+      {/* The conversation under this ask's card on Today, the same one in 3.0 and 3.1. */}
+      <div style={{ marginTop: 10, marginLeft: 52, color: t.ACCENT }}>
+        <CardConversationToggle source="socket-relay" sourceId={r.id} />
       </div>
     </div>
   );
