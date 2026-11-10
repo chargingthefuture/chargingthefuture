@@ -1,15 +1,14 @@
 import type { SeTodayBroadcast, SeTodayCard } from '@ctf/shared';
 import { readMoodEligibilityForUser } from 'lib/mood/repository';
 import { getDashboard } from 'lib/workforce/repository';
-import { getLiveBeaconEvent, listBeaconReplays } from 'lib/beacon/repository';
-import { toPublicBeaconReplay } from 'lib/beacon/replays';
+import { getLiveBeaconEvent } from 'lib/beacon/repository';
 import { listRounds } from 'lib/skills-hunt/repository';
 import { listMissionsForRoundWithCommunityProgress } from 'lib/skills-hunt/missions';
 import { withDbTransaction } from 'lib/db/postgres';
 import { action, card, startOfTodayIso, type TodayViewer } from './card';
 
 // The parts of Today that belong to the day or to this moment: the Mood check-in, the numbers, a
-// broadcast or its replays, the current SkillsHunt round, and the Main Room.
+// broadcast, the current SkillsHunt round, and the Main Room.
 
 export async function moodCard(viewer: TodayViewer, now = new Date()): Promise<SeTodayCard[]> {
   const { eligible } = await readMoodEligibilityForUser(viewer.userId);
@@ -53,23 +52,6 @@ export async function numbersCard(now = new Date()): Promise<SeTodayCard[]> {
 export async function broadcast(): Promise<SeTodayBroadcast | null> {
   const live = await getLiveBeaconEvent();
   return live ? { live: true, title: live.title, href: '/apps/beacon' } : null;
-}
-
-export async function replayCards(): Promise<SeTodayCard[]> {
-  const replays = (await listBeaconReplays(2, 0)).map(toPublicBeaconReplay);
-  return replays.map((replay) =>
-    card({
-      source: 'beacon-replay',
-      sourceId: replay.id,
-      kind: 'replay',
-      label: 'Replay',
-      title: replay.title,
-      body: replay.description || null,
-      createdAtIso: replay.endedAtIso ?? replay.startedAtIso ?? new Date().toISOString(),
-      href: replay.watchUrl,
-      actions: [action('open', 'Watch', replay.watchUrl)],
-    }),
-  );
 }
 
 export async function wantedCard(): Promise<SeTodayCard[]> {

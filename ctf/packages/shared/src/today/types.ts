@@ -30,9 +30,29 @@ export type SeTodayCard = {
   // Set by the server when the member already did what the card asks (a 21 Questions answer): the
   // card stays and shows done, and the dot cannot mark it not done.
   done?: boolean;
+  // On a blog story: when each comment anybody can read in its Fireside conversation was written,
+  // newest first (up to 50).
+  // Used by the server to apply the member's marks (seApplyCardMarks) and never sent.
+  commentTimesIso?: string[];
+  // When the member marked this card done today (it leaves Today from their next day).
+  markedDoneAtIso?: string;
+  // A story the member marked done that came back: how many comments were written since.
+  newComments?: number;
   // Set on signed-out Today when the card was read from the demo schema rather than from members'
   // rows, so the screen can tag it as sample data.
   sample?: boolean;
+  // Set only on an ask or offer the viewer posted: when it leaves Today, and what they can do there.
+  mine?: SeTodayCardMine;
+};
+
+// An ask or offer as its poster sees it on Today. `leavesIso` is its deadline, or the end of its 14
+// days; `dueIso` is the deadline the poster chose, if any. An offer cannot be closed from Today, and
+// an ask with a deadline is not renewed (it stays until the deadline).
+export type SeTodayCardMine = {
+  leavesIso: string;
+  dueIso: string | null;
+  canClose: boolean;
+  canRenew: boolean;
 };
 
 // The next booked TI Radio talk, held in the Main Room. `onAir` while its 90 minutes are running.

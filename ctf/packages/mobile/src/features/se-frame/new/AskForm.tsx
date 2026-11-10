@@ -1,14 +1,15 @@
 // + New → Ask on Android, the copy of the web (web components/se-frame/new/ask-form.tsx): posted as
 // a public SocketRelay request with no place on it. Suggestions from the holiday list appear while
-// typing.
+// typing. "By when?" (AskByWhen.tsx) is optional.
 
 import React, { useMemo, useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { SE_ASK_WORDS as W, seAskSuggestions, type SeThemeTokens } from '@ctf/shared';
+import { SE_ASK_WORDS as W, SE_CARD_LIFETIME_WORDS as L, seAskDueIso, seAskSuggestions, type SeAskDue, type SeThemeTokens } from '@ctf/shared';
 import { authedFetchJson } from '../../../auth/authedFetch';
 import { AskTasks, SuggestionText, useAskTasks } from './AskTasks';
 import { makeSheetStyles } from './sheetStyles';
 import { SE_FONT } from '../fonts';
+import { AskByWhen } from './AskByWhen';
 
 const MAX_TITLE = 120;
 const MAX_DETAILS = 5000;
@@ -27,20 +28,29 @@ export function AskForm({ t }: { t: SeThemeTokens }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [posted, setPosted] = useState(false);
+  const [due, setDue] = useState<SeAskDue>('none');
+  const [date, setDate] = useState('');
 
   async function submit() {
+    const dueIso = seAskDueIso(due, date || null);
+    if (due === 'date' && !dueIso) {
+      setError(L.dateMissing);
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
       await authedFetchJson('/api/socket-relay/requests', {
         method: 'POST',
         headers: { 'content-type': 'application/json', 'x-ctf-csrf': '1' },
-        body: JSON.stringify({ title: title.trim(), details: details.trim(), tags: [tag], isPublic: true, idempotencyKey: randomKey() }),
+        body: JSON.stringify({ title: title.trim(), details: details.trim(), tags: [tag], isPublic: true, idempotencyKey: randomKey(), dueIso }),
       });
       setPosted(true);
       setTitle('');
       setDetails('');
       setTag(W.defaultTag);
+      setDue('none');
+      setDate('');
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : W.failed);
     } finally {
@@ -94,6 +104,7 @@ export function AskForm({ t }: { t: SeThemeTokens }) {
         multiline
       />
       <Text style={s.text}>{W.hint}</Text>
+      <AskByWhen t={t} due={due} date={date} onDue={setDue} onDate={setDate} />
       {error ? (
         <Text accessibilityRole="alert" style={s.error}>
           {error}

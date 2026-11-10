@@ -7,7 +7,7 @@ import { BroadcastCard, RoomCard } from './room-card';
 import { TodayCard } from './today-card';
 import { sendTodayFeedback } from './send-feedback';
 import { WeekStrip } from './week-strip';
-import { useToday, type TodayMarks } from './use-today';
+import { useToday, type MarkKind, type TodayMarks } from './use-today';
 import styles from './today.module.css';
 
 // Today in 3.1: Days won, the broadcast while it is live, the rooms, then the day's cards newest first.
@@ -86,8 +86,8 @@ type TimelineProps = {
   viewerId: string;
   view: ReturnType<typeof seTodayView>;
   marks: TodayMarks;
-  mark: (kind: keyof TodayMarks, id: string) => void;
-  toggle: (kind: keyof TodayMarks, id: string) => void;
+  mark: (kind: MarkKind, id: string) => void;
+  toggle: (kind: MarkKind, id: string) => void;
   onMute?: (card: SeTodayCard) => void;
   onChanged: () => void;
 };

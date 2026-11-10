@@ -468,6 +468,10 @@ confirm it is not, and that no settlement table exists here.
 **1.** As a seeker, request a stay on another member's listing. Sign in as that host, open the 🔔 notifications tab in the Commons, and confirm a "Someone requested a stay on your LightHouse listing." item appears (unread) with an "Open" pill. Requesting on your own listing produces no notification.
 web ☐
 
+## A place to stay on Today (added 2026-11-03)
+
+**1.** As a host with an active listing, open Today in the 3.1 frame and tap the listing's title. **Expected:** "You posted this · On Today until <14 days from when the listing was posted or last changed>" with Keep it up for 14 more days and no close buttons. On day 14 Activity shows "Still offering this? Keep it up for 14 more days: <title>" once, with the same button. Without a renew the listing leaves Today and stays listed in LightHouse.
+web ☐ android ☐
 ### LH-13 · The card's conversation on this page, in 3.0 and 3.1 (added 2026-11-10)
 **Role:** two members (A and B) · **Surfaces:** web
 **Steps:**

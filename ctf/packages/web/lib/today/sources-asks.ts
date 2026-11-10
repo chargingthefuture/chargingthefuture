@@ -10,7 +10,9 @@ import { action, author, card, clip, type TodayViewer } from './card';
 // wanted. No times or places: a ride request shows that a ride is wanted and nothing about where,
 // as TrustTransport's own browse does, and a SocketRelay card leaves out the city.
 
-const PER_SOURCE = 4;
+// Enough that an ask kept up past its first 14 days, or with a later deadline, is not crowded out by
+// newer ones whose time on Today has ended (applyLifetimes leaves those out).
+const PER_SOURCE = 8;
 
 export async function goalAsks(viewer: TodayViewer): Promise<SeTodayCard[]> {
   const cohort = await getMyCohort(viewer.userId);

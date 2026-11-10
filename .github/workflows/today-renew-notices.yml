@@ -1,0 +1,61 @@
+name: Today — Day-14 Notices
+
+# Sends the day-14 notice in Activity for every open ask and offer whose 14 days on Today are ending
+# ("Still need this? Keep it up for 14 more days"), so a poster hears about it whether or not they open
+# the app (owner decision, 2026-11-10). Calls POST /api/internal/today/renew-notices once a day. The
+# route keys each notice by card and window end, so a repeat run never sends one twice. The response is
+# counts only (items checked, notices due); no member data is printed here or in the summary.
+#
+# What it needs (Settings → Secrets and variables → Actions), the same two the other daily runs use:
+#   NEXT_PUBLIC_APP_URL secret — the production base URL.
+#   CRON_SECRET secret — must match the CRON_SECRET the app reads at runtime.
+# If either is missing, the run warns, notes it in the summary and exits without error. The poster's
+# own Today read still sends their notice in the meantime.
+
+on:
+  schedule:
+    - cron: '37 19 * * *' # daily at 19:37 UTC, off the top of the hour
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: today-renew-notices
+  cancel-in-progress: false
+
+jobs:
+  run:
+    name: Send day-14 notices
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call the day-14 notice route
+        env:
+          APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          if [ -z "${APP_URL:-}" ]; then
+            echo "::warning::Day-14 notices skipped: NEXT_PUBLIC_APP_URL is not set in GitHub Actions secrets."
+            echo "Skipped: app URL not configured." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          if [ -z "${CRON_SECRET:-}" ]; then
+            echo "::warning::Day-14 notices skipped: CRON_SECRET is not set in GitHub Actions secrets."
+            echo "Skipped: CRON_SECRET not set; the daily day-14 notices are OFF." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          code=$(curl -sS -o /tmp/renew-notices.json -w '%{http_code}' -X POST \
+            "${APP_URL%/}/api/internal/today/renew-notices" \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            -H 'Content-Type: application/json' \
+            -d '{}')
+          echo "HTTP ${code}"
+          if [ "${code}" != "200" ]; then
+            echo "::error::The day-14 notice request failed with HTTP ${code}. Check that CRON_SECRET matches the app runtime value and the route is deployed."
+            exit 1
+          fi
+          checked=$(jq -r '.checked // 0' /tmp/renew-notices.json)
+          due=$(jq -r '.due // 0' /tmp/renew-notices.json)
+          echo "Checked ${checked} open asks and offers; ${due} were due a notice."
+          echo "Day-14 notices: checked ${checked} open asks and offers; ${due} were due a notice (each is sent once per window)." >> "$GITHUB_STEP_SUMMARY"

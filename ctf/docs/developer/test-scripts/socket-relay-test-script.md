@@ -126,6 +126,8 @@ web ☐
 - On success the new request appears in the feed with the correct tags, the poster's `@username`, and
   its "City, State, Country" location (only the parts that were set).
 - The request shows no price / "Free" — not "$0".
+- Details are optional: a request posted with a title and no details (from this form, or as an ask
+  from 3.1's + New) is accepted, and its card shows the title alone with no empty details line.
 
 web ☐
 
@@ -845,6 +847,17 @@ check found something harmful in it. Reword it and try again, or report a mistak
 reporting." The ordinary one posts as usual. If Stream is down, both post.
 **Result:** web ☐ — notes:
 
+### SR-24 · A deadline on an ask, and closing it from Today (3.1)
+**Role:** member A (posting) · **Surfaces:** web, android
+**Steps:**
+1. In + New → Ask, choose "By when?" → Today and post. Open Today and tap the ask's title.
+2. Tap Done. Open SocketRelay → Mine.
+3. Post another ask with No deadline, open it on Today and tap Closed, not done.
+**Expected:** Step 1: the card reads "You posted this · On Today until <today's date>", with Done and
+Closed, not done and no Keep it up button. Step 2: the ask leaves Today and shows as closed in
+SocketRelay. Step 3: the ask leaves Today and shows as canceled. A request somebody already claimed is
+not closed from Today; it closes through its fulfillment as before.
+**Result:** web ☐ android ☐ — notes:
 ### SR-24 · The card's conversation on this page, in 3.0 and 3.1 (added 2026-11-10)
 **Role:** two members (A and B) · **Surfaces:** web
 **Steps:**

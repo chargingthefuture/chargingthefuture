@@ -701,6 +701,10 @@ The following are documented limitations from the inventory's "Gaps and Known Te
 **1.** As a provider, make an offer on a request. As the requester, accept it. Sign in as the provider, open the 🔔 notifications tab in the Commons, and confirm a "Your TrustTransport offer was accepted." item appears (unread) with an "Open" pill.
 web ☐
 
+## Rides wanted on Today (added 2026-11-03)
+
+**1.** As a requester, ask for a ride, then open Today in the 3.1 frame and tap "A ride is wanted". **Expected:** the card reads "Your ride request…" and "You posted this · On Today until <14 days from posting>" (a ride carries no date of its own), with Done, Closed, not done and Keep it up for 14 more days. Tapping either close button cancels the request, and it leaves Today for the requester and for drivers. A ride request past its 14 days with no renew leaves Today and stays open in TrustTransport.
+web ☐ android ☐
 ### TT-30 · The card's conversation on this page, in 3.0 and 3.1 (added 2026-11-10)
 **Role:** two members (A and B) · **Surfaces:** web
 **Steps:**

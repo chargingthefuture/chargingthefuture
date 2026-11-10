@@ -38,6 +38,7 @@ function answerStyles(t: SeThemeTokens) {
     answers: { backgroundColor: t.card, borderWidth: 1.5, borderColor: t.hair, borderRadius: 18, padding: 12, gap: 10 },
     answersTitle: { fontSize: 13, color: t.ink, fontFamily: SE_FONT.sansBold },
     answer: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    yoursRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     answerText: { flex: 1, fontSize: 14, color: t.ink, fontFamily: SE_FONT.sans },
     answerName: { fontFamily: SE_FONT.sansBold },
     talkButton: { ...talk, backgroundColor: t.card },

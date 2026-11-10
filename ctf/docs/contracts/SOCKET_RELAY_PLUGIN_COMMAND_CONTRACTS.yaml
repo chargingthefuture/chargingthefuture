@@ -16,6 +16,9 @@ contracts:
       accepts (split settlements, e.g. part ServiceCredits and part USD). Accepted codes
       are validated against the active currencies catalog; unknown/inactive codes are
       dropped, never a fiat-parity claim for ServiceCredits.
+      An optional dueIso (the deadline chosen in + New, "By when?") is kept by Today in
+      today_card_windows, so the ask stays on Today until then; a missing, past or
+      unreadable one leaves the usual 14 days, and the request is saved either way.
     inputSchema:
       request:
         type: object
@@ -23,6 +26,9 @@ contracts:
       idempotencyKey:
         type: string
         required: true
+      dueIso:
+        type: string
+        required: false
     outputSchema:
       requestId:
         type: string
@@ -33,6 +39,7 @@ contracts:
       - socket_relay_request_events
       - socket_relay_request_accepted_currencies
       - currencies
+      - today_card_windows
     purpose: request_lifecycle
     retentionClass: transactional_long_lived
     idempotency: true

@@ -146,6 +146,20 @@
       "reason": "POST /api/today/feedback at 'signed_in', the tier Today is read at: a member who marks a Today card done or picks Not for me adds one to a daily total for that card's source and kind. No account id is stored, so the count says which kinds of cards are finished or passed on and nothing about who. Account restrictions still apply. The admin read of the totals is a separate route, GET /api/admin/today-feedback, at the default tier."
     },
     {
+      "file": "ctf/packages/web/lib/today/poster.ts",
+      "kind": "exception",
+      "feature": "3.1 open sign-up use",
+      "decision": "2026-11-10",
+      "reason": "requirePoster for POST /api/today/cards/[cardId]/close and /renew at 'signed_in': a member may always close (Done, or Closed, not done) or keep up for 14 more days their OWN open ask or offer on Today, whatever their Unlock standing and after day 14 too, so a need they posted is never stuck on Today or left to drop off unseen. Only the poster, checked against the item where it lives; account restrictions still apply; nothing about anybody else is read or written."
+    },
+    {
+      "file": "ctf/packages/web/app/api/today/marks/route.ts",
+      "kind": "exception",
+      "feature": "3.1 open sign-up use",
+      "decision": "2026-11-03",
+      "reason": "POST /api/today/marks at 'signed_in', the tier Today is read at: a member's own Done and Not for me marks on Today cards, stored on their account (today_card_marks) so every device agrees, and applied by GET /api/today. Only the member's own rows, scoped by account. Account restrictions still apply. Separate from POST /api/today/feedback, which counts marks with no names."
+    },
+    {
       "file": "ctf/packages/web/lib/mood/_lib.ts",
       "kind": "exception",
       "feature": "3.1 open sign-up use",

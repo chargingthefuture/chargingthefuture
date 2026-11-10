@@ -98,6 +98,22 @@
   cursor: pointer;
 }
 
+.chipOn {
+  border-color: var(--se-line);
+  background: var(--se-btn);
+  color: var(--se-on-btn);
+  font-weight: 700;
+}
+
+.byWhen {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .choice {
   display: flex;
   flex-direction: column;

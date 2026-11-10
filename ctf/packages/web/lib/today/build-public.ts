@@ -3,7 +3,8 @@ import { blogStories } from './sources-blog';
 import { dailyPuzzleCard } from './sources-daily';
 import { reportError } from 'lib/observability/report';
 import { cohortOffers } from './sources-offers';
-import { broadcast, missionCard, numbersCard, replayCards, wantedCard } from './sources-live';
+import { broadcast, missionCard, numbersCard, wantedCard } from './sources-live';
+import { replayCards } from './sources-replays';
 import { mainRoom, nextTalk, weekTalks } from './sources-rooms';
 import { readDaysWon } from 'lib/measures/action-minutes';
 import { listAvailableRequests as listRideRequests } from 'lib/trust-transport/repository';
@@ -73,7 +74,7 @@ export async function buildPublicToday(now = new Date()): Promise<SeToday> {
     { name: 'blog-stories', read: () => blogStories(now) },
     // Signed out, the puzzle can be read but not played, so its button says so.
     { name: 'games', read: async () => (await dailyPuzzleCard(now)).map((item) => ({ ...item, actions: [action('open', 'See the puzzle', item.href)] })) },
-    { name: 'beacon-replays', read: () => replayCards() },
+    { name: 'beacon-replays', read: () => replayCards(now) },
     { name: 'skills-hunt', read: () => wantedCard() },
     { name: 'skills-hunt-mission', read: () => missionCard(now) },
   ];
@@ -88,7 +89,8 @@ export async function buildPublicToday(now = new Date()): Promise<SeToday> {
   ]);
   const cards = cardLists
     .flatMap((list) => list ?? [])
-    .map((item) => ({ ...item, author: null }))
+    // No author, and no comment times: those are only for a member's own marks.
+    .map((item) => ({ ...item, author: null, commentTimesIso: undefined }))
     .sort((a, b) => b.createdAtIso.localeCompare(a.createdAtIso))
     .slice(0, TODAY_MAX_CARDS);
   return {

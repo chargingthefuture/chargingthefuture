@@ -14,6 +14,7 @@ import {
   SE_MUTE_WORDS,
   seCardAnswerKind,
   seCardOpensSheet,
+  seNewCommentsLine,
   type SeCardAnswerKind,
   type SeThemeTokens,
   type SeTodayCard,
@@ -157,6 +158,8 @@ function CardText({ s, card, open, opensSheet, onPress }: TextProps) {
           {card.body}
         </Text>
       ) : null}
+      {/* A story marked done that came back: comments were written in its conversation since. */}
+      {card.newComments ? <Text style={s.newComments}>{seNewCommentsLine(card.newComments)}</Text> : null}
     </TouchableOpacity>
   );
 }
@@ -225,7 +228,7 @@ export function TodayCard({
       {isQuestionsCard(card) ? <QuestionsPanel t={t} card={card} open={open} onOpen={() => setOpen(true)} onChanged={onChanged ?? noop} /> : null}
       <CardActions s={s} card={card} onOpenLink={onOpenLink} onAnswer={opensSheet ? (kind) => setSheet({ firstAnswer: kind }) : null} />
       {sheet ? (
-        <CardSheet t={t} card={card} viewerId={viewerId} firstAnswer={sheet.firstAnswer} onClose={() => setSheet(null)} onOpenLink={onOpenLink} />
+        <CardSheet t={t} card={card} viewerId={viewerId} firstAnswer={sheet.firstAnswer} onClose={() => setSheet(null)} onOpenLink={onOpenLink} onChanged={onChanged} />
       ) : null}
     </View>
   );
@@ -246,6 +249,7 @@ function makeStyles(t: SeThemeTokens) {
     text: { gap: 6 },
     title: { fontSize: 17, lineHeight: 22, color: t.ink, fontFamily: SE_FONT.sansBold },
     body: { fontSize: 14, lineHeight: 20, color: t.soft, fontFamily: SE_FONT.sans },
+    newComments: { fontSize: 12, color: t.kind.story, fontFamily: SE_FONT.sansBold },
     actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     action: {
       minHeight: 44,

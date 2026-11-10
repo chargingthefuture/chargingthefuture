@@ -479,3 +479,116 @@ policies:
     denyConditions:
       - actor_not_authenticated
       - actor_not_admin
+  - pluginId: today
+    command: today.cards.close
+    version: 1.0.0
+    requiredRoles:
+      - member
+    attributePolicies:
+      tenancy: same_workspace
+      minUnlockTier: signed_in
+      readsOnly: false
+      csrf: required
+      relationship: poster_only
+    consentRequirements:
+      scopes:
+        - platform_terms
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - actor_not_authenticated
+      - account_restricted
+      - invalid_card_id
+      - rate_limited
+      - not_the_poster
+      - not_open
+      - not_an_ask
+      - invalid_outcome
+  - pluginId: today
+    command: today.cards.renew
+    version: 1.0.0
+    requiredRoles:
+      - member
+    attributePolicies:
+      tenancy: same_workspace
+      minUnlockTier: signed_in
+      readsOnly: false
+      csrf: required
+      relationship: poster_only
+    consentRequirements:
+      scopes:
+        - platform_terms
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - actor_not_authenticated
+      - account_restricted
+      - invalid_card_id
+      - rate_limited
+      - not_the_poster
+      - not_open
+      - has_deadline
+  - pluginId: today
+    command: today.marks.save
+    version: 1.0.0
+    requiredRoles:
+      - member
+    attributePolicies:
+      tenancy: same_workspace
+      minUnlockTier: signed_in
+      readsOnly: false
+      csrf: required
+      relationship: own_rows_only
+    consentRequirements:
+      scopes:
+        - platform_terms
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - actor_not_authenticated
+      - account_restricted
+      - csrf_header_missing
+      - invalid_mark
+      - rate_limited
+  - pluginId: today
+    command: today.renew_notices.run
+    version: 1.0.0
+    requiredRoles:
+      - system_cron
+    attributePolicies:
+      tenancy: same_workspace
+      auth: cron_secret_bearer
+      readsOnly: false
+      csrf: not_applicable
+      relationship: none
+    consentRequirements:
+      scopes:
+        - platform_terms
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - cron_secret_missing_or_wrong

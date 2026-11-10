@@ -2,6 +2,7 @@ import { seStoriesForDay, seStoryOpening, type SeStoryPost, type SeTodayCard } f
 import { readBlogPosts } from 'lib/daily-posts/source';
 import { listExclusions } from 'lib/daily-posts/repository';
 import { reportError } from 'lib/observability/report';
+import { listStoryCommentTimes } from 'lib/fireside/story-comments';
 import { action, card, startOfTodayIso } from './card';
 
 // Stories from the blog (3.1.0 plan, Today): the blog's posts and the owner's Quora answers, five a
@@ -20,6 +21,18 @@ async function leftOut(): Promise<Set<string>> {
   }
 }
 
+// When each story's readable Fireside comments were written, so a story the member marked done comes
+// back when somebody has written since. A failed read leaves the times out and is reported: the
+// stories still show.
+async function commentTimes(slugs: string[]): Promise<Map<string, string[]>> {
+  try {
+    return await listStoryCommentTimes(slugs);
+  } catch (error) {
+    reportError(error, { area: 'today', op: 'story_comment_times' });
+    return new Map();
+  }
+}
+
 function storyLabel(post: SeStoryPost): string {
   return post.collection === 'archive/quora' ? 'Story · from Quora' : 'Story · from the blog';
 }
@@ -32,8 +45,9 @@ export async function blogStories(now = new Date()): Promise<SeTodayCard[]> {
   const today = seStoriesForDay(read.posts, day).filter((post) => !excluded.has(post.slug));
   if (today.length === 0) return [];
   const createdAtIso = startOfTodayIso(now);
-  return today.map((post) =>
-    card({
+  const times = await commentTimes(today.map((post) => post.slug));
+  return today.map((post) => ({
+    ...card({
       source: 'blog-story',
       sourceId: post.slug,
       kind: 'story',
@@ -44,5 +58,6 @@ export async function blogStories(now = new Date()): Promise<SeTodayCard[]> {
       href: post.url,
       actions: [action('open', 'Read it', post.url)],
     }),
-  );
+    commentTimesIso: times.get(post.slug) ?? [],
+  }));
 }

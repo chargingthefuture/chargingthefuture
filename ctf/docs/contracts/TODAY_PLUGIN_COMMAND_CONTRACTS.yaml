@@ -2,8 +2,11 @@ contracts:
   - pluginId: today
     command: today.read
     version: 1.0.0
-    description: Read everything the 3.1 Today screen draws, in one answer (GET /api/today).
-    inputSchema: {}
+    description: "Read everything the 3.1 Today screen draws, in one answer (GET /api/today), with the member's own Done and Not for me marks (today_card_marks) applied: Not for me never comes back; done stays the day it was marked (markedDoneAtIso) and leaves from the member's next day; a done blog story with a newer readable Fireside comment comes back with newComments. dayStart is the start of the member's own day."
+    inputSchema:
+      dayStart:
+        type: string
+        required: false
     outputSchema:
       today:
         type: object
@@ -63,6 +66,11 @@ contracts:
       - question_match_messages
       - member_blocks
       - account_restrictions
+      - today_card_windows
+      - today_card_marks
+      - fireside_threads
+      - fireside_comments
+      - notifications
     purpose: member_daily_overview
     retentionClass: none_read_only
     idempotency: true
@@ -428,5 +436,99 @@ contracts:
     dataAccess:
       - today_card_feedback_counts
     purpose: today_card_feedback
+    retentionClass: none_read_only
+    idempotency: true
+  - pluginId: today
+    command: today.cards.close
+    version: 1.0.0
+    description: "The poster closes their own open ask from its Today card, with the outcome they pick: 'done' or 'not_done'. A goal is reached or withdrawn, a SocketRelay request closed or canceled, a ride request canceled; the outcome is kept in today_card_windows so unmet needs can be counted. Poster only, at signed_in whatever their Unlock standing (owner decision, 2026-11-10); account restrictions apply; 20 a minute. (POST /api/today/cards/[cardId]/close)."
+    inputSchema:
+      cardId:
+        type: string
+      outcome:
+        type: string
+        enum: [done, not_done]
+    outputSchema:
+      ok:
+        type: boolean
+      outcome:
+        type: string
+    dataAccess:
+      - today_card_windows
+      - peer_programming_goals
+      - socket_relay_requests
+      - socket_relay_request_events
+      - trust_transport_requests
+      - trust_transport_trips
+    purpose: card_lifetime
+    retentionClass: until_account_deletion
+    idempotency: false
+  - pluginId: today
+    command: today.cards.renew
+    version: 1.0.0
+    description: "The poster keeps their own open ask or offer on Today for 14 more days from the tap (the card, or the day-14 notice in Activity). Refused on an ask with a deadline. Poster only, at signed_in whatever their Unlock standing (owner decision, 2026-11-10); account restrictions apply; 20 a minute. (POST /api/today/cards/[cardId]/renew)."
+    inputSchema:
+      cardId:
+        type: string
+    outputSchema:
+      ok:
+        type: boolean
+      shownUntilIso:
+        type: string
+    dataAccess:
+      - today_card_windows
+      - peer_programming_goals
+      - socket_relay_requests
+      - trust_transport_requests
+      - lighthouse_properties
+    purpose: card_lifetime
+    retentionClass: until_account_deletion
+    idempotency: true
+  - pluginId: today
+    command: today.marks.save
+    version: 1.0.0
+    description: "Store the member's own mark on a Today card: done (the timeline dot), not_for_me (the ••• menu) or clear (Done taken away), or a batch of up to 500 with upload true, sent once by a device that kept marks before they were stored on the account (a card already marked keeps its mark). Scoped to the member's own rows. 600 an hour. (POST /api/today/marks)."
+    inputSchema:
+      cardId:
+        type: string
+      mark:
+        type: string
+        enum: [done, not_for_me, clear]
+      marks:
+        type: array
+        maxItems: 500
+      upload:
+        type: boolean
+    outputSchema:
+      ok:
+        type: boolean
+      saved:
+        type: integer
+    dataAccess:
+      - today_card_marks
+    purpose: card_marks
+    retentionClass: until_account_deletion
+    idempotency: true
+  - pluginId: today
+    command: today.renew_notices.run
+    version: 1.0.0
+    description: "Daily run (today-renew-notices.yml, CRON_SECRET): send the day-14 notice in Activity for every open ask and offer with no deadline whose 14 days on Today end within a day or ended in the past week, whether or not the poster opens the app. Keyed by card and window end, so a notice is never sent twice for one window. Answers counts only. (POST /api/internal/today/renew-notices)."
+    inputSchema: {}
+    outputSchema:
+      ok:
+        type: boolean
+      checked:
+        type: integer
+      due:
+        type: integer
+    dataAccess:
+      - socket_relay_requests
+      - trust_transport_requests
+      - peer_programming_goals
+      - lighthouse_properties
+      - today_card_windows
+      - notifications
+      - notification_preferences
+    purpose: card_lifetime
     retentionClass: none_read_only
     idempotency: true

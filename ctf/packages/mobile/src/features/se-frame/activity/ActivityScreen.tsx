@@ -1,13 +1,15 @@
 // Activity on Android, the copy of the web (web components/se-frame/activity/): what needs the
 // member's answer, then what happened, from the app's notifications. Opening an item marks it read.
-// No red badges: "New" uses the theme's own colors.
+// No red badges: "New" uses the theme's own colors. The day-14 notice on the member's own ask or offer
+// carries its one-tap renew beside it.
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { SE_ACTIVITY_WORDS as W, seActivityView, seAgo, type SeActivityItem, type SeThemeTokens } from '@ctf/shared';
+import { SE_ACTIVITY_WORDS as W, SE_CARD_LIFETIME_WORDS as L, seActivityView, seAgo, seRenewCardId, type SeActivityItem, type SeThemeTokens } from '@ctf/shared';
 import { authedFetch, authedFetchJson } from '../../../auth/authedFetch';
 import type { FeatureKey } from '../../../navigation/screens';
 import { openTodayLink } from '../today/openTodayLink';
+import { usePosterActions } from '../today/usePosterActions';
 import { SE_FONT } from '../fonts';
 
 type State = { kind: 'loading' } | { kind: 'error'; message: string } | { kind: 'ready'; items: SeActivityItem[] };
@@ -41,22 +43,46 @@ function useActivity() {
   return { state, reload: load, markRead, markAllRead };
 }
 
-function Group({ s, title, items, onOpen }: { s: Styles; title: string; items: SeActivityItem[]; onOpen: (_item: SeActivityItem) => void }) {
+function Renew({ s, cardId, onDone }: { s: Styles; cardId: string; onDone: () => void }) {
+  const actions = usePosterActions(cardId, onDone);
+  const { status } = actions;
+  if (status.kind === 'done') return <Text style={s.text}>{status.text}</Text>;
+  return (
+    <>
+      <TouchableOpacity accessibilityRole="button" disabled={status.kind === 'busy'} onPress={() => void actions.renew()} style={s.allRead}>
+        <Text style={s.allReadLabel}>{status.kind === 'busy' ? L.renewing : L.renew}</Text>
+      </TouchableOpacity>
+      {status.kind === 'error' ? (
+        <Text accessibilityRole="alert" style={s.text}>
+          {status.text}
+        </Text>
+      ) : null}
+    </>
+  );
+}
+
+function Group({ s, title, items, onOpen, onRead }: { s: Styles; title: string; items: SeActivityItem[]; onOpen: (_item: SeActivityItem) => void; onRead: (_id: string) => void }) {
   if (items.length === 0) return null;
   return (
     <View style={s.group} accessibilityLabel={title}>
       <Text accessibilityRole="header" style={s.groupTitle}>
         {title}
       </Text>
-      {items.map((item) => (
-        <TouchableOpacity key={item.id} accessibilityRole={item.linkPath ? 'link' : 'button'} onPress={() => onOpen(item)} style={s.row}>
-          <Text style={s.summary}>{item.summary}</Text>
-          <View style={s.meta}>
-            {item.isRead ? null : <Text style={s.isNew}>{W.isNew}</Text>}
-            <Text style={s.when}>{seAgo(item.createdAtIso)}</Text>
+      {items.map((item) => {
+        const renewId = seRenewCardId(item);
+        return (
+          <View key={item.id} style={s.group}>
+            <TouchableOpacity accessibilityRole={item.linkPath ? 'link' : 'button'} onPress={() => onOpen(item)} style={s.row}>
+              <Text style={s.summary}>{item.summary}</Text>
+              <View style={s.meta}>
+                {item.isRead ? null : <Text style={s.isNew}>{W.isNew}</Text>}
+                <Text style={s.when}>{seAgo(item.createdAtIso)}</Text>
+              </View>
+            </TouchableOpacity>
+            {renewId ? <Renew s={s} cardId={renewId} onDone={() => onRead(item.id)} /> : null}
           </View>
-        </TouchableOpacity>
-      ))}
+        );
+      })}
     </View>
   );
 }
@@ -83,8 +109,8 @@ export function ActivityScreen({ t, onOpen }: { t: SeThemeTokens; onOpen: (_key:
   };
   return (
     <>
-      <Group s={s} title={W.answer} items={view.answer} onOpen={open} />
-      <Group s={s} title={W.happened} items={view.happened} onOpen={open} />
+      <Group s={s} title={W.answer} items={view.answer} onOpen={open} onRead={markRead} />
+      <Group s={s} title={W.happened} items={view.happened} onOpen={open} onRead={markRead} />
       {state.items.some((item) => !item.isRead) ? (
         <TouchableOpacity accessibilityRole="button" onPress={markAllRead} style={s.allRead}>
           <Text style={s.allReadLabel}>{W.allRead}</Text>

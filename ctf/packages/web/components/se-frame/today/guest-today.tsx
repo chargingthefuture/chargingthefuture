@@ -32,9 +32,18 @@ import styles from './today.module.css';
 // a quiet day, the readings and the next room), the day's cards read only, asks and offers from "A
 // member" with Sign up to answer, and People locked until a member is reviewed.
 
-// The small tag on anything read from sample data rather than members' own rows.
-function DemoTag() {
-  return <span className={styles.demoTag}>{W.demo}</span>;
+// The small tag on anything read from sample data rather than members' own rows: a lock and
+// "Sample", so a visitor reads it as private rather than empty.
+function SampleTag() {
+  return (
+    <span className={styles.sampleTag} aria-label={W.sampleLabel} title={W.sampleLabel}>
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <rect x="3" y="11" width="18" height="11" rx="2" />
+        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+      </svg>
+      <span aria-hidden="true">{W.sample}</span>
+    </span>
+  );
 }
 
 function Hero({ today, signUpUrl }: { today: SeToday | null; signUpUrl: string }) {
@@ -43,7 +52,7 @@ function Hero({ today, signUpUrl }: { today: SeToday | null; signUpUrl: string }
     <section aria-label={SE_DAYS_WON_TITLE} className={styles.daysWon}>
       <span className={styles.daysWonLabel}>
         {SE_DAYS_WON_TITLE}
-        {big && today?.daysWon?.sample ? <> <DemoTag /></> : null}
+        {big && today?.daysWon?.sample ? <> <SampleTag /></> : null}
       </span>
       {big ? <span className={styles.daysWonBig}>{big}</span> : null}
       <span className={styles.daysWonSmall}>{W.hero}</span>
@@ -150,7 +159,7 @@ function GuestCard({ card, signUpUrl }: { card: SeTodayCard; signUpUrl: string }
         <span className={styles.label} style={{ color }}>
           {card.label}
         </span>
-        {card.sample ? <DemoTag /> : null}
+        {card.sample ? <SampleTag /> : null}
       </div>
       <span className={styles.cardTitle}>{card.title}</span>
       {card.body && !bySignUp ? <span className={`${styles.body} ${styles.bodyClosed}`}>{card.body}</span> : null}

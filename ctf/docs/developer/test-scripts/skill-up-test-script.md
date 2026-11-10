@@ -978,6 +978,13 @@ web ☐
 
 Result: web ☐
 
+### LU-TODAY — A cohort on Today follows its own registration (added 2026-11-03)
+
+**Steps:** Open Today in the 3.1 frame with an open cohort that has a seat. Then close its registration (or fill its seats) and read Today again.
+
+**Expected:** The card reads "Learn a skill · learners wanted", or "Learn a skill · a trainer and learners wanted" while no trainer owns the cohort. It stays on Today however long ago it was opened, with no renew button and no day-14 notice, and leaves Today once registration closes or the cohort closes.
+
+Result: web ☐
 ### LU-30 · The card's conversation on this page, in 3.0 and 3.1 (added 2026-11-10)
 **Role:** two members (A and B) · **Surfaces:** web
 **Steps:**
