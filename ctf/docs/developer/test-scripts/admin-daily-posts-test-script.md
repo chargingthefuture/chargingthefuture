@@ -23,7 +23,26 @@
 
 **Expected:**
 - Step 1: there is a Daily Posts row and no Quora Message of the Day row.
-- Step 2: the screen shows today's date and four sections in order: PB2 Message of the Day, Today's blog posts, Templates, Themes.
+- Step 2: the screen shows today's date and five sections in order: Today, PB2 Message of the Day, Today's blog posts, Templates, Themes.
+
+### DP-1a — Today: the live topic, the blurbs and the platform ticks
+
+**Role:** Admin
+**Steps:**
+1. Look at the Today section.
+2. Tap **Copy** on the live topic and paste into a note.
+3. Tap **Copy** on the first blurb and paste into a note.
+4. Tap the **Quora** row under Platforms, then reload the screen.
+5. Tap the **Quora** row again, then reload.
+6. Open the screen again the next day (Eastern).
+
+**Expected:**
+- Step 1: a live topic labeled with its line, with three talking points; four blurbs, one per line (Peace Battle 2, Peace Battle 2 conference, Finding skills and One Percent, Why I am not on Quora); and eleven platform rows in three groups (Full posts, Blurbs, Lives and videos), with a count of how many are done. No row names a part of the app.
+- Step 2: the note holds the title, the three points as a list, and the link on its own line; the topic shows a green tick.
+- Step 3: the note holds the blurb and the link on its own line; the blurb shows a green tick.
+- Step 4: Quora shows a green tick and the count goes up by one after the reload.
+- Step 5: the tick is gone after the reload.
+- Step 6: the live topic is from the next line, the blurbs have moved on, and no platform is ticked.
 
 ### DP-2 — Copy ticks an item off for today, and the tick can be taken back
 

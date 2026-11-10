@@ -15,6 +15,11 @@ function daysBetween(from: string, to: string): number {
   return Math.round((Date.UTC(ty, tm - 1, td) - Date.UTC(fy, fm - 1, fd)) / 86_400_000);
 }
 
+/** Days from the epoch to a date; negative before it. */
+export function daysSinceEpoch(date: string): number {
+  return daysBetween(ROTATION_EPOCH, date);
+}
+
 /** Which of the 30 days a calendar date is, 0 to 29. */
 export function rotationSlot(date: string): number {
   const days = daysBetween(ROTATION_EPOCH, date);
