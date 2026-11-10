@@ -161,6 +161,7 @@ function IdentityNameRow({
           <WeaversBadgeControl size={20} tokens={t} />
         )}
       </div>
+      {p.username ? <div style={{ fontSize: 14, color: t.SUBTLE, marginBottom: 4 }}>@{p.username}</div> : null}
       {/* The headline (a short one-line tagline) always shows when set — including on a
           community-generated profile, where it used to be suppressed. */}
       {headline && <div style={{ fontSize: 15, color: t.SUBTLE, marginBottom: 8, lineHeight: 1.4 }}>{headline}</div>}

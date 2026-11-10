@@ -95,6 +95,15 @@ interface DirectoryListItem {
   firstName: string;
   lastName: string | null;
   claimedByUserId: string | null;
+  username?: string | null;
+}
+
+// "Ada Lovelace · @ada": the Directory name with the member's username (owner decision, 2026-11-10),
+// so the picker can be searched and read either way.
+export function memberLabel(item: Pick<DirectoryListItem, 'firstName' | 'lastName' | 'username'>): string {
+  const name = [item.firstName, item.lastName].filter(Boolean).join(' ').trim();
+  if (item.username) return name ? `${name} · @${item.username}` : `@${item.username}`;
+  return name || 'A member';
 }
 
 interface DirectoryListResponse {
@@ -106,7 +115,7 @@ export function mapDirectoryToMembers(payload: DirectoryListResponse): MemberOpt
     .filter((item): item is DirectoryListItem & { claimedByUserId: string } => Boolean(item.claimedByUserId))
     .map((item) => ({
       userId: item.claimedByUserId,
-      name: [item.firstName, item.lastName].filter(Boolean).join(' ').trim() || 'A member',
+      name: memberLabel(item),
     }));
 }
 

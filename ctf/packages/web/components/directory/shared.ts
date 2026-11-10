@@ -28,6 +28,8 @@ export function getDirectoryTokens(theme: ThemeName): DirectoryTokens {
 export interface Member {
   id: string;
   name: string;
+  // The claimed member's username (owner decision, 2026-11-10), shown as @username beside the name.
+  username?: string | null;
   sector: string;
   jobTitle: string;
   skills: string[];
