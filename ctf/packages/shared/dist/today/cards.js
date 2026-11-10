@@ -20,30 +20,25 @@ export function seCardIdValid(id) {
     return !OWN_CONTROLS.has(id.slice(0, id.indexOf(':')));
 }
 const SHEET_KINDS = new Set(['ask', 'offer', 'story']);
-// The plugin a card's conversation belongs to, by the card's source. A source not listed (an
-// announcement, the Quora survey) has no plugin of its own, so its conversation is Commons'.
+// The plugin a card's conversation belongs to, by the card's source. A source not listed goes to
+// Commons: an announcement or the Quora survey, which have no plugin of their own, and SkillsHunt,
+// What Works and Directory invitations, whose talk is for the group rather than one item's
+// (owner decision, 2026-11-10).
 const CARD_SOURCE_PLUGIN = {
     'trust-transport': 'trust-transport',
     lighthouse: 'lighthouse',
     'socket-relay': 'socket-relay',
     'peer-programming': 'peer-programming',
     'skill-up': 'skill-up',
-    'skills-hunt': 'skills-hunt',
-    'skills-hunt-mission': 'skills-hunt',
-    'what-works': 'what-works',
-    'directory-invite': 'directory',
     'blog-story': 'fireside',
 };
-// Which plugin item a card is: the plugin from the card's source, and the source's own id. A
-// SkillsHunt mission is marked as one, so it never shares a conversation with a round of that plugin.
+// Which plugin item a card is: the plugin from the card's source, and the source's own id. In
+// Commons the item id keeps the source in front (`what-works:12`), so items from different sources
+// never share a conversation.
 export function seCardItemRef(cardId) {
     const colon = cardId.indexOf(':');
-    const source = cardId.slice(0, colon);
-    const sourceId = cardId.slice(colon + 1);
-    return {
-        plugin: CARD_SOURCE_PLUGIN[source] ?? 'commons',
-        itemId: source === 'skills-hunt-mission' ? `mission:${sourceId}` : sourceId,
-    };
+    const plugin = CARD_SOURCE_PLUGIN[cardId.slice(0, colon)];
+    return plugin ? { plugin, itemId: cardId.slice(colon + 1) } : { plugin: 'commons', itemId: cardId };
 }
 // Whether tapping the card's text opens the sheet; every other card keeps expanding in place.
 export function seCardOpensSheet(card) {

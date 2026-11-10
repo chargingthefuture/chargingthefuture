@@ -113,17 +113,14 @@ describe('seCardItemRef', () => {
   it('names the plugin behind each card source', () => {
     expect(seCardItemRef('trust-transport:9f1c')).toEqual({ plugin: 'trust-transport', itemId: '9f1c' });
     expect(seCardItemRef('lighthouse:abc')).toEqual({ plugin: 'lighthouse', itemId: 'abc' });
-    expect(seCardItemRef('directory-invite:k3x9')).toEqual({ plugin: 'directory', itemId: 'k3x9' });
     expect(seCardItemRef('blog-story:why-i-trade')).toEqual({ plugin: 'fireside', itemId: 'why-i-trade' });
   });
 
-  it('keeps a SkillsHunt mission apart from a round of the same plugin', () => {
-    expect(seCardItemRef('skills-hunt-mission:1')).toEqual({ plugin: 'skills-hunt', itemId: 'mission:1' });
-    expect(seCardItemRef('skills-hunt:1')).toEqual({ plugin: 'skills-hunt', itemId: '1' });
-  });
-
-  it('gives Commons anything with no plugin of its own, and keeps colons in the item id', () => {
-    expect(seCardItemRef('announcement:42')).toEqual({ plugin: 'commons', itemId: '42' });
-    expect(seCardItemRef('quora-survey:https://example.org/a:b')).toEqual({ plugin: 'commons', itemId: 'https://example.org/a:b' });
+  it('gives Commons SkillsHunt, What Works, invitations and anything with no plugin, keeping the source in the item id', () => {
+    expect(seCardItemRef('skills-hunt-mission:1')).toEqual({ plugin: 'commons', itemId: 'skills-hunt-mission:1' });
+    expect(seCardItemRef('skills-hunt:1')).toEqual({ plugin: 'commons', itemId: 'skills-hunt:1' });
+    expect(seCardItemRef('what-works:12')).toEqual({ plugin: 'commons', itemId: 'what-works:12' });
+    expect(seCardItemRef('directory-invite:k3x9')).toEqual({ plugin: 'commons', itemId: 'directory-invite:k3x9' });
+    expect(seCardItemRef('quora-survey:https://example.org/a:b')).toEqual({ plugin: 'commons', itemId: 'quora-survey:https://example.org/a:b' });
   });
 });
