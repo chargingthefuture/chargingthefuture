@@ -132,6 +132,13 @@
       "reason": "requireCardsAccess for the Today card conversations under /api/today/cards/[cardId]: reading and deleting one's own message at 'signed_in', and answering, writing, editing one's own message, Just us two and Report at 'signed_in_posting' (open while approved, inside the first 14 days, or waiting on an address; paused after day 14 until Unlock is done). A trial of whether writing early keeps people: CARDS_OPEN_BEFORE_UNLOCK = false puts every card route back to approved members only."
     },
     {
+      "file": "ctf/packages/web/lib/games/play-gate.ts",
+      "kind": "exception",
+      "feature": "3.1 open sign-up use",
+      "decision": "2026-11-10",
+      "reason": "readDailyGate at 'signed_in': the /games page sends the puzzle of the day's play screens to any signed-in member, approved or not, and to a signed-out visitor only the puzzle's details with Sign in to play. Nothing is stored on the server; the result stays on the device. Account restrictions still apply."
+    },
+    {
       "file": "ctf/packages/web/app/api/today/feedback/route.ts",
       "kind": "exception",
       "feature": "3.1 open sign-up use",

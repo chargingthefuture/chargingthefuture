@@ -259,3 +259,8 @@
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+/* The button under "Sign in to play" or "Finish Unlock to play" keeps its own width. */
+.gateButton {
+  align-self: flex-start;
+}
