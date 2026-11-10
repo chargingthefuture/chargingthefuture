@@ -113,6 +113,17 @@ could not be opened. Step 3 shows the profile route's message. In step 4 the tak
 route's reason instead of a fixed sentence, and both panels name the failure.
 **Result:** web ☐ — notes:
 
+### DIR-1c · Usernames show beside names and can be searched (added 2026-11-10)
+**Role:** member · **Surfaces:** web
+**Precondition:** One claimed profile whose member has a Clerk username (for example `ada_l`), and one unclaimed profile.
+**Steps:**
+1. Open Directory and find the claimed profile in the list.
+2. Open it.
+3. Type part of the username (for example `ada`, then `@ADA`) in the search box.
+4. Type part of that member's email address in the search box.
+**Expected:** Step 1 shows `@ada_l` under the name on the card and in the side list; the unclaimed profile shows no `@` line. Step 2 shows `@ada_l` under the name in the header. Step 3 lists the claimed profile both times. Step 4 does not list it because of the email: a search only ever matches a username, never an email address.
+**Result:** web ☐ — notes:
+
 ### DIR-2 · Read a profile (real fields only)
 **Role:** member · **Surfaces:** all
 **Steps:**

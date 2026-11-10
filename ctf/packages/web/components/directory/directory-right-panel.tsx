@@ -32,7 +32,7 @@ export function DirectoryRightPanel({
           </Avatar>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: t.TEXT, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.name}</div>
-            <div style={{ fontSize: 11, color: t.MUTED, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.jobTitle}</div>
+            <div style={{ fontSize: 11, color: t.MUTED, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.username ? `@${p.username} · ` : ""}{p.jobTitle}</div>
           </div>
         </div>
       ))}

@@ -81,6 +81,7 @@ export function DirectoryBrowse({
                     <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
                       <div style={{ fontSize: 15, fontWeight: 700, color: t.TITLE, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.name}</div>
                     </div>
+                    {p.username ? <div style={{ fontSize: 12, color: t.SUBTLE, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>@{p.username}</div> : null}
                     <div style={{ fontSize: 12, color: t.SUBTLE, marginBottom: 4 }}>{p.jobTitle}</div>
                     <Badge style={{ background: `${t.ACCENT}10`, color: t.ACCENT, border: `1px solid ${t.ACCENT}25`, fontSize: 11 }}>{p.sector}</Badge>
                   </div>

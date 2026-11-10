@@ -74,3 +74,29 @@ export async function resolveUsernames(userIds: string[]): Promise<Map<string, s
   for (const [id, identity] of identities) result.set(id, identity.username);
   return result;
 }
+
+// The accounts whose username contains `term` (a leading @ and case ignored), for finding a member by
+// username in a search box. Clerk's search also matches names and email addresses, so every result is
+// checked against the username alone: a search never reveals whose email or name matched.
+// Best-effort: no secret key, or a failed call, finds nobody.
+export const USERNAME_MATCH_LIMIT = 100;
+
+export function usernameContains(username: string | null | undefined, term: string): boolean {
+  const needle = term.trim().replace(/^@/, '').toLowerCase();
+  return needle.length >= 2 && typeof username === 'string' && username.toLowerCase().includes(needle);
+}
+
+export async function findUserIdsByUsername(term: string): Promise<string[]> {
+  const needle = term.trim().replace(/^@/, '');
+  if (needle.length < 2) return [];
+  const secretKey = getClerkSecretKey();
+  if (!secretKey) return [];
+  try {
+    const client = createClerkClient({ secretKey });
+    const response = await client.users.getUserList({ query: needle, limit: USERNAME_MATCH_LIMIT });
+    return response.data.filter((user) => usernameContains(user.username, needle)).map((user) => user.id);
+  } catch {
+    // no-trace: best-effort, so the search runs on the Directory's own fields alone
+    return [];
+  }
+}

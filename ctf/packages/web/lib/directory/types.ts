@@ -50,6 +50,9 @@ export type DirectoryProfile = {
   // the claimed member currently holds the badge (eligible and not revoked for cause). The UI is
   // positive-only: false/absent renders nothing (no empty slot, no "not yet earned" state).
   hasWeaversBadge?: boolean;
+  // The claimed member's username, from Clerk, shown beside the name (owner decision, 2026-11-10).
+  // Set by the read routes on a claimed profile only; null when the member has none.
+  username?: string | null;
 };
 
 export type DirectoryAnnouncement = {

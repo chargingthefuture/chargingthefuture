@@ -83,33 +83,6 @@ export interface CurrenciesResponse {
   currencies?: Currency[];
 }
 
-// One member the caller can pick as the other party. Only claimed profiles (with a real user id)
-// are offered, because a counterparty must resolve to an actual member.
-export interface MemberOption {
-  userId: string;
-  name: string;
-}
-
-interface DirectoryListItem {
-  id: string;
-  firstName: string;
-  lastName: string | null;
-  claimedByUserId: string | null;
-}
-
-interface DirectoryListResponse {
-  items?: DirectoryListItem[];
-}
-
-export function mapDirectoryToMembers(payload: DirectoryListResponse): MemberOption[] {
-  return (payload.items ?? [])
-    .filter((item): item is DirectoryListItem & { claimedByUserId: string } => Boolean(item.claimedByUserId))
-    .map((item) => ({
-      userId: item.claimedByUserId,
-      name: [item.firstName, item.lastName].filter(Boolean).join(' ').trim() || 'A member',
-    }));
-}
-
 // --- display labels ----------------------------------------------------------------------------
 
 export const SECTOR_LABEL: Record<RecurringActivitySector, string> = {

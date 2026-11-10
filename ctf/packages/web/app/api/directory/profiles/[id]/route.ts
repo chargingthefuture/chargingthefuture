@@ -5,6 +5,7 @@ import { getDirectoryProfileForMember } from 'lib/directory/repository';
 import { getWeaversBadgeHolders } from 'lib/contributor-access/badge';
 import { logDirectoryAudit } from 'lib/directory/audit';
 import { reportError } from 'lib/observability/report';
+import { resolveMemberIdentities } from 'lib/identity/resolve-usernames';
 
 // Single directory profile by id, behind the same read-access gate as the list. Backs the auth-gated
 // deep-link page (/apps/directory/profile/[id]) so a shared link opens that profile for a signed-in
@@ -43,9 +44,13 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     // carries the field; a community-generated (unclaimed) profile never gets it. Guarded read:
     // any Contributor Access error yields the empty set and the profile still returns.
     if (member.claimedByUserId != null) {
-      const badgeHolders = await getWeaversBadgeHolders([member.claimedByUserId]);
+      const [badgeHolders, identities] = await Promise.all([
+        getWeaversBadgeHolders([member.claimedByUserId]),
+        resolveMemberIdentities([member.claimedByUserId]),
+      ]);
+      const username = identities.get(member.claimedByUserId)?.username ?? null;
       return NextResponse.json(
-        { member: { ...member, hasWeaversBadge: badgeHolders.has(member.claimedByUserId) } },
+        { member: { ...member, hasWeaversBadge: badgeHolders.has(member.claimedByUserId), username } },
         { status: 200 },
       );
     }

@@ -181,6 +181,27 @@ Result: web ☐
 
 ---
 
+### SC-3c — Find the recipient by name or username (added 2026-11-10)
+
+**Role:** member
+**Surfaces:** web
+**Precondition:** Signed in as Sender with at least 10 credits available. Recipient has a claimed Directory profile and a username.
+
+**Steps:**
+1. Open the Send panel and type two letters of Recipient's Directory name in the Recipient box.
+2. Pick Recipient from the list, enter 5, and send.
+3. Type part of Recipient's username instead, pick them, and send 5 again.
+4. Type a name that matches nobody.
+
+**Expected:**
+- Step 1 lists matching members as "Name · @username".
+- Steps 2 and 3 send to Recipient, as in SC-3; the box shows the picked member, and empties after the send.
+- Step 4 lists nobody, and sending that text is refused as in SC-3a: a name is never sent as typed.
+
+Result: web ☐
+
+---
+
 ### SC-3b — A send to yourself is refused
 
 **Role:** member

@@ -45,6 +45,8 @@ type DirectoryListItem = {
   country?: string | null;
   // "Weavers of the Commons" contributor badge — present only on claimed profiles.
   hasWeaversBadge?: boolean;
+  // The claimed member's username, shown beside the name; absent on unclaimed profiles.
+  username?: string | null;
 };
 
 // Collapse `undefined` to `null` for the optional nullable fields, so the many `field ?? null`
@@ -104,6 +106,7 @@ function mapListItemToMember(item: DirectoryListItem): Member {
     state: orNull(item.state),
     country: orNull(item.country),
     hasWeaversBadge: item.hasWeaversBadge,
+    username: orNull(item.username),
   };
 }
 
@@ -154,7 +157,7 @@ function DirectoryHeader({
       <div style={{ padding: "0 12px 10px", display: "flex", flexDirection: "column", gap: 8 }}>
         <div style={{ position: "relative" }}>
           <Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: t.FAINT }} />
-          <input value={query} onChange={(e) => onQueryChange(e.target.value)} placeholder="Search name, skill, or location…" style={{ width: "100%", padding: "8px 10px 8px 30px", background: t.INPUT_BG, border: `1px solid ${t.BORDER}`, borderRadius: 8, fontSize: 13, color: t.SUBTLE, outline: "none", boxSizing: "border-box" }} />
+          <input value={query} onChange={(e) => onQueryChange(e.target.value)} placeholder="Search name, username, skill, or location…" style={{ width: "100%", padding: "8px 10px 8px 30px", background: t.INPUT_BG, border: `1px solid ${t.BORDER}`, borderRadius: 8, fontSize: 13, color: t.SUBTLE, outline: "none", boxSizing: "border-box" }} />
         </div>
         {showSectorFilters && (
           <div style={{ display: "flex", gap: 6, overflowX: "auto" }}>

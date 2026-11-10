@@ -79,6 +79,14 @@ interface DirectoryListItem {
   firstName: string;
   lastName: string | null;
   claimedByUserId: string | null;
+  username?: string | null;
+}
+
+// "Ada Lovelace · @ada": the Directory name with the member's username, as on the web.
+function memberLabel(item: DirectoryListItem): string {
+  const name = [item.firstName, item.lastName].filter(Boolean).join(' ').trim();
+  if (item.username) return name ? `${name} · @${item.username}` : `@${item.username}`;
+  return name || 'A member';
 }
 
 // Only claimed profiles are offered, because the other party must be a real member. A refused search
@@ -91,7 +99,7 @@ export async function searchMembers(term: string, signal: AbortSignal): Promise<
     .filter((item): item is DirectoryListItem & { claimedByUserId: string } => Boolean(item.claimedByUserId))
     .map((item) => ({
       userId: item.claimedByUserId,
-      name: [item.firstName, item.lastName].filter(Boolean).join(' ').trim() || 'A member',
+      name: memberLabel(item),
     }))
     .slice(0, 8);
 }
