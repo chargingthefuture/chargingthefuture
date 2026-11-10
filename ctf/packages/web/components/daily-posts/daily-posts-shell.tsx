@@ -12,10 +12,12 @@ import { CopyRow } from './copy-row';
 import { ExcludeButton } from './exclude-button';
 import { TemplatesSection } from './templates-section';
 import { ThemeGroup } from './theme-group';
+import { TodayChecklist } from './today-checklist';
 import * as api from './api';
-import type { DailyPostItem, DailyPostTemplateItem, ShellTokens, TickMap } from './types';
+import type { DailyBlurbItem, DailyLiveItem, DailyPostItem, DailyPostTemplateItem, ShellTokens, TickMap } from './types';
 
-// The day's posting list in one place, from a phone: today's PB2 message, today's share of the blog
+// The day's posting list in one place, from a phone: today's checklist (live topic, blurbs and a
+// tick per platform), today's PB2 message, today's share of the blog
 // rotation, the owner's templates, and the blog posts grouped by theme. Every copy control ticks
 // itself off for the day, so what is already posted is visible at a glance. Nothing here changes
 // the app or the blog.
@@ -31,6 +33,9 @@ type Props = {
   templates: DailyPostTemplateItem[];
   ticks: TickMap;
   storeError: string | null;
+  live: DailyLiveItem | null;
+  blurbs: DailyBlurbItem[];
+  contentError: string | null;
 };
 
 function Section({ t, title, note, children }: { t: ShellTokens; title: string; note?: ReactNode; children: ReactNode }) {
@@ -52,7 +57,7 @@ function ErrorLine({ text }: { text: string }) {
 }
 
 export function DailyPostsShell(props: Props) {
-  const { today, todayLabel, pb2, pb2Error, rotation, postsError, templates, storeError } = props;
+  const { today, todayLabel, pb2, pb2Error, rotation, postsError, templates, storeError, live, blurbs, contentError } = props;
   const { theme } = useTheme();
   const t = getPluginShellTokens(getAppAccent('fireside', theme), theme);
   const [ticks, setTicks] = useState<TickMap>(props.ticks);
@@ -102,6 +107,10 @@ export function DailyPostsShell(props: Props) {
           {todayLabel}. Copy ticks a post off for today; tap the tick to take it back.
         </p>
         {storeError && <ErrorLine text={`Ticks and templates could not be read: ${storeError}`} />}
+
+        <Section t={t} title="Today" note="One live topic, one blurb from each line, and a tick for every platform once something has gone up there.">
+          <TodayChecklist t={t} today={today} ticks={ticks} live={live} blurbs={blurbs} contentError={contentError} onTick={onTick} />
+        </Section>
 
         <Section t={t} title="PB2 Message of the Day" note={<Link href="/admin/quora-message-of-the-day" style={{ color: t.ACCENT }}>See the coming days</Link>}>
           {pb2Error && <ErrorLine text={pb2Error} />}
