@@ -23,6 +23,7 @@ type Props = {
 const GROUPS: Array<{ kind: DailyPlatformKind; title: string }> = [
   { kind: 'post', title: 'Full posts' },
   { kind: 'blurb', title: 'Blurbs' },
+  { kind: 'image', title: 'Pictures' },
   { kind: 'live', title: 'Lives and videos' },
 ];
 
