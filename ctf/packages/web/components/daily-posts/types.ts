@@ -21,3 +21,7 @@ export type DailyPostTemplateItem = { id: string; title: string; body: string };
 
 /** item_key → days ticked, newest first. */
 export type TickMap = Record<string, string[]>;
+
+export type DailyBlurbItem = { id: string; lineLabel: string; text: string; pasteText: string };
+
+export type DailyLiveItem = { id: string; lineLabel: string; title: string; points: string[]; pasteText: string };

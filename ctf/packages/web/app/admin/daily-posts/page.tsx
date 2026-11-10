@@ -1,11 +1,12 @@
 import { redirect } from 'next/navigation';
 import { evaluatePluginAccess } from 'lib/auth/server-authz';
 import { DailyPostsShell } from '@/components/daily-posts/daily-posts-shell';
-import type { DailyPostItem, DailyPostTemplateItem, TickMap } from '@/components/daily-posts/types';
+import type { DailyBlurbItem, DailyLiveItem, DailyPostItem, DailyPostTemplateItem, TickMap } from '@/components/daily-posts/types';
 import { motdProtestDay, motdToday, quoraMotdFor } from 'lib/quora-motd/select';
 import { motdDayLine } from 'lib/quora-motd/types';
 import { blogPostPasteText, readBlogPosts } from 'lib/daily-posts/source';
 import { rotationFor } from 'lib/daily-posts/rotation';
+import { blurbPasteText, dailyPick, livePasteText, readDailyContent } from 'lib/daily-posts/daily-content';
 import { themesFromText, type DailyPostThemeId } from 'lib/daily-posts/themes';
 import { listExclusions, listTemplates, listThemeChoices, listTicks } from 'lib/daily-posts/repository';
 import { failureReason } from 'lib/errors/failure';
@@ -60,6 +61,20 @@ function postItems(blog: BlogRead, store: StoreRead): DailyPostItem[] {
   });
 }
 
+// The day's live topic and blurbs, ready for the screen, or why they could not be read.
+function dailyItems(
+  daily: Awaited<ReturnType<typeof readDailyContent>>,
+  today: string,
+): { live: DailyLiveItem | null; blurbs: DailyBlurbItem[]; contentError: string | null } {
+  if (!daily.ok) return { live: null, blurbs: [], contentError: `Blurbs and the live topic could not be read: ${daily.reason}` };
+  const pick = dailyPick(daily.content, today);
+  const live = pick.live
+    ? { id: pick.live.id, lineLabel: pick.live.lineLabel, title: pick.live.title, points: pick.live.points, pasteText: livePasteText(pick.live) }
+    : null;
+  const blurbs = pick.blurbs.map((blurb) => ({ id: blurb.id, lineLabel: blurb.lineLabel, text: blurb.text, pasteText: blurbPasteText(blurb) }));
+  return { live, blurbs, contentError: null };
+}
+
 export default async function DailyPostsPage() {
   const access = await evaluatePluginAccess({ requireUsername: false });
   if (!access.allowed || !access.isAdmin) {
@@ -78,7 +93,8 @@ export default async function DailyPostsPage() {
     pb2Error = `Today's PB2 message could not be picked: ${failureReason(error)}`;
   }
 
-  const [blog, store] = await Promise.all([readBlogPosts(), readStore()]);
+  const [blog, store, daily] = await Promise.all([readBlogPosts(), readStore(), readDailyContent()]);
+  const { live, blurbs, contentError } = dailyItems(daily, today);
   const posts = postItems(blog, store);
   const ticks: TickMap = store.ok ? Object.fromEntries(store.ticks) : {};
 
@@ -94,6 +110,9 @@ export default async function DailyPostsPage() {
       templates={store.ok ? store.templates : []}
       ticks={ticks}
       storeError={store.ok ? null : store.reason}
+      live={live}
+      blurbs={blurbs}
+      contentError={contentError}
     />
   );
 }
