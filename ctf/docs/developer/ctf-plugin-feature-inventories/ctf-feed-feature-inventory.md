@@ -200,9 +200,10 @@ Admin routes:
   moderator can find what they took down and put it back; `?hidden=1` narrows to only those. Optional
   `?limit=` clamped to 1..200. Admin-gated (`requireFeedAdminAccess`), read-only, no audit row.
 - `POST /api/feed/admin/moderation/:target/:id` — admin hides or restores one Commons post or reply.
-  `:target` is one of `post` / `reply` / `announcement-reply` / `question` / `answer`
-  (`FeedModerationTarget`); `announcement-reply` is a member's reply on an official announcement,
-  stored in `announcement_replies`.
+  `:target` is one of `post` / `reply` / `announcement-reply` / `card-message` / `question` /
+  `answer` (`FeedModerationTarget`); `announcement-reply` is a member's reply on an official
+  announcement and `card-message` a public message under any Today card, both stored in
+  `commons_item_messages` (Just us two messages can never be moderated or listed).
   Body may also carry `reason`, one of `off_topic` / `suspected_bad_actor` / `spam` / `abusive` /
   `other` (`FEED_MODERATION_REASON`). Validated against that fixed set, never free text — a
   moderator's prose about a member would become a permanent unreviewable note on a survivor's
@@ -365,6 +366,7 @@ All three feed channels (announcements, questions, community) are shipped on web
 
 ## 11) Change Log
 
+- 2026-11-10: **The moderation queue covers card conversations.** Announcement replies moved into `commons_item_messages`, which gained the moderation columns, and every public message under a Today card can now be hidden and restored as target `card-message`; the queue, the author summary and the hidden count read the shared store. Just us two messages are never listed or changed.
 - 2026-10-28: **Stream AI moderation on new community posts (3.1.0 plan).** `POST /api/feed/community/posts` checks the body. The words are sent to Stream's AI moderation check before saving (`lib/integrations/stream-content-check.ts`, config `se:posts`, rules set by `stream-moderation-setup.yml`): when Stream answers remove the post is refused with 422 `content_refused` and the member is told to reword it; harm Stream rates high is flagged in Stream's review queue and still published. When Stream is not set up or cannot be reached the post is saved and the failure is reported. Pictures are not sent, because Stream cannot fetch them from behind sign-in.
 
 - 2026-10-17: **Announcement region targeting is rejected (#2970, owner decision).** The timeline queries already match roles exactly (a member sees `member` and `all`; an admin also sees `admin`), but no query compares a region, so an announcement aimed at one region showed to every member. `validateAnnouncementDraftInput` now refuses a draft with a non-empty `targeting.regions`. No screen sets targeting. Test script FD-REGION.
