@@ -32,11 +32,19 @@ import styles from './today.module.css';
 // a quiet day, the readings and the next room), the day's cards read only, asks and offers from "A
 // member" with Sign up to answer, and People locked until a member is reviewed.
 
+// The small tag on anything read from sample data rather than members' own rows.
+function DemoTag() {
+  return <span className={styles.demoTag}>{W.demo}</span>;
+}
+
 function Hero({ today, signUpUrl }: { today: SeToday | null; signUpUrl: string }) {
   const big = today?.daysWon ? seDaysWonLines(today.daysWon).big : null;
   return (
     <section aria-label={SE_DAYS_WON_TITLE} className={styles.daysWon}>
-      <span className={styles.daysWonLabel}>{SE_DAYS_WON_TITLE}</span>
+      <span className={styles.daysWonLabel}>
+        {SE_DAYS_WON_TITLE}
+        {big && today?.daysWon?.sample ? <> <DemoTag /></> : null}
+      </span>
       {big ? <span className={styles.daysWonBig}>{big}</span> : null}
       <span className={styles.daysWonSmall}>{W.hero}</span>
       <a href={SE_DAYS_WON_WHY.href} target="_blank" rel="noreferrer" className={styles.howButton}>
@@ -142,6 +150,7 @@ function GuestCard({ card, signUpUrl }: { card: SeTodayCard; signUpUrl: string }
         <span className={styles.label} style={{ color }}>
           {card.label}
         </span>
+        {card.sample ? <DemoTag /> : null}
       </div>
       <span className={styles.cardTitle}>{card.title}</span>
       {card.body && !bySignUp ? <span className={`${styles.body} ${styles.bodyClosed}`}>{card.body}</span> : null}
@@ -193,6 +202,7 @@ export function GuestToday({ signUpUrl }: { signUpUrl: string }) {
           <span className={styles.body}>{W.peopleLocked}</span>
         </article>
       </div>
+      <p className={styles.sampleNote}>{W.sampleNote}</p>
     </>
   );
 }

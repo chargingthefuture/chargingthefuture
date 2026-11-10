@@ -33,11 +33,14 @@ import { useToday } from './useToday';
 
 type Styles = ReturnType<typeof makeStyles>;
 
-function Hero({ s, today, onSignUp }: { s: Styles; today: SeToday | null; onSignUp: () => void }) {
+function Hero({ s, t, today, onSignUp }: { s: Styles; t: SeThemeTokens; today: SeToday | null; onSignUp: () => void }) {
   const big = today?.daysWon ? seDaysWonLines(today.daysWon).big : null;
   return (
     <View style={s.hero} accessibilityLabel={SE_DAYS_WON_TITLE}>
-      <Text style={s.heroLabel}>{SE_DAYS_WON_TITLE}</Text>
+      <View style={s.row}>
+        <Text style={s.heroLabel}>{SE_DAYS_WON_TITLE}</Text>
+        {big && today?.daysWon?.sample ? <Text style={[s.demoTag, { color: t.onHero, borderColor: t.onHero }]}>{W.demo}</Text> : null}
+      </View>
       {big ? <Text style={s.heroBig}>{big}</Text> : null}
       <Text style={s.heroText}>{W.hero}</Text>
       <TouchableOpacity accessibilityRole="link" onPress={() => void Linking.openURL(SE_DAYS_WON_WHY.href)} style={s.heroWhy}>
@@ -133,6 +136,7 @@ function GuestCard({ s, t, card, onSignUp, go }: { s: Styles; t: SeThemeTokens; 
         {bySignUp ? <SeAvatar accountId={card.id} size={28} /> : null}
         {bySignUp ? <Text style={s.handle}>{W.member}</Text> : null}
         <Text style={[s.label, { color }]}>{card.label}</Text>
+        {card.sample ? <Text style={s.demoTag}>{W.demo}</Text> : null}
       </View>
       <Text style={s.title}>{card.title}</Text>
       {card.body && !bySignUp ? (
@@ -164,7 +168,7 @@ export function GuestToday({ t, onSignUp, onOpen }: { t: SeThemeTokens; onSignUp
   const go = (href: string) => openTodayLink(href, onOpen);
   return (
     <>
-      <Hero s={s} today={today} onSignUp={onSignUp} />
+      <Hero s={s} t={t} today={today} onSignUp={onSignUp} />
       <RoomCard s={s} t={t} today={today} />
       <View style={s.listHead}>
         <Text style={s.listTitle}>{W.cardsTitle}</Text>
@@ -190,6 +194,7 @@ export function GuestToday({ t, onSignUp, onOpen }: { t: SeThemeTokens; onSignUp
           <Text style={s.body}>{W.peopleLocked}</Text>
         </View>
       </View>
+      <Text style={s.sampleNote}>{W.sampleNote}</Text>
     </>
   );
 }
@@ -228,5 +233,8 @@ function makeStyles(t: SeThemeTokens) {
     body: { fontSize: 14, lineHeight: 20, color: t.soft, fontFamily: SE_FONT.sans },
     action: { alignSelf: 'flex-start', minHeight: 44, paddingHorizontal: 14, justifyContent: 'center', borderRadius: 999, borderWidth: 1.5, borderColor: t.line, backgroundColor: t.card },
     actionLabel: { fontSize: 13, color: t.ink, fontFamily: SE_FONT.sansSemi },
+    // The small tag on sample data, and the one line under the cards that says why.
+    demoTag: { paddingHorizontal: 6, borderRadius: 999, borderWidth: 1, borderColor: t.ink, color: t.ink, fontSize: 10, lineHeight: 16, opacity: 0.7, fontFamily: SE_FONT.sansSemi },
+    sampleNote: { marginTop: 4, fontSize: 12, color: t.soft, textAlign: 'center', fontFamily: SE_FONT.sans },
   });
 }
