@@ -24,6 +24,7 @@ export type SeTodayCard = {
     commentTimesIso?: string[];
     markedDoneAtIso?: string;
     newComments?: number;
+    sample?: boolean;
     mine?: SeTodayCardMine;
 };
 export type SeTodayCardMine = {
@@ -61,6 +62,7 @@ export type SeToday = {
     daysWon: {
         total: number;
         thisWeek: number;
+        sample?: boolean;
     } | null;
     broadcast: SeTodayBroadcast | null;
     rooms: SeTodayRoom[];

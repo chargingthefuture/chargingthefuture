@@ -10,6 +10,7 @@ import { readDaysWon } from 'lib/measures/action-minutes';
 import { listAvailableRequests as listRideRequests } from 'lib/trust-transport/repository';
 import { action, card } from './card';
 import { TODAY_MAX_CARDS } from './build';
+import { runWithForcedPool } from 'lib/db/postgres';
 
 // Today for a visitor who is not signed in (3.1.0 plan, Access: read Today, names on asks hidden).
 // Only what is already public or carries no person: the live broadcast, the Main Room (guests can
@@ -17,6 +18,22 @@ import { TODAY_MAX_CARDS } from './build';
 // cohorts, and that rides are wanted. Nothing personal and no name: asks that carry a name or text
 // a member wrote (goals, SocketRelay, LightHouse), announcements, invitations, Mood, the survey and
 // the Weavers room are left out.
+//
+// Sample data (owner decision, 2026-11-10): what is built from individual members' rows — Days won
+// (its total and this week), ride asks and Skill Up cohorts — is read from the demo schema instead,
+// the separate copy of every table the demo accounts use, and marked `sample` so the screen tags it.
+// A signed-out visitor never reaches those members' rows, and the demo rows never reach a real
+// count, because every count reads the public schema. Stories, the puzzle, the rooms, the day's
+// numbers, replays and SkillsHunt stay real.
+
+// Reads from the demo schema, whoever is asking; signed-out Today has nobody to target.
+export function readSample<T>(read: () => Promise<T>): Promise<T> {
+  return runWithForcedPool('demo', read);
+}
+
+async function sampleCards(read: () => Promise<SeTodayCard[]>): Promise<SeTodayCard[]> {
+  return (await readSample(read)).map((item) => ({ ...item, sample: true }));
+}
 
 type Source = { name: string; read: () => Promise<SeTodayCard[]> };
 
@@ -51,11 +68,12 @@ async function publicRideAsks(): Promise<SeTodayCard[]> {
 export async function buildPublicToday(now = new Date()): Promise<SeToday> {
   const unavailable: string[] = [];
   const sources: Source[] = [
-    { name: 'trust-transport', read: publicRideAsks },
-    { name: 'skill-up', read: () => cohortOffers() },
+    { name: 'trust-transport', read: () => sampleCards(publicRideAsks) },
+    { name: 'skill-up', read: () => sampleCards(() => cohortOffers()) },
     { name: 'numbers', read: () => numbersCard(now) },
     { name: 'blog-stories', read: () => blogStories(now) },
-    { name: 'games', read: () => dailyPuzzleCard(now) },
+    // Signed out, the puzzle can be read but not played, so its button says so.
+    { name: 'games', read: async () => (await dailyPuzzleCard(now)).map((item) => ({ ...item, actions: [action('open', 'See the puzzle', item.href)] })) },
     { name: 'beacon-replays', read: () => replayCards(now) },
     { name: 'skills-hunt', read: () => wantedCard() },
     { name: 'skills-hunt-mission', read: () => missionCard(now) },
@@ -67,7 +85,7 @@ export async function buildPublicToday(now = new Date()): Promise<SeToday> {
     settle<SeTodayRoom>('chyme', () => mainRoom(nextTalk(week), false), unavailable),
     // A schedule that fails to read leaves the strip empty rather than the room missing.
     settle('ti-radio', () => week, []),
-    settle('days-won', () => readDaysWon(now), unavailable),
+    settle('days-won', async () => ({ ...(await readSample(() => readDaysWon(now))), sample: true }), unavailable),
   ]);
   const cards = cardLists
     .flatMap((list) => list ?? [])

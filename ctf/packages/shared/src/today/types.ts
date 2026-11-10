@@ -38,6 +38,9 @@ export type SeTodayCard = {
   markedDoneAtIso?: string;
   // A story the member marked done that came back: how many comments were written since.
   newComments?: number;
+  // Set on signed-out Today when the card was read from the demo schema rather than from members'
+  // rows, so the screen can tag it as sample data.
+  sample?: boolean;
   // Set only on an ask or offer the viewer posted: when it leaves Today, and what they can do there.
   mine?: SeTodayCardMine;
 };
@@ -84,7 +87,8 @@ export type SeToday = {
   presence: number | null;
   // All members' action minutes ÷ 480, in total and over the last 7 days; null when it could not
   // be read.
-  daysWon: { total: number; thisWeek: number } | null;
+  // `sample` is set on signed-out Today, which reads it from the demo schema.
+  daysWon: { total: number; thisWeek: number; sample?: boolean } | null;
   broadcast: SeTodayBroadcast | null;
   rooms: SeTodayRoom[];
   // The talks booked in the Main Room from now through the next 7 days, oldest first, for the week

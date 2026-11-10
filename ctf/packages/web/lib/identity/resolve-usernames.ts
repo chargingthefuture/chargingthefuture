@@ -64,11 +64,13 @@ export async function resolveMemberIdentities(userIds: string[]): Promise<Map<st
   return result;
 }
 
-// One label per id — the handle when there is one, otherwise the full name. Callers that want the two
-// apart use resolveMemberIdentities instead.
+// One label per id: the handle, or null when the member has none, so the caller shows its generated
+// `user-xxxxxxxx`. Never the person's real name (owner decision, 2026-11-10): members are shown by
+// username everywhere, one they picked or one generated for them. Surfaces that need the name itself
+// (an admin review queue) use resolveMemberIdentities.
 export async function resolveUsernames(userIds: string[]): Promise<Map<string, string | null>> {
   const identities = await resolveMemberIdentities(userIds);
   const result = new Map<string, string | null>();
-  for (const [id, identity] of identities) result.set(id, identity.username ?? identity.name);
+  for (const [id, identity] of identities) result.set(id, identity.username);
   return result;
 }
