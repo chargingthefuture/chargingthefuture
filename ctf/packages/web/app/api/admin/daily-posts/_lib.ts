@@ -49,8 +49,9 @@ export function isTemplateId(value: string): boolean {
 }
 
 export const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-// What a tick can point at: a blog post by its slug, a template by its id, or the PB2 message.
-export const ITEM_KEY_PATTERN = /^(?:post:.{1,300}|template:[0-9a-f-]{36}|pb2)$/i;
+// What a tick can point at: a blog post by its slug, a template by its id, the PB2 message, a
+// platform on the day's checklist, or a blurb or live topic from the blog's daily content.
+export const ITEM_KEY_PATTERN = /^(?:post:.{1,300}|template:[0-9a-f-]{36}|pb2|(?:platform|blurb|live):[a-z0-9-]{1,60})$/i;
 
 export const TITLE_MAX = 200;
 export const BODY_MAX = 20_000;
@@ -67,7 +68,7 @@ export function parseTemplateInput(body: Record<string, unknown>): { ok: true; t
 
 export function parseTickInput(body: Record<string, unknown>): { ok: true; itemKey: string; date: string; done: boolean } | { ok: false; message: string } {
   const { itemKey, date, done } = body;
-  if (typeof itemKey !== 'string' || !ITEM_KEY_PATTERN.test(itemKey)) return { ok: false, message: 'itemKey must be post:<slug>, template:<id> or pb2.' };
+  if (typeof itemKey !== 'string' || !ITEM_KEY_PATTERN.test(itemKey)) return { ok: false, message: 'itemKey must be post:<slug>, template:<id>, pb2, platform:<id>, blurb:<id> or live:<id>.' };
   if (typeof date !== 'string' || !DATE_PATTERN.test(date)) return { ok: false, message: 'date must be YYYY-MM-DD.' };
   if (typeof done !== 'boolean') return { ok: false, message: 'done must be true or false.' };
   return { ok: true, itemKey, date, done };

@@ -107,6 +107,21 @@ Bypass keywords still work but are no longer required to build a new surface: `b
 
 Full policy, the deprecated stop-for-design machinery (history), and worked examples: see `.claude/rules/127-design-pass-gating-rules.mdc`.
 
+## 3.0 and 3.1 Share One Backend (owner decision, 2026-11-10)
+
+3.0 stays a choice in Settings until the owner deletes it. Until then the two differ only in their
+screens:
+
+- **One backend.** Every change to a route, table, store or rule made for 3.1 is the same change
+  for 3.0, in the same piece of work. 3.0 never keeps its own copy of data that 3.1 has moved, and
+  never reads a store 3.1 has left.
+- **3.0's screens are frozen.** No new 3.0 screen, control or feature unless the owner makes an
+  explicit exception. The first exception (2026-11-10): the conversation under a Today card shows on
+  the matching 3.0 plugin page, using the same panel 3.1 uses.
+- **3.0 must not break.** A backend change made for 3.1 keeps every existing 3.0 feature working.
+  When 3.0 reads something 3.1 changed, update 3.0's read in the same change; that is a fix, not a
+  new feature, and needs no exception.
+
 ## One Design, One Color per Site (owner decision, 2026-10-14)
 
 The name shown everywhere is Skills Economy (owner decision, 2026-10-13). Charging The Future
@@ -175,7 +190,7 @@ seventh:
 | Quora account deletion survey | 2026-08-19 | The research is about people outside this app, so approval cannot be the bar without sampling only the members already reached. Sign-in keeps bulk junk out; it is not a claim that the member is verified. |
 | Fireside conversation | 2026-09-13 | Writing under a blog post is a route *into* verification, on the same reasoning as the Knowledge Library row above. Nothing an unapproved member writes is publicly visible; approval is per person and makes everything they have written appear at once. Reading needs no account at all, so it is not an exception — it is not gated in the first place. |
 | Directory invite wall | 2026-10-15 | The invitations to people listed in the Directory are how people arrive from Quora, and seeing who has been invited is the reason to make an account. Reading them needs a sign-in, so the list is not public, which is why they left the blog; approval is not required because the people reading are mostly the people invited. A signed-out visitor sees each person's name and the invite's opening words only, except for the invites already published on the blog before that day, which stay public. The Directory itself still needs approval. The gate is `lib/directory/invite-access.ts`. |
-| 3.1 open sign-up use | 2026-10-27, widened 2026-11-03 | The 3.1 plan (`ctf/docs/developer/SOCIAL_REDESIGN_3_1_PLAN.md`, Access) lets a member use the app before Unlock is done. Two tiers in `evaluatePluginAccess`: `signed_in` (Today, Mood, ClickLog, What Works, their own Activity and listening in the Main Room, open after day 14 too) and `signed_in_posting` (posting an ask from + New, and, since 2026-11-03, answering and writing in a Today card, both of which pause after day 14 until Unlock is done; the count stops once the address is sent or the member asks for help). Both still apply account restrictions. The Directory, People, speaking in rooms, booking a talk, credits and Foundation contact stay approved-only. Not finishing never removes an account. The standing is `lib/unlock/standing.ts`. The card writing is a trial of whether writing early keeps people: `CARDS_OPEN_BEFORE_UNLOCK` in `lib/today/cards/access.ts` turns it off, and deleting that switch with its allowlist entry removes it. |
+| 3.1 open sign-up use | 2026-10-27, widened 2026-11-03 | The 3.1 plan (`ctf/docs/developer/SOCIAL_REDESIGN_3_1_PLAN.md`, Access) lets a member use the app before Unlock is done. Two tiers in `evaluatePluginAccess`: `signed_in` (Today, Mood, ClickLog, What Works, their own Activity, listening in the Main Room and, since 2026-11-10, playing the puzzle of the day, open after day 14 too) and `signed_in_posting` (posting an ask from + New, and, since 2026-11-03, answering and writing in a Today card, both of which pause after day 14 until Unlock is done; the count stops once the address is sent or the member asks for help). Both still apply account restrictions. The Directory, People, speaking in rooms, booking a talk, credits and Foundation contact stay approved-only. Not finishing never removes an account. The standing is `lib/unlock/standing.ts`. The card writing is a trial of whether writing early keeps people: `CARDS_OPEN_BEFORE_UNLOCK` in `lib/today/cards/access.ts` turns it off, and deleting that switch with its allowlist entry removes it. |
 
 Every other feature requires Unlock approval. When you build anything new the answer is
 `minUnlockTier: 'approved_full'` — the default — essentially every time.

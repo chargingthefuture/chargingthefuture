@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { themesFromText } from './themes';
-import { ROTATION_DAYS, rotationFor, rotationSlot } from './rotation';
+import { ROTATION_DAYS, ROTATION_EPOCH, rotationFor, rotationSlot } from './rotation';
+import { blurbPasteText, dailyPick, livePasteText, type DailyContent } from './daily-content';
 import { blogPostPasteText } from './source';
 
 describe('themesFromText', () => {
@@ -40,5 +41,43 @@ describe('rotation', () => {
 describe('blogPostPasteText', () => {
   it('hands over the title, the full post and the link on its own line', () => {
     expect(blogPostPasteText({ title: 'T', text: 'Body.\n', url: 'https://example.org/p' })).toBe('T\n\nBody.\n\nFull post: https://example.org/p');
+  });
+});
+
+describe('dailyPick', () => {
+  const content: DailyContent = {
+    lines: [
+      { id: 'a', label: 'Line A' },
+      { id: 'b', label: 'Line B' },
+    ],
+    blurbs: [
+      { id: 'a1', line: 'a', link: 'https://x', text: 'A one' },
+      { id: 'a2', line: 'a', link: 'https://x', text: 'A two' },
+      { id: 'b1', line: 'b', link: 'https://x', text: 'B one' },
+    ],
+    live: [
+      { id: 'la1', line: 'a', link: 'https://x', title: 'LA1', points: ['1', '2', '3'] },
+      { id: 'la2', line: 'a', link: 'https://x', title: 'LA2', points: ['1', '2', '3'] },
+      { id: 'lb1', line: 'b', link: 'https://x', title: 'LB1', points: ['1', '2', '3'] },
+    ],
+  };
+
+  it('gives one blurb per line and moves the live topic through the lines a day at a time', () => {
+    const first = dailyPick(content, ROTATION_EPOCH);
+    expect(first.blurbs.map((blurb) => blurb.id)).toEqual(['a1', 'b1']);
+    expect(first.live?.id).toBe('la1');
+    expect(dailyPick(content, '2026-11-03').live?.id).toBe('lb1');
+    expect(dailyPick(content, '2026-11-04').live?.id).toBe('la2');
+    expect(dailyPick(content, '2026-11-03').blurbs.map((blurb) => blurb.id)).toEqual(['a2', 'b1']);
+  });
+
+  it('keeps an earlier day the same when an entry is added to the end of a line', () => {
+    const longer = { ...content, live: [...content.live, { id: 'lb2', line: 'b', link: 'https://x', title: 'LB2', points: ['1', '2', '3'] }] };
+    expect(dailyPick(longer, '2026-11-03').live?.id).toBe('lb1');
+  });
+
+  it('puts the link on its own line under a blurb and under a live topic', () => {
+    expect(blurbPasteText({ text: 'Hi.', link: 'https://x' })).toBe('Hi.\n\nhttps://x');
+    expect(livePasteText({ title: 'T', points: ['p'], link: 'https://x' })).toBe('T\n\n- p\n\nhttps://x');
   });
 });
