@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { seCardAnswerKind, seCardIdValid, seCardOpensSheet, seCardPair } from '@ctf/shared';
+import { seCardAnswerKind, seCardIdValid, seCardItemRef, seCardOpensSheet, seCardPair } from '@ctf/shared';
 import { readCardId } from './ids';
 import { reportDetail } from './report';
 import { groupAnswers, pairState, shapeConversation, type ConversationRows } from './shape';
@@ -105,5 +105,25 @@ describe('reportDetail', () => {
     expect(reportDetail('lighthouse:1', null)).toBe('Reported from Today card lighthouse:1: the card itself.');
     const detail = reportDetail('lighthouse:1', 'x'.repeat(600));
     expect(detail.endsWith(`${'x'.repeat(500)}…`)).toBe(true);
+  });
+});
+
+// A card's conversation belongs to the plugin behind the card (owner decision, 2026-11-10).
+describe('seCardItemRef', () => {
+  it('names the plugin behind each card source', () => {
+    expect(seCardItemRef('trust-transport:9f1c')).toEqual({ plugin: 'trust-transport', itemId: '9f1c' });
+    expect(seCardItemRef('lighthouse:abc')).toEqual({ plugin: 'lighthouse', itemId: 'abc' });
+    expect(seCardItemRef('directory-invite:k3x9')).toEqual({ plugin: 'directory', itemId: 'k3x9' });
+    expect(seCardItemRef('blog-story:why-i-trade')).toEqual({ plugin: 'fireside', itemId: 'why-i-trade' });
+  });
+
+  it('keeps a SkillsHunt mission apart from a round of the same plugin', () => {
+    expect(seCardItemRef('skills-hunt-mission:1')).toEqual({ plugin: 'skills-hunt', itemId: 'mission:1' });
+    expect(seCardItemRef('skills-hunt:1')).toEqual({ plugin: 'skills-hunt', itemId: '1' });
+  });
+
+  it('gives Commons anything with no plugin of its own, and keeps colons in the item id', () => {
+    expect(seCardItemRef('announcement:42')).toEqual({ plugin: 'commons', itemId: '42' });
+    expect(seCardItemRef('quora-survey:https://example.org/a:b')).toEqual({ plugin: 'commons', itemId: 'https://example.org/a:b' });
   });
 });
