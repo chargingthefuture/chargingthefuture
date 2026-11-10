@@ -411,6 +411,7 @@ Demo schema (`ctf/scripts/seedDemo.mjs`, `seedPeerProgrammingGoalBoard`): finds 
 
 ## Change Log
 
+- 2026-11-10: **The goal's conversation on the goal board, web and Android.** Choosing a goal shows its conversation under the board's goal panel (Android `GoalsBoard.tsx`, `se-frame/today/CardConversationPanel.tsx`). Owner decision (an exception to the 3.0 screen freeze): the conversation under this plugin's Today card shows on the plugin's own page too, through the same panel the card's sheet uses on Today (`CardConversationPanel` / `CardConversationToggle` in `components/se-frame/today/card-conversation-panel.tsx`), reading and writing the same conversation through `/api/today/cards/[cardId]`, so 3.0 and 3.1 show one conversation. No route or table changed.
 - 2026-11-02: **Signed in, not active (owner decision).** Cohorts are formed from the members who
   signed in within the last 7 days, and the copy now says so: active means a day with 30 or more
   action minutes, which this selection does not use. Web and Android: the cohorts tab line reads

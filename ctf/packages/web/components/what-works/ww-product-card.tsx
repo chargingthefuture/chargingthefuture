@@ -5,6 +5,7 @@
 import { ShieldCheck, ThumbsUp, ExternalLink } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { getWhatWorksTokens, type WhatWorksProduct } from './ww-shared';
+import { CardConversationToggle } from '@/components/se-frame/today/card-conversation-panel';
 
 type Props = {
   product: WhatWorksProduct;
@@ -40,6 +41,10 @@ export function WhatWorksProductCard({ product, busy, onToggleHelpful }: Props) 
           >
             <ThumbsUp size={12} /> {endorsed ? 'Helped me' : 'Helpful'}
           </button>
+        </div>
+        {/* The conversation under this product's card on Today, the same one in 3.0 and 3.1. */}
+        <div style={{ marginTop: 10, color: t.ACCENT }}>
+          <CardConversationToggle source="what-works" sourceId={product.id} />
         </div>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center', flexShrink: 0 }}>

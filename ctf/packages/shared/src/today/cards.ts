@@ -26,6 +26,12 @@ const CARD_ID = /^[a-z][a-z0-9-]{0,39}:\S{1,200}$/;
 // 21 Questions keeps its own controls inside the card and never opens a sheet.
 const OWN_CONTROLS = new Set(['questions', 'questions-match']);
 
+// A card's id from its source and the source's own id: what Today builds for the card, and what a
+// plugin's own page builds to show the same conversation.
+export function seCardId(source: string, sourceId: string): string {
+  return `${source}:${sourceId}`;
+}
+
 export function seCardIdValid(id: string): boolean {
   if (id.length > SE_CARD_ID_MAX || !CARD_ID.test(id)) return false;
   return !OWN_CONTROLS.has(id.slice(0, id.indexOf(':')));
@@ -137,6 +143,7 @@ export const SE_CARD_WORDS = {
   answerLine: (kinds: readonly SeCardAnswerKind[]) => kinds.map((kind) => ANSWER_WORDS[kind]).join(', '),
   talkHere: 'Talk here',
   conversation: 'Conversation',
+  hideConversation: 'Hide the conversation',
   whoReads: 'Who can read it',
   public: 'Public',
   pair: 'Just us two',

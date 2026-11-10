@@ -5,6 +5,7 @@ import { type SkillsHuntMissionWithCommunityProgress, type Tab } from "./sh-shar
 import { useTheme } from '@/hooks/useTheme';
 import { getSkillsHuntTokens } from './sh-shared';
 import { missionView } from 'lib/skills-hunt/mission-view';
+import { CardConversationToggle } from '@/components/se-frame/today/card-conversation-panel';
 
 function MissionTitleRow({ title, isLocked, isComplete }: { title: string; isLocked: boolean; isComplete: boolean }) {
   const { theme } = useTheme();
@@ -91,7 +92,16 @@ export function SkillsHuntMissionsTab({
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          {missions.map((m) => <MissionCard key={m.id} mission={m} onScout={() => onNavTab("scout")} />)}
+          {missions.map((m) => (
+            <div key={m.id} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <MissionCard mission={m} onScout={() => onNavTab("scout")} />
+              {/* Today's conversation under this mission's card, the same one in 3.0 and 3.1. Today
+                  gives a mission a new card, and so a new conversation, each day (UTC). */}
+              <div style={{ color: t.ACCENT }}>
+                <CardConversationToggle source="skills-hunt-mission" sourceId={`${m.id}:${new Date().toISOString().slice(0, 10)}`} />
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </>

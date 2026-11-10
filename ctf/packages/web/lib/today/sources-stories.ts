@@ -27,12 +27,23 @@ export async function announcementStories(viewer: TodayViewer): Promise<SeTodayC
     );
 }
 
+export function inviteSourceId(url: string): string {
+  try {
+    return new URL(url).searchParams.get('invite') ?? url;
+  } catch {
+    // no-trace: an address that does not parse keeps the address itself as the id
+    return url;
+  }
+}
+
 export async function inviteStories(): Promise<SeTodayCard[]> {
   const invites = await listLatestDirectoryInviteCards(3);
   return invites.map((invite) =>
     card({
       source: 'directory-invite',
-      sourceId: invite.url,
+      // The invite code, so the invitation's own page can open the same conversation; the full
+      // address only for an invite written before codes.
+      sourceId: inviteSourceId(invite.url),
       kind: 'story',
       label: 'Story · an invitation',
       title: `An invitation to ${invite.name}`,

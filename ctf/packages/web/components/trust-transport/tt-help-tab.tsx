@@ -8,6 +8,7 @@ import { getTrustTransportTokens, tripChatReadOnlyNotice, ttSettlementLabel, typ
 import { acceptedCurrenciesBadgeLabel } from "@/components/shared/accepted-currency-picker";
 import { StreamChatPanel } from "../shared/stream-chat-panel";
 import { SettlementFailedNotice } from "./tt-settlement-notice";
+import { CardConversationToggle } from "@/components/se-frame/today/card-conversation-panel";
 
 function modeLabel(mode: string | undefined): string {
   if (!mode) return "Request";
@@ -439,6 +440,10 @@ function HelpCard({ request }: { request: AvailableRequest }) {
           <HandHeart size={14} /> Make an offer
         </button>
       )}
+      {/* The conversation under this ride's card on Today, the same one in 3.0 and 3.1. */}
+      <div style={{ marginTop: 10, color: t.ACCENT }}>
+        <CardConversationToggle source="trust-transport" sourceId={request.id} />
+      </div>
     </div>
   );
 }

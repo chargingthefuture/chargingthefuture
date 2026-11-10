@@ -467,3 +467,13 @@ confirm it is not, and that no settlement table exists here.
 
 **1.** As a seeker, request a stay on another member's listing. Sign in as that host, open the 🔔 notifications tab in the Commons, and confirm a "Someone requested a stay on your LightHouse listing." item appears (unread) with an "Open" pill. Requesting on your own listing produces no notification.
 web ☐
+
+### LH-13 · The card's conversation on this page, in 3.0 and 3.1 (added 2026-11-10)
+**Role:** two members (A and B) · **Surfaces:** web
+**Steps:**
+1. As A on 3.1, open the place's card on Today and write a public message in it.
+2. As B, open this plugin's page and find the listing detail, under About.
+3. As B, write a reply there.
+4. As B, switch to 3.0 in Settings and open the same place again.
+**Expected:** Step 2 shows A's message. Step 3's reply appears in the card's sheet on Today for A. Step 4 shows the same conversation: 3.0 and 3.1 read one conversation, only the screens differ.
+**Result:** web ☐ — notes:

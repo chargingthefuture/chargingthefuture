@@ -3,6 +3,7 @@ export type SeCardAnswerKind = 'help' | 'know-someone' | 'want' | 'helped-me';
 export declare const SE_CARD_ANSWER_KINDS: readonly SeCardAnswerKind[];
 export declare const SE_CARD_MESSAGE_MAX = 1000;
 export declare const SE_CARD_ID_MAX = 200;
+export declare function seCardId(source: string, sourceId: string): string;
 export declare function seCardIdValid(id: string): boolean;
 export type SeCardItemRef = {
     plugin: string;
@@ -46,6 +47,7 @@ export declare const SE_CARD_WORDS: {
     answerLine: (kinds: readonly SeCardAnswerKind[]) => string;
     talkHere: string;
     conversation: string;
+    hideConversation: string;
     whoReads: string;
     public: string;
     pair: string;

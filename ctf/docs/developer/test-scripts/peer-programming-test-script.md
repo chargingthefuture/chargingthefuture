@@ -853,3 +853,13 @@ on Android through AN-PP in `android-app-test-script.md`.
 check found something harmful in it. Reword it and try again, or report a mistake through bug
 reporting." The ordinary one posts as usual. If Stream is down, both post.
 **Result:** web ☐ — notes:
+
+### PP-25 · The card's conversation on this page, in 3.0 and 3.1 (added 2026-11-10)
+**Role:** two members (A and B) · **Surfaces:** web, android
+**Steps:**
+1. As A on 3.1, open the goal's card on Today and write a public message in it.
+2. As B, open this plugin's page and find the goal board with that goal chosen.
+3. As B, write a reply there.
+4. As B, switch to 3.0 in Settings and open the same place again.
+**Expected:** Step 2 shows A's message. Step 3's reply appears in the card's sheet on Today for A. Step 4 shows the same conversation: 3.0 and 3.1 read one conversation, only the screens differ.
+**Result:** web ☐ android ☐ — notes:
