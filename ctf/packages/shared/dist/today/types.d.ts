@@ -21,6 +21,7 @@ export type SeTodayCard = {
     href: string;
     actions: SeTodayAction[];
     done?: boolean;
+    sample?: boolean;
 };
 export type SeTodayTalk = {
     title: string;
@@ -51,6 +52,7 @@ export type SeToday = {
     daysWon: {
         total: number;
         thisWeek: number;
+        sample?: boolean;
     } | null;
     broadcast: SeTodayBroadcast | null;
     rooms: SeTodayRoom[];
