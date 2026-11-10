@@ -599,4 +599,65 @@ error; nothing is counted for them. Step 5 is counted the same as A's. Step 6 sh
 and kind, for example "socket-relay · ask" with Not for me 1 and Not for me share 100%, most marks
 first, and the pasted text has one line per row and says counts only, nobody named. Step 7 shows
 rows with a day, source, kind, signal and count, and no column naming who tapped.
+
+## AD-30 · How long cards stay on Today
+**Role:** member A (posting) and member B (reading) on 3.1 · **Surfaces:** web, android
+**Steps:**
+1. As A, open + New → Ask. Fill in what you need, choose "By when?" → A date, pick a date three weeks
+   ahead, and post. Post a second ask with No deadline.
+2. As B, open Today. As A, open Today and tap the title of each of your asks.
+3. As A, on the no-deadline ask, tap Keep it up for 14 more days.
+4. As A, on the dated ask, tap Closed, not done. Read Today again, then open SocketRelay.
+5. On a test database, set the no-deadline ask's `created_at` 13½ days back and remove its
+   `today_card_windows` row, then as A read Today and open Activity. Tap Keep it up for 14 more days there.
+6. Set an announcement or a Directory invitation 8 days back and read Today.
+7. As B, mark a card done with its dot. Change the device date to tomorrow and read Today, on this
+   device and on another one signed in as B.
+8. Read Today with an open Skill Up cohort that has a seat. Close its registration as an admin and read
+   Today again.
+**Expected:** Step 1: the ask form shows "By when?" with Today, This week, A date and No deadline (No
+deadline picked), and A date opens a date picker. Step 2: B sees both asks; A sees both with "You posted
+this · On Today until <date>": the dated one until its date, the other 14 days from posting. The dated
+one has Done and Closed, not done only; the other also has Keep it up for 14 more days. Step 3 reads
+"Kept up on Today for 14 more days." and the date moves to 14 days from now. Step 4: the ask leaves A's
+and B's Today and shows as canceled in SocketRelay; the closing outcome is `not_done` in
+`today_card_windows`. Step 5: Activity has "Still need this? Keep it up for 14 more days: <title>" under
+Needs your answer, once only, and the tap keeps the ask up 14 days from then. Step 6: the story is gone
+from Today and still in its own place. Step 7: the card stays on Today the day it was marked, shown done on both
+devices, and is gone the next day on both; a 21 Questions card marked done by its answer stays. Step 8: the cohort card reads "Learn
+a skill · learners wanted" (or "a trainer and learners wanted" while no trainer owns it) and leaves Today
+once registration closes, with no renew offered.
+**Result:** web ☐ android ☐ — notes:
+
+## AD-31 · Card windows go with the account
+**Role:** member A from AD-30 · **Surfaces:** web
+**Steps:**
+1. As A, delete the account (or only Card conversations on Today) from the account area.
+**Expected:** Every `today_card_windows` row with A as `owner_user_id` is gone; the listing names "The
+deadlines, renewals and closing outcomes of your own asks and offers on Today."
+**Result:** web ☐ android ☐ — notes:
+
+## AD-32 · Done and Not for me are stored on the account
+**Role:** member A signed in on web and on Android; a visitor who is not signed in · **Surfaces:** web, android
+**Steps:**
+1. As A on the web, mark a story done with its dot and pick Not for me on another card.
+2. Open Today as A on Android.
+3. On Android, tap the dot on the done story again.
+4. On a phone or browser that still holds marks from before this change, sign in as A and open Today.
+5. As A, delete the account (or only Card conversations on Today).
+6. As the visitor, open signed-out Today.
+**Expected:** Step 2 shows the story done and the other card gone, as on the web. Step 3 takes Done away
+on both. Step 4 sends the old marks once (a card the account already marked keeps its mark) and the old
+copy is removed from the device; Today then reads the same as on the other device. Step 5 removes every
+`today_card_marks` row for A. Step 6 shows no marks and offers none. The anonymous Done and Not for me
+totals (AD-28) still count each mark.
+**Result:** web ☐ android ☐ — notes:
+
+## AD-33 · The day-14 notice without opening the app, and closing after day 14
+**Role:** member A, signed in, not approved in Unlock and past day 14 · **Surfaces:** web, android (step 1 is a GitHub Actions run)
+**Steps:**
+1. On a test database, set one of A's open asks (no deadline) to 13½ days old. Without A opening the app, run "Today — Day-14 Notices" from Actions twice.
+2. As A, open Activity, then open Today and tap the ask's title.
+3. Tap Keep it up for 14 more days, then Closed, not done on another of A's asks.
+**Expected:** Step 1: the run summary shows only counts ("checked N … M were due"), no names; the second run sends nothing new. Step 2: Activity has exactly one "Still need this? Keep it up for 14 more days: <title>". Step 3: both work for A although their posting is paused; another member calling either route on A's card is refused with not_yours, and an account restricted from contact is refused.
 **Result:** web ☐ android ☐ — notes:

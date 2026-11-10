@@ -854,6 +854,16 @@ check found something harmful in it. Reword it and try again, or report a mistak
 reporting." The ordinary one posts as usual. If Stream is down, both post.
 **Result:** web ☐ — notes:
 
+### PP-25 — A goal on Today: 14 days, renew and close (added 2026-11-03)
+**Role:** goal owner A and board member B · **Surfaces:** web, android
+**Steps:**
+1. As A, post a goal on the goal board. Open Today and tap the goal's title.
+2. Tap Keep it up for 14 more days.
+3. Tap Done. Open the goal board.
+**Expected:** Step 1: B sees the goal on Today; A sees "You posted this · On Today until <14 days from
+posting>" with Done, Closed, not done and Keep it up for 14 more days. Step 2 moves the date to 14 days
+from now. Step 3: the goal leaves Today and shows as reached on the board (Closed, not done would show it
+withdrawn). A goal past its 14 days with no renew leaves Today and stays open on the board.
 ### PP-25 · The card's conversation on this page, in 3.0 and 3.1 (added 2026-11-10)
 **Role:** two members (A and B) · **Surfaces:** web, android
 **Steps:**

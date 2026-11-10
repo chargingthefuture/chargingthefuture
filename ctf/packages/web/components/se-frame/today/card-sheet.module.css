@@ -171,6 +171,12 @@
   gap: 10px;
 }
 
+.yoursRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .answerText {
   flex: 1;
   font-size: 14px;

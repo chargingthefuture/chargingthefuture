@@ -43,10 +43,19 @@ table, which the safety contract covers.
 account id and nothing about who tapped, so no row in it belongs to anybody and there is nothing in
 it to delete when an account is deleted.
 
-On the member's own device it keeps two things: the last Today answer, so the screen draws at once,
-and the cards the member opened or hid. Web keeps them in this browser's storage under
-`se-today-v1:<user_id>` and `se-today-marks-v1:<user_id>`; Android keeps them in the app's own files.
-Neither leaves the device, and signing out of the device or clearing the app's data removes them.
+How long an ask or offer stays on Today is the fourth: `today_card_windows`, one row per card id,
+written only once its poster set something. It holds the poster's account id, the deadline chosen
+in + New, the end of a renewed 14 days and when it was renewed, and, when the poster closed the ask
+from Today, the outcome (`done` or `not_done`) and when. It holds nothing anybody wrote.
+
+A member's own marks on cards are the fifth: `today_card_marks`, one row per member per card id,
+with the mark (`done` for the timeline dot, `not_for_me` for the ••• menu) and when it was made. They
+are stored on the account so every phone and browser agrees, and GET /api/today applies them. They
+are separate from `today_card_feedback_counts`, which counts marks with no names.
+
+On the member's own device it keeps the last Today answer, so the screen draws at once. Marks a
+device kept before they were stored on the account are sent up once and removed from the device. A
+visitor who is not signed in has no account and no marks.
 
 ## 4) Deletion Scopes
 
@@ -55,6 +64,10 @@ Neither leaves the device, and signing out of the device or clearing the app's d
   `question_match_messages` row where they are `user_low` or `user_high` (registry entry
   `twenty-one-questions`). The member's `commons_item_answers` rows, every `commons_item_messages` row they wrote,
   every Just us two message where they are `pair_low` or `pair_high`, and every
+  `card_pair_requests` row where they are `user_low` or `user_high` (registry entry
+  `today-card-conversations`), and every `today_card_windows` row where they are `owner_user_id`
+  (same entry), and every `today_card_marks` row where they are `account_id` (same entry). Public messages other members wrote under a card stay.
+- Full account deletion: the same 21 Questions, card conversation, card window and card mark rows; each card source's own
   `commons_item_pair_requests` row where they are `user_low` or `user_high` (registry entry
   `today-card-conversations`). Public messages other members wrote under a card stay.
 - Full account deletion: the same 21 Questions and card conversation rows; each card source's own
@@ -64,7 +77,7 @@ Neither leaves the device, and signing out of the device or clearing the app's d
 
 ## 5) Retention
 
-21 Questions and card conversation rows are kept until the account is deleted. When the item a
+21 Questions, card conversation, card window and card mark rows are kept until the account is deleted. When the item a
 card came from is removed, its card leaves Today and its conversation is no longer shown; the rows
 stay until their authors' accounts are deleted. The feedback totals are kept as counts; the admin screen reads the last 30 days. Nothing else is kept on the server; the
 on-device copy is replaced on every read.

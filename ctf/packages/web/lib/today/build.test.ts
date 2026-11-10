@@ -23,11 +23,16 @@ vi.mock('./sources-stories', () => ({
 vi.mock('./sources-live', () => ({
   moodCard: vi.fn(async () => []),
   numbersCard: vi.fn(async () => []),
-  replayCards: vi.fn(async () => []),
   wantedCard: vi.fn(async () => []),
   missionCard: vi.fn(async () => []),
   broadcast: vi.fn(async () => null),
 }));
+vi.mock('./sources-replays', () => ({ replayCards: vi.fn(async () => []) }));
+vi.mock('./sources-mine', () => ({ mineCards: vi.fn(async () => []) }));
+vi.mock('./marks/repository', () => ({ readCardMarks: vi.fn(async () => []) }));
+vi.mock('lib/fireside/story-comments', () => ({ listStoryCommentTimes: vi.fn(async () => new Map()) }));
+vi.mock('./windows', () => ({ readWindows: vi.fn(async () => new Map()) }));
+vi.mock('lib/notifications/repository', () => ({ notifySafe: vi.fn(async () => undefined) }));
 vi.mock('./sources-questions', () => ({ questionCards: vi.fn(async () => []) }));
 vi.mock('./sources-blog', () => ({ blogStories: vi.fn(async () => []) }));
 vi.mock('./sources-daily', () => ({ dailyPuzzleCard: vi.fn(async () => []) }));
@@ -44,16 +49,18 @@ function stub(id: string, createdAtIso: string) {
 
 import { buildToday } from './build';
 
+const NOW = new Date('2026-11-03T12:00:00.000Z');
+
 describe('buildToday', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('puts the newest card first', async () => {
-    const today = await buildToday({ userId: 'u1', isAdmin: false });
+    const today = await buildToday({ userId: 'u1', isAdmin: false }, NOW);
     expect(today.cards.map((c) => c.id)).toEqual(['lighthouse:1', 'peer-programming:1']);
   });
 
   it('leaves out a failing source and names it, keeping the rest', async () => {
-    const today = await buildToday({ userId: 'u1', isAdmin: false });
+    const today = await buildToday({ userId: 'u1', isAdmin: false }, NOW);
     expect(today.unavailable).toEqual(['socket-relay']);
     expect(today.rooms).toHaveLength(1);
   });

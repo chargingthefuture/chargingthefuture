@@ -407,3 +407,8 @@ one of these, it is already tracked, not a new bug:
 **Result:** android ☐ — notes:
 
 > _Terminology (2026-07-20): the source inventory's user-facing section is now titled **User Features** (was "Target User Features"), and its admin section **Admin Features**. Heading rename only — no test steps changed._
+
+## Replays on Today (added 2026-11-10)
+
+**1.** With one replay broadcast in the last 7 days and several older ones, open Today in the 3.1 frame on two accounts, then again on the next day. **Expected:** the recent replay shows as "Replay"; one older replay shows as "Replay · from the archive" with "Broadcast on <date>", the same one on both accounts, and the next day the next older one in order, oldest first. A replay that is still within its 7 days is never the archive card. Mark the archive card done, change the day until its turn comes round again: it does not come back for that account. Pick Not for me on a replay: it never comes back for that account, on any device.
+web ☐ android ☐

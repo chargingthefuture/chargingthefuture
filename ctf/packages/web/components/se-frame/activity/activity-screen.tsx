@@ -1,11 +1,27 @@
 'use client';
 
 import Link from 'next/link';
-import { SE_ACTIVITY_WORDS as W, seActivityView, seAgo, type SeActivityItem } from '@ctf/shared';
+import { SE_ACTIVITY_WORDS as W, SE_CARD_LIFETIME_WORDS as L, seActivityView, seAgo, seRenewCardId, type SeActivityItem } from '@ctf/shared';
+import { usePosterActions } from '../today/use-poster-actions';
 import { useActivity } from './use-activity';
 import styles from './activity.module.css';
 
-// Activity: what needs the member's answer, then what happened. Opening an item marks it read.
+// Activity: what needs the member's answer, then what happened. Opening an item marks it read. The
+// day-14 notice on the member's own ask or offer carries its one-tap renew beside it.
+
+function Renew({ cardId, onDone }: { cardId: string; onDone: () => void }) {
+  const actions = usePosterActions(cardId, onDone);
+  const { status } = actions;
+  if (status.kind === 'done') return <p role="status" className={styles.text}>{status.text}</p>;
+  return (
+    <>
+      <button type="button" className={styles.allRead} disabled={status.kind === 'busy'} onClick={() => void actions.renew()}>
+        {status.kind === 'busy' ? L.renewing : L.renew}
+      </button>
+      {status.kind === 'error' ? <p role="alert" className={styles.text}>{status.text}</p> : null}
+    </>
+  );
+}
 
 function Row({ item, onOpen }: { item: SeActivityItem; onOpen: (_id: string) => void }) {
   const body = (
@@ -36,9 +52,15 @@ function Group({ title, items, onOpen }: { title: string; items: SeActivityItem[
   return (
     <section className={styles.group} aria-label={title}>
       <h2 className={styles.groupTitle}>{title}</h2>
-      {items.map((item) => (
-        <Row key={item.id} item={item} onOpen={onOpen} />
-      ))}
+      {items.map((item) => {
+        const renewId = seRenewCardId(item);
+        return (
+          <div key={item.id} className={styles.group}>
+            <Row item={item} onOpen={onOpen} />
+            {renewId ? <Renew cardId={renewId} onDone={() => onOpen(item.id)} /> : null}
+          </div>
+        );
+      })}
     </section>
   );
 }

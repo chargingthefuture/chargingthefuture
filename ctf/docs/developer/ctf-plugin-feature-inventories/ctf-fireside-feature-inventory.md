@@ -282,6 +282,8 @@ member active only in Fireside is seen by being read, which is what the plugin i
 
 ## Change Log
 
+- 2026-11-10: **Today reads when comments were written under its blog stories (non-plugin inventory 5n).** `listStoryCommentTimes` (`lib/fireside/story-comments.ts`) answers, for the day's story slugs, when each publicly visible comment was written (an approved author, not taken down; `isPubliclyVisible`), up to 50 a post. A member who marked a story done sees it come back with "N new comments" when somebody has written since. The times are used on the server and never sent; nothing about who wrote is read. No Fireside table or route changed.
+
 - 2026-10-17: Demo seed module `ctf/scripts/demo-seed/21-fireside.mjs` gives the demo owner a comment with a reply and a reaction under the Dictionary post (test cases FS-5, FS-6, FS-21).
 - 2026-10-16: **A comment an admin removed can no longer be withdrawn (owner decision; #2751).**
   The screen already showed no Withdraw button on a removed comment, but `withdrawOwnComment`

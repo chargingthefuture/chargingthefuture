@@ -38,6 +38,7 @@ const SOURCE_NAMES: Record<string, string> = {
   beacon: 'the broadcast',
   chyme: 'the Main Room',
   'days-won': 'Days won',
+  yours: 'your own asks and offers',
 };
 
 export type SeTodayView = {

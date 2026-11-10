@@ -22,8 +22,9 @@ export const SE_ACTIVITY_WORDS = {
   allRead: 'Mark all as read',
 };
 
-// Kinds that ask the member to do something: a Recurring Activity invite waits for confirm or decline.
-const ANSWER_TYPES: readonly string[] = ['recurring-activity.invited'];
+// Kinds that ask the member to do something: a Recurring Activity invite waits for confirm or
+// decline, and a day-14 notice on an ask or offer waits for a renew (`today.renew`, lifetime.ts).
+const ANSWER_TYPES: readonly string[] = ['recurring-activity.invited', 'today.renew'];
 
 export function seActivityView(items: readonly SeActivityItem[]): { answer: SeActivityItem[]; happened: SeActivityItem[] } {
   const sorted = [...items].sort((a, b) => b.createdAtIso.localeCompare(a.createdAtIso));

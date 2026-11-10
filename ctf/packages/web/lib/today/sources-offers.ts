@@ -5,7 +5,10 @@ import { resolveUsernames } from 'lib/identity/resolve-usernames';
 import { action, author, card, clip, type TodayViewer } from './card';
 
 // Offers: places to stay on LightHouse, and Skill Up cohorts open to join. A LightHouse card
-// carries the listing's title and description and never its address or city.
+// carries the listing's title and description and never its address or city. A cohort is listed
+// exactly while it is open for registration with a seat left, by its own status, and has no window
+// on Today (lifetime.ts). Its label says who it is recruiting: a cohort with no trainer yet (the
+// cohort page shows "Trainer TBD") wants a trainer as well as learners.
 
 const PER_SOURCE = 3;
 
@@ -38,7 +41,7 @@ export async function cohortOffers(): Promise<SeTodayCard[]> {
       source: 'skill-up',
       sourceId: cohort.id,
       kind: 'offer',
-      label: 'Learn a skill · cohort open',
+      label: cohort.trainerName ? 'Learn a skill · learners wanted' : 'Learn a skill · a trainer and learners wanted',
       title: cohort.title,
       body: clip(cohort.description),
       createdAtIso: new Date(cohort.startDate ?? Date.now()).toISOString(),
