@@ -72,7 +72,7 @@ export async function buildPublicToday(now = new Date()): Promise<SeToday> {
   const cards = cardLists
     .flatMap((list) => list ?? [])
     // No author, and no comment times: those are only for a member's own marks.
-    .map(({ commentTimesIso: _times, ...item }) => ({ ...item, author: null }))
+    .map((item) => ({ ...item, author: null, commentTimesIso: undefined }))
     .sort((a, b) => b.createdAtIso.localeCompare(a.createdAtIso))
     .slice(0, TODAY_MAX_CARDS);
   return {

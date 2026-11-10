@@ -1,9 +1,9 @@
-import { SE_CARD_LIFETIME_WORDS as W, SE_TODAY_RENEW_NOTICE, seRenewLink, type SeTodayCard } from '@ctf/shared';
-import { notifySafe } from 'lib/notifications/repository';
+import type { SeTodayCard } from '@ctf/shared';
 import { reportError } from 'lib/observability/report';
 import type { TodayViewer } from './card';
 import { mineFor, onToday, renewNoticeDue, todayCardRule, windowEndMs, type TodayCardWindow } from './lifetime';
 import { readWindows } from './windows';
+import { sendRenewNotice } from './renew-notice';
 
 // Applies how long each card stays on Today (lifetime.ts) to one Today read: leaves out a card whose
 // time is over, marks the viewer's own asks and offers with what they can do, and sends the day-14
@@ -23,16 +23,7 @@ async function windowsFor(cards: SeTodayCard[]): Promise<Map<string, TodayCardWi
 }
 
 function noticeFor(viewer: TodayViewer, card: SeTodayCard, window: TodayCardWindow | undefined) {
-  const words = todayCardRule(card.source) === 'offer' ? W.offerNotice : W.askNotice;
-  return notifySafe({
-    userId: viewer.userId,
-    sourcePlugin: 'today',
-    notificationType: SE_TODAY_RENEW_NOTICE,
-    category: 'activity',
-    summary: `${words}: ${card.title}`,
-    linkPath: seRenewLink(card.href, card.id),
-    targetRef: `${card.id}@${new Date(windowEndMs(card, window)).toISOString()}`,
-  });
+  return sendRenewNotice({ ownerUserId: viewer.userId, cardId: card.id, source: card.source, title: card.title, href: card.href, windowEndMs: windowEndMs(card, window) });
 }
 
 // One card per id: the viewer's own copy (with `mine`) is kept over the copy other members see.

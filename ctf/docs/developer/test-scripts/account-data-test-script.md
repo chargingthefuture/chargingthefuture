@@ -652,3 +652,12 @@ copy is removed from the device; Today then reads the same as on the other devic
 `today_card_marks` row for A. Step 6 shows no marks and offers none. The anonymous Done and Not for me
 totals (AD-28) still count each mark.
 **Result:** web ☐ android ☐ — notes:
+
+## AD-33 · The day-14 notice without opening the app, and closing after day 14
+**Role:** member A, signed in, not approved in Unlock and past day 14 · **Surfaces:** web, android (step 1 is a GitHub Actions run)
+**Steps:**
+1. On a test database, set one of A's open asks (no deadline) to 13½ days old. Without A opening the app, run "Today — Day-14 Notices" from Actions twice.
+2. As A, open Activity, then open Today and tap the ask's title.
+3. Tap Keep it up for 14 more days, then Closed, not done on another of A's asks.
+**Expected:** Step 1: the run summary shows only counts ("checked N … M were due"), no names; the second run sends nothing new. Step 2: Activity has exactly one "Still need this? Keep it up for 14 more days: <title>". Step 3: both work for A although their posting is paused; another member calling either route on A's card is refused with not_yours, and an account restricted from contact is refused.
+**Result:** web ☐ android ☐ — notes:

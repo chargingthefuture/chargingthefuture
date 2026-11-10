@@ -54,12 +54,18 @@ export function onToday(card: SeTodayCard, window: TodayCardWindow | undefined, 
   return now.getTime() < windowEndMs(card, window);
 }
 
-// Day 14: the last day of a window with no deadline, or any time after it. The notice is sent once
-// per window (the notification is keyed by the window's end).
-export function renewNoticeDue(card: SeTodayCard, window: TodayCardWindow | undefined, now: Date): boolean {
-  if (todayCardRule(card.source) === 'kept' || todayCardRule(card.source) === 'week') return false;
+// How long after a window ends its notice can still go out, for a day the daily run missed.
+export const RENEW_NOTICE_GRACE_DAYS = 7;
+
+// Day 14: from the last day of a window with no deadline until a week after it ends. The notice is
+// sent once per window (the notification is keyed by the window's end), by the daily run
+// (renew-notices.ts) or by the poster's own Today read, whichever comes first.
+export function renewNoticeDue(card: Pick<SeTodayCard, 'source' | 'createdAtIso'>, window: TodayCardWindow | undefined, now: Date): boolean {
+  const rule = todayCardRule(card.source);
+  if (rule !== 'ask' && rule !== 'offer') return false;
   if (window?.dueIso || window?.outcome) return false;
-  return now.getTime() >= windowEndMs(card, window) - DAY_MS;
+  const end = windowEndMs(card, window);
+  return now.getTime() >= end - DAY_MS && now.getTime() < end + RENEW_NOTICE_GRACE_DAYS * DAY_MS;
 }
 
 export function mineFor(card: SeTodayCard, window: TodayCardWindow | undefined): SeTodayCardMine {

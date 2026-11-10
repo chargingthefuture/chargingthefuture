@@ -441,7 +441,7 @@ contracts:
   - pluginId: today
     command: today.cards.close
     version: 1.0.0
-    description: "The poster closes their own open ask from its Today card, with the outcome they pick: 'done' or 'not_done'. A goal is reached or withdrawn, a SocketRelay request closed or canceled, a ride request canceled; the outcome is kept in today_card_windows so unmet needs can be counted. Poster only; 20 a minute. (POST /api/today/cards/[cardId]/close)."
+    description: "The poster closes their own open ask from its Today card, with the outcome they pick: 'done' or 'not_done'. A goal is reached or withdrawn, a SocketRelay request closed or canceled, a ride request canceled; the outcome is kept in today_card_windows so unmet needs can be counted. Poster only, at signed_in whatever their Unlock standing (owner decision, 2026-11-10); account restrictions apply; 20 a minute. (POST /api/today/cards/[cardId]/close)."
     inputSchema:
       cardId:
         type: string
@@ -466,7 +466,7 @@ contracts:
   - pluginId: today
     command: today.cards.renew
     version: 1.0.0
-    description: "The poster keeps their own open ask or offer on Today for 14 more days from the tap (the card, or the day-14 notice in Activity). Refused on an ask with a deadline. Poster only; 20 a minute. (POST /api/today/cards/[cardId]/renew)."
+    description: "The poster keeps their own open ask or offer on Today for 14 more days from the tap (the card, or the day-14 notice in Activity). Refused on an ask with a deadline. Poster only, at signed_in whatever their Unlock standing (owner decision, 2026-11-10); account restrictions apply; 20 a minute. (POST /api/today/cards/[cardId]/renew)."
     inputSchema:
       cardId:
         type: string
@@ -508,4 +508,27 @@ contracts:
       - today_card_marks
     purpose: card_marks
     retentionClass: until_account_deletion
+    idempotency: true
+  - pluginId: today
+    command: today.renew_notices.run
+    version: 1.0.0
+    description: "Daily run (today-renew-notices.yml, CRON_SECRET): send the day-14 notice in Activity for every open ask and offer with no deadline whose 14 days on Today end within a day or ended in the past week, whether or not the poster opens the app. Keyed by card and window end, so a notice is never sent twice for one window. Answers counts only. (POST /api/internal/today/renew-notices)."
+    inputSchema: {}
+    outputSchema:
+      ok:
+        type: boolean
+      checked:
+        type: integer
+      due:
+        type: integer
+    dataAccess:
+      - socket_relay_requests
+      - trust_transport_requests
+      - peer_programming_goals
+      - lighthouse_properties
+      - today_card_windows
+      - notifications
+      - notification_preferences
+    purpose: card_lifetime
+    retentionClass: none_read_only
     idempotency: true

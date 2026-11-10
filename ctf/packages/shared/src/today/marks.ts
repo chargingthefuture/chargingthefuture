@@ -63,8 +63,15 @@ export function seNewCommentsLine(count: number | undefined): string | null {
   return count === 1 ? '1 new comment' : `${count} new comments`;
 }
 
+// A copy of a card without the named fields.
+function without(card: SeTodayCard, keys: ReadonlyArray<keyof SeTodayCard>): SeTodayCard {
+  const copy = { ...card };
+  for (const key of keys) delete copy[key];
+  return copy;
+}
+
 function applyOne(card: SeTodayCard, mark: SeCardMark | undefined, dayStartMs: number): SeTodayCard | null {
-  const { commentTimesIso: _times, ...shown } = card;
+  const shown = without(card, ['commentTimesIso']);
   if (!mark) return shown;
   if (mark.mark === 'not_for_me') return null;
   const fresh = seNewCommentsSince(card, mark.markedAtIso);
@@ -93,7 +100,7 @@ export function seMarkCardInToday<T extends { cards: SeTodayCard[] }>(today: T, 
     ...today,
     cards: today.cards.map((card) => {
       if (card.id !== change.cardId) return card;
-      const { markedDoneAtIso: _was, newComments: _new, ...rest } = card;
+      const rest = without(card, ['markedDoneAtIso', 'newComments']);
       return change.mark === 'done' ? { ...rest, markedDoneAtIso: now.toISOString() } : rest;
     }),
   };

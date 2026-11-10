@@ -49,8 +49,15 @@ export function seNewCommentsLine(count) {
         return null;
     return count === 1 ? '1 new comment' : `${count} new comments`;
 }
+// A copy of a card without the named fields.
+function without(card, keys) {
+    const copy = { ...card };
+    for (const key of keys)
+        delete copy[key];
+    return copy;
+}
 function applyOne(card, mark, dayStartMs) {
-    const { commentTimesIso: _times, ...shown } = card;
+    const shown = without(card, ['commentTimesIso']);
     if (!mark)
         return shown;
     if (mark.mark === 'not_for_me')
@@ -82,7 +89,7 @@ export function seMarkCardInToday(today, change, now = new Date()) {
         cards: today.cards.map((card) => {
             if (card.id !== change.cardId)
                 return card;
-            const { markedDoneAtIso: _was, newComments: _new, ...rest } = card;
+            const rest = without(card, ['markedDoneAtIso', 'newComments']);
             return change.mark === 'done' ? { ...rest, markedDoneAtIso: now.toISOString() } : rest;
         }),
     };

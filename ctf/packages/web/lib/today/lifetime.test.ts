@@ -38,9 +38,11 @@ describe('an ask with no deadline', () => {
     expect(onToday(cardOf('socket-relay', 14.1), undefined, NOW)).toBe(false);
   });
 
-  it('gets the notice on day 14, and not before', () => {
+  it('gets the notice from day 14 until a week after its window ends, and not before', () => {
     expect(renewNoticeDue(cardOf('socket-relay', 12.5), undefined, NOW)).toBe(false);
     expect(renewNoticeDue(cardOf('socket-relay', 13.5), undefined, NOW)).toBe(true);
+    expect(renewNoticeDue(cardOf('socket-relay', 20), undefined, NOW)).toBe(true);
+    expect(renewNoticeDue(cardOf('socket-relay', 21.5), undefined, NOW)).toBe(false);
   });
 
   it('comes back for 14 days from the renew tap', () => {

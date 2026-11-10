@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SeTodayCard } from '@ctf/shared';
 
-const { notifySafe } = vi.hoisted(() => ({ notifySafe: vi.fn(async (_input: unknown) => undefined) }));
+const { notifySafe } = vi.hoisted(() => ({ notifySafe: vi.fn<(input: unknown) => Promise<void>>(async () => undefined) }));
 vi.mock('lib/notifications/repository', () => ({ notifySafe }));
 vi.mock('lib/observability/report', () => ({ reportError: vi.fn() }));
 vi.mock('./windows', () => ({ readWindows: vi.fn(async () => new Map()) }));
