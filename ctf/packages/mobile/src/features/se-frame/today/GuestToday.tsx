@@ -30,8 +30,23 @@ import type { FeatureKey } from '../../../navigation/screens';
 import { SE_FONT } from '../fonts';
 import { openTodayLink } from './openTodayLink';
 import { useToday } from './useToday';
+import Svg, { Path, Rect } from 'react-native-svg';
 
 type Styles = ReturnType<typeof makeStyles>;
+
+// The small tag on sample data: a lock and "Sample", so a visitor reads it as private rather than
+// empty, as on the web.
+function SampleTag({ s, color }: { s: Styles; color: string }) {
+  return (
+    <View style={[s.sampleTag, { borderColor: color }]} accessible accessibilityLabel={W.sampleLabel}>
+      <Svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+        <Rect x={3} y={11} width={18} height={11} rx={2} />
+        <Path d="M7 11V7a5 5 0 0 1 10 0v4" />
+      </Svg>
+      <Text style={[s.sampleTagText, { color }]}>{W.sample}</Text>
+    </View>
+  );
+}
 
 function Hero({ s, t, today, onSignUp }: { s: Styles; t: SeThemeTokens; today: SeToday | null; onSignUp: () => void }) {
   const big = today?.daysWon ? seDaysWonLines(today.daysWon).big : null;
@@ -39,7 +54,7 @@ function Hero({ s, t, today, onSignUp }: { s: Styles; t: SeThemeTokens; today: S
     <View style={s.hero} accessibilityLabel={SE_DAYS_WON_TITLE}>
       <View style={s.row}>
         <Text style={s.heroLabel}>{SE_DAYS_WON_TITLE}</Text>
-        {big && today?.daysWon?.sample ? <Text style={[s.demoTag, { color: t.onHero, borderColor: t.onHero }]}>{W.demo}</Text> : null}
+        {big && today?.daysWon?.sample ? <SampleTag s={s} color={t.onHero} /> : null}
       </View>
       {big ? <Text style={s.heroBig}>{big}</Text> : null}
       <Text style={s.heroText}>{W.hero}</Text>
@@ -136,7 +151,7 @@ function GuestCard({ s, t, card, onSignUp, go }: { s: Styles; t: SeThemeTokens; 
         {bySignUp ? <SeAvatar accountId={card.id} size={28} /> : null}
         {bySignUp ? <Text style={s.handle}>{W.member}</Text> : null}
         <Text style={[s.label, { color }]}>{card.label}</Text>
-        {card.sample ? <Text style={s.demoTag}>{W.demo}</Text> : null}
+        {card.sample ? <SampleTag s={s} color={t.ink} /> : null}
       </View>
       <Text style={s.title}>{card.title}</Text>
       {card.body && !bySignUp ? (
@@ -234,7 +249,8 @@ function makeStyles(t: SeThemeTokens) {
     action: { alignSelf: 'flex-start', minHeight: 44, paddingHorizontal: 14, justifyContent: 'center', borderRadius: 999, borderWidth: 1.5, borderColor: t.line, backgroundColor: t.card },
     actionLabel: { fontSize: 13, color: t.ink, fontFamily: SE_FONT.sansSemi },
     // The small tag on sample data, and the one line under the cards that says why.
-    demoTag: { paddingHorizontal: 6, borderRadius: 999, borderWidth: 1, borderColor: t.ink, color: t.ink, fontSize: 10, lineHeight: 16, opacity: 0.7, fontFamily: SE_FONT.sansSemi },
+    sampleTag: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 6, borderRadius: 999, borderWidth: 1, opacity: 0.7 },
+    sampleTagText: { fontSize: 10, lineHeight: 16, fontFamily: SE_FONT.sansSemi },
     sampleNote: { marginTop: 4, fontSize: 12, color: t.soft, textAlign: 'center', fontFamily: SE_FONT.sans },
   });
 }

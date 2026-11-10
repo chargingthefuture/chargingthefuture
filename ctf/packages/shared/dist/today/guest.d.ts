@@ -22,7 +22,8 @@ export declare const SE_GUEST_WORDS: {
     readonly loading: "Loading Today…";
     readonly failed: "Could not load Today.";
     readonly tryAgain: "Try again";
-    readonly demo: "Demo";
+    readonly sample: "Sample";
+    readonly sampleLabel: "Sample, shown in place of private member data";
     readonly sampleNote: "Some content is sample data to protect member privacy.";
 };
 export declare function seGuestAnswersBySignUp(card: SeTodayCard): boolean;
