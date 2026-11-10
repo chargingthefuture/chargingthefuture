@@ -118,11 +118,27 @@ function Answers({ conversation, onTalk }: { conversation: SeCardConversation; o
   );
 }
 
+// Who answered and the conversation, public or Just us two: the part of a card that is the same
+// wherever it is shown, in this sheet on Today and in the panel on the plugin's own page
+// (card-conversation-panel.tsx), so 3.0 and 3.1 read and write one conversation.
+export function CardConversationView({ talk }: { talk: CardConversation }) {
+  const [partner, setPartner] = useState<string | null>(null);
+  const talkTo = async (accountId: string) => {
+    const open = talk.conversation?.pairs.some((pair) => pair.partnerId === accountId);
+    if (open || (await talk.ask(accountId))) setPartner(accountId);
+  };
+  return (
+    <>
+      {talk.conversation ? <Answers conversation={talk.conversation} onTalk={(id) => void talkTo(id)} /> : null}
+      <CardTalk talk={talk} partner={partner} onPartner={setPartner} onTalk={(id) => void talkTo(id)} />
+    </>
+  );
+}
+
 type SheetProps = { card: SeTodayCard; viewerId: string; onClose: () => void };
 
 export function CardSheet({ card, viewerId, firstAnswer, onClose, onChanged }: SheetProps & { firstAnswer: SeCardAnswerKind | null; onChanged?: () => void }) {
   const talk = useCardConversation(card.id, firstAnswer);
-  const [partner, setPartner] = useState<string | null>(null);
   const closeRef = useRef<HTMLButtonElement | null>(null);
   useEffect(() => {
     closeRef.current?.focus();
@@ -130,10 +146,6 @@ export function CardSheet({ card, viewerId, firstAnswer, onClose, onChanged }: S
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
-  const talkTo = async (accountId: string) => {
-    const open = talk.conversation?.pairs.some((pair) => pair.partnerId === accountId);
-    if (open || (await talk.ask(accountId))) setPartner(accountId);
-  };
   return (
     <div className={styles.backdrop}>
       {/* Tapping the dimmed Today behind the sheet closes it; the Close button and Escape do the same. */}
@@ -149,8 +161,7 @@ export function CardSheet({ card, viewerId, firstAnswer, onClose, onChanged }: S
           </Link>
         </div>
         <SheetYours card={card} onChanged={onChanged} />
-        {talk.conversation ? <Answers conversation={talk.conversation} onTalk={(id) => void talkTo(id)} /> : null}
-        <CardTalk talk={talk} partner={partner} onPartner={setPartner} onTalk={(id) => void talkTo(id)} />
+        <CardConversationView talk={talk} />
       </section>
     </div>
   );

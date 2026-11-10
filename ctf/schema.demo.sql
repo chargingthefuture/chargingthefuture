@@ -7447,72 +7447,84 @@ ALTER TABLE IF EXISTS question_answer_audit ADD COLUMN IF NOT EXISTS prior_choic
 ALTER TABLE IF EXISTS question_answer_audit ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 CREATE INDEX IF NOT EXISTS idx_question_answer_audit_user ON question_answer_audit (user_id, created_at DESC);
 
--- card_answers, card_messages and card_pair_requests: card conversations (3.1, the board "a card
--- opened in place"). One store for every Today card of kind ask, offer or story, keyed by the card
--- id (`<source>:<id>`, e.g. `trust-transport:123`), so the cards from every feature work the same.
--- An answer is one member saying "can help", "knows someone", "would like this" or "this helped"
--- on a card, once per kind. A message is public (pair_low and pair_high empty) or belongs to "Just
--- us two", a private conversation between exactly two members on one card (the pair stored lower
--- id first), which opens only after the second member agrees to the request. Account deletion
--- removes a member's answers, the messages they wrote, and every Just us two conversation and
--- request they were part of.
-CREATE TABLE IF NOT EXISTS card_answers (
+-- commons_item_answers, commons_item_messages and commons_item_pair_requests: the conversation
+-- under a Today card (3.1, the board "a card opened in place"). Commons holds the store, and every
+-- row names the plugin and the item it belongs to, so a ride's conversation is TrustTransport's, a
+-- place's is LightHouse's, and one with no plugin of its own (an announcement) is Commons'
+-- (owner decision, 2026-11-10). An answer is one member saying "can help", "knows someone", "would
+-- like this" or "this helped" on an item, once per kind. A message is public (pair_low and pair_high
+-- empty) or belongs to "Just us two", a private conversation between exactly two members on one
+-- item (the pair stored lower id first), which opens only after the second member agrees to the
+-- request. Account deletion removes a member's answers, the messages they wrote, and every Just us
+-- two conversation and request they were part of. They replace card_answers, card_messages and
+-- card_pair_requests, dropped by post/0086 with their rows.
+CREATE TABLE IF NOT EXISTS commons_item_answers (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  card_id TEXT NOT NULL CHECK (char_length(card_id) BETWEEN 3 AND 200),
+  plugin TEXT NOT NULL CHECK (plugin ~ '^[a-z][a-z0-9-]{0,39}$'),
+  item_id TEXT NOT NULL CHECK (char_length(item_id) BETWEEN 1 AND 200),
   account_id TEXT NOT NULL,
   kind TEXT NOT NULL CHECK (kind IN ('help', 'know-someone', 'want', 'helped-me')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  CONSTRAINT card_answers_once UNIQUE (card_id, account_id, kind)
+  CONSTRAINT commons_item_answers_once UNIQUE (plugin, item_id, account_id, kind)
 );
-ALTER TABLE IF EXISTS card_answers ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS card_answers ADD COLUMN IF NOT EXISTS card_id TEXT;
-ALTER TABLE IF EXISTS card_answers ADD COLUMN IF NOT EXISTS account_id TEXT;
-ALTER TABLE IF EXISTS card_answers ADD COLUMN IF NOT EXISTS kind TEXT;
-ALTER TABLE IF EXISTS card_answers ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-CREATE INDEX IF NOT EXISTS idx_card_answers_card ON card_answers(card_id, created_at);
-CREATE INDEX IF NOT EXISTS idx_card_answers_account ON card_answers(account_id);
+ALTER TABLE IF EXISTS commons_item_answers ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS commons_item_answers ADD COLUMN IF NOT EXISTS plugin TEXT;
+ALTER TABLE IF EXISTS commons_item_answers ADD COLUMN IF NOT EXISTS item_id TEXT;
+ALTER TABLE IF EXISTS commons_item_answers ADD COLUMN IF NOT EXISTS account_id TEXT;
+ALTER TABLE IF EXISTS commons_item_answers ADD COLUMN IF NOT EXISTS kind TEXT;
+ALTER TABLE IF EXISTS commons_item_answers ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_commons_item_answers_item ON commons_item_answers(plugin, item_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_commons_item_answers_account ON commons_item_answers(account_id);
 
-CREATE TABLE IF NOT EXISTS card_messages (
+CREATE TABLE IF NOT EXISTS commons_item_messages (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  card_id TEXT NOT NULL CHECK (char_length(card_id) BETWEEN 3 AND 200),
+  plugin TEXT NOT NULL CHECK (plugin ~ '^[a-z][a-z0-9-]{0,39}$'),
+  item_id TEXT NOT NULL CHECK (char_length(item_id) BETWEEN 1 AND 200),
   author_id TEXT NOT NULL,
   body TEXT NOT NULL CHECK (char_length(body) BETWEEN 1 AND 1000),
   pair_low TEXT,
   pair_high TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   edited_at TIMESTAMPTZ,
-  CONSTRAINT card_messages_pair_both CHECK ((pair_low IS NULL) = (pair_high IS NULL)),
-  CONSTRAINT card_messages_pair_order CHECK (pair_low IS NULL OR pair_low < pair_high),
-  CONSTRAINT card_messages_author_in_pair CHECK (pair_low IS NULL OR author_id IN (pair_low, pair_high))
+  CONSTRAINT commons_item_messages_pair_both CHECK ((pair_low IS NULL) = (pair_high IS NULL)),
+  CONSTRAINT commons_item_messages_pair_order CHECK (pair_low IS NULL OR pair_low < pair_high),
+  CONSTRAINT commons_item_messages_author_in_pair CHECK (pair_low IS NULL OR author_id IN (pair_low, pair_high))
 );
-ALTER TABLE IF EXISTS card_messages ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS card_messages ADD COLUMN IF NOT EXISTS card_id TEXT;
-ALTER TABLE IF EXISTS card_messages ADD COLUMN IF NOT EXISTS author_id TEXT;
-ALTER TABLE IF EXISTS card_messages ADD COLUMN IF NOT EXISTS body TEXT;
-ALTER TABLE IF EXISTS card_messages ADD COLUMN IF NOT EXISTS pair_low TEXT;
-ALTER TABLE IF EXISTS card_messages ADD COLUMN IF NOT EXISTS pair_high TEXT;
-ALTER TABLE IF EXISTS card_messages ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE IF EXISTS card_messages ADD COLUMN IF NOT EXISTS edited_at TIMESTAMPTZ;
-CREATE INDEX IF NOT EXISTS idx_card_messages_card ON card_messages(card_id, pair_low, pair_high, created_at);
-CREATE INDEX IF NOT EXISTS idx_card_messages_author ON card_messages(author_id);
-CREATE INDEX IF NOT EXISTS idx_card_messages_pair_high ON card_messages(pair_high) WHERE pair_high IS NOT NULL;
+ALTER TABLE IF EXISTS commons_item_messages ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS commons_item_messages ADD COLUMN IF NOT EXISTS plugin TEXT;
+ALTER TABLE IF EXISTS commons_item_messages ADD COLUMN IF NOT EXISTS item_id TEXT;
+ALTER TABLE IF EXISTS commons_item_messages ADD COLUMN IF NOT EXISTS author_id TEXT;
+ALTER TABLE IF EXISTS commons_item_messages ADD COLUMN IF NOT EXISTS body TEXT;
+ALTER TABLE IF EXISTS commons_item_messages ADD COLUMN IF NOT EXISTS pair_low TEXT;
+ALTER TABLE IF EXISTS commons_item_messages ADD COLUMN IF NOT EXISTS pair_high TEXT;
+ALTER TABLE IF EXISTS commons_item_messages ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS commons_item_messages ADD COLUMN IF NOT EXISTS edited_at TIMESTAMPTZ;
+CREATE INDEX IF NOT EXISTS idx_commons_item_messages_item ON commons_item_messages(plugin, item_id, pair_low, pair_high, created_at);
+CREATE INDEX IF NOT EXISTS idx_commons_item_messages_author ON commons_item_messages(author_id);
+CREATE INDEX IF NOT EXISTS idx_commons_item_messages_pair_high ON commons_item_messages(pair_high) WHERE pair_high IS NOT NULL;
 
-CREATE TABLE IF NOT EXISTS card_pair_requests (
-  card_id TEXT NOT NULL CHECK (char_length(card_id) BETWEEN 3 AND 200),
+CREATE TABLE IF NOT EXISTS commons_item_pair_requests (
+  plugin TEXT NOT NULL CHECK (plugin ~ '^[a-z][a-z0-9-]{0,39}$'),
+  item_id TEXT NOT NULL CHECK (char_length(item_id) BETWEEN 1 AND 200),
   user_low TEXT NOT NULL,
   user_high TEXT NOT NULL,
   requester_id TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   agreed_at TIMESTAMPTZ,
-  PRIMARY KEY (card_id, user_low, user_high),
-  CONSTRAINT card_pair_requests_pair_order CHECK (user_low < user_high),
-  CONSTRAINT card_pair_requests_requester_in_pair CHECK (requester_id IN (user_low, user_high))
+  PRIMARY KEY (plugin, item_id, user_low, user_high),
+  CONSTRAINT commons_item_pair_requests_pair_order CHECK (user_low < user_high),
+  CONSTRAINT commons_item_pair_requests_requester_in_pair CHECK (requester_id IN (user_low, user_high))
 );
-ALTER TABLE IF EXISTS card_pair_requests ADD COLUMN IF NOT EXISTS requester_id TEXT;
-ALTER TABLE IF EXISTS card_pair_requests ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE IF EXISTS card_pair_requests ADD COLUMN IF NOT EXISTS agreed_at TIMESTAMPTZ;
-CREATE INDEX IF NOT EXISTS idx_card_pair_requests_low ON card_pair_requests(user_low);
-CREATE INDEX IF NOT EXISTS idx_card_pair_requests_high ON card_pair_requests(user_high);
+ALTER TABLE IF EXISTS commons_item_pair_requests ADD COLUMN IF NOT EXISTS requester_id TEXT;
+ALTER TABLE IF EXISTS commons_item_pair_requests ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS commons_item_pair_requests ADD COLUMN IF NOT EXISTS agreed_at TIMESTAMPTZ;
+CREATE INDEX IF NOT EXISTS idx_commons_item_pair_requests_low ON commons_item_pair_requests(user_low);
+CREATE INDEX IF NOT EXISTS idx_commons_item_pair_requests_high ON commons_item_pair_requests(user_high);
+
+-- The card tables they replace, dropped with their rows (owner decision, 2026-11-10).
+DROP TABLE IF EXISTS card_answers;
+DROP TABLE IF EXISTS card_messages;
+DROP TABLE IF EXISTS card_pair_requests;
 
 -- today_card_feedback_counts: how many times a day members marked a Today card done or picked Not
 -- for me, by the card's source and kind. A total only: no account id and nothing about who tapped,
@@ -11285,7 +11297,88 @@ ALTER TABLE IF EXISTS today_card_feedback_counts ADD COLUMN IF NOT EXISTS count 
 ALTER TABLE IF EXISTS card_messages ADD COLUMN IF NOT EXISTS edited_at TIMESTAMPTZ;
 
 
--- ── post migration: 0086_today_card_windows.sql ──
+-- ── post migration: 0086_card_conversations_to_commons.sql ──
+-- post/0086: Card conversations move to Commons, one row per plugin item.
+--
+-- Owner decision, 2026-11-10: nothing in 3.1 stands apart from a plugin. The conversation under a
+-- Today card belongs to the plugin behind the card (a ride's to TrustTransport, a place's to
+-- LightHouse, and Commons' when there is no other), so Commons holds one store whose rows name the
+-- plugin and the item: commons_item_answers, commons_item_messages and commons_item_pair_requests.
+-- card_answers, card_messages and card_pair_requests are dropped with their rows, in production and
+-- the demo schema; they held only the owner's own test posts, which the owner reposts. Safe to
+-- re-run.
+CREATE TABLE IF NOT EXISTS commons_item_answers (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  plugin TEXT NOT NULL CHECK (plugin ~ '^[a-z][a-z0-9-]{0,39}$'),
+  item_id TEXT NOT NULL CHECK (char_length(item_id) BETWEEN 1 AND 200),
+  account_id TEXT NOT NULL,
+  kind TEXT NOT NULL CHECK (kind IN ('help', 'know-someone', 'want', 'helped-me')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT commons_item_answers_once UNIQUE (plugin, item_id, account_id, kind)
+);
+ALTER TABLE IF EXISTS commons_item_answers ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS commons_item_answers ADD COLUMN IF NOT EXISTS plugin TEXT;
+ALTER TABLE IF EXISTS commons_item_answers ADD COLUMN IF NOT EXISTS item_id TEXT;
+ALTER TABLE IF EXISTS commons_item_answers ADD COLUMN IF NOT EXISTS account_id TEXT;
+ALTER TABLE IF EXISTS commons_item_answers ADD COLUMN IF NOT EXISTS kind TEXT;
+ALTER TABLE IF EXISTS commons_item_answers ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_commons_item_answers_item ON commons_item_answers(plugin, item_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_commons_item_answers_account ON commons_item_answers(account_id);
+
+CREATE TABLE IF NOT EXISTS commons_item_messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  plugin TEXT NOT NULL CHECK (plugin ~ '^[a-z][a-z0-9-]{0,39}$'),
+  item_id TEXT NOT NULL CHECK (char_length(item_id) BETWEEN 1 AND 200),
+  author_id TEXT NOT NULL,
+  body TEXT NOT NULL CHECK (char_length(body) BETWEEN 1 AND 1000),
+  pair_low TEXT,
+  pair_high TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  edited_at TIMESTAMPTZ,
+  CONSTRAINT commons_item_messages_pair_both CHECK ((pair_low IS NULL) = (pair_high IS NULL)),
+  CONSTRAINT commons_item_messages_pair_order CHECK (pair_low IS NULL OR pair_low < pair_high),
+  CONSTRAINT commons_item_messages_author_in_pair CHECK (pair_low IS NULL OR author_id IN (pair_low, pair_high))
+);
+ALTER TABLE IF EXISTS commons_item_messages ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
+ALTER TABLE IF EXISTS commons_item_messages ADD COLUMN IF NOT EXISTS plugin TEXT;
+ALTER TABLE IF EXISTS commons_item_messages ADD COLUMN IF NOT EXISTS item_id TEXT;
+ALTER TABLE IF EXISTS commons_item_messages ADD COLUMN IF NOT EXISTS author_id TEXT;
+ALTER TABLE IF EXISTS commons_item_messages ADD COLUMN IF NOT EXISTS body TEXT;
+ALTER TABLE IF EXISTS commons_item_messages ADD COLUMN IF NOT EXISTS pair_low TEXT;
+ALTER TABLE IF EXISTS commons_item_messages ADD COLUMN IF NOT EXISTS pair_high TEXT;
+ALTER TABLE IF EXISTS commons_item_messages ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS commons_item_messages ADD COLUMN IF NOT EXISTS edited_at TIMESTAMPTZ;
+CREATE INDEX IF NOT EXISTS idx_commons_item_messages_item ON commons_item_messages(plugin, item_id, pair_low, pair_high, created_at);
+CREATE INDEX IF NOT EXISTS idx_commons_item_messages_author ON commons_item_messages(author_id);
+CREATE INDEX IF NOT EXISTS idx_commons_item_messages_pair_high ON commons_item_messages(pair_high) WHERE pair_high IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS commons_item_pair_requests (
+  plugin TEXT NOT NULL CHECK (plugin ~ '^[a-z][a-z0-9-]{0,39}$'),
+  item_id TEXT NOT NULL CHECK (char_length(item_id) BETWEEN 1 AND 200),
+  user_low TEXT NOT NULL,
+  user_high TEXT NOT NULL,
+  requester_id TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  agreed_at TIMESTAMPTZ,
+  PRIMARY KEY (plugin, item_id, user_low, user_high),
+  CONSTRAINT commons_item_pair_requests_pair_order CHECK (user_low < user_high),
+  CONSTRAINT commons_item_pair_requests_requester_in_pair CHECK (requester_id IN (user_low, user_high))
+);
+ALTER TABLE IF EXISTS commons_item_pair_requests ADD COLUMN IF NOT EXISTS requester_id TEXT;
+ALTER TABLE IF EXISTS commons_item_pair_requests ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS commons_item_pair_requests ADD COLUMN IF NOT EXISTS agreed_at TIMESTAMPTZ;
+CREATE INDEX IF NOT EXISTS idx_commons_item_pair_requests_low ON commons_item_pair_requests(user_low);
+CREATE INDEX IF NOT EXISTS idx_commons_item_pair_requests_high ON commons_item_pair_requests(user_high);
+
+DROP TABLE IF EXISTS card_answers;
+DROP TABLE IF EXISTS card_messages;
+DROP TABLE IF EXISTS card_pair_requests;
+DROP TABLE IF EXISTS demo.card_answers;
+DROP TABLE IF EXISTS demo.card_messages;
+DROP TABLE IF EXISTS demo.card_pair_requests;
+
+
+-- ── post migration: 0088_today_card_windows.sql ──
 -- Safe to re-run.
 -- today_card_windows: how long an ask or an offer stays on Today (owner decisions, 2026-11-03),
 -- keyed by the card id (`<source>:<id>`, e.g. `socket-relay:123`). One row only once the poster
@@ -11317,7 +11410,7 @@ CREATE INDEX IF NOT EXISTS idx_today_card_windows_owner ON today_card_windows(ow
 CREATE INDEX IF NOT EXISTS idx_today_card_windows_outcome ON today_card_windows(outcome) WHERE outcome IS NOT NULL;
 
 
--- ── post migration: 0087_today_card_marks.sql ──
+-- ── post migration: 0089_today_card_marks.sql ──
 -- Safe to re-run.
 -- today_card_marks: a member's own marks on Today cards (owner decisions, 2026-11-03), stored on the
 -- account so every phone and browser agrees. `done` is the timeline dot: the card stays on Today the

@@ -705,3 +705,12 @@ web ☐
 
 **1.** As a requester, ask for a ride, then open Today in the 3.1 frame and tap "A ride is wanted". **Expected:** the card reads "Your ride request…" and "You posted this · On Today until <14 days from posting>" (a ride carries no date of its own), with Done, Closed, not done and Keep it up for 14 more days. Tapping either close button cancels the request, and it leaves Today for the requester and for drivers. A ride request past its 14 days with no renew leaves Today and stays open in TrustTransport.
 web ☐ android ☐
+### TT-30 · The card's conversation on this page, in 3.0 and 3.1 (added 2026-11-10)
+**Role:** two members (A and B) · **Surfaces:** web
+**Steps:**
+1. As A on 3.1, open the ride's card on Today and write a public message in it.
+2. As B, open this plugin's page and find the ride in Help, and your own ride in Tracking (the Conversation button).
+3. As B, write a reply there.
+4. As B, switch to 3.0 in Settings and open the same place again.
+**Expected:** Step 2 shows A's message. Step 3's reply appears in the card's sheet on Today for A. Step 4 shows the same conversation: 3.0 and 3.1 read one conversation, only the screens differ.
+**Result:** web ☐ — notes:

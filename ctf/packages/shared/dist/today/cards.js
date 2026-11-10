@@ -1,8 +1,9 @@
 // Card conversations in 3.1, shared by web and Android: a Today card of kind ask, offer or story
 // opens in place as a sheet with the people who answered it, a public conversation, and "Just us
 // two", a private conversation between two members on that card that opens once both agree.
-// One store serves every such card, keyed by the card id (`SeTodayCard.id`, e.g.
-// `trust-transport:123`), so asks, offers and stories all work the same.
+// The conversation belongs to the plugin behind the card (owner decision, 2026-11-10): Commons holds
+// one store whose rows name the plugin and the item (`seCardItemRef`), so a ride's conversation is
+// TrustTransport's, a place's is LightHouse's, and Commons' when no other plugin is behind the card.
 // Built on the server by ctf/packages/web/lib/today/cards/; drawn by web
 // components/se-frame/today/card-sheet*.tsx and Android src/features/se-frame/today/CardSheet*.tsx.
 export const SE_CARD_ANSWER_KINDS = ['help', 'know-someone', 'want', 'helped-me'];
@@ -13,12 +14,37 @@ export const SE_CARD_ID_MAX = 200;
 const CARD_ID = /^[a-z][a-z0-9-]{0,39}:\S{1,200}$/;
 // 21 Questions keeps its own controls inside the card and never opens a sheet.
 const OWN_CONTROLS = new Set(['questions', 'questions-match']);
+// A card's id from its source and the source's own id: what Today builds for the card, and what a
+// plugin's own page builds to show the same conversation.
+export function seCardId(source, sourceId) {
+    return `${source}:${sourceId}`;
+}
 export function seCardIdValid(id) {
     if (id.length > SE_CARD_ID_MAX || !CARD_ID.test(id))
         return false;
     return !OWN_CONTROLS.has(id.slice(0, id.indexOf(':')));
 }
 const SHEET_KINDS = new Set(['ask', 'offer', 'story']);
+// The plugin a card's conversation belongs to, by the card's source. A source not listed goes to
+// Commons: an announcement or the Quora survey, which have no plugin of their own, and SkillsHunt,
+// What Works and Directory invitations, whose talk is for the group rather than one item's
+// (owner decision, 2026-11-10).
+const CARD_SOURCE_PLUGIN = {
+    'trust-transport': 'trust-transport',
+    lighthouse: 'lighthouse',
+    'socket-relay': 'socket-relay',
+    'peer-programming': 'peer-programming',
+    'skill-up': 'skill-up',
+    'blog-story': 'fireside',
+};
+// Which plugin item a card is: the plugin from the card's source, and the source's own id. In
+// Commons the item id keeps the source in front (`what-works:12`), so items from different sources
+// never share a conversation.
+export function seCardItemRef(cardId) {
+    const colon = cardId.indexOf(':');
+    const plugin = CARD_SOURCE_PLUGIN[cardId.slice(0, colon)];
+    return plugin ? { plugin, itemId: cardId.slice(colon + 1) } : { plugin: 'commons', itemId: cardId };
+}
 // Whether tapping the card's text opens the sheet; every other card keeps expanding in place.
 export function seCardOpensSheet(card) {
     return SHEET_KINDS.has(card.kind) && !OWN_CONTROLS.has(card.source);
@@ -58,6 +84,7 @@ export const SE_CARD_WORDS = {
     answerLine: (kinds) => kinds.map((kind) => ANSWER_WORDS[kind]).join(', '),
     talkHere: 'Talk here',
     conversation: 'Conversation',
+    hideConversation: 'Hide the conversation',
     whoReads: 'Who can read it',
     public: 'Public',
     pair: 'Just us two',

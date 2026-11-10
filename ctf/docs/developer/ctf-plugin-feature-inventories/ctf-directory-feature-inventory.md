@@ -64,8 +64,13 @@ Implemented routes:
   - `GET /api/directory/list` — also decorates each **claimed** item with the
     `hasWeaversBadge` boolean (guarded read of `contributor_access_eligibility` via
     `lib/contributor-access/badge.ts`; unclaimed items never carry the field; empty result on any
-    error so the list can never fail because of it).
-  - `GET /api/directory/profiles/:id` — fetch one active directory profile by id, behind the same `requireDirectoryReadAccess` gate as the list. Backs the auth-gated deep-link page `/apps/directory/profile/[id]` (the destination a shared `ShareLink` points at): a signed-in member opens the Directory with that profile's detail; an unauthenticated visitor is redirected to the directory landing by the page, never reaching this route. Returns `{ member }` (a `DirectoryProfile`) on 200, `{ ok: false, code: DIRECTORY_NOT_FOUND }` 404 when no active profile matches, or `DIRECTORY_PERSISTENCE_UNAVAILABLE` 503. A **claimed** member also carries the `hasWeaversBadge` boolean (same guarded contributor-access read as the list; never set on an unclaimed profile).
+    error so the list can never fail because of it), and with the member's `username` from Clerk
+    (`resolveMemberIdentities`; null when the member has none or Clerk cannot be read). The `q`
+    search also finds a claimed profile by its member's username (owner decision, 2026-11-10): the
+    route asks Clerk which accounts' usernames contain the term (`findUserIdsByUsername` in
+    `lib/identity/resolve-usernames.ts`, which keeps only username matches so a search never shows
+    whose email or real name matched) and passes their ids to `listDirectoryForMember`.
+  - `GET /api/directory/profiles/:id` — fetch one active directory profile by id, behind the same `requireDirectoryReadAccess` gate as the list. Backs the auth-gated deep-link page `/apps/directory/profile/[id]` (the destination a shared `ShareLink` points at): a signed-in member opens the Directory with that profile's detail; an unauthenticated visitor is redirected to the directory landing by the page, never reaching this route. Returns `{ member }` (a `DirectoryProfile`) on 200, `{ ok: false, code: DIRECTORY_NOT_FOUND }` 404 when no active profile matches, or `DIRECTORY_PERSISTENCE_UNAVAILABLE` 503. A **claimed** member also carries the `hasWeaversBadge` boolean (same guarded contributor-access read as the list; never set on an unclaimed profile) and `username`, as in the list.
   - `GET /api/directory/skills`
   - `GET /api/directory/sectors`
   - `GET /api/directory/job-titles`
@@ -255,6 +260,8 @@ Seeded content:
 
 ## Change Log
 
+- 2026-11-10: **An invitation's conversation on the invite wall.** A "Conversation" button in the opened invitation opens it; it is held by Commons. Today's invitation cards are now keyed by the invite code (`inviteSourceId` in `lib/today/sources-stories.ts`) rather than the full address, so the wall can open the same conversation. Owner decision (an exception to the 3.0 screen freeze): the conversation under this plugin's Today card shows on the plugin's own page too, through the same panel the card's sheet uses on Today (`CardConversationPanel` / `CardConversationToggle` in `components/se-frame/today/card-conversation-panel.tsx`), reading and writing the same conversation through `/api/today/cards/[cardId]`, so 3.0 and 3.1 show one conversation. No route or table changed.
+- 2026-11-10: **Usernames in the Directory.** Owner decision: a claimed profile shows its member's @username beside the name (browse card, the side list and the profile header), and the search box finds a member by username as well as by name, skill and location. The username comes from Clerk on each read (`resolveMemberIdentities`), and a search asks Clerk for usernames containing the term (`findUserIdsByUsername`), keeping only username matches. No table changed. Test `lib/identity/find-by-username.test.ts`. Android has no Directory screen.
 - 2026-11-03: **The listing link in a full invitation names the person (owner report).** "See the live listing" sat directly above the Quora line and read as a label for the Quora address. It now reads "<name> in the Directory", beside "<name> on Quora:", same `/apps/directory/profile/<id>` address.
 - 2026-10-28: **Location data removed from invitation pictures (3.1.0, Personal controls).** `upsertDirectoryInvite` and the image read pass the picture through `stripPictureMetadata`.
 - 2026-10-17: Demo seed module `ctf/scripts/demo-seed/12-directory.mjs` covers the badge holder (DIR-8), a pending review skill chip (DIR-3) and the invitation wall as a member sees it (DIR-12) in the demo schema. Demo schema only; no product change.

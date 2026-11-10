@@ -115,14 +115,25 @@ type SheetProps = {
   onChanged?: () => void;
 };
 
-export function CardSheet({ t, card, viewerId, firstAnswer, onClose, onOpenLink, onChanged }: SheetProps) {
-  const s = makeCardSheetStyles(t);
-  const talk = useCardConversation(card.id, firstAnswer);
+// Who answered and the conversation: the same wherever it is shown, in this sheet on Today and in the
+// panel on the plugin's own page (CardConversationPanel.tsx), as on the web.
+export function CardConversationView({ t, s, talk }: { t: SeThemeTokens; s: CardSheetStyles; talk: CardConversation }) {
   const [partner, setPartner] = useState<string | null>(null);
   const talkTo = async (accountId: string) => {
     const open = talk.conversation?.pairs.some((pair) => pair.partnerId === accountId);
     if (open || (await talk.ask(accountId))) setPartner(accountId);
   };
+  return (
+    <>
+      {talk.conversation ? <Answers s={s} conversation={talk.conversation} onTalk={(id) => void talkTo(id)} /> : null}
+      <CardTalk t={t} s={s} talk={talk} partner={partner} onPartner={setPartner} onTalk={(id) => void talkTo(id)} />
+    </>
+  );
+}
+
+export function CardSheet({ t, card, viewerId, firstAnswer, onClose, onOpenLink, onChanged }: SheetProps) {
+  const s = makeCardSheetStyles(t);
+  const talk = useCardConversation(card.id, firstAnswer);
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onClose}>
       <View style={s.backdrop}>
@@ -141,8 +152,7 @@ export function CardSheet({ t, card, viewerId, firstAnswer, onClose, onOpenLink,
               </TouchableOpacity>
             </View>
             <SheetYours s={s} card={card} onChanged={onChanged} />
-            {talk.conversation ? <Answers s={s} conversation={talk.conversation} onTalk={(id) => void talkTo(id)} /> : null}
-            <CardTalk t={t} s={s} talk={talk} partner={partner} onPartner={setPartner} onTalk={(id) => void talkTo(id)} />
+            <CardConversationView t={t} s={s} talk={talk} />
           </ScrollView>
         </View>
       </View>

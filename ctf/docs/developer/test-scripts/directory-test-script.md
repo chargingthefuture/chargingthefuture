@@ -113,6 +113,17 @@ could not be opened. Step 3 shows the profile route's message. In step 4 the tak
 route's reason instead of a fixed sentence, and both panels name the failure.
 **Result:** web ☐ — notes:
 
+### DIR-1c · Usernames show beside names and can be searched (added 2026-11-10)
+**Role:** member · **Surfaces:** web
+**Precondition:** One claimed profile whose member has a Clerk username (for example `ada_l`), and one unclaimed profile.
+**Steps:**
+1. Open Directory and find the claimed profile in the list.
+2. Open it.
+3. Type part of the username (for example `ada`, then `@ADA`) in the search box.
+4. Type part of that member's email address in the search box.
+**Expected:** Step 1 shows `@ada_l` under the name on the card and in the side list; the unclaimed profile shows no `@` line. Step 2 shows `@ada_l` under the name in the header. Step 3 lists the claimed profile both times. Step 4 does not list it because of the email: a search only ever matches a username, never an email address.
+**Result:** web ☐ — notes:
+
 ### DIR-2 · Read a profile (real fields only)
 **Role:** member · **Surfaces:** all
 **Steps:**
@@ -939,3 +950,13 @@ of these, it is already tracked, not a new bug:
 > _Terminology (2026-07-20): the source inventory's user-facing section is now titled **User Features** (was "Target User Features"), and its admin section **Admin Features**. Heading rename only — no test steps changed._
 
 > Address note (2026-10-28): the app is now at app.lagatos.com and the landing page at lagatos.com; links in the steps above that name chargingthefuture.com redirect there.
+
+### DIR-13 · The card's conversation on this page, in 3.0 and 3.1 (added 2026-11-10)
+**Role:** two members (A and B) · **Surfaces:** web
+**Steps:**
+1. As A on 3.1, open an invitation card on Today and write a public message in it.
+2. As B, open this plugin's page and find the opened invitation on the invite wall (the Conversation button).
+3. As B, write a reply there.
+4. As B, switch to 3.0 in Settings and open the same place again.
+**Expected:** Step 2 shows A's message. Step 3's reply appears in the card's sheet on Today for A. Step 4 shows the same conversation: 3.0 and 3.1 read one conversation, only the screens differ.
+**Result:** web ☐ — notes:

@@ -181,8 +181,8 @@ function CounterpartyPicker({ t, tokens, selected, onSelect, onClear }: {
         <TextInput
           value={query}
           onChangeText={setQuery}
-          accessibilityLabel="Search members by name"
-          placeholder="Search members by name…"
+          accessibilityLabel="Search members by name or username"
+          placeholder="Search members by name or username…"
           placeholderTextColor={t.MUTED}
           style={{ paddingVertical: 10, paddingRight: 12, paddingLeft: 32, borderRadius: rr(tokens, 8), fontSize: 13, fontFamily: interFamily('400'), color: t.TEXT, backgroundColor: t.INPUT_BG, borderWidth: 1, borderColor: t.BORDER_STRONG }}
         />

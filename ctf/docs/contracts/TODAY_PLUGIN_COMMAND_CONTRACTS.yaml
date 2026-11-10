@@ -231,9 +231,9 @@ contracts:
       conversation:
         type: object
     dataAccess:
-      - card_answers
-      - card_messages
-      - card_pair_requests
+      - commons_item_answers
+      - commons_item_messages
+      - commons_item_pair_requests
       - member_blocks
       - member_mutes
     purpose: card_conversation
@@ -254,9 +254,9 @@ contracts:
       conversation:
         type: object
     dataAccess:
-      - card_answers
-      - card_messages
-      - card_pair_requests
+      - commons_item_answers
+      - commons_item_messages
+      - commons_item_pair_requests
       - account_restrictions
       - member_blocks
       - member_mutes
@@ -280,9 +280,9 @@ contracts:
       conversation:
         type: object
     dataAccess:
-      - card_messages
-      - card_pair_requests
-      - card_answers
+      - commons_item_messages
+      - commons_item_pair_requests
+      - commons_item_answers
       - account_restrictions
       - member_blocks
       - member_mutes
@@ -305,9 +305,9 @@ contracts:
       conversation:
         type: object
     dataAccess:
-      - card_messages
-      - card_pair_requests
-      - card_answers
+      - commons_item_messages
+      - commons_item_pair_requests
+      - commons_item_answers
       - account_restrictions
       - member_blocks
       - member_mutes
@@ -327,9 +327,9 @@ contracts:
       conversation:
         type: object
     dataAccess:
-      - card_messages
-      - card_pair_requests
-      - card_answers
+      - commons_item_messages
+      - commons_item_pair_requests
+      - commons_item_answers
       - member_blocks
       - member_mutes
     purpose: card_conversation
@@ -348,9 +348,9 @@ contracts:
       conversation:
         type: object
     dataAccess:
-      - card_pair_requests
-      - card_answers
-      - card_messages
+      - commons_item_pair_requests
+      - commons_item_answers
+      - commons_item_messages
       - account_restrictions
       - member_blocks
       - member_mutes
@@ -371,9 +371,9 @@ contracts:
       conversation:
         type: object
     dataAccess:
-      - card_pair_requests
-      - card_answers
-      - card_messages
+      - commons_item_pair_requests
+      - commons_item_answers
+      - commons_item_messages
       - account_restrictions
       - member_blocks
       - member_mutes
@@ -395,7 +395,7 @@ contracts:
       ok:
         type: boolean
     dataAccess:
-      - card_messages
+      - commons_item_messages
       - member_safety_reports
     purpose: card_conversation
     retentionClass: until_account_deletion

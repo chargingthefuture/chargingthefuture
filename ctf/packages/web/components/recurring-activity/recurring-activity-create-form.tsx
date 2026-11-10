@@ -5,13 +5,12 @@ import { Check, Search, X } from 'lucide-react';
 import {
   CADENCE_LABEL,
   SECTOR_LABEL,
-  mapDirectoryToMembers,
   type Currency,
-  type MemberOption,
   type RecurringActivityCadence,
   type RecurringActivitySector,
   type RecurringActivityTokens,
 } from './recurring-activity-shared';
+import { mapDirectoryToMembers, type MemberOption } from '@/components/shared/member-search';
 import { failureText, responseFailureText } from 'lib/errors/client-failure';
 
 const SECTORS: RecurringActivitySector[] = ['housing', 'service', 'favor', 'general'];
@@ -321,8 +320,8 @@ function CounterpartyPicker({
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          aria-label="Search members by name"
-          placeholder="Search members by name…"
+          aria-label="Search members by name or username"
+          placeholder="Search members by name or username…"
           style={{
             width: '100%',
             padding: '10px 12px 10px 32px',

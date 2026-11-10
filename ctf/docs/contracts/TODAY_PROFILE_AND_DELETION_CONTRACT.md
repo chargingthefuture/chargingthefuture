@@ -27,11 +27,14 @@ controls sit inside Today's cards: `question_answers` (a member's answers, the f
 `question_answer_audit` (each answer, each refused attempt to change one, and matching turned off or
 on, read by the owner to spot somebody fishing for matches).
 
-Card conversations (3.1, the board "a card opened in place") are the second exception: one store
-for every ask, offer and story card, keyed by the card id (`<source>:<id>`). `card_answers` (a
+Card conversations (3.1, the board "a card opened in place") are the second exception. Since
+2026-11-10 (owner decision) a card's conversation belongs to the plugin behind the card: Commons
+holds one store and every row names the plugin and the item (`plugin`, `item_id`, from
+`seCardItemRef` in `@ctf/shared`; Commons when no other plugin is behind the card). The earlier
+`card_*` tables keyed by the card id were dropped with their rows by `post/0086`. `commons_item_answers` (a
 member's answer on a card: can help, knows someone, would like this, this helped; once per kind),
-`card_messages` (public messages, and Just us two messages with the pair in `pair_low` and
-`pair_high`, lower id first) and `card_pair_requests` (who asked whom to talk just you two on a card,
+`commons_item_messages` (public messages, and Just us two messages with the pair in `pair_low` and
+`pair_high`, lower id first) and `commons_item_pair_requests` (who asked whom to talk just you two on a card,
 and when the other agreed). A report made from a card goes into the existing `member_safety_reports`
 table, which the safety contract covers.
 
@@ -59,12 +62,15 @@ visitor who is not signed in has no account and no marks.
 - Service deletion: the member's `question_answers`, `question_matching_settings` and
   `question_answer_audit` rows, and every
   `question_match_messages` row where they are `user_low` or `user_high` (registry entry
-  `twenty-one-questions`). The member's `card_answers` rows, every `card_messages` row they wrote,
+  `twenty-one-questions`). The member's `commons_item_answers` rows, every `commons_item_messages` row they wrote,
   every Just us two message where they are `pair_low` or `pair_high`, and every
   `card_pair_requests` row where they are `user_low` or `user_high` (registry entry
   `today-card-conversations`), and every `today_card_windows` row where they are `owner_user_id`
   (same entry), and every `today_card_marks` row where they are `account_id` (same entry). Public messages other members wrote under a card stay.
 - Full account deletion: the same 21 Questions, card conversation, card window and card mark rows; each card source's own
+  `commons_item_pair_requests` row where they are `user_low` or `user_high` (registry entry
+  `today-card-conversations`). Public messages other members wrote under a card stay.
+- Full account deletion: the same 21 Questions and card conversation rows; each card source's own
   contract covers its rows.
 - `today_card_feedback_counts` is not touched by either: it stores no account id, so no row can be
   traced to the member.

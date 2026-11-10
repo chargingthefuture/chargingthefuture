@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useTheme } from "@/hooks/useTheme";
 import { STATUS_COLOR, TRACK_COLORS, cohortEconomics, getSkillUpTokens, trackRepeatsTitle, type Cohort, type CohortEconomics, type SkillUpTokens } from "./su-shared";
 import { ClaimTrainerRow } from "./su-claim-trainer";
+import { CardConversationToggle } from "@/components/se-frame/today/card-conversation-panel";
 
 function enrollButtonView(t: SkillUpTokens, isEnrolled: boolean, isEnrolling: boolean, isFull: boolean) {
   if (isEnrolled) return { bg: `${t.ACCENT}30`, color: t.ACCENT, label: "✓ Enrolled", locked: true };
@@ -205,6 +206,10 @@ export function SkillUpCohortCard({
           is asking for somebody, and the ask should not be a thing you have to open to find. */}
       {cohort.needsTrainer ? <ClaimTrainerRow cohortId={cohort.id} t={t} onClaimed={onClaimed} /> : null}
       <CohortDetails economics={economics} tags={tags} t={t} />
+      {/* The conversation under this cohort's card on Today, the same one in 3.0 and 3.1. */}
+      <div style={{ marginBottom: 12, color: t.ACCENT }}>
+        <CardConversationToggle source="skill-up" sourceId={cohort.id} />
+      </div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 10, borderTop: `1px solid ${t.BORDER_SOLID}` }}>
         <div>
           <div style={{ fontSize: 11, color: t.TEXT_SUBTLE }}>Seats</div>

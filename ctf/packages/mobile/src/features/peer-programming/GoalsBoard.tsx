@@ -14,6 +14,7 @@ import { NewGoalForm } from './NewGoalForm';
 import { YourGoalPanel } from './YourGoalPanel';
 import type { BoardProps } from './GoalCard';
 import { usePPTheme } from './usePPTheme';
+import { CardConversationPanel } from '../se-frame/today/CardConversationPanel';
 
 // The Done column keeps growing for two weeks, so it shows the newest cards and a control for the rest.
 const DONE_SHOWN = 8;
@@ -110,6 +111,8 @@ export function GoalsBoard({ board, busy, onAction, onEditTask, onAddTask, onClo
       {showOwnPanel && selectedGoal ? (
         <YourGoalPanel key={selectedGoal.id} goal={selectedGoal} busy={busy} onAddTask={onAddTask} onClose={onClose} />
       ) : null}
+      {/* The conversation under this goal's card on Today, the same one in 3.0 and 3.1. */}
+      {selectedGoal ? <CardConversationPanel key={`talk-${selectedGoal.id}`} source="peer-programming" sourceId={selectedGoal.id} /> : null}
       <Columns sections={sections} props={props} />
     </View>
   );
