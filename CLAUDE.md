@@ -107,6 +107,21 @@ Bypass keywords still work but are no longer required to build a new surface: `b
 
 Full policy, the deprecated stop-for-design machinery (history), and worked examples: see `.claude/rules/127-design-pass-gating-rules.mdc`.
 
+## 3.0 and 3.1 Share One Backend (owner decision, 2026-11-10)
+
+3.0 stays a choice in Settings until the owner deletes it. Until then the two differ only in their
+screens:
+
+- **One backend.** Every change to a route, table, store or rule made for 3.1 is the same change
+  for 3.0, in the same piece of work. 3.0 never keeps its own copy of data that 3.1 has moved, and
+  never reads a store 3.1 has left.
+- **3.0's screens are frozen.** No new 3.0 screen, control or feature unless the owner makes an
+  explicit exception. The first exception (2026-11-10): the conversation under a Today card shows on
+  the matching 3.0 plugin page, using the same panel 3.1 uses.
+- **3.0 must not break.** A backend change made for 3.1 keeps every existing 3.0 feature working.
+  When 3.0 reads something 3.1 changed, update 3.0's read in the same change; that is a fix, not a
+  new feature, and needs no exception.
+
 ## One Design, One Color per Site (owner decision, 2026-10-14)
 
 The name shown everywhere is Skills Economy (owner decision, 2026-10-13). Charging The Future
