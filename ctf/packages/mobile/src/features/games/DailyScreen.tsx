@@ -2,7 +2,7 @@
 // same for everyone, taking turns between the word of the day, the picture of the day and the word
 // ladder. No timer, no streak, no ranking, and no way to fail.
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import {
@@ -15,10 +15,8 @@ import {
   type SeDailyGate,
   type SeDailyPuzzle,
   type SeThemeTokens,
-  type SeUnlockStanding,
 } from '@ctf/shared';
 import { useAuth } from '../../auth/auth-context';
-import { authedFetchJson } from '../../auth/authedFetch';
 import { useSeTheme } from '../se-frame/useSeTheme';
 import { LadderPlay, PicturePlay, WordCard, WordPlay } from './Plays';
 import { SceneSvg } from './SceneSvg';
@@ -82,36 +80,20 @@ function Done({ s, puzzle, result, onBack }: { s: GameStyles; puzzle: SeDailyPuz
   );
 }
 
-// Playing is for approved members (owner decision, 2026-11-10), as on the web's /games: signed out
-// is Sign in to play, before Unlock is Finish Unlock to play, and the standing is read from the same
-// route the Unlock banner reads. Until it answers, nothing is shown in the puzzle's place.
-function useDailyGate(): { gate: SeDailyGate | null; reason: string | null } {
+// Playing is for any signed-in member (owner decision, 2026-11-10), as on the web's /games: signed
+// out shows Sign in to play in the puzzle's place.
+function useDailyGate(): SeDailyGate {
   const { isAuthenticated } = useAuth();
-  const [state, setState] = useState<{ gate: SeDailyGate | null; reason: string | null }>({ gate: null, reason: null });
-  useEffect(() => {
-    if (!isAuthenticated) {
-      setState({ gate: 'sign-in', reason: null });
-      return;
-    }
-    let live = true;
-    authedFetchJson<{ standing?: SeUnlockStanding }>('/api/unlock/standing')
-      .then((body) => live && setState({ gate: body.standing?.approved ? 'play' : 'unlock', reason: null }))
-      .catch((error: unknown) => live && setState({ gate: 'unavailable', reason: error instanceof Error ? error.message : String(error) }));
-    return () => {
-      live = false;
-    };
-  }, [isAuthenticated]);
-  return state;
+  return isAuthenticated ? 'play' : 'sign-in';
 }
 
-function Gate({ s, gate, reason, onSignIn, onOpenUnlock }: { s: GameStyles; gate: Exclude<SeDailyGate, 'play'>; reason: string | null; onSignIn: () => void; onOpenUnlock?: () => void }) {
+function Gate({ s, gate, onSignIn }: { s: GameStyles; gate: Exclude<SeDailyGate, 'play'>; onSignIn: () => void }) {
   const prompt = G[gate];
-  const press = gate === 'sign-in' ? onSignIn : gate === 'unlock' ? onOpenUnlock : undefined;
+  const press = gate === 'sign-in' ? onSignIn : undefined;
   return (
     <View style={s.result}>
       <Text style={s.resultTitle}>{prompt.title}</Text>
       <Text style={s.text}>{prompt.body}</Text>
-      {reason ? <Text style={s.text}>The check failed: {reason}</Text> : null}
       {press && prompt.button ? (
         <TouchableOpacity accessibilityRole="button" style={[s.primary, { alignSelf: 'flex-start' }]} onPress={press}>
           <Text style={s.primaryText}>{prompt.button}</Text>
@@ -121,7 +103,7 @@ function Gate({ s, gate, reason, onSignIn, onOpenUnlock }: { s: GameStyles; gate
   );
 }
 
-export function DailyScreen({ onBack, onOpenUnlock }: { onBack: () => void; onOpenUnlock?: () => void }) {
+export function DailyScreen({ onBack }: { onBack: () => void }) {
   const { theme } = useSeTheme();
   const { signIn } = useAuth();
   const t = seTheme(theme.color, theme.mode);
@@ -129,7 +111,7 @@ export function DailyScreen({ onBack, onOpenUnlock }: { onBack: () => void; onOp
   const [day] = useState(() => new Date().toISOString().slice(0, 10));
   const puzzle = seDailyPuzzle(day);
   const { result, finish, notKept } = useDailyProgress(day);
-  const { gate, reason } = useDailyGate();
+  const gate = useDailyGate();
   const words = SE_DAILY_TITLES[puzzle.kind];
   if (gate !== 'play') {
     return (
@@ -145,7 +127,7 @@ export function DailyScreen({ onBack, onOpenUnlock }: { onBack: () => void; onOp
         </View>
         <Text style={s.text}>{G.about}</Text>
         <Text style={s.ask}>{words.ask}</Text>
-        {gate ? <Gate s={s} gate={gate} reason={reason} onSignIn={() => void signIn()} onOpenUnlock={onOpenUnlock} /> : null}
+        <Gate s={s} gate={gate} onSignIn={() => void signIn()} />
       </ScrollView>
     );
   }

@@ -13,20 +13,21 @@ vi.mock('lib/observability/report', () => ({
   },
 }));
 
-import { readDailyGate } from './play-gate';
+import { DAILY_PLAY_ACCESS, readDailyGate } from './play-gate';
 
-// Playing the puzzle of the day is for approved members (owner decision, 2026-11-10). The /games page
-// sends the play screens only when this answers 'play'.
+// Playing the puzzle of the day is for any signed-in member (owner decision, 2026-11-10). The /games
+// page sends the play screens only when this answers 'play'.
 describe('who may play the puzzle of the day', () => {
   beforeEach(() => access.evaluatePluginAccess.mockReset());
 
-  it('asks for the default tier, approved members only', async () => {
+  it('asks for a signed-in member, approved or not', async () => {
     access.evaluatePluginAccess.mockResolvedValue({ allowed: true, userId: 'u1' });
     await readDailyGate();
-    expect(access.evaluatePluginAccess).toHaveBeenCalledWith();
+    expect(access.evaluatePluginAccess).toHaveBeenCalledWith(DAILY_PLAY_ACCESS);
+    expect(DAILY_PLAY_ACCESS.minUnlockTier).not.toBe('approved_full');
   });
 
-  it('lets an approved member play', async () => {
+  it('lets a signed-in member play', async () => {
     access.evaluatePluginAccess.mockResolvedValue({ allowed: true, userId: 'u1' });
     expect(await readDailyGate()).toEqual({ gate: 'play', reason: null });
   });
@@ -34,11 +35,6 @@ describe('who may play the puzzle of the day', () => {
   it('tells a visitor with no session to sign in', async () => {
     access.evaluatePluginAccess.mockResolvedValue({ allowed: false, status: 401, code: 'AUTH_UNAUTHORIZED', reason: 'no_active_session' });
     expect((await readDailyGate()).gate).toBe('sign-in');
-  });
-
-  it('tells a signed-in member who is not approved to finish Unlock', async () => {
-    access.evaluatePluginAccess.mockResolvedValue({ allowed: false, status: 403, code: 'AUTH_FORBIDDEN_POLICY', reason: 'unlock_required' });
-    expect((await readDailyGate()).gate).toBe('unlock');
   });
 
   it('closes it to a restricted account', async () => {

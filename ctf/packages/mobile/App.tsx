@@ -246,7 +246,7 @@ function standaloneScreen({ selected, isAuthenticated, interfaceVersion, user, b
   if (selected === 'games') {
     return (
       <View style={styles.container}>
-        <DailyScreen onBack={back} onOpenUnlock={() => open('unlock')} />
+        <DailyScreen onBack={back} />
         <StatusBar style="light" />
       </View>
     );

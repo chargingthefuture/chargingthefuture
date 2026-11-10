@@ -1,15 +1,10 @@
-export type SeDailyGate = 'play' | 'sign-in' | 'unlock' | 'closed' | 'unavailable';
+export type SeDailyGate = 'play' | 'sign-in' | 'closed' | 'unavailable';
 export declare const SE_DAILY_GATE_WORDS: {
     readonly about: "One puzzle a day, the same for everyone, taking turns between the word of the day, the picture of the day and the word ladder. No timer, no streak, no ranking, and no way to fail.";
     readonly 'sign-in': {
         readonly title: "Sign in to play";
         readonly body: "Anyone can see what today's puzzle is. Playing it is for members.";
         readonly button: "Sign in";
-    };
-    readonly unlock: {
-        readonly title: "Finish Unlock to play";
-        readonly body: "The puzzle opens once your account is reviewed.";
-        readonly button: "Open Unlock";
     };
     readonly closed: {
         readonly title: "Playing is closed for this account";

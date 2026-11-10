@@ -8,8 +8,7 @@ import { seThemeVars } from '../se-theme-vars';
 import frame from '../se-frame.module.css';
 import styles from './games.module.css';
 
-// The puzzle of the day for someone who may not play it yet (signed out, before Unlock, or a
-// restricted account): what today's puzzle is and how it is played, and in place of the puzzle, what
+// The puzzle of the day for someone who may not play it (signed out, or a restricted account): what today's puzzle is and how it is played, and in place of the puzzle, what
 // to do next. The play screens are not part of this page, so they are never sent.
 
 type Gate = Exclude<SeDailyGate, 'play'>;
@@ -21,7 +20,7 @@ export function DailyGateScreen({ gate, reason, signInUrl }: { gate: Gate; reaso
   const puzzle = day ? seDailyPuzzle(day) : null;
   const words = puzzle ? SE_DAILY_TITLES[puzzle.kind] : null;
   const prompt = G[gate];
-  const href = gate === 'sign-in' ? signInUrl : gate === 'unlock' ? '/plugin/unlock' : null;
+  const href = gate === 'sign-in' ? signInUrl : null;
   return (
     <div className={frame.frame} style={seThemeVars(theme.color, theme.mode)}>
       <main className={`${frame.screen} ${styles.screen}`}>
