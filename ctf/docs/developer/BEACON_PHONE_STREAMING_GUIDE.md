@@ -1,7 +1,8 @@
 # Beacon — How to Stream From a Phone
 
 **To go live on camera, you do not need any of this.** On `/admin/beacon`, press Go Live, then
-**Use camera and microphone**, and allow both when the phone asks. You are live with the phone's
+**Use microphone** and **Use camera**, and allow each when the phone asks (each button asks for its
+own permission). You are live with the phone's
 camera and sound, like a Twitch or TikTok live; **Flip camera** switches to the back camera. The rest
 of this guide is for showing the phone's own *screen*, which a phone's browser cannot capture, so it
 still needs a broadcaster app.
