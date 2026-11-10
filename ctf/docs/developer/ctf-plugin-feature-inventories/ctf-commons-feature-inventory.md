@@ -170,7 +170,7 @@ Platform-neutral tables consumed read-only by the Commons shell:
 Card conversations on Today (owner decision, 2026-11-10): the conversation under a Today card belongs to the plugin behind the card, and Commons holds the store for every plugin. Each row names `plugin` and `item_id` (from `seCardItemRef` in `@ctf/shared`; `commons` when no other plugin is behind the card):
 
 - `commons_item_answers` — a member's answer on an item (can help, knows someone, would like this, this helped), once per kind; unique on `(plugin, item_id, account_id, kind)`.
-- `commons_item_messages` — public messages (`pair_low`/`pair_high` empty) and Just us two messages (the pair, lower id first); `edited_at` when the author changed one.
+- `commons_item_messages` — public messages (`pair_low`/`pair_high` empty) and Just us two messages (the pair, lower id first); `edited_at` when the author changed one. Since 2026-11-10 it also holds announcement replies (item `announcement:<id>`) and carries `moderation_status`, `moderation_reason`, `moderated_by_user_id`, `moderated_at` and `updated_at`, so an admin can hide and restore any public message; reads show only `accepted` ones.
 - `commons_item_pair_requests` — who asked whom to talk just you two on an item, and when the other agreed; primary key `(plugin, item_id, user_low, user_high)`.
 
 They replace `card_answers`, `card_messages` and `card_pair_requests` (dropped with their rows by `post/0086`). The routes are Today's (`/api/today/cards/[cardId]/…`) and are described in the non-plugin inventory §1.5 item 5k; account deletion is the registry entry `today-card-conversations`.
@@ -228,6 +228,7 @@ There is no `seedHub.mjs`; the Commons channel's data layer is seeded by the Fee
 
 ## Change Log
 
+- 2026-11-10: **Announcement replies and moderation in the shared store.** `commons_item_messages` holds announcement replies (copied from `announcement_replies` by `post/0090`, which then dropped it) and gains the Commons moderation columns. Hidden messages are left out of every read, and a hidden message cannot be edited.
 - 2026-11-10: **Commons holds the conversations under Today cards.** Owner decision: a card's conversation belongs to the plugin behind it, and Commons is the store, with each row naming the plugin and item. New tables `commons_item_answers`, `commons_item_messages`, `commons_item_pair_requests` (migration `post/0086_card_conversations_to_commons.sql`); `card_answers`, `card_messages` and `card_pair_requests` dropped with their rows. No Commons route changed.
 - 2026-10-28: **Stream AI moderation on new Commons posts (3.1.0 plan).** `POST /api/commons/messages` checks the text. The words are sent to Stream's AI moderation check before saving (`lib/integrations/stream-content-check.ts`, config `se:posts`, rules set by `stream-moderation-setup.yml`): when Stream answers remove the post is refused with 422 `content_refused` and the member is told to reword it; harm Stream rates high is flagged in Stream's review queue and still published. When Stream is not set up or cannot be reached the post is saved and the failure is reported. Pictures are not sent, because Stream cannot fetch them from behind sign-in.
 

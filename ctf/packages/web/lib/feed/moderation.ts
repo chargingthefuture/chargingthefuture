@@ -27,15 +27,25 @@ import { normalizeUuid } from 'lib/feed/repository';
 // could be read by an admin and then nothing could be done about it — which is why the flag queue could
 // not be built and member flags reached nobody. `announcement-reply` joined on 2026-08-10 for the same
 // reason: replies on official announcements were the one member-authored surface with no way to take
-// anything down.
-export type FeedModerationTarget = 'post' | 'reply' | 'question' | 'answer' | 'announcement-reply';
+// anything down. `card-message` joined on 2026-11-10 when announcement replies moved into the shared
+// conversation store (commons_item_messages): a public message under any Today card is hidden and
+// restored the same way. A Just us two message is never in the queue; it is reported instead.
+export type FeedModerationTarget = 'post' | 'reply' | 'question' | 'answer' | 'announcement-reply' | 'card-message';
 
 const MODERATION_TABLES: Record<FeedModerationTarget, string> = {
   post: 'feed_community_posts',
   reply: 'feed_community_replies',
   question: 'feed_questions',
   answer: 'feed_answers',
-  'announcement-reply': 'announcement_replies',
+  'announcement-reply': 'commons_item_messages',
+  'card-message': 'commons_item_messages',
+};
+
+// Rows a target may never reach: a Just us two message is private to the two members in it, so no
+// moderation target can read or change one, even by id.
+const MODERATION_ROW_FILTER: Partial<Record<FeedModerationTarget, string>> = {
+  'announcement-reply': " AND pair_low IS NULL AND plugin = 'commons' AND item_id LIKE 'announcement:%'",
+  'card-message': ' AND pair_low IS NULL',
 };
 
 export function isFeedModerationTarget(value: unknown): value is FeedModerationTarget {
@@ -44,7 +54,8 @@ export function isFeedModerationTarget(value: unknown): value is FeedModerationT
     value === 'reply' ||
     value === 'question' ||
     value === 'answer' ||
-    value === 'announcement-reply'
+    value === 'announcement-reply' ||
+    value === 'card-message'
   );
 }
 
@@ -109,12 +120,13 @@ export async function setCommunityModerationStatus(input: {
   }
 
   const table = MODERATION_TABLES[input.target];
+  const rowFilter = MODERATION_ROW_FILTER[input.target] ?? '';
 
   return withDbTransaction(async (client) => {
     // Locked for the read-then-write so two moderators acting at once cannot both believe they made
     // the change, which would write two audit rows for one transition.
     const current = await client.query<{ moderation_status: string }>(
-      `SELECT moderation_status FROM ${table} WHERE id = $1::uuid FOR UPDATE`,
+      `SELECT moderation_status FROM ${table} WHERE id = $1::uuid${rowFilter} FOR UPDATE`,
       [normalizedId],
     );
 
@@ -145,7 +157,7 @@ export async function setCommunityModerationStatus(input: {
             moderated_by_user_id = $4,
             moderated_at = CASE WHEN $5::boolean THEN NOW() ELSE NULL END,
             updated_at = NOW()
-        WHERE id = $1::uuid
+        WHERE id = $1::uuid${rowFilter}
       `,
       [normalizedId, input.next, hiding ? input.reason : null, hiding ? input.actorUserId : null, hiding],
     );
@@ -203,11 +215,15 @@ export async function listCommonsModerationQueue(options?: {
       )
       UNION ALL
       (
-        SELECT 'announcement-reply' AS target, id, announcement_id AS parent_id, author_user_id, author_username,
+        SELECT CASE WHEN plugin = 'commons' AND item_id LIKE 'announcement:%' THEN 'announcement-reply' ELSE 'card-message' END AS target,
+               id,
+               CASE WHEN plugin = 'commons' AND item_id LIKE 'announcement:%' THEN substring(item_id FROM 14) ELSE plugin || ':' || item_id END AS parent_id,
+               author_id AS author_user_id, NULL::text AS author_username,
                body, moderation_status, moderation_reason, moderated_by_user_id, moderated_at, created_at
-        FROM announcement_replies
-        WHERE ($1::boolean = FALSE OR moderation_status = 'hidden')
-          AND ($3::text IS NULL OR author_user_id = $3::text)
+        FROM commons_item_messages
+        WHERE pair_low IS NULL
+          AND ($1::boolean = FALSE OR moderation_status = 'hidden')
+          AND ($3::text IS NULL OR author_id = $3::text)
         ORDER BY created_at DESC
         LIMIT $2
       )
@@ -262,8 +278,9 @@ export async function listCommonsAuthors(limit = 50): Promise<FeedModerationAuth
         SELECT author_user_id, NULL::text AS author_username, moderation_status, created_at, 'reply' AS kind
         FROM feed_community_replies
         UNION ALL
-        SELECT author_user_id, author_username, moderation_status, created_at, 'reply' AS kind
-        FROM announcement_replies
+        SELECT author_id AS author_user_id, NULL::text AS author_username, moderation_status, created_at, 'reply' AS kind
+        FROM commons_item_messages
+        WHERE pair_low IS NULL
       )
       SELECT
         author_user_id,
@@ -402,7 +419,7 @@ export async function countHiddenCommonsRows(): Promise<{ posts: number; replies
         (SELECT COUNT(*) FROM feed_community_posts WHERE moderation_status = 'hidden')::text AS hidden_posts,
         (
           (SELECT COUNT(*) FROM feed_community_replies WHERE moderation_status = 'hidden')
-          + (SELECT COUNT(*) FROM announcement_replies WHERE moderation_status = 'hidden')
+          + (SELECT COUNT(*) FROM commons_item_messages WHERE pair_low IS NULL AND moderation_status = 'hidden')
         )::text AS hidden_replies
     `,
   );
