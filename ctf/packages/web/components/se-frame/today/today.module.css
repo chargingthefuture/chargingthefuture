@@ -706,15 +706,3 @@
   outline: 2px solid var(--se-pick);
   outline-offset: 2px;
 }
-
-/* Under the week strip: where a talk in the Main Room is booked. */
-.weekBook {
-  align-self: flex-start;
-  min-height: 44px;
-  display: inline-flex;
-  align-items: center;
-  font-size: 13px;
-  color: var(--se-ink);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}

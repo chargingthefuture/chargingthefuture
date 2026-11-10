@@ -30,7 +30,6 @@ import type { FeatureKey } from '../../../navigation/screens';
 import { SE_FONT } from '../fonts';
 import { openTodayLink } from './openTodayLink';
 import { useToday } from './useToday';
-import { WeekStrip } from './WeekStrip';
 import Svg, { Path, Rect } from 'react-native-svg';
 
 type Styles = ReturnType<typeof makeStyles>;
@@ -185,7 +184,6 @@ export function GuestToday({ t, onSignUp, onOpen }: { t: SeThemeTokens; onSignUp
   return (
     <>
       <Hero s={s} t={t} today={today} onSignUp={onSignUp} />
-      {today ? <WeekStrip t={t} talks={today.week ?? []} /> : null}
       <RoomCard s={s} t={t} today={today} />
       <View style={s.listHead}>
         <Text style={s.listTitle}>{W.cardsTitle}</Text>

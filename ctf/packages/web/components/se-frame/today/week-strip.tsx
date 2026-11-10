@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import { SE_TODAY_ROOM_WORDS as W, seTalkTimes, seWeekDays, type SeTodayTalk } from '@ctf/shared';
 import styles from './today.module.css';
 
@@ -43,9 +42,6 @@ export function WeekStrip({ talks }: { talks: SeTodayTalk[] }) {
           ))}
         </div>
       ) : null}
-      <Link href={W.bookPath} className={styles.weekBook}>
-        {W.book}
-      </Link>
     </>
   );
 }

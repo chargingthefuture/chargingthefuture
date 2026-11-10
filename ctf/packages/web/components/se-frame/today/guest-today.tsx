@@ -25,7 +25,6 @@ import { ChymeTokensContext, seChymeTokens } from '@/components/chyme/chyme-toke
 import { SeAvatar } from '@/components/shared/se-avatar';
 import { useGuestRoom } from './use-guest-room';
 import { useToday } from './use-today';
-import { WeekStrip } from './week-strip';
 import styles from './today.module.css';
 
 // Today for a visitor who is not signed in, built to the approved "Today, signed out" board: Days
@@ -187,7 +186,6 @@ export function GuestToday({ signUpUrl }: { signUpUrl: string }) {
   return (
     <>
       <Hero today={today} signUpUrl={signUpUrl} />
-      {today ? <WeekStrip talks={today.week ?? []} /> : null}
       <RoomCard today={today} />
       <div className={styles.listHead}>
         <h2 className={styles.listTitle}>{W.cardsTitle}</h2>
