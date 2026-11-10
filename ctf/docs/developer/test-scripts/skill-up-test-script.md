@@ -977,3 +977,13 @@ web ☐
 **Expected:** The cohort shows as needing a trainer and can be claimed again. The learner has no assigned trainer and can leave the cohort.
 
 Result: web ☐
+
+### LU-30 · The card's conversation on this page, in 3.0 and 3.1 (added 2026-11-10)
+**Role:** two members (A and B) · **Surfaces:** web
+**Steps:**
+1. As A on 3.1, open the cohort's card on Today and write a public message in it.
+2. As B, open this plugin's page and find the cohort card (the Conversation button).
+3. As B, write a reply there.
+4. As B, switch to 3.0 in Settings and open the same place again.
+**Expected:** Step 2 shows A's message. Step 3's reply appears in the card's sheet on Today for A. Step 4 shows the same conversation: 3.0 and 3.1 read one conversation, only the screens differ.
+**Result:** web ☐ — notes:

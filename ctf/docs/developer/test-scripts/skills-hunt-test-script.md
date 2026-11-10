@@ -1452,3 +1452,13 @@ someone button that opens SkillsHunt. The mission changes from one day to the ne
 mission never shows; with no active round there is no card. Since 2026-11-02 both SkillsHunt cards
 are under the Asks filter on Today, not Matches.
 **Result:** web ☐ android ☐ — notes:
+
+### SH-18 · The card's conversation on this page, in 3.0 and 3.1 (added 2026-11-10)
+**Role:** two members (A and B) · **Surfaces:** web
+**Steps:**
+1. As A on 3.1, open today's mission card on Today and write a public message in it.
+2. As B, open this plugin's page and find today's mission on the Missions tab (the Conversation button under it).
+3. As B, write a reply there.
+4. As B, switch to 3.0 in Settings and open the same place again.
+**Expected:** Step 2 shows A's message. Step 3's reply appears in the card's sheet on Today for A. Step 4 shows the same conversation: 3.0 and 3.1 read one conversation, only the screens differ.
+**Result:** web ☐ — notes:
