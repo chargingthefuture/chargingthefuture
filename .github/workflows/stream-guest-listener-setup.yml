@@ -14,6 +14,14 @@ name: Stream — Guest Listener Setup
 # check run means guest listening and hand-raise mode are both affected. Never prints a
 # secret; the api key is scrubbed from any Stream error text.
 #
+# It also owns the address Stream sends call events to (ctf/scripts/lib/stream-webhook-address.mjs):
+# every webhook address on the app that names /api/beacon/stream-webhook, or a retired
+# chargingthefuture.com host, becomes https://app.lagatos.com/api/beacon/stream-webhook. That field
+# still named app.chargingthefuture.com after the move to app.lagatos.com, so every delivery failed
+# with "unable to resolve url" and Beacon's feed, recording and the Video minute meter got nothing.
+# The address step runs even when no guest role is set. Pick target "both": the demo app sends to
+# the same address.
+#
 # Three modes:
 #   plan   (manual default) read and print the state and what apply would change. Writes nothing.
 #   check  (the weekly schedule) same, but the run goes red when anything is out of the target
@@ -62,7 +70,7 @@ on:
 
 jobs:
   setup:
-    name: Guest listener role and call-type grants
+    name: Guest listener role, call-type grants and webhook address
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
