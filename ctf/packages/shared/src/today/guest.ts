@@ -27,8 +27,10 @@ export const SE_GUEST_WORDS = {
   loading: 'Loading Today…',
   failed: 'Could not load Today.',
   tryAgain: 'Try again',
-  // The tag on a card or number read from sample data, and the one line under the cards that says why.
-  demo: 'Demo',
+  // The tag on a card or number read from sample data (a lock and "Sample": the real thing is private,
+  // not empty), its spoken label, and the one line under the cards that says why.
+  sample: 'Sample',
+  sampleLabel: 'Sample, shown in place of private member data',
   sampleNote: 'Some content is sample data to protect member privacy.',
 } as const;
 
