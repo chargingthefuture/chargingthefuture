@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { mapDirectoryToMembers, type MemberOption } from "@/components/recurring-activity/recurring-activity-shared";
+import { mapDirectoryToMembers, type MemberOption } from "@/components/shared/member-search";
 
 // The Recipient box (owner decision, 2026-11-10): a member can be found by their name in the
 // Directory or by their username. Typing two or more characters lists matching members; picking one

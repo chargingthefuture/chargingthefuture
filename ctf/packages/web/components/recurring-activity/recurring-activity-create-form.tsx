@@ -5,13 +5,12 @@ import { Check, Search, X } from 'lucide-react';
 import {
   CADENCE_LABEL,
   SECTOR_LABEL,
-  mapDirectoryToMembers,
   type Currency,
-  type MemberOption,
   type RecurringActivityCadence,
   type RecurringActivitySector,
   type RecurringActivityTokens,
 } from './recurring-activity-shared';
+import { mapDirectoryToMembers, type MemberOption } from '@/components/shared/member-search';
 import { failureText, responseFailureText } from 'lib/errors/client-failure';
 
 const SECTORS: RecurringActivitySector[] = ['housing', 'service', 'favor', 'general'];
