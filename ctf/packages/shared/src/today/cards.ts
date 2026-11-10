@@ -1,8 +1,9 @@
 // Card conversations in 3.1, shared by web and Android: a Today card of kind ask, offer or story
 // opens in place as a sheet with the people who answered it, a public conversation, and "Just us
 // two", a private conversation between two members on that card that opens once both agree.
-// One store serves every such card, keyed by the card id (`SeTodayCard.id`, e.g.
-// `trust-transport:123`), so asks, offers and stories all work the same.
+// The conversation belongs to the plugin behind the card (owner decision, 2026-11-10): Commons holds
+// one store whose rows name the plugin and the item (`seCardItemRef`), so a ride's conversation is
+// TrustTransport's, a place's is LightHouse's, and Commons' when no other plugin is behind the card.
 // Built on the server by ctf/packages/web/lib/today/cards/; drawn by web
 // components/se-frame/today/card-sheet*.tsx and Android src/features/se-frame/today/CardSheet*.tsx.
 
@@ -31,6 +32,30 @@ export function seCardIdValid(id: string): boolean {
 }
 
 const SHEET_KINDS: ReadonlySet<SeCardKind> = new Set<SeCardKind>(['ask', 'offer', 'story']);
+
+// The plugin a card's conversation belongs to, by the card's source. A source not listed goes to
+// Commons: an announcement or the Quora survey, which have no plugin of their own, and SkillsHunt,
+// What Works and Directory invitations, whose talk is for the group rather than one item's
+// (owner decision, 2026-11-10).
+const CARD_SOURCE_PLUGIN: Readonly<Record<string, string>> = {
+  'trust-transport': 'trust-transport',
+  lighthouse: 'lighthouse',
+  'socket-relay': 'socket-relay',
+  'peer-programming': 'peer-programming',
+  'skill-up': 'skill-up',
+  'blog-story': 'fireside',
+};
+
+export type SeCardItemRef = { plugin: string; itemId: string };
+
+// Which plugin item a card is: the plugin from the card's source, and the source's own id. In
+// Commons the item id keeps the source in front (`what-works:12`), so items from different sources
+// never share a conversation.
+export function seCardItemRef(cardId: string): SeCardItemRef {
+  const colon = cardId.indexOf(':');
+  const plugin = CARD_SOURCE_PLUGIN[cardId.slice(0, colon)];
+  return plugin ? { plugin, itemId: cardId.slice(colon + 1) } : { plugin: 'commons', itemId: cardId };
+}
 
 // Whether tapping the card's text opens the sheet; every other card keeps expanding in place.
 export function seCardOpensSheet(card: Pick<SeTodayCard, 'kind' | 'source'>): boolean {
