@@ -54,7 +54,8 @@ export async function buildPublicToday(now = new Date()): Promise<SeToday> {
     { name: 'skill-up', read: () => cohortOffers() },
     { name: 'numbers', read: () => numbersCard(now) },
     { name: 'blog-stories', read: () => blogStories(now) },
-    { name: 'games', read: () => dailyPuzzleCard(now) },
+    // Signed out, the puzzle can be read but not played, so its button says so.
+    { name: 'games', read: async () => (await dailyPuzzleCard(now)).map((item) => ({ ...item, actions: [action('open', 'See the puzzle', item.href)] })) },
     { name: 'beacon-replays', read: () => replayCards() },
     { name: 'skills-hunt', read: () => wantedCard() },
     { name: 'skills-hunt-mission', read: () => missionCard(now) },
