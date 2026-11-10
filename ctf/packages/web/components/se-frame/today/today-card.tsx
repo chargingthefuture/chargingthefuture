@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { SE_CARD_WORDS, SE_MUTE_WORDS, seCardAnswerKind, seCardOpensSheet, type SeCardAnswerKind, type SeTodayCard } from '@ctf/shared';
+import { SE_CARD_WORDS, SE_MUTE_WORDS, seCardAnswerKind, seCardOpensSheet, seNewCommentsLine, type SeCardAnswerKind, type SeTodayCard } from '@ctf/shared';
 import { SeAvatar } from '../../shared/se-avatar';
 import { QuestionsPanel, isQuestionsCard } from './questions-panel';
 import { CardSheet } from './card-sheet';
@@ -191,6 +191,8 @@ export function TodayCard({
       <button type="button" className={styles.textButton} aria-expanded={opensSheet ? undefined : open} aria-haspopup={opensSheet ? 'dialog' : undefined} onClick={toggle}>
         <span className={styles.cardTitle}>{card.title}</span>
         {card.body ? <span className={bodyClass(card, open)}>{card.body}</span> : null}
+        {/* A story marked done that came back: comments were written in its conversation since. */}
+        {card.newComments ? <span className={styles.label} style={{ color }}>{seNewCommentsLine(card.newComments)}</span> : null}
       </button>
       {isQuestionsCard(card) ? <QuestionsPanel card={card} open={open} onOpen={() => setOpen(true)} onChanged={onChanged ?? (() => undefined)} /> : null}
       <CardActions card={card} onAnswer={opensSheet ? (kind) => setSheet({ firstAnswer: kind }) : null} />

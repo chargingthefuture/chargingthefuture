@@ -29,6 +29,8 @@ vi.mock('./sources-live', () => ({
 }));
 vi.mock('./sources-replays', () => ({ replayCards: vi.fn(async () => []) }));
 vi.mock('./sources-mine', () => ({ mineCards: vi.fn(async () => []) }));
+vi.mock('./marks/repository', () => ({ readCardMarks: vi.fn(async () => []) }));
+vi.mock('lib/fireside/story-comments', () => ({ listStoryCommentTimes: vi.fn(async () => new Map()) }));
 vi.mock('./windows', () => ({ readWindows: vi.fn(async () => new Map()) }));
 vi.mock('lib/notifications/repository', () => ({ notifySafe: vi.fn(async () => undefined) }));
 vi.mock('./sources-questions', () => ({ questionCards: vi.fn(async () => []) }));

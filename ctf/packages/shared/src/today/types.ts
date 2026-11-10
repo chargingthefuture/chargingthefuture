@@ -31,8 +31,13 @@ export type SeTodayCard = {
   // card stays and shows done, and the dot cannot mark it not done.
   done?: boolean;
   // On a blog story: when each comment anybody can read in its Fireside conversation was written,
-  // newest first (up to 50). A story the member marked done comes back when one is newer than the mark.
+  // newest first (up to 50).
+  // Used by the server to apply the member's marks (seApplyCardMarks) and never sent.
   commentTimesIso?: string[];
+  // When the member marked this card done today (it leaves Today from their next day).
+  markedDoneAtIso?: string;
+  // A story the member marked done that came back: how many comments were written since.
+  newComments?: number;
   // Set only on an ask or offer the viewer posted: when it leaves Today, and what they can do there.
   mine?: SeTodayCardMine;
 };

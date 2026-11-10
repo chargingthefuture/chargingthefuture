@@ -1,93 +1,119 @@
-// The member's own marks on Today cards, kept on the device (per device, never on the server):
-// `read` for a card marked done with its timeline dot, `hidden` for Not for me. `readOn` holds when
-// each card was marked done, as a moment (marks saved on 2026-11-03 may hold the day alone).
-// Owner decisions, 2026-11-03:
-// - A card marked done stays on Today the day it was marked and leaves from the member's next day.
-// - A story or replay marked done does not come back when the rotation brings it round again, except
-//   a blog story with a new comment in its Fireside conversation since it was marked: it comes back,
-//   not done, with "N new comments".
+// The member's own marks on Today cards (owner decisions, 2026-11-03), stored on the server per
+// member (today_card_marks) so every phone and browser agrees: Done (the timeline dot) and Not for me
+// (the card's ••• menu). The server applies them to each Today read with seApplyCardMarks:
 // - A card marked Not for me never comes back.
-// Marks are kept across rotations, whether or not the card is on today's list.
+// - A card marked done stays on Today the day it was marked and leaves from the member's next day.
+//   A story or replay brought round again by its daily rotation stays off once done, except a blog
+//   story whose Fireside conversation has a comment newer than the mark: it comes back, not done,
+//   with "N new comments".
+// A visitor who is not signed in has no account, so their marks stay on their device only
+// (SeTodayMarks, seTodayView).
 
-import { seLocalDay } from '../stories/release';
 import type { SeTodayCard } from './types';
 
-export type SeTodayMarks = { read: string[]; hidden: string[]; readOn?: Record<string, string> };
+export type SeCardMarkKind = 'done' | 'not_for_me';
 
-const MAX_MARKS = 2000;
-const DAY_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+export type SeCardMark = { cardId: string; mark: SeCardMarkKind; markedAtIso: string };
 
-function idList(value: unknown): string[] {
-  return Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string').slice(-MAX_MARKS) : [];
+// What the route takes: set a mark, or 'clear' to take Done away.
+export type SeCardMarkChange = { cardId: string; mark: SeCardMarkKind | 'clear' };
+
+const CARD_ID = /^[a-z][a-z0-9-]{0,39}:.{1,200}$/;
+export const SE_CARD_MARKS_MAX_BATCH = 500;
+
+function readChange(value: unknown): SeCardMarkChange | null {
+  if (!value || typeof value !== 'object') return null;
+  const { cardId, mark } = value as Record<string, unknown>;
+  if (typeof cardId !== 'string' || cardId.length > 241 || !CARD_ID.test(cardId)) return null;
+  return mark === 'done' || mark === 'not_for_me' || mark === 'clear' ? { cardId, mark } : null;
 }
 
-// When a mark was made, as a moment. A day alone means the start of that day, in the member's zone.
-function markedMs(value: string): number {
-  if (!DAY_ONLY.test(value)) return Date.parse(value);
-  const [year, month, day] = value.split('-').map(Number);
-  return new Date(year, month - 1, day).getTime();
-}
-
-function markedDay(value: string): string {
-  return DAY_ONLY.test(value) ? value : seLocalDay(new Date(value));
-}
-
-// Marks as saved on the device, made safe to use. A done mark saved before the moment was kept counts
-// as marked now, so nothing leaves Today the moment this arrives.
-export function seMarksFromSaved(saved: unknown, now: Date = new Date()): SeTodayMarks {
-  const raw = (saved && typeof saved === 'object' ? saved : {}) as Record<string, unknown>;
-  const read = idList(raw.read);
-  const kept = (raw.readOn && typeof raw.readOn === 'object' ? raw.readOn : {}) as Record<string, unknown>;
-  const readOn: Record<string, string> = {};
-  for (const id of read) {
-    const value = kept[id];
-    readOn[id] = typeof value === 'string' && !Number.isNaN(markedMs(value)) ? value : now.toISOString();
+// One change `{ cardId, mark }`, or a batch `{ marks: [...] }` (the one-time upload of marks a device
+// kept before they were stored on the account). Null when anything in it is unreadable.
+export function seParseCardMarkChanges(body: unknown): SeCardMarkChange[] | null {
+  const list = (body as { marks?: unknown } | null)?.marks;
+  if (Array.isArray(list)) {
+    if (list.length === 0 || list.length > SE_CARD_MARKS_MAX_BATCH) return null;
+    const changes = list.map(readChange);
+    return changes.every(Boolean) ? (changes as SeCardMarkChange[]) : null;
   }
-  return { read, hidden: idList(raw.hidden), readOn };
+  const one = readChange(body);
+  return one ? [one] : null;
 }
 
-// How many comments anybody can read were written under a story since the member marked it done.
-export function seNewComments(marks: SeTodayMarks, card: SeTodayCard): number {
-  const at = marks.read.includes(card.id) ? marks.readOn?.[card.id] : undefined;
-  if (!at || !card.commentTimesIso?.length) return 0;
-  const since = markedMs(at);
-  return card.commentTimesIso.filter((iso) => Date.parse(iso) > since).length;
+// Marks a device kept before they were stored on the account, as the changes that upload them once.
+export function seLegacyMarkChanges(saved: unknown): SeCardMarkChange[] {
+  const raw = (saved && typeof saved === 'object' ? saved : {}) as Record<string, unknown>;
+  const ids = (value: unknown) => (Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string' && CARD_ID.test(id)) : []);
+  const hidden = ids(raw.hidden);
+  const done = ids(raw.read).filter((id) => !hidden.includes(id));
+  return [...hidden.map((cardId) => ({ cardId, mark: 'not_for_me' as const })), ...done.map((cardId) => ({ cardId, mark: 'done' as const }))].slice(
+    -SE_CARD_MARKS_MAX_BATCH,
+  );
 }
 
-export function seNewCommentsLine(count: number): string | null {
-  if (count <= 0) return null;
+// How many comments anybody can read were written under a story since it was marked done.
+export function seNewCommentsSince(card: Pick<SeTodayCard, 'commentTimesIso'>, markedAtIso: string): number {
+  const since = Date.parse(markedAtIso);
+  return (card.commentTimesIso ?? []).filter((iso) => Date.parse(iso) > since).length;
+}
+
+export function seNewCommentsLine(count: number | undefined): string | null {
+  if (!count || count <= 0) return null;
   return count === 1 ? '1 new comment' : `${count} new comments`;
 }
 
-// Shown as done: done on the server (a 21 Questions answer), or marked done with nothing new since.
-export function seCardDone(marks: SeTodayMarks, card: SeTodayCard): boolean {
-  return Boolean(card.done) || (marks.read.includes(card.id) && seNewComments(marks, card) === 0);
+function applyOne(card: SeTodayCard, mark: SeCardMark | undefined, dayStartMs: number): SeTodayCard | null {
+  const { commentTimesIso: _times, ...shown } = card;
+  if (!mark) return shown;
+  if (mark.mark === 'not_for_me') return null;
+  const fresh = seNewCommentsSince(card, mark.markedAtIso);
+  if (fresh > 0) return { ...shown, newComments: fresh };
+  if (Date.parse(mark.markedAtIso) < dayStartMs) return null;
+  return { ...shown, markedDoneAtIso: mark.markedAtIso };
 }
 
-// Leaves Today: marked done on an earlier day of the member's own, with nothing new since. A card the
-// server marks done is not a device mark and stays as it is.
-export function seDoneBefore(marks: SeTodayMarks, card: SeTodayCard, today: string): boolean {
-  if (card.done || !marks.read.includes(card.id) || seNewComments(marks, card) > 0) return false;
-  const at = marks.readOn?.[card.id];
-  return Boolean(at && markedDay(at) < today);
+// The member's marks applied to a Today read. `dayStartIso` is the start of the member's own day.
+// Comment times are used here and left out of what is sent.
+export function seApplyCardMarks(cards: readonly SeTodayCard[], marks: readonly SeCardMark[], dayStartIso: string): SeTodayCard[] {
+  const byId = new Map(marks.map((mark) => [mark.cardId, mark]));
+  const dayStartMs = Date.parse(dayStartIso);
+  return cards.map((card) => applyOne(card, byId.get(card.id), dayStartMs)).filter((card): card is SeTodayCard => card !== null);
 }
 
-// The timeline dot. On a card shown as done it takes the mark away; otherwise it marks the card done
-// now, which on a story that came back with new comments moves the mark to now.
-export function seToggleDone(marks: SeTodayMarks, card: SeTodayCard, now: Date = new Date()): SeTodayMarks {
-  if (card.done) return marks;
-  const readOn = { ...(marks.readOn ?? {}) };
-  if (seCardDone(marks, card)) {
-    delete readOn[card.id];
-    return { ...marks, read: marks.read.filter((id) => id !== card.id), readOn };
-  }
-  readOn[card.id] = now.toISOString();
-  const read = marks.read.includes(card.id) ? marks.read : [...marks.read, card.id].slice(-MAX_MARKS);
-  return { ...marks, read, readOn };
+// Shown as done: done on the server (a 21 Questions answer) or marked done by the member.
+export function seCardShownDone(card: SeTodayCard): boolean {
+  return Boolean(card.done || card.markedDoneAtIso);
 }
 
-// Not for me: the card never comes back on this device.
-export function seHideCard(marks: SeTodayMarks, cardId: string): SeTodayMarks {
-  if (marks.hidden.includes(cardId)) return marks;
-  return { ...marks, hidden: [...marks.hidden, cardId].slice(-MAX_MARKS) };
+// The screen's own copy of a change, drawn at once while the route stores it.
+export function seMarkCardInToday<T extends { cards: SeTodayCard[] }>(today: T, change: SeCardMarkChange, now: Date = new Date()): T {
+  if (change.mark === 'not_for_me') return { ...today, cards: today.cards.filter((card) => card.id !== change.cardId) };
+  return {
+    ...today,
+    cards: today.cards.map((card) => {
+      if (card.id !== change.cardId) return card;
+      const { markedDoneAtIso: _was, newComments: _new, ...rest } = card;
+      return change.mark === 'done' ? { ...rest, markedDoneAtIso: now.toISOString() } : rest;
+    }),
+  };
+}
+
+// The start of the member's own day, sent with the Today read so done cards leave from their next day.
+export function seDayStartIso(now: Date = new Date()): string {
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+}
+
+// The marks the screen draws for a signed-in member, read from the cards themselves.
+export function seMarksFromToday(today: { cards: SeTodayCard[] } | null): { read: string[]; hidden: string[] } {
+  return { read: (today?.cards ?? []).filter(seCardShownDone).map((card) => card.id), hidden: [] };
+}
+
+// What a tap asks the server for: Not for me, or the timeline dot (done, or Done taken away). Null on
+// a card the server marks done itself (a 21 Questions answer), which the dot does not change.
+export function seMarkChangeFor(today: { cards: SeTodayCard[] } | null, kind: 'read' | 'hidden', cardId: string): SeCardMarkChange | null {
+  if (kind === 'hidden') return { cardId, mark: 'not_for_me' };
+  const card = today?.cards.find((item) => item.id === cardId);
+  if (!card || card.done) return null;
+  return { cardId, mark: card.markedDoneAtIso ? 'clear' : 'done' };
 }

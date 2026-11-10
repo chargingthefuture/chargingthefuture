@@ -914,3 +914,8 @@ with a comment under a post.
   notice each. None is silently left out.
 
 Result: web ☐
+
+## A story on Today comes back with new comments (added 2026-11-10)
+
+**1.** As member A, mark a blog story done on Today. As approved member B, write a comment under that post's Fireside conversation. On a later day, when the story's turn comes round again, open Today as A. **Expected:** the story is back, not done, with "1 new comment" in the story color, and opening it goes to the post and its conversation. A comment held or taken down does not bring it back. A story A marked Not for me never comes back, comments or not.
+web ☐ android ☐

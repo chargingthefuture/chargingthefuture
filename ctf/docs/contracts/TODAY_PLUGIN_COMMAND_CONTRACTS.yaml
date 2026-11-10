@@ -2,8 +2,11 @@ contracts:
   - pluginId: today
     command: today.read
     version: 1.0.0
-    description: Read everything the 3.1 Today screen draws, in one answer (GET /api/today).
-    inputSchema: {}
+    description: "Read everything the 3.1 Today screen draws, in one answer (GET /api/today), with the member's own Done and Not for me marks (today_card_marks) applied: Not for me never comes back; done stays the day it was marked (markedDoneAtIso) and leaves from the member's next day; a done blog story with a newer readable Fireside comment comes back with newComments. dayStart is the start of the member's own day."
+    inputSchema:
+      dayStart:
+        type: string
+        required: false
     outputSchema:
       today:
         type: object
@@ -64,6 +67,9 @@ contracts:
       - member_blocks
       - account_restrictions
       - today_card_windows
+      - today_card_marks
+      - fireside_threads
+      - fireside_comments
       - notifications
     purpose: member_daily_overview
     retentionClass: none_read_only
@@ -476,5 +482,30 @@ contracts:
       - trust_transport_requests
       - lighthouse_properties
     purpose: card_lifetime
+    retentionClass: until_account_deletion
+    idempotency: true
+  - pluginId: today
+    command: today.marks.save
+    version: 1.0.0
+    description: "Store the member's own mark on a Today card: done (the timeline dot), not_for_me (the ••• menu) or clear (Done taken away), or a batch of up to 500 with upload true, sent once by a device that kept marks before they were stored on the account (a card already marked keeps its mark). Scoped to the member's own rows. 600 an hour. (POST /api/today/marks)."
+    inputSchema:
+      cardId:
+        type: string
+      mark:
+        type: string
+        enum: [done, not_for_me, clear]
+      marks:
+        type: array
+        maxItems: 500
+      upload:
+        type: boolean
+    outputSchema:
+      ok:
+        type: boolean
+      saved:
+        type: integer
+    dataAccess:
+      - today_card_marks
+    purpose: card_marks
     retentionClass: until_account_deletion
     idempotency: true

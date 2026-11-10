@@ -1,15 +1,19 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { seMarksFromSaved, seToggleRead, type SeToday, type SeTodayMarks } from '@ctf/shared';
+import { seDayStartIso, seLegacyMarkChanges, seMarkCardInToday, seMarkChangeFor, seMarksFromToday, type SeCardMarkChange, type SeToday, type SeTodayMarks } from '@ctf/shared';
 import { failureText, responseFailureText } from 'lib/errors/client-failure';
+import { reportError } from 'lib/observability/report';
 
-// Reads /api/today (or, for a visitor who is not signed in, /api/today/public), and keeps the last answer in this browser so the screen draws at once on the
-// next open and is replaced when the fresh answer arrives. Read and hidden marks are kept here too,
-// per member, until they have a home on the server.
+// Reads /api/today (or, for a visitor who is not signed in, /api/today/public), and keeps the last
+// answer in this browser so the screen draws at once on the next open and is replaced when the fresh
+// answer arrives. A signed-in member's Done and Not for me marks are stored on their account
+// (POST /api/today/marks) and applied by the server, so every device agrees; the screen changes at
+// once and the route stores the change. Marks this browser kept before that are sent up once, then
+// removed here. A visitor who is not signed in has no account and no marks.
 
 const CACHE_PREFIX = 'se-today-v1:';
-const MARKS_PREFIX = 'se-today-marks-v1:';
+const LEGACY_MARKS_PREFIX = 'se-today-marks-v1:';
 
 export type TodayMarks = SeTodayMarks;
 export type MarkKind = 'read' | 'hidden';
@@ -32,19 +36,47 @@ function writeJson(key: string, value: unknown) {
   }
 }
 
-// `accountId` null: a visitor who is not signed in. Their cache and marks are kept under 'guest'.
+async function postMarks(body: unknown): Promise<boolean> {
+  try {
+    const res = await fetch('/api/today/marks', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'content-type': 'application/json', 'x-ctf-csrf': '1' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) reportError(new Error(`The card mark was not saved (HTTP ${res.status}).`), { area: 'today', op: 'marks_save', extra: { status: res.status } });
+    return res.ok;
+  } catch (error) {
+    reportError(error, { area: 'today', op: 'marks_save' });
+    return false;
+  }
+}
+
+// Marks this browser kept before they were stored on the account: sent once, then removed.
+async function uploadLegacyMarks(owner: string): Promise<boolean> {
+  const changes = seLegacyMarkChanges(readJson<unknown>(LEGACY_MARKS_PREFIX + owner));
+  if (changes.length === 0) return false;
+  if (!(await postMarks({ marks: changes, upload: true }))) return false;
+  try {
+    window.localStorage.removeItem(LEGACY_MARKS_PREFIX + owner);
+  } catch {
+    // no-trace: storage refused; the next upload keeps the marks already stored.
+  }
+  return true;
+}
+
+// `accountId` null: a visitor who is not signed in. Their cache is kept under 'guest'.
 export function useToday(accountId: string | null) {
   const owner = accountId ?? 'guest';
-  const url = accountId ? '/api/today' : '/api/today/public';
   const [today, setToday] = useState<SeToday | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [marks, setMarks] = useState<TodayMarks>({ read: [], hidden: [] });
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     const fallback = 'Could not load Today.';
+    const url = accountId ? `/api/today?dayStart=${encodeURIComponent(seDayStartIso())}` : '/api/today/public';
     try {
       const res = await fetch(url, { credentials: 'same-origin' });
       if (!res.ok) {
@@ -59,44 +91,36 @@ export function useToday(accountId: string | null) {
     } finally {
       setLoading(false);
     }
-  }, [owner, url]);
+  }, [owner, accountId]);
 
   useEffect(() => {
     const cached = readJson<SeToday>(CACHE_PREFIX + owner);
     if (cached) setToday(cached);
-    // Marks saved before the day was kept count as marked today (seMarksFromSaved).
-    setMarks(seMarksFromSaved(readJson<unknown>(MARKS_PREFIX + owner)));
-    void load();
-  }, [owner, load]);
+    void (async () => {
+      if (accountId) await uploadLegacyMarks(owner);
+      await load();
+    })();
+  }, [owner, accountId, load]);
 
-  const mark = useCallback(
-    (kind: MarkKind, cardId: string) => {
-      setMarks((current) => {
-        if (current[kind].includes(cardId)) return current;
-        const next = kind === 'read' ? seToggleRead(current, cardId) : { ...current, hidden: [...current.hidden, cardId].slice(-300) };
-        writeJson(MARKS_PREFIX + owner, next);
+  const apply = useCallback(
+    (change: SeCardMarkChange | null) => {
+      if (!change || !accountId) return;
+      setToday((current) => {
+        if (!current) return current;
+        const next = seMarkCardInToday(current, change);
+        writeJson(CACHE_PREFIX + owner, next);
         return next;
       });
+      // A mark that was not stored is read back as it is on the server.
+      void postMarks(change).then((ok) => (ok ? undefined : load()));
     },
-    [owner],
+    [owner, accountId, load],
   );
 
-  // Done is a toggle on the card's timeline dot, so a card marked by mistake can be unmarked. The day it
-  // was marked is kept with it: a done card leaves Today from the member's next day.
-  const toggle = useCallback(
-    (kind: MarkKind, cardId: string) => {
-      setMarks((current) => {
-        const has = current[kind].includes(cardId);
-        const next =
-          kind === 'read'
-            ? seToggleRead(current, cardId)
-            : { ...current, hidden: has ? current.hidden.filter((id) => id !== cardId) : [...current.hidden, cardId].slice(-300) };
-        writeJson(MARKS_PREFIX + owner, next);
-        return next;
-      });
-    },
-    [owner],
-  );
+  // Not for me: the card leaves Today on every device and never comes back.
+  const mark = useCallback((kind: MarkKind, cardId: string) => apply(seMarkChangeFor(today, kind, cardId)), [apply, today]);
+  // Done is a toggle on the card's timeline dot, so a card marked by mistake can be unmarked.
+  const toggle = useCallback((kind: MarkKind, cardId: string) => apply(seMarkChangeFor(today, kind, cardId)), [apply, today]);
 
-  return { today, loading, error, marks, mark, toggle, reload: load };
+  return { today, loading, error, marks: seMarksFromToday(today), mark, toggle, reload: load };
 }

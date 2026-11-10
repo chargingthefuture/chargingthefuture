@@ -396,6 +396,8 @@ stops. HLS is used for public viewers so scale does not multiply WebRTC cost.
 
 ## Change Log
 
+- 2026-11-10: **Replays on Today: 7 days after broadcast, and one older replay a day (owner decision, non-plugin inventory 5m).** Today reads every published replay (`listBeaconReplays`, 100 a page) instead of the newest two. A replay shows on Today for 7 days after its broadcast; each day one older replay comes back as "Replay · from the archive" with its broadcast date, every replay in turn, oldest first, the same one for everybody on the same day, from 2026-11-03 (`seArchiveReplayForDay` in `@ctf/shared`). A replay a member marked done or Not for me stays off their Today when its turn comes again. No Beacon table or route changed.
+
 - 2026-11-03: The podcast feed's channel title is its own address,
   `https://app.lagatos.com/api/beacon/replays/feed`, in place of a name (owner directive: a link
   preview and a feed reader show the plain address, so a shared link says where it goes).

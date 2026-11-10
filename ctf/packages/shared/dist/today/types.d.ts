@@ -22,6 +22,8 @@ export type SeTodayCard = {
     actions: SeTodayAction[];
     done?: boolean;
     commentTimesIso?: string[];
+    markedDoneAtIso?: string;
+    newComments?: number;
     mine?: SeTodayCardMine;
 };
 export type SeTodayCardMine = {

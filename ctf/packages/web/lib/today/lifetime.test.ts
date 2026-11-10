@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { seAskDueIso, seMarksFromSaved, seRenewCardId, seRenewLink, seToggleRead, seTodayView, type SeToday, type SeTodayCard } from '@ctf/shared';
+import { seAskDueIso, seRenewCardId, seRenewLink, type SeTodayCard } from '@ctf/shared';
 import { mineFor, onToday, readDueIso, renewNoticeDue, renewedUntil, todayCardRule, type TodayCardWindow } from './lifetime';
 
 const DAY = 86_400_000;
@@ -117,40 +117,5 @@ describe('the day-14 notice link', () => {
     const linkPath = seRenewLink('/apps/socket-relay', 'socket-relay:abc');
     expect(seRenewCardId({ notificationType: 'today.renew', linkPath })).toBe('socket-relay:abc');
     expect(seRenewCardId({ notificationType: 'commons.reply', linkPath })).toBeNull();
-  });
-});
-
-describe('a card marked done on the device', () => {
-  const today: SeToday = {
-    generatedAtIso: NOW.toISOString(),
-    presence: null,
-    daysWon: null,
-    broadcast: null,
-    rooms: [],
-    week: [],
-    cards: [{ ...cardOf('socket-relay', 1), id: 'a' }, { ...cardOf('socket-relay', 1), id: 'b', done: true }],
-    unavailable: [],
-  };
-
-  it('stays the day it was marked and leaves from the next day', () => {
-    const marks = seToggleRead({ read: [], hidden: [] }, 'a', '2026-11-03');
-    expect(seTodayView(today, marks, 'all', '2026-11-03').cards.map((c) => c.id)).toEqual(['a', 'b']);
-    expect(seTodayView(today, marks, 'all', '2026-11-04').cards.map((c) => c.id)).toEqual(['b']);
-  });
-
-  it('counts an old mark with no day as marked today', () => {
-    const marks = seMarksFromSaved({ read: ['a'], hidden: [] }, '2026-11-03');
-    expect(marks.readOn).toEqual({ a: '2026-11-03' });
-    expect(seTodayView(today, marks, 'all', '2026-11-03').cards).toHaveLength(2);
-  });
-
-  it('keeps a card the server marked done, as before', () => {
-    const marks = { read: ['b'], hidden: [], readOn: { b: '2026-11-01' } };
-    expect(seTodayView(today, marks, 'all', '2026-11-03').cards.map((c) => c.id)).toEqual(['a', 'b']);
-  });
-
-  it('unmarking clears the day', () => {
-    const marked = seToggleRead({ read: [], hidden: [] }, 'a', '2026-11-03');
-    expect(seToggleRead(marked, 'a', '2026-11-03')).toEqual({ read: [], hidden: [], readOn: {} });
   });
 });

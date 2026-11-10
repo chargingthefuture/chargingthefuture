@@ -259,9 +259,11 @@ email sender, Android app links and blog links move with it.
 
 Built 2026-11-03 on web and Android. Asks stay until met, closed or due; with no deadline, 14 days and
 a one-tap renew from a notice in Activity. Offers get the same 14 days and renew. Skill Up cohorts stay
-while open for registration. Everything else stays 7 days, and the day's own cards work as before. A
-card marked done leaves from the member's next day. Leaving Today closes nothing. Detail: the
-non-plugin inventory, 5m.
+while open for registration. Beacon replays stay 7 days after broadcast, and one older replay comes
+back each day, oldest first. Everything else stays 7 days, and the day's own cards work as before. A
+card marked done leaves from the member's next day, and a story or replay stays off when its rotation
+brings it round again, unless a blog story has new comments. Not for me never comes back. Both marks
+are stored on the account. Leaving Today closes nothing. Detail: the non-plugin inventory, 5m and 5n.
 
 ## Later, not built
 

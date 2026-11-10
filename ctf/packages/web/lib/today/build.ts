@@ -14,7 +14,9 @@ import { readDaysWon } from 'lib/measures/action-minutes';
 import { listMutes } from 'lib/mutes/repository';
 import { seApplyMutes } from '@ctf/shared';
 import { mineCards } from './sources-mine';
+import { startOfTodayIso } from './card';
 import { applyLifetimes } from './apply-lifetimes';
+import { applyMemberMarks } from './apply-marks';
 
 // The Today read. Every source runs at once and on its own: one that fails leaves its cards out,
 // is reported, and is named in `unavailable` so the screen can say what is missing instead of
@@ -36,7 +38,7 @@ async function settle<T>(name: string, read: () => Promise<T>, unavailable: stri
   }
 }
 
-export async function buildToday(viewer: TodayViewer, now = new Date()): Promise<SeToday> {
+export async function buildToday(viewer: TodayViewer, now = new Date(), dayStartIso = startOfTodayIso(now)): Promise<SeToday> {
   const unavailable: string[] = [];
   const sources: CardSource[] = [
     { name: 'peer-programming', read: () => goalAsks(viewer) },
@@ -75,7 +77,8 @@ export async function buildToday(viewer: TodayViewer, now = new Date()): Promise
 
   const mineIds = new Set((cardLists[sources.length - 1] ?? []).map((card) => card.id));
   const lasting = await applyLifetimes(cardLists.flatMap((list) => list ?? []), viewer, mineIds, now);
-  const cards = seApplyMutes(lasting, mutes ?? [])
+  const marked = await applyMemberMarks(viewer, lasting, dayStartIso);
+  const cards = seApplyMutes(marked, mutes ?? [])
     .sort((a, b) => b.createdAtIso.localeCompare(a.createdAtIso))
     .slice(0, TODAY_MAX_CARDS);
 

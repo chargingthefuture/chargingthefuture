@@ -29,6 +29,7 @@ const SOURCE_NAMES = {
     beacon: 'the broadcast',
     chyme: 'the Main Room',
     'days-won': 'Days won',
+    yours: 'your own asks and offers',
 };
 export function seTodayView(today, marks, filter) {
     const kinds = SE_TODAY_FILTERS.find((item) => item.key === filter)?.kinds ?? null;
