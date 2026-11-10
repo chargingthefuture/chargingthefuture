@@ -21,6 +21,14 @@ export type SeTodayCard = {
     href: string;
     actions: SeTodayAction[];
     done?: boolean;
+    commentTimesIso?: string[];
+    mine?: SeTodayCardMine;
+};
+export type SeTodayCardMine = {
+    leavesIso: string;
+    dueIso: string | null;
+    canClose: boolean;
+    canRenew: boolean;
 };
 export type SeTodayTalk = {
     title: string;

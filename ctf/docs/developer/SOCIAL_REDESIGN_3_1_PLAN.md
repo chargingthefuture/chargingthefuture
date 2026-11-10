@@ -254,3 +254,18 @@ email sender, Android app links and blog links move with it.
     family prompts. Blocked by 6 and 8. Built 2026-11-02 on the web: answers on the question card under
     Matches, a Match card for three or more answers the same, the talk inside the card; SkillsHunt's
     cards moved to Asks. Android Today has the same controls.
+
+## How long cards stay on Today (owner decisions, 2026-11-03)
+
+Built 2026-11-03 on web and Android. Asks stay until met, closed or due; with no deadline, 14 days and
+a one-tap renew from a notice in Activity. Offers get the same 14 days and renew. Skill Up cohorts stay
+while open for registration. Everything else stays 7 days, and the day's own cards work as before. A
+card marked done leaves from the member's next day. Leaving Today closes nothing. Detail: the
+non-plugin inventory, 5l.
+
+## Later, not built
+
+- Past days of Today: scroll back to an earlier day and see the cards that showed that day, and return
+  to their conversations, since each card now has its own.
+- An anniversary card, now and then: a past exchange, such as one that changed somebody's life,
+  brought back on the day it happened in an earlier year.

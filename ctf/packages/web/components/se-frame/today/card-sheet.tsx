@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { SE_CARD_WORDS, seCardSheetLine, type SeCardAnswerKind, type SeCardConversation, type SeTodayCard } from '@ctf/shared';
 import { SeAvatar } from '../../shared/se-avatar';
 import { CardTalk } from './card-sheet-talk';
+import { SheetYours } from './card-sheet-yours';
 import { useCardConversation, type CardConversation } from './use-card-conversation';
 import styles from './card-sheet.module.css';
 
@@ -119,7 +120,7 @@ function Answers({ conversation, onTalk }: { conversation: SeCardConversation; o
 
 type SheetProps = { card: SeTodayCard; viewerId: string; onClose: () => void };
 
-export function CardSheet({ card, viewerId, firstAnswer, onClose }: SheetProps & { firstAnswer: SeCardAnswerKind | null }) {
+export function CardSheet({ card, viewerId, firstAnswer, onClose, onChanged }: SheetProps & { firstAnswer: SeCardAnswerKind | null; onChanged?: () => void }) {
   const talk = useCardConversation(card.id, firstAnswer);
   const [partner, setPartner] = useState<string | null>(null);
   const closeRef = useRef<HTMLButtonElement | null>(null);
@@ -147,6 +148,7 @@ export function CardSheet({ card, viewerId, firstAnswer, onClose }: SheetProps &
             {SE_CARD_WORDS.openIn(card.source)}
           </Link>
         </div>
+        <SheetYours card={card} onChanged={onChanged} />
         {talk.conversation ? <Answers conversation={talk.conversation} onTalk={(id) => void talkTo(id)} /> : null}
         <CardTalk talk={talk} partner={partner} onPartner={setPartner} onTalk={(id) => void talkTo(id)} />
       </section>

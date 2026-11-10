@@ -11,6 +11,7 @@ import { SeAvatar } from '../../../components/shared/SeAvatar';
 import { getApiBaseUrl } from '../../../auth/authedFetch';
 import { reportError } from '../../../observability/report';
 import { CardTalk } from './CardSheetTalk';
+import { SheetYours } from './CardSheetYours';
 import { makeCardSheetStyles, type CardSheetStyles } from './cardSheetStyles';
 import { useCardConversation, type CardConversation } from './useCardConversation';
 
@@ -111,9 +112,10 @@ type SheetProps = {
   firstAnswer: SeCardAnswerKind | null;
   onClose: () => void;
   onOpenLink: (_href: string) => void;
+  onChanged?: () => void;
 };
 
-export function CardSheet({ t, card, viewerId, firstAnswer, onClose, onOpenLink }: SheetProps) {
+export function CardSheet({ t, card, viewerId, firstAnswer, onClose, onOpenLink, onChanged }: SheetProps) {
   const s = makeCardSheetStyles(t);
   const talk = useCardConversation(card.id, firstAnswer);
   const [partner, setPartner] = useState<string | null>(null);
@@ -138,6 +140,7 @@ export function CardSheet({ t, card, viewerId, firstAnswer, onClose, onOpenLink 
                 <Text style={s.openInLabel}>{SE_CARD_WORDS.openIn(card.source)}</Text>
               </TouchableOpacity>
             </View>
+            <SheetYours s={s} card={card} onChanged={onChanged} />
             {talk.conversation ? <Answers s={s} conversation={talk.conversation} onTalk={(id) => void talkTo(id)} /> : null}
             <CardTalk t={t} s={s} talk={talk} partner={partner} onPartner={setPartner} onTalk={(id) => void talkTo(id)} />
           </ScrollView>

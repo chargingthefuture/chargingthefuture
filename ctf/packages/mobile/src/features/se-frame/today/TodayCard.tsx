@@ -225,7 +225,7 @@ export function TodayCard({
       {isQuestionsCard(card) ? <QuestionsPanel t={t} card={card} open={open} onOpen={() => setOpen(true)} onChanged={onChanged ?? noop} /> : null}
       <CardActions s={s} card={card} onOpenLink={onOpenLink} onAnswer={opensSheet ? (kind) => setSheet({ firstAnswer: kind }) : null} />
       {sheet ? (
-        <CardSheet t={t} card={card} viewerId={viewerId} firstAnswer={sheet.firstAnswer} onClose={() => setSheet(null)} onOpenLink={onOpenLink} />
+        <CardSheet t={t} card={card} viewerId={viewerId} firstAnswer={sheet.firstAnswer} onClose={() => setSheet(null)} onOpenLink={onOpenLink} onChanged={onChanged} />
       ) : null}
     </View>
   );

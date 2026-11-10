@@ -18,6 +18,7 @@ import type { SocketRelayRequestStatus } from 'lib/socket-relay/types';
 import { parseRequestInput } from 'lib/socket-relay/parse-input';
 import { reportError } from 'lib/observability/report';
 import { contentRefusedResponse, isRefusedByStream } from 'lib/integrations/stream-content-check';
+import { saveAskDue } from 'lib/today/ask-due';
 import { failureReason } from 'lib/errors/failure';
 
 const REQUEST_STATUSES: SocketRelayRequestStatus[] = ['open', 'claimed', 'closed', 'canceled'];
@@ -131,6 +132,8 @@ export async function POST(request: Request) {
       // the payload validation above both passed.
       metadata: { roleCheck: 'pass', payloadValidationCheck: 'pass' },
     });
+    // The deadline chosen in + New ("By when?"), kept by Today; a missing one leaves the 14 days.
+    await saveAskDue(`socket-relay:${item.id}`, gate.auth.userId, body.dueIso);
     return NextResponse.json({ ok: true, item }, { status: 201 });
   } catch (error) {
     reportError(error, { area: 'socket-relay', op: 'requests' });

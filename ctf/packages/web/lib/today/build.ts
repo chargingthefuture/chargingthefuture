@@ -6,17 +6,21 @@ import { cohortOffers, placeOffers } from './sources-offers';
 import { blogStories } from './sources-blog';
 import { dailyPuzzleCard } from './sources-daily';
 import { announcementStories, inviteStories, surveyCard, whatWorksStory } from './sources-stories';
-import { broadcast, missionCard, moodCard, numbersCard, replayCards, wantedCard } from './sources-live';
+import { broadcast, missionCard, moodCard, numbersCard, wantedCard } from './sources-live';
+import { replayCards } from './sources-replays';
 import { mainRoom, nextTalk, weekTalks, weaversRoom } from './sources-rooms';
 import { questionCards } from './sources-questions';
 import { readDaysWon } from 'lib/measures/action-minutes';
 import { listMutes } from 'lib/mutes/repository';
 import { seApplyMutes } from '@ctf/shared';
+import { mineCards } from './sources-mine';
+import { applyLifetimes } from './apply-lifetimes';
 
 // The Today read. Every source runs at once and on its own: one that fails leaves its cards out,
 // is reported, and is named in `unavailable` so the screen can say what is missing instead of
 // looking empty. Cards are newest first, with the day's own cards (Mood, numbers, What Works)
-// sorted among them by the start of the day.
+// sorted among them by the start of the day. How long each card stays is applyLifetimes
+// (lifetime.ts): asks until met, closed or due, asks and offers 14 days with a renew, the rest 7.
 
 export const TODAY_MAX_CARDS = 30;
 
@@ -49,9 +53,10 @@ export async function buildToday(viewer: TodayViewer, now = new Date()): Promise
     { name: 'quora-survey', read: () => surveyCard(viewer, now) },
     { name: 'mood', read: () => moodCard(viewer, now) },
     { name: 'numbers', read: () => numbersCard(now) },
-    { name: 'beacon-replays', read: () => replayCards() },
+    { name: 'beacon-replays', read: () => replayCards(now) },
     { name: 'skills-hunt', read: () => wantedCard() },
     { name: 'skills-hunt-mission', read: () => missionCard(now) },
+    { name: 'yours', read: () => mineCards(viewer) },
   ];
 
   const week = weekTalks(now);
@@ -68,7 +73,9 @@ export async function buildToday(viewer: TodayViewer, now = new Date()): Promise
     settle('mutes', () => listMutes(viewer.userId), []),
   ]);
 
-  const cards = seApplyMutes(cardLists.flatMap((list) => list ?? []), mutes ?? [])
+  const mineIds = new Set((cardLists[sources.length - 1] ?? []).map((card) => card.id));
+  const lasting = await applyLifetimes(cardLists.flatMap((list) => list ?? []), viewer, mineIds, now);
+  const cards = seApplyMutes(lasting, mutes ?? [])
     .sort((a, b) => b.createdAtIso.localeCompare(a.createdAtIso))
     .slice(0, TODAY_MAX_CARDS);
 

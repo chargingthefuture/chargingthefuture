@@ -977,3 +977,11 @@ web ☐
 **Expected:** The cohort shows as needing a trainer and can be claimed again. The learner has no assigned trainer and can leave the cohort.
 
 Result: web ☐
+
+### LU-TODAY — A cohort on Today follows its own registration (added 2026-11-03)
+
+**Steps:** Open Today in the 3.1 frame with an open cohort that has a seat. Then close its registration (or fill its seats) and read Today again.
+
+**Expected:** The card reads "Learn a skill · learners wanted", or "Learn a skill · a trainer and learners wanted" while no trainer owns the cohort. It stays on Today however long ago it was opened, with no renew button and no day-14 notice, and leaves Today once registration closes or the cohort closes.
+
+Result: web ☐

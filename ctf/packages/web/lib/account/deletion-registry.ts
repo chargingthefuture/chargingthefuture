@@ -641,7 +641,7 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
   {
     slug: 'today-card-conversations',
     name: 'Card conversations on Today',
-    dataSummary: 'Your answers on Today cards, the messages you wrote under them, and every Just us two conversation and request you were part of.',
+    dataSummary: 'Your answers on Today cards, the messages you wrote under them, every Just us two conversation and request you were part of, and how long your own asks and offers stay on Today.',
     // Card conversations (3.1). Public messages other members wrote under a card stay; a Just us two
     // conversation belongs to both people in it and goes with either account, as 21 Questions does.
     serviceScopeSupported: true,
@@ -652,6 +652,7 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       del('card_messages', 'pair_high', 'Just us two conversations you were part of.'),
       del('card_pair_requests', 'user_low', 'Just us two requests you made or were asked.'),
       del('card_pair_requests', 'user_high', 'Just us two requests you made or were asked.'),
+      del('today_card_windows', 'owner_user_id', 'The deadlines, renewals and closing outcomes of your own asks and offers on Today.'),
     ],
   },
   {

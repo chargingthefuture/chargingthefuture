@@ -4,10 +4,10 @@
 
 import type { SeCardKind } from '../design/se-theme';
 import type { SeToday, SeTodayCard, SeTodayTalk } from './types';
+import { seLocalDay } from '../stories/release';
+import { seCardDone, seDoneBefore, type SeTodayMarks } from './marks';
 
 export type SeTodayFilter = 'all' | 'asks' | 'offers' | 'stories' | 'matches';
-
-export type SeTodayMarks = { read: string[]; hidden: string[] };
 
 export const SE_TODAY_FILTERS: ReadonlyArray<{ key: SeTodayFilter; label: string; kinds: SeCardKind[] | null }> = [
   { key: 'all', label: 'All', kinds: null },
@@ -38,6 +38,7 @@ const SOURCE_NAMES: Record<string, string> = {
   beacon: 'the broadcast',
   chyme: 'the Main Room',
   'days-won': 'Days won',
+  yours: 'your own asks and offers',
 };
 
 export type SeTodayView = {
@@ -49,15 +50,24 @@ export type SeTodayView = {
   caughtUpLine: string;
 };
 
-export function seTodayView(today: SeToday | null, marks: SeTodayMarks, filter: SeTodayFilter): SeTodayView {
-  const kinds = SE_TODAY_FILTERS.find((item) => item.key === filter)?.kinds ?? null;
-  const cards = (today?.cards ?? []).filter((card) => !marks.hidden.includes(card.id) && (!kinds || kinds.includes(card.kind)));
-  const done = cards.filter((card) => card.done || marks.read.includes(card.id)).length;
+function missingLine(today: SeToday | null): string | null {
   const missing = (today?.unavailable ?? []).map((name) => SOURCE_NAMES[name] ?? name);
+  return missing.length > 0 ? `Could not load ${missing.join(', ')} this time.` : null;
+}
+
+function shown(card: SeTodayCard, marks: SeTodayMarks, kinds: SeCardKind[] | null, day: string): boolean {
+  if (marks.hidden.includes(card.id) || seDoneBefore(marks, card, day)) return false;
+  return !kinds || kinds.includes(card.kind);
+}
+
+export function seTodayView(today: SeToday | null, marks: SeTodayMarks, filter: SeTodayFilter, day: string = seLocalDay()): SeTodayView {
+  const kinds = SE_TODAY_FILTERS.find((item) => item.key === filter)?.kinds ?? null;
+  const cards = (today?.cards ?? []).filter((card) => shown(card, marks, kinds, day));
+  const done = cards.filter((card) => seCardDone(marks, card)).length;
   return {
     cards,
     doneLine: done > 0 ? `${done} of ${cards.length} done` : null,
-    missingLine: missing.length > 0 ? `Could not load ${missing.join(', ')} this time.` : null,
+    missingLine: missingLine(today),
     caughtUpLine: cards.length === 0 ? 'Nothing here yet.' : "You're caught up.",
   };
 }

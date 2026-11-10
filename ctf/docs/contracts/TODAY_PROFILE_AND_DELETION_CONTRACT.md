@@ -35,8 +35,13 @@ member's answer on a card: can help, knows someone, would like this, this helped
 and when the other agreed). A report made from a card goes into the existing `member_safety_reports`
 table, which the safety contract covers.
 
+How long an ask or offer stays on Today is the third: `today_card_windows`, one row per card id,
+written only once its poster set something. It holds the poster's account id, the deadline chosen
+in + New, the end of a renewed 14 days and when it was renewed, and, when the poster closed the ask
+from Today, the outcome (`done` or `not_done`) and when. It holds nothing anybody wrote.
+
 On the member's own device it keeps two things: the last Today answer, so the screen draws at once,
-and the cards the member opened or hid. Web keeps them in this browser's storage under
+and the cards the member marked done (with the member's own day each was marked) or hid. Web keeps them in this browser's storage under
 `se-today-v1:<user_id>` and `se-today-marks-v1:<user_id>`; Android keeps them in the app's own files.
 Neither leaves the device, and signing out of the device or clearing the app's data removes them.
 
@@ -48,13 +53,14 @@ Neither leaves the device, and signing out of the device or clearing the app's d
   `twenty-one-questions`). The member's `card_answers` rows, every `card_messages` row they wrote,
   every Just us two message where they are `pair_low` or `pair_high`, and every
   `card_pair_requests` row where they are `user_low` or `user_high` (registry entry
-  `today-card-conversations`). Public messages other members wrote under a card stay.
-- Full account deletion: the same 21 Questions and card conversation rows; each card source's own
+  `today-card-conversations`), and every `today_card_windows` row where they are `owner_user_id`
+  (same entry). Public messages other members wrote under a card stay.
+- Full account deletion: the same 21 Questions, card conversation and card window rows; each card source's own
   contract covers its rows.
 
 ## 5) Retention
 
-21 Questions and card conversation rows are kept until the account is deleted. When the item a
+21 Questions, card conversation and card window rows are kept until the account is deleted. When the item a
 card came from is removed, its card leaves Today and its conversation is no longer shown; the rows
 stay until their authors' accounts are deleted. Nothing else is kept on the server; the
 on-device copy is replaced on every read.

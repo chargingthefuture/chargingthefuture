@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import type { SeToday, SeTodayMarks } from '@ctf/shared';
+import { seMarksFromSaved, seToggleRead, type SeToday, type SeTodayMarks } from '@ctf/shared';
 import { failureText, responseFailureText } from 'lib/errors/client-failure';
 
 // Reads /api/today (or, for a visitor who is not signed in, /api/today/public), and keeps the last answer in this browser so the screen draws at once on the
@@ -12,6 +12,7 @@ const CACHE_PREFIX = 'se-today-v1:';
 const MARKS_PREFIX = 'se-today-marks-v1:';
 
 export type TodayMarks = SeTodayMarks;
+export type MarkKind = 'read' | 'hidden';
 
 function readJson<T>(key: string): T | null {
   try {
@@ -63,15 +64,16 @@ export function useToday(accountId: string | null) {
   useEffect(() => {
     const cached = readJson<SeToday>(CACHE_PREFIX + owner);
     if (cached) setToday(cached);
-    setMarks(readJson<TodayMarks>(MARKS_PREFIX + owner) ?? { read: [], hidden: [] });
+    // Marks saved before the day was kept count as marked today (seMarksFromSaved).
+    setMarks(seMarksFromSaved(readJson<unknown>(MARKS_PREFIX + owner)));
     void load();
   }, [owner, load]);
 
   const mark = useCallback(
-    (kind: keyof TodayMarks, cardId: string) => {
+    (kind: MarkKind, cardId: string) => {
       setMarks((current) => {
         if (current[kind].includes(cardId)) return current;
-        const next = { ...current, [kind]: [...current[kind], cardId].slice(-300) };
+        const next = kind === 'read' ? seToggleRead(current, cardId) : { ...current, hidden: [...current.hidden, cardId].slice(-300) };
         writeJson(MARKS_PREFIX + owner, next);
         return next;
       });
@@ -79,13 +81,16 @@ export function useToday(accountId: string | null) {
     [owner],
   );
 
-  // Done is a toggle on the card's timeline dot, so a card marked by mistake can be unmarked.
+  // Done is a toggle on the card's timeline dot, so a card marked by mistake can be unmarked. The day it
+  // was marked is kept with it: a done card leaves Today from the member's next day.
   const toggle = useCallback(
-    (kind: keyof TodayMarks, cardId: string) => {
+    (kind: MarkKind, cardId: string) => {
       setMarks((current) => {
         const has = current[kind].includes(cardId);
-        const list = has ? current[kind].filter((id) => id !== cardId) : [...current[kind], cardId].slice(-300);
-        const next = { ...current, [kind]: list };
+        const next =
+          kind === 'read'
+            ? seToggleRead(current, cardId)
+            : { ...current, hidden: has ? current.hidden.filter((id) => id !== cardId) : [...current.hidden, cardId].slice(-300) };
         writeJson(MARKS_PREFIX + owner, next);
         return next;
       });

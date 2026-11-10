@@ -125,7 +125,9 @@ User/authenticated routes:
 - `GET /api/socket-relay/requests` — member feed. Optional `?status=open` (comma-separated statuses) scopes the list to claimable posts; `?page`/`?pageSize` paginate (feed uses `status=open`, pageSize 20, with a "Load more" button). Absent/unknown `status` returns the full-status list.
 - `GET /api/socket-relay/requests/:id` — single request, members-only. Any signed-in member may view any request (no `is_public` gate); 404 for a missing request.
 - `GET /api/socket-relay/my-requests`
-- `POST /api/socket-relay/requests` — body includes optional `acceptedCurrencies: string[]` (split
+- `POST /api/socket-relay/requests` — body includes optional `dueIso` (the deadline chosen in + New,
+  kept by Today in `today_card_windows`; a missing or past one leaves the usual 14 days on Today) and
+  optional `acceptedCurrencies: string[]` (split
   settlements); codes are validated against the active currencies catalog, unknown/inactive codes
   dropped. Every request read path returns the stored set as `acceptedCurrencies` (ServiceCredits
   first).
@@ -249,6 +251,8 @@ alongside the legacy `category`) and fulfillment outcomes for dev validation.
 3. Android requests now go through the shared `authedFetch` wrapper (Clerk bearer token, base URL from runtime config) like chyme/currency; earlier the SocketRelay mobile client used plain dev-only `fetch`. The admin client (`admin-api.ts`) and the chat-credentials fetcher (`fetchFulfillmentChatCredentials` in `api.ts`) now use the same wrapper. Ownership detection still leans on `GET /api/socket-relay/my-requests` (a card is "mine" if its id appears in that list) because the client does not compare user ids locally; one extra request per feed load.
 
 ## 9) Change Log
+
+- 2026-11-03: **An ask from + New can carry a deadline, and the poster can close an open request from Today.** `POST /api/socket-relay/requests` takes an optional `dueIso` (the deadline chosen under "By when?" in + New); Today keeps it in `today_card_windows` and leaves the request on Today until then, instead of the usual 14 days (non-plugin inventory 5l). The poster can close their own open, unclaimed request from its Today card with `POST /api/today/cards/[cardId]/close`: Done sets `status = 'closed'`, Closed, not done sets `status = 'canceled'`, through `closeOpenRequestByOwner` (`lib/socket-relay/close-open.ts`), which writes the event `request_closed_by_owner` with the outcome and clears the post's presence. A claimed request still closes through its fulfillment. The member's own open requests now show on their own Today. No SocketRelay table changed.
 
 - 2026-10-28: **Stream AI moderation on new asks (3.1.0 plan).** `POST /api/socket-relay/requests` checks the title and details. The words are sent to Stream's AI moderation check before saving (`lib/integrations/stream-content-check.ts`, config `se:posts`, rules set by `stream-moderation-setup.yml`): when Stream answers remove the post is refused with 422 `content_refused` and the member is told to reword it; harm Stream rates high is flagged in Stream's review queue and still published. When Stream is not set up or cannot be reached the post is saved and the failure is reported. Pictures are not sent, because Stream cannot fetch them from behind sign-in.
 

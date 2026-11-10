@@ -411,6 +411,8 @@ Demo schema (`ctf/scripts/seedDemo.mjs`, `seedPeerProgrammingGoalBoard`): finds 
 
 ## Change Log
 
+- 2026-11-03: **Goals on Today follow the ask rules (non-plugin inventory 5l).** An open goal stays on Today 14 days from posting, and its owner can keep it up 14 more days from the card or from the day-14 notice in Activity (`POST /api/today/cards/[cardId]/renew`). The owner can close it from the card: Done marks it `reached`, Closed, not done marks it `withdrawn`, through the existing `closeGoal` (`POST /api/today/cards/[cardId]/close`). Leaving Today closes nothing; the goal stays on the board. Today now reads up to 8 goals. No PeerProgramming table or route changed.
+
 - 2026-11-02: **Signed in, not active (owner decision).** Cohorts are formed from the members who
   signed in within the last 7 days, and the copy now says so: active means a day with 30 or more
   action minutes, which this selection does not use. Web and Android: the cohorts tab line reads

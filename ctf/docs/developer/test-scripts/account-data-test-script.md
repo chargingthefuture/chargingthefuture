@@ -581,3 +581,39 @@ it read-only with "Writing in a card is paused until Unlock is done. Reading sta
 account is never removed for this." With `CARDS_OPEN_BEFORE_UNLOCK` set to false, C sees "Writing in a
 card opens once Unlock is done." instead, from the first write.
 **Result:** web ☐ android ☐ — notes:
+
+## AD-28 · How long cards stay on Today
+**Role:** member A (posting) and member B (reading) on 3.1 · **Surfaces:** web, android
+**Steps:**
+1. As A, open + New → Ask. Fill in what you need, choose "By when?" → A date, pick a date three weeks
+   ahead, and post. Post a second ask with No deadline.
+2. As B, open Today. As A, open Today and tap the title of each of your asks.
+3. As A, on the no-deadline ask, tap Keep it up for 14 more days.
+4. As A, on the dated ask, tap Closed, not done. Read Today again, then open SocketRelay.
+5. On a test database, set the no-deadline ask's `created_at` 13½ days back and remove its
+   `today_card_windows` row, then as A read Today and open Activity. Tap Keep it up for 14 more days there.
+6. Set an announcement or a Directory invitation 8 days back and read Today.
+7. As B, mark a card done with its dot. Change the device date to tomorrow and read Today.
+8. Read Today with an open Skill Up cohort that has a seat. Close its registration as an admin and read
+   Today again.
+**Expected:** Step 1: the ask form shows "By when?" with Today, This week, A date and No deadline (No
+deadline picked), and A date opens a date picker. Step 2: B sees both asks; A sees both with "You posted
+this · On Today until <date>": the dated one until its date, the other 14 days from posting. The dated
+one has Done and Closed, not done only; the other also has Keep it up for 14 more days. Step 3 reads
+"Kept up on Today for 14 more days." and the date moves to 14 days from now. Step 4: the ask leaves A's
+and B's Today and shows as canceled in SocketRelay; the closing outcome is `not_done` in
+`today_card_windows`. Step 5: Activity has "Still need this? Keep it up for 14 more days: <title>" under
+Needs your answer, once only, and the tap keeps the ask up 14 days from then. Step 6: the story is gone
+from Today and still in its own place. Step 7: the card stays on Today the day it was marked and is gone
+the next day; a 21 Questions card marked done by its answer stays. Step 8: the cohort card reads "Learn
+a skill · learners wanted" (or "a trainer and learners wanted" while no trainer owns it) and leaves Today
+once registration closes, with no renew offered.
+**Result:** web ☐ android ☐ — notes:
+
+## AD-29 · Card windows go with the account
+**Role:** member A from AD-28 · **Surfaces:** web
+**Steps:**
+1. As A, delete the account (or only Card conversations on Today) from the account area.
+**Expected:** Every `today_card_windows` row with A as `owner_user_id` is gone; the listing names "The
+deadlines, renewals and closing outcomes of your own asks and offers on Today."
+**Result:** web ☐ android ☐ — notes:

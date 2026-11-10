@@ -63,6 +63,8 @@ contracts:
       - question_match_messages
       - member_blocks
       - account_restrictions
+      - today_card_windows
+      - notifications
     purpose: member_daily_overview
     retentionClass: none_read_only
     idempotency: true
@@ -347,3 +349,49 @@ contracts:
     purpose: card_conversation
     retentionClass: until_account_deletion
     idempotency: false
+  - pluginId: today
+    command: today.cards.close
+    version: 1.0.0
+    description: "The poster closes their own open ask from its Today card, with the outcome they pick: 'done' or 'not_done'. A goal is reached or withdrawn, a SocketRelay request closed or canceled, a ride request canceled; the outcome is kept in today_card_windows so unmet needs can be counted. Poster only; 20 a minute. (POST /api/today/cards/[cardId]/close)."
+    inputSchema:
+      cardId:
+        type: string
+      outcome:
+        type: string
+        enum: [done, not_done]
+    outputSchema:
+      ok:
+        type: boolean
+      outcome:
+        type: string
+    dataAccess:
+      - today_card_windows
+      - peer_programming_goals
+      - socket_relay_requests
+      - socket_relay_request_events
+      - trust_transport_requests
+      - trust_transport_trips
+    purpose: card_lifetime
+    retentionClass: until_account_deletion
+    idempotency: false
+  - pluginId: today
+    command: today.cards.renew
+    version: 1.0.0
+    description: "The poster keeps their own open ask or offer on Today for 14 more days from the tap (the card, or the day-14 notice in Activity). Refused on an ask with a deadline. Poster only; 20 a minute. (POST /api/today/cards/[cardId]/renew)."
+    inputSchema:
+      cardId:
+        type: string
+    outputSchema:
+      ok:
+        type: boolean
+      shownUntilIso:
+        type: string
+    dataAccess:
+      - today_card_windows
+      - peer_programming_goals
+      - socket_relay_requests
+      - trust_transport_requests
+      - lighthouse_properties
+    purpose: card_lifetime
+    retentionClass: until_account_deletion
+    idempotency: true

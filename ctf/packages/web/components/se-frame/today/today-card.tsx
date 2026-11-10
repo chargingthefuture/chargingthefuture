@@ -193,7 +193,7 @@ export function TodayCard({
       </button>
       {isQuestionsCard(card) ? <QuestionsPanel card={card} open={open} onOpen={() => setOpen(true)} onChanged={onChanged ?? (() => undefined)} /> : null}
       <CardActions card={card} onAnswer={opensSheet ? (kind) => setSheet({ firstAnswer: kind }) : null} />
-      {sheet ? <CardSheet card={card} viewerId={viewerId} firstAnswer={sheet.firstAnswer} onClose={() => setSheet(null)} /> : null}
+      {sheet ? <CardSheet card={card} viewerId={viewerId} firstAnswer={sheet.firstAnswer} onClose={() => setSheet(null)} onChanged={onChanged} /> : null}
     </article>
   );
 }

@@ -4,11 +4,12 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { File, Paths } from 'expo-file-system';
-import type { SeToday, SeTodayMarks } from '@ctf/shared';
+import { seMarksFromSaved, seToggleRead, type SeToday, type SeTodayMarks } from '@ctf/shared';
 import { authedFetch } from '../../../auth/authedFetch';
 import { reportError } from '../../../observability/report';
 
 export type TodayMarks = SeTodayMarks;
+export type MarkKind = 'read' | 'hidden';
 
 function store(name: string): File {
   return new File(Paths.document, name.replace(/[^a-zA-Z0-9_-]/g, '_') + '.json');
@@ -80,11 +81,12 @@ export function useToday(accountId: string | null) {
     void (async () => {
       const [cached, savedMarks] = await Promise.all([
         readJson<SeToday>(`se-today-${owner}`),
-        readJson<TodayMarks>(`se-today-marks-${owner}`),
+        readJson<unknown>(`se-today-marks-${owner}`),
       ]);
       if (!live) return;
       if (cached) setToday((current) => current ?? cached);
-      if (savedMarks) setMarks(savedMarks);
+      // Marks saved before the day was kept count as marked today (seMarksFromSaved).
+      if (savedMarks) setMarks(seMarksFromSaved(savedMarks));
     })();
     void load();
     return () => {
@@ -93,10 +95,10 @@ export function useToday(accountId: string | null) {
   }, [owner, load]);
 
   const mark = useCallback(
-    (kind: keyof TodayMarks, cardId: string) => {
+    (kind: MarkKind, cardId: string) => {
       setMarks((current) => {
         if (current[kind].includes(cardId)) return current;
-        const next = { ...current, [kind]: [...current[kind], cardId].slice(-300) };
+        const next = kind === 'read' ? seToggleRead(current, cardId) : { ...current, hidden: [...current.hidden, cardId].slice(-300) };
         writeJson(`se-today-marks-${owner}`, next);
         return next;
       });
@@ -104,13 +106,16 @@ export function useToday(accountId: string | null) {
     [owner],
   );
 
-  // Done is a toggle on the card's timeline dot, so a card marked by mistake can be unmarked.
+  // Done is a toggle on the card's timeline dot, so a card marked by mistake can be unmarked. The day it
+  // was marked is kept with it: a done card leaves Today from the member's next day.
   const toggle = useCallback(
-    (kind: keyof TodayMarks, cardId: string) => {
+    (kind: MarkKind, cardId: string) => {
       setMarks((current) => {
         const has = current[kind].includes(cardId);
-        const list = has ? current[kind].filter((id) => id !== cardId) : [...current[kind], cardId].slice(-300);
-        const next = { ...current, [kind]: list };
+        const next =
+          kind === 'read'
+            ? seToggleRead(current, cardId)
+            : { ...current, hidden: has ? current.hidden.filter((id) => id !== cardId) : [...current.hidden, cardId].slice(-300) };
         writeJson(`se-today-marks-${owner}`, next);
         return next;
       });
