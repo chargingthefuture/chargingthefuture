@@ -13,6 +13,8 @@ export declare const SE_TODAY_ROOM_WORDS: {
     copyFailed: string;
     weekLabel: string;
     noTalks: string;
+    book: string;
+    bookPath: string;
 };
 export type SeWeekDay = {
     key: string;

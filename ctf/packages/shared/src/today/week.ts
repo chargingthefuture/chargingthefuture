@@ -18,6 +18,9 @@ export const SE_TODAY_ROOM_WORDS = {
   copyFailed: 'The link could not be copied.',
   weekLabel: 'This week',
   noTalks: 'Nothing booked in the Main Room that day.',
+  // Under the week strip, signed in and out: where a talk in the Main Room is booked.
+  book: 'Book a talk on TI Radio',
+  bookPath: '/apps/ti-radio',
 };
 
 const LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];

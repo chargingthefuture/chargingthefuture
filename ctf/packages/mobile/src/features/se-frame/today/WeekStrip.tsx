@@ -6,6 +6,7 @@ import React, { useMemo, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SE_TODAY_ROOM_WORDS as W, seTalkTimes, seWeekDays, type SeThemeTokens, type SeTodayTalk, type SeWeekDay } from '@ctf/shared';
 import { SE_FONT } from '../fonts';
+import { openWebPage } from '../../../navigation/openWebPage';
 
 type Styles = ReturnType<typeof makeStyles>;
 
@@ -51,6 +52,9 @@ export function WeekStrip({ t, talks }: { t: SeThemeTokens; talks: SeTodayTalk[]
           ))}
         </View>
       ) : null}
+      <TouchableOpacity accessibilityRole="link" style={s.book} onPress={() => void openWebPage(W.bookPath, 'today')}>
+        <Text style={s.bookLabel}>{W.book}</Text>
+      </TouchableOpacity>
     </>
   );
 }
@@ -73,5 +77,7 @@ function makeStyles(t: SeThemeTokens) {
     meta: { fontSize: 13, color: t.soft, fontFamily: SE_FONT.sans },
     talk: { fontSize: 14, lineHeight: 20, color: t.ink, fontFamily: SE_FONT.sans },
     bold: { fontFamily: SE_FONT.sansBold },
+    book: { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center' },
+    bookLabel: { fontSize: 13, color: t.ink, textDecorationLine: 'underline', fontFamily: SE_FONT.sans },
   });
 }
