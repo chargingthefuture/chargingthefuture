@@ -363,8 +363,9 @@ function isValidRequestTitle(title: string): boolean {
   return title.length > 0 && title.length <= SOCKET_RELAY_MAX_TITLE_LENGTH;
 }
 
+// Details may be empty: an ask from + New in 3.1 can be its title alone (approved board "New post").
 function isValidRequestDetails(details: string): boolean {
-  return details.length > 0 && details.length <= SOCKET_RELAY_MAX_DETAILS_LENGTH;
+  return details.length <= SOCKET_RELAY_MAX_DETAILS_LENGTH;
 }
 
 function isValidRequestTags(tags: string[]): boolean {

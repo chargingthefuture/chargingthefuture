@@ -155,35 +155,3 @@ export function seRoomBarLine(speakers: string[], selfSpeaking: boolean): string
 export const SE_ROOM_QUIET = 'Quiet right now';
 export const SE_ROOM_QUIET_TEXT = 'Nobody is in the room. Play a reading while you wait, or come back for the next talk.';
 export const SE_ROOM_MAIN_AUDIENCE = 'Open to everyone';
-
-// + New → Talk: booking a TI Radio slot, held in the Main Room.
-export const SE_TALK_WORDS = {
-  title: 'Talk',
-  intro: 'Host 90 minutes in the Main Room. Anyone can listen; your name and topic go on the schedule.',
-  needsUnlock: 'Booking a talk needs Unlock approval.',
-  finishUnlock: 'Finish Unlock',
-  loading: 'Reading the schedule…',
-  when: 'When (90 minutes, your time)',
-  choose: 'Choose a time',
-  about: 'What it is about',
-  detail: 'More detail (optional)',
-  submit: 'Book the talk',
-  submitting: 'Booking…',
-  tryAgain: 'Try again',
-  noOpen: 'Every time this week is booked. New times open each day.',
-};
-
-export function seTalkBooked(dayLabel: string): string {
-  return `Booked for ${dayLabel}. It shows on Today and in the TI Radio schedule.`;
-}
-
-// "Mon, Sep 14 · 7:30 PM – 9:00 PM", in the reader's own timezone.
-export function seSlotLabel(startIso: string, endIso: string): string {
-  const time = (iso: string) => new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-  const day = new Date(startIso).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-  return `${day} · ${time(startIso)} – ${time(endIso)}`;
-}
-
-export function seSlotDay(startIso: string): string {
-  return new Date(startIso).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-}

@@ -16,6 +16,7 @@ export * from './today/week';
 export * from './calendar/ics';
 export * from './today/rooms';
 export * from './today/new';
+export * from './today/new-talk';
 export * from './today/activity';
 export * from './today/people';
 export * from './today/unlock';

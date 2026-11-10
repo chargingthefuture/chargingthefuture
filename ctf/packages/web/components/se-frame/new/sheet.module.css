@@ -1,0 +1,412 @@
+/* + New as a sheet, to the approved boards "New post", "Schedule a talk" and "Schedule a talk, not
+   yet verified". Colors come from the frame's custom properties (se-theme-vars.ts). */
+.sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-sizing: border-box;
+  min-height: calc(100dvh - 40px);
+  margin: 8px -16px -180px;
+  padding: 12px 16px 200px;
+  border-radius: 26px 26px 0 0;
+  border-top: 1.5px solid var(--se-line);
+  background: var(--se-card);
+  color: var(--se-ink);
+}
+
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1.5px solid var(--se-hair);
+  background: transparent;
+  color: var(--se-ink);
+  cursor: pointer;
+}
+
+.topLink {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--se-ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.rule {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 16px;
+  background: var(--se-sunk);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding-top: 4px;
+  text-align: center;
+}
+
+.headLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.title,
+.titleSmall,
+.lockTitle {
+  margin: 0;
+  font-family: 'Newsreader Variable', Newsreader, Georgia, serif;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.title {
+  font-size: 26px;
+}
+
+.titleSmall {
+  font-size: 24px;
+}
+
+.sub {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--se-soft);
+}
+
+.head .sub {
+  font-size: 14px;
+}
+
+.kinds {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 2px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--se-sunk);
+}
+
+.kind {
+  min-height: 40px;
+  border-radius: 999px;
+  border: 0;
+  background: transparent;
+  color: var(--se-soft);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.kind[aria-pressed='true'] {
+  border: 1.5px solid var(--se-line);
+  background: var(--se-card);
+  color: var(--se-ink);
+  font-weight: 700;
+}
+
+.architect {
+  align-self: center;
+  min-height: 32px;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: var(--se-soft);
+  font: inherit;
+  font-size: 13px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+input.pill {
+  min-height: 48px;
+  padding: 0 18px;
+  border-radius: 999px;
+  background: var(--se-bg);
+  font-size: 15px;
+}
+
+textarea.area {
+  border-radius: 20px;
+  border-color: var(--se-hair);
+  padding: 12px 18px;
+  font-size: 14px;
+  resize: none;
+}
+
+textarea.area:disabled {
+  opacity: 0.55;
+}
+
+.optional {
+  font-weight: 400;
+  color: var(--se-soft);
+}
+
+.suggestList {
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+  border-radius: 16px;
+  background: var(--se-sunk);
+}
+
+.suggestItem {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--se-ink);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dashed {
+  align-self: flex-start;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1.5px dashed var(--se-soft);
+  background: transparent;
+  color: var(--se-ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tasks {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.tasks legend {
+  padding: 0;
+}
+
+.taskRow,
+.taskActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.taskActions {
+  flex-wrap: wrap;
+}
+
+.talkForm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  min-height: 52px;
+  padding: 0;
+  border-radius: 14px;
+  border: 1.5px solid var(--se-hair);
+  background: var(--se-sunk);
+  color: var(--se-ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.day[aria-pressed='true'] {
+  border-color: var(--se-line);
+  background: var(--se-btn);
+  color: var(--se-on-btn);
+}
+
+.dayLetter {
+  font-size: 11px;
+}
+
+.dayDate {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.slots {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.slot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 48px;
+  padding: 6px 12px;
+  border-radius: 14px;
+  color: var(--se-ink);
+  font: inherit;
+  text-align: left;
+}
+
+button.slot {
+  cursor: pointer;
+}
+
+.open {
+  border: 1.5px dashed var(--se-soft);
+  background: var(--se-card);
+}
+
+.booked {
+  border: 1.5px solid var(--se-hair);
+  background: var(--se-sunk);
+}
+
+.picked {
+  border: 1.5px solid var(--se-line);
+  background: var(--se-pick);
+  color: var(--se-on-pick);
+}
+
+.slotTime {
+  flex: none;
+  width: 74px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.slotText {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.slotTitle {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.slotSub {
+  font-size: 12px;
+  color: var(--se-soft);
+}
+
+.picked .slotSub {
+  color: inherit;
+}
+
+.lockCard,
+.nextCard {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 16px;
+  border-radius: 20px;
+  border: 1.5px solid var(--se-hair);
+  background: var(--se-sunk);
+}
+
+.nextCard {
+  gap: 6px;
+  padding: 14px;
+  border-radius: 18px;
+  background: var(--se-card);
+}
+
+.lockTitle {
+  font-size: 21px;
+}
+
+.lockCard .sub {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.lockButton {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  min-height: 46px;
+  padding: 0 20px;
+  border-radius: 999px;
+  border: 1.5px solid var(--se-line);
+  background: var(--se-btn);
+  color: var(--se-on-btn);
+  font-size: 15px;
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: 0 3px 0 var(--se-line);
+}
+
+.nextLabel {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--se-soft);
+}
+
+.nextTitle {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.close:focus-visible,
+.topLink:focus-visible,
+.kind:focus-visible,
+.architect:focus-visible,
+.suggestItem:focus-visible,
+.dashed:focus-visible,
+.day:focus-visible,
+.slot:focus-visible,
+.lockButton:focus-visible {
+  outline: 2px solid var(--se-pick);
+  outline-offset: 2px;
+}

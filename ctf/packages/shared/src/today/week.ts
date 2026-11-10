@@ -33,27 +33,29 @@ export type SeWeekDay = {
   talks: SeTodayTalk[];
 };
 
-function dayKey(d: Date): string {
+// A day in the reader's own timezone, as a key that two instants on the same day share.
+export function seDayKey(d: Date): string {
   return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
 }
 
 // Monday to Sunday of the reader's own week, in their own timezone, each with the talks booked
-// that day.
-export function seWeekDays(talks: SeTodayTalk[], now: Date = new Date()): SeWeekDay[] {
+// that day. With `fromToday`, the seven days starting today instead (booking a talk in + New, where
+// every day shown has to be one that can still be booked).
+export function seWeekDays(talks: SeTodayTalk[], now: Date = new Date(), fromToday = false): SeWeekDay[] {
   const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
-  const todayKey = dayKey(now);
-  return LETTERS.map((letter, index) => {
+  if (!fromToday) start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+  const todayKey = seDayKey(now);
+  return LETTERS.map((_letter, index) => {
     const day = new Date(start.getTime() + index * DAY_MS + 12 * 3_600_000);
-    const key = dayKey(day);
+    const key = seDayKey(day);
     return {
       key,
-      letter,
+      letter: LETTERS[(day.getDay() + 6) % 7],
       date: day.getDate(),
       label: day.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }),
       today: key === todayKey,
       past: day.getTime() < now.getTime() && key !== todayKey,
-      talks: talks.filter((talk) => dayKey(new Date(talk.startIso)) === key),
+      talks: talks.filter((talk) => seDayKey(new Date(talk.startIso)) === key),
     };
   });
 }
