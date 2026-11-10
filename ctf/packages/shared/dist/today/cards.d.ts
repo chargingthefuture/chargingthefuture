@@ -5,6 +5,11 @@ export declare const SE_CARD_MESSAGE_MAX = 1000;
 export declare const SE_CARD_ID_MAX = 200;
 export declare function seCardId(source: string, sourceId: string): string;
 export declare function seCardIdValid(id: string): boolean;
+export type SeCardItemRef = {
+    plugin: string;
+    itemId: string;
+};
+export declare function seCardItemRef(cardId: string): SeCardItemRef;
 export declare function seCardOpensSheet(card: Pick<SeTodayCard, 'kind' | 'source'>): boolean;
 export declare function seCardAnswerKind(kind: SeTodayActionKind): SeCardAnswerKind | null;
 export declare function seCardPair(a: string, b: string): [string, string];
