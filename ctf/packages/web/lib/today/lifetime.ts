@@ -6,19 +6,20 @@ import { SE_TODAY_ASK_DAYS, SE_TODAY_STORY_DAYS, type SeTodayCard, type SeTodayC
 // - An ask (a PeerProgramming goal, a SocketRelay request, a ride wanted) stays until it is met or
 //   closed (its source stops listing it), or until its deadline passes. With no deadline it stays 14
 //   days from posting; the poster can keep it up 14 more days from the tap, as often as they like.
-// - An offer (a LightHouse place to stay) stays 14 days the same way, with no deadline.
+// - An offer (a LightHouse place to stay, a Mutual Time survey open for picking) stays 14 days the
+//   same way, with no deadline, and leaves sooner when it closes.
 // - A Skill Up cohort stays exactly while it is open for registration (its source lists only open
 //   cohorts with a seat), with no window and no renew: it recruits on its own schedule.
 // - The day's own cards (Mood, numbers, stories, the puzzle, What Works, the mission, 21 Questions)
 //   are dated to the start of today and keep working as they do. A 21 Questions match card and the
 //   Quora survey card stay as they are.
-// - Everything else (announcements, Directory invitations, Beacon replays, the Wanted round) stays 7
-//   days from posting.
+// - Everything else (announcements, Directory invitations, Beacon replays, the Wanted round, the
+//   PeerProgramming "with you this week" card) stays 7 days from posting.
 
 const DAY_MS = 86_400_000;
 
 export const TODAY_ASK_SOURCES = ['peer-programming', 'socket-relay', 'trust-transport'] as const;
-export const TODAY_OFFER_SOURCES = ['lighthouse'] as const;
+export const TODAY_OFFER_SOURCES = ['lighthouse', 'mutual-time'] as const;
 
 export type TodayCardRule = 'ask' | 'offer' | 'kept' | 'week';
 

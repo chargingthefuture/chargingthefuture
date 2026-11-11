@@ -12,7 +12,8 @@ with a link to where the meeting happens (Chyme, Peer Programming, or Beacon).
   states (vote / result / sign-in gate); timezone-aware voting; the most-overlap algorithm; auto-close
   at a set close time; a rolling seven-day window of times while the survey is open.
 - **Out of scope:** any ServiceCredits/money (there are none here); a public directory of events (events
-  are shared as direct links, never listed); recurring events; native Android (web + mobile-responsive
+  are shared as direct links and never listed in public; since 2026-11-11 an open survey also shows as
+  an Offer card on signed-in Today, per the 3.1 plan, User Features item 9); recurring events; native Android (web + mobile-responsive
   only, per rule 105 — Mutual Time is not on the Chyme keep-list).
 
 ## Intent and Outcome
@@ -52,6 +53,14 @@ to the meeting surface; members who did not vote can still come listen in.
    off their list, and the voting form tells them so — "One time you picked earlier has now passed, so
    it no longer counts. Pick from the days below and save again." — instead of dropping the vote
    silently. Their remaining upcoming picks are untouched.
+
+9. **See open surveys on Today (3.1).** While a survey is open for picking, it shows on Today as an
+   Offer card, "Offer · hours": its title (or "Pick a time to meet"), its description and "We'll meet
+   in <plugin>", with "Pick your times" opening its shared link. The card shows only what that link
+   shows anybody: no name, no count and nobody's picks. It stays on Today as offers do, 14 days with a
+   renew for the survey's creator, and leaves as soon as the survey closes. The creator sees their own
+   survey among their own cards. Read by `lib/mutual-time/open-events.ts` (`listOpenEvents`,
+   `getEventForToday`); see the non-plugin inventory §1.5 item 5a.
 
 ## Admin Features
 
@@ -214,6 +223,13 @@ keeps that half reproducible; its stamped result stands.
    push/notification tie-in is a possible follow-up.
 
 ## Change Log
+
+- 2026-11-11: **Open surveys show on Today (User Features item 9).** The 3.1 plan lists Mutual Time among
+  the Offer cards. `lib/mutual-time/open-events.ts` reads surveys open for picking right now (stored
+  open, opened, not past their close time) with only the title, description, meeting place, creator id
+  and when picking opened; it never closes a survey, so one past its close time is left out and closes
+  when its link is next opened. Today's `today.read`, `today.cards.renew` and
+  `today.renew_notices.run` contracts list `mutual_time_events`. No table or route changed.
 
 - 2026-10-28: **Add to calendar on the chosen time (3.1.0 plan).** Once a time is chosen, the result screen offers "Add to calendar": an .ics file for the hour-long meeting (`MUTUAL_TIME_MEETING_MINUTES`) with a link to where it is held, built in the browser by `seCalendarIcs`. The app never reads a calendar. No route, schema or contract change.
 

@@ -2,7 +2,7 @@ contracts:
   - pluginId: today
     command: today.read
     version: 1.0.0
-    description: "Read everything the 3.1 Today screen draws, in one answer (GET /api/today). Touches the member's own member_presence row (at most once a minute) and answers presence, the number of signed-in members whose last read was in the last 10 minutes (one COUNT, never names), and storiesTomorrow, how many stories open at the next midnight. Stories and replays carry saved from today_card_saves. The member's own Done and Not for me marks (today_card_marks) are applied: Not for me never comes back; done stays the day it was marked (markedDoneAtIso) and leaves from the member's next day; a done blog story with a newer readable Fireside comment comes back with newComments. dayStart is the start of the member's own day."
+    description: "Read everything the 3.1 Today screen draws, in one answer (GET /api/today). Touches the member's own member_presence row (at most once a minute) and answers presence, the number of signed-in members whose last read was in the last 10 minutes (one COUNT, never names), and storiesTomorrow, how many stories open at the next midnight. Stories and replays carry saved from today_card_saves. The member's own Done and Not for me marks (today_card_marks) are applied: Not for me never comes back; done stays the day it was marked (markedDoneAtIso) and leaves from the member's next day; a done blog story with a newer readable Fireside comment comes back with newComments. dayStart is the start of the member's own day. Open Mutual Time surveys show as Offer cards with only what their shared link shows anybody (title, description, where the group meets), never who picked what. A member placed in a PeerProgramming cohort gets one card naming their own cohort and who is in it with them, the names its room already lists to them. The Our numbers card carries figures: Workforce's skills coverage and, signed in, how much the Community Value Index grew this week (a relative index, never money), which stores the current week's reading in gdp_metric_snapshots (metric gdp_value_index, the row scripts/recognizeGdp.mjs writes) at most once every 10 minutes per server and compares it with last week's row."
     inputSchema:
       dayStart:
         type: string
@@ -74,6 +74,17 @@ contracts:
       - fireside_threads
       - fireside_comments
       - notifications
+      - mutual_time_events
+      - peer_programming_cohorts
+      - peer_programming_settings
+      - gdp_metric_snapshots
+      - trust_transport_earnings_ledger
+      - service_credits_governance_events
+      - foundation_quote_requests
+      - service_credits_transfers
+      - lighthouse_matches
+      - socket_relay_fulfillments
+      - recurring_activities
     purpose: member_daily_overview
     retentionClass: none_read_only
     idempotency: true
@@ -508,6 +519,7 @@ contracts:
       - socket_relay_requests
       - trust_transport_requests
       - lighthouse_properties
+      - mutual_time_events
     purpose: card_lifetime
     retentionClass: until_account_deletion
     idempotency: true
@@ -613,6 +625,7 @@ contracts:
       - trust_transport_requests
       - peer_programming_goals
       - lighthouse_properties
+      - mutual_time_events
       - today_card_windows
       - notifications
       - notification_preferences
