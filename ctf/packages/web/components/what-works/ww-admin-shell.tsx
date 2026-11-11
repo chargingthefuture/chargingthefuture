@@ -13,7 +13,7 @@ import { adminMutate, type AdminProblem, type AdminProduct } from './ww-admin-sh
 import { getWhatWorksTokens } from './ww-shared';
 import { WhatWorksAdminProducts } from './ww-admin-products';
 import { WhatWorksAdminProblems } from './ww-admin-problems';
-import { WhatWorksAdminProposals } from './ww-admin-proposals';
+import { WwAdminNewProblems } from '../se-frame/what-works/ww-admin-new-problems';
 import { WhatWorksAuditPanel } from './ww-audit-panel';
 import { responseFailureText } from 'lib/errors/client-failure';
 
@@ -229,6 +229,7 @@ export function WhatWorksAdminShell() {
           <div style={{ padding: '32px 16px', textAlign: 'center', color: t.MUTED, fontSize: 14, borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>Loading…</div>
         ) : (
           <>
+            <WwAdminNewProblems listed={problems} onChanged={loadProblems} />
             <WhatWorksAdminProducts
               products={products}
               busyId={busyId}
@@ -238,7 +239,6 @@ export function WhatWorksAdminShell() {
               onEdit={editProduct}
               onDelete={deleteProduct}
             />
-            <WhatWorksAdminProposals listed={problems} onChanged={loadProblems} />
             <WhatWorksAdminProblems
               problems={problems}
               busyId={busyId}

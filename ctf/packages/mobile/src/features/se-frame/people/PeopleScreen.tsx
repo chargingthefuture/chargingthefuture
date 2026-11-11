@@ -1,102 +1,43 @@
-// People on Android, the copy of the web (web components/se-frame/people/): the Directory, with who
-// offers what now. Foundation offerings filled, Directory listings outlined, Request a quote only
-// when someone offers a skill. Profile and Request a quote open their pages in the browser.
+// People on Android, the copy of the web (web components/se-frame/people/), built to the approved
+// boards "People, verified" and "People, not yet verified": the Directory with who offers what now,
+// paged, or for a member not approved yet the number listed and the way to Unlock.
 
-import React, { useEffect, useMemo, useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { SE_PEOPLE_PAGE_SIZE, SE_PEOPLE_WORDS as W, sePersonLinks, type SePeoplePage, type SePerson, type SeThemeTokens } from '@ctf/shared';
-import { authedFetch } from '../../../auth/authedFetch';
-import { SeAvatar } from '../../../components/shared/SeAvatar';
+import React, { useMemo, useState } from 'react';
+import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SE_PEOPLE_FILTERS, SE_PEOPLE_PAGE_SIZE, SE_PEOPLE_WORDS as W, type SePeopleFilter, type SePeoplePage, type SeThemeTokens } from '@ctf/shared';
 import type { FeatureKey } from '../../../navigation/screens';
 import { openTodayLink } from '../today/openTodayLink';
-import { SE_FONT } from '../fonts';
 import { useScrollFrameToTop } from '../frame-scroll';
+import { PeopleLocked } from './PeopleLocked';
+import { PersonCard } from './PersonCard';
+import { makePeopleStyles, type PeopleStyles } from './peopleStyles';
+import { usePeople, usePeopleCount, type PeopleState } from './usePeople';
 
-type State = { kind: 'loading' } | { kind: 'error'; message: string } | { kind: 'ready'; people: SePeoplePage };
-type Styles = ReturnType<typeof makeStyles>;
 type Go = (_href: string) => void;
 
-function usePeople(page: number, offeringOnly: boolean, query: string, attempt: number): State {
-  const [state, setState] = useState<State>({ kind: 'loading' });
-  useEffect(() => {
-    let active = true;
-    const params = new URLSearchParams({ page: String(page) });
-    if (offeringOnly) params.set('offering', '1');
-    if (query.trim()) params.set('q', query.trim());
-    const timer = setTimeout(() => {
-      authedFetch(`/api/people?${params.toString()}`)
-        .then(async (res) => {
-          const body = (await res.json().catch(() => null)) as { people?: SePeoplePage; message?: string; reason?: string } | null;
-          if (body?.reason === 'unlock_required') throw new Error(W.needsUnlock);
-          if (!res.ok || !body?.people) throw new Error(`${body?.message ?? 'The server returned an error.'} (HTTP ${res.status})`);
-          if (active) setState({ kind: 'ready', people: body.people });
-        })
-        .catch((error: unknown) => {
-          if (active) setState({ kind: 'error', message: error instanceof Error ? error.message : 'The request did not complete.' });
-        });
-    }, 250);
-    return () => {
-      active = false;
-      clearTimeout(timer);
-    };
-  }, [page, offeringOnly, query, attempt]);
-  return state;
-}
-
-function Button({ s, label, onPress, primary, disabled }: { s: Styles; label: string; onPress: () => void; primary?: boolean; disabled?: boolean }) {
+function Button({ s, label, onPress, disabled }: { s: PeopleStyles; label: string; onPress: () => void; disabled?: boolean }) {
   return (
-    <TouchableOpacity
-      accessibilityRole="button"
-      accessibilityState={{ disabled, selected: primary }}
-      disabled={disabled}
-      onPress={onPress}
-      style={[s.button, primary ? s.primary : null, disabled ? s.disabled : null]}
-    >
-      <Text style={[s.buttonLabel, primary ? s.primaryLabel : null]}>{label}</Text>
+    <TouchableOpacity accessibilityRole="button" accessibilityState={{ disabled }} disabled={disabled} onPress={onPress} style={[s.button, disabled ? s.disabled : null]}>
+      <Text style={s.buttonLabel}>{label}</Text>
     </TouchableOpacity>
   );
 }
 
-function PersonCard({ s, person, go }: { s: Styles; person: SePerson; go: Go }) {
-  const links = sePersonLinks(person);
-  const listed = person.listed.filter((skill) => !person.offering.includes(skill));
+function Pager({ s, people, onPage }: { s: PeopleStyles; people: SePeoplePage; onPage: (_page: number) => void }) {
+  const from = people.total === 0 ? 0 : (people.page - 1) * SE_PEOPLE_PAGE_SIZE + 1;
+  const to = Math.min(people.page * SE_PEOPLE_PAGE_SIZE, people.total);
+  const last = Math.max(1, Math.ceil(people.total / SE_PEOPLE_PAGE_SIZE));
   return (
-    <View style={s.card} accessibilityLabel={person.name}>
-      <View style={s.head}>
-        <SeAvatar accountId={person.id} size={44} />
-        <View style={s.who}>
-          <Text style={s.name}>{person.name}</Text>
-          {person.jobTitle || person.headline ? <Text style={s.meta}>{person.jobTitle ?? person.headline}</Text> : null}
-        </View>
-      </View>
-      {person.offering.length > 0 ? (
-        <View style={s.skills} accessibilityLabel={W.offering}>
-          {person.offering.map((skill) => (
-            <Text key={skill} style={[s.skill, s.offering]}>
-              {skill}
-            </Text>
-          ))}
-        </View>
-      ) : null}
-      {listed.length > 0 ? (
-        <View style={s.skills} accessibilityLabel={W.listed}>
-          {listed.map((skill) => (
-            <Text key={skill} style={[s.skill, s.listed]}>
-              {skill}
-            </Text>
-          ))}
-        </View>
-      ) : null}
-      <View style={s.skills}>
-        <Button s={s} label={W.profile} onPress={() => go(links.profile)} />
-        {links.quote ? <Button s={s} label={W.quote} primary onPress={() => go(links.quote ?? '')} /> : null}
-      </View>
+    <View style={s.pager}>
+      <Button s={s} label={W.previous} disabled={people.page <= 1} onPress={() => onPage(people.page - 1)} />
+      <Text style={s.meta}>{W.range(from, to, people.total)}</Text>
+      <Button s={s} label={W.next} disabled={people.page >= last} onPress={() => onPage(people.page + 1)} />
     </View>
   );
 }
 
-function Results({ s, state, go, onPage, onRetry }: { s: Styles; state: State; go: Go; onPage: (_page: number) => void; onRetry: () => void }) {
-  if (state.kind === 'loading') return <Text style={s.meta}>{W.loading}</Text>;
+function Results({ s, state, go, onPage, onRetry }: { s: PeopleStyles; state: PeopleState; go: Go; onPage: (_page: number) => void; onRetry: () => void }) {
+  if (state.kind === 'loading' || state.kind === 'locked') return <Text style={s.meta}>{W.loading}</Text>;
   if (state.kind === 'error') {
     return (
       <Text accessibilityRole="alert" style={s.meta}>
@@ -107,32 +48,53 @@ function Results({ s, state, go, onPage, onRetry }: { s: Styles; state: State; g
       </Text>
     );
   }
-  const { people } = state;
-  if (people.items.length === 0) return <Text style={s.meta}>{W.empty}</Text>;
-  const from = (people.page - 1) * SE_PEOPLE_PAGE_SIZE + 1;
-  const to = Math.min(people.page * SE_PEOPLE_PAGE_SIZE, people.total);
-  const last = Math.max(1, Math.ceil(people.total / SE_PEOPLE_PAGE_SIZE));
+  if (state.people.items.length === 0) return <Text style={s.meta}>{W.empty}</Text>;
   return (
     <>
-      {people.items.map((person) => (
+      {state.people.items.map((person) => (
         <PersonCard key={person.id} s={s} person={person} go={go} />
       ))}
-      <View style={s.pager}>
-        <Button s={s} label={W.previous} disabled={people.page <= 1} onPress={() => onPage(people.page - 1)} />
-        <Text style={s.meta}>{W.range(from, to, people.total)}</Text>
-        <Button s={s} label={W.next} disabled={people.page >= last} onPress={() => onPage(people.page + 1)} />
-      </View>
+      <Pager s={s} people={state.people} onPage={onPage} />
     </>
   );
 }
 
-export function PeopleScreen({ t, onOpen }: { t: SeThemeTokens; onOpen: (_key: FeatureKey) => void }) {
-  const s = useMemo(() => makeStyles(t), [t]);
+function Header({ s, count }: { s: PeopleStyles; count: number | null }) {
+  return (
+    <View style={s.header}>
+      <Text accessibilityRole="header" style={s.title}>
+        {W.title}
+      </Text>
+      {count !== null ? <Text style={s.count}>{W.listedCount(count)}</Text> : null}
+    </View>
+  );
+}
+
+function Filters({ s, filter, onFilter }: { s: PeopleStyles; filter: SePeopleFilter; onFilter: (_next: SePeopleFilter) => void }) {
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.chipRow} contentContainerStyle={s.chips} accessibilityRole="radiogroup" accessibilityLabel={W.filters}>
+      {SE_PEOPLE_FILTERS.map((chip) => {
+        const on = filter === chip.id;
+        return (
+          <TouchableOpacity key={chip.id} accessibilityRole="radio" accessibilityState={{ checked: on }} onPress={() => onFilter(chip.id)} style={[s.chip, on ? s.chipOn : null]}>
+            <Text style={[s.chipLabel, on ? s.chipLabelOn : null]}>{chip.label}</Text>
+          </TouchableOpacity>
+        );
+      })}
+    </ScrollView>
+  );
+}
+
+type ScreenProps = { t: SeThemeTokens; onOpen: (_key: FeatureKey) => void; onToday: () => void };
+
+export function PeopleScreen({ t, onOpen, onToday }: ScreenProps) {
+  const s = useMemo(() => makePeopleStyles(t), [t]);
   const [page, setPage] = useState(1);
-  const [offeringOnly, setOfferingOnly] = useState(false);
+  const [filter, setFilter] = useState<SePeopleFilter>('all');
   const [query, setQuery] = useState('');
   const [attempt, setAttempt] = useState(0);
-  const state = usePeople(page, offeringOnly, query, attempt);
+  const state = usePeople(page, filter, query, attempt);
+  const count = usePeopleCount();
   const scrollToTop = useScrollFrameToTop();
   // A new page starts at its top, as the web does.
   const turnPage = (next: number) => {
@@ -140,10 +102,20 @@ export function PeopleScreen({ t, onOpen }: { t: SeThemeTokens; onOpen: (_key: F
     scrollToTop();
   };
   const go: Go = (href) => openTodayLink(href, onOpen);
+
+  if (state.kind === 'locked') {
+    return (
+      <View style={s.lockedScreen}>
+        <Header s={s} count={null} />
+        <PeopleLocked s={s} count={count} onUnlock={() => onOpen('unlock')} onToday={onToday} />
+      </View>
+    );
+  }
   return (
-    <>
+    <View style={s.screen}>
+      <Header s={s} count={count} />
       <TextInput
-        accessibilityLabel={W.search}
+        accessibilityLabel={W.searchLabel}
         placeholder={W.search}
         placeholderTextColor={t.soft}
         style={s.search}
@@ -153,33 +125,15 @@ export function PeopleScreen({ t, onOpen }: { t: SeThemeTokens; onOpen: (_key: F
           setPage(1);
         }}
       />
-      <View style={s.skills} accessibilityRole="radiogroup">
-        <Button s={s} label={W.everyone} primary={!offeringOnly} onPress={() => (setOfferingOnly(false), setPage(1))} />
-        <Button s={s} label={W.offeringNow} primary={offeringOnly} onPress={() => (setOfferingOnly(true), setPage(1))} />
-      </View>
+      <Filters
+        s={s}
+        filter={filter}
+        onFilter={(next) => {
+          setFilter(next);
+          setPage(1);
+        }}
+      />
       <Results s={s} state={state} go={go} onPage={turnPage} onRetry={() => setAttempt((n) => n + 1)} />
-    </>
+    </View>
   );
-}
-
-function makeStyles(t: SeThemeTokens) {
-  return StyleSheet.create({
-    search: { minHeight: 46, paddingVertical: 10, paddingHorizontal: 16, borderRadius: 999, borderWidth: 1.5, borderColor: t.line, backgroundColor: t.card, color: t.ink, fontSize: 16, fontFamily: SE_FONT.sans },
-    skills: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-    button: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 16, borderRadius: 999, borderWidth: 1.5, borderColor: t.line, backgroundColor: t.card },
-    primary: { backgroundColor: t.btn },
-    disabled: { opacity: 0.5 },
-    buttonLabel: { fontSize: 14, color: t.ink, fontFamily: SE_FONT.sansBold },
-    primaryLabel: { color: t.onBtn },
-    card: { gap: 10, padding: 14, borderRadius: 18, backgroundColor: t.card, borderWidth: 1.5, borderColor: t.hair },
-    head: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-    who: { flexShrink: 1, gap: 2 },
-    name: { fontSize: 17, color: t.ink, fontFamily: SE_FONT.sansBold },
-    meta: { fontSize: 14, color: t.soft, fontFamily: SE_FONT.sans },
-    skill: { paddingVertical: 4, paddingHorizontal: 10, borderRadius: 999, overflow: 'hidden', borderWidth: 1.5, borderColor: t.kind.offer, fontSize: 13 },
-    offering: { backgroundColor: t.kind.offer, color: t.bg, fontFamily: SE_FONT.sansBold },
-    listed: { color: t.ink, fontFamily: SE_FONT.sans },
-    pager: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-    link: { color: t.ink, textDecorationLine: 'underline', fontFamily: SE_FONT.sansBold },
-  });
 }

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { listActiveProblems } from 'lib/what-works/repository';
 import { proposeProblem, ProposalLimitError } from 'lib/what-works/problem-review';
-import { MAX_PROBLEM_CONTEXT_LENGTH, MAX_PROBLEM_TITLE_LENGTH } from 'lib/what-works/constants';
+import { MAX_PROBLEM_TITLE_LENGTH } from 'lib/what-works/constants';
 import { failureReason } from 'lib/errors/failure';
 import { ensureMutationCsrf, parseJsonBody, readTrimmedString, requireWhatWorksAccess, whatWorksError } from '../_lib';
 import { logWhatWorksAudit } from 'lib/what-works/audit';
@@ -42,13 +42,11 @@ export async function GET() {
   }
 }
 
-function readProposal(body: Record<string, unknown>): { error: NextResponse } | { title: string; context: string } {
+function readProposal(body: Record<string, unknown>): { error: NextResponse } | { title: string } {
   const title = readTrimmedString(body.title);
-  const context = readTrimmedString(body.context) ?? '';
   if (!title) return { error: whatWorksError('Say what the problem is.', 'what_works_title_required', 400) };
   if (title.length > MAX_PROBLEM_TITLE_LENGTH) return { error: whatWorksError('Problem title is too long.', 'what_works_title_too_long', 400) };
-  if (context.length > MAX_PROBLEM_CONTEXT_LENGTH) return { error: whatWorksError('Problem context is too long.', 'what_works_context_too_long', 400) };
-  return { title, context };
+  return { title };
 }
 
 // A member proposes a problem. It waits for an admin, who approves it, merges it into one already
