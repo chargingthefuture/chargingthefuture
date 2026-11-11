@@ -5,6 +5,7 @@ export type SeActivityItem = {
     summary: string;
     linkPath: string | null;
     targetRef: string | null;
+    answer: 'kept' | 'closed' | null;
     isRead: boolean;
     createdAtIso: string;
 };
@@ -37,6 +38,7 @@ export type SeActivityNeed = {
     buttons: SeActivityButton[];
 };
 export declare function seActivityNeed(item: SeActivityItem): SeActivityNeed | null;
+export declare function seActivityOutcome(item: SeActivityItem): string | null;
 export type SeActivityView = {
     needs: SeActivityNeed[];
     today: SeActivityItem[];

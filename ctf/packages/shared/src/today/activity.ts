@@ -15,6 +15,9 @@ export type SeActivityItem = {
   // What the notice is about, as its producer recorded it: the activity id on a Recurring Activity
   // invite, `<card id>|<requester id>` on a Just us two request (seActivityPairRef).
   targetRef: string | null;
+  // On a day-14 notice, decided on the server: kept up or closed after the notice was sent, so its
+  // keep-up never comes back. Null on any other notice and on one still waiting.
+  answer: 'kept' | 'closed' | null;
   isRead: boolean;
   createdAtIso: string;
 };
@@ -104,10 +107,18 @@ function renewNeed(item: SeActivityItem): SeActivityNeed | null {
 
 // The inline answer an unread notice waits on, or null for a notice that only tells.
 export function seActivityNeed(item: SeActivityItem): SeActivityNeed | null {
-  if (item.isRead) return null;
+  if (item.isRead || item.answer) return null;
   if (item.notificationType === SE_RECURRING_INVITE_NOTICE) return recurringNeed(item);
   if (item.notificationType === SE_PAIR_REQUEST_NOTICE) return pairNeed(item);
   return renewNeed(item);
+}
+
+// The line under a day-14 notice that was already answered: "Kept up on Today for 14 more days." or
+// "Closed. It has left Today."; null otherwise.
+export function seActivityOutcome(item: SeActivityItem): string | null {
+  if (item.answer === 'kept') return L.renewed;
+  if (item.answer === 'closed') return L.closed;
+  return null;
 }
 
 export type SeActivityView = { needs: SeActivityNeed[]; today: SeActivityItem[]; earlier: SeActivityItem[] };
