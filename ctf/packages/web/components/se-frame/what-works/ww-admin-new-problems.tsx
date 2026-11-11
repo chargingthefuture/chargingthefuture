@@ -1,0 +1,140 @@
+'use client';
+
+import { useState } from 'react';
+import { SE_WW_ADMIN_WORDS as W, seWwHelpedCount, seWwPendingMeta } from '@ctf/shared';
+import { reasonText } from 'lib/errors/client-failure';
+import { seThemeVars } from '../se-theme-vars';
+import { useSeTheme } from '../use-se-theme';
+import { useWwPending, wwAdminPost, type WwPending, type WwPendingState } from './use-ww-pending';
+import { WwAdminMergeTwo, type WwListedProblem } from './ww-admin-merge-two';
+import styles from './ww-admin.module.css';
+
+// New problems members added, oldest first. Each is approved as new, merged into a problem already
+// on the list (what was added under it moves there), or deleted as spam. Who added it is never
+// shown. Below them, two problems already on the list can be merged.
+
+type Action = 'approve' | 'merge' | 'spam';
+type Props = { listed: WwListedProblem[]; onChanged: () => Promise<void> };
+
+const SENT = new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZoneName: 'short' });
+
+function sentLabel(iso: string): string {
+  return SENT.format(new Date(iso)).replace(/, (\d{4}),/, ', $1 at');
+}
+
+function MergeTarget({ item, listed, intoId, setIntoId }: { item: WwPending; listed: WwListedProblem[]; intoId: string; setIntoId: (_id: string) => void }) {
+  const id = `se-ww-into-${item.id}`;
+  return (
+    <>
+      <label htmlFor={id} className={styles.fieldLabel}>
+        {W.mergeInto}
+      </label>
+      <select id={id} className={styles.select} value={intoId} onChange={(e) => setIntoId(e.target.value)}>
+        {intoId ? null : <option value="">{W.mergeIntoMenu}</option>}
+        {listed.map((p) => (
+          <option key={p.id} value={p.id}>
+            {p.title}
+          </option>
+        ))}
+      </select>
+    </>
+  );
+}
+
+function PendingCard({ item, first, listed, onDone }: { item: WwPending; first: boolean; listed: WwListedProblem[]; onDone: () => Promise<void> }) {
+  const [intoId, setIntoId] = useState(item.suggestion?.id ?? '');
+  const [showTarget, setShowTarget] = useState(item.suggestion !== null);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const run = async (action: Action) => {
+    setBusy(true);
+    setMessage(null);
+    try {
+      await wwAdminPost(`/api/what-works/admin/problems/${item.id}/review`, { action, intoId: action === 'merge' ? intoId : undefined });
+      await onDone();
+    } catch (error) {
+      setMessage(reasonText(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const merge = (
+    <button type="button" className={item.suggestion ? styles.primary : styles.secondary} disabled={busy || !intoId} onClick={() => void run('merge')}>
+      {W.merge}
+    </button>
+  );
+  const approve = (
+    <button type="button" className={item.suggestion ? styles.secondary : styles.primary} disabled={busy} onClick={() => void run('approve')}>
+      {W.approve}
+    </button>
+  );
+  return (
+    <article className={first ? styles.cardFirst : styles.card}>
+      <p className={styles.problem}>{item.title}</p>
+      <span className={styles.meta}>{seWwPendingMeta(sentLabel(item.createdAt), item.attachedCount, item.suggestion !== null)}</span>
+      {item.suggestion ? (
+        <p className={styles.looks}>
+          <b>{W.looksLike}</b> {item.suggestion.title} ({seWwHelpedCount(item.suggestion.helpedCount).toLowerCase()})
+        </p>
+      ) : null}
+      {showTarget ? <MergeTarget item={item} listed={listed} intoId={intoId} setIntoId={setIntoId} /> : null}
+      <div className={styles.actions}>
+        {item.suggestion ? merge : approve}
+        {item.suggestion ? approve : null}
+        {!item.suggestion && !showTarget ? (
+          <button type="button" className={styles.secondary} disabled={busy} onClick={() => setShowTarget(true)}>
+            {W.mergeIntoMenu}
+          </button>
+        ) : null}
+        {!item.suggestion && showTarget ? merge : null}
+        <button type="button" className={styles.danger} disabled={busy} onClick={() => void run('spam')}>
+          {W.spam}
+        </button>
+      </div>
+      {message ? (
+        <p role="alert" className={styles.error}>
+          {message}
+        </p>
+      ) : null}
+    </article>
+  );
+}
+
+function PendingList({ state, listed, onDone }: { state: WwPendingState; listed: WwListedProblem[]; onDone: () => Promise<void> }) {
+  if (state.kind === 'loading') return <p className={styles.note}>{W.loading}</p>;
+  if (state.kind === 'error') return <p role="alert" className={styles.error}>{state.message}</p>;
+  if (state.items.length === 0) return <p className={styles.note}>{W.empty}</p>;
+  return (
+    <>
+      {state.items.map((item, i) => (
+        <PendingCard key={item.id} item={item} first={i === 0} listed={listed} onDone={onDone} />
+      ))}
+    </>
+  );
+}
+
+export function WwAdminNewProblems({ listed, onChanged }: Props) {
+  const { theme } = useSeTheme();
+  const pending = useWwPending();
+  const [showAll, setShowAll] = useState(false);
+  const count = pending.state.kind === 'ready' ? pending.state.items.length : 0;
+  const done = async () => {
+    await pending.reload();
+    await onChanged();
+  };
+  return (
+    <section aria-labelledby="se-ww-new" className={styles.screen} style={seThemeVars(theme.color, theme.mode)}>
+      <div className={styles.head}>
+        <span className={styles.eyebrow}>{W.eyebrow}</span>
+        <h2 id="se-ww-new" className={styles.title}>
+          {W.title(count)}
+        </h2>
+      </div>
+      <PendingList state={pending.state} listed={listed} onDone={done} />
+      <button type="button" className={styles.link} aria-expanded={showAll} onClick={() => setShowAll((v) => !v)}>
+        {showAll ? W.hideAll : W.allProblems}
+      </button>
+      {showAll ? <WwAdminMergeTwo listed={listed} onMerged={done} /> : null}
+    </section>
+  );
+}
