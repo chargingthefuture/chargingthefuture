@@ -244,6 +244,10 @@ Opening the call must succeed on the first press: Beacon asks Stream to record a
 missing recording size is what previously made every Go Live come back with `(400)` and
 `recording quality is required when audio_only is false and recording is enabled`. Seeing that
 message again means the recording settings sent on call creation regressed.
+Hold the phone upright for the camera broadcast: after it ends, the replay is upright and shows the
+full picture with nothing cut off, and a screen-share replay is landscape. A replay that is
+landscape with the face cropped means the recording layout was not applied; the server error report
+names op `recording_layout` with Stream's reason.
 **Result:** web ☐ mobile ☐ — notes:
 
 ### BCN-A2b · A failed Go Live says which step failed
