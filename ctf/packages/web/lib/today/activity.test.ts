@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { seActivityIcon, seActivityNeed, seActivityPairRef, seActivityTint, seActivityView, seActivityWhen, seAgo, seTheme, type SeActivityItem } from '@ctf/shared';
+import { seActivityIcon, seActivityNeed, seActivityOutcome, seActivityPairRef, seActivityTint, seActivityView, seActivityWhen, seAgo, seTheme, type SeActivityItem } from '@ctf/shared';
 
 const item = (id: string, notificationType: string, isRead: boolean, createdAtIso: string, targetRef: string | null = null, linkPath: string | null = null): SeActivityItem => ({
   id,
@@ -7,6 +7,7 @@ const item = (id: string, notificationType: string, isRead: boolean, createdAtIs
   summary: id,
   linkPath,
   targetRef,
+  answer: null,
   isRead,
   createdAtIso,
 });
@@ -48,6 +49,14 @@ describe('Activity', () => {
   it('keeps an ask up from its day-14 notice', () => {
     const need = seActivityNeed(item('n', 'today.renew', false, '2026-10-27T10:00:00.000Z', null, '/apps/socket-relay?renew=socket-relay%3A1'));
     expect(need?.buttons.map((b) => b.path)).toEqual(['/api/today/cards/socket-relay%3A1/renew']);
+  });
+
+  it('shows a day-14 notice kept up or closed since as a plain row with what happened', () => {
+    const notice = item('n', 'today.renew', false, '2026-10-27T10:00:00.000Z', null, '/apps/socket-relay?renew=socket-relay%3A1');
+    expect(seActivityNeed({ ...notice, answer: 'kept' })).toBeNull();
+    expect(seActivityOutcome({ ...notice, answer: 'kept' })).toBe('Kept up on Today for 14 more days.');
+    expect(seActivityOutcome({ ...notice, answer: 'closed' })).toBe('Closed. It has left Today.');
+    expect(seActivityOutcome(notice)).toBeNull();
   });
 
   it('shows a notice with no target as a plain row', () => {

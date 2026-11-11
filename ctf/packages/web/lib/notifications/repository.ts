@@ -1,6 +1,8 @@
 import { queryDb } from 'lib/db/postgres';
 import { reportError } from 'lib/observability/report';
+import { SE_TODAY_RENEW_NOTICE } from '@ctf/shared';
 import { sendWebPushToUser } from './push';
+import { renewNoticeAnswer } from './renew-answer';
 import { DELETED_MEMBER_PLACEHOLDER } from 'lib/account/deletion-registry';
 import {
   isNotificationCategory,
@@ -21,6 +23,9 @@ type NotificationRow = {
   target_ref: string | null;
   read_at: Date | null;
   created_at: Date;
+  window_renewed_at?: Date | null;
+  window_closed_at?: Date | null;
+  window_found?: boolean | null;
 };
 
 // Deep link for a notification. Producers set link_path directly, but the earliest Commons rows were
@@ -50,6 +55,10 @@ function mapNotification(row: NotificationRow): Notification {
     summary: row.summary,
     linkPath: resolveLinkPath(row),
     targetRef: row.target_ref,
+    answer:
+      row.notification_type === SE_TODAY_RENEW_NOTICE
+        ? renewNoticeAnswer(row.created_at, row.window_found ? { renewedAt: row.window_renewed_at ?? null, closedAt: row.window_closed_at ?? null } : null)
+        : null,
     isRead: row.read_at !== null,
     createdAtIso: row.created_at.toISOString(),
   };
@@ -140,17 +149,25 @@ async function maybeSendDevicePush(input: NotificationInput): Promise<void> {
   await sendWebPushToUser(input.userId, payload);
 }
 
+// A day-14 notice is joined to its card's window (the card id is the notice's target_ref before the
+// '@'), so the feed says whether it was kept up or closed after it was sent.
 export async function listNotifications(userId: string, limit: number): Promise<Notification[]> {
   const pageSize = Math.min(Math.max(1, limit), NOTIFICATIONS_MAX_PAGE_SIZE);
   const result = await queryDb<NotificationRow>(
     `
-      SELECT id, source_plugin, notification_type, category, summary, link_path, target_ref, read_at, created_at
-      FROM notifications
-      WHERE user_id = $1
-      ORDER BY created_at DESC, id DESC
+      SELECT n.id, n.source_plugin, n.notification_type, n.category, n.summary, n.link_path, n.target_ref, n.read_at,
+             n.created_at, w.renewed_at AS window_renewed_at, w.closed_at AS window_closed_at,
+             (w.card_id IS NOT NULL) AS window_found
+      FROM notifications n
+      LEFT JOIN today_card_windows w
+        ON n.notification_type = $3
+       AND w.owner_user_id = n.user_id
+       AND w.card_id = substring(n.target_ref from '^(.*)@[^@]*$')
+      WHERE n.user_id = $1
+      ORDER BY n.created_at DESC, n.id DESC
       LIMIT $2
     `,
-    [userId, pageSize],
+    [userId, pageSize, SE_TODAY_RENEW_NOTICE],
   );
   return result.rows.map(mapNotification);
 }
