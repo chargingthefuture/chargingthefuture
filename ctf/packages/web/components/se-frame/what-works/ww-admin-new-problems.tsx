@@ -41,9 +41,49 @@ function MergeTarget({ item, listed, intoId, setIntoId }: { item: WwPending; lis
   );
 }
 
+type ActionsProps = { matched: boolean; showTarget: boolean; canMerge: boolean; busy: boolean; run: (_a: Action) => void; openTarget: () => void };
+
+// With a close match, Merge leads; without one, Approve as new leads and Merge into… opens the menu.
+function CardActions({ matched, showTarget, canMerge, busy, run, openTarget }: ActionsProps) {
+  const merge = (
+    <button type="button" className={matched ? styles.primary : styles.secondary} disabled={busy || !canMerge} onClick={() => run('merge')}>
+      {W.merge}
+    </button>
+  );
+  const approve = (
+    <button type="button" className={matched ? styles.secondary : styles.primary} disabled={busy} onClick={() => run('approve')}>
+      {W.approve}
+    </button>
+  );
+  const openMenu = (
+    <button type="button" className={styles.secondary} disabled={busy} onClick={openTarget}>
+      {W.mergeIntoMenu}
+    </button>
+  );
+  return (
+    <div className={styles.actions}>
+      {matched ? merge : approve}
+      {matched ? approve : showTarget ? merge : openMenu}
+      <button type="button" className={styles.danger} disabled={busy} onClick={() => run('spam')}>
+        {W.spam}
+      </button>
+    </div>
+  );
+}
+
+function LooksLike({ item }: { item: WwPending }) {
+  if (!item.suggestion) return null;
+  return (
+    <p className={styles.looks}>
+      <b>{W.looksLike}</b> {item.suggestion.title} ({seWwHelpedCount(item.suggestion.helpedCount).toLowerCase()})
+    </p>
+  );
+}
+
 function PendingCard({ item, first, listed, onDone }: { item: WwPending; first: boolean; listed: WwListedProblem[]; onDone: () => Promise<void> }) {
+  const matched = item.suggestion !== null;
   const [intoId, setIntoId] = useState(item.suggestion?.id ?? '');
-  const [showTarget, setShowTarget] = useState(item.suggestion !== null);
+  const [showTarget, setShowTarget] = useState(matched);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const run = async (action: Action) => {
@@ -58,39 +98,13 @@ function PendingCard({ item, first, listed, onDone }: { item: WwPending; first: 
       setBusy(false);
     }
   };
-  const merge = (
-    <button type="button" className={item.suggestion ? styles.primary : styles.secondary} disabled={busy || !intoId} onClick={() => void run('merge')}>
-      {W.merge}
-    </button>
-  );
-  const approve = (
-    <button type="button" className={item.suggestion ? styles.secondary : styles.primary} disabled={busy} onClick={() => void run('approve')}>
-      {W.approve}
-    </button>
-  );
   return (
     <article className={first ? styles.cardFirst : styles.card}>
       <p className={styles.problem}>{item.title}</p>
-      <span className={styles.meta}>{seWwPendingMeta(sentLabel(item.createdAt), item.attachedCount, item.suggestion !== null)}</span>
-      {item.suggestion ? (
-        <p className={styles.looks}>
-          <b>{W.looksLike}</b> {item.suggestion.title} ({seWwHelpedCount(item.suggestion.helpedCount).toLowerCase()})
-        </p>
-      ) : null}
+      <span className={styles.meta}>{seWwPendingMeta(sentLabel(item.createdAt), item.attachedCount, matched)}</span>
+      <LooksLike item={item} />
       {showTarget ? <MergeTarget item={item} listed={listed} intoId={intoId} setIntoId={setIntoId} /> : null}
-      <div className={styles.actions}>
-        {item.suggestion ? merge : approve}
-        {item.suggestion ? approve : null}
-        {!item.suggestion && !showTarget ? (
-          <button type="button" className={styles.secondary} disabled={busy} onClick={() => setShowTarget(true)}>
-            {W.mergeIntoMenu}
-          </button>
-        ) : null}
-        {!item.suggestion && showTarget ? merge : null}
-        <button type="button" className={styles.danger} disabled={busy} onClick={() => void run('spam')}>
-          {W.spam}
-        </button>
-      </div>
+      <CardActions matched={matched} showTarget={showTarget} canMerge={Boolean(intoId)} busy={busy} run={(a) => void run(a)} openTarget={() => setShowTarget(true)} />
       {message ? (
         <p role="alert" className={styles.error}>
           {message}
