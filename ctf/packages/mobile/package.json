@@ -46,6 +46,7 @@
     "expo-video": "^55.0.17",
     "expo-web-browser": "^55.0.16",
     "lucide-react-native": "^1.25.0",
+    "qrcode-generator": "2.0.4",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "react-native": "0.83.6",
