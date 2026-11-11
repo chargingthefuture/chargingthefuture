@@ -66,7 +66,7 @@ export async function listAnswers(viewerId: string, cardId: string): Promise<Ans
 export async function listPublicMessages(viewerId: string, cardId: string): Promise<MessageRow[]> {
   const result = await queryDb<RawMessage>(
     `SELECT id, author_id, body, created_at, edited_at, pair_low, pair_high FROM commons_item_messages
-      WHERE plugin = $2 AND item_id = $3 AND pair_low IS NULL AND (author_id = $1 OR (${visibleTo('author_id')}))
+      WHERE plugin = $2 AND item_id = $3 AND pair_low IS NULL AND moderation_status = 'accepted' AND (author_id = $1 OR (${visibleTo('author_id')}))
       ORDER BY created_at DESC LIMIT ${MESSAGES_SHOWN}`,
     [viewerId, ...item(cardId)],
   );
@@ -124,7 +124,7 @@ export async function insertMessage(cardId: string, authorId: string, body: stri
 export async function editOwnMessage(cardId: string, messageId: string, authorId: string, body: string): Promise<boolean> {
   const result = await queryDb(
     `UPDATE commons_item_messages SET body = $4, edited_at = NOW()
-      WHERE id::text = $1 AND plugin = $2 AND item_id = $3 AND author_id = $5 RETURNING id`,
+      WHERE id::text = $1 AND plugin = $2 AND item_id = $3 AND author_id = $5 AND moderation_status <> 'hidden' RETURNING id`,
     [messageId, ...item(cardId), body, authorId],
   );
   return (result.rowCount ?? 0) > 0;

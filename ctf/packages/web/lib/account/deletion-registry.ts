@@ -340,7 +340,6 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       del('announcement_reactions', 'user_id', 'Your reactions on announcements.'),
       del('feed_commons_last_seen', 'user_id', 'When you last opened the Commons (unread-badge state).'),
       del('announcement_membership_events', 'user_id', 'Your announcement membership events.'),
-      del('announcement_replies', 'author_user_id', 'Your replies to announcements.'),
       // The AI-answer inference log FK-cascades with the member's questions and answers (deleted
       // above), so this direct delete matches almost nothing — it exists so no log row carrying the
       // member's id can survive through any path the cascades miss.
@@ -648,7 +647,7 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     serviceScopeSupported: true,
     tables: [
       del('commons_item_answers', 'account_id', 'Your answers on cards.'),
-      del('commons_item_messages', 'author_id', 'The messages you wrote under cards.'),
+      del('commons_item_messages', 'author_id', 'The messages you wrote under cards and your replies to announcements.'),
       del('commons_item_messages', 'pair_low', 'Just us two conversations you were part of.'),
       del('commons_item_messages', 'pair_high', 'Just us two conversations you were part of.'),
       del('commons_item_pair_requests', 'user_low', 'Just us two requests you made or were asked.'),
