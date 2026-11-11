@@ -11,6 +11,7 @@ import type { SePrefs } from '../useSePrefs';
 import { SeFrameScrollContext } from '../frame-scroll';
 import { MarkedList } from './MarkedList';
 import { MeScreen, type MeUser } from './MeScreen';
+import { SavedCard } from './SavedCard';
 import { useMeProfile } from './meData';
 import { PromptsEditor } from './PromptsEditor';
 import { SettingsScreen } from './SettingsScreen';
@@ -75,5 +76,5 @@ export function MeTab({ t, user, prefs, onAskArchitect, onBack, saving, onOpen }
       />
     );
   }
-  return <MeScreen t={t} user={user} profile={profile} reading={prefs.reading} onReading={prefs.setReading} onView={setView} go={go} />;
+  return <MeScreen t={t} user={user} profile={profile} reading={prefs.reading} onReading={prefs.setReading} onView={setView} go={go} savedList={<SavedCard t={t} onOpen={onOpen} />} />;
 }

@@ -597,6 +597,7 @@ policies:
       - rate_limited
   - pluginId: today
     command: today.marks.list
+    command: today.saves.list
     version: 1.0.0
     requiredRoles:
       - member
@@ -620,6 +621,35 @@ policies:
       - actor_not_authenticated
       - account_restricted
       - invalid_mark
+  - pluginId: today
+    command: today.saves.change
+    version: 1.0.0
+    requiredRoles:
+      - member
+    attributePolicies:
+      tenancy: same_workspace
+      minUnlockTier: signed_in
+      readsOnly: false
+      csrf: required
+      relationship: own_rows_only
+    consentRequirements:
+      scopes:
+        - platform_terms
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - actor_not_authenticated
+      - account_restricted
+      - csrf_header_missing
+      - invalid_save
+      - saves_full
+      - rate_limited
   - pluginId: today
     command: today.renew_notices.run
     version: 1.0.0

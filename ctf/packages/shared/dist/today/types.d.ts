@@ -27,6 +27,7 @@ export type SeTodayCard = {
     newComments?: number;
     sample?: boolean;
     mine?: SeTodayCardMine;
+    saved?: boolean;
     goal?: SeTodayGoal;
 };
 export type SeTodayCardMine = {
@@ -57,10 +58,13 @@ export type SeTodayBroadcast = {
     live: boolean;
     title: string | null;
     href: string;
+    host?: string | null;
+    startedAtIso?: string | null;
 };
 export type SeToday = {
     generatedAtIso: string;
     presence: number | null;
+    storiesTomorrow?: number | null;
     daysWon: {
         total: number;
         thisWeek: number;

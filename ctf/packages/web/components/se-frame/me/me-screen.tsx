@@ -21,6 +21,7 @@ import {
 } from '@ctf/shared';
 import type { ShellCurrentUser } from '../../community-shell/shell-types';
 import { SeAvatar } from '../../shared/se-avatar';
+import { SavedCard } from './saved-card';
 import { useCredits } from './use-credits';
 import type { MeProfileState } from './use-me-profile';
 import styles from './me.module.css';
@@ -222,6 +223,7 @@ export function MeScreen({ currentUser, profile, reading, onReading, onOpen, sav
           {W.hidden}
         </button>
       </div>
+      <SavedCard />
       <Tools />
       <label className={styles.switchRow}>
         <span>{SE_SETTINGS_WORDS.emojiRain}</span>

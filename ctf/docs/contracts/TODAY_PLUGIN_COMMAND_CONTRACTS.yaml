@@ -2,7 +2,7 @@ contracts:
   - pluginId: today
     command: today.read
     version: 1.0.0
-    description: "Read everything the 3.1 Today screen draws, in one answer (GET /api/today), with the member's own Done and Not for me marks (today_card_marks) applied: Not for me never comes back; done stays the day it was marked (markedDoneAtIso) and leaves from the member's next day; a done blog story with a newer readable Fireside comment comes back with newComments. dayStart is the start of the member's own day."
+    description: "Read everything the 3.1 Today screen draws, in one answer (GET /api/today). Touches the member's own member_presence row (at most once a minute) and answers presence, the number of signed-in members whose last read was in the last 10 minutes (one COUNT, never names), and storiesTomorrow, how many stories open at the next midnight. Stories and replays carry saved from today_card_saves. The member's own Done and Not for me marks (today_card_marks) are applied: Not for me never comes back; done stays the day it was marked (markedDoneAtIso) and leaves from the member's next day; a done blog story with a newer readable Fireside comment comes back with newComments. dayStart is the start of the member's own day."
     inputSchema:
       dayStart:
         type: string
@@ -68,6 +68,9 @@ contracts:
       - account_restrictions
       - today_card_windows
       - today_card_marks
+      - today_card_saves
+      - member_presence
+      - beacon_events
       - fireside_threads
       - fireside_comments
       - notifications
@@ -550,6 +553,47 @@ contracts:
     dataAccess:
       - today_card_marks
     purpose: card_marks
+    command: today.saves.list
+    version: 1.0.0
+    description: "List the member's own Save for later cards, newest first, up to 200, each with card id, kind, title, address and when it was saved, for Saved in Me (GET /api/today/saves)."
+    inputSchema: {}
+    outputSchema:
+      ok:
+        type: boolean
+      saves:
+        type: array
+    dataAccess:
+      - today_card_saves
+    purpose: card_saves
+    retentionClass: none_read_only
+    idempotency: true
+  - pluginId: today
+    command: today.saves.change
+    version: 1.0.0
+    description: "Save a story or replay from Today for later ({ cardId, saved: true, kind story or replay, title up to 300, href inside the app or https }), or take it off ({ cardId, saved: false }). Saving does not mark the card done and does not change how long it stays on Today. At most 200 saved per member (409 saves_full). Scoped to the member's own rows. 300 an hour. (POST /api/today/saves)."
+    inputSchema:
+      cardId:
+        type: string
+      saved:
+        type: boolean
+      kind:
+        type: string
+        enum: [story, replay]
+      title:
+        type: string
+        maxLength: 300
+      href:
+        type: string
+        maxLength: 1000
+    outputSchema:
+      ok:
+        type: boolean
+      result:
+        type: string
+        enum: [saved, removed]
+    dataAccess:
+      - today_card_saves
+    purpose: card_saves
     retentionClass: until_account_deletion
     idempotency: true
   - pluginId: today

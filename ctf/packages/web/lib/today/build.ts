@@ -3,7 +3,7 @@ import { reportError } from 'lib/observability/report';
 import type { TodayViewer } from './card';
 import { goalAsks, relayAsks, rideAsks } from './sources-asks';
 import { cohortOffers, placeOffers } from './sources-offers';
-import { blogStories } from './sources-blog';
+import { blogStories, storiesTomorrow } from './sources-blog';
 import { dailyPuzzleCard } from './sources-daily';
 import { announcementStories, inviteStories, surveyCard, whatWorksStory } from './sources-stories';
 import { broadcast, missionCard, moodCard, numbersCard, wantedCard } from './sources-live';
@@ -16,7 +16,8 @@ import { seApplyMutes } from '@ctf/shared';
 import { mineCards } from './sources-mine';
 import { startOfTodayIso } from './card';
 import { applyLifetimes } from './apply-lifetimes';
-import { applyMemberMarks } from './apply-marks';
+import { applyMemberMarks, applyMemberSaves } from './apply-marks';
+import { readPresence } from './presence';
 
 // The Today read. Every source runs at once and on its own: one that fails leaves its cards out,
 // is reported, and is named in `unavailable` so the screen can say what is missing instead of
@@ -68,7 +69,7 @@ export async function buildToday(viewer: TodayViewer, now = new Date(), dayStart
   const sources = todaySources(viewer, now);
 
   const week = weekTalks(now);
-  const [cardLists, live, room, weekList, weavers, daysWon, mutes] = await Promise.all([
+  const [cardLists, live, room, weekList, weavers, daysWon, mutes, presence, tomorrow] = await Promise.all([
     Promise.all(sources.map((source) => settle(source.name, source.read, unavailable))),
     settle<SeTodayBroadcast | null>('beacon', () => broadcast(), unavailable),
     settle<SeTodayRoom>('chyme', () => mainRoom(nextTalk(week), true), unavailable),
@@ -79,18 +80,22 @@ export async function buildToday(viewer: TodayViewer, now = new Date(), dayStart
     settle('days-won', () => readDaysWon(now), unavailable),
     // A member's own mutes; a failed read shows every card rather than none.
     settle('mutes', () => listMutes(viewer.userId), []),
+    // Reported but never named: the pill is simply not shown when the count is unknown.
+    settle('presence', () => readPresence(viewer.userId), []),
+    settle('stories-tomorrow', () => storiesTomorrow(now), []),
   ]);
 
   const mineIds = new Set((cardLists[sources.length - 1] ?? []).map((card) => card.id));
   const lasting = await applyLifetimes(cardLists.flatMap((list) => list ?? []), viewer, mineIds, now);
-  const marked = await applyMemberMarks(viewer, lasting, dayStartIso);
+  const marked = await applyMemberSaves(viewer, await applyMemberMarks(viewer, lasting, dayStartIso));
   const cards = seApplyMutes(marked, mutes ?? [])
     .sort((a, b) => b.createdAtIso.localeCompare(a.createdAtIso))
     .slice(0, TODAY_MAX_CARDS);
 
   return {
     generatedAtIso: now.toISOString(),
-    presence: null,
+    presence: presence ?? null,
+    storiesTomorrow: tomorrow ?? null,
     daysWon: daysWon ?? null,
     broadcast: live ?? null,
     rooms: [room, weavers].filter((item): item is SeTodayRoom => Boolean(item)),

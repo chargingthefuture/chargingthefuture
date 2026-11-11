@@ -655,6 +655,8 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       del('commons_item_pair_requests', 'user_high', 'Just us two requests you made or were asked.'),
       del('today_card_windows', 'owner_user_id', 'The deadlines, renewals and closing outcomes of your own asks and offers on Today.'),
       del('today_card_marks', 'account_id', 'The Today cards you marked done or Not for me.'),
+      del('today_card_saves', 'account_id', 'The stories and replays you saved for later from Today.'),
+      del('member_presence', 'account_id', 'When you last opened Today, used only to count how many members are here.'),
     ],
   },
   {

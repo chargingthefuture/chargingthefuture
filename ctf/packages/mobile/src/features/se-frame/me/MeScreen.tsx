@@ -201,9 +201,11 @@ type MeScreenProps = {
   go: Go;
   // Me → Saved is built separately; it goes first in the row, before Read and Hidden.
   saved?: ReactNode;
+  // The Saved list under that row, from MeTab, which can open what a saved card links to.
+  savedList?: ReactNode;
 };
 
-export function MeScreen({ t, user, profile, reading, onReading, onView, go, saved }: MeScreenProps) {
+export function MeScreen({ t, user, profile, reading, onReading, onView, go, saved, savedList }: MeScreenProps) {
   const s = useMemo(() => makeMeStyles(t), [t]);
   return (
     <View style={s.stack}>
@@ -218,6 +220,7 @@ export function MeScreen({ t, user, profile, reading, onReading, onView, go, sav
           </TouchableOpacity>
         ))}
       </View>
+      {savedList ?? null}
       <Tools s={s} go={go} />
       <View style={s.switchRow}>
         <Text style={s.switchLabel}>{SE_SETTINGS_WORDS.emojiRain}</Text>

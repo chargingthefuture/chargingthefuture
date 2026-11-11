@@ -3,7 +3,8 @@
 // help, I know someone, I'd like this, It helped me too) records the answer and opens the sheet;
 // other buttons open the item. Every other card expands in place as before. The ••• menu holds Copy
 // link, Not for me (the card leaves Today on this device) and, on a card with an author, Mute and
-// Report. The timeline dot marks it done, and tapping it again marks it not done.
+// Report. The timeline dot marks it done, and tapping it again marks it not done. A story or replay
+// carries Save for later and Hide as icons in its button row, and the Mood card its five faces.
 
 import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -12,7 +13,9 @@ import * as Clipboard from 'expo-clipboard';
 import {
   SE_CARD_WORDS,
   SE_MUTE_WORDS,
+  seCanSave,
   seCardAnswerKind,
+  seIsMoodCard,
   seCardOpensSheet,
   seNewCommentsLine,
   type SeCardAnswerKind,
@@ -25,6 +28,7 @@ import { reportError } from '../../../observability/report';
 import { SE_FONT } from '../fonts';
 import { QuestionsPanel, isQuestionsCard } from './QuestionsPanel';
 import { CardSheet } from './CardSheet';
+import { MoodFaces, SaveHideIcons } from './CardQuickActions';
 import { GoalCard } from './GoalCard';
 import { cardPath } from './useCardConversation';
 
@@ -91,8 +95,8 @@ function CardMenu({ s, card, canReport, onHide, onMute }: MenuProps) {
 
 type ActionsProps = { s: Styles; card: SeTodayCard; onOpenLink: (_href: string) => void; onAnswer: ((_kind: SeCardAnswerKind) => void) | null };
 
-function CardActions({ s, card, onOpenLink, onAnswer }: ActionsProps) {
-  if (card.actions.length === 0) return null;
+function CardActions({ s, card, onOpenLink, onAnswer, trailing }: ActionsProps & { trailing?: React.ReactNode }) {
+  if (card.actions.length === 0 && !trailing) return null;
   return (
     <View style={s.actions}>
       {card.actions.map((item) => {
@@ -108,6 +112,7 @@ function CardActions({ s, card, onOpenLink, onAnswer }: ActionsProps) {
           </TouchableOpacity>
         );
       })}
+      {trailing}
     </View>
   );
 }
@@ -165,6 +170,18 @@ function CardText({ s, card, open, opensSheet, onPress }: TextProps) {
   );
 }
 
+// Under the text: the Mood faces on the Mood card, then the buttons, with Save and Hide on a story
+// or replay.
+function CardFoot({ t, onSave, onHide, ...rest }: ActionsProps & { t: SeThemeTokens; onSave?: () => void; onHide: () => void }) {
+  const trailing = onSave && seCanSave(rest.card) ? <SaveHideIcons t={t} card={rest.card} onSave={onSave} onHide={onHide} /> : undefined;
+  return (
+    <>
+      {seIsMoodCard(rest.card) ? <MoodFaces t={t} /> : null}
+      <CardActions {...rest} trailing={trailing} />
+    </>
+  );
+}
+
 type Sheet = { firstAnswer: SeCardAnswerKind | null } | null;
 
 export function TodayCard({
@@ -175,6 +192,7 @@ export function TodayCard({
   onToggleDone,
   onHide,
   onMute,
+  onSave,
   onOpenLink,
   onChanged,
 }: {
@@ -186,6 +204,8 @@ export function TodayCard({
   onToggleDone: () => void;
   onHide: () => void;
   onMute?: () => void;
+  // Save for later on a story or replay.
+  onSave?: () => void;
   onOpenLink: (_href: string) => void;
   // A card that changes something (a 21 Questions answer) asks Today to read again.
   onChanged?: () => void;
@@ -230,7 +250,7 @@ export function TodayCard({
       {menu ? <CardMenu s={s} card={card} canReport={canReport} onHide={onHide} onMute={onMute} /> : null}
       <CardText s={s} card={card} open={open} opensSheet={opensSheet} onPress={() => (opensSheet ? setSheet({ firstAnswer: null }) : setOpen((value) => !value))} />
       {isQuestionsCard(card) ? <QuestionsPanel t={t} card={card} open={open} onOpen={() => setOpen(true)} onChanged={onChanged ?? noop} /> : null}
-      <CardActions s={s} card={card} onOpenLink={onOpenLink} onAnswer={opensSheet ? (kind) => setSheet({ firstAnswer: kind }) : null} />
+      <CardFoot t={t} s={s} card={card} onOpenLink={onOpenLink} onAnswer={opensSheet ? (kind) => setSheet({ firstAnswer: kind }) : null} onSave={onSave} onHide={onHide} />
       {sheet ? (
         <CardSheet t={t} card={card} viewerId={viewerId} firstAnswer={sheet.firstAnswer} onClose={() => setSheet(null)} onOpenLink={onOpenLink} onChanged={onChanged} />
       ) : null}
@@ -254,7 +274,7 @@ function makeStyles(t: SeThemeTokens) {
     title: { fontSize: 17, lineHeight: 22, color: t.ink, fontFamily: SE_FONT.sansBold },
     body: { fontSize: 14, lineHeight: 20, color: t.soft, fontFamily: SE_FONT.sans },
     newComments: { fontSize: 12, color: t.kind.story, fontFamily: SE_FONT.sansBold },
-    actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    actions: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 },
     action: {
       minHeight: 44,
       paddingHorizontal: 14,

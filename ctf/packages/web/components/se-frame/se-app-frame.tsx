@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useState } from 'react';
-import { SE_AVENHOOD, SE_AVENHOOD_DEFINITION, SE_TABS, SE_TEXT_SIZE_SCALE, type SeNewKind, type SeTab } from '@ctf/shared';
+import { SE_AVENHOOD, SE_AVENHOOD_DEFINITION, SE_TABS, SE_TEXT_SIZE_SCALE, sePresenceLine, type SeNewKind, type SeTab } from '@ctf/shared';
 import type { ShellCurrentUser } from '../community-shell/shell-types';
 import { SeTabBar } from './se-tab-bar';
 import { TodayScreen } from './today/today-screen';
@@ -44,24 +44,36 @@ function ScreenHeader({ title }: { title: string }) {
   );
 }
 
-// "Today in the Avenhood", with the word itself a button that opens its definition in place.
-function TodayHeader() {
+// "Today in the Avenhood", with the word itself a button that opens its definition in place, and
+// beside it how many members are here ("3 Avens here"), hidden while that is unknown.
+function TodayHeader({ presence }: { presence: number | null }) {
   const [open, setOpen] = useState(false);
+  const here = sePresenceLine(presence);
   return (
     <header className={styles.header}>
-      <span className={styles.eyebrow}>{TODAY_DATE.format(new Date())}</span>
-      <h1 className={styles.title}>
-        Today in the{' '}
-        <button
-          type="button"
-          className={styles.termButton}
-          aria-expanded={open}
-          aria-controls="se-avenhood-definition"
-          onClick={() => setOpen((value) => !value)}
-        >
-          {SE_AVENHOOD}
-        </button>
-      </h1>
+      <div className={styles.todayHeadRow}>
+        <span className={styles.todayHeadText}>
+          <span className={styles.eyebrow}>{TODAY_DATE.format(new Date())}</span>
+          <h1 className={styles.title}>
+            Today in the{' '}
+            <button
+              type="button"
+              className={styles.termButton}
+              aria-expanded={open}
+              aria-controls="se-avenhood-definition"
+              onClick={() => setOpen((value) => !value)}
+            >
+              {SE_AVENHOOD}
+            </button>
+          </h1>
+        </span>
+        {here ? (
+          <span className={styles.presence}>
+            <span className={styles.presenceDot} aria-hidden="true" />
+            {here}
+          </span>
+        ) : null}
+      </div>
       {open ? (
         <p id="se-avenhood-definition" className={styles.definition}>
           {SE_AVENHOOD_DEFINITION}
@@ -97,11 +109,12 @@ type TabScreenProps = FrameProps & {
 
 function TabScreen({ tab, currentUser, isAdmin, prefs, newKind, onAskArchitect, onBack, onClose, saving }: TabScreenProps) {
   const title = TAB_TITLES[tab];
+  const [presence, setPresence] = useState<number | null>(null);
   return (
     <>
-      {tab === 'today' ? <TodayHeader /> : null}
+      {tab === 'today' ? <TodayHeader presence={presence} /> : null}
       {title ? <ScreenHeader title={title} /> : null}
-      {tab === 'today' ? <TodayScreen accountId={currentUser.userId} /> : null}
+      {tab === 'today' ? <TodayScreen accountId={currentUser.userId} onPresence={setPresence} /> : null}
       {tab === 'new' ? <NewScreen key={newKind} initialKind={newKind} onClose={onClose} /> : null}
       {tab === 'me' ? (
         <MeTab currentUser={currentUser} isAdmin={isAdmin} prefs={prefs} onAskArchitect={onAskArchitect} onBack={onBack} saving={saving} />

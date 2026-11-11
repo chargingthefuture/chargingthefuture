@@ -7,6 +7,7 @@ import {
   SE_AVENHOOD,
   SE_AVENHOOD_DEFINITION,
   SE_TEXT_SIZE_SCALE,
+  sePresenceLine,
   seReadableTokens,
   seTheme,
   type SeNewKind,
@@ -78,6 +79,7 @@ function SeAppFrameBody({ onOpen }: FrameProps) {
   const { switchTo, saving, error } = useInterfaceVersion();
   const [tab, setTab] = useState<SeTab>('today');
   const [newKind, setNewKind] = useState<SeNewKind>('ask');
+  const [presence, setPresence] = useState<number | null>(null);
   const rooms = useSeRooms();
   const { minimize } = rooms;
   useFrameBack(tab, setTab, rooms.shown !== null, minimize);
@@ -106,7 +108,7 @@ function SeAppFrameBody({ onOpen }: FrameProps) {
       <ScrollView ref={scrollRef} style={rooms.shown ? s.hidden : null}>
         <ScaledScreen scale={SE_TEXT_SIZE_SCALE[reading.textSize]} style={s.screen}>
           <UnlockBanner t={t} onOpenUnlock={() => onOpen('unlock')} />
-          <FrameHeader s={s} tab={tab} />
+          <FrameHeader s={s} tab={tab} presence={presence} />
 
           <TabScreen
             t={t}
@@ -119,6 +121,7 @@ function SeAppFrameBody({ onOpen }: FrameProps) {
             onClose={() => select('today')}
             saving={saving}
             onOpen={onOpen}
+            onPresence={setPresence}
           />
 
           {[error, prefs.error].filter(Boolean).map((message) => (
@@ -141,6 +144,7 @@ type Styles = ReturnType<typeof makeStyles>;
 type TabScreenProps = {
   t: SeThemeTokens;
   tab: SeTab;
+  onPresence: (_count: number | null) => void;
   user: { id: string; username?: string | null; isAdmin?: boolean } | null;
   prefs: SePrefs;
   newKind: SeNewKind;
@@ -151,17 +155,18 @@ type TabScreenProps = {
   onOpen: (_key: FeatureKey) => void;
 };
 
-function TabScreen({ t, tab, user, prefs, newKind, onAskArchitect, onBack, onClose, saving, onOpen }: TabScreenProps) {
+function TabScreen({ t, tab, onPresence, user, prefs, newKind, onAskArchitect, onBack, onClose, saving, onOpen }: TabScreenProps) {
   if (tab === 'me') {
     return user ? <MeTab t={t} user={user} prefs={prefs} onAskArchitect={onAskArchitect} onBack={onBack} saving={saving} onOpen={onOpen} /> : null;
   }
-  if (tab === 'today') return user ? <TodayScreen t={t} accountId={user.id} onOpen={onOpen} /> : null;
+  if (tab === 'today') return user ? <TodayScreen t={t} accountId={user.id} onOpen={onOpen} onPresence={onPresence} /> : null;
   if (tab === 'new') return <NewScreen key={newKind} t={t} initialKind={newKind} onOpen={onOpen} onClose={onClose} />;
   if (tab === 'activity') return <ActivityScreen t={t} onOpen={onOpen} />;
   return <PeopleScreen t={t} onOpen={onOpen} onToday={onClose} />;
 }
 
-function FrameHeader({ s, tab }: { s: Styles; tab: SeTab }) {
+// Today's title row carries how many members are here ("3 Avens here"), hidden while unknown.
+function FrameHeader({ s, tab, presence }: { s: Styles; tab: SeTab; presence: number | null }) {
   const [definitionOpen, setDefinitionOpen] = useState(false);
   // Me has no title, as on the web: the member's own picture and handle head it. + New is a sheet
   // with its own heading. People heads itself, with the number listed beside its title.
@@ -175,20 +180,31 @@ function FrameHeader({ s, tab }: { s: Styles; tab: SeTab }) {
       </View>
     );
   }
+  const here = sePresenceLine(presence);
   return (
     <View style={s.header}>
-      <Text style={s.eyebrow}>{TODAY_DATE.format(new Date())}</Text>
-      <Text accessibilityRole="header" style={s.title}>
-        Today in the{' '}
-        <Text
-          accessibilityRole="button"
-          accessibilityState={{ expanded: definitionOpen }}
-          onPress={() => setDefinitionOpen((value) => !value)}
-          style={s.term}
-        >
-          {SE_AVENHOOD}
-        </Text>
-      </Text>
+      <View style={s.todayRow}>
+        <View style={s.todayText}>
+          <Text style={s.eyebrow}>{TODAY_DATE.format(new Date())}</Text>
+          <Text accessibilityRole="header" style={s.title}>
+            Today in the{' '}
+            <Text
+              accessibilityRole="button"
+              accessibilityState={{ expanded: definitionOpen }}
+              onPress={() => setDefinitionOpen((value) => !value)}
+              style={s.term}
+            >
+              {SE_AVENHOOD}
+            </Text>
+          </Text>
+        </View>
+        {here ? (
+          <View style={s.presence}>
+            <View style={s.presenceDot} />
+            <Text style={s.presenceLabel}>{here}</Text>
+          </View>
+        ) : null}
+      </View>
       {definitionOpen ? <Text style={s.definition}>{SE_AVENHOOD_DEFINITION}</Text> : null}
     </View>
   );
@@ -203,6 +219,11 @@ function makeStyles(t: SeThemeTokens) {
     header: { gap: 2 },
     eyebrow: { fontSize: 13, color: t.soft, fontFamily: SE_FONT.sans },
     title: { fontSize: 30, lineHeight: 33, color: t.ink, fontFamily: SE_FONT.serif },
+    todayRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', gap: 10 },
+    todayText: { flex: 1, gap: 2 },
+    presence: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 7, paddingHorizontal: 12, borderRadius: 999, backgroundColor: t.card, borderWidth: 1, borderColor: t.hair },
+    presenceDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: t.live },
+    presenceLabel: { fontSize: 13, color: t.ink, fontFamily: SE_FONT.sansSemi },
     term: { textDecorationLine: 'underline', textDecorationStyle: 'dotted' },
     definition: {
       marginTop: 8,
