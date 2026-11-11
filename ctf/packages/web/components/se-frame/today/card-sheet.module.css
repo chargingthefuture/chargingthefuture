@@ -446,3 +446,12 @@
   font-weight: 600;
   cursor: pointer;
 }
+
+/* The sign-in under a card opened on signed-out Today (guest-sheet.tsx). */
+.guestSignIn {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  text-decoration: none;
+}
