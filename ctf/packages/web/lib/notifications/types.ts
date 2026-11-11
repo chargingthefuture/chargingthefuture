@@ -24,9 +24,14 @@ export type Notification = {
   // What the notice is about, as its producer recorded it (an activity id, a post id, a card and
   // the member who asked). Activity uses it to answer a notice in place.
   targetRef: string | null;
+  // On a day-14 notice, how it was answered after it was sent ('kept' up or 'closed'); null on any
+  // other notice and on one still waiting.
+  answer: NotificationAnswer | null;
   isRead: boolean;
   createdAtIso: string;
 };
+
+export type NotificationAnswer = 'kept' | 'closed';
 
 // Per-member device-push opt-in. The in-app feed is never gated by these — only device push is.
 export type NotificationPreferences = {

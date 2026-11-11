@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { SE_ACTIVITY_ICON_KIND, SE_ACTIVITY_ICON_PATHS, SE_ACTIVITY_WORDS as W, seActivityIcon, seActivityView, seActivityWhen, type SeActivityItem } from '@ctf/shared';
+import { SE_ACTIVITY_ICON_KIND, SE_ACTIVITY_ICON_PATHS, SE_ACTIVITY_WORDS as W, seActivityIcon, seActivityOutcome, seActivityView, seActivityWhen, type SeActivityItem } from '@ctf/shared';
 import { NeedCard } from './need-card';
 import { useActivity } from './use-activity';
 import styles from './activity.module.css';
@@ -13,6 +13,7 @@ import styles from './activity.module.css';
 
 function RowBody({ item }: { item: SeActivityItem }) {
   const icon = seActivityIcon(item.notificationType);
+  const outcome = seActivityOutcome(item);
   return (
     <>
       <span className={styles.icon} style={{ background: `color-mix(in srgb, var(--se-kind-${SE_ACTIVITY_ICON_KIND[icon]}) 20%, var(--se-card))` }}>
@@ -22,6 +23,7 @@ function RowBody({ item }: { item: SeActivityItem }) {
       </span>
       <span className={styles.rowText}>
         <span className={styles.summary}>{item.summary}</span>
+        {outcome ? <span className={styles.outcome}>{outcome}</span> : null}
         <span className={styles.meta}>{seActivityWhen(item.createdAtIso)}</span>
       </span>
     </>

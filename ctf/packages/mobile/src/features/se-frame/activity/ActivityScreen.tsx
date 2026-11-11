@@ -9,6 +9,7 @@ import {
   SE_ACTIVITY_ICON_PATHS,
   SE_ACTIVITY_WORDS as W,
   seActivityIcon,
+  seActivityOutcome,
   seActivityTint,
   seActivityView,
   seActivityWhen,
@@ -25,6 +26,7 @@ type Styles = ReturnType<typeof makeStyles>;
 
 function Row({ s, t, item, onOpen }: { s: Styles; t: SeThemeTokens; item: SeActivityItem; onOpen: (_item: SeActivityItem) => void }) {
   const icon = seActivityIcon(item.notificationType);
+  const outcome = seActivityOutcome(item);
   return (
     <TouchableOpacity accessibilityRole={item.linkPath ? 'link' : 'button'} onPress={() => onOpen(item)} style={s.row}>
       <View style={[s.icon, { backgroundColor: seActivityTint(t, icon) }]}>
@@ -34,6 +36,7 @@ function Row({ s, t, item, onOpen }: { s: Styles; t: SeThemeTokens; item: SeActi
       </View>
       <View style={s.rowText}>
         <Text style={s.summary}>{item.summary}</Text>
+        {outcome ? <Text style={s.outcome}>{outcome}</Text> : null}
         <Text style={s.when}>{seActivityWhen(item.createdAtIso)}</Text>
       </View>
     </TouchableOpacity>
@@ -98,6 +101,7 @@ function makeStyles(t: SeThemeTokens) {
     icon: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
     rowText: { flex: 1, gap: 2 },
     summary: { fontSize: 14, lineHeight: 20, color: t.ink, fontFamily: SE_FONT.sans },
+    outcome: { fontSize: 13, lineHeight: 18, color: t.ink, fontFamily: SE_FONT.sansSemi },
     when: { fontSize: 12, color: t.soft, fontFamily: SE_FONT.sans },
     text: { fontSize: 15, lineHeight: 21, color: t.soft, fontFamily: SE_FONT.sans },
     end: { paddingTop: 4, fontSize: 13, lineHeight: 18, textAlign: 'center', color: t.soft, fontFamily: SE_FONT.sans },

@@ -10,7 +10,9 @@ contracts:
     description: >-
       Read the requesting member's own notifications feed (newest first) and unread count. Each item
       carries id, sourcePlugin, notificationType, category, summary, linkPath, targetRef (what the notice
-      is about, as its producer recorded it, or null), isRead and createdAtIso.
+      is about, as its producer recorded it, or null), answer (on a day-14 notice, kept or closed when its
+      card was kept up or closed after the notice, read from today_card_windows; else null), isRead and
+      createdAtIso.
     inputSchema:
       limit:
         type: number
@@ -23,6 +25,7 @@ contracts:
         type: number
     dataAccess:
       - notifications
+      - today_card_windows
     purpose: member_self_service
     retentionClass: derived_short_lived
     idempotency: true

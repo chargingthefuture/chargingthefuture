@@ -349,7 +349,7 @@ everything. Notifications are quiet unless you turn them up in Me." at the end. 
 anywhere. Agree shows "Agreed. Open the card in Today to talk just you two." and the card's Just us
 two conversation is open; Confirm shows "Confirmed." and the activity is confirmed in Recurring
 Activity. Step 3 opens the reply; on the second visit the answered request and invite sit in Today as
-plain rows. Not now on a request moves it out of the top straight away. A notice from an earlier
+plain rows. Not now on a request moves it out of the top straight away. On a day-14 notice, tap "Keep it up for 14 more days" and reload: the notice is a plain row with "Kept up on Today for 14 more days." and no button; closing an ask from its card does the same with "Closed. It has left Today." A notice from an earlier
 day is under "Earlier". With nothing recorded, Activity reads "Nothing yet. Replies, credits sent to
 you and confirmations show here."
 **Result:** web ☐ android ☐ — notes:

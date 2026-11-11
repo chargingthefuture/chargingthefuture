@@ -65,7 +65,7 @@ None. Notifications are member self-service; there are no admin governance actio
 
 ## 3) API Surface and Route Map
 
-- `GET /api/notifications` — the member's own feed (newest first) + unread count; each item carries its `targetRef` (since 2026-11-11, so Activity can answer a notice in place). `?limit` optional
+- `GET /api/notifications` — the member's own feed (newest first) + unread count; each item carries its `targetRef` (since 2026-11-11, so Activity can answer a notice in place) and `answer`: on a day-14 notice (`today.renew`), `kept` or `closed` when its card's `today_card_windows` row shows it was kept up or closed after the notice was sent, else null. `?limit` optional
   (capped at 50). Always available to a signed-in member.
 - `POST /api/notifications/:notificationId/read` — mark one own notification read (idempotent; 404
   when no owned row matches). Hub-style CSRF (`x-ctf-csrf: '1'`).
@@ -168,6 +168,7 @@ No seed yet. A follow-up seed can insert a couple of sample notifications for a 
   push now follows the 3.1 rows for a member on 3.1 and the categories for a member on 3.0, and is
   held in quiet hours. The browser subscription helpers moved to
   `components/notifications/device-push.ts` so 3.1 Settings and the 3.0 panel share them.
+- 2026-11-11: **A day-14 notice says whether it was answered.** `listNotifications` left-joins `today_card_windows` on the card id in a `today.renew` notice's `target_ref` (the part before `@`, same owner) and returns `answer` `kept` or `closed` when `renewed_at` or `closed_at` is later than the notice (`lib/notifications/renew-answer.ts`). Activity uses it so the keep-up never comes back on a notice already dealt with. No table changed.
 - 2026-11-11: **The feed carries each notice's target.** `GET /api/notifications` now returns `targetRef`
   (the stored `target_ref`) on every item, and a Just us two request on a Today card
   (`today.card.pair_request`) is written with `targetRef` `<card id>|<asker id>`, which also keeps one
