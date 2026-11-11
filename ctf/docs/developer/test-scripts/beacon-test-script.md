@@ -154,22 +154,44 @@ logged for retry.
 commands are deny-by-default).
 **Result:** web ☐ mobile ☐ — notes:
 
-### BCN-A1b · Delete a draft (and confirm broadcast history cannot be deleted)
-**Role:** admin · **Surfaces:** web (admin surface)
+### BCN-A1b · Delete a draft or an ended broadcast (a live one cannot be deleted)
+**Role:** admin · **Surfaces:** web (admin surface) and Android (Beacon Admin)
 **Steps:**
 1. Open `/admin/beacon` and create a throwaway draft, e.g. "Delete me".
 2. In Event history, find that row and press `Delete`. The button should change to `Confirm delete`
-   with a `Cancel` beside it.
+   with a `Cancel` beside it, and a red line under the row reads "Deletes this draft. It cannot be
+   undone."
 3. Press `Cancel` first — the row must still be there, untouched.
 4. Press `Delete` again, then `Confirm delete`.
-5. Now look at any `ended` event in the same list.
-**Expected:** After step 4 the draft disappears from Event history and the page shows "Draft deleted."
-A single click never deletes anything — step 3 proves the first click only arms it. In step 5 the
-`ended` event has **no** Delete button at all: broadcast history is not deletable from the app. If you
-call `DELETE /api/beacon/<id>` directly against a `live` or `ended` event it must come back 409
-(`beacon_conflict`) and leave the row in place, and that refused attempt is written to
-`beacon_events_admin_audit_trail` with `policy_status = 'deny'`. A successful draft delete is written
-there too, with `policy_status = 'allow'`.
+5. Run a short test broadcast and end it. Once it shows in Event history as `ended`, press `Delete`.
+   The red line reads "Deletes this broadcast and its replay from the app, Today, the podcast feed
+   and the Commons. It cannot be undone." Press `Confirm delete`.
+6. While an event is `live`, look at its row.
+**Expected:** After step 4 the draft disappears and the page shows "Event deleted." A single click
+never deletes anything — step 3 proves the first click only arms it. After step 5 the broadcast is
+gone from Event history, from the member page's replays, from Today, from the podcast feed, and its
+"live now" and replay posts are gone from the Commons. In step 6 the live row has **no** Delete
+button. Calling `DELETE /api/beacon/<id>` directly against a `live` event comes back 409
+(`beacon_conflict`, "This broadcast is live. End it first, then delete it.") and leaves the row in
+place; that refused attempt is written to `beacon_events_admin_audit_trail` with
+`policy_status = 'deny'`. A successful delete is written there too, with `policy_status = 'allow'`
+and the title in its metadata.
+**Result:** web ☐ mobile ☐ — notes:
+
+### BCN-A1b2 · Rename an event before, during and after a broadcast
+**Role:** admin · **Surfaces:** web (admin surface) and Android (Beacon Admin)
+**Steps:**
+1. Create a draft with a typo in the title. In Event history press `Rename`, fix it, press `Save`
+   (or Enter).
+2. Go live with it, then press `Rename` on its row again and change the title.
+3. End it, then rename it once more.
+4. Press `Rename` and then `Cancel`.
+**Expected:** Each save shows "Event renamed." and the row shows the new title. In step 2 a viewer on
+`/apps/beacon` sees the new title on their next refresh; in step 3 the replay on the member page and
+on Today carries the new title. A "live now" post already in the Commons keeps its original words.
+Step 4 leaves the title unchanged. An empty title cannot be saved (`Save` is disabled), and the route
+answers 400 for an empty title or one over 160 characters. Each rename writes a
+`beacon.event.rename` row with the previous and new title.
 **Result:** web ☐ mobile ☐ — notes:
 
 ### BCN-A1c · Event history shows Eastern Time and recovers a missed recording

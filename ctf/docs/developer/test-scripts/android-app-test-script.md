@@ -101,6 +101,13 @@ second test member in the same room.
 6. Tap **End broadcast**. After a minute, the event's Log on the web admin page shows the recording
    started and the recording file ready, and the replay has picture and sound.
 7. As a non-admin, the **Go live** card is not shown.
+8. As an admin, open **Beacon Admin** and find a row in **Event history**. Tap **Rename**, change
+   the title and tap **Save**: expect "Event renamed." and the new title in the row (and on the web
+   admin page after a refresh). Rename works on a draft, the live event and an ended one. On an ended
+   test event tap **Delete**: expect **Confirm delete**, **Cancel**, and the red line "Deletes this
+   broadcast and its replay from the app, Today, the podcast feed and the Commons. It cannot be
+   undone." Tap **Confirm delete**: expect "Event deleted." and the row gone. The live event shows no
+   **Delete**.
 
 ## AN-PP — PeerProgramming: goals, cohorts, Direct Line, the live call, and admin
 

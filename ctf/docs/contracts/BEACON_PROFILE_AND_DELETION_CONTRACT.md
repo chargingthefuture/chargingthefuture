@@ -39,23 +39,27 @@ that Stream user (with `mark_messages_deleted`), removing the copy.
   - Contains personal data? minimal — `host_user_id` (an admin) and the saved public recording URL.
     No viewer or chatter identities are stored in this table (chat lives in Stream, not the DB — and
     is cleared from Stream on account deletion via the external-cleanup hook).
-  - Retention period: long-lived (event history and replay links). A `live` or `ended` row is never
-    deletable through the app — the admin surface has no delete control for one, and the
-    `DELETE /api/beacon/[id]` route refuses it with a 409 and records the refusal in the audit trail.
-    A `draft` row is the one exception: an admin can delete it (see below), because a draft was never
-    broadcast, has no recording, and never appeared in the member view.
+  - Retention period: long-lived (event history and replay links) until an admin deletes it. Since
+    2026-11-10 (owner decision) an admin can delete a `draft` or an `ended` row from Beacon Admin
+    (`DELETE /api/beacon/[id]`), so a failed broadcast with no sound, or a test, is removed from the
+    app rather than kept. Deleting an ended row also deletes the two Commons notices it posted (live
+    now, replay). A `live` row is never deletable: the admin surface shows no delete control for one,
+    and the route refuses it with a 409, again in its SQL, and records the refusal in the audit
+    trail.
   - Legal/compliance note: the broadcast and its recording are public by design; the replay is posted
     publicly to the Commons. No private member content is stored here.
   - Kept copy of the recording (since 2026-09-29): the `beacon-recordings-archive` workflow copies each
     recording to its own public release of `chargingthefuture/chargingthefuture`, tagged
     `beacon-recording-<eventId>` and holding `<eventId>.mp4`, and stores that address in `archived_recording_url`. It is the same
     public broadcast, not new personal data. Removing one is done by deleting that release by
-    hand and clearing the column; nothing in the app deletes it.
+    hand; nothing in the app deletes it, including the admin delete of the event. Once the event row
+    is deleted, the archive workflow no longer looks at it.
 - Table/entity: `beacon_events_admin_audit_trail`
   - Contains personal data? minimal — `actor_id` (the admin) and an optional moderated `target_id`.
   - Retention period: compliance retention window.
   - Legal/compliance note: admin-action audit trail (create, go-live, end, moderate,
-    recording-ingest, and draft delete — including a *refused* delete of a live or ended event).
+    recording-ingest, rename, and delete — including a *refused* delete of a live event). A delete
+    row keeps the event's title in its metadata, since the event row is gone afterwards.
 
 ## 5) Service-Scoped Deletion Contract
 

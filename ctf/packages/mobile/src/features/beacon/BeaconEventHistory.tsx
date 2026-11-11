@@ -1,15 +1,16 @@
 /**
  * The "Event history" card of Beacon Admin, copied from EventHistorySection and EventHistoryRow in
  * the web admin page (components/beacon/beacon-admin-shell.tsx): each event's title, its status line
- * (status, time in Eastern Time, recording state), its log, and Replay / Open / two-step Delete.
- * Delete is offered for drafts only; a live or ended event is public history.
+ * (status, time in Eastern Time, recording state), its log, and Replay / Open / Rename / two-step
+ * Delete. Rename works in every status. Delete is offered for a draft or an ended event, never a
+ * live one (owner decision, 2026-11-10). The web copy is components/beacon/beacon-event-history.tsx.
  */
-import React from 'react';
-import { Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useState } from 'react';
+import { Linking, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { getApiBaseUrl } from '../../auth/authedFetch';
 import { type BeaconAdminEvent } from './BeaconAdminApi';
 import { BeaconEventLog } from './BeaconEventLog';
-import { adminCardStyle, cardTitleText, chipStyle, chipText, DANGER_CHIP, DANGER_TEXT, font, radius, type BeaconTokens } from './BeaconTheme';
+import { adminCardStyle, cardTitleText, chipStyle, chipText, DANGER_CHIP, DANGER_TEXT, font, inputStyle, radius, type BeaconTokens } from './BeaconTheme';
 import { reportError } from '../../observability/report';
 
 // "Oct 6, 2026, 3:05 PM ET": when it went live, or when a draft was created.
@@ -55,8 +56,10 @@ export type EventHistoryProps = {
   events: BeaconAdminEvent[];
   confirmDeleteId: string | null;
   deletingId: string | null;
+  renamingId: string | null;
   onOpen: (_eventId: string) => void;
   onDelete: (_eventId: string) => void;
+  onRename: (_eventId: string, _title: string) => Promise<boolean>;
   onArmDelete: (_eventId: string) => void;
   onCancelDelete: () => void;
 };
@@ -82,10 +85,19 @@ function Chip({ t, label, onPress, danger, disabled, accessibilityLabel }: {
   );
 }
 
+// What a confirmed delete removes, shown while Delete is armed. Same words as the web's
+// beaconDeleteWarning in components/beacon/beacon-event-history.tsx.
+function deleteWarning(event: BeaconAdminEvent): string {
+  return event.status === 'draft'
+    ? 'Deletes this draft. It cannot be undone.'
+    : 'Deletes this broadcast and its replay from the app, Today, the podcast feed and the Commons. It cannot be undone.';
+}
+
 function DeleteControls({ t, event, confirmDeleteId, deletingId, onDelete, onArmDelete, onCancelDelete }: EventHistoryProps & { event: BeaconAdminEvent }) {
-  if (event.status !== 'draft') return null;
+  // A live broadcast is ended first; the route refuses it too.
+  if (event.status === 'live') return null;
   if (confirmDeleteId !== event.id) {
-    return <Chip t={t} label="Delete" onPress={() => onArmDelete(event.id)} accessibilityLabel={`Delete the draft "${event.title}"`} />;
+    return <Chip t={t} label="Delete" onPress={() => onArmDelete(event.id)} accessibilityLabel={`Delete "${event.title}"`} />;
   }
   return (
     <>
@@ -95,26 +107,74 @@ function DeleteControls({ t, event, confirmDeleteId, deletingId, onDelete, onArm
   );
 }
 
-function EventHistoryRow(props: EventHistoryProps & { event: BeaconAdminEvent }) {
-  const { t, event, onOpen } = props;
+// The rename box: the title in a field with Save and Cancel. Submitting from the keyboard saves.
+function TitleEditor({ t, event, saving, onSave, onCancel }: {
+  t: BeaconTokens;
+  event: BeaconAdminEvent;
+  saving: boolean;
+  onSave: (_title: string) => void;
+  onCancel: () => void;
+}) {
+  const [draft, setDraft] = useState(event.title);
+  return (
+    <View style={styles.editor}>
+      <TextInput
+        accessibilityLabel={`New title for "${event.title}"`}
+        value={draft}
+        autoFocus
+        maxLength={160}
+        onChangeText={setDraft}
+        onSubmitEditing={() => onSave(draft)}
+        returnKeyType="done"
+        style={[inputStyle(t), styles.editorInput]}
+      />
+      <View style={styles.rowActions}>
+        <Chip t={t} label={saving ? 'Saving…' : 'Save'} disabled={saving || draft.trim().length === 0} onPress={() => onSave(draft)} />
+        <Chip t={t} label="Cancel" disabled={saving} onPress={onCancel} />
+      </View>
+    </View>
+  );
+}
+
+// One event row: title (or the rename box), status line and log, then the actions on their own
+// line so four controls fit the phone's width.
+function EventHistoryRow(props: EventHistoryProps & { event: BeaconAdminEvent; editing: boolean; onEdit: (_id: string | null) => void }) {
+  const { t, event, onOpen, editing, onEdit, renamingId, confirmDeleteId, onRename } = props;
+  const save = async (title: string) => {
+    if (title.trim() === event.title) {
+      onEdit(null);
+      return;
+    }
+    if (await onRename(event.id, title)) onEdit(null);
+  };
   return (
     <View style={[styles.row, { borderRadius: radius(t, 10), backgroundColor: t.SURFACE, borderColor: t.BORDER_SOLID }]}>
       <View style={styles.rowText}>
-        <Text style={[styles.rowTitle, { color: t.TITLE }]} numberOfLines={1}>{event.title}</Text>
+        {editing ? (
+          <TitleEditor t={t} event={event} saving={renamingId === event.id} onSave={(title) => void save(title)} onCancel={() => onEdit(null)} />
+        ) : (
+          <Text style={[styles.rowTitle, { color: t.TITLE }]} numberOfLines={1}>{event.title}</Text>
+        )}
         <Text style={[styles.rowStatus, { color: t.SUBTLE }]}>{eventStatusLine(event)}</Text>
         <BeaconEventLog title={event.title} recordingLookup={event.recordingLookup} log={event.log ?? []} t={t} />
       </View>
       <View style={styles.rowActions}>
         {event.recordingUrl ? <Chip t={t} label="Replay" onPress={() => openReplay(event.id)} /> : null}
         {event.status !== 'ended' ? <Chip t={t} label="Open" onPress={() => onOpen(event.id)} /> : null}
+        {editing ? null : <Chip t={t} label="Rename" onPress={() => onEdit(event.id)} accessibilityLabel={`Rename "${event.title}"`} />}
         <DeleteControls {...props} />
       </View>
+      {confirmDeleteId === event.id ? (
+        <Text accessibilityRole="alert" style={[styles.warning, { color: DANGER_TEXT }]}>{deleteWarning(event)}</Text>
+      ) : null}
     </View>
   );
 }
 
 export function BeaconEventHistory(props: EventHistoryProps) {
   const { t, loading, events } = props;
+  // Which row's title is open for renaming; one at a time.
+  const [editingId, setEditingId] = useState<string | null>(null);
   return (
     <View style={adminCardStyle(t)}>
       <Text style={cardTitleText(t)}>Event history</Text>
@@ -124,7 +184,7 @@ export function BeaconEventHistory(props: EventHistoryProps) {
         <Text style={[styles.empty, { color: t.SUBTLE }]}>No events yet. Create one above.</Text>
       ) : (
         <View style={styles.list}>
-          {events.map((event) => <EventHistoryRow key={event.id} {...props} event={event} />)}
+          {events.map((event) => <EventHistoryRow key={event.id} {...props} event={event} editing={editingId === event.id} onEdit={setEditingId} />)}
         </View>
       )}
     </View>
@@ -134,9 +194,12 @@ export function BeaconEventHistory(props: EventHistoryProps) {
 const styles = StyleSheet.create({
   list: { gap: 8 },
   empty: { fontSize: 14, ...font('400') },
-  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12, paddingVertical: 10, paddingHorizontal: 12, borderWidth: 1 },
-  rowText: { flex: 1, minWidth: 0 },
+  row: { gap: 8, paddingVertical: 10, paddingHorizontal: 12, borderWidth: 1 },
+  rowText: { minWidth: 0 },
   rowTitle: { fontSize: 14, ...font('600') },
   rowStatus: { fontSize: 12, ...font('400') },
-  rowActions: { flexDirection: 'row', gap: 8 },
+  rowActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  editor: { gap: 8, marginBottom: 4 },
+  editorInput: { marginBottom: 0 },
+  warning: { fontSize: 12, ...font('400') },
 });

@@ -8,9 +8,11 @@
 //     livestream call
 //   - read the live chat and moderate (mute / ban / slow-mode)
 //   - end the event (stops the broadcast and billing)
-//   - see event history with recordings
+//   - see event history with recordings, rename any event, and delete a draft or ended one
+//     (the list is beacon-event-history.tsx)
 //
-// Binds the Beacon API routes: POST /api/beacon, GET /api/beacon/admin, GET /api/beacon/[id]/ingest,
+// Binds the Beacon API routes: POST /api/beacon, GET /api/beacon/admin, PATCH and DELETE
+// /api/beacon/[id], GET /api/beacon/[id]/ingest,
 // POST /api/beacon/[id]/go-live, POST /api/beacon/[id]/end, POST /api/beacon/[id]/moderate, and the
 // member chat token route for the admin's own chat view.
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -20,26 +22,13 @@ import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-button';
 import { StreamChatPanel } from '@/components/shared/stream-chat-panel';
 import { BeaconHostStage, type BeaconHostCredentials } from './beacon-host-stage';
-import { getBeaconTokens, type BeaconTokens } from './beacon-shared';
-import { BeaconEventLog, type BeaconEventLogEntry } from './beacon-event-log';
+import { getBeaconTokens } from './beacon-shared';
+import { EventHistorySection, type BeaconEvent } from './beacon-event-history';
+import {
+  bannerStyle, cardStyle, cardTitleStyle, chipButtonStyle, inputStyle, labelStyle, primaryButtonStyle,
+} from './beacon-admin-styles';
 import { useBeaconLivePoll } from './use-beacon-live-poll';
 import { reportError } from 'lib/observability/report';
-
-type BeaconEvent = {
-  id: string;
-  title: string;
-  description: string;
-  status: 'draft' | 'live' | 'ended';
-  startedAtIso: string | null;
-  endedAtIso: string | null;
-  recordingUrl: string | null;
-  commonsLivePostId: string | null;
-  commonsRecordingPostId: string | null;
-  createdAtIso: string;
-  // Admin list only: what Stream said when asked for a missing recording, and the event's log.
-  recordingLookup?: string;
-  log?: BeaconEventLogEntry[];
-};
 
 type IngestResponse = {
   ok: boolean;
@@ -60,7 +49,7 @@ type ChatCredentials = {
   streamToken: string;
 };
 
-async function adminMutate<T = unknown>(url: string, method: 'POST' | 'DELETE', body?: unknown): Promise<{ ok: boolean; data: T | null; message?: string }> {
+async function adminMutate<T = unknown>(url: string, method: 'POST' | 'PATCH' | 'DELETE', body?: unknown): Promise<{ ok: boolean; data: T | null; message?: string }> {
   try {
     const res = await fetch(url, {
       method,
@@ -164,151 +153,6 @@ function BroadcastSection({
   );
 }
 
-// When the event happened, in Eastern Time: when it went live for a broadcast event, when it was
-// created for a draft. "Oct 6, 2026, 3:05 PM ET".
-const EASTERN_TIME = new Intl.DateTimeFormat('en-US', {
-  timeZone: 'America/New_York',
-  month: 'short',
-  day: 'numeric',
-  year: 'numeric',
-  hour: 'numeric',
-  minute: '2-digit',
-});
-
-function formatEventTimeEt(event: BeaconEvent): string | null {
-  const iso = event.startedAtIso ?? event.createdAtIso;
-  const date = iso ? new Date(iso) : null;
-  if (!date || Number.isNaN(date.getTime())) {
-    return null;
-  }
-  return `${EASTERN_TIME.format(date)} ET`;
-}
-
-// The line under an event's title: status, time in ET, and whether its recording is ready.
-function eventStatusLine(event: BeaconEvent): string {
-  const time = formatEventTimeEt(event);
-  const parts: string[] = [event.status];
-  if (time) parts.push(time);
-  if (event.recordingUrl) parts.push('recording ready');
-  else if (event.status === 'ended') parts.push('no recording found');
-  return parts.join(' · ');
-}
-
-// One event row in the history list, with Replay / Open / two-step Delete controls.
-function EventHistoryRow({
-  event,
-  confirmDeleteId,
-  deletingId,
-  onOpen,
-  onDelete,
-  onArmDelete,
-  onCancelDelete,
-}: {
-  event: BeaconEvent;
-  confirmDeleteId: string | null;
-  deletingId: string | null;
-  onOpen: (eventId: string) => void;
-  onDelete: (eventId: string) => void;
-  onArmDelete: (eventId: string) => void;
-  onCancelDelete: () => void;
-}) {
-  const { theme } = useTheme();
-  const t = getBeaconTokens(theme);
-  return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 10, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
-      <div style={{ minWidth: 0 }}>
-        <div style={{ fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{event.title}</div>
-        <div style={{ fontSize: 12, color: t.SUBTLE }}>{eventStatusLine(event)}</div>
-        <BeaconEventLog title={event.title} recordingLookup={event.recordingLookup} log={event.log ?? []} t={t} />
-      </div>
-      <div style={{ display: 'flex', gap: 8 }}>
-        {event.recordingUrl ? (
-          <a href={`/api/beacon/replays/${event.id}/recording`} target="_blank" rel="noreferrer" style={chipButtonStyle(t)}>Replay</a>
-        ) : null}
-        {event.status !== 'ended' ? (
-          <button type="button" onClick={() => onOpen(event.id)} style={chipButtonStyle(t)}>Open</button>
-        ) : null}
-        {/* Delete is offered for drafts only. A draft was never broadcast — nobody saw
-            it, it has no recording, and it does not appear in the member view — so
-            removing a mistyped one destroys nothing. A live or ended event is public
-            history and is never deletable from here. */}
-        {event.status === 'draft' ? (
-          confirmDeleteId === event.id ? (
-            <>
-              <button
-                type="button"
-                onClick={() => onDelete(event.id)}
-                disabled={deletingId === event.id}
-                style={dangerButtonStyle(t)}
-              >
-                {deletingId === event.id ? 'Deleting…' : 'Confirm delete'}
-              </button>
-              <button type="button" onClick={onCancelDelete} style={chipButtonStyle(t)}>Cancel</button>
-            </>
-          ) : (
-            <button
-              type="button"
-              onClick={() => onArmDelete(event.id)}
-              aria-label={`Delete the draft "${event.title}"`}
-              style={chipButtonStyle(t)}
-            >
-              Delete
-            </button>
-          )
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
-function EventHistorySection({
-  loading,
-  events,
-  confirmDeleteId,
-  deletingId,
-  onOpen,
-  onDelete,
-  onArmDelete,
-  onCancelDelete,
-}: {
-  loading: boolean;
-  events: BeaconEvent[];
-  confirmDeleteId: string | null;
-  deletingId: string | null;
-  onOpen: (eventId: string) => void;
-  onDelete: (eventId: string) => void;
-  onArmDelete: (eventId: string) => void;
-  onCancelDelete: () => void;
-}) {
-  const { theme } = useTheme();
-  const t = getBeaconTokens(theme);
-  return (
-    <section style={cardStyle(t)}>
-      <h2 style={cardTitleStyle}>Event history</h2>
-      {loading ? (
-        <div style={{ color: t.SUBTLE, fontSize: 14 }}>Loading…</div>
-      ) : events.length === 0 ? (
-        <div style={{ color: t.SUBTLE, fontSize: 14 }}>No events yet. Create one above.</div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {events.map((event) => (
-            <EventHistoryRow
-              key={event.id}
-              event={event}
-              confirmDeleteId={confirmDeleteId}
-              deletingId={deletingId}
-              onOpen={onOpen}
-              onDelete={onDelete}
-              onArmDelete={onArmDelete}
-              onCancelDelete={onCancelDelete}
-            />
-          ))}
-        </div>
-      )}
-    </section>
-  );
-}
-
 // All Beacon admin state, data loading, and mutations. Split out of the component so the render
 // stays small; the component below only reads this hook and draws the sections.
 function useBeaconAdmin() {
@@ -328,9 +172,10 @@ function useBeaconAdmin() {
   const [copied, setCopied] = useState<string | null>(null);
   const [moderateTarget, setModerateTarget] = useState('');
   // Two-step delete: the first click arms this id and turns the button into "Confirm delete", the
-  // second does it. A single click cannot destroy a draft, and there is no modal to build.
+  // second does it. A single click cannot destroy an event, and there is no modal to build.
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
   const broadcastSectionRef = useRef<HTMLElement | null>(null);
 
   const loadEvents = useCallback(async () => {
@@ -398,24 +243,40 @@ function useBeaconAdmin() {
     setCreating(false);
   }, [title, description, refreshEvents]);
 
-  // Delete a draft. Drafts only — the route refuses anything else, and the button below is only
-  // rendered for drafts, so this is the second of three guards (UI, route, SQL predicate).
-  const deleteDraft = useCallback(async (eventId: string) => {
+  // Delete a draft or an ended event. Never a live one — the button is not shown for it and the
+  // route refuses it, so this is the first of three guards (UI, route, SQL predicate).
+  const deleteEvent = useCallback(async (eventId: string) => {
     setDeletingId(eventId);
     setError(null);
     setNotice(null);
     const result = await adminMutate(`/api/beacon/${eventId}`, 'DELETE');
     if (!result.ok) {
-      setError(result.message ?? 'Could not delete the draft.');
+      setError(result.message ?? 'Could not delete the event.');
     } else {
-      setNotice('Draft deleted.');
-      // If the deleted draft was the one open in the Broadcast panel, close the panel — otherwise it
+      setNotice('Event deleted.');
+      // If the deleted event was the one open in the Broadcast panel, close the panel — otherwise it
       // keeps showing controls for an event that no longer exists.
       setActiveEventId((current) => (current === eventId ? null : current));
       await refreshEvents();
     }
     setConfirmDeleteId(null);
     setDeletingId(null);
+  }, [refreshEvents]);
+
+  // Rename an event in any status. Returns whether it worked, so the row closes its box only then.
+  const renameEvent = useCallback(async (eventId: string, newTitle: string): Promise<boolean> => {
+    setRenamingId(eventId);
+    setError(null);
+    setNotice(null);
+    const result = await adminMutate(`/api/beacon/${eventId}`, 'PATCH', { title: newTitle.trim() });
+    setRenamingId(null);
+    if (!result.ok) {
+      setError(result.message ?? 'Could not rename the event.');
+      return false;
+    }
+    setNotice('Event renamed.');
+    await refreshEvents();
+    return true;
   }, [refreshEvents]);
 
   // Fetch the RTMP ingest + host token. Used to populate the broadcaster panel before going live.
@@ -509,9 +370,9 @@ function useBeaconAdmin() {
     events, loading, error, notice,
     title, setTitle, description, setDescription, creating,
     setActiveEventId, ingest, host, chat, copied,
-    moderateTarget, setModerateTarget, confirmDeleteId, setConfirmDeleteId, deletingId,
+    moderateTarget, setModerateTarget, confirmDeleteId, setConfirmDeleteId, deletingId, renamingId,
     broadcastSectionRef, activeEvent,
-    createEvent, deleteDraft, goLive, endEvent, moderate, copy,
+    createEvent, deleteEvent, renameEvent, goLive, endEvent, moderate, copy,
   };
 }
 
@@ -522,9 +383,9 @@ export function BeaconAdminShell() {
     events, loading, error, notice,
     title, setTitle, description, setDescription, creating,
     setActiveEventId, ingest, host, chat, copied,
-    moderateTarget, setModerateTarget, confirmDeleteId, setConfirmDeleteId, deletingId,
+    moderateTarget, setModerateTarget, confirmDeleteId, setConfirmDeleteId, deletingId, renamingId,
     broadcastSectionRef, activeEvent,
-    createEvent, deleteDraft, goLive, endEvent, moderate, copy,
+    createEvent, deleteEvent, renameEvent, goLive, endEvent, moderate, copy,
   } = useBeaconAdmin();
 
   return (
@@ -577,8 +438,10 @@ export function BeaconAdminShell() {
           events={events}
           confirmDeleteId={confirmDeleteId}
           deletingId={deletingId}
+          renamingId={renamingId}
           onOpen={setActiveEventId}
-          onDelete={deleteDraft}
+          onDelete={(eventId) => void deleteEvent(eventId)}
+          onRename={renameEvent}
           onArmDelete={setConfirmDeleteId}
           onCancelDelete={() => setConfirmDeleteId(null)}
         />
@@ -601,15 +464,3 @@ function CopyRow({ label, value, copied, onCopy, masked }: { label: string; valu
     </div>
   );
 }
-
-const cardStyle = (t: BeaconTokens): React.CSSProperties => ({ marginTop: 18, borderRadius: 14, background: t.HEADER, border: `1px solid ${t.BORDER_SOLID}`, padding: 18 });
-const cardTitleStyle: React.CSSProperties = { fontSize: 16, fontWeight: 700, margin: '0 0 12px' };
-const labelStyle = (t: BeaconTokens): React.CSSProperties => ({ display: 'block', fontSize: 12, fontWeight: 600, color: t.SUBTLE, margin: '8px 0 4px' });
-const inputStyle = (t: BeaconTokens): React.CSSProperties => ({ width: '100%', boxSizing: 'border-box', background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, borderRadius: 10, padding: '10px 12px', color: t.TITLE, fontSize: 14, marginBottom: 8 });
-const primaryButtonStyle = (t: BeaconTokens): React.CSSProperties => ({ marginTop: 8, padding: '10px 18px', borderRadius: 10, background: `${t.ACCENT}20`, border: `1px solid ${t.ACCENT}55`, color: t.ACCENT, fontSize: 14, fontWeight: 700, cursor: 'pointer' });
-const chipButtonStyle = (t: BeaconTokens): React.CSSProperties => ({ padding: '7px 12px', borderRadius: 8, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}`, color: t.TITLE, fontSize: 13, fontWeight: 600, cursor: 'pointer', textDecoration: 'none' });
-// Armed-delete chip: same shape as chipButtonStyle, tinted red so the confirming click is visibly
-// the destructive one. Red is not derived from the Beacon amber accent on purpose — it must not read
-// as just another action.
-const dangerButtonStyle = (t: BeaconTokens): React.CSSProperties => ({ ...chipButtonStyle(t), background: 'rgba(220,38,38,0.16)', border: '1px solid rgba(220,38,38,0.5)', color: '#F87171' });
-const bannerStyle = (t: BeaconTokens): React.CSSProperties => ({ marginTop: 14, padding: '10px 14px', borderRadius: 10, background: t.SURFACE, border: '1px solid', fontSize: 14 });

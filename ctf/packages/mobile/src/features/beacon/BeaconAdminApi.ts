@@ -4,7 +4,8 @@
 //
 //   - GET    /api/beacon/admin            events newest first, each with its broadcast log.
 //   - POST   /api/beacon                  create a draft { title, description }.
-//   - DELETE /api/beacon/[id]             delete a draft (drafts only; the route refuses the rest).
+//   - PATCH  /api/beacon/[id]             rename an event { title }, in any status.
+//   - DELETE /api/beacon/[id]             delete a draft or an ended event (the route refuses a live one).
 //   - GET    /api/beacon/[id]/ingest      the broadcaster-app address and stream key, plus the host's
 //                                          Stream credentials.
 //   - POST   /api/beacon/[id]/go-live     takes the call out of backstage; posts "live now".
@@ -50,7 +51,7 @@ export type BeaconModerationAction = 'mute' | 'ban' | 'slow_mode';
 export type MutateResult<T> = { ok: boolean; data: T | null; message?: string };
 
 // The web adminMutate: the route's message, else its code, else the status.
-export async function adminMutate<T = unknown>(path: string, method: 'POST' | 'DELETE', body?: unknown): Promise<MutateResult<T>> {
+export async function adminMutate<T = unknown>(path: string, method: 'POST' | 'PATCH' | 'DELETE', body?: unknown): Promise<MutateResult<T>> {
   try {
     const res = await authedFetch(path, {
       method,
