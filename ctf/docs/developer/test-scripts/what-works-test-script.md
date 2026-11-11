@@ -305,8 +305,8 @@ one of these, it is already tracked, not a new bug:
 
 **Role:** approved member, then admin · **Surfaces:** web (mobile-responsive), android (browser panel)
 **Steps:**
-1. As the member, open What Works from Me's "What works" tile, open the suggest form and tap "Not on
-   the list? Add a problem". Type a few words that match a listed problem's title.
+1. As the member, open What Works from Today's What Works card, open the suggest form and tap "Not
+   on the list? Add a problem". Type a few words that match a listed problem's title.
 2. Tap **Use this** on one of the matches.
 3. Open the sheet again, type a problem that is not listed and tap **None of these, add it** (or
    **Add it** when nothing matches). Tap **Add what helped** and suggest a tool. Add three more
@@ -315,7 +315,7 @@ one of these, it is already tracked, not a new bug:
    like" line, approve one, open **Merge into…** on one with "no close match" and merge it, and
    delete one as spam.
 5. As the member, reload What Works.
-6. Repeat step 1 in each of the four colors, light and dark, and on Android from Me.
+6. Repeat step 1 in each of the four colors, light and dark, and on Android from the Today card.
 **Expected:** Step 1 shows the sheet "Add a problem" with the rule line, then up to five listed
 problems under "Already here. Is it one of these?", each with "N things that helped" and "Use this".
 Step 2 closes the sheet and opens the suggest form on that problem. Step 3 shows "Sent for review";
