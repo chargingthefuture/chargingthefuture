@@ -50,6 +50,10 @@ Apply Sentry correctly for the v3 app while keeping provider abstraction intact.
 
 ## Privacy and Safety Constraints
 - `sendDefaultPii` must remain `false` unless explicitly approved.
+- Every `Sentry.init` passes the shared scrub filters (`beforeBreadcrumb`, `beforeSend`,
+  `beforeSendTransaction`) from `ctf/packages/shared/src/observability/scrub.ts` (web wires them
+  through `packages/web/lib/observability/sentry-scrub.ts`), and web Session Replay passes
+  `beforeAddRecordingEvent`. A new init path or replay integration does the same.
 - Never hardcode DSNs in source files.
 - DSNs must come from rewrite environment variables only.
 - Do not share a single DSN across web and mobile in production.
