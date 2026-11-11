@@ -1,5 +1,6 @@
 import Constants from 'expo-constants';
 import * as Sentry from '@sentry/react-native';
+import { seScrubBreadcrumb, seScrubEvent } from '@ctf/shared';
 
 // Crash reporting for the native Android app (the Chyme keep-list surface, rule 105). The DSN has
 // been carried through app config as `mobileSentryDsn` (from EXPO_SENTRY_DSN, which already exists in
@@ -38,5 +39,14 @@ export function initMobileSentry(): void {
     ],
     replaysSessionSampleRate: 0.1,
     replaysOnErrorSampleRate: 1.0,
+    // The same filters as web (@ctf/shared observability/scrub.ts): ids in screen and request
+    // addresses become :id, typed and logged text is dropped from breadcrumbs, request bodies,
+    // cookies, sign-in headers and the member are removed, and email addresses and phone numbers
+    // are cut from error text. Replay's recorded breadcrumbs come from the same breadcrumbs, so
+    // they arrive already scrubbed.
+    beforeBreadcrumb: seScrubBreadcrumb,
+    beforeSend: seScrubEvent,
+    beforeSendTransaction: seScrubEvent,
   });
+  Sentry.addEventProcessor((event) => (event.type === 'replay_event' ? seScrubEvent(event) : event));
 }
