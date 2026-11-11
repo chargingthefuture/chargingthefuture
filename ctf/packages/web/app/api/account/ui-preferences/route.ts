@@ -1,12 +1,22 @@
 import { NextResponse } from 'next/server';
 import { requireAccountAccess, ensureMutationCsrf } from '../_lib';
-import { getUserUiPreferences, setUserUiPreferences } from 'lib/account/ui-preferences-repository';
+import { getUserUiPreferences, setUserUiPreferences, type UiPreferenceChanges } from 'lib/account/ui-preferences-repository';
 import { ACCOUNT_ERROR_CODE } from 'lib/account/constants';
-import { isThemeName, THEME_NAMES, type ThemeName } from 'lib/theme/theme-tokens';
-import { isSeInterfaceVersion, SE_INTERFACE_VERSIONS, type SeInterfaceVersion } from '@ctf/shared';
+import { isThemeName, THEME_NAMES } from 'lib/theme/theme-tokens';
+import {
+  isSeInterfaceVersion,
+  isSeTextSize,
+  isSeThemeColor,
+  isSeThemeMode,
+  SE_INTERFACE_VERSIONS,
+  SE_TEXT_SIZES,
+  SE_THEME_COLORS,
+  type SeThemeChoice,
+} from '@ctf/shared';
 import { reportError } from 'lib/observability/report';
 
-// Per-user UI preferences: the theme and which interface (3.0 or 3.1) the member sees. Auth posture
+// Per-user UI preferences: the 3.0 theme, which interface (3.0 or 3.1) the member sees, and the 3.1
+// Settings (colors, text size, higher contrast, easier-to-read font, emoji rain). Auth posture
 // matches the other /api/account routes: any signed-in identity (including unlock-pending) may read
 // and set its own.
 // The choice is non-sensitive, scoped to the caller's own row, and CSRF-guarded on write.
@@ -17,12 +27,10 @@ function invalidPayload(message: string): NextResponse {
   return NextResponse.json({ ok: false, code: ACCOUNT_ERROR_CODE.invalidPayload, message }, { status: 400 });
 }
 
-type Changes = { theme?: ThemeName; interfaceVersion?: SeInterfaceVersion };
-
 // A body that is not JSON, or a value the app does not have, is refused rather than saved as the
-// default: answering 200 to a broken request would overwrite the member's saved choice. Either
-// field may be sent alone; at least one must be.
-type ReadResult = { ok: true; changes: Changes } | { ok: false; message: string };
+// default: answering 200 to a broken request would overwrite the member's saved choice. Any field
+// may be sent alone; at least one must be. seTheme is `{ color, mode }`, both together.
+type ReadResult = { ok: true; changes: UiPreferenceChanges } | { ok: false; message: string };
 
 async function readFields(request: Request): Promise<{ ok: true; fields: Record<string, unknown> } | { ok: false; message: string }> {
   try {
@@ -34,15 +42,45 @@ async function readFields(request: Request): Promise<{ ok: true; fields: Record<
   }
 }
 
+const isBool = (value: unknown): value is boolean => typeof value === 'boolean';
+
+// Each field the route takes, the check it must pass, and what the refusal says.
+const FIELDS: ReadonlyArray<{ name: string; valid: (_value: unknown) => boolean; message: string }> = [
+  { name: 'theme', valid: isThemeName, message: `theme must be one of: ${THEME_NAMES.join(', ')}.` },
+  { name: 'interfaceVersion', valid: isSeInterfaceVersion, message: `interfaceVersion must be one of: ${SE_INTERFACE_VERSIONS.join(', ')}.` },
+  {
+    name: 'seTheme',
+    valid: (value) => {
+      const pick = value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+      return isSeThemeColor(pick.color) && isSeThemeMode(pick.mode);
+    },
+    message: `seTheme must be { color, mode } with color one of ${SE_THEME_COLORS.join(', ')} and mode dark or light.`,
+  },
+  { name: 'textSize', valid: isSeTextSize, message: `textSize must be one of: ${SE_TEXT_SIZES.join(', ')}.` },
+  { name: 'highContrast', valid: isBool, message: 'highContrast must be true or false.' },
+  { name: 'readableFont', valid: isBool, message: 'readableFont must be true or false.' },
+  { name: 'emojiRain', valid: isBool, message: 'emojiRain must be true or false.' },
+];
+
 // The first reason the fields cannot be saved, or null when they can.
 function fieldProblem(fields: Record<string, unknown>): string | null {
-  const { theme, interfaceVersion } = fields;
-  if (theme === undefined && interfaceVersion === undefined) return 'Send theme, interfaceVersion, or both.';
-  if (theme !== undefined && !isThemeName(theme)) return `theme must be one of: ${THEME_NAMES.join(', ')}.`;
-  if (interfaceVersion !== undefined && !isSeInterfaceVersion(interfaceVersion)) {
-    return `interfaceVersion must be one of: ${SE_INTERFACE_VERSIONS.join(', ')}.`;
-  }
-  return null;
+  const sent = FIELDS.filter((field) => fields[field.name] !== undefined);
+  if (sent.length === 0) return `Send at least one of: ${FIELDS.map((field) => field.name).join(', ')}.`;
+  return sent.find((field) => !field.valid(fields[field.name]))?.message ?? null;
+}
+
+function toChanges(fields: Record<string, unknown>): UiPreferenceChanges {
+  const pick = (fields.seTheme ?? {}) as Partial<SeThemeChoice>;
+  return {
+    theme: isThemeName(fields.theme) ? fields.theme : undefined,
+    interfaceVersion: isSeInterfaceVersion(fields.interfaceVersion) ? fields.interfaceVersion : undefined,
+    seThemeColor: pick.color,
+    seThemeMode: pick.mode,
+    textSize: isSeTextSize(fields.textSize) ? fields.textSize : undefined,
+    highContrast: isBool(fields.highContrast) ? fields.highContrast : undefined,
+    readableFont: isBool(fields.readableFont) ? fields.readableFont : undefined,
+    emojiRain: isBool(fields.emojiRain) ? fields.emojiRain : undefined,
+  };
 }
 
 async function readChanges(request: Request): Promise<ReadResult> {
@@ -50,14 +88,7 @@ async function readChanges(request: Request): Promise<ReadResult> {
   if (!read.ok) return read;
   const problem = fieldProblem(read.fields);
   if (problem) return { ok: false, message: problem };
-  const { theme, interfaceVersion } = read.fields;
-  return {
-    ok: true,
-    changes: {
-      theme: isThemeName(theme) ? theme : undefined,
-      interfaceVersion: isSeInterfaceVersion(interfaceVersion) ? interfaceVersion : undefined,
-    },
-  };
+  return { ok: true, changes: toChanges(read.fields) };
 }
 
 export async function GET() {

@@ -47,6 +47,17 @@ received. The trauma-informed answer (owner decision, 2026-07-20):
    server and says so if the save failed. Each time the panel opens with any category on, the
    device's subscription is sent to the server again, so a device the server lost starts getting
    pings again without touching a switch. Tapping a ping opens the same place the row's "Open" does.
+5. On 3.1, Settings → Notifications (web and Android) has three rows instead of the categories:
+   "Replies and talk requests" (Commons replies and mentions, announcement replies, Fireside
+   replies, requests to talk and messages on a Today card, 21 Questions match messages and
+   PeerProgramming cohort messages), "Rooms starting" (anything Chyme, Beacon or TI Radio sends when
+   a room or talk starts; nothing sends one yet) and "Everything else". Each is On or Off, default
+   Off. A member on 3.1 is pinged by these rows, a member on 3.0 by the three categories. Turning a
+   row on in the browser asks for permission and saves the device, as the 3.0 switches do. Quiet
+   hours (default 10:00 PM to 7:00 AM when first set, in the member's own time zone) hold every
+   device ping in those hours; the row still lands in the list. Foundation's instant-call ring is
+   not held by quiet hours: it rings only a provider who switched their availability on. Pings go to
+   browsers only; the Android app gets device pings only for Foundation calls.
 
 ## 2) Admin Features
 
@@ -59,8 +70,11 @@ None. Notifications are member self-service; there are no admin governance actio
 - `POST /api/notifications/:notificationId/read` — mark one own notification read (idempotent; 404
   when no owned row matches). Hub-style CSRF (`x-ctf-csrf: '1'`).
 - `POST /api/notifications/read-all` — mark all unread read. CSRF-guarded.
-- `GET /api/notifications/preferences` — the member's device-push opt-ins.
-- `PUT /api/notifications/preferences` — update opt-ins (missing field keeps its value). CSRF-guarded.
+- `GET /api/notifications/preferences` — the member's device-push opt-ins: the 3.0 categories,
+  `discreetPush`, the 3.1 rows (`pushReplies`, `pushRooms`, `pushOther`) and `quiet`
+  (`{ startMinute, endMinute, timeZone }` or null).
+- `PUT /api/notifications/preferences` — update opt-ins and quiet hours (missing field keeps its
+  value; `quiet: null` turns quiet hours off; an invalid `quiet` answers 400). CSRF-guarded.
 - `GET /api/notifications/push/vapid-public-key` — the public VAPID key the browser needs to create a
   Web Push subscription (not secret; empty string when push is unconfigured).
 - `POST /api/notifications/push/subscribe` — save this device's Web Push subscription. CSRF-guarded.
@@ -77,7 +91,12 @@ Producers do not use HTTP — each plugin calls `createNotification` in
   (null = unread), `created_at`. Indexes: `(user_id, created_at DESC)`; partial on unread; partial
   unique `(user_id, notification_type, target_ref)` where `target_ref` is not null (dedupe guard).
 - `notification_preferences` — `user_id` (pk), `push_safety` / `push_activity` / `push_community`
-  (default FALSE), `discreet_push` (default TRUE), `updated_at`.
+  (default FALSE), `discreet_push` (default TRUE), `push_replies` / `push_rooms` / `push_other`
+  (the 3.1 Settings rows, default FALSE; when migration `post/0093_se_settings_and_me_profile.sql`
+  first adds them, each starts from the categories the member already had on), `quiet_start_minute`
+  / `quiet_end_minute` (SMALLINT 0-1439, NULL for no quiet hours), `quiet_time_zone` (TEXT, at most
+  64 characters), `updated_at`. Which row a type belongs to is `seNotifyGroup` in `@ctf/shared`;
+  the send decision is `shouldPushNow` in `lib/notifications/repository.ts`.
 
 A row stores only a reference + a short label, never sensitive detail.
 
@@ -143,6 +162,12 @@ No seed yet. A follow-up seed can insert a couple of sample notifications for a 
 
 ## Change Log
 
+- 2026-11-11: **3.1 Settings rows and quiet hours.** `notification_preferences` gains
+  `push_replies`, `push_rooms`, `push_other` and quiet hours (migration
+  `post/0093_se_settings_and_me_profile.sql`), read and written by the preferences routes. Device
+  push now follows the 3.1 rows for a member on 3.1 and the categories for a member on 3.0, and is
+  held in quiet hours. The browser subscription helpers moved to
+  `components/notifications/device-push.ts` so 3.1 Settings and the 3.0 panel share them.
 - 2026-10-17: **One browser shows notifications for one member at a time (#2908).** Two members who
   turned pings on in the same browser both got pushes there, and signing out left them on, because the
   unique key on `push_subscriptions` is `(user_id, endpoint)` and nothing removed a row at sign-out.

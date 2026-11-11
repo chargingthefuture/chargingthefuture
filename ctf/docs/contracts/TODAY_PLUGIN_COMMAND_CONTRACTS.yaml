@@ -534,6 +534,25 @@ contracts:
     retentionClass: until_account_deletion
     idempotency: true
   - pluginId: today
+    command: today.marks.list
+    version: 1.0.0
+    description: "List the member's own Today cards marked done or not_for_me that are still around, newest mark first, for Me → Read and Hidden. Read from the same sources as Today; at most 200 marks. (GET /api/today/marks?mark=done|not_for_me)."
+    inputSchema:
+      mark:
+        type: string
+        enum: [done, not_for_me]
+    outputSchema:
+      ok:
+        type: boolean
+      cards:
+        type: array
+        items: object
+    dataAccess:
+      - today_card_marks
+    purpose: card_marks
+    retentionClass: until_account_deletion
+    idempotency: true
+  - pluginId: today
     command: today.renew_notices.run
     version: 1.0.0
     description: "Daily run (today-renew-notices.yml, CRON_SECRET): send the day-14 notice in Activity for every open ask and offer with no deadline whose 14 days on Today end within a day or ended in the past week, whether or not the poster opens the app. Keyed by card and window end, so a notice is never sent twice for one window. Answers counts only. (POST /api/internal/today/renew-notices)."

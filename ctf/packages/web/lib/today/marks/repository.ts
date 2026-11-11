@@ -33,3 +33,12 @@ export async function saveCardMarks(accountId: string, changes: readonly SeCardM
     [accountId, set.map((change) => change.cardId), set.map((change) => change.mark)],
   );
 }
+
+// The card ids this member gave one mark, newest first (Me → Read and Hidden).
+export async function listMarkedCardIds(accountId: string, mark: 'done' | 'not_for_me', limit = 200): Promise<string[]> {
+  const result = await queryDb<{ card_id: string }>(
+    `SELECT card_id FROM today_card_marks WHERE account_id = $1 AND mark = $2 ORDER BY marked_at DESC LIMIT $3`,
+    [accountId, mark, limit],
+  );
+  return result.rows.map((row) => row.card_id);
+}

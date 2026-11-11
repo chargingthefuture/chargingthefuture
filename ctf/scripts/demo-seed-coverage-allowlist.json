@@ -47,6 +47,7 @@
     "commons_item_pair_requests": "a request between two members to talk privately on a card; the demo viewer makes one from a card",
     "today_card_feedback_counts": "daily totals with no account id; the demo viewer adds to them by marking a card done or Not for me",
     "today_card_marks": "a member's own Done and Not for me marks; the demo viewer makes them from the cards",
+    "member_profile_prompts": "the three lines on a member's own Me screen; the demo viewer writes them from Me",
     "today_card_windows": "a poster's own deadline, renew or close on an ask or offer; the demo viewer sets one from + New or the card",
     "question_answer_audit": "audit trail: the app writes it as people act; no demo screen reads it as content",
     "question_matching_settings": "a member's own setting; no row means matching is on, which is what the demo shows",

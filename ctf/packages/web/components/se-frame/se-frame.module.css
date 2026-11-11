@@ -7,6 +7,12 @@
   font-family: 'Figtree Variable', system-ui, sans-serif;
 }
 
+/* Settings → Easier-to-read font: Atkinson Hyperlegible for every line of the frame, titles too. */
+.readable,
+.readable * {
+  font-family: 'Atkinson Hyperlegible', system-ui, sans-serif !important;
+}
+
 .screen {
   box-sizing: border-box;
   display: flex;

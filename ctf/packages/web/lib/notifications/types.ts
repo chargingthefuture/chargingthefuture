@@ -1,3 +1,5 @@
+import type { SeQuietHours } from '@ctf/shared';
+
 // Coarse opt-in bucket a notification belongs to. Device push is opted in per bucket (all default
 // off); the in-app feed shows every bucket regardless. Kept deliberately small so a member has three
 // plain choices, not one per plugin.
@@ -30,6 +32,12 @@ export type NotificationPreferences = {
   pushCommunity: boolean;
   // Keep push text generic (no plugin name or content) on the lock screen. Default true.
   discreetPush: boolean;
+  // The 3.1 Settings rows, used instead of the three categories for a member on 3.1 (seNotifyGroup
+  // says which row a notification type belongs to), and quiet hours, which hold every device push.
+  pushReplies: boolean;
+  pushRooms: boolean;
+  pushOther: boolean;
+  quiet: SeQuietHours | null;
 };
 
 export type NotificationsResponse = {

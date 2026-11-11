@@ -596,6 +596,31 @@ policies:
       - invalid_mark
       - rate_limited
   - pluginId: today
+    command: today.marks.list
+    version: 1.0.0
+    requiredRoles:
+      - member
+    attributePolicies:
+      tenancy: same_workspace
+      minUnlockTier: signed_in
+      readsOnly: true
+      relationship: own_rows_only
+    consentRequirements:
+      scopes:
+        - platform_terms
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - actor_not_authenticated
+      - account_restricted
+      - invalid_mark
+  - pluginId: today
     command: today.renew_notices.run
     version: 1.0.0
     requiredRoles:

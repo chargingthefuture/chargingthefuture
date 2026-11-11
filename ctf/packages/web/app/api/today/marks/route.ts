@@ -6,12 +6,14 @@ import { checkRateLimit } from 'lib/security/rate-limit';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
 import { saveCardMarks } from 'lib/today/marks/repository';
+import { readMarkedCards } from 'lib/today/marked-cards';
 
 // POST /api/today/marks: a member's own mark on a Today card, stored on the account so every device
 // agrees (today_card_marks). `{ cardId, mark }` with mark 'done' (the timeline dot), 'not_for_me'
 // (the ••• menu) or 'clear' (the dot again, taking Done away); or `{ marks: [...], upload: true }`,
 // sent once by a device that kept marks before they were stored here (a card already marked keeps
-// its mark). GET /api/today applies them. Open to every signed-in member at 'signed_in', the tier
+// its mark). GET /api/today applies them. GET /api/today/marks?mark=done|not_for_me lists the
+// member's own marked cards that are still around, for Me → Read and Hidden. Open to every signed-in member at 'signed_in', the tier
 // Today is read at. Separate from POST /api/today/feedback, which counts marks with no names.
 
 export const dynamic = 'force-dynamic';
@@ -53,5 +55,19 @@ export async function POST(request: Request) {
   } catch (error) {
     reportError(error, { area: 'today', op: 'marks_save', extra: { count: changes.length } });
     return denied('marks_unavailable', `The mark was not saved: ${failureReason(error)}`, 503);
+  }
+}
+
+export async function GET(request: Request) {
+  const mark = new URL(request.url).searchParams.get('mark');
+  if (mark !== 'done' && mark !== 'not_for_me') return denied('invalid_mark', "Send ?mark=done or ?mark=not_for_me.", 400);
+  const decision = await evaluatePluginAccess({ requireUsername: false, minUnlockTier: 'signed_in' });
+  if (!decision.allowed) return NextResponse.json(decision, { status: decision.status });
+  try {
+    const cards = await readMarkedCards(decision, mark);
+    return NextResponse.json({ ok: true, cards }, { headers: { 'cache-control': 'private, no-store' } });
+  } catch (error) {
+    reportError(error, { area: 'today', op: 'marks_list', extra: { mark } });
+    return denied('marks_unavailable', `Could not read your marked cards: ${failureReason(error)}`, 503);
   }
 }

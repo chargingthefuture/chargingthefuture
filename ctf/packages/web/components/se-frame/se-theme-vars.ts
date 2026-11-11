@@ -1,10 +1,11 @@
 import type { CSSProperties } from 'react';
-import { seTheme, type SeThemeColor, type SeThemeMode } from '@ctf/shared';
+import { seReadableTokens, seTheme, type SeThemeColor, type SeThemeMode } from '@ctf/shared';
 
 // The 3.1 theme as CSS custom properties on the frame's root, so the stylesheet reads one set of
-// names whichever color and mode the member picks.
-export function seThemeVars(color?: SeThemeColor, mode?: SeThemeMode): CSSProperties {
-  const t = seTheme(color, mode);
+// names whichever color and mode the member picks. Higher contrast (Settings) draws soft text and
+// faint borders in the strong colors.
+export function seThemeVars(color?: SeThemeColor, mode?: SeThemeMode, highContrast = false): CSSProperties {
+  const t = seReadableTokens(seTheme(color, mode), highContrast);
   const vars: Record<string, string> = {
     '--se-bg': t.bg,
     '--se-card': t.card,

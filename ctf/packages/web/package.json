@@ -25,6 +25,7 @@
     "@ctf/shared": "workspace:*",
     "@fontsource-variable/figtree": "5.2.10",
     "@fontsource-variable/newsreader": "^5.3.0",
+    "@fontsource/atkinson-hyperlegible": "5.2.6",
     "@openfeature/server-sdk": "1.21.0",
     "@radix-ui/react-dialog": "^1.1.2",
     "@sentry/nextjs": "^10.76.2",

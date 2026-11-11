@@ -1,52 +1,313 @@
-/* The 3.1 Me screen. Colors come from the frame's custom properties (se-theme-vars.ts). */
-.card {
+/* The 3.1 Me screen, built to the approved board "Me". Colors come from the frame's custom
+   properties (se-theme-vars.ts). */
+.stack {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 14px;
-  border-radius: 18px;
-  background: var(--se-card);
-  border: 1.5px solid var(--se-hair);
+  gap: 14px;
 }
 
-.profile {
+.head {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-.handle {
-  font-size: 17px;
-  font-weight: 700;
+.avatar {
+  flex: none;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 1.5px solid var(--se-ink);
 }
 
-.label,
-.subLabel {
+.who {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.name {
+  margin: 0;
+  font-family: 'Newsreader Variable', Newsreader, Georgia, serif;
+  font-size: 24px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.since {
+  margin: 0;
+  font-size: 13px;
+  color: var(--se-soft);
+}
+
+.term {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.badge {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--se-sunk);
+  color: var(--se-soft);
+}
+
+.badge:any-link {
+  text-decoration: none;
+}
+
+.badgeWeaver {
+  color: var(--se-kind-offer);
+}
+
+.gear {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1.5px solid var(--se-hair);
+  background: var(--se-card);
+  color: var(--se-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: var(--se-card);
+  border: 1.5px solid var(--se-hair);
+}
+
+.definition {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.prompt {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.q {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--se-soft);
+}
+
+.a {
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.textButton {
+  align-self: flex-start;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--se-ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.credits {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 20px;
+  background: var(--se-card);
+  border: 1.5px solid var(--se-line);
+  box-shadow: 0 3px 0 var(--se-line);
+}
+
+.creditsText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.label {
   margin: 0;
   font-size: 12px;
   font-weight: 700;
   color: var(--se-soft);
 }
 
-.title {
+.balance {
+  font-family: 'Newsreader Variable', Newsreader, Georgia, serif;
+  font-size: 36px;
+  font-weight: 600;
+  line-height: 1.05;
+}
+
+.note {
+  font-size: 12px;
+  color: var(--se-soft);
+}
+
+.creditAction {
+  min-width: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--se-ink);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.creditIcon {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--se-btn);
+  color: var(--se-on-btn);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.status {
   margin: 0;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--se-soft);
+}
+
+.shortcuts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.shortcut {
+  min-height: 46px;
+  border-radius: 14px;
+  border: 1.5px solid var(--se-line);
+  background: var(--se-card);
+  box-shadow: 0 2px 0 var(--se-line);
+  color: var(--se-ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.h2 {
+  margin: 4px 0 0;
   font-family: 'Newsreader Variable', Newsreader, Georgia, serif;
   font-size: 20px;
   font-weight: 600;
 }
 
-.big {
-  margin: 0;
-  font-family: 'Newsreader Variable', Newsreader, Georgia, serif;
-  font-size: 28px;
+.tools {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.tool {
+  min-height: 92px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 10px;
+  border-radius: 16px;
+  background: var(--se-card);
+  border: 1.5px solid var(--se-hair);
+  color: var(--se-ink);
+  text-decoration: none;
+}
+
+.toolIcon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.toolLabel {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.switchRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 16px;
+  background: var(--se-card);
+  border: 1.5px solid var(--se-hair);
+  font-size: 14px;
   font-weight: 600;
 }
 
-.text {
-  margin: 0;
-  font-size: 15px;
-  line-height: 1.4;
-  color: var(--se-soft);
+.switch {
+  width: 44px;
+  height: 24px;
+  accent-color: var(--se-btn);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.input {
+  min-height: 44px;
+  box-sizing: border-box;
+  padding: 0 14px;
+  border-radius: 14px;
+  border: 1.5px solid var(--se-line);
+  background: var(--se-bg);
+  color: var(--se-ink);
+  font: inherit;
+  font-size: 16px;
 }
 
 .row {
@@ -55,13 +316,10 @@
   gap: 8px;
 }
 
-.pill,
-.pillButton,
-.swatch {
+.pillButton {
   min-height: 44px;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
   padding: 0 16px;
   border-radius: 999px;
   border: 1.5px solid var(--se-line);
@@ -70,13 +328,13 @@
   font: inherit;
   font-size: 14px;
   font-weight: 700;
-  text-decoration: none;
   box-shadow: 0 2px 0 var(--se-line);
   cursor: pointer;
 }
 
-.pillButton {
-  align-self: flex-start;
+.primary {
+  background: var(--se-btn);
+  color: var(--se-on-btn);
 }
 
 .pillButton:disabled {
@@ -84,61 +342,30 @@
   cursor: default;
 }
 
-.swatch[aria-checked='true'] {
-  background: var(--se-btn);
-  color: var(--se-on-btn);
-}
-
-.swatchDot {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  border: 3px solid;
-}
-
-.picker {
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.tiles {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 10px;
-}
-
-.tile {
+.listItem {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 14px;
-  border-radius: 18px;
+  gap: 2px;
+  padding: 12px 14px;
+  border-radius: 16px;
   background: var(--se-card);
-  border: 1.5px solid var(--se-line);
-  box-shadow: 0 3px 0 var(--se-line);
+  border: 1.5px solid var(--se-hair);
   color: var(--se-ink);
   text-decoration: none;
 }
 
-.tileTitle {
-  font-size: 16px;
-  font-weight: 700;
-}
-
-.links {
-  display: flex;
-  flex-direction: column;
-}
-
-.links a {
-  min-height: 44px;
-  display: flex;
-  align-items: center;
+.itemTitle {
   font-size: 15px;
-  font-weight: 700;
-  color: var(--se-ink);
-  text-underline-offset: 3px;
+  font-weight: 600;
 }
 
 .muteItem {
@@ -162,12 +389,25 @@
   font-size: 16px;
 }
 
-.wordsInput:focus-visible,
-.pill:focus-visible,
+.text {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.4;
+  color: var(--se-soft);
+}
+
+.badge:focus-visible,
+.gear:focus-visible,
+.term:focus-visible,
+.textButton:focus-visible,
+.creditAction:focus-visible,
+.shortcut:focus-visible,
+.tool:focus-visible,
+.switch:focus-visible,
+.input:focus-visible,
 .pillButton:focus-visible,
-.swatch:focus-visible,
-.tile:focus-visible,
-.links a:focus-visible {
+.listItem:focus-visible,
+.wordsInput:focus-visible {
   outline: 2px solid var(--se-pick);
   outline-offset: 2px;
 }

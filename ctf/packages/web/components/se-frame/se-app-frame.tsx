@@ -2,22 +2,24 @@
 
 import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useState } from 'react';
-import { SE_AVENHOOD, SE_AVENHOOD_DEFINITION, SE_TABS, type SeTab, type SeThemeChoice } from '@ctf/shared';
+import { SE_AVENHOOD, SE_AVENHOOD_DEFINITION, SE_TABS, SE_TEXT_SIZE_SCALE, type SeNewKind, type SeTab } from '@ctf/shared';
 import type { ShellCurrentUser } from '../community-shell/shell-types';
 import { SeTabBar } from './se-tab-bar';
 import { TodayScreen } from './today/today-screen';
-import { useSeTheme } from './use-se-theme';
+import { useSePrefs, type SePrefs } from './use-se-prefs';
 import { UnlockBanner } from './unlock-banner';
 import { SeRoomsProvider, useSeRooms } from './rooms/se-rooms';
 import { seThemeVars } from './se-theme-vars';
 import { useInterfaceSwitch } from './use-interface-switch';
+import '@fontsource/atkinson-hyperlegible/400.css';
+import '@fontsource/atkinson-hyperlegible/700.css';
 import styles from './se-frame.module.css';
 
 // Today is the first card a member sees, so only Today is in the first load (3.1 speed budget:
 // under 3 seconds cold on a low-cost phone). The other tabs, and the room screens with their call
 // code, load the first time they are opened.
 const NewScreen = dynamic(() => import('./new/new-screen').then((m) => m.NewScreen));
-const MeScreen = dynamic(() => import('./me/me-screen').then((m) => m.MeScreen));
+const MeTab = dynamic(() => import('./me/me-tab').then((m) => m.MeTab));
 const ActivityScreen = dynamic(() => import('./activity/activity-screen').then((m) => m.ActivityScreen));
 const PeopleScreen = dynamic(() => import('./people/people-screen').then((m) => m.PeopleScreen));
 const SeRoomHosts = dynamic(() => import('./rooms/se-room-screen').then((m) => m.SeRoomHosts), { ssr: false });
@@ -84,22 +86,25 @@ const TAB_TITLES: Partial<Record<SeTab, string>> = { people: 'People', activity:
 
 type TabScreenProps = FrameProps & {
   tab: SeTab;
-  theme: SeThemeChoice;
-  onTheme: (_next: SeThemeChoice) => void;
+  prefs: SePrefs;
+  newKind: SeNewKind;
+  onAskArchitect: () => void;
   onBack: () => void;
   onClose: () => void;
   saving: boolean;
 };
 
-function TabScreen({ tab, currentUser, isAdmin, theme, onTheme, onBack, onClose, saving }: TabScreenProps) {
+function TabScreen({ tab, currentUser, isAdmin, prefs, newKind, onAskArchitect, onBack, onClose, saving }: TabScreenProps) {
   const title = TAB_TITLES[tab];
   return (
     <>
       {tab === 'today' ? <TodayHeader /> : null}
       {title ? <ScreenHeader title={title} /> : null}
       {tab === 'today' ? <TodayScreen accountId={currentUser.userId} /> : null}
-      {tab === 'new' ? <NewScreen onClose={onClose} /> : null}
-      {tab === 'me' ? <MeScreen currentUser={currentUser} isAdmin={isAdmin} theme={theme} onTheme={onTheme} onBack={onBack} saving={saving} /> : null}
+      {tab === 'new' ? <NewScreen key={newKind} initialKind={newKind} onClose={onClose} /> : null}
+      {tab === 'me' ? (
+        <MeTab currentUser={currentUser} isAdmin={isAdmin} prefs={prefs} onAskArchitect={onAskArchitect} onBack={onBack} saving={saving} />
+      ) : null}
       {tab === 'activity' ? <ActivityScreen /> : null}
       {tab === 'people' ? <PeopleScreen /> : null}
     </>
@@ -107,8 +112,10 @@ function TabScreen({ tab, currentUser, isAdmin, theme, onTheme, onBack, onClose,
 }
 
 function SeAppFrameBody({ currentUser, isAdmin }: FrameProps) {
-  const { theme, setTheme } = useSeTheme();
+  const prefs = useSePrefs();
+  const { theme, reading } = prefs;
   const [tab, setTab] = useState<SeTab>('today');
+  const [newKind, setNewKind] = useState<SeNewKind>('ask');
   const rooms = useSeRooms();
   const { minimize } = rooms;
   const { switchTo, saving, error } = useInterfaceSwitch();
@@ -123,6 +130,7 @@ function SeAppFrameBody({ currentUser, isAdmin }: FrameProps) {
   // Choosing a tab while a room is open puts the room in the bar above the tab bar.
   const select = useCallback((next: SeTab) => {
     minimize();
+    setNewKind('ask');
     setTab(next);
     const url = next === 'today' ? '/' : `/?tab=${next}`;
     window.history.pushState(null, '', url);
@@ -130,17 +138,34 @@ function SeAppFrameBody({ currentUser, isAdmin }: FrameProps) {
   }, [minimize]);
 
   const back = () => void switchTo('3.0');
+  // Settings → Ask the architect opens + New on its architect sheet.
+  const askArchitect = () => {
+    select('new');
+    setNewKind('architect');
+  };
+  // Text size zooms the screen (not the tab bar); the easier-to-read font swaps the text font.
+  const scale = SE_TEXT_SIZE_SCALE[reading.textSize];
 
   return (
-    <div className={styles.frame} style={seThemeVars(theme.color, theme.mode)}>
-      <main className={styles.screen} hidden={rooms.shown !== null}>
+    <div className={`${styles.frame} ${reading.readableFont ? styles.readable : ''}`} style={seThemeVars(theme.color, theme.mode, reading.highContrast)}>
+      <main className={styles.screen} hidden={rooms.shown !== null} style={scale === 1 ? undefined : { zoom: scale }}>
         <UnlockBanner />
-        <TabScreen tab={tab} currentUser={currentUser} isAdmin={isAdmin} theme={theme} onTheme={setTheme} onBack={back} onClose={() => select('today')} saving={saving} />
-        {error ? (
-          <p role="alert" className={styles.error}>
-            {error}
+        <TabScreen
+          tab={tab}
+          currentUser={currentUser}
+          isAdmin={isAdmin}
+          prefs={prefs}
+          newKind={newKind}
+          onAskArchitect={askArchitect}
+          onBack={back}
+          onClose={() => select('today')}
+          saving={saving}
+        />
+        {[error, prefs.error].filter(Boolean).map((message) => (
+          <p key={message} role="alert" className={styles.error}>
+            {message}
           </p>
-        ) : null}
+        ))}
       </main>
       {rooms.opened.length > 0 ? (
         <>

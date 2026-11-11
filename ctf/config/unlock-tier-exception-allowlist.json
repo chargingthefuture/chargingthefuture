@@ -157,7 +157,7 @@
       "kind": "exception",
       "feature": "3.1 open sign-up use",
       "decision": "2026-11-03",
-      "reason": "POST /api/today/marks at 'signed_in', the tier Today is read at: a member's own Done and Not for me marks on Today cards, stored on their account (today_card_marks) so every device agrees, and applied by GET /api/today. Only the member's own rows, scoped by account. Account restrictions still apply. Separate from POST /api/today/feedback, which counts marks with no names."
+      "reason": "POST /api/today/marks at 'signed_in', the tier Today is read at: a member's own Done and Not for me marks on Today cards, stored on their account (today_card_marks) so every device agrees, and applied by GET /api/today. Only the member's own rows, scoped by account. Account restrictions still apply. Separate from POST /api/today/feedback, which counts marks with no names. GET at the same tier lists the member's own marked cards that are still around, for Me → Read and Hidden (reading their own marks, at the tier Today is read at)."
     },
     {
       "file": "ctf/packages/web/lib/mood/_lib.ts",

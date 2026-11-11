@@ -23,6 +23,7 @@ import {
 import { Newsreader_500Medium, Newsreader_600SemiBold } from '@expo-google-fonts/newsreader';
 // The 3.1 screens' text face (src/features/se-frame/fonts.ts).
 import { DMSans_400Regular, DMSans_600SemiBold, DMSans_700Bold } from '@expo-google-fonts/dm-sans';
+import { AtkinsonHyperlegible_400Regular, AtkinsonHyperlegible_700Bold } from '@expo-google-fonts/atkinson-hyperlegible';
 import { DailyScreen } from './src/features/games';
 import { ChymeRoom } from './src/features/chyme';
 import { InterfaceVersionProvider, PublicToday, SeAppFrame, useInterfaceVersion } from './src/features/se-frame';
@@ -82,6 +83,8 @@ export default function App() {
     DMSans_400Regular,
     DMSans_600SemiBold,
     DMSans_700Bold,
+    AtkinsonHyperlegible_400Regular,
+    AtkinsonHyperlegible_700Bold,
   });
 
   if (!fontsLoaded) {
@@ -210,19 +213,11 @@ function showsNewFrame(isAuthenticated: boolean, interfaceVersion: string, selec
 }
 
 // The 3.1 home, with the Foundation call controller above it so an incoming call still rings.
-function NewFrameShell({
-  user,
-  onOpenAccount,
-  onOpen,
-}: {
-  user: { id?: string; username?: string | null } | null;
-  onOpenAccount: () => void;
-  onOpen: (_key: FeatureKey) => void;
-}) {
+function NewFrameShell({ user, onOpen }: { user: { id?: string; username?: string | null } | null; onOpen: (_key: FeatureKey) => void }) {
   return (
     <View key={user?.id ?? 'signed-out'} style={styles.container}>
       <FoundationCallController signedIn displayName={callDisplayName(user)}>
-        <SeAppFrame onOpenAccount={onOpenAccount} onOpen={onOpen} />
+        <SeAppFrame onOpen={onOpen} />
       </FoundationCallController>
       <StatusBar style="light" />
     </View>
@@ -236,11 +231,10 @@ type StandaloneInput = {
   user: { id?: string; username?: string | null } | null;
   back: () => void;
   open: (_key: FeatureKey) => void;
-  openAccount: () => void;
 };
 
 // The 3.1 screens that draw their own frame, outside the 3.0 shell, or null for the shell.
-function standaloneScreen({ selected, isAuthenticated, interfaceVersion, user, back, open, openAccount }: StandaloneInput) {
+function standaloneScreen({ selected, isAuthenticated, interfaceVersion, user, back, open }: StandaloneInput) {
   // The puzzle of the day: full screen in the 3.1 look, with its own Back to Today, as the web's
   // /games is, not inside the 3.0 header.
   if (selected === 'games') {
@@ -274,7 +268,7 @@ function standaloneScreen({ selected, isAuthenticated, interfaceVersion, user, b
   // A member who switched to 3.1 sees the new frame on the home screen, as the web does at `/`. The
   // account screens it links to keep the 3.0 shell for now.
   if (showsNewFrame(isAuthenticated, interfaceVersion, selected)) {
-    return <NewFrameShell user={user} onOpenAccount={openAccount} onOpen={open} />;
+    return <NewFrameShell user={user} onOpen={open} />;
   }
   return null;
 }
@@ -345,7 +339,7 @@ function AppShell() {
 
   // A member who switched to 3.1 sees the new frame on the home screen, as the web does at `/`. The
   // account screens it links to keep the 3.0 shell for now.
-  const standalone = standaloneScreen({ selected, isAuthenticated, interfaceVersion, user, back, open, openAccount });
+  const standalone = standaloneScreen({ selected, isAuthenticated, interfaceVersion, user, back, open });
   if (standalone) return standalone;
 
   return (

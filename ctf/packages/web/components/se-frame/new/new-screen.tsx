@@ -119,8 +119,9 @@ const BODIES: Record<SeNewKind, () => React.ReactElement> = {
   architect: ArchitectBody,
 };
 
-export function NewScreen({ onClose }: { onClose: () => void }) {
-  const [kind, setKind] = useState<SeNewKind>('ask');
+// `initialKind` opens a sheet other than Ask: Settings → Ask the architect opens the architect's.
+export function NewScreen({ onClose, initialKind = 'ask' }: { onClose: () => void; initialKind?: SeNewKind }) {
+  const [kind, setKind] = useState<SeNewKind>(initialKind);
   const Body = BODIES[kind];
   // Ask, Offer and Story share "Post something" above the switch; Talk and the architect carry
   // their own heading under it.

@@ -1,0 +1,276 @@
+/* 3.1 Settings and Theme, built to the approved boards "Settings" and "Theme". */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.back {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1.5px solid var(--se-hair);
+  background: transparent;
+  color: var(--se-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.title {
+  margin: 0;
+  font-family: 'Newsreader Variable', Newsreader, Georgia, serif;
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.groupTitle {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--se-soft);
+}
+
+.box {
+  background: var(--se-card);
+  border: 1.5px solid var(--se-hair);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.row {
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 50px;
+  padding: 0 14px;
+  border: 0;
+  border-bottom: 1px solid var(--se-sunk);
+  background: transparent;
+  color: var(--se-ink);
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.box > :last-child .row,
+.box > .row:last-child {
+  border-bottom: 0;
+}
+
+.rowLabel {
+  flex: 1;
+  font-size: 15px;
+}
+
+.rowValue {
+  font-size: 13px;
+  color: var(--se-soft);
+  text-align: right;
+}
+
+.chevron {
+  flex: none;
+  color: var(--se-soft);
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--se-sunk);
+}
+
+.fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--se-soft);
+}
+
+.time {
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1.5px solid var(--se-line);
+  background: var(--se-bg);
+  color: var(--se-ink);
+  font: inherit;
+  font-size: 16px;
+}
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pill {
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1.5px solid var(--se-line);
+  background: var(--se-card);
+  color: var(--se-ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: 0 2px 0 var(--se-line);
+  cursor: pointer;
+}
+
+.primary {
+  background: var(--se-btn);
+  color: var(--se-on-btn);
+}
+
+.pill:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.note {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--se-soft);
+}
+
+.alert {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--se-kind-ask);
+}
+
+.segment {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--se-sunk);
+}
+
+.segmentButton {
+  min-height: 42px;
+  border-radius: 999px;
+  border: 0;
+  background: transparent;
+  color: var(--se-soft);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.segmentButton[aria-pressed='true'] {
+  border: 1.5px solid var(--se-pick);
+  background: var(--se-card);
+  color: var(--se-ink);
+  font-weight: 700;
+}
+
+.themes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.themeButton {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 18px;
+  border: 1.5px solid var(--se-hair);
+  background: var(--se-card);
+  color: var(--se-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.themeButton[aria-pressed='true'] {
+  border: 2px solid var(--se-pick);
+}
+
+.swatch {
+  height: 72px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 12px;
+}
+
+.dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+}
+
+.themeName {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.themeNote {
+  font-size: 12px;
+  color: var(--se-soft);
+}
+
+.getLink {
+  display: flex;
+  align-items: center;
+  min-height: 50px;
+  padding: 0 14px;
+  border-radius: 14px;
+  background: var(--se-card);
+  border: 1.5px solid var(--se-hair);
+  color: var(--se-ink);
+  font-size: 15px;
+  text-decoration: none;
+}
+
+.grow {
+  flex: 1;
+}
+
+.back:focus-visible,
+.row:focus-visible,
+.time:focus-visible,
+.pill:focus-visible,
+.segmentButton:focus-visible,
+.themeButton:focus-visible,
+.getLink:focus-visible {
+  outline: 2px solid var(--se-pick);
+  outline-offset: -2px;
+}
