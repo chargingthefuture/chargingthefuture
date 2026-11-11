@@ -1,95 +1,62 @@
-// Activity on Android, the copy of the web (web components/se-frame/activity/): what needs the
-// member's answer, then what happened, from the app's notifications. Opening an item marks it read.
-// No red badges: "New" uses the theme's own colors. The day-14 notice on the member's own ask or offer
-// carries its one-tap renew beside it.
+// Activity on Android, the copy of the web (web components/se-frame/activity/, approved board
+// "Activity"): what needs the member, answered in place, then what happened today and earlier,
+// each with its icon and full date and time. Opening an item marks it read and follows its link.
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { SE_ACTIVITY_WORDS as W, SE_CARD_LIFETIME_WORDS as L, seActivityView, seAgo, seRenewCardId, type SeActivityItem, type SeThemeTokens } from '@ctf/shared';
-import { authedFetch, authedFetchJson } from '../../../auth/authedFetch';
+import Svg, { Path } from 'react-native-svg';
+import {
+  SE_ACTIVITY_ICON_PATHS,
+  SE_ACTIVITY_WORDS as W,
+  seActivityIcon,
+  seActivityTint,
+  seActivityView,
+  seActivityWhen,
+  type SeActivityItem,
+  type SeThemeTokens,
+} from '@ctf/shared';
 import type { FeatureKey } from '../../../navigation/screens';
 import { openTodayLink } from '../today/openTodayLink';
-import { usePosterActions } from '../today/usePosterActions';
 import { SE_FONT } from '../fonts';
+import { NeedCard } from './NeedCard';
+import { useActivity } from './useActivity';
 
-type State = { kind: 'loading' } | { kind: 'error'; message: string } | { kind: 'ready'; items: SeActivityItem[] };
 type Styles = ReturnType<typeof makeStyles>;
 
-const CSRF = { 'x-ctf-csrf': '1' };
-
-function useActivity() {
-  const [state, setState] = useState<State>({ kind: 'loading' });
-  const load = useCallback(async () => {
-    try {
-      const body = await authedFetchJson<{ notifications?: SeActivityItem[] }>('/api/notifications');
-      setState({ kind: 'ready', items: body.notifications ?? [] });
-    } catch (error) {
-      setState({ kind: 'error', message: error instanceof Error ? error.message : 'The request did not complete.' });
-    }
-  }, []);
-  useEffect(() => {
-    void load();
-  }, [load]);
-  const markRead = useCallback((id: string) => {
-    setState((current) =>
-      current.kind === 'ready' ? { kind: 'ready', items: current.items.map((item) => (item.id === id ? { ...item, isRead: true } : item)) } : current,
-    );
-    void authedFetch(`/api/notifications/${encodeURIComponent(id)}/read`, { method: 'POST', headers: CSRF }).catch(() => undefined);
-  }, []);
-  const markAllRead = useCallback(() => {
-    setState((current) => (current.kind === 'ready' ? { kind: 'ready', items: current.items.map((item) => ({ ...item, isRead: true })) } : current));
-    void authedFetch('/api/notifications/read-all', { method: 'POST', headers: CSRF }).catch(() => undefined);
-  }, []);
-  return { state, reload: load, markRead, markAllRead };
-}
-
-function Renew({ s, cardId, onDone }: { s: Styles; cardId: string; onDone: () => void }) {
-  const actions = usePosterActions(cardId, onDone);
-  const { status } = actions;
-  if (status.kind === 'done') return <Text style={s.text}>{status.text}</Text>;
+function Row({ s, t, item, onOpen }: { s: Styles; t: SeThemeTokens; item: SeActivityItem; onOpen: (_item: SeActivityItem) => void }) {
+  const icon = seActivityIcon(item.notificationType);
   return (
-    <>
-      <TouchableOpacity accessibilityRole="button" disabled={status.kind === 'busy'} onPress={() => void actions.renew()} style={s.allRead}>
-        <Text style={s.allReadLabel}>{status.kind === 'busy' ? L.renewing : L.renew}</Text>
-      </TouchableOpacity>
-      {status.kind === 'error' ? (
-        <Text accessibilityRole="alert" style={s.text}>
-          {status.text}
-        </Text>
-      ) : null}
-    </>
+    <TouchableOpacity accessibilityRole={item.linkPath ? 'link' : 'button'} onPress={() => onOpen(item)} style={s.row}>
+      <View style={[s.icon, { backgroundColor: seActivityTint(t, icon) }]}>
+        <Svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke={t.ink} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          <Path d={SE_ACTIVITY_ICON_PATHS[icon]} />
+        </Svg>
+      </View>
+      <View style={s.rowText}>
+        <Text style={s.summary}>{item.summary}</Text>
+        <Text style={s.when}>{seActivityWhen(item.createdAtIso)}</Text>
+      </View>
+    </TouchableOpacity>
   );
 }
 
-function Group({ s, title, items, onOpen, onRead }: { s: Styles; title: string; items: SeActivityItem[]; onOpen: (_item: SeActivityItem) => void; onRead: (_id: string) => void }) {
+function Group({ s, t, title, items, onOpen }: { s: Styles; t: SeThemeTokens; title: string; items: SeActivityItem[]; onOpen: (_item: SeActivityItem) => void }) {
   if (items.length === 0) return null;
   return (
-    <View style={s.group} accessibilityLabel={title}>
+    <View accessibilityLabel={title}>
       <Text accessibilityRole="header" style={s.groupTitle}>
         {title}
       </Text>
-      {items.map((item) => {
-        const renewId = seRenewCardId(item);
-        return (
-          <View key={item.id} style={s.group}>
-            <TouchableOpacity accessibilityRole={item.linkPath ? 'link' : 'button'} onPress={() => onOpen(item)} style={s.row}>
-              <Text style={s.summary}>{item.summary}</Text>
-              <View style={s.meta}>
-                {item.isRead ? null : <Text style={s.isNew}>{W.isNew}</Text>}
-                <Text style={s.when}>{seAgo(item.createdAtIso)}</Text>
-              </View>
-            </TouchableOpacity>
-            {renewId ? <Renew s={s} cardId={renewId} onDone={() => onRead(item.id)} /> : null}
-          </View>
-        );
-      })}
+      {items.map((item) => (
+        <Row key={item.id} s={s} t={t} item={item} onOpen={onOpen} />
+      ))}
     </View>
   );
 }
 
 export function ActivityScreen({ t, onOpen }: { t: SeThemeTokens; onOpen: (_key: FeatureKey) => void }) {
   const s = useMemo(() => makeStyles(t), [t]);
-  const { state, reload, markRead, markAllRead } = useActivity();
+  const { state, reload, markRead } = useActivity();
   if (state.kind === 'loading') return <Text style={s.text}>{W.loading}</Text>;
   if (state.kind === 'error') {
     return (
@@ -109,39 +76,31 @@ export function ActivityScreen({ t, onOpen }: { t: SeThemeTokens; onOpen: (_key:
   };
   return (
     <>
-      <Group s={s} title={W.answer} items={view.answer} onOpen={open} onRead={markRead} />
-      <Group s={s} title={W.happened} items={view.happened} onOpen={open} onRead={markRead} />
-      {state.items.some((item) => !item.isRead) ? (
-        <TouchableOpacity accessibilityRole="button" onPress={markAllRead} style={s.allRead}>
-          <Text style={s.allReadLabel}>{W.allRead}</Text>
-        </TouchableOpacity>
+      {view.needs.length > 0 ? (
+        <View accessibilityLabel={W.needs} style={s.needs}>
+          {view.needs.map((need) => (
+            <NeedCard key={need.item.id} t={t} need={need} onRead={markRead} />
+          ))}
+        </View>
       ) : null}
+      <Group s={s} t={t} title={W.today} items={view.today} onOpen={open} />
+      <Group s={s} t={t} title={W.earlier} items={view.earlier} onOpen={open} />
+      <Text style={s.end}>{W.end}</Text>
     </>
   );
 }
 
 function makeStyles(t: SeThemeTokens) {
   return StyleSheet.create({
-    group: { gap: 8 },
-    groupTitle: { fontSize: 12, color: t.soft, fontFamily: SE_FONT.sansBold },
-    row: { gap: 4, minHeight: 44, paddingVertical: 12, paddingHorizontal: 14, borderRadius: 16, borderWidth: 1.5, borderColor: t.hair, backgroundColor: t.card },
-    summary: { fontSize: 15, lineHeight: 21, color: t.ink, fontFamily: SE_FONT.sans },
-    meta: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    isNew: { paddingVertical: 2, paddingHorizontal: 8, borderRadius: 999, overflow: 'hidden', backgroundColor: t.btn, color: t.onBtn, fontSize: 11, fontFamily: SE_FONT.sansBold },
-    when: { fontSize: 13, color: t.soft, fontFamily: SE_FONT.sans },
+    needs: { gap: 14 },
+    groupTitle: { marginTop: 4, fontSize: 13, color: t.soft, fontFamily: SE_FONT.sansBold },
+    row: { flexDirection: 'row', gap: 12, alignItems: 'flex-start', minHeight: 44, paddingVertical: 10, paddingHorizontal: 2, borderBottomWidth: 1, borderBottomColor: t.hair },
+    icon: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+    rowText: { flex: 1, gap: 2 },
+    summary: { fontSize: 14, lineHeight: 20, color: t.ink, fontFamily: SE_FONT.sans },
+    when: { fontSize: 12, color: t.soft, fontFamily: SE_FONT.sans },
     text: { fontSize: 15, lineHeight: 21, color: t.soft, fontFamily: SE_FONT.sans },
+    end: { paddingTop: 4, fontSize: 13, lineHeight: 18, textAlign: 'center', color: t.soft, fontFamily: SE_FONT.sans },
     link: { color: t.ink, textDecorationLine: 'underline', fontFamily: SE_FONT.sansBold },
-    allRead: {
-      alignSelf: 'flex-start',
-      minHeight: 44,
-      justifyContent: 'center',
-      paddingHorizontal: 16,
-      borderRadius: 999,
-      borderWidth: 1.5,
-      borderColor: t.line,
-      backgroundColor: t.card,
-      boxShadow: `0px 2px 0px ${t.line}`,
-    },
-    allReadLabel: { fontSize: 14, color: t.ink, fontFamily: SE_FONT.sansBold },
   });
 }

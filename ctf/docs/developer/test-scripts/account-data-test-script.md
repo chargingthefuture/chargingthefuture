@@ -327,15 +327,22 @@ not an admin never sees it.
 **Role:** approved member; a second member · **Precondition:** on 3.1.
 **Steps:**
 1. As the second member, reply to one of the first member's Commons posts, send them 1 ServiceCredit,
-   and invite them to a Recurring Activity.
-2. As the first member, open Activity. Open the reply.
-3. Tap **Mark all as read**.
-**Expected:** Step 2 shows the invite under "Needs your answer" and the reply and the credits under
-"What happened", newest first, each with how long ago and "New" on the unread ones (no red badge
-anywhere). Opening the reply goes to it and its "New" is gone on return. Step 3 clears every "New".
-With nothing recorded, Activity reads "Nothing yet. Replies, credits sent to you and confirmations
-show here."
-**Result:** web ☐ — notes:
+   invite them to a Recurring Activity, and on a Today card the first member answered, ask them to
+   talk just you two.
+2. As the first member, open Activity. Tap **Agree** on the Just us two request and **Confirm** on the
+   invite.
+3. Open the reply. Return to Activity, then leave it and open it again.
+**Expected:** Step 2 shows the request (with the second member's picture, Agree and Not now) and the
+invite (Confirm and That's not right) at the top, then the reply and the credits under "Today", each
+with an icon and its full date and time in the reader's own timezone, and the line "That is
+everything. Notifications are quiet unless you turn them up in Me." at the end. No unread badge
+anywhere. Agree shows "Agreed. Open the card in Today to talk just you two." and the card's Just us
+two conversation is open; Confirm shows "Confirmed." and the activity is confirmed in Recurring
+Activity. Step 3 opens the reply; on the second visit the answered request and invite sit in Today as
+plain rows. Not now on a request moves it out of the top straight away. A notice from an earlier
+day is under "Earlier". With nothing recorded, Activity reads "Nothing yet. Replies, credits sent to
+you and confirmations show here."
+**Result:** web ☐ android ☐ — notes:
 
 ## AD-16 · People in 3.1
 
@@ -448,8 +455,8 @@ the top; Days won with "Skills Economy is where the Avenhood meets…" and Sign 
 "Today's cards" with "Read only"; asks and offers from "A member" with Sign up to answer, stories with
 Read it; a dashed People card that says it opens once a member is reviewed; and a bar along the
 bottom, "Free. Use one part, ignore the rest." with Sign up. No card shows a name and there is no
-card menu. Step 2 starts listening right there on the card, with no account. Step 3 says "Quiet
-right now", offers the readings, and shows the next room with Add to calendar. Step 4 opens sign-up,
+card menu. Step 2 starts listening right there on the card, with no account. Step 3 says "The Main
+Room is quiet right now", naming the room so it never reads as the app being quiet, offers the readings, and shows the next room with Add to calendar. Step 4 opens sign-up,
 then sign-in. Step 5 lands on the home page.
 **Result:** web ☐ android ☐ — notes:
 

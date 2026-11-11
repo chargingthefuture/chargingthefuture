@@ -10,7 +10,7 @@ export const SE_GUEST_WORDS = {
     listen: 'Listen as a guest',
     listenNote: 'Anyone can listen, no account needed. Sign in to speak.',
     listenUnavailable: "Listening in without an account isn't available right now.",
-    quiet: 'Quiet right now',
+    quiet: 'The Main Room is quiet right now',
     playReadings: 'Play readings',
     readingsNote: 'Recorded blog posts, one after another',
     nextRoom: 'Next room',

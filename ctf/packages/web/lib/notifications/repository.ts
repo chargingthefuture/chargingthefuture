@@ -49,6 +49,7 @@ function mapNotification(row: NotificationRow): Notification {
     category: isNotificationCategory(row.category) ? row.category : 'activity',
     summary: row.summary,
     linkPath: resolveLinkPath(row),
+    targetRef: row.target_ref,
     isRead: row.read_at !== null,
     createdAtIso: row.created_at.toISOString(),
   };
