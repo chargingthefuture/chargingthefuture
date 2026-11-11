@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { SeActivityItem } from '@ctf/shared';
 
-// Activity reads the app's notifications and marks one read when it is opened.
+// Activity reads the app's notifications and marks one read when it is opened or answered.
 
 export type ActivityState = { kind: 'loading' } | { kind: 'error'; message: string } | { kind: 'ready'; items: SeActivityItem[] };
 
@@ -27,17 +27,15 @@ export function useActivity() {
     void load();
   }, [load]);
 
-  const markRead = useCallback((id: string) => {
+  // `keepShown` marks it read on the server only, so an answered notice stays in place showing what
+  // was done until the next visit.
+  const markRead = useCallback((id: string, keepShown = false) => {
+    void fetch(`/api/notifications/${encodeURIComponent(id)}/read`, { method: 'POST', headers: CSRF }).catch(() => undefined);
+    if (keepShown) return;
     setState((current) =>
       current.kind === 'ready' ? { kind: 'ready', items: current.items.map((item) => (item.id === id ? { ...item, isRead: true } : item)) } : current,
     );
-    void fetch(`/api/notifications/${encodeURIComponent(id)}/read`, { method: 'POST', headers: CSRF }).catch(() => undefined);
   }, []);
 
-  const markAllRead = useCallback(() => {
-    setState((current) => (current.kind === 'ready' ? { kind: 'ready', items: current.items.map((item) => ({ ...item, isRead: true })) } : current));
-    void fetch('/api/notifications/read-all', { method: 'POST', headers: CSRF }).catch(() => undefined);
-  }, []);
-
-  return { state, reload: load, markRead, markAllRead };
+  return { state, reload: load, markRead };
 }
