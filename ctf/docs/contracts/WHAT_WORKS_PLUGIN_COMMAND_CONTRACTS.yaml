@@ -231,9 +231,6 @@ commands:
         title:
           type: string
           maxLength: 120
-        context:
-          type: string
-          maxLength: 280
       required: [title]
     outputSchema:
       type: object
@@ -263,9 +260,16 @@ commands:
         problems:
           type: array
           maxItems: 5
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              title: { type: string }
+              helpedCount: { type: integer }
     dataAccess:
       - what_works_problems (select)
-    purpose: Listed problems sharing words with what a member is typing, so they add to one instead of proposing a duplicate
+      - what_works_products (select)
+    purpose: Listed problems sharing words with what a member is typing, each with how many approved things that helped are under it, so they add to one instead of proposing a duplicate
     retentionClass: community_content
   - pluginId: what-works
     command: what-works.admin.problem.pending
@@ -278,9 +282,23 @@ commands:
       properties:
         problems:
           type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              title: { type: string }
+              createdAt: { type: string }
+              attachedCount: { type: integer }
+              suggestion:
+                type: [object, 'null']
+                properties:
+                  id: { type: string }
+                  title: { type: string }
+                  helpedCount: { type: integer }
     dataAccess:
       - what_works_problems (select)
-    purpose: Problems members proposed, oldest first, without who proposed them
+      - what_works_products (select)
+    purpose: Problems members proposed, oldest first, without who proposed them, each with how many things the proposer added under it and the listed problem it looks most like
     retentionClass: community_content
   - pluginId: what-works
     command: what-works.admin.problem.review
@@ -308,6 +326,33 @@ commands:
       - what_works_products (update)
       - what_works_admin_audit_trail
     purpose: Approve a proposal as new, merge it into a listed problem (its suggestions move there), or delete it as spam
+    retentionClass: community_content
+  - pluginId: what-works
+    command: what-works.admin.problem.merge
+    version: 1.0.0
+    inputSchema:
+      type: object
+      properties:
+        id:
+          type: string
+        intoId:
+          type: string
+      required: [id, intoId]
+    outputSchema:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        intoId:
+          type: string
+        moved:
+          type: integer
+    dataAccess:
+      - what_works_problems (select)
+      - what_works_problems (delete)
+      - what_works_products (update)
+      - what_works_admin_audit_trail
+    purpose: Merge two approved problems; every thing that helped under the first, with every vote on it, moves to the second, then the first is removed
     retentionClass: community_content
   - pluginId: what-works
     command: what-works.admin.product.list

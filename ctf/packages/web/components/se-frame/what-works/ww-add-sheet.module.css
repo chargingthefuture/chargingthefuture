@@ -1,0 +1,178 @@
+/* What Works, add a problem, to the approved board "What works: add a problem". Colors come from
+   the 3.1 theme's custom properties (se-theme-vars.ts). */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  justify-content: center;
+  background: var(--se-soft);
+  font-family: 'Figtree Variable', system-ui, sans-serif;
+}
+
+.sheet {
+  position: absolute;
+  top: 48px;
+  bottom: 0;
+  width: 100%;
+  max-width: 480px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 12px 16px 20px;
+  overflow-y: auto;
+  border-radius: 26px 26px 0 0;
+  border-top: 1.5px solid var(--se-line);
+  background: var(--se-card);
+  color: var(--se-ink);
+}
+
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1.5px solid var(--se-hair);
+  background: transparent;
+  color: var(--se-ink);
+  cursor: pointer;
+}
+
+.eyebrow {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--se-kind-story);
+}
+
+.title {
+  margin: 0;
+  font-family: 'Newsreader Variable', Newsreader, Georgia, serif;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.rule {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--se-bg);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.input {
+  min-height: 48px;
+  box-sizing: border-box;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1.5px solid var(--se-line);
+  background: var(--se-card);
+  color: var(--se-ink);
+  font: inherit;
+  font-size: 15px;
+}
+
+.matches {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.match {
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-radius: 14px;
+  border: 1.5px solid var(--se-hair);
+  background: var(--se-card);
+  color: var(--se-ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.matchText {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+.matchTitle {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.matchCount,
+.note {
+  font-size: 12px;
+  color: var(--se-soft);
+}
+
+.note {
+  margin: 0;
+  font-size: 13px;
+}
+
+.use {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--se-kind-story);
+}
+
+.error {
+  margin: 0;
+  font-size: 13px;
+  color: var(--se-live-badge);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.add,
+.primary {
+  min-height: 50px;
+  border-radius: 999px;
+  border: 1.5px solid var(--se-line);
+  background: var(--se-card);
+  color: var(--se-ink);
+  font: inherit;
+  font-weight: 700;
+  font-size: 15px;
+  box-shadow: 0 3px 0 var(--se-line);
+  cursor: pointer;
+}
+
+.primary {
+  background: var(--se-btn);
+  color: var(--se-on-btn);
+}
+
+.add:disabled,
+.primary:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
