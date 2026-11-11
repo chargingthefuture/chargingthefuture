@@ -33,9 +33,8 @@ import type { FeatureKey } from '../../navigation/screens';
 const TODAY_DATE = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
 // + New has no title here: it is a sheet with its own heading, as on the web.
-const TITLES: Record<Exclude<SeTab, 'new'>, string> = {
+const TITLES: Record<Exclude<SeTab, 'new' | 'people'>, string> = {
   today: `Today in the ${SE_AVENHOOD}`,
-  people: 'People',
   activity: 'Activity',
   me: 'Me',
 };
@@ -159,14 +158,14 @@ function TabScreen({ t, tab, user, prefs, newKind, onAskArchitect, onBack, onClo
   if (tab === 'today') return user ? <TodayScreen t={t} accountId={user.id} onOpen={onOpen} /> : null;
   if (tab === 'new') return <NewScreen key={newKind} t={t} initialKind={newKind} onOpen={onOpen} onClose={onClose} />;
   if (tab === 'activity') return <ActivityScreen t={t} onOpen={onOpen} />;
-  return <PeopleScreen t={t} onOpen={onOpen} />;
+  return <PeopleScreen t={t} onOpen={onOpen} onToday={onClose} />;
 }
 
 function FrameHeader({ s, tab }: { s: Styles; tab: SeTab }) {
   const [definitionOpen, setDefinitionOpen] = useState(false);
   // Me has no title, as on the web: the member's own picture and handle head it. + New is a sheet
-  // with its own heading.
-  if (tab === 'me' || tab === 'new') return null;
+  // with its own heading. People heads itself, with the number listed beside its title.
+  if (tab === 'me' || tab === 'new' || tab === 'people') return null;
   if (tab !== 'today') {
     return (
       <View style={s.header}>

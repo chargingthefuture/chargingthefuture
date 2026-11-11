@@ -1,0 +1,155 @@
+/* What Works admin, new problems, to the approved board "What works: admin merge and spam".
+   Colors come from the 3.1 theme's custom properties (se-theme-vars.ts). */
+.screen {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 16px 0;
+  padding: 20px 16px;
+  border-radius: 18px;
+  background: var(--se-bg);
+  color: var(--se-ink);
+  font-family: 'Figtree Variable', system-ui, sans-serif;
+}
+
+.head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.eyebrow,
+.meta {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--se-soft);
+}
+
+.meta {
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.title {
+  margin: 0;
+  font-family: 'Newsreader Variable', Newsreader, Georgia, serif;
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.card,
+.cardFirst {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1.5px solid var(--se-hair);
+  background: var(--se-card);
+}
+
+.cardFirst {
+  border-color: var(--se-line);
+  box-shadow: 0 3px 0 var(--se-line);
+}
+
+.problem {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.looks {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: var(--se-pick);
+  color: var(--se-on-pick);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.fieldLabel {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.select {
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1.5px solid var(--se-hair);
+  background: var(--se-card);
+  color: var(--se-ink);
+  font: inherit;
+  font-size: 14px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.primary,
+.secondary,
+.danger {
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1.5px solid var(--se-line);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.primary {
+  background: var(--se-btn);
+  color: var(--se-on-btn);
+  font-weight: 700;
+}
+
+.secondary {
+  background: var(--se-card);
+  color: var(--se-ink);
+}
+
+.danger {
+  border-color: var(--se-live-badge);
+  background: transparent;
+  color: var(--se-live-badge);
+}
+
+.primary:disabled,
+.secondary:disabled,
+.danger:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.link {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--se-ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.note {
+  margin: 0;
+  font-size: 13px;
+  color: var(--se-soft);
+}
+
+.error {
+  margin: 0;
+  font-size: 13px;
+  color: var(--se-live-badge);
+}

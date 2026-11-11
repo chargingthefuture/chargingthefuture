@@ -1,0 +1,112 @@
+/* The approved 3.1 board "Share picture". Colors come from the --se-* theme variables the sheet
+   sets on itself, so it follows every color and dark mode wherever it opens. */
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: color-mix(in srgb, var(--se-ink) 55%, transparent);
+  display: flex;
+  justify-content: center;
+  font-family: 'Figtree Variable', system-ui, sans-serif;
+}
+
+.scrim {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.sheet {
+  position: absolute;
+  top: 40px;
+  bottom: 0;
+  width: 100%;
+  max-width: 560px;
+  box-sizing: border-box;
+  background: var(--se-bg);
+  color: var(--se-ink);
+  border-radius: 26px 26px 0 0;
+  border-top: 1.5px solid var(--se-line);
+  padding: 14px 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+}
+
+.head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.title {
+  margin: 0;
+  font-family: 'Newsreader Variable', Newsreader, Georgia, serif;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.round {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: 50%;
+  border: 1.5px solid var(--se-hair);
+  background: var(--se-card);
+  color: var(--se-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.figure {
+  margin: 0;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.hint {
+  margin: 0;
+  font-size: 14px;
+  color: var(--se-soft);
+  text-align: center;
+}
+
+.primary,
+.secondary {
+  border-radius: 999px;
+  border: 1.5px solid var(--se-line);
+  cursor: pointer;
+  font: inherit;
+}
+
+.primary {
+  min-height: 52px;
+  background: var(--se-btn);
+  color: var(--se-on-btn);
+  font-weight: 700;
+  font-size: 16px;
+  box-shadow: 0 4px 0 var(--se-line);
+}
+
+.primary:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.secondary {
+  min-height: 48px;
+  background: var(--se-card);
+  color: var(--se-ink);
+  font-weight: 600;
+  font-size: 15px;
+  box-shadow: 0 2px 0 var(--se-line);
+}

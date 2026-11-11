@@ -48,6 +48,11 @@
       "reason": "The currency options feed for a dropdown on a gated screen. Reads a global catalog, not anyone's data."
     },
     {
+      "file": "ctf/packages/web/app/api/people/count/route.ts",
+      "kind": "machinery",
+      "reason": "GET /api/people/count at 'signed_in' (the tier of the 3.1 open sign-up use, owner decision 2026-10-27): only the number of people the Directory lists, for the approved board \"People, not yet verified\" (2026-11-02), which shows a member not yet approved how many people are listed before they finish Unlock. No name, id, skill or place is read or returned; the list itself, GET /api/people, stays approved-only. Account restrictions still apply."
+    },
+    {
       "file": "ctf/packages/web/app/knowledge/page.tsx",
       "kind": "exception",
       "reason": "Knowledge library contribution (owner decision, 2026-07-29). Contributing is a route INTO verification: judging a contribution means looking at a real person writing real things, which is the same look Unlock asks for.",

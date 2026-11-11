@@ -21,6 +21,9 @@ export type Notification = {
   category: NotificationCategory;
   summary: string;
   linkPath: string | null;
+  // What the notice is about, as its producer recorded it (an activity id, a post id, a card and
+  // the member who asked). Activity uses it to answer a notice in place.
+  targetRef: string | null;
   isRead: boolean;
   createdAtIso: string;
 };

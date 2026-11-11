@@ -65,7 +65,7 @@ None. Notifications are member self-service; there are no admin governance actio
 
 ## 3) API Surface and Route Map
 
-- `GET /api/notifications` — the member's own feed (newest first) + unread count. `?limit` optional
+- `GET /api/notifications` — the member's own feed (newest first) + unread count; each item carries its `targetRef` (since 2026-11-11, so Activity can answer a notice in place). `?limit` optional
   (capped at 50). Always available to a signed-in member.
 - `POST /api/notifications/:notificationId/read` — mark one own notification read (idempotent; 404
   when no owned row matches). Hub-style CSRF (`x-ctf-csrf: '1'`).
@@ -168,6 +168,11 @@ No seed yet. A follow-up seed can insert a couple of sample notifications for a 
   push now follows the 3.1 rows for a member on 3.1 and the categories for a member on 3.0, and is
   held in quiet hours. The browser subscription helpers moved to
   `components/notifications/device-push.ts` so 3.1 Settings and the 3.0 panel share them.
+- 2026-11-11: **The feed carries each notice's target.** `GET /api/notifications` now returns `targetRef`
+  (the stored `target_ref`) on every item, and a Just us two request on a Today card
+  (`today.card.pair_request`) is written with `targetRef` `<card id>|<asker id>`, which also keeps one
+  request from notifying twice. 3.1 Activity uses it to answer a Recurring Activity invite, a Just us
+  two request and a day-14 notice in place. No table changed.
 - 2026-10-17: **One browser shows notifications for one member at a time (#2908).** Two members who
   turned pings on in the same browser both got pushes there, and signing out left them on, because the
   unique key on `push_subscriptions` is `(user_id, endpoint)` and nothing removed a row at sign-out.

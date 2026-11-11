@@ -93,6 +93,14 @@ auditEvents:
     # Merge moves suggestions to the target problem; spam deletes the proposal.
     dataClassesAccessed: [community_content]
     targetContext: admin
+  - eventId: what-works.admin.problem.merge
+    pluginId: what-works
+    command: what-works.admin.problem.merge
+    version: 1.0.0
+    policyDecision: allow
+    # Moves every thing that helped (and the votes on it) to the target problem, then removes the first.
+    dataClassesAccessed: [community_content]
+    targetContext: admin
   - eventId: what-works.admin.product.list
     pluginId: what-works
     command: what-works.admin.product.list

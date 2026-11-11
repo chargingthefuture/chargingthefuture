@@ -706,3 +706,37 @@
   outline: 2px solid var(--se-pick);
   outline-offset: 2px;
 }
+
+/* The "Your goal" card (the approved 3.1 board "Today, a quiet day"): how many tasks are taken, as
+   a bar in the ask color. */
+.goalBar {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--se-sunk);
+  overflow: hidden;
+}
+
+.goalBarFill {
+  height: 8px;
+  background: var(--se-kind-ask);
+}
+
+.goalShare {
+  align-self: flex-start;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1.5px solid var(--se-line);
+  background: var(--se-card);
+  color: var(--se-ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 2px 0 var(--se-line);
+  cursor: pointer;
+}
+
+.goalShare:focus-visible {
+  outline: 2px solid var(--se-pick);
+  outline-offset: 2px;
+}

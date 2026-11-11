@@ -6,6 +6,7 @@ import { SE_CARD_WORDS, SE_MUTE_WORDS, seCardAnswerKind, seCardOpensSheet, seNew
 import { SeAvatar } from '../../shared/se-avatar';
 import { QuestionsPanel, isQuestionsCard } from './questions-panel';
 import { CardSheet } from './card-sheet';
+import { GoalCard } from './goal-card';
 import { cardPath } from './use-card-conversation';
 import styles from './today.module.css';
 
@@ -158,7 +159,7 @@ function CardActions({ card, onAnswer }: { card: SeTodayCard; onAnswer: ((kind: 
   );
 }
 
-export function TodayCard({
+function PlainCard({
   card,
   viewerId,
   read,
@@ -166,17 +167,7 @@ export function TodayCard({
   onHide,
   onMute,
   onChanged,
-}: {
-  card: SeTodayCard;
-  // The signed-in member, so the card offers Report only on somebody else's card.
-  viewerId: string;
-  read: boolean;
-  onToggleDone: () => void;
-  onHide: () => void;
-  onMute?: () => void;
-  // A card that changes something (a 21 Questions answer) asks Today to read again.
-  onChanged?: () => void;
-}) {
+}: TodayCardProps) {
   const [open, setOpen] = useState(false);
   const [sheet, setSheet] = useState<Sheet>(null);
   const color = `var(--se-kind-${card.kind})`;
@@ -199,4 +190,24 @@ export function TodayCard({
       {sheet ? <CardSheet card={card} viewerId={viewerId} firstAnswer={sheet.firstAnswer} onClose={() => setSheet(null)} onChanged={onChanged} /> : null}
     </article>
   );
+}
+
+type TodayCardProps = {
+  card: SeTodayCard;
+  // The signed-in member, so the card offers Report only on somebody else's card.
+  viewerId: string;
+  read: boolean;
+  onToggleDone: () => void;
+  onHide: () => void;
+  onMute?: () => void;
+  // A card that changes something (a 21 Questions answer) asks Today to read again.
+  onChanged?: () => void;
+};
+
+// The member's own goal draws as the "Your goal" card (goal-card.tsx); every other card as above.
+export function TodayCard(props: TodayCardProps) {
+  const { card } = props;
+  if (!card.goal) return <PlainCard {...props} />;
+  const dot = <DoneDot card={card} done={props.read} color={`var(--se-kind-${card.kind})`} onToggleDone={props.onToggleDone} />;
+  return <GoalCard card={{ ...card, goal: card.goal }} viewerId={props.viewerId} dot={dot} onChanged={props.onChanged} />;
 }
