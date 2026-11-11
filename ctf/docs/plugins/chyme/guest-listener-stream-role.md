@@ -26,6 +26,13 @@ target state through Stream's APIs:
    and Video).
 2. On the `default` Video call type, that role has `join-call` and `read-call`, does **not** have
    `send-audio`, `send-video` or `screenshare`, and keeps anything else it already had.
+3. Every webhook address on the app (the app-level one and each webhook event hook) that names
+   `/api/beacon/stream-webhook`, or a retired chargingthefuture.com host, is
+   `https://app.lagatos.com/api/beacon/stream-webhook`; when none is set, apply sets the app-level
+   one. An address pointing at any other service is left alone. This step runs even when
+   `CHYME_GUEST_STREAM_ROLE` is unset (`ctf/scripts/lib/stream-webhook-address.mjs`). It exists
+   because the address still named app.chargingthefuture.com after the move to app.lagatos.com, and
+   Stream failed every delivery with "unable to resolve url" (2026-11-10).
 
 No other role changes: the `default` call type's member roles (the `user` role a speaker holds) are
 never touched. The named role is the one a guest carries, and the one a member carries while an

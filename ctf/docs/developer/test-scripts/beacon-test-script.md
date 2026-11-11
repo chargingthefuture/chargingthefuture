@@ -325,6 +325,23 @@ the end means recording never started. Until 2026-10-06 every event ended that w
 recording was requested with a second go-live instead of Stream's start-recording request.
 **Result:** web ☐ mobile ☐ — notes:
 
+### BCN-A2f · Stream's webhook address is the app's own (app.lagatos.com)
+**Role:** admin · **Surfaces:** GitHub Actions, then web (admin surface)
+**Steps:**
+1. Actions → "Stream — Guest Listener Setup" → Run workflow with mode `plan`, target `both`.
+2. If the run lists any webhook address other than
+   `https://app.lagatos.com/api/beacon/stream-webhook`, run it again with mode `apply`, target
+   `both`.
+3. Run a short broadcast from a phone broadcaster app (the RTMP address and stream key), end it, and
+   open the event's Log in Event history.
+**Expected:** Step 1 prints `webhook address, target https://app.lagatos.com/api/beacon/stream-webhook`
+for each Stream app, then each stored address, and either "in the target state" or what apply would
+change. An address on app.chargingthefuture.com is drift: that host no longer resolves, and Stream
+failed every delivery to it. Step 2 prints `stored:` with the new address and "applied". Step 3: the
+Log shows the broadcaster joining and the recording starting, which come from Stream's deliveries,
+and the event ends `recording ready`. The weekly scheduled run goes red if the address drifts again.
+**Result:** web ☐ mobile ☐ — notes:
+
 ### BCN-A3 · Moderate the chat
 **Role:** admin · **Surfaces:** web (admin surface)
 **Precondition:** a live event with member chat.
