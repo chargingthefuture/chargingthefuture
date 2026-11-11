@@ -13,8 +13,8 @@ export const SE_PEOPLE_FILTERS = [
 ];
 // Which Skills Taxonomy sectors each chip covers, by the sector's live name. A person falls in a
 // category when their job title's sector, their profile's sector or the sector of any skill they list
-// is one of these, so one person can be in several. Creative & Media sits in none of the four: those
-// people show under All. A sector renamed in the taxonomy drops out of its chip until its new name
+// is one of these, so one person can be in several. Creative & Media is under Trades (owner decision,
+// 2026-11-11). A sector renamed in the taxonomy drops out of its chip until its new name
 // is added here.
 export const SE_PEOPLE_CATEGORY_SECTORS = {
     trades: [
@@ -28,6 +28,7 @@ export const SE_PEOPLE_CATEGORY_SECTORS = {
         'Food & Agriculture',
         'Tourism & Hospitality',
         'Retail & Services',
+        'Creative & Media',
     ],
     care: ['Health', 'Education', 'Emergency & Reserve Roles'],
     paperwork: ['Professional & Business Services', 'Finance & Public Administration', 'Microfinance & SME Support', 'Public Safety & Justice'],
