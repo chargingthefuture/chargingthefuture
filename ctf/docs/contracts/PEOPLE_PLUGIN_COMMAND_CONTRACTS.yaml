@@ -11,6 +11,10 @@ contracts:
         type: string
         enum: ['1']
         description: Only people whose claimed profile's owner offers at least one skill through Foundation.
+      category:
+        type: string
+        enum: ['trades', 'care', 'paperwork', 'tech']
+        description: Only people whose profile sector, job title sector or a listed skill's sector is one of the category's Skills Taxonomy sectors (SE_PEOPLE_CATEGORY_SECTORS in @ctf/shared). Any other value is ignored.
       q:
         type: string
         maxLength: 80
@@ -21,7 +25,7 @@ contracts:
           items:
             type: array
             maxItems: 20
-            description: Each person is id, name, headline, job title, claimed, offering skill names, listed skill names.
+            description: Each person is id, name, headline, job title, claimed, region (state), country (two-letter code when it has one), offering skill names, listed skill names. The city is never read.
           page:
             type: integer
           pageSize:
@@ -33,7 +37,22 @@ contracts:
       - directory_profile_skills
       - skills_taxonomy_skills
       - skills_taxonomy_job_titles
+      - skills_taxonomy_sectors
       - foundation_provider_skills
+    purpose: member_directory_browse
+    retentionClass: none_read_only
+    idempotency: true
+  - pluginId: people
+    command: people.count
+    version: 1.0.0
+    description: How many people the Directory lists (GET /api/people/count), for People's header and the screen a member not yet approved sees. Only the number; no name, id, skill or place.
+    inputSchema: {}
+    outputSchema:
+      listed:
+        type: integer
+        minimum: 0
+    dataAccess:
+      - directory_profiles
     purpose: member_directory_browse
     retentionClass: none_read_only
     idempotency: true

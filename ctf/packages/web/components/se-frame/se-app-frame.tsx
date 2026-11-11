@@ -79,8 +79,9 @@ export function SeAppFrame({ currentUser, isAdmin }: FrameProps) {
   );
 }
 
-// + New has no title here: it is a sheet with its own heading (approved board "New post").
-const TAB_TITLES: Partial<Record<SeTab, string>> = { people: 'People', activity: 'Activity' };
+// + New has no title here: it is a sheet with its own heading (approved board "New post"). People
+// heads itself, with the number listed beside its title (approved board "People, verified").
+const TAB_TITLES: Partial<Record<SeTab, string>> = { activity: 'Activity' };
 
 type TabScreenProps = FrameProps & {
   tab: SeTab;
@@ -101,7 +102,7 @@ function TabScreen({ tab, currentUser, isAdmin, theme, onTheme, onBack, onClose,
       {tab === 'new' ? <NewScreen onClose={onClose} /> : null}
       {tab === 'me' ? <MeScreen currentUser={currentUser} isAdmin={isAdmin} theme={theme} onTheme={onTheme} onBack={onBack} saving={saving} /> : null}
       {tab === 'activity' ? <ActivityScreen /> : null}
-      {tab === 'people' ? <PeopleScreen /> : null}
+      {tab === 'people' ? <PeopleScreen onToday={onClose} /> : null}
     </>
   );
 }

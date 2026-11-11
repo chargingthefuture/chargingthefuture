@@ -1,22 +1,25 @@
 import { NextResponse } from 'next/server';
-import { SE_PEOPLE_PAGE_SIZE } from '@ctf/shared';
+import { SE_PEOPLE_PAGE_SIZE, sePeopleCategory, sePeopleFilter } from '@ctf/shared';
 import { evaluatePluginAccess } from 'lib/auth/server-authz';
-import { listPeople } from 'lib/people/repository';
+import { listPeople, type PeopleQuery } from 'lib/people/repository';
 import { reportError } from 'lib/observability/report';
 
-// GET /api/people?page=&offering=1&q=: the 3.1 People screen, a page of the Directory with each
-// person's Foundation offering. Approved members only (the default tier), the same bar as the
-// Directory. A page past the end answers the last page, so an old link never shows nothing.
+// GET /api/people?page=&offering=1&category=&q=: the 3.1 People screen, a page of the Directory with
+// each person's Foundation offering. category is trades, care, paperwork or tech (the chips; see
+// SE_PEOPLE_CATEGORY_SECTORS in @ctf/shared); anything else is ignored. Approved members only (the
+// default tier), the same bar as the Directory. A page past the end answers the last page, so an old
+// link never shows nothing.
 
 export const dynamic = 'force-dynamic';
 
-function readQuery(url: URL): { page: number; offeringOnly: boolean; query: string | null } {
+function readQuery(url: URL): Omit<PeopleQuery, 'pageSize'> {
   const page = Number.parseInt(url.searchParams.get('page') ?? '1', 10);
   const query = (url.searchParams.get('q') ?? '').trim().slice(0, 80);
   return {
     page: Number.isFinite(page) && page > 0 ? page : 1,
     offeringOnly: url.searchParams.get('offering') === '1',
     query: query || null,
+    category: sePeopleCategory(sePeopleFilter(url.searchParams.get('category'))),
   };
 }
 

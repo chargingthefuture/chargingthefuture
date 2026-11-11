@@ -1,29 +1,231 @@
-/* People in 3.1. Colors come from the frame's custom properties (se-theme-vars.ts). Offerings use
-   the Offer kind's color, filled; Directory listings are outlined. */
+/* People in 3.1, built to the approved boards "People, verified" and "People, not yet verified".
+   Colors come from the frame's custom properties (se-theme-vars.ts): offerings in the Offer kind's
+   color, filled; Directory listings outlined in the hairline. */
+.screen,
+.lockedScreen {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.lockedScreen {
+  gap: 18px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.title {
+  margin: 0;
+  font-family: 'Newsreader Variable', Newsreader, Georgia, serif;
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.count,
+.line {
+  font-size: 13px;
+  color: var(--se-soft);
+}
+
+.hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.searchField {
+  display: flex;
+}
+
 .search {
   box-sizing: border-box;
-  width: 100%;
-  min-height: 46px;
-  padding: 10px 16px;
+  flex: 1;
+  min-width: 0;
+  min-height: 48px;
+  padding: 0 18px;
   border-radius: 999px;
   border: 1.5px solid var(--se-line);
   background: var(--se-card);
   color: var(--se-ink);
   font: inherit;
-  font-size: 16px;
+  font-size: 15px;
 }
 
-.filters,
-.skills,
-.actions {
+.search::placeholder {
+  color: var(--se-soft);
+}
+
+.chips {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin-right: -16px;
+  padding-right: 16px;
+}
+
+.chip {
+  flex: none;
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1.5px solid var(--se-hair);
+  background: transparent;
+  color: var(--se-ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.chip[aria-checked='true'] {
+  border-color: var(--se-ink);
+  background: var(--se-ink);
+  color: var(--se-bg);
+}
+
+.card {
+  position: relative;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: var(--se-card);
+  border: 1.5px solid var(--se-hair);
+}
+
+.face,
+.lockedFace {
+  flex: none;
+  display: block;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.face svg,
+.lockedFace svg {
+  display: block;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.nameRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* The name opens the profile, and its link covers the card so a tap anywhere on it does too. */
+.name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--se-ink);
+  text-decoration: none;
+}
+
+.name::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 18px;
+}
+
+.tag {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--se-sunk);
+  color: var(--se-soft);
+}
+
+.skills {
   display: flex;
   flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.offeringLabel,
+.skillsLabel {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--se-soft);
+}
+
+.offeringLabel {
+  color: var(--se-kind-offer);
+}
+
+.offering,
+.listed {
+  font-size: 12px;
+  padding: 3px 9px;
+  border-radius: 999px;
+}
+
+.offering {
+  font-weight: 600;
+  background: var(--se-kind-offer);
+  color: var(--se-card);
+}
+
+.listed {
+  border: 1px solid var(--se-hair);
+  color: var(--se-ink);
+}
+
+.quote {
+  position: relative;
+  z-index: 1;
+  align-self: flex-start;
+  margin-top: 4px;
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1.5px solid var(--se-line);
+  background: var(--se-card);
+  color: var(--se-ink);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: 0 2px 0 var(--se-line);
+}
+
+.meta {
+  margin: 0;
+  font-size: 14px;
+  color: var(--se-soft);
+}
+
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 8px;
 }
 
-.filter,
-.button,
-.primary {
+.button {
   min-height: 44px;
   display: inline-flex;
   align-items: center;
@@ -35,14 +237,7 @@
   font: inherit;
   font-size: 14px;
   font-weight: 700;
-  text-decoration: none;
   cursor: pointer;
-}
-
-.filter[aria-checked='true'],
-.primary {
-  background: var(--se-btn);
-  color: var(--se-on-btn);
 }
 
 .button:disabled {
@@ -50,66 +245,9 @@
   cursor: default;
 }
 
-.card {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 14px;
-  border-radius: 18px;
-  background: var(--se-card);
-  border: 1.5px solid var(--se-hair);
-}
-
-.head {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.who {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.name {
-  font-size: 17px;
-  font-weight: 700;
-}
-
-.meta {
-  margin: 0;
-  font-size: 14px;
-  color: var(--se-soft);
-}
-
-.offering,
-.listed {
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 13px;
-  border: 1.5px solid var(--se-kind-offer);
-}
-
-.offering {
-  background: var(--se-kind-offer);
-  color: var(--se-bg);
-  font-weight: 700;
-}
-
-.listed {
-  color: var(--se-ink);
-}
-
-.pager {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.linkButton {
+.linkButton,
+.backLink {
+  align-self: flex-start;
   padding: 0;
   border: 0;
   background: none;
@@ -119,11 +257,96 @@
   cursor: pointer;
 }
 
+/* People, not yet verified. */
+.faces {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  padding: 8px 0;
+}
+
+.lockedFace {
+  justify-self: center;
+  width: 52px;
+  height: 52px;
+  opacity: 0.55;
+}
+
+.lockedCard,
+.openNow {
+  display: flex;
+  flex-direction: column;
+}
+
+.lockedCard {
+  gap: 10px;
+  padding: 18px;
+  border-radius: 20px;
+  background: var(--se-card);
+  border: 1.5px solid var(--se-line);
+  box-shadow: 0 3px 0 var(--se-line);
+}
+
+.lockedNumber {
+  font-family: 'Newsreader Variable', Newsreader, Georgia, serif;
+  font-size: 40px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.lockedLabel {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.lockedText {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--se-soft);
+}
+
+.finish {
+  align-self: flex-start;
+  min-height: 46px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 20px;
+  border-radius: 999px;
+  border: 1.5px solid var(--se-line);
+  background: var(--se-btn);
+  color: var(--se-on-btn);
+  font-size: 15px;
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: 0 3px 0 var(--se-line);
+}
+
+.openNow {
+  gap: 6px;
+  padding: 14px;
+  border-radius: 18px;
+  background: var(--se-sunk);
+}
+
+.openTitle {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.backLink {
+  font-size: 14px;
+  font-weight: 700;
+}
+
 .search:focus-visible,
-.filter:focus-visible,
+.chip:focus-visible,
+.name:focus-visible,
+.quote:focus-visible,
 .button:focus-visible,
-.primary:focus-visible,
-.linkButton:focus-visible {
+.linkButton:focus-visible,
+.finish:focus-visible,
+.backLink:focus-visible {
   outline: 2px solid var(--se-pick);
   outline-offset: 2px;
 }

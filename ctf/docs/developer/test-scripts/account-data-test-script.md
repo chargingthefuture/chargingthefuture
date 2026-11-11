@@ -340,18 +340,26 @@ show here."
 ## AD-16 · People in 3.1
 
 **Role:** approved member; a signed-in member not yet approved · **Precondition:** on 3.1; one
-claimed profile whose owner offers a skill in Foundation.
+claimed profile whose owner offers a skill in Foundation; a profile with a state and country and a job
+title in the Health sector.
 **Steps:**
 1. Open People. Page forward and back, then reload on page 2.
-2. Tap **Offering now**, then **Everyone**. Search a skill name.
-3. On a person who offers a skill, tap **Request a quote**; on another, tap **Profile**.
-4. As the member not yet approved, open People.
-**Expected:** Step 1 lists 20 people a page with "1–20 of N", people who offer something first; the
-reload stays on page 2. Offered skills are filled in the Offer color and listed skills outlined, and a
-skill shows once. Step 2 keeps only people offering something, then everyone again; the search narrows
-to people with that skill in their name, headline, job title or listing. Step 3 opens the Foundation
-provider page and the Directory profile. Request a quote never shows for someone offering nothing.
-Step 4 shows the route's refusal reason instead of any person.
+2. Tap **Offering now**, then **Care**, then **All**. Search a skill name.
+3. On a person who offers a skill, tap **Request a quote**; on another, tap the card.
+4. As the member not yet approved, open People and tap **Back to Today**; open People again and tap
+   **Finish Unlock**.
+**Expected:** Step 1 shows "People" with "N listed" beside it, a search reading "A skill, like
+plumbing or tax forms", the chips All, Offering now, Trades, Care, Paperwork and Tech, and 20 people a
+page with "1–20 of N", people who offer something first; the reload stays on page 2. Each card shows
+the name with Member (claimed) or Listed, then job title · place such as "Georgia, US" (never a city),
+then "Offering" with offered skills filled in the Offer color and "Listed" with listed skills
+outlined; a skill shows once. Step 2 keeps only people offering something, then people in Care
+(Health, Education, Emergency & Reserve Roles), then everyone; the search narrows to people with
+that skill in their name, headline, job title or listing. Step 3 opens the Foundation provider page and
+the Directory profile. Request a quote never shows for someone offering nothing, and there is no
+Profile button. Step 4 shows ten faded faces, the number listed with "people listed, with what they
+can do", why names wait for one check, **Finish Unlock** (opens Unlock) and "Open to you now" with
+**Back to Today** (opens Today), and no name, skill or place of anybody.
 Opening People never shows "Could not read People" while the app and its database are up.
 **Result:** web ☐ — notes:
 
