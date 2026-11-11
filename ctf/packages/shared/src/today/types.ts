@@ -44,6 +44,8 @@ export type SeTodayCard = {
   sample?: boolean;
   // Set only on an ask or offer the viewer posted: when it leaves Today, and what they can do there.
   mine?: SeTodayCardMine;
+  // Set for a signed-in member on a story or replay they saved for later (today_card_saves).
+  saved?: boolean;
   // Set only on the viewer's own PeerProgramming goal (open, or reached in the last 7 days): how far it
   // got, for the "Your goal" card's bar and its Share this goal picture.
   goal?: SeTodayGoal;
@@ -84,11 +86,16 @@ export type SeTodayRoom = {
   nextTalk: SeTodayTalk | null;
 };
 
-export type SeTodayBroadcast = { live: boolean; title: string | null; href: string };
+// `host` is the broadcaster's handle and `startedAtIso` when it went live, for the line under the
+// title; either is null when it could not be read.
+export type SeTodayBroadcast = { live: boolean; title: string | null; href: string; host?: string | null; startedAtIso?: string | null };
 
 export type SeToday = {
   generatedAtIso: string;
+  // Signed-in members who read Today in the last 10 minutes, the reader included; null when unknown.
   presence: number | null;
+  // How many stories open at the member's next midnight (seStoriesForDay); null when unknown.
+  storiesTomorrow?: number | null;
   // All members' action minutes ÷ 480, in total and over the last 7 days; null when it could not
   // be read.
   // `sample` is set on signed-out Today, which reads it from the demo schema.

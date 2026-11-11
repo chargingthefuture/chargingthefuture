@@ -14,6 +14,7 @@ export type SeTodayView = {
     cards: SeTodayCard[];
     missingLine: string | null;
     caughtUpLine: string;
+    caughtUpNote: string;
 };
 export declare function seTodayView(today: SeToday | null, marks: SeTodayMarks, filter: SeTodayFilter): SeTodayView;
 export declare function seTalkWhen(startIso: string, now?: Date): string;

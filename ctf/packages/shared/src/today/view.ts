@@ -4,6 +4,7 @@
 
 import type { SeCardKind } from '../design/se-theme';
 import type { SeToday, SeTodayCard, SeTodayTalk } from './types';
+import { seClosingLines } from './board';
 
 export type SeTodayFilter = 'all' | 'asks' | 'offers' | 'stories' | 'matches';
 
@@ -45,17 +46,21 @@ export type SeTodayView = {
   cards: SeTodayCard[];
   // "Could not load goals, rides this time.", or null when every source answered.
   missingLine: string | null;
+  // The two lines under the last card (seClosingLines).
   caughtUpLine: string;
+  caughtUpNote: string;
 };
 
 export function seTodayView(today: SeToday | null, marks: SeTodayMarks, filter: SeTodayFilter): SeTodayView {
   const kinds = SE_TODAY_FILTERS.find((item) => item.key === filter)?.kinds ?? null;
   const cards = (today?.cards ?? []).filter((card) => !marks.hidden.includes(card.id) && (!kinds || kinds.includes(card.kind)));
   const missing = (today?.unavailable ?? []).map((name) => SOURCE_NAMES[name] ?? name);
+  const closing = seClosingLines(cards, today?.storiesTomorrow);
   return {
     cards,
     missingLine: missing.length > 0 ? `Could not load ${missing.join(', ')} this time.` : null,
-    caughtUpLine: cards.length === 0 ? 'Nothing here yet.' : "You're caught up.",
+    caughtUpLine: closing.title,
+    caughtUpNote: closing.note,
   };
 }
 

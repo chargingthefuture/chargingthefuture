@@ -211,3 +211,39 @@
   outline: 2px solid var(--se-pick);
   outline-offset: 2px;
 }
+
+/* Today's title row: the date and title, and "N Avens here" beside them (approved board). */
+.todayHeadRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.todayHeadText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.presence {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: var(--se-card);
+  border: 1px solid var(--se-hair);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.presenceDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--se-live);
+}

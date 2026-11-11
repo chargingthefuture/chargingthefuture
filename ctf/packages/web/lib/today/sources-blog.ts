@@ -6,9 +6,9 @@ import { listStoryCommentTimes } from 'lib/fireside/story-comments';
 import { action, card, startOfTodayIso } from './card';
 
 // Stories from the blog (3.1.0 plan, Today): the blog's posts and the owner's Quora answers, five a
-// day, the same five for everyone (seStoriesForDay), each with Read. A blog that cannot be read is
-// reported as this source failing. A post the owner left out on Daily Posts is skipped (its day shows
-// one story fewer, and every other post keeps its day).
+// day, the same five for everyone (seStoriesForDay), each with This helped me. A blog that cannot
+// be read is reported as this source failing. A post the owner left out on Daily Posts is skipped
+// (its day shows one story fewer, and every other post keeps its day).
 
 // The posts left out on Daily Posts. If that list cannot be read, every story shows and the cause is
 // reported: a story too many is better than none.
@@ -56,8 +56,20 @@ export async function blogStories(now = new Date()): Promise<SeTodayCard[]> {
       body: seStoryOpening(post.text),
       createdAtIso,
       href: post.url,
-      actions: [action('open', 'Read it', post.url)],
+      // As on the board: This helped me, with Save and Hide beside it. The title opens the sheet, whose
+      // "Open in the blog" link reads the post.
+      actions: [action('helped-me', 'This helped me', post.url)],
     }),
     commentTimesIso: times.get(post.slug) ?? [],
   }));
+}
+
+// How many stories open at the next midnight, for the line under the last card: tomorrow's share of
+// the release less any post the owner left out. Posts the blog publishes tomorrow are not known yet.
+export async function storiesTomorrow(now = new Date()): Promise<number> {
+  const read = await readBlogPosts();
+  if (!read.ok) throw new Error(read.reason);
+  const tomorrow = new Date(Date.parse(startOfTodayIso(now)) + 86_400_000).toISOString().slice(0, 10);
+  const excluded = await leftOut();
+  return seStoriesForDay(read.posts, tomorrow).filter((post) => !excluded.has(post.slug) && post.date.slice(0, 10) !== tomorrow).length;
 }

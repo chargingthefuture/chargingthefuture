@@ -6,12 +6,15 @@ import React, { useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
 import {
+  SE_BROADCAST_WORDS as B,
   SE_TODAY_ROOM_WORDS as W,
+  seBroadcastHostLine,
   seRoomCountsLine,
   seTalkCalendarEvent,
   seTalkHostLine,
   seWeaversLine,
   type SeThemeTokens,
+  type SeTodayBroadcast,
   type SeTodayRoom,
 } from '@ctf/shared';
 import { AddToCalendarButton } from '../../../components/shared/AddToCalendarButton';
@@ -89,9 +92,62 @@ function WeaversRow({ t, room }: { t: SeThemeTokens; room: SeTodayRoom }) {
   );
 }
 
+// The Main Room while a broadcast is on and nobody is in the room: one quiet row.
+function QuietMainRoom({ t, room }: { t: SeThemeTokens; room: SeTodayRoom }) {
+  const s = useMemo(() => makeStyles(t), [t]);
+  const { open } = useSeRooms();
+  return (
+    <View style={s.weavers} accessibilityLabel={room.name}>
+      <View style={s.weaversText}>
+        <Text style={s.name}>
+          {room.name} <Text style={s.meta}>· {W.mainAudience}</Text>
+        </Text>
+        <Text style={s.small}>{B.roomQuiet}</Text>
+      </View>
+      <TouchableOpacity accessibilityRole="button" onPress={() => open('main', room.nextTalk)} style={[s.quiet, s.quietSmall]}>
+        <Text style={[s.quietLabel, s.quietLabelSmall]}>{W.open}</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 // Opens the room inside the frame, so the call keeps running while the member reads Today.
-export function RoomCard({ t, room }: { t: SeThemeTokens; room: SeTodayRoom }) {
-  return room.key === 'weavers' ? <WeaversRow t={t} room={room} /> : <MainRoomCard t={t} room={room} />;
+// `broadcasting`: a broadcast is live, so a Main Room nobody is in shows as one quiet row.
+export function RoomCard({ t, room, broadcasting = false }: { t: SeThemeTokens; room: SeTodayRoom; broadcasting?: boolean }) {
+  if (room.key === 'weavers') return <WeaversRow t={t} room={room} />;
+  return broadcasting && !room.live ? <QuietMainRoom t={t} room={room} /> : <MainRoomCard t={t} room={room} />;
+}
+
+// The broadcast card, the copy of the web's: the picture area with LIVE and a play button, who is
+// broadcasting and since when, Watch and Chat. No watcher count, as on the web.
+export function BroadcastCard({ t, broadcast, go }: { t: SeThemeTokens; broadcast: SeTodayBroadcast; go: (_href: string) => void }) {
+  const s = useMemo(() => makeStyles(t), [t]);
+  const hostLine = seBroadcastHostLine(broadcast);
+  return (
+    <View style={s.broadcast} accessibilityLabel="Live broadcast">
+      <TouchableOpacity accessibilityRole="button" accessibilityLabel={`${B.watch}: ${broadcast.title ?? B.label}`} onPress={() => go(broadcast.href)} style={s.picture}>
+        <Text style={[s.liveBadge, s.pictureLive]}>LIVE</Text>
+        <View style={s.play}>
+          <Svg width={22} height={22} viewBox="0 0 24 24">
+            <Path d="M8 5l12 7-12 7z" fill={t.hero} />
+          </Svg>
+        </View>
+      </TouchableOpacity>
+      <View style={s.broadcastBody}>
+        <Text style={s.broadcastLabel}>{B.label.toUpperCase()}</Text>
+        {broadcast.title ? <Text style={s.title}>{broadcast.title}</Text> : null}
+        {hostLine ? <Text style={s.meta}>{hostLine}</Text> : null}
+        <View style={s.buttons}>
+          <TouchableOpacity accessibilityRole="button" onPress={() => go(broadcast.href)} style={s.primary}>
+            <Text style={s.primaryLabel}>{B.watch}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity accessibilityRole="button" onPress={() => go(broadcast.href)} style={s.quiet}>
+            <Text style={s.quietLabel}>{B.chat}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
 }
 
 function makeStyles(t: SeThemeTokens) {
@@ -117,5 +173,11 @@ function makeStyles(t: SeThemeTokens) {
     weavers: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12, paddingHorizontal: 14, borderRadius: 18, backgroundColor: t.card, borderWidth: 1.5, borderColor: t.hair },
     lock: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center', borderRadius: 999, backgroundColor: t.sunk },
     weaversText: { flex: 1 },
+    broadcast: { overflow: 'hidden', borderRadius: 20, backgroundColor: t.card, borderWidth: 1.5, borderColor: t.line, boxShadow: `0px 3px 0px ${t.line}` },
+    picture: { height: 180, alignItems: 'center', justifyContent: 'center', backgroundColor: t.hero },
+    pictureLive: { position: 'absolute', left: 12, top: 12 },
+    play: { width: 60, height: 60, borderRadius: 30, alignItems: 'center', justifyContent: 'center', backgroundColor: t.onHero },
+    broadcastBody: { gap: 8, paddingTop: 14, paddingHorizontal: 16, paddingBottom: 16 },
+    broadcastLabel: { fontSize: 12, letterSpacing: 1, color: t.soft, fontFamily: SE_FONT.sansBold },
   });
 }

@@ -497,8 +497,8 @@ dot and the done count goes up by one. Step 3 removes the check and the count go
    letter apart until the last word is reached (try Hint and Undo once).
 4. Tap Copy to share and paste the line somewhere.
 5. Close the page and open `/games` again; then open it on the next day.
-**Expected:** Step 1 shows five Story cards marked "from the blog" or "from Quora", each with Read it
-only, and the Puzzle of the day card with its number. Nothing in the puzzle comes from a blog post.
+**Expected:** Step 1 shows five Story cards marked "from the blog" or "from Quora", each with This helped
+me, Save for later and Hide (tapping the title opens the sheet with Open in the blog), and the Puzzle of the day card with its number. Nothing in the puzzle comes from a blog post.
 Step 3 never ends in failure: a wrong word is marked and another can be picked, and the ladder
 accepts any number of steps. Step 4's line gives the puzzle number and how it went, never the answer.
 Step 5 shows Done with the same result the same day, and the next kind of puzzle the next day (word,
@@ -688,4 +688,18 @@ totals (AD-28) still count each mark.
 2. As A, open Activity, then open Today and tap the ask's title.
 3. Tap Keep it up for 14 more days, then Closed, not done on another of A's asks.
 **Expected:** Step 1: the run summary shows only counts ("checked N … M were due"), no names; the second run sends nothing new. Step 2: Activity has exactly one "Still need this? Keep it up for 14 more days: <title>". Step 3: both work for A although their posting is paused; another member calling either route on A's card is refused with not_yours, and an account restricted from contact is refused.
+**Result:** web ☐ android ☐ — notes:
+
+## AD-34 · The rest of the Today board: Avens here, Save, Mood faces, the closing line, the broadcast
+**Role:** members A and B, signed in on web and Android; an admin who can go live in Beacon · **Surfaces:** web, android
+**Steps:**
+1. As A, open Today. Then as B on another device, open Today and wait a minute; open Today as A again.
+2. As A, tap Save for later on a story, then open Me.
+3. On Android as A, open Me, then tap the saved story's title, then Remove.
+4. As A, tap This helped me on a blog story, then Hide on another story.
+5. As A, on the Mood card, tap Good.
+6. Scroll to the end of Today on a day with asks, and on a day with none.
+7. As the admin, go live in Beacon; as A, open Today.
+8. As A, delete the account (or only Card conversations on Today).
+**Expected:** Step 1: the pill beside the title reads "1 Aven here", then "2 Avens here"; no name appears anywhere. Step 2: the bookmark fills, and Me → Saved lists the story with "Story" and its title. Step 3: the same list on Android; the title opens the story; Remove takes it off and the bookmark on Today is empty on the next read. Step 4: the card's sheet opens with "says this helped" recorded; Hide takes the other story off Today for good. Step 5: the card says "Checked in: Good. The next check-in opens in a week." and the check-in shows in Mood; the card is gone on the next read. Step 6: "You're caught up." or "That is today.", then "5 more stories open at your midnight." No ask card shows a credit line. Step 7: the broadcast card shows LIVE, the title, "<host> · started at <time>", Watch and Chat; the Main Room reads "Quiet during the broadcast" with Open unless somebody is in it. Step 8 removes A's `today_card_saves` rows and `member_presence` row.
 **Result:** web ☐ android ☐ — notes:

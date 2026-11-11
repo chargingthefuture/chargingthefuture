@@ -34,7 +34,9 @@ vi.mock('lib/fireside/story-comments', () => ({ listStoryCommentTimes: vi.fn(asy
 vi.mock('./windows', () => ({ readWindows: vi.fn(async () => new Map()) }));
 vi.mock('lib/notifications/repository', () => ({ notifySafe: vi.fn(async () => undefined) }));
 vi.mock('./sources-questions', () => ({ questionCards: vi.fn(async () => []) }));
-vi.mock('./sources-blog', () => ({ blogStories: vi.fn(async () => []) }));
+vi.mock('./sources-blog', () => ({ blogStories: vi.fn(async () => []), storiesTomorrow: vi.fn(async () => 5) }));
+vi.mock('./presence', () => ({ readPresence: vi.fn(async () => 3) }));
+vi.mock('./saves/repository', () => ({ readSavedIds: vi.fn(async () => new Set()) }));
 vi.mock('./sources-daily', () => ({ dailyPuzzleCard: vi.fn(async () => []) }));
 vi.mock('./sources-rooms', () => ({
   nextTalk: vi.fn(async () => null),
@@ -63,5 +65,11 @@ describe('buildToday', () => {
     const today = await buildToday({ userId: 'u1', isAdmin: false }, NOW);
     expect(today.unavailable).toEqual(['socket-relay']);
     expect(today.rooms).toHaveLength(1);
+  });
+
+  it('carries how many members are here and how many stories open tomorrow', async () => {
+    const today = await buildToday({ userId: 'u1', isAdmin: false }, NOW);
+    expect(today.presence).toBe(3);
+    expect(today.storiesTomorrow).toBe(5);
   });
 });
