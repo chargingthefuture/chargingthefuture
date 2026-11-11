@@ -14,6 +14,7 @@ export const SE_ME_TILES = [
     { key: 'click-log', label: 'ClickLog', text: 'Your private log of what happened, and check-ins when you are safe.', href: '/apps/click-log' },
     { key: 'trust', label: 'Trust', text: 'What others can see of your part in the Avenhood.', href: '/apps/trust' },
     { key: 'reader', label: 'Reader', text: 'Your feed reader. Your subscriptions are yours alone.', href: '/apps/reader' },
+    { key: 'what-works', label: 'What works', text: 'What helped other survivors with a problem. Add a problem, or what helped you.', href: '/apps/what-works' },
 ];
 export const SE_ME_WORDS = {
     credits: 'ServiceCredits',
