@@ -70,6 +70,33 @@ policies:
     denyConditions:
       - rate_limited
   - pluginId: today
+    command: today.public.card.read
+    version: 1.0.0
+    requiredRoles: []
+    attributePolicies:
+      tenancy: public
+      minUnlockTier: none
+      readsOnly: true
+      rateLimit: public_read_per_ip
+      sources:
+        - a blog or Quora story's top-level Fireside comments by approved authors (public on the blog)
+        - the sample conversation under a sample ride or Skill Up card, from the demo schema
+      excluded:
+        - Just us two messages
+        - every other card
+    consentRequirements:
+      scopes: []
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - rate_limited
+      - card_not_open_signed_out
+  - pluginId: today
     command: today.questions.answer
     version: 1.0.0
     requiredRoles:

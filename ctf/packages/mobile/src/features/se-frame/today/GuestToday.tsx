@@ -11,6 +11,7 @@ import {
   SE_GUEST_WORDS as W,
   seDaysWonLines,
   seGuestAnswersBySignUp,
+  seGuestOpensSheet,
   seGuestNextRoomLine,
   seGuestStartedLine,
   seTalkCalendarEvent,
@@ -30,6 +31,7 @@ import type { FeatureKey } from '../../../navigation/screens';
 import { SE_FONT } from '../fonts';
 import { openTodayLink } from './openTodayLink';
 import { useToday } from './useToday';
+import { GuestSheet } from './GuestSheet';
 import Svg, { Path, Rect } from 'react-native-svg';
 
 type Styles = ReturnType<typeof makeStyles>;
@@ -142,6 +144,7 @@ function RoomCard({ s, t, today }: { s: Styles; t: SeThemeTokens; today: SeToday
 }
 
 function GuestCard({ s, t, card, onSignUp, go }: { s: Styles; t: SeThemeTokens; card: SeTodayCard; onSignUp: () => void; go: (_href: string) => void }) {
+  const [open, setOpen] = useState(false);
   const color = t.kind[card.kind];
   const bySignUp = seGuestAnswersBySignUp(card);
   return (
@@ -171,7 +174,13 @@ function GuestCard({ s, t, card, onSignUp, go }: { s: Styles; t: SeThemeTokens; 
             </TouchableOpacity>
           ))
         )}
+        {seGuestOpensSheet(card) ? (
+          <TouchableOpacity accessibilityRole="button" onPress={() => setOpen(true)} style={s.action}>
+            <Text style={s.actionLabel}>{W.conversation}</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
+      {open ? <GuestSheet t={t} card={card} sampleTag={<SampleTag s={s} color={t.ink} />} onSignIn={onSignUp} onClose={() => setOpen(false)} /> : null}
     </View>
   );
 }
