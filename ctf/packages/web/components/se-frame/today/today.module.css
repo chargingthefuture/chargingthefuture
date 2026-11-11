@@ -336,6 +336,7 @@
 .actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
 }
 
@@ -650,6 +651,9 @@
 
 .quietButton {
   min-height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 0 16px;
   border-radius: 999px;
   border: 1.5px solid var(--se-hair);
@@ -705,6 +709,127 @@
 .quietButton:focus-visible {
   outline: 2px solid var(--se-pick);
   outline-offset: 2px;
+}
+
+/* Save for later and Hide on a story or replay (approved board). */
+.iconButton {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1.5px solid var(--se-hair);
+  background: transparent;
+  color: var(--se-ink);
+  cursor: pointer;
+}
+
+.iconButtonOn {
+  border-color: var(--se-line);
+  background: var(--se-sunk);
+}
+
+/* The Mood card's five faces; each one is the check-in. */
+.moodFaces {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px;
+  padding: 4px;
+  border-radius: 18px;
+  background: var(--se-sunk);
+}
+
+.moodFace {
+  min-height: 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 4px 2px;
+  border: 1.5px solid transparent;
+  border-radius: 14px;
+  background: transparent;
+  color: var(--se-ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.moodFaceOn {
+  border-color: var(--se-line);
+  background: var(--se-card);
+}
+
+.moodFaceLabel {
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.iconButton:focus-visible,
+.moodFace:focus-visible {
+  outline: 2px solid var(--se-pick);
+  outline-offset: 2px;
+}
+
+/* The live broadcast card (approved board "Broadcast cards on Today"). */
+.broadcastCard {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 20px;
+  background: var(--se-card);
+  border: 1.5px solid var(--se-line);
+  box-shadow: 0 3px 0 var(--se-line);
+}
+
+.broadcastPicture {
+  position: relative;
+  height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--se-hero);
+  color: var(--se-hero);
+}
+
+.broadcastLive {
+  position: absolute;
+  left: 12px;
+  top: 12px;
+}
+
+.broadcastPlay {
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--se-on-hero);
+}
+
+.broadcastBody {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px 16px;
+}
+
+.broadcastLabel {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--se-soft);
+}
+
+.broadcastPicture:focus-visible {
+  outline: 2px solid var(--se-pick);
+  outline-offset: -4px;
 }
 
 /* The "Your goal" card (the approved 3.1 board "Today, a quiet day"): how many tasks are taken, as

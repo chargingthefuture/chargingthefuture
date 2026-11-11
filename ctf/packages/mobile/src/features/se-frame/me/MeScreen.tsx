@@ -29,6 +29,7 @@ import { openTodayLink } from '../today/openTodayLink';
 import { SE_FONT } from '../fonts';
 import { MatchingToggle } from '../today/MatchingToggle';
 import { MutedCard } from './MutedCard';
+import { SavedCard } from './SavedCard';
 
 type Styles = ReturnType<typeof makeStyles>;
 type Go = (_href: string) => void;
@@ -218,6 +219,7 @@ export function MeScreen({ t, user, isAdmin, onOpen, ...settings }: MeProps) {
       </View>
       <MatchingToggle t={t} />
       <MutedCard t={t} />
+      <SavedCard t={t} onOpen={onOpen} />
       <SettingsCard s={s} go={go} {...settings} />
       {isAdmin ? <Tile s={s} title={W.architect} text={W.architectText} onPress={() => go(SE_ME_LINKS.architect)} /> : null}
     </>

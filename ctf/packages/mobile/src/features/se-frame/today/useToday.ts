@@ -7,7 +7,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { File, Paths } from 'expo-file-system';
-import { seDayStartIso, seLegacyMarkChanges, seMarkCardInToday, seMarkChangeFor, seMarksFromToday, type SeCardMarkChange, type SeToday, type SeTodayMarks } from '@ctf/shared';
+import { SE_SAVED_WORDS, seSaveCardInToday, seSaveChangeFor, type SeSaveChange, type SeTodayCard, seDayStartIso, seLegacyMarkChanges, seMarkCardInToday, seMarkChangeFor, seMarksFromToday, type SeCardMarkChange, type SeToday, type SeTodayMarks } from '@ctf/shared';
 import { authedFetch } from '../../../auth/authedFetch';
 import { reportError } from '../../../observability/report';
 
@@ -61,6 +61,23 @@ async function postMarks(body: unknown): Promise<boolean> {
   } catch (error) {
     reportError(error, { area: 'today', op: 'marks_save' });
     return false;
+  }
+}
+
+// Null when stored, otherwise why not, in words the screen shows.
+async function postSave(change: SeSaveChange): Promise<string | null> {
+  try {
+    const res = await authedFetch('/api/today/saves', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-ctf-csrf': '1' },
+      body: JSON.stringify(change),
+    });
+    if (res.ok) return null;
+    const body = (await res.json().catch(() => null)) as { message?: string } | null;
+    return `${SE_SAVED_WORDS.failed} ${body?.message ?? `HTTP ${res.status}`}`;
+  } catch (error) {
+    reportError(error, { area: 'today', op: 'saves_change' });
+    return `${SE_SAVED_WORDS.failed} the app could not be reached.`;
   }
 }
 
@@ -139,5 +156,22 @@ export function useToday(accountId: string | null) {
   // Done is a toggle on the card's timeline dot, so a card marked by mistake can be unmarked.
   const toggle = useCallback((kind: MarkKind, cardId: string) => apply(seMarkChangeFor(today, kind, cardId)), [apply, today]);
 
-  return { today, loading, error, marks: seMarksFromToday(today), mark, toggle, reload: load };
+  // Save for later: drawn at once, stored by POST /api/today/saves. A change that was not stored is
+  // read back as it is on the server, with the reason shown.
+  const [saveNote, setSaveNote] = useState<string | null>(null);
+  const save = useCallback(
+    (card: SeTodayCard) => {
+      const change = seSaveChangeFor(card);
+      setSaveNote(null);
+      setToday((current) => (current ? seSaveCardInToday(current, change) : current));
+      void postSave(change).then((failure) => {
+        if (!failure) return;
+        setSaveNote(failure);
+        void load();
+      });
+    },
+    [load],
+  );
+
+  return { today, loading, error, marks: seMarksFromToday(today), mark, toggle, save, saveNote, reload: load };
 }

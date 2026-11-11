@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { SE_CARD_WORDS, SE_MUTE_WORDS, seCardAnswerKind, seCardOpensSheet, seNewCommentsLine, type SeCardAnswerKind, type SeTodayCard } from '@ctf/shared';
+import { SE_CARD_WORDS, SE_MUTE_WORDS, seCanSave, seCardAnswerKind, seIsMoodCard, seCardOpensSheet, seNewCommentsLine, type SeCardAnswerKind, type SeTodayCard } from '@ctf/shared';
 import { SeAvatar } from '../../shared/se-avatar';
 import { QuestionsPanel, isQuestionsCard } from './questions-panel';
 import { CardSheet } from './card-sheet';
 import { GoalCard } from './goal-card';
+import { MoodFaces, SaveHideIcons } from './card-quick-actions';
 import { cardPath } from './use-card-conversation';
 import styles from './today.module.css';
 
@@ -14,7 +15,8 @@ import styles from './today.module.css';
 // (card-sheet.tsx), and an answer button (I can help, I know someone, I'd like this, It helped me
 // too) records the answer and opens the sheet; other buttons open the item where it lives. Every
 // other card expands in place as before. The timeline dot marks it done, and tapping it again marks
-// it not done. The ••• menu holds Copy link, Not for me (the card leaves Today on this device) and,
+// it not done. A story or replay carries Save for later and Hide as icons in its button row, and the
+// Mood card its five faces. The ••• menu holds Copy link, Not for me (the card leaves Today on this device) and,
 // on a card with an author, Mute and Report.
 
 // The 21 Questions card keeps its lines and is never cut short: it says how matching works.
@@ -139,8 +141,8 @@ function CardHead({ card, viewerId, color, onHide, onMute }: MenuProps & { color
 
 type Sheet = { firstAnswer: SeCardAnswerKind | null } | null;
 
-function CardActions({ card, onAnswer }: { card: SeTodayCard; onAnswer: ((kind: SeCardAnswerKind) => void) | null }) {
-  if (card.actions.length === 0) return null;
+function CardActions({ card, onAnswer, trailing }: { card: SeTodayCard; onAnswer: ((kind: SeCardAnswerKind) => void) | null; trailing?: ReactNode }) {
+  if (card.actions.length === 0 && !trailing) return null;
   return (
     <div className={styles.actions}>
       {card.actions.map((item) => {
@@ -155,7 +157,21 @@ function CardActions({ card, onAnswer }: { card: SeTodayCard; onAnswer: ((kind: 
           </Link>
         );
       })}
+      {trailing}
     </div>
+  );
+}
+
+// Under the text: the Mood faces on the Mood card, then the buttons, with Save and Hide on a story
+// or replay.
+type FootProps = { card: SeTodayCard; onAnswer: ((kind: SeCardAnswerKind) => void) | null; onSave?: () => void; onHide: () => void };
+
+function CardFoot({ card, onAnswer, onSave, onHide }: FootProps) {
+  return (
+    <>
+      {seIsMoodCard(card) ? <MoodFaces /> : null}
+      <CardActions card={card} onAnswer={onAnswer} trailing={onSave && seCanSave(card) ? <SaveHideIcons card={card} onSave={onSave} onHide={onHide} /> : undefined} />
+    </>
   );
 }
 
@@ -166,6 +182,7 @@ function PlainCard({
   onToggleDone,
   onHide,
   onMute,
+  onSave,
   onChanged,
 }: TodayCardProps) {
   const [open, setOpen] = useState(false);
@@ -186,7 +203,7 @@ function PlainCard({
         {card.newComments ? <span className={styles.label} style={{ color }}>{seNewCommentsLine(card.newComments)}</span> : null}
       </button>
       {isQuestionsCard(card) ? <QuestionsPanel card={card} open={open} onOpen={() => setOpen(true)} onChanged={onChanged ?? (() => undefined)} /> : null}
-      <CardActions card={card} onAnswer={opensSheet ? (kind) => setSheet({ firstAnswer: kind }) : null} />
+      <CardFoot card={card} onAnswer={opensSheet ? (kind) => setSheet({ firstAnswer: kind }) : null} onSave={onSave} onHide={onHide} />
       {sheet ? <CardSheet card={card} viewerId={viewerId} firstAnswer={sheet.firstAnswer} onClose={() => setSheet(null)} onChanged={onChanged} /> : null}
     </article>
   );
@@ -200,6 +217,8 @@ type TodayCardProps = {
   onToggleDone: () => void;
   onHide: () => void;
   onMute?: () => void;
+  // Save for later on a story or replay; absent where there is no account to save to.
+  onSave?: () => void;
   // A card that changes something (a 21 Questions answer) asks Today to read again.
   onChanged?: () => void;
 };

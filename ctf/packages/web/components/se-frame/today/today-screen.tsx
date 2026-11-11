@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { SE_DAYS_WON_HOW, SE_DAYS_WON_TITLE, SE_DAYS_WON_WHY, SE_MUTE_WORDS, SE_TODAY_FILTERS, seDaysWonLines, seTodayView, type SeToday, type SeTodayCard, type SeTodayFilter } from '@ctf/shared';
 import { MatchingToggle } from './matching-toggle';
 import { BroadcastCard, RoomCard } from './room-card';
@@ -42,7 +42,7 @@ function LiveCards({ today }: { today: SeToday | null }) {
       {today?.daysWon ? <DaysWonCard daysWon={today.daysWon} /> : null}
       {today ? <WeekStrip talks={today.week ?? []} /> : null}
       {today?.broadcast?.live ? <BroadcastCard broadcast={today.broadcast} /> : null}
-      {today?.rooms.map((room) => <RoomCard key={room.key} room={room} />)}
+      {today?.rooms.map((room) => <RoomCard key={room.key} room={room} broadcasting={today.broadcast?.live === true} />)}
     </>
   );
 }
@@ -88,11 +88,12 @@ type TimelineProps = {
   marks: TodayMarks;
   mark: (kind: MarkKind, id: string) => void;
   toggle: (kind: MarkKind, id: string) => void;
+  onSave: (card: SeTodayCard) => void;
   onMute?: (card: SeTodayCard) => void;
   onChanged: () => void;
 };
 
-function Timeline({ viewerId, view, marks, mark, toggle, onMute, onChanged }: TimelineProps) {
+function Timeline({ viewerId, view, marks, mark, toggle, onSave, onMute, onChanged }: TimelineProps) {
   return (
     <div className={styles.timeline}>
       <span className={styles.line} aria-hidden="true" />
@@ -111,20 +112,24 @@ function Timeline({ viewerId, view, marks, mark, toggle, onMute, onChanged }: Ti
             mark('hidden', card.id);
           }}
           onMute={card.author && onMute ? () => onMute(card) : undefined}
+          onSave={() => onSave(card)}
           onChanged={onChanged}
         />
       ))}
       <div className={styles.caughtUp}>
         <span className={styles.caughtUpTitle}>{view.caughtUpLine}</span>
-        <span className={styles.noticeQuiet}>New cards arrive as people post.</span>
+        <span className={styles.noticeQuiet}>{view.caughtUpNote}</span>
       </div>
     </div>
   );
 }
 
 // A visitor who is not signed in gets GuestToday (guest-today.tsx) instead.
-export function TodayScreen({ accountId }: { accountId: string }) {
-  const { today, loading, error, marks, mark, toggle, reload } = useToday(accountId);
+// `onPresence` hands the "N Avens here" count to the title row above the screen.
+export function TodayScreen({ accountId, onPresence }: { accountId: string; onPresence?: (count: number | null) => void }) {
+  const { today, loading, error, marks, mark, toggle, save, saveNote, reload } = useToday(accountId);
+  const presence = today?.presence ?? null;
+  useEffect(() => onPresence?.(presence), [onPresence, presence]);
   const [filter, setFilter] = useState<SeTodayFilter>('all');
   const view = seTodayView(today, marks, filter);
   const [muteNote, setMuteNote] = useState<string | null>(null);
@@ -153,12 +158,17 @@ export function TodayScreen({ accountId }: { accountId: string }) {
       <FilterChips filter={filter} onChange={setFilter} />
       {filter === 'matches' ? <MatchingToggle refreshKey={today?.generatedAtIso} onChanged={() => void reload()} /> : null}
       <Notices error={error} missingLine={view.missingLine} loading={!today && loading} onRetry={() => void reload()} />
+      {saveNote ? (
+        <p role="alert" className={styles.noticeQuiet}>
+          {saveNote}
+        </p>
+      ) : null}
       {muteNote ? (
         <p role="status" className={styles.noticeQuiet}>
           {muteNote}
         </p>
       ) : null}
-      {today ? <Timeline viewerId={accountId} view={view} marks={marks} mark={mark} toggle={toggle} onMute={(card) => void mute(card)} onChanged={() => void reload()} /> : null}
+      {today ? <Timeline viewerId={accountId} view={view} marks={marks} mark={mark} toggle={toggle} onSave={save} onMute={(card) => void mute(card)} onChanged={() => void reload()} /> : null}
     </>
   );
 }

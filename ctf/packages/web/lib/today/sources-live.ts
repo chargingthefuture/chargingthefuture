@@ -1,4 +1,6 @@
-import type { SeTodayBroadcast, SeTodayCard } from '@ctf/shared';
+import { SE_TODAY_MOOD_TITLE, type SeTodayBroadcast, type SeTodayCard } from '@ctf/shared';
+import { resolveUsernames } from 'lib/identity/resolve-usernames';
+import { reportError } from 'lib/observability/report';
 import { readMoodEligibilityForUser } from 'lib/mood/repository';
 import { getDashboard } from 'lib/workforce/repository';
 import { getLiveBeaconEvent } from 'lib/beacon/repository';
@@ -20,11 +22,12 @@ export async function moodCard(viewer: TodayViewer, now = new Date()): Promise<S
       sourceId: startOfTodayIso(now).slice(0, 10),
       kind: 'mood',
       label: 'Mood',
-      title: 'How is this week?',
-      body: 'One tap, no name kept with it.',
+      title: SE_TODAY_MOOD_TITLE,
+      body: null,
       createdAtIso: startOfTodayIso(now),
       href,
-      actions: [action('check-in', 'Check in', href)],
+      // The five faces post the check-in from the card (SE_TODAY_MOODS); nothing else is needed.
+      actions: [],
     }),
   ];
 }
@@ -49,9 +52,21 @@ export async function numbersCard(now = new Date()): Promise<SeTodayCard[]> {
   ];
 }
 
+// The live broadcast, with the host's handle and when it started for the line under the title. A
+// handle that cannot be read leaves the host out rather than the card.
+async function hostHandle(userId: string): Promise<string | null> {
+  try {
+    return (await resolveUsernames([userId])).get(userId) ?? null;
+  } catch (error) {
+    reportError(error, { area: 'today', op: 'broadcast_host' });
+    return null;
+  }
+}
+
 export async function broadcast(): Promise<SeTodayBroadcast | null> {
   const live = await getLiveBeaconEvent();
-  return live ? { live: true, title: live.title, href: '/apps/beacon' } : null;
+  if (!live) return null;
+  return { live: true, title: live.title, href: '/apps/beacon', host: await hostHandle(live.hostUserId), startedAtIso: live.startedAtIso };
 }
 
 export async function wantedCard(): Promise<SeTodayCard[]> {

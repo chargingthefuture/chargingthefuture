@@ -53,6 +53,14 @@ with the mark (`done` for the timeline dot, `not_for_me` for the ••• menu)
 are stored on the account so every phone and browser agrees, and GET /api/today applies them. They
 are separate from `today_card_feedback_counts`, which counts marks with no names.
 
+A member's Save for later list is the sixth: `today_card_saves`, one row per member per saved story
+or replay, with the card's kind, title and address and when it was saved, so Saved in Me still works
+after the card has left Today. Saving does not mark the card done.
+
+When a member last read Today is the seventh: `member_presence`, one row per member with the time of
+their last Today read (touched at most once a minute). It is only counted, for "N Avens here", and
+never listed or shown with a name.
+
 On the member's own device it keeps the last Today answer, so the screen draws at once. Marks a
 device kept before they were stored on the account are sent up once and removed from the device. A
 visitor who is not signed in has no account and no marks.
@@ -66,8 +74,11 @@ visitor who is not signed in has no account and no marks.
   every Just us two message where they are `pair_low` or `pair_high`, and every
   `card_pair_requests` row where they are `user_low` or `user_high` (registry entry
   `today-card-conversations`), and every `today_card_windows` row where they are `owner_user_id`
-  (same entry), and every `today_card_marks` row where they are `account_id` (same entry). Public messages other members wrote under a card stay.
-- Full account deletion: the same 21 Questions, card conversation, card window and card mark rows; each card source's own
+  (same entry), every `today_card_marks` row where they are `account_id` (same entry), every
+  `today_card_saves` row where they are `account_id` (same entry), and their `member_presence` row
+  (same entry). Public messages other members wrote under a card stay.
+- Full account deletion: the same 21 Questions, card conversation, card window, card mark, saved card
+  and presence rows; each card source's own
   `commons_item_pair_requests` row where they are `user_low` or `user_high` (registry entry
   `today-card-conversations`). Public messages other members wrote under a card stay.
 - Full account deletion: the same 21 Questions and card conversation rows; each card source's own

@@ -17,6 +17,7 @@ import { SeAvatar } from '../../shared/se-avatar';
 import { ThemePicker } from './theme-picker';
 import { MatchingToggle } from '../today/matching-toggle';
 import { MutedCard } from './muted-card';
+import { SavedCard } from './saved-card';
 import { useCredits } from './use-credits';
 import type { SeThemeChoice } from '@ctf/shared';
 import styles from './me.module.css';
@@ -174,6 +175,7 @@ export function MeScreen({ currentUser, isAdmin, ...settings }: MeScreenProps) {
       <AboutCard />
       <MatchingToggle />
       <MutedCard />
+      <SavedCard />
       <SettingsCard {...settings} />
       {isAdmin ? (
         <Link href={SE_ME_LINKS.architect} className={styles.tile}>
