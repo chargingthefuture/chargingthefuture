@@ -16,6 +16,8 @@ import { findPair, insertMessage } from 'lib/today/cards/repository';
 import { readConversation } from 'lib/today/cards/conversation';
 import { resolveUsernames } from 'lib/identity/resolve-usernames';
 import { notifySafe } from 'lib/notifications/repository';
+import { writeCardThreadMessage } from 'lib/fireside/card-thread';
+import { storyPostFor } from 'lib/today/cards/story';
 
 // POST /api/today/cards/[cardId]/messages { body, private, partnerId? }: write in a card. Public
 // messages are read by everybody who can read Today. A private one goes into the Just us two
@@ -58,9 +60,23 @@ async function tellPartner(userId: string, partnerId: string) {
   });
 }
 
+// A public message on a story card is a comment on the post's Fireside thread, under Fireside's own
+// rules; a refusal comes back in Fireside's words.
+async function writeToStory(cardId: string, userId: string, body: string): Promise<NextResponse | null | 'not-a-story'> {
+  const story = await storyPostFor(cardId);
+  if (!story) return 'not-a-story';
+  const names = await resolveUsernames([userId]);
+  const written = await writeCardThreadMessage(userId, names.get(userId) ?? '', story.post, story.title, body);
+  return written.ok ? null : cardsDenied(written.reason, written.message, written.status);
+}
+
 async function write(cardId: string, userId: string, input: Input): Promise<NextResponse | null> {
   const refused = await ensureCanContact(userId, input.partnerId);
   if (refused) return refused;
+  if (!input.partnerId) {
+    const story = await writeToStory(cardId, userId, input.body);
+    if (story !== 'not-a-story') return story;
+  }
   if (input.partnerId) {
     const closed = await ensurePairOpen(cardId, userId, input.partnerId);
     if (closed) return closed;
