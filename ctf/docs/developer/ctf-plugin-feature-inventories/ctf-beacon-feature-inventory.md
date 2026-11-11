@@ -136,11 +136,14 @@ feed; when the event ends, Beacon auto-posts the recording to the Commons as a r
    for the feed and recording to start, Stream starting, stopping or failing the recording, the
    recording file ready, ended — and the reason for any step that failed. **Copy log** copies it as
    plain text with the event title on top.
-7. **Delete a draft** — a draft that was mistyped or abandoned can be removed from the Event history
-   list. Two clicks: `Delete` arms the row, `Confirm delete` does it. **Drafts only** — a live or
-   ended event has no delete control, and the route refuses one with a 409, because an ended event is
-   public broadcast history with a recording attached. A draft was never broadcast, has no recording,
-   and never appeared in the member view, so removing one takes away nothing a member saw.
+7. **Delete a draft or an ended broadcast** — from the Event history list. Two clicks: `Delete` arms
+   the row and shows what it removes, `Confirm delete` does it. A deleted broadcast leaves the app:
+   the replays list, Today, the podcast feed, and its two Commons notices (live now, replay) are all
+   removed. A live event has no delete control and the route refuses one with a 409: end it first.
+   The copy of the recording on its GitHub release is not touched (owner decision, 2026-11-10).
+8. **Rename an event** — `Rename` on any row, in any status (draft, live or ended), opens the title
+   in a box with `Save` and `Cancel`; Enter saves. The new title shows wherever the event appears;
+   a Commons notice already posted keeps its words.
 
 ## API Surface and Route Map
 
@@ -198,9 +201,13 @@ feed; when the event ends, Beacon auto-posts the recording to the Commons as a r
 - `POST /api/beacon/[id]/moderate` — mute / ban / slow-mode actions on the event chat. A mute is a
   timed ban on the event channel (`BEACON_MUTE_MINUTES`, 10), so the member stops posting to everyone;
   a ban lasts until lifted.
-- `DELETE /api/beacon/[id]` — delete a **draft** event. Refuses a `live` or `ended` event with a 409
-  (`beacon_conflict`); the draft-only rule is enforced in the route and again in the SQL predicate of
-  `deleteDraftBeaconEvent`. Both the deletion and a refused attempt are written to the audit trail.
+- `DELETE /api/beacon/[id]` — delete a **draft or ended** event. Refuses a `live` event with a 409
+  (`beacon_conflict`), in the route and again in the SQL predicate of `deleteBeaconEvent`. Then
+  deletes the event's Commons notices as the host (`removeBeaconCommonsNotices`). Both the deletion
+  (metadata `status`, `title`, `hadRecording`, `commonsNoticesRemoved`) and a refused attempt are
+  written to the audit trail.
+- `PATCH /api/beacon/[id]` — rename an event `{ title }` (1 to 160 characters), in any status
+  (`renameBeaconEvent`). Audited as `beacon.event.rename` with the previous and new title.
 
 ### Internal (cron-only)
 - `GET /api/internal/beacon/recordings-archive` — up to 5 ended, recorded events with no kept copy,
@@ -275,10 +282,10 @@ default on the ALTER (the `id` default lesson from the announcements fix). Regen
    states recording is on; the replay is posted publicly to the Commons.
 6. Webhook signature verification on the Stream webhook; idempotent recording-post (never double-post
    the replay).
-7. **Broadcast history cannot be deleted from the app.** The only delete path is `DELETE
-   /api/beacon/[id]`, and it is restricted to `status = 'draft'` in two independent places (the route
-   check and the SQL predicate). A `live` or `ended` event — the rows the deletion contract retains —
-   has no delete control in the UI and is refused by the route.
+7. **A live broadcast cannot be deleted.** The only delete path is `DELETE /api/beacon/[id]`, which
+   takes a draft or an ended event (owner decision, 2026-11-10) and refuses `live` in two independent
+   places (the route check and the SQL predicate). A live row has no delete control in the UI. Every
+   delete and every refusal is audited, and the delete row keeps the title.
 8. Survivor-safety: the admin is the only person on camera; members are never required to appear; chat
    is text only.
 
@@ -395,6 +402,8 @@ stops. HLS is used for public viewers so scale does not multiply WebRTC cost.
 12. **Android viewer parity** — deferred via a parity ticket on the build PR.
 
 ## Change Log
+
+- 2026-11-10: **Rename any event, and delete an ended broadcast (owner report).** A typo in a title could not be fixed, and failed broadcasts (some with no sound) stayed in the app with no way to remove them. Added `PATCH /api/beacon/[id]` (`renameBeaconEvent`, audited `beacon.event.rename`) and a `Rename` control on every Event history row in any status. `DELETE /api/beacon/[id]` now takes an ended event as well as a draft (`deleteBeaconEvent`, replacing `deleteDraftBeaconEvent`), still refuses a live one in the route and the SQL, and deletes the event's two Commons notices as the host (`removeBeaconCommonsNotices`). The history list moved to `components/beacon/beacon-event-history.tsx` (styles in `beacon-admin-styles.ts`), with each row's actions on their own line so four fit a phone. Android's Beacon Admin (`BeaconEventHistory.tsx`, `useBeaconAdminActions.ts`) matches. Contracts: `event.delete` 1.1.0, new `event.rename`. The GitHub release copy of a recording is not touched.
 
 - 2026-11-10: **Replays on Today: 7 days after broadcast, and one older replay a day (owner decision, non-plugin inventory 5m).** Today reads every published replay (`listBeaconReplays`, 100 a page) instead of the newest two. A replay shows on Today for 7 days after its broadcast; each day one older replay comes back as "Replay · from the archive" with its broadcast date, every replay in turn, oldest first, the same one for everybody on the same day, from 2026-11-03 (`seArchiveReplayForDay` in `@ctf/shared`). A replay a member marked done or Not for me stays off their Today when its turn comes again. No Beacon table or route changed.
 

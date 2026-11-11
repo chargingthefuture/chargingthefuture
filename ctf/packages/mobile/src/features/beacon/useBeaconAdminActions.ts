@@ -1,6 +1,7 @@
 /**
  * The Beacon Admin actions, ported from the web admin page's useBeaconAdmin
- * (components/beacon/beacon-admin-shell.tsx): create a draft, delete a draft in two steps, go live,
+ * (components/beacon/beacon-admin-shell.tsx): create a draft, rename any event, delete a draft or an
+ * ended event in two steps, go live,
  * end, moderate the chat, and copy the broadcaster-app address or stream key. Same order of steps,
  * same notices, same error lines.
  */
@@ -30,6 +31,7 @@ export function useBeaconAdminActions(s: Setters) {
   // Two-step delete: the first press arms this id and turns the button into "Confirm delete".
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
 
   const createEvent = useCallback(async () => {
     if (title.trim().length === 0) {
@@ -52,21 +54,38 @@ export function useBeaconAdminActions(s: Setters) {
     setCreating(false);
   }, [title, description, setError, setNotice, setActiveEventId, refreshEvents]);
 
-  const deleteDraft = useCallback(async (eventId: string) => {
+  // A draft or an ended event; the button is not shown for a live one and the route refuses it.
+  const deleteEvent = useCallback(async (eventId: string) => {
     setDeletingId(eventId);
     setError(null);
     setNotice(null);
     const result = await adminMutate(`/api/beacon/${eventId}`, 'DELETE');
     if (!result.ok) {
-      setError(result.message ?? 'Could not delete the draft.');
+      setError(result.message ?? 'Could not delete the event.');
     } else {
-      setNotice('Draft deleted.');
+      setNotice('Event deleted.');
       setActiveEventId((current) => (current === eventId ? null : current));
       await refreshEvents();
     }
     setConfirmDeleteId(null);
     setDeletingId(null);
   }, [setError, setNotice, setActiveEventId, refreshEvents]);
+
+  // Rename an event in any status. Returns whether it worked, so the row closes its box only then.
+  const renameEvent = useCallback(async (eventId: string, newTitle: string): Promise<boolean> => {
+    setRenamingId(eventId);
+    setError(null);
+    setNotice(null);
+    const result = await adminMutate(`/api/beacon/${eventId}`, 'PATCH', { title: newTitle.trim() });
+    setRenamingId(null);
+    if (!result.ok) {
+      setError(result.message ?? 'Could not rename the event.');
+      return false;
+    }
+    setNotice('Event renamed.');
+    await refreshEvents();
+    return true;
+  }, [setError, setNotice, refreshEvents]);
 
   const goLive = useCallback(async (eventId: string) => {
     setError(null);
@@ -133,7 +152,7 @@ export function useBeaconAdminActions(s: Setters) {
 
   return {
     title, setTitle, description, setDescription, creating, copied,
-    moderateTarget, setModerateTarget, confirmDeleteId, setConfirmDeleteId, deletingId,
-    createEvent, deleteDraft, goLive, endEvent, moderate, copy,
+    moderateTarget, setModerateTarget, confirmDeleteId, setConfirmDeleteId, deletingId, renamingId,
+    createEvent, deleteEvent, renameEvent, goLive, endEvent, moderate, copy,
   };
 }

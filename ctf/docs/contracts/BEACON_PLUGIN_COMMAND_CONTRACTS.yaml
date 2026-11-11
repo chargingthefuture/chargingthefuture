@@ -228,14 +228,15 @@ contracts:
 
   - pluginId: beacon
     command: event.delete
-    version: 1.0.0
+    version: 1.1.0
     description: >-
-      Delete a DRAFT Beacon event. Admin-only. Drafts only — a live or ended event is refused with a
-      409, because an ended event is public broadcast history with a recording attached and is
-      retained per the Beacon deletion contract. A draft was never broadcast, has no recording, and
-      never appeared in the member view, so deleting a mistyped one removes nothing a member saw.
-      The draft-only rule is enforced in the route AND in the SQL predicate. A refused attempt is
-      itself written to the audit trail.
+      Delete a draft or an ended Beacon event. Admin-only. DELETE /api/beacon/[id]. A live event is
+      refused with a 409 ("End it first"), in the route AND in the SQL predicate. Since 2026-11-10
+      (owner decision) an ended broadcast can be deleted too: a failed broadcast with no sound, or a
+      test, is removed from the app rather than kept as history. Deleting the row removes the event
+      from the replays list, Today and the podcast feed, and the route also deletes the two Commons
+      notices it posted (live now, replay) as the host. The GitHub release copy of the recording is
+      not touched by the app. A refused attempt is itself written to the audit trail.
     inputSchema:
       eventId:
         type: string
@@ -246,9 +247,39 @@ contracts:
     dataAccess:
       - beacon_events
       - beacon_events_admin_audit_trail
+      - feed_community_posts
+      - feed_items
     purpose: event_lifecycle
     retentionClass: transactional_long_lived
     idempotency: false
+
+  - pluginId: beacon
+    command: event.rename
+    version: 1.0.0
+    description: >-
+      Rename a Beacon event, in any status: draft, live or ended (owner report, 2026-11-10: a typo in
+      a title could not be fixed). Admin-only. PATCH /api/beacon/[id] with { title }, 1 to 160
+      characters. The viewer, the replays list, Today and the podcast feed read the title, so the new
+      one shows wherever the event appears; a Commons notice already posted keeps its words.
+    inputSchema:
+      eventId:
+        type: string
+        required: true
+      title:
+        type: string
+        required: true
+        maxLength: 160
+    outputSchema:
+      id:
+        type: string
+      title:
+        type: string
+    dataAccess:
+      - beacon_events
+      - beacon_events_admin_audit_trail
+    purpose: event_lifecycle
+    retentionClass: transactional_long_lived
+    idempotency: true
 
   - pluginId: beacon
     command: event.admin.list

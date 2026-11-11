@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 import { queryDb } from 'lib/db/postgres';
-import { createFeedCommunityPost } from 'lib/feed/repository';
+import { createFeedCommunityPost, deleteCommunityPost } from 'lib/feed/repository';
 import { reportError } from 'lib/observability/report';
 import { BEACON_MAX_DESCRIPTION_LENGTH, BEACON_MAX_TITLE_LENGTH, BEACON_STREAM_CALL_TYPE } from './constants';
 import { beaconCallIdForEvent } from './stream';
@@ -177,20 +177,31 @@ export async function listBeaconEvents(limit = 50): Promise<BeaconEvent[]> {
   return result.rows.map(mapEventRow);
 }
 
-// Delete a draft event. DRAFTS ONLY — the `status = 'draft'` predicate is in the SQL, not just in
-// the route, so no future caller can delete a live or ended broadcast even by mistake. A draft has
-// never been broadcast: nobody watched it, it has no recording, and it is absent from the member
-// view, so deleting one destroys nothing a member ever saw. A live or ended event is the opposite —
-// it is public history plus a recording, and removing it is not the app's job.
-//
-// Returns true when a row was deleted, false when the id does not exist OR is not a draft. The
-// caller distinguishes those two cases by loading the event first.
-export async function deleteDraftBeaconEvent(eventId: string): Promise<boolean> {
-  const result = await queryDb(
-    `DELETE FROM beacon_events WHERE id = $1::uuid AND status = 'draft'`,
+// Delete a draft or an ended event (owner decision, 2026-11-10: a failed or test broadcast is
+// removed from the app, not kept as history). Never a live one: the `status IN ('draft', 'ended')`
+// predicate refuses it here as well as in the route, and an event that went live between the
+// route's read and this delete is not removed. Returns the deleted row, or null when nothing was
+// deleted, so the caller can remove the Commons notices the row pointed at.
+export async function deleteBeaconEvent(eventId: string): Promise<BeaconEvent | null> {
+  const result = await queryDb<BeaconEventRow>(
+    `DELETE FROM beacon_events WHERE id = $1::uuid AND status IN ('draft', 'ended')
+     RETURNING ${EVENT_COLUMNS}`,
     [eventId],
   );
-  return (result.rowCount ?? 0) > 0;
+  return result.rows[0] ? mapEventRow(result.rows[0]) : null;
+}
+
+// Rename an event in any status: before it goes live, while it is live, or after it ended (owner
+// report: a typo in a title could not be fixed). The title is what the viewer, the replays list,
+// Today and the podcast feed read, so the new one shows wherever the event appears. A Commons
+// notice already posted keeps the words it was posted with.
+export async function renameBeaconEvent(eventId: string, title: string): Promise<BeaconEvent | null> {
+  const result = await queryDb<BeaconEventRow>(
+    `UPDATE beacon_events SET title = $2, updated_at = NOW() WHERE id = $1::uuid
+     RETURNING ${EVENT_COLUMNS}`,
+    [eventId, title.trim().slice(0, BEACON_MAX_TITLE_LENGTH)],
+  );
+  return result.rows[0] ? mapEventRow(result.rows[0]) : null;
 }
 
 // Draft -> live only. The `status = 'draft'` predicate means an ended event (which keeps its
@@ -396,4 +407,23 @@ export async function postBeaconReplayNotice(event: BeaconEvent): Promise<string
     reportError(error, { area: 'beacon', op: 'commons_replay_post', extra: { eventId: event.id } });
     return null;
   }
+}
+
+// Remove the "live now" and replay notices a deleted event posted to the Commons, so a deleted
+// broadcast leaves nothing behind in the app. The notices are posted as the host, so they are
+// deleted as the host. A notice somebody already removed is not an error. Returns how many were
+// removed; any other failure is reported and does not undo the event's deletion.
+export async function removeBeaconCommonsNotices(event: BeaconEvent): Promise<number> {
+  let removed = 0;
+  for (const postId of [event.commonsLivePostId, event.commonsRecordingPostId]) {
+    if (!postId) continue;
+    try {
+      await deleteCommunityPost(event.hostUserId, postId);
+      removed += 1;
+    } catch (error) {
+      if (error instanceof Error && error.message === 'post_not_found') continue;
+      reportError(error, { area: 'beacon', op: 'commons_notice_delete', extra: { eventId: event.id, postId } });
+    }
+  }
+  return removed;
 }
