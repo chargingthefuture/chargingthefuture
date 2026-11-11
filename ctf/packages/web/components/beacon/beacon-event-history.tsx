@@ -11,7 +11,7 @@
 //     DELETE /api/beacon/[id], which refuses a live event and is the real guard.
 //
 // The Android app's copy is src/features/beacon/BeaconEventHistory.tsx; change both together.
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTheme } from '@/hooks/useTheme';
 import { getBeaconTokens } from './beacon-shared';
 import { BeaconEventLog, type BeaconEventLogEntry } from './beacon-event-log';
@@ -92,6 +92,13 @@ function TitleOrEditor({ event, editing, saving, onSave, onCancel }: {
   const { theme } = useTheme();
   const t = getBeaconTokens(theme);
   const [draft, setDraft] = useState(event.title);
+  // Put the cursor in the box when it opens, so the new title can be typed straight away. Done on
+  // open rather than with autoFocus, which the accessibility check refuses because it moves focus
+  // on page load; here it only follows the admin pressing Rename.
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  useEffect(() => {
+    if (editing) inputRef.current?.focus();
+  }, [editing]);
   if (!editing) {
     return <div style={{ fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{event.title}</div>;
   }
@@ -100,8 +107,8 @@ function TitleOrEditor({ event, editing, saving, onSave, onCancel }: {
     <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 4 }}>
       <input
         aria-label={`New title for "${event.title}"`}
+        ref={inputRef}
         value={draft}
-        autoFocus
         maxLength={160}
         onChange={(e) => setDraft(e.target.value)}
         onKeyDown={(e) => {
