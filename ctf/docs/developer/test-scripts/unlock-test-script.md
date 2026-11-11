@@ -796,7 +796,7 @@ color with "Posting is paused until you finish Unlock", what stays open, the add
 find it? Ask the architect"; the ask is refused, Mood and Today work, and nothing says the account
 is at risk. Step 4: the banner changes to "Sent. Waiting for approval." straight away and posting
 works again. Step 5: the banner changes to "Sent. Waiting for approval." and the Commons opens to
-that member. Step 6: no banner. People shows "People opens once Unlock is done" until approval.
+that member. Step 6: no banner. People shows the number listed and Finish Unlock, with no names, until approval.
 3.0 still sends the member to the Unlock screen as before.
 **Result:** web ☐ android ☐ — notes:
 
