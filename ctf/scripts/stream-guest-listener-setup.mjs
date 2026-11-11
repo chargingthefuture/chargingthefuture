@@ -17,6 +17,12 @@
 //   - on the call type, that role has `join-call` and `read-call`, does not have `send-audio`,
 //     `send-video` or `screenshare`, and keeps anything else it already had (Video API).
 //
+// It also owns the address Stream sends call events to (ctf/scripts/lib/stream-webhook-address.mjs):
+// every webhook address on the app that names /api/beacon/stream-webhook, or the retired
+// chargingthefuture.com hosts, is https://app.lagatos.com/api/beacon/stream-webhook. That field was
+// left on app.chargingthefuture.com after the move to app.lagatos.com and every delivery failed.
+// The address step runs whether or not the guest role is set.
+//
 // No other role changes: the call type's member roles (the `user` role a speaker holds) are never
 // touched. Two kinds of session carry the named role — a signed-out guest, and, since 2026-09-19, a
 // member an admin has moved to listening in hand-raise mode. Both want the same grants, so the
@@ -38,6 +44,7 @@
 
 import { createRequire } from 'node:module';
 import jwt from 'jsonwebtoken';
+import { ensureWebhookAddress, webhookTarget } from './lib/stream-webhook-address.mjs';
 
 // stream-chat is a dependency of @ctf/web, not of the workspace root, so resolve it from there.
 const requireFromWeb = createRequire(new URL('../packages/web/package.json', import.meta.url));
@@ -221,9 +228,14 @@ async function processPair(pair, role, mode) {
   const chat = new StreamChat(apiKey, apiSecret);
   const auth = { apiKey, token: serverToken(apiSecret) };
   try {
+    const webhookResult = await ensureWebhookAddress(chat, mode, pad);
+    if (!role) {
+      console.log(pad('guest role: CHYME_GUEST_STREAM_ROLE is unset — guests use the default role; role and grants skipped.'));
+      return { ok: true, drift: webhookResult.drift };
+    }
     const roleResult = await ensureRole(chat, role, mode);
     const grantResult = await ensureGrants(auth, role, mode, roleResult.changed);
-    return { ok: true, drift: roleResult.drift || grantResult.drift };
+    return { ok: true, drift: webhookResult.drift || roleResult.drift || grantResult.drift };
   } catch (error) {
     console.error(`✗ ${pair.label}: ${describe(error)}`);
     return { ok: false, drift: true };
@@ -237,13 +249,12 @@ async function main() {
   const mode = readOption(argv, 'mode', MODES, 'plan');
   const target = readOption(argv, 'target', TARGETS, 'production');
 
+  // With no role, guests use the default role and can already join, so only the address is set up.
   const role = readTrimmed('STREAM_GUEST_ROLE') || readTrimmed('CHYME_GUEST_STREAM_ROLE');
-  if (!role) {
-    console.error('✗ No role: CHYME_GUEST_STREAM_ROLE is unset (and no STREAM_GUEST_ROLE override). With it unset, guests use the default role and can already join — there is nothing to set up.');
-    process.exit(1);
-  }
 
-  console.log(`Guest listener setup — mode ${mode}, role "${role}", call type "${CALL_TYPE}", target ${target}.`);
+  console.log(
+    `Stream setup — mode ${mode}, role ${role ? `"${role}"` : '(unset)'}, call type "${CALL_TYPE}", webhook ${webhookTarget()}, target ${target}.`,
+  );
 
   const pairs = target === 'both' ? [PAIRS.production, PAIRS.staging] : [PAIRS[target]];
   let ok = true;
@@ -263,7 +274,7 @@ async function main() {
     process.exit(1);
   }
   if (mode === 'apply') {
-    console.log(drift ? '\nDone. Guests can join on the next page load; no redeploy is needed.' : '\nNothing to do — already in the target state.');
+    console.log(drift ? '\nDone. Takes effect at once (the next guest join, the next Stream delivery); no redeploy is needed.' : '\nNothing to do — already in the target state.');
   } else {
     console.log(drift ? '\nPlan complete. Run with mode "apply" to make these changes.' : '\nIn the target state.');
   }
