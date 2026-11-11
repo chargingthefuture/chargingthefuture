@@ -18,8 +18,6 @@ import { ExpenseForm } from './expense-form';
 import { ExpensesOverview } from './expenses-overview';
 import { ExpensesAudit } from './expenses-audit';
 import { GpuBillCard } from './gpu-bill-card';
-import { DomainsCard } from './domains-card';
-import { DOMAINS, domainsAsPlainText } from 'lib/admin-expenses/domains';
 import { measuredGpuMonthlyCents, type GpuBillState } from 'lib/admin-expenses/gpu-bill-shared';
 
 type Tab = 'costs' | 'audit';
@@ -200,7 +198,7 @@ export function ExpensesAdminShell() {
   async function copy() {
     if (!summary) return;
     try {
-      await navigator.clipboard.writeText(`${expensesAsPlainText(summary, today)}\n${domainsAsPlainText(DOMAINS, today)}`);
+      await navigator.clipboard.writeText(expensesAsPlainText(summary, today));
       setCopied(true);
       window.setTimeout(() => setCopied(false), 2500);
     } catch (caught) {
@@ -252,8 +250,6 @@ export function ExpensesAdminShell() {
                 onRemove: remove,
               }}
             />
-
-            <DomainsCard tokens={t} today={today} />
           </>
         ) : null}
       </div>
