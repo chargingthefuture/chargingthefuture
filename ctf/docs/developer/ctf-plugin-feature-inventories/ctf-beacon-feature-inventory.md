@@ -62,8 +62,11 @@ feed; when the event ends, Beacon auto-posts the recording to the Commons as a r
 - **Video = Stream Video, `livestream` call type.** The admin is the only publisher, via three input
   paths into the same call:
   - **Camera and microphone → in-browser publish.** From `/admin/beacon` on a phone or a computer,
-    "Use camera and microphone" turns both on through the Stream web SDK, shows the host a muted
-    preview, then joins the call as the host. "Flip camera" switches front and back cameras.
+    "Use microphone" and "Use camera" are separate buttons, each with its own permission prompt;
+    each turns its device on through the Stream web SDK and then joins the call as the host. The
+    camera shows the host a muted preview. The line under the buttons names what is going out and
+    turns red when a picture is going out with the microphone off (`beaconHostStatus` in
+    `@ctf/shared`, used by web and Android). "Flip camera" switches front and back cameras.
   - **Phone demo → RTMP ingest.** Beacon requests Stream's per-call RTMP ingest URL + stream key and
     shows them to the admin; the admin pushes the phone screen from a mobile broadcaster app. Stream
     distributes it to viewers. The stream key works for 4 hours from when the broadcast panel opened
@@ -119,8 +122,9 @@ feed; when the event ends, Beacon auto-posts the recording to the Commons as a r
 ## Admin Features (admin surface, `/admin/beacon`)
 
 1. **Create an event** (title + description).
-2. **Go Live** — then broadcast from the admin page itself: **Use camera and microphone** goes live
-   with the phone's or computer's camera and microphone, shows a preview of the shot, and offers
+2. **Go Live** — then broadcast from the admin page itself: **Use microphone** and **Use camera** (separate
+   buttons, each asking for its own permission) go live with the phone's or computer's microphone
+   and camera, shows a preview of the shot, and offers
    **Flip camera** (front and back); **Share screen** (computers only) captures a screen/window in the
    browser. The per-event RTMP URL + stream key are shown below them for a mobile broadcaster app,
    which is still how to show a phone's own screen. Any way Go Live flips the event to `live` and auto-posts the "live now" notice to the
@@ -397,6 +401,7 @@ stops. HLS is used for public viewers so scale does not multiply WebRTC cost.
 ## Change Log
 
 - 2026-11-10: **Stream's webhook address moved to app.lagatos.com, and code now owns it (owner report).** Stream reported 100% of deliveries to `/api/beacon/stream-webhook` failing: the address in the Stream app still named app.chargingthefuture.com, which stopped resolving after the move to app.lagatos.com, so no feed start, recording store, replay post or Video minute credit arrived. The "Stream — Guest Listener Setup" workflow now also sets every webhook address on the app that names this route, or a retired chargingthefuture.com host, to `https://app.lagatos.com/api/beacon/stream-webhook` (`ctf/scripts/lib/stream-webhook-address.mjs`), and its weekly check goes red if it drifts. Run it with mode apply, target both. No route, table or contract changed.
+- 2026-11-10: **Microphone and camera are separate buttons (owner report).** One "Use camera and microphone" button sometimes got only one of the two permission prompts, and broadcasts went out with no sound; the only fix was ending the broadcast and starting another. The host controls on web and Android now have "Use microphone" / "Stop microphone" and "Use camera" / "Stop camera", each with its own prompt, and a refusal names the device. The line under the buttons comes from `beaconHostStatus` in `@ctf/shared` and turns red when a camera or screen is live with the microphone off. A screen share can now carry the microphone too. No route or table changed.
 
 - 2026-11-10: **Replays on Today: 7 days after broadcast, and one older replay a day (owner decision, non-plugin inventory 5m).** Today reads every published replay (`listBeaconReplays`, 100 a page) instead of the newest two. A replay shows on Today for 7 days after its broadcast; each day one older replay comes back as "Replay · from the archive" with its broadcast date, every replay in turn, oldest first, the same one for everybody on the same day, from 2026-11-03 (`seArchiveReplayForDay` in `@ctf/shared`). A replay a member marked done or Not for me stays off their Today when its turn comes again. No Beacon table or route changed.
 
