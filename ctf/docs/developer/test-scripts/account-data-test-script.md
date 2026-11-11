@@ -361,7 +361,8 @@ page with "1–20 of N", people who offer something first; the reload stays on p
 the name with Member (claimed) or Listed, then job title · place such as "Georgia, US" (never a city),
 then "Offering" with offered skills filled in the Offer color and "Listed" with listed skills
 outlined; a skill shows once. Step 2 keeps only people offering something, then people in Care
-(Health, Education, Emergency & Reserve Roles), then everyone; the search narrows to people with
+(Health, Education, Emergency & Reserve Roles), then people in Trades, which includes a person whose
+sector is Creative & Media, then everyone; the search narrows to people with
 that skill in their name, headline, job title or listing. Step 3 opens the Foundation provider page and
 the Directory profile. Request a quote never shows for someone offering nothing, and there is no
 Profile button. Step 4 shows ten faded faces, the number listed with "people listed, with what they
