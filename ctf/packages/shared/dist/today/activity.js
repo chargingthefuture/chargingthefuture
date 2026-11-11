@@ -69,13 +69,22 @@ function renewNeed(item) {
 }
 // The inline answer an unread notice waits on, or null for a notice that only tells.
 export function seActivityNeed(item) {
-    if (item.isRead)
+    if (item.isRead || item.answer)
         return null;
     if (item.notificationType === SE_RECURRING_INVITE_NOTICE)
         return recurringNeed(item);
     if (item.notificationType === SE_PAIR_REQUEST_NOTICE)
         return pairNeed(item);
     return renewNeed(item);
+}
+// The line under a day-14 notice that was already answered: "Kept up on Today for 14 more days." or
+// "Closed. It has left Today."; null otherwise.
+export function seActivityOutcome(item) {
+    if (item.answer === 'kept')
+        return L.renewed;
+    if (item.answer === 'closed')
+        return L.closed;
+    return null;
 }
 function sameLocalDay(a, b) {
     return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
