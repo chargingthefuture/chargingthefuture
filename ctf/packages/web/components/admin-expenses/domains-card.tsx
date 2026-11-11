@@ -23,7 +23,6 @@ export function DomainsCard({ tokens: t, today }: { tokens: PluginShellTokens; t
               <span style={{ fontSize: 13, color: t.TITLE, whiteSpace: 'nowrap' }}>{formatDollars(domain.yearlyCents)}</span>
               <span style={{ fontSize: 12, color: t.MUTED, whiteSpace: 'nowrap', minWidth: 56, textAlign: 'right' }}>{formatRenewal(domain.renews)}</span>
             </div>
-            {domain.note ? <div style={{ fontSize: 11, color: '#F59E0B', marginTop: 2 }}>{domain.note}</div> : null}
           </div>
         ))}
       </div>

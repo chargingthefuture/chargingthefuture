@@ -10,11 +10,10 @@ export type Domain = {
   yearlyCents: number;
   // Month and day the registration renews, "MM-DD".
   renews: string;
-  note?: string;
 };
 
 export const DOMAINS: readonly Domain[] = [
-  { name: 'the-comic.net', yearlyCents: 1186, renews: '11-08', note: 'Shown as expired at the registrar on 2026-11-08' },
+  { name: 'the-comic.net', yearlyCents: 1186, renews: '11-08' },
   { name: 'lagatos.com', yearlyCents: 1117, renews: '11-16' },
   { name: 'chargingthefuture.com', yearlyCents: 1117, renews: '12-15' },
   { name: 'chargingthefuture.net', yearlyCents: 1186, renews: '12-15' },
@@ -61,7 +60,6 @@ export function domainsAsPlainText(domains: readonly Domain[], today: string): s
   const lines = ['', `Domains, renewed yearly (${dollars(yearly)} a year, ${dollars(yearly / 12)} a month; not in the monthly total)`];
   for (const domain of domainsByNextRenewal(domains, today)) {
     const parts = [domain.name, `${dollars(domain.yearlyCents)} a year`, `renews ${formatRenewal(domain.renews)}`];
-    if (domain.note) parts.push(domain.note);
     lines.push(parts.join(' · '));
   }
   return lines.join('\n');
