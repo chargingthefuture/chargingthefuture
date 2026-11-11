@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { seActivityPairRef } from '@ctf/shared';
 import {
   cardIdFrom,
   cardsDenied,
@@ -18,7 +19,8 @@ import { notifySafe } from 'lib/notifications/repository';
 
 // POST /api/today/cards/[cardId]/pair { partnerId }: ask another member to talk just you two on
 // this card. The partner must have taken part on the card (answered it, written in it, or been in a
-// Just us two request on it). It opens only once they agree; they are told in Activity. Asking a
+// Just us two request on it). It opens only once they agree; they are told in Activity, where the
+// notice carries the card and the asker so they can agree in place. Asking a
 // member who already asked you agrees to their request. Refused when either has blocked the other
 // or either is restricted from contact.
 
@@ -28,7 +30,7 @@ const ASKS_PER_HOUR = 20;
 
 type Context = { params: Promise<{ cardId: string }> };
 
-async function tellPartner(userId: string, partnerId: string) {
+async function tellPartner(cardId: string, userId: string, partnerId: string) {
   const names = await resolveUsernames([userId]);
   await notifySafe({
     userId: partnerId,
@@ -37,6 +39,7 @@ async function tellPartner(userId: string, partnerId: string) {
     category: 'community',
     summary: `${names.get(userId) ?? 'A member'} asked to talk just you two on a card in Today.`,
     linkPath: '/',
+    targetRef: seActivityPairRef(cardId, userId),
   });
 }
 
@@ -52,7 +55,7 @@ async function ask(cardId: string, userId: string, partnerId: string): Promise<N
   if (!(await isParticipant(cardId, partnerId))) {
     return cardsDenied('not_on_card', 'This member has not answered or written on this card, so they cannot be asked from it.', 404);
   }
-  if (await insertPairRequest(cardId, userId, partnerId)) await tellPartner(userId, partnerId);
+  if (await insertPairRequest(cardId, userId, partnerId)) await tellPartner(cardId, userId, partnerId);
   return null;
 }
 
