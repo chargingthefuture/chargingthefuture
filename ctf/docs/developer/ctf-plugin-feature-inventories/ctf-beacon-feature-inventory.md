@@ -92,7 +92,11 @@ feed; when the event ends, Beacon auto-posts the recording to the Commons as a r
   signed-in members get a Stream Chat token (so only members can post); the admin is the channel
   moderator (mute/ban/slow-mode). Reuses the rich `StreamChatPanel` shipped in the Stream initiative.
   Anonymous public viewers see the chat read-only (or a "sign in to chat" prompt) but cannot post.
-- **Recording = Stream Video recording.** Recording is enabled on the call; when it is ready Stream
+- **Recording = Stream Video recording.** The recording shows the host alone and the full picture:
+  `BEACON_RECORDING_LAYOUT` in `lib/beacon/stream.ts` (layout `single-participant`,
+  `detect_orientation` on, `video.scale_mode: fit`, black bars) is set on the call by a separate
+  update each time the broadcast panel opens, and a refusal there is reported without stopping Go
+  live. Recording is enabled on the call; when it is ready Stream
   delivers the URL via webhook. Beacon stores the URL and posts the replay to the Commons.
 - **Commons integration** reuses the existing feed/announcement path: a "🔴 Live now" entry on go-live
   and a "▶️ Watch the replay" entry when the recording is ready. Both carry the full web address
@@ -399,6 +403,8 @@ stops. HLS is used for public viewers so scale does not multiply WebRTC cost.
 12. **Android viewer parity** — deferred via a parity ticket on the build PR.
 
 ## Change Log
+
+- 2026-11-10: **Replays keep the full picture (owner report).** A phone broadcast held upright showed the full face to the host, but the replay was a landscape frame with the picture cropped to fill a tile, cutting half of it off. Stream's default recording layout draws each participant as a tile and fills it. Beacon now sets the call's recording layout to `single-participant` with `detect_orientation` and `video.scale_mode: fit` (`BEACON_RECORDING_LAYOUT`, applied by `applyBeaconRecordingLayout` with `PATCH /api/v2/video/call/livestream/{id}`), so an upright phone records upright, a screen share records landscape, and nothing is cropped. It applies to broadcasts from now on; replays already recorded keep their frame. Quota note: `ctf/docs/quota-impact/2026-11-10-beacon-recording-layout.md`.
 
 - 2026-11-10: **Stream's webhook address moved to app.lagatos.com, and code now owns it (owner report).** Stream reported 100% of deliveries to `/api/beacon/stream-webhook` failing: the address in the Stream app still named app.chargingthefuture.com, which stopped resolving after the move to app.lagatos.com, so no feed start, recording store, replay post or Video minute credit arrived. The "Stream — Guest Listener Setup" workflow now also sets every webhook address on the app that names this route, or a retired chargingthefuture.com host, to `https://app.lagatos.com/api/beacon/stream-webhook` (`ctf/scripts/lib/stream-webhook-address.mjs`), and its weekly check goes red if it drifts. Run it with mode apply, target both. No route, table or contract changed.
 - 2026-11-10: **Microphone and camera are separate buttons (owner report).** One "Use camera and microphone" button sometimes got only one of the two permission prompts, and broadcasts went out with no sound; the only fix was ending the broadcast and starting another. The host controls on web and Android now have "Use microphone" / "Stop microphone" and "Use camera" / "Stop camera", each with its own prompt, and a refusal names the device. The line under the buttons comes from `beaconHostStatus` in `@ctf/shared` and turns red when a camera or screen is live with the microphone off. A screen share can now carry the microphone too. No route or table changed.

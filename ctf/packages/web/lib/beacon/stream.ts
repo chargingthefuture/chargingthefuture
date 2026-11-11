@@ -244,6 +244,42 @@ export type BeaconIngest = {
   streamKey: string;
 };
 
+// How the recording frames the host (owner report, 2026-11-10: a phone broadcast held vertically
+// was recorded in a landscape frame with the picture filled to it, so half the face was cut off).
+// Stream composites a recording from a layout; its default draws every participant as a tile and
+// fills the tile, cropping whatever does not fit. Beacon has one publisher, so:
+//   - `single-participant`: the host alone, using the full frame, not a tile in a grid;
+//   - `detect_orientation`: the frame follows the picture, so a phone held upright records upright
+//     and a screen share or RTMP feed records landscape;
+//   - `video.scale_mode: fit`: the full picture is always shown, with bars rather than a crop if the
+//     shapes still differ; the bars are black.
+// Field names from the Stream Video API's LayoutSettingsRequest (@stream-io/video-client 1.47.0:
+// name, detect_orientation, options) and its documented layout options.
+export const BEACON_RECORDING_LAYOUT = {
+  name: 'single-participant',
+  detect_orientation: true,
+  options: { 'video.scale_mode': 'fit', 'video.background_color': '#000000' },
+} as const;
+
+// Put the layout on the call. A separate update rather than part of the create above, for two
+// reasons: get-or-create ignores settings for a call that already exists (an event whose broadcast
+// panel was opened before), and a refusal here must never stop "Go live" — the broadcast matters
+// more than how the replay is framed. A refusal is reported, and the replay keeps Stream's default.
+async function applyBeaconRecordingLayout(ctx: StreamRestContext, callId: string, eventId: string): Promise<void> {
+  try {
+    await streamVideoFetch(ctx, `/api/v2/video/call/${BEACON_STREAM_CALL_TYPE}/${callId}`, {
+      method: 'PATCH',
+      body: {
+        settings_override: {
+          recording: { mode: 'available', audio_only: false, quality: '720p', layout: BEACON_RECORDING_LAYOUT },
+        },
+      },
+    });
+  } catch (error) {
+    reportError(error, { area: 'beacon', op: 'recording_layout', extra: { eventId } });
+  }
+}
+
 // Create (or get) the Beacon livestream call and return its per-event RTMP ingest URL + stream key
 // for a phone broadcaster app. Recording is enabled so Stream delivers a recording-ready webhook
 // after the event ends. Returns null when Stream is not configured.
@@ -274,15 +310,16 @@ export async function ensureBeaconCallAndIngest(input: {
           backstage: { enabled: true },
           // `quality` is not optional in practice: Stream rejects the entire get-or-create with 400
           // "recording quality is required when audio_only is false and recording is enabled" when a
-          // video recording is turned on without one, which failed every "Go live" click. Both inputs
-          // are landscape — the in-browser host shares a screen or window, and the phone path pushes
-          // RTMP — so 720p records what is broadcast without upscaling. `audio_only: false` is stated
+          // video recording is turned on without one, which failed every "Go live" click. 720p is the
+          // size of the frame's long side; its orientation follows the picture once
+          // applyBeaconRecordingLayout below has run. `audio_only: false` is stated
           // rather than left to default so the pairing Stream validates is visible in one place.
           recording: { mode: 'available', audio_only: false, quality: '720p' },
         },
       },
     },
   });
+  await applyBeaconRecordingLayout(ctx, callId, input.eventId);
   // The `host` call role is what lets this user publish on a livestream call, in the browser and over
   // RTMP, and it applies to this call only, unlike an app-wide role. Set through the members endpoint
   // rather than on create, because get-or-create leaves an existing call's members as they were, and
