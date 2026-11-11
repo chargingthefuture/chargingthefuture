@@ -121,6 +121,30 @@ contracts:
     retentionClass: none_read_only
     idempotency: true
   - pluginId: today
+    command: today.public.card.read
+    version: 1.0.0
+    description: Read a card opened on signed-out Today (GET /api/today/public/cards/[cardId]). A story's Fireside comments, or a sample card's sample conversation from the demo schema; never Just us two.
+    inputSchema:
+      cardId:
+        type: string
+        description: blog-story, trust-transport or skill-up card id; any other answers 404.
+    outputSchema:
+      conversation:
+        type: object
+        properties:
+          sample:
+            type: boolean
+          messages:
+            type: array
+            maxItems: 100
+    dataAccess:
+      - fireside_threads
+      - fireside_comments
+      - commons_item_messages
+    purpose: public_daily_overview
+    retentionClass: none_read_only
+    idempotency: true
+  - pluginId: today
     command: today.questions.answer
     version: 1.0.0
     description: Answer a 21 Questions question that is out (POST /api/today/questions/answers). The first answer stands. Each answer, and each refused attempt to give a different one, is recorded in question_answer_audit.
