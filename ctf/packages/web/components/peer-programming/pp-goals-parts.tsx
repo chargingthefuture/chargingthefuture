@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useTheme } from "@/hooks/useTheme";
 import { getPeerProgrammingTokens } from "./pp-shared";
 import type { BoardGoal, BoardTask, TaskAction } from "./pp-goals-api";
@@ -189,7 +189,7 @@ export function CardControls(props: CardControlProps) {
 
 // The owner's own open goal, above the columns: how far along it is, a box to add a card, and closing
 // it either way.
-export function YourGoalPanel({ goal, busy, onAddTask, onClose }: { goal: BoardGoal; busy: boolean; onAddTask: (goalId: string, description: string) => Promise<boolean>; onClose: (goalId: string, outcome: "reached" | "withdrawn") => void }) {
+export function YourGoalPanel({ goal, busy, onAddTask, onClose, share }: { goal: BoardGoal; busy: boolean; share?: ReactNode; onAddTask: (goalId: string, description: string) => Promise<boolean>; onClose: (goalId: string, outcome: "reached" | "withdrawn") => void }) {
   const t = useTokens();
   const [task, setTask] = useState("");
   const done = goal.tasks.filter((item) => item.status === "finished" || item.status === "kept").length;
@@ -205,6 +205,7 @@ export function YourGoalPanel({ goal, busy, onAddTask, onClose }: { goal: BoardG
         <SmallButton label="Add card" disabled={busy || task.trim().length === 0} onClick={() => void add()} />
         <SmallButton label="Reached it" primary disabled={busy} onClick={() => onClose(goal.id, "reached")} />
         <SmallButton label="Take it down" disabled={busy} onClick={() => onClose(goal.id, "withdrawn")} />
+        {share}
       </div>
     </section>
   );

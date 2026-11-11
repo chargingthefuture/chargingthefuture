@@ -1,0 +1,13 @@
+// The share picture's QR code, the Android copy of the web's goal-share-qr.ts: encoded on the
+// phone (qrcode-generator, MIT), medium error correction.
+
+import qrcode from 'qrcode-generator';
+import { seQrPath } from '@ctf/shared';
+
+export function qrFor(text: string): { modules: number; d: string } {
+  const qr = qrcode(0, 'M');
+  qr.addData(text);
+  qr.make();
+  const modules = qr.getModuleCount();
+  return { modules, d: seQrPath(modules, (row, col) => qr.isDark(row, col)) };
+}

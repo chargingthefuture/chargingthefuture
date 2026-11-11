@@ -873,3 +873,20 @@ withdrawn). A goal past its 14 days with no renew leaves Today and stays open on
 4. As B, switch to 3.0 in Settings and open the same place again.
 **Expected:** Step 2 shows A's message. Step 3's reply appears in the card's sheet on Today for A. Step 4 shows the same conversation: 3.0 and 3.1 read one conversation, only the screens differ.
 **Result:** web ☐ android ☐ — notes:
+
+---
+
+### PP-26 — Share this goal: the picture, Save picture and Copy as text (added 2026-11-11)
+
+**Role:** member A with an open goal of 5 tasks, member B in the same cohort · **Surfaces:** web, Android
+
+**Steps:**
+1. As B, take 2 of A's tasks and post a result on one. As A, keep it.
+2. As A, open Today. Find the goal's card.
+3. Tap **Share this goal**.
+4. Tap **Copy as text** and paste it into a note. Tap **Save picture**.
+5. Scan the QR code in the picture with another phone.
+6. On the goal board, choose the goal and tap **Reached it**. Choose **All goals**, find "Your goals reached" and tap **Share this goal**. Open Today again.
+
+**Expected:** Step 2 shows "Your goal · 2 of 5 tasks taken", a bar 40% full and **Share this goal**, with no I can help button. Step 3 opens a sheet titled Share with a Close button, and a picture reading "A goal · 2 of 5 tasks taken", the goal's title, "Helped so far by a member of the Avenhood" (B's name appears nowhere), A's handle, the line about the app, `app.lagatos.com` and a QR code. Step 4 pastes one plain sentence ending with `https://app.lagatos.com/today`; web downloads a PNG of the same picture, Android opens the phone's share sheet with it. Step 5 opens signed-out Today. Step 6 shows a picture reading "Goal reached" and "Thanks to a member of the Avenhood", and Today shows "Your goal · reached" with a full bar and Share this goal. Repeat in a dark theme and another color: the sheet and the picture follow them, and the QR code stays dark on light.
+**Result:** web ☐ android ☐ — notes:

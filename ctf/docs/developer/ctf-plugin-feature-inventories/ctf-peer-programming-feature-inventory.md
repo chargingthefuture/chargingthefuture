@@ -220,6 +220,20 @@ to the env flag, then the default. With no admin setting and no env override, th
 9. When a helper posts a result, the goal's owner gets a notifications-center notification
    (`peer-programming.goal.task-finished`, category `community`) linking to the board.
 10. On an ended cohort the board is read-only.
+11. Share this goal (the approved 3.1 board "Share picture", web and Android). The owner's own open
+    goal has "Share this goal" in its "Your goal" panel, and their goals reached in the last two weeks
+    are listed under "Your goals reached" (with "All goals" chosen), each with the same button. It
+    opens a sheet with the picture that will be saved: "Goal reached" (or "A goal · N of M tasks
+    taken"), the goal's title, who helped as "a member of the Avenhood" or "N members of the
+    Avenhood" (PeerProgramming records no agreement to be named, so no helper is ever named), the
+    owner's own handle and picture, one line about the app, `app.lagatos.com` and a QR code to
+    signed-out Today (`https://app.lagatos.com/today`; no public page exists for one goal). "Save
+    picture" makes a PNG on the device (web: a download; Android: the phone's share sheet, where it
+    can be saved or sent) and "Copy as text" copies one plain sentence and the link. Nothing is sent
+    to the server. The picture is drawn in the member's 3.1 colors from shapes in `@ctf/shared`
+    (`today/goal-share.ts`); web `components/se-frame/share/`, `components/peer-programming/pp-goal-share.tsx`;
+    Android `src/features/se-frame/share/`, `src/features/peer-programming/GoalShare.tsx`. The QR code
+    is encoded with `qrcode-generator` (MIT), added to both packages for this.
 
 ### Tiered Participation Visibility
 
@@ -410,6 +424,8 @@ Demo schema (`ctf/scripts/seedDemo.mjs`, `seedPeerProgrammingGoalBoard`): finds 
 6. The Android app carries every PeerProgramming screen the web has, the admin screen included (2026-10-08). No automated test harness exists for live Stream calls — verification on web and on Android (AN-PP in `android-app-test-script.md`) is manual.
 
 ## Change Log
+
+- 2026-11-11: **Share this goal, web and Android (Goal Board item 11).** The approved 3.1 board "Share picture": the owner's open goal and their goals reached in the last two weeks open a share picture with Save picture and Copy as text, never naming a helper. On Today the owner's own goal is now the "Your goal · N of M tasks taken" card with a bar and Share this goal, and a reached goal stays on their Today 7 days to share (non-plugin inventory 5m). No route, table or contract changed. New dependency `qrcode-generator` (MIT) in web and mobile.
 
 - 2026-11-03: **Goals on Today follow the ask rules (non-plugin inventory 5m).** An open goal stays on Today 14 days from posting, and its owner can keep it up 14 more days from the card or from the day-14 notice in Activity (`POST /api/today/cards/[cardId]/renew`). The owner can close it from the card: Done marks it `reached`, Closed, not done marks it `withdrawn`, through the existing `closeGoal` (`POST /api/today/cards/[cardId]/close`). Leaving Today closes nothing; the goal stays on the board. Today now reads up to 8 goals. No PeerProgramming table or route changed.
 
