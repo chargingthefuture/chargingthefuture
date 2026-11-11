@@ -13,8 +13,11 @@ Rule 114 baseline: People uses the Directory's profiles and the canonical accoun
 There is no People-local profile.
 
 - Read fields:
-  - Directory profile id, first and last name, headline, job title, listed skills, and whether it is
-    claimed
+  - Directory profile id, first and last name, headline, job title, listed skills, whether it is
+    claimed, and its state and country (never the city)
+  - the Skills Taxonomy sector of the profile, its job title and its listed skills, for the category
+    chips
+  - the number of Directory profiles (`GET /api/people/count`)
   - the skills a claimed profile's owner offers through Foundation (`foundation_provider_skills`)
 - Write fields:
   - none

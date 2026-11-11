@@ -1,48 +1,44 @@
 'use client';
 
 import Link from 'next/link';
-import { SE_ACTIVITY_WORDS as W, SE_CARD_LIFETIME_WORDS as L, seActivityView, seAgo, seRenewCardId, type SeActivityItem } from '@ctf/shared';
-import { usePosterActions } from '../today/use-poster-actions';
+import { SE_ACTIVITY_ICON_KIND, SE_ACTIVITY_ICON_PATHS, SE_ACTIVITY_WORDS as W, seActivityIcon, seActivityView, seActivityWhen, type SeActivityItem } from '@ctf/shared';
+import { NeedCard } from './need-card';
 import { useActivity } from './use-activity';
 import styles from './activity.module.css';
 
-// Activity: what needs the member's answer, then what happened. Opening an item marks it read. The
-// day-14 notice on the member's own ask or offer carries its one-tap renew beside it.
+// Activity (approved board "Activity"): what needs the member, answered in place, then what
+// happened today and earlier, each with its icon and full date and time. Opening an item marks it
+// read and follows its link. The icon circle is the kind's color lightly over the card, the same
+// mix as seActivityTint on Android.
 
-function Renew({ cardId, onDone }: { cardId: string; onDone: () => void }) {
-  const actions = usePosterActions(cardId, onDone);
-  const { status } = actions;
-  if (status.kind === 'done') return <p role="status" className={styles.text}>{status.text}</p>;
+function RowBody({ item }: { item: SeActivityItem }) {
+  const icon = seActivityIcon(item.notificationType);
   return (
     <>
-      <button type="button" className={styles.allRead} disabled={status.kind === 'busy'} onClick={() => void actions.renew()}>
-        {status.kind === 'busy' ? L.renewing : L.renew}
-      </button>
-      {status.kind === 'error' ? <p role="alert" className={styles.text}>{status.text}</p> : null}
+      <span className={styles.icon} style={{ background: `color-mix(in srgb, var(--se-kind-${SE_ACTIVITY_ICON_KIND[icon]}) 20%, var(--se-card))` }}>
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d={SE_ACTIVITY_ICON_PATHS[icon]} />
+        </svg>
+      </span>
+      <span className={styles.rowText}>
+        <span className={styles.summary}>{item.summary}</span>
+        <span className={styles.meta}>{seActivityWhen(item.createdAtIso)}</span>
+      </span>
     </>
   );
 }
 
 function Row({ item, onOpen }: { item: SeActivityItem; onOpen: (_id: string) => void }) {
-  const body = (
-    <>
-      <span className={styles.summary}>{item.summary}</span>
-      <span className={styles.meta}>
-        {item.isRead ? null : <span className={styles.isNew}>{W.isNew}</span>}
-        {seAgo(item.createdAtIso)}
-      </span>
-    </>
-  );
   if (!item.linkPath) {
     return (
       <button type="button" className={styles.row} onClick={() => onOpen(item.id)}>
-        {body}
+        <RowBody item={item} />
       </button>
     );
   }
   return (
     <Link href={item.linkPath} className={styles.row} onClick={() => onOpen(item.id)}>
-      {body}
+      <RowBody item={item} />
     </Link>
   );
 }
@@ -52,21 +48,15 @@ function Group({ title, items, onOpen }: { title: string; items: SeActivityItem[
   return (
     <section className={styles.group} aria-label={title}>
       <h2 className={styles.groupTitle}>{title}</h2>
-      {items.map((item) => {
-        const renewId = seRenewCardId(item);
-        return (
-          <div key={item.id} className={styles.group}>
-            <Row item={item} onOpen={onOpen} />
-            {renewId ? <Renew cardId={renewId} onDone={() => onOpen(item.id)} /> : null}
-          </div>
-        );
-      })}
+      {items.map((item) => (
+        <Row key={item.id} item={item} onOpen={onOpen} />
+      ))}
     </section>
   );
 }
 
 export function ActivityScreen() {
-  const { state, reload, markRead, markAllRead } = useActivity();
+  const { state, reload, markRead } = useActivity();
   if (state.kind === 'loading') return <p className={styles.text}>{W.loading}</p>;
   if (state.kind === 'error') {
     return (
@@ -82,13 +72,16 @@ export function ActivityScreen() {
   const view = seActivityView(state.items);
   return (
     <>
-      <Group title={W.answer} items={view.answer} onOpen={markRead} />
-      <Group title={W.happened} items={view.happened} onOpen={markRead} />
-      {state.items.some((item) => !item.isRead) ? (
-        <button type="button" className={styles.allRead} onClick={markAllRead}>
-          {W.allRead}
-        </button>
+      {view.needs.length > 0 ? (
+        <section className={styles.needs} aria-label={W.needs}>
+          {view.needs.map((need) => (
+            <NeedCard key={need.item.id} need={need} onRead={markRead} />
+          ))}
+        </section>
       ) : null}
+      <Group title={W.today} items={view.today} onOpen={markRead} />
+      <Group title={W.earlier} items={view.earlier} onOpen={markRead} />
+      <p className={styles.end}>{W.end}</p>
     </>
   );
 }

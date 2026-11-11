@@ -7,7 +7,10 @@ contracts:
   - pluginId: notifications
     command: notifications.list
     version: 1.0.0
-    description: Read the requesting member's own notifications feed (newest first) and unread count.
+    description: >-
+      Read the requesting member's own notifications feed (newest first) and unread count. Each item
+      carries id, sourcePlugin, notificationType, category, summary, linkPath, targetRef (what the notice
+      is about, as its producer recorded it, or null), isRead and createdAtIso.
     inputSchema:
       limit:
         type: number

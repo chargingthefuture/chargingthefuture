@@ -36,10 +36,16 @@ the problem categories and review every suggestion before it joins the shared li
   "N survivors verified"; toggle off to withdraw it.
 - Suggest a tool: choose an existing problem, add a product name, a direct purchase link, and an
   optional note. Suggestions are reviewed before they appear (anonymous to other members).
-- Propose a problem that is not listed: under the suggest form, type the problem in a few words and,
-  optionally, when it happens. Problems already listed that share words with it appear while typing;
-  tapping one picks it in the form instead. A proposal waits for review and shows once approved; a
-  duplicate is merged into the problem already listed. A member can have three waiting at once.
+- Add a problem that is not listed (3.1 sheet "Add a problem", opened from "Not on the list? Add a
+  problem" under the suggest form, or straight away at `/apps/what-works?add=problem`): type the
+  problem in a few words. Problems already listed that share words with it appear under "Already
+  here. Is it one of these?", each with how many things helped with it and a "Use this" button that
+  opens the suggest form on that problem. "None of these, add it" sends it for review; the sheet
+  then offers "Add what helped", which opens the suggest form on the new problem, marked as waiting
+  for review. What the member adds there moves with the problem if it is merged. A problem shows on
+  the list once approved; a member can have three waiting at once.
+- Reached from Today's What Works card ("See the problem"). On Android it opens this web screen in
+  the browser panel.
 - Paged lists, no endless scrolling. The problem list shows five problems per page with
   Previous / Page N of M / Next controls; moving a page returns to the top of the list.
 - Each problem shows its first two tools; any beyond that sit behind a "Show N more tools" control
@@ -53,9 +59,16 @@ the problem categories and review every suggestion before it joins the shared li
 ## 4. Admin Features
 
 - Review queue: approve or reject (with an admin-only reason) each suggested tool; delete tools.
-- **Proposed problems**, above the problem list: each problem a member proposed, oldest first,
-  without who proposed it, with **Approve as new**, **Merge** into a listed problem (anything
-  suggested under the proposal moves there) and **Delete as spam**. Each decision is in the Audit log.
+- **New problems · N**, at the top of the admin screen in the 3.1 colors (board "What works: admin
+  merge and spam"): each problem a member added, oldest first, without who added it. The line under
+  the title gives when it was sent, how many things that helped were added under it, and "no close
+  match" when nothing listed shares words with it. When something does, a "Looks like: <problem>
+  (N things that helped)" line shows and the Merge into menu starts on that problem, with **Merge**
+  first. Otherwise **Approve as new** comes first and **Merge into…** opens the menu. **Delete as
+  spam** removes it with what was added under it. Each decision is in the Audit log.
+- **All problems · merge two that already show**: pick a problem and the one it goes into; every
+  thing that helped under the first, with every vote on it, moves to the second, and the first is
+  removed. Audit `what-works.admin.problem.merge`.
 - Edit a tool's own details (emoji, name, type, note, purchase link) at any status — including after
   it is approved — to fix a typo or a broken link without unpublishing it. Status, verified count,
   and submitter identity are left untouched.
@@ -78,13 +91,14 @@ the problem categories and review every suggestion before it joins the shared li
 - `GET /api/what-works` — Authenticated read of the shared list (problems + approved tools + per-viewer endorsement state + stats + `viewer.isAdmin`).
 - `GET /api/what-works/public` — Public, identity-free teaser slice of the list + stats. The teaser skips problems that have no approved tool yet (a heading with nothing under it is not a preview of anything); signed-in members do see those problems. The returned stats describe only the teaser slice (not the full list), so the public payload never advertises counts a signed-out visitor cannot see.
 - `GET /api/what-works/problems` — Approved, active problems for the suggest form (authenticated).
-- `POST /api/what-works/problems` — A member proposes a problem `{ title, context? }`; it is saved as
+- `POST /api/what-works/problems` — A member proposes a problem `{ title }`; it is saved as
   pending (`review_status 'pending'`, `proposed_by` the member). 429 once the member has three
   waiting. Audit `what-works.problem.propose`.
 - `GET /api/what-works/problems/similar?q=` — Up to five approved, active problems sharing words
-  (three letters or more) with `q`, most words in common first.
+  (three letters or more) with `q`, most words in common first, as `{ id, title, helpedCount }`
+  (`helpedCount` is the approved things that helped under it).
 - `GET /api/what-works/admin/audit-events` — admin read of `what_works_admin_audit_trail`, newest first. Optional `?limit=` (default 100, capped at 200). Returns `{ events }`. Backs the Audit log panel on the admin screen.
-- `POST /api/what-works/products` — Suggest a tool (lands `pending`; suggester auto-recorded as first verifier).
+- `POST /api/what-works/products` — Suggest a tool (lands `pending`; suggester auto-recorded as first verifier). The problem must be approved and active, or still waiting for review and proposed by this member.
 - `POST /api/what-works/products/[id]/endorse` — Mark an approved tool helpful.
 - `DELETE /api/what-works/products/[id]/endorse` — Withdraw the viewer's endorsement.
 - `GET /api/what-works/admin/problems` — Admin: list problems with product counts.
@@ -92,7 +106,13 @@ the problem categories and review every suggestion before it joins the shared li
 - `PATCH /api/what-works/admin/problems/[id]` — Admin: edit/reorder/deactivate a problem.
 - `DELETE /api/what-works/admin/problems/[id]` — Admin: delete a problem (cascade).
 - `GET /api/what-works/admin/problems/pending` — Admin: proposed problems, oldest first, as
-  `{ id, title, context, createdAt }` (never who proposed them).
+  `{ id, title, createdAt, attachedCount, suggestion }` (never who proposed them). `attachedCount`
+  is the things added under it that were not rejected; `suggestion` is the most similar listed
+  problem as `{ id, title, helpedCount }`, or null.
+- `POST /api/what-works/admin/problems/[id]/merge` — Admin: `{ intoId }`, both approved and
+  different. Moves every product under `[id]` (endorsements stay on the products) to `intoId`,
+  deletes `[id]`, and answers `{ ok, intoId, moved }`. 404 when either is no longer listed. Audit
+  `what-works.admin.problem.merge` with `intoId` and the count moved.
 - `POST /api/what-works/admin/problems/[id]/review` — Admin: `{ action: 'approve' | 'merge' | 'spam',
   intoId? }` on a problem still pending. Merge moves the proposal's products to `intoId` (an approved
   problem) and deletes the proposal; spam deletes it. 404 when it is not pending or the target is not
@@ -193,6 +213,9 @@ Derived metrics (no stored counters): a tool's verified count is `COUNT(*)` of i
   by the installable web app (PWA). Historical detail: an Expo feature previously lived at
   `packages/mobile/src/features/what-works/` (list + Helpful toggle + suggest, against the
   `MobileWhatWorks*` references).
+- 3.1: the "Add a problem" sheet and the admin New problems section follow the approved boards
+  "What works: add a problem" and "What works: admin merge and spam" in the 3.1 colors (all four,
+  light and dark). Android opens the same web screens in its browser panel (rule 105 keep-list).
 - Parity contract: [plugin-parity-contracts.json](../../../config/plugin-parity-contracts.json).
 
 ## 9. Seed Coverage Status
@@ -218,6 +241,7 @@ Derived metrics (no stored counters): a tool's verified count is `COUNT(*)` of i
 ## Change Log
 
 - 2026-11-10: **The product's conversation on the What Works page.** A "Conversation" button on each product card opens it; it is held by Commons. Owner decision (an exception to the 3.0 screen freeze): the conversation under this plugin's Today card shows on the plugin's own page too, through the same panel the card's sheet uses on Today (`CardConversationPanel` / `CardConversationToggle` in `components/se-frame/today/card-conversation-panel.tsx`), reading and writing the same conversation through `/api/today/cards/[cardId]`, so 3.0 and 3.1 show one conversation. No route or table changed.
+- 2026-11-11: **Add a problem and admin review built to the 3.1 boards.** The inline propose box under the suggest form is replaced by the "Add a problem" sheet (search first, matches with how many things helped, "Use this", "None of these, add it"; no extra context field, so `POST /api/what-works/problems` takes `{ title }` only). A member can add what helped under their own waiting problem (`POST /api/what-works/products`). `GET /api/what-works/problems/similar` answers `helpedCount`; `GET /api/what-works/admin/problems/pending` answers `attachedCount` and `suggestion` and no longer `context`. The admin Proposed problems section becomes New problems with the suggested merge target preselected, and gains merging two approved problems (`POST /api/what-works/admin/problems/[id]/merge`, contract `what-works.admin.problem.merge`). No schema change.
 - 2026-10-27: **Open to signed-in members in 3.1 (owner decision, Access).** `requireWhatWorksAccess` (reading, suggesting, endorsing, proposing problems) now uses the `signed_in` tier; the admin gate is unchanged. Listed under "3.1 open sign-up use".
 - 2026-10-27: **Members propose problems; admins approve, merge or delete them as spam (3.1.0, plan task 13).** Until now only admins added problems. A member proposes one under the suggest form, with listed problems that share words shown while typing (`GET /api/what-works/problems/similar`) and a note that duplicates are merged; it waits for review (`POST /api/what-works/problems`, at most three waiting per member). The admin screen gains Proposed problems with Approve as new, Merge and Delete as spam (`GET /api/what-works/admin/problems/pending`, `POST /api/what-works/admin/problems/[id]/review`). Schema: `review_status` and `proposed_by` on `what_works_problems` (`post/0072_what_works_problem_review.sql`); every reader filters to approved. Problem reads now name their columns instead of `SELECT *`, so `proposed_by` is never returned. The deletion registry overwrites `proposed_by` on account deletion. Contracts: `what-works.problem.propose`, `.problems.similar`, `.admin.problem.pending`, `.admin.problem.review`.
 - 2026-10-17: **Demo seed for paging.** `ctf/scripts/demo-seed/41-what-works.mjs` adds eight problems and their approved tools to the demo schema, so the list pages and a second problem shows "Show N more tools". Demo data only; no code, schema or route change.

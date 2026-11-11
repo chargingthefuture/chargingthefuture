@@ -9,7 +9,7 @@ policies:
       minUnlockTier: approved_full
       readsOnly: true
       sources:
-        - directory live profiles (deleted_at IS NULL), the same set the Directory list shows
+        - every Directory profile, the same set the Directory list shows (a removed listing is deleted outright)
         - foundation offered skills of a claimed profile's owner
     consentRequirements:
       scopes:
@@ -25,4 +25,29 @@ policies:
     denyConditions:
       - actor_not_authenticated
       - actor_not_approved
+      - account_restricted
+  - pluginId: people
+    command: people.count
+    version: 1.0.0
+    requiredRoles:
+      - member
+    attributePolicies:
+      tenancy: same_workspace
+      minUnlockTier: signed_in
+      readsOnly: true
+      sources:
+        - the number of Directory profiles, and nothing else
+      allowlist: ctf/config/unlock-tier-exception-allowlist.json (machinery, a small feed the gated People screen needs)
+    consentRequirements:
+      scopes:
+        - platform_terms
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - actor_not_authenticated
       - account_restricted
