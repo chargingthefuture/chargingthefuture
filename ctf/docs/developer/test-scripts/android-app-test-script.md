@@ -89,8 +89,11 @@ second test member in the same room.
    connects and you can post; signed out, a **Sign in to chat** button shows instead.
 3. As an admin: the **Go live** card is above the viewer. Type a title and tap **Go live**. Expect
    the "live now" post in the Commons and the broadcast buttons.
-4. Tap **Use camera and microphone** and allow both. Expect your own preview and "Your camera and
-   microphone are live to the broadcast." Tap **Flip camera**: the preview switches cameras. Talk for
+4. Tap **Use microphone** and allow it: expect "Your microphone is live to the broadcast. Turn on
+   the camera or share a screen to be seen." Tap **Use camera** and allow it. Expect your own
+   preview and "Your camera and microphone are live to the broadcast." Tap **Stop microphone**:
+   the line turns red and reads "Your camera is live, but your microphone is off. Viewers cannot
+   hear you." Tap **Use microphone** again. Tap **Flip camera**: the preview switches cameras. Talk for
    a minute; a viewer on another device sees and hears you within about 30 seconds.
 5. Tap **Share screen** and accept Android's prompt. Expect the preview to show the phone's screen
    and "Your screen is live to the broadcast." Switch to another app for 30 seconds: the viewer keeps

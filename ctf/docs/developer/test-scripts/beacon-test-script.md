@@ -199,8 +199,9 @@ for this event.` The pasted text starts with the event title and matches what th
 **Steps:**
 1. Press Go Live. The RTMP ingest URL + stream key do not exist before this press — they are minted
    by it, so there is nothing to copy until Go Live has succeeded.
-2. On a phone or a computer: press "Use camera and microphone", allow both when the browser asks,
-   and talk for a minute. Press "Flip camera" once.
+2. On a phone or a computer: press "Use microphone" and allow it, then "Use camera" and allow it.
+   Each button asks for its own permission. Talk for a minute. Press "Flip camera" once. Press
+   "Stop microphone", check the line under the buttons, then "Use microphone" again.
 3. For a desktop demo: use "Share screen" to capture a desktop screen/window in the browser. On a
    phone the button is not shown.
 4. To show a phone's own screen: copy the per-event RTMP ingest URL + stream key and push from a
@@ -208,7 +209,9 @@ for this event.` The pasted text starts with the event title and matches what th
 **Expected:** Go Live flips the event out of backstage to `live` and auto-posts the "live now" notice
 to the Commons. The admin page does not join the call until a button in step 2 or 3 is pressed: the
 event's Log shows no "Broadcaster joined" line before then. In step 2 a preview of the camera
-appears, the line under the buttons reads "Your camera and microphone are live to the broadcast.",
+appears, the line under the buttons reads "Your camera and microphone are live to the broadcast."
+(with the microphone stopped it turns red and reads "Your camera is live, but your microphone is
+off. Viewers cannot hear you."),
 the flip switches between front and back cameras, and a signed-out viewer on another device sees and
 hears you (the player starts muted; its speaker button turns sound on). HLS + recording start once a
 host is actually publishing — the admin page posting to `start-broadcast`, or Stream's

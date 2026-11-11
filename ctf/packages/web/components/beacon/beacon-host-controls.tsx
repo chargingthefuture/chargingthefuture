@@ -1,14 +1,15 @@
 'use client';
 
 // The Beacon host's broadcast controls, inside the admin page: go live from this browser with the
-// camera and microphone (a phone works, like a Twitch or TikTok live), or share a screen or window
-// from a computer. The page joins the call only when one of these is pressed, so an admin who just
+// microphone and the camera, each its own button with its own permission prompt (a phone works,
+// like a Twitch or TikTok live), or share a screen or window from a computer. The page joins the call only when one of these is pressed, so an admin who just
 // has the page open is never counted as a silent broadcaster (owner report: a recording made of
 // nothing, started by the admin page joining with no camera, microphone or screen).
 import { useEffect, useRef, useState } from 'react';
 import { CallingState, useCallStateHooks, type Call } from '@stream-io/video-react-sdk';
-import { ScreenShare, ScreenShareOff, SwitchCamera, Video, VideoOff } from 'lucide-react';
+import { Mic, MicOff, ScreenShare, ScreenShareOff, SwitchCamera, Video, VideoOff } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
+import { beaconHostStatus } from '@ctf/shared';
 import { getBeaconTokens, type BeaconTokens } from './beacon-shared';
 import { useBeaconEgressStart } from './use-beacon-egress-start';
 import { reportError } from 'lib/observability/report';
@@ -75,65 +76,81 @@ export function BeaconHostControls({ call, eventId }: { call: Call; eventId: str
   const [busy, setBusy] = useState(false);
   const [deviceError, setDeviceError] = useState<string | null>(null);
 
-  const onCamera = !cameraOff || !micOff;
-  const publishing = onCamera || isSharing;
+  const cameraOn = !cameraOff;
+  const micOn = !micOff;
+  const publishing = cameraOn || micOn || isSharing;
   const broadcastError = useBeaconEgressStart(eventId, publishing);
 
-  const run = async (op: string, action: () => Promise<void>) => {
+  const run = async (op: string, refusal: string, action: () => Promise<void>) => {
     setBusy(true);
     setDeviceError(null);
     try {
       await action();
     } catch (error) {
       reportError(error, { area: 'beacon', op, extra: { eventId } });
-      setDeviceError(error instanceof Error ? error.message : 'The browser refused the camera, microphone or screen.');
+      setDeviceError(`${refusal}${error instanceof Error && error.message ? ` (${error.message})` : ''}`);
     } finally {
       setBusy(false);
     }
   };
 
-  // Turn the camera and microphone on before joining, so the first thing the call sees from this
-  // host is real picture and sound.
-  const toggleCamera = () =>
-    run('host_camera', async () => {
-      if (onCamera) {
-        await camera.disable();
+  // The microphone and the camera are separate buttons, each with its own permission prompt. One
+  // button asking for both sometimes got only one of the two prompts, and the broadcast went out
+  // with no sound or no picture (owner report). Each turns its device on before joining, so the
+  // first thing the call sees from this host is real sound or picture.
+  const toggleMic = () =>
+    run('host_microphone', 'The browser did not allow the microphone.', async () => {
+      if (micOn) {
         await microphone.disable();
         return;
       }
-      await camera.enable();
       await microphone.enable();
       await joinIfNeeded(call);
     });
 
+  const toggleCamera = () =>
+    run('host_camera', 'The browser did not allow the camera.', async () => {
+      if (cameraOn) {
+        await camera.disable();
+        return;
+      }
+      await camera.enable();
+      await joinIfNeeded(call);
+    });
+
   const toggleScreen = () =>
-    run('host_screen_share', async () => {
+    run('host_screen_share', 'The browser did not share the screen.', async () => {
       await joinIfNeeded(call);
       await screenShare.toggle();
     });
 
   return (
     <div style={{ display: 'grid', gap: 12 }}>
-      <CameraPreview stream={onCamera ? mediaStream : undefined} />
+      <CameraPreview stream={cameraOn ? mediaStream : undefined} />
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-        <ControlButton t={t} busy={busy} active={onCamera} onPress={toggleCamera} {...CAMERA_BUTTON[String(onCamera)]} />
-        {onCamera ? (
-          <ControlButton t={t} busy={busy} active={false} onPress={() => run('host_camera_flip', () => camera.flip())}
+        <ControlButton t={t} busy={busy} active={micOn} onPress={toggleMic} {...MIC_BUTTON[String(micOn)]} />
+        <ControlButton t={t} busy={busy} active={cameraOn} onPress={toggleCamera} {...CAMERA_BUTTON[String(cameraOn)]} />
+        {cameraOn ? (
+          <ControlButton t={t} busy={busy} active={false} onPress={() => run('host_camera_flip', 'The camera could not be flipped.', () => camera.flip())}
             icon={<SwitchCamera size={18} />} label="Flip camera" />
         ) : null}
         {canShareScreen() ? (
           <ControlButton t={t} busy={busy} active={!screenOff} onPress={toggleScreen} {...SCREEN_BUTTON[String(!screenOff)]} />
         ) : null}
       </div>
-      <StatusLine t={t} error={broadcastError ?? deviceError} onCamera={onCamera} isSharing={isSharing} />
+      <StatusLine t={t} error={broadcastError ?? deviceError} micOn={micOn} cameraOn={cameraOn} isSharing={isSharing} />
     </div>
   );
 }
 
 // Each toggle's icon and label, keyed by whether it is on.
+const MIC_BUTTON: Record<string, { icon: React.ReactNode; label: string }> = {
+  true: { icon: <MicOff size={18} />, label: 'Stop microphone' },
+  false: { icon: <Mic size={18} />, label: 'Use microphone' },
+};
 const CAMERA_BUTTON: Record<string, { icon: React.ReactNode; label: string }> = {
-  true: { icon: <VideoOff size={18} />, label: 'Stop camera and microphone' },
-  false: { icon: <Video size={18} />, label: 'Use camera and microphone' },
+  true: { icon: <VideoOff size={18} />, label: 'Stop camera' },
+  false: { icon: <Video size={18} />, label: 'Use camera' },
 };
 const SCREEN_BUTTON: Record<string, { icon: React.ReactNode; label: string }> = {
   true: { icon: <ScreenShareOff size={18} />, label: 'Stop sharing' },
@@ -157,15 +174,12 @@ function ControlButton({ t, busy, active, onPress, icon, label }: {
 }
 
 // What the host is sending, or why the broadcast did not start. An error replaces the "live" line,
-// which would be untrue while no public feed or recording has started.
-function StatusLine({ t, error, onCamera, isSharing }: { t: BeaconTokens; error: string | null; onCamera: boolean; isSharing: boolean }) {
+// which would be untrue while no public feed or recording has started. A picture going out with the
+// microphone off is called out in red, since viewers would hear nothing.
+function StatusLine({ t, error, micOn, cameraOn, isSharing }: { t: BeaconTokens; error: string | null; micOn: boolean; cameraOn: boolean; isSharing: boolean }) {
   if (error) {
     return <span role="alert" style={{ fontSize: 13, color: '#F87171' }}>{error}</span>;
   }
-  const text = onCamera
-    ? 'Your camera and microphone are live to the broadcast.'
-    : isSharing
-      ? 'Your screen is live to the broadcast.'
-      : 'Go live with your camera and microphone, from a phone or a computer.';
-  return <span style={{ fontSize: 13, color: t.SUBTLE }}>{text}</span>;
+  const { text, warn } = beaconHostStatus(micOn, cameraOn, isSharing);
+  return <span role={warn ? 'alert' : undefined} style={{ fontSize: 13, color: warn ? '#F87171' : t.SUBTLE }}>{text}</span>;
 }
