@@ -138,6 +138,7 @@
 
 .bar {
   position: fixed;
+  z-index: 10;
   left: 12px;
   right: 12px;
   bottom: 100px;
