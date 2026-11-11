@@ -714,3 +714,16 @@ totals (AD-28) still count each mark.
 8. As A, delete the account (or only Card conversations on Today).
 **Expected:** Step 1: the pill beside the title reads "1 Aven here", then "2 Avens here"; no name appears anywhere. Step 2: the bookmark fills, and Me → Saved lists the story with "Story" and its title. Step 3: the same list on Android; the title opens the story; Remove takes it off and the bookmark on Today is empty on the next read. Step 4: the card's sheet opens with "says this helped" recorded; Hide takes the other story off Today for good. Step 5: the card says "Checked in: Good. The next check-in opens in a week." and the check-in shows in Mood; the card is gone on the next read. Step 6: "You're caught up." or "That is today.", then "5 more stories open at your midnight." No ask card shows a credit line. Step 7: the broadcast card shows LIVE, the title, "<host> · started at <time>", Watch and Chat; the Main Room reads "Quiet during the broadcast" with Open unless somebody is in it. Step 8 removes A's `today_card_saves` rows and `member_presence` row.
 **Result:** web ☐ android ☐ — notes:
+
+## AD-35 · Emoji rain when Days won goes up (added 2026-11-11)
+**Role:** an approved member on 3.1; an admin who can see the Days won total move (or a day with an exchange recorded) · **Surfaces:** web, android
+**Steps:**
+1. With Emoji rain off (Me → Settings → Look and reading), open Today. Note the Days won total.
+2. Wait until Days won goes up (an exchange recorded today), then open Today again.
+3. Turn Emoji rain on. Open Today; wait until Days won goes up again and open Today.
+4. While emoji are falling, tap a card and scroll.
+5. Open Today on the other device (web or Android) without Days won changing.
+6. Turn on the phone's Remove animations (Android: Settings → Accessibility) or the browser's reduce motion setting, wait for Days won to go up, and open Today.
+7. Delete the account.
+**Expected:** Step 1 shows no rain. Step 2 shows no rain, because the switch is off; the account still records the new total. Step 3: the first open shows no rain (the total has not moved since step 2); after Days won goes up, emoji (🎉 🌱 ⭐ 🙌 ✨) fall over Today for about three seconds and stop, with no sound. Step 4: the tap opens the card and the screen scrolls; the rain blocks nothing. Step 5 shows no rain, because the account has already seen this total. Step 6 shows no rain and records the total. Step 7 removes the `user_ui_preferences` row, `days_won_seen` with it. On Android the drops match the web's emoji, sizes and order.
+**Result:** web ☐ android ☐ — notes:

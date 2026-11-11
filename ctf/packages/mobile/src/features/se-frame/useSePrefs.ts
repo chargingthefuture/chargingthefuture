@@ -1,7 +1,8 @@
 // The member's 3.1 look on Android, the copy of the web's use-se-prefs.ts: colors, text size, higher
 // contrast, easier-to-read font and emoji rain, saved on the account (/api/account/ui-preferences).
 // The phone keeps a copy of the colors only so the first frame is drawn in them; the account's
-// answer wins. A save that fails puts the earlier choice back and says why.
+// answer wins. A save that fails puts the earlier choice back and says why. It also carries the Days
+// won total Today last saw for this account, which decides when emoji rain falls (today/EmojiRain.tsx).
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -18,7 +19,7 @@ import { themeCacheFile } from './useSeTheme';
 
 const PATH = '/api/account/ui-preferences';
 
-type Saved = { seTheme?: SeThemeChoice | null; reading?: SeReadingPrefs };
+type Saved = { seTheme?: SeThemeChoice | null; reading?: SeReadingPrefs; daysWonSeen?: number | null };
 
 function cacheTheme(theme: SeThemeChoice) {
   try {
@@ -41,9 +42,16 @@ export type SePrefs = {
   error: string | null;
   setTheme: (_next: SeThemeChoice) => void;
   setReading: (_change: Partial<SeReadingPrefs>) => void;
+  // undefined until the account answers; null when Today has never recorded a total.
+  daysWonSeen: number | null | undefined;
+  markDaysWonSeen: (_total: number) => void;
 };
 
-function useInitialLoad(setTheme: (_t: SeThemeChoice) => void, setReading: (_r: SeReadingPrefs) => void) {
+function useInitialLoad(
+  setTheme: (_t: SeThemeChoice) => void,
+  setReading: (_r: SeReadingPrefs) => void,
+  setSeen: (_seen: number | null) => void,
+) {
   useEffect(() => {
     let active = true;
     const file = themeCacheFile();
@@ -61,21 +69,23 @@ function useInitialLoad(setTheme: (_t: SeThemeChoice) => void, setReading: (_r: 
           cacheTheme(saved.seTheme);
         }
         if (saved.reading) setReading(saved.reading);
+        setSeen(typeof saved.daysWonSeen === 'number' ? saved.daysWonSeen : null);
       })
       .catch((error: unknown) => reportError(error, { area: 'se-frame', op: 'read_look' }));
     return () => {
       active = false;
     };
-  }, [setTheme, setReading]);
+  }, [setTheme, setReading, setSeen]);
 }
 
 export function useSePrefs(): SePrefs {
   const [theme, setThemeState] = useState<SeThemeChoice>({ ...SE_DEFAULT_THEME });
   const [reading, setReadingState] = useState<SeReadingPrefs>({ ...SE_DEFAULT_READING });
   const [error, setError] = useState<string | null>(null);
+  const [daysWonSeen, setDaysWonSeen] = useState<number | null | undefined>(undefined);
   const current = useRef({ theme, reading });
   current.current = { theme, reading };
-  useInitialLoad(setThemeState, setReadingState);
+  useInitialLoad(setThemeState, setReadingState, setDaysWonSeen);
 
   const save = useCallback(async (body: Record<string, unknown>, undo: () => void) => {
     setError(null);
@@ -117,5 +127,20 @@ export function useSePrefs(): SePrefs {
     [save],
   );
 
-  return { theme, reading, error, setTheme, setReading };
+  // Not a choice the member makes, so a failed save is reported rather than shown; the next Today
+  // read records it again.
+  const markDaysWonSeen = useCallback((total: number) => {
+    setDaysWonSeen(total);
+    authedFetch(PATH, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
+      body: JSON.stringify({ daysWonSeen: total }),
+    })
+      .then((res) => {
+        if (!res.ok) reportError(new Error(`Saving the Days won total Today showed failed (HTTP ${res.status})`), { area: 'se-frame', op: 'save_days_won_seen' });
+      })
+      .catch((caught: unknown) => reportError(caught, { area: 'se-frame', op: 'save_days_won_seen' }));
+  }, []);
+
+  return { theme, reading, error, setTheme, setReading, daysWonSeen, markDaysWonSeen };
 }

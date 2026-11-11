@@ -19,7 +19,7 @@ import { Mic, MicOff, Video as VideoIcon, VideoOff, PhoneOff } from 'lucide-reac
 import { useTheme } from '@/hooks/useTheme';
 import { getPeerProgrammingTokens, type PeerProgrammingTokens } from './pp-shared';
 import { reportError } from 'lib/observability/report';
-import { BlockAndReportButton, BlurBackgroundToggle, CallFiltersProvider, openPictureInPicture } from '@/components/shared/call-safety';
+import { BlockAndReportButton, BlurBackgroundToggle, CallFiltersProvider, openPictureInPicture, useAutoPictureInPicture } from '@/components/shared/call-safety';
 import { PeerProgrammingCallLobby } from './pp-call-lobby';
 
 const CALL_TYPE = 'default';
@@ -277,26 +277,6 @@ function PeerProgrammingSessionStage({ onLeave, deviceNotices }: { onLeave: () =
 // PeerProgramming Stream ids are `pp-<accountId>` (lib/peer-programming/stream.ts).
 function accountIdOf(streamUserId: string): string {
   return streamUserId.startsWith('pp-') ? streamUserId.slice('pp-'.length) : streamUserId;
-}
-
-// Picture in picture by default: where the browser lets a page open it on its own (Chrome, for a
-// video call that is hidden behind another tab or app), the other member's video moves to its own
-// window. Elsewhere the button does it.
-function useAutoPictureInPicture(tile: React.RefObject<HTMLDivElement | null>): [string | null, (notice: string | null) => void] {
-  const [notice, setNotice] = useState<string | null>(null);
-  useEffect(() => {
-    const session = typeof navigator !== 'undefined' ? navigator.mediaSession : undefined;
-    if (!session) return;
-    const action = 'enterpictureinpicture' as MediaSessionAction;
-    try {
-      session.setActionHandler(action, () => void openPictureInPicture(tile.current).then(setNotice));
-    } catch {
-      return; // This browser does not offer it; the button still works.
-    }
-    // Only reached when the handler was set, so clearing it is supported too.
-    return () => session.setActionHandler(action, null);
-  }, [tile]);
-  return [notice, setNotice];
 }
 
 function controlStyle(active: boolean, t: PeerProgrammingTokens): React.CSSProperties {

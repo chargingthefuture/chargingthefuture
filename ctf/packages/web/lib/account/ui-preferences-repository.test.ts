@@ -10,12 +10,12 @@ describe('user UI preferences', () => {
 
   it('reads 3.1 and the default theme when the member has no row', async () => {
     queryDb.mockResolvedValue({ rows: [] });
-    await expect(getUserUiPreferences('user_1')).resolves.toEqual({ theme: 'default', interfaceVersion: '3.1', seTheme: null, reading: { textSize: 'default', highContrast: false, readableFont: false, emojiRain: false } });
+    await expect(getUserUiPreferences('user_1')).resolves.toEqual({ theme: 'default', interfaceVersion: '3.1', seTheme: null, reading: { textSize: 'default', highContrast: false, readableFont: false, emojiRain: false }, daysWonSeen: null });
   });
 
   it('reads a saved 3.1', async () => {
     queryDb.mockResolvedValue({ rows: [{ theme: 'comic', interface_version: '3.1' }] });
-    await expect(getUserUiPreferences('user_1')).resolves.toEqual({ theme: 'comic', interfaceVersion: '3.1', seTheme: null, reading: { textSize: 'default', highContrast: false, readableFont: false, emojiRain: false } });
+    await expect(getUserUiPreferences('user_1')).resolves.toEqual({ theme: 'comic', interfaceVersion: '3.1', seTheme: null, reading: { textSize: 'default', highContrast: false, readableFont: false, emojiRain: false }, daysWonSeen: null });
   });
 
   it('treats an unknown stored version as 3.1, the default', async () => {
@@ -26,7 +26,7 @@ describe('user UI preferences', () => {
   it('saving only the interface leaves the theme to the stored value', async () => {
     queryDb.mockResolvedValue({ rows: [{ theme: 'comic', interface_version: '3.1' }] });
     const saved = await setUserUiPreferences('user_1', { interfaceVersion: '3.1' });
-    expect(queryDb.mock.calls[0][1]).toEqual(['user_1', null, '3.1', null, null, null, null, null, null]);
+    expect(queryDb.mock.calls[0][1]).toEqual(['user_1', null, '3.1', null, null, null, null, null, null, null]);
     expect(saved).toMatchObject({ theme: 'comic', interfaceVersion: '3.1' });
   });
 
@@ -40,5 +40,14 @@ describe('user UI preferences', () => {
     });
     queryDb.mockResolvedValue({ rows: [{ theme: 'default', interface_version: '3.1', se_theme_color: 'coral', se_theme_mode: null, text_size: 'huge' }] });
     await expect(getUserUiPreferences('user_1')).resolves.toMatchObject({ seTheme: null, reading: { textSize: 'default' } });
+  });
+
+  it('reads and saves the Days won total Today last saw', async () => {
+    queryDb.mockResolvedValue({ rows: [{ theme: 'default', interface_version: '3.1', days_won_seen: 41 }] });
+    await expect(getUserUiPreferences('user_1')).resolves.toMatchObject({ daysWonSeen: 41 });
+    queryDb.mockResolvedValue({ rows: [{ theme: 'default', interface_version: '3.1', days_won_seen: 42 }] });
+    const saved = await setUserUiPreferences('user_1', { daysWonSeen: 42 });
+    expect(queryDb.mock.calls[1][1]).toEqual(['user_1', null, null, null, null, null, null, null, null, 42]);
+    expect(saved.daysWonSeen).toBe(42);
   });
 });

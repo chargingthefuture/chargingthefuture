@@ -4,12 +4,15 @@
 // signed-in member. This one component serves both: an anonymous visitor sees the player plus a
 // "sign in to chat" prompt; a member additionally gets the live chat panel. It polls the public
 // /api/beacon/current endpoint for the live event + HLS URL and falls back to a calm idle state or
-// the last replay when nothing is live.
+// the last replay when nothing is live. Picture in picture is the default for the broadcast and the
+// replay (3.1 plan): the video moves to its own window when the member leaves the tab, where the
+// browser allows it, and a button does it everywhere else (call-safety.tsx).
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Radio, Lock } from 'lucide-react';
 import type Hls from 'hls.js';
 import { PublicShellBackLink } from '@/components/plugins/public-shell-back-link';
 import { StreamChatPanel } from '@/components/shared/stream-chat-panel';
+import { openPictureInPicture, useAutoPictureInPicture } from '@/components/shared/call-safety';
 import { useTheme } from '@/hooks/useTheme';
 import { getBeaconTokens, type BeaconTokens } from './beacon-shared';
 import { BEACON_COLOR } from 'lib/beacon/constants';
@@ -54,6 +57,27 @@ function deriveBeaconView(current: CurrentResponse | null): {
   return { liveEvent, hlsUrl, replay };
 }
 
+// The picture in picture button under a player, and what it says when the browser cannot.
+function PictureInPictureControl({ container, t }: { container: React.RefObject<HTMLDivElement | null>; t: BeaconTokens }) {
+  const [notice, setNotice] = useAutoPictureInPicture(container, 'the broadcast');
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, marginTop: 10 }}>
+      <button
+        type="button"
+        onClick={() => void openPictureInPicture(container.current, 'the broadcast').then(setNotice)}
+        style={{ minHeight: 40, padding: '6px 14px', borderRadius: 999, border: `1px solid ${t.ACCENT}55`, background: 'transparent', color: t.ACCENT, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+      >
+        Picture in picture
+      </button>
+      {notice ? (
+        <span role="status" style={{ fontSize: 12, color: t.SUBTLE }}>
+          {notice}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
 // The live layout: player on the left, chat (member) or sign-in prompt (anonymous) on the right.
 function BeaconLiveView({
   liveEvent,
@@ -74,6 +98,7 @@ function BeaconLiveView({
 }) {
   const { theme } = useTheme();
   const t = getBeaconTokens(theme);
+  const player = useRef<HTMLDivElement | null>(null);
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 16 }}>
       <div style={{ display: 'grid', gap: 16, gridTemplateColumns: '1fr', alignItems: 'start' }} className="beacon-live-grid">
@@ -101,13 +126,14 @@ function BeaconLiveView({
           {liveEvent.description ? (
             <p style={{ color: t.SUBTLE, fontSize: 14, margin: '0 0 12px' }}>{liveEvent.description}</p>
           ) : null}
-          <div style={{ borderRadius: 12, overflow: 'hidden', background: '#000', border: `1px solid ${t.BORDER_SOLID}`, aspectRatio: '16 / 9' }}>
+          <div ref={player} style={{ borderRadius: 12, overflow: 'hidden', background: '#000', border: `1px solid ${t.BORDER_SOLID}`, aspectRatio: '16 / 9' }}>
             {hlsUrl ? (
               <video ref={videoRef} controls autoPlay playsInline muted style={{ width: '100%', height: '100%' }} />
             ) : (
               <div style={{ ...centeredStyle(t), height: '100%' }}>The broadcast is starting…</div>
             )}
           </div>
+          {hlsUrl ? <PictureInPictureControl container={player} t={t} /> : null}
           <p style={{ color: t.SUBTLE, fontSize: 12, marginTop: 10 }}>
             This broadcast and its chat are public. The event is recorded; the replay is posted to the Commons.
           </p>
@@ -147,6 +173,7 @@ function BeaconLiveView({
 function BeaconIdleView({ replay }: { replay: BeaconEventLike | null }) {
   const { theme } = useTheme();
   const t = getBeaconTokens(theme);
+  const player = useRef<HTMLDivElement | null>(null);
   return (
     <div style={{ ...panelStyle(t), textAlign: 'center', padding: '48px 24px' }}>
       <Radio size={40} style={{ color: t.SUBTLE, display: 'block', margin: '0 auto 12px' }} />
@@ -158,10 +185,11 @@ function BeaconIdleView({ replay }: { replay: BeaconEventLike | null }) {
       {replay?.recordingUrl ? (
         <div style={{ marginTop: 20, textAlign: 'left' }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: t.SUBTLE, marginBottom: 8 }}>Last replay</div>
-          <div style={{ borderRadius: 12, overflow: 'hidden', background: '#000', border: `1px solid ${t.BORDER_SOLID}`, aspectRatio: '16 / 9' }}>
+          <div ref={player} style={{ borderRadius: 12, overflow: 'hidden', background: '#000', border: `1px solid ${t.BORDER_SOLID}`, aspectRatio: '16 / 9' }}>
             {/* eslint-disable-next-line jsx-a11y/media-has-caption -- known gap (WCAG 1.2.2): recorded broadcasts have no captions track yet; a captions pipeline is tracked in issue #1432. */}
             <video controls playsInline src={replay.recordingUrl} style={{ width: '100%', height: '100%' }} />
           </div>
+          <PictureInPictureControl container={player} t={t} />
           <div style={{ fontSize: 14, fontWeight: 600, marginTop: 8 }}>{replay.title}</div>
         </div>
       ) : null}
