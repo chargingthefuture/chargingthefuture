@@ -89,6 +89,12 @@ policies:
     attributePolicies: []
     consentRequirements: []
   - pluginId: what-works
+    command: what-works.admin.problem.merge
+    version: 1.0.0
+    requiredRoles: [admin]
+    attributePolicies: []
+    consentRequirements: []
+  - pluginId: what-works
     command: what-works.admin.product.list
     version: 1.0.0
     requiredRoles: [admin]

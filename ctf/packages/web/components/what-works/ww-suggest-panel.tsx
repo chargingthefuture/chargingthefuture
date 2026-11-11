@@ -9,7 +9,6 @@ import { BackChevronButton } from '@/lib/nav/back-history';
 import { useTheme } from '@/hooks/useTheme';
 import { getWhatWorksTokens, type SuggestDraft, type WhatWorksProblemOption, type WhatWorksTokens } from './ww-shared';
 import { WhatWorksSuggestGuidance } from './ww-suggest-guidance';
-import { WhatWorksProposeProblem } from './ww-propose-problem';
 
 type Props = {
   problems: WhatWorksProblemOption[];
@@ -21,6 +20,8 @@ type Props = {
   isFirst: boolean;
   onSubmit: (draft: SuggestDraft) => Promise<string | null>;
   onBack?: () => void;
+  // Opens the "Add a problem" sheet, for a problem that is not on the list.
+  onAddProblem?: () => void;
 };
 
 const makeInputStyle = (t: WhatWorksTokens): CSSProperties => ({
@@ -94,10 +95,11 @@ type SuggestFormProps = {
   submitting: boolean;
   onSubmit: () => void;
   onBack?: () => void;
+  onAddProblem?: () => void;
 };
 
 // The suggest layout: header bar, the entry form, and the guidance panel.
-function SuggestForm({ t, inputStyle, problems, isFirst, error, problemId, setProblemId, name, setName, link, setLink, why, setWhy, ready, submitting, onSubmit, onBack }: SuggestFormProps) {
+function SuggestForm({ t, inputStyle, problems, isFirst, error, problemId, setProblemId, name, setName, link, setLink, why, setWhy, ready, submitting, onSubmit, onBack, onAddProblem }: SuggestFormProps) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', maxHeight: '100%', background: t.BG, fontFamily: "'Figtree Variable',system-ui", color: t.TITLE, overflow: 'hidden' }}>
       <div style={{ height: 56, borderBottom: `1px solid ${t.BORDER_SOLID}`, display: 'flex', alignItems: 'center', padding: '0 16px', gap: 12, background: t.HEADER, flexShrink: 0 }}>
@@ -147,7 +149,7 @@ function SuggestForm({ t, inputStyle, problems, isFirst, error, problemId, setPr
                 </select>
                 <ChevronDown size={15} color={t.MUTED} style={{ flexShrink: 0 }} />
               </div>
-              <div style={{ fontSize: 11, color: t.MUTED, marginTop: 6, lineHeight: 1.5 }}>Pick an existing problem. Not listed? Propose it below the form.</div>
+              <div style={{ fontSize: 11, color: t.MUTED, marginTop: 6, lineHeight: 1.5 }}>Pick an existing problem. Not listed? Add it below the form.</div>
             </Field>
 
             <Field label="Product name" required>
@@ -167,7 +169,11 @@ function SuggestForm({ t, inputStyle, problems, isFirst, error, problemId, setPr
 
             <SuggestSubmitButton t={t} ready={ready} submitting={submitting} />
           </form>
-          <WhatWorksProposeProblem onPick={setProblemId} />
+          {onAddProblem ? (
+            <button type="button" onClick={onAddProblem} style={{ marginTop: 18, width: '100%', padding: 16, borderRadius: 14, border: `1px dashed ${t.BORDER_SOLID}`, background: 'transparent', color: t.TITLE, fontSize: 13, fontWeight: 700, textAlign: 'left', cursor: 'pointer' }}>
+              Not on the list? Add a problem
+            </button>
+          ) : null}
         </div>
 
         <WhatWorksSuggestGuidance />
@@ -176,7 +182,7 @@ function SuggestForm({ t, inputStyle, problems, isFirst, error, problemId, setPr
   );
 }
 
-export function WhatWorksSuggestPanel({ problems, optionsError = null, initialProblemId = '', isFirst, onSubmit, onBack }: Props) {
+export function WhatWorksSuggestPanel({ problems, optionsError = null, initialProblemId = '', isFirst, onSubmit, onBack, onAddProblem }: Props) {
   const { theme } = useTheme();
   const t = getWhatWorksTokens(theme);
   const inputStyle = makeInputStyle(t);
@@ -230,6 +236,7 @@ export function WhatWorksSuggestPanel({ problems, optionsError = null, initialPr
       submitting={submitting}
       onSubmit={() => void submit()}
       onBack={onBack}
+      onAddProblem={onAddProblem}
     />
   );
 }

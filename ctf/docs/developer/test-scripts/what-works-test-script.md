@@ -301,29 +301,51 @@ one of these, it is already tracked, not a new bug:
 
 > _Terminology (2026-07-20): the source inventory's user-facing section is now titled **User Features** (was "Target User Features"), and its admin section **Admin Features**. Heading rename only — no test steps changed._
 
-### WW-10 · Propose a problem, and review it
+### WW-10 · Add a problem, and review it (3.1 boards, rewritten 2026-11-11)
 
-**Role:** approved member, then admin · **Surfaces:** web (mobile-responsive)
+**Role:** approved member, then admin · **Surfaces:** web (mobile-responsive), android (browser panel)
 **Steps:**
-1. As the member, open the suggest form. Under "Not on the list? Propose a problem", type a few
-   words that match a listed problem's title.
-2. Tap one of the "Already listed" matches.
-3. Type a problem that is not listed, add when it happens, and tap **Propose it**. Propose three more.
-4. As the admin, open the What Works admin screen. Under Proposed problems, approve one, merge one
-   into a listed problem, and delete one as spam.
+1. As the member, open What Works from Today's What Works card, open the suggest form and tap "Not
+   on the list? Add a problem". Type a few words that match a listed problem's title.
+2. Tap **Use this** on one of the matches.
+3. Open the sheet again, type a problem that is not listed and tap **None of these, add it** (or
+   **Add it** when nothing matches). Tap **Add what helped** and suggest a tool. Add three more
+   problems.
+4. As the admin, open the What Works admin screen. Under New problems, merge the one with a "Looks
+   like" line, approve one, open **Merge into…** on one with "no close match" and merge it, and
+   delete one as spam.
 5. As the member, reload What Works.
-**Expected:** Step 1 shows up to five listed problems sharing words with what was typed. Step 2 picks
-that problem in the suggest form's dropdown. Step 3 says "Sent for review. It shows on the list once
-approved."; the fourth proposal is refused with "A member can have 3 problems waiting for review at
-once." The proposals do not appear on the list or in the dropdown. Step 4 lists them oldest first
-with no name or id of who proposed them; each action removes the row and appears in the Audit log
-with the action. Step 5 shows the approved problem on the list (and in the dropdown), the merged one
-nowhere, and the spam one nowhere.
+6. Repeat step 1 in each of the four colors, light and dark, and on Android from the Today card.
+**Expected:** Step 1 shows the sheet "Add a problem" with the rule line, then up to five listed
+problems under "Already here. Is it one of these?", each with "N things that helped" and "Use this".
+Step 2 closes the sheet and opens the suggest form on that problem. Step 3 shows "Sent for review";
+the suggest form then has the new problem selected, marked "(waiting for review)", and the tool is
+saved. The fifth problem is refused with "A member can have 3 problems waiting for review at once."
+Waiting problems do not appear on the list. Step 4 shows "New problems · N" oldest first with no
+name or id of who added them; the line under each title gives the sent date and time, "1 thing that
+helped attached" where one was added, and "no close match" where nothing listed shares words. The
+"Looks like" problem is already chosen in Merge into. Each action removes the card and appears in the
+Audit log. Step 5 shows the approved problem on the list, the merged ones nowhere but the tool added
+under the merged one now under the problem it went into, and the spam one nowhere. Step 6: every
+color reads clearly; Android opens the same web screen in the browser panel.
+**Result:** web ☐ android ☐ — notes:
+
+### WW-13 · Merge two problems already on the list (added 2026-11-11)
+
+**Role:** admin · **Surfaces:** web (mobile-responsive)
+**Steps:**
+1. Note a listed problem A with at least one tool marked Helpful, and a listed problem B.
+2. On the admin screen tap **All problems · merge two that already show**. Choose A under "This
+   problem" and B under "Goes into", and tap **Merge them**.
+3. Open What Works as a member.
+**Expected:** Step 2 says "Merged. N things that helped moved." and A leaves the problem list. Step 3
+shows A's tools under B with the same Helpful counts, and A nowhere. The Audit log has
+`what-works.admin.problem.merge`. The same problem cannot be picked on both sides.
 **Result:** web ☐ — notes:
 
 ### WW-11 · What Works before Unlock is done (3.1)
 **Role:** a signed-in member not yet approved, on 3.1 · **Surfaces:** web, android
-1. Open What Works, mark a tool Helpful, suggest a tool and propose a problem.
+1. Open What Works, mark a tool Helpful, suggest a tool and add a problem.
 **Expected:** All of it works. The admin screens still refuse this member.
 **Result:** web ☐ — notes:
 

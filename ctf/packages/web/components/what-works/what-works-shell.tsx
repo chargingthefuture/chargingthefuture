@@ -14,6 +14,7 @@ import { WhatWorksLoading } from './ww-loading';
 import { WhatWorksSuggestPanel } from './ww-suggest-panel';
 import { WhatWorksShellHeader } from './ww-shell-header';
 import { WhatWorksListBody } from './ww-list-body';
+import { useWwAddEntry } from './ww-add-entry';
 import { failureText, responseFailureText } from 'lib/errors/client-failure';
 
 const EMPTY_STATS: WhatWorksStats = { problems: 0, verifiedTools: 0, survivorsHelped: 0 };
@@ -170,6 +171,8 @@ export function WhatWorksShell() {
     setShowSuggest(true);
   }
 
+  const addEntry = useWwAddEntry(openSuggest);
+
   const visibleProblems = useMemo(() => filterProblems(problems, query), [problems, query]);
   const pageCount = pageCountFor(visibleProblems.length, PROBLEMS_PER_PAGE);
   // The list can shrink under a page index that is already set (a search narrows it, a refresh
@@ -183,7 +186,12 @@ export function WhatWorksShell() {
   const listHasNoTools = problems.every((problem) => problem.products.length === 0);
 
   if (loading) {
-    return <WhatWorksLoading />;
+    return (
+      <>
+        <WhatWorksLoading />
+        {addEntry.sheet}
+      </>
+    );
   }
 
   // A failed load also leaves problems empty; show the failure rather than masking it as
@@ -207,14 +215,19 @@ export function WhatWorksShell() {
 
   if (showSuggest || problems.length === 0) {
     return (
+      <>
       <WhatWorksSuggestPanel
-        problems={problemOptions}
+        key={suggestProblemId}
+        problems={[...problemOptions, ...addEntry.ownPending]}
         optionsError={problemOptionsError}
         initialProblemId={suggestProblemId}
         isFirst={listHasNoTools}
         onSubmit={submitSuggestion}
         onBack={problems.length === 0 ? undefined : () => setShowSuggest(false)}
+        onAddProblem={addEntry.openAdd}
       />
+      {addEntry.sheet}
+      </>
     );
   }
 
@@ -245,6 +258,7 @@ export function WhatWorksShell() {
           />
         </div>
       </div>
+      {addEntry.sheet}
     </div>
   );
 

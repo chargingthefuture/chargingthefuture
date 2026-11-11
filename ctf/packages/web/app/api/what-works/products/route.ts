@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getProblemById, suggestProduct } from 'lib/what-works/repository';
+import { isOwnPendingProblem } from 'lib/what-works/problem-review';
 import { canSuggestProduct } from 'lib/what-works/policy';
 import {
   MAX_EMOJI_LENGTH,
@@ -74,6 +75,15 @@ function validateSuggestionBody(
   return { data: { problemId, name, purchaseUrl, emoji, kind, note } };
 }
 
+// A listed problem, or one this member proposed that is still waiting: what they add moves with it
+// if it is merged, and goes with it if it is deleted as spam.
+async function problemTakesSuggestion(problemId: string, userId: string): Promise<boolean> {
+  const problem = await getProblemById(problemId);
+  if (!problem) return false;
+  if (problem.is_active && problem.review_status === 'approved') return true;
+  return isOwnPendingProblem(problemId, userId);
+}
+
 // A survivor suggests a tool. It lands as `pending` for admin review before it joins
 // the shared list, and the suggester is auto-recorded as its first verifier.
 export async function POST(request: Request) {
@@ -100,8 +110,7 @@ export async function POST(request: Request) {
   }
   const { problemId, name, purchaseUrl, emoji, kind, note } = validated.data;
 
-  const problem = await getProblemById(problemId);
-  if (!problem || !problem.is_active || problem.review_status !== 'approved') {
+  if (!(await problemTakesSuggestion(problemId, gate.auth.userId))) {
     return whatWorksError('That problem could not be found.', 'what_works_problem_not_found', 404);
   }
 
