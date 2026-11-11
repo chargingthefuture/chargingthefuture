@@ -13,7 +13,6 @@ export declare const SE_GUEST_WORDS: {
     readonly readingsNote: "Recorded blog posts, one after another";
     readonly nextRoom: "Next room";
     readonly cardsTitle: "Today's cards";
-    readonly readOnly: "Read only";
     readonly member: "A member";
     readonly answer: "Sign up to answer";
     readonly peopleTitle: "People";
