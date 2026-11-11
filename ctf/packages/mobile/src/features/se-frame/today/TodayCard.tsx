@@ -25,6 +25,7 @@ import { reportError } from '../../../observability/report';
 import { SE_FONT } from '../fonts';
 import { QuestionsPanel, isQuestionsCard } from './QuestionsPanel';
 import { CardSheet } from './CardSheet';
+import { GoalCard } from './GoalCard';
 import { cardPath } from './useCardConversation';
 
 function absolute(href: string): string {
@@ -197,9 +198,12 @@ export function TodayCard({
   const opensSheet = seCardOpensSheet(card);
   const canReport = Boolean(card.author && card.author.accountId !== viewerId);
 
+  const dot = <DoneDot t={t} s={s} card={card} read={read} color={color} onToggleDone={onToggleDone} />;
+  if (card.goal) return <GoalCard t={t} card={{ ...card, goal: card.goal }} viewerId={viewerId} dot={dot} onOpenLink={onOpenLink} onChanged={onChanged} />;
+
   return (
     <View style={s.card}>
-      <DoneDot t={t} s={s} card={card} read={read} color={color} onToggleDone={onToggleDone} />
+      {dot}
       <View style={s.head}>
         {card.author ? (
           <>

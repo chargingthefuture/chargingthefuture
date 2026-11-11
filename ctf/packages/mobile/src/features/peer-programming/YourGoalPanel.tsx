@@ -1,6 +1,6 @@
 // The owner's own open goal, above the sections: how far along it is, a box to add a card, and
 // closing it either way (reached, or taken down).
-import React, { useState } from 'react';
+import React, { useState, type ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { interFamily } from '../../components/ui';
 import type { BoardGoal } from './PeerProgrammingApi';
@@ -8,9 +8,10 @@ import { doneCount } from './ppBoard';
 import { PPButton, PPTextBox } from './PPButton';
 import { usePPTheme } from './usePPTheme';
 
-export function YourGoalPanel({ goal, busy, onAddTask, onClose }: {
+export function YourGoalPanel({ goal, busy, onAddTask, onClose, share }: {
   goal: BoardGoal;
   busy: boolean;
+  share?: ReactNode;
   onAddTask: (_goalId: string, _description: string) => Promise<boolean>;
   onClose: (_goalId: string, _outcome: 'reached' | 'withdrawn') => void;
 }) {
@@ -28,6 +29,7 @@ export function YourGoalPanel({ goal, busy, onAddTask, onClose }: {
         <PPButton label="Add card" disabled={busy || task.trim().length === 0} onPress={() => void add()} />
         <PPButton label="Reached it" primary disabled={busy} onPress={() => onClose(goal.id, 'reached')} />
         <PPButton label="Take it down" disabled={busy} onPress={() => onClose(goal.id, 'withdrawn')} />
+        {share}
       </View>
     </View>
   );

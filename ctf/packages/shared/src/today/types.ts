@@ -4,6 +4,7 @@
 // Android src/features/se-frame/today/.
 
 import type { SeCardKind } from '../design/se-theme';
+import type { SeTodayGoal } from './goal-share';
 
 // What a quick response does. Each opens the item where it lives; a response that writes
 // something (an offer of help, "This helped me") is made there, by the feature that owns it.
@@ -43,6 +44,9 @@ export type SeTodayCard = {
   sample?: boolean;
   // Set only on an ask or offer the viewer posted: when it leaves Today, and what they can do there.
   mine?: SeTodayCardMine;
+  // Set only on the viewer's own PeerProgramming goal (open, or reached in the last 7 days): how far it
+  // got, for the "Your goal" card's bar and its Share this goal picture.
+  goal?: SeTodayGoal;
 };
 
 // An ask or offer as its poster sees it on Today. `leavesIso` is its deadline, or the end of its 14

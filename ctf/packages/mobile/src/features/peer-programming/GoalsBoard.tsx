@@ -12,6 +12,7 @@ import { GoalChips } from './GoalChips';
 import { GoalSection } from './GoalSection';
 import { NewGoalForm } from './NewGoalForm';
 import { YourGoalPanel } from './YourGoalPanel';
+import { ReachedGoals, ShareGoalButton } from './GoalShare';
 import type { BoardProps } from './GoalCard';
 import { usePPTheme } from './usePPTheme';
 import { CardConversationPanel } from '../se-frame/today/CardConversationPanel';
@@ -109,10 +110,11 @@ export function GoalsBoard({ board, busy, onAction, onEditTask, onAddTask, onClo
       <GoalChips goals={chips} selected={selected} viewerUserId={board.viewerUserId} names={board.names} canAdd={canAdd} onSelect={setSelected} />
       {selected === NEW_GOAL ? <NewGoalForm busy={busy} onPost={onPost} onCancel={() => setSelected(ALL_GOALS)} /> : null}
       {showOwnPanel && selectedGoal ? (
-        <YourGoalPanel key={selectedGoal.id} goal={selectedGoal} busy={busy} onAddTask={onAddTask} onClose={onClose} />
+        <YourGoalPanel key={selectedGoal.id} goal={selectedGoal} busy={busy} onAddTask={onAddTask} onClose={onClose} share={<ShareGoalButton goal={selectedGoal} board={board} />} />
       ) : null}
       {/* The conversation under this goal's card on Today, the same one in 3.0 and 3.1. */}
       {selectedGoal ? <CardConversationPanel key={`talk-${selectedGoal.id}`} source="peer-programming" sourceId={selectedGoal.id} /> : null}
+      {selected === ALL_GOALS ? <ReachedGoals board={board} /> : null}
       <Columns sections={sections} props={props} />
     </View>
   );

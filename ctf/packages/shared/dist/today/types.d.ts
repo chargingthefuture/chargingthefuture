@@ -1,4 +1,5 @@
 import type { SeCardKind } from '../design/se-theme';
+import type { SeTodayGoal } from './goal-share';
 export type SeTodayActionKind = 'open' | 'help' | 'know-someone' | 'want' | 'helped-me' | 'join' | 'listen' | 'check-in';
 export type SeTodayAction = {
     kind: SeTodayActionKind;
@@ -26,6 +27,7 @@ export type SeTodayCard = {
     newComments?: number;
     sample?: boolean;
     mine?: SeTodayCardMine;
+    goal?: SeTodayGoal;
 };
 export type SeTodayCardMine = {
     leavesIso: string;

@@ -5,6 +5,7 @@ import { resolveBoardNames } from 'lib/peer-programming/goal-route-helpers';
 import { listRequests as listSocketRelayRequests } from 'lib/socket-relay/repository';
 import { listAvailableRequests as listRideRequests } from 'lib/trust-transport/repository';
 import { action, author, card, clip, type TodayViewer } from './card';
+import { goalCard } from './sources-goal';
 
 // Asks: goals on the member's own PeerProgramming board, open SocketRelay requests, and rides
 // wanted. No times or places: a ride request shows that a ride is wanted and nothing about where,
@@ -17,24 +18,11 @@ const PER_SOURCE = 8;
 export async function goalAsks(viewer: TodayViewer): Promise<SeTodayCard[]> {
   const cohort = await getMyCohort(viewer.userId);
   if (!cohort) return [];
-  const goals = (await listCohortGoals(cohort.id)).filter((goal) => goal.status === 'open').slice(0, PER_SOURCE);
+  const goals = (await listCohortGoals(cohort.id))
+    .filter((goal) => goal.status === 'open' || goal.ownerUserId === viewer.userId)
+    .slice(0, PER_SOURCE);
   const names = await resolveBoardNames(goals);
-  const href = '/apps/peer-programming';
-  return goals.map((goal) => {
-    const open = goal.tasks.filter((task) => task.status === 'open').length;
-    return card({
-      source: 'peer-programming',
-      sourceId: goal.id,
-      kind: 'ask',
-      label: 'Ask · a goal',
-      title: goal.title,
-      body: open > 0 ? `${open} small task${open === 1 ? '' : 's'} open` : null,
-      author: author(goal.ownerUserId, names[goal.ownerUserId]),
-      createdAtIso: goal.createdAtIso,
-      href,
-      actions: [action('help', 'I can help', href), action('know-someone', 'I know someone', href)],
-    });
-  });
+  return goals.map((goal) => goalCard(goal, viewer.userId, names)).filter((item): item is SeTodayCard => item !== null);
 }
 
 export async function relayAsks(viewer: TodayViewer): Promise<SeTodayCard[]> {
