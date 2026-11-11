@@ -19,7 +19,7 @@ export function PublicToday({ signInUrl, signUpUrl }: { signInUrl: string; signU
             {W.signIn}
           </a>
         </header>
-        <GuestToday signUpUrl={signUpUrl} />
+        <GuestToday signUpUrl={signUpUrl} signInUrl={signInUrl} />
       </main>
       <nav aria-label="Main" className={styles.guestBar}>
         <span className={styles.guestBarText}>{W.bar}</span>

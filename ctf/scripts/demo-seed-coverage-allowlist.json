@@ -44,7 +44,6 @@
     "question_match_messages": "conversations between two matched members; a demo with seeded conversations would show words nobody wrote",
     "admin_daily_post_exclusions": "the owner's own admin list of posts left out of the rotation; the demo has no admin posting screen data",
     "commons_item_answers": "a member's own answers on Today cards; the demo viewer answers from a card",
-    "commons_item_messages": "conversations under Today cards; a demo with seeded conversations would show words nobody wrote",
     "commons_item_pair_requests": "a request between two members to talk privately on a card; the demo viewer makes one from a card",
     "today_card_feedback_counts": "daily totals with no account id; the demo viewer adds to them by marking a card done or Not for me",
     "today_card_marks": "a member's own Done and Not for me marks; the demo viewer makes them from the cards",

@@ -919,3 +919,15 @@ Result: web ☐
 
 **1.** As member A, mark a blog story done on Today. As approved member B, write a comment under that post's Fireside conversation. On a later day, when the story's turn comes round again, open Today as A. **Expected:** the story is back, not done, with "1 new comment" in the story color, and opening it goes to the post and its conversation. A comment held or taken down does not bring it back. A story A marked Not for me never comes back, comments or not.
 web ☐ android ☐
+
+### FS-30 · A story's Today card talks in the post's Fireside thread (added 2026-11-11)
+**Role:** an approved member, a member not yet approved, and a signed-out visitor · **Surfaces:** web, android
+**Steps:**
+1. As the approved member, open a blog story's card on Today and write a public message.
+2. Open the same post on the blog and read its Fireside comments.
+3. As the member not yet approved, write a public message on the same card.
+4. Signed out, open the post's story card on Today (Conversation), then switch to Just us two.
+5. Signed out, open a sample ride card's Conversation.
+**Expected:** Step 2 shows step 1's message as a comment. Step 3's message shows only to its author until they are approved. Step 4 shows the approved comments read only, "Sign in to write here", and on Just us two nothing but the private-conversation line with "Sign in to have private conversations". Step 5 shows a conversation tagged Sample.
+**Result:** web ☐ android ☐ — notes:
+

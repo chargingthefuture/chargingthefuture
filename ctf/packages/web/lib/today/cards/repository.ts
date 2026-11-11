@@ -1,4 +1,13 @@
 import { seCardItemRef, seCardPair, type SeCardAnswerKind } from '@ctf/shared';
+import {
+  editCardThreadMessage,
+  findCardThreadMessage,
+  hasWrittenInCardThread,
+  listCardThreadMessages,
+  withdrawCardThreadMessage,
+  type CardThreadMessage,
+} from 'lib/fireside/card-thread';
+import { storyPostFor } from './story';
 import { queryDb } from 'lib/db/postgres';
 
 // The store behind card conversations (commons_item_answers, commons_item_messages,
@@ -63,7 +72,7 @@ export async function listAnswers(viewerId: string, cardId: string): Promise<Ans
   return result.rows.map((row) => ({ accountId: row.account_id, kind: row.kind, createdAt: new Date(row.created_at) }));
 }
 
-export async function listPublicMessages(viewerId: string, cardId: string): Promise<MessageRow[]> {
+async function listPublicMessagesInStore(viewerId: string, cardId: string): Promise<MessageRow[]> {
   const result = await queryDb<RawMessage>(
     `SELECT id, author_id, body, created_at, edited_at, pair_low, pair_high FROM commons_item_messages
       WHERE plugin = $2 AND item_id = $3 AND pair_low IS NULL AND moderation_status = 'accepted' AND (author_id = $1 OR (${visibleTo('author_id')}))
@@ -121,7 +130,7 @@ export async function insertMessage(cardId: string, authorId: string, body: stri
 // Only the author changes or removes a message, and only on the card it was written on. False when
 // there was no such message of theirs. Messages are matched by id as text, so an id that is not a
 // UUID finds nothing rather than failing the query.
-export async function editOwnMessage(cardId: string, messageId: string, authorId: string, body: string): Promise<boolean> {
+async function editOwnMessageInStore(cardId: string, messageId: string, authorId: string, body: string): Promise<boolean> {
   const result = await queryDb(
     `UPDATE commons_item_messages SET body = $4, edited_at = NOW()
       WHERE id::text = $1 AND plugin = $2 AND item_id = $3 AND author_id = $5 AND moderation_status <> 'hidden' RETURNING id`,
@@ -130,7 +139,7 @@ export async function editOwnMessage(cardId: string, messageId: string, authorId
   return (result.rowCount ?? 0) > 0;
 }
 
-export async function deleteOwnMessage(cardId: string, messageId: string, authorId: string): Promise<boolean> {
+async function deleteOwnMessageInStore(cardId: string, messageId: string, authorId: string): Promise<boolean> {
   const result = await queryDb(
     `DELETE FROM commons_item_messages WHERE id::text = $1 AND plugin = $2 AND item_id = $3 AND author_id = $4 RETURNING id`,
     [messageId, ...item(cardId), authorId],
@@ -139,7 +148,7 @@ export async function deleteOwnMessage(cardId: string, messageId: string, author
 }
 
 // The other member of a Just us two message the author wrote, or null for a public one or none.
-export async function findOwnMessagePartner(cardId: string, messageId: string, authorId: string): Promise<{ found: boolean; partnerId: string | null }> {
+async function findOwnMessagePartnerInStore(cardId: string, messageId: string, authorId: string): Promise<{ found: boolean; partnerId: string | null }> {
   const result = await queryDb<{ pair_low: string | null; pair_high: string | null }>(
     `SELECT pair_low, pair_high FROM commons_item_messages WHERE id::text = $1 AND plugin = $2 AND item_id = $3 AND author_id = $4`,
     [messageId, ...item(cardId), authorId],
@@ -185,7 +194,7 @@ export async function agreePairRequest(cardId: string, agreerId: string, request
 
 // Somebody who took part on this card: answered it, wrote in it publicly, or asked or was asked
 // for Just us two on it. Only they can be asked to talk just you two from the card.
-export async function isParticipant(cardId: string, accountId: string): Promise<boolean> {
+async function isParticipantInStore(cardId: string, accountId: string): Promise<boolean> {
   const result = await queryDb<{ yes: boolean }>(
     `SELECT EXISTS (SELECT 1 FROM commons_item_answers WHERE plugin = $1 AND item_id = $2 AND account_id = $3)
          OR EXISTS (SELECT 1 FROM commons_item_messages WHERE plugin = $1 AND item_id = $2 AND author_id = $3 AND pair_low IS NULL)
@@ -196,11 +205,65 @@ export async function isParticipant(cardId: string, accountId: string): Promise<
 }
 
 // A message the reporter can read: public on the card, or in a Just us two they are part of.
-export async function findReadableMessage(cardId: string, messageId: string, readerId: string): Promise<MessageRow | null> {
+async function findReadableMessageInStore(cardId: string, messageId: string, readerId: string): Promise<MessageRow | null> {
   const result = await queryDb<RawMessage>(
     `SELECT id, author_id, body, created_at, edited_at, pair_low, pair_high FROM commons_item_messages
       WHERE id::text = $1 AND plugin = $2 AND item_id = $3 AND (pair_low IS NULL OR pair_low = $4 OR pair_high = $4)`,
     [messageId, ...item(cardId), readerId],
   );
   return result.rows[0] ? toMessage(result.rows[0]) : null;
+}
+
+// A story card's public messages are its post's Fireside comments (owner decision, 2026-11-10): the
+// functions below send them there, and everything else on a card (answers, Just us two) to the store
+// above.
+
+function fromThread(message: CardThreadMessage): MessageRow {
+  return { id: message.id, authorId: message.authorId, body: message.body, createdAt: message.createdAt, editedAt: message.editedAt, pairLow: null, pairHigh: null };
+}
+
+export async function listPublicMessages(viewerId: string, cardId: string): Promise<MessageRow[]> {
+  const story = await storyPostFor(cardId);
+  if (story) return (await listCardThreadMessages(story.post, viewerId)).map(fromThread);
+  return listPublicMessagesInStore(viewerId, cardId);
+}
+
+export async function editOwnMessage(cardId: string, messageId: string, authorId: string, body: string): Promise<boolean> {
+  if (await editOwnMessageInStore(cardId, messageId, authorId, body)) return true;
+  const story = await storyPostFor(cardId);
+  return story ? editCardThreadMessage(story.post, messageId, authorId, body) : false;
+}
+
+export async function deleteOwnMessage(cardId: string, messageId: string, authorId: string): Promise<boolean> {
+  if (await deleteOwnMessageInStore(cardId, messageId, authorId)) return true;
+  const story = await storyPostFor(cardId);
+  return story ? withdrawCardThreadMessage(story.post, messageId, authorId) : false;
+}
+
+export async function findOwnMessagePartner(cardId: string, messageId: string, authorId: string): Promise<{ found: boolean; partnerId: string | null }> {
+  const own = await findOwnMessagePartnerInStore(cardId, messageId, authorId);
+  if (own.found) return own;
+  const story = await storyPostFor(cardId);
+  const comment = story ? await findCardThreadMessage(story.post, messageId, authorId) : null;
+  return { found: comment?.authorId === authorId, partnerId: null };
+}
+
+export async function isParticipant(cardId: string, accountId: string): Promise<boolean> {
+  if (await isParticipantInStore(cardId, accountId)) return true;
+  const story = await storyPostFor(cardId);
+  return story ? hasWrittenInCardThread(story.post, accountId) : false;
+}
+
+export async function findReadableMessage(cardId: string, messageId: string, readerId: string): Promise<MessageRow | null> {
+  const found = await findReadableMessageInStore(cardId, messageId, readerId);
+  if (found) return found;
+  const story = await storyPostFor(cardId);
+  const comment = story ? await findCardThreadMessage(story.post, messageId, readerId) : null;
+  return comment ? fromThread(comment) : null;
+}
+
+// A card's public messages with nobody signed in: no viewer, so nobody's blocks or mutes apply. Used
+// only by the signed-out read, which runs it against the demo schema.
+export async function listGuestMessagesInStore(cardId: string): Promise<MessageRow[]> {
+  return listPublicMessagesInStore('', cardId);
 }

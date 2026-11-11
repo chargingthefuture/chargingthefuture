@@ -9,6 +9,7 @@ import {
   SE_GUEST_WORDS as W,
   seDaysWonLines,
   seGuestAnswersBySignUp,
+  seGuestOpensSheet,
   seGuestNextRoomLine,
   seGuestStartedLine,
   seTalkCalendarEvent,
@@ -25,6 +26,7 @@ import { ChymeTokensContext, seChymeTokens } from '@/components/chyme/chyme-toke
 import { SeAvatar } from '@/components/shared/se-avatar';
 import { useGuestRoom } from './use-guest-room';
 import { useToday } from './use-today';
+import { GuestSheet } from './guest-sheet';
 import styles from './today.module.css';
 
 // Today for a visitor who is not signed in, built to the approved "Today, signed out" board: Days
@@ -147,9 +149,10 @@ function RoomCard({ today }: { today: SeToday | null }) {
   return <QuietRoom talk={talk} onLive={() => void reload()} />;
 }
 
-function GuestCard({ card, signUpUrl }: { card: SeTodayCard; signUpUrl: string }) {
+function GuestCard({ card, signUpUrl, signInUrl }: { card: SeTodayCard; signUpUrl: string; signInUrl: string }) {
   const color = `var(--se-kind-${card.kind})`;
   const bySignUp = seGuestAnswersBySignUp(card);
+  const [open, setOpen] = useState(false);
   return (
     <article className={styles.card}>
       <span className={styles.guestDot} style={{ background: color }} aria-hidden="true" />
@@ -175,12 +178,18 @@ function GuestCard({ card, signUpUrl }: { card: SeTodayCard; signUpUrl: string }
             </Link>
           ))
         )}
+        {seGuestOpensSheet(card) ? (
+          <button type="button" className={styles.actionButton} onClick={() => setOpen(true)}>
+            {W.conversation}
+          </button>
+        ) : null}
       </div>
+      {open ? <GuestSheet card={card} signInUrl={signInUrl} sampleTag={<SampleTag />} onClose={() => setOpen(false)} /> : null}
     </article>
   );
 }
 
-export function GuestToday({ signUpUrl }: { signUpUrl: string }) {
+export function GuestToday({ signUpUrl, signInUrl }: { signUpUrl: string; signInUrl: string }) {
   const { today, loading, error, marks, reload } = useToday(null);
   const view = seTodayView(today, marks, 'all');
   return (
@@ -202,7 +211,7 @@ export function GuestToday({ signUpUrl }: { signUpUrl: string }) {
       <div className={styles.timeline}>
         <span className={styles.line} aria-hidden="true" />
         {view.cards.map((card) => (
-          <GuestCard key={card.id} card={card} signUpUrl={signUpUrl} />
+          <GuestCard key={card.id} card={card} signUpUrl={signUpUrl} signInUrl={signInUrl} />
         ))}
         <article className={`${styles.card} ${styles.lockedCard}`}>
           <span className={styles.guestDot} style={{ background: 'var(--se-kind-match)' }} aria-hidden="true" />
