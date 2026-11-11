@@ -3,7 +3,9 @@
 import Link from 'next/link';
 import { AddToCalendarButton } from '@/components/shared/add-to-calendar';
 import {
+  SE_BROADCAST_WORDS as B,
   SE_TODAY_ROOM_WORDS as W,
+  seBroadcastHostLine,
   seRoomCountsLine,
   seTalkCalendarEvent,
   seTalkHostLine,
@@ -21,17 +23,53 @@ import styles from './today.module.css';
 // one row for the members who may enter it. The broadcast card sits above them while the System
 // Architect is live.
 
+// The broadcast card (approved board "Broadcast cards on Today"): the picture area with LIVE and a
+// play button, then who is broadcasting and since when, Watch, and Chat (the chat sits beside the
+// player on the broadcast page). No watcher count: viewers watch the public stream without joining
+// the call, so nothing counts them.
 export function BroadcastCard({ broadcast }: { broadcast: SeTodayBroadcast }) {
+  const hostLine = seBroadcastHostLine(broadcast);
   return (
-    <section aria-label="Live broadcast" className={styles.roomCard}>
-      <div className={styles.roomHead}>
-        <span className={styles.liveBadge}>LIVE</span>
-        <span className={styles.roomName}>Broadcast</span>
-      </div>
-      {broadcast.title ? <span className={styles.roomTitle}>{broadcast.title}</span> : null}
-      <Link href={broadcast.href} className={styles.primaryButton}>
-        Watch now
+    <section aria-label="Live broadcast" className={styles.broadcastCard}>
+      <Link href={broadcast.href} className={styles.broadcastPicture} aria-label={`${B.watch}: ${broadcast.title ?? B.label}`}>
+        <span className={`${styles.liveBadge} ${styles.broadcastLive}`}>LIVE</span>
+        <span className={styles.broadcastPlay} aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M8 5l12 7-12 7z" />
+          </svg>
+        </span>
       </Link>
+      <div className={styles.broadcastBody}>
+        <span className={styles.broadcastLabel}>{B.label}</span>
+        {broadcast.title ? <span className={styles.roomTitle}>{broadcast.title}</span> : null}
+        {hostLine ? <span className={styles.roomMeta}>{hostLine}</span> : null}
+        <div className={styles.roomButtons}>
+          <Link href={broadcast.href} className={`${styles.primaryButton} ${styles.grow}`}>
+            {B.watch}
+          </Link>
+          <Link href={broadcast.href} className={styles.quietButton}>
+            {B.chat}
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// The Main Room while a broadcast is on and nobody is in the room: one quiet row.
+function QuietMainRoom({ room }: { room: SeTodayRoom }) {
+  const { open } = useSeRooms();
+  return (
+    <section aria-label={room.name} className={styles.weavers}>
+      <span className={styles.weaversText}>
+        <span className={styles.roomName}>
+          {room.name} <span className={styles.roomMeta}>· {W.mainAudience}</span>
+        </span>
+        <span className={styles.weaversLine}>{B.roomQuiet}</span>
+      </span>
+      <button type="button" className={styles.quietButton} onClick={() => open('main', room.nextTalk)}>
+        {W.open}
+      </button>
     </section>
   );
 }
@@ -108,6 +146,8 @@ function WeaversRow({ room }: { room: SeTodayRoom }) {
 }
 
 // Opens the room inside the frame, so the call keeps running while the member reads Today.
-export function RoomCard({ room }: { room: SeTodayRoom }) {
-  return room.key === 'weavers' ? <WeaversRow room={room} /> : <MainRoomCard room={room} />;
+// `broadcasting`: a broadcast is live, so a Main Room nobody is in shows as one quiet row.
+export function RoomCard({ room, broadcasting = false }: { room: SeTodayRoom; broadcasting?: boolean }) {
+  if (room.key === 'weavers') return <WeaversRow room={room} />;
+  return broadcasting && !room.live ? <QuietMainRoom room={room} /> : <MainRoomCard room={room} />;
 }

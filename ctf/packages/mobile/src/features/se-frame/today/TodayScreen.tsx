@@ -1,7 +1,7 @@
 // Today in 3.1 on Android, the copy of the web's today-screen.tsx: the broadcast while it is live,
 // Days won, the rooms, then the day's cards newest first. There is no done count, as on the web.
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import {
   SE_DAYS_WON_HOW,
@@ -20,7 +20,7 @@ import { authedFetchJson } from '../../../auth/authedFetch';
 import type { FeatureKey } from '../../../navigation/screens';
 import { SE_FONT } from '../fonts';
 import { MatchingToggle } from './MatchingToggle';
-import { RoomCard } from './RoomCards';
+import { BroadcastCard, RoomCard } from './RoomCards';
 import { WeekStrip } from './WeekStrip';
 import { TodayCard } from './TodayCard';
 import { sendTodayFeedback } from './sendFeedback';
@@ -59,19 +59,8 @@ function LiveCards({ t, s, today, go }: LiveProps) {
     <>
       {today?.daysWon ? <DaysWonCard s={s} daysWon={today.daysWon} /> : null}
       {today ? <WeekStrip t={t} talks={today.week ?? []} /> : null}
-      {broadcast?.live ? (
-        <View style={s.roomCard} accessibilityLabel="Live broadcast">
-          <View style={s.row}>
-            <Text style={s.liveBadge}>LIVE</Text>
-            <Text style={s.roomName}>Broadcast</Text>
-          </View>
-          {broadcast.title ? <Text style={s.roomTitle}>{broadcast.title}</Text> : null}
-          <TouchableOpacity accessibilityRole="button" onPress={() => go(broadcast.href)} style={s.primary}>
-            <Text style={s.primaryLabel}>Watch now</Text>
-          </TouchableOpacity>
-        </View>
-      ) : null}
-      {today?.rooms.map((room) => <RoomCard key={room.key} t={t} room={room} />)}
+      {broadcast?.live ? <BroadcastCard t={t} broadcast={broadcast} go={go} /> : null}
+      {today?.rooms.map((room) => <RoomCard key={room.key} t={t} room={room} broadcasting={broadcast?.live === true} />)}
     </>
   );
 }
@@ -115,9 +104,14 @@ function Notices({ s, error, missingLine, loading, onRetry }: { s: Styles; error
 }
 
 // A visitor who is not signed in gets GuestToday (GuestToday.tsx) instead.
-export function TodayScreen({ t, accountId, onOpen }: { t: SeThemeTokens; accountId: string; onOpen: (_key: FeatureKey) => void }) {
+// `onPresence` hands the "N Avens here" count to the title row above the screen.
+type ScreenProps = { t: SeThemeTokens; accountId: string; onOpen: (_key: FeatureKey) => void; onPresence?: (_count: number | null) => void };
+
+export function TodayScreen({ t, accountId, onOpen, onPresence }: ScreenProps) {
   const s = makeStyles(t);
-  const { today, loading, error, marks, mark, toggle, reload } = useToday(accountId);
+  const { today, loading, error, marks, mark, toggle, save, saveNote, reload } = useToday(accountId);
+  const presence = today?.presence ?? null;
+  useEffect(() => onPresence?.(presence), [onPresence, presence]);
   const [filter, setFilter] = useState<SeTodayFilter>('all');
   const go = (href: string) => openTodayLink(href, onOpen);
   const view = seTodayView(today, marks, filter);
@@ -151,6 +145,11 @@ export function TodayScreen({ t, accountId, onOpen }: { t: SeThemeTokens; accoun
       <FilterChips s={s} filter={filter} onChange={setFilter} />
       {filter === 'matches' ? <MatchingToggle t={t} refreshKey={today?.generatedAtIso} onChanged={() => void reload()} /> : null}
       <Notices s={s} error={error} missingLine={view.missingLine} loading={!today && loading} onRetry={() => void reload()} />
+      {saveNote ? (
+        <Text accessibilityRole="alert" style={s.meta}>
+          {saveNote}
+        </Text>
+      ) : null}
       {muteNote ? <Text style={s.meta}>{muteNote}</Text> : null}
       {today ? (
         <View style={s.timeline}>
@@ -171,13 +170,14 @@ export function TodayScreen({ t, accountId, onOpen }: { t: SeThemeTokens; accoun
                 mark('hidden', card.id);
               }}
               onMute={card.author ? () => void mute(card) : undefined}
+              onSave={() => save(card)}
               onOpenLink={go}
               onChanged={() => void reload()}
             />
           ))}
           <View style={s.caughtUp}>
             <Text style={s.caughtUpTitle}>{view.caughtUpLine}</Text>
-            <Text style={s.meta}>New cards arrive as people post.</Text>
+            <Text style={s.meta}>{view.caughtUpNote}</Text>
           </View>
         </View>
       ) : null}
@@ -193,14 +193,7 @@ function makeStyles(t: SeThemeTokens) {
     daysWonSmall: { fontSize: 15, lineHeight: 21, color: t.onHero, fontFamily: SE_FONT.sans },
     how: { alignSelf: 'flex-start', minHeight: 32, justifyContent: 'center' },
     howLabel: { fontSize: 13, opacity: 0.9, color: t.onHero, textDecorationLine: 'underline', fontFamily: SE_FONT.sans },
-    roomCard: { gap: 10, padding: 16, borderRadius: 20, backgroundColor: t.card, borderWidth: 1.5, borderColor: t.line, boxShadow: `0px 3px 0px ${t.line}` },
-    row: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 },
-    liveBadge: { paddingVertical: 4, paddingHorizontal: 9, borderRadius: 999, overflow: 'hidden', backgroundColor: t.liveBadge, color: t.onLiveBadge, fontSize: 11, letterSpacing: 1.1, fontFamily: SE_FONT.sansBold },
-    roomName: { fontSize: 14, color: t.ink, fontFamily: SE_FONT.sansBold },
-    roomTitle: { fontSize: 21, lineHeight: 25, color: t.ink, fontFamily: SE_FONT.serif },
     meta: { fontSize: 13, color: t.soft, fontFamily: SE_FONT.sans },
-    primary: { minHeight: 46, alignItems: 'center', justifyContent: 'center', borderRadius: 999, borderWidth: 1.5, borderColor: t.line, backgroundColor: t.btn, boxShadow: `0px 3px 0px ${t.line}` },
-    primaryLabel: { fontSize: 15, color: t.onBtn, fontFamily: SE_FONT.sansBold },
     listHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
     listTitle: { fontSize: 22, color: t.ink, fontFamily: SE_FONT.serif },
     chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
