@@ -105,8 +105,10 @@ export const BeaconAdmin: React.FC = () => {
         events={a.events}
         confirmDeleteId={a.confirmDeleteId}
         deletingId={a.deletingId}
+        renamingId={a.renamingId}
         onOpen={(eventId) => void a.openEvent(eventId)}
-        onDelete={(eventId) => void a.deleteDraft(eventId)}
+        onDelete={(eventId) => void a.deleteEvent(eventId)}
+        onRename={a.renameEvent}
         onArmDelete={a.setConfirmDeleteId}
         onCancelDelete={() => a.setConfirmDeleteId(null)}
       />
