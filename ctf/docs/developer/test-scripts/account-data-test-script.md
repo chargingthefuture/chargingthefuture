@@ -217,14 +217,13 @@ menu and Manage account show no photo and no upload or remove control. The Ident
 1. Open `/account` and find the Settings card. Tap **Switch to 3.1**.
 2. On the home screen, tap each tab along the bottom: Today, People, the round + button, Activity, Me.
 3. Press the browser's back button after moving between two tabs.
-4. On Today, tap the word **Avenhood** in the title, then tap it again. On Me, read the About card.
+4. On Today, tap the word **Avenhood** in the title, then tap it again. On Me, tap the word **Aven** under your name.
 5. Open `/apps/directory/invites` and one invite's page from it, then come back to `/`.
-6. On the Me tab, tap **Back to 3.0**.
+6. On the Me tab, tap the gear, then **Back to 3.0**.
 **Expected:** Step 1 lands on the 3.1 home: forest green and gold, dark, the date above "Today in the
-Avenhood", and the tab bar. Each tab shows its title; Me shows your picture, your handle and Back to 3.0, and the
+Avenhood", and the tab bar. Each tab shows its title; Me shows your picture, your name and the gear to Settings, and the
 others say the screen is still being built. The address carries the tab (`/?tab=people`), and back
-returns to the tab before. Tapping Avenhood opens and closes its definition under the title; the
-About card on Me shows the same definition and what an Aven is. The invite wall and the invite page open and work as before. Back to 3.0
+returns to the tab before. Tapping Avenhood opens and closes its definition under the title; tapping Aven on Me shows what an Aven is. The invite wall and the invite page open and work as before. Back to 3.0
 returns to the 3.0 home. Signing in on another device or the Android app shows the same choice.
 **Result:** web ☐ — notes:
 
@@ -238,8 +237,8 @@ on your board, a LightHouse listing, an announcement).
 3. Tap each chip: All, Asks, Offers, Stories, Matches.
 4. On a card, open ••• and choose **Copy link**, then open ••• on another card and choose **Hide**.
 5. Open the Main Room card's button.
-6. If you have not answered the Quora account removals survey, find its card ("Has Quora removed an
-   account of yours?"), answer the survey, then reopen Today.
+6. If you have not answered the Quora account removals survey, find its card ("Lost a Quora account?
+   Add it to the census"), tap **Add an account**, answer the survey, then reopen Today.
 **Expected:** Step 1 shows the Main Room card (LIVE only while somebody is in it), with the TI Radio
 talk that is on ("On now: …") or next ("Next: … · Today · 9:00 PM") when one is booked, and the day's cards,
 newest first; after the reload the cards appear at once from the saved copy and then refresh. No
@@ -304,23 +303,34 @@ Mutual Time, A ride TrustTransport, A skill Foundation, and the Story link the K
 architect line opens Ask the architect with the member's questions. Close returns to Today.
 **Result:** web ☐ — notes:
 
-## AD-14 · Me and Settings in 3.1
+## AD-14 · Me, Settings and Theme in 3.1
 
-**Role:** approved member; an admin · **Precondition:** on 3.1.
+**Role:** approved member; an admin; a Weavers of the Commons badge holder · **Precondition:** on 3.1. **Surfaces:** web, android
 **Steps:**
 1. Open Me.
-2. Tap Send, go back, tap History, go back, tap Receive.
-3. Under Settings → Colors, pick Burgundy, then Light. Reload the page.
-4. Tap Account and data, the survey, Wallpapers and The Android app in turn.
-5. Sign in as the admin and open Me.
-**Expected:** Step 1 shows the avatar and handle, ServiceCredits with the balance in credits (never
-money words), ClickLog, Trust and Reader, About with the Avenhood definition, and Settings; no tile
-for making or browsing posts. Step 2 opens ServiceCredits on its Send tab, then on the wallet tab with
-recent transactions; Receive copies @handle and says so. Step 3 recolors the app at once and keeps the
-choice after the reload. Step 4 opens each place; Wallpapers and the Android app open GitHub releases
-filtered to each. Step 5 adds a System Architect entry that opens the admin screens; a member who is
-not an admin never sees it.
-**Result:** web ☐ — notes:
+2. Tap **Add a line about you**, write a line under "I can help with" and "Ask me about", leave "I need" empty, and tap **Save**. Reload.
+3. Tap Send, go back, tap Receive, then History, go back.
+4. Tap **Read**, go back, tap **Hidden**, go back.
+5. Tap each of the six Tools tiles in turn, coming back each time.
+6. Tap the gear. Tap **Theme**, pick Light, then Coral. Reload. Sign in on the other device.
+7. Back in Settings, tap Text size until it says Larger, then Higher contrast and Easier-to-read font. Reload. Then put them back.
+8. Tap Muted people and words, then Blocked people, then Quora census, coming back each time.
+9. Tap Ask the architect; go back to Me → Settings and tap Report a bug, then close it.
+10. Tap Guide and community rules, Terms and privacy, Wallpapers, Get the Android app, Delete data from one part of the app and Delete your account in turn.
+11. Sign in as the admin and as the badge holder and open Me.
+**Expected:** Step 1 shows the picture with a dark ring, your name (no @, the same on web and Android), "Aven since <month year>", the gear, ServiceCredits with the balance in credits and "credits, not money" under it (never money words), round Send, Receive and History buttons with icons in that order, Read and Hidden, Tools with A place to stay, Trade hours, Learn a skill, Our numbers, Bring your writing and Log what happened, and the emoji rain switch. Step 2 shows the two written lines under their labels and no "I need"; they stay after the reload and on the other device. Step 3 opens ServiceCredits on its Send tab, copies @handle and says so, and opens the wallet tab. Step 4 lists the cards you marked done (Read) or Not for me (Hidden) that are still around, each opening where it lives, or "Nothing here yet."; the web address carries `view=read` and the back button returns to Me. Step 5 opens LightHouse, Mutual Time, SkillUp, Workforce, the Knowledge Library and ClickLog (in the browser on Android). Step 6 opens Theme with Back to Settings, Dark and Light, then Burgundy (Default · The landing page), Forest and gold (One Percent), Coral (The blog), Teal and purple (The first wallpaper), "The same colors as the wallpapers" and Get; the app recolors at once and keeps Coral light after the reload and on the other device. Step 7 makes the screen larger (the tab bar stays its size), the gray text dark or light like the rest and the borders stronger, and the text Atkinson Hyperlegible, all kept after the reload. Step 8 opens the Muted card in place with its count on the row, the blocked list with its count, and the survey; the census row says Added once the survey is answered. Step 9 opens + New on Ask the architect, then the bug report form. Step 10 opens each place; Wallpapers and the Android app open GitHub releases filtered to each, and both delete rows open Account and data. Step 11 shows System Architect for the admin (tapping it opens the admin screens) and Weavers of the Commons for the badge holder; a member who is neither sees no badge.
+**Result:** web ☐ android ☐ — notes:
+
+## AD-14b · Notifications and quiet hours in 3.1 Settings
+
+**Role:** two approved members · **Precondition:** on 3.1 in a browser that allows notifications. **Surfaces:** web, android (Android saves the same rows and quiet hours; pings for these go to browsers only)
+**Steps:**
+1. As the first member, open Me → Settings and turn **Replies and talk requests** On; allow notifications when asked.
+2. As the second member, reply to the first member's Commons message.
+3. As the first member, tap **Quiet hours**, set From to a minute ago and To to an hour from now, and save. Repeat step 2.
+4. Tap Quiet hours and **Turn quiet hours off**. Turn the row Off and repeat step 2.
+**Expected:** Step 1 shows On and saves; on another device the row shows On too. Step 2 pings the first member's browser. Step 3 shows the hours on the row and sends no ping, while the reply still appears in Activity. Step 4 shows Off on Quiet hours, and with the row Off no ping comes; the reply still appears in Activity. A member still on 3.0 is pinged by the three categories in the 3.0 panel instead.
+**Result:** web ☐ android ☐ — notes:
 
 ## AD-15 · Activity in 3.1
 
@@ -392,7 +402,7 @@ same lines. A failed read shows "Could not read the measures:" with the reason.
 
 **Role:** any member · **Precondition:** on 3.1. **Surfaces:** web, android
 **Steps:**
-1. Open Me and choose each color, first with Dark, then with Light.
+1. Open Me → Settings → Theme and choose each color, first with Dark, then with Light.
 **Expected:** Every color shows its own color on the buttons, the selected chips and the + button in
 both modes: Coral is coral with dark text in light and dark alike, never near-black.
 Signed out, the "Skills Economy" name at the top of Today is easy to read in every color; in Coral
@@ -425,12 +435,12 @@ inside the app.
 **Role:** a visitor, then a member · **Surfaces:** web, android
 **Steps:**
 1. On a phone that has never opened the app, open the app signed out.
-2. Sign in, open Me and pick Coral. Sign out again.
+2. Sign in, open Me → Settings → Theme and pick Coral. Sign out again.
 3. Set the phone to light, then to dark, while signed out.
 **Expected:** Step 1 shows signed-out Today in burgundy, light or dark as the phone is set, with the
 hero line ending "That is less time on Specterati schemes, and more time for all of us reaching our
 own definition of happiness. Free. Exit their economy, exit the psyop." Step 2 keeps Coral while
-signed in; signing out uses **Sign out** at the end of Me's Settings, which asks "Sign out of this
+signed in; signing out uses **Sign out** at the end of Settings (Me's gear), which asks "Sign out of this
 device?" first and lands on signed-out Today, burgundy again. Step 3 switches signed-out Today and
 the room page between burgundy light and burgundy dark. A member who never picked a color sees
 burgundy, dark, once signed in.

@@ -1,45 +1,33 @@
-// The member's 3.1 colors, kept on the phone, the Android copy of the web's use-se-theme.ts. A file
-// that cannot be read or written leaves the default in place.
+// The member's 3.1 colors for a screen drawn outside the frame (a game, a card's conversation),
+// read from the phone's copy of the choice saved on the account; the Android copy of the web's
+// use-se-theme.ts. The frame (useSePrefs.ts) reads the account and keeps that copy current. A file
+// that cannot be read leaves the default in place.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { File, Paths } from 'expo-file-system';
 import { SE_DEFAULT_THEME, SE_THEME_STORE_KEY, seParseThemeChoice, type SeThemeChoice } from '@ctf/shared';
-import { reportError } from '../../observability/report';
 
-function store(): File {
+export function themeCacheFile(): File {
   return new File(Paths.document, `${SE_THEME_STORE_KEY}.json`);
 }
 
-export function useSeTheme(): { theme: SeThemeChoice; setTheme: (_next: SeThemeChoice) => void } {
-  const [theme, setThemeState] = useState<SeThemeChoice>({ ...SE_DEFAULT_THEME });
-
+export function useSeTheme(): { theme: SeThemeChoice } {
+  const [theme, setTheme] = useState<SeThemeChoice>({ ...SE_DEFAULT_THEME });
   useEffect(() => {
     let active = true;
-    const file = store();
+    const file = themeCacheFile();
     if (!file.exists) return;
     file
       .text()
       .then((raw) => {
-        if (active) setThemeState(seParseThemeChoice(raw));
+        if (active) setTheme(seParseThemeChoice(raw));
       })
       .catch(() => {
-        // no-trace: the saved choice is unreadable; the default stays.
+        // no-trace: the saved copy is unreadable; the default stays.
       });
     return () => {
       active = false;
     };
   }, []);
-
-  const setTheme = useCallback((next: SeThemeChoice) => {
-    setThemeState(next);
-    try {
-      const file = store();
-      if (!file.exists) file.create();
-      file.write(JSON.stringify(next));
-    } catch (error) {
-      reportError(error, { area: 'se-frame', op: 'save_theme' });
-    }
-  }, []);
-
-  return { theme, setTheme };
+  return { theme };
 }

@@ -64,7 +64,7 @@ contracts:
   - pluginId: notifications
     command: notifications.preferences.read
     version: 1.0.0
-    description: Read the requesting member's device-push opt-ins. Defaults are all-off, discreet-on.
+    description: Read the requesting member's device-push opt-ins and quiet hours. Defaults are all-off, discreet-on, no quiet hours.
     inputSchema: {}
     outputSchema:
       preferences:
@@ -79,8 +79,11 @@ contracts:
     command: notifications.preferences.update
     version: 1.0.0
     description: >
-      Update the requesting member's device-push opt-ins. Only device push is gated by these; the
-      in-app feed is unaffected. A missing field keeps its current value.
+      Update the requesting member's device-push opt-ins and quiet hours. Only device push is gated
+      by these; the in-app feed is unaffected. A missing field keeps its current value. A member on
+      3.1 is pushed by pushReplies, pushRooms and pushOther (the 3.1 Settings rows, seNotifyGroup), a
+      member on 3.0 by the three categories; quiet hours hold every device push either way. quiet
+      null turns them off; an invalid quiet answers 400.
     inputSchema:
       pushSafety:
         type: boolean
@@ -94,6 +97,19 @@ contracts:
       discreetPush:
         type: boolean
         required: false
+      pushReplies:
+        type: boolean
+        required: false
+      pushRooms:
+        type: boolean
+        required: false
+      pushOther:
+        type: boolean
+        required: false
+      quiet:
+        type: object
+        required: false
+        description: "null, or { startMinute, endMinute, timeZone }: minutes after midnight (0-1439) in an IANA time zone."
     outputSchema:
       preferences:
         type: object

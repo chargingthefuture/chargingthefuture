@@ -1,23 +1,89 @@
-// What the 3.1 Me screen shows, shared by web and Android: only what is the member's own, plus
-// Settings. Making things is + New and reading is Today, so Me carries no tiles for either.
+// What the 3.1 Me screen shows, shared by web and Android, built to the approved board "Me": the
+// member's name, since when, badges and three profile prompts; ServiceCredits; Saved, Read and
+// Hidden; the Tools grid; and the gear to Settings. Making things is + New and reading is Today.
 import { SE_DEFAULT_THEME, isSeThemeColor, isSeThemeMode } from './se-theme';
 const RELEASES = 'https://github.com/chargingthefuture/chargingthefuture/releases';
 export const SE_ME_LINKS = {
     credits: '/apps/service-credits',
     account: '/account',
+    accountData: '/account/data',
+    blocks: '/account/blocks',
     survey: '/survey/quora-account-deletions',
     architect: '/admin',
+    guide: '/guide',
+    rules: '/guidelines',
+    terms: '/terms',
     wallpapers: `${RELEASES}?q=wallpapers`,
     androidApp: `${RELEASES}?q=mobile`,
 };
-export const SE_ME_TILES = [
-    { key: 'click-log', label: 'ClickLog', text: 'Your private log of what happened, and check-ins when you are safe.', href: '/apps/click-log' },
-    { key: 'trust', label: 'Trust', text: 'What others can see of your part in the Avenhood.', href: '/apps/trust' },
-    { key: 'reader', label: 'Reader', text: 'Your feed reader. Your subscriptions are yours alone.', href: '/apps/reader' },
+export const SE_ME_TOOLS = [
+    { key: 'lighthouse', label: 'A place to stay', href: '/apps/lighthouse', tint: '#ede2d9', icon: 'M4 11l8-6 8 6v9H4zM10 20v-5h4v5' },
+    { key: 'mutual-time', label: 'Trade hours', href: '/apps/mutual-time', tint: '#e3ead9', icon: 'M12 7v5l3 2M12 3a9 9 0 1 0 .01 0' },
+    { key: 'skill-up', label: 'Learn a skill', href: '/apps/skill-up', tint: '#dfe6ee', icon: 'M3 9l9-5 9 5-9 5zM7 11v5c3 2 7 2 10 0v-5' },
+    { key: 'workforce', label: 'Our numbers', href: '/apps/workforce', tint: '#f3e3cf', icon: 'M5 20V10M12 20V4M19 20v-7' },
+    { key: 'knowledge', label: 'Bring your writing', href: '/knowledge', tint: '#f4dde1', icon: 'M4 20l4-1 11-11-3-3L5 16zM14 6l3 3' },
+    { key: 'click-log', label: 'Log what happened', href: '/apps/click-log', tint: '#ede2d9', icon: 'M6 3h9l4 4v14H6zM9 12h7M9 16h5' },
 ];
+// The tile's icon is drawn in the board's ink on its light tint, in every theme.
+export const SE_ME_TOOL_INK = '#2a1a1d';
+export const SE_ME_CREDIT_ICONS = {
+    send: 'M5 12h14M13 6l6 6-6 6',
+    receive: 'M19 12H5M11 6l-6 6 6 6',
+    history: 'M4 6h16M4 12h16M4 18h10',
+};
+export const SE_ME_GEAR_ICON = 'M4 7h10M18 7h2M4 17h2M10 17h10';
+export const SE_ME_PROMPT_KEYS = ['canHelpWith', 'needs', 'askMeAbout'];
+export const SE_ME_PROMPT_LABELS = {
+    canHelpWith: 'I can help with',
+    needs: 'I need',
+    askMeAbout: 'Ask me about',
+};
+export const SE_ME_PROMPT_MAX = 140;
+export const SE_ME_EMPTY_PROMPTS = { canHelpWith: '', needs: '', askMeAbout: '' };
+// Reads the three prompts from a request or answer body. Each is trimmed, inner runs of spaces and
+// line breaks are folded to one space, and a missing one is empty. Null when any is not text or is
+// longer than SE_ME_PROMPT_MAX.
+export function seParseMePrompts(body) {
+    const value = body && typeof body === 'object' ? body : {};
+    const out = { ...SE_ME_EMPTY_PROMPTS };
+    for (const key of SE_ME_PROMPT_KEYS) {
+        const raw = value[key] ?? '';
+        if (typeof raw !== 'string')
+            return null;
+        const text = raw.replace(/\s+/g, ' ').trim();
+        if (text.length > SE_ME_PROMPT_MAX)
+            return null;
+        out[key] = text;
+    }
+    return out;
+}
+export const SE_ME_BADGE_LABELS = {
+    architect: 'System Architect',
+    weaver: 'Weavers of the Commons',
+};
+const SINCE = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+export function seMeSince(sinceIso) {
+    if (!sinceIso)
+        return null;
+    const at = Date.parse(sinceIso);
+    return Number.isNaN(at) ? null : SINCE.format(new Date(at));
+}
+// The name at the top of Me: the member's handle without the @, as on the board.
+export function seMeName(username) {
+    const name = (username ?? '').replace(/^@/, '').trim();
+    return name || 'Survivor';
+}
+export const SE_ME_VIEWS = ['me', 'settings', 'theme', 'read', 'hidden', 'prompts'];
+export function isSeMeView(value) {
+    return typeof value === 'string' && SE_ME_VIEWS.includes(value);
+}
 export const SE_ME_WORDS = {
+    since: 'since',
+    aven: 'Aven',
+    settings: 'Settings',
+    backToMe: 'Back to Me',
     credits: 'ServiceCredits',
-    creditsUnit: (n) => `${n.toLocaleString('en-US')} ${n === 1 ? 'credit' : 'credits'}`,
+    creditsNote: 'credits, not money',
     creditsFailed: 'Could not read your ServiceCredits this time.',
     send: 'Send',
     receive: 'Receive',
@@ -25,23 +91,22 @@ export const SE_ME_WORDS = {
     receiveCopyFailed: (handle, reason) => `Could not copy (${reason}). Your handle is ${handle}.`,
     receiveNoHandle: 'Choose a handle in Account and data to receive.',
     history: 'History',
-    theme: 'Colors',
-    themeText: 'Saved on this device.',
-    dark: 'Dark',
-    light: 'Light',
-    version: 'You are using 3.1. You can go back to 3.0 at any time.',
-    backTo30: 'Back to 3.0',
-    account: 'Account and data',
-    survey: 'Quora account deletion survey',
-    wallpapers: 'Wallpapers',
-    androidApp: 'The Android app',
-    signOut: 'Sign out',
-    signingOut: 'Signing out…',
-    signOutConfirm: 'Sign out of this device?',
-    signOutConfirmText: 'You can sign back in at any time.',
-    signOutFailed: 'Signing out failed. Reload and try again.',
+    read: 'Read',
+    hidden: 'Hidden',
+    readIntro: 'Cards you marked done that are still around.',
+    hiddenIntro: 'Cards you said were not for you. They do not come back to Today.',
+    listEmpty: 'Nothing here yet.',
+    listFailed: 'Could not read this list.',
+    tools: 'Tools',
+    profileFailed: 'Could not read your profile this time.',
+    promptsEdit: 'Edit',
+    promptsAdd: 'Add a line about you',
+    promptsTitle: 'About you',
+    promptsSave: 'Save',
+    promptsSaving: 'Saving…',
+    promptsCancel: 'Cancel',
+    promptsFailed: 'Could not save.',
     architect: 'System Architect',
-    architectText: 'Admin screens.',
 };
 export const SE_THEME_STORE_KEY = 'se-theme';
 export function seParseThemeChoice(raw) {

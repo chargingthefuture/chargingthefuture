@@ -3,14 +3,25 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BackHandler, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SE_AVENHOOD, SE_AVENHOOD_DEFINITION, sePresenceLine, seTheme, type SeTab, type SeThemeChoice, type SeThemeTokens } from '@ctf/shared';
+import {
+  SE_AVENHOOD,
+  SE_AVENHOOD_DEFINITION,
+  SE_TEXT_SIZE_SCALE,
+  sePresenceLine,
+  seReadableTokens,
+  seTheme,
+  type SeNewKind,
+  type SeTab,
+  type SeThemeTokens,
+} from '@ctf/shared';
 import { useAuth } from '../../auth/auth-context';
 import { SeTabBar } from './SeTabBar';
-import { SE_FONT } from './fonts';
+import { SE_FONT, setSeReadableFont } from './fonts';
 import { useInterfaceVersion } from './interface-version';
 import { TodayScreen } from './today/TodayScreen';
-import { MeScreen } from './me/MeScreen';
-import { useSeTheme } from './useSeTheme';
+import { MeTab } from './me/MeTab';
+import { useSePrefs, type SePrefs } from './useSePrefs';
+import { ScaledScreen } from './ScaledScreen';
 import { UnlockBanner } from './UnlockBanner';
 import { SeFrameScrollContext } from './frame-scroll';
 import { NewScreen } from './new/NewScreen';
@@ -29,7 +40,7 @@ const TITLES: Record<Exclude<SeTab, 'new' | 'people'>, string> = {
   me: 'Me',
 };
 
-type FrameProps = { onOpenAccount: () => void; onOpen: (_key: FeatureKey) => void };
+type FrameProps = { onOpen: (_key: FeatureKey) => void };
 
 export function SeAppFrame(props: FrameProps) {
   return (
@@ -52,13 +63,22 @@ function useFrameBack(tab: SeTab, setTab: (_tab: SeTab) => void, roomShown: bool
   }, [tab, setTab, roomShown, minimize]);
 }
 
-function SeAppFrameBody({ onOpenAccount, onOpen }: FrameProps) {
-  const { theme, setTheme } = useSeTheme();
-  const t = seTheme(theme.color, theme.mode);
+function SeAppFrameBody({ onOpen }: FrameProps) {
+  const prefs = useSePrefs();
+  const { theme, reading } = prefs;
+  // The easier-to-read font is set before anything is drawn; a fresh tokens object makes every
+  // screen build its styles again when the font or contrast changes.
+  setSeReadableFont(reading.readableFont);
+  const t = useMemo(
+    () => ({ ...seReadableTokens(seTheme(theme.color, theme.mode), reading.highContrast) }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- readableFont changes the fonts the screens read through SE_FONT.
+    [theme.color, theme.mode, reading.highContrast, reading.readableFont],
+  );
   const s = useMemo(() => makeStyles(t), [t]);
   const { user } = useAuth();
   const { switchTo, saving, error } = useInterfaceVersion();
   const [tab, setTab] = useState<SeTab>('today');
+  const [newKind, setNewKind] = useState<SeNewKind>('ask');
   const [presence, setPresence] = useState<number | null>(null);
   const rooms = useSeRooms();
   const { minimize } = rooms;
@@ -68,28 +88,48 @@ function SeAppFrameBody({ onOpenAccount, onOpen }: FrameProps) {
   const select = useCallback(
     (next: SeTab) => {
       minimize();
+      setNewKind('ask');
       setTab(next);
     },
     [minimize],
   );
   const back = () => void switchTo('3.0');
+  // Settings → Ask the architect opens + New on its architect sheet.
+  const askArchitect = () => {
+    select('new');
+    setNewKind('architect');
+  };
   const scrollRef = useRef<ScrollView>(null);
   const scrollToTop = useCallback(() => scrollRef.current?.scrollTo({ y: 0, animated: false }), []);
 
   return (
     <View style={s.frame}>
       <SeFrameScrollContext.Provider value={scrollToTop}>
-      <ScrollView ref={scrollRef} contentContainerStyle={s.screen} style={rooms.shown ? s.hidden : null}>
-        <UnlockBanner t={t} onOpenUnlock={() => onOpen('unlock')} />
-        <FrameHeader s={s} tab={tab} presence={presence} />
+      <ScrollView ref={scrollRef} style={rooms.shown ? s.hidden : null}>
+        <ScaledScreen scale={SE_TEXT_SIZE_SCALE[reading.textSize]} style={s.screen}>
+          <UnlockBanner t={t} onOpenUnlock={() => onOpen('unlock')} />
+          <FrameHeader s={s} tab={tab} presence={presence} />
 
-        <TabScreen t={t} tab={tab} onPresence={setPresence} user={user} theme={theme} onTheme={setTheme} onBack={back} onClose={() => select('today')} saving={saving} onOpenAccount={onOpenAccount} onOpen={onOpen} />
+          <TabScreen
+            t={t}
+            tab={tab}
+            user={user}
+            prefs={prefs}
+            newKind={newKind}
+            onAskArchitect={askArchitect}
+            onBack={back}
+            onClose={() => select('today')}
+            saving={saving}
+            onOpen={onOpen}
+            onPresence={setPresence}
+          />
 
-        {error ? (
-          <Text accessibilityRole="alert" style={s.error}>
-            {error}
-          </Text>
-        ) : null}
+          {[error, prefs.error].filter(Boolean).map((message) => (
+            <Text key={message} accessibilityRole="alert" style={s.error}>
+              {message}
+            </Text>
+          ))}
+        </ScaledScreen>
       </ScrollView>
       </SeFrameScrollContext.Provider>
       {user ? <SeRoomHosts t={t} user={{ userId: user.id, username: user.username ?? null }} /> : null}
@@ -106,33 +146,21 @@ type TabScreenProps = {
   tab: SeTab;
   onPresence: (_count: number | null) => void;
   user: { id: string; username?: string | null; isAdmin?: boolean } | null;
-  theme: SeThemeChoice;
-  onTheme: (_next: SeThemeChoice) => void;
+  prefs: SePrefs;
+  newKind: SeNewKind;
+  onAskArchitect: () => void;
   onBack: () => void;
   onClose: () => void;
   saving: boolean;
-  onOpenAccount: () => void;
   onOpen: (_key: FeatureKey) => void;
 };
 
-function TabScreen({ t, tab, onPresence, user, theme, onTheme, onBack, onClose, saving, onOpenAccount, onOpen }: TabScreenProps) {
+function TabScreen({ t, tab, onPresence, user, prefs, newKind, onAskArchitect, onBack, onClose, saving, onOpen }: TabScreenProps) {
   if (tab === 'me') {
-    return (
-      <MeScreen
-        t={t}
-        user={user}
-        isAdmin={user?.isAdmin === true}
-        onOpen={onOpen}
-        theme={theme}
-        onTheme={onTheme}
-        onBack={onBack}
-        saving={saving}
-        onOpenAccount={onOpenAccount}
-      />
-    );
+    return user ? <MeTab t={t} user={user} prefs={prefs} onAskArchitect={onAskArchitect} onBack={onBack} saving={saving} onOpen={onOpen} /> : null;
   }
   if (tab === 'today') return user ? <TodayScreen t={t} accountId={user.id} onOpen={onOpen} onPresence={onPresence} /> : null;
-  if (tab === 'new') return <NewScreen t={t} onOpen={onOpen} onClose={onClose} />;
+  if (tab === 'new') return <NewScreen key={newKind} t={t} initialKind={newKind} onOpen={onOpen} onClose={onClose} />;
   if (tab === 'activity') return <ActivityScreen t={t} onOpen={onOpen} />;
   return <PeopleScreen t={t} onOpen={onOpen} onToday={onClose} />;
 }

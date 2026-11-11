@@ -596,6 +596,7 @@ policies:
       - invalid_mark
       - rate_limited
   - pluginId: today
+    command: today.marks.list
     command: today.saves.list
     version: 1.0.0
     requiredRoles:
@@ -619,6 +620,7 @@ policies:
     denyConditions:
       - actor_not_authenticated
       - account_restricted
+      - invalid_mark
   - pluginId: today
     command: today.saves.change
     version: 1.0.0

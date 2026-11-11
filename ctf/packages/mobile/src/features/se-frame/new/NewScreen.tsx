@@ -122,10 +122,21 @@ const BODIES: Record<SeNewKind, (_props: BodyProps) => React.ReactElement> = {
   architect: ArchitectBody,
 };
 
-export function NewScreen({ t, onOpen, onClose }: { t: SeThemeTokens; onOpen: (_key: FeatureKey) => void; onClose: () => void }) {
+// `initialKind` opens a sheet other than Ask: Settings → Ask the architect opens the architect's.
+export function NewScreen({
+  t,
+  onOpen,
+  onClose,
+  initialKind = 'ask',
+}: {
+  t: SeThemeTokens;
+  onOpen: (_key: FeatureKey) => void;
+  onClose: () => void;
+  initialKind?: SeNewKind;
+}) {
   const s = useMemo(() => makeStyles(t), [t]);
   const sh = useMemo(() => makeSheetStyles(t), [t]);
-  const [kind, setKind] = useState<SeNewKind>('ask');
+  const [kind, setKind] = useState<SeNewKind>(initialKind);
   const go = (href: string) => openTodayLink(href, onOpen);
   const Body = BODIES[kind];
   // Ask, Offer and Story share "Post something" above the switch; Talk and the architect carry

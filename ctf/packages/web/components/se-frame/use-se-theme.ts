@@ -1,29 +1,20 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { SE_DEFAULT_THEME, SE_THEME_STORE_KEY, seParseThemeChoice, type SeThemeChoice } from '@ctf/shared';
 
-// The member's 3.1 colors, kept in this browser. Storage can be refused (a private window); the
-// frame then shows the default and the choice lasts until the page closes.
-export function useSeTheme(): { theme: SeThemeChoice; setTheme: (_next: SeThemeChoice) => void } {
-  const [theme, setThemeState] = useState<SeThemeChoice>({ ...SE_DEFAULT_THEME });
-
+// The member's 3.1 colors for a screen drawn outside the frame (a game, a room, a card's
+// conversation), read from this browser's copy of the choice saved on the account. The frame
+// (use-se-prefs.ts) reads the account and keeps that copy current. Storage can be refused (a private
+// window); the default colors are then used.
+export function useSeTheme(): { theme: SeThemeChoice } {
+  const [theme, setTheme] = useState<SeThemeChoice>({ ...SE_DEFAULT_THEME });
   useEffect(() => {
     try {
-      setThemeState(seParseThemeChoice(window.localStorage.getItem(SE_THEME_STORE_KEY)));
+      setTheme(seParseThemeChoice(window.localStorage.getItem(SE_THEME_STORE_KEY)));
     } catch {
       // no-trace: storage refused; the default stays.
     }
   }, []);
-
-  const setTheme = useCallback((next: SeThemeChoice) => {
-    setThemeState(next);
-    try {
-      window.localStorage.setItem(SE_THEME_STORE_KEY, JSON.stringify(next));
-    } catch {
-      // no-trace: storage refused; the choice lasts for this page only.
-    }
-  }, []);
-
-  return { theme, setTheme };
+  return { theme };
 }

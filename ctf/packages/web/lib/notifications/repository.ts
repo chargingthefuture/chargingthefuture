@@ -2,6 +2,8 @@ import { queryDb } from 'lib/db/postgres';
 import { reportError } from 'lib/observability/report';
 import { SE_TODAY_RENEW_NOTICE } from '@ctf/shared';
 import { sendWebPushToUser } from './push';
+import { getUserInterfaceVersion } from 'lib/account/ui-preferences-repository';
+import { isSeMinuteOfDay, seInQuietHours, seNotifyGroup, type SeInterfaceVersion, type SeNotifyGroup, type SeQuietHours } from '@ctf/shared';
 import { renewNoticeAnswer } from './renew-answer';
 import { DELETED_MEMBER_PLACEHOLDER } from 'lib/account/deletion-registry';
 import {
@@ -126,21 +128,40 @@ export async function notifySafe(input: NotificationInput): Promise<void> {
   }
 }
 
-// Category → the matching device-push opt-in field.
+// Category → the matching 3.0 device-push opt-in field.
 function isCategoryPushEnabled(category: NotificationCategory, prefs: NotificationPreferences): boolean {
   if (category === 'safety') return prefs.pushSafety;
   if (category === 'activity') return prefs.pushActivity;
   return prefs.pushCommunity;
 }
 
-// Send a device push for a just-created notification when the recipient opted that category in. The
-// in-app feed is never gated by this; only the ping is. Discreet (the default) sends a generic ping
-// with no plugin name or content — safe on a shared or monitored lock screen; the tappable detail
-// lives behind sign-in in the feed. `sendWebPushToUser` is itself best-effort and a no-op when VAPID
-// is unconfigured, so this never throws in a way that matters.
+const GROUP_FIELD: Record<SeNotifyGroup, 'pushReplies' | 'pushRooms' | 'pushOther'> = {
+  replies: 'pushReplies',
+  rooms: 'pushRooms',
+  other: 'pushOther',
+};
+
+// Whether this notification may ping the member's devices now. A member on 3.1 chose by the Settings
+// rows, a member on 3.0 by the three categories; quiet hours hold every ping either way.
+export function shouldPushNow(
+  input: Pick<NotificationInput, 'category' | 'notificationType'>,
+  prefs: NotificationPreferences,
+  interfaceVersion: SeInterfaceVersion,
+  now: Date,
+): boolean {
+  const opted =
+    interfaceVersion === '3.1' ? prefs[GROUP_FIELD[seNotifyGroup(input.notificationType)]] : isCategoryPushEnabled(input.category, prefs);
+  return opted && !seInQuietHours(prefs.quiet, now);
+}
+
+// Send a device push for a just-created notification when the recipient opted in and is outside
+// their quiet hours. The in-app feed is never gated by this; only the ping is. Discreet (the default)
+// sends a generic ping with no plugin name or content — safe on a shared or monitored lock screen;
+// the tappable detail lives behind sign-in in the feed. `sendWebPushToUser` is itself best-effort and
+// a no-op when VAPID is unconfigured, so this never throws in a way that matters.
 async function maybeSendDevicePush(input: NotificationInput): Promise<void> {
-  const prefs = await getNotificationPreferences(input.userId);
-  if (!isCategoryPushEnabled(input.category, prefs)) {
+  const [prefs, interfaceVersion] = await Promise.all([getNotificationPreferences(input.userId), getUserInterfaceVersion(input.userId)]);
+  if (!shouldPushNow(input, prefs, interfaceVersion, new Date())) {
     return;
   }
   const payload = prefs.discreetPush
@@ -213,19 +234,37 @@ const DEFAULT_PREFERENCES: NotificationPreferences = {
   pushActivity: false,
   pushCommunity: false,
   discreetPush: true,
+  pushReplies: false,
+  pushRooms: false,
+  pushOther: false,
+  quiet: null,
 };
 
+type PreferencesRow = {
+  push_safety: boolean;
+  push_activity: boolean;
+  push_community: boolean;
+  discreet_push: boolean;
+  push_replies: boolean;
+  push_rooms: boolean;
+  push_other: boolean;
+  quiet_start_minute: number | null;
+  quiet_end_minute: number | null;
+  quiet_time_zone: string | null;
+};
+
+function readQuiet(row: PreferencesRow): SeQuietHours | null {
+  const { quiet_start_minute: start, quiet_end_minute: end, quiet_time_zone: zone } = row;
+  return isSeMinuteOfDay(start) && isSeMinuteOfDay(end) && zone ? { startMinute: start, endMinute: end, timeZone: zone } : null;
+}
+
 // Read a member's device-push preferences. A member with no row yet gets the safe defaults
-// (all push off, discreet on) — the in-app feed does not depend on this.
+// (all push off, discreet on, no quiet hours) — the in-app feed does not depend on this.
 export async function getNotificationPreferences(userId: string): Promise<NotificationPreferences> {
-  const result = await queryDb<{
-    push_safety: boolean;
-    push_activity: boolean;
-    push_community: boolean;
-    discreet_push: boolean;
-  }>(
+  const result = await queryDb<PreferencesRow>(
     `
-      SELECT push_safety, push_activity, push_community, discreet_push
+      SELECT push_safety, push_activity, push_community, discreet_push, push_replies, push_rooms, push_other,
+             quiet_start_minute, quiet_end_minute, quiet_time_zone
       FROM notification_preferences
       WHERE user_id = $1
       LIMIT 1
@@ -241,6 +280,10 @@ export async function getNotificationPreferences(userId: string): Promise<Notifi
     pushActivity: row.push_activity,
     pushCommunity: row.push_community,
     discreetPush: row.discreet_push,
+    pushReplies: row.push_replies,
+    pushRooms: row.push_rooms,
+    pushOther: row.push_other,
+    quiet: readQuiet(row),
   };
 }
 
@@ -248,19 +291,39 @@ export async function updateNotificationPreferences(
   userId: string,
   preferences: NotificationPreferences,
 ): Promise<NotificationPreferences> {
+  const quiet = preferences.quiet;
   await queryDb(
     `
-      INSERT INTO notification_preferences (user_id, push_safety, push_activity, push_community, discreet_push, updated_at)
-      VALUES ($1, $2, $3, $4, $5, NOW())
+      INSERT INTO notification_preferences (user_id, push_safety, push_activity, push_community, discreet_push,
+        push_replies, push_rooms, push_other, quiet_start_minute, quiet_end_minute, quiet_time_zone, updated_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
       ON CONFLICT (user_id)
       DO UPDATE SET
         push_safety = EXCLUDED.push_safety,
         push_activity = EXCLUDED.push_activity,
         push_community = EXCLUDED.push_community,
         discreet_push = EXCLUDED.discreet_push,
+        push_replies = EXCLUDED.push_replies,
+        push_rooms = EXCLUDED.push_rooms,
+        push_other = EXCLUDED.push_other,
+        quiet_start_minute = EXCLUDED.quiet_start_minute,
+        quiet_end_minute = EXCLUDED.quiet_end_minute,
+        quiet_time_zone = EXCLUDED.quiet_time_zone,
         updated_at = NOW()
     `,
-    [userId, preferences.pushSafety, preferences.pushActivity, preferences.pushCommunity, preferences.discreetPush],
+    [
+      userId,
+      preferences.pushSafety,
+      preferences.pushActivity,
+      preferences.pushCommunity,
+      preferences.discreetPush,
+      preferences.pushReplies,
+      preferences.pushRooms,
+      preferences.pushOther,
+      quiet?.startMinute ?? null,
+      quiet?.endMinute ?? null,
+      quiet?.timeZone ?? null,
+    ],
   );
   return preferences;
 }

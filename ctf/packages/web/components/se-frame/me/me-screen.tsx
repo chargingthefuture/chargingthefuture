@@ -1,32 +1,130 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { useAuth } from '@/hooks/useAuth';
-import { reportError } from '@/lib/observability/report';
 import {
   SE_AVEN_DEFINITION,
-  SE_AVENHOOD,
-  SE_AVENHOOD_DEFINITION,
+  SE_ME_BADGE_LABELS,
+  SE_ME_CREDIT_ICONS,
+  SE_ME_GEAR_ICON,
   SE_ME_LINKS,
-  SE_ME_TILES,
+  SE_ME_PROMPT_KEYS,
+  SE_ME_PROMPT_LABELS,
+  SE_ME_TOOL_INK,
+  SE_ME_TOOLS,
   SE_ME_WORDS as W,
+  SE_SETTINGS_WORDS,
+  seMeName,
+  seMeSince,
+  type SeMeView,
+  type SeReadingPrefs,
 } from '@ctf/shared';
 import type { ShellCurrentUser } from '../../community-shell/shell-types';
 import { SeAvatar } from '../../shared/se-avatar';
-import { ThemePicker } from './theme-picker';
-import { MatchingToggle } from '../today/matching-toggle';
-import { MutedCard } from './muted-card';
 import { SavedCard } from './saved-card';
 import { useCredits } from './use-credits';
-import type { SeThemeChoice } from '@ctf/shared';
+import type { MeProfileState } from './use-me-profile';
 import styles from './me.module.css';
 
-// Me holds only what is the member's own: the profile, ServiceCredits, the private tools, About,
-// Settings and, for the owner, the System Architect entry. Making things is + New; reading is Today.
+// Me, built to the approved board "Me": the member's name, since when they have been an Aven,
+// their badges and the gear to Settings; their three profile lines; ServiceCredits; Saved, Read and
+// Hidden; the Tools grid; and emoji rain. Making things is + New; reading is Today.
+
+function Icon({ d, size = 18 }: { d: string; size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d={d} />
+    </svg>
+  );
+}
+
+function Since({ sinceIso }: { sinceIso: string | null }) {
+  const [open, setOpen] = useState(false);
+  const since = seMeSince(sinceIso);
+  if (!since) return null;
+  return (
+    <>
+      <p className={styles.since}>
+        <button type="button" className={styles.term} aria-expanded={open} aria-controls="se-me-aven" onClick={() => setOpen((value) => !value)}>
+          {W.aven}
+        </button>{' '}
+        {W.since} {since}
+      </p>
+      {open ? (
+        <p id="se-me-aven" className={styles.since}>
+          {SE_AVEN_DEFINITION}
+        </p>
+      ) : null}
+    </>
+  );
+}
+
+function Head({ user, profile, onSettings }: { user: ShellCurrentUser; profile: MeProfileState; onSettings: () => void }) {
+  const ready = profile.kind === 'ready' ? profile.profile : null;
+  return (
+    <div className={styles.head}>
+      <span className={styles.avatar}>
+        <SeAvatar accountId={user.userId} size={64} />
+      </span>
+      <div className={styles.who}>
+        <h1 className={styles.name}>{seMeName(user.username)}</h1>
+        {ready ? <Since sinceIso={ready.sinceIso} /> : null}
+        {ready && ready.badges.length > 0 ? (
+          <div className={styles.badges}>
+            {ready.badges.map((badge) =>
+              // The System Architect badge is also the way into the admin screens.
+              badge === 'architect' ? (
+                <Link key={badge} href={SE_ME_LINKS.architect} className={styles.badge}>
+                  {SE_ME_BADGE_LABELS[badge]}
+                </Link>
+              ) : (
+                <span key={badge} className={`${styles.badge} ${styles.badgeWeaver}`}>
+                  {SE_ME_BADGE_LABELS[badge]}
+                </span>
+              ),
+            )}
+          </div>
+        ) : null}
+      </div>
+      <button type="button" className={styles.gear} aria-label={W.settings} onClick={onSettings}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+          <path d={SE_ME_GEAR_ICON} />
+          <circle cx="16" cy="7" r="2" />
+          <circle cx="8" cy="17" r="2" />
+        </svg>
+      </button>
+    </div>
+  );
+}
+
+// The three profile lines. Only the ones written are shown; with none, a line to add them.
+function Prompts({ profile, onEdit }: { profile: MeProfileState; onEdit: () => void }) {
+  if (profile.kind === 'loading') return null;
+  if (profile.kind === 'error') {
+    return (
+      <p role="alert" className={styles.status}>
+        {profile.message}
+      </p>
+    );
+  }
+  const written = SE_ME_PROMPT_KEYS.filter((key) => profile.profile.prompts[key]);
+  return (
+    <div className={styles.card}>
+      {written.map((key) => (
+        <div key={key} className={styles.prompt}>
+          <span className={styles.q}>{SE_ME_PROMPT_LABELS[key]}</span>
+          <span className={styles.a}>{profile.profile.prompts[key]}</span>
+        </div>
+      ))}
+      <button type="button" className={styles.textButton} onClick={onEdit}>
+        {written.length > 0 ? W.promptsEdit : W.promptsAdd}
+      </button>
+    </div>
+  );
+}
 
 // Receive copies the member's handle, which is what somebody types to send to them.
-function ReceiveButton({ handle }: { handle: string | null }) {
+function useReceive(handle: string | null) {
   const [note, setNote] = useState<string | null>(null);
   const copy = () => {
     if (!handle) return setNote(W.receiveNoHandle);
@@ -35,154 +133,102 @@ function ReceiveButton({ handle }: { handle: string | null }) {
       .then(() => setNote(W.receiveCopied(handle)))
       .catch((error: unknown) => setNote(W.receiveCopyFailed(handle, error instanceof Error ? error.message : 'the browser refused')));
   };
-  return (
-    <>
-      <button type="button" className={styles.pillButton} onClick={copy}>
-        {W.receive}
-      </button>
-      {note ? (
-        <p role="status" className={styles.text}>
-          {note}
-        </p>
-      ) : null}
-    </>
-  );
+  return { note, copy };
 }
 
 function CreditsCard({ handle }: { handle: string | null }) {
   const credits = useCredits();
+  const receive = useReceive(handle);
   return (
-    <section className={styles.card} aria-labelledby="se-me-credits">
-      <p id="se-me-credits" className={styles.label}>
-        {W.credits}
-      </p>
-      {credits.kind === 'ready' ? <p className={styles.big}>{W.creditsUnit(credits.available)}</p> : null}
+    <>
+      <section className={styles.credits} aria-label={W.credits}>
+        <div className={styles.creditsText}>
+          <span className={styles.label}>{W.credits}</span>
+          <span className={styles.balance}>{credits.kind === 'ready' ? credits.available.toLocaleString('en-US') : '–'}</span>
+          <span className={styles.note}>{W.creditsNote}</span>
+        </div>
+        <Link href={`${SE_ME_LINKS.credits}?tab=send`} className={styles.creditAction}>
+          <span className={styles.creditIcon}>
+            <Icon d={SE_ME_CREDIT_ICONS.send} size={17} />
+          </span>
+          {W.send}
+        </Link>
+        <button type="button" className={styles.creditAction} onClick={receive.copy}>
+          <span className={styles.creditIcon}>
+            <Icon d={SE_ME_CREDIT_ICONS.receive} size={17} />
+          </span>
+          {W.receive}
+        </button>
+        <Link href={`${SE_ME_LINKS.credits}?tab=wallet`} className={styles.creditAction}>
+          <span className={styles.creditIcon}>
+            <Icon d={SE_ME_CREDIT_ICONS.history} size={17} />
+          </span>
+          {W.history}
+        </Link>
+      </section>
       {credits.kind === 'error' ? (
-        <p className={styles.text}>
+        <p role="alert" className={styles.status}>
           {W.creditsFailed} {credits.message}
         </p>
       ) : null}
-      <div className={styles.row}>
-        <Link href={`${SE_ME_LINKS.credits}?tab=send`} className={styles.pill}>
-          {W.send}
-        </Link>
-        <Link href={`${SE_ME_LINKS.credits}?tab=wallet`} className={styles.pill}>
-          {W.history}
-        </Link>
-        <ReceiveButton handle={handle} />
-      </div>
-    </section>
-  );
-}
-
-function Tiles() {
-  return (
-    <div className={styles.tiles}>
-      {SE_ME_TILES.map((tile) => (
-        <Link key={tile.key} href={tile.href} className={styles.tile}>
-          <span className={styles.tileTitle}>{tile.label}</span>
-          <span className={styles.text}>{tile.text}</span>
-        </Link>
-      ))}
-    </div>
-  );
-}
-
-function AboutCard() {
-  return (
-    <section className={styles.card}>
-      <p className={styles.label}>About</p>
-      <p className={styles.title}>The {SE_AVENHOOD}</p>
-      <p className={styles.text}>{SE_AVENHOOD_DEFINITION}</p>
-      <p className={styles.text}>{SE_AVEN_DEFINITION}</p>
-    </section>
-  );
-}
-
-type SettingsProps = { theme: SeThemeChoice; onTheme: (_next: SeThemeChoice) => void; onBack: () => void; saving: boolean };
-
-function SettingsCard({ theme, onTheme, onBack, saving }: SettingsProps) {
-  return (
-    <section className={styles.card} aria-labelledby="se-me-settings">
-      <p id="se-me-settings" className={styles.label}>
-        Settings
-      </p>
-      <ThemePicker theme={theme} onChange={onTheme} />
-      <p className={styles.text}>{W.version}</p>
-      <button type="button" className={styles.pillButton} onClick={onBack} disabled={saving}>
-        {W.backTo30}
-      </button>
-      <nav className={styles.links} aria-label="Settings links">
-        <Link href={SE_ME_LINKS.account}>{W.account}</Link>
-        <Link href={SE_ME_LINKS.survey}>{W.survey}</Link>
-        <a href={SE_ME_LINKS.wallpapers} target="_blank" rel="noreferrer">
-          {W.wallpapers}
-        </a>
-        <a href={SE_ME_LINKS.androidApp} target="_blank" rel="noreferrer">
-          {W.androidApp}
-        </a>
-      </nav>
-      <SignOutButton />
-    </section>
-  );
-}
-
-// Sign out of this device, back to signed-out Today.
-function SignOutButton() {
-  const { signOut } = useAuth();
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const run = async () => {
-    if (!window.confirm(`${W.signOutConfirm} ${W.signOutConfirmText}`)) return;
-    setPending(true);
-    setError(null);
-    try {
-      await signOut({ redirectUrl: '/' });
-    } catch (err) {
-      reportError(err, { area: 'se-frame', op: 'me_sign_out' });
-      const reason = err instanceof Error && err.message ? ` (${err.message})` : '';
-      setError(`${W.signOutFailed}${reason}`);
-      setPending(false);
-    }
-  };
-  return (
-    <>
-      <button type="button" className={styles.pillButton} onClick={() => void run()} disabled={pending}>
-        {pending ? W.signingOut : W.signOut}
-      </button>
-      {error ? (
-        <p role="alert" className={styles.text}>
-          {error}
+      {receive.note ? (
+        <p role="status" className={styles.status}>
+          {receive.note}
         </p>
       ) : null}
     </>
   );
 }
 
-type MeScreenProps = SettingsProps & { currentUser: ShellCurrentUser; isAdmin: boolean };
-
-export function MeScreen({ currentUser, isAdmin, ...settings }: MeScreenProps) {
+function Tools() {
   return (
     <>
-      <section className={styles.card}>
-        <div className={styles.profile}>
-          <SeAvatar accountId={currentUser.userId} size={56} />
-          <span className={styles.handle}>{currentUser.displayName}</span>
-        </div>
-      </section>
-      <CreditsCard handle={currentUser.username ? `@${currentUser.username}` : null} />
-      <Tiles />
-      <AboutCard />
-      <MatchingToggle />
-      <MutedCard />
-      <SavedCard />
-      <SettingsCard {...settings} />
-      {isAdmin ? (
-        <Link href={SE_ME_LINKS.architect} className={styles.tile}>
-          <span className={styles.tileTitle}>{W.architect}</span>
-          <span className={styles.text}>{W.architectText}</span>
-        </Link>
-      ) : null}
+      <h2 className={styles.h2}>{W.tools}</h2>
+      <div className={styles.tools}>
+        {SE_ME_TOOLS.map((tool) => (
+          <Link key={tool.key} href={tool.href} className={styles.tool}>
+            <span className={styles.toolIcon} style={{ background: tool.tint, color: SE_ME_TOOL_INK }}>
+              <Icon d={tool.icon} />
+            </span>
+            <span className={styles.toolLabel}>{tool.label}</span>
+          </Link>
+        ))}
+      </div>
     </>
+  );
+}
+
+export type MeScreenProps = {
+  currentUser: ShellCurrentUser;
+  profile: MeProfileState;
+  reading: SeReadingPrefs;
+  onReading: (_change: Partial<SeReadingPrefs>) => void;
+  onOpen: (_view: SeMeView) => void;
+  // Me → Saved is built separately; it goes first in the row, before Read and Hidden.
+  saved?: ReactNode;
+};
+
+export function MeScreen({ currentUser, profile, reading, onReading, onOpen, saved }: MeScreenProps) {
+  return (
+    <div className={styles.stack}>
+      <Head user={currentUser} profile={profile} onSettings={() => onOpen('settings')} />
+      <Prompts profile={profile} onEdit={() => onOpen('prompts')} />
+      <CreditsCard handle={currentUser.username ? `@${currentUser.username}` : null} />
+      <div className={styles.shortcuts}>
+        {saved ?? null}
+        <button type="button" className={styles.shortcut} onClick={() => onOpen('read')}>
+          {W.read}
+        </button>
+        <button type="button" className={styles.shortcut} onClick={() => onOpen('hidden')}>
+          {W.hidden}
+        </button>
+      </div>
+      <SavedCard />
+      <Tools />
+      <label className={styles.switchRow}>
+        <span>{SE_SETTINGS_WORDS.emojiRain}</span>
+        <input type="checkbox" role="switch" className={styles.switch} checked={reading.emojiRain} onChange={(event) => onReading({ emojiRain: event.target.checked })} />
+      </label>
+    </div>
   );
 }

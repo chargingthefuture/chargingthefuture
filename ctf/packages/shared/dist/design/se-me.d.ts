@@ -1,21 +1,59 @@
-import { type SeThemeColor, type SeThemeMode } from './se-theme';
+import { type SeCardKind, type SeThemeColor, type SeThemeMode } from './se-theme';
 export declare const SE_ME_LINKS: {
     readonly credits: "/apps/service-credits";
     readonly account: "/account";
+    readonly accountData: "/account/data";
+    readonly blocks: "/account/blocks";
     readonly survey: "/survey/quora-account-deletions";
     readonly architect: "/admin";
+    readonly guide: "/guide";
+    readonly rules: "/guidelines";
+    readonly terms: "/terms";
     readonly wallpapers: "https://github.com/chargingthefuture/chargingthefuture/releases?q=wallpapers";
     readonly androidApp: "https://github.com/chargingthefuture/chargingthefuture/releases?q=mobile";
 };
-export declare const SE_ME_TILES: ReadonlyArray<{
+export type SeMeTool = {
     key: string;
     label: string;
-    text: string;
     href: string;
-}>;
+    tint: string;
+    icon: string;
+};
+export declare const SE_ME_TOOLS: readonly SeMeTool[];
+export declare const SE_ME_TOOL_INK = "#2a1a1d";
+export declare const SE_ME_CREDIT_ICONS: {
+    readonly send: "M5 12h14M13 6l6 6-6 6";
+    readonly receive: "M19 12H5M11 6l-6 6 6 6";
+    readonly history: "M4 6h16M4 12h16M4 18h10";
+};
+export declare const SE_ME_GEAR_ICON = "M4 7h10M18 7h2M4 17h2M10 17h10";
+export type SeMePromptKey = 'canHelpWith' | 'needs' | 'askMeAbout';
+export type SeMePrompts = Record<SeMePromptKey, string>;
+export declare const SE_ME_PROMPT_KEYS: readonly SeMePromptKey[];
+export declare const SE_ME_PROMPT_LABELS: Record<SeMePromptKey, string>;
+export declare const SE_ME_PROMPT_MAX = 140;
+export declare const SE_ME_EMPTY_PROMPTS: SeMePrompts;
+export declare function seParseMePrompts(body: unknown): SeMePrompts | null;
+export type SeMeBadge = 'architect' | 'weaver';
+export type SeMeProfile = {
+    sinceIso: string | null;
+    badges: SeMeBadge[];
+    prompts: SeMePrompts;
+    censusAdded: boolean;
+};
+export declare const SE_ME_BADGE_LABELS: Record<SeMeBadge, string>;
+export declare function seMeSince(sinceIso: string | null): string | null;
+export declare function seMeName(username: string | null | undefined): string;
+export type SeMeView = 'me' | 'settings' | 'theme' | 'read' | 'hidden' | 'prompts';
+export declare const SE_ME_VIEWS: readonly SeMeView[];
+export declare function isSeMeView(value: unknown): value is SeMeView;
 export declare const SE_ME_WORDS: {
+    since: string;
+    aven: string;
+    settings: string;
+    backToMe: string;
     credits: string;
-    creditsUnit: (n: number) => string;
+    creditsNote: string;
     creditsFailed: string;
     send: string;
     receive: string;
@@ -23,23 +61,22 @@ export declare const SE_ME_WORDS: {
     receiveCopyFailed: (handle: string, reason: string) => string;
     receiveNoHandle: string;
     history: string;
-    theme: string;
-    themeText: string;
-    dark: string;
-    light: string;
-    version: string;
-    backTo30: string;
-    account: string;
-    survey: string;
-    wallpapers: string;
-    androidApp: string;
-    signOut: string;
-    signingOut: string;
-    signOutConfirm: string;
-    signOutConfirmText: string;
-    signOutFailed: string;
+    read: string;
+    hidden: string;
+    readIntro: string;
+    hiddenIntro: string;
+    listEmpty: string;
+    listFailed: string;
+    tools: string;
+    profileFailed: string;
+    promptsEdit: string;
+    promptsAdd: string;
+    promptsTitle: string;
+    promptsSave: string;
+    promptsSaving: string;
+    promptsCancel: string;
+    promptsFailed: string;
     architect: string;
-    architectText: string;
 };
 export type SeThemeChoice = {
     color: SeThemeColor;
@@ -47,3 +84,10 @@ export type SeThemeChoice = {
 };
 export declare const SE_THEME_STORE_KEY = "se-theme";
 export declare function seParseThemeChoice(raw: string | null | undefined): SeThemeChoice;
+export type SeMarkedCard = {
+    id: string;
+    kind: SeCardKind;
+    label: string;
+    title: string;
+    href: string;
+};

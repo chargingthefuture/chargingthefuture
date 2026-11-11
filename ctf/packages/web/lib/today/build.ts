@@ -39,9 +39,10 @@ async function settle<T>(name: string, read: () => Promise<T>, unavailable: stri
   }
 }
 
-export async function buildToday(viewer: TodayViewer, now = new Date(), dayStartIso = startOfTodayIso(now)): Promise<SeToday> {
-  const unavailable: string[] = [];
-  const sources: CardSource[] = [
+// Every card source behind Today, in the order they are read; the member's own cards ("yours")
+// are last.
+export function todaySources(viewer: TodayViewer, now: Date): CardSource[] {
+  return [
     { name: 'peer-programming', read: () => goalAsks(viewer) },
     { name: 'socket-relay', read: () => relayAsks(viewer) },
     { name: 'trust-transport', read: () => rideAsks(viewer) },
@@ -61,6 +62,11 @@ export async function buildToday(viewer: TodayViewer, now = new Date(), dayStart
     { name: 'skills-hunt-mission', read: () => missionCard(now) },
     { name: 'yours', read: () => mineCards(viewer) },
   ];
+}
+
+export async function buildToday(viewer: TodayViewer, now = new Date(), dayStartIso = startOfTodayIso(now)): Promise<SeToday> {
+  const unavailable: string[] = [];
+  const sources = todaySources(viewer, now);
 
   const week = weekTalks(now);
   const [cardLists, live, room, weekList, weavers, daysWon, mutes, presence, tomorrow] = await Promise.all([

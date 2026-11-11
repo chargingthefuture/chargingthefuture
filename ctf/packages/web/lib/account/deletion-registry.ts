@@ -199,12 +199,13 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
   {
     slug: 'app-preferences',
     name: 'App preferences',
-    dataSummary: 'Your theme and other app-wide display preferences.',
+    dataSummary: 'Your theme and other app-wide display and reading preferences, and the lines about you on your Me screen.',
     // Cross-cutting like notifications: not a service a member joins or leaves, so no per-service
     // scope — it clears with the account.
     serviceScopeSupported: false,
     tables: [
-      del('user_ui_preferences', 'user_id', 'Your theme and display preferences.'),
+      del('user_ui_preferences', 'user_id', 'Your theme, colors, text size, contrast, font and emoji rain choices.'),
+      del('member_profile_prompts', 'account_id', 'The three lines about you on your Me screen.'),
     ],
   },
   {
@@ -216,7 +217,7 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     serviceScopeSupported: false,
     tables: [
       del('notifications', 'user_id', 'Your notifications.'),
-      del('notification_preferences', 'user_id', 'Your device-push preferences.'),
+      del('notification_preferences', 'user_id', 'Your device-push preferences and quiet hours.'),
       // push_subscriptions is user-global: notification pushes (lib/notifications/push.ts,
       // expo-push.ts) and Foundation's instant-call ring both send to the same device rows. It sits
       // here, with no per-service scope, so deleting only Foundation data keeps the devices a member
