@@ -76,6 +76,8 @@
 
 .tabBar {
   position: fixed;
+  /* Above page content that sets its own stacking, such as Request a quote on People. */
+  z-index: 10;
   left: 16px;
   right: 16px;
   bottom: 24px;
@@ -178,6 +180,7 @@
 
 .guestBar {
   position: fixed;
+  z-index: 10;
   left: 16px;
   right: 16px;
   bottom: 24px;
