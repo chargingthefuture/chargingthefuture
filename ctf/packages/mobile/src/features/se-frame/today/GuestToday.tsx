@@ -187,7 +187,6 @@ export function GuestToday({ t, onSignUp, onOpen }: { t: SeThemeTokens; onSignUp
       <RoomCard s={s} t={t} today={today} />
       <View style={s.listHead}>
         <Text style={s.listTitle}>{W.cardsTitle}</Text>
-        <Text style={s.meta}>{W.readOnly}</Text>
       </View>
       {error ? (
         <View style={s.notice} accessibilityRole="alert">

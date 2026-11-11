@@ -189,7 +189,6 @@ export function GuestToday({ signUpUrl }: { signUpUrl: string }) {
       <RoomCard today={today} />
       <div className={styles.listHead}>
         <h2 className={styles.listTitle}>{W.cardsTitle}</h2>
-        <span className={styles.doneCount}>{W.readOnly}</span>
       </div>
       {error ? (
         <div role="alert" className={styles.notice}>

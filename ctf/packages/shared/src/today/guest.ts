@@ -18,7 +18,6 @@ export const SE_GUEST_WORDS = {
   readingsNote: 'Recorded blog posts, one after another',
   nextRoom: 'Next room',
   cardsTitle: "Today's cards",
-  readOnly: 'Read only',
   member: 'A member',
   answer: 'Sign up to answer',
   peopleTitle: 'People',
