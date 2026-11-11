@@ -1,12 +1,12 @@
 contracts:
   - pluginId: member-mutes
     command: member.mute.create
-    version: 1.0.0
-    description: Mute a person (target = account id, label = handle shown) or words (target = lower-cased words, at most 60 characters) for the signed-in member. Idempotent; at most 100 mutes; rejects muting yourself.
+    version: 1.1.0
+    description: Mute a person (target = account id, label = handle shown), a post (target = a Today card id, label = the card's title, at most 80 characters) or words (target = lower-cased words, at most 60 characters) for the signed-in member. A muted post leaves the member's Today and its conversation sends them no Activity notices. Idempotent; at most 100 mutes; rejects muting yourself and a post target that is not a card id. Nobody is told.
     inputSchema:
       kind:
         type: string
-        enum: [person, words]
+        enum: [person, post, words]
         required: true
       target:
         type: string
@@ -41,8 +41,8 @@ contracts:
 
   - pluginId: member-mutes
     command: member.mute.list
-    version: 1.0.0
-    description: List the signed-in member's own mutes, newest first.
+    version: 1.1.0
+    description: List the signed-in member's own mutes (people, posts and words), newest first.
     inputSchema: {}
     outputSchema:
       mutes:

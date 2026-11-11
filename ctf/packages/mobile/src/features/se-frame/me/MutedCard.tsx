@@ -3,7 +3,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { SE_MUTE_WORDS as W, type SeMute, type SeThemeTokens } from '@ctf/shared';
+import { SE_MUTE_WORDS as W, seMuteRowLabel, type SeMute, type SeThemeTokens } from '@ctf/shared';
 import { authedFetchJson } from '../../../auth/authedFetch';
 import { SE_FONT } from '../fonts';
 
@@ -46,7 +46,7 @@ export function MutedCard({ t }: { t: SeThemeTokens }) {
       {mutes.length === 0 ? <Text style={s.text}>{W.empty}</Text> : null}
       {mutes.map((mute) => (
         <View key={mute.id} style={s.row}>
-          <Text style={s.item}>{mute.kind === 'person' ? (mute.label ?? 'A member') : `“${mute.target}”`}</Text>
+          <Text style={s.item}>{seMuteRowLabel(mute)}</Text>
           <TouchableOpacity accessibilityRole="button" onPress={() => remove(mute.id)} style={s.pill}>
             <Text style={s.pillLabel}>{W.remove}</Text>
           </TouchableOpacity>

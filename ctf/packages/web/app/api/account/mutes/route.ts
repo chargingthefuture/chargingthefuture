@@ -1,16 +1,17 @@
 import { NextResponse } from 'next/server';
 import { MAX_MUTE_WORDS_LENGTH, addMute, listMutes, MuteLimitError } from 'lib/mutes/repository';
-import { seNormalizeMuteWords } from '@ctf/shared';
+import { seMutePostTargetValid, seNormalizeMuteWords, type SeMuteKind } from '@ctf/shared';
 import { ACCOUNT_ERROR_CODE } from 'lib/account/constants';
 import { failureReason } from 'lib/errors/failure';
 import { reportError } from 'lib/observability/report';
 import { ensureMutationCsrf, requireAccountAccess } from '../_lib';
 
-// Personal mute (3.1.0): the member's own list of muted people and words, beside blocks. A
+// Personal mute (3.1.0): the member's own list of muted people, posts and words, beside blocks. A
 // personal control, so it uses the account area's gate, the same as blocks. Nobody is told.
 //
 // GET  /api/account/mutes  — the member's mutes, newest first.
-// POST /api/account/mutes  — { kind: 'person', target: accountId, label? } or { kind: 'words', target }.
+// POST /api/account/mutes  — { kind: 'person', target: accountId, label? }, { kind: 'post', target:
+//                            cardId, label? (the card's title) } or { kind: 'words', target }.
 
 export async function GET() {
   const gate = await requireAccountAccess();
@@ -26,21 +27,33 @@ export async function GET() {
   }
 }
 
-function readMute(body: Record<string, unknown>, selfId: string): { kind: 'person' | 'words'; target: string; label: string | null } | string {
+type MuteInput = { kind: SeMuteKind; target: string; label: string | null };
+
+function readLabel(body: Record<string, unknown>): string | null {
+  const label = typeof body.label === 'string' ? body.label.trim().slice(0, 80) : '';
+  return label || null;
+}
+
+function readWords(target: string): MuteInput | string {
+  const words = seNormalizeMuteWords(target);
+  if (!words) return 'Type the words to mute.';
+  if (words.length > MAX_MUTE_WORDS_LENGTH) return `Muted words can be at most ${MAX_MUTE_WORDS_LENGTH} characters.`;
+  return { kind: 'words', target: words, label: null };
+}
+
+function readMute(body: Record<string, unknown>, selfId: string): MuteInput | string {
   const target = typeof body.target === 'string' ? body.target.trim() : '';
   if (body.kind === 'person') {
     if (!target) return 'Name the person to mute.';
     if (target === selfId) return 'You cannot mute yourself.';
-    const label = typeof body.label === 'string' ? body.label.trim().slice(0, 80) : null;
-    return { kind: 'person', target, label: label || null };
+    return { kind: 'person', target, label: readLabel(body) };
   }
-  if (body.kind === 'words') {
-    const words = seNormalizeMuteWords(target);
-    if (!words) return 'Type the words to mute.';
-    if (words.length > MAX_MUTE_WORDS_LENGTH) return `Muted words can be at most ${MAX_MUTE_WORDS_LENGTH} characters.`;
-    return { kind: 'words', target: words, label: null };
+  if (body.kind === 'post') {
+    if (!seMutePostTargetValid(target)) return 'Name the Today card to mute by its id.';
+    return { kind: 'post', target, label: readLabel(body) };
   }
-  return "A mute is a 'person' or 'words'.";
+  if (body.kind === 'words') return readWords(target);
+  return "A mute is a 'person', a 'post' or 'words'.";
 }
 
 export async function POST(request: Request) {

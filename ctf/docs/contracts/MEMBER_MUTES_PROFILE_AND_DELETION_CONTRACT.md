@@ -11,13 +11,17 @@
 - Table: `member_mutes`
   - `id` (uuid, primary key)
   - `user_id` (text): the member who muted.
-  - `kind` (`person` or `words`)
-  - `target` (text): the muted member's account id, or the muted words in lower case.
-  - `label` (text, nullable): the handle shown when a person was muted, for the member's own list.
+  - `kind` (`person`, `post` or `words`)
+  - `target` (text): the muted member's account id, the muted Today card's id, or the muted words in
+    lower case.
+  - `label` (text, nullable): the handle shown when a person was muted, or the card's title when a
+    post was muted, for the member's own list.
   - `created_at` (timestamptz)
   - Unique on `(user_id, kind, target)`.
-- Read only by the member's own list and by Today, which leaves out cards by a muted person or
-  containing muted words. Nobody is told; a mute is not a block and changes nothing else.
+- Read only by the member's own list, by Today, which leaves out cards by a muted person, muted
+  cards, and cards containing muted words, by Chyme rooms (person mutes), and by a Today card's
+  conversation before it tells the member something in Activity: a member who muted the card is not
+  told. Nobody is told; a mute is not a block and changes nothing else.
 
 ## 3) Deletion
 

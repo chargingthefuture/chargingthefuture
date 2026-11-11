@@ -1,18 +1,19 @@
-import type { SeMute } from '@ctf/shared';
+import type { SeMute, SeMuteKind } from '@ctf/shared';
 import { queryDb } from 'lib/db/postgres';
 
-// Personal mute: a member's own list of muted people and words. Read by Today to leave cards out, and
-// by Chyme rooms (through GET /api/account/mutes) to stop playing a muted person.
+// Personal mute: a member's own list of muted people, posts and words. Read by Today to leave cards
+// out, by Chyme rooms (through GET /api/account/mutes) to stop playing a muted person, and by a
+// Today card's conversation before it tells a member something in Activity (`hasMutedPost`).
 // Nobody is told; nothing else reads it.
 
 export const MAX_MUTES = 100;
 export const MAX_MUTE_WORDS_LENGTH = 60;
 
-type MuteRow = { id: string; kind: 'person' | 'words'; target: string; label: string | null; created_at: Date };
+type MuteRow = { id: string; kind: SeMuteKind; target: string; label: string | null; created_at: Date };
 
 export class MuteLimitError extends Error {
   constructor() {
-    super(`A member can mute at most ${MAX_MUTES} people and words.`);
+    super(`A member can mute at most ${MAX_MUTES} people, posts and words.`);
   }
 }
 
@@ -28,7 +29,7 @@ export async function listMutes(userId: string): Promise<SeMute[]> {
   return result.rows.map(toMute);
 }
 
-export async function addMute(userId: string, kind: 'person' | 'words', target: string, label: string | null): Promise<SeMute> {
+export async function addMute(userId: string, kind: SeMuteKind, target: string, label: string | null): Promise<SeMute> {
   const count = await queryDb<{ n: number }>(`SELECT COUNT(*)::int AS n FROM member_mutes WHERE user_id = $1`, [userId]);
   if ((count.rows[0]?.n ?? 0) >= MAX_MUTES) throw new MuteLimitError();
   const result = await queryDb<MuteRow>(
@@ -44,4 +45,13 @@ export async function addMute(userId: string, kind: 'person' | 'words', target: 
 export async function removeMute(userId: string, muteId: string): Promise<boolean> {
   const result = await queryDb(`DELETE FROM member_mutes WHERE id = $1 AND user_id = $2`, [muteId, userId]);
   return (result.rowCount ?? 0) > 0;
+}
+
+// Whether this member muted this Today card: a muted card's conversation tells them nothing.
+export async function hasMutedPost(userId: string, cardId: string): Promise<boolean> {
+  const result = await queryDb<{ found: boolean }>(
+    `SELECT EXISTS (SELECT 1 FROM member_mutes WHERE user_id = $1 AND kind = 'post' AND target = $2) AS found`,
+    [userId, cardId],
+  );
+  return result.rows[0]?.found === true;
 }

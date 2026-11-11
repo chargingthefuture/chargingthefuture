@@ -448,16 +448,25 @@ burgundy, dark, once signed in.
 
 ## AD-18 · Personal mute
 
-**Role:** two approved members, A and B · **Precondition:** on 3.1; B has an ask on Today.
+**Role:** two approved members, A and B · **Surfaces:** web, android · **Precondition:** on 3.1; B
+has two asks on Today, and A answered both.
 **Steps:**
 1. As A, open B's card ••• menu and tap **Mute @B**.
 2. Open Me → Muted. Add the words "blankets". Then tap **Unmute** on B.
 3. As B, look for any sign of the mute.
+4. As A, open the ••• menu on one of B's two asks (or open the card and use the sheet's •••) and
+   tap **Mute this post**. Check A's own card's ••• menu too.
+5. As B, ask A to talk just you two on the muted ask, and on the other ask.
+6. As A, open Me → Muted, then tap **Unmute** on the post.
 **Expected:** Step 1 says "@B is muted. Their cards leave Today." and B's cards leave Today (after a
 reload too). Step 2 lists @B; a card with "blankets" in it leaves Today; after Unmute, B's cards
 return. Step 3: B sees nothing; B can still see A's cards, and nothing else between them changes (a
-mute is not a block).
-**Result:** web ☐ — notes:
+mute is not a block). Step 4 says "Post muted. It leaves Today, and its conversation sends you no
+notices.", the sheet closes, and only that card leaves Today (after a reload too); A's own card has
+no Mute this post. Step 5: A's Activity shows the request on the other ask and nothing for the
+muted one; B sees nothing different. Step 6 lists "Post: <the card's title>"; after Unmute the card
+returns to Today.
+**Result:** web ☐ android ☐ — notes:
 
 ## AD-19 · Today for a visitor who is not signed in
 

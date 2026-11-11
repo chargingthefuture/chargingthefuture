@@ -7631,18 +7631,22 @@ CREATE INDEX IF NOT EXISTS idx_today_card_windows_owner ON today_card_windows(ow
 CREATE INDEX IF NOT EXISTS idx_today_card_windows_outcome ON today_card_windows(outcome) WHERE outcome IS NOT NULL;
 
 -- member_mutes: personal mute (3.1.0). A member mutes a person (target = their account id, label =
--- the handle shown at the time) or a word or phrase (target = the lower-cased words). Today leaves
--- out cards by that person or containing those words. Nobody is told; a mute is not a block.
+-- the handle shown at the time), a post (target = the Today card id, label = the card's title) or a
+-- word or phrase (target = the lower-cased words). Today leaves out cards by that person, that card,
+-- or cards containing those words, and a muted card's conversation sends the member no Activity
+-- notices. Nobody is told; a mute is not a block.
 CREATE TABLE IF NOT EXISTS member_mutes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id TEXT NOT NULL,
-  kind TEXT NOT NULL CHECK (kind IN ('person', 'words')),
+  kind TEXT NOT NULL CHECK (kind IN ('person', 'post', 'words')),
   target TEXT NOT NULL,
   label TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   CONSTRAINT member_mutes_unique UNIQUE (user_id, kind, target)
 );
 ALTER TABLE IF EXISTS member_mutes ADD COLUMN IF NOT EXISTS label TEXT;
+ALTER TABLE IF EXISTS member_mutes DROP CONSTRAINT IF EXISTS member_mutes_kind_check;
+ALTER TABLE IF EXISTS member_mutes ADD CONSTRAINT member_mutes_kind_check CHECK (kind IN ('person', 'post', 'words'));
 CREATE INDEX IF NOT EXISTS idx_member_mutes_user ON member_mutes(user_id);
 
 -- member_blocks: product-wide, cross-cutting member blocking (issue #809, owner-signed model

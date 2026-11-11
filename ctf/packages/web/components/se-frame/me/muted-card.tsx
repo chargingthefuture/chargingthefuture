@@ -1,10 +1,10 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { SE_MUTE_WORDS as W, type SeMute } from '@ctf/shared';
+import { SE_MUTE_WORDS as W, seMuteRowLabel, type SeMute } from '@ctf/shared';
 import styles from './me.module.css';
 
-// Me → Muted: the people and words this member muted, each with Unmute, and a box to mute words.
+// Me → Muted: the people, posts and words this member muted, each with Unmute, and a box to mute words.
 
 const CSRF = { 'content-type': 'application/json', 'x-ctf-csrf': '1' };
 
@@ -54,7 +54,7 @@ export function MutedCard() {
       {mutes.length === 0 ? <p className={styles.text}>{W.empty}</p> : null}
       {mutes.map((mute) => (
         <div key={mute.id} className={styles.row}>
-          <span className={styles.muteItem}>{mute.kind === 'person' ? (mute.label ?? 'A member') : `“${mute.target}”`}</span>
+          <span className={styles.muteItem}>{seMuteRowLabel(mute)}</span>
           <button type="button" className={styles.pillButton} onClick={() => remove(mute.id)}>
             {W.remove}
           </button>

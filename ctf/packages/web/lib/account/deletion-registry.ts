@@ -662,12 +662,12 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
   {
     slug: 'member-mutes',
     name: 'Muted people and words',
-    dataSummary: 'The people and words you muted (your own private list; nobody is told).',
+    dataSummary: 'The people, posts and words you muted (your own private list; nobody is told).',
     // Personal mute (3.1.0). Only the rows this member created are theirs; a row where somebody else
     // muted them is that member's private list and stays, as with blocks.
     serviceScopeSupported: true,
     tables: [
-      del('member_mutes', 'user_id', 'The people and words you muted.'),
+      del('member_mutes', 'user_id', 'The people, posts and words you muted.'),
     ],
   },
   {

@@ -8,6 +8,9 @@ import {
   SE_DAYS_WON_TITLE,
   SE_DAYS_WON_WHY,
   SE_MUTE_WORDS,
+  seCardMutedNote,
+  seCardMuteRequest,
+  type SeCardMuteKind,
   SE_TODAY_FILTERS,
   seDaysWonLines,
   seTodayView,
@@ -117,17 +120,19 @@ export function TodayScreen({ t, accountId, onOpen, onPresence }: ScreenProps) {
   const view = seTodayView(today, marks, filter);
   const [muteNote, setMuteNote] = useState<string | null>(null);
 
-  // Mute the card's author: their cards leave Today from the next read. Nobody is told.
-  const mute = async (card: SeTodayCard) => {
-    if (!card.author) return;
+  // Mute the card's author (their cards leave Today) or the card itself (it leaves Today and its
+  // conversation sends no notices), from the next read. Nobody is told.
+  const mute = async (card: SeTodayCard, kind: SeCardMuteKind) => {
+    const body = seCardMuteRequest(card, kind);
+    if (!body) return;
     try {
       await authedFetchJson('/api/account/mutes', {
         method: 'POST',
         headers: { 'content-type': 'application/json', 'x-ctf-csrf': '1' },
-        body: JSON.stringify({ kind: 'person', target: card.author.accountId, label: card.author.handle }),
+        body: JSON.stringify(body),
       });
-      setMuteNote(SE_MUTE_WORDS.muted(card.author.handle));
-      mark('hidden', card.id);
+      setMuteNote(seCardMutedNote(card, kind));
+      if (kind === 'person') mark('hidden', card.id);
       void reload();
     } catch (error) {
       setMuteNote(`${SE_MUTE_WORDS.failed} ${error instanceof Error ? error.message : ''}`.trim());
@@ -169,7 +174,8 @@ export function TodayScreen({ t, accountId, onOpen, onPresence }: ScreenProps) {
                 sendTodayFeedback(card, 'not_for_me');
                 mark('hidden', card.id);
               }}
-              onMute={card.author ? () => void mute(card) : undefined}
+              onMute={card.author ? () => void mute(card, 'person') : undefined}
+              onMutePost={() => void mute(card, 'post')}
               onSave={() => save(card)}
               onOpenLink={go}
               onChanged={() => void reload()}

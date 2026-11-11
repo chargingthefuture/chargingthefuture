@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { Modal, Pressable, ScrollView, Share, Text, TouchableOpacity, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
-import { SE_CARD_WORDS, seCardSheetLine, type SeCardAnswerKind, type SeCardConversation, type SeThemeTokens, type SeTodayCard } from '@ctf/shared';
+import { SE_CARD_WORDS, SE_MUTE_WORDS, seCardSheetLine, type SeCardAnswerKind, type SeCardConversation, type SeThemeTokens, type SeTodayCard } from '@ctf/shared';
 import { SeAvatar } from '../../../components/shared/SeAvatar';
 import { getApiBaseUrl } from '../../../auth/authedFetch';
 import { reportError } from '../../../observability/report';
@@ -28,24 +28,41 @@ async function shareCard(card: SeTodayCard) {
   }
 }
 
-type HeadProps = { t: SeThemeTokens; s: CardSheetStyles; card: SeTodayCard; viewerId: string; talk: CardConversation; onClose: () => void };
+type HeadProps = {
+  t: SeThemeTokens;
+  s: CardSheetStyles;
+  card: SeTodayCard;
+  viewerId: string;
+  talk: CardConversation;
+  onClose: () => void;
+  onMutePost?: () => void;
+};
 
-function ReportMenu({ s, card, viewerId, talk }: Omit<HeadProps, 't' | 'onClose'>) {
+// Mute this post on any card but the member's own (the sheet closes as the card leaves Today), and
+// Report on a card with somebody else as its author.
+function SheetMenu({ s, card, viewerId, talk, onMutePost }: Omit<HeadProps, 't' | 'onClose'>) {
   const [done, setDone] = useState(false);
-  if (!card.author || card.author.accountId === viewerId) return null;
-  const authorId = card.author.accountId;
+  const authorId = card.author && card.author.accountId !== viewerId ? card.author.accountId : null;
   return (
     <View style={s.menu} accessibilityRole="menu">
-      <TouchableOpacity accessibilityRole="menuitem" style={s.menuItem} disabled={done} onPress={() => void talk.report({ authorId }).then(setDone)}>
-        <Text style={s.menuLabel}>{done ? SE_CARD_WORDS.reported : SE_CARD_WORDS.report}</Text>
-      </TouchableOpacity>
+      {onMutePost ? (
+        <TouchableOpacity accessibilityRole="menuitem" style={s.menuItem} onPress={onMutePost}>
+          <Text style={s.menuLabel}>{SE_MUTE_WORDS.mutePost}</Text>
+        </TouchableOpacity>
+      ) : null}
+      {authorId ? (
+        <TouchableOpacity accessibilityRole="menuitem" style={s.menuItem} disabled={done} onPress={() => void talk.report({ authorId }).then(setDone)}>
+          <Text style={s.menuLabel}>{done ? SE_CARD_WORDS.reported : SE_CARD_WORDS.report}</Text>
+        </TouchableOpacity>
+      ) : null}
     </View>
   );
 }
 
-function SheetHead({ t, s, card, viewerId, talk, onClose }: HeadProps) {
+function SheetHead({ t, s, card, viewerId, talk, onClose, onMutePost }: HeadProps) {
   const [menu, setMenu] = useState(false);
   const canReport = Boolean(card.author && card.author.accountId !== viewerId);
+  const hasMenu = canReport || Boolean(onMutePost);
   return (
     <>
       <View style={s.head}>
@@ -60,7 +77,7 @@ function SheetHead({ t, s, card, viewerId, talk, onClose }: HeadProps) {
             <Path d="M12 15V3M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" stroke={t.ink} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" />
           </Svg>
         </TouchableOpacity>
-        {canReport ? (
+        {hasMenu ? (
           <TouchableOpacity accessibilityRole="button" accessibilityLabel={SE_CARD_WORDS.more} accessibilityState={{ expanded: menu }} style={s.round} onPress={() => setMenu((value) => !value)}>
             <Svg width={18} height={18} viewBox="0 0 24 24">
               <Circle cx={5} cy={12} r={1.8} fill={t.ink} />
@@ -75,7 +92,7 @@ function SheetHead({ t, s, card, viewerId, talk, onClose }: HeadProps) {
           </Svg>
         </TouchableOpacity>
       </View>
-      {menu ? <ReportMenu s={s} card={card} viewerId={viewerId} talk={talk} /> : null}
+      {menu ? <SheetMenu s={s} card={card} viewerId={viewerId} talk={talk} onMutePost={onMutePost} /> : null}
     </>
   );
 }
@@ -113,6 +130,8 @@ type SheetProps = {
   onClose: () => void;
   onOpenLink: (_href: string) => void;
   onChanged?: () => void;
+  // Mute this post, on somebody else's card: the sheet closes and the card leaves Today.
+  onMutePost?: () => void;
 };
 
 // Who answered and the conversation: the same wherever it is shown, in this sheet on Today and in the
@@ -131,7 +150,7 @@ export function CardConversationView({ t, s, talk }: { t: SeThemeTokens; s: Card
   );
 }
 
-export function CardSheet({ t, card, viewerId, firstAnswer, onClose, onOpenLink, onChanged }: SheetProps) {
+export function CardSheet({ t, card, viewerId, firstAnswer, onClose, onOpenLink, onChanged, onMutePost }: SheetProps) {
   const s = makeCardSheetStyles(t);
   const talk = useCardConversation(card.id, firstAnswer);
   return (
@@ -141,7 +160,22 @@ export function CardSheet({ t, card, viewerId, firstAnswer, onClose, onOpenLink,
         <View style={s.sheet} accessibilityViewIsModal accessibilityLabel={`${card.label}: ${card.title}`}>
           <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
             <View style={s.grip} />
-            <SheetHead t={t} s={s} card={card} viewerId={viewerId} talk={talk} onClose={onClose} />
+            <SheetHead
+              t={t}
+              s={s}
+              card={card}
+              viewerId={viewerId}
+              talk={talk}
+              onClose={onClose}
+              onMutePost={
+                onMutePost
+                  ? () => {
+                      onClose();
+                      onMutePost();
+                    }
+                  : undefined
+              }
+            />
             <View style={s.text}>
               <Text accessibilityRole="header" style={s.title}>
                 {card.title}

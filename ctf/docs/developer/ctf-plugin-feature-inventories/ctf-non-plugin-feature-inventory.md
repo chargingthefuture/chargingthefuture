@@ -225,19 +225,30 @@
    leaves out cards by a muted person or whose title or text contains muted words (`seApplyMutes` in
    `@ctf/shared`, applied in `lib/today/build.ts`; a failed read of the mutes shows every card).
    Nobody is told; a mute is not a block and changes nothing else. In a Chyme room, "Mute for me" under a speaker adds the same person mute, and the room stops playing that person for this member (Chyme inventory).
+   A member also mutes a post: "Mute this post" in a card's ••• menu on Today and in the card
+   sheet's ••• menu, on every card but their own. The card leaves their Today, and its conversation
+   sends them no Activity notices: a Just us two request or Just us two message on that card is not
+   written to their notifications (`notifyOnCard` in `lib/today/cards/notify.ts`, which reads
+   `hasMutedPost`; when the mute list cannot be read the notice still goes out). The request still
+   waits on the card. Not for me is separate and stays: it only takes the card off Today and counts
+   as feedback. Notices written before the mute stay in Activity. Me → Muted lists a muted post as
+   "Post: <title>" with Unmute (`seMuteRowLabel`).
 2. Routes, under the account area's gate like blocks (`requireAccountAccess`):
    - `GET /api/account/mutes` — the member's own mutes, newest first.
-   - `POST /api/account/mutes` — `{ kind: 'person', target: accountId, label? }` or
-     `{ kind: 'words', target }` (lower-cased, at most 60 characters). Idempotent; at most 100;
-     muting yourself is refused. 429 at the limit.
+   - `POST /api/account/mutes` — `{ kind: 'person', target: accountId, label? }`,
+     `{ kind: 'post', target: cardId, label? }` (the Today card id; the label is the card's title,
+     at most 80 characters) or `{ kind: 'words', target }` (lower-cased, at most 60 characters).
+     Idempotent; at most 100; muting yourself, or a post target that is not a card id, is refused.
+     429 at the limit.
    - `DELETE /api/account/mutes/[muteId]` — unmute one of the member's own; idempotent.
-3. Table **`member_mutes`** (`id`, `user_id`, `kind` `person` or `words`, `target`, `label`,
+3. Table **`member_mutes`** (`id`, `user_id`, `kind` `person`, `post` or `words`, `target`, `label`,
    `created_at`; unique on `user_id, kind, target`; index on `user_id`;
-   `post/0074_member_mutes.sql`). Account deletion removes the member's own rows (registry entry
+   `post/0074_member_mutes.sql`, `post` kind added by `post/0094_member_mutes_post.sql`). Account deletion removes the member's own rows (registry entry
    `member-mutes`). No demo rows. Contracts `MEMBER_MUTES_*` (`member.mute.create`, `.remove`,
    `.list`).
-4. Screens: web `components/se-frame/me/muted-card.tsx` and the card menu in
-   `components/se-frame/today/`; Android `src/features/se-frame/me/MutedCard.tsx` and `TodayCard.tsx`.
+4. Screens: web `components/se-frame/me/muted-card.tsx` and the card and sheet menus in
+   `components/se-frame/today/` (`today-card.tsx`, `card-sheet.tsx`); Android
+   `src/features/se-frame/me/MutedCard.tsx`, `TodayCard.tsx` and `CardSheet.tsx`.
 
 ### 1.6 Member Blocking (cross-cutting safety control)
 
@@ -517,6 +528,7 @@ Manual test steps: `ctf/docs/developer/test-scripts/admin-daily-posts-test-scrip
 
 ## 5) Change Log
 
+- 2026-11-11: **Mute a post and its conversation (§1.6a), web and Android.** "Mute this post" in a Today card's ••• menu and in the card sheet's ••• menu, on every card but the member's own: the card leaves their Today and its conversation sends them no Activity notices (Just us two requests and messages). Nobody is told. Me → Muted lists it by title with Unmute. `member_mutes.kind` takes `post` (`post/0094_member_mutes_post.sql`); `POST /api/account/mutes` takes `{ kind: 'post', target: cardId, label }`; contracts `member.mute.create` and `.list` 1.1.0, and the Today `pair.ask` and `message.send` descriptions. Not for me is unchanged.
 - 2026-11-11: **Me, Settings and the Theme screen built to their approved boards, web and Android (§1.5 items 5 and 5d, 5n).** Me gains the member's name, "Aven since", badges, three profile lines (`member_profile_prompts`, `GET`/`PUT /api/account/me`), "credits, not money" with icons on Send, Receive and History, Read and Hidden (`GET /api/today/marks?mark=`, with a place left first in the row for Saved), the six Tools tiles and the emoji rain switch; Android shows the name where it showed the @handle. Settings is its own screen from Me's gear, with Notifications (three rows and quiet hours, stored in `notification_preferences` and respected where device push is sent), Look and reading (theme, text size, higher contrast, easier-to-read font, emoji rain, stored in `user_ui_preferences` and applied on web and Android), Safety and privacy, Help, Get, Your data, Back to 3.0 and Sign out. What Me carried that its board does not moved rather than went: the colors to the Theme screen, the Muted card and the matching switch to Safety and privacy, Back to 3.0, Sign out, Wallpapers and the Android app to Settings, the About card to the word Aven in "Aven since", and the System Architect entry to the System Architect badge; the ClickLog tile is now Log what happened, and the Trust and Reader tiles are gone with the board (both stay in Apps). The colors are saved on the account; the device keeps only a copy. The Quora survey card on Today is rebuilt as the census card ("Lost a Quora account? Add it to the census", Add an account). Migration `post/0093_se_settings_and_me_profile.sql`.
 - 2026-11-11: **Creative & Media people show under Trades (§1.5, 5f).** Owner decision: the Creative & Media sector was in none of the four People chips, so those people showed under All only. It is now part of Trades in `SE_PEOPLE_CATEGORY_SECTORS`, on web and Android. No route or table changed.
 - 2026-11-11: **The rest of the 3.1 Today board (§1.5, 5o), web and Android.** "N Avens here" beside the title from the new `member_presence` table, Save for later on stories and replays with a Saved section in Me (`today_card_saves`, `GET`/`POST /api/today/saves`), Save, Hide and This helped me inline on story cards, the Mood card's five faces posting the check-in, the closing line with tomorrow's story count, and the broadcast card with host and start time plus the quiet Main Room row. No credit line on ask cards: no ask source grants a credit on confirmation. No watcher count on the broadcast: nothing counts stream viewers.
