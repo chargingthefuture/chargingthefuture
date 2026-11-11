@@ -448,8 +448,8 @@ the top; Days won with "Skills Economy is where the Avenhood meets…" and Sign 
 "Today's cards" with "Read only"; asks and offers from "A member" with Sign up to answer, stories with
 Read it; a dashed People card that says it opens once a member is reviewed; and a bar along the
 bottom, "Free. Use one part, ignore the rest." with Sign up. No card shows a name and there is no
-card menu. Step 2 starts listening right there on the card, with no account. Step 3 says "Quiet
-right now", offers the readings, and shows the next room with Add to calendar. Step 4 opens sign-up,
+card menu. Step 2 starts listening right there on the card, with no account. Step 3 says "The Main
+Room is quiet right now", naming the room so it never reads as the app being quiet, offers the readings, and shows the next room with Add to calendar. Step 4 opens sign-up,
 then sign-in. Step 5 lands on the home page.
 **Result:** web ☐ android ☐ — notes:
 
