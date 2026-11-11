@@ -273,22 +273,35 @@ no Bring someone in. The 3.0 Chyme page still reads Join Room, Leave and Back Ch
 
 **Role:** approved member; an account not yet approved · **Precondition:** on 3.1.
 **Steps:**
-1. Open the + tab. Under Talk, choose a time, type a topic and tap **Book the talk**.
+1. Open the + tab. Tap Talk. Pick a day in the strip, tap an open time, type a topic and tap **Book
+   this slot**.
 2. Open the TI Radio guide and Today's Main Room card.
-3. Try to book a second slot the same day, then sign in as the account not yet approved and open +.
-**Expected:** Step 1 confirms "Booked for <day>. It shows on Today and in the TI Radio schedule." and
-the time leaves the list. Step 2 shows the booking on the guide and, when it is the next talk, on
-the Main Room card. Step 3 shows the route's own reason when a limit is hit, and the account not
-yet approved sees "Booking a talk needs Unlock approval." with a link to Unlock.
-4. Under Ask, type "ride". Tap "A ride to the pharmacy or grocery store", add a line and tap **Post the
-   ask**.
-5. Tap each Offer choice and the Story link.
-**Expected (4 and 5):** Typing shows only suggestions that contain every word typed; with nothing
-typed, one from each group. The hint "Everyone can read this. Keep times and places for the private
-conversation." sits under the box. Posting says "Posted. It shows on Today, and answers come to
-Activity." and the ask appears on Today and in SocketRelay with the tag "Getting around" and no city.
-A place to stay opens LightHouse, Hours Mutual Time, A ride TrustTransport, A skill Foundation, and the
-Story link the Knowledge Library.
+3. Try to book a second slot the same day, then sign in as the account not yet approved, open + and
+   tap Talk.
+**Expected:** Step 1 shows "Host a talk in the Main Room" with "Times are yours, <your zone>.", the
+seven days from today, and every time that day: open ones dashed with "Take this slot", booked ones
+with their title and "Hosted by <host>". The time tapped turns yellow as "Your talk · Picked" and its
+times appear beside "What is it about?". Booking confirms "Booked for <day>. It shows on Today and in
+the TI Radio schedule." and the time shows as booked. Room rule shows the rule in place. Step 2 shows
+the booking on the guide and, when it is the next talk, on the Main Room card. Step 3 shows the
+route's own reason when a limit is hit; the account not yet approved sees "Booking a talk opens once
+you are verified", Finish Unlock, and a Next talk box with its host, date and time, and Add to
+calendar.
+4. Tap Ask. Type "A ride to". Tap "A ride to the pharmacy or grocery store", leave Details empty and
+   tap **Post**.
+5. Type another ask, tap **+ Break it into small tasks**, fill two tasks and tap **Post**.
+6. Tap each Offer choice and the Story link; tap "A question about the app? Ask the architect"; tap
+   Close.
+**Expected (4 to 6):** The sheet reads "Post something" and "It goes into everyone's Today." with
+Community guidelines at the top. Suggestions list only asks that contain every word typed, with the
+typed words in bold; with nothing typed, one from each group. Details is marked (optional) and the
+hint "Everyone can read this. Keep times and places for the private conversation." sits under it.
+Step 4 says "Posted. It shows on Today, and answers come to Activity." and the ask appears on Today
+and in SocketRelay with the tag "Getting around" and no city. Step 5 sets Details aside, says "Posted
+to your goal board. It shows on Today." and the goal and both tasks appear on the PeerProgramming
+board (a member with no cohort sees the board's own reason). A place to stay opens LightHouse, Hours
+Mutual Time, A ride TrustTransport, A skill Foundation, and the Story link the Knowledge Library. The
+architect line opens Ask the architect with the member's questions. Close returns to Today.
 **Result:** web ☐ — notes:
 
 ## AD-14 · Me and Settings in 3.1

@@ -1,27 +1,70 @@
-// + New in 3.1, shared by web and Android: the Ask form's words and its suggestions, and where an
-// Offer or a Story is made. An Ask is posted as a SocketRelay request, public, with no place on it.
+// + New in 3.1, shared by web and Android, to the approved board "New post": the sheet's words, the
+// Ask form's words and its suggestions, and where an Offer or a Story is made. An Ask is posted as a
+// SocketRelay request, public, with no place on it; an Ask broken into small tasks is posted as a
+// goal on the member's PeerProgramming board, which is where small tasks live.
+
+export const SE_NEW_SHEET_WORDS = {
+  label: 'New post',
+  close: 'Close',
+  guidelines: 'Community guidelines',
+  guidelinesHref: '/guidelines',
+  heading: 'Post something',
+  intro: "It goes into everyone's Today.",
+  kinds: 'Kind of post',
+  architect: 'A question about the app? Ask the architect',
+};
+
+export type SeNewKind = 'ask' | 'offer' | 'story' | 'talk' | 'architect';
+
+// The switch at the top of the sheet. Ask the architect is not in it: it opens from the line under
+// the switch, since the board has four choices.
+export const SE_NEW_KINDS: ReadonlyArray<{ key: Exclude<SeNewKind, 'architect'>; label: string }> = [
+  { key: 'ask', label: 'Ask' },
+  { key: 'offer', label: 'Offer' },
+  { key: 'story', label: 'Story' },
+  { key: 'talk', label: 'Talk' },
+];
 
 export const SE_ASK_WORDS = {
-  title: 'Ask',
-  intro: 'Ask for something done, found or lent. Anyone in the Avenhood can answer.',
   what: 'What do you need?',
-  details: 'A little more',
+  details: 'Details',
+  optional: '(optional)',
   hint: 'Everyone can read this. Keep times and places for the private conversation.',
-  suggestions: 'Ideas',
-  submit: 'Post the ask',
+  suggestions: 'Suggestions',
+  submit: 'Post',
   submitting: 'Posting…',
   posted: 'Posted. It shows on Today, and answers come to Activity.',
   failed: 'Could not post the ask.',
   defaultTag: 'Help',
 };
 
+// "+ Break it into small tasks": the ask becomes a goal on the member's PeerProgramming board, with
+// each task one that anybody can take on its own. A goal has a title and tasks and nothing else.
+export const SE_ASK_TASK_WORDS = {
+  add: '+ Break it into small tasks',
+  task: 'Small task',
+  another: '+ Another task',
+  remove: 'Remove',
+  none: 'No small tasks',
+  note: 'With small tasks, this goes on your goal board in PeerProgramming, where anybody can take one. A goal carries no details.',
+  posted: 'Posted to your goal board. It shows on Today.',
+  failed: 'Could not post the goal.',
+};
+
+// The goal board's own limits (lib/peer-programming/constants.ts).
+export const SE_ASK_MAX_TASKS = 30;
+export const SE_ASK_MAX_TASK_LENGTH = 300;
+
+// The tasks typed so far, blanks left out, as the goals route takes them.
+export function seAskTasks(tasks: readonly string[]): string[] {
+  return tasks.map((task) => task.trim()).filter((task) => task.length > 0);
+}
+
 export const SE_OFFER_WORDS = {
-  title: 'Offer',
   intro: 'Offer what you have. Each one opens where it is made.',
 };
 
 export const SE_STORY_WORDS = {
-  title: 'Story',
   intro: 'Lend your own public writing, such as Quora answers, to the Knowledge Library.',
   open: 'Bring your writing',
   href: '/knowledge',
@@ -121,6 +164,14 @@ export function seAskSuggestions(typed: string, limit = 6): SeAskSuggestion[] {
   const all = SE_HOLIDAY_ASKS.flatMap((group) => group.asks.map((text) => ({ text, group: group.group })));
   if (words.length === 0) return SE_HOLIDAY_ASKS.map((group) => ({ text: group.asks[0], group: group.group })).slice(0, limit);
   return all.filter((item) => words.every((word) => item.text.toLowerCase().includes(word))).slice(0, limit);
+}
+
+// A suggestion split for display: the part that matches what was typed, shown bold, and the rest.
+// When the suggestion does not start with what was typed, nothing is bold.
+export function seAskSuggestionParts(typed: string, text: string): { lead: string; rest: string } {
+  const start = typed.trimStart();
+  if (start && text.toLowerCase().startsWith(start.toLowerCase())) return { lead: text.slice(0, start.length), rest: text.slice(start.length) };
+  return { lead: '', rest: text };
 }
 
 // + New → Ask the architect (3.1.0 plan: @comic becomes Ask the architect). A question about the app

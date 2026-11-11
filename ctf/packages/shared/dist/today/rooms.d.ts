@@ -73,21 +73,3 @@ export declare function seRoomBarLine(speakers: string[], selfSpeaking: boolean)
 export declare const SE_ROOM_QUIET = "Quiet right now";
 export declare const SE_ROOM_QUIET_TEXT = "Nobody is in the room. Play a reading while you wait, or come back for the next talk.";
 export declare const SE_ROOM_MAIN_AUDIENCE = "Open to everyone";
-export declare const SE_TALK_WORDS: {
-    title: string;
-    intro: string;
-    needsUnlock: string;
-    finishUnlock: string;
-    loading: string;
-    when: string;
-    choose: string;
-    about: string;
-    detail: string;
-    submit: string;
-    submitting: string;
-    tryAgain: string;
-    noOpen: string;
-};
-export declare function seTalkBooked(dayLabel: string): string;
-export declare function seSlotLabel(startIso: string, endIso: string): string;
-export declare function seSlotDay(startIso: string): string;

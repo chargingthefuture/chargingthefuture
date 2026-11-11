@@ -2855,43 +2855,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_announcement_reactions_unique
 CREATE INDEX IF NOT EXISTS idx_announcement_reactions_announcement
   ON announcement_reactions(announcement_id);
 
--- Replies on official announcements. Mirrors feed_community_replies but keyed on the announcement:
--- a member can reply to an official announcement, and the replies group under that
--- announcement as a thread. author_username is captured at reply time so the thread can show the
--- member's handle without a second lookup. Deleting the announcement cascades its replies.
-CREATE TABLE IF NOT EXISTS announcement_replies (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  announcement_id UUID NOT NULL REFERENCES announcements(id) ON DELETE CASCADE,
-  author_user_id TEXT NOT NULL,
-  author_username TEXT,
-  body TEXT NOT NULL,
-  moderation_status TEXT NOT NULL DEFAULT 'accepted',
-  moderation_reason TEXT,
-  moderated_by_user_id TEXT,
-  moderated_at TIMESTAMPTZ,
-  edited_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS announcement_id UUID;
-ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS author_user_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS author_username TEXT;
-ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS body TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS moderation_status TEXT NOT NULL DEFAULT 'accepted';
--- Why a moderator hid the reply, who hid it, and when. Added 2026-08-10 with announcement-reply
--- moderation: the shared hide/restore writer sets all three, so a table without them could not be
--- moderated at all — an admin could see a bad reply on an announcement and had no way to take it down.
-ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS moderation_reason TEXT;
-ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS moderated_by_user_id TEXT;
-ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS moderated_at TIMESTAMPTZ;
--- Set when the author rewrites their own reply, so the thread can mark it "edited" rather than
--- silently showing different words under the same timestamp.
-ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS edited_at TIMESTAMPTZ;
-ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE IF EXISTS announcement_replies ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-CREATE INDEX IF NOT EXISTS idx_announcement_replies_announcement
-  ON announcement_replies(announcement_id, created_at);
+-- Replies on official announcements moved to commons_item_messages (plugin 'commons', item
+-- 'announcement:<id>') with post/0090, so 3.0's announcement thread and 3.1's announcement card
+-- read one conversation (owner decision, 2026-11-10).
+DROP TABLE IF EXISTS announcement_replies;
 
 -- === FEED TIMELINE PROJECTION ===
 CREATE TABLE IF NOT EXISTS feed_timeline_projection (
@@ -7501,6 +7468,15 @@ ALTER TABLE IF EXISTS commons_item_messages ADD COLUMN IF NOT EXISTS pair_low TE
 ALTER TABLE IF EXISTS commons_item_messages ADD COLUMN IF NOT EXISTS pair_high TEXT;
 ALTER TABLE IF EXISTS commons_item_messages ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS commons_item_messages ADD COLUMN IF NOT EXISTS edited_at TIMESTAMPTZ;
+-- Admin hide and restore (owner decision, 2026-11-10), the same columns and meaning as the Commons
+-- posts: only 'accepted' is shown, a hidden message names why, who hid it and when, and restoring
+-- clears all three. Announcement replies brought their moderation state with them in post/0090.
+ALTER TABLE IF EXISTS commons_item_messages ADD COLUMN IF NOT EXISTS moderation_status TEXT NOT NULL DEFAULT 'accepted';
+ALTER TABLE IF EXISTS commons_item_messages ADD COLUMN IF NOT EXISTS moderation_reason TEXT;
+ALTER TABLE IF EXISTS commons_item_messages ADD COLUMN IF NOT EXISTS moderated_by_user_id TEXT;
+ALTER TABLE IF EXISTS commons_item_messages ADD COLUMN IF NOT EXISTS moderated_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS commons_item_messages ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+CREATE INDEX IF NOT EXISTS idx_commons_item_messages_hidden ON commons_item_messages(created_at) WHERE moderation_status = 'hidden';
 CREATE INDEX IF NOT EXISTS idx_commons_item_messages_item ON commons_item_messages(plugin, item_id, pair_low, pair_high, created_at);
 CREATE INDEX IF NOT EXISTS idx_commons_item_messages_author ON commons_item_messages(author_id);
 CREATE INDEX IF NOT EXISTS idx_commons_item_messages_pair_high ON commons_item_messages(pair_high) WHERE pair_high IS NOT NULL;

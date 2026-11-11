@@ -36,6 +36,7 @@ import { getPluginBySlug, getPluginRoute, isAdminOnlyPlugin } from 'lib/plugins/
 import { notifySafe } from 'lib/notifications/repository';
 import { isBlockedBetween } from 'lib/blocks/repository';
 import { resolveMentionUserIds } from 'lib/identity/resolve-mention-user-ids';
+import { resolveUsernames } from 'lib/identity/resolve-usernames';
 import { reportError } from 'lib/observability/report';
 
 // Re-exported so existing server callers can keep importing them from the feed
@@ -194,13 +195,21 @@ type AnnouncementReplyCountRow = {
 
 type AnnouncementReplyRow = {
   id: string;
-  announcement_id: string;
   author_user_id: string;
-  author_username: string | null;
   body: string;
   edited_at: Date | null;
   created_at: Date;
 };
+
+// An announcement's replies are the Commons conversation for item `announcement:<id>` in
+// commons_item_messages (owner decision, 2026-11-10): the same thread the announcement's Today card
+// opens in 3.1, so 3.0 and 3.1 read one conversation. Only public messages (no Just us two pair) are
+// replies.
+const ANNOUNCEMENT_ITEM_PREFIX = 'announcement:';
+
+function announcementItemId(announcementId: string): string {
+  return `${ANNOUNCEMENT_ITEM_PREFIX}${announcementId}`;
+}
 
 // Order a post's reaction summaries by the fixed reaction set so the chips render in a stable,
 // predictable order regardless of how rows came back from the database.
@@ -393,7 +402,7 @@ const FEED_RATE_LIMIT_TABLES = {
   feed_questions: 'asked_by_user_id',
   feed_community_posts: 'author_user_id',
   feed_community_replies: 'author_user_id',
-  announcement_replies: 'author_user_id',
+  commons_item_messages: 'author_id',
 } as const;
 
 async function evaluateFeedRateLimit(
@@ -1512,11 +1521,13 @@ async function loadAnnouncementDetails(
     ),
     client.query<AnnouncementReplyCountRow>(
       `
-            SELECT announcement_id, COUNT(*)::text AS count
-            FROM announcement_replies
-            WHERE announcement_id = ANY($1::uuid[])
-              AND moderation_status = 'accepted'${notBlockedWithViewerSql('$2', 'announcement_replies.author_user_id')}
-            GROUP BY announcement_id
+            SELECT substring(item_id FROM ${ANNOUNCEMENT_ITEM_PREFIX.length + 1}) AS announcement_id, COUNT(*)::text AS count
+            FROM commons_item_messages
+            WHERE plugin = 'commons'
+              AND item_id = ANY(SELECT '${ANNOUNCEMENT_ITEM_PREFIX}' || id::text FROM unnest($1::uuid[]) AS id)
+              AND pair_low IS NULL
+              AND moderation_status = 'accepted'${notBlockedWithViewerSql('$2', 'commons_item_messages.author_id')}
+            GROUP BY item_id
           `,
       [announcementIds, userId],
     ),
@@ -2705,7 +2716,6 @@ export async function replyToAnnouncement(
   actorId: string,
   announcementId: string,
   bodyInput: string,
-  authorUsername: string | null,
 ): Promise<{ replyId: string; createdAtIso: string }> {
   const normalizedId = normalizeUuid(announcementId);
   if (normalizedId === null) {
@@ -2732,7 +2742,7 @@ export async function replyToAnnouncement(
 
     const allowed = await evaluateFeedRateLimit(client, {
       userId: actorId,
-      tableName: 'announcement_replies',
+      tableName: 'commons_item_messages',
       limit: 20,
       windowMinutes: 30,
     });
@@ -2742,11 +2752,11 @@ export async function replyToAnnouncement(
 
     const inserted = await client.query<{ id: string; created_at: Date }>(
       `
-        INSERT INTO announcement_replies (announcement_id, author_user_id, author_username, body, moderation_status)
-        VALUES ($1::uuid, $2, $3, $4, 'accepted')
+        INSERT INTO commons_item_messages (plugin, item_id, author_id, body, moderation_status)
+        VALUES ('commons', $1, $2, $3, 'accepted')
         RETURNING id, created_at
       `,
-      [normalizedId, actorId, normalizeNullableText(authorUsername), body],
+      [announcementItemId(normalizedId), actorId, body],
     );
 
     return {
@@ -2784,21 +2794,23 @@ export async function listAnnouncementReplies(announcementId: string, viewerId: 
 
   const result = await queryDb<AnnouncementReplyRow>(
     `
-      SELECT id, announcement_id, author_user_id, author_username, body, edited_at, created_at
-      FROM announcement_replies
-      WHERE announcement_id = $1::uuid
-        AND moderation_status = 'accepted'${notBlockedWithViewerSql('$2', 'announcement_replies.author_user_id')}
+      SELECT id, author_id AS author_user_id, body, edited_at, created_at
+      FROM commons_item_messages
+      WHERE plugin = 'commons' AND item_id = $1 AND pair_low IS NULL
+        AND moderation_status = 'accepted'${notBlockedWithViewerSql('$2', 'commons_item_messages.author_id')}
       ORDER BY created_at ASC
     `,
-    [normalizedId, viewerId],
+    [announcementItemId(normalizedId), viewerId],
   );
+  // Handles come from each account's username, never a stored copy or a real name.
+  const handles = await resolveUsernames(result.rows.map((row) => row.author_user_id));
 
   return result.rows.map((row) => ({
     id: row.id,
-    announcementId: row.announcement_id,
+    announcementId: normalizedId,
     body: row.body,
     authorUserId: row.author_user_id,
-    authorUsername: row.author_username,
+    authorUsername: handles.get(row.author_user_id) ?? null,
     editedAtIso: row.edited_at ? toIso(row.edited_at) : null,
     createdAtIso: toIso(row.created_at),
   }));
@@ -2826,7 +2838,8 @@ export async function editAnnouncementReply(
     }
 
     const existing = await client.query<{ author_user_id: string; moderation_status: string }>(
-      'SELECT author_user_id, moderation_status FROM announcement_replies WHERE id = $1::uuid FOR UPDATE',
+      `SELECT author_id AS author_user_id, moderation_status FROM commons_item_messages
+        WHERE id = $1::uuid AND plugin = 'commons' AND item_id LIKE '${ANNOUNCEMENT_ITEM_PREFIX}%' FOR UPDATE`,
       [normalizedId],
     );
     if (existing.rows.length === 0) {
@@ -2841,7 +2854,7 @@ export async function editAnnouncementReply(
 
     const updated = await client.query<{ edited_at: Date }>(
       `
-        UPDATE announcement_replies
+        UPDATE commons_item_messages
         SET body = $2, edited_at = NOW(), updated_at = NOW()
         WHERE id = $1::uuid
         RETURNING edited_at
@@ -2864,7 +2877,8 @@ export async function deleteAnnouncementReply(actorId: string, replyId: string):
 
   return withDbTransaction(async (client) => {
     const existing = await client.query<{ author_user_id: string }>(
-      'SELECT author_user_id FROM announcement_replies WHERE id = $1::uuid FOR UPDATE',
+      `SELECT author_id AS author_user_id FROM commons_item_messages
+        WHERE id = $1::uuid AND plugin = 'commons' AND item_id LIKE '${ANNOUNCEMENT_ITEM_PREFIX}%' FOR UPDATE`,
       [normalizedId],
     );
     if (existing.rows.length === 0) {
@@ -2874,7 +2888,7 @@ export async function deleteAnnouncementReply(actorId: string, replyId: string):
       throw new Error('not_reply_owner');
     }
 
-    await client.query('DELETE FROM announcement_replies WHERE id = $1::uuid', [normalizedId]);
+    await client.query('DELETE FROM commons_item_messages WHERE id = $1::uuid', [normalizedId]);
     return 'ok' as const;
   });
 }
