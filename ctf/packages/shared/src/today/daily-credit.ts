@@ -4,6 +4,7 @@
 // ServiceCredits are an internal credits unit, not money.
 
 import type { SeTodayCard } from './types';
+import type { SeCardAnswer } from './cards';
 
 export type SeDailyCreditCandidate = { id: string; createdAtIso: string; authorAccountId: string | null };
 
@@ -26,6 +27,12 @@ function isOlder(a: SeDailyCreditCandidate, b: SeDailyCreditCandidate): boolean 
 // The day the choice belongs to, in UTC, so the card is the same for everyone wherever they are.
 export function seDailyCreditDay(now: Date): string {
   return now.toISOString().slice(0, 10);
+}
+
+// Who the asker can name when they tap Done on their ask from Today: the other members who answered
+// "I can help" on it, in the order they answered. Empty means Done closes it with no credit.
+export function seDoneHelpers(answers: readonly SeCardAnswer[], viewerId: string): SeCardAnswer[] {
+  return answers.filter((answer) => answer.accountId !== viewerId && answer.kinds.includes('help'));
 }
 
 // The line on that one card, as the approved boards show it. Shown to everyone but the asker, who is

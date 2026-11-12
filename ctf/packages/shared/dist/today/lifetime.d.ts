@@ -17,6 +17,8 @@ export declare const SE_CARD_LIFETIME_WORDS: {
     readonly closing: "Closing…";
     readonly closed: "Closed. It has left Today.";
     readonly closeFailed: "Could not close it.";
+    readonly whoDidIt: "Who did it?";
+    readonly back: "Back";
     readonly renew: "Keep it up for 14 more days";
     readonly renewing: "Keeping it up…";
     readonly renewed: "Kept up on Today for 14 more days.";

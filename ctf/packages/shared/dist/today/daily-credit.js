@@ -22,6 +22,11 @@ function isOlder(a, b) {
 export function seDailyCreditDay(now) {
     return now.toISOString().slice(0, 10);
 }
+// Who the asker can name when they tap Done on their ask from Today: the other members who answered
+// "I can help" on it, in the order they answered. Empty means Done closes it with no credit.
+export function seDoneHelpers(answers, viewerId) {
+    return answers.filter((answer) => answer.accountId !== viewerId && answer.kinds.includes('help'));
+}
 // The line on that one card, as the approved boards show it. Shown to everyone but the asker, who is
 // the one confirming rather than the one it waits on.
 export function seDailyCreditPill(card, viewerId) {
