@@ -2,11 +2,11 @@ import { NextResponse } from 'next/server';
 import { SE_WEAVERS_LIMIT_WORDS as W, seHasLink } from '@ctf/shared';
 import { isMemberEligible } from './repository';
 
-// Only Weavers of the Commons badge holders bring people into rooms and put pictures and links in
-// posts (3.1 plan, Access). The badge is never given by hand, the owner included, so an admin is
+// Only Weavers of the Commons badge holders ask members into a Back Channel and put pictures and
+// links in posts (3.1 plan, Access). The badge is never given by hand, the owner included, so an admin is
 // held to it like anybody else. A refusal is a 403 carrying the plan's words, which the screens show.
 
-export type WeaversLimit = 'bring' | 'picture' | 'link';
+export type WeaversLimit = 'invite' | 'picture' | 'link';
 
 export function weaversRefusal(limit: WeaversLimit): NextResponse {
   return NextResponse.json({ ok: false, code: 'weavers_only', message: W[limit] }, { status: 403 });

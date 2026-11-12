@@ -853,17 +853,17 @@ returns to the signed-out Today. The signed-in Chyme screens look as before.
 
 Result: web ☐ android ☐
 
-### Bringing someone in is for Weavers of the Commons
+### Bringing someone in is open to every member; Back Channel invites are for Weavers of the Commons
 
 **Role:** an approved member without the badge, then a badge holder · **Surfaces:** web, android
 
 1. As the member without the badge, open Today and look at the Main Room card, then open the Main
-   Room.
-2. As the badge holder, do the same and tap Bring someone in.
+   Room and tap Bring someone in.
+2. Still without the badge, ask a member into a Back Channel.
+3. As the badge holder, ask a member into a Back Channel.
 
-**Expected:** Step 1 shows no Bring someone in button on the card or the room bar; the card reads
-"Bringing people into rooms is for Weavers of the Commons." Asking a member into a Back Channel is
-refused with the same kind of line. Step 2 shows the button in both places and opens the share
-sheet.
+**Expected:** Step 1 shows Bring someone in on the card and the room bar, and it opens the share
+sheet. Step 2 is refused with "Asking members into a Back Channel is for Weavers of the Commons."
+Step 3 sends the invite.
 
 Result: web ☐ android ☐

@@ -32,7 +32,7 @@ export function SeRoomIdle({ room, currentUserId, roomScope }: { room: ChymeRoom
   return (
     <div className={styles.room}>
       <SeRoomStage entries={entries} extraListeners={room.guestCount} />
-      <SeRoomJoinControls joining={embed?.joining ?? false} onJoin={() => embed?.join()} bringIn={roomScope === 'main' && room.viewer?.canBringSomeoneIn === true} />
+      <SeRoomJoinControls joining={embed?.joining ?? false} onJoin={() => embed?.join()} bringIn={roomScope === 'main'} />
       <SeRoomMoreSheet />
     </div>
   );
