@@ -6,6 +6,7 @@
 
 export const SE_SCRUB_ID = ':id';
 export const SE_SCRUB_VALUE = ':value';
+export const SE_SCRUB_HANDLE = ':handle';
 export const SE_SCRUB_EMAIL = ':email';
 export const SE_SCRUB_PHONE = ':phone';
 
@@ -18,6 +19,8 @@ const CARD_SEGMENT = /^[a-z][a-z0-9-]{0,39}:\S+$/;
 // ten-letter word such as "foundation" in an address is left alone.
 const CODE_SEGMENT = /^(?=[a-z0-9]*\d)[a-z0-9]{10}$/;
 const DIGITS_SEGMENT = /^\d+$/;
+const UUID_SEGMENT = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const CLERK_SEGMENT = /^(?:user|org|sess)_[A-Za-z0-9]{8,}$/;
 const EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
 // Ten or more digits with the usual separators between them.
 const PHONE = /\+?\d(?:[\s().-]*\d){9,}/g;
@@ -50,14 +53,35 @@ function decodeSegment(segment: string): string {
 
 function isIdSegment(segment: string): boolean {
   const plain = decodeSegment(segment);
-  return DIGITS_SEGMENT.test(plain) || CARD_SEGMENT.test(plain) || CODE_SEGMENT.test(plain);
+  return [DIGITS_SEGMENT, UUID_SEGMENT, CLERK_SEGMENT, CARD_SEGMENT, CODE_SEGMENT].some((pattern) => pattern.test(plain));
+}
+
+// Routes whose next segment is a member's handle or an invite's name, which name a person: the
+// Directory listing page, a Directory profile and an invite. Each lists the segments that are pages
+// of their own rather than a handle.
+const HANDLE_ROUTES: ReadonlyArray<{ prefix: string; pages: ReadonlySet<string> }> = [
+  { prefix: 'apps/directory', pages: new Set(['invites', 'profile', 'public', 'weavers-of-the-commons']) },
+  { prefix: 'apps/directory/profile', pages: new Set() },
+  { prefix: 'api/directory/invites', pages: new Set() },
+];
+
+function isHandleSegment(before: string[], segment: string): boolean {
+  // Empty, already a placeholder, or a route template such as [handle].
+  if (!segment || segment.startsWith(':') || segment.startsWith('[')) return false;
+  // A leading method in a route name ("GET ") is not part of the path.
+  const prefix = before.filter((part) => part && !part.includes(' ')).join('/');
+  return HANDLE_ROUTES.some((route) => route.prefix === prefix && !route.pages.has(decodeSegment(segment)));
+}
+
+function scrubSegment(segments: string[], index: number): string {
+  const segment = segments[index];
+  if (isIdSegment(segment)) return SE_SCRUB_ID;
+  return isHandleSegment(segments.slice(0, index), segment) ? SE_SCRUB_HANDLE : segment;
 }
 
 function scrubPath(path: string): string {
-  return path
-    .split('/')
-    .map((segment) => (isIdSegment(segment) ? SE_SCRUB_ID : segment))
-    .join('/');
+  const segments = path.split('/');
+  return segments.map((_, index) => scrubSegment(segments, index)).join('/');
 }
 
 // Keeps each key and replaces each value: `?q=abc&page=2` → `?q=:value&page=:value`.
