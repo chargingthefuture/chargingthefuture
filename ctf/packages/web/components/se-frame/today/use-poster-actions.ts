@@ -34,7 +34,8 @@ export function usePosterActions(cardId: string, onChanged?: () => void) {
   };
   return {
     status,
-    close: (outcome: 'done' | 'not_done') => run('close', { outcome }, W.closeFailed, W.closed),
+    // With Done, the member the poster picked from those who offered help, if any.
+    close: (outcome: 'done' | 'not_done', helperId?: string) => run('close', helperId ? { outcome, helperId } : { outcome }, W.closeFailed, W.closed),
     renew: () => run('renew', {}, W.renewFailed, W.renewed),
   };
 }

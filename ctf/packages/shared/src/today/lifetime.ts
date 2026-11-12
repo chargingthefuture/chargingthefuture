@@ -27,6 +27,10 @@ export const SE_CARD_LIFETIME_WORDS = {
   closing: 'Closing…',
   closed: 'Closed. It has left Today.',
   closeFailed: 'Could not close it.',
+  // Done on an ask somebody offered to help with: the poster picks who did it, and that member
+  // receives the day's credit when the card carries it.
+  whoDidIt: 'Who did it?',
+  back: 'Back',
   renew: 'Keep it up for 14 more days',
   renewing: 'Keeping it up…',
   renewed: 'Kept up on Today for 14 more days.',

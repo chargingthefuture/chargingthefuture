@@ -81,15 +81,14 @@ export async function claimHeldDailyCredit(day: string, helperUserId: string): P
   return (result.rowCount ?? 0) > 0;
 }
 
-// The member who helped on a card closed from Today: the first other member who answered "I can
-// help" on it. Null when nobody did.
-export async function firstHelperOn(cardId: string, askerUserId: string): Promise<string | null> {
+// Whether the member the asker picked when closing from Today answered "I can help" on the card.
+export async function answeredHelpOn(cardId: string, askerUserId: string, helperUserId: string): Promise<boolean> {
   const ref = seCardItemRef(cardId);
-  const result = await queryDb<{ account_id: string }>(
-    `SELECT account_id FROM commons_item_answers
-      WHERE plugin = $1 AND item_id = $2 AND kind = 'help' AND account_id <> $3
-      ORDER BY created_at LIMIT 1`,
-    [ref.plugin, ref.itemId, askerUserId],
+  const result = await queryDb(
+    `SELECT 1 FROM commons_item_answers
+      WHERE plugin = $1 AND item_id = $2 AND kind = 'help' AND account_id = $3 AND account_id <> $4
+      LIMIT 1`,
+    [ref.plugin, ref.itemId, helperUserId, askerUserId],
   );
-  return result.rows[0]?.account_id ?? null;
+  return (result.rowCount ?? 0) > 0;
 }

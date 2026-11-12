@@ -503,13 +503,16 @@ contracts:
   - pluginId: today
     command: today.cards.close
     version: 1.0.0
-    description: "The poster closes their own open ask from its Today card, with the outcome they pick: 'done' or 'not_done'. A goal is reached or withdrawn, a SocketRelay request closed or canceled, a ride request canceled; the outcome is kept in today_card_windows so unmet needs can be counted. Closed as done on the day's credit card, the first other member who answered I can help receives its 1 ServiceCredit (service-credits.today.daily-credit.grant). Poster only, at signed_in whatever their Unlock standing (owner decision, 2026-11-10); account restrictions apply; 20 a minute. (POST /api/today/cards/[cardId]/close)."
+    description: "The poster closes their own open ask from its Today card, with the outcome they pick: 'done' or 'not_done'. A goal is reached or withdrawn, a SocketRelay request closed or canceled, a ride request canceled; the outcome is kept in today_card_windows so unmet needs can be counted. With 'done' the poster may name who did it (helperId), picked from the other members who answered I can help on the card; any other id is refused with not_a_helper. On the day's credit card that member receives its 1 ServiceCredit (service-credits.today.daily-credit.grant); with no helper named, no credit. Poster only, at signed_in whatever their Unlock standing (owner decision, 2026-11-10); account restrictions apply; 20 a minute. (POST /api/today/cards/[cardId]/close)."
     inputSchema:
       cardId:
         type: string
       outcome:
         type: string
         enum: [done, not_done]
+      helperId:
+        type: string
+        required: false
     outputSchema:
       ok:
         type: boolean

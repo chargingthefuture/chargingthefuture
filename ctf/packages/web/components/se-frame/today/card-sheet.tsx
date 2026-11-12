@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { SE_CARD_WORDS, SE_MUTE_WORDS, seCanConfirmHelped, seCardSheetLine, seDailyCreditPill, type SeCardAnswer, type SeCardAnswerKind, type SeCardConversation, type SeTodayCard } from '@ctf/shared';
+import { SE_CARD_WORDS, SE_MUTE_WORDS, seCanConfirmHelped, seCardSheetLine, seDailyCreditPill, seDoneHelpers, type SeCardAnswer, type SeCardAnswerKind, type SeCardConversation, type SeTodayCard } from '@ctf/shared';
 import { SeAvatar } from '../../shared/se-avatar';
 import { CardTalk } from './card-sheet-talk';
 import { SheetYours } from './card-sheet-yours';
@@ -210,7 +210,7 @@ export function CardSheet({ card, viewerId, firstAnswer, onClose, onChanged, onM
             {SE_CARD_WORDS.openIn(card.source)}
           </Link>
         </div>
-        <SheetYours card={card} onChanged={onChanged} />
+        <SheetYours card={card} helpers={seDoneHelpers(talk.conversation?.answers ?? [], viewerId)} onChanged={onChanged} />
         <CardConversationView talk={talk} />
       </section>
     </div>
