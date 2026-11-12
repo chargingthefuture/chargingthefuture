@@ -211,7 +211,7 @@ function describeHttpError(status: number): string {
 function describeTimeout(timeoutMs: number): string {
   if (timeoutMs >= OLLAMA_DRAFT_TIMEOUT_MS) {
     const runpodHint = ollamaProviderIsRunpod()
-      ? ' The RunPod job was canceled. Check the endpoint has at least 1 max worker in the RunPod dashboard — RunPod sets it to 0 after about two weeks with no requests.'
+      ? ' The RunPod job was canceled. If the review queue shows the drafting endpoint off, use Turn on there — RunPod sets it to 0 max workers after about two weeks with no requests.'
       : '';
     return `The engine did not answer within ${Math.round(timeoutMs / 60_000)} minutes.${runpodHint}`;
   }

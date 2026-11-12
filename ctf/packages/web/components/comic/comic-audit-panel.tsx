@@ -29,6 +29,7 @@ const COMMAND_LABELS: Record<string, string> = {
   "comic.admin.knowledge.set-active": "Switched a knowledge entry on or off",
   "comic.admin.unlock-help.set-review": "Switched sending Unlock answers without review",
   "comic.training.export": "Exported the training data",
+  "comic.engine.power.set": "Turned the drafting endpoint on or off",
 };
 
 // The reason codes carried on a denied or failed action, said plainly. These are the lines that
@@ -41,6 +42,7 @@ const REASON_LABELS: Record<string, string> = {
   policy: "policy refused it",
   already_reviewed: "it had already been decided",
   contribution_withdrawn: "its member withdrew the contribution",
+  upstream_unavailable: "RunPod refused or did not answer",
 };
 
 // The facts the metadata may carry, said plainly. A table rather than a chain of ifs, so a new
@@ -52,6 +54,7 @@ const METADATA_PHRASES: ReadonlyArray<(meta: Record<string, unknown>) => string 
   (meta) => (typeof meta.declineReason === "string" ? `reason: ${meta.declineReason}` : null),
   (meta) => (meta.preview === true ? "preview only" : null),
   (meta) => (typeof meta.markedExported === "number" ? `${meta.markedExported} marked exported` : null),
+  (meta) => (typeof meta.workersMax === "number" ? (meta.workersMax > 0 ? `on, ${meta.workersMax} max workers` : "off, 0 max workers") : null),
 ];
 
 function describeMetadata(event: AuditEvent): string | null {
