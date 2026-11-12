@@ -15,7 +15,7 @@ import {
 import { findPair, insertMessage } from 'lib/today/cards/repository';
 import { readConversation } from 'lib/today/cards/conversation';
 import { resolveUsernames } from 'lib/identity/resolve-usernames';
-import { notifySafe } from 'lib/notifications/repository';
+import { notifyOnCard } from 'lib/today/cards/notify';
 import { writeCardThreadMessage } from 'lib/fireside/card-thread';
 import { storyPostFor } from 'lib/today/cards/story';
 
@@ -23,7 +23,7 @@ import { storyPostFor } from 'lib/today/cards/story';
 // messages are read by everybody who can read Today. A private one goes into the Just us two
 // conversation with partnerId, which must be open (both agreed); the partner is told in Activity.
 // Refused when the writer is restricted from contact, or, for Just us two, when either has blocked
-// the other.
+// the other. A partner who muted the card is not told.
 
 export const dynamic = 'force-dynamic';
 
@@ -48,9 +48,9 @@ async function ensurePairOpen(cardId: string, userId: string, partnerId: string)
   return cardsDenied('pair_not_open', 'Just us two is not open with this member on this card: it opens once you both agree.', 409);
 }
 
-async function tellPartner(userId: string, partnerId: string) {
+async function tellPartner(cardId: string, userId: string, partnerId: string) {
   const names = await resolveUsernames([userId]);
-  await notifySafe({
+  await notifyOnCard(cardId, {
     userId: partnerId,
     sourcePlugin: 'today',
     notificationType: 'today.card.pair_message',
@@ -82,7 +82,7 @@ async function write(cardId: string, userId: string, input: Input): Promise<Next
     if (closed) return closed;
   }
   await insertMessage(cardId, userId, input.body, input.partnerId);
-  if (input.partnerId) await tellPartner(userId, input.partnerId);
+  if (input.partnerId) await tellPartner(cardId, userId, input.partnerId);
   return null;
 }
 

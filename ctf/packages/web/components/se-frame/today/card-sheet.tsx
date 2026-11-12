@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { SE_CARD_WORDS, seCardSheetLine, type SeCardAnswerKind, type SeCardConversation, type SeTodayCard } from '@ctf/shared';
+import { SE_CARD_WORDS, SE_MUTE_WORDS, seCardSheetLine, type SeCardAnswerKind, type SeCardConversation, type SeTodayCard } from '@ctf/shared';
 import { SeAvatar } from '../../shared/se-avatar';
 import { CardTalk } from './card-sheet-talk';
 import { SheetYours } from './card-sheet-yours';
@@ -40,12 +40,35 @@ async function shareCard(card: SeTodayCard): Promise<boolean> {
   }
 }
 
-function SheetMenu({ card, talk, viewerId }: { card: SeTodayCard; talk: CardConversation; viewerId: string }) {
-  const [open, setOpen] = useState(false);
+type MenuProps = { card: SeTodayCard; talk: CardConversation; viewerId: string; onMutePost?: () => void };
+
+function SheetMenuItems({ authorId, talk, onMutePost }: { authorId: string | null; talk: CardConversation; onMutePost?: () => void }) {
   const [done, setDone] = useState(false);
-  const author = card.author && card.author.accountId !== viewerId ? card.author : null;
-  if (!author) return null;
-  const report = async () => setDone(await talk.report({ authorId: author.accountId }));
+  const report = async () => setDone(authorId ? await talk.report({ authorId }) : false);
+  return (
+    <div className={styles.menu} role="menu">
+      {onMutePost ? (
+        <button type="button" role="menuitem" className={styles.menuItem} onClick={onMutePost}>
+          {SE_MUTE_WORDS.mutePost}
+        </button>
+      ) : null}
+      {authorId ? (
+        <button type="button" role="menuitem" className={styles.menuItem} disabled={done} onClick={() => void report()}>
+          {done ? SE_CARD_WORDS.reported : SE_CARD_WORDS.report}
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+// Mute this post on any card but the member's own (the sheet closes as the card leaves Today), and
+// Report on a card with somebody else as its author.
+function SheetMenu({ card, talk, viewerId, onMutePost }: MenuProps) {
+  const [open, setOpen] = useState(false);
+  const own = card.author?.accountId === viewerId;
+  const authorId = card.author && !own ? card.author.accountId : null;
+  const mutePost = own ? undefined : onMutePost;
+  if (!authorId && !mutePost) return null;
   return (
     <div className={styles.menuWrap}>
       <RoundButton label={SE_CARD_WORDS.more} onClick={() => setOpen((value) => !value)}>
@@ -55,18 +78,12 @@ function SheetMenu({ card, talk, viewerId }: { card: SeTodayCard; talk: CardConv
           <circle cx="19" cy="12" r="1.8" />
         </svg>
       </RoundButton>
-      {open ? (
-        <div className={styles.menu} role="menu">
-          <button type="button" role="menuitem" className={styles.menuItem} disabled={done} onClick={() => void report()}>
-            {done ? SE_CARD_WORDS.reported : SE_CARD_WORDS.report}
-          </button>
-        </div>
-      ) : null}
+      {open ? <SheetMenuItems authorId={authorId} talk={talk} onMutePost={mutePost} /> : null}
     </div>
   );
 }
 
-function SheetHead({ card, talk, viewerId, onClose, closeRef }: SheetProps & { talk: CardConversation; closeRef: React.RefObject<HTMLButtonElement | null> }) {
+function SheetHead({ card, talk, viewerId, onClose, onMutePost, closeRef }: SheetProps & { talk: CardConversation; closeRef: React.RefObject<HTMLButtonElement | null> }) {
   const [copied, setCopied] = useState(false);
   return (
     <div className={styles.head}>
@@ -83,7 +100,7 @@ function SheetHead({ card, talk, viewerId, onClose, closeRef }: SheetProps & { t
           <path d="M12 15V3M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" />
         </svg>
       </RoundButton>
-      <SheetMenu card={card} talk={talk} viewerId={viewerId} />
+      <SheetMenu card={card} talk={talk} viewerId={viewerId} onMutePost={onMutePost} />
       <button ref={closeRef} type="button" aria-label={SE_CARD_WORDS.close} className={styles.round} onClick={onClose}>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
           <path d="M6 6l12 12M18 6L6 18" />
@@ -135,9 +152,9 @@ export function CardConversationView({ talk }: { talk: CardConversation }) {
   );
 }
 
-type SheetProps = { card: SeTodayCard; viewerId: string; onClose: () => void };
+type SheetProps = { card: SeTodayCard; viewerId: string; onClose: () => void; onMutePost?: () => void };
 
-export function CardSheet({ card, viewerId, firstAnswer, onClose, onChanged }: SheetProps & { firstAnswer: SeCardAnswerKind | null; onChanged?: () => void }) {
+export function CardSheet({ card, viewerId, firstAnswer, onClose, onChanged, onMutePost }: SheetProps & { firstAnswer: SeCardAnswerKind | null; onChanged?: () => void }) {
   const talk = useCardConversation(card.id, firstAnswer);
   const closeRef = useRef<HTMLButtonElement | null>(null);
   useEffect(() => {
@@ -152,7 +169,21 @@ export function CardSheet({ card, viewerId, firstAnswer, onClose, onChanged }: S
       <button type="button" className={styles.scrim} aria-label={SE_CARD_WORDS.close} tabIndex={-1} onClick={onClose} />
       <section role="dialog" aria-modal="true" aria-label={`${card.label}: ${card.title}`} className={styles.sheet}>
         <span className={styles.grip} aria-hidden="true" />
-        <SheetHead card={card} talk={talk} viewerId={viewerId} onClose={onClose} closeRef={closeRef} />
+        <SheetHead
+          card={card}
+          talk={talk}
+          viewerId={viewerId}
+          onClose={onClose}
+          onMutePost={
+            onMutePost
+              ? () => {
+                  onClose();
+                  onMutePost();
+                }
+              : undefined
+          }
+          closeRef={closeRef}
+        />
         <div className={styles.text}>
           <h2 className={styles.title}>{card.title}</h2>
           {card.body ? <p className={styles.body}>{card.body}</p> : null}

@@ -17,8 +17,9 @@ import styles from './today.module.css';
 // too) records the answer and opens the sheet; other buttons open the item where it lives. Every
 // other card expands in place as before. The timeline dot marks it done, and tapping it again marks
 // it not done. A story or replay carries Save for later and Hide as icons in its button row, and the
-// Mood card its five faces. The ••• menu holds Copy link, Not for me (the card leaves Today on this device) and,
-// on a card with an author, Mute and Report.
+// Mood card its five faces. The ••• menu holds Copy link, Not for me (the card leaves Today on this device),
+// Mute this post (the card leaves Today and its conversation sends no notices) on somebody else's
+// card and, on a card with an author, Mute and Report.
 
 // The 21 Questions card keeps its lines and is never cut short: it says how matching works.
 function bodyClass(card: SeTodayCard, open: boolean): string {
@@ -45,14 +46,19 @@ async function reportCard(card: SeTodayCard): Promise<string> {
   return res?.ok ? SE_CARD_WORDS.reported : (data?.message ?? 'The report was not sent: the app could not be reached.');
 }
 
-function menuLabel(onMute: unknown, canReport: boolean): string {
-  const items = ['copy link', 'not for me', ...(onMute ? ['mute'] : []), ...(canReport ? ['report'] : [])];
+function menuLabel(onMute: unknown, canMutePost: boolean, canReport: boolean): string {
+  const items = ['copy link', 'not for me', ...(canMutePost ? ['mute this post'] : []), ...(onMute ? ['mute'] : []), ...(canReport ? ['report'] : [])];
   return `More: ${items.join(', ')}`;
 }
 
-type MenuProps = { card: SeTodayCard; viewerId: string; onHide: () => void; onMute?: () => void };
+type MenuProps = { card: SeTodayCard; viewerId: string; onHide: () => void; onMute?: () => void; onMutePost?: () => void };
 
-function CardMenu({ card, viewerId, onHide, onMute }: MenuProps) {
+// Mute this post is offered on every card but the member's own.
+function canMutePost(card: SeTodayCard, viewerId: string, onMutePost?: () => void): onMutePost is () => void {
+  return Boolean(onMutePost) && card.author?.accountId !== viewerId;
+}
+
+function CardMenu({ card, viewerId, onHide, onMute, onMutePost }: MenuProps) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [reported, setReported] = useState<string | null>(null);
@@ -71,7 +77,7 @@ function CardMenu({ card, viewerId, onHide, onMute }: MenuProps) {
       <button
         type="button"
         className={styles.menuButton}
-        aria-label={menuLabel(onMute, canReport)}
+        aria-label={menuLabel(onMute, canMutePost(card, viewerId, onMutePost), canReport)}
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
       >
@@ -89,6 +95,11 @@ function CardMenu({ card, viewerId, onHide, onMute }: MenuProps) {
           <button type="button" role="menuitem" className={styles.menuItem} onClick={onHide}>
             {SE_CARD_WORDS.notForMe}
           </button>
+          {canMutePost(card, viewerId, onMutePost) ? (
+            <button type="button" role="menuitem" className={styles.menuItem} onClick={onMutePost}>
+              {SE_MUTE_WORDS.mutePost}
+            </button>
+          ) : null}
           {onMute && card.author ? (
             <button type="button" role="menuitem" className={styles.menuItem} onClick={onMute}>
               {SE_MUTE_WORDS.mutePerson(card.author.handle)}
@@ -126,7 +137,7 @@ function DoneDot({ card, done, color, onToggleDone }: { card: SeTodayCard; done:
   );
 }
 
-function CardHead({ card, viewerId, color, onHide, onMute }: MenuProps & { color: string }) {
+function CardHead({ card, viewerId, color, onHide, onMute, onMutePost }: MenuProps & { color: string }) {
   return (
     <div className={styles.cardHead}>
       {card.author ? <SeAvatar accountId={card.author.accountId} size={28} /> : null}
@@ -135,7 +146,7 @@ function CardHead({ card, viewerId, color, onHide, onMute }: MenuProps & { color
         {card.label}
       </span>
       <span className={styles.spacer} />
-      <CardMenu card={card} viewerId={viewerId} onHide={onHide} onMute={onMute} />
+      <CardMenu card={card} viewerId={viewerId} onHide={onHide} onMute={onMute} onMutePost={onMutePost} />
     </div>
   );
 }
@@ -205,6 +216,7 @@ function PlainCard({
   onToggleDone,
   onHide,
   onMute,
+  onMutePost,
   onSave,
   onChanged,
 }: TodayCardProps) {
@@ -218,13 +230,15 @@ function PlainCard({
   return (
     <article className={styles.card}>
       <DoneDot card={card} done={done} color={color} onToggleDone={onToggleDone} />
-      <CardHead card={card} viewerId={viewerId} color={color} onHide={onHide} onMute={onMute} />
+      <CardHead card={card} viewerId={viewerId} color={color} onHide={onHide} onMute={onMute} onMutePost={onMutePost} />
       <button type="button" className={styles.textButton} aria-expanded={opensSheet ? undefined : open} aria-haspopup={opensSheet ? 'dialog' : undefined} onClick={toggle}>
         <CardText card={card} open={open} color={color} />
       </button>
       {isQuestionsCard(card) ? <QuestionsPanel card={card} open={open} onOpen={() => setOpen(true)} onChanged={onChanged ?? (() => undefined)} /> : null}
       <CardFoot card={card} onAnswer={opensSheet ? (kind) => setSheet({ firstAnswer: kind }) : null} onSave={onSave} onHide={onHide} />
-      {sheet ? <CardSheet card={card} viewerId={viewerId} firstAnswer={sheet.firstAnswer} onClose={() => setSheet(null)} onChanged={onChanged} /> : null}
+      {sheet ? (
+        <CardSheet card={card} viewerId={viewerId} firstAnswer={sheet.firstAnswer} onClose={() => setSheet(null)} onChanged={onChanged} onMutePost={onMutePost} />
+      ) : null}
     </article>
   );
 }
@@ -237,6 +251,8 @@ type TodayCardProps = {
   onToggleDone: () => void;
   onHide: () => void;
   onMute?: () => void;
+  // Mute this post: the card leaves Today and its conversation sends no notices.
+  onMutePost?: () => void;
   // Save for later on a story or replay; absent where there is no account to save to.
   onSave?: () => void;
   // A card that changes something (a 21 Questions answer) asks Today to read again.

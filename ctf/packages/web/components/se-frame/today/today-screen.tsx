@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { SE_DAYS_WON_HOW, SE_DAYS_WON_TITLE, SE_DAYS_WON_WHY, SE_MUTE_WORDS, SE_TODAY_FILTERS, seDaysWonLines, seTodayView, type SeToday, type SeTodayCard, type SeTodayFilter } from '@ctf/shared';
+import { SE_DAYS_WON_HOW, SE_DAYS_WON_TITLE, SE_DAYS_WON_WHY, SE_MUTE_WORDS, SE_TODAY_FILTERS, seCardMutedNote, seCardMuteRequest, seDaysWonLines, seTodayView, type SeCardMuteKind, type SeToday, type SeTodayCard, type SeTodayFilter } from '@ctf/shared';
 import { MatchingToggle } from './matching-toggle';
 import { BroadcastCard, RoomCard } from './room-card';
 import { TodayCard } from './today-card';
@@ -90,7 +90,7 @@ type TimelineProps = {
   mark: (kind: MarkKind, id: string) => void;
   toggle: (kind: MarkKind, id: string) => void;
   onSave: (card: SeTodayCard) => void;
-  onMute?: (card: SeTodayCard) => void;
+  onMute?: (card: SeTodayCard, kind: SeCardMuteKind) => void;
   onChanged: () => void;
 };
 
@@ -112,7 +112,8 @@ function Timeline({ viewerId, view, marks, mark, toggle, onSave, onMute, onChang
             sendTodayFeedback(card, 'not_for_me');
             mark('hidden', card.id);
           }}
-          onMute={card.author && onMute ? () => onMute(card) : undefined}
+          onMute={card.author && onMute ? () => onMute(card, 'person') : undefined}
+          onMutePost={onMute ? () => onMute(card, 'post') : undefined}
           onSave={() => onSave(card)}
           onChanged={onChanged}
         />
@@ -138,18 +139,20 @@ export function TodayScreen({ accountId, onPresence, rain }: { accountId: string
   const view = seTodayView(today, marks, filter);
   const [muteNote, setMuteNote] = useState<string | null>(null);
 
-  // Mute the card's author: their cards leave Today from the next read. Nobody is told.
-  const mute = async (card: SeTodayCard) => {
-    if (!card.author) return;
+  // Mute the card's author (their cards leave Today) or the card itself (it leaves Today and its
+  // conversation sends no notices), from the next read. Nobody is told.
+  const mute = async (card: SeTodayCard, kind: SeCardMuteKind) => {
+    const body = seCardMuteRequest(card, kind);
+    if (!body) return;
     const res = await fetch('/api/account/mutes', {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-ctf-csrf': '1' },
-      body: JSON.stringify({ kind: 'person', target: card.author.accountId, label: card.author.handle }),
+      body: JSON.stringify(body),
     }).catch(() => null);
-    const body = (await res?.json().catch(() => null)) as { message?: string } | null;
-    if (!res?.ok) return setMuteNote(`${SE_MUTE_WORDS.failed} ${body?.message ?? ''}`.trim());
-    setMuteNote(SE_MUTE_WORDS.muted(card.author.handle));
-    mark('hidden', card.id);
+    const data = (await res?.json().catch(() => null)) as { message?: string } | null;
+    if (!res?.ok) return setMuteNote(`${SE_MUTE_WORDS.failed} ${data?.message ?? ''}`.trim());
+    setMuteNote(seCardMutedNote(card, kind));
+    if (kind === 'person') mark('hidden', card.id);
     void reload();
   };
 
@@ -173,7 +176,7 @@ export function TodayScreen({ accountId, onPresence, rain }: { accountId: string
           {muteNote}
         </p>
       ) : null}
-      {today ? <Timeline viewerId={accountId} view={view} marks={marks} mark={mark} toggle={toggle} onSave={save} onMute={(card) => void mute(card)} onChanged={() => void reload()} /> : null}
+      {today ? <Timeline viewerId={accountId} view={view} marks={marks} mark={mark} toggle={toggle} onSave={save} onMute={(card, kind) => void mute(card, kind)} onChanged={() => void reload()} /> : null}
     </>
   );
 }

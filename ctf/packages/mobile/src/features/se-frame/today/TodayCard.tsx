@@ -2,7 +2,8 @@
 // tapping the text opens the card in place as a sheet (CardSheet.tsx), and an answer button (I can
 // help, I know someone, I'd like this, It helped me too) records the answer and opens the sheet;
 // other buttons open the item. Every other card expands in place as before. The ••• menu holds Copy
-// link, Not for me (the card leaves Today on this device) and, on a card with an author, Mute and
+// link, Not for me (the card leaves Today on this device), Mute this post (the card leaves Today and
+// its conversation sends no notices) on somebody else's card and, on a card with an author, Mute and
 // Report. The timeline dot marks it done, and tapping it again marks it not done. A story or replay
 // carries Save for later and Hide as icons in its button row, and the Mood card its five faces.
 
@@ -56,14 +57,19 @@ async function reportCard(card: SeTodayCard): Promise<string> {
   }
 }
 
-function menuLabel(onMute: unknown, canReport: boolean): string {
-  const items = ['copy link', 'not for me', ...(onMute ? ['mute'] : []), ...(canReport ? ['report'] : [])];
+function menuLabel(onMute: unknown, onMutePost: unknown, canReport: boolean): string {
+  const items = ['copy link', 'not for me', ...(onMutePost ? ['mute this post'] : []), ...(onMute ? ['mute'] : []), ...(canReport ? ['report'] : [])];
   return `More: ${items.join(', ')}`;
 }
 
-type MenuProps = { s: Styles; card: SeTodayCard; canReport: boolean; onHide: () => void; onMute?: () => void };
+// Mute this post is offered on every card but the member's own.
+function mutePostFor(card: SeTodayCard, viewerId: string, onMutePost?: () => void): (() => void) | undefined {
+  return card.author?.accountId === viewerId ? undefined : onMutePost;
+}
 
-function CardMenu({ s, card, canReport, onHide, onMute }: MenuProps) {
+type MenuProps = { s: Styles; card: SeTodayCard; canReport: boolean; onHide: () => void; onMute?: () => void; onMutePost?: () => void };
+
+function CardMenu({ s, card, canReport, onHide, onMute, onMutePost }: MenuProps) {
   const [copied, setCopied] = useState(false);
   const [reported, setReported] = useState<string | null>(null);
   return (
@@ -80,6 +86,11 @@ function CardMenu({ s, card, canReport, onHide, onMute }: MenuProps) {
       <TouchableOpacity accessibilityRole="menuitem" style={s.menuItem} onPress={onHide}>
         <Text style={s.menuLabel}>{SE_CARD_WORDS.notForMe}</Text>
       </TouchableOpacity>
+      {onMutePost ? (
+        <TouchableOpacity accessibilityRole="menuitem" style={s.menuItem} onPress={onMutePost}>
+          <Text style={s.menuLabel}>{SE_MUTE_WORDS.mutePost}</Text>
+        </TouchableOpacity>
+      ) : null}
       {onMute && card.author ? (
         <TouchableOpacity accessibilityRole="menuitem" style={s.menuItem} onPress={onMute}>
           <Text style={s.menuLabel}>{SE_MUTE_WORDS.mutePerson(card.author.handle)}</Text>
@@ -204,6 +215,7 @@ export function TodayCard({
   onToggleDone,
   onHide,
   onMute,
+  onMutePost,
   onSave,
   onOpenLink,
   onChanged,
@@ -216,6 +228,8 @@ export function TodayCard({
   onToggleDone: () => void;
   onHide: () => void;
   onMute?: () => void;
+  // Mute this post: the card leaves Today and its conversation sends no notices.
+  onMutePost?: () => void;
   // Save for later on a story or replay.
   onSave?: () => void;
   onOpenLink: (_href: string) => void;
@@ -229,6 +243,7 @@ export function TodayCard({
   const s = makeStyles(t);
   const opensSheet = seCardOpensSheet(card);
   const canReport = Boolean(card.author && card.author.accountId !== viewerId);
+  const mutePost = mutePostFor(card, viewerId, onMutePost);
 
   const dot = <DoneDot t={t} s={s} card={card} read={read} color={color} onToggleDone={onToggleDone} />;
   if (card.goal) return <GoalCard t={t} card={{ ...card, goal: card.goal }} viewerId={viewerId} dot={dot} onOpenLink={onOpenLink} onChanged={onChanged} />;
@@ -247,7 +262,7 @@ export function TodayCard({
         <View style={s.spacer} />
         <TouchableOpacity
           accessibilityRole="button"
-          accessibilityLabel={menuLabel(onMute, canReport)}
+          accessibilityLabel={menuLabel(onMute, mutePost, canReport)}
           accessibilityState={{ expanded: menu }}
           onPress={() => setMenu((value) => !value)}
           style={s.menuButton}
@@ -259,12 +274,21 @@ export function TodayCard({
           </Svg>
         </TouchableOpacity>
       </View>
-      {menu ? <CardMenu s={s} card={card} canReport={canReport} onHide={onHide} onMute={onMute} /> : null}
+      {menu ? <CardMenu s={s} card={card} canReport={canReport} onHide={onHide} onMute={onMute} onMutePost={mutePost} /> : null}
       <CardText t={t} s={s} card={card} open={open} opensSheet={opensSheet} onPress={() => (opensSheet ? setSheet({ firstAnswer: null }) : setOpen((value) => !value))} />
       {isQuestionsCard(card) ? <QuestionsPanel t={t} card={card} open={open} onOpen={() => setOpen(true)} onChanged={onChanged ?? noop} /> : null}
       <CardFoot t={t} s={s} card={card} onOpenLink={onOpenLink} onAnswer={opensSheet ? (kind) => setSheet({ firstAnswer: kind }) : null} onSave={onSave} onHide={onHide} />
       {sheet ? (
-        <CardSheet t={t} card={card} viewerId={viewerId} firstAnswer={sheet.firstAnswer} onClose={() => setSheet(null)} onOpenLink={onOpenLink} onChanged={onChanged} />
+        <CardSheet
+          t={t}
+          card={card}
+          viewerId={viewerId}
+          firstAnswer={sheet.firstAnswer}
+          onClose={() => setSheet(null)}
+          onOpenLink={onOpenLink}
+          onChanged={onChanged}
+          onMutePost={mutePost}
+        />
       ) : null}
     </View>
   );

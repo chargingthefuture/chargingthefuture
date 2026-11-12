@@ -304,7 +304,7 @@ contracts:
   - pluginId: today
     command: today.cards.message.send
     version: 1.0.0
-    description: "Write in a card, 1 to 1000 characters, 60 an hour. Public, or private into an open Just us two conversation with partnerId, whose partner is told in Activity. Refused when the writer is restricted from contact or, for Just us two, either has blocked the other. (POST /api/today/cards/[cardId]/messages)."
+    description: "Write in a card, 1 to 1000 characters, 60 an hour. Public, or private into an open Just us two conversation with partnerId, whose partner is told in Activity unless they muted the card. Refused when the writer is restricted from contact or, for Just us two, either has blocked the other. (POST /api/today/cards/[cardId]/messages)."
     inputSchema:
       cardId:
         type: string
@@ -376,7 +376,7 @@ contracts:
   - pluginId: today
     command: today.cards.pair.ask
     version: 1.0.0
-    description: "Ask a member who took part on the card to talk just you two; they are told in Activity, and it opens once they agree. Asking a member who already asked agrees to their request. 20 an hour. (POST /api/today/cards/[cardId]/pair)."
+    description: "Ask a member who took part on the card to talk just you two; they are told in Activity unless they muted the card, and it opens once they agree. Asking a member who already asked agrees to their request. 20 an hour. (POST /api/today/cards/[cardId]/pair)."
     inputSchema:
       cardId:
         type: string

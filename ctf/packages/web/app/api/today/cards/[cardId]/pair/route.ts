@@ -15,14 +15,15 @@ import {
 import { agreePairRequest, findPair, insertPairRequest, isParticipant } from 'lib/today/cards/repository';
 import { readConversation } from 'lib/today/cards/conversation';
 import { resolveUsernames } from 'lib/identity/resolve-usernames';
-import { notifySafe } from 'lib/notifications/repository';
+import { notifyOnCard } from 'lib/today/cards/notify';
 
 // POST /api/today/cards/[cardId]/pair { partnerId }: ask another member to talk just you two on
 // this card. The partner must have taken part on the card (answered it, written in it, or been in a
 // Just us two request on it). It opens only once they agree; they are told in Activity, where the
 // notice carries the card and the asker so they can agree in place. Asking a
 // member who already asked you agrees to their request. Refused when either has blocked the other
-// or either is restricted from contact.
+// or either is restricted from contact. A partner who muted the card is not told; the request still
+// waits for them on the card.
 
 export const dynamic = 'force-dynamic';
 
@@ -32,7 +33,7 @@ type Context = { params: Promise<{ cardId: string }> };
 
 async function tellPartner(cardId: string, userId: string, partnerId: string) {
   const names = await resolveUsernames([userId]);
-  await notifySafe({
+  await notifyOnCard(cardId, {
     userId: partnerId,
     sourcePlugin: 'today',
     notificationType: 'today.card.pair_request',
