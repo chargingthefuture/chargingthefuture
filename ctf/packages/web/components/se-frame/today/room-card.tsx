@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { SE_WEAVERS_LIMIT_WORDS } from '@ctf/shared';
 import { AddToCalendarButton } from '@/components/shared/add-to-calendar';
 import {
   SE_BROADCAST_WORDS as B,
@@ -112,13 +111,10 @@ function MainRoomCard({ room }: { room: SeTodayRoom }) {
         <button type="button" className={`${styles.primaryButton} ${styles.grow}`} onClick={() => open('main', talk)}>
           {W.listen}
         </button>
-        {room.canBring ? (
-          <button type="button" className={styles.quietButton} onClick={() => void bring()}>
-            {W.bring}
-          </button>
-        ) : null}
+        <button type="button" className={styles.quietButton} onClick={() => void bring()}>
+          {W.bring}
+        </button>
       </div>
-      {room.canBring ? null : <p className={styles.roomMeta}>{SE_WEAVERS_LIMIT_WORDS.bring}</p>}
       {note ? (
         <p role="status" className={styles.roomMeta}>
           {note}

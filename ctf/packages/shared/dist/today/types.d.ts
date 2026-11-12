@@ -59,7 +59,6 @@ export type SeTodayRoom = {
     faces: string[];
     href: string;
     nextTalk: SeTodayTalk | null;
-    canBring?: boolean;
 };
 export type SeTodayBroadcast = {
     live: boolean;

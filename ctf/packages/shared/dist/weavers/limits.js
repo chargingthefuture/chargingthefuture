@@ -1,9 +1,10 @@
-// What only Weavers of the Commons badge holders may do (3.1 plan, Access): bring people into rooms,
-// and put pictures and links in posts. Everybody else sees the line that says so where the action
+// What only Weavers of the Commons badge holders may do (3.1 plan, Access): ask members into a Back
+// Channel, and put pictures and links in posts. Bringing somebody into a room is a shared link and
+// open to every member (owner decision, 2026-11-12). Everybody else sees the line that says so where the action
 // would be, and the server refuses it with the same words.
 export const SE_WEAVERS_LIMIT_WORDS = {
-    rule: 'Bringing people into rooms, and pictures and links in posts, are for Weavers of the Commons.',
-    bring: 'Bringing people into rooms is for Weavers of the Commons.',
+    rule: 'Back Channel invites, and pictures and links in posts, are for Weavers of the Commons.',
+    invite: 'Asking members into a Back Channel is for Weavers of the Commons.',
     picture: 'Pictures in posts are for Weavers of the Commons.',
     link: 'Links in posts are for Weavers of the Commons. Take the link out to post this.',
 };

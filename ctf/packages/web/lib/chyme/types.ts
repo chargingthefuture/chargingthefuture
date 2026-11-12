@@ -46,8 +46,6 @@ export type ChymeViewerState = {
   // A signed-in member not yet approved in Unlock, in the Main Room: they listen and cannot speak
   // or raise a hand (3.1.0, Access). Set by the room read; absent means false.
   listenOnly?: boolean;
-  // Weavers of the Commons badge holders bring people into rooms. Set by the room read; absent means false.
-  canBringSomeoneIn?: boolean;
 };
 
 export type ChymeRoomResponse = {
