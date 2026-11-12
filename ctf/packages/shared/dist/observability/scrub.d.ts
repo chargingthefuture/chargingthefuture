@@ -1,5 +1,6 @@
 export declare const SE_SCRUB_ID = ":id";
 export declare const SE_SCRUB_VALUE = ":value";
+export declare const SE_SCRUB_HANDLE = ":handle";
 export declare const SE_SCRUB_EMAIL = ":email";
 export declare const SE_SCRUB_PHONE = ":phone";
 export declare function seScrubIds(text: string): string;

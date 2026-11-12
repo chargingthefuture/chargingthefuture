@@ -28,6 +28,25 @@ describe('seScrubAddress', () => {
     expect(seScrubAddress('')).toBe('');
   });
 
+  it('replaces Directory handles and invite names with :handle', () => {
+    expect(seScrubAddress('/apps/directory/jane-doe')).toBe('/apps/directory/:handle');
+    expect(seScrubAddress('https://app.lagatos.com/apps/directory/profile/jane-doe?tab=skills')).toBe(
+      'https://app.lagatos.com/apps/directory/profile/:handle?tab=:value',
+    );
+    expect(seScrubAddress('/api/directory/invites/jane-doe/image')).toBe('/api/directory/invites/:handle/image');
+    expect(seScrubAddress('GET /apps/directory/jane-doe')).toBe('GET /apps/directory/:handle');
+    expect(seScrubAddress(`/apps/directory/profile/${UUID}`)).toBe('/apps/directory/profile/:id');
+  });
+
+  it('leaves Directory pages and route templates alone', () => {
+    expect(seScrubAddress('/apps/directory')).toBe('/apps/directory');
+    expect(seScrubAddress('/apps/directory/')).toBe('/apps/directory/');
+    expect(seScrubAddress('/apps/directory/invites')).toBe('/apps/directory/invites');
+    expect(seScrubAddress('/apps/directory/weavers-of-the-commons')).toBe('/apps/directory/weavers-of-the-commons');
+    expect(seScrubAddress('/apps/directory/profile/[handle]')).toBe('/apps/directory/profile/[handle]');
+    expect(seScrubAddress('/apps/directory/:handle')).toBe('/apps/directory/:handle');
+  });
+
   it('scrubs ids in the fragment and inside a segment', () => {
     expect(seScrubAddress(`/a#/b/${UUID}`)).toBe('/a#/b/:id');
     expect(seScrubAddress(`/files/photo-${UUID}.png`)).toBe('/files/photo-:id.png');
