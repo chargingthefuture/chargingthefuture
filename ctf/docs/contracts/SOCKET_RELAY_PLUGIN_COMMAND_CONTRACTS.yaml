@@ -4,6 +4,7 @@ contracts:
     version: 1.2.0
     description: >-
       Before saving, the words are sent to Stream's AI moderation check (config se:posts, lib/integrations/stream-content-check.ts); when Stream answers remove, the post is refused with 422 content_refused and nothing is saved. When Stream is not set up or cannot be reached the post is saved and the failure is reported.
+      Links in the title or details (an ask from + New included) are for Weavers of the Commons; anybody else is refused with 403 weavers_only and the plan's words before the moderation check (3.1 plan, Access; lib/contributor-access/weavers-limits.ts): the badge is never given by hand, so an admin is held to it too.
       Create a relay request with ownership and lifecycle defaults. The request object
       carries title, details (optional; may be empty, as an ask from + New can be its title
       alone), tags (1-3 free-text tags, each up to 64 chars; a legacy
@@ -53,6 +54,7 @@ contracts:
       inert — see create; v3 is members-only), the settlement value type, and
       acceptedCurrencies (replace semantics: the stored set is cleared and re-written
       from the validated request payload). Lifecycle status is not changed here.
+      Links in the title or details are for Weavers of the Commons; anybody else is refused with 403 weavers_only and the plan's words (3.1 plan, Access; lib/contributor-access/weavers-limits.ts): the badge is never given by hand, so an admin is held to it too.
     inputSchema:
       requestId:
         type: string
@@ -199,6 +201,7 @@ contracts:
       rule that an inappropriate picture is an automatic ban with no exceptions, and the member
       ticks it before the file picker opens; the route refuses an upload without
       acknowledged=1 and stores rules_acknowledged_at on every picture.
+      Pictures are for Weavers of the Commons; anybody else is refused with 403 weavers_only and the plan's words (3.1 plan, Access; lib/contributor-access/weavers-limits.ts): the badge is never given by hand, so an admin is held to it too.
     inputSchema:
       requestId:
         type: string

@@ -435,6 +435,8 @@ Demo schema (`ctf/scripts/seedDemo.mjs`, `seedPeerProgrammingGoalBoard`): finds 
 
 ## Change Log
 
+- 2026-11-12: **Links in a goal are for Weavers of the Commons (owner decision).** Per the 3.1 plan's Access table, only badge holders put links in posts. `POST /api/peer-programming/goals`, which also carries an ask's tasks from + New, refuses a title or task with a link from anybody else with 403 `weavers_only` and the plan's words ("Links in posts are for Weavers of the Commons. Take the link out to post this."). Admins are held to it too. + New shows the refusal on web and Android. No table changed.
+
 - 2026-11-11: **The "with you this week" card on Today (With you this week on Today).** The 3.1 plan shows
   cohorts as a "with you this week" card. Today reads the member's own cohort and its first six
   members; `today.read` lists `peer_programming_cohorts` and `peer_programming_settings` beside

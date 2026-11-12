@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { ensureMutationCsrf, requireLighthouseAdminAccess } from 'lib/lighthouse/_lib';
 import { LIGHTHOUSE_ERROR_CODE } from 'lib/lighthouse/constants';
-import { insertLighthouseAudit, updateProperty, validatePropertyInput } from 'lib/lighthouse/repository';
+import { getPropertyById, insertLighthouseAudit, updateProperty, validatePropertyInput } from 'lib/lighthouse/repository';
 import type { LighthousePropertyInput } from 'lib/lighthouse/types';
+import { refuseNewPicturesUnlessWeaver } from 'lib/contributor-access/weavers-limits';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
 
@@ -60,6 +61,21 @@ function parsePropertyInput(body: PropertyBody): LighthousePropertyInput {
   };
 }
 
+// New listing photos are for Weavers of the Commons (3.1 plan, Access); photos already on the listing
+// stay and do not block an edit. Null when the edit may go ahead.
+async function refuseNewAdminPhotos(userId: string, propertyId: string, photos: LighthousePropertyInput['photos']): Promise<NextResponse | null> {
+  try {
+    const current = await getPropertyById(propertyId, { userId, isAdmin: true });
+    return await refuseNewPicturesUnlessWeaver(userId, photos, current?.photos ?? []);
+  } catch (error) {
+    reportError(error, { area: 'lighthouse', op: 'admin_properties_propertyid' });
+    return NextResponse.json(
+      { ok: false, code: LIGHTHOUSE_ERROR_CODE.persistenceUnavailable, message: 'Property update unavailable.', reason: failureReason(error) },
+      { status: 503 },
+    );
+  }
+}
+
 export async function PUT(request: Request, { params }: RouteParams) {
   const csrfDeny = ensureMutationCsrf(request);
   if (csrfDeny) {
@@ -90,6 +106,11 @@ export async function PUT(request: Request, { params }: RouteParams) {
   }
 
   const { propertyId } = await params;
+
+  const weavers = await refuseNewAdminPhotos(gate.auth.userId, propertyId, input.photos);
+  if (weavers) {
+    return weavers;
+  }
 
   try {
     const property = await updateProperty(gate.auth.userId, propertyId, input, true);

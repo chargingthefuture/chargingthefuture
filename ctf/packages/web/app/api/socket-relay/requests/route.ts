@@ -16,6 +16,7 @@ import {
 } from 'lib/socket-relay/repository';
 import type { SocketRelayRequestStatus } from 'lib/socket-relay/types';
 import { parseRequestInput } from 'lib/socket-relay/parse-input';
+import { refuseLinkUnlessWeaver } from 'lib/contributor-access/weavers-limits';
 import { reportError } from 'lib/observability/report';
 import { contentRefusedResponse, isRefusedByStream } from 'lib/integrations/stream-content-check';
 import { saveAskDue } from 'lib/today/ask-due';
@@ -87,6 +88,14 @@ function resolveIdempotencyKey(body: Record<string, unknown>, userId: string): s
   return typeof raw === 'string' && raw.trim().length > 0 ? raw.trim() : `${userId}:${Date.now()}`;
 }
 
+// A payload that fails validation, or carries a link from a member without the Weavers of the
+// Commons badge (3.1 plan, Access). Null when the ask may be posted.
+async function refuseAskInput(userId: string, input: ReturnType<typeof parseRequestInput>): Promise<NextResponse | null> {
+  const payloadDeny = await validateCreateRequestPayload(input);
+  if (payloadDeny) return payloadDeny;
+  return refuseLinkUnlessWeaver(userId, `${input.title}\n${input.details ?? ''}`);
+}
+
 export async function POST(request: Request) {
   const csrfDeny = ensureMutationCsrf(request);
   if (csrfDeny) {
@@ -109,7 +118,7 @@ export async function POST(request: Request) {
   }
 
   const input = parseRequestInput(body);
-  const payloadDeny = await validateCreateRequestPayload(input);
+  const payloadDeny = await refuseAskInput(gate.auth.userId, input);
   if (payloadDeny) {
     return payloadDeny;
   }

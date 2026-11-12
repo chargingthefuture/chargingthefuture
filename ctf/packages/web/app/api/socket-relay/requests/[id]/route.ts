@@ -9,6 +9,7 @@ import {
   validateRequestInput,
 } from 'lib/socket-relay/repository';
 import { parseRequestInput } from 'lib/socket-relay/parse-input';
+import { refuseLinkUnlessWeaver } from 'lib/contributor-access/weavers-limits';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
 
@@ -66,6 +67,11 @@ export async function PUT(request: Request, { params }: RouteProps) {
   }
 
   const input = parseRequestInput(body);
+  // Links in an ask are for Weavers of the Commons (3.1 plan, Access).
+  const linkDeny = await refuseLinkUnlessWeaver(gate.auth.userId, `${input.title}\n${input.details ?? ''}`);
+  if (linkDeny) {
+    return linkDeny;
+  }
   // Answer the one payload problem a caller can act on by itself before the catch-all message below.
   if (hasOverlongTag(input.tags)) {
     return NextResponse.json(

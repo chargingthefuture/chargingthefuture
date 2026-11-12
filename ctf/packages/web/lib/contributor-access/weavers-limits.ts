@@ -25,3 +25,18 @@ export async function refuseLinkUnlessWeaver(userId: string, text: string): Prom
 export async function refuseUnlessWeaver(userId: string, limit: WeaversLimit): Promise<NextResponse | null> {
   return (await holdsWeaversBadge(userId)) ? null : weaversRefusal(limit);
 }
+
+// Null when no picture is new (every one was already there before this edit) or the writer holds the
+// badge; otherwise the refusal. Pictures put up before the rule stay, so an edit that keeps them is
+// not refused.
+export async function refuseNewPicturesUnlessWeaver(
+  userId: string,
+  pictures: unknown,
+  alreadyThere: readonly string[] = [],
+): Promise<NextResponse | null> {
+  // A body's photos arrive unchecked; anything that is not a list carries no picture.
+  const list: unknown[] = Array.isArray(pictures) ? pictures : [];
+  const kept = new Set<unknown>(alreadyThere);
+  if (!list.some((p) => !kept.has(p))) return null;
+  return (await holdsWeaversBadge(userId)) ? null : weaversRefusal('picture');
+}
