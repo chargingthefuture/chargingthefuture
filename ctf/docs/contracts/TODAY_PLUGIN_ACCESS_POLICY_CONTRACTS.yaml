@@ -286,6 +286,35 @@ policies:
       - invalid_card_id
       - rate_limited
   - pluginId: today
+    command: today.cards.answer.confirm_helped
+    version: 1.0.0
+    requiredRoles:
+      - member
+    attributePolicies:
+      tenancy: same_workspace
+      minUnlockTier: signed_in_posting
+      readsOnly: false
+      csrf: required
+      relationship: none
+    consentRequirements:
+      scopes:
+        - platform_terms
+      fallbackLawfulBasis: legitimate_interest
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+        - scc
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: false
+    denyConditions:
+      - actor_not_authenticated
+      - unlock_paused_after_day_14
+      - account_restricted
+      - not_card_author
+      - invalid_card_id
+      - rate_limited
+  - pluginId: today
     command: today.cards.message.send
     version: 1.0.0
     requiredRoles:

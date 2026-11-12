@@ -2,12 +2,12 @@
 // who is not signed in) and keeps the last answer on the phone so Today draws at once on the next
 // open. A signed-in member's Done and Not for me marks are stored on their account
 // (POST /api/today/marks) and applied by the server, so every device agrees; the screen changes at
-// once and the route stores the change. Marks this phone kept before that are sent up once, then
+// once and the route stores the change. Opening a card marks it read the same way. Marks this phone kept before that are sent up once, then
 // removed here. A visitor who is not signed in has no account and no marks.
 
 import { useCallback, useEffect, useState } from 'react';
 import { File, Paths } from 'expo-file-system';
-import { SE_SAVED_WORDS, seSaveCardInToday, seSaveChangeFor, type SeSaveChange, type SeTodayCard, seDayStartIso, seLegacyMarkChanges, seMarkCardInToday, seMarkChangeFor, seMarksFromToday, type SeCardMarkChange, type SeToday, type SeTodayMarks } from '@ctf/shared';
+import { SE_SAVED_WORDS, seSaveCardInToday, seSaveChangeFor, type SeSaveChange, type SeTodayCard, seLegacyMarkChanges, seMarkCardInToday, seMarkChangeFor, seMarksFromToday, seReadChangeFor, seTodayDayQuery, type SeCardMarkChange, type SeToday, type SeTodayMarks } from '@ctf/shared';
 import { authedFetch } from '../../../auth/authedFetch';
 import { reportError } from '../../../observability/report';
 
@@ -105,7 +105,8 @@ export function useToday(accountId: string | null) {
     setLoading(true);
     setError(null);
     const fallback = 'Could not load Today.';
-    const url = accountId ? `/api/today?dayStart=${encodeURIComponent(seDayStartIso())}` : '/api/today/public';
+    // The member's own day, so stories, the puzzle and 21 Questions turn at their midnight.
+    const url = `${accountId ? '/api/today' : '/api/today/public'}?${seTodayDayQuery()}`;
     try {
       const res = await authedFetch(url);
       if (!res.ok) {
@@ -155,6 +156,8 @@ export function useToday(accountId: string | null) {
   const mark = useCallback((kind: MarkKind, cardId: string) => apply(seMarkChangeFor(today, kind, cardId)), [apply, today]);
   // Done is a toggle on the card's timeline dot, so a card marked by mistake can be unmarked.
   const toggle = useCallback((kind: MarkKind, cardId: string) => apply(seMarkChangeFor(today, kind, cardId)), [apply, today]);
+  // Opening a card marks it read, once, where the plan gives it a check mark (seReadChangeFor).
+  const markRead = useCallback((cardId: string) => (accountId ? apply(seReadChangeFor(today, cardId, accountId)) : undefined), [apply, today, accountId]);
 
   // Save for later: drawn at once, stored by POST /api/today/saves. A change that was not stored is
   // read back as it is on the server, with the reason shown.
@@ -173,5 +176,5 @@ export function useToday(accountId: string | null) {
     [load],
   );
 
-  return { today, loading, error, marks: seMarksFromToday(today), mark, toggle, save, saveNote, reload: load };
+  return { today, loading, error, marks: seMarksFromToday(today), mark, toggle, markRead, save, saveNote, reload: load };
 }

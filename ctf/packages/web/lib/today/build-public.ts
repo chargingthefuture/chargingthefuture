@@ -1,4 +1,4 @@
-import type { SeToday, SeTodayBroadcast, SeTodayCard, SeTodayRoom } from '@ctf/shared';
+import type { SeToday, SeTodayBroadcast, SeTodayCard, SeTodayDay, SeTodayRoom } from '@ctf/shared';
 import { blogStories } from './sources-blog';
 import { dailyPuzzleCard } from './sources-daily';
 import { reportError } from 'lib/observability/report';
@@ -9,7 +9,7 @@ import { replayCards } from './sources-replays';
 import { mainRoom, nextTalk, weekTalks } from './sources-rooms';
 import { readDaysWon } from 'lib/measures/action-minutes';
 import { listAvailableRequests as listRideRequests } from 'lib/trust-transport/repository';
-import { action, card } from './card';
+import { action, card, utcTodayDay } from './card';
 import { TODAY_MAX_CARDS } from './build';
 import { runWithForcedPool } from 'lib/db/postgres';
 
@@ -73,7 +73,7 @@ const GUEST = { userId: '', isAdmin: false };
 // newcomer comes to see. Everything else follows, newest first within each group.
 const leads = (item: SeTodayCard) => (item.kind === 'ask' || item.kind === 'offer' ? 0 : 1);
 
-export async function buildPublicToday(now = new Date()): Promise<SeToday> {
+export async function buildPublicToday(now = new Date(), day: SeTodayDay = utcTodayDay(now)): Promise<SeToday> {
   const unavailable: string[] = [];
   const sources: Source[] = [
     { name: 'trust-transport', read: () => sampleCards(publicRideAsks) },
@@ -82,13 +82,13 @@ export async function buildPublicToday(now = new Date()): Promise<SeToday> {
     { name: 'peer-programming', read: () => sampleCards(() => goalAsks(GUEST)) },
     { name: 'lighthouse', read: () => sampleCards(() => placeOffers(GUEST)) },
     { name: 'mutual-time', read: () => sampleCards(() => hoursOffers(GUEST)) },
-    { name: 'numbers', read: () => numbersCard(now) },
-    { name: 'blog-stories', read: () => blogStories(now) },
+    { name: 'numbers', read: () => numbersCard(day) },
+    { name: 'blog-stories', read: () => blogStories(day) },
     // Signed out, the puzzle can be read but not played, so its button says so.
-    { name: 'games', read: async () => (await dailyPuzzleCard(now)).map((item) => ({ ...item, actions: [action('open', 'See the puzzle', item.href)] })) },
-    { name: 'beacon-replays', read: () => replayCards(now) },
+    { name: 'games', read: async () => (await dailyPuzzleCard(day)).map((item) => ({ ...item, actions: [action('open', 'See the puzzle', item.href)] })) },
+    { name: 'beacon-replays', read: () => replayCards(day) },
     { name: 'skills-hunt', read: () => wantedCard() },
-    { name: 'skills-hunt-mission', read: () => missionCard(now) },
+    { name: 'skills-hunt-mission', read: () => missionCard(day) },
   ];
   const week = weekTalks(now);
   const [cardLists, live, room, weekList, daysWon] = await Promise.all([

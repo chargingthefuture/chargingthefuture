@@ -17,7 +17,7 @@ vi.mock('lib/questions/repository', () => ({
 import { questionCards } from './sources-questions';
 
 const viewer = { userId: 'ann', isAdmin: false };
-const thirdDay = new Date('2026-11-05T12:00:00Z');
+const thirdDay = { day: '2026-11-05', startIso: '2026-11-05T00:00:00.000Z' };
 const today = seQuestionOfDay('2026-11-05');
 
 describe("Today's 21 Questions card", () => {

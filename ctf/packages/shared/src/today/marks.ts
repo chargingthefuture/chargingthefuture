@@ -6,6 +6,10 @@
 //   A story or replay brought round again by its daily rotation stays off once done, except a blog
 //   story whose Fireside conversation has a comment newer than the mark: it comes back, not done,
 //   with "N new comments".
+// Check marks (3.1.0 plan, Card rules): a card shows one when the member read it or answered it,
+// never on another person's ask. Opening a card (its sheet, or expanding it in place) marks it done
+// by itself (seReadChangeFor); the dot still takes it away or puts it back by hand. Another
+// person's ask has no check mark: a done mark on one is not applied, and its dot is not a button.
 // A visitor who is not signed in has no account, so their marks stay on their device only
 // (SeTodayMarks, seTodayView).
 
@@ -70,10 +74,21 @@ function without(card: SeTodayCard, keys: ReadonlyArray<keyof SeTodayCard>): SeT
   return copy;
 }
 
+// Somebody else's ask: an ask that is not the viewer's own posting or goal. It never shows a check mark.
+export function seIsOthersAsk(card: Pick<SeTodayCard, 'kind' | 'mine' | 'goal'>): boolean {
+  return card.kind === 'ask' && !card.mine && !card.goal;
+}
+
+// Whether the card's dot can carry a check mark at all.
+export function seCardTakesCheckMark(card: Pick<SeTodayCard, 'kind' | 'mine' | 'goal'>): boolean {
+  return !seIsOthersAsk(card);
+}
+
 function applyOne(card: SeTodayCard, mark: SeCardMark | undefined, dayStartMs: number): SeTodayCard | null {
   const shown = without(card, ['commentTimesIso']);
   if (!mark) return shown;
   if (mark.mark === 'not_for_me') return null;
+  if (!seCardTakesCheckMark(card)) return shown;
   const fresh = seNewCommentsSince(card, mark.markedAtIso);
   if (fresh > 0) return { ...shown, newComments: fresh };
   if (Date.parse(mark.markedAtIso) < dayStartMs) return null;
@@ -88,9 +103,10 @@ export function seApplyCardMarks(cards: readonly SeTodayCard[], marks: readonly 
   return cards.map((card) => applyOne(card, byId.get(card.id), dayStartMs)).filter((card): card is SeTodayCard => card !== null);
 }
 
-// Shown as done: done on the server (a 21 Questions answer) or marked done by the member.
+// Shown as done: done on the server (a 21 Questions answer) or marked done by the member. Never on
+// another person's ask.
 export function seCardShownDone(card: SeTodayCard): boolean {
-  return Boolean(card.done || card.markedDoneAtIso);
+  return seCardTakesCheckMark(card) && Boolean(card.done || card.markedDoneAtIso);
 }
 
 // The screen's own copy of a change, drawn at once while the route stores it.
@@ -121,6 +137,16 @@ export function seMarksFromToday(today: { cards: SeTodayCard[] } | null): { read
 export function seMarkChangeFor(today: { cards: SeTodayCard[] } | null, kind: 'read' | 'hidden', cardId: string): SeCardMarkChange | null {
   if (kind === 'hidden') return { cardId, mark: 'not_for_me' };
   const card = today?.cards.find((item) => item.id === cardId);
-  if (!card || card.done) return null;
+  if (!card || card.done || !seCardTakesCheckMark(card)) return null;
   return { cardId, mark: card.markedDoneAtIso ? 'clear' : 'done' };
+}
+
+// What opening a card asks the server for: done, once. Null on another person's ask, on the
+// member's own posting or goal (writing it is not reading it), on a card the server marks done
+// itself, and on a card already marked.
+export function seReadChangeFor(today: { cards: SeTodayCard[] } | null, cardId: string, viewerId: string): SeCardMarkChange | null {
+  const card = today?.cards.find((item) => item.id === cardId);
+  if (!card || card.done || card.markedDoneAtIso || !seCardTakesCheckMark(card)) return null;
+  if (card.mine || card.goal || card.author?.accountId === viewerId) return null;
+  return { cardId, mark: 'done' };
 }

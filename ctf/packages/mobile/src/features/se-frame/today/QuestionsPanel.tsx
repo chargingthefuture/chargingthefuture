@@ -4,7 +4,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { SE_MATCH_MESSAGE_MAX, seAgo, seQuestionById, type SeMatchMessage, type SeThemeTokens, type SeTodayCard } from '@ctf/shared';
+import { SE_MATCH_MESSAGE_MAX, seAgo, seLocalDay, seQuestionById, type SeMatchMessage, type SeThemeTokens, type SeTodayCard } from '@ctf/shared';
 import { authedFetch } from '../../../auth/authedFetch';
 import { SE_FONT } from '../fonts';
 
@@ -29,7 +29,7 @@ function QuestionChoices({ s, card, onChanged }: { s: Styles; card: SeTodayCard;
   if (!question) return null;
   const pick = async (choice: number) => {
     setBusy(true);
-    const result = await send('/api/today/questions/answers', { questionId: question.id, choice });
+    const result = await send('/api/today/questions/answers', { questionId: question.id, choice, day: seLocalDay() });
     setBusy(false);
     if (!result.ok) return setNote(messageOf(result.data, 'The answer was not saved: the app could not be reached.'));
     setNote(`Saved: ${question.choices[choice]}.`);

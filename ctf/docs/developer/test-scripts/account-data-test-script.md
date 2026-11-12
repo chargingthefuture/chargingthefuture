@@ -757,3 +757,13 @@ totals (AD-28) still count each mark.
 7. Repeat steps 1, 3, 5 and 6 in every color, light and dark.
 **Expected:** Step 1: A sees a sage "Offer · hours" card with the survey's title, its description and "We'll meet in Chyme.", no name and no count; the admin sees the same survey among their own cards, with when it leaves Today and Keep it up. Step 2 opens the survey's shared page; once closed, the card is gone. Step 3: the card reads "Cohort C…" and "With you: …" with up to five names and "and N more", never A's own name; tapping the text opens it in place (no sheet), and the button opens the cohort's goal board. Marked done, it stays off until next Monday. Step 4: B has no cohort card. Step 5: the card is labeled "Our numbers · this week" with two figures, "N%" over "of a small country's skills covered" and "+N" over "Community Value Index this week", and no currency symbol anywhere; with no row for last week the card reads "Our numbers" with the coverage figure alone. Step 6: under the blog story's public composer, "Your comment can also appear under this post on the blog." shows beneath "Everyone can read this…"; it is gone in Just us two and never shows on the Ask card. Step 7: the figures and lines are readable in every color and mode.
 **Result:** web ☐ android ☐ — notes:
+
+## AD-36 · Check marks, This helped me, and the member's own midnight
+**Role:** member A (signed in on web and Android), member B (posted an open ask), an admin · **Surfaces:** web, android
+**Steps:**
+1. As A, open a blog story card on Today (tap its title), close the sheet, and expand a numbers card. Then tap the title of B's ask.
+2. As A, tap This helped me on a blog story. As the admin, open the same story's sheet.
+3. As the admin, tap Confirm beside A's answer.
+4. Set A's phone or computer clock to a time zone where it is already the next day while UTC is still today, and reload Today. Answer the 21 Questions card. Do the same signed out.
+**Expected:** Step 1: the story and the numbers card show a check mark on their dot at once and on the other device after a reload; B's ask shows a plain dot with no check mark, and tapping the dot does nothing. Step 2: the admin sees A's answer "says this helped" with Confirm beside it; A sees no Confirm. Step 3: Confirm turns to Confirmed for both, and the admin's Days won reads 10 action minutes more after the next read. A confirmation from anybody who did not write the card is refused (403 `not_author`). Step 4: the five stories, the puzzle of the day, today's question and the closing "N more stories open at your midnight" are the next day's, signed in and signed out, and the answer is taken.
+**Result:** web ☐ android ☐ — notes:

@@ -18,6 +18,7 @@ export type SeCardAnswer = {
     accountId: string;
     handle: string;
     kinds: SeCardAnswerKind[];
+    helpedConfirmed: boolean;
 };
 export type SeCardMessage = {
     id: string;
@@ -39,6 +40,7 @@ export type SeCardConversation = {
     cardId: string;
     viewerId: string;
     answers: SeCardAnswer[];
+    canConfirmHelped: boolean;
     mine: SeCardAnswerKind[];
     messages: SeCardMessage[];
     pairs: SeCardPairThread[];
@@ -84,6 +86,11 @@ export declare const SE_CARD_WORDS: {
     close: string;
     openIn: (source: string) => string;
     you: string;
+    confirmHelped: string;
+    confirmHelpedLabel: (handle: string) => string;
+    helpedConfirmed: string;
 };
+export declare function seCanConfirmHelped(conversation: Pick<SeCardConversation, 'canConfirmHelped' | 'viewerId'>, answer: SeCardAnswer): boolean;
+export declare function seHelpedConfirmedByAdmin(cardId: string): boolean;
 export declare function seCardSheetLine(card: Pick<SeTodayCard, 'kind' | 'label' | 'createdAtIso'>): string;
 export declare function seCardLockLine(reason: unknown): string | null;

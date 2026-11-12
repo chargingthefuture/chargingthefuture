@@ -2,7 +2,7 @@
 
 import { useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { SE_CARD_WORDS, SE_MUTE_WORDS, seCanSave, seCardAnswerKind, seIsMoodCard, seCardOpensSheet, seNewCommentsLine, type SeCardAnswerKind, type SeTodayCard } from '@ctf/shared';
+import { SE_CARD_WORDS, SE_MUTE_WORDS, seCanSave, seCardAnswerKind, seCardShownDone, seCardTakesCheckMark, seIsMoodCard, seCardOpensSheet, seNewCommentsLine, type SeCardAnswerKind, type SeTodayCard } from '@ctf/shared';
 import { SeAvatar } from '../../shared/se-avatar';
 import { QuestionsPanel, isQuestionsCard } from './questions-panel';
 import { CardSheet } from './card-sheet';
@@ -15,8 +15,10 @@ import styles from './today.module.css';
 // One card in Today. On an ask, offer or story, tapping the text opens the card in place as a sheet
 // (card-sheet.tsx), and an answer button (I can help, I know someone, I'd like this, It helped me
 // too) records the answer and opens the sheet; other buttons open the item where it lives. Every
-// other card expands in place as before. The timeline dot marks it done, and tapping it again marks
-// it not done. A story or replay carries Save for later and Hide as icons in its button row, and the
+// other card expands in place as before. Opening a card (its sheet, or expanding it) marks it read,
+// which puts the check mark on its timeline dot; tapping the dot takes it away or puts it back.
+// Another person's ask never shows a check mark, and its dot is not a button (3.1.0 plan, Card
+// rules). A story or replay carries Save for later and Hide as icons in its button row, and the
 // Mood card its five faces. The ••• menu holds Copy link, Not for me (the card leaves Today on this device),
 // Mute this post (the card leaves Today and its conversation sends no notices) on somebody else's
 // card and, on a card with an author, Mute and Report.
@@ -117,7 +119,9 @@ function CardMenu({ card, viewerId, onHide, onMute, onMutePost }: MenuProps) {
 }
 
 // The timeline dot. A card the server marks done (a 21 Questions answer) stays done: the answer is final.
+// On another person's ask it is only the dot.
 function DoneDot({ card, done, color, onToggleDone }: { card: SeTodayCard; done: boolean; color: string; onToggleDone: () => void }) {
+  if (!seCardTakesCheckMark(card)) return <span className={styles.dot} style={{ background: color }} aria-hidden="true" />;
   return (
     <button
       type="button"
@@ -187,6 +191,23 @@ function CardFoot({ card, onAnswer, onSave, onHide }: FootProps) {
   );
 }
 
+// Opening a card, in its sheet or in place, marks it read (onRead) before it opens.
+function useCardOpening(card: SeTodayCard, onRead: (() => void) | undefined) {
+  const [open, setOpen] = useState(false);
+  const [sheet, setSheet] = useState<Sheet>(null);
+  const opensSheet = seCardOpensSheet(card);
+  const openSheet = (firstAnswer: SeCardAnswerKind | null) => {
+    onRead?.();
+    setSheet({ firstAnswer });
+  };
+  const toggle = () => {
+    if (opensSheet) return openSheet(null);
+    if (!open) onRead?.();
+    setOpen((value) => !value);
+  };
+  return { open, setOpen, sheet, setSheet, opensSheet, openSheet, toggle };
+}
+
 // The title and text, or a card's figures in their place (card-figures.tsx), then the line about
 // new comments on a story marked done that came back.
 function CardText({ card, open, color }: { card: SeTodayCard; open: boolean; color: string }) {
@@ -219,14 +240,12 @@ function PlainCard({
   onMutePost,
   onSave,
   onChanged,
+  onRead,
 }: TodayCardProps) {
-  const [open, setOpen] = useState(false);
-  const [sheet, setSheet] = useState<Sheet>(null);
+  const { open, setOpen, sheet, setSheet, opensSheet, openSheet, toggle } = useCardOpening(card, onRead);
   const color = `var(--se-kind-${card.kind})`;
   // A card the server marks done (a 21 Questions answer) stays done: the answer is final.
-  const done = read || card.done === true;
-  const opensSheet = seCardOpensSheet(card);
-  const toggle = () => (opensSheet ? setSheet({ firstAnswer: null }) : setOpen((value) => !value));
+  const done = read || seCardShownDone(card);
   return (
     <article className={styles.card}>
       <DoneDot card={card} done={done} color={color} onToggleDone={onToggleDone} />
@@ -235,7 +254,7 @@ function PlainCard({
         <CardText card={card} open={open} color={color} />
       </button>
       {isQuestionsCard(card) ? <QuestionsPanel card={card} open={open} onOpen={() => setOpen(true)} onChanged={onChanged ?? (() => undefined)} /> : null}
-      <CardFoot card={card} onAnswer={opensSheet ? (kind) => setSheet({ firstAnswer: kind }) : null} onSave={onSave} onHide={onHide} />
+      <CardFoot card={card} onAnswer={opensSheet ? openSheet : null} onSave={onSave} onHide={onHide} />
       {sheet ? (
         <CardSheet card={card} viewerId={viewerId} firstAnswer={sheet.firstAnswer} onClose={() => setSheet(null)} onChanged={onChanged} onMutePost={onMutePost} />
       ) : null}
@@ -257,6 +276,8 @@ type TodayCardProps = {
   onSave?: () => void;
   // A card that changes something (a 21 Questions answer) asks Today to read again.
   onChanged?: () => void;
+  // Opening the card: Today marks it read (done) where the plan gives it a check mark.
+  onRead?: () => void;
 };
 
 // The member's own goal draws as the "Your goal" card (goal-card.tsx); every other card as above.

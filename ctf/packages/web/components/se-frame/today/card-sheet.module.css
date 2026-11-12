@@ -183,6 +183,12 @@
   min-width: 0;
 }
 
+.answerConfirmed {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--se-soft);
+}
+
 .talkButton,
 .talkPrimary {
   min-height: 38px;

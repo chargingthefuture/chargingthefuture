@@ -101,7 +101,7 @@ export async function POST(request: Request, context: Context) {
   try {
     const refused = await write(cardId, userId, input);
     if (refused) return refused;
-    const conversation = await readConversation(userId, cardId);
+    const conversation = await readConversation(gate.auth, cardId);
     return NextResponse.json({ ok: true, conversation }, { headers: { 'cache-control': 'private, no-store' } });
   } catch (error) {
     return cardsFailed('send_message', error, 'The message was not sent: the database write failed. Try again.');

@@ -16,7 +16,7 @@ export async function GET(_request: Request, context: Context) {
   const cardId = await cardIdFrom(context);
   if (!cardId) return invalidCard();
   try {
-    const conversation = await readConversation(gate.auth.userId, cardId);
+    const conversation = await readConversation(gate.auth, cardId);
     return NextResponse.json({ ok: true, conversation }, { headers: { 'cache-control': 'private, no-store' } });
   } catch (error) {
     return cardsFailed('read_conversation', error, 'The conversation could not be read: the database read failed.');

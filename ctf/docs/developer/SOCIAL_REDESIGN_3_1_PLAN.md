@@ -161,7 +161,7 @@ Unlock stops being the gate for most of the app.
 | Foundation | Contact route for People; provider side in Me |
 | Directory invite wall | Unchanged and still working: `/apps/directory/invites`, each invite's own page, the sign-in rule in `lib/directory/invite-access.ts`, and the public feed `/api/directory/invites/public` that the blog's invite row and the landing page read. Every address blog posts and Quora answers link to keeps answering. New invites also show as brass Story cards in Today, opening the invite's page |
 | Directory, SkillsHunt | People screen; Wanted card leads to the current round; the scout leaderboard is removed with its code and data; missions stay; each member sees their own nomination count |
-| Workforce, GDP | Our numbers card in Today; full report one tap from the card. No tile in Me |
+| Workforce, GDP | Our numbers card in Today; full report one tap from the card. Me keeps an "Our numbers" tile as the approved Me board shows (owner decision, 2026-11-11; this line said no tile in Me before) |
 | Skills Taxonomy | No page; the list behind prompts, search and matches |
 | Skill Up | Cohort cards in Today, joined from the card; the member's own cohorts under Me → Yours. No tile in Me |
 | What Works | Open to every signed-in member. Duplicate problems are discouraged: matches appear while typing, a note says duplicates are merged, new problems wait for review, and the review offers Merge, Approve as new, Delete as spam |

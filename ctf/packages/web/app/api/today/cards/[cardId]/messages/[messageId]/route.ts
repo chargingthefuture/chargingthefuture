@@ -75,7 +75,7 @@ export async function PATCH(request: Request, context: Context) {
   try {
     const refused = await edit(ids.cardId, ids.messageId, userId, body);
     if (refused) return refused;
-    return answer(await readConversation(userId, ids.cardId));
+    return answer(await readConversation(gate.auth, ids.cardId));
   } catch (error) {
     return cardsFailed('edit_message', error, 'The change was not saved: the database write failed. Try again.');
   }
@@ -93,7 +93,7 @@ export async function DELETE(request: Request, context: Context) {
   if (limited) return limited;
   try {
     if (!(await deleteOwnMessage(ids.cardId, ids.messageId, userId))) return cardsDenied('message_not_found', NOT_YOURS, 404);
-    return answer(await readConversation(userId, ids.cardId));
+    return answer(await readConversation(gate.auth, ids.cardId));
   } catch (error) {
     return cardsFailed('delete_message', error, 'The message was not deleted: the database write failed. Try again.');
   }

@@ -1,7 +1,7 @@
-import { seArchiveReplayForDay, seReplayBroadcastLine, seReplayIsRecent, type SeTodayCard } from '@ctf/shared';
+import { seArchiveReplayForDay, seReplayBroadcastLine, seReplayIsRecent, type SeTodayCard, type SeTodayDay } from '@ctf/shared';
 import { listBeaconReplays } from 'lib/beacon/repository';
 import { BEACON_REPLAY_PAGE_SIZE, BLOG_STREAMS_PAGE_URL, toPublicBeaconReplay, type PublicBeaconReplay } from 'lib/beacon/replays';
-import { action, card, startOfTodayIso } from './card';
+import { action, card, utcTodayDay } from './card';
 
 // Beacon replays on Today (owner decision, 2026-11-03): every replay broadcast in the last 7 days,
 // and one older replay a day from the archive, the same for everybody (seArchiveReplayForDay in
@@ -43,8 +43,8 @@ function replayCard(replay: PublicBeaconReplay, label: string, body: string | nu
   });
 }
 
-export async function replayCards(now = new Date()): Promise<SeTodayCard[]> {
-  const day = startOfTodayIso(now).slice(0, 10);
+export async function replayCards(today: SeTodayDay = utcTodayDay()): Promise<SeTodayCard[]> {
+  const day = today.day;
   const replays = (await allReplays()).map((replay, position) => ({
     ...replay,
     watchUrl: replayWatchUrl(replay.id, position),
@@ -57,5 +57,5 @@ export async function replayCards(now = new Date()): Promise<SeTodayCard[]> {
   if (!archived) return recent;
   const body = [seReplayBroadcastLine(archived.broadcastIso), archived.description].filter(Boolean).join('. ');
   // Dated to the start of today: it is the day's card, as a story is.
-  return [...recent, replayCard(archived, 'Replay · from the archive', body, startOfTodayIso(now))];
+  return [...recent, replayCard(archived, 'Replay · from the archive', body, today.startIso)];
 }

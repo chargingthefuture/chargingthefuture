@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { Modal, Pressable, ScrollView, Share, Text, TouchableOpacity, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
-import { SE_CARD_WORDS, SE_MUTE_WORDS, seCardSheetLine, type SeCardAnswerKind, type SeCardConversation, type SeThemeTokens, type SeTodayCard } from '@ctf/shared';
+import { SE_CARD_WORDS, SE_MUTE_WORDS, seCanConfirmHelped, seCardSheetLine, type SeCardAnswer, type SeCardAnswerKind, type SeCardConversation, type SeThemeTokens, type SeTodayCard } from '@ctf/shared';
 import { SeAvatar } from '../../../components/shared/SeAvatar';
 import { getApiBaseUrl } from '../../../auth/authedFetch';
 import { reportError } from '../../../observability/report';
@@ -97,7 +97,28 @@ function SheetHead({ t, s, card, viewerId, talk, onClose, onMutePost }: HeadProp
   );
 }
 
-function Answers({ s, conversation, onTalk }: { s: CardSheetStyles; conversation: SeCardConversation; onTalk: (_id: string) => void }) {
+type AnswersProps = { s: CardSheetStyles; conversation: SeCardConversation; busy: boolean; onTalk: (_id: string) => void; onConfirm: (_id: string) => void };
+
+// Confirm beside a "This helped me" for the card's author, Confirmed once it is.
+function HelpedConfirm({ s, conversation, answer, busy, onConfirm }: Omit<AnswersProps, 'onTalk'> & { answer: SeCardAnswer }) {
+  if (seCanConfirmHelped(conversation, answer)) {
+    return (
+      <TouchableOpacity
+        accessibilityRole="button"
+        accessibilityLabel={SE_CARD_WORDS.confirmHelpedLabel(answer.handle)}
+        accessibilityState={{ disabled: busy }}
+        disabled={busy}
+        style={s.talkButton}
+        onPress={() => onConfirm(answer.accountId)}
+      >
+        <Text style={s.talkLabel}>{SE_CARD_WORDS.confirmHelped}</Text>
+      </TouchableOpacity>
+    );
+  }
+  return answer.helpedConfirmed ? <Text style={s.answerConfirmed}>{SE_CARD_WORDS.helpedConfirmed}</Text> : null;
+}
+
+function Answers({ s, conversation, busy, onTalk, onConfirm }: AnswersProps) {
   if (conversation.answers.length === 0) return null;
   return (
     <View style={s.answers}>
@@ -110,6 +131,7 @@ function Answers({ s, conversation, onTalk }: { s: CardSheetStyles; conversation
             <Text style={s.answerText}>
               <Text style={s.answerName}>{mine ? SE_CARD_WORDS.you : answer.handle}</Text> {SE_CARD_WORDS.answerLine(answer.kinds)}
             </Text>
+            <HelpedConfirm s={s} conversation={conversation} answer={answer} busy={busy} onConfirm={onConfirm} />
             {mine ? null : (
               <TouchableOpacity accessibilityRole="button" style={index === 0 ? s.talkPrimary : s.talkButton} onPress={() => onTalk(answer.accountId)}>
                 <Text style={index === 0 ? s.talkPrimaryLabel : s.talkLabel}>{SE_CARD_WORDS.talkHere}</Text>
@@ -144,7 +166,9 @@ export function CardConversationView({ t, s, talk }: { t: SeThemeTokens; s: Card
   };
   return (
     <>
-      {talk.conversation ? <Answers s={s} conversation={talk.conversation} onTalk={(id) => void talkTo(id)} /> : null}
+      {talk.conversation ? (
+        <Answers s={s} conversation={talk.conversation} busy={talk.busy} onTalk={(id) => void talkTo(id)} onConfirm={(id) => void talk.confirm(id)} />
+      ) : null}
       <CardTalk t={t} s={s} talk={talk} partner={partner} onPartner={setPartner} onTalk={(id) => void talkTo(id)} />
     </>
   );

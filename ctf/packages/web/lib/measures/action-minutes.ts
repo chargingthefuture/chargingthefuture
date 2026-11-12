@@ -4,16 +4,18 @@ import { notExcludedAccount } from 'lib/unlock/excluded-accounts';
 import type { Signups } from './signups';
 
 // Action minutes (3.1.0, owner-approved plan, Measures). Minutes connected in a room or a call, 30
-// for a task its author confirmed, and 10 for a "This helped me" its author confirmed (nothing
-// records that confirmation yet, so it adds nothing). Time with the app open counts for nothing.
+// for a task its author confirmed, and 10 for a "This helped me" its author confirmed (credited to
+// the member who said it, on the day it was confirmed). Time with the app open counts for nothing.
 // Days won = all members' action minutes ÷ 480.
 //
 // Room and Back Channel seconds are credited per member on each heartbeat into
 // member_action_seconds_daily. Foundation calls (answered to ended, each side, capped at four hours)
-// and confirmed PeerProgramming tasks are read from their own tables.
+// and confirmed PeerProgramming tasks are read from their own tables, and confirmed "This helped me"
+// answers from commons_item_answers (confirmed_at, set by POST /api/today/cards/[cardId]/answers/confirm).
 
 export const ACTION_MINUTES_PER_DAY_WON = 480;
 export const CONFIRMED_TASK_MINUTES = 30;
+export const CONFIRMED_HELPED_MINUTES = 10;
 
 export type ActionSource = 'chyme-room' | 'back-channel';
 
@@ -28,8 +30,9 @@ export async function creditActionSeconds(client: PoolClient, userId: string, so
   );
 }
 
-// Every member's action minutes per UTC day, from all three sources, as two CTEs (minutes, daily)
-// to interpolate after WITH. Accounts marked demo/test on the Unlock admin are left out. `from` is the placeholder of the first day counted (inclusive); the
+// Every member's action minutes per UTC day, from all four sources, as two CTEs (minutes, daily)
+// to interpolate after WITH. Accounts marked demo/test on the Unlock admin are left out. `from` is
+// the placeholder of the first day counted (inclusive); the
 // reads below pass $1, the retention charts their own.
 export function dailyMinutesCte(from = '$1'): string {
   return `
@@ -48,6 +51,11 @@ export function dailyMinutesCte(from = '$1'): string {
       FROM peer_programming_goal_tasks
      WHERE helped = TRUE AND kept_at IS NOT NULL AND taken_by_user_id IS NOT NULL
        AND (kept_at AT TIME ZONE 'UTC')::date >= ${from}::date
+    UNION ALL
+    SELECT account_id, (confirmed_at AT TIME ZONE 'UTC')::date, ${CONFIRMED_HELPED_MINUTES}
+      FROM commons_item_answers
+     WHERE kind = 'helped-me' AND confirmed_at IS NOT NULL
+       AND (confirmed_at AT TIME ZONE 'UTC')::date >= ${from}::date
   ),
   daily AS (SELECT user_id, day, SUM(m) AS minutes FROM minutes WHERE ${notExcludedAccount('user_id')} GROUP BY user_id, day)`;
 }
