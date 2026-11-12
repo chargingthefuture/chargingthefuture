@@ -80,7 +80,9 @@ contracts:
     description: >-
       Claim an eligible request for fulfillment. A helper whose earlier claim on the same request
       was canceled by the requester (resolve outcome unsuccessful_reopen) is not eligible to claim
-      it again — the reopen is for other helpers (helper_previously_canceled, 409).
+      it again — the reopen is for other helpers (helper_previously_canceled, 409). The offer asks
+      the person who asked to talk just you two on the request's card (commons_item_pair_requests);
+      it opens once they agree.
     inputSchema:
       requestId:
         type: string
@@ -95,6 +97,7 @@ contracts:
       - socket_relay_fulfillments
       - socket_relay_request_events
       - member_blocks
+      - commons_item_pair_requests
     purpose: fulfillment_lifecycle
     retentionClass: transactional_long_lived
     idempotency: true
@@ -133,27 +136,22 @@ contracts:
     idempotency: true
 
   - pluginId: socket-relay
-    command: socket-relay.fulfillment.message.send
+    command: socket-relay.fulfillment.history.open
     version: 1.0.0
-    description: Send a participant-scoped message in a fulfillment thread.
+    description: >-
+      Open, read-only, the messages the two people wrote on the fulfillment's Direct Line on Stream
+      before 3.1. Freezes the Stream channel on first open; creates nothing. 404 when there was none.
     inputSchema:
       fulfillmentId:
         type: string
         required: true
-      messageText:
-        type: string
-        required: true
-      clientMessageId:
-        type: string
-        required: true
     outputSchema:
-      messageId:
+      streamChannelId:
         type: string
-      sentAt:
+      streamToken:
         type: string
     dataAccess:
-      - socket_relay_messages
-      - socket_relay_fulfillment_participants
+      - socket_relay_fulfillments
     purpose: fulfillment_communication
     retentionClass: communication_medium_lived
     idempotency: true

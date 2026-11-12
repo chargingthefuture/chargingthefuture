@@ -95,8 +95,8 @@ export type SocketRelayFulfillment = {
   requestId: string;
   requesterUserId: string;
   fulfillerUserId: string;
-  // The two participants' @usernames, captured on the fulfillment at claim time so the Direct Line chat
-  // can render real names instead of a raw user id. Null for legacy rows / members with no handle.
+  // The two participants' @usernames, captured on the fulfillment at claim time so the request
+  // under Yours can name the other person instead of a raw user id. Null for legacy rows / members with no handle.
   requesterUsername: string | null;
   fulfillerUsername: string | null;
   // Real names, joined by the admin list only, so an admin sees who the two people are without
@@ -112,13 +112,4 @@ export type SocketRelayFulfillment = {
   // single-fulfillment fetch does not join the request.
   requestTitle?: string;
   requestStatus?: SocketRelayRequestStatus;
-};
-
-export type SocketRelayMessage = {
-  id: string;
-  fulfillmentId: string;
-  senderUserId: string;
-  messageText: string;
-  moderationStatus: 'accepted' | 'flagged';
-  createdAtIso: string;
 };

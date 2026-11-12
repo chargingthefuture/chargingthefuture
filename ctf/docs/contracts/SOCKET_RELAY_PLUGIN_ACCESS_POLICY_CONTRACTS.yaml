@@ -56,7 +56,7 @@ policies:
     attributePolicies:
       tenancy: same_workspace
       # Only the requester (the person who posted the request) — or an admin — may resolve it. A
-      # helper can chat on the Direct Line but cannot close someone else's request.
+      # helper can talk in the card's conversation but cannot close someone else's request.
       actorMustBeRequester: true
     consentRequirements:
       scopes:
@@ -75,14 +75,14 @@ policies:
       - invalid_outcome
 
   - pluginId: socket-relay
-    command: socket-relay.fulfillment.message.send
+    command: socket-relay.fulfillment.history.open
     version: 1.0.0
     requiredRoles:
       - member
     attributePolicies:
       tenancy: same_workspace
       participantMembershipRequired: true
-      moderationGate: required
+      readOnly: true
     consentRequirements:
       scopes:
         - socket_relay_fulfillment_communication
@@ -93,11 +93,10 @@ policies:
         - scc
     highRiskFlags:
       containsPHI: true
-      requiresAdditionalAudit: true
+      requiresAdditionalAudit: false
     denyConditions:
       - actor_not_authenticated
       - actor_not_fulfillment_participant
-      - prohibited_content_detected
 
   - pluginId: socket-relay
     command: socket-relay.service-credits.send

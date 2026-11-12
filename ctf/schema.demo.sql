@@ -4336,8 +4336,6 @@ ALTER TABLE IF EXISTS socketrelay_requests RENAME TO socket_relay_requests;
 ALTER TABLE IF EXISTS socketrelay_request_accepted_currencies RENAME TO socket_relay_request_accepted_currencies;
 ALTER TABLE IF EXISTS socketrelay_request_events RENAME TO socket_relay_request_events;
 ALTER TABLE IF EXISTS socketrelay_fulfillments RENAME TO socket_relay_fulfillments;
-ALTER TABLE IF EXISTS socketrelay_fulfillment_participants RENAME TO socket_relay_fulfillment_participants;
-ALTER TABLE IF EXISTS socketrelay_messages RENAME TO socket_relay_messages;
 ALTER TABLE IF EXISTS socketrelay_admin_audit_trail RENAME TO socket_relay_admin_audit_trail;
 -- Drop the legacy-named price-consistency CHECK constraint if an older DB still carries it; the
 -- DO-block further down recreates it under the new socket_relay_requests_price_consistency_check name.
@@ -4512,32 +4510,8 @@ ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS closed_
 ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
-CREATE TABLE IF NOT EXISTS socket_relay_fulfillment_participants (
-  fulfillment_id UUID NOT NULL,
-  user_id TEXT NOT NULL,
-  participant_role TEXT NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  PRIMARY KEY (fulfillment_id, user_id)
-);
-ALTER TABLE IF EXISTS socket_relay_fulfillment_participants ADD COLUMN IF NOT EXISTS fulfillment_id UUID;
-ALTER TABLE IF EXISTS socket_relay_fulfillment_participants ADD COLUMN IF NOT EXISTS user_id TEXT;
-ALTER TABLE IF EXISTS socket_relay_fulfillment_participants ADD COLUMN IF NOT EXISTS participant_role TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS socket_relay_fulfillment_participants ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-
-CREATE TABLE IF NOT EXISTS socket_relay_messages (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  fulfillment_id UUID NOT NULL,
-  sender_user_id TEXT NOT NULL,
-  message_text TEXT NOT NULL,
-  moderation_status TEXT NOT NULL DEFAULT 'accepted',
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-ALTER TABLE IF EXISTS socket_relay_messages ADD COLUMN IF NOT EXISTS id UUID;
-ALTER TABLE IF EXISTS socket_relay_messages ADD COLUMN IF NOT EXISTS fulfillment_id UUID NOT NULL DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS socket_relay_messages ADD COLUMN IF NOT EXISTS sender_user_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS socket_relay_messages ADD COLUMN IF NOT EXISTS message_text TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS socket_relay_messages ADD COLUMN IF NOT EXISTS moderation_status TEXT NOT NULL DEFAULT 'accepted';
-ALTER TABLE IF EXISTS socket_relay_messages ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- The fulfillment participants and Direct Line messages tables were dropped by post/0102: a
+-- helper and the person who asked now talk in the request card's Just us two (commons_item_messages).
 
 CREATE TABLE IF NOT EXISTS socket_relay_admin_audit_trail (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -6032,15 +6006,6 @@ BEGIN
   END IF;
 END
 $sc_legacy_not_null_relax$;
-
--- socket_relay_messages (1 missing)
-ALTER TABLE IF EXISTS socket_relay_messages ADD COLUMN IF NOT EXISTS client_message_id TEXT;
--- Idempotency key backing sendFulfillmentMessage's `ON CONFLICT (fulfillment_id, sender_user_id,
--- client_message_id)`. Without a matching unique index Postgres rejects that ON CONFLICT (error 42P10)
--- and the message-send route throws — so this index is required for the route to work at all. Created
--- after the client_message_id column is added above so the referenced column always exists.
-CREATE UNIQUE INDEX IF NOT EXISTS socket_relay_messages_idempotency_uidx
-  ON socket_relay_messages (fulfillment_id, sender_user_id, client_message_id);
 
 -- trust_transport_user_extension (5 missing)
 ALTER TABLE IF EXISTS trust_transport_user_extension ADD COLUMN IF NOT EXISTS mode_preferences JSONB NOT NULL DEFAULT '{}'::jsonb;
@@ -11805,4 +11770,71 @@ ALTER TABLE IF EXISTS today_daily_credit_cards ADD COLUMN IF NOT EXISTS governan
 CREATE INDEX IF NOT EXISTS idx_today_daily_credit_cards_card ON today_daily_credit_cards(card_id, day);
 CREATE INDEX IF NOT EXISTS idx_today_daily_credit_cards_author ON today_daily_credit_cards(author_user_id);
 CREATE INDEX IF NOT EXISTS idx_today_daily_credit_cards_held ON today_daily_credit_cards(helper_user_id) WHERE credit_status = 'held';
+
+
+-- ── post migration: 0102_socket_relay_direct_lines_to_cards.sql ──
+-- post/0102: SocketRelay's Direct Lines move into the conversation under the request's card.
+--
+-- 3.1 removes Direct Lines: the helper and the person who asked talk in the card's Just us two,
+-- stored with every other card conversation in commons_item_messages (plugin 'socket-relay', item
+-- the request id). Every fulfillment that had a Direct Line already had both people talking, so
+-- each gets an agreed Just us two between them on its request. The few messages kept in this
+-- database (socket_relay_messages) are copied there as Just us two messages with their author,
+-- words and time; the copy is checked, and the table is dropped only when every message is there.
+-- socket_relay_fulfillment_participants recorded who could open a Direct Line and nothing reads it
+-- any more, so it is dropped too. Messages written on Stream stay readable, read-only, from the
+-- request. Production and the demo schema. Safe to re-run.
+
+DO $$
+BEGIN
+  IF to_regclass('socket_relay_fulfillments') IS NULL OR to_regclass('commons_item_pair_requests') IS NULL THEN
+    RETURN;
+  END IF;
+  INSERT INTO commons_item_pair_requests (plugin, item_id, user_low, user_high, requester_id, agreed_at, created_at)
+  SELECT DISTINCT ON (f.request_id, LEAST(f.requester_user_id, f.fulfiller_user_id), GREATEST(f.requester_user_id, f.fulfiller_user_id))
+         'socket-relay', f.request_id::text,
+         LEAST(f.requester_user_id, f.fulfiller_user_id), GREATEST(f.requester_user_id, f.fulfiller_user_id),
+         f.fulfiller_user_id, f.created_at, f.created_at
+  FROM socket_relay_fulfillments f
+  WHERE f.request_id IS NOT NULL AND f.requester_user_id <> f.fulfiller_user_id
+  ORDER BY f.request_id, LEAST(f.requester_user_id, f.fulfiller_user_id), GREATEST(f.requester_user_id, f.fulfiller_user_id), f.created_at
+  ON CONFLICT (plugin, item_id, user_low, user_high) DO UPDATE
+    SET agreed_at = COALESCE(commons_item_pair_requests.agreed_at, EXCLUDED.agreed_at);
+END $$;
+
+DO $$
+DECLARE
+  missing INTEGER;
+BEGIN
+  IF to_regclass('socket_relay_messages') IS NULL THEN
+    RETURN;
+  END IF;
+  INSERT INTO commons_item_messages (id, plugin, item_id, author_id, body, pair_low, pair_high, created_at, moderation_status)
+  SELECT m.id, 'socket-relay', f.request_id::text, m.sender_user_id, left(btrim(m.message_text), 1000),
+         LEAST(f.requester_user_id, f.fulfiller_user_id), GREATEST(f.requester_user_id, f.fulfiller_user_id),
+         m.created_at, COALESCE(m.moderation_status, 'accepted')
+  FROM socket_relay_messages m
+  JOIN socket_relay_fulfillments f ON f.id = m.fulfillment_id
+  WHERE btrim(m.message_text) <> '' AND m.sender_user_id IN (f.requester_user_id, f.fulfiller_user_id)
+    AND f.requester_user_id <> f.fulfiller_user_id
+  ON CONFLICT (id) DO NOTHING;
+
+  -- Only a message with words, from one of the two, on a fulfillment that still exists can move; the
+  -- rest could never be read (an empty message, or a fulfillment an admin removed).
+  SELECT COUNT(*) INTO missing
+  FROM socket_relay_messages m
+  JOIN socket_relay_fulfillments f ON f.id = m.fulfillment_id
+  WHERE btrim(m.message_text) <> '' AND m.sender_user_id IN (f.requester_user_id, f.fulfiller_user_id)
+    AND f.requester_user_id <> f.fulfiller_user_id
+    AND NOT EXISTS (SELECT 1 FROM commons_item_messages c WHERE c.id = m.id);
+  IF missing > 0 THEN
+    RAISE EXCEPTION 'post/0102: % SocketRelay messages were not copied; socket_relay_messages is kept', missing;
+  END IF;
+
+  DROP TABLE socket_relay_messages;
+END $$;
+
+DROP TABLE IF EXISTS socketrelay_messages;
+DROP TABLE IF EXISTS socket_relay_fulfillment_participants;
+DROP TABLE IF EXISTS socketrelay_fulfillment_participants;
 

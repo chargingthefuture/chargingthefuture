@@ -1,6 +1,6 @@
 // Stream channel-type settings check — finds the settings that stop members sending messages.
 //
-// Why this exists: every chat in the app (SocketRelay Direct Line, LightHouse, TrustTransport,
+// Why this exists: every chat in the app (SocketRelay's read-only earlier messages, LightHouse, TrustTransport,
 // PeerProgramming, Foundation, Beacon, the gated contributor channel) sends into a Stream channel
 // type. Some channel-type settings make Stream REFUSE every send, and the refusal arrives as a bare
 // HTTP 403 that the chat library labels "Message Failed · Unauthorized" — the same words it uses for

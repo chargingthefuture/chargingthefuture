@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { refuseUnlessWeaver } from 'lib/contributor-access/weavers-limits';
 import { CHYME_ERROR_CODE } from 'lib/chyme/constants';
 import { inviteBackChannel } from 'lib/chyme/back-channel';
 import { logChymeAudit } from 'lib/chyme/audit';
@@ -17,6 +18,11 @@ export async function POST(request: Request) {
   const csrfDeny = ensureMutationCsrf(request);
   if (csrfDeny) {
     return csrfDeny;
+  }
+
+  const weaversDeny = await refuseUnlessWeaver(gate.auth.userId, 'bring');
+  if (weaversDeny) {
+    return weaversDeny;
   }
 
   const recipientUserId = await readJsonField(request, 'recipientUserId');

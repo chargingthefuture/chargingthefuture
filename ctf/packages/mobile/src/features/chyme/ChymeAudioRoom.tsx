@@ -287,7 +287,7 @@ function ChymeAudioRoomLive(props: RoomProps) {
         raisedHandUserIds={props.raisedHandUserIds}
         moderation={props.moderation}
         onLeave={props.onLeave}
-        bringIn={props.roomScope === 'main'}
+        bringIn={props.roomScope === 'main' && props.moderation.viewer.canBringSomeoneIn === true}
         renderActions={(clerkUserId, name) => <TileActions clerkUserId={clerkUserId} name={name} backChannel={props.backChannel} moderation={props.moderation} />}
       />
     );

@@ -1,9 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { ChevronLeft, Clock, MessageCircle } from "lucide-react";
+import { responseFailureText } from "lib/errors/client-failure";
+import { CardConversationPanel } from "@/components/se-frame/today/card-conversation-panel";
 import { MarkRecurringControl } from "@/components/shared/mark-recurring-control";
 import { StreamChatPanel } from "../shared/stream-chat-panel";
-import { FAINT, SUBTLE, srCounterpartLabel, type SrChatCredentials, type SrDirectLine, type SrFulfillment, type SrResolveOutcome } from "./sr-shared";
+import { FAINT, SUBTLE, srCounterpartLabel, type SrHistoryCredentials, type SrYoursRow, type SrFulfillment, type SrResolveOutcome } from "./sr-shared";
 import { useTheme } from '@/hooks/useTheme';
 import { getSocketRelayTokens } from './sr-shared';
 
@@ -18,21 +21,53 @@ function fulfillmentTitle(f: SrFulfillment): string {
   return f.requestTitle && f.requestTitle.trim().length > 0 ? f.requestTitle : `Request ${f.id.slice(0, 8)}`;
 }
 
-// Why the composer is gone on a past conversation. A Direct Line closes for good at a terminal state
-// (rule 100) — there is no reopen. Without this, a member typed into the still-visible composer and
-// the send failed "Unauthorized" with no explanation (owner report). The canceled-but-open case also
-// says what TO do for the requester: a fresh offer opens a fresh Direct Line. The canceled helper
-// gets only the neutral first sentence — the reopen is for other helpers, and the copy must never
-// reveal to them that the poster reopened the post (owner directive; same rule as the feed's
-// "You already offered to help" note).
-function readOnlyNotice(f: SrFulfillment, isRequester: boolean): string | null {
-  if (f.status === "active") return null;
-  if (f.status === "canceled") {
-    return isRequester && f.requestStatus === "open"
-      ? "This conversation ended when the offer was canceled and can't be reopened. The request is open again on the feed — a new offer starts a new Direct Line."
-      : "This conversation ended when the offer was canceled and can't be reopened.";
+// The messages written on the fulfillment's Direct Line chat before 3.1, read-only. Talk now happens in the
+// card's conversation above; these stay where they were written (on Stream) and open on request.
+const HISTORY_NOTICE = "Earlier messages, kept to read. Talk in the conversation above.";
+
+async function fetchHistory(fulfillmentId: string): Promise<SrHistoryCredentials | null> {
+  const res = await fetch(`/api/socket-relay/fulfillments/${fulfillmentId}/history`, { method: "POST", headers: { "x-ctf-csrf": "1" } });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(await responseFailureText(res, "The earlier messages could not be opened", "member"));
+  return (await res.json()) as SrHistoryCredentials;
+}
+
+function EarlierMessages({ fulfillmentId, accent }: { fulfillmentId: string; accent: string }) {
+  const [state, setState] = useState<"closed" | "loading" | "none" | "open" | "failed">("closed");
+  const [creds, setCreds] = useState<SrHistoryCredentials | null>(null);
+  const [failure, setFailure] = useState("");
+  const open = async () => {
+    setState("loading");
+    try {
+      const found = await fetchHistory(fulfillmentId);
+      setCreds(found);
+      setState(found ? "open" : "none");
+    } catch (e) {
+      setFailure(e instanceof Error ? e.message : "The earlier messages could not be opened.");
+      setState("failed");
+    }
+  };
+  if (state === "open" && creds?.streamApiKey && creds.streamToken && creds.streamUserId && creds.streamChannelId) {
+    return (
+      <div style={{ height: 320, display: "flex", flexDirection: "column", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+        <StreamChatPanel streamApiKey={creds.streamApiKey} streamToken={creds.streamToken} streamUserId={creds.streamUserId} streamChannelId={creds.streamChannelId} accentColor={accent} readOnlyNotice={HISTORY_NOTICE} />
+      </div>
+    );
   }
-  return "This conversation ended when the request closed. You can still read it, but no new messages can be sent.";
+  return <EarlierMessagesLine state={state} failure={failure} accent={accent} onOpen={() => void open()} />;
+}
+
+function EarlierMessagesLine({ state, failure, accent, onOpen }: { state: string; failure: string; accent: string; onOpen: () => void }) {
+  const line = state === "none" ? "There are no earlier messages on this request." : state === "failed" ? failure : null;
+  return (
+    <div style={{ padding: "10px 16px", borderTop: "1px solid rgba(255,255,255,0.06)", fontSize: 12, color: SUBTLE }}>
+      {line ?? (
+        <button type="button" disabled={state === "loading"} onClick={onOpen} style={{ background: "transparent", border: "none", color: accent, fontSize: 12, fontWeight: 600, cursor: "pointer", padding: 0 }}>
+          {state === "loading" ? "Opening earlier messages…" : "Earlier messages"}
+        </button>
+      )}
+    </div>
+  );
 }
 
 function ResolveBar({
@@ -52,7 +87,7 @@ function ResolveBar({
   if (!isRequester) {
     return (
       <div style={{ padding: "10px 16px", borderTop: "1px solid rgba(255,255,255,0.06)", fontSize: 12, color: SUBTLE }}>
-        Only the person who posted this request can close it. Work it out here on the Direct Line.
+        Only the person who posted this request can close it. Work it out in the conversation above.
       </div>
     );
   }
@@ -75,7 +110,7 @@ function ResolveBar({
 
 // The right pane for a pending request: it has no helper yet, so there is nothing to chat on. Explain
 // what happens next instead of showing an empty chat.
-function PendingPane({ title }: { title: string }) {
+function PendingPane({ title, requestId }: { title: string; requestId: string }) {
   const { theme } = useTheme();
   const t = getSocketRelayTokens(theme);
   return (
@@ -90,9 +125,10 @@ function PendingPane({ title }: { title: string }) {
         </div>
         <div style={{ fontSize: 15, fontWeight: 600, color: t.SUBTLE }}>No helper yet</div>
         <div style={{ fontSize: 13, color: FAINT, maxWidth: 320, lineHeight: 1.5 }}>
-          This request is still open on the feed. As soon as someone offers to help, your Direct Line opens here and you can talk it through.
+          This request is still open on the feed. When someone offers to help, you can agree to talk just you two in the conversation below.
         </div>
       </div>
+      <CardConversationPanel source="socket-relay" sourceId={requestId} />
     </div>
   );
 }
@@ -135,17 +171,13 @@ function ChatPane({
   isRequester,
   resolving,
   onResolve,
-  chatLoading,
-  chatError,
-  chatCredentials,
+  resolveError,
 }: {
   selected: SrFulfillment | null;
   isRequester: boolean;
   resolving: boolean;
   onResolve: (fulfillmentId: string, outcome: SrResolveOutcome) => void;
-  chatLoading: boolean;
-  chatError: string | null;
-  chatCredentials: SrChatCredentials | null;
+  resolveError: string | null;
 }) {
   const { theme } = useTheme();
   const t = getSocketRelayTokens(theme);
@@ -162,26 +194,10 @@ function ChatPane({
         <div style={{ fontSize: 12, color: SUBTLE }}>{counterpartHeadline(selected, isRequester)}</div>
       </div>
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
-        {chatLoading ? (
-          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: SUBTLE, fontSize: 14 }}>Loading chat…</div>
-        ) : chatError ? (
-          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#EF4444", fontSize: 14 }}>{chatError}</div>
-        ) : chatCredentials?.streamApiKey &&
-          chatCredentials.streamToken &&
-          chatCredentials.streamUserId &&
-          chatCredentials.streamChannelId ? (
-          <StreamChatPanel
-            streamApiKey={chatCredentials.streamApiKey}
-            streamToken={chatCredentials.streamToken}
-            streamUserId={chatCredentials.streamUserId}
-            streamChannelId={chatCredentials.streamChannelId}
-            accentColor={t.ACCENT}
-            readOnlyNotice={readOnlyNotice(selected, isRequester)}
-          />
-        ) : (
-          <div style={{ flex: 1 }} />
-        )}
+        {resolveError ? <div style={{ padding: "8px 16px", color: "#EF4444", fontSize: 13 }}>{resolveError}</div> : null}
+        <CardConversationPanel source="socket-relay" sourceId={selected.requestId} />
       </div>
+      <EarlierMessages fulfillmentId={selected.id} accent={t.ACCENT} />
       <FavorRecurringPrompt selected={selected} isRequester={isRequester} accent={t.ACCENT} />
       <ResolveBar selected={selected} isRequester={isRequester} resolving={resolving} onResolve={onResolve} />
     </div>
@@ -190,16 +206,16 @@ function ChatPane({
 
 // A single row in the left conversation list. A fulfillment row is a live conversation; a pending row
 // is a request you posted that no one has claimed yet (shown with a muted "waiting" sub-label).
-function DirectLineRow({
+function YoursRow({
   line,
   active,
   currentUserId,
   onSelect,
 }: {
-  line: SrDirectLine;
+  line: SrYoursRow;
   active: boolean;
   currentUserId?: string;
-  onSelect: (line: SrDirectLine) => void;
+  onSelect: (line: SrYoursRow) => void;
 }) {
   const { theme } = useTheme();
   const t = getSocketRelayTokens(theme);
@@ -247,42 +263,38 @@ function counterpartHeadline(f: SrFulfillment, isRequester: boolean): string {
   return `${role} · ${other}${ended}`;
 }
 
-export function SocketRelayChat({
-  directLines,
+export function SocketRelayYours({
+  rows,
   selected,
   currentUserId,
   resolving = false,
   onSelect,
   onBack,
   onResolve,
-  chatLoading,
-  chatError,
-  chatCredentials,
+  resolveError,
 }: {
-  directLines: SrDirectLine[];
-  selected: SrDirectLine | null;
+  rows: SrYoursRow[];
+  selected: SrYoursRow | null;
   currentUserId?: string;
   resolving?: boolean;
-  onSelect: (line: SrDirectLine) => void;
+  onSelect: (line: SrYoursRow) => void;
   // Clear the selection and return to the conversation list (the app is phone-width only, so the list
   // and the open conversation are separate full-width views, not a side-by-side split).
   onBack: () => void;
   onResolve: (fulfillmentId: string, outcome: SrResolveOutcome) => void;
-  chatLoading: boolean;
-  chatError: string | null;
-  chatCredentials: SrChatCredentials | null;
+  resolveError: string | null;
 }) {
   const { theme } = useTheme();
   const t = getSocketRelayTokens(theme);
-  if (directLines.length === 0) {
+  if (rows.length === 0) {
     return (
       <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, padding: 32 }}>
         <div style={{ width: 48, height: 48, borderRadius: "50%", border: `2px dashed ${t.ACCENT}4D`, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <MessageCircle size={20} style={{ color: `${t.ACCENT}66` }} />
         </div>
-        <div style={{ fontSize: 15, fontWeight: 600, color: t.SUBTLE }}>No Direct Lines yet</div>
+        <div style={{ fontSize: 15, fontWeight: 600, color: t.SUBTLE }}>Nothing here yet</div>
         <div style={{ fontSize: 13, color: FAINT, textAlign: "center", maxWidth: 320, lineHeight: 1.5 }}>
-          Post a request or offer to help on one, and it shows up here as a private Direct Line.
+          Post a request or offer to help on one, and it shows up here with its conversation.
         </div>
       </div>
     );
@@ -297,8 +309,8 @@ export function SocketRelayChat({
     return (
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, overflowY: "auto", padding: "12px 12px" }}>
         <div style={{ fontSize: 11, fontWeight: 700, color: FAINT, textTransform: "uppercase", letterSpacing: "0.08em", padding: "0 4px", marginBottom: 8 }}>Conversations</div>
-        {directLines.map((line) => (
-          <DirectLineRow key={line.key} line={line} active={false} currentUserId={currentUserId} onSelect={onSelect} />
+        {rows.map((line) => (
+          <YoursRow key={line.key} line={line} active={false} currentUserId={currentUserId} onSelect={onSelect} />
         ))}
       </div>
     );
@@ -314,16 +326,14 @@ export function SocketRelayChat({
         <ChevronLeft size={16} /> All conversations
       </button>
       {selected.kind === "pending" ? (
-        <PendingPane title={selected.request.title} />
+        <PendingPane title={selected.request.title} requestId={selected.request.id} />
       ) : (
         <ChatPane
           selected={selectedFulfillment}
           isRequester={selectedIsRequester}
           resolving={resolving}
           onResolve={onResolve}
-          chatLoading={chatLoading}
-          chatError={chatError}
-          chatCredentials={chatCredentials}
+          resolveError={resolveError}
         />
       )}
     </div>

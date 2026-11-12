@@ -12,6 +12,7 @@ import {
   requireCardsAccess,
 } from 'lib/today/cards/access';
 import { deleteOwnMessage, editOwnMessage, findOwnMessagePartner } from 'lib/today/cards/repository';
+import { refuseLinkUnlessWeaver } from 'lib/contributor-access/weavers-limits';
 import { readConversation } from 'lib/today/cards/conversation';
 
 // PATCH /api/today/cards/[cardId]/messages/[messageId] { body }: the author changes their own
@@ -73,7 +74,7 @@ export async function PATCH(request: Request, context: Context) {
   const body = readBody(await readJson(request));
   if (!body) return cardsDenied('invalid_message', `A message is 1 to ${SE_CARD_MESSAGE_MAX} characters.`, 400);
   try {
-    const refused = await edit(ids.cardId, ids.messageId, userId, body);
+    const refused = (await refuseLinkUnlessWeaver(userId, body)) ?? (await edit(ids.cardId, ids.messageId, userId, body));
     if (refused) return refused;
     return answer(await readConversation(gate.auth, ids.cardId));
   } catch (error) {

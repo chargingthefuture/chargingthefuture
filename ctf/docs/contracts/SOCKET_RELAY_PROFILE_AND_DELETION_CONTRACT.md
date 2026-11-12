@@ -69,7 +69,7 @@ Rule 114 baseline: SocketRelay uses canonical identity and plugin extension rows
 
 ### Transaction-scoped messaging retention
 
-Per platform rule 100 ("Messaging Scope and Lifecycle"), the fulfillment chat (`socket_relay_messages`) is bound to a single fulfillment between exactly the two participants (request owner and fulfiller) and has no existence outside it. When the fulfillment reaches a terminal state (completed, canceled, disputed) the chat closes: no new messages may be sent, both parties retain read-only access for a limited window, and messages are retained server-side for moderation and abuse evidence. On service-scoped or full-account deletion, message bodies are hard-deleted or pseudonymized per the scopes below, while minimal moderation/abuse-evidence and Rule 114 audit metadata may be retained where policy or law requires (consistent with the retain-for-compliance scope).
+Since 2026-11-12 the helper and the person who asked talk in the request card's Just us two (`commons_item_messages` and `commons_item_pair_requests`, plugin `socket-relay`, item the request id), which the Commons deletion contract covers; post/0102 moved the messages kept in `socket_relay_messages` there and dropped that table and `socket_relay_fulfillment_participants`. Messages written on Stream before then stay readable, read-only, and are deleted from Stream with the member's Stream user on account deletion. The rule below described the retired Direct Line and still applies to those messages: the fulfillment chat was bound to a single fulfillment between exactly the two participants (request owner and fulfiller) and has no existence outside it. When the fulfillment reaches a terminal state (completed, canceled, disputed) the chat closes: no new messages may be sent, both parties retain read-only access for a limited window, and messages are retained server-side for moderation and abuse evidence. On service-scoped or full-account deletion, message bodies are hard-deleted or pseudonymized per the scopes below, while minimal moderation/abuse-evidence and Rule 114 audit metadata may be retained where policy or law requires (consistent with the retain-for-compliance scope).
 
 ## 5) Service-Scoped Deletion Contract
 
@@ -95,12 +95,11 @@ When an admin removes a request (`DELETE /api/socket-relay/admin/requests/:id`),
 transaction and is deterministic — the plugin's tables carry no `ON DELETE CASCADE`, so the app clears
 the dependent rows itself instead of leaving orphans:
 
-- Deleted: the `socket_relay_requests` row, its `socket_relay_fulfillments`, their
-  `socket_relay_fulfillment_participants`, and the request's `socket_relay_request_events`. Its picture
+- Deleted: the `socket_relay_requests` row, its `socket_relay_fulfillments`, and the request's
+  `socket_relay_request_events`. Its picture
   in `socket_relay_request_images` goes with it through that table's `ON DELETE CASCADE`.
-- Retained: `socket_relay_messages` for those fulfillments — kept server-side as moderation/abuse
-  evidence per the transaction-scoped messaging retention above (rule 100). Once the fulfillment row is
-  gone they are unreachable through the participant-gated read path.
+- Retained: the request card's conversation in `commons_item_messages`, kept as moderation/abuse
+  evidence like any card conversation. With the request gone no card opens it.
 - Audited: the removal writes a `socket-relay.admin.request.delete` row to `socket_relay_admin_audit_trail`.
 
 ### Request pictures
@@ -203,3 +202,4 @@ If user returns after service-scoped deletion:
 - 2026-02-25: Created initial draft.
 - 2026-05-31: Added transaction-scoped messaging retention (per rule 100): per-fulfillment 1:1 chat (`socket_relay_messages`) closes on terminal state (read-only window), retained server-side for moderation/abuse evidence; bodies hard-deleted/pseudonymized on deletion with minimal evidence/audit metadata retained per policy.
 - 2026-07-05: Documented admin request removal (moderation delete): now a single transaction that clears the request plus its fulfillments, participants, and request-events (no orphaned rows, since these tables have no FK cascade), retains `socket_relay_messages` as moderation evidence, and writes a `socket-relay.admin.request.delete` audit row.
+- 2026-11-12: Direct Lines retired into the request card's Just us two. post/0102 copied `socket_relay_messages` into `commons_item_messages` and dropped it and `socket_relay_fulfillment_participants`; neither is in the deletion registry any more. The Stream copies stay read-only and are still removed on account deletion.

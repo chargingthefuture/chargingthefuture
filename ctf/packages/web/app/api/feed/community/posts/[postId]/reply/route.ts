@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { refuseLinkUnlessWeaver } from 'lib/contributor-access/weavers-limits';
 import { ensureMutationCsrf, requireFeedReadAccess } from '../../../../_lib';
 import { FEED_ERROR_CODE } from 'lib/feed/constants';
 import { logFeedAudit } from 'lib/feed/audit';
@@ -94,6 +95,8 @@ export async function POST(request: Request, { params }: RouteParams) {
     return parsed.error;
   }
   const replyText = parsed.data;
+  const weaversDeny = await refuseLinkUnlessWeaver(gate.auth.userId, replyText);
+  if (weaversDeny) return weaversDeny;
 
   const { postId } = await params;
 

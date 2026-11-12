@@ -530,8 +530,6 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     dataSummary: 'Your relay requests, fulfillments, messages, and profile.',
     serviceScopeSupported: true,
     tables: [
-      del('socket_relay_messages', 'sender_user_id', 'Messages you sent.'),
-      del('socket_relay_fulfillment_participants', 'user_id', 'Your fulfillment participation.'),
       del('socket_relay_fulfillments', 'requester_user_id', 'Fulfillments you requested.'),
       // The other side of the same table: rows where YOU were the helper belong to the requester, so
       // they stay — but your id and captured handle are overwritten so you are not still named in

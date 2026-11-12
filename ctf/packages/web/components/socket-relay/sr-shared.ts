@@ -22,7 +22,7 @@ export function getSocketRelayTokens(theme: ThemeName): SocketRelayTokens {
   return getPluginShellTokens(accent, theme);
 }
 
-export type Tab = "feed" | "post" | "chat";
+export type Tab = "feed" | "post" | "yours";
 
 export type SrRequestStatus = "open" | "claimed" | "closed" | "canceled";
 
@@ -66,14 +66,14 @@ export type SrFulfillment = {
   requesterUserId: string;
   fulfillerUserId: string;
   // Participant @usernames captured at claim time (may be null for legacy rows). Returned by
-  // /api/socket-relay/my-fulfillments; the chat itself renders names from Stream, so these are optional.
+  // /api/socket-relay/my-fulfillments; so these are optional.
   requesterUsername?: string | null;
   fulfillerUsername?: string | null;
   status: "active" | "closed" | "canceled";
   closeReason: string | null;
   createdAtIso: string;
   updatedAtIso: string;
-  // Joined from the request by /api/socket-relay/my-fulfillments so the chat can show context.
+  // Joined from the request by /api/socket-relay/my-fulfillments so Yours can show context.
   requestTitle?: string;
   requestStatus?: SrRequestStatus;
   // Participants' real names, joined from directory_profiles by the same route. Null for a member
@@ -85,48 +85,37 @@ export type SrFulfillment = {
 export type SrListResponse = { ok: boolean; items: SrRequest[]; page: number; pageSize: number; total: number };
 export type SrFulfillmentsResponse = { ok: boolean; items: SrFulfillment[] };
 
-// One row in the Direct Line list. Either a live conversation (an active fulfillment you can chat on)
-// or a pending request you posted that no helper has claimed yet (a placeholder — no chat until it is
-// claimed). Modeled as a discriminated union so the list can render both and only the fulfillment
-// kind opens a chat.
-export type SrDirectLine =
+// One row under Yours. Either a request somebody offered to help with (yours, or one you offered on)
+// or a request you posted that no helper has claimed yet. Both open the request's card conversation;
+// only a fulfillment row has a helper to resolve with.
+export type SrYoursRow =
   | { kind: "fulfillment"; key: string; fulfillment: SrFulfillment }
   | { kind: "pending"; key: string; request: SrRequest };
 
-// Build the unified Direct Line list, newest activity first within each group:
-//   1. Active fulfillments — live conversations (you posted it and a helper claimed it, or you
-//      offered to help).
-//   2. Your own still-open, non-expired requests — "waiting for a helper" placeholders.
-//   3. Past fulfillments — ones that were closed or canceled.
-//
-// A claimed request is already represented by its active fulfillment, so it is not also listed as a
-// placeholder; that is why group 2 filters to `open`.
-//
-// Group 3 used to be dropped entirely. That erased the only record a member had of who had offered
-// to help: when a claim is canceled the request returns to `open`, the feed shows "no helper yet"
-// again, and the conversation vanished from this list — so the person who offered became
-// unreachable and effectively anonymous (owner report: two people offered help and there was no way
-// left to see who they were). Keeping past lines costs nothing to read: the chat routes gate on
-// participation, not on status, so a participant could always open these — the list simply stopped
-// pointing at them.
-export function buildDirectLines(fulfillments: SrFulfillment[], myRequests: SrRequest[]): SrDirectLine[] {
+// Build the list under Yours, newest activity first within each group:
+//   1. Active fulfillments (you posted it and a helper claimed it, or you offered to help).
+//   2. Your own still-open, non-expired requests, waiting for a helper.
+//   3. Past fulfillments, closed or canceled, kept so a member can still see who offered to help
+//      (owner report: two people offered help and there was no way left to see who they were).
+// A claimed request is already represented by its active fulfillment, so group 2 filters to `open`.
+export function buildYoursRows(fulfillments: SrFulfillment[], myRequests: SrRequest[]): SrYoursRow[] {
   const byRecentUpdate = (a: SrFulfillment, b: SrFulfillment) => b.updatedAtIso.localeCompare(a.updatedAtIso);
-  const active: SrDirectLine[] = fulfillments
+  const active: SrYoursRow[] = fulfillments
     .filter((f) => f.status === "active")
     .sort(byRecentUpdate)
     .map((f) => ({ kind: "fulfillment", key: f.id, fulfillment: f }));
-  const pending: SrDirectLine[] = myRequests
+  const pending: SrYoursRow[] = myRequests
     .filter((r) => r.status === "open" && !r.isExpired)
     .sort((a, b) => b.createdAtIso.localeCompare(a.createdAtIso))
     .map((r) => ({ kind: "pending", key: `pending:${r.id}`, request: r }));
-  const past: SrDirectLine[] = fulfillments
+  const past: SrYoursRow[] = fulfillments
     .filter((f) => f.status !== "active")
     .sort(byRecentUpdate)
     .map((f) => ({ kind: "fulfillment", key: f.id, fulfillment: f }));
   return [...active, ...pending, ...past];
 }
 
-export type SrChatCredentials = {
+export type SrHistoryCredentials = {
   ok?: boolean;
   message?: string;
   streamApiKey?: string;

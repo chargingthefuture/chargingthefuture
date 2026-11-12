@@ -12,7 +12,7 @@ import { getSocketRelayTokens } from './sr-shared';
 const NAV: { icon: React.ElementType; key: Tab; label: string }[] = [
   { icon: Share2, key: "feed", label: "Feed" },
   { icon: Plus, key: "post", label: "Post" },
-  { icon: MessageCircle, key: "chat", label: "Direct Line" },
+  { icon: MessageCircle, key: "yours", label: "Yours" },
 ];
 
 export function SocketRelayIconRail({ tab, onTab }: { tab: Tab; onTab: (tab: Tab) => void }) {

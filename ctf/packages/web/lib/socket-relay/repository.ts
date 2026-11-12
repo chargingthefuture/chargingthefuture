@@ -5,7 +5,6 @@ import {
   SOCKET_RELAY_DEFAULT_PAGE,
   SOCKET_RELAY_DEFAULT_PAGE_SIZE,
   SOCKET_RELAY_MAX_DETAILS_LENGTH,
-  SOCKET_RELAY_MAX_MESSAGE_LENGTH,
   SOCKET_RELAY_MAX_PAGE_SIZE,
   SOCKET_RELAY_MAX_TAG_LENGTH,
   SOCKET_RELAY_MAX_TAGS_PER_REQUEST,
@@ -13,7 +12,6 @@ import {
 } from './constants';
 import type {
   SocketRelayFulfillment,
-  SocketRelayMessage,
   SocketRelayProfile,
   SocketRelayProfileInput,
   SocketRelayRequest,
@@ -21,8 +19,7 @@ import type {
   SocketRelayRequestStatus,
   SocketRelayResolveOutcome,
 } from './types';
-import { ensureSocketRelayFulfillmentChannel } from './stream';
-import { buildIdentityDisplayName } from 'lib/auth/request-identity';
+import { openFulfillmentJustUsTwo } from './card-conversation';
 import { clearMemberPresence, recordMemberPresence } from 'lib/presence/live';
 import { isBlockedBetweenTx } from 'lib/blocks/repository';
 import { reportError } from 'lib/observability/report';
@@ -114,15 +111,6 @@ type FulfillmentRow = {
   fulfiller_name?: string | null;
 };
 
-type MessageRow = {
-  id: string;
-  fulfillment_id: string;
-  sender_user_id: string;
-  message_text: string;
-  moderation_status: 'accepted' | 'flagged';
-  created_at: Date;
-};
-
 type AuditInput = {
   actorId: string;
   command: string;
@@ -133,7 +121,6 @@ type AuditInput = {
   metadata?: Record<string, unknown>;
 };
 
-const PROHIBITED_PATTERNS = [/\b(?:kill|rape|murder)\b/i];
 
 function toIso(value: Date): string {
   return value.toISOString();
@@ -330,17 +317,6 @@ function mapFulfillmentRow(row: FulfillmentRow): SocketRelayFulfillment {
   };
 }
 
-function mapMessageRow(row: MessageRow): SocketRelayMessage {
-  return {
-    id: row.id,
-    fulfillmentId: row.fulfillment_id,
-    senderUserId: row.sender_user_id,
-    messageText: row.message_text,
-    moderationStatus: row.moderation_status,
-    createdAtIso: toIso(row.created_at),
-  };
-}
-
 export function validateProfileInput(input: SocketRelayProfileInput): boolean {
   const bio = normalizeNullableText(input.bio);
 
@@ -421,15 +397,6 @@ export async function isValidRequestPrice(priceCurrency: string | null, priceAmo
     return typeof priceAmount === 'number' && Number.isFinite(priceAmount) && priceAmount > 0;
   }
   return priceAmount === null;
-}
-
-export function validateMessageInput(messageText: string): boolean {
-  const normalized = normalizeText(messageText);
-  if (normalized.length === 0 || normalized.length > SOCKET_RELAY_MAX_MESSAGE_LENGTH) {
-    return false;
-  }
-
-  return !PROHIBITED_PATTERNS.some((pattern) => pattern.test(normalized));
 }
 
 function normalizePage(value: number | null | undefined): number {
@@ -591,7 +558,7 @@ function normalizeListRequestsOptions(options?: ListRequestsOptions) {
     ownerUserId: normalizeNullableText(options?.ownerUserId ?? null),
     // Optional status scoping. The member feed asks for open (claimable) requests only, so resolved
     // and claimed posts do not crowd out open ones on a page. Null means every status — the owner
-    // "Mine" / Direct Line lists and the admin list all keep their full-status view.
+    // "Mine" / Yours lists and the admin list all keep their full-status view.
     statuses: options?.statuses && options.statuses.length > 0 ? options.statuses : null,
     viewerUserId: normalizeNullableText(options?.viewerUserId ?? null),
   };
@@ -743,7 +710,7 @@ export async function repostRequest(requestId: string, actorUserId: string, isAd
 
   const request = await withDbTransaction(async (client) => {
     // Lock the row and re-check status UNDER the lock. A claimed request has an active helper and a live
-    // Direct Line; re-posting it would blank `claimed_fulfillment_id` and set the request back to `open`
+    // fulfillment; re-posting it would blank `claimed_fulfillment_id` and set the request back to `open`
     // while its fulfillment stays `active` — a request that is at once a live conversation and a "waiting
     // for a helper" row, re-claimable by a second helper. The earlier ownership read is unlocked, so a
     // concurrent claim could flip the status in between; the FOR UPDATE lock + the `status <> 'claimed'`
@@ -854,7 +821,7 @@ export async function claimRequest(requestId: string, actorUserId: string, actor
       throw new Error('actor_is_owner');
     }
 
-    // Block check (issue #809 task 4): a blocked pair must not be joined into a Direct Line. Checked
+    // Block check (issue #809 task 4): a blocked pair must not be joined into a fulfillment. Checked
     // before the idempotency branch so a blocked retry cannot resurrect an old claim either. The
     // route maps blocked_pair to neutral copy so the block never reveals itself.
     if (await isBlockedBetweenTx(client, actorUserId, requestRow.owner_user_id)) {
@@ -884,13 +851,6 @@ export async function claimRequest(requestId: string, actorUserId: string, actor
       [requestId, requestRow.owner_user_id, actorUserId, normalizeNullableText(requestRow.owner_username), normalizeNullableText(actorUsername)],
     );
 
-    await client.query(
-      `INSERT INTO socket_relay_fulfillment_participants (fulfillment_id, user_id, participant_role)
-       VALUES ($1::uuid, $2, 'requester'), ($1::uuid, $3, 'fulfiller')
-       ON CONFLICT (fulfillment_id, user_id) DO NOTHING`,
-      [fulfillment.rows[0].id, requestRow.owner_user_id, actorUserId],
-    );
-
     const requestUpdate = await client.query<RequestRow>(
       `UPDATE socket_relay_requests
        SET status = 'claimed', claimed_fulfillment_id = $2::uuid, updated_at = NOW()
@@ -912,26 +872,14 @@ export async function claimRequest(requestId: string, actorUserId: string, actor
     };
   });
 
-  // Resolve readable display names for the Stream channel instead of raw user UUIDs. Both handles are
-  // now captured on the fulfillment at claim time (requester = the request's owner_username; fulfiller =
-  // the claimer's own username), so both participants render with a real @handle in chat. The chat
-  // route reads these same stored handles on every open, so a later open never degrades them.
-  //
-  // Best-effort: the claim is already durably committed above, so a Stream outage here must NOT throw
-  // out of claimRequest — that would make the fulfill route return 500, skip its audit row and the
-  // "someone offered to help" notification, and leave a retry stuck on `request_not_claimable` for a
-  // claim that actually succeeded. The chat-credentials route re-ensures the channel on first open, so
-  // it self-heals; here we just log and move on.
+  // The helper and the person who asked talk in the request card's Just us two, the same
+  // conversation Today shows under the card. The helper's offer asks for it; it opens once the person
+  // who asked agrees, in the card or in Activity. Best-effort: the claim is already committed, so a
+  // failed write here is recorded and never undoes the offer.
   try {
-    await ensureSocketRelayFulfillmentChannel({
-      fulfillmentId: created.fulfillment.id,
-      requesterUserId: created.fulfillment.requesterUserId,
-      requesterDisplayName: buildIdentityDisplayName(created.fulfillment.requesterUsername, created.fulfillment.requesterUserId),
-      fulfillerUserId: created.fulfillment.fulfillerUserId,
-      fulfillerDisplayName: buildIdentityDisplayName(created.fulfillment.fulfillerUsername, created.fulfillment.fulfillerUserId),
-    });
+    await openFulfillmentJustUsTwo(created.request.id, created.fulfillment.fulfillerUserId, created.fulfillment.requesterUserId);
   } catch (error) {
-    reportError(error, { area: 'socket-relay', op: 'claim_ensure_channel' });
+    reportError(error, { area: 'socket-relay', op: 'claim_open_just_us_two' });
   }
 
   // Best-effort presence sync after the durable claim: the post left the open pool (status 'claimed'),
@@ -986,24 +934,6 @@ export async function listMyFulfillments(userId: string): Promise<SocketRelayFul
   }));
 }
 
-async function ensureFulfillmentParticipant(fulfillmentId: string, actorUserId: string, isAdmin: boolean): Promise<SocketRelayFulfillment> {
-  const fulfillment = await getFulfillmentById(fulfillmentId);
-  if (!fulfillment) {
-    throw new Error('fulfillment_not_found');
-  }
-
-  if (isAdmin) {
-    return fulfillment;
-  }
-
-  const isParticipant = fulfillment.requesterUserId === actorUserId || fulfillment.fulfillerUserId === actorUserId;
-  if (!isParticipant) {
-    throw new Error('actor_not_participant');
-  }
-
-  return fulfillment;
-}
-
 // The status/event triples a resolve applies, derived once from the outcome so resolveFulfillment
 // does not repeat the same `reopen ? … : …` branch three times. `unsuccessful_reopen` cancels this
 // helper and puts the request back to open; every other outcome closes both.
@@ -1021,7 +951,7 @@ function resolveOutcomePlan(outcome: SocketRelayResolveOutcome): ResolveOutcomeP
 }
 
 // Resolve a claimed request. Only the REQUESTER (the person who posted it) or an admin may resolve —
-// a helper can chat on the Direct Line but cannot close someone else's request. The requester picks
+// a helper can talk in the card's conversation but cannot close someone else's request. The requester picks
 // one of four outcomes; `unsuccessful_reopen` cancels this helper and puts the request back to open
 // so others can offer, while the other three close the request (the outcome is kept in close_reason).
 export async function resolveFulfillment(
@@ -1110,49 +1040,6 @@ export async function resolveFulfillment(
   return result;
 }
 
-export async function listFulfillmentMessages(fulfillmentId: string, actorUserId: string, isAdmin: boolean): Promise<SocketRelayMessage[]> {
-  await ensureFulfillmentParticipant(fulfillmentId, actorUserId, isAdmin);
-
-  const result = await queryDb<MessageRow>(
-    `SELECT id, fulfillment_id, sender_user_id, message_text, moderation_status, created_at
-     FROM socket_relay_messages
-     WHERE fulfillment_id = $1::uuid
-     ORDER BY created_at ASC`,
-    [fulfillmentId],
-  );
-
-  return result.rows.map(mapMessageRow);
-}
-
-export async function sendFulfillmentMessage(
-  fulfillmentId: string,
-  actorUserId: string,
-  isAdmin: boolean,
-  messageText: string,
-  clientMessageId: string,
-): Promise<SocketRelayMessage> {
-  const fulfillment = await ensureFulfillmentParticipant(fulfillmentId, actorUserId, isAdmin);
-
-  if (fulfillment.status !== 'active') {
-    throw new Error('request_not_claimable');
-  }
-
-  if (!validateMessageInput(messageText)) {
-    throw new Error('prohibited_content_detected');
-  }
-
-  const result = await queryDb<MessageRow>(
-    `INSERT INTO socket_relay_messages (fulfillment_id, sender_user_id, message_text, client_message_id, moderation_status)
-     VALUES ($1::uuid, $2, $3, $4, 'accepted')
-     ON CONFLICT (fulfillment_id, sender_user_id, client_message_id)
-     DO UPDATE SET message_text = socket_relay_messages.message_text
-     RETURNING id, fulfillment_id, sender_user_id, message_text, moderation_status, created_at`,
-    [fulfillmentId, actorUserId, normalizeText(messageText), normalizeText(clientMessageId)],
-  );
-
-  return mapMessageRow(result.rows[0]);
-}
-
 export async function listAdminRequests(options?: { page?: number; pageSize?: number }) {
   return listRequests({ page: options?.page, pageSize: options?.pageSize });
 }
@@ -1188,11 +1075,10 @@ export async function listAdminFulfillments(): Promise<SocketRelayFulfillment[]>
 
 export async function adminDeleteRequest(requestId: string, audit: AuditInput): Promise<void> {
   // These tables carry no ON DELETE CASCADE (they are plain UUID columns, not FKs), so deleting the
-  // request alone would leave orphaned fulfillments, participants, and lifecycle events pointing at a
-  // row that no longer exists. Remove them in one transaction so the delete is deterministic. The
-  // fulfillment chat messages (`socket_relay_messages`) are deliberately NOT deleted here: per the
-  // deletion contract (rule 100) they are retained server-side as moderation/abuse evidence; once their
-  // fulfillment row is gone they are simply unreachable through the participant-gated read path.
+  // request alone would leave orphaned fulfillments and lifecycle events pointing at a row that no
+  // longer exists. Remove them in one transaction so the delete is deterministic. The conversation
+  // under the request's card (commons_item_messages) is kept like any card conversation, as
+  // moderation evidence; with the request gone no card opens it.
   const deleted = await withDbTransaction(async (client) => {
     const result = await client.query<RequestRow>(
       `DELETE FROM socket_relay_requests
@@ -1205,11 +1091,6 @@ export async function adminDeleteRequest(requestId: string, audit: AuditInput): 
       throw new Error('request_not_found');
     }
 
-    await client.query(
-      `DELETE FROM socket_relay_fulfillment_participants
-       WHERE fulfillment_id IN (SELECT id FROM socket_relay_fulfillments WHERE request_id = $1::uuid)`,
-      [requestId],
-    );
     await client.query(`DELETE FROM socket_relay_fulfillments WHERE request_id = $1::uuid`, [requestId]);
     await client.query(`DELETE FROM socket_relay_request_events WHERE request_id = $1::uuid`, [requestId]);
 

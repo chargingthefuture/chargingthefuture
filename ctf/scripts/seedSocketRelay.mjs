@@ -82,30 +82,11 @@ async function main() {
 
     await client.query(
       `
-        INSERT INTO socket_relay_fulfillment_participants
-          (fulfillment_id, user_id, participant_role)
-        VALUES
-          ($1::uuid, 'seed-socket-relay-owner-01', 'requester'),
-          ($1::uuid, 'seed-socket-relay-fulfiller-01', 'fulfiller')
-        ON CONFLICT (fulfillment_id, user_id)
-        DO UPDATE SET participant_role = EXCLUDED.participant_role
+        INSERT INTO commons_item_pair_requests (plugin, item_id, user_low, user_high, requester_id, agreed_at)
+        VALUES ('socket-relay', $1::text, 'seed-socket-relay-fulfiller-01', 'seed-socket-relay-owner-01', 'seed-socket-relay-fulfiller-01', NOW())
+        ON CONFLICT (plugin, item_id, user_low, user_high) DO NOTHING
       `,
-      [seedFulfillmentId],
-    );
-
-    await client.query(
-      `
-        INSERT INTO socket_relay_messages
-          (fulfillment_id, sender_user_id, message_text, client_message_id, moderation_status)
-        VALUES
-          ($1::uuid, 'seed-socket-relay-owner-01', 'Seed message from requester.', 'seed-msg-1', 'accepted'),
-          ($1::uuid, 'seed-socket-relay-fulfiller-01', 'Seed reply from fulfiller.', 'seed-msg-2', 'accepted')
-        ON CONFLICT (fulfillment_id, sender_user_id, client_message_id)
-        DO UPDATE SET
-          message_text = EXCLUDED.message_text,
-          moderation_status = EXCLUDED.moderation_status
-      `,
-      [seedFulfillmentId],
+      [seedRequestId],
     );
 
     await client.query(

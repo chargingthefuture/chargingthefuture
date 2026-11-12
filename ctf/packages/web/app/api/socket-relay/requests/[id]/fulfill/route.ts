@@ -43,9 +43,9 @@ export async function POST(request: Request, { params }: RouteProps) {
         sourcePlugin: 'socket-relay',
         notificationType: 'socket-relay.request.claimed',
         category: 'safety',
-        summary: 'Someone offered to help with your SocketRelay request.',
-        // Deep-link straight to this fulfillment's Direct Line, not the app homepage — the shell reads
-        // ?fulfillment=<id> and opens that conversation.
+        summary: 'Someone offered to help with your SocketRelay request. Agree in its conversation to talk just you two.',
+        // Deep-link straight to this request under Yours, not the app homepage — the shell reads
+        // ?fulfillment=<id> and opens it with its card's conversation.
         linkPath: `/apps/socket-relay?fulfillment=${created.fulfillment.id}`,
         targetRef: created.fulfillment.id,
       });
