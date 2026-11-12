@@ -92,6 +92,9 @@ export type SeTodayRoom = {
   href: string;
   // Main Room only.
   nextTalk: SeTodayTalk | null;
+  // Whether the reader may bring somebody in: Weavers of the Commons badge holders only. Absent on
+  // signed-out Today, where it is false.
+  canBring?: boolean;
 };
 
 // `host` is the broadcaster's handle and `startedAtIso` when it went live, for the line under the

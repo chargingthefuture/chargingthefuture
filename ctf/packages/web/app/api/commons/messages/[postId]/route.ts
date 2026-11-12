@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { refuseLinkUnlessWeaver } from 'lib/contributor-access/weavers-limits';
 import { reportError } from 'lib/observability/report';
 import { FEED_ADMIN_MAX_COMMUNITY_POST_LENGTH, FEED_ERROR_CODE, FEED_MAX_COMMUNITY_POST_LENGTH } from 'lib/feed/constants';
 import { feedPostLength } from 'lib/feed/normalize';
@@ -221,6 +222,8 @@ export async function PATCH(
     );
   }
 
+  const weaversDeny = await refuseLinkUnlessWeaver(gate.auth.userId, typeof body.text === 'string' ? body.text : '');
+  if (weaversDeny) return weaversDeny;
   const isPrivileged = gate.auth.isAdmin;
   const validated = validateEditPostInput(body, isPrivileged);
   if ('error' in validated) {

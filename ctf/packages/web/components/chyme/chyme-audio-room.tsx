@@ -439,7 +439,7 @@ function ChymeAudioRoomLive({
           moderation={moderation}
           onLeave={onLeave}
           mutesError={roomMutes.error}
-          bringIn={roomScope === 'main'}
+          bringIn={roomScope === 'main' && moderation.viewer.canBringSomeoneIn === true}
           renderActions={(clerkUserId, name) => (
             <ChymeTileActions clerkUserId={clerkUserId} name={name} backChannel={backChannel} backChannelEnabled={backChannelEnabled} moderation={moderation} />
           )}

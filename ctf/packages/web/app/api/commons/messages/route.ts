@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { refuseLinkUnlessWeaver } from 'lib/contributor-access/weavers-limits';
 import { contentRefusedResponse, isRefusedByStream } from 'lib/integrations/stream-content-check';
 import { reportError } from 'lib/observability/report';
 import { jsonWithEtag } from 'lib/http/json-with-etag';
@@ -338,6 +339,8 @@ export async function POST(request: Request) {
     return validated.error;
   }
   const { text, input, echoedQuote } = validated;
+  const weaversDeny = await refuseLinkUnlessWeaver(gate.auth.userId, text);
+  if (weaversDeny) return weaversDeny;
   if (await isRefusedByStream({ entityType: 'commons-post', creatorAccountId: gate.auth.userId, texts: [text] })) {
     return contentRefusedResponse();
   }

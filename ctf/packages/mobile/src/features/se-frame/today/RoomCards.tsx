@@ -3,6 +3,7 @@
 // and Bring someone in; and Weavers of the Commons as one row for the members who may enter it.
 
 import React, { useMemo } from 'react';
+import { SE_WEAVERS_LIMIT_WORDS } from '@ctf/shared';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
 import {
@@ -61,10 +62,13 @@ function MainRoomCard({ t, room }: { t: SeThemeTokens; room: SeTodayRoom }) {
         <TouchableOpacity accessibilityRole="button" onPress={() => open('main', talk)} style={s.primary}>
           <Text style={s.primaryLabel}>{W.listen}</Text>
         </TouchableOpacity>
-        <TouchableOpacity accessibilityRole="button" onPress={() => void bring()} style={s.quiet}>
-          <Text style={s.quietLabel}>{W.bring}</Text>
-        </TouchableOpacity>
+        {room.canBring ? (
+          <TouchableOpacity accessibilityRole="button" onPress={() => void bring()} style={s.quiet}>
+            <Text style={s.quietLabel}>{W.bring}</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
+      {room.canBring ? null : <Text style={s.meta}>{SE_WEAVERS_LIMIT_WORDS.bring}</Text>}
       {note ? <Text style={s.meta}>{note}</Text> : null}
     </View>
   );

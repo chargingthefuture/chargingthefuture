@@ -10,6 +10,7 @@ import { announcementStories, inviteStories, surveyCard, whatWorksStory } from '
 import { broadcast, missionCard, moodCard, numbersCard, wantedCard } from './sources-live';
 import { replayCards } from './sources-replays';
 import { mainRoom, nextTalk, weekTalks, weaversRoom } from './sources-rooms';
+import { holdsWeaversBadge } from 'lib/contributor-access/weavers-limits';
 import { questionCards } from './sources-questions';
 import { readDaysWon } from 'lib/measures/action-minutes';
 import { listMutes } from 'lib/mutes/repository';
@@ -78,7 +79,7 @@ export async function buildToday(viewer: TodayViewer, now = new Date(), day: SeT
   const [cardLists, live, room, weekList, weavers, daysWon, mutes, presence, tomorrow, creditCardId] = await Promise.all([
     Promise.all(sources.map((source) => settle(source.name, source.read, unavailable))),
     settle<SeTodayBroadcast | null>('beacon', () => broadcast(), unavailable),
-    settle<SeTodayRoom>('chyme', () => mainRoom(nextTalk(week), true), unavailable),
+    settle<SeTodayRoom>('chyme', async () => ({ ...(await mainRoom(nextTalk(week), true)), canBring: await holdsWeaversBadge(viewer.userId) }), unavailable),
     // A schedule that fails to read leaves the strip empty rather than the room missing.
     settle('ti-radio', () => week, []),
     // Reported but never named on screen: a member who may not enter is not told the room exists.

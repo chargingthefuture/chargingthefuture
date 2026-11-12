@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { holdsWeaversBadge } from 'lib/contributor-access/weavers-limits';
 import { CHYME_ERROR_CODE } from 'lib/chyme/constants';
 import { logChymeAudit } from 'lib/chyme/audit';
 import { getRoomState } from 'lib/chyme/repository';
@@ -13,7 +14,8 @@ export async function GET(request: Request) {
 
   try {
     const state = await getRoomState(gate.identity, gate.roomKey, gate.auth.isAdmin);
-    const room = { ...state, viewer: { ...state.viewer, listenOnly: gate.listenOnly } };
+    const canBringSomeoneIn = await holdsWeaversBadge(gate.auth.userId);
+    const room = { ...state, viewer: { ...state.viewer, listenOnly: gate.listenOnly, canBringSomeoneIn } };
     logChymeAudit({
       pluginId: 'chyme',
       command: 'chyme.room.state.fetch',

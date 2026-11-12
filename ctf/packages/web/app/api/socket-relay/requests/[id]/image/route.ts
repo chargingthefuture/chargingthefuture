@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { refuseUnlessWeaver } from 'lib/contributor-access/weavers-limits';
 import { ensureMutationCsrf, requireSocketRelayReadAccess, socketRelayErrorResponse } from 'lib/socket-relay/_lib';
 import { SOCKET_RELAY_ERROR_CODE } from 'lib/socket-relay/constants';
 import {
@@ -126,6 +127,9 @@ export async function PUT(request: Request, { params }: RouteProps) {
 
   const gate = await requireSocketRelayReadAccess();
   if (!gate.allowed) return gate.response;
+
+  const weaversDeny = await refuseUnlessWeaver(gate.auth.userId, 'picture');
+  if (weaversDeny) return weaversDeny;
 
   const requestId = await readRequestId(params);
   if (!requestId) return badRequest('That request address is not valid.');

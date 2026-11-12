@@ -13,6 +13,7 @@ import {
   requireCardsAccess,
 } from 'lib/today/cards/access';
 import { findPair, insertMessage } from 'lib/today/cards/repository';
+import { refuseLinkUnlessWeaver } from 'lib/contributor-access/weavers-limits';
 import { readConversation } from 'lib/today/cards/conversation';
 import { resolveUsernames } from 'lib/identity/resolve-usernames';
 import { notifyOnCard } from 'lib/today/cards/notify';
@@ -99,7 +100,7 @@ export async function POST(request: Request, context: Context) {
   const input = readInput(await readJson(request), userId);
   if (typeof input === 'string') return cardsDenied('invalid_message', input, 400);
   try {
-    const refused = await write(cardId, userId, input);
+    const refused = (await refuseLinkUnlessWeaver(userId, input.body)) ?? (await write(cardId, userId, input));
     if (refused) return refused;
     const conversation = await readConversation(gate.auth, cardId);
     return NextResponse.json({ ok: true, conversation }, { headers: { 'cache-control': 'private, no-store' } });

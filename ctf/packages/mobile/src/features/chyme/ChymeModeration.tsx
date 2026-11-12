@@ -26,7 +26,7 @@ import { useChymeTokens } from './chyme-tokens';
 export type MobileModerationContext = {
   roomScope: ChymeRoomScope;
   speakMode: ChymeSpeakMode;
-  viewer: { isAdmin: boolean; role: ChymeRole; listenOnly?: boolean };
+  viewer: { isAdmin: boolean; role: ChymeRole; listenOnly?: boolean; canBringSomeoneIn?: boolean };
   memberRoles: ReadonlyMap<string, ChymeRole>;
 };
 

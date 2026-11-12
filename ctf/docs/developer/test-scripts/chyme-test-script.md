@@ -852,3 +852,18 @@ with no green Chyme header. Listening still needs no account. Step 2 opens sign-
 returns to the signed-out Today. The signed-in Chyme screens look as before.
 
 Result: web ☐ android ☐
+
+### Bringing someone in is for Weavers of the Commons
+
+**Role:** an approved member without the badge, then a badge holder · **Surfaces:** web, android
+
+1. As the member without the badge, open Today and look at the Main Room card, then open the Main
+   Room.
+2. As the badge holder, do the same and tap Bring someone in.
+
+**Expected:** Step 1 shows no Bring someone in button on the card or the room bar; the card reads
+"Bringing people into rooms is for Weavers of the Commons." Asking a member into a Back Channel is
+refused with the same kind of line. Step 2 shows the button in both places and opens the share
+sheet.
+
+Result: web ☐ android ☐
