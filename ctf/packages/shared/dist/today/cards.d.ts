@@ -11,6 +11,7 @@ export type SeCardItemRef = {
 };
 export declare function seCardItemRef(cardId: string): SeCardItemRef;
 export declare function seCardOpensSheet(card: Pick<SeTodayCard, 'kind' | 'source'>): boolean;
+export declare function seCardBlogNote(cardId: string, publicThread: boolean): string | null;
 export declare function seCardAnswerKind(kind: SeTodayActionKind): SeCardAnswerKind | null;
 export declare function seCardPair(a: string, b: string): [string, string];
 export type SeCardAnswer = {
@@ -54,6 +55,7 @@ export declare const SE_CARD_WORDS: {
     composer: string;
     send: string;
     publicHint: string;
+    blogNote: string;
     pairHint: (handle: string) => string;
     pairNone: string;
     waiting: (handle: string) => string;

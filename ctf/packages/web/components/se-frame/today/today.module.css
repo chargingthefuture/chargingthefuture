@@ -865,3 +865,33 @@
   outline: 2px solid var(--se-pick);
   outline-offset: 2px;
 }
+
+/* The Our numbers card's figures: two to a row on the page color, as on the board. */
+.figures {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.figure {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--se-bg);
+}
+
+.figureValue {
+  font-family: 'Newsreader Variable', Newsreader, Georgia, serif;
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--se-ink);
+}
+
+.figureLine {
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--se-soft);
+}

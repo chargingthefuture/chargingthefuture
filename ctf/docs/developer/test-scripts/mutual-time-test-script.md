@@ -675,3 +675,13 @@ The following cases must behave identically in a desktop browser and a phone-wid
 **Expected:** The phone offers to add an hour-long event at the chosen time, titled with the event's title, linking to where the meeting is held. Nothing asks to read the calendar.
 
 Result: web ☐
+
+## Open surveys on Today (added 2026-11-11)
+**Role:** admin who made a survey; approved member A · **Surfaces:** web, android
+**Steps:**
+1. As the admin, make a survey with a title and description, meeting in Chyme, opening now. Open Today as A, then as the admin.
+2. As A, tap **Pick your times**.
+3. As the admin, close the survey, then open Today as A.
+4. Make a survey that opens tomorrow and open Today as A.
+**Expected:** Step 1: A sees "Offer · hours" with the title, the description and "We'll meet in Chyme.", no name, no count and nobody's picks; the admin sees it among their own cards with when it leaves Today and Keep it up. Step 2 opens the survey's shared page. Step 3: the card is gone. Step 4: no card until it opens.
+**Result:** web ☐ android ☐ — notes:

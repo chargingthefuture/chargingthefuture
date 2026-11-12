@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { SE_CARD_MESSAGE_MAX, SE_CARD_WORDS, seAgo, type SeCardMessage, type SeCardPairThread } from '@ctf/shared';
+import { SE_CARD_MESSAGE_MAX, SE_CARD_WORDS, seAgo, seCardBlogNote, type SeCardMessage, type SeCardPairThread } from '@ctf/shared';
 import type { CardConversation } from './use-card-conversation';
 import styles from './card-sheet.module.css';
 
@@ -158,6 +158,7 @@ function PartnerChips({ partner, pairs, onPartner }: { partner: string; pairs: S
 }
 
 function Composer({ talk, partnerId, hint }: { talk: CardConversation; partnerId: string | null; hint: string }) {
+  const blogNote = seCardBlogNote(talk.cardId, partnerId === null);
   const [draft, setDraft] = useState('');
   if (talk.locked) return <p className={styles.hint}>{talk.lockLine}</p>;
   const submit = async (event: React.FormEvent) => {
@@ -178,6 +179,7 @@ function Composer({ talk, partnerId, hint }: { talk: CardConversation; partnerId
         </button>
       </form>
       <p className={styles.hint}>{hint}</p>
+      {blogNote ? <p className={styles.hint}>{blogNote}</p> : null}
     </>
   );
 }

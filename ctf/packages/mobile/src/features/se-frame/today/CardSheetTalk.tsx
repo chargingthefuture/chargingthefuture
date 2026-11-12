@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { Alert, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { SE_CARD_MESSAGE_MAX, SE_CARD_WORDS, seAgo, type SeCardMessage, type SeCardPairThread, type SeThemeTokens } from '@ctf/shared';
+import { SE_CARD_MESSAGE_MAX, SE_CARD_WORDS, seAgo, seCardBlogNote, type SeCardMessage, type SeCardPairThread, type SeThemeTokens } from '@ctf/shared';
 import type { CardSheetStyles } from './cardSheetStyles';
 import type { CardConversation } from './useCardConversation';
 
@@ -165,6 +165,7 @@ function PartnerChips({ s, partner, pairs, onPartner }: Pick<TalkProps, 's' | 'o
 function Composer({ t, s, talk, partnerId, hint }: { t: SeThemeTokens; s: CardSheetStyles; talk: CardConversation; partnerId: string | null; hint: string }) {
   const [draft, setDraft] = useState('');
   if (talk.locked) return <Text style={s.hint}>{talk.lockLine}</Text>;
+  const blogNote = seCardBlogNote(talk.cardId, partnerId === null);
   const disabled = talk.busy || !draft.trim();
   const submit = async () => {
     if (draft.trim() && (await talk.write(draft.trim(), partnerId))) setDraft('');
@@ -188,6 +189,7 @@ function Composer({ t, s, talk, partnerId, hint }: { t: SeThemeTokens; s: CardSh
         </TouchableOpacity>
       </View>
       <Text style={s.hint}>{hint}</Text>
+      {blogNote ? <Text style={s.hint}>{blogNote}</Text> : null}
     </>
   );
 }

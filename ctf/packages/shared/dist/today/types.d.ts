@@ -29,6 +29,11 @@ export type SeTodayCard = {
     mine?: SeTodayCardMine;
     saved?: boolean;
     goal?: SeTodayGoal;
+    figures?: SeTodayFigure[];
+};
+export type SeTodayFigure = {
+    value: string;
+    line: string;
 };
 export type SeTodayCardMine = {
     leavesIso: string;

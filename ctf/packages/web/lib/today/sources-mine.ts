@@ -3,6 +3,8 @@ import { listRequests as listSocketRelayRequests } from 'lib/socket-relay/reposi
 import { listRequests as listRideRequests } from 'lib/trust-transport/repository';
 import { listMyProperties } from 'lib/lighthouse/repository';
 import { resolveUsernames } from 'lib/identity/resolve-usernames';
+import { listOpenEvents } from 'lib/mutual-time/open-events';
+import { hoursCard } from './sources-offers';
 import { action, author, card, clip, type TodayViewer } from './card';
 
 // The viewer's own open asks and offers, so they see them on Today while they are up, can close or
@@ -70,7 +72,13 @@ async function myPlaceOffers(viewer: TodayViewer): Promise<SeTodayCard[]> {
   );
 }
 
+// The Mutual Time surveys the viewer made that are open for picking (only an admin makes one).
+async function myHoursOffers(viewer: TodayViewer): Promise<SeTodayCard[]> {
+  const events = await listOpenEvents({ limit: MINE_PER_SOURCE, createdBy: viewer.userId });
+  return events.map((event) => hoursCard(event, 'Open'));
+}
+
 export async function mineCards(viewer: TodayViewer): Promise<SeTodayCard[]> {
-  const lists = await Promise.all([myRelayAsks(viewer), myRideAsks(viewer), myPlaceOffers(viewer)]);
+  const lists = await Promise.all([myRelayAsks(viewer), myRideAsks(viewer), myPlaceOffers(viewer), myHoursOffers(viewer)]);
   return lists.flat();
 }

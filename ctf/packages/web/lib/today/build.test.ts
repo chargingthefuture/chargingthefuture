@@ -13,7 +13,11 @@ vi.mock('./sources-asks', () => ({
 vi.mock('./sources-offers', () => ({
   placeOffers: vi.fn(async () => [stub('lighthouse:1', '2026-10-26T12:00:00.000Z')]),
   cohortOffers: vi.fn(async () => []),
+  hoursOffers: vi.fn(async () => {
+    throw new Error('mutual time down');
+  }),
 }));
+vi.mock('./sources-cohort', () => ({ cohortCard: vi.fn(async () => []) }));
 vi.mock('./sources-stories', () => ({
   announcementStories: vi.fn(async () => []),
   inviteStories: vi.fn(async () => []),
@@ -61,9 +65,9 @@ describe('buildToday', () => {
     expect(today.cards.map((c) => c.id)).toEqual(['lighthouse:1', 'peer-programming:1']);
   });
 
-  it('leaves out a failing source and names it, keeping the rest', async () => {
+  it('leaves out each failing source and names it, keeping the rest', async () => {
     const today = await buildToday({ userId: 'u1', isAdmin: false }, NOW);
-    expect(today.unavailable).toEqual(['socket-relay']);
+    expect(today.unavailable).toEqual(['socket-relay', 'mutual-time']);
     expect(today.rooms).toHaveLength(1);
   });
 

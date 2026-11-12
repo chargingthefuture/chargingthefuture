@@ -890,3 +890,13 @@ withdrawn). A goal past its 14 days with no renew leaves Today and stays open on
 
 **Expected:** Step 2 shows "Your goal · 2 of 5 tasks taken", a bar 40% full and **Share this goal**, with no I can help button. Step 3 opens a sheet titled Share with a Close button, and a picture reading "A goal · 2 of 5 tasks taken", the goal's title, "Helped so far by a member of the Avenhood" (B's name appears nowhere), A's handle, the line about the app, `app.lagatos.com` and a QR code. Step 4 pastes one plain sentence ending with `https://app.lagatos.com/today`; web downloads a PNG of the same picture, Android opens the phone's share sheet with it. Step 5 opens signed-out Today. Step 6 shows a picture reading "Goal reached" and "Thanks to a member of the Avenhood", and Today shows "Your goal · reached" with a full bar and Share this goal. Repeat in a dark theme and another color: the sheet and the picture follow them, and the QR code stays dark on light.
 **Result:** web ☐ android ☐ — notes:
+
+## With you this week on Today (added 2026-11-11)
+**Role:** member A placed in a cohort with at least six others; member B in no cohort · **Surfaces:** web, android
+**Steps:**
+1. As A, open Today and find "PeerProgramming · with you this week".
+2. Tap its text, then **Open the goal board**.
+3. Tap its timeline dot, reopen Today, and reopen it again after next Monday.
+4. As B, open Today.
+**Expected:** Step 1: the card is titled with A's cohort ("Cohort C…") and reads "With you: …" with five names and "and N more", never A's own name. Step 2: the text expands in place (no sheet) and the button opens the cohort's goal board. Step 3: the card stays off for the rest of the week and comes back the next. Step 4: no cohort card.
+**Result:** web ☐ android ☐ — notes:
