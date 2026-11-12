@@ -87,6 +87,7 @@ contracts:
       Member self-service — create a property listing. Listing a place transparently provisions the
       member's host profile (no separate host-profile form). The host identity shown on the listing
       is composed from existing data (name/username, Quora link, Trust signals), not re-entered.
+      Listing photos are for Weavers of the Commons: a member without the badge who sends photos is refused with 403 weavers_only and the plan's words, on create (POST /api/lighthouse/properties) and on an edit that adds a photo not already on the listing (PUT /api/lighthouse/properties/:id and the admin PUT) (3.1 plan, Access; lib/contributor-access/weavers-limits.ts): the badge is never given by hand, so an admin is held to it too.
     inputSchema:
       title:
         type: string

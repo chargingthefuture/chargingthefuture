@@ -10,6 +10,7 @@ import {
   validatePropertyInput,
 } from 'lib/lighthouse/repository';
 import type { LighthousePropertyInput } from 'lib/lighthouse/types';
+import { refuseNewPicturesUnlessWeaver } from 'lib/contributor-access/weavers-limits';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
 
@@ -146,6 +147,19 @@ export async function PUT(request: Request, { params }: RouteParams) {
   }
 
   const { propertyId } = await params;
+
+  // New listing photos are for Weavers of the Commons (3.1 plan, Access); photos already on the
+  // listing stay and do not block an edit.
+  try {
+    const current = await getPropertyById(propertyId, { userId: gate.auth.userId, isAdmin: true });
+    const weavers = await refuseNewPicturesUnlessWeaver(gate.auth.userId, input.photos, current?.photos ?? []);
+    if (weavers) {
+      return weavers;
+    }
+  } catch (error) {
+    reportError(error, { area: 'lighthouse', op: 'properties_propertyid' });
+    return lighthouseErrorResponse(error, 'Property update unavailable.');
+  }
 
   try {
     const property = await updateProperty(gate.auth.userId, propertyId, input, gate.auth.isAdmin);

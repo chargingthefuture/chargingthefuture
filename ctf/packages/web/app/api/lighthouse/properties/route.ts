@@ -9,6 +9,7 @@ import {
   validatePropertyInput,
 } from 'lib/lighthouse/repository';
 import type { LighthousePropertyInput } from 'lib/lighthouse/types';
+import { refuseNewPicturesUnlessWeaver } from 'lib/contributor-access/weavers-limits';
 import { reportError } from 'lib/observability/report';
 import { failureReason } from 'lib/errors/failure';
 
@@ -152,6 +153,12 @@ export async function POST(request: Request) {
       { ok: false, code: LIGHTHOUSE_ERROR_CODE.invalidPayload, message: 'Invalid property payload.' },
       { status: 400 },
     );
+  }
+
+  // Listing photos are for Weavers of the Commons (3.1 plan, Access).
+  const weavers = await refuseNewPicturesUnlessWeaver(gate.auth.userId, input.photos);
+  if (weavers) {
+    return weavers;
   }
 
   try {
