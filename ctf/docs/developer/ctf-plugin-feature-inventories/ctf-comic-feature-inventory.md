@@ -351,6 +351,15 @@ Built on `feat/comic-ai-assistant`; all server-only routes (no rendered surface)
   marking anything. Question and answer text is redacted with `redactContributedText` before it is
   written, and every run writes a `comic.training.export` row to `comic_admin_audit_trail`
   (format, `markedExported`, `preview`; a failed run records the reason).
+- `GET` / `POST /api/comic/admin/engine-power` (`comic.engine.power.get`, `comic.engine.power.set`) —
+  admin. Whether the drafting endpoint (the RunPod endpoint named in `OLLAMA_BASE_URL`) is on, and a
+  switch for it: `POST { "on": true }` sets it to 1 max worker, `{ "on": false }` to 0, through
+  RunPod's `PATCH /v1/endpoints/{id}` with `OLLAMA_API_KEY`. Only that endpoint is read or changed;
+  the RunPod account is shared with One Percent and its endpoints are never touched. Shown as
+  **Turn on** / **Turn off** in the review queue header. Every switch writes a
+  `comic.engine.power.set` row to `comic_admin_audit_trail` (target the endpoint id, `workersMax`, or
+  the failure reason). With `OLLAMA_BASE_URL` not a RunPod address or `OLLAMA_API_KEY` unset, the
+  header says which and offers no switch.
 - `GET /api/comic/admin/ai-status` (`comic.ai.status`) — admin. Read-only live status of the Ollama
   drafting backend (configured / reachable / latency). An admin diagnostic probe only — it no longer
   backs a UI badge. The always-"reachable" engine badges were removed because they only pinged the
@@ -791,6 +800,8 @@ buckets are not reproduced — only real provenance (engine / intent / safety ca
 `nlu_confidence`, surfaced as "Not yet scored" when null) is shown.
 
 ## Change Log
+
+- 2026-11-12: **Turn the drafting endpoint on or off from the review queue.** Owner report: RunPod set the drafting endpoint to 0 max workers after two weeks with no requests, and the only way back was the RunPod dashboard. New `lib/chatbot/runpod-endpoint-power.ts` reads and sets the max workers of the one endpoint named in `OLLAMA_BASE_URL` (on is 1, off is 0) with `OLLAMA_API_KEY`, and refuses an answer where RunPod did not apply the change. New admin route `GET`/`POST /api/comic/admin/engine-power` (`comic.engine.power.get` / `.set`, audited). The review queue header shows "Drafting endpoint on · up to 1 worker" or "off · 0 max workers" with **Turn off** / **Turn on** (`components/comic/comic-engine-power.tsx`). The draft timeout reason now points at that switch. No schema change. Web only; @comic admin is not on Android.
 
 - 2026-11-02: **@comic in 3.1: Ask the architect (3.1.0 plan, Commons row).** Owner report: the 3.1 frame had no way to reach the assistant, since Commons, where 3.0 asks with `@comic`, is not part of 3.1. + New now has an **Ask the architect** section on web (`components/se-frame/new/architect-section.tsx`, `use-architect.ts`) and Android (`src/features/se-frame/new/ArchitectSection.tsx`): a question box that sends the question to `POST /api/comic/message` with the `@comic` mention (`seArchitectMessage` in `@ctf/shared` `today/new.ts`, 590 characters so the message stays within the 600 limit), then the member's own questions from `GET /api/comic/conversation`, each marked Being checked until a person approves or corrects the answer, with the answer, its linked plugins and Helpful / Not helpful (`POST /api/comic/answers/[turnId]/rate`). Approving or correcting an answer in the review queue now tells the asker in Activity (`comic.answer.published`, category `activity`, deduped on the answer turn, linking to + New; `askerOfTurn` in `lib/comic/repository.ts`, best effort so a failed notice never undoes the review). Approved members only, as before. No new route, table or contract.
 
