@@ -26,6 +26,7 @@ import { TodayCard } from './TodayCard';
 import { sendTodayFeedback } from './sendFeedback';
 import { openTodayLink } from './openTodayLink';
 import { useToday } from './useToday';
+import { useEmojiRainTrigger } from './EmojiRain';
 
 type Styles = ReturnType<typeof makeStyles>;
 
@@ -104,12 +105,16 @@ function Notices({ s, error, missingLine, loading, onRetry }: { s: Styles; error
 }
 
 // A visitor who is not signed in gets GuestToday (GuestToday.tsx) instead.
-// `onPresence` hands the "N Avens here" count to the title row above the screen.
-type ScreenProps = { t: SeThemeTokens; accountId: string; onOpen: (_key: FeatureKey) => void; onPresence?: (_count: number | null) => void };
+// `onPresence` hands the "N Avens here" count to the title row above the screen. `rain` carries the
+// emoji rain switch, the Days won total the account last saw (useSePrefs.ts) and how to start the rain,
+// which the frame draws over the screen.
+type RainPrefs = { on: boolean; seen: number | null | undefined; onSeen: (_total: number) => void; onRain: () => void };
+type ScreenProps = { t: SeThemeTokens; accountId: string; onOpen: (_key: FeatureKey) => void; onPresence?: (_count: number | null) => void; rain: RainPrefs };
 
-export function TodayScreen({ t, accountId, onOpen, onPresence }: ScreenProps) {
+export function TodayScreen({ t, accountId, onOpen, onPresence, rain }: ScreenProps) {
   const s = makeStyles(t);
   const { today, loading, error, marks, mark, toggle, save, saveNote, reload } = useToday(accountId);
+  useEmojiRainTrigger({ ...rain, daysWon: today?.daysWon });
   const presence = today?.presence ?? null;
   useEffect(() => onPresence?.(presence), [onPresence, presence]);
   const [filter, setFilter] = useState<SeTodayFilter>('all');

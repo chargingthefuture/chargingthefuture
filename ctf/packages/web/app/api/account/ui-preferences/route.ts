@@ -4,6 +4,7 @@ import { getUserUiPreferences, setUserUiPreferences, type UiPreferenceChanges } 
 import { ACCOUNT_ERROR_CODE } from 'lib/account/constants';
 import { isThemeName, THEME_NAMES } from 'lib/theme/theme-tokens';
 import {
+  isSeDaysWonSeen,
   isSeInterfaceVersion,
   isSeTextSize,
   isSeThemeColor,
@@ -16,7 +17,8 @@ import {
 import { reportError } from 'lib/observability/report';
 
 // Per-user UI preferences: the 3.0 theme, which interface (3.0 or 3.1) the member sees, and the 3.1
-// Settings (colors, text size, higher contrast, easier-to-read font, emoji rain). Auth posture
+// Settings (colors, text size, higher contrast, easier-to-read font, emoji rain), plus the Days won
+// total Today last saw for this account (`daysWonSeen`, which decides when emoji rain falls). Auth posture
 // matches the other /api/account routes: any signed-in identity (including unlock-pending) may read
 // and set its own.
 // The choice is non-sensitive, scoped to the caller's own row, and CSRF-guarded on write.
@@ -60,6 +62,7 @@ const FIELDS: ReadonlyArray<{ name: string; valid: (_value: unknown) => boolean;
   { name: 'highContrast', valid: isBool, message: 'highContrast must be true or false.' },
   { name: 'readableFont', valid: isBool, message: 'readableFont must be true or false.' },
   { name: 'emojiRain', valid: isBool, message: 'emojiRain must be true or false.' },
+  { name: 'daysWonSeen', valid: isSeDaysWonSeen, message: 'daysWonSeen must be a count of days, 0 or more.' },
 ];
 
 // The first reason the fields cannot be saved, or null when they can.
@@ -80,6 +83,7 @@ function toChanges(fields: Record<string, unknown>): UiPreferenceChanges {
     highContrast: isBool(fields.highContrast) ? fields.highContrast : undefined,
     readableFont: isBool(fields.readableFont) ? fields.readableFont : undefined,
     emojiRain: isBool(fields.emojiRain) ? fields.emojiRain : undefined,
+    daysWonSeen: isSeDaysWonSeen(fields.daysWonSeen) ? fields.daysWonSeen : undefined,
   };
 }
 

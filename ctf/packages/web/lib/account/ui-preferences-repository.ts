@@ -16,7 +16,8 @@ import {
 
 // Per-user UI preferences: the 3.0 theme, which interface (3.0 or 3.1) the member sees, and the 3.1
 // Settings: colors (null until picked), text size, higher contrast, easier-to-read font and emoji
-// rain. Backed by the user_ui_preferences table. Reads return the defaults when no row exists;
+// rain, and the Days won total this account last saw on Today (emoji rain falls when it goes up).
+// Backed by the user_ui_preferences table. Reads return the defaults when no row exists;
 // writes upsert on user_id and change only the fields given.
 
 export type UserUiPreferences = {
@@ -24,6 +25,8 @@ export type UserUiPreferences = {
   interfaceVersion: SeInterfaceVersion;
   seTheme: SeThemeChoice | null;
   reading: SeReadingPrefs;
+  // The Days won total Today last recorded for this account, or null before the first one.
+  daysWonSeen: number | null;
 };
 
 export type UiPreferenceChanges = {
@@ -35,6 +38,7 @@ export type UiPreferenceChanges = {
   highContrast?: boolean;
   readableFont?: boolean;
   emojiRain?: boolean;
+  daysWonSeen?: number;
 };
 
 type PreferencesRow = {
@@ -46,9 +50,10 @@ type PreferencesRow = {
   high_contrast?: boolean | null;
   readable_font?: boolean | null;
   emoji_rain?: boolean | null;
+  days_won_seen?: number | null;
 };
 
-const COLUMNS = 'theme, interface_version, se_theme_color, se_theme_mode, text_size, high_contrast, readable_font, emoji_rain';
+const COLUMNS = 'theme, interface_version, se_theme_color, se_theme_mode, text_size, high_contrast, readable_font, emoji_rain, days_won_seen';
 
 function mapSeTheme(row: PreferencesRow | undefined): SeThemeChoice | null {
   const color = row?.se_theme_color;
@@ -71,6 +76,7 @@ function mapRow(row: PreferencesRow | undefined): UserUiPreferences {
     interfaceVersion: isSeInterfaceVersion(row?.interface_version) ? row.interface_version : SE_DEFAULT_INTERFACE_VERSION,
     seTheme: mapSeTheme(row),
     reading: mapReading(row),
+    daysWonSeen: typeof row?.days_won_seen === 'number' ? row.days_won_seen : null,
   };
 }
 
@@ -86,9 +92,9 @@ export async function getUserInterfaceVersion(userId: string): Promise<SeInterfa
 export async function setUserUiPreferences(userId: string, changes: UiPreferenceChanges): Promise<UserUiPreferences> {
   const result = await queryDb<PreferencesRow>(
     `INSERT INTO user_ui_preferences (user_id, theme, interface_version, se_theme_color, se_theme_mode, text_size,
-       high_contrast, readable_font, emoji_rain, updated_at)
+       high_contrast, readable_font, emoji_rain, days_won_seen, updated_at)
      VALUES ($1, COALESCE($2, 'default'), COALESCE($3, '${SE_DEFAULT_INTERFACE_VERSION}'), $4, $5, COALESCE($6, 'default'),
-       COALESCE($7, FALSE), COALESCE($8, FALSE), COALESCE($9, FALSE), NOW())
+       COALESCE($7, FALSE), COALESCE($8, FALSE), COALESCE($9, FALSE), $10, NOW())
      ON CONFLICT (user_id) DO UPDATE SET
        theme = COALESCE($2, user_ui_preferences.theme),
        interface_version = COALESCE($3, user_ui_preferences.interface_version),
@@ -98,6 +104,7 @@ export async function setUserUiPreferences(userId: string, changes: UiPreference
        high_contrast = COALESCE($7, user_ui_preferences.high_contrast),
        readable_font = COALESCE($8, user_ui_preferences.readable_font),
        emoji_rain = COALESCE($9, user_ui_preferences.emoji_rain),
+       days_won_seen = COALESCE($10, user_ui_preferences.days_won_seen),
        updated_at = NOW()
      RETURNING ${COLUMNS}`,
     [
@@ -110,6 +117,7 @@ export async function setUserUiPreferences(userId: string, changes: UiPreference
       changes.highContrast ?? null,
       changes.readableFont ?? null,
       changes.emojiRain ?? null,
+      changes.daysWonSeen ?? null,
     ],
   );
   return mapRow(result.rows[0]);
