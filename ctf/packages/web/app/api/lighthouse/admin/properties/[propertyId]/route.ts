@@ -61,6 +61,21 @@ function parsePropertyInput(body: PropertyBody): LighthousePropertyInput {
   };
 }
 
+// New listing photos are for Weavers of the Commons (3.1 plan, Access); photos already on the listing
+// stay and do not block an edit. Null when the edit may go ahead.
+async function refuseNewAdminPhotos(userId: string, propertyId: string, photos: LighthousePropertyInput['photos']): Promise<NextResponse | null> {
+  try {
+    const current = await getPropertyById(propertyId, { userId, isAdmin: true });
+    return await refuseNewPicturesUnlessWeaver(userId, photos, current?.photos ?? []);
+  } catch (error) {
+    reportError(error, { area: 'lighthouse', op: 'admin_properties_propertyid' });
+    return NextResponse.json(
+      { ok: false, code: LIGHTHOUSE_ERROR_CODE.persistenceUnavailable, message: 'Property update unavailable.', reason: failureReason(error) },
+      { status: 503 },
+    );
+  }
+}
+
 export async function PUT(request: Request, { params }: RouteParams) {
   const csrfDeny = ensureMutationCsrf(request);
   if (csrfDeny) {
@@ -92,20 +107,9 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
   const { propertyId } = await params;
 
-  // New listing photos are for Weavers of the Commons (3.1 plan, Access); photos already on the
-  // listing stay and do not block an edit.
-  try {
-    const current = await getPropertyById(propertyId, { userId: gate.auth.userId, isAdmin: true });
-    const weavers = await refuseNewPicturesUnlessWeaver(gate.auth.userId, input.photos, current?.photos ?? []);
-    if (weavers) {
-      return weavers;
-    }
-  } catch (error) {
-    reportError(error, { area: 'lighthouse', op: 'admin_properties_propertyid' });
-    return NextResponse.json(
-      { ok: false, code: LIGHTHOUSE_ERROR_CODE.persistenceUnavailable, message: 'Property update unavailable.', reason: failureReason(error) },
-      { status: 503 },
-    );
+  const weavers = await refuseNewAdminPhotos(gate.auth.userId, propertyId, input.photos);
+  if (weavers) {
+    return weavers;
   }
 
   try {
