@@ -28,7 +28,7 @@ function fail(message) {
 function parseSchemaColumns(sql) {
   const tables = new Map();
   // Match each CREATE TABLE IF NOT EXISTS <name> ( ... ); block.
-  const blockRe = /CREATE TABLE IF NOT EXISTS\s+([a-z_][a-z0-9_]*)\s*\(([\s\S]*?)\n\);/g;
+  const blockRe = /CREATE TABLE IF NOT EXISTS\s+(?:public\.)?([a-z_][a-z0-9_]*)\s*\(([\s\S]*?)\n\);/g;
   let m;
   while ((m = blockRe.exec(sql)) !== null) {
     const name = m[1];

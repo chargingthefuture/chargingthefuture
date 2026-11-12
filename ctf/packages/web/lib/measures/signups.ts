@@ -1,6 +1,7 @@
 import { queryDb } from 'lib/db/postgres';
 import { failureReason } from 'lib/errors/failure';
 import { listSignupDates } from 'lib/unlock/signups';
+import { notExcludedAccount } from 'lib/unlock/excluded-accounts';
 
 // Who has signed up, and when, for the adoption tab's measures: the auth provider's account list
 // without demo/test accounts, the same roster the Unlock admin counts. The sign-in record
@@ -21,7 +22,7 @@ export async function readSignups(): Promise<Signups> {
     const reason = failureReason(error);
     console.error(`[measures.signups] sign-up dates fell back to the first recorded sign-in: ${reason}`);
     const result = await queryDb<{ user_id: string; first_seen: Date }>(
-      `SELECT user_id, MIN(created_at) AS first_seen FROM login_events GROUP BY user_id`,
+      `SELECT user_id, MIN(created_at) AS first_seen FROM login_events WHERE ${notExcludedAccount('user_id')} GROUP BY user_id`,
     );
     return {
       ids: result.rows.map((r) => r.user_id),

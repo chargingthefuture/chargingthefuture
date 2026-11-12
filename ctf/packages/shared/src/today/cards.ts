@@ -26,6 +26,10 @@ const CARD_ID = /^[a-z][a-z0-9-]{0,39}:\S{1,200}$/;
 // 21 Questions keeps its own controls inside the card and never opens a sheet.
 const OWN_CONTROLS = new Set(['questions', 'questions-match']);
 
+// Cards that expand in place rather than open a sheet: the "with you this week" cohort card, whose
+// talk is the cohort's own room on the goal board.
+const IN_PLACE_SOURCES = new Set(['peer-programming-cohort']);
+
 // A card's id from its source and the source's own id: what Today builds for the card, and what a
 // plugin's own page builds to show the same conversation.
 export function seCardId(source: string, sourceId: string): string {
@@ -65,7 +69,13 @@ export function seCardItemRef(cardId: string): SeCardItemRef {
 
 // Whether tapping the card's text opens the sheet; every other card keeps expanding in place.
 export function seCardOpensSheet(card: Pick<SeTodayCard, 'kind' | 'source'>): boolean {
-  return SHEET_KINDS.has(card.kind) && !OWN_CONTROLS.has(card.source);
+  return SHEET_KINDS.has(card.kind) && !OWN_CONTROLS.has(card.source) && !IN_PLACE_SOURCES.has(card.source);
+}
+
+// The note under the composer on a blog story's public conversation; null on every other card and
+// in Just us two, which never reaches the blog.
+export function seCardBlogNote(cardId: string, publicThread: boolean): string | null {
+  return publicThread && cardId.startsWith('blog-story:') ? SE_CARD_WORDS.blogNote : null;
 }
 
 export function seCardAnswerKind(kind: SeTodayActionKind): SeCardAnswerKind | null {
@@ -132,6 +142,7 @@ const SOURCE_NAMES: Record<string, string> = {
   'skills-hunt': 'SkillsHunt',
   'skills-hunt-mission': 'SkillsHunt',
   lighthouse: 'LightHouse',
+  'mutual-time': 'Mutual Time',
   'skill-up': 'SkillUp',
   'what-works': 'WhatWorks',
   'blog-story': 'the blog',
@@ -150,6 +161,9 @@ export const SE_CARD_WORDS = {
   composer: 'Write in this card',
   send: 'Send',
   publicHint: 'Everyone can read this. Just us two opens once you both agree.',
+  // Under the public composer of a story card from the blog only (plan, Card rules): what a member
+  // writes there is the post's Fireside conversation.
+  blogNote: 'Your comment can also appear under this post on the blog.',
   pairHint: (handle: string) => `Only you and ${handle} can read this.`,
   pairNone: 'Nobody is talking just you two yet. Tap Talk here next to somebody, or Just us two under a message.',
   waiting: (handle: string) => `Waiting for ${handle} to agree`,

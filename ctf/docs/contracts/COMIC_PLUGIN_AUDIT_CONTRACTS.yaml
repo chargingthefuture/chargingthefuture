@@ -353,3 +353,27 @@ auditEvents:
     result:
       status: success_or_failure
       errorCategory: none_or_error_class
+
+  # Admin turns the drafting endpoint on or off. Added 2026-11-12.
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: comic
+    command: comic.engine.power.set
+    commandVersion: 1.0.0
+    purpose: assistant_supervision
+    policyDecision:
+      status: allow_or_deny
+      reason: turned_on_or_turned_off_or_failed
+    dataClassesAccessed:
+      - runpod_endpoint
+      - comic_admin_audit_trail
+    targetContext:
+      targetType: runpod_endpoint
+      targetId: endpoint_identifier
+    metadata:
+      workersMax: integer_after_the_change
+      failureReason: none_or_runpod_reason
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class

@@ -24,6 +24,14 @@ function mapExcludedAccount(row: UnlockExcludedAccountRow): UnlockExcludedAccoun
   };
 }
 
+// A SQL condition that leaves out the accounts marked here, for every reading that counts members
+// (the Adoption measures, the daily exchange). One fragment so the readings cannot drift apart.
+// `column` is the account id column of the row being counted; the table exists in the demo schema
+// too, so a reading there filters against the demo copy.
+export function notExcludedAccount(column: string): string {
+  return `${column} NOT IN (SELECT user_id FROM unlock_excluded_accounts)`;
+}
+
 // Every excluded account, newest mark first.
 export async function listUnlockExcludedAccounts(): Promise<UnlockExcludedAccount[]> {
   const result = await queryDb<UnlockExcludedAccountRow>(

@@ -1,6 +1,6 @@
 import { seArchiveReplayForDay, seReplayBroadcastLine, seReplayIsRecent, type SeTodayCard } from '@ctf/shared';
 import { listBeaconReplays } from 'lib/beacon/repository';
-import { toPublicBeaconReplay, type PublicBeaconReplay } from 'lib/beacon/replays';
+import { BEACON_REPLAY_PAGE_SIZE, BLOG_STREAMS_PAGE_URL, toPublicBeaconReplay, type PublicBeaconReplay } from 'lib/beacon/replays';
 import { action, card, startOfTodayIso } from './card';
 
 // Beacon replays on Today (owner decision, 2026-11-03): every replay broadcast in the last 7 days,
@@ -21,6 +21,12 @@ async function allReplays(): Promise<PublicBeaconReplay[]> {
   return all;
 }
 
+// Watch opens the blog's streams page at the page that lists this replay, scrolled to it. The list
+// here is in the same order as that page, newest first, so its place gives the page number.
+export function replayWatchUrl(id: string, position: number): string {
+  return `${BLOG_STREAMS_PAGE_URL}?page=${Math.floor(position / BEACON_REPLAY_PAGE_SIZE) + 1}#${id}`;
+}
+
 const broadcastIso = (replay: PublicBeaconReplay) => replay.endedAtIso ?? replay.startedAtIso ?? new Date(0).toISOString();
 
 function replayCard(replay: PublicBeaconReplay, label: string, body: string | null, createdAtIso: string): SeTodayCard {
@@ -39,7 +45,11 @@ function replayCard(replay: PublicBeaconReplay, label: string, body: string | nu
 
 export async function replayCards(now = new Date()): Promise<SeTodayCard[]> {
   const day = startOfTodayIso(now).slice(0, 10);
-  const replays = (await allReplays()).map((replay) => ({ ...replay, broadcastIso: broadcastIso(replay) }));
+  const replays = (await allReplays()).map((replay, position) => ({
+    ...replay,
+    watchUrl: replayWatchUrl(replay.id, position),
+    broadcastIso: broadcastIso(replay),
+  }));
   const recent = replays
     .filter((replay) => seReplayIsRecent(replay, day))
     .map((replay) => replayCard(replay, 'Replay', replay.description || null, replay.broadcastIso));

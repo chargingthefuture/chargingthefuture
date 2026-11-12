@@ -5,7 +5,7 @@
 // with that token. The Account Portal is not used: it never returned a headless browser to the app.
 // The session cookies are saved and handed to every recording, so no clip shows a sign-in screen.
 //
-// The account has to be in demo mode — its Clerk id targeted by the `demo-mode` Unleash flag — or
+// The account has to be in demo mode — the Demo data switch on for it on the Unlock admin — or
 // the clips would show real members. The recorder checks nothing about that itself; the README's
 // setup steps are where it is made true.
 const CLERK_API = 'https://api.clerk.com/v1';

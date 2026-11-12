@@ -1,4 +1,4 @@
-import { isDemoMode } from 'lib/feature-flags';
+import { isDemoMode } from 'lib/demo-mode/demo-accounts';
 import { toMinorUnits } from 'lib/service-credits/amounts';
 
 type FormanceTransactionResponse = {

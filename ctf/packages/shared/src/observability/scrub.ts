@@ -1,0 +1,253 @@
+// What leaves a member's browser or phone for Sentry, shared by web and Android so the two strip the
+// same things. Session Replay and error reports carry page addresses, breadcrumbs and request
+// details; none of them may carry an id that points at a person, card or code, anything a member
+// typed, a request body, a cookie or a sign-in header. Text on screen is masked by the replay
+// settings themselves; this module covers everything else. Pure functions: nothing here logs.
+
+export const SE_SCRUB_ID = ':id';
+export const SE_SCRUB_VALUE = ':value';
+export const SE_SCRUB_HANDLE = ':handle';
+export const SE_SCRUB_EMAIL = ':email';
+export const SE_SCRUB_PHONE = ':phone';
+
+const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
+// Clerk's ids: user_…, org_…, sess_….
+const CLERK_ID = /\b(?:user|org|sess)_[A-Za-z0-9]{8,}\b/g;
+// A Today card id, `${source}:${sourceId}` (see today/cards.ts), as one address segment.
+const CARD_SEGMENT = /^[a-z][a-z0-9-]{0,39}:\S+$/;
+// A 10-character match or invite code: lower-case letters and digits with at least one digit, so a
+// ten-letter word such as "foundation" in an address is left alone.
+const CODE_SEGMENT = /^(?=[a-z0-9]*\d)[a-z0-9]{10}$/;
+const DIGITS_SEGMENT = /^\d+$/;
+const UUID_SEGMENT = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const CLERK_SEGMENT = /^(?:user|org|sess)_[A-Za-z0-9]{8,}$/;
+const EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
+// Ten or more digits with the usual separators between them.
+const PHONE = /\+?\d(?:[\s().-]*\d){9,}/g;
+// An attribute value inside a CSS selector, e.g. [aria-label="A name"] in a click breadcrumb.
+const SELECTOR_ATTRIBUTE_VALUE = /\[([\w-]+)=(?:"[^"]*"|'[^']*'|[^\]]*)\]/g;
+const ADDRESS = /^([a-z][a-z0-9+.-]*:\/\/[^/?#]*)?([^?#]*)(\?[^#]*)?(#.*)?$/i;
+
+const DROPPED_HEADERS = new Set(['cookie', 'set-cookie', 'authorization', 'proxy-authorization', 'x-csrf-token']);
+const ADDRESS_HEADERS = new Set(['referer', 'referrer', 'origin']);
+const BODY_KEYS = ['body', 'request_body', 'response_body', 'data', 'input', 'response'];
+const ADDRESS_KEYS = ['url', 'from', 'to', 'previous', 'http.url', 'http.query', 'url.full', 'url.query'];
+
+// Ids inside free text: UUIDs and Clerk ids anywhere in the string.
+export function seScrubIds(text: string): string {
+  return text.replace(UUID, SE_SCRUB_ID).replace(CLERK_ID, SE_SCRUB_ID);
+}
+
+// Ids and contact details inside free text: an error message, a log line.
+export function seScrubText(text: string): string {
+  return seScrubIds(text.replace(EMAIL, SE_SCRUB_EMAIL).replace(PHONE, SE_SCRUB_PHONE));
+}
+
+function decodeSegment(segment: string): string {
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    return segment;
+  }
+}
+
+function isIdSegment(segment: string): boolean {
+  const plain = decodeSegment(segment);
+  return [DIGITS_SEGMENT, UUID_SEGMENT, CLERK_SEGMENT, CARD_SEGMENT, CODE_SEGMENT].some((pattern) => pattern.test(plain));
+}
+
+// Routes whose next segment is a member's handle or an invite's name, which name a person: the
+// Directory listing page, a Directory profile and an invite. Each lists the segments that are pages
+// of their own rather than a handle.
+const HANDLE_ROUTES: ReadonlyArray<{ prefix: string; pages: ReadonlySet<string> }> = [
+  { prefix: 'apps/directory', pages: new Set(['invites', 'profile', 'public', 'weavers-of-the-commons']) },
+  { prefix: 'apps/directory/profile', pages: new Set() },
+  { prefix: 'api/directory/invites', pages: new Set() },
+];
+
+function isHandleSegment(before: string[], segment: string): boolean {
+  // Empty, already a placeholder, or a route template such as [handle].
+  if (!segment || segment.startsWith(':') || segment.startsWith('[')) return false;
+  // A leading method in a route name ("GET ") is not part of the path.
+  const prefix = before.filter((part) => part && !part.includes(' ')).join('/');
+  return HANDLE_ROUTES.some((route) => route.prefix === prefix && !route.pages.has(decodeSegment(segment)));
+}
+
+function scrubSegment(segments: string[], index: number): string {
+  const segment = segments[index];
+  if (isIdSegment(segment)) return SE_SCRUB_ID;
+  return isHandleSegment(segments.slice(0, index), segment) ? SE_SCRUB_HANDLE : segment;
+}
+
+function scrubPath(path: string): string {
+  const segments = path.split('/');
+  return segments.map((_, index) => scrubSegment(segments, index)).join('/');
+}
+
+// Keeps each key and replaces each value: `?q=abc&page=2` → `?q=:value&page=:value`.
+export function seScrubQuery(query: string): string {
+  const lead = query.startsWith('?') ? '?' : '';
+  const body = lead ? query.slice(1) : query;
+  if (!body) return query;
+  return lead + body
+    .split('&')
+    .map((pair) => {
+      const at = pair.indexOf('=');
+      return at < 0 || at === pair.length - 1 ? pair : `${pair.slice(0, at)}=${SE_SCRUB_VALUE}`;
+    })
+    .join('&');
+}
+
+// A page address, request address or route name with every id replaced by `:id` and every query
+// value by `:value`: /apps/directory/profile/<uuid>?ref=x → /apps/directory/profile/:id?ref=:value.
+export function seScrubAddress(address: string): string {
+  if (!address) return address;
+  const parts = ADDRESS.exec(address);
+  if (!parts) return seScrubIds(address);
+  const [, origin = '', path = '', query = '', hash = ''] = parts;
+  const scrubbedHash = hash ? `#${scrubPath(hash.slice(1))}` : '';
+  return seScrubIds(origin + scrubPath(path) + (query ? seScrubQuery(query) : '') + scrubbedHash);
+}
+
+type AnyRecord = Record<string, unknown>;
+
+function isRecord(value: unknown): value is AnyRecord {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function scrubAddressKeys(data: AnyRecord): void {
+  for (const key of ADDRESS_KEYS) {
+    if (typeof data[key] === 'string') data[key] = seScrubAddress(data[key] as string);
+  }
+}
+
+function dropBodies(data: AnyRecord): void {
+  for (const key of BODY_KEYS) delete data[key];
+  for (const side of ['request', 'response']) {
+    const part = data[side];
+    if (isRecord(part)) delete part.body;
+  }
+}
+
+export interface SeScrubBreadcrumb {
+  category?: string;
+  message?: string;
+  data?: { [key: string]: unknown };
+}
+
+const TEXT_DROPPED_CATEGORIES = new Set(['ui.input', 'console']);
+
+// A breadcrumb with typed text and console text removed, addresses scrubbed, bodies dropped, and
+// attribute values cut from click selectors. Changes the breadcrumb in place and returns it.
+export function seScrubBreadcrumb<T extends SeScrubBreadcrumb>(crumb: T): T {
+  const category = crumb.category ?? '';
+  if (TEXT_DROPPED_CATEGORIES.has(category)) {
+    delete crumb.message;
+    delete crumb.data;
+    return crumb;
+  }
+  if (typeof crumb.message === 'string') {
+    const message = crumb.message.replace(SELECTOR_ATTRIBUTE_VALUE, '[$1]');
+    crumb.message = category === 'navigation' ? seScrubAddress(message) : seScrubText(message);
+  }
+  if (isRecord(crumb.data)) {
+    scrubAddressKeys(crumb.data);
+    dropBodies(crumb.data);
+  }
+  return crumb;
+}
+
+interface SeScrubSpan {
+  description?: string;
+  name?: string;
+  data?: { [key: string]: unknown };
+}
+
+function scrubSpan(span: SeScrubSpan): void {
+  if (typeof span.description === 'string') span.description = seScrubAddress(span.description);
+  if (typeof span.name === 'string') span.name = seScrubAddress(span.name);
+  if (isRecord(span.data)) {
+    scrubAddressKeys(span.data);
+    dropBodies(span.data);
+  }
+}
+
+// One frame Session Replay is about to record (a breadcrumb or a performance span). Other frames
+// pass through unchanged.
+export function seScrubReplayFrame<T extends { data?: { tag?: string; payload?: unknown } }>(frame: T): T {
+  const tag = frame.data?.tag;
+  const payload = frame.data?.payload;
+  if (!isRecord(payload)) return frame;
+  if (tag === 'breadcrumb') seScrubBreadcrumb(payload as SeScrubBreadcrumb);
+  if (tag === 'performanceSpan') scrubSpan(payload as SeScrubSpan);
+  return frame;
+}
+
+function scrubHeaders(headers: AnyRecord): void {
+  for (const name of Object.keys(headers)) {
+    const lower = name.toLowerCase();
+    if (DROPPED_HEADERS.has(lower)) delete headers[name];
+    else if (ADDRESS_HEADERS.has(lower) && typeof headers[name] === 'string') {
+      headers[name] = seScrubAddress(headers[name] as string);
+    }
+  }
+}
+
+function scrubQueryString(query: unknown): unknown {
+  if (typeof query === 'string') return seScrubQuery(query);
+  if (Array.isArray(query)) {
+    return query.map((pair) => (Array.isArray(pair) ? [pair[0], SE_SCRUB_VALUE] : SE_SCRUB_VALUE));
+  }
+  if (isRecord(query)) {
+    return Object.fromEntries(Object.keys(query).map((key) => [key, SE_SCRUB_VALUE]));
+  }
+  return query;
+}
+
+function scrubRequest(request: AnyRecord): void {
+  if (typeof request.url === 'string') request.url = seScrubAddress(request.url);
+  if (request.query_string !== undefined) request.query_string = scrubQueryString(request.query_string);
+  delete request.cookies;
+  delete request.data;
+  if (isRecord(request.headers)) scrubHeaders(request.headers);
+}
+
+function scrubExceptionValues(event: AnyRecord): void {
+  const exception = event.exception;
+  if (!isRecord(exception) || !Array.isArray(exception.values)) return;
+  for (const value of exception.values) {
+    if (isRecord(value) && typeof value.value === 'string') value.value = seScrubText(value.value);
+  }
+}
+
+function scrubMessages(event: AnyRecord): void {
+  if (typeof event.message === 'string') event.message = seScrubText(event.message);
+  if (isRecord(event.logentry) && typeof event.logentry.message === 'string') {
+    event.logentry.message = seScrubText(event.logentry.message);
+  }
+  scrubExceptionValues(event);
+}
+
+function scrubList(event: AnyRecord, key: string, scrub: (item: AnyRecord) => void): void {
+  const list = event[key];
+  if (!Array.isArray(list)) return;
+  for (const item of list) if (isRecord(item)) scrub(item);
+}
+
+// An error, transaction or replay event just before it is sent: request address, query, cookies
+// and sign-in headers, the member (no rule allows a member id in a report, so it goes), message
+// text that looks like an email address or phone number, the route name, span addresses and the
+// addresses a replay lists. Changes the event in place and returns it.
+export function seScrubEvent<T extends object>(event: T): T {
+  const record = event as AnyRecord;
+  if (isRecord(record.request)) scrubRequest(record.request);
+  delete record.user;
+  scrubMessages(record);
+  if (typeof record.transaction === 'string') record.transaction = seScrubAddress(record.transaction);
+  if (Array.isArray(record.urls)) {
+    record.urls = record.urls.map((url) => (typeof url === 'string' ? seScrubAddress(url) : url));
+  }
+  scrubList(record, 'breadcrumbs', (crumb) => seScrubBreadcrumb(crumb as SeScrubBreadcrumb));
+  scrubList(record, 'spans', (span) => scrubSpan(span as SeScrubSpan));
+  return event;
+}

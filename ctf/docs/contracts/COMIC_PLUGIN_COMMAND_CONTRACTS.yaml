@@ -515,6 +515,53 @@ contracts:
     idempotency: false
 
   - pluginId: comic
+    command: comic.engine.power.get
+    version: 1.0.0
+    description: >-
+      Admin reads whether the drafting endpoint (the RunPod endpoint named in OLLAMA_BASE_URL) is on:
+      its max workers, where 0 is off. Added 2026-11-12.
+    inputSchema: {}
+    outputSchema:
+      available:
+        type: boolean
+        description: False when OLLAMA_BASE_URL is not a RunPod address or OLLAMA_API_KEY is unset.
+      endpointId:
+        type: string
+      workersMax:
+        type: integer
+      on:
+        type: boolean
+    dataAccess:
+      - runpod_endpoint
+    purpose: assistant_supervision
+    retentionClass: none
+    idempotency: true
+
+  - pluginId: comic
+    command: comic.engine.power.set
+    version: 1.0.0
+    description: >-
+      Admin turns the drafting endpoint on (1 max worker) or off (0). Only the endpoint named in
+      OLLAMA_BASE_URL is changed. Added 2026-11-12.
+    inputSchema:
+      on:
+        type: boolean
+        required: true
+    outputSchema:
+      endpointId:
+        type: string
+      workersMax:
+        type: integer
+      on:
+        type: boolean
+    dataAccess:
+      - runpod_endpoint
+      - comic_admin_audit_trail
+    purpose: assistant_supervision
+    retentionClass: audit_long_lived
+    idempotency: true
+
+  - pluginId: comic
     command: comic.admin.audit.list
     version: 1.0.0
     description: >-

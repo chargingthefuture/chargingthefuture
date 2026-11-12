@@ -63,8 +63,8 @@ second. Infisical is optional: if it cannot be reached, the run carries on with 
 The workflow signs in with a one-time Clerk sign-in token for that id. No password is stored
 anywhere.
 
-A separate recording account instead: create the user in Clerk, add its id to the `demo-mode`
-Unleash flag (without this the clips would show real members), and run Seed Demo with it as
+A separate recording account instead: create the user in Clerk, turn on the Demo data
+switch for it on the Unlock admin (without this the clips would show real members), and run Seed Demo with it as
 `demo_tester_member_id`.
 
 The `user-guide` clip needs no sign-in, so it is the clip to run first to check that recording, voice

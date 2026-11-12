@@ -931,3 +931,11 @@ web ☐ android ☐
 **Expected:** Step 2 shows step 1's message as a comment. Step 3's message shows only to its author until they are approved. Step 4 shows the approved comments read only, "Sign in to write here", and on Just us two nothing but the private-conversation line with "Sign in to have private conversations". Step 5 shows a conversation tagged Sample.
 **Result:** web ☐ android ☐ — notes:
 
+
+## The note under a blog story's composer on Today (added 2026-11-11)
+**Role:** approved member · **Surfaces:** web, android
+**Steps:**
+1. On Today, open a blog story card and look under the composer.
+2. Switch to Just us two. Then open an Ask card and look under its composer.
+**Expected:** Step 1: "Your comment can also appear under this post on the blog." shows under "Everyone can read this…". Step 2: the line is not shown in Just us two or on the Ask card.
+**Result:** web ☐ android ☐ — notes:

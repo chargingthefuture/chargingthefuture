@@ -14,7 +14,7 @@ name: Expo — Preview APK
 #
 # There is ONE environment: production. A preview build is just an install
 # channel — it points at the SAME production backend and the SAME Clerk sign-in
-# key as a release build. Demo/sample data is a runtime Unleash flag, not a
+# key as a release build. Demo/sample data is a per-account switch, not a
 # separate deploy environment.
 
 on:

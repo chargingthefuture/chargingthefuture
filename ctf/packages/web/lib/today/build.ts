@@ -2,7 +2,8 @@ import type { SeToday, SeTodayBroadcast, SeTodayCard, SeTodayRoom } from '@ctf/s
 import { reportError } from 'lib/observability/report';
 import type { TodayViewer } from './card';
 import { goalAsks, relayAsks, rideAsks } from './sources-asks';
-import { cohortOffers, placeOffers } from './sources-offers';
+import { cohortOffers, hoursOffers, placeOffers } from './sources-offers';
+import { cohortCard } from './sources-cohort';
 import { blogStories, storiesTomorrow } from './sources-blog';
 import { dailyPuzzleCard } from './sources-daily';
 import { announcementStories, inviteStories, surveyCard, whatWorksStory } from './sources-stories';
@@ -47,6 +48,8 @@ export function todaySources(viewer: TodayViewer, now: Date): CardSource[] {
     { name: 'socket-relay', read: () => relayAsks(viewer) },
     { name: 'trust-transport', read: () => rideAsks(viewer) },
     { name: 'lighthouse', read: () => placeOffers(viewer) },
+    { name: 'mutual-time', read: () => hoursOffers(viewer) },
+    { name: 'peer-programming-cohort', read: () => cohortCard(viewer, now) },
     { name: 'skill-up', read: () => cohortOffers() },
     { name: 'questions', read: () => questionCards(viewer, now) },
     { name: 'announcements', read: () => announcementStories(viewer) },
@@ -56,7 +59,7 @@ export function todaySources(viewer: TodayViewer, now: Date): CardSource[] {
     { name: 'games', read: () => dailyPuzzleCard(now) },
     { name: 'quora-survey', read: () => surveyCard(viewer, now) },
     { name: 'mood', read: () => moodCard(viewer, now) },
-    { name: 'numbers', read: () => numbersCard(now) },
+    { name: 'numbers', read: () => numbersCard(now, true) },
     { name: 'beacon-replays', read: () => replayCards(now) },
     { name: 'skills-hunt', read: () => wantedCard() },
     { name: 'skills-hunt-mission', read: () => missionCard(now) },

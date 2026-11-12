@@ -282,6 +282,12 @@ member active only in Fireside is seen by being read, which is what the plugin i
 
 ## Change Log
 
+- 2026-11-11: **The composer under a blog story on Today says where a comment goes.** The 3.1 plan's card
+  rules: under the public conversation of a blog story card, below the composer, the line "Your comment
+  can also appear under this post on the blog." (`SE_CARD_WORDS.blogNote`, `seCardBlogNote` in
+  `@ctf/shared`), on web and Android. Not shown in Just us two or on any other card. No route or table
+  changed.
+
 - 2026-11-11: **A story's Today card talks in its Fireside thread.** Owner decision: a public message under a blog or Quora story card on Today is a top-level Fireside comment on the post, through `createComment`, `editOwnComment` and `withdrawOwnComment` (`lib/fireside/card-thread.ts`), with Fireside's rules and an audit row (`reason: today_card`). The card reads the thread's top-level comments by approved authors plus the reader's own, leaving out blocked and muted members. Signed-out Today reads the same comments through `GET /api/today/public/cards/[cardId]`. No Fireside route or table changed.
 - 2026-11-10: **Today reads when comments were written under its blog stories (non-plugin inventory 5n).** `listStoryCommentTimes` (`lib/fireside/story-comments.ts`) answers, for the day's story slugs, when each publicly visible comment was written (an approved author, not taken down; `isPubliclyVisible`), up to 50 a post. A member who marked a story done sees it come back with "N new comments" when somebody has written since. The times are used on the server and never sent; nothing about who wrote is read. No Fireside table or route changed.
 

@@ -1,8 +1,9 @@
-import { SE_TODAY_MOOD_TITLE, type SeTodayBroadcast, type SeTodayCard } from '@ctf/shared';
+import { SE_TODAY_MOOD_TITLE, type SeTodayBroadcast, type SeTodayCard, type SeTodayFigure } from '@ctf/shared';
 import { resolveUsernames } from 'lib/identity/resolve-usernames';
 import { reportError } from 'lib/observability/report';
 import { readMoodEligibilityForUser } from 'lib/mood/repository';
 import { getDashboard } from 'lib/workforce/repository';
+import { readWeeklyIndexChange } from 'lib/gdp/weekly-change';
 import { getLiveBeaconEvent } from 'lib/beacon/repository';
 import { listRounds } from 'lib/skills-hunt/repository';
 import { listMissionsForRoundWithCommunityProgress } from 'lib/skills-hunt/missions';
@@ -32,23 +33,41 @@ export async function moodCard(viewer: TodayViewer, now = new Date()): Promise<S
   ];
 }
 
-export async function numbersCard(now = new Date()): Promise<SeTodayCard[]> {
-  const dashboard = await getDashboard();
+// The Our numbers card (approved board "More cards in Today"): Workforce's skills coverage and, for a
+// signed-in member, how much the Community Value Index grew this week (lib/gdp/weekly-change.ts), as
+// two figures. The index is a relative measure and is never written as money. A weekly figure that
+// cannot be read, or has no last week to compare with, is left out and the card keeps coverage.
+async function weeklyIndexFigure(now: Date): Promise<SeTodayFigure | null> {
+  try {
+    const change = await readWeeklyIndexChange(now);
+    return change === null ? null : { value: `+${change.toLocaleString('en-US')}`, line: 'Community Value Index this week' };
+  } catch (error) {
+    reportError(error, { area: 'today', op: 'numbers_weekly_index' });
+    return null;
+  }
+}
+
+export async function numbersCard(now = new Date(), withWeekly = false): Promise<SeTodayCard[]> {
+  const [dashboard, weekly] = await Promise.all([getDashboard(), withWeekly ? weeklyIndexFigure(now) : Promise.resolve(null)]);
   if (!dashboard.skillsCatalogTotal) return [];
   const covered = Math.min(100, Math.round((dashboard.skillsListedTotal / dashboard.skillsCatalogTotal) * 100));
   const href = '/apps/workforce';
+  const coverage: SeTodayFigure = { value: `${covered}%`, line: "of a small country's skills covered" };
   return [
-    card({
-      source: 'numbers',
-      sourceId: startOfTodayIso(now).slice(0, 10),
-      kind: 'numbers',
-      label: 'Our numbers',
-      title: `${covered}% of a small country's skills covered`,
-      body: `${dashboard.skillsListedTotal} of ${dashboard.skillsCatalogTotal} skills are held by somebody listed in the Directory.`,
-      createdAtIso: startOfTodayIso(now),
-      href,
-      actions: [action('open', 'Open the full report', href)],
-    }),
+    {
+      ...card({
+        source: 'numbers',
+        sourceId: startOfTodayIso(now).slice(0, 10),
+        kind: 'numbers',
+        label: weekly ? 'Our numbers · this week' : 'Our numbers',
+        title: `${covered}% of a small country's skills covered`,
+        body: `${dashboard.skillsListedTotal} of ${dashboard.skillsCatalogTotal} skills are held by somebody listed in the Directory.`,
+        createdAtIso: startOfTodayIso(now),
+        href,
+        actions: [action('open', 'Open the full report', href)],
+      }),
+      figures: weekly ? [coverage, weekly] : [coverage],
+    },
   ];
 }
 

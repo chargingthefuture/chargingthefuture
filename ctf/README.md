@@ -62,7 +62,7 @@ This folder contains the v3 monorepo for:
 ## Deploy Baseline
 
 - The web app deploys on Render (`render.yaml` at the repo root is the service definition); Railway
-  hosts only the supporting services (Infisical, Unleash, Formance). The old `ctf/railway.toml` web
+  hosts only the supporting services (Infisical, Formance). The old `ctf/railway.toml` web
   deploy entry point was removed 2026-08-03 — the web app has not deployed from Railway since the
   Render migration.
 - Keep package manager alignment pinned to `pnpm@9.12.0` for deterministic builds.

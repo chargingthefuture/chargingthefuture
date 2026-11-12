@@ -29,4 +29,4 @@ Manages environment variables, secrets, and authentication configuration. Ensure
 - Validation tools: `ctf/packages/web/scripts/check-auth-env.mjs` and `check-formance-env.mjs`
   (pnpm scripts `check:auth-env` / `check:formance-env`); Stream credentials have a manual
   workflow, `.github/workflows/check-stream-env.yml`. None run automatically in CI or deploys.
-- Feature flags: Unleash (self-hosted on Railway) behind OpenFeature; keys are in rule 123.
+- No feature-flag service. Demo data is a per-account switch (`public.demo_mode_accounts`); see rule 123.

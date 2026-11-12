@@ -13,7 +13,7 @@ managed DB on a sleep-assumed free tier (Neon free = 100 compute-hours/month, wh
 an always-awake DB exhausts before month-end) is the wrong fit. Railway meters
 actual RAM/CPU and never caps with suspension, so a quiet ledger + its Postgres are
 cheaper there (~$7–12/mo metered vs ~$26/mo for a Render private service + Neon
-Launch). This is the same reasoning that keeps Infisical and Unleash on Railway —
+Launch). This is the same reasoning that keeps Infisical on Railway —
 see the note in `render.yaml`.
 
 ## Source of Truth (code, not prose)

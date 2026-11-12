@@ -53,6 +53,7 @@ Unlock uses canonical identity for authentication, submission ownership, and mod
 - `unlock_spam_quora_urls`
 - `unlock_excluded_accounts`
 - `unlock_help_requests`
+- `demo_mode_accounts` (production schema only)
 
 Retention summary:
 
@@ -70,6 +71,9 @@ Retention summary:
    other data (registered `del` in the account deletion registry): the account it names no longer
    exists, so the row would count for nothing and there is no abuse-prevention reason to keep it. The
    row grants and revokes nothing — it changes only what the admin sign-up numbers count.
+   `demo_mode_accounts` is its companion: one row per account an admin switched to demo data, keyed on
+   `user_id`, in the production schema only. It is hard-deleted with the member's other data
+   (registered `del`): it grants nothing and only chooses which schema the account's requests use.
 6. `unlock_help_requests` holds one row per member who pressed "ask for help" on the Unlock screen
    rather than submitting a Quora URL, together with `quora_hint` — whatever they said about their
    Quora account when they could not give the URL (a name, a link to something they posted, an email).

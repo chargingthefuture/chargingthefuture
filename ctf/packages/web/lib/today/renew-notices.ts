@@ -20,6 +20,11 @@ const SOURCES: Source[] = [
   { source: 'trust-transport', href: '/apps/trust-transport', sql: `SELECT id::text AS id, requester_user_id AS owner, 'A ride is wanted' AS title, created_at AS start FROM trust_transport_requests WHERE status = 'open'` },
   { source: 'peer-programming', href: '/apps/peer-programming', sql: `SELECT id::text AS id, owner_user_id AS owner, title, created_at AS start FROM peer_programming_goals WHERE status = 'open'` },
   { source: 'lighthouse', href: '/apps/lighthouse', sql: `SELECT id::text AS id, host_user_id AS owner, title, updated_at AS start FROM lighthouse_properties WHERE is_active = TRUE` },
+  {
+    source: 'mutual-time',
+    href: '/apps/mutual-time',
+    sql: `SELECT id::text AS id, created_by_user_id AS owner, COALESCE(title, 'Pick a time to meet') AS title, COALESCE(opens_at, created_at) AS start FROM mutual_time_events WHERE status = 'open' AND (opens_at IS NULL OR opens_at <= NOW()) AND (closes_at IS NULL OR closes_at > NOW())`,
+  },
 ];
 
 type Row = { id: string; owner: string; title: string; start: Date; due_at: Date | null; shown_until: Date | null; outcome: 'done' | 'not_done' | null };

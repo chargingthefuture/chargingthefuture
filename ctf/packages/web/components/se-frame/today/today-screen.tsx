@@ -8,6 +8,7 @@ import { TodayCard } from './today-card';
 import { sendTodayFeedback } from './send-feedback';
 import { WeekStrip } from './week-strip';
 import { useToday, type MarkKind, type TodayMarks } from './use-today';
+import { EmojiRain } from './emoji-rain';
 import styles from './today.module.css';
 
 // Today in 3.1: Days won, the broadcast while it is live, the rooms, then the day's cards newest first.
@@ -126,8 +127,11 @@ function Timeline({ viewerId, view, marks, mark, toggle, onSave, onMute, onChang
 }
 
 // A visitor who is not signed in gets GuestToday (guest-today.tsx) instead.
-// `onPresence` hands the "N Avens here" count to the title row above the screen.
-export function TodayScreen({ accountId, onPresence }: { accountId: string; onPresence?: (count: number | null) => void }) {
+// `onPresence` hands the "N Avens here" count to the title row above the screen. `rain` carries the
+// emoji rain switch and the Days won total the account last saw (use-se-prefs.ts).
+type RainPrefs = { on: boolean; seen: number | null | undefined; onSeen: (_total: number) => void };
+
+export function TodayScreen({ accountId, onPresence, rain }: { accountId: string; onPresence?: (count: number | null) => void; rain: RainPrefs }) {
   const { today, loading, error, marks, mark, toggle, save, saveNote, reload } = useToday(accountId);
   const presence = today?.presence ?? null;
   useEffect(() => onPresence?.(presence), [onPresence, presence]);
@@ -154,6 +158,7 @@ export function TodayScreen({ accountId, onPresence }: { accountId: string; onPr
 
   return (
     <>
+      <EmojiRain on={rain.on} daysWon={today?.daysWon} seen={rain.seen} onSeen={rain.onSeen} />
       <LiveCards today={today} />
       <div className={styles.listHead}>
         <h2 className={styles.listTitle}>Today&apos;s cards</h2>

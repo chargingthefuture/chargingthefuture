@@ -99,7 +99,7 @@ See `.devcontainer/README.md` for fast-mode options and database setup.
 Production deployment uses:
 
 - **[Render](https://render.com)** — The web app and the route-weather service, pulling images that GitHub Actions builds
-- **[Railway](https://railway.com)** — The Formance ledger and its Postgres, Infisical, and Unleash (feature flags)
+- **[Railway](https://railway.com)** — The Formance ledger and its Postgres, and Infisical
 - **[Infisical](https://infisical.com)** (self-hosted on Railway) — Single source of truth for secrets
 - **[Neon](https://neon.tech)** — PostgreSQL database with connection pooling
 - **[RunPod](https://www.runpod.io)** — Serverless GPU endpoint for the Ollama model; its worker image lives in the `runpod` repository

@@ -147,7 +147,8 @@ realization of "demo tables in the prod db, not mixed":
 - **Formance**: demo seeds post realistic transactions to the `ctf-demo` ledger so the credit economy
   looks real in demos.
 - **Identity / login-as-demo-user (MODULAR)**: demo participation is an **owner-curated allowlist of
-  real Clerk user IDs**, not a single hardcoded owner. Mechanism reuses the existing flag infra (#103):
+  real Clerk user IDs**, not a single hardcoded owner. Since 2026-11-12 the allowlist is the table
+  `public.demo_mode_accounts` (see below). As first built, the mechanism reused the flag infra (#103):
   `demo-mode` is evaluated **per-user** via Unleash user-id targeting (`evaluateBooleanFlag` already
   accepts `{ targetingKey }`). A user is a "demo participant" iff `demo-mode` is targeted ON for their
   Clerk id. Adding/removing a tester = a flag-targeting change in Unleash — no deploy, no schema edit.
@@ -163,6 +164,18 @@ realization of "demo tables in the prod db, not mixed":
   `formance-ledger.ts`) keep calling `isDemoMode()` with no args and are now per-user. Outside a request
   scope (seed scripts, migrations, startup) `resolveRequestIdentity()` throws on `headers()`/`cookies()`;
   it's caught and the flag falls back to its global default (OFF) — fail-safe to today's behavior.
+- **[Landed 2026-11-12] The flag service is gone; the allowlist is a table.** The Unleash server was
+  shut down for cost, and while it could not be reached every demo participant silently read and
+  wrote production. `demo-mode` targeting is replaced by `public.demo_mode_accounts`, switched per
+  account with the Demo data switch on the Unlock admin (`POST /api/unlock/admin/demo-accounts`).
+  `isDemoMode()` (`lib/demo-mode/demo-accounts.ts`) answers whether the caller's id is on it: read from
+  the public pool with `runWithForcedPool('public')` (no loop back through pool selection), kept in
+  memory for about a minute, the last list kept when a read fails, and production with the reason
+  logged when no list has been read. A pin with `runWithForcedPool` still decides first, so the
+  signed-out Today sample (`lib/today/build-public.ts`, `lib/today/cards/public-read.ts`, pinned to
+  `demo`) is unchanged. The bullets above and below describe the flag-based design as it was built;
+  wherever they say "targeted in Unleash", read "switched on in the table". Tests:
+  `lib/demo-mode/demo-accounts.test.ts`, `lib/db/postgres.test.ts`.
 - **[Next — must be runtime-tested before any participant relies on it]** the demo-aware DB pool in
   `postgres.ts` will call `isDemoMode()` to pick the `demo` vs `public` pool. **Fail-closed**: if demo is
   active but the `demo` schema/pool isn't available, the query errors rather than silently hitting
@@ -219,7 +232,7 @@ realization of "demo tables in the prod db, not mixed":
    **Owner action**: add `DATABASE_URL_DIRECT` (Neon unpooled endpoint) to Infisical `production`.
    Then run `pnpm migrate:demo-schema` on Render (or via a one-off migration job) to provision the
    `demo` schema on the production Neon DB.
-4. **Identity**: configure the `demo-mode` participant allowlist (Unleash per-user targeting); seed
+4. **Identity**: configure the participant allowlist (the Demo data switch on the Unlock admin; Unleash per-user targeting until 2026-11-12); seed
    participant accounts (owner + testers) and auto-provision a demo profile on first demo login.
 5. **Per-plugin demo seeds (scenario matrix)** — run against the `demo` schema (seed runner sets
    `search_path=demo`), starting with credit-bearing plugins (service-credits, trusttransport, lighthouse,

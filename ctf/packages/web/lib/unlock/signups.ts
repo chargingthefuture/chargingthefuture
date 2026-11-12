@@ -3,6 +3,7 @@ import { queryDb } from 'lib/db/postgres';
 import { getClerkSecretKey } from 'lib/auth/clerk-env';
 import { failureReason } from 'lib/errors/failure';
 import { listUnlockExcludedAccounts } from './excluded-accounts';
+import { listDemoAccountIds } from 'lib/demo-mode/demo-accounts';
 import { listUnlockBannedAccounts } from './banned-accounts';
 import type { UnlockReviewStatus, UnlockSignupAccount, UnlockSignupOverview } from './types';
 
@@ -192,6 +193,7 @@ type BannedMark = { reason: string; bannedAt: string; providerApplied: boolean }
 // takes three arguments rather than seven.
 type AccountMarks = {
   excludedUserIds: Map<string, string | null>;
+  demoUserIds: Set<string>;
   bannedAccounts: Map<string, BannedMark>;
   deletedDates: Map<string, string>;
   screenViews: Map<string, number>;
@@ -216,6 +218,7 @@ function adminMarkFields(userId: string, marks: AccountMarks) {
   return {
     excluded: marks.excludedUserIds.has(userId),
     excludedNote: marks.excludedUserIds.get(userId) ?? null,
+    demoData: marks.demoUserIds.has(userId),
     ...banFields(marks.bannedAccounts.get(userId) ?? null),
     deletedTheirData: marks.deletedDates.has(userId),
     deletedAt: marks.deletedDates.get(userId) ?? null,
@@ -276,14 +279,16 @@ export async function getUnlockSignupOverview(): Promise<UnlockSignupOverview> {
 
   let submissions: Map<string, SubmissionFact>;
   let excludedUserIds: Map<string, string | null>;
+  let demoUserIds: Set<string>;
   let bannedAccounts: Map<string, BannedMark>;
   let deletedDates: Map<string, string>;
   let screenViews: Map<string, number>;
   let quoraHints: Map<string, string>;
   try {
-    const [facts, excluded, banned, deleted, views, hints] = await Promise.all([
+    const [facts, excluded, demo, banned, deleted, views, hints] = await Promise.all([
       listSubmissionFacts(),
       listUnlockExcludedAccounts(),
+      listDemoAccountIds(),
       listUnlockBannedAccounts(),
       listDeletedAccountDates(),
       countUnlockScreenViews(),
@@ -291,6 +296,7 @@ export async function getUnlockSignupOverview(): Promise<UnlockSignupOverview> {
     ]);
     submissions = facts;
     excludedUserIds = new Map(excluded.map((entry) => [entry.userId, entry.note]));
+    demoUserIds = demo;
     bannedAccounts = new Map(
       banned.map((entry) => [entry.userId, { reason: entry.reason, bannedAt: entry.createdAt, providerApplied: entry.providerApplied }]),
     );
@@ -301,7 +307,7 @@ export async function getUnlockSignupOverview(): Promise<UnlockSignupOverview> {
     return emptyOverview(`The verification records could not be read from the database — ${failureReason(error)}`);
   }
 
-  const marks: AccountMarks = { excludedUserIds, bannedAccounts, deletedDates, screenViews, quoraHints };
+  const marks: AccountMarks = { excludedUserIds, demoUserIds, bannedAccounts, deletedDates, screenViews, quoraHints };
   const accounts: UnlockSignupAccount[] = roster.accounts.map((account) =>
     buildSignupAccount(account, submissions.get(account.userId) ?? null, marks),
   );

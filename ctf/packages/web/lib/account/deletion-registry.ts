@@ -204,7 +204,7 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     // scope — it clears with the account.
     serviceScopeSupported: false,
     tables: [
-      del('user_ui_preferences', 'user_id', 'Your theme, colors, text size, contrast, font and emoji rain choices.'),
+      del('user_ui_preferences', 'user_id', 'Your theme, colors, text size, contrast, font and emoji rain choices, and the Days won total Today last showed you.'),
       del('member_profile_prompts', 'account_id', 'The three lines about you on your Me screen.'),
     ],
   },
@@ -774,6 +774,9 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       // Counter-only marker: it says "leave this account out of the admin sign-up numbers" and grants
       // nothing. Once the account is gone the row counts for nothing, so it goes with the rest.
       del('unlock_excluded_accounts', 'user_id', 'The admin marker that left your account out of the sign-up counts.'),
+      // Switch-only marker: it sends the account's requests to demo data and grants nothing. The table
+      // is in the production schema only, so an unqualified name finds it from either schema.
+      del('demo_mode_accounts', 'user_id', 'The admin switch that showed your account demo data.'),
       // Retained, unlike the counter-only marker above, because deleting it would undo the ban. A ban
       // is keyed on the account id and is what keeps somebody out of this app and anything else the
       // auth provider fronts; a row that disappears on request would make "delete your data" the way

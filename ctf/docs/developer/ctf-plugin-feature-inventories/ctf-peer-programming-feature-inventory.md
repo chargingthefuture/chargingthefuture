@@ -249,6 +249,16 @@ to the env flag, then the default. With no admin setting and no env override, th
 4. The note is all of what the member writes — there is no category picker in the box. The stored `issue_type` and `suggestion_category` columns are filled with the fixed value "general" on every submission, and `release_surface` with "web"; they carry no member-chosen meaning today.
 5. Feedback records are retained for iteration analytics and audit.
 
+### With you this week on Today (3.1)
+
+1. A member placed in a cohort sees one card on Today, "PeerProgramming · with you this week", titled
+   with their cohort ("Cohort C1") and naming up to five other members in it, then "and N more"
+   ("Nobody else is in it yet." when they are alone). "Open the goal board" opens the cohort's goal
+   board. It shows only the member's own cohort (`getMyCohort`), and only the names the cohort's room
+   already lists to its members (`buildCohortRosters`, capped at six). It belongs to the week: marked
+   done, it stays off until next week's card. Built by `lib/today/sources-cohort.ts`; see the
+   non-plugin inventory §1.5 item 5a.
+
 ## Admin Features
 
 ### Weekly Topic Guidance Governance
@@ -424,6 +434,12 @@ Demo schema (`ctf/scripts/seedDemo.mjs`, `seedPeerProgrammingGoalBoard`): finds 
 6. The Android app carries every PeerProgramming screen the web has, the admin screen included (2026-10-08). No automated test harness exists for live Stream calls — verification on web and on Android (AN-PP in `android-app-test-script.md`) is manual.
 
 ## Change Log
+
+- 2026-11-11: **The "with you this week" card on Today (With you this week on Today).** The 3.1 plan shows
+  cohorts as a "with you this week" card. Today reads the member's own cohort and its first six
+  members; `today.read` lists `peer_programming_cohorts` and `peer_programming_settings` beside
+  `peer_programming_cohort_members`. The card expands in place rather than opening a card sheet, since
+  the cohort already talks in its own room. No table or route changed.
 
 - 2026-11-11: **Share this goal, web and Android (Goal Board item 11).** The approved 3.1 board "Share picture": the owner's open goal and their goals reached in the last two weeks open a share picture with Save picture and Copy as text, never naming a helper. On Today the owner's own goal is now the "Your goal · N of M tasks taken" card with a bar and Share this goal, and a reached goal stays on their Today 7 days to share (non-plugin inventory 5m). No route, table or contract changed. New dependency `qrcode-generator` (MIT) in web and mobile.
 

@@ -1781,6 +1781,19 @@ ALTER TABLE IF EXISTS unlock_excluded_accounts ADD COLUMN IF NOT EXISTS excluded
 ALTER TABLE IF EXISTS unlock_excluded_accounts ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS unlock_excluded_accounts ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
+-- Accounts that see demo data. An admin switches an account on from its card on the Unlock admin;
+-- every request from that account then reads and writes the demo schema and uses the Stream and
+-- Formance staging instances (lib/demo-mode/demo-accounts.ts). It replaced the flag service's
+-- demo-mode targeting. Production schema only, always named with public. so the demo schema never
+-- holds a copy: the app reads it from the public pool, before it knows which schema a request uses.
+CREATE TABLE IF NOT EXISTS public.demo_mode_accounts (
+  user_id TEXT PRIMARY KEY,
+  added_by_user_id TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS public.demo_mode_accounts ADD COLUMN IF NOT EXISTS added_by_user_id TEXT;
+ALTER TABLE IF EXISTS public.demo_mode_accounts ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
 -- Accounts an admin has banned outright. Separate from the demo/test exclusion above and from an
 -- account deletion, because it means something else: a real person really signed up, was judged, and
 -- should not hold a login anywhere this project runs.
@@ -6564,6 +6577,18 @@ BEGIN
   END IF;
 END
 $user_ui_preferences_se_checks$;
+
+-- Emoji rain (3.1 plan, Look): the Days won total this account last saw on Today. Today rains when
+-- the switch is on and the total is higher than this; NULL until Today first records one.
+ALTER TABLE IF EXISTS user_ui_preferences ADD COLUMN IF NOT EXISTS days_won_seen INTEGER;
+DO $user_ui_preferences_days_won_seen_check$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'user_ui_preferences_days_won_seen_check' AND connamespace = current_schema()::regnamespace) THEN
+    ALTER TABLE user_ui_preferences ADD CONSTRAINT user_ui_preferences_days_won_seen_check
+      CHECK (days_won_seen IS NULL OR days_won_seen >= 0);
+  END IF;
+END
+$user_ui_preferences_days_won_seen_check$;
 
 -- === BUG REPORTS (in-app "Report a problem" capture; raw text stays private) ===
 -- Users file problem reports from inside the app and never touch GitHub. The raw
@@ -11684,3 +11709,21 @@ ALTER TABLE IF EXISTS demo.member_mutes DROP CONSTRAINT IF EXISTS member_mutes_k
 ALTER TABLE IF EXISTS demo.member_mutes
   ADD CONSTRAINT member_mutes_kind_check CHECK (kind IN ('person', 'post', 'words'));
 
+
+-- ── post migration: 0096_se_emoji_rain_seen.sql ──
+-- Safe to re-run.
+-- Emoji rain (3.1 plan, Look): the Days won total this account last saw on Today. Today rains when
+-- the switch is on and the total is higher than this; NULL until Today first records one.
+ALTER TABLE IF EXISTS user_ui_preferences ADD COLUMN IF NOT EXISTS days_won_seen INTEGER;
+DO $user_ui_preferences_days_won_seen_check$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'user_ui_preferences_days_won_seen_check' AND connamespace = current_schema()::regnamespace) THEN
+    ALTER TABLE user_ui_preferences ADD CONSTRAINT user_ui_preferences_days_won_seen_check
+      CHECK (days_won_seen IS NULL OR days_won_seen >= 0);
+  END IF;
+END
+$user_ui_preferences_days_won_seen_check$;
+
+
+-- ── post migration: 0100_demo_mode_accounts.sql ──
+-- [demo-skip: names production (public.) tables directly; it repairs production data and has no meaning here]

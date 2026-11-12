@@ -173,6 +173,9 @@ export type UnlockSignupAccount = {
   // True when an admin has marked this as a demo/test account, so the sign-up counters leave it out.
   excluded: boolean;
   excludedNote: string | null;
+  // True when an admin has switched this account to demo data (public.demo_mode_accounts): every request
+  // from it reads and writes the demo schema.
+  demoData: boolean;
   // True when this account has an account-scope row in account_deletion_events: the person asked to be
   // forgotten and their data is gone. Their submission row went with it, so without this they would be
   // counted as "signed up, never gave a Quora URL" — the opposite of what happened.

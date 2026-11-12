@@ -26,7 +26,6 @@
     "@fontsource-variable/figtree": "5.2.10",
     "@fontsource-variable/newsreader": "^5.3.0",
     "@fontsource/atkinson-hyperlegible": "5.2.6",
-    "@openfeature/server-sdk": "1.21.0",
     "@radix-ui/react-dialog": "^1.1.2",
     "@sentry/nextjs": "^10.76.2",
     "@stream-io/node-sdk": "^0.8.6",
@@ -43,7 +42,6 @@
     "react-dom": "^19.0.0",
     "stream-chat": "^8.60.0",
     "stream-chat-react": "^12.13.1",
-    "unleash-client": "6.11.0",
     "web-push": "^3.6.7",
     "zod": "^4.6.6"
   },

@@ -63,9 +63,11 @@ export const SE_THEMES = {
     burgundy: {
         light: { ...SAND_LIGHT, hero: '#6b1f2e', onHero: '#f7ece4', pick: '#f2c46d', btn: '#6b1f2e', wordmark: '#6b1f2e', onBtn: '#f7ece4' },
         dark: {
-            bg: '#170e10', card: '#24151a', sunk: '#33202a', ink: '#f1e4dc', soft: '#bba8a9', hair: '#452a30', line: '#5e3a43',
-            hero: '#4a1420', onHero: '#f7ece4', pick: '#f2c46d', btn: '#f7ece4', wordmark: '#f7ece4', onBtn: '#170e10',
-            live: '#6fcf8e', liveBadge: '#e5909f', onLiveBadge: '#170e10', kind: DARK_KINDS, onPick: '#2a1a1d', pickField: '#fffdfa', onKind: '#170e10',
+            // A deep near-black with a burgundy cast, and a full burgundy Days won card (the light theme's
+            // own hero color) so it reads as burgundy rather than brown at a first look.
+            bg: '#110a0c', card: '#1c1215', sunk: '#2a1a1f', ink: '#f4e9e2', soft: '#c3b0b1', hair: '#38222a', line: '#5a2433',
+            hero: '#6b1f2e', onHero: '#f7ece4', pick: '#f5c96f', btn: '#f7ece4', wordmark: '#f7ece4', onBtn: '#110a0c',
+            live: '#6fcf8e', liveBadge: '#e5909f', onLiveBadge: '#110a0c', kind: DARK_KINDS, onPick: '#2a1a1d', pickField: '#fffdfa', onKind: '#110a0c',
         },
     },
     coral: {

@@ -9,12 +9,12 @@ on:
         type: string
         default: ""
       demo_second_owner_id:
-        description: "Optional: a SECOND Clerk user ID to be the two-sided marketplace counterparty (for testing both sides). Also target the demo-mode Unleash flag at this ID."
+        description: "Optional: a SECOND Clerk user ID to be the two-sided marketplace counterparty (for testing both sides). Also turn on the Demo data switch for this ID on the Unlock admin."
         required: false
         type: string
         default: ""
       demo_tester_admin_id:
-        description: "Optional: the ADMIN demo Clerk user ID. Leave empty to use the DEMO_VIDEO_CLERK_ADMIN_ID repository variable. The seed grants entry + wallet + profile; set role=admin on it in Clerk and target the demo-mode Unleash flag at it."
+        description: "Optional: the ADMIN demo Clerk user ID. Leave empty to use the DEMO_VIDEO_CLERK_ADMIN_ID repository variable. The seed grants entry + wallet + profile; set role=admin on it in Clerk and turn on the Demo data switch for it on the Unlock admin."
         required: false
         type: string
         default: ""
@@ -24,7 +24,7 @@ on:
         type: boolean
         default: true
       demo_tester_member_id:
-        description: "Optional: the hired tester's MEMBER Clerk user ID (issue #2037). The seed grants entry + wallet + profile; also target the demo-mode Unleash flag at it."
+        description: "Optional: the hired tester's MEMBER Clerk user ID (issue #2037). The seed grants entry + wallet + profile; also turn on the Demo data switch for it on the Unlock admin."
         required: false
         type: string
         default: ""
@@ -107,11 +107,11 @@ jobs:
           node scripts/seedDemo.mjs
           echo "Demo schema seeded for $DEMO_OWNER_ID."
           if [ -n "$DEMO_SECOND_OWNER_ID" ]; then
-            echo "Two-sided counterparty seeded: $DEMO_SECOND_OWNER_ID (also target the demo-mode Unleash flag at this ID)."
+            echo "Two-sided counterparty seeded: $DEMO_SECOND_OWNER_ID (also turn on the Demo data switch for this ID on the Unlock admin)."
           fi
           if [ -n "$DEMO_TESTER_ADMIN_ID" ]; then
-            echo "Tester admin seeded: $DEMO_TESTER_ADMIN_ID (set role=admin on it in Clerk, and target the demo-mode Unleash flag at it)."
+            echo "Tester admin seeded: $DEMO_TESTER_ADMIN_ID (set role=admin on it in Clerk, and turn on the Demo data switch for it on the Unlock admin)."
           fi
           if [ -n "$DEMO_TESTER_MEMBER_ID" ]; then
-            echo "Tester member seeded: $DEMO_TESTER_MEMBER_ID (target the demo-mode Unleash flag at it)."
+            echo "Tester member seeded: $DEMO_TESTER_MEMBER_ID (turn on the Demo data switch for it on the Unlock admin)."
           fi
