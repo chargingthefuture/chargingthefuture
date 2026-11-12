@@ -30,6 +30,7 @@ import { PeopleScreen } from './people/PeopleScreen';
 import { SeRoomBar, SeRoomHosts } from './rooms/SeRoomScreen';
 import { SeRoomsProvider, useSeRooms } from './rooms/SeRooms';
 import type { FeatureKey } from '../../navigation/screens';
+import { EmojiRain } from './today/EmojiRain';
 
 const TODAY_DATE = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
@@ -80,6 +81,8 @@ function SeAppFrameBody({ onOpen }: FrameProps) {
   const [tab, setTab] = useState<SeTab>('today');
   const [newKind, setNewKind] = useState<SeNewKind>('ask');
   const [presence, setPresence] = useState<number | null>(null);
+  const [rainRun, setRainRun] = useState(0);
+  const startRain = useCallback(() => setRainRun((run) => run + 1), []);
   const rooms = useSeRooms();
   const { minimize } = rooms;
   useFrameBack(tab, setTab, rooms.shown !== null, minimize);
@@ -122,6 +125,7 @@ function SeAppFrameBody({ onOpen }: FrameProps) {
             saving={saving}
             onOpen={onOpen}
             onPresence={setPresence}
+            onRain={startRain}
           />
 
           {[error, prefs.error].filter(Boolean).map((message) => (
@@ -132,6 +136,7 @@ function SeAppFrameBody({ onOpen }: FrameProps) {
         </ScaledScreen>
       </ScrollView>
       </SeFrameScrollContext.Provider>
+      <EmojiRain run={rainRun} />
       {user ? <SeRoomHosts t={t} user={{ userId: user.id, username: user.username ?? null }} /> : null}
       <SeRoomBar t={t} />
       <SeTabBar t={t} active={tab} onSelect={select} />
@@ -153,13 +158,18 @@ type TabScreenProps = {
   onClose: () => void;
   saving: boolean;
   onOpen: (_key: FeatureKey) => void;
+  onRain: () => void;
 };
 
-function TabScreen({ t, tab, onPresence, user, prefs, newKind, onAskArchitect, onBack, onClose, saving, onOpen }: TabScreenProps) {
+function TabScreen({ t, tab, onPresence, user, prefs, newKind, onAskArchitect, onBack, onClose, saving, onOpen, onRain }: TabScreenProps) {
   if (tab === 'me') {
     return user ? <MeTab t={t} user={user} prefs={prefs} onAskArchitect={onAskArchitect} onBack={onBack} saving={saving} onOpen={onOpen} /> : null;
   }
-  if (tab === 'today') return user ? <TodayScreen t={t} accountId={user.id} onOpen={onOpen} onPresence={onPresence} /> : null;
+  if (tab === 'today') {
+    if (!user) return null;
+    const rain = { on: prefs.reading.emojiRain, seen: prefs.daysWonSeen, onSeen: prefs.markDaysWonSeen, onRain };
+    return <TodayScreen t={t} accountId={user.id} onOpen={onOpen} onPresence={onPresence} rain={rain} />;
+  }
   if (tab === 'new') return <NewScreen key={newKind} t={t} initialKind={newKind} onOpen={onOpen} onClose={onClose} />;
   if (tab === 'activity') return <ActivityScreen t={t} onOpen={onOpen} />;
   return <PeopleScreen t={t} onOpen={onOpen} onToday={onClose} />;

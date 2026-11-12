@@ -122,6 +122,13 @@ feed; when the event ends, Beacon auto-posts the recording to the Commons as a r
    list is a podcast feed at `https://app.lagatos.com/api/beacon/replays/feed`, which a feed
    reader or podcast app can follow; a new replay is in it as soon as its recording is ready. The
    viewer at `/apps/beacon` still shows only the latest replay.
+8. **Picture in picture (web).** The live broadcast and the last replay each have a **Picture in
+   picture** button under the player that moves the video into its own small window, which stays on
+   top while the member uses other tabs or apps. Where the browser allows a page to do it by itself
+   (Chrome's "enter picture in picture" action), the playing video moves there when the member leaves
+   the tab. A browser that cannot says "This browser cannot show the broadcast in its own window."
+   under the button. Built on `openPictureInPicture` and `useAutoPictureInPicture` in
+   `components/shared/call-safety.tsx`, the helpers the PeerProgramming call uses. Not on Android yet.
 
 ## Admin Features (admin surface, `/admin/beacon`)
 
@@ -377,6 +384,11 @@ stops. HLS is used for public viewers so scale does not multiply WebRTC cost.
   2026-08-10: the Stream webhook now starts egress on `call.session_participant_joined`, so any
   publisher — RTMP from a phone or the in-browser screen-share — starts the public feed and the
   recording. See the change log entry for that date.
+- **Picture in picture on Android.** The web viewer has it (User Features 8); the Android viewer
+  (`BeaconLiveView.tsx`, `BeaconIdleView.tsx`) does not yet. Android-only gaps are done after the web
+  (owner decision, 2026-11-11). The installed player, `expo-video`, can show picture in picture once
+  its config plugin sets `supportsPictureInPicture` in the app's build config, so no new dependency is
+  needed when it is done; it needs a new Android build.
 - **The phone-only path has not been exercised end to end against production Stream yet.** The fix
   above is written against Stream's documented event name and is guarded so a non-`live` event is
   never put back on air, but no one has yet run a broadcast from a phone with no browser involved and
@@ -411,6 +423,7 @@ stops. HLS is used for public viewers so scale does not multiply WebRTC cost.
 
 ## Change Log
 
+- 2026-11-11: **Picture in picture for the broadcast and the replay on the web (3.1 plan, Rooms: picture in picture is the default for video and calls).** The viewer at `/apps/beacon` has a **Picture in picture** button under the live player and under the last replay, and registers the browser's "enter picture in picture" action so Chrome moves the playing video to its own window when the member leaves the tab. The PeerProgramming call's hook moved into `components/shared/call-safety.tsx` as `useAutoPictureInPicture`, and `openPictureInPicture` takes the name of what it opens, so both use the same code. Android is left for later (Gaps). No route, table or contract changed. Quota note: `ctf/docs/quota-impact/2026-11-11-beacon-picture-in-picture.md`. Test: BCN-2b.
 - 2026-11-10: **Rename any event, and delete an ended broadcast (owner report).** A typo in a title could not be fixed, and failed broadcasts (some with no sound) stayed in the app with no way to remove them. Added `PATCH /api/beacon/[id]` (`renameBeaconEvent`, audited `beacon.event.rename`) and a `Rename` control on every Event history row in any status. `DELETE /api/beacon/[id]` now takes an ended event as well as a draft (`deleteBeaconEvent`, replacing `deleteDraftBeaconEvent`), still refuses a live one in the route and the SQL, and deletes the event's two Commons notices as the host (`removeBeaconCommonsNotices`). The history list moved to `components/beacon/beacon-event-history.tsx` (styles in `beacon-admin-styles.ts`), with each row's actions on their own line so four fit a phone. Android's Beacon Admin (`BeaconEventHistory.tsx`, `useBeaconAdminActions.ts`) matches. Contracts: `event.delete` 1.1.0, new `event.rename`. The GitHub release copy of a recording is not touched.
 - 2026-11-10: **Replays keep the full picture (owner report).** A phone broadcast held upright showed the full face to the host, but the replay was a landscape frame with the picture cropped to fill a tile, cutting half of it off. Stream's default recording layout draws each participant as a tile and fills it. Beacon now sets the call's recording layout to `single-participant` with `detect_orientation` and `video.scale_mode: fit` (`BEACON_RECORDING_LAYOUT`, applied by `applyBeaconRecordingLayout` with `PATCH /api/v2/video/call/livestream/{id}`), so an upright phone records upright, a screen share records landscape, and nothing is cropped. It applies to broadcasts from now on; replays already recorded keep their frame. Quota note: `ctf/docs/quota-impact/2026-11-10-beacon-recording-layout.md`.
 

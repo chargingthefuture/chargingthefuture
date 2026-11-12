@@ -114,7 +114,13 @@ function TabScreen({ tab, currentUser, isAdmin, prefs, newKind, onAskArchitect, 
     <>
       {tab === 'today' ? <TodayHeader presence={presence} /> : null}
       {title ? <ScreenHeader title={title} /> : null}
-      {tab === 'today' ? <TodayScreen accountId={currentUser.userId} onPresence={setPresence} /> : null}
+      {tab === 'today' ? (
+        <TodayScreen
+          accountId={currentUser.userId}
+          onPresence={setPresence}
+          rain={{ on: prefs.reading.emojiRain, seen: prefs.daysWonSeen, onSeen: prefs.markDaysWonSeen }}
+        />
+      ) : null}
       {tab === 'new' ? <NewScreen key={newKind} initialKind={newKind} onClose={onClose} /> : null}
       {tab === 'me' ? (
         <MeTab currentUser={currentUser} isAdmin={isAdmin} prefs={prefs} onAskArchitect={onAskArchitect} onBack={onBack} saving={saving} />
