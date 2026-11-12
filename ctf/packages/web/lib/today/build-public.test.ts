@@ -57,16 +57,16 @@ vi.mock('./build', () => ({ TODAY_MAX_CARDS: 30 }));
 import { buildPublicToday } from './build-public';
 
 describe('signed-out Today', () => {
-  it('reads Days won, ride asks and Skill Up from the demo schema and tags them as sample', async () => {
+  it('reads Days won and ride asks from the demo schema, and Skill Up from production, tagging the demo ones as sample', async () => {
     schema.reads.length = 0;
     const today = await buildPublicToday(new Date('2026-11-10T12:00:00.000Z'));
     const where = Object.fromEntries(schema.reads);
     expect(where['days-won']).toBe('demo');
     expect(where['trust-transport']).toBe('demo');
-    expect(where['skill-up']).toBe('demo');
+    expect(where['skill-up']).toBe('public');
     expect(today.daysWon).toEqual({ total: 52, thisWeek: 3, sample: true });
     expect(today.cards.find((c) => c.source === 'trust-transport')?.sample).toBe(true);
-    expect(today.cards.find((c) => c.source === 'skill-up')?.sample).toBe(true);
+    expect(today.cards.find((c) => c.source === 'skill-up')?.sample).toBeUndefined();
   });
 
   it('keeps stories, numbers, SkillsHunt and the room real and untagged', async () => {
