@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * migrate:demo-schema — provisions a parallel `demo` Postgres schema that mirrors the v3 `public`
- * schema so demo-mode requests land in an isolated namespace without touching production rows.
+ * schema so demo account requests land in an isolated namespace without touching production rows.
  *
  * Usage:
  *   DATABASE_URL=<conn> node scripts/migrateToDemo.mjs [--schema=demo]

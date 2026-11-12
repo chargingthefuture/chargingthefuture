@@ -9,7 +9,7 @@ try {
 // Mobile env contract check.
 //
 // The mobile app reads the SAME environment names as the web app and ships to a
-// SINGLE production environment (demo/staging data is a runtime Unleash flag, not
+// SINGLE production environment (demo/staging data is a per-account switch, not
 // a deploy environment). It requires:
 //   - NEXT_PUBLIC_AUTH_PUBLISHABLE_KEY   Clerk publishable key (real sign-in)
 //   - APP_URL                https API base URL (the deployed host)

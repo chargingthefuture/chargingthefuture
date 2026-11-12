@@ -8,7 +8,7 @@ export declare const SE_GUEST_WORDS: {
     readonly listen: "Listen as a guest";
     readonly listenNote: "Anyone can listen, no account needed. Sign in to speak.";
     readonly listenUnavailable: "Listening in without an account isn't available right now.";
-    readonly quiet: "The Main Room is quiet right now";
+    readonly quiet: "The audio room is quiet now";
     readonly playReadings: "Play readings";
     readonly readingsNote: "Recorded blog posts, one after another";
     readonly nextRoom: "Next room";

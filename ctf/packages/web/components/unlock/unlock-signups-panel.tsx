@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronDown, ChevronUp, Users } from 'lucide-react';
-import type { UnlockReviewStatus, UnlockSignupOverview } from 'lib/unlock/types';
+import type { UnlockReviewStatus, UnlockSignupAccount, UnlockSignupOverview } from 'lib/unlock/types';
 import { failureText } from 'lib/errors/client-failure';
 import { useTheme } from '@/hooks/useTheme';
 import { getUnlockTokens, type UnlockTokens } from './unlock-shared';
@@ -78,6 +78,19 @@ function addedUrlOutcome(stored: UnlockReviewStatus | undefined): { status: Unlo
   return { status: stored ?? 'pending', notice: 'URL added and sent to the review queue as pending — approve or reject it there.' };
 }
 
+// Posts one admin mark (the demo/test count mark or the demo data switch). Returns what failed, or
+// null when the server took it.
+async function postSignupMark(route: string, body: Record<string, unknown>): Promise<string | null> {
+  const res = await fetch(route, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
+    body: JSON.stringify(body),
+  });
+  if (res.ok) return null;
+  const data = (await res.json().catch(() => null)) as { message?: string; code?: string } | null;
+  return data?.message ?? data?.code ?? `Update failed (${res.status}).`;
+}
+
 export function UnlockSignupsPanel({ overview }: { overview: UnlockSignupOverview }) {
   const router = useRouter();
   const { theme } = useTheme();
@@ -114,29 +127,34 @@ export function UnlockSignupsPanel({ overview }: { overview: UnlockSignupOvervie
     setLimit(PAGE_SIZE);
   }
 
-  async function toggleExcluded(userId: string, excluded: boolean) {
+  // One admin mark on one account, applied to the row at once.
+  async function setMark(
+    userId: string,
+    route: string,
+    body: Record<string, unknown>,
+    apply: (account: UnlockSignupAccount) => UnlockSignupAccount,
+    op: string,
+  ) {
     setBusyUserId(userId);
     setError(null);
     try {
-      const res = await fetch('/api/unlock/admin/excluded-accounts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-ctf-csrf': '1' },
-        body: JSON.stringify({ userId, excluded }),
-      });
-      const data = (await res.json().catch(() => null)) as { ok?: boolean; message?: string; code?: string } | null;
-      if (!res.ok) {
-        setError(data?.message ?? data?.code ?? `Update failed (${res.status}).`);
-        return;
-      }
-      setAccounts((prev) =>
-        prev.map((account) => (account.userId === userId ? { ...account, excluded, excludedNote: null } : account)),
-      );
+      const failed = await postSignupMark(route, { userId, ...body });
+      if (failed) return setError(failed);
+      setAccounts((prev) => prev.map((account) => (account.userId === userId ? apply(account) : account)));
       router.refresh();
     } catch (caught) {
-      setError(failureText(caught, { area: 'unlock', op: 'exclude_account', fallback: 'Network error. Try again.' }));
+      setError(failureText(caught, { area: 'unlock', op, fallback: 'Network error. Try again.' }));
     } finally {
       setBusyUserId(null);
     }
+  }
+
+  function toggleExcluded(userId: string, excluded: boolean) {
+    return setMark(userId, '/api/unlock/admin/excluded-accounts', { excluded }, (a) => ({ ...a, excluded, excludedNote: null }), 'exclude_account');
+  }
+
+  function toggleDemo(userId: string, demo: boolean) {
+    return setMark(userId, '/api/unlock/admin/demo-accounts', { demo }, (a) => ({ ...a, demoData: demo }), 'demo_account');
   }
 
   // Ban an account outright, or lift that ban. Two writes on the server: the row the counts read, and
@@ -278,6 +296,7 @@ export function UnlockSignupsPanel({ overview }: { overview: UnlockSignupOvervie
                       account={account}
                       busy={busyUserId === account.userId}
                       onToggleExcluded={(userId, excluded) => void toggleExcluded(userId, excluded)}
+                      onToggleDemo={(userId, demo) => void toggleDemo(userId, demo)}
                       onToggleBanned={(userId, banned) => void toggleBanned(userId, banned)}
                       onAddUrl={(userId, url) => void addUrl(userId, url)}
                     />

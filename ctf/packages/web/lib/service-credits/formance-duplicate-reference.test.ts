@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('lib/feature-flags', () => ({ isDemoMode: vi.fn(async () => false) }));
+vi.mock('lib/demo-mode/demo-accounts', () => ({ isDemoMode: vi.fn(async () => false) }));
 
 import { FORMANCE_DUPLICATE_REFERENCE, postTransferToFormance } from './formance-ledger';
 

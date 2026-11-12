@@ -9,7 +9,7 @@
 
 No local dev. The v3 app runs as a **single production environment on Render**:
 the `ctf-web` service plus `ctf-route-weather` (see `render.yaml`). The Formance
-ledger, Infisical, and Unleash deliberately stay on Railway (cost decision
+ledger and Infisical deliberately stay on Railway (cost decision
 recorded in `render.yaml`); the Ollama Render service was removed 2026-06-14
 (moved to a RunPod endpoint). There is no separate staging *deployment* —
 splitting was constrained by Clerk's domain binding (one Clerk instance per
@@ -18,13 +18,13 @@ domain), and v3 ships to the single production domain.
 - **Frontend + Backend**: one Next.js app (`ctf-web`) on Render.
 - **Domain**: the production domain (e.g. `app.lagatos.com`).
 - **Clerk Identity**: one production Clerk instance bound to that domain.
-- **Release gating**: feature flags (Unleash + OpenFeature), not separate
-  environments — see the Feature Flags section below.
+- **Demo data**: a per-account switch (the Demo Accounts section below), not a
+  separate environment.
 
 ### Per-environment credentials for Stream and Formance (the exception)
 
 Two third-party integrations still need a non-production credential set even
-though there is only one deployment, and `demo-mode` selects it at runtime:
+though there is only one deployment, and the demo account list selects it at runtime:
 
 - **GetStream** — the Maker-tier quota is a hard ceiling (see
   [110-stream-maker-tier-rules.mdc](110-stream-maker-tier-rules.mdc)). A separate
@@ -35,7 +35,7 @@ though there is only one deployment, and `demo-mode` selects it at runtime:
   out of the production ledger (`FORMANCE_LEDGER` = `ctf-main`). API URL, token,
   and asset are shared because both books live on the one instance.
 
-When `demo-mode` is ON, `resolveStreamCredentials()` (web Stream readers) and the
+When the caller is on the demo account list, `resolveStreamCredentials()` (web Stream readers) and the
 Formance config reader select the `*_STAGING` values; if a `*_STAGING` value is
 missing they report "not configured" rather than falling back to production, so a
 demo session can never touch the production Stream quota or the real ledger.
@@ -191,7 +191,7 @@ credential set for the two integrations that need it:
   `FORMANCE_ASSET` (production) and `FORMANCE_LEDGER_STAGING` (= `ctf-demo`, the
   demo ledger book on the same Formance instance).
 
-`demo-mode` selects between the two sets at request time; see the
+The demo account list selects between the two sets at request time; see the
 per-environment-credentials note above.
 
 ### Web Push (VAPID) keys — Foundation instant-call ring
@@ -358,41 +358,31 @@ The server-side check is the source of truth; the Clerk dashboard layer is defen
 - Update the Clerk dashboard on the production Clerk instance.
 - Document the new prefix in this rule.
 
-## Feature Flags (Unleash + OpenFeature)
+## Demo Accounts (no flag service)
 
-Release gating and progressive user access use **Unleash** behind an **OpenFeature** client
-(vendor-neutral interface). Runtime hosting and secret sync are separate concerns: the **Unleash
-server is self-hosted on Railway**, while the app's **environment variables sync from Infisical to
-Render** (where `ctf-web` runs). Single production environment: code ships with flags OFF by default;
-flags are toggled per-agent-branch/PR or by rollout. See issues #103 (epic), #101 (unlock-as-flag),
-#102 (public-screen gating + demo-safe data).
+There is no feature-flag service. The self-hosted Unleash server and its OpenFeature client were
+removed in November 2026 (shut down for cost); nothing reads `UNLEASH_*` any more, and those keys
+can be deleted from Infisical. Release gating is done by merging when a change is ready.
 
-### Required environment variables (synced via Infisical → Render Sync)
+Which accounts see demo data is a table, `public.demo_mode_accounts` (`user_id`, `added_by_user_id`,
+`created_at`), in the production schema only. An admin turns it on or off per account with the
+Demo data switch on the account's card on the Unlock admin (`POST /api/unlock/admin/demo-accounts`,
+audited as `unlock.admin.signups.demo`). `isDemoMode()` (`lib/demo-mode/demo-accounts.ts`) answers
+whether the caller's id is in it:
 
-| Variable | Layer | Used by | Pairs with |
-|---|---|---|---|
-| `UNLEASH_API_URL` | Both | All services | Base URL of the Unleash instance. Server SDK uses the **Client API** (`/api/`); the frontend client uses the **Frontend API** (`/api/frontend`). |
-| `UNLEASH_API_TOKEN_BACKEND` | Server | web (Node), agents | Server-side `unleash-client` SDK (Client API). **Never exposed to the browser.** |
-| `UNLEASH_API_TOKEN_FRONTEND` | Client | mobile (Expo), browser | Client-side reads via the Unleash Frontend API. |
+- The list is read from the public pool (`runWithForcedPool('public')`), so choosing a pool never
+  asks for the pool again, and kept in memory for about a minute. A switch takes effect at once on
+  the server that changed it and within a minute on the others.
+- A failed read keeps the last list read. With no list read yet, the request uses production and
+  the reason is logged (no account id in the log).
+- A pin with `runWithForcedPool` wins over the list: a signed-out read pinned to `demo` (the
+  signed-out Today sample) reaches the demo schema, and a read pinned to `public` stays on
+  production.
+- Signed out, or outside a request: production.
 
-Optional: `UNLEASH_APP_NAME` (default `ctf-web`), `UNLEASH_ENVIRONMENT`.
-
-When `UNLEASH_API_URL` + `UNLEASH_API_TOKEN_BACKEND` are absent (local/CI), the server flag client
-falls back to OpenFeature's default provider, which returns each call's supplied default — i.e. flags
-are safely OFF. This is the SDK's defined unconfigured behavior, not a placeholder.
-
-### Flag-key naming convention (source of truth: `ctf/packages/shared/src/feature-flags/keys.ts`)
-
-- `feature-{pluginSlug}-{featureName}` — user-facing feature gating (e.g. `feature-unlock-quora-onboarding`).
-- `release-{agent}-{fixName}` — release/rollout gating for a specific change.
-- System flags (cross-cutting): `demo-mode`, `public-surface`.
-
-### Targeting strategy
-
-- Per-user targeting and sticky percentage rollout key off the OpenFeature `targetingKey`
-  (mapped to the Unleash `userId`); use the caller's Clerk user id.
-- Segment/role/region targeting passes through `FeatureFlagContext.attributes` → Unleash `properties`.
-- Unleash logs every toggle (audit trail); flag changes are an operational step separate from deploys.
+"Mark as demo / test" on the same card (`unlock_excluded_accounts`) is separate: it takes the
+account out of the sign-up and Adoption counts and routes nothing. A recording account normally has
+both.
 
 ## Precedence
 This rule takes precedence over all other environment and deployment rules.
@@ -407,5 +397,5 @@ Breaking this rule will directly cause Clerk authentication to fail and prevent 
 | Domain | Custom production domain |
 | Clerk Instance | One, bound to the production domain |
 | Secrets | Infisical `production` (single source of truth) |
-| Per-env credentials | Stream + Formance `*_STAGING` keys, selected by `demo-mode` |
-| Release gating | Feature flags (Unleash + OpenFeature), not environments |
+| Per-env credentials | Stream + Formance `*_STAGING` keys, selected by the demo account list |
+| Demo data | Per-account switch (`public.demo_mode_accounts`), not an environment |

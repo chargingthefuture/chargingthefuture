@@ -5,7 +5,7 @@ let publicPool: Pool | null = null;
 let demoPool: Pool | null = null;
 
 // Request-scoped override that pins EVERY query in the wrapped callback to a
-// specific schema, ignoring the usual per-user demo-mode targeting. This is for
+// specific schema, ignoring the usual demo account list. This is for
 // trusted server-only operations that must act on a chosen schema regardless of
 // (or in the absence of) a signed-in caller — e.g. the operator account-delete
 // route, which runs with a bearer secret and no Clerk session, and must be able
@@ -16,7 +16,7 @@ type ForcedPoolTarget = 'demo' | 'public';
 const forcedPoolStore = new AsyncLocalStorage<ForcedPoolTarget>();
 
 // Run `fn` with every DB query pinned to the chosen schema's pool. Trusted callers
-// only — this bypasses demo-mode access control by design.
+// only — this bypasses the demo account list by design.
 export function runWithForcedPool<T>(target: ForcedPoolTarget, fn: () => Promise<T>): Promise<T> {
   return forcedPoolStore.run(target, fn);
 }
@@ -61,7 +61,7 @@ function getPublicPool(): Pool {
   return publicPool;
 }
 
-// Demo participants (per-user demo-mode targeting) are routed to the `demo` schema:
+// Demo participants (accounts on the demo account list) are routed to the `demo` schema:
 // a parallel copy of every table in the SAME database, seeded with synthetic data
 // (#102). The connection pins search_path to `demo` (with `public` only as a
 // fallback for shared objects like extensions/functions), so a missing demo table
@@ -81,13 +81,14 @@ function getDemoPool(): Pool {
   return demoPool;
 }
 
-// Selects the pool for the current request. Demo-mode is a per-user Unleash
-// targeting allowlist; when no one is a participant this always returns the public
-// pool — identical to prior behavior. The feature-flag layer is imported lazily so
-// plain-node consumers (seed scripts, migrations) never pull Next-only deps into
-// their import graph; if it can't load or there is no request scope, we use public.
+// Selects the pool for the current request. A pin (runWithForcedPool) decides first, so a
+// signed-out read pinned to `demo` (the signed-out Today sample) still reaches the demo schema.
+// Otherwise an account switched to demo data on the Unlock admin (public.demo_mode_accounts,
+// lib/demo-mode/demo-accounts.ts) gets the demo pool and everybody else the public pool. That
+// module is imported lazily so plain-node consumers (seed scripts, migrations) never pull Next-only
+// deps into their import graph; if it can't load or there is no request scope, we use public.
 async function getActivePool(): Promise<Pool> {
-  // An explicit forced target (runWithForcedPool) wins over demo-mode targeting —
+  // An explicit forced target (runWithForcedPool) wins over the demo account list —
   // it is the authoritative choice made by a trusted operator path.
   const forced = forcedPoolStore.getStore();
   if (forced === 'demo') {
@@ -98,12 +99,12 @@ async function getActivePool(): Promise<Pool> {
   }
 
   try {
-    const { isDemoMode } = await import('../feature-flags/system');
+    const { isDemoMode } = await import('../demo-mode/demo-accounts');
     if (await isDemoMode()) {
       return getDemoPool();
     }
   } catch {
-    // no-trace: no request scope or flag layer (a seed script, say), so the public pool is right.
+    // no-trace: no request scope or demo account module (a seed script, say), so the public pool is right.
   }
 
   return getPublicPool();
@@ -117,7 +118,7 @@ export async function queryDb<T extends QueryResultRow>(
   return pool.query<T>(text, values as unknown[]);
 }
 
-// The reporter is loaded lazily for the same reason as the feature-flag layer above: plain-node
+// The reporter is loaded lazily for the same reason as the demo account module above: plain-node
 // consumers of this module must not pull Sentry's Next.js package into their import graph.
 async function reportRollbackFailure(error: Error): Promise<void> {
   try {

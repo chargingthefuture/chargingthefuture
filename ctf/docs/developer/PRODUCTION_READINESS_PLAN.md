@@ -14,8 +14,8 @@
 > pixel-perfect to the `design/` submodule and complete to each plugin's feature inventory.
 > Infra: the Railway → Render migration is **complete on `main`** (PRs #98–#117 superseded the
 > early PR #86 foundation). Deploy model is now a **single production environment** with
-> **Unleash + OpenFeature feature flags** for release gating and preview-per-branch (epic #103;
-> dependents #101 unlock-as-flag, #102 public-screen gating + demo-safe data). Infisical remains
+> merge-when-ready release gating. The Unleash + OpenFeature flag service (epic #103) was removed on
+> 2026-11-12; demo data is a per-account switch (`public.demo_mode_accounts`). Infisical remains
 > the single source of truth for env variables.
 
 ## Locked strategic decisions (owner, 2026-05-20)
@@ -24,9 +24,9 @@
    with its own draft PR. PR #74 (design-audit) stays separate. This doc is the progress channel.
 2. **Deploy target:** **Render**, single **production** environment (no staging, no per-PR Render
    preview environments — Hobby workspace can't host them). Railway → Render migration is complete on
-   `main`. Images are built in GitHub Actions, pushed to GHCR, and pulled by Render. Release gating is
-   done with **Unleash + OpenFeature feature flags** (epic #103): code ships to prod with flags OFF,
-   and previews are per-agent-branch/PR via flag targeting rather than ephemeral environments.
+   `main`. Images are built in GitHub Actions, pushed to GHCR, and pulled by Render. Release gating was
+   done with Unleash + OpenFeature feature flags (epic #103) until 2026-11-12, when the flag service
+   was removed; a change now ships when it merges, and demo data is a per-account switch.
    Infisical (self-hosted on Railway) remains the single source of truth for secrets.
 3. **Nothing is design-skippable** (Rule 127 updated 2026-05-20). Every rendered surface — including
    admin/internal (`click-log`, `weekly-performance`, `skills-taxonomy` admin, `unlock`, `community`) —
@@ -48,7 +48,7 @@
 | Parity registry | `ctf/config/plugin-parity-contracts.json` |
 | Plugin registry | `ctf/packages/web/lib/plugins/repository.ts` + `ctf_plugin_registry` table |
 | Deploy infra | root `render.yaml` (GHCR pre-built images) + `.github/workflows/build-images.yml` + `render-deploy.yml` |
-| Feature flags | Unleash (self-hosted) via OpenFeature client; epic #103 |
+| Demo data | `public.demo_mode_accounts`, switched per account on the Unlock admin (the flag service was removed 2026-11-12) |
 
 ## Per-plugin production-readiness pipeline (the repeatable gate sequence)
 
@@ -164,10 +164,10 @@ Current model: GitHub Actions builds Docker images → pushes to GHCR → Render
         offsite secondary.
 - [x] **Feature-flag infra (epic #103)**: OpenFeature client + self-hosted Unleash provider landed
       (web/mobile/agents share the flag-key registry); `UNLEASH_API_*` wired via Infisical → Render Sync.
-      Flags default safely OFF when unconfigured (local/CI).
+      Flags default safely OFF when unconfigured (local/CI). Removed 2026-11-12 with the flag service.
 - [x] **#101**: `unlock` access re-scoped to the `feature-unlock-quora-onboarding` Unleash flag, with a
       DB fallback so users approved before flag-gating aren't locked out (and hardened so a flag-backend
-      error falls through to the DB tier instead of throwing).
+      error falls through to the DB tier instead of throwing). The flag step was removed 2026-11-12; the stored tier decides.
 - [x] **#102 foundation**: public visibility resolved as a per-plugin **auth-gate** (not a global flag) —
       directory's dead v2 public routes removed (they leaked full profiles incl. payment addresses),
       socket-relay stays public via `mapPublicRequestRow()` redaction, chyme/hub auth-only; `public-surface`
@@ -194,7 +194,7 @@ Current model: GitHub Actions builds Docker images → pushes to GHCR → Render
       (2) Go to Actions → **"Provision demo schema in Neon"** → Run workflow (pastes `schema.demo.sql` into Neon via psql).
           _Alternative_: open `ctf/schema.demo.sql` from the repo, copy the full file, paste into Neon SQL Editor → Run.
       (3) Go to Actions → **"Seed demo schema"** → Run workflow → enter your Clerk user ID in the `demo_owner_id` field.
-      (4) Target your Clerk ID to `demo-mode` flag in Unleash.
+      (4) Turn on the Demo data switch for your Clerk ID on the Unlock admin (was the `demo-mode` flag in Unleash until 2026-11-12).
       (5) Confirm writes land only in the `demo` Neon schema — check Neon console → Tables → schema: demo.
 - [—] **#102 remaining (non-UI)**: the demo-tenant **DB scoping layer** (seed synthetic demo-tenant
       rows into the prod DB and scope per-plugin reads by `isDemoMode()`) is a discretionary demo-mode

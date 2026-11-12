@@ -27,8 +27,8 @@ Reviews deployment topology, environment-specific builds, and domain/routing con
 - Images are built by GitHub Actions (`.github/workflows/build-images.yml`) and pushed to GHCR;
   Render pulls the pre-built images. `render-deploy.yml` is the manual re-pull/redeploy button;
   `render-deploy-watch.yml` only watches a deploy's status.
-- Three services deliberately stay on Railway for cost reasons (re-confirmed June 2026, see the
-  notes in `render.yaml`): Infisical (secrets, synced to Render), Unleash (feature flags), and the
+- Two services deliberately stay on Railway for cost reasons (re-confirmed June 2026, see the
+  notes in `render.yaml`): Infisical (secrets, synced to Render) and the
   Formance ledger with its Postgres.
 - The Ollama Render service was removed 2026-06-14 (moved to a RunPod endpoint, issue #502).
 - Secrets flow: Infisical `production` → Render Sync → service env vars (rule 123).

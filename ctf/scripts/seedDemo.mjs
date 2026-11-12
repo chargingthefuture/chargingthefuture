@@ -27,11 +27,10 @@
  *   between the admin and member accounts covers both sides of each flow.
  *
  *   Access note: the seed grants the approved_full unlock tier to both real owners
- *   (an unlock_verification_submissions row), so neither needs the
- *   feature-unlock-quora-onboarding Unleash flag. The second user still needs the
- *   `demo-mode` Unleash flag targeted to their Clerk id — that flag is what routes
- *   them to the `demo` schema, and only the running app can evaluate it (the seed
- *   cannot set it).
+ *   (an unlock_verification_submissions row). The second user still needs the
+ *   Demo data switch turned on for their Clerk id on the Unlock admin
+ *   (public.demo_mode_accounts) — that switch is what routes them to the `demo`
+ *   schema, and the seed writes only the demo schema, so it cannot set it.
  *
  * Prerequisites:
  *   - `pnpm migrate:demo-schema` has been run (demo schema exists)
@@ -86,9 +85,9 @@ if (OWNER2 && OWNER2 === OWNER) {
 // Optional tester accounts (issue #2037): a hired tester runs the manual test scripts against the
 // demo schema with two REAL Clerk accounts — one they use as an admin, one as a plain member. The
 // seed gives each the baseline to sign in and participate (approved_full unlock, a wallet, a
-// directory profile). Two things the seed CANNOT do, because only Clerk / Unleash hold them:
+// directory profile). Two things the seed CANNOT do, because they live outside the demo schema:
 //   - the admin role: set role=admin on the tester-admin account in the Clerk dashboard;
-//   - demo routing: target the `demo-mode` Unleash flag at both ids.
+//   - demo routing: turn on the Demo data switch for both ids on the Unlock admin.
 const TESTER_ADMIN = (process.env.DEMO_TESTER_ADMIN_ID || '').trim() || null;
 const TESTER_MEMBER = (process.env.DEMO_TESTER_MEMBER_ID || '').trim() || null;
 
@@ -216,11 +215,9 @@ const WEEK_START = '2026-05-19';
 
 async function seedUnlock(c) {
   // Grant the approved_full unlock tier to the REAL demo owner(s) so they can use
-  // every plugin in the demo schema. Without a row here, access depends entirely on
-  // the feature-unlock-quora-onboarding Unleash flag being targeted at each id; the
-  // row makes the demo self-sufficient (the app's DB fallback reads this tier).
-  // The second owner still needs the `demo-mode` Unleash flag to be routed to this
-  // schema in the first place — only the running app can evaluate that.
+  // every plugin in the demo schema; the app reads this tier. The second owner still
+  // needs the Demo data switch on the Unlock admin to be routed to this schema in the
+  // first place.
   // Tester accounts (issue #2037) are included: they are real Clerk accounts and need the same
   // tier row to enter the demo's plugins.
   const realOwners = REAL_USERS;
@@ -1594,13 +1591,13 @@ async function main() {
     if (OWNER2) {
       console.log(
         `Second owner ${OWNER2} wired as the two-sided counterparty. ` +
-        `Reminder: target the \`demo-mode\` Unleash flag at ${OWNER2} so the app routes them to the demo schema.`,
+        `Reminder: turn on the Demo data switch for ${OWNER2} on the Unlock admin so the app routes them to the demo schema.`,
       );
     }
     for (const tester of TESTER_PROFILES) {
       console.log(
         `Tester account ${tester.id} seeded (${tester.headline}). ` +
-        `Reminder: target the \`demo-mode\` Unleash flag at this id` +
+        `Reminder: turn on the Demo data switch for this id on the Unlock admin` +
         (tester.id === TESTER_ADMIN ? ', and set role=admin on it in the Clerk dashboard (the seed cannot set the role).' : '.'),
       );
     }

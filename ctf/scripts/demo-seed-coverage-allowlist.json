@@ -1,6 +1,7 @@
 {
   "_README": "Allowlist for check-demo-seed-coverage.mjs. \"exempt\": tables with no demo rows on purpose, each with its reason. \"notYetSeeded\": a BURN-DOWN list of tables the demo seed does not fill yet, as of 2026-10-17. It only shrinks: seed the table in ctf/scripts/demo-seed/ and delete its line. Never add a new table to it; a new table is seeded, or exempt with a reason.",
   "exempt": {
+    "demo_mode_accounts": "production schema only: it chooses which accounts see the demo schema, so the demo schema holds no copy",
     "account_deletion_events": "derived or logged data: computed or recorded by the app from activity, not seeded directly",
     "account_restrictions": "admin or moderation record: not shown on member screens; admin clips are out of scope for now",
     "account_restrictions_audit": "audit trail: the app writes it as people act; no demo screen reads it as content",

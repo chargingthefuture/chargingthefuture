@@ -12,6 +12,7 @@ function account(overrides: Partial<UnlockSignupAccount> = {}): UnlockSignupAcco
     lastSignInAt: null,
     excluded: false,
     excludedNote: null,
+    demoData: false,
     deletedTheirData: false,
     deletedAt: null,
     banned: false,

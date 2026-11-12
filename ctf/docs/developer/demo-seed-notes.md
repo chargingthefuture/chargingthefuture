@@ -15,8 +15,7 @@ Set the optional **`DEMO_SECOND_OWNER_ID`** input to a second real Clerk user id
 seed makes that user the real counterparty to `DEMO_OWNER_ID`:
 
 - both real owners are granted the `approved_full` unlock tier (an
-  `unlock_verification_submissions` row), so neither needs the
-  `feature-unlock-quora-onboarding` Unleash flag;
+  `unlock_verification_submissions` row);
 - the second user gets a member profile (directory, trust, wallet, workforce, socket-relay
   presence);
 - both-sided data is wired so each real account can act as **both** sides: an open
@@ -62,12 +61,13 @@ Cross-member browse surfaces (Foundation Browse, WhatWorks, the feed, and so on)
 same shared rows to both owners. Re-running `seed:demo` restores the populated state for
 the first owner without duplicating rows.
 
-### Still required in Unleash for the second user
+### Still required on the Unlock admin for the second user
 
 The seed grants the *access tier*, but it cannot route a user into the demo world. The
-**`demo-mode`** Unleash flag is what points that signed-in user's database pool at the
-`demo` schema, and only the running app can evaluate it. So for the second Clerk id:
-target the `demo-mode` flag at it in Unleash, then run the workflow with both ids.
+**Demo data** switch on the account's card on the Unlock admin (`public.demo_mode_accounts`)
+is what points that signed-in user's database pool at the `demo` schema, and the seed writes
+only the demo schema. So for the second Clerk id: turn the switch on, then run the workflow
+with both ids.
 
 ## Idempotency
 
@@ -176,10 +176,10 @@ The seed workflow gained two optional inputs, `demo_tester_admin_id` and
 admin, one as a plain member). For each id given, `seedDemo.mjs` inserts the same
 baseline the second owner gets: an `unlock_verification_submissions` tier row, a
 `service_credits_wallets` row, and a `directory_profiles` /
-`directory_user_extension` pair. Two things stay outside the seed because only
-Clerk and Unleash hold them: the admin role (set role=admin on the tester-admin
-account in the Clerk dashboard) and demo routing (target the `demo-mode` Unleash
-flag at both ids).
+`directory_user_extension` pair. Two things stay outside the seed because they live
+outside the demo schema: the admin role (set role=admin on the tester-admin
+account in the Clerk dashboard) and demo routing (turn on the Demo data switch for
+both ids on the Unlock admin).
 
 All inserts target tables and columns that already exist in `ctf/schema.sql`; no
 table, column, constraint, index, or contract is added or changed, so no

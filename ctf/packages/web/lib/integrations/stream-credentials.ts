@@ -1,5 +1,5 @@
 import { getForcedPoolTarget } from 'lib/db/postgres';
-import { isDemoMode } from 'lib/feature-flags';
+import { isDemoMode } from 'lib/demo-mode/demo-accounts';
 
 export type StreamCredentials = {
   apiKey: string;
@@ -15,7 +15,7 @@ export type StreamCredentials = {
 // caller receives null and the Stream-backed feature degrades, which is the
 // intended safe outcome rather than silently billing production quota.
 //
-// A schema pinned with runWithForcedPool wins over demo-mode targeting, the same as it does for the
+// A schema pinned with runWithForcedPool wins over the demo account list, the same as it does for the
 // database pool. Demo mode targets the signed-in caller, and the operator account-delete route has
 // none, so without this a deletion pinned to the demo schema ran its Stream cleanup against the
 // production app: it hard-deleted the person's production Stream users and messages and left the

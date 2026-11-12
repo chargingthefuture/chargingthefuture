@@ -238,6 +238,35 @@ contracts:
     retentionClass: audit_long_lived
     idempotency: true
 
+
+  - pluginId: unlock
+    command: unlock.admin.signups.demo
+    version: 1.0.0
+    description: >-
+      Switch one account to demo data, or back. While on, every request from that account reads and
+      writes the demo schema and uses the Stream and Formance staging instances. It never changes the
+      member's access tier, submission, or reward. Writes public.demo_mode_accounts only.
+    inputSchema:
+      userId:
+        type: string
+        required: true
+      demo:
+        type: boolean
+        required: true
+    outputSchema:
+      ok:
+        type: boolean
+      userId:
+        type: string
+      demo:
+        type: boolean
+    dataAccess:
+      - demo_mode_accounts
+      - unlock_audit_log
+    purpose: demo_data_isolation
+    retentionClass: audit_long_lived
+    idempotency: true
+
   - pluginId: unlock
     command: unlock.admin.signups.ban
     version: 1.0.0

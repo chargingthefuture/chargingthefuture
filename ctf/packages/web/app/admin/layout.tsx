@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { isDemoMode } from 'lib/feature-flags/system';
+import { isDemoMode } from 'lib/demo-mode/demo-accounts';
 import { AdminDemoBanner } from '@/components/shared/admin-demo-banner';
 import { AdminRefreshProvider } from '@/components/shared/admin-refresh';
 
@@ -7,7 +7,7 @@ import { AdminRefreshProvider } from '@/components/shared/admin-refresh';
 // routes their admin actions to the demo schema, which is easy to miss and makes operations like
 // "Retry pending rewards" or a governance burn silently act on demo data (a burn against an empty demo
 // wallet just fails as "Insufficient balance."). A loud banner keeps the operator aware of which
-// environment their actions affect. Best-effort: if the flag layer cannot resolve, show no banner (the
+// environment their actions affect. Best-effort: if the demo account list cannot be read, show no banner (the
 // normal production view) rather than failing the page.
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   let demo = false;
