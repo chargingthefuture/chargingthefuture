@@ -25,7 +25,7 @@ export const GUIDELINE_SECTIONS: GuidelineSection[] = [
       {
         type: 'p',
         text:
-          'This platform exists to build a psyop-free economy: survivors exchanging real skills, real help, and real resources with each other. Every discussion space — the Commons, the members-only channel, plugin Direct Lines, and replies anywhere — is for that. The focus is us, not them.',
+          'This platform exists to build a psyop-free economy: survivors exchanging real skills, real help, and real resources with each other. Every discussion space — the Commons, the members-only channel, the conversations inside cards, and replies anywhere — is for that. The focus is us, not them.',
       },
     ],
   },

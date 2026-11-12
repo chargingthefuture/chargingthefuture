@@ -867,3 +867,22 @@ not closed from Today; it closes through its fulfillment as before.
 4. As B, switch to 3.0 in Settings and open the same place again.
 **Expected:** Step 2 shows A's message. Step 3's reply appears in the card's sheet on Today for A. Step 4 shows the same conversation: 3.0 and 3.1 read one conversation, only the screens differ.
 **Result:** web ☐ — notes:
+
+### The helper and the person who asked talk in the card
+
+**Role:** member A (posted a request), member B (helper) · **Surfaces:** web
+
+1. As B, tap I can help on A's request.
+2. As A, open the notice, which lands on Yours with the request open; agree to talk just you two in
+   its conversation, then write a message.
+3. As B, open Yours and the same request; reply. Open the request's card in Today.
+4. As A, on a request that had a Direct Line before this change, tap Earlier messages.
+5. As a member without the Weavers of the Commons badge, add a picture to a request.
+
+**Expected:** The tab reads Yours, and no screen says Direct Line. Step 2 shows the request with its
+conversation, the four ways to resolve it and the ongoing-arrangement prompt. Step 3's messages are
+the same ones Today's card shows in Just us two. Step 4 shows the earlier messages with "Earlier
+messages, kept to read. Talk in the conversation above." and no box to write in; a request with
+none reads "There are no earlier messages on this request." Step 5 is refused with "Pictures in
+posts are for Weavers of the Commons."
+**Result:** web ☐ — notes:

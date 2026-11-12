@@ -4338,8 +4338,6 @@ ALTER TABLE IF EXISTS socketrelay_requests RENAME TO socket_relay_requests;
 ALTER TABLE IF EXISTS socketrelay_request_accepted_currencies RENAME TO socket_relay_request_accepted_currencies;
 ALTER TABLE IF EXISTS socketrelay_request_events RENAME TO socket_relay_request_events;
 ALTER TABLE IF EXISTS socketrelay_fulfillments RENAME TO socket_relay_fulfillments;
-ALTER TABLE IF EXISTS socketrelay_fulfillment_participants RENAME TO socket_relay_fulfillment_participants;
-ALTER TABLE IF EXISTS socketrelay_messages RENAME TO socket_relay_messages;
 ALTER TABLE IF EXISTS socketrelay_admin_audit_trail RENAME TO socket_relay_admin_audit_trail;
 -- Drop the legacy-named price-consistency CHECK constraint if an older DB still carries it; the
 -- DO-block further down recreates it under the new socket_relay_requests_price_consistency_check name.
@@ -4514,32 +4512,8 @@ ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS closed_
 ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS socket_relay_fulfillments ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
-CREATE TABLE IF NOT EXISTS socket_relay_fulfillment_participants (
-  fulfillment_id UUID NOT NULL,
-  user_id TEXT NOT NULL,
-  participant_role TEXT NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  PRIMARY KEY (fulfillment_id, user_id)
-);
-ALTER TABLE IF EXISTS socket_relay_fulfillment_participants ADD COLUMN IF NOT EXISTS fulfillment_id UUID;
-ALTER TABLE IF EXISTS socket_relay_fulfillment_participants ADD COLUMN IF NOT EXISTS user_id TEXT;
-ALTER TABLE IF EXISTS socket_relay_fulfillment_participants ADD COLUMN IF NOT EXISTS participant_role TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS socket_relay_fulfillment_participants ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-
-CREATE TABLE IF NOT EXISTS socket_relay_messages (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  fulfillment_id UUID NOT NULL,
-  sender_user_id TEXT NOT NULL,
-  message_text TEXT NOT NULL,
-  moderation_status TEXT NOT NULL DEFAULT 'accepted',
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-ALTER TABLE IF EXISTS socket_relay_messages ADD COLUMN IF NOT EXISTS id UUID;
-ALTER TABLE IF EXISTS socket_relay_messages ADD COLUMN IF NOT EXISTS fulfillment_id UUID NOT NULL DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS socket_relay_messages ADD COLUMN IF NOT EXISTS sender_user_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS socket_relay_messages ADD COLUMN IF NOT EXISTS message_text TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS socket_relay_messages ADD COLUMN IF NOT EXISTS moderation_status TEXT NOT NULL DEFAULT 'accepted';
-ALTER TABLE IF EXISTS socket_relay_messages ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- The fulfillment participants and Direct Line messages tables were dropped by post/0102: a
+-- helper and the person who asked now talk in the request card's Just us two (commons_item_messages).
 
 CREATE TABLE IF NOT EXISTS socket_relay_admin_audit_trail (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -6034,15 +6008,6 @@ BEGIN
   END IF;
 END
 $sc_legacy_not_null_relax$;
-
--- socket_relay_messages (1 missing)
-ALTER TABLE IF EXISTS socket_relay_messages ADD COLUMN IF NOT EXISTS client_message_id TEXT;
--- Idempotency key backing sendFulfillmentMessage's `ON CONFLICT (fulfillment_id, sender_user_id,
--- client_message_id)`. Without a matching unique index Postgres rejects that ON CONFLICT (error 42P10)
--- and the message-send route throws — so this index is required for the route to work at all. Created
--- after the client_message_id column is added above so the referenced column always exists.
-CREATE UNIQUE INDEX IF NOT EXISTS socket_relay_messages_idempotency_uidx
-  ON socket_relay_messages (fulfillment_id, sender_user_id, client_message_id);
 
 -- trust_transport_user_extension (5 missing)
 ALTER TABLE IF EXISTS trust_transport_user_extension ADD COLUMN IF NOT EXISTS mode_preferences JSONB NOT NULL DEFAULT '{}'::jsonb;

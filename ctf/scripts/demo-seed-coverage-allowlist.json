@@ -180,8 +180,6 @@
     "skills_hunt_rare_skills_lookup",
     "skills_hunt_round_awards",
     "skills_taxonomy_flattened_projection",
-    "socket_relay_fulfillment_participants",
-    "socket_relay_messages",
     "socket_relay_request_accepted_currencies",
     "socket_relay_request_images",
     "trust_transport_disputes",

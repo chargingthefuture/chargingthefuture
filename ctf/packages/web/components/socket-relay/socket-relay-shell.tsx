@@ -8,14 +8,13 @@ import { BackChevronButton } from "@/lib/nav/back-history";
 import { useTheme } from "@/hooks/useTheme";
 import {
   BG,
-  buildDirectLines,
+  buildYoursRows,
   deriveCategories,
   getSocketRelayTokens,
   requestTags,
   suggestTags,
   type SocketRelayTokens,
-  type SrChatCredentials,
-  type SrDirectLine,
+  type SrYoursRow,
   type SrFulfillment,
   type SrFulfillmentsResponse,
   type SrListResponse,
@@ -27,7 +26,7 @@ import { SocketRelayLoading } from "./sr-loading";
 import { SocketRelayFeed } from "./sr-feed";
 import { SocketRelayPost, type PostDraft } from "./sr-post";
 import { EMPTY_IMAGE_DRAFT, saveRequestImage, validateImageDraft } from "./sr-image-field";
-import { SocketRelayChat } from "./sr-chat";
+import { SocketRelayYours } from "./sr-yours";
 import { PluginAdminButton } from "@/components/shared/plugin-admin-button";
 import { MobileTopActions } from "@/components/shared/mobile-top-actions";
 import { RefreshButton } from "@/components/shared/refresh-button";
@@ -85,7 +84,7 @@ const FEED_PAGE_SIZE = 20;
 // Load all three feed datasets at once, normalizing missing payloads to empties.
 // Kept out of the component so the loader stays within the rule-116 complexity limit.
 // The main feed asks for open requests only (server-side ?status=open) — the first page. My-requests is
-// fetched at the max page size (all statuses) so the "Mine" filter and the Direct Line list can show a
+// fetched at the max page size (all statuses) so the "Mine" filter and the list under Yours can show a
 // member's own posts regardless of status (a member realistically has far fewer than 100 at once).
 async function loadSocketRelayData(): Promise<{
   requests: SrRequest[];
@@ -215,19 +214,6 @@ async function postCsrf(url: string): Promise<string | null> {
   }
 }
 
-// Fetch Stream chat credentials for a fulfillment's Direct Line. Throws with a message on any non-OK
-// response (or a payload without credentials) so the caller can surface it.
-async function fetchChatCredentials(fulfillmentId: string): Promise<SrChatCredentials> {
-  const res = await fetch(`/api/socket-relay/fulfillments/${fulfillmentId}/chat`, {
-    method: "POST",
-    headers: { "x-ctf-csrf": "1" },
-  });
-  if (!res.ok) throw new Error(await responseFailureText(res, "Failed to fetch chat credentials", "member"));
-  const data = (await res.json()) as SrChatCredentials;
-  if (!data.ok) throw new Error(data.message ?? "No chat credentials");
-  return data;
-}
-
 // Resolve (close / reopen) a fulfillment with the chosen outcome. Throws with a friendly message on a
 // non-OK response.
 async function closeFulfillment(fulfillmentId: string, outcome: SrResolveOutcome): Promise<void> {
@@ -301,13 +287,11 @@ function useSocketRelay() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [postError, setPostError] = useState<string | null>(null);
   const [postSuccess, setPostSuccess] = useState(false);
-  const [selectedLine, setSelectedLine] = useState<SrDirectLine | null>(null);
+  const [selectedLine, setSelectedLine] = useState<SrYoursRow | null>(null);
   // Whether the ?fulfillment=<id> deep link (from the "someone offered to help" notification) has been
-  // resolved to an open Direct Line yet. Guards the one-shot deep-link effect below.
+  // resolved to its row under Yours yet. Guards the one-shot deep-link effect below.
   const [deepLinkHandled, setDeepLinkHandled] = useState(false);
-  const [chatCredentials, setChatCredentials] = useState<SrChatCredentials | null>(null);
-  const [chatLoading, setChatLoading] = useState(false);
-  const [chatError, setChatError] = useState<string | null>(null);
+  const [resolveError, setResolveError] = useState<string | null>(null);
   const [resolving, setResolving] = useState(false);
 
   const fetchData = useCallback(async (showLoading = true) => {
@@ -435,30 +419,16 @@ function useSocketRelay() {
   const handleRepost = useCallback((id: string) => runFeedAction(`/api/socket-relay/requests/${id}/repost`), [runFeedAction]);
   const handleClaim = useCallback((id: string) => runFeedAction(`/api/socket-relay/requests/${id}/fulfill`), [runFeedAction]);
 
-  // Select a Direct Line row. A pending request (no helper yet) has no chat to open — it just shows the
-  // "waiting for a helper" pane — so only a fulfillment row fetches chat credentials.
-  const handleSelectLine = useCallback(async (line: SrDirectLine) => {
+  // Select a row under Yours: it opens with the request card's conversation.
+  const handleSelectLine = useCallback((line: SrYoursRow) => {
     setSelectedLine(line);
-    setChatCredentials(null);
-    setChatError(null);
-    if (line.kind !== "fulfillment") {
-      setChatLoading(false);
-      return;
-    }
-    setChatLoading(true);
-    try {
-      setChatCredentials(await fetchChatCredentials(line.fulfillment.id));
-    } catch (e) {
-      setChatError(e instanceof Error ? e.message : "Failed to load chat");
-    } finally {
-      setChatLoading(false);
-    }
+    setResolveError(null);
   }, []);
 
   // Deep link: the "Someone offered to help" notification links to /apps/socket-relay?fulfillment=<id>.
-  // Once the data has loaded, open the Direct Line tab and select that conversation, instead of dropping
-  // the member on the feed. Runs once. If the fulfillment is no longer active (already resolved), it
-  // still lands on the Direct Line tab so the member sees their conversations rather than the feed.
+  // Once the data has loaded, open Yours and select that request, instead of dropping the member on the
+  // feed. Runs once. If the fulfillment is no longer active (already resolved), it still lands on
+  // Yours so the member sees their requests rather than the feed.
   useEffect(() => {
     if (deepLinkHandled || loading) return;
     const fulfillmentId = new URLSearchParams(window.location.search).get("fulfillment");
@@ -466,13 +436,13 @@ function useSocketRelay() {
       setDeepLinkHandled(true);
       return;
     }
-    const match = buildDirectLines(fulfillments, myRequests).find(
+    const match = buildYoursRows(fulfillments, myRequests).find(
       (l) => l.kind === "fulfillment" && l.fulfillment.id === fulfillmentId,
     );
-    setTab("chat");
-    if (match) void handleSelectLine(match);
+    setTab("yours");
+    if (match) handleSelectLine(match);
     // Strip ?fulfillment=<id> from the URL so a later refresh doesn't yank the member back to the
-    // Direct Line tab after they've moved to Feed/Post. One-time handoff, not a persistent view.
+    // Yours tab after they've moved to Feed/Post. One-time handoff, not a persistent view.
     window.history.replaceState(null, "", window.location.pathname);
     setDeepLinkHandled(true);
   }, [deepLinkHandled, loading, fulfillments, myRequests, handleSelectLine]);
@@ -481,15 +451,14 @@ function useSocketRelay() {
   // we refresh and clear the selection so the resolved/reopened state is reflected.
   const handleResolve = useCallback(async (fulfillmentId: string, outcome: SrResolveOutcome) => {
     setResolving(true);
-    setChatError(null);
+    setResolveError(null);
     try {
       await closeFulfillment(fulfillmentId, outcome);
       setSelectedLine(null);
-      setChatCredentials(null);
       await fetchData(false);
     } catch (e) {
-      // Surface the failure and still refresh so the chat doesn't sit on out-of-date state.
-      setChatError(e instanceof Error ? e.message : "Couldn't resolve this request. Please try again.");
+      // Surface the failure and still refresh so the row doesn't sit on out-of-date state.
+      setResolveError(e instanceof Error ? e.message : "Couldn't resolve this request. Please try again.");
       await fetchData(false);
     } finally {
       setResolving(false);
@@ -499,14 +468,13 @@ function useSocketRelay() {
   const updateDraft = useCallback((patch: Partial<PostDraft>) => setDraft((d) => ({ ...d, ...patch })), []);
   const clearSelection = useCallback(() => {
     setSelectedLine(null);
-    setChatCredentials(null);
-    setChatError(null);
+    setResolveError(null);
   }, []);
 
   return {
     loading, error, requests, requestsTotal, loadingMore, loadMoreError, feedNotice, myRequests, fulfillments,
     submitting, tab, category, search, draft, editingId, postError, postSuccess,
-    selectedLine, chatCredentials, chatLoading, chatError, resolving,
+    selectedLine, resolveError, resolving,
     setTab, setCategory, setSearch,
     fetchData, loadMore, startEdit, cancelEdit, handlePost, handleRepost, handleClaim,
     handleSelectLine, handleResolve, updateDraft, clearSelection,
@@ -592,15 +560,13 @@ type SocketRelayTabContentProps = {
   postSuccess: boolean;
   onSubmit: () => void;
   onCancelEdit: () => void;
-  directLines: SrDirectLine[];
-  selectedLine: SrDirectLine | null;
+  rows: SrYoursRow[];
+  selectedLine: SrYoursRow | null;
   resolving: boolean;
-  onSelect: (line: SrDirectLine) => void;
+  onSelect: (line: SrYoursRow) => void;
   onBack: () => void;
   onResolve: (id: string, outcome: SrResolveOutcome) => void;
-  chatLoading: boolean;
-  chatError: string | null;
-  chatCredentials: SrChatCredentials | null;
+  resolveError: string | null;
 };
 
 // The body under the header: whichever tab is active. `requests` is the filtered feed list; suggestions
@@ -609,7 +575,7 @@ function SocketRelayTabContent(props: SocketRelayTabContentProps) {
   const { tab, requests, allRequests, userId, reclaimBlockedIds, submitting, search, category } = props;
   const { hasMore, loadingMore, loadMoreError, feedNotice, onLoadMore, onClaim, onPost, onEdit, onRepost } = props;
   const { draft, editing, onChange, postError, postSuccess, onSubmit, onCancelEdit } = props;
-  const { directLines, selectedLine, resolving, onSelect, onBack, onResolve, chatLoading, chatError, chatCredentials } = props;
+  const { rows, selectedLine, resolving, onSelect, onBack, onResolve, resolveError } = props;
   const filterActive = Boolean(search.trim()) || category !== "All";
   return (
     <>
@@ -644,18 +610,16 @@ function SocketRelayTabContent(props: SocketRelayTabContentProps) {
           suggest={(prefix, exclude) => suggestTags(allRequests, prefix, exclude)}
         />
       )}
-      {tab === "chat" && (
-        <SocketRelayChat
-          directLines={directLines}
+      {tab === "yours" && (
+        <SocketRelayYours
+          rows={rows}
           selected={selectedLine}
           currentUserId={userId}
           resolving={resolving}
           onSelect={onSelect}
           onBack={onBack}
           onResolve={onResolve}
-          chatLoading={chatLoading}
-          chatError={chatError}
-          chatCredentials={chatCredentials}
+          resolveError={resolveError}
         />
       )}
     </>
@@ -691,9 +655,8 @@ export function SocketRelayShell({ userId, isAdmin }: SocketRelayShellProps) {
   // "Mine" as soon as 20 newer posts existed board-wide — hiding their own posts and blocking Edit/Re-post.
   const source = sr.category === "Mine" ? sr.myRequests : sr.requests;
   const visible = source.filter((r) => matchesRequestFilter(r, sr.category, userId, sr.search));
-  // The Direct Line list: active conversations plus your own still-open requests as pending
-  // placeholders. Canceled/closed lines drop out — one row per request you're waiting on or talking through.
-  const directLines = buildDirectLines(sr.fulfillments, sr.myRequests);
+  // The list under Yours: requests with a helper, your own still-open requests, then past ones.
+  const rows = buildYoursRows(sr.fulfillments, sr.myRequests);
   // Requests this member was canceled off as the helper (the poster chose "didn't work — reopen for
   // others"). The server refuses a re-claim on these, so the feed replaces the "I can help" button
   // with a plain note instead of offering an action that would fail.
@@ -706,7 +669,7 @@ export function SocketRelayShell({ userId, isAdmin }: SocketRelayShellProps) {
   const tabs: { key: Tab; label: string }[] = [
     { key: "feed", label: "Feed" },
     { key: "post", label: "Post" },
-    { key: "chat", label: "Direct Line" },
+    { key: "yours", label: "Yours" },
   ];
   return (
     <div style={{ minHeight: "100vh", background: t.BG, fontFamily: "'Figtree Variable', system-ui, sans-serif", color: t.TEXT }}>
@@ -749,15 +712,13 @@ export function SocketRelayShell({ userId, isAdmin }: SocketRelayShellProps) {
         postSuccess={sr.postSuccess}
         onSubmit={() => void sr.handlePost()}
         onCancelEdit={sr.cancelEdit}
-        directLines={directLines}
+        rows={rows}
         selectedLine={sr.selectedLine}
         resolving={sr.resolving}
-        onSelect={(line) => void sr.handleSelectLine(line)}
+        onSelect={sr.handleSelectLine}
         onBack={sr.clearSelection}
         onResolve={(id, outcome) => void sr.handleResolve(id, outcome)}
-        chatLoading={sr.chatLoading}
-        chatError={sr.chatError}
-        chatCredentials={sr.chatCredentials}
+        resolveError={sr.resolveError}
       />
     </div>
   );

@@ -52,9 +52,9 @@ function CardAction({
     }
     return <div style={{ fontSize: 12, color: SUBTLE, fontWeight: 600 }}>Expired</div>;
   }
-  // A claimed request has an active helper — the conversation lives on the Direct Line. It is neither
-  // closed nor claimable, so it must not read "✓ closed" (that was the bug: a claimed request looked
-  // closed in the feed while its Direct Line was still live).
+  // A claimed request has an active helper, talking in the card's conversation. It is neither closed
+  // nor claimable, so it must not read "✓ closed" (that was the bug: a claimed request looked closed
+  // in the feed while its helper was still on it).
   if (status === "claimed") return <div style={{ fontSize: 12, color: "#F59E0B", fontWeight: 600 }}>Being helped</div>;
   if (status === "canceled") return <div style={{ fontSize: 12, color: SUBTLE, fontWeight: 600 }}>Canceled</div>;
   if (!open) return <div style={{ fontSize: 12, color: "#22C55E", fontWeight: 600 }}>✓ closed</div>;
@@ -89,7 +89,7 @@ function OpenCardAction({
     );
   }
   // Soft copy on purpose (owner directive): reads as "you already offered", never as being blocked
-  // or as the poster having ended the earlier Direct Line.
+  // or as the poster having ended the earlier offer.
   if (reclaimBlocked) {
     return <div style={{ fontSize: 12, color: SUBTLE, fontWeight: 600 }}>You already offered to help</div>;
   }

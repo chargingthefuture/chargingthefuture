@@ -48,80 +48,27 @@ async function upsertStreamUser(streamClient: StreamChat, userId: string, displa
   return streamUserId;
 }
 
-export async function ensureSocketRelayFulfillmentChannel(input: {
-  fulfillmentId: string;
-  requesterUserId: string;
-  requesterDisplayName: string;
-  fulfillerUserId: string;
-  fulfillerDisplayName: string;
-}): Promise<string | null> {
+// The Direct Line a fulfillment had on Stream before 3.1, read-only. Conversations now live in the
+// request card's Just us two (commons_item_messages); the messages written on Stream stay where they
+// are and are shown as a short history under the request. Nothing new is created: a fulfillment with
+// no channel returns null. The channel is frozen on first open, so neither member can write in it
+// again even with a token. Messages there were never copied: they live on Stream, not in this
+// database, and could carry pictures a card conversation does not hold.
+export async function openFulfillmentHistoryChannel(fulfillmentId: string): Promise<string | null> {
   const config = await resolveStreamCredentials();
   if (!config) {
     return null;
   }
-
-  // Server-side StreamChat client (built with the API secret): it holds no user connection, so there
-  // is nothing to disconnect — the client is simply let go out of scope when this function returns.
   const streamClient = new StreamChat(config.apiKey, config.apiSecret);
-  const requesterStreamUserId = await upsertStreamUser(streamClient, input.requesterUserId, input.requesterDisplayName);
-  const fulfillerStreamUserId = await upsertStreamUser(streamClient, input.fulfillerUserId, input.fulfillerDisplayName);
-
-  const streamChannelId = `socket-relay-fulfillment-${input.fulfillmentId}`;
-  const channel = streamClient.channel('messaging', streamChannelId, {
-    created_by_id: requesterStreamUserId,
-    name: 'SocketRelay Fulfillment Thread',
-  });
-
-  // create() fails in the common, benign case where the channel already exists — fall back to watch()
-  // to attach to it. But a genuine failure (auth, network, bad id) makes watch() fail too; when it
-  // does, surface the original create error (it is otherwise masked behind the watch error) so the
-  // real cause is not swallowed, then rethrow so the caller sees the failure.
-  try {
-    await channel.create();
-  } catch (createError) {
-    try {
-      await channel.watch();
-    } catch (watchError) {
-      reportError(createError, { area: 'socket-relay', op: 'ensure_channel_create' });
-      throw watchError;
-    }
+  const streamChannelId = `socket-relay-fulfillment-${fulfillmentId}`;
+  const [channel] = await streamClient.queryChannels({ type: 'messaging', id: streamChannelId }, {}, { limit: 1, watch: false, state: false });
+  if (!channel) {
+    return null;
   }
-
-  await channel.addMembers([requesterStreamUserId, fulfillerStreamUserId]);
-  await verifyFulfillmentChannelMembers(channel, streamChannelId, [requesterStreamUserId, fulfillerStreamUserId]);
+  if (channel.data?.frozen !== true) {
+    await channel.updatePartial({ set: { frozen: true } });
+  }
   return streamChannelId;
-}
-
-// Confirm Stream really holds both participants as members of the conversation, and record it when it
-// does not.
-//
-// Membership is what grants the right to post: Stream refuses a send from a non-member with a 403,
-// which the browser shows as a bare "Message Failed · Unauthorized" with no reason attached (owner
-// reports). `addMembers` above is expected to make that true, so this check should always pass — which
-// is exactly why it is worth running: if it ever fails, that silent mismatch is the cause of the
-// refused send, and this is the only place it can be seen. A frozen channel refuses sends the same way
-// and is recorded here too. Never throws: a conversation must still open even if this read fails.
-async function verifyFulfillmentChannelMembers(
-  channel: ReturnType<StreamChat['channel']>,
-  streamChannelId: string,
-  expectedMemberIds: string[],
-): Promise<void> {
-  try {
-    const response = await channel.queryMembers({});
-    const presentIds = new Set(response.members.map((member) => member.user_id ?? member.user?.id));
-    const missing = expectedMemberIds.filter((id) => !presentIds.has(id));
-    const frozen = channel.data?.frozen === true;
-    if (missing.length === 0 && !frozen) {
-      return;
-    }
-    reportError(new Error('SocketRelay Direct Line cannot accept messages'), {
-      area: 'socket-relay',
-      op: 'verify_channel_members',
-      extra: { streamChannelId, missingMemberIds: missing, frozen, memberCount: presentIds.size },
-    });
-  } catch (error: unknown) {
-    reportError(error, { area: 'socket-relay', op: 'verify_channel_members', extra: { streamChannelId } });
-  }
 }
 
 export async function createSocketRelayParticipantToken(userId: string, displayName: string): Promise<SocketRelayStreamParticipantCredentials | null> {
