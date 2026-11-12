@@ -265,3 +265,25 @@ auditEvents:
     result:
       status: success_or_failure
       errorCategory: none_or_error_class
+
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: service-credits
+    command: service-credits.today.daily-credit.grant
+    commandVersion: 1.0.0
+    purpose: today_daily_credit
+    policyDecision:
+      status: allow_or_deny
+      reason: asker_confirmed_done_or_held_until_unlock_approval
+    dataClassesAccessed:
+      - today_daily_credit_card
+      - wallet_balance_state
+    targetContext:
+      workspaceId: workspace_identifier
+      day: utc_day_of_the_credit_card
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class

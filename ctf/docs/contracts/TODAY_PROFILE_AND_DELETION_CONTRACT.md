@@ -61,6 +61,12 @@ When a member last read Today is the seventh: `member_presence`, one row per mem
 their last Today read (touched at most once a minute). It is only counted, for "N Avens here", and
 never listed or shown with a name.
 
+The day's credit card is the eighth: `today_daily_credit_cards`, one row per UTC day naming the card
+that carries the day's 1 ServiceCredit (the oldest open ask on Today that day) and its asker's account
+id, and, once the asker confirms it was done, the helper's account id, when, whether the credit was
+granted or is held until the helper is approved in Unlock, and the ServiceCredits grant it made. It
+holds nothing anybody wrote. Credits are not money.
+
 On the member's own device it keeps the last Today answer, so the screen draws at once. Marks a
 device kept before they were stored on the account are sent up once and removed from the device. A
 visitor who is not signed in has no account and no marks.
@@ -75,10 +81,12 @@ visitor who is not signed in has no account and no marks.
   `card_pair_requests` row where they are `user_low` or `user_high` (registry entry
   `today-card-conversations`), and every `today_card_windows` row where they are `owner_user_id`
   (same entry), every `today_card_marks` row where they are `account_id` (same entry), every
-  `today_card_saves` row where they are `account_id` (same entry), and their `member_presence` row
-  (same entry). Public messages other members wrote under a card stay.
-- Full account deletion: the same 21 Questions, card conversation, card window, card mark, saved card
-  and presence rows; each card source's own
+  `today_card_saves` row where they are `account_id` (same entry), their `member_presence` row
+  (same entry), and every `today_daily_credit_cards` row where they are `author_user_id` or
+  `helper_user_id` (same entry; a credit still held for them goes with it, and credits already in
+  their wallet follow the ServiceCredits deletion contract). Public messages other members wrote under a card stay.
+- Full account deletion: the same 21 Questions, card conversation, card window, card mark, saved card,
+  presence and daily credit card rows; each card source's own
   `commons_item_pair_requests` row where they are `user_low` or `user_high` (registry entry
   `today-card-conversations`). Public messages other members wrote under a card stay.
 - Full account deletion: the same 21 Questions and card conversation rows; each card source's own

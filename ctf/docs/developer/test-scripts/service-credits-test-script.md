@@ -394,6 +394,28 @@ Result: web ☐
 
 ---
 
+### SC-10b — One card a day carries 1 credit for the member who helps (added 2026-11-12)
+
+**Role:** member (Asker), member (Helper), member (Other)
+**Surfaces:** web, android
+**Precondition:** Asker has the oldest open SocketRelay request on Today and nobody has claimed it. Helper is approved in Unlock. Note Helper's balance.
+
+**Steps:**
+1. Sign in as Other and open Today. Find Asker's request and open it in place.
+2. Look at every other card on Today.
+3. Sign in as Asker and open the same card.
+4. Sign in as Helper, tap **I can help** on the card.
+5. Sign in as Asker, open the card and tap **Done**.
+6. Sign in as Helper and check the wallet.
+7. Sign in as Asker, open a second card of theirs that is not the day's credit card, and close it as **Done** after somebody tapped I can help.
+8. Repeat steps 1–6 on another day with a Helper not yet approved in Unlock, then approve that Helper in Unlock.
+
+**Expected:** Step 1 shows "+1 credit when <Asker's handle> confirms it was done" under the text, on the card in Today and in the opened card, in light and dark and in every theme color. Step 2: no other card shows it. Step 3: Asker does not see the line. Step 6: Helper's balance is 1 higher, with a newly created grant in Recent Transactions; Asker's balance is unchanged. Step 7: nothing is granted. Step 8: nothing is granted at the confirm; the credit arrives when Unlock approves the Helper, once. Keeping a PeerProgramming task result on the credit card's goal, or resolving its SocketRelay fulfillment as successful, grants it the same way. The words never describe credits as money.
+
+Result: web ☐ android ☐
+
+---
+
 ### SC-11 — Wallet shows correct state for a frozen account (spend blocked)
 
 **Role:** member (frozen by admin in SC-A6)

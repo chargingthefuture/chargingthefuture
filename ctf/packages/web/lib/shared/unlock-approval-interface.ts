@@ -20,6 +20,7 @@ import { reportError } from 'lib/observability/report';
 import { grantHeldSharedWritingCredits } from 'lib/comic/approval-catch-up';
 import { announceHeldReplies } from 'lib/fireside/approval-catch-up';
 import { grantHeldContributionCredits } from 'lib/contributions/repository';
+import { grantHeldDailyCredits } from 'lib/today/daily-credit/grant';
 
 /** What each plugin did about the approval, for the audit row the caller writes. */
 export type UnlockApprovalCatchUp = {
@@ -38,6 +39,8 @@ export type UnlockApprovalCatchUp = {
   comicSharedWritingGranted: number;
   /** How many confirmed gift cards had their held thank-you credits granted. */
   contributionsGranted: number;
+  /** How many held credits for help on the day's Today credit card were granted. */
+  todayDailyCreditsGranted: number;
 };
 
 /**
@@ -55,6 +58,7 @@ export async function runUnlockApprovalCatchUp(userId: string, approvedByUserId:
   let firesidePeopleTold = 0;
   let comicSharedWritingGranted = 0;
   let contributionsGranted = 0;
+  let todayDailyCreditsGranted = 0;
 
   try {
     firesidePeopleTold = await announceHeldReplies(userId);
@@ -75,5 +79,11 @@ export async function runUnlockApprovalCatchUp(userId: string, approvedByUserId:
     reportError(error, { area: 'unlock-approval-catch-up', op: 'contributions_held_credits' });
   }
 
-  return { firesidePeopleTold, comicSharedWritingGranted, contributionsGranted };
+  try {
+    todayDailyCreditsGranted = await grantHeldDailyCredits(userId);
+  } catch (error) {
+    reportError(error, { area: 'unlock-approval-catch-up', op: 'today_held_daily_credits' });
+  }
+
+  return { firesidePeopleTold, comicSharedWritingGranted, contributionsGranted, todayDailyCreditsGranted };
 }

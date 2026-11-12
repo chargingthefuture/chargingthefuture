@@ -27,6 +27,8 @@ function sheetStyles(t: SeThemeTokens) {
     text: { gap: 8 },
     title: { fontSize: 26, lineHeight: 31, color: t.ink, fontFamily: SE_FONT.serif },
     body: { fontSize: 15, lineHeight: 22, color: t.soft, fontFamily: SE_FONT.sans },
+    // The day's credit card: the one ask that carries 1 ServiceCredit for the member who helps.
+    creditPill: { alignSelf: 'flex-start', paddingVertical: 4, paddingHorizontal: 10, borderRadius: 999, overflow: 'hidden', backgroundColor: t.sunk, color: t.ink, fontSize: 12, fontFamily: SE_FONT.sansSemi },
     openIn: { alignSelf: 'flex-start', minHeight: 32, justifyContent: 'center' },
     openInLabel: { fontSize: 13, color: t.ink, fontFamily: SE_FONT.sansSemi, textDecorationLine: 'underline' },
   } as const;

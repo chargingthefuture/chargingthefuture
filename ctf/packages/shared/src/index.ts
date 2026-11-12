@@ -30,6 +30,7 @@ export * from './today/cards';
 export * from './today/feedback';
 export * from './today/board';
 export * from './today/saves';
+export * from './today/daily-credit';
 export * from './questions/bank';
 export * from './questions/matching';
 export * from './stories/release';

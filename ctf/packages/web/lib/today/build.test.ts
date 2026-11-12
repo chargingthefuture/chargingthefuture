@@ -41,6 +41,10 @@ vi.mock('./sources-questions', () => ({ questionCards: vi.fn(async () => []) }))
 vi.mock('./sources-blog', () => ({ blogStories: vi.fn(async () => []), storiesTomorrow: vi.fn(async () => 5) }));
 vi.mock('./presence', () => ({ readPresence: vi.fn(async () => 3) }));
 vi.mock('./saves/repository', () => ({ readSavedIds: vi.fn(async () => new Set()) }));
+vi.mock('./daily-credit/choose', async () => ({
+  ...(await vi.importActual<typeof import('./daily-credit/choose')>('./daily-credit/choose')),
+  dailyCreditCardId: vi.fn(async () => null),
+}));
 vi.mock('./sources-daily', () => ({ dailyPuzzleCard: vi.fn(async () => []) }));
 vi.mock('./sources-rooms', () => ({
   nextTalk: vi.fn(async () => null),
