@@ -15,6 +15,7 @@ import { SeRoomStage, type SeStageEntry } from './SeRoomStage';
 import { SeRoomControls } from './SeRoomControls';
 import { SeRoomMoreSheet, SeRoomNotice, type SeRoomPerson } from './SeRoomMore';
 import { useSeRoomStyles } from './useSeRoomStyles';
+import type { SeBringIn } from './SeRoomControls';
 
 type SeRoomLiveProps = {
   participants: StreamVideoParticipant[];
@@ -24,7 +25,7 @@ type SeRoomLiveProps = {
   raisedHandUserIds: ReadonlySet<string>;
   moderation: MobileModerationContext;
   onLeave: () => void;
-  bringIn: boolean;
+  bringIn: SeBringIn;
   renderActions: (_clerkUserId: string, _name: string) => React.ReactNode;
 };
 

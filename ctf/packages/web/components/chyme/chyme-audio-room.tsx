@@ -28,6 +28,7 @@ import { ChymeListeningNotice, ChymeModeratorActions, ChymeSpeakModeToggle, chym
 import { reportError } from 'lib/observability/report';
 import { ChymeMuteForMeButton, RoomMutesProvider, accountIdOfStreamUser, useRoomMutesState } from './chyme-personal-mute';
 import type { ChymeJoinResponse } from 'lib/chyme/types';
+import { seBringIn } from './se-room/se-room-controls';
 
 // Chyme is open social audio (early-Clubhouse style): everyone who joins can
 // speak, so the plain "default" call type — where members may publish audio
@@ -439,7 +440,7 @@ function ChymeAudioRoomLive({
           moderation={moderation}
           onLeave={onLeave}
           mutesError={roomMutes.error}
-          bringIn={roomScope === 'main' && moderation.viewer.canBringSomeoneIn === true}
+          bringIn={roomScope === 'main' ? seBringIn(moderation.viewer) : false}
           renderActions={(clerkUserId, name) => (
             <ChymeTileActions clerkUserId={clerkUserId} name={name} backChannel={backChannel} backChannelEnabled={backChannelEnabled} moderation={moderation} />
           )}

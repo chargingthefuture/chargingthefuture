@@ -11,6 +11,7 @@ import { SeRoomStage, type SeStageEntry } from './SeRoomStage';
 import { SeRoomJoinControls } from './SeRoomControls';
 import { SeRoomMoreSheet, SeRoomNotice } from './SeRoomMore';
 import { useSeRoomStyles } from './useSeRoomStyles';
+import { seBringIn } from './SeRoomControls';
 
 function toEntry(participant: ChymeRoomResponse['participants'][number], room: ChymeRoomResponse, currentUserId: string): SeStageEntry {
   const micOn = participant.micOn === true;
@@ -32,7 +33,7 @@ export function SeRoomIdle({ room, currentUserId, scope }: { room: ChymeRoomResp
   return (
     <View style={s.room}>
       <SeRoomStage entries={entries} extraListeners={room.guestCount ?? 0} />
-      <SeRoomJoinControls joining={embed?.joining ?? false} onJoin={() => embed?.join()} bringIn={scope === 'main' && room.viewer?.canBringSomeoneIn === true} />
+      <SeRoomJoinControls joining={embed?.joining ?? false} onJoin={() => embed?.join()} bringIn={scope === 'main' ? seBringIn(room.viewer) : false} />
       <SeRoomMoreSheet />
     </View>
   );

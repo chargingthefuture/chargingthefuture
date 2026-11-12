@@ -11,6 +11,7 @@ import { SeRoomStage, type SeStageEntry } from './se-room-stage';
 import { SeRoomControls } from './se-room-controls';
 import { SeRoomMoreSheet, SeRoomNotice, type SeRoomPerson } from './se-room-more';
 import styles from './se-room.module.css';
+import type { SeBringIn } from './se-room-controls';
 
 // The live call inside the 3.1 room screen, to the "Live room" board. Everything it reads comes
 // from the same Stream call and room state the 3.0 layout uses (chyme-audio-room.tsx); only the
@@ -26,7 +27,7 @@ type SeRoomLiveProps = {
   moderation: ChymeModerationContext;
   onLeave: () => void;
   mutesError: string | null;
-  bringIn: boolean;
+  bringIn: SeBringIn;
   renderActions: (clerkUserId: string, name: string) => ReactNode;
 };
 

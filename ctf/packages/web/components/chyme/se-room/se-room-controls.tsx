@@ -1,6 +1,6 @@
 'use client';
 
-import { SE_LIVE_ROOM_WORDS as W, SE_TODAY_ROOM_WORDS } from '@ctf/shared';
+import { SE_LIVE_ROOM_WORDS as W, SE_TODAY_ROOM_WORDS, SE_WEAVERS_LIMIT_WORDS } from '@ctf/shared';
 import { useBringSomeoneIn } from '@/components/shared/use-bring-someone-in';
 import { useChymeWords } from '../chyme-words';
 import { SeRoomIcon } from './se-room-icon';
@@ -41,8 +41,17 @@ function HandButton({ hand }: { hand: SeRoomHand }) {
 }
 
 // In the call. `hand` is left out for a member who cannot ask to speak, `mic` while the call is
-// still connecting. `bringIn` is the Main Room only: the link it shares opens that room.
-export function SeRoomControls({ onLeave, hand, mic, bringIn }: { onLeave: () => void; hand?: SeRoomHand; mic?: SeRoomMic; bringIn: boolean }) {
+// still connecting. `bringIn` is the Main Room only: the link it shares opens that room. 'limited'
+// is the Main Room for a member without the Weavers of the Commons badge: the line saying so instead.
+export type SeBringIn = boolean | 'limited';
+
+// The Main Room's bring-in state for a viewer: the button for a badge holder, the line for anybody
+// else, and nothing while the viewer is not read yet.
+export function seBringIn(viewer: { canBringSomeoneIn?: boolean } | undefined | null): SeBringIn {
+  if (!viewer) return false;
+  return viewer.canBringSomeoneIn === true ? true : 'limited';
+}
+export function SeRoomControls({ onLeave, hand, mic, bringIn }: { onLeave: () => void; hand?: SeRoomHand; mic?: SeRoomMic; bringIn: SeBringIn }) {
   const words = useChymeWords();
   const { note, bring } = useBringSomeoneIn();
   return (
@@ -52,17 +61,18 @@ export function SeRoomControls({ onLeave, hand, mic, bringIn }: { onLeave: () =>
           {words.leave}
         </button>
         <span className={styles.grow} />
-        {bringIn ? <BringButton onBring={() => void bring()} /> : null}
+        {bringIn === true ? <BringButton onBring={() => void bring()} /> : null}
         {hand ? <HandButton hand={hand} /> : null}
         {mic ? <MicButton mic={mic} /> : null}
       </div>
+      {bringIn === 'limited' ? <p className={styles.note}>{SE_WEAVERS_LIMIT_WORDS.bring}</p> : null}
       {note ? <p role="status" className={styles.note}>{note}</p> : null}
     </>
   );
 }
 
 // Before joining: Listen in, and in the Main Room Bring someone in.
-export function SeRoomJoinControls({ joining, onJoin, bringIn }: { joining: boolean; onJoin: () => void; bringIn: boolean }) {
+export function SeRoomJoinControls({ joining, onJoin, bringIn }: { joining: boolean; onJoin: () => void; bringIn: SeBringIn }) {
   const words = useChymeWords();
   const { note, bring } = useBringSomeoneIn();
   return (
@@ -72,8 +82,9 @@ export function SeRoomJoinControls({ joining, onJoin, bringIn }: { joining: bool
           {joining ? W.joining : words.join}
         </button>
         <span className={styles.grow} />
-        {bringIn ? <BringButton onBring={() => void bring()} /> : null}
+        {bringIn === true ? <BringButton onBring={() => void bring()} /> : null}
       </div>
+      {bringIn === 'limited' ? <p className={styles.note}>{SE_WEAVERS_LIMIT_WORDS.bring}</p> : null}
       {note ? <p role="status" className={styles.note}>{note}</p> : null}
     </>
   );

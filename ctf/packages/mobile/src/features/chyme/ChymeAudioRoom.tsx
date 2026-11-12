@@ -34,6 +34,7 @@ import { SE_LIVE_ROOM_WORDS } from '@ctf/shared';
 import { ChymeAudioControls, ChymeLeaveButton } from './chyme-controls';
 import { useChymeTokens } from './chyme-tokens';
 import { reportError } from '../../observability/report';
+import { seBringIn } from './se-room/SeRoomControls';
 
 // Open social audio: everyone who joins may publish audio, so the plain "default" call type. Never
 // video. Matches the web room.
@@ -287,7 +288,7 @@ function ChymeAudioRoomLive(props: RoomProps) {
         raisedHandUserIds={props.raisedHandUserIds}
         moderation={props.moderation}
         onLeave={props.onLeave}
-        bringIn={props.roomScope === 'main' && props.moderation.viewer.canBringSomeoneIn === true}
+        bringIn={props.roomScope === 'main' ? seBringIn(props.moderation.viewer) : false}
         renderActions={(clerkUserId, name) => <TileActions clerkUserId={clerkUserId} name={name} backChannel={props.backChannel} moderation={props.moderation} />}
       />
     );

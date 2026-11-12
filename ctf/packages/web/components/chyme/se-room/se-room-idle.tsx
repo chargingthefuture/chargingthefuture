@@ -8,6 +8,7 @@ import { SeRoomStage, type SeStageEntry } from './se-room-stage';
 import { SeRoomJoinControls } from './se-room-controls';
 import { SeRoomMoreSheet, SeRoomNotice } from './se-room-more';
 import styles from './se-room.module.css';
+import { seBringIn } from './se-room-controls';
 
 // The 3.1 room before the member joins the call: who is in it, from the room read (each member's
 // microphone as their app last reported it), then Listen in. Signed-out guests are counted under
@@ -32,7 +33,7 @@ export function SeRoomIdle({ room, currentUserId, roomScope }: { room: ChymeRoom
   return (
     <div className={styles.room}>
       <SeRoomStage entries={entries} extraListeners={room.guestCount} />
-      <SeRoomJoinControls joining={embed?.joining ?? false} onJoin={() => embed?.join()} bringIn={roomScope === 'main' && room.viewer?.canBringSomeoneIn === true} />
+      <SeRoomJoinControls joining={embed?.joining ?? false} onJoin={() => embed?.join()} bringIn={roomScope === 'main' ? seBringIn(room.viewer) : false} />
       <SeRoomMoreSheet />
     </div>
   );
