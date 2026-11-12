@@ -1,4 +1,5 @@
 import { queryDb } from 'lib/db/postgres';
+import { notExcludedAccount } from 'lib/unlock/excluded-accounts';
 import { resolveMemberIdentities } from 'lib/identity/resolve-usernames';
 import { getContributorAccessConfig } from 'lib/contributor-access/repository';
 import {
@@ -214,7 +215,9 @@ export async function readDailyExchangeActivity(days = 30): Promise<ExchangeActi
   }
 
   const config = await getContributorAccessConfig();
-  const memberDays = memberDaysSql(sources, config.weights);
+  // Accounts marked demo/test on the Unlock admin are not counted toward the day's number.
+  const memberDays = `SELECT * FROM (${memberDaysSql(sources, config.weights)}) AS every_member_day
+                       WHERE ${notExcludedAccount('every_member_day.member_id')}`;
 
   // A year is read even though thirty days are shown, because the year's middle day is the goal and
   // the longest run is read across it.

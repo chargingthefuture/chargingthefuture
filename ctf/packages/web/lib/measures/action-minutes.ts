@@ -1,5 +1,6 @@
 import type { PoolClient } from 'pg';
 import { queryDb } from 'lib/db/postgres';
+import { notExcludedAccount } from 'lib/unlock/excluded-accounts';
 import type { Signups } from './signups';
 
 // Action minutes (3.1.0, owner-approved plan, Measures). Minutes connected in a room or a call, 30
@@ -28,7 +29,7 @@ export async function creditActionSeconds(client: PoolClient, userId: string, so
 }
 
 // Every member's action minutes per UTC day, from all three sources, as two CTEs (minutes, daily)
-// to interpolate after WITH. `from` is the placeholder of the first day counted (inclusive); the
+// to interpolate after WITH. Accounts marked demo/test on the Unlock admin are left out. `from` is the placeholder of the first day counted (inclusive); the
 // reads below pass $1, the retention charts their own.
 export function dailyMinutesCte(from = '$1'): string {
   return `
@@ -48,7 +49,7 @@ export function dailyMinutesCte(from = '$1'): string {
      WHERE helped = TRUE AND kept_at IS NOT NULL AND taken_by_user_id IS NOT NULL
        AND (kept_at AT TIME ZONE 'UTC')::date >= ${from}::date
   ),
-  daily AS (SELECT user_id, day, SUM(m) AS minutes FROM minutes GROUP BY user_id, day)`;
+  daily AS (SELECT user_id, day, SUM(m) AS minutes FROM minutes WHERE ${notExcludedAccount('user_id')} GROUP BY user_id, day)`;
 }
 
 const DAILY_MINUTES_CTE = dailyMinutesCte();
@@ -87,9 +88,10 @@ export async function readRetention(signups: Signups, now = new Date()): Promise
      signups AS (SELECT * FROM unnest($4::text[], $5::timestamptz[]) AS s(user_id, signed_up_at)),
      eligible AS (SELECT user_id FROM signups WHERE signed_up_at < $1::date),
      full_days AS (SELECT user_id, day FROM daily WHERE minutes >= 30),
-     recent AS (SELECT DISTINCT user_id FROM login_events WHERE created_at >= $2::date),
+     recent AS (SELECT DISTINCT user_id FROM login_events WHERE created_at >= $2::date AND ${notExcludedAccount('user_id')}),
      earlier AS (
-       SELECT user_id, MAX(created_at) AS last_before FROM login_events WHERE created_at < $2::date GROUP BY user_id
+       SELECT user_id, MAX(created_at) AS last_before FROM login_events
+        WHERE created_at < $2::date AND ${notExcludedAccount('user_id')} GROUP BY user_id
      )
      SELECT
        (SELECT COUNT(*) FROM eligible)::int AS eligible,
@@ -112,7 +114,7 @@ function toRetention(row: { eligible: number; retained: number; came_back: numbe
 }
 
 // Time to unlock, over members who sent their address in the last 90 days: median days from their
-// first sign-in to sending it, and from sending it to approval.
+// first sign-in to sending it, and from sending it to approval. Demo/test accounts are left out.
 export type TimeToUnlock = { sent: number; daysToSend: number | null; approved: number; daysToApprove: number | null };
 
 export async function readTimeToUnlock(now = new Date()): Promise<TimeToUnlock> {
@@ -122,7 +124,7 @@ export async function readTimeToUnlock(now = new Date()): Promise<TimeToUnlock> 
      subs AS (
        SELECT s.user_id, s.created_at, s.reviewed_at, s.access_tier, f.first_seen
          FROM unlock_verification_submissions s LEFT JOIN firsts f ON f.user_id = s.user_id
-        WHERE s.created_at >= $1::timestamptz
+        WHERE s.created_at >= $1::timestamptz AND ${notExcludedAccount('s.user_id')}
      )
      SELECT
        COUNT(*)::int AS sent,

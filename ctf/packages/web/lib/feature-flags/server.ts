@@ -1,4 +1,4 @@
-import { OpenFeature, type Client, type EvaluationContext } from '@openfeature/server-sdk';
+import { OpenFeature, StandardResolutionReasons, type Client, type EvaluationContext } from '@openfeature/server-sdk';
 import { initialize, UnleashEvents } from 'unleash-client';
 import { type FeatureFlagContext, type FlagKey } from '@ctf/shared';
 import { UnleashOpenFeatureProvider } from './unleash-provider';
@@ -99,4 +99,27 @@ export async function evaluateNumberFlag(
 ): Promise<number> {
 	const client = await getClient();
 	return client.getNumberValue(flagKey, defaultValue, toEvaluationContext(context));
+}
+
+// A flag's value and whether the flag service actually answered for it. It has not answered when
+// Unleash is not configured (the SDK's no-op provider), has not synchronized yet (every fresh server
+// instance until its first fetch lands), has no definition for the flag, or the evaluation errored:
+// in each of those the value is only the caller's default. A caller that must not mistake a default
+// for a decision (demo routing, lib/feature-flags/system.ts) reads `answered`.
+export type BooleanFlagDetail = { value: boolean; answered: boolean };
+
+const UNANSWERED_REASONS = new Set<string>([StandardResolutionReasons.DEFAULT, StandardResolutionReasons.ERROR, 'No-op']);
+
+export function flagAnswered(reason: string | undefined, errorCode: unknown): boolean {
+	return errorCode === undefined && reason !== undefined && !UNANSWERED_REASONS.has(reason);
+}
+
+export async function evaluateBooleanFlagDetail(
+	flagKey: FlagKey,
+	defaultValue: boolean,
+	context?: FeatureFlagContext,
+): Promise<BooleanFlagDetail> {
+	const client = await getClient();
+	const details = await client.getBooleanDetails(flagKey, defaultValue, toEvaluationContext(context));
+	return { value: details.value, answered: flagAnswered(details.reason, details.errorCode) };
 }

@@ -163,6 +163,16 @@ realization of "demo tables in the prod db, not mixed":
   `formance-ledger.ts`) keep calling `isDemoMode()` with no args and are now per-user. Outside a request
   scope (seed scripts, migrations, startup) `resolveRequestIdentity()` throws on `headers()`/`cookies()`;
   it's caught and the flag falls back to its global default (OFF) — fail-safe to today's behavior.
+- **[Landed 2026-11-12]** When the flag service has not answered for `demo-mode` (Unleash not
+  configured, not synchronized yet after a deploy, down, no definition for the flag, or an error),
+  `isDemoMode()` no longer treats the default as a decision: an account marked demo/test on the Unlock
+  admin (`unlock_excluded_accounts`) still goes to the demo schema, and every other caller gets
+  production. The list is read from the public schema with `runWithForcedPool('public')` (no loop
+  back through pool selection), kept in memory for a minute, and the last list is kept when a read
+  fails; with no list at all the request uses production and the reason is logged. The fallback is
+  logged once per process without an account id. When the flag answers, its answer stands.
+  Code: `lib/feature-flags/system.ts`, `lib/feature-flags/demo-fallback.ts`; tests in
+  `lib/feature-flags/system.test.ts`.
 - **[Next — must be runtime-tested before any participant relies on it]** the demo-aware DB pool in
   `postgres.ts` will call `isDemoMode()` to pick the `demo` vs `public` pool. **Fail-closed**: if demo is
   active but the `demo` schema/pool isn't available, the query errors rather than silently hitting

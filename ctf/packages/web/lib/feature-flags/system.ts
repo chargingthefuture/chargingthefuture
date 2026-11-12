@@ -1,5 +1,5 @@
 import { SYSTEM_FLAGS } from '@ctf/shared';
-import { evaluateBooleanFlag } from './server';
+import { evaluateBooleanFlagDetail } from './server';
 import { getRequestUserId } from 'lib/auth/request-identity';
 
 // Demo participation is a per-user allowlist: the `demo-mode` flag is targeted to
@@ -17,12 +17,25 @@ async function resolveDemoTargetingKey(): Promise<string | undefined> {
 
 // Demo mode routes data surfaces to demo-safe data and routes Stream/Formance to
 // their non-prod instances so recordings never touch production data or quota.
-// Defaults to false (real data) unless the caller is an allowlisted demo participant.
+// When the flag service answers, its answer is used as it is. When it has not answered
+// (not configured, not synchronized yet after a deploy, no definition for the flag, or an
+// error), an account marked demo/test on the Unlock admin (unlock_excluded_accounts) still
+// goes to the demo schema, so a demo account never lands on production data because the
+// flag was not ready; every other caller gets production, as before. The fallback is
+// loaded lazily so this module stays free of the database layer for its other importers.
 export async function isDemoMode(): Promise<boolean> {
 	const targetingKey = await resolveDemoTargetingKey();
-	return evaluateBooleanFlag(
+	const flag = await evaluateBooleanFlagDetail(
 		SYSTEM_FLAGS.DEMO_MODE,
 		false,
 		targetingKey ? { targetingKey } : undefined,
 	);
+	if (flag.answered) {
+		return flag.value;
+	}
+	if (!targetingKey) {
+		return false;
+	}
+	const { isMarkedDemoAccount } = await import('./demo-fallback');
+	return isMarkedDemoAccount(targetingKey);
 }

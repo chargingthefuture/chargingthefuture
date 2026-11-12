@@ -381,6 +381,17 @@ When `UNLEASH_API_URL` + `UNLEASH_API_TOKEN_BACKEND` are absent (local/CI), the 
 falls back to OpenFeature's default provider, which returns each call's supplied default — i.e. flags
 are safely OFF. This is the SDK's defined unconfigured behavior, not a placeholder.
 
+The same default comes back when Unleash is configured but has not answered: a fresh server instance
+before its first fetch lands (every deploy), Unleash down or unreachable, no definition for the flag,
+or an evaluation error. `evaluateBooleanFlagDetail` (`lib/feature-flags/server.ts`) returns the value
+with `answered: false` in all of those (reason `DEFAULT`, `ERROR` or the no-op provider's, or an
+error code). `demo-mode` is the one flag that reads it: when the flag has not answered, an account
+marked demo/test on the Unlock admin (`unlock_excluded_accounts`, read from the public schema and
+kept in memory for a minute, the last list kept if a read fails) is still sent to the demo schema,
+and every other caller gets production. The fallback is logged once per process, with no account id.
+When the flag answers, its answer is used as it is. So an account that should be in demo must be
+both targeted in Unleash and marked on the Unlock admin.
+
 ### Flag-key naming convention (source of truth: `ctf/packages/shared/src/feature-flags/keys.ts`)
 
 - `feature-{pluginSlug}-{featureName}` — user-facing feature gating (e.g. `feature-unlock-quora-onboarding`).
