@@ -28,9 +28,9 @@ export type RecurringActivityTokens = PluginShellTokens & { SURFACE: string; BOR
 export function getRecurringActivityTokens(theme: ThemeName): RecurringActivityTokens {
   const accent = getAppAccent('recurring-activity', theme);
   if (theme === 'comic') {
-    return { ...getPluginShellTokens(accent, theme), SURFACE: '#141414', BORDER_SOLID: '#D4C49A1A' };
+    return getPluginShellTokens(accent, theme);
   }
-  return { ...getPluginShellTokens(accent, theme), SURFACE: '#161B27', BORDER_SOLID: '#1E2A3A' };
+  return getPluginShellTokens(accent, theme);
 }
 
 export const FONT_FAMILY = "'Figtree Variable', system-ui, sans-serif";

@@ -1,0 +1,56 @@
+/* The admin screens in the 3.1 look. Colors come from the 3.1 theme's custom properties
+   (se-theme-vars.ts); the --ctf-* and --ctf-shell-* names below are the ones the admin screens
+   already read, pointed at them. Titles are Newsreader, text the app's own font. */
+.scope {
+  --ctf-root-bg: var(--se-bg);
+  --ctf-root-text: var(--se-ink);
+  --ctf-bg: var(--se-bg);
+  --ctf-surface: var(--se-card);
+  --ctf-surface-raised: var(--se-sunk);
+  --ctf-panel: var(--se-card);
+  --ctf-icon-rail: var(--se-sunk);
+  --ctf-border: var(--se-hair);
+  --ctf-border-dim: var(--se-hair);
+  --ctf-text: var(--se-ink);
+  --ctf-text-shell: var(--se-ink);
+  --ctf-text-primary: var(--se-ink);
+  --ctf-text-secondary: var(--se-soft);
+  --ctf-text-subtle: var(--se-soft);
+  --ctf-text-muted: var(--se-soft);
+  --ctf-cta-bg: var(--se-btn);
+  --ctf-cta-border: transparent;
+  --ctf-cta-text: var(--se-on-btn);
+  --ctf-elevation-shadow: 0 3px 0 var(--se-line);
+  --ctf-card-radius: 18px;
+  --ctf-control-radius: 999px;
+  --ctf-chip-radius: 999px;
+  --ctf-dot-bg: none;
+  --ctf-dot-size: 0;
+
+  --ctf-shell-bg: var(--se-bg);
+  --ctf-shell-header: var(--se-bg);
+  --ctf-shell-rail: var(--se-sunk);
+  --ctf-shell-text: var(--se-ink);
+  --ctf-shell-title: var(--se-ink);
+  --ctf-shell-subtle: var(--se-soft);
+  --ctf-shell-muted: var(--se-soft);
+  --ctf-shell-faint: var(--se-soft);
+  --ctf-shell-border: var(--se-hair);
+  --ctf-shell-border-strong: var(--se-hair);
+  --ctf-shell-border-hi: var(--se-line);
+  --ctf-shell-input-bg: var(--se-sunk);
+  --ctf-shell-surface: var(--se-card);
+  --ctf-shell-border-solid: var(--se-hair);
+
+  min-height: 100dvh;
+  background: var(--se-bg);
+  color: var(--se-ink);
+  font-family: 'Figtree Variable', system-ui, sans-serif;
+}
+
+.scope :global(h1),
+.scope :global(h2),
+.scope :global(h3),
+.scope :global([data-screen-title]) {
+  font-family: 'Newsreader Variable', Newsreader, Georgia, serif;
+}

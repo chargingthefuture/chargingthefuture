@@ -16,9 +16,9 @@ export const ACCENT_DEFAULT = '#FB7185';
 export function getContributionsTokens(theme: ThemeName): ContributionsTokens {
   if (theme === 'comic') {
     const accent = getAppAccent('contributions', 'comic');
-    return { ...getPluginShellTokens(accent, theme), SURFACE: '#141414', BORDER_SOLID: '#D4C49A1A' };
+    return getPluginShellTokens(accent, theme);
   }
-  return { ...getPluginShellTokens(ACCENT_DEFAULT, theme), SURFACE: '#161B27', BORDER_SOLID: '#1E2A3A' };
+  return getPluginShellTokens(ACCENT_DEFAULT, theme);
 }
 
 export const FONT_FAMILY = "'Figtree Variable', system-ui, sans-serif";

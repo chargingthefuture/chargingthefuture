@@ -33,7 +33,7 @@ function PrivacyFooter() {
           </div>
         ))}
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11, color: `${t.MUTED}90` }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11, color: `color-mix(in srgb, ${t.MUTED} 56%, transparent)` }}>
         <BarChart2 size={12} color={t.MUTED} /> Aggregated across the entire community — individual check-ins are never shown.
       </div>
     </>

@@ -6,12 +6,12 @@ import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { failureText, responseFailureText } from 'lib/errors/client-failure';
 
 // Admin dark palette (rule 131) with the Recurring Activity accent.
-const BG = '#0F1117';
-const SURFACE = '#161B27';
-const BORDER = '#1E2A3A';
-const TEXT = '#D5D9E2';
-const SUBTLE = '#9CA3AF';
-const FAINT = '#6B7280';
+const BG = 'var(--ctf-shell-bg, #0F1117)';
+const SURFACE = 'var(--ctf-shell-surface, #161B27)';
+const BORDER = 'var(--ctf-shell-border-solid, #1E2A3A)';
+const TEXT = 'var(--ctf-shell-text, #D5D9E2)';
+const SUBTLE = 'var(--ctf-shell-subtle, #9CA3AF)';
+const FAINT = 'var(--ctf-shell-muted, #6B7280)';
 const ACCENT = '#14B8A6';
 
 type ReciprocalPair = { userA: string; userB: string; activityIds: string[] };

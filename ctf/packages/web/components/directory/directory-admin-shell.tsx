@@ -55,10 +55,10 @@ import { DIRECTORY_MAX_PROPOSED_SKILL_LENGTH, DIRECTORY_MAX_PROPOSED_SKILLS } fr
 
 const COLOR = "#93C5FD";
 const COMMUNITY = "#A855F7";
-const BG = "#0F1117";
-const BORDER = "#1E2A3A";
-const TEXT = "#D5D9E2";
-const SUBTLE = "#6B7280";
+const BG = "var(--ctf-shell-bg, #0F1117)";
+const BORDER = "var(--ctf-shell-border-solid, #1E2A3A)";
+const TEXT = "var(--ctf-shell-text, #D5D9E2)";
+const SUBTLE = "var(--ctf-shell-muted, #6B7280)";
 
 // Shared field chrome reused across the edit drawer inputs (label caption + input box).
 const LABEL_STYLE: CSSProperties = {
@@ -776,7 +776,7 @@ interface EditDrawerViewProps {
 function EditDrawerView({ p, saving, onClose, onSave, children }: EditDrawerViewProps) {
   return (
     <div style={{ minHeight: "100vh", background: BG, fontFamily: "'Figtree Variable', system-ui, sans-serif", color: TEXT, display: "flex", flexDirection: "column" }}>
-      <div style={{ position: "sticky", top: 0, zIndex: 20, padding: "12px 16px", borderBottom: `1px solid ${BORDER}`, background: "#0D0F14", display: "flex", alignItems: "center", gap: 10 }}>
+      <div style={{ position: "sticky", top: 0, zIndex: 20, padding: "12px 16px", borderBottom: `1px solid ${BORDER}`, background: "var(--ctf-shell-header, #0D0F14)", display: "flex", alignItems: "center", gap: 10 }}>
         <div style={{ width: 34, height: 34, borderRadius: 9, background: `${COLOR}20`, border: `1px solid ${COLOR}35`, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <Edit2 size={15} color={COLOR} />
         </div>
@@ -836,7 +836,7 @@ function ProfileCardActions({ p, saving, onEdit, onTakedown, onDelete }: Profile
 function ProfileCard({ p, saving, onEdit, onTakedown, onDelete }: ProfileCardCallbacks & { p: AdminDirectoryProfile }) {
   const b = sourceBadge(p);
   return (
-    <div style={{ padding: 13, borderRadius: 13, background: "#161B27", border: `1px solid ${BORDER}` }}>
+    <div style={{ padding: 13, borderRadius: 13, background: "var(--ctf-shell-surface, #161B27)", border: `1px solid ${BORDER}` }}>
       <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 10 }}>
         <div style={{ width: 36, height: 36, borderRadius: 10, background: `${COLOR}20`, border: `1px solid ${COLOR}30`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, color: COLOR, flexShrink: 0 }}>{initials(fullName(p))}</div>
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -923,7 +923,7 @@ function InviteQueueLink() {
         padding: "12px 14px",
         borderRadius: 12,
         border: `1px solid ${BORDER}`,
-        background: "#0D0F14",
+        background: "var(--ctf-shell-header, #0D0F14)",
         color: TEXT,
         textDecoration: "none",
       }}
@@ -952,7 +952,7 @@ function PendingSkillProposalsLink() {
         padding: "12px 14px",
         borderRadius: 12,
         border: `1px solid ${BORDER}`,
-        background: "#0D0F14",
+        background: "var(--ctf-shell-header, #0D0F14)",
         color: TEXT,
         textDecoration: "none",
       }}
@@ -970,7 +970,7 @@ function ProfileListView(props: ProfileListViewProps) {
   const { profilesCount, unclaimedCount, query, setQuery, filter, setFilter, loading, error, profiles, page, pageCount, onPageChange, saving, onEdit, onTakedown, onDelete } = props;
   return (
     <div style={{ minHeight: "100vh", background: BG, fontFamily: "'Figtree Variable', system-ui, sans-serif", color: TEXT, display: "flex", flexDirection: "column" }}>
-      <div style={{ position: "sticky", top: 0, zIndex: 20, padding: "12px 16px 10px", borderBottom: `1px solid ${BORDER}`, background: "#0D0F14" }}>
+      <div style={{ position: "sticky", top: 0, zIndex: 20, padding: "12px 16px 10px", borderBottom: `1px solid ${BORDER}`, background: "var(--ctf-shell-header, #0D0F14)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
           <BackChevronButton accent={COLOR} />
           <div style={{ width: 34, height: 34, borderRadius: 9, background: `${COLOR}20`, border: `1px solid ${COLOR}35`, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -1231,7 +1231,7 @@ function SuppressionPanel() {
   const activeCount = items?.filter((i) => !i.isOverridden).length ?? 0;
 
   return (
-    <div style={{ margin: "16px", borderRadius: 12, border: `1px solid ${BORDER}`, background: "#0D0F14" }}>
+    <div style={{ margin: "16px", borderRadius: 12, border: `1px solid ${BORDER}`, background: "var(--ctf-shell-header, #0D0F14)" }}>
       <button
         onClick={toggle}
         style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "12px 14px", background: "transparent", border: "none", color: TEXT, cursor: "pointer", textAlign: "left" }}

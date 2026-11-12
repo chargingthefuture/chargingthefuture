@@ -17,20 +17,14 @@ export const FAINT = "#4B5563";
 // Theme-aware chrome tokens for the Unlock shell chrome (the submission and status views — the
 // UnlockShell itself is a thin controller with no inline colors). Default keeps the shipped values
 // (accent stays the green #10B981); comic uses the shared comic surface tokens plus the Unlock
-// comic-ink accent. The shell paints a solid #1E2A3A chrome border and a #161B27 card surface that are
-// distinct from the shared defaults, so each is carried as its own token to keep the default theme
-// byte-for-byte identical.
+// comic-ink accent. SURFACE_CARD is the shared SURFACE under the name the shell's cards read.
 export type UnlockTokens = PluginShellTokens & {
-  BORDER_SOLID: string; // solid chrome border (default #1E2A3A)
-  SURFACE_CARD: string; // raised card surface (default #161B27)
+  SURFACE_CARD: string; // raised card surface, the shared SURFACE
 };
 
 export function getUnlockTokens(theme: ThemeName): UnlockTokens {
-  if (theme === "comic") {
-    const accent = getAppAccent("unlock", "comic");
-    return { ...getPluginShellTokens(accent, theme), BORDER_SOLID: "#D4C49A1A", SURFACE_CARD: "#141414" };
-  }
-  return { ...getPluginShellTokens(BRAND, theme), BORDER_SOLID: "#1E2A3A", SURFACE_CARD: "#161B27" };
+  const base = getPluginShellTokens(theme === "comic" ? getAppAccent("unlock", "comic") : BRAND, theme);
+  return { ...base, SURFACE_CARD: base.SURFACE };
 }
 
 export type DisplayStatus = "pending" | "approved" | "rejected";

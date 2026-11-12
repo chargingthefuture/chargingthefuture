@@ -24,9 +24,9 @@ export type MoodTokens = PluginShellTokens & { BORDER_SOLID: string; SURFACE: st
 export function getMoodTokens(theme: ThemeName): MoodTokens {
   if (theme === "comic") {
     const accent = getAppAccent("mood", "comic");
-    return { ...getPluginShellTokens(accent, theme), BORDER_SOLID: "#D4C49A1A", SURFACE: "#141414" };
+    return getPluginShellTokens(accent, theme);
   }
-  return { ...getPluginShellTokens(COLOR, theme), BORDER_SOLID: "#1E2A3A", SURFACE: "#161B27" };
+  return getPluginShellTokens(COLOR, theme);
 }
 
 export type Tab = "checkin" | "community";

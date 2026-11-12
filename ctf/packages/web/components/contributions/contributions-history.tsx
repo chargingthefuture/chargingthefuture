@@ -20,7 +20,7 @@ function HistoryItem({ item, t }: { item: ContributionSubmission; t: Contributio
     <div style={{ background: t.BG, borderRadius: 9, padding: '12px 14px', border: `1px solid ${t.BORDER_SOLID}`, marginBottom: 10 }}>
       <div style={{ fontSize: 13, fontWeight: 500, color: t.TITLE, marginBottom: 6 }}>{submissionLabel(item)}</div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: showCredits ? 6 : 0 }}>
-        <span style={{ fontSize: 11, fontWeight: 600, color: sc, background: `${sc}15`, padding: '1px 8px', borderRadius: 20 }}>{statusLabel(item.status)}</span>
+        <span style={{ fontSize: 11, fontWeight: 600, color: sc, background: `color-mix(in srgb, ${sc} 8%, transparent)`, padding: '1px 8px', borderRadius: 20 }}>{statusLabel(item.status)}</span>
         <span style={{ fontSize: 11, color: t.MUTED }}>{shortDate(item.createdAt)}</span>
       </div>
       {showCredits && <div style={{ fontSize: 12, color: t.ACCENT, fontWeight: 600 }}>+{item.creditsGranted.toLocaleString()} SC received</div>}

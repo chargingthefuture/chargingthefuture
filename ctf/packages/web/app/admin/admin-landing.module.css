@@ -1,5 +1,6 @@
-/* Admin landing page — shared dark admin look (rule 131). Neutral indigo accent for
-   cross-cutting admin chrome. A CSS module is used (rather than inline styles) so the
+/* Admin landing page in the 3.1 look: the --ctf-* names are pointed at the member's 3.1 colors by
+   AdminSeScope (components/shared/admin-se-scope.module.css), with Newsreader titles and the 3.1
+   card (hair border, round corners, flat shadow). The fallbacks are the older dark admin look. A CSS module is used (rather than inline styles) so the
    directory cards keep a hover affordance while the page stays a server component. */
 
 .page {
@@ -24,9 +25,9 @@
   align-items: center;
   gap: 10px;
   padding: 14px 16px;
-  border-radius: 12px;
+  border-radius: var(--ctf-card-radius, 12px);
   background: var(--ctf-panel, #0d0f14);
-  border: 1px solid var(--ctf-border-dim, #1e2a3a);
+  border: 1.5px solid var(--ctf-border-dim, #1e2a3a);
   margin-bottom: 16px;
 }
 
@@ -43,8 +44,9 @@
 }
 
 .title {
-  font-size: 17px;
-  font-weight: 800;
+  font-family: 'Newsreader Variable', Newsreader, Georgia, serif;
+  font-size: 20px;
+  font-weight: 600;
 }
 
 .subtitle {
@@ -55,7 +57,7 @@
 .badge {
   margin-left: auto;
   padding: 3px 9px;
-  border-radius: 6px;
+  border-radius: 999px;
   background: rgba(99, 102, 241, 0.15);
   border: 1px solid rgba(99, 102, 241, 0.3);
   font-size: 11px;
@@ -77,10 +79,12 @@
 .card {
   display: block;
   position: relative;
+  box-sizing: border-box;
   height: 100%;
-  border-radius: 12px;
+  border-radius: var(--ctf-card-radius, 12px);
   background: var(--ctf-surface, #161b27);
-  border: 1px solid var(--ctf-border-dim, #1e2a3a);
+  border: 1.5px solid var(--ctf-border-dim, #1e2a3a);
+  box-shadow: 0 3px 0 var(--se-line, transparent);
   padding: 16px;
   text-decoration: none;
   transition:
@@ -103,8 +107,8 @@
 }
 
 .card:hover {
-  border-color: rgba(99, 102, 241, 0.5);
-  background: #1a2030;
+  border-color: var(--se-line, rgba(99, 102, 241, 0.5));
+  background: var(--ctf-surface-raised, #1a2030);
 }
 
 .cardName {
@@ -129,15 +133,16 @@
 }
 
 .link {
-  color: #6366f1;
+  color: var(--se-btn, #6366f1);
   text-decoration: none;
 }
 
 .denyCard {
   margin-top: 16px;
-  border-radius: 12px;
+  border-radius: var(--ctf-card-radius, 12px);
   background: var(--ctf-surface, #161b27);
-  border: 1px solid var(--ctf-border-dim, #1e2a3a);
+  border: 1.5px solid var(--ctf-border-dim, #1e2a3a);
+  box-shadow: 0 3px 0 var(--se-line, transparent);
   padding: 16px;
   font-size: 13px;
 }

@@ -15,7 +15,7 @@
 .loadingScreen {
   display: flex;
   height: 100vh;
-  background: #0F1117;
+  background: var(--ctf-bg, #0F1117);
   align-items: center;
   justify-content: center;
   font-family: 'Figtree Variable', system-ui, sans-serif;

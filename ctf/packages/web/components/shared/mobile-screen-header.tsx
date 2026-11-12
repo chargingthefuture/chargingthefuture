@@ -117,6 +117,7 @@ export function MobileScreenHeader({
           nothing else wanted. `minWidth: 0` is what lets a flex child shrink below its text width at
           all, which is what makes the ellipsis work rather than overflowing the bar. */}
       <span
+        data-screen-title=""
         style={{
           flex: 1,
           // A floor, not zero: the title must claim at least this much before the control cluster is

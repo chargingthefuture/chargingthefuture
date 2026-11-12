@@ -12,17 +12,16 @@ export const SUBTLE = '#6B7280';
 export const FAINT = '#4B5563';
 
 // Theme-aware chrome tokens for the WhatWorks shell. Default keeps the shipped values (accent stays
-// #84CC16); comic uses the shared comic surface tokens plus the WhatWorks comic-ink accent. The shell
-// paints a solid #1E2A3A chrome border that is distinct from the shared white-alpha border, so it is
-// carried as its own BORDER_SOLID token (default #1E2A3A, comic comic-border-faint).
+// #84CC16); comic uses the shared comic surface tokens plus the WhatWorks comic-ink accent. The solid
+// chrome border is the shared BORDER_SOLID.
 export type WhatWorksTokens = PluginShellTokens & { BORDER_SOLID: string };
 
 export function getWhatWorksTokens(theme: ThemeName): WhatWorksTokens {
   if (theme === 'comic') {
     const accent = getAppAccent('what-works', 'comic');
-    return { ...getPluginShellTokens(accent, theme), BORDER_SOLID: '#D4C49A1A' };
+    return getPluginShellTokens(accent, theme);
   }
-  return { ...getPluginShellTokens(BRAND, theme), BORDER_SOLID: '#1E2A3A' };
+  return getPluginShellTokens(BRAND, theme);
 }
 
 // List sizing (owner directive, 2026-08-24: lists are paged, never scrolled without end).

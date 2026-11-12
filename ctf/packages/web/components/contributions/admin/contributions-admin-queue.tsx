@@ -303,7 +303,7 @@ export function ContributionsAdminQueue(props: QueueProps) {
                     </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                    <span style={{ fontSize: 11, fontWeight: 600, color: sc, background: `${sc}15`, padding: '2px 8px', borderRadius: 20 }}>{statusLabel(row.status)}</span>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: sc, background: `color-mix(in srgb, ${sc} 8%, transparent)`, padding: '2px 8px', borderRadius: 20 }}>{statusLabel(row.status)}</span>
                     <ChevronRight size={14} color={t.MUTED} style={{ transform: expanded ? 'rotate(90deg)' : 'none' }} />
                   </div>
                 </div>

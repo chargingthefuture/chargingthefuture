@@ -5,9 +5,9 @@ import { ScrollText } from "lucide-react";
 import { COLOR } from "./shared";
 import { failureText } from "lib/errors/client-failure";
 
-const BORDER = "#1E2A3A";
-const TEXT = "#D5D9E2";
-const SUBTLE = "#6B7280";
+const BORDER = "var(--ctf-shell-border-solid, #1E2A3A)";
+const TEXT = "var(--ctf-shell-text, #D5D9E2)";
+const SUBTLE = "var(--ctf-shell-muted, #6B7280)";
 
 // One row of directory_admin_audit_trail, as the admin route returns it.
 type AuditEvent = {
@@ -124,7 +124,7 @@ export function DirectoryAuditPanel() {
   }
 
   return (
-    <div style={{ margin: "0 16px 16px", borderRadius: 12, border: `1px solid ${BORDER}`, background: "#0D0F14" }}>
+    <div style={{ margin: "0 16px 16px", borderRadius: 12, border: `1px solid ${BORDER}`, background: "var(--ctf-shell-header, #0D0F14)" }}>
       <button
         onClick={toggle}
         style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "12px 14px", background: "transparent", border: "none", color: TEXT, cursor: "pointer", textAlign: "left" }}
