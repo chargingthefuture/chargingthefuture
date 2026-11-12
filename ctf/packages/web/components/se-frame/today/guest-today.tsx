@@ -123,6 +123,7 @@ function QuietRoom({ talk, onLive }: { talk: SeTodayTalk | null; onLive: () => v
       {talk && !talk.onAir ? (
         <div className={styles.nextRoom}>
           <span className={styles.roomMeta}>{W.nextRoom}</span>
+          {talk.title ? <span className={styles.nextRoomTitle}>{talk.title}</span> : null}
           <span className={styles.nextRoomWhen}>{seGuestNextRoomLine(talk.startIso)}</span>
           <AddToCalendarButton color="var(--se-ink)" borderColor="var(--se-line)" event={seTalkCalendarEvent(talk)} style={{ alignSelf: 'flex-start' }} />
         </div>
