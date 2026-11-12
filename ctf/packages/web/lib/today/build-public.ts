@@ -77,7 +77,9 @@ export async function buildPublicToday(now = new Date(), day: SeTodayDay = utcTo
   const unavailable: string[] = [];
   const sources: Source[] = [
     { name: 'trust-transport', read: () => sampleCards(publicRideAsks) },
-    { name: 'skill-up', read: () => sampleCards(() => cohortOffers()) },
+    // Real cohorts (owner decision, 2026-11-12): a cohort card shows its title and who it wants,
+    // never a member's name.
+    { name: 'skill-up', read: () => cohortOffers() },
     { name: 'socket-relay', read: () => sampleCards(() => relayAsks(GUEST)) },
     { name: 'peer-programming', read: () => sampleCards(() => goalAsks(GUEST)) },
     { name: 'lighthouse', read: () => sampleCards(() => placeOffers(GUEST)) },
