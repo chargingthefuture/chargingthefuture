@@ -204,7 +204,7 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     // scope — it clears with the account.
     serviceScopeSupported: false,
     tables: [
-      del('user_ui_preferences', 'user_id', 'Your theme, colors, text size, contrast, font and emoji rain choices.'),
+      del('user_ui_preferences', 'user_id', 'Your theme, colors, text size, contrast, font and emoji rain choices, and the Days won total Today last showed you.'),
       del('member_profile_prompts', 'account_id', 'The three lines about you on your Me screen.'),
     ],
   },

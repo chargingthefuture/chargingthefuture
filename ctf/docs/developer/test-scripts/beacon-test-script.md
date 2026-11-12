@@ -78,6 +78,17 @@ elsewhere). The "live and public" indicator is visible. You can watch but the ch
 "sign in to chat" prompt.
 **Result:** web ☐ mobile ☐ — notes:
 
+### BCN-2b · Picture in picture for the broadcast and the replay (added 2026-11-11)
+**Role:** signed-out viewer, then a member · **Surfaces:** web (Android picture in picture is left for later)
+**Precondition:** an admin has gone live (BCN-A2); later, nothing is live and a replay exists.
+**Steps:**
+1. Open `/apps/beacon` in Chrome while live. Tap **Picture in picture** under the player, then close the small window.
+2. Switch to another tab while the broadcast plays.
+3. Repeat step 1 in Firefox.
+4. When nothing is live, play the Last replay and tap **Picture in picture** under it.
+**Expected:** Step 1 moves the broadcast into its own small window that stays on top; closing it puts the video back in the page. Step 2: Chrome moves the playing broadcast into the small window by itself (on a version that allows it; otherwise the button still works). Step 3: where the browser cannot, a line under the button reads "This browser cannot show the broadcast in its own window." and the player keeps playing. Step 4 opens the replay in the small window. The chat and the sign-in prompt are unchanged.
+**Result:** web ☐ — notes:
+
 ### BCN-3 · Member live chat and reactions
 **Role:** member · **Surfaces:** all
 **Precondition:** a live event in progress.
