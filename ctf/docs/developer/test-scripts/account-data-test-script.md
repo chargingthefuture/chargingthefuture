@@ -715,7 +715,16 @@ totals (AD-28) still count each mark.
 **Expected:** Step 1: the pill beside the title reads "1 Aven here", then "2 Avens here"; no name appears anywhere. Step 2: the bookmark fills, and Me → Saved lists the story with "Story" and its title. Step 3: the same list on Android; the title opens the story; Remove takes it off and the bookmark on Today is empty on the next read. Step 4: the card's sheet opens with "says this helped" recorded; Hide takes the other story off Today for good. Step 5: the card says "Checked in: Good. The next check-in opens in a week." and the check-in shows in Mood; the card is gone on the next read. Step 6: "You're caught up." or "That is today.", then "5 more stories open at your midnight." No ask card shows a credit line. Step 7: the broadcast card shows LIVE, the title, "<host> · started at <time>", Watch and Chat; the Main Room reads "Quiet during the broadcast" with Open unless somebody is in it. Step 8 removes A's `today_card_saves` rows and `member_presence` row.
 **Result:** web ☐ android ☐ — notes:
 
-## AD-35 · The cards the 3.1 plan names: hours, your cohort, this week's index, the blog note
+## AD-35 · What Session Replay and error reports send
+**Role:** a member, signed in on web and Android, on a build with a Sentry DSN set; an admin with access to the Sentry project · **Surfaces:** web, android
+**Steps:**
+1. On web, open a Directory profile (`/apps/directory/profile/<id>`), open a Today card, and type a sentence into a card's answer box. On Android, open a Today card and type a sentence the same way.
+2. Cause an error on each (for example, open an address that fails, or use a test build that throws), so the session's replay is kept.
+3. In Sentry, open that replay and the error event for each.
+**Expected:** Step 3: the replay's page list, its navigation and network rows and its breadcrumbs show addresses with `:id` in place of every profile id, card id, account id, match code and long number, and `:value` in place of every query value, with the keys kept (for example `/apps/directory/profile/:id`). The typed sentence appears nowhere: no input or log breadcrumb carries text, and no request or response body is attached. The error event carries no cookie, no Authorization header and no user, its request address is scrubbed the same way, and an email address or phone number in its message shows as `:email` or `:phone`. On-screen text and pictures stay masked as before.
+**Result:** web ☐ android ☐ — notes:
+
+## AD-36 · The cards the 3.1 plan names: hours, your cohort, this week's index, the blog note
 **Role:** member A (approved, placed in a PeerProgramming cohort with at least two others), member B (approved, in no cohort), an admin · **Surfaces:** web, android
 **Steps:**
 1. As the admin, make a Mutual Time survey with a title and description, meeting in Chyme, that opens now. Open Today as the admin, then as A.
@@ -726,12 +735,4 @@ totals (AD-28) still count each mark.
 6. As A, open a story card from the blog and look under the composer; switch to Just us two. Then open an Ask card and look under its composer.
 7. Repeat steps 1, 3, 5 and 6 in every color, light and dark.
 **Expected:** Step 1: A sees a sage "Offer · hours" card with the survey's title, its description and "We'll meet in Chyme.", no name and no count; the admin sees the same survey among their own cards, with when it leaves Today and Keep it up. Step 2 opens the survey's shared page; once closed, the card is gone. Step 3: the card reads "Cohort C…" and "With you: …" with up to five names and "and N more", never A's own name; tapping the text opens it in place (no sheet), and the button opens the cohort's goal board. Marked done, it stays off until next Monday. Step 4: B has no cohort card. Step 5: the card is labeled "Our numbers · this week" with two figures, "N%" over "of a small country's skills covered" and "+N" over "Community Value Index this week", and no currency symbol anywhere; with no row for last week the card reads "Our numbers" with the coverage figure alone. Step 6: under the blog story's public composer, "Your comment can also appear under this post on the blog." shows beneath "Everyone can read this…"; it is gone in Just us two and never shows on the Ask card. Step 7: the figures and lines are readable in every color and mode.
-
-## AD-35 · What Session Replay and error reports send
-**Role:** a member, signed in on web and Android, on a build with a Sentry DSN set; an admin with access to the Sentry project · **Surfaces:** web, android
-**Steps:**
-1. On web, open a Directory profile (`/apps/directory/profile/<id>`), open a Today card, and type a sentence into a card's answer box. On Android, open a Today card and type a sentence the same way.
-2. Cause an error on each (for example, open an address that fails, or use a test build that throws), so the session's replay is kept.
-3. In Sentry, open that replay and the error event for each.
-**Expected:** Step 3: the replay's page list, its navigation and network rows and its breadcrumbs show addresses with `:id` in place of every profile id, card id, account id, match code and long number, and `:value` in place of every query value, with the keys kept (for example `/apps/directory/profile/:id`). The typed sentence appears nowhere: no input or log breadcrumb carries text, and no request or response body is attached. The error event carries no cookie, no Authorization header and no user, its request address is scrubbed the same way, and an email address or phone number in its message shows as `:email` or `:phone`. On-screen text and pictures stay masked as before.
 **Result:** web ☐ android ☐ — notes:
