@@ -6578,6 +6578,18 @@ BEGIN
 END
 $user_ui_preferences_se_checks$;
 
+-- Emoji rain (3.1 plan, Look): the Days won total this account last saw on Today. Today rains when
+-- the switch is on and the total is higher than this; NULL until Today first records one.
+ALTER TABLE IF EXISTS user_ui_preferences ADD COLUMN IF NOT EXISTS days_won_seen INTEGER;
+DO $user_ui_preferences_days_won_seen_check$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'user_ui_preferences_days_won_seen_check' AND connamespace = current_schema()::regnamespace) THEN
+    ALTER TABLE user_ui_preferences ADD CONSTRAINT user_ui_preferences_days_won_seen_check
+      CHECK (days_won_seen IS NULL OR days_won_seen >= 0);
+  END IF;
+END
+$user_ui_preferences_days_won_seen_check$;
+
 -- === BUG REPORTS (in-app "Report a problem" capture; raw text stays private) ===
 -- Users file problem reports from inside the app and never touch GitHub. The raw
 -- message is the private source of truth and is NEVER published. A separate process
@@ -11679,5 +11691,20 @@ ALTER TABLE IF EXISTS member_profile_prompts ADD COLUMN IF NOT EXISTS ask_me_abo
 ALTER TABLE IF EXISTS member_profile_prompts ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
 
--- ── post migration: 0096_demo_mode_accounts.sql ──
+-- ── post migration: 0096_se_emoji_rain_seen.sql ──
+-- Safe to re-run.
+-- Emoji rain (3.1 plan, Look): the Days won total this account last saw on Today. Today rains when
+-- the switch is on and the total is higher than this; NULL until Today first records one.
+ALTER TABLE IF EXISTS user_ui_preferences ADD COLUMN IF NOT EXISTS days_won_seen INTEGER;
+DO $user_ui_preferences_days_won_seen_check$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'user_ui_preferences_days_won_seen_check' AND connamespace = current_schema()::regnamespace) THEN
+    ALTER TABLE user_ui_preferences ADD CONSTRAINT user_ui_preferences_days_won_seen_check
+      CHECK (days_won_seen IS NULL OR days_won_seen >= 0);
+  END IF;
+END
+$user_ui_preferences_days_won_seen_check$;
+
+
+-- ── post migration: 0100_demo_mode_accounts.sql ──
 -- [demo-skip: names production (public.) tables directly; it repairs production data and has no meaning here]

@@ -30,6 +30,7 @@ import { QuestionsPanel, isQuestionsCard } from './QuestionsPanel';
 import { CardSheet } from './CardSheet';
 import { MoodFaces, SaveHideIcons } from './CardQuickActions';
 import { GoalCard } from './GoalCard';
+import { CardFigures } from './CardFigures';
 import { cardPath } from './useCardConversation';
 
 function absolute(href: string): string {
@@ -147,23 +148,34 @@ function DoneDot({ t, s, card, read, color, onToggleDone }: DotProps) {
   );
 }
 
-type TextProps = { s: Styles; card: SeTodayCard; open: boolean; opensSheet: boolean; onPress: () => void };
+type TextProps = { t: SeThemeTokens; s: Styles; card: SeTodayCard; open: boolean; opensSheet: boolean; onPress: () => void };
 
-// The title and body. On an ask, offer or story they open the sheet; on other cards they expand in place.
-function CardText({ s, card, open, opensSheet, onPress }: TextProps) {
+function TitleAndBody({ s, card, open }: Pick<TextProps, 's' | 'card' | 'open'>) {
   return (
-    <TouchableOpacity
-      accessibilityRole="button"
-      accessibilityState={opensSheet ? undefined : { expanded: open }}
-      onPress={onPress}
-      style={s.text}
-    >
+    <>
       <Text style={s.title}>{card.title}</Text>
       {card.body ? (
         <Text style={s.body} numberOfLines={open || card.source === 'questions' ? undefined : 3}>
           {card.body}
         </Text>
       ) : null}
+    </>
+  );
+}
+
+// The title and body, or the card's figures in their place (the title stays its name for a screen
+// reader). On an ask, offer or story they open the sheet; on other cards they expand in place.
+function CardText({ t, s, card, open, opensSheet, onPress }: TextProps) {
+  const figures = Boolean(card.figures?.length);
+  return (
+    <TouchableOpacity
+      accessibilityRole="button"
+      accessibilityLabel={figures ? card.title : undefined}
+      accessibilityState={opensSheet ? undefined : { expanded: open }}
+      onPress={onPress}
+      style={s.text}
+    >
+      {figures ? <CardFigures t={t} card={card} /> : <TitleAndBody s={s} card={card} open={open} />}
       {/* A story marked done that came back: comments were written in its conversation since. */}
       {card.newComments ? <Text style={s.newComments}>{seNewCommentsLine(card.newComments)}</Text> : null}
     </TouchableOpacity>
@@ -248,7 +260,7 @@ export function TodayCard({
         </TouchableOpacity>
       </View>
       {menu ? <CardMenu s={s} card={card} canReport={canReport} onHide={onHide} onMute={onMute} /> : null}
-      <CardText s={s} card={card} open={open} opensSheet={opensSheet} onPress={() => (opensSheet ? setSheet({ firstAnswer: null }) : setOpen((value) => !value))} />
+      <CardText t={t} s={s} card={card} open={open} opensSheet={opensSheet} onPress={() => (opensSheet ? setSheet({ firstAnswer: null }) : setOpen((value) => !value))} />
       {isQuestionsCard(card) ? <QuestionsPanel t={t} card={card} open={open} onOpen={() => setOpen(true)} onChanged={onChanged ?? noop} /> : null}
       <CardFoot t={t} s={s} card={card} onOpenLink={onOpenLink} onAnswer={opensSheet ? (kind) => setSheet({ firstAnswer: kind }) : null} onSave={onSave} onHide={onHide} />
       {sheet ? (

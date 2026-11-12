@@ -23,6 +23,8 @@ const SOURCE_NAMES: Record<string, string> = {
   'socket-relay': 'requests',
   'trust-transport': 'rides',
   lighthouse: 'places to stay',
+  'mutual-time': 'times to meet',
+  'peer-programming-cohort': 'your cohort',
   'skill-up': 'cohorts',
   announcements: 'announcements',
   'directory-invites': 'invitations',

@@ -49,3 +49,10 @@ export function card(input: {
 export function startOfTodayIso(now = new Date()): string {
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString();
 }
+
+// The Monday (UTC) of this week, as a date: what a card that lasts the week is keyed by.
+export function weekStartDate(now = new Date()): string {
+  const day = now.getUTCDay();
+  const back = day === 0 ? 6 : day - 1;
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - back)).toISOString().slice(0, 10);
+}

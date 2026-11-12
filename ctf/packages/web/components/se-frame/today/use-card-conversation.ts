@@ -12,6 +12,8 @@ const CSRF = { 'content-type': 'application/json', 'x-ctf-csrf': '1' };
 type Reply = { conversation?: SeCardConversation; message?: string; reason?: string };
 
 export type CardConversation = {
+  // The card this conversation is under, so the composer can say where a comment also appears.
+  cardId: string;
   conversation: SeCardConversation | null;
   locked: boolean;
   // Why writing is closed: not approved (cards closed before Unlock), or paused after day 14.
@@ -77,6 +79,7 @@ export function useCardConversation(cardId: string, firstAnswer: SeCardAnswerKin
   }, [run, firstAnswer]);
 
   return {
+    cardId,
     conversation,
     locked,
     lockLine: lockLine ?? '',

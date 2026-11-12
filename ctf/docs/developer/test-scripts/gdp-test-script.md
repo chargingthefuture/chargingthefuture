@@ -472,3 +472,12 @@ Pulled from §9 of the feature inventory:
 1. **Metric ownership roster not surfaced.** Ownership assignments for economics metrics are documented in contracts but there is no single roster page. A missing owner page is not a bug.
 2. **No plugin-specific cross-region transfer contract.** Regional/legal constraints for authenticated cross-region GDP publication are governed by platform defaults; a GDP-specific transfer-control contract has not been finalized. The absence of a plugin-level override is not a bug.
 3. **No explicit SLA document for snapshot publication.** Snapshot publication SLA and freeze windows follow operational best-effort; a formal SLA document has not been published. Missing SLA documentation is not a testable bug here.
+
+## This week's growth on Today (added 2026-11-11)
+**Role:** approved member · **Surfaces:** web, android
+**Steps:**
+1. On a database with a `gdp_value_index` row in `gdp_metric_snapshots` for last week's Monday, open Today and find the Our numbers card. Compare with the GDP dashboard's Community Value Index.
+2. On a database with no row for last week, open Today.
+3. Sign out and open Today.
+**Expected:** Step 1: "Our numbers · this week" with "+N" over "Community Value Index this week", where N is the dashboard's index less last week's row (never below 0), with no currency symbol; this week's row in `gdp_metric_snapshots` now holds the dashboard's index. Step 2: "Our numbers" with the skills coverage figure alone. Step 3: the coverage figure alone; no weekly figure signed out.
+**Result:** web ☐ android ☐ — notes:

@@ -8,6 +8,7 @@ import { QuestionsPanel, isQuestionsCard } from './questions-panel';
 import { CardSheet } from './card-sheet';
 import { GoalCard } from './goal-card';
 import { MoodFaces, SaveHideIcons } from './card-quick-actions';
+import { CardFigures } from './card-figures';
 import { cardPath } from './use-card-conversation';
 import styles from './today.module.css';
 
@@ -175,6 +176,28 @@ function CardFoot({ card, onAnswer, onSave, onHide }: FootProps) {
   );
 }
 
+// The title and text, or a card's figures in their place (card-figures.tsx), then the line about
+// new comments on a story marked done that came back.
+function CardText({ card, open, color }: { card: SeTodayCard; open: boolean; color: string }) {
+  const lead = card.figures?.length ? (
+    <>
+      <span className={styles.srOnly}>{card.title}</span>
+      <CardFigures card={card} />
+    </>
+  ) : (
+    <>
+      <span className={styles.cardTitle}>{card.title}</span>
+      {card.body ? <span className={bodyClass(card, open)}>{card.body}</span> : null}
+    </>
+  );
+  return (
+    <>
+      {lead}
+      {card.newComments ? <span className={styles.label} style={{ color }}>{seNewCommentsLine(card.newComments)}</span> : null}
+    </>
+  );
+}
+
 function PlainCard({
   card,
   viewerId,
@@ -197,10 +220,7 @@ function PlainCard({
       <DoneDot card={card} done={done} color={color} onToggleDone={onToggleDone} />
       <CardHead card={card} viewerId={viewerId} color={color} onHide={onHide} onMute={onMute} />
       <button type="button" className={styles.textButton} aria-expanded={opensSheet ? undefined : open} aria-haspopup={opensSheet ? 'dialog' : undefined} onClick={toggle}>
-        <span className={styles.cardTitle}>{card.title}</span>
-        {card.body ? <span className={bodyClass(card, open)}>{card.body}</span> : null}
-        {/* A story marked done that came back: comments were written in its conversation since. */}
-        {card.newComments ? <span className={styles.label} style={{ color }}>{seNewCommentsLine(card.newComments)}</span> : null}
+        <CardText card={card} open={open} color={color} />
       </button>
       {isQuestionsCard(card) ? <QuestionsPanel card={card} open={open} onOpen={() => setOpen(true)} onChanged={onChanged ?? (() => undefined)} /> : null}
       <CardFoot card={card} onAnswer={opensSheet ? (kind) => setSheet({ firstAnswer: kind }) : null} onSave={onSave} onHide={onHide} />

@@ -49,7 +49,12 @@ export type SeTodayCard = {
   // Set only on the viewer's own PeerProgramming goal (open, or reached in the last 7 days): how far it
   // got, for the "Your goal" card's bar and its Share this goal picture.
   goal?: SeTodayGoal;
+  // Large figures drawn above the title, each with its line, e.g. "36%" and "of a small country's
+  // skills covered" on the Our numbers card (approved board "More cards in Today").
+  figures?: SeTodayFigure[];
 };
+
+export type SeTodayFigure = { value: string; line: string };
 
 // An ask or offer as its poster sees it on Today. `leavesIso` is its deadline, or the end of its 14
 // days; `dueIso` is the deadline the poster chose, if any. An offer cannot be closed from Today, and

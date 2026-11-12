@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode, type RefObject } from 'react';
 import { BackgroundFiltersProvider, useBackgroundFilters } from '@stream-io/video-react-sdk';
 import { reportError } from 'lib/observability/report';
 
@@ -63,16 +63,37 @@ export function BlurBackgroundToggle({ color, border }: { color: string; border:
 }
 
 // Puts one video into its own small window that stays on top while the member uses other apps.
-export async function openPictureInPicture(container: HTMLElement | null): Promise<string | null> {
+// `what` names the video in the message when it cannot ("the call", "the broadcast").
+export async function openPictureInPicture(container: HTMLElement | null, what = 'the call'): Promise<string | null> {
   const video = container?.querySelector('video');
-  if (!video || !document.pictureInPictureEnabled) return 'This browser cannot show the call in its own window.';
+  if (!video || !document.pictureInPictureEnabled) return `This browser cannot show ${what} in its own window.`;
   try {
     if (document.pictureInPictureElement) await document.exitPictureInPicture();
     else await video.requestPictureInPicture();
     return null;
   } catch (error) {
-    return `The call could not open in its own window: ${error instanceof Error ? error.message : String(error)}`;
+    return `${what.charAt(0).toUpperCase()}${what.slice(1)} could not open in its own window: ${error instanceof Error ? error.message : String(error)}`;
   }
+}
+
+// Picture in picture by default (3.1 plan): where the browser lets a page open it on its own (Chrome,
+// for a video that is hidden behind another tab or app), the video in `container` moves to its own
+// window. Elsewhere a button calling openPictureInPicture does it. Returns the last notice to show.
+export function useAutoPictureInPicture(container: RefObject<HTMLElement | null>, what = 'the call'): [string | null, (notice: string | null) => void] {
+  const [notice, setNotice] = useState<string | null>(null);
+  useEffect(() => {
+    const session = typeof navigator !== 'undefined' ? navigator.mediaSession : undefined;
+    if (!session) return;
+    const action = 'enterpictureinpicture' as MediaSessionAction;
+    try {
+      session.setActionHandler(action, () => void openPictureInPicture(container.current, what).then(setNotice));
+    } catch {
+      return; // This browser does not offer it; the button still works.
+    }
+    // Only reached when the handler was set, so clearing it is supported too.
+    return () => session.setActionHandler(action, null);
+  }, [container, what]);
+  return [notice, setNotice];
 }
 
 // Block the other person and send a safety report in one step, then leave. The block hides each
