@@ -6270,6 +6270,11 @@ CREATE TABLE IF NOT EXISTS comic_contributions (
   -- Set when the member asked for their material back out; the accepted knowledge rows are
   -- deactivated at the same time.
   withdrawn_at TIMESTAMPTZ NULL,
+  -- Set when the member also chose to show this writing as Today stories (3.1), with the version of
+  -- the words they read; NULL when they have not, or turned it off. Separate from consent_version,
+  -- which covers lending it to the library only.
+  story_consent_version TEXT NULL,
+  story_consent_at TIMESTAMPTZ NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -6290,7 +6295,11 @@ ALTER TABLE IF EXISTS comic_contributions ADD COLUMN IF NOT EXISTS withdrawn_at 
 ALTER TABLE IF EXISTS comic_contributions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS comic_contributions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 CREATE INDEX IF NOT EXISTS idx_comic_contributions_user ON comic_contributions(user_id, created_at DESC);
+ALTER TABLE IF EXISTS comic_contributions ADD COLUMN IF NOT EXISTS story_consent_version TEXT NULL;
+ALTER TABLE IF EXISTS comic_contributions ADD COLUMN IF NOT EXISTS story_consent_at TIMESTAMPTZ NULL;
 CREATE INDEX IF NOT EXISTS idx_comic_contributions_status ON comic_contributions(status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_comic_contributions_story
+  ON comic_contributions(reviewed_at) WHERE status = 'accepted' AND story_consent_at IS NOT NULL;
 
 -- comic_contribution_entries: the surviving public entries from one contribution, held here for
 -- review. Nothing here is visible to the assistant — only an accepted entry is copied into
@@ -11664,4 +11673,15 @@ ALTER TABLE IF EXISTS member_profile_prompts ADD COLUMN IF NOT EXISTS can_help_w
 ALTER TABLE IF EXISTS member_profile_prompts ADD COLUMN IF NOT EXISTS needs TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS member_profile_prompts ADD COLUMN IF NOT EXISTS ask_me_about TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS member_profile_prompts ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+
+-- ── post migration: 0098_member_writing_as_today_stories.sql ──
+-- Safe to re-run.
+-- 3.1 Today: a member may also show the writing they lent to the Knowledge Library as Today stories.
+-- The choice is per contribution, stamped with the version of the words they read, and separate from
+-- the library consent (consent_version). NULL means not shown.
+ALTER TABLE IF EXISTS comic_contributions ADD COLUMN IF NOT EXISTS story_consent_version TEXT NULL;
+ALTER TABLE IF EXISTS comic_contributions ADD COLUMN IF NOT EXISTS story_consent_at TIMESTAMPTZ NULL;
+CREATE INDEX IF NOT EXISTS idx_comic_contributions_story
+  ON comic_contributions(reviewed_at) WHERE status = 'accepted' AND story_consent_at IS NOT NULL;
 

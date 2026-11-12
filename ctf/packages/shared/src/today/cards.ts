@@ -9,6 +9,7 @@
 
 import type { SeCardKind } from '../design/se-theme';
 import type { SeTodayActionKind, SeTodayCard } from './types';
+import { SE_MEMBER_STORY_WORDS } from '../stories/member';
 
 // The answers a member can give on a card: the quick responses that say something about the
 // member, not the ones that only open a page.
@@ -122,7 +123,7 @@ const KIND_WORDS: Partial<Record<SeCardKind, string>> = { ask: 'Ask', offer: 'Of
 
 // A source whose link opens something narrower than the place it lives says what it opens, so the
 // link in the sheet matches the card's own button: an invite card's Read it opens the invitation.
-const OPEN_WORDS: Record<string, string> = { 'directory-invite': 'Read the invitation' };
+const OPEN_WORDS: Record<string, string> = { 'directory-invite': 'Read the invitation', 'member-story': SE_MEMBER_STORY_WORDS.open };
 
 // Where each source's item lives, for the "Open in …" link in the sheet.
 const SOURCE_NAMES: Record<string, string> = {

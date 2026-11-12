@@ -37,6 +37,7 @@ type ReviewSharedWriting = {
   entryCount: number;
   discardedSections: string[];
   createdAtIso: string;
+  showAsStory: boolean;
   entries: ReviewEntry[];
 };
 
@@ -241,6 +242,7 @@ function SharedWritingCard({
           {contribution.kind === 'links' ? 'picked posts' : 'full export'} ·{' '}
           {new Date(contribution.createdAtIso).toLocaleDateString()} · consent{' '}
           {contribution.consentVersion}
+          {contribution.showAsStory ? ' · also asked to show it as Today stories' : ''}
         </span>
       </div>
 

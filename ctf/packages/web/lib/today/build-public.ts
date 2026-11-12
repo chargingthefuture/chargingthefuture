@@ -1,5 +1,6 @@
 import type { SeToday, SeTodayBroadcast, SeTodayCard, SeTodayRoom } from '@ctf/shared';
 import { blogStories } from './sources-blog';
+import { MEMBER_STORY_SOURCE } from './sources-member';
 import { dailyPuzzleCard } from './sources-daily';
 import { reportError } from 'lib/observability/report';
 import { cohortOffers } from './sources-offers';
@@ -16,8 +17,8 @@ import { runWithForcedPool } from 'lib/db/postgres';
 // Only what is already public or carries no person: the live broadcast, the Main Room (guests can
 // listen), the day's numbers, recorded broadcasts, SkillsHunt's wanted card and mission, Skill Up
 // cohorts, and that rides are wanted. Nothing personal and no name: asks that carry a name or text
-// a member wrote (goals, SocketRelay, LightHouse), announcements, invitations, Mood, the survey and
-// the Weavers room are left out.
+// a member wrote (goals, SocketRelay, LightHouse), members' own stories, announcements, invitations,
+// Mood, the survey and the Weavers room are left out.
 //
 // Sample data (owner decision, 2026-11-10): what is built from individual members' rows — Days won
 // (its total and this week), ride asks and Skill Up cohorts — is read from the demo schema instead,
@@ -71,7 +72,8 @@ export async function buildPublicToday(now = new Date()): Promise<SeToday> {
     { name: 'trust-transport', read: () => sampleCards(publicRideAsks) },
     { name: 'skill-up', read: () => sampleCards(() => cohortOffers()) },
     { name: 'numbers', read: () => numbersCard(now) },
-    { name: 'blog-stories', read: () => blogStories(now) },
+    // Members' own stories are for signed-in members only: what they agreed to (sources-member.ts).
+    { name: 'blog-stories', read: async () => (await blogStories(now)).filter((item) => item.source !== MEMBER_STORY_SOURCE) },
     // Signed out, the puzzle can be read but not played, so its button says so.
     { name: 'games', read: async () => (await dailyPuzzleCard(now)).map((item) => ({ ...item, actions: [action('open', 'See the puzzle', item.href)] })) },
     { name: 'beacon-replays', read: () => replayCards(now) },

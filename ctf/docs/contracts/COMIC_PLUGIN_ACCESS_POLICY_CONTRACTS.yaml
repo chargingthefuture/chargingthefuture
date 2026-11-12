@@ -321,6 +321,40 @@ policies:
       - contribution_not_owned
 
   - pluginId: comic
+    command: comic.contribution.story.set
+    version: 1.0.0
+    requiredRoles:
+      - member
+    # Open on the same terms as contributing (the Knowledge library contribution exception): the
+    # choice can be made before Unlock. Showing is not: a story reaches Today only after review and
+    # only while the writer's Unlock is approved, and never on signed-out Today.
+    minUnlockTier: any_authenticated
+    attributePolicies:
+      tenancy: same_workspace
+      ownerOnly: true
+      explicitConsentRequired: true
+      requiresAcceptedReviewBeforeShown: true
+      requiresWriterUnlockApprovedBeforeShown: true
+      signedOutVisible: false
+    consentRequirements:
+      scopes:
+        - comic_knowledge_contribution
+        - today_member_story
+      fallbackLawfulBasis: none
+    regionRestrictions:
+      allowedTransferMechanisms:
+        - local_processing
+    highRiskFlags:
+      containsPHI: false
+      requiresAdditionalAudit: true
+    denyConditions:
+      - actor_not_authenticated
+      - invalid_payload
+      - contribution_not_found
+      - contribution_not_owned
+      - contribution_withdrawn_or_declined
+
+  - pluginId: comic
     command: comic.contribution.review
     version: 1.0.0
     requiredRoles:

@@ -6,6 +6,7 @@
 // TrustTransport's, a place's is LightHouse's, and Commons' when no other plugin is behind the card.
 // Built on the server by ctf/packages/web/lib/today/cards/; drawn by web
 // components/se-frame/today/card-sheet*.tsx and Android src/features/se-frame/today/CardSheet*.tsx.
+import { SE_MEMBER_STORY_WORDS } from '../stories/member';
 export const SE_CARD_ANSWER_KINDS = ['help', 'know-someone', 'want', 'helped-me'];
 export const SE_CARD_MESSAGE_MAX = 1000;
 export const SE_CARD_ID_MAX = 200;
@@ -65,7 +66,7 @@ const ANSWER_WORDS = {
 const KIND_WORDS = { ask: 'Ask', offer: 'Offer', story: 'Story' };
 // A source whose link opens something narrower than the place it lives says what it opens, so the
 // link in the sheet matches the card's own button: an invite card's Read it opens the invitation.
-const OPEN_WORDS = { 'directory-invite': 'Read the invitation' };
+const OPEN_WORDS = { 'directory-invite': 'Read the invitation', 'member-story': SE_MEMBER_STORY_WORDS.open };
 // Where each source's item lives, for the "Open in …" link in the sheet.
 const SOURCE_NAMES = {
     'peer-programming': 'PeerProgramming',

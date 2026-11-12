@@ -1,12 +1,14 @@
-import { seStoriesForDay, seStoryOpening, type SeStoryPost, type SeTodayCard } from '@ctf/shared';
+import { SE_MEMBER_STORY_COLLECTION, seStoriesForDay, seStoryOpening, seStoryQueue, type SeStoryPost, type SeTodayCard } from '@ctf/shared';
 import { readBlogPosts } from 'lib/daily-posts/source';
 import { listExclusions } from 'lib/daily-posts/repository';
 import { reportError } from 'lib/observability/report';
 import { listStoryCommentTimes } from 'lib/fireside/story-comments';
 import { action, card, startOfTodayIso } from './card';
+import { memberStoryCards, readMemberStories } from './sources-member';
 
-// Stories from the blog (3.1.0 plan, Today): the blog's posts and the owner's Quora answers, five a
-// day, the same five for everyone (seStoriesForDay), each with This helped me. A blog that cannot
+// Stories from the blog (3.1.0 plan, Today): the blog's posts and the owner's Quora answers, then
+// members' own writing (sources-member.ts), five a day, the same five for everyone (seStoriesForDay),
+// each with This helped me. A blog that cannot
 // be read is reported as this source failing. A post the owner left out on Daily Posts is skipped
 // (its day shows one story fewer, and every other post keeps its day).
 
@@ -37,16 +39,20 @@ function storyLabel(post: SeStoryPost): string {
   return post.collection === 'archive/quora' ? 'Story · from Quora' : 'Story · from the blog';
 }
 
-export async function blogStories(now = new Date()): Promise<SeTodayCard[]> {
+function isMember(post: SeStoryPost): boolean {
+  return post.collection === SE_MEMBER_STORY_COLLECTION;
+}
+
+// The blog's posts, then the members' stories that may show, as one release order.
+async function storyQueue() {
   const read = await readBlogPosts();
   if (!read.ok) throw new Error(read.reason);
-  const day = startOfTodayIso(now).slice(0, 10);
-  const excluded = await leftOut();
-  const today = seStoriesForDay(read.posts, day).filter((post) => !excluded.has(post.slug));
-  if (today.length === 0) return [];
-  const createdAtIso = startOfTodayIso(now);
-  const times = await commentTimes(today.map((post) => post.slug));
-  return today.map((post) => ({
+  const members = await readMemberStories();
+  return { queue: seStoryQueue(read.posts, members.stories), writers: members.writers };
+}
+
+function blogCard(post: SeStoryPost, createdAtIso: string, times: Map<string, string[]>): SeTodayCard {
+  return {
     ...card({
       source: 'blog-story',
       sourceId: post.slug,
@@ -61,15 +67,27 @@ export async function blogStories(now = new Date()): Promise<SeTodayCard[]> {
       actions: [action('helped-me', 'This helped me', post.url)],
     }),
     commentTimesIso: times.get(post.slug) ?? [],
-  }));
+  };
+}
+
+export async function blogStories(now = new Date()): Promise<SeTodayCard[]> {
+  const { queue, writers } = await storyQueue();
+  const day = startOfTodayIso(now).slice(0, 10);
+  const excluded = await leftOut();
+  const today = seStoriesForDay(queue, day).filter((post) => !excluded.has(post.slug));
+  if (today.length === 0) return [];
+  const createdAtIso = startOfTodayIso(now);
+  const blog = today.filter((post) => !isMember(post));
+  const times = blog.length > 0 ? await commentTimes(blog.map((post) => post.slug)) : new Map<string, string[]>();
+  const members = await memberStoryCards(today.filter(isMember), writers, createdAtIso);
+  return [...blog.map((post) => blogCard(post, createdAtIso, times)), ...members];
 }
 
 // How many stories open at the next midnight, for the line under the last card: tomorrow's share of
 // the release less any post the owner left out. Posts the blog publishes tomorrow are not known yet.
 export async function storiesTomorrow(now = new Date()): Promise<number> {
-  const read = await readBlogPosts();
-  if (!read.ok) throw new Error(read.reason);
+  const { queue } = await storyQueue();
   const tomorrow = new Date(Date.parse(startOfTodayIso(now)) + 86_400_000).toISOString().slice(0, 10);
   const excluded = await leftOut();
-  return seStoriesForDay(read.posts, tomorrow).filter((post) => !excluded.has(post.slug) && post.date.slice(0, 10) !== tomorrow).length;
+  return seStoriesForDay(queue, tomorrow).filter((post) => !excluded.has(post.slug) && post.date.slice(0, 10) !== tomorrow).length;
 }

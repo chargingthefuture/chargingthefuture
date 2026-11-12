@@ -276,6 +276,31 @@ auditEvents:
       status: success_or_failure
       errorCategory: none_or_error_class
 
+  # Written when a member turns showing their writing as Today stories on or off. Never the writing.
+  - eventId: uuid
+    timestamp: rfc3339
+    actorId: principal
+    pluginId: comic
+    command: comic.contribution.story.set
+    commandVersion: 1.0.0
+    purpose: assistant_knowledge_contribution
+    policyDecision:
+      status: allow_or_deny
+      reason: policy_reason_code
+      evidence:
+        ownerCheck: pass_or_fail
+    dataClassesAccessed:
+      - comic_contribution_metadata
+    targetContext:
+      contributionId: contribution_identifier
+      show: boolean
+      storyConsentVersion: consent_version_or_null
+    requestId: request_identifier
+    traceId: trace_identifier
+    result:
+      status: success_or_failure
+      errorCategory: none_or_error_class
+
   # Written on every review decision. Records counts and the grant outcome, never the contributed
   # writing itself.
   - eventId: uuid
