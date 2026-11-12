@@ -1,6 +1,6 @@
 'use client';
 
-import { SE_LIVE_ROOM_WORDS as W, SE_TODAY_ROOM_WORDS } from '@ctf/shared';
+import { SE_LIVE_ROOM_WORDS as W, SE_TODAY_ROOM_WORDS, SE_WEAVERS_LIMIT_WORDS, type SeBringIn } from '@ctf/shared';
 import { useBringSomeoneIn } from '@/components/shared/use-bring-someone-in';
 import { useChymeWords } from '../chyme-words';
 import { SeRoomIcon } from './se-room-icon';
@@ -41,8 +41,9 @@ function HandButton({ hand }: { hand: SeRoomHand }) {
 }
 
 // In the call. `hand` is left out for a member who cannot ask to speak, `mic` while the call is
-// still connecting. `bringIn` is the Main Room only: the link it shares opens that room.
-export function SeRoomControls({ onLeave, hand, mic, bringIn }: { onLeave: () => void; hand?: SeRoomHand; mic?: SeRoomMic; bringIn: boolean }) {
+// still connecting. `bringIn` is the Main Room only: the link it shares opens that room. A member without the
+// Weavers badge sees the plan's line in its place.
+export function SeRoomControls({ onLeave, hand, mic, bringIn }: { onLeave: () => void; hand?: SeRoomHand; mic?: SeRoomMic; bringIn: SeBringIn }) {
   const words = useChymeWords();
   const { note, bring } = useBringSomeoneIn();
   return (
@@ -52,17 +53,18 @@ export function SeRoomControls({ onLeave, hand, mic, bringIn }: { onLeave: () =>
           {words.leave}
         </button>
         <span className={styles.grow} />
-        {bringIn ? <BringButton onBring={() => void bring()} /> : null}
+        {bringIn === 'button' ? <BringButton onBring={() => void bring()} /> : null}
         {hand ? <HandButton hand={hand} /> : null}
         {mic ? <MicButton mic={mic} /> : null}
       </div>
+      {bringIn === 'weavers_only' ? <p className={styles.note}>{SE_WEAVERS_LIMIT_WORDS.bring}</p> : null}
       {note ? <p role="status" className={styles.note}>{note}</p> : null}
     </>
   );
 }
 
 // Before joining: Listen in, and in the Main Room Bring someone in.
-export function SeRoomJoinControls({ joining, onJoin, bringIn }: { joining: boolean; onJoin: () => void; bringIn: boolean }) {
+export function SeRoomJoinControls({ joining, onJoin, bringIn }: { joining: boolean; onJoin: () => void; bringIn: SeBringIn }) {
   const words = useChymeWords();
   const { note, bring } = useBringSomeoneIn();
   return (
@@ -72,8 +74,9 @@ export function SeRoomJoinControls({ joining, onJoin, bringIn }: { joining: bool
           {joining ? W.joining : words.join}
         </button>
         <span className={styles.grow} />
-        {bringIn ? <BringButton onBring={() => void bring()} /> : null}
+        {bringIn === 'button' ? <BringButton onBring={() => void bring()} /> : null}
       </div>
+      {bringIn === 'weavers_only' ? <p className={styles.note}>{SE_WEAVERS_LIMIT_WORDS.bring}</p> : null}
       {note ? <p role="status" className={styles.note}>{note}</p> : null}
     </>
   );

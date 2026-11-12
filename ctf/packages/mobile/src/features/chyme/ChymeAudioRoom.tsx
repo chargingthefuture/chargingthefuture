@@ -30,7 +30,7 @@ import type { MobileModerationContext } from './ChymeModeration';
 import type { ChymeConnectionState } from './useChymeRoomState';
 import { ChymeSpeakerTile, TileActions } from './chyme-speaker-tile';
 import { SeRoomLive, SeRoomPending } from './se-room/SeRoomLive';
-import { SE_LIVE_ROOM_WORDS } from '@ctf/shared';
+import { SE_LIVE_ROOM_WORDS, seBringIn } from '@ctf/shared';
 import { ChymeAudioControls, ChymeLeaveButton } from './chyme-controls';
 import { useChymeTokens } from './chyme-tokens';
 import { reportError } from '../../observability/report';
@@ -287,7 +287,7 @@ function ChymeAudioRoomLive(props: RoomProps) {
         raisedHandUserIds={props.raisedHandUserIds}
         moderation={props.moderation}
         onLeave={props.onLeave}
-        bringIn={props.roomScope === 'main' && props.moderation.viewer.canBringSomeoneIn === true}
+        bringIn={seBringIn(props.roomScope, props.moderation.viewer.canBringSomeoneIn)}
         renderActions={(clerkUserId, name) => <TileActions clerkUserId={clerkUserId} name={name} backChannel={props.backChannel} moderation={props.moderation} />}
       />
     );

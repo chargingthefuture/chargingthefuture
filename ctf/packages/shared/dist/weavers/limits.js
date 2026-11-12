@@ -12,3 +12,8 @@ const LINK = /(?:https?:\/\/|www\.)\S|\b[a-z0-9][a-z0-9-]*\.(?:com|org|net|io|co
 export function seHasLink(text) {
     return LINK.test(text);
 }
+export function seBringIn(scope, canBringSomeoneIn) {
+    if (scope !== 'main')
+        return 'none';
+    return canBringSomeoneIn === true ? 'button' : 'weavers_only';
+}

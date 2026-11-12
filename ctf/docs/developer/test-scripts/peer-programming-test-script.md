@@ -900,3 +900,10 @@ withdrawn). A goal past its 14 days with no renew leaves Today and stays open on
 4. As B, open Today.
 **Expected:** Step 1: the card is titled with A's cohort ("Cohort C…") and reads "With you: …" with five names and "and N more", never A's own name. Step 2: the text expands in place (no sheet) and the button opens the cohort's goal board. Step 3: the card stays off for the rest of the week and comes back the next. Step 4: no cohort card.
 **Result:** web ☐ android ☐ — notes:
+
+### Links in a goal are for Weavers of the Commons (added 2026-11-12)
+**Role:** an approved member in a cohort without the Weavers of the Commons badge, then a badge holder · **Surfaces:** web, android
+1. As the member without the badge, post a goal whose task reads "read www.example.org first", from the goal board and from + New's Ask tasks.
+2. As the badge holder, post the same goal.
+**Expected:** Step 1 is refused both ways with "Links in posts are for Weavers of the Commons. Take the link out to post this." Step 2 posts.
+**Result:** web ☐ android ☐ — notes:

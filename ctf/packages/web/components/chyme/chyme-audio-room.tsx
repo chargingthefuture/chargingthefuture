@@ -2,6 +2,7 @@
 
 import { useChymeTokens } from './chyme-tokens-context';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { seBringIn } from '@ctf/shared';
 import {
   StreamVideo,
   StreamVideoClient,
@@ -439,7 +440,7 @@ function ChymeAudioRoomLive({
           moderation={moderation}
           onLeave={onLeave}
           mutesError={roomMutes.error}
-          bringIn={roomScope === 'main' && moderation.viewer.canBringSomeoneIn === true}
+          bringIn={seBringIn(roomScope, moderation.viewer.canBringSomeoneIn)}
           renderActions={(clerkUserId, name) => (
             <ChymeTileActions clerkUserId={clerkUserId} name={name} backChannel={backChannel} backChannelEnabled={backChannelEnabled} moderation={moderation} />
           )}

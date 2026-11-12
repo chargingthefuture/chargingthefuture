@@ -2,7 +2,7 @@
 
 import { useEffect, type ReactNode } from 'react';
 import { ParticipantsAudio, SfuModels, useCallStateHooks, type StreamVideoParticipant } from '@stream-io/video-react-sdk';
-import { SE_LIVE_ROOM_WORDS as W, seRoomName, seRoomOnStage } from '@ctf/shared';
+import { SE_LIVE_ROOM_WORDS as W, seRoomName, seRoomOnStage, type SeBringIn } from '@ctf/shared';
 import { useChymeEmbed, type ChymeLiveSummary } from '../chyme-embed';
 import { useChymeWords } from '../chyme-words';
 import { ChymeSpeakModeToggle, chymeSpeakRules, useMicOffWhileListening, type ChymeModerationContext } from '../chyme-moderation';
@@ -26,7 +26,7 @@ type SeRoomLiveProps = {
   moderation: ChymeModerationContext;
   onLeave: () => void;
   mutesError: string | null;
-  bringIn: boolean;
+  bringIn: SeBringIn;
   renderActions: (clerkUserId: string, name: string) => ReactNode;
 };
 
@@ -133,7 +133,7 @@ export function SeRoomPending({ onLeave, children }: { onLeave: () => void; chil
   return (
     <div className={styles.room}>
       <SeRoomNotice>{children}</SeRoomNotice>
-      <SeRoomControls onLeave={onLeave} bringIn={false} />
+      <SeRoomControls onLeave={onLeave} bringIn="none" />
       <SeRoomMoreSheet />
     </div>
   );

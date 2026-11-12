@@ -1,6 +1,6 @@
 'use client';
 
-import { SE_LIVE_ROOM_WORDS as W, seRoomName, seRoomOnStage } from '@ctf/shared';
+import { SE_LIVE_ROOM_WORDS as W, seBringIn, seRoomName, seRoomOnStage } from '@ctf/shared';
 import type { ChymeRoomResponse } from 'lib/chyme/types';
 import { chymeHandle } from '../chyme-shared';
 import { useChymeEmbed } from '../chyme-embed';
@@ -32,7 +32,7 @@ export function SeRoomIdle({ room, currentUserId, roomScope }: { room: ChymeRoom
   return (
     <div className={styles.room}>
       <SeRoomStage entries={entries} extraListeners={room.guestCount} />
-      <SeRoomJoinControls joining={embed?.joining ?? false} onJoin={() => embed?.join()} bringIn={roomScope === 'main' && room.viewer?.canBringSomeoneIn === true} />
+      <SeRoomJoinControls joining={embed?.joining ?? false} onJoin={() => embed?.join()} bringIn={seBringIn(roomScope, room.viewer?.canBringSomeoneIn)} />
       <SeRoomMoreSheet />
     </div>
   );

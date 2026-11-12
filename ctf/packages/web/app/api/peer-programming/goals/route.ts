@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { contentRefusedResponse, isRefusedByStream } from 'lib/integrations/stream-content-check';
+import { refuseLinkUnlessWeaver } from 'lib/contributor-access/weavers-limits';
 import { ensureMutationCsrf, peerProgrammingErrorResponse, requirePeerProgrammingReadAccess } from 'lib/peer-programming/_lib';
 import {
   PEER_PROGRAMMING_ERROR_CODE,
@@ -98,6 +99,9 @@ async function readGoal(request: Request, userId: string): Promise<ParsedGoal> {
   if (!json.ok) return { ok: false, response: json.response };
   const parsed = parseGoal(json.body);
   if (!parsed.ok) return parsed;
+  // Links in an ask's tasks are for Weavers of the Commons (3.1 plan, Access).
+  const linkDeny = await refuseLinkUnlessWeaver(userId, [parsed.title, ...parsed.tasks].join('\n'));
+  if (linkDeny) return { ok: false, response: linkDeny };
   const refused = await isRefusedByStream({ entityType: 'peer-programming-goal', creatorAccountId: userId, texts: [parsed.title, ...parsed.tasks] });
   return refused ? { ok: false, response: contentRefusedResponse() } : parsed;
 }

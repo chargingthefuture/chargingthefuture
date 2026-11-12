@@ -4,7 +4,7 @@
 
 import React from 'react';
 import { View } from 'react-native';
-import { SE_LIVE_ROOM_WORDS as W, seRoomName, seRoomOnStage } from '@ctf/shared';
+import { SE_LIVE_ROOM_WORDS as W, seBringIn, seRoomName, seRoomOnStage } from '@ctf/shared';
 import { chymeHandle, type ChymeRoomResponse, type ChymeRoomScope } from '../ChymeApi';
 import { useChymeEmbed } from '../chyme-embed';
 import { SeRoomStage, type SeStageEntry } from './SeRoomStage';
@@ -32,7 +32,7 @@ export function SeRoomIdle({ room, currentUserId, scope }: { room: ChymeRoomResp
   return (
     <View style={s.room}>
       <SeRoomStage entries={entries} extraListeners={room.guestCount ?? 0} />
-      <SeRoomJoinControls joining={embed?.joining ?? false} onJoin={() => embed?.join()} bringIn={scope === 'main' && room.viewer?.canBringSomeoneIn === true} />
+      <SeRoomJoinControls joining={embed?.joining ?? false} onJoin={() => embed?.join()} bringIn={seBringIn(scope, room.viewer?.canBringSomeoneIn)} />
       <SeRoomMoreSheet />
     </View>
   );

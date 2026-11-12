@@ -481,3 +481,12 @@ web ☐ android ☐
 4. As B, switch to 3.0 in Settings and open the same place again.
 **Expected:** Step 2 shows A's message. Step 3's reply appears in the card's sheet on Today for A. Step 4 shows the same conversation: 3.0 and 3.1 read one conversation, only the screens differ.
 **Result:** web ☐ — notes:
+
+### Listing photos are for Weavers of the Commons (added 2026-11-12)
+**Role:** an approved member without the Weavers of the Commons badge, then a badge holder · **Surfaces:** web
+1. As the member without the badge, list a place with one photo.
+2. List it without the photo, then edit it and add a photo.
+3. Edit a listing of yours that already had photos before 2026-11-12 and change only its title.
+4. As the badge holder, list a place with a photo.
+**Expected:** Steps 1 and 2 are refused with "Pictures in posts are for Weavers of the Commons." and the photo is not saved. Step 3 saves and the old photos stay. Step 4 saves with the photo.
+**Result:** web ☐ — notes:

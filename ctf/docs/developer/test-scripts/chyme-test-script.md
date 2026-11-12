@@ -861,8 +861,8 @@ Result: web ☐ android ☐
    Room.
 2. As the badge holder, do the same and tap Bring someone in.
 
-**Expected:** Step 1 shows no Bring someone in button on the card or the room bar; the card reads
-"Bringing people into rooms is for Weavers of the Commons." Asking a member into a Back Channel is
+**Expected:** Step 1 shows no Bring someone in button on the card or the room bar; both read
+"Bringing people into rooms is for Weavers of the Commons." in its place, before and after joining. Asking a member into a Back Channel is
 refused with the same kind of line. Step 2 shows the button in both places and opens the share
 sheet.
 

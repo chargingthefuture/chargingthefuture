@@ -14,3 +14,12 @@ const LINK = /(?:https?:\/\/|www\.)\S|\b[a-z0-9][a-z0-9-]*\.(?:com|org|net|io|co
 export function seHasLink(text: string): boolean {
   return LINK.test(text);
 }
+
+// What the room bar shows for Bring someone in: the button for a badge holder in the Main Room, the
+// Weavers line in its place for anybody else there, and nothing in any other room.
+export type SeBringIn = 'button' | 'weavers_only' | 'none';
+
+export function seBringIn(scope: string | null | undefined, canBringSomeoneIn: boolean | undefined): SeBringIn {
+  if (scope !== 'main') return 'none';
+  return canBringSomeoneIn === true ? 'button' : 'weavers_only';
+}

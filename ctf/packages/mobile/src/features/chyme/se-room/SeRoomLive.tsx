@@ -6,7 +6,7 @@
 import React, { useEffect } from 'react';
 import { Text, View } from 'react-native';
 import { SfuModels, useCallStateHooks, type StreamVideoParticipant } from '@stream-io/video-react-native-sdk';
-import { SE_LIVE_ROOM_WORDS as W, seRoomName, seRoomOnStage } from '@ctf/shared';
+import { SE_LIVE_ROOM_WORDS as W, seRoomName, seRoomOnStage, type SeBringIn } from '@ctf/shared';
 import { useChymeEmbed, type ChymeLiveSummary } from '../chyme-embed';
 import { useChymeWords } from '../chyme-words';
 import { ChymeSpeakModeToggle, chymeSpeakRules, useMicOffWhileListening, type MobileModerationContext } from '../ChymeModeration';
@@ -24,7 +24,7 @@ type SeRoomLiveProps = {
   raisedHandUserIds: ReadonlySet<string>;
   moderation: MobileModerationContext;
   onLeave: () => void;
-  bringIn: boolean;
+  bringIn: SeBringIn;
   renderActions: (_clerkUserId: string, _name: string) => React.ReactNode;
 };
 
@@ -132,7 +132,7 @@ export function SeRoomPending({ onLeave, children }: { onLeave: () => void; chil
   return (
     <View style={s.room}>
       <SeRoomNotice>{children}</SeRoomNotice>
-      <SeRoomControls onLeave={onLeave} bringIn={false} />
+      <SeRoomControls onLeave={onLeave} bringIn="none" />
       <SeRoomMoreSheet />
     </View>
   );

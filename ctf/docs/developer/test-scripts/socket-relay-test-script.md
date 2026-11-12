@@ -886,3 +886,11 @@ messages, kept to read. Talk in the conversation above." and no box to write in;
 none reads "There are no earlier messages on this request." Step 5 is refused with "Pictures in
 posts are for Weavers of the Commons."
 **Result:** web ☐ — notes:
+
+### Links in an ask are for Weavers of the Commons (added 2026-11-12)
+**Role:** an approved member without the Weavers of the Commons badge, then a badge holder · **Surfaces:** web, android (+ New)
+1. As the member without the badge, open + New, choose Ask, and post "Need a ride, see example.com".
+2. Edit one of your own requests in SocketRelay and add "https://example.org" to its details.
+3. As the badge holder, post the same ask from + New.
+**Expected:** Steps 1 and 2 are refused with "Links in posts are for Weavers of the Commons. Take the link out to post this." and nothing is saved; taking the link out posts it. Step 3 posts.
+**Result:** web ☐ android ☐ — notes:

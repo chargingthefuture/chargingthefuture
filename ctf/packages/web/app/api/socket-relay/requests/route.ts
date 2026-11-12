@@ -16,6 +16,7 @@ import {
 } from 'lib/socket-relay/repository';
 import type { SocketRelayRequestStatus } from 'lib/socket-relay/types';
 import { parseRequestInput } from 'lib/socket-relay/parse-input';
+import { refuseLinkUnlessWeaver } from 'lib/contributor-access/weavers-limits';
 import { reportError } from 'lib/observability/report';
 import { contentRefusedResponse, isRefusedByStream } from 'lib/integrations/stream-content-check';
 import { saveAskDue } from 'lib/today/ask-due';
@@ -112,6 +113,11 @@ export async function POST(request: Request) {
   const payloadDeny = await validateCreateRequestPayload(input);
   if (payloadDeny) {
     return payloadDeny;
+  }
+  // Links in an ask are for Weavers of the Commons (3.1 plan, Access).
+  const linkDeny = await refuseLinkUnlessWeaver(gate.auth.userId, `${input.title}\n${input.details ?? ''}`);
+  if (linkDeny) {
+    return linkDeny;
   }
   if (await isRefusedByStream({ entityType: 'socket-relay-ask', creatorAccountId: gate.auth.userId, texts: [input.title, input.details ?? ''] })) {
     return contentRefusedResponse();
