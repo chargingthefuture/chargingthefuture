@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     return csrfDeny;
   }
 
-  const weaversDeny = await refuseUnlessWeaver(gate.auth.userId, 'bring');
+  const weaversDeny = await refuseUnlessWeaver(gate.auth.userId, 'invite');
   if (weaversDeny) {
     return weaversDeny;
   }

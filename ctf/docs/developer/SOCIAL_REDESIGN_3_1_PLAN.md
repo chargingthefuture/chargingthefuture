@@ -105,7 +105,7 @@ Unlock stops being the gate for most of the app.
 | Signed out | Read Today (names on asks hidden), listen to rooms as a guest, read stories, watch broadcasts |
 | Signed in | Post asks and offers, answer in public, react, listen, Mood, ClickLog, What Works, mute and block |
 | Approved (Unlock) | People and the Directory, speak in rooms, book a talk, the 100 ServiceCredits, contact through Foundation |
-| Weavers of the Commons | Bring people into rooms, pictures and links in posts, the private room |
+| Weavers of the Commons | Back Channel invites, pictures and links in posts, the private room (bringing somebody into a room is a shared link, open to every member: owner decision, 2026-11-12) |
 
 - Unlock finishes by any of three: a Quora profile address, a removed Quora account added to the
   census, or Quora writing brought into the Knowledge Library. The System Architect approves each,
