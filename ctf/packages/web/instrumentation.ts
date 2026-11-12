@@ -8,6 +8,7 @@ function shouldSkipSentryBootstrap(): boolean {
 async function initSentryForRuntime(runtime: 'nodejs' | 'edge'): Promise<void> {
   try {
     const { resolveWebSentryDsn } = await import('./lib/observability/sentry-config');
+    const { webSentryScrubOptions } = await import('./lib/observability/sentry-scrub');
     const dsn = resolveWebSentryDsn();
     if (!dsn) {
       return;
@@ -26,6 +27,7 @@ async function initSentryForRuntime(runtime: 'nodejs' | 'edge'): Promise<void> {
       sendDefaultPii: false,
       tracesSampleRate: 0,
       environment,
+      ...webSentryScrubOptions,
     });
   } catch (error) {
     // Keep runtime startup resilient if telemetry initialization fails, but say so in the logs:
