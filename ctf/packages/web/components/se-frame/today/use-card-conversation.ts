@@ -21,6 +21,8 @@ export type CardConversation = {
   note: string | null;
   busy: boolean;
   answer: (kind: SeCardAnswerKind) => Promise<void>;
+  // The card's author confirms that a member's "This helped me" is true.
+  confirm: (accountId: string) => Promise<void>;
   write: (body: string, partnerId: string | null) => Promise<boolean>;
   ask: (partnerId: string) => Promise<boolean>;
   agree: (partnerId: string) => Promise<void>;
@@ -86,6 +88,8 @@ export function useCardConversation(cardId: string, firstAnswer: SeCardAnswerKin
     note,
     busy,
     answer: async (kind) => void (await run('/answers', { kind }, 'The answer was not saved: the app could not be reached.')),
+    confirm: async (accountId) =>
+      void (await run('/answers/confirm', { accountId }, 'The confirmation was not saved: the app could not be reached.')),
     write: (body, partnerId) =>
       run('/messages', partnerId ? { body, private: true, partnerId } : { body, private: false }, 'The message was not sent: the app could not be reached.'),
     ask: (partnerId) => run('/pair', { partnerId }, 'The request was not sent: the app could not be reached.'),

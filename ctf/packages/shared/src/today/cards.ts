@@ -87,7 +87,9 @@ export function seCardPair(a: string, b: string): [string, string] {
   return a < b ? [a, b] : [b, a];
 }
 
-export type SeCardAnswer = { accountId: string; handle: string; kinds: SeCardAnswerKind[] };
+// `helpedConfirmed`: the card's author confirmed this member's "This helped me" (3.1.0 plan,
+// Measures: it counts 10 action minutes toward Days won).
+export type SeCardAnswer = { accountId: string; handle: string; kinds: SeCardAnswerKind[]; helpedConfirmed: boolean };
 
 export type SeCardMessage = {
   id: string;
@@ -116,6 +118,9 @@ export type SeCardConversation = {
   // The viewer, so the sheet can say You on their own answer and offer Talk here only beside others.
   viewerId: string;
   answers: SeCardAnswer[];
+  // The viewer wrote the card (the System Architect, for a blog story, an announcement or What
+  // Works), so the sheet offers Confirm beside each "This helped me" not yet confirmed.
+  canConfirmHelped: boolean;
   mine: SeCardAnswerKind[];
   messages: SeCardMessage[];
   pairs: SeCardPairThread[];
@@ -192,7 +197,25 @@ export const SE_CARD_WORDS = {
   close: 'Close',
   openIn: (source: string) => OPEN_WORDS[source] ?? (SOURCE_NAMES[source] ? `Open in ${SOURCE_NAMES[source]}` : 'Open where it lives'),
   you: 'You',
+  confirmHelped: 'Confirm',
+  confirmHelpedLabel: (handle: string) => `Confirm that this helped ${handle}`,
+  helpedConfirmed: 'Confirmed',
 };
+
+// Whether the sheet offers Confirm beside an answer: the viewer wrote the card, the answer says
+// this helped, and it is not confirmed yet. Never on the viewer's own answer.
+export function seCanConfirmHelped(conversation: Pick<SeCardConversation, 'canConfirmHelped' | 'viewerId'>, answer: SeCardAnswer): boolean {
+  return conversation.canConfirmHelped && answer.accountId !== conversation.viewerId && answer.kinds.includes('helped-me') && !answer.helpedConfirmed;
+}
+
+// Cards the System Architect writes or reviews: a blog story, an announcement, What Works (whose
+// suggesters are never named). On these an admin confirms a "This helped me"; on any other card,
+// the member who posted the item.
+const SYSTEM_ARCHITECT_SOURCES: ReadonlySet<string> = new Set(['blog-story', 'announcement', 'what-works']);
+
+export function seHelpedConfirmedByAdmin(cardId: string): boolean {
+  return SYSTEM_ARCHITECT_SOURCES.has(cardId.slice(0, cardId.indexOf(':')));
+}
 
 // "Ask · October 26, 2026 at 11:40 AM CDT", the line under the author in the sheet.
 export function seCardSheetLine(card: Pick<SeTodayCard, 'kind' | 'label' | 'createdAtIso'>): string {

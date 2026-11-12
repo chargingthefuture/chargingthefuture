@@ -1,7 +1,7 @@
-import type { SeTodayCard } from '@ctf/shared';
+import type { SeTodayCard, SeTodayDay } from '@ctf/shared';
 import { getMyCohort } from 'lib/peer-programming/repository';
 import { buildCohortRosters } from 'lib/peer-programming/roster';
-import { action, card, startOfTodayIso, weekStartDate, type TodayViewer } from './card';
+import { action, card, utcTodayDay, weekStartDate, type TodayViewer } from './card';
 
 // The PeerProgramming "with you this week" card (3.1 plan, Plugins in the new screens): for a member
 // placed in a cohort, one card naming the cohort and who is in it with them, leading to its goal
@@ -23,7 +23,7 @@ export function withYouLine(names: string[], others: number): string {
   return `With you: ${shown.join(', ')} and ${rest} more.`;
 }
 
-export async function cohortCard(viewer: TodayViewer, now = new Date()): Promise<SeTodayCard[]> {
+export async function cohortCard(viewer: TodayViewer, now = new Date(), day: SeTodayDay = utcTodayDay(now)): Promise<SeTodayCard[]> {
   const cohort = await getMyCohort(viewer.userId);
   if (!cohort || cohort.status !== 'active') return [];
   const roster = (await buildCohortRosters([cohort.id], NAMED + 1)).get(cohort.id) ?? [];
@@ -38,7 +38,7 @@ export async function cohortCard(viewer: TodayViewer, now = new Date()): Promise
       label: 'PeerProgramming · with you this week',
       title: `Cohort ${cohort.cohortLabel}`,
       body: withYouLine(names, others),
-      createdAtIso: startOfTodayIso(now),
+      createdAtIso: day.startIso,
       href,
       actions: [action('open', 'Open the goal board', href)],
     }),

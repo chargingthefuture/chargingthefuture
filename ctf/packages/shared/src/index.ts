@@ -13,6 +13,7 @@ export * from './design/se-what-works';
 export * from './today/types';
 export * from './today/view';
 export * from './today/marks';
+export * from './today/day';
 export * from './today/lifetime';
 export * from './today/replays';
 export * from './today/week';

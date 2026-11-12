@@ -1,4 +1,4 @@
-import { seCardId, type SeCardKind, type SeTodayAction, type SeTodayAuthor, type SeTodayCard } from '@ctf/shared';
+import { seCardId, seReadTodayDay, type SeCardKind, type SeTodayAction, type SeTodayAuthor, type SeTodayCard, type SeTodayDay } from '@ctf/shared';
 
 // Shared helpers for the Today sources: one card shape, and short text so a card stays a card.
 
@@ -45,9 +45,10 @@ export function card(input: {
   };
 }
 
-// The start of today in UTC, for a card that belongs to the day rather than to a moment.
-export function startOfTodayIso(now = new Date()): string {
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString();
+// The UTC day, for a read that carried no day of the member's own (seReadTodayDay). A card that
+// belongs to the day rather than to a moment is dated to the start of the member's day.
+export function utcTodayDay(now = new Date()): SeTodayDay {
+  return seReadTodayDay({}, now);
 }
 
 // The Monday (UTC) of this week, as a date: what a card that lasts the week is keyed by.

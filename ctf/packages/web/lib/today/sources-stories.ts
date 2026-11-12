@@ -1,9 +1,9 @@
-import { SE_CENSUS_WORDS, type SeTodayCard } from '@ctf/shared';
+import { SE_CENSUS_WORDS, type SeTodayCard, type SeTodayDay } from '@ctf/shared';
 import { listFeedTimeline } from 'lib/feed/repository';
 import { listLatestDirectoryInviteCards } from 'lib/directory/invites';
 import { getReaderList } from 'lib/what-works/repository';
 import { hasSurveyResponse } from 'lib/quora-deletion-survey/repository';
-import { action, card, clip, startOfTodayIso, type TodayViewer } from './card';
+import { action, card, clip, utcTodayDay, type TodayViewer } from './card';
 
 // Stories: announcements from the System Architect, the newest Directory invitations, one thing
 // that worked for somebody, a different one each day, and the Quora census card (approved board "Settings")
@@ -58,14 +58,14 @@ export async function inviteStories(): Promise<SeTodayCard[]> {
   );
 }
 
-export async function whatWorksStory(viewer: TodayViewer, now = new Date()): Promise<SeTodayCard[]> {
+export async function whatWorksStory(viewer: TodayViewer, day: SeTodayDay = utcTodayDay()): Promise<SeTodayCard[]> {
   const { problems } = await getReaderList(viewer.userId);
   const verified = problems.flatMap((problem) =>
     problem.products.filter((product) => product.verifiedCount > 0).map((product) => ({ problem, product })),
   );
   if (verified.length === 0) return [];
-  const day = Math.floor(now.getTime() / 86_400_000);
-  const { problem, product } = verified[day % verified.length];
+  const index = Math.floor(Date.parse(`${day.day}T00:00:00Z`) / 86_400_000);
+  const { problem, product } = verified[index % verified.length];
   const href = '/apps/what-works';
   return [
     card({
@@ -75,7 +75,7 @@ export async function whatWorksStory(viewer: TodayViewer, now = new Date()): Pro
       label: 'What worked for someone',
       title: product.name,
       body: `Problem: ${problem.title}. Verified helped by ${product.verifiedCount} ${product.verifiedCount === 1 ? 'person' : 'people'}.`,
-      createdAtIso: startOfTodayIso(now),
+      createdAtIso: day.startIso,
       href,
       actions: [action('helped-me', 'It helped me too', href), action('open', 'See the problem', href)],
     }),
@@ -83,7 +83,7 @@ export async function whatWorksStory(viewer: TodayViewer, now = new Date()): Pro
 }
 
 // The Quora account removals survey, once: shown until the member answers it (or hides the card).
-export async function surveyCard(viewer: TodayViewer, now = new Date()): Promise<SeTodayCard[]> {
+export async function surveyCard(viewer: TodayViewer, day: SeTodayDay = utcTodayDay()): Promise<SeTodayCard[]> {
   if (await hasSurveyResponse(viewer.userId)) return [];
   const href = '/survey/quora-account-deletions';
   return [
@@ -94,7 +94,7 @@ export async function surveyCard(viewer: TodayViewer, now = new Date()): Promise
       label: SE_CENSUS_WORDS.label,
       title: SE_CENSUS_WORDS.title,
       body: SE_CENSUS_WORDS.body,
-      createdAtIso: startOfTodayIso(now),
+      createdAtIso: day.startIso,
       href,
       actions: [action('open', SE_CENSUS_WORDS.add, href)],
     }),

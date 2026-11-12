@@ -1,12 +1,13 @@
-import { seStoriesForDay, seStoryOpening, type SeStoryPost, type SeTodayCard } from '@ctf/shared';
+import { seNextDay, seStoriesForDay, seStoryOpening, type SeTodayDay, type SeStoryPost, type SeTodayCard } from '@ctf/shared';
 import { readBlogPosts } from 'lib/daily-posts/source';
 import { listExclusions } from 'lib/daily-posts/repository';
 import { reportError } from 'lib/observability/report';
 import { listStoryCommentTimes } from 'lib/fireside/story-comments';
-import { action, card, startOfTodayIso } from './card';
+import { action, card, utcTodayDay } from './card';
 
 // Stories from the blog (3.1.0 plan, Today): the blog's posts and the owner's Quora answers, five a
-// day, the same five for everyone (seStoriesForDay), each with This helped me. A blog that cannot
+// day, the same five for everyone on the same day (seStoriesForDay), the day turning at each
+// member's own midnight (SeTodayDay), each with This helped me. A blog that cannot
 // be read is reported as this source failing. A post the owner left out on Daily Posts is skipped
 // (its day shows one story fewer, and every other post keeps its day).
 
@@ -37,14 +38,13 @@ function storyLabel(post: SeStoryPost): string {
   return post.collection === 'archive/quora' ? 'Story · from Quora' : 'Story · from the blog';
 }
 
-export async function blogStories(now = new Date()): Promise<SeTodayCard[]> {
+export async function blogStories(day: SeTodayDay = utcTodayDay()): Promise<SeTodayCard[]> {
   const read = await readBlogPosts();
   if (!read.ok) throw new Error(read.reason);
-  const day = startOfTodayIso(now).slice(0, 10);
   const excluded = await leftOut();
-  const today = seStoriesForDay(read.posts, day).filter((post) => !excluded.has(post.slug));
+  const today = seStoriesForDay(read.posts, day.day).filter((post) => !excluded.has(post.slug));
   if (today.length === 0) return [];
-  const createdAtIso = startOfTodayIso(now);
+  const createdAtIso = day.startIso;
   const times = await commentTimes(today.map((post) => post.slug));
   return today.map((post) => ({
     ...card({
@@ -64,12 +64,12 @@ export async function blogStories(now = new Date()): Promise<SeTodayCard[]> {
   }));
 }
 
-// How many stories open at the next midnight, for the line under the last card: tomorrow's share of
-// the release less any post the owner left out. Posts the blog publishes tomorrow are not known yet.
-export async function storiesTomorrow(now = new Date()): Promise<number> {
+// How many stories open at the member's next midnight, for the line under the last card: tomorrow's
+// share of the release less any post the owner left out. Posts the blog publishes tomorrow are not known yet.
+export async function storiesTomorrow(day: SeTodayDay = utcTodayDay()): Promise<number> {
   const read = await readBlogPosts();
   if (!read.ok) throw new Error(read.reason);
-  const tomorrow = new Date(Date.parse(startOfTodayIso(now)) + 86_400_000).toISOString().slice(0, 10);
+  const tomorrow = seNextDay(day.day);
   const excluded = await leftOut();
   return seStoriesForDay(read.posts, tomorrow).filter((post) => !excluded.has(post.slug) && post.date.slice(0, 10) !== tomorrow).length;
 }

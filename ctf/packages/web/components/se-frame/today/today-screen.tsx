@@ -89,12 +89,13 @@ type TimelineProps = {
   marks: TodayMarks;
   mark: (kind: MarkKind, id: string) => void;
   toggle: (kind: MarkKind, id: string) => void;
+  markRead: (id: string) => void;
   onSave: (card: SeTodayCard) => void;
   onMute?: (card: SeTodayCard, kind: SeCardMuteKind) => void;
   onChanged: () => void;
 };
 
-function Timeline({ viewerId, view, marks, mark, toggle, onSave, onMute, onChanged }: TimelineProps) {
+function Timeline({ viewerId, view, marks, mark, toggle, markRead, onSave, onMute, onChanged }: TimelineProps) {
   return (
     <div className={styles.timeline}>
       <span className={styles.line} aria-hidden="true" />
@@ -116,6 +117,7 @@ function Timeline({ viewerId, view, marks, mark, toggle, onSave, onMute, onChang
           onMutePost={onMute ? () => onMute(card, 'post') : undefined}
           onSave={() => onSave(card)}
           onChanged={onChanged}
+          onRead={() => markRead(card.id)}
         />
       ))}
       <div className={styles.caughtUp}>
@@ -132,7 +134,7 @@ function Timeline({ viewerId, view, marks, mark, toggle, onSave, onMute, onChang
 type RainPrefs = { on: boolean; seen: number | null | undefined; onSeen: (_total: number) => void };
 
 export function TodayScreen({ accountId, onPresence, rain }: { accountId: string; onPresence?: (count: number | null) => void; rain: RainPrefs }) {
-  const { today, loading, error, marks, mark, toggle, save, saveNote, reload } = useToday(accountId);
+  const { today, loading, error, marks, mark, toggle, markRead, save, saveNote, reload } = useToday(accountId);
   const presence = today?.presence ?? null;
   useEffect(() => onPresence?.(presence), [onPresence, presence]);
   const [filter, setFilter] = useState<SeTodayFilter>('all');
@@ -176,7 +178,7 @@ export function TodayScreen({ accountId, onPresence, rain }: { accountId: string
           {muteNote}
         </p>
       ) : null}
-      {today ? <Timeline viewerId={accountId} view={view} marks={marks} mark={mark} toggle={toggle} onSave={save} onMute={(card, kind) => void mute(card, kind)} onChanged={() => void reload()} /> : null}
+      {today ? <Timeline viewerId={accountId} view={view} marks={marks} mark={mark} toggle={toggle} markRead={markRead} onSave={save} onMute={(card, kind) => void mute(card, kind)} onChanged={() => void reload()} /> : null}
     </>
   );
 }

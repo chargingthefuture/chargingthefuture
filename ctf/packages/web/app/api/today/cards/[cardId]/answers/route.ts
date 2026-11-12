@@ -45,7 +45,7 @@ export async function POST(request: Request, context: Context) {
     const restricted = await ensureCanContact(userId, null);
     if (restricted) return restricted;
     const saved = await saveAnswer(userId, cardId, kind);
-    const conversation = await readConversation(userId, cardId);
+    const conversation = await readConversation(gate.auth, cardId);
     return NextResponse.json({ ok: true, saved, conversation }, { headers: { 'cache-control': 'private, no-store' } });
   } catch (error) {
     return cardsFailed('answer', error, 'The answer was not saved: the database write failed. Try again.');

@@ -7494,6 +7494,11 @@ ALTER TABLE IF EXISTS commons_item_answers ADD COLUMN IF NOT EXISTS kind TEXT;
 ALTER TABLE IF EXISTS commons_item_answers ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 CREATE INDEX IF NOT EXISTS idx_commons_item_answers_item ON commons_item_answers(plugin, item_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_commons_item_answers_account ON commons_item_answers(account_id);
+-- confirmed_at: when the card's author confirmed a member's "This helped me" (3.1.0 plan, Measures:
+-- 10 action minutes toward Days won, for the member who said it). NULL until confirmed.
+ALTER TABLE IF EXISTS commons_item_answers ADD COLUMN IF NOT EXISTS confirmed_at TIMESTAMPTZ;
+CREATE INDEX IF NOT EXISTS idx_commons_item_answers_helped_confirmed
+  ON commons_item_answers(confirmed_at) WHERE kind = 'helped-me' AND confirmed_at IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS commons_item_messages (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -11723,6 +11728,17 @@ BEGIN
   END IF;
 END
 $user_ui_preferences_days_won_seen_check$;
+
+
+-- ── post migration: 0098_card_helped_confirmed.sql ──
+-- Safe to re-run.
+-- commons_item_answers.confirmed_at: when the card's author confirmed a member's "This helped me"
+-- (3.1.0 plan, Measures). Each confirmed one counts 10 action minutes toward Days won, for the
+-- member who said it. NULL until confirmed; set only on kind 'helped-me'. Account deletion already
+-- removes the member's answers, and the timestamp with them.
+ALTER TABLE IF EXISTS commons_item_answers ADD COLUMN IF NOT EXISTS confirmed_at TIMESTAMPTZ;
+CREATE INDEX IF NOT EXISTS idx_commons_item_answers_helped_confirmed
+  ON commons_item_answers(confirmed_at) WHERE kind = 'helped-me' AND confirmed_at IS NOT NULL;
 
 
 -- ── post migration: 0100_demo_mode_accounts.sql ──

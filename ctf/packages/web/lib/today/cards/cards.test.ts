@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { seCardAnswerKind, seCardIdValid, seCardItemRef, seCardOpensSheet, seCardPair } from '@ctf/shared';
 import { readCardId } from './ids';
 import { reportDetail } from './report';
-import { groupAnswers, pairState, shapeConversation, type ConversationRows } from './shape';
+import { groupAnswers, hasHelpedFromOthers, pairState, shapeConversation, type ConversationRows } from './shape';
 import type { MessageRow, PairRow } from './repository';
 
 const at = new Date('2026-11-03T12:00:00Z');
@@ -54,9 +54,10 @@ describe('shapeConversation', () => {
   const pending: PairRow = { low: 'acc_a', high: 'acc_c', requesterId: 'acc_c', agreedAt: null };
   const rows: ConversationRows = {
     answers: [
-      { accountId: 'acc_b', kind: 'know-someone', createdAt: at },
-      { accountId: 'acc_b', kind: 'help', createdAt: at },
-      { accountId: 'acc_a', kind: 'want', createdAt: at },
+      { accountId: 'acc_b', kind: 'know-someone', createdAt: at, confirmedAt: null },
+      { accountId: 'acc_b', kind: 'help', createdAt: at, confirmedAt: null },
+      { accountId: 'acc_a', kind: 'want', createdAt: at, confirmedAt: null },
+      { accountId: 'acc_c', kind: 'helped-me', createdAt: at, confirmedAt: at },
     ],
     publicMessages: [message('m1', 'acc_b', null), message('m-leak', 'acc_b', ['acc_a', 'acc_b'])],
     pairs: [agreed, pending, { low: 'acc_b', high: 'acc_c', requesterId: 'acc_b', agreedAt: at }],
@@ -65,10 +66,18 @@ describe('shapeConversation', () => {
 
   it('groups answers by member in a fixed order and names the viewer', () => {
     const answers = groupAnswers(rows.answers, handles);
-    expect(answers[0]).toEqual({ accountId: 'acc_b', handle: 'ben', kinds: ['help', 'know-someone'] });
+    expect(answers[0]).toEqual({ accountId: 'acc_b', handle: 'ben', kinds: ['help', 'know-someone'], helpedConfirmed: false });
+    expect(answers.find((answer) => answer.accountId === 'acc_c')?.helpedConfirmed).toBe(true);
     const shaped = shapeConversation('lighthouse:1', 'acc_a', rows, handles);
     expect(shaped.viewerId).toBe('acc_a');
     expect(shaped.mine).toEqual(['want']);
+    expect(shaped.canConfirmHelped).toBe(false);
+    expect(shapeConversation('blog-story:a', 'acc_a', rows, handles, true).canConfirmHelped).toBe(true);
+  });
+
+  it('asks who wrote the card only when somebody else said it helped', () => {
+    expect(hasHelpedFromOthers(rows.answers, 'acc_a')).toBe(true);
+    expect(hasHelpedFromOthers(rows.answers, 'acc_c')).toBe(false);
   });
 
   it('keeps private messages out of the public conversation', () => {

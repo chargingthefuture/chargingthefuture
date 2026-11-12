@@ -41,6 +41,7 @@ function answerStyles(t: SeThemeTokens) {
     yoursRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     answerText: { flex: 1, fontSize: 14, color: t.ink, fontFamily: SE_FONT.sans },
     answerName: { fontFamily: SE_FONT.sansBold },
+    answerConfirmed: { fontSize: 12, color: t.soft, fontFamily: SE_FONT.sansBold },
     talkButton: { ...talk, backgroundColor: t.card },
     talkPrimary: { ...talk, backgroundColor: t.btn },
     talkLabel: { fontSize: 13, color: t.ink, fontFamily: SE_FONT.sansSemi },

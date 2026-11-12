@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server';
-import { seNextQuestion, seQuestionById, seQuestionsOut, SE_QUESTIONS, type SeQuestion } from '@ctf/shared';
+import { seNextQuestion, seQuestionById, seReadMemberDay, seQuestionsOut, SE_QUESTIONS, type SeQuestion } from '@ctf/shared';
 import { ensureMutationCsrf, requireQuestionsAccess } from 'lib/questions/_lib';
 import { listAnswers, saveAnswer } from 'lib/questions/repository';
 import { checkRateLimit } from 'lib/security/rate-limit';
 import { reportError } from 'lib/observability/report';
 
-// POST /api/today/questions/answers { questionId, choice }: answer one of the questions that are out.
-// The first answer stands. Answers with the next question to show, or null when all out are answered.
+// POST /api/today/questions/answers { questionId, choice, day? }: answer one of the questions that are
+// out on the member's own day (`day`, YYYY-MM-DD from their phone or browser, believed within one day
+// of the UTC day; the UTC day otherwise), so today's question opens at their midnight as it does on
+// Today. The first answer stands. Answers with the next question to show, or null when all out are answered.
 
 export const dynamic = 'force-dynamic';
 
@@ -16,6 +18,12 @@ function readBody(body: unknown): { questionId: string; choice: number } | null 
   const value = body as { questionId?: unknown; choice?: unknown } | null;
   if (typeof value?.questionId !== 'string' || typeof value.choice !== 'number' || !Number.isInteger(value.choice)) return null;
   return { questionId: value.questionId, choice: value.choice };
+}
+
+// The member's own day from the body, the UTC day when it carried none to believe.
+function memberDay(body: { day?: unknown } | null): string {
+  const now = new Date();
+  return seReadMemberDay(body?.day, now) ?? now.toISOString().slice(0, 10);
 }
 
 // The question being answered, or why the answer cannot be taken.
@@ -45,8 +53,9 @@ export async function POST(request: Request) {
       { status: 429, headers: { 'Retry-After': String(limit.retryAfterSeconds) } },
     );
   }
-  const input = readBody(await request.json().catch(() => null));
-  const day = new Date().toISOString().slice(0, 10);
+  const body = (await request.json().catch(() => null)) as { day?: unknown } | null;
+  const input = readBody(body);
+  const day = memberDay(body);
   const question = checkAnswer(input, day);
   if (typeof question === 'string' || !input) return invalid(typeof question === 'string' ? question : 'Missing answer.');
 

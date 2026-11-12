@@ -4,7 +4,9 @@
 // other buttons open the item. Every other card expands in place as before. The ••• menu holds Copy
 // link, Not for me (the card leaves Today on this device), Mute this post (the card leaves Today and
 // its conversation sends no notices) on somebody else's card and, on a card with an author, Mute and
-// Report. The timeline dot marks it done, and tapping it again marks it not done. A story or replay
+// Report. Opening a card (its sheet, or expanding it) marks it read, which puts the check mark on its
+// timeline dot; tapping the dot takes it away or puts it back. Another person's ask never shows a
+// check mark, and its dot is not a button (3.1.0 plan, Card rules). A story or replay
 // carries Save for later and Hide as icons in its button row, and the Mood card its five faces.
 
 import React, { useState } from 'react';
@@ -18,6 +20,7 @@ import {
   seCardAnswerKind,
   seIsMoodCard,
   seCardOpensSheet,
+  seCardTakesCheckMark,
   seNewCommentsLine,
   type SeCardAnswerKind,
   type SeThemeTokens,
@@ -137,7 +140,9 @@ function doneLabel(card: SeTodayCard, done: boolean): string {
 type DotProps = { t: SeThemeTokens; s: ReturnType<typeof makeStyles>; card: SeTodayCard; read: boolean; color: string; onToggleDone: () => void };
 
 // The timeline dot. A card the server marks done (a 21 Questions answer) stays done: the answer is final.
+// On another person's ask it is only the dot.
 function DoneDot({ t, s, card, read, color, onToggleDone }: DotProps) {
+  if (!seCardTakesCheckMark(card)) return <View style={[s.dot, { backgroundColor: color }]} importantForAccessibility="no" />;
   const locked = card.done === true;
   const done = read || locked;
   return (
@@ -219,6 +224,7 @@ export function TodayCard({
   onSave,
   onOpenLink,
   onChanged,
+  onRead,
 }: {
   t: SeThemeTokens;
   card: SeTodayCard;
@@ -235,6 +241,8 @@ export function TodayCard({
   onOpenLink: (_href: string) => void;
   // A card that changes something (a 21 Questions answer) asks Today to read again.
   onChanged?: () => void;
+  // Opening the card: Today marks it read (done) where the plan gives it a check mark.
+  onRead?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [menu, setMenu] = useState(false);
@@ -243,6 +251,15 @@ export function TodayCard({
   const s = makeStyles(t);
   const opensSheet = seCardOpensSheet(card);
   const canReport = Boolean(card.author && card.author.accountId !== viewerId);
+  const openSheet = (firstAnswer: SeCardAnswerKind | null) => {
+    onRead?.();
+    setSheet({ firstAnswer });
+  };
+  const toggle = () => {
+    if (opensSheet) return openSheet(null);
+    if (!open) onRead?.();
+    setOpen((value) => !value);
+  };
   const mutePost = mutePostFor(card, viewerId, onMutePost);
 
   const dot = <DoneDot t={t} s={s} card={card} read={read} color={color} onToggleDone={onToggleDone} />;
@@ -275,9 +292,9 @@ export function TodayCard({
         </TouchableOpacity>
       </View>
       {menu ? <CardMenu s={s} card={card} canReport={canReport} onHide={onHide} onMute={onMute} onMutePost={mutePost} /> : null}
-      <CardText t={t} s={s} card={card} open={open} opensSheet={opensSheet} onPress={() => (opensSheet ? setSheet({ firstAnswer: null }) : setOpen((value) => !value))} />
+      <CardText t={t} s={s} card={card} open={open} opensSheet={opensSheet} onPress={toggle} />
       {isQuestionsCard(card) ? <QuestionsPanel t={t} card={card} open={open} onOpen={() => setOpen(true)} onChanged={onChanged ?? noop} /> : null}
-      <CardFoot t={t} s={s} card={card} onOpenLink={onOpenLink} onAnswer={opensSheet ? (kind) => setSheet({ firstAnswer: kind }) : null} onSave={onSave} onHide={onHide} />
+      <CardFoot t={t} s={s} card={card} onOpenLink={onOpenLink} onAnswer={opensSheet ? openSheet : null} onSave={onSave} onHide={onHide} />
       {sheet ? (
         <CardSheet
           t={t}

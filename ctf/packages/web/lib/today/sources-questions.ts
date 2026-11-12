@@ -1,8 +1,8 @@
-import { seMatchLine, seNextQuestion, seQuestionCardBody, seQuestionOfDay, seQuestionById, SE_QUESTIONS, seQuestionsOut, type SeTodayCard } from '@ctf/shared';
+import { seMatchLine, seNextQuestion, seQuestionCardBody, seQuestionOfDay, seQuestionById, SE_QUESTIONS, seQuestionsOut, type SeTodayCard, type SeTodayDay } from '@ctf/shared';
 import { evaluatePluginAccess } from 'lib/auth/server-authz';
 import { resolveUsernames } from 'lib/identity/resolve-usernames';
 import { listAnswers, listMatches, readMatchingState, summarizeConversations, type ConversationSummary, type MatchRow } from 'lib/questions/repository';
-import { author, card, clip, startOfTodayIso, type TodayViewer } from './card';
+import { author, card, clip, utcTodayDay, type TodayViewer } from './card';
 
 // 21 Questions on Today (3.1.0 plan, task 18), approved members only: the question to answer next
 // (today's, then any earlier one missed), and a Match card for each member who answered at least
@@ -76,15 +76,15 @@ function matchCard(
   });
 }
 
-export async function questionCards(viewer: TodayViewer, now = new Date()): Promise<SeTodayCard[]> {
+export async function questionCards(viewer: TodayViewer, day: SeTodayDay = utcTodayDay()): Promise<SeTodayCard[]> {
   const access = await evaluatePluginAccess({ requireUsername: false });
   if (!access.allowed) return [];
-  const createdAtIso = startOfTodayIso(now);
+  const createdAtIso = day.startIso;
   const answers = await listAnswers(viewer.userId);
   const { enabled } = await readMatchingState(viewer.userId);
   const matches = enabled ? await listMatches(viewer.userId) : [];
   const ids = matches.map((match) => match.userId);
   const [names, talks] = await Promise.all([resolveUsernames(ids), summarizeConversations(viewer.userId, ids)]);
   const matchCards = matches.map((match) => matchCard(match, names.get(match.userId), talks.get(match.userId), answers, createdAtIso));
-  return [...dayQuestionCards(createdAtIso.slice(0, 10), answers, enabled, createdAtIso), ...matchCards];
+  return [...dayQuestionCards(day.day, answers, enabled, createdAtIso), ...matchCards];
 }

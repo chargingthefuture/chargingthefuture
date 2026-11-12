@@ -2,7 +2,7 @@ contracts:
   - pluginId: today
     command: today.read
     version: 1.0.0
-    description: "Read everything the 3.1 Today screen draws, in one answer (GET /api/today). Touches the member's own member_presence row (at most once a minute) and answers presence, the number of signed-in members whose last read was in the last 10 minutes (one COUNT, never names), and storiesTomorrow, how many stories open at the next midnight. Stories and replays carry saved from today_card_saves. The member's own Done and Not for me marks (today_card_marks) are applied: Not for me never comes back; done stays the day it was marked (markedDoneAtIso) and leaves from the member's next day; a done blog story with a newer readable Fireside comment comes back with newComments. dayStart is the start of the member's own day. Open Mutual Time surveys show as Offer cards with only what their shared link shows anybody (title, description, where the group meets), never who picked what. A member placed in a PeerProgramming cohort gets one card naming their own cohort and who is in it with them, the names its room already lists to them. The Our numbers card carries figures: Workforce's skills coverage and, signed in, how much the Community Value Index grew this week (a relative index, never money), which stores the current week's reading in gdp_metric_snapshots (metric gdp_value_index, the row scripts/recognizeGdp.mjs writes) at most once every 10 minutes per server and compares it with last week's row."
+    description: "Read everything the 3.1 Today screen draws, in one answer (GET /api/today). Touches the member's own member_presence row (at most once a minute) and answers presence, the number of signed-in members whose last read was in the last 10 minutes (one COUNT, never names), and storiesTomorrow, how many stories open at the next midnight. Stories and replays carry saved from today_card_saves. The member's own Done and Not for me marks (today_card_marks) are applied: Not for me never comes back; done stays the day it was marked (markedDoneAtIso) and leaves from the member's next day; a done blog story with a newer readable Fireside comment comes back with newComments. Open Mutual Time surveys show as Offer cards with only what their shared link shows anybody (title, description, where the group meets), never who picked what. A member placed in a PeerProgramming cohort gets one card naming their own cohort and who is in it with them, the names its room already lists to them. The Our numbers card carries figures: Workforce's skills coverage and, signed in, how much the Community Value Index grew this week (a relative index, never money), which stores the current week's reading in gdp_metric_snapshots (metric gdp_value_index, the row scripts/recognizeGdp.mjs writes) at most once every 10 minutes per server and compares it with last week's row. day (YYYY-MM-DD) and dayStart are the member's own day and when it began, from their phone or browser; stories, the puzzle, 21 Questions, the day's own cards and storiesTomorrow follow it, falling back to the UTC day. Another person's ask never carries a done mark."
     inputSchema:
       dayStart:
         type: string
@@ -292,6 +292,29 @@ contracts:
       conversation:
         type: object
     dataAccess:
+      - commons_item_answers
+      - commons_item_messages
+      - commons_item_pair_requests
+      - account_restrictions
+      - member_blocks
+      - member_mutes
+    purpose: card_conversation
+    retentionClass: until_account_deletion
+    idempotency: true
+  - pluginId: today
+    command: today.cards.answer.confirm_helped
+    version: 1.0.0
+    description: "The card's author confirms a member's helped-me answer: the poster of the item (read where it lives), or an admin on a blog story, an announcement or What Works. Sets commons_item_answers.confirmed_at once; confirming again changes nothing. Never one's own answer (400 own_answer); 403 not_author; 404 no_answer when that member gave no helped-me on the card. Each confirmed one counts 10 action minutes toward Days won for the member who said it. 30 a minute. (POST /api/today/cards/[cardId]/answers/confirm)."
+    inputSchema:
+      cardId:
+        type: string
+      accountId:
+        type: string
+    outputSchema:
+      conversation:
+        type: object
+    dataAccess:
+      - feed_admin_audit_trail
       - commons_item_answers
       - commons_item_messages
       - commons_item_pair_requests

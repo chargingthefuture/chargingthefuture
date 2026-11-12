@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { SE_MATCH_MESSAGE_MAX, seAgo, seQuestionById, type SeMatchMessage, type SeTodayCard } from '@ctf/shared';
+import { SE_MATCH_MESSAGE_MAX, seAgo, seLocalDay, seQuestionById, type SeMatchMessage, type SeTodayCard } from '@ctf/shared';
 import styles from './today.module.css';
 
 // The controls inside a 21 Questions card on Today: the answers to pick from on the question card,
@@ -26,7 +26,7 @@ function QuestionChoices({ card, onChanged }: { card: SeTodayCard; onChanged: ()
   if (!question) return null;
   const pick = async (choice: number) => {
     setBusy(true);
-    const result = await send('/api/today/questions/answers', { questionId: question.id, choice });
+    const result = await send('/api/today/questions/answers', { questionId: question.id, choice, day: seLocalDay() });
     setBusy(false);
     if (!result.ok) return setNote(messageOf(result.data, 'The answer was not saved: the app could not be reached.'));
     setNote(`Saved: ${question.choices[choice]}.`);

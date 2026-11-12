@@ -14,6 +14,8 @@ export declare function seParseCardMarkChanges(body: unknown): SeCardMarkChange[
 export declare function seLegacyMarkChanges(saved: unknown): SeCardMarkChange[];
 export declare function seNewCommentsSince(card: Pick<SeTodayCard, 'commentTimesIso'>, markedAtIso: string): number;
 export declare function seNewCommentsLine(count: number | undefined): string | null;
+export declare function seIsOthersAsk(card: Pick<SeTodayCard, 'kind' | 'mine' | 'goal'>): boolean;
+export declare function seCardTakesCheckMark(card: Pick<SeTodayCard, 'kind' | 'mine' | 'goal'>): boolean;
 export declare function seApplyCardMarks(cards: readonly SeTodayCard[], marks: readonly SeCardMark[], dayStartIso: string): SeTodayCard[];
 export declare function seCardShownDone(card: SeTodayCard): boolean;
 export declare function seMarkCardInToday<T extends {
@@ -29,3 +31,6 @@ export declare function seMarksFromToday(today: {
 export declare function seMarkChangeFor(today: {
     cards: SeTodayCard[];
 } | null, kind: 'read' | 'hidden', cardId: string): SeCardMarkChange | null;
+export declare function seReadChangeFor(today: {
+    cards: SeTodayCard[];
+} | null, cardId: string, viewerId: string): SeCardMarkChange | null;

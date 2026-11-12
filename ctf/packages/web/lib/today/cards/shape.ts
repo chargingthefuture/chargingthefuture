@@ -30,11 +30,13 @@ export function idsIn(rows: ConversationRows): string[] {
 // One row per member, their answers in a fixed order, first to answer first.
 export function groupAnswers(rows: AnswerRow[], handles: Map<string, string | null>): SeCardAnswer[] {
   const byMember = new Map<string, Set<SeCardAnswerKind>>();
+  const confirmed = new Set(rows.filter((row) => row.kind === 'helped-me' && row.confirmedAt).map((row) => row.accountId));
   for (const row of rows) byMember.set(row.accountId, (byMember.get(row.accountId) ?? new Set()).add(row.kind));
   return [...byMember.entries()].map(([accountId, kinds]) => ({
     accountId,
     handle: handleOf(handles, accountId),
     kinds: SE_CARD_ANSWER_KINDS.filter((kind) => kinds.has(kind)),
+    helpedConfirmed: confirmed.has(accountId),
   }));
 }
 
@@ -62,12 +64,24 @@ function threadFor(pair: PairRow, viewerId: string, rows: MessageRow[], handles:
   return { partnerId, partnerHandle: handleOf(handles, partnerId), state, messages: messages.map((row) => toMessage(row, viewerId, handles)) };
 }
 
-export function shapeConversation(cardId: string, viewerId: string, rows: ConversationRows, handles: Map<string, string | null>): SeCardConversation {
+// Whether anybody but the viewer said this helped: only then is it worth asking who wrote the card.
+export function hasHelpedFromOthers(rows: AnswerRow[], viewerId: string): boolean {
+  return rows.some((row) => row.kind === 'helped-me' && row.accountId !== viewerId);
+}
+
+export function shapeConversation(
+  cardId: string,
+  viewerId: string,
+  rows: ConversationRows,
+  handles: Map<string, string | null>,
+  canConfirmHelped = false,
+): SeCardConversation {
   const pairs = rows.pairs.filter((pair) => pair.low === viewerId || pair.high === viewerId);
   return {
     cardId,
     viewerId,
     answers: groupAnswers(rows.answers, handles),
+    canConfirmHelped,
     mine: SE_CARD_ANSWER_KINDS.filter((kind) => rows.answers.some((row) => row.accountId === viewerId && row.kind === kind)),
     messages: rows.publicMessages.filter((row) => row.pairLow === null).map((row) => toMessage(row, viewerId, handles)),
     pairs: pairs.map((pair) => threadFor(pair, viewerId, rows.pairMessages, handles)),

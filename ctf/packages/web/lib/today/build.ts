@@ -13,9 +13,9 @@ import { mainRoom, nextTalk, weekTalks, weaversRoom } from './sources-rooms';
 import { questionCards } from './sources-questions';
 import { readDaysWon } from 'lib/measures/action-minutes';
 import { listMutes } from 'lib/mutes/repository';
-import { seApplyMutes } from '@ctf/shared';
+import { seApplyMutes, type SeTodayDay } from '@ctf/shared';
 import { mineCards } from './sources-mine';
-import { startOfTodayIso } from './card';
+import { utcTodayDay } from './card';
 import { applyLifetimes } from './apply-lifetimes';
 import { applyMemberMarks, applyMemberSaves } from './apply-marks';
 import { readPresence } from './presence';
@@ -42,34 +42,36 @@ async function settle<T>(name: string, read: () => Promise<T>, unavailable: stri
 
 // Every card source behind Today, in the order they are read; the member's own cards ("yours")
 // are last.
-export function todaySources(viewer: TodayViewer, now: Date): CardSource[] {
+export function todaySources(viewer: TodayViewer, day: SeTodayDay, now = new Date()): CardSource[] {
   return [
     { name: 'peer-programming', read: () => goalAsks(viewer) },
     { name: 'socket-relay', read: () => relayAsks(viewer) },
     { name: 'trust-transport', read: () => rideAsks(viewer) },
     { name: 'lighthouse', read: () => placeOffers(viewer) },
     { name: 'mutual-time', read: () => hoursOffers(viewer) },
-    { name: 'peer-programming-cohort', read: () => cohortCard(viewer, now) },
+    { name: 'peer-programming-cohort', read: () => cohortCard(viewer, now, day) },
     { name: 'skill-up', read: () => cohortOffers() },
-    { name: 'questions', read: () => questionCards(viewer, now) },
+    { name: 'questions', read: () => questionCards(viewer, day) },
     { name: 'announcements', read: () => announcementStories(viewer) },
     { name: 'directory-invites', read: () => inviteStories() },
-    { name: 'what-works', read: () => whatWorksStory(viewer, now) },
-    { name: 'blog-stories', read: () => blogStories(now) },
-    { name: 'games', read: () => dailyPuzzleCard(now) },
-    { name: 'quora-survey', read: () => surveyCard(viewer, now) },
-    { name: 'mood', read: () => moodCard(viewer, now) },
-    { name: 'numbers', read: () => numbersCard(now, true) },
-    { name: 'beacon-replays', read: () => replayCards(now) },
+    { name: 'what-works', read: () => whatWorksStory(viewer, day) },
+    { name: 'blog-stories', read: () => blogStories(day) },
+    { name: 'games', read: () => dailyPuzzleCard(day) },
+    { name: 'quora-survey', read: () => surveyCard(viewer, day) },
+    { name: 'mood', read: () => moodCard(viewer, day) },
+    { name: 'numbers', read: () => numbersCard(day, true, now) },
+    { name: 'beacon-replays', read: () => replayCards(day) },
     { name: 'skills-hunt', read: () => wantedCard() },
-    { name: 'skills-hunt-mission', read: () => missionCard(now) },
+    { name: 'skills-hunt-mission', read: () => missionCard(day) },
     { name: 'yours', read: () => mineCards(viewer) },
   ];
 }
 
-export async function buildToday(viewer: TodayViewer, now = new Date(), dayStartIso = startOfTodayIso(now)): Promise<SeToday> {
+// `day` is the member's own day (seReadTodayDay): stories, the puzzle, 21 Questions and the day's
+// own cards follow it, and a card marked done leaves from their next day.
+export async function buildToday(viewer: TodayViewer, now = new Date(), day: SeTodayDay = utcTodayDay(now)): Promise<SeToday> {
   const unavailable: string[] = [];
-  const sources = todaySources(viewer, now);
+  const sources = todaySources(viewer, day, now);
 
   const week = weekTalks(now);
   const [cardLists, live, room, weekList, weavers, daysWon, mutes, presence, tomorrow] = await Promise.all([
@@ -85,12 +87,12 @@ export async function buildToday(viewer: TodayViewer, now = new Date(), dayStart
     settle('mutes', () => listMutes(viewer.userId), []),
     // Reported but never named: the pill is simply not shown when the count is unknown.
     settle('presence', () => readPresence(viewer.userId), []),
-    settle('stories-tomorrow', () => storiesTomorrow(now), []),
+    settle('stories-tomorrow', () => storiesTomorrow(day), []),
   ]);
 
   const mineIds = new Set((cardLists[sources.length - 1] ?? []).map((card) => card.id));
   const lasting = await applyLifetimes(cardLists.flatMap((list) => list ?? []), viewer, mineIds, now);
-  const marked = await applyMemberSaves(viewer, await applyMemberMarks(viewer, lasting, dayStartIso));
+  const marked = await applyMemberSaves(viewer, await applyMemberMarks(viewer, lasting, day.startIso));
   const cards = seApplyMutes(marked, mutes ?? [])
     .sort((a, b) => b.createdAtIso.localeCompare(a.createdAtIso))
     .slice(0, TODAY_MAX_CARDS);

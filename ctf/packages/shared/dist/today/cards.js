@@ -131,7 +131,22 @@ export const SE_CARD_WORDS = {
     close: 'Close',
     openIn: (source) => OPEN_WORDS[source] ?? (SOURCE_NAMES[source] ? `Open in ${SOURCE_NAMES[source]}` : 'Open where it lives'),
     you: 'You',
+    confirmHelped: 'Confirm',
+    confirmHelpedLabel: (handle) => `Confirm that this helped ${handle}`,
+    helpedConfirmed: 'Confirmed',
 };
+// Whether the sheet offers Confirm beside an answer: the viewer wrote the card, the answer says
+// this helped, and it is not confirmed yet. Never on the viewer's own answer.
+export function seCanConfirmHelped(conversation, answer) {
+    return conversation.canConfirmHelped && answer.accountId !== conversation.viewerId && answer.kinds.includes('helped-me') && !answer.helpedConfirmed;
+}
+// Cards the System Architect writes or reviews: a blog story, an announcement, What Works (whose
+// suggesters are never named). On these an admin confirms a "This helped me"; on any other card,
+// the member who posted the item.
+const SYSTEM_ARCHITECT_SOURCES = new Set(['blog-story', 'announcement', 'what-works']);
+export function seHelpedConfirmedByAdmin(cardId) {
+    return SYSTEM_ARCHITECT_SOURCES.has(cardId.slice(0, cardId.indexOf(':')));
+}
 // "Ask · October 26, 2026 at 11:40 AM CDT", the line under the author in the sheet.
 export function seCardSheetLine(card) {
     const at = new Date(card.createdAtIso);

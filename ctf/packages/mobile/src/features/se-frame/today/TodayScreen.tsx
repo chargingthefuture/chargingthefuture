@@ -116,7 +116,7 @@ type ScreenProps = { t: SeThemeTokens; accountId: string; onOpen: (_key: Feature
 
 export function TodayScreen({ t, accountId, onOpen, onPresence, rain }: ScreenProps) {
   const s = makeStyles(t);
-  const { today, loading, error, marks, mark, toggle, save, saveNote, reload } = useToday(accountId);
+  const { today, loading, error, marks, mark, toggle, markRead, save, saveNote, reload } = useToday(accountId);
   useEmojiRainTrigger({ ...rain, daysWon: today?.daysWon });
   const presence = today?.presence ?? null;
   useEffect(() => onPresence?.(presence), [onPresence, presence]);
@@ -184,6 +184,7 @@ export function TodayScreen({ t, accountId, onOpen, onPresence, rain }: ScreenPr
               onSave={() => save(card)}
               onOpenLink={go}
               onChanged={() => void reload()}
+              onRead={() => markRead(card.id)}
             />
           ))}
           <View style={s.caughtUp}>

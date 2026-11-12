@@ -47,7 +47,7 @@ export async function POST(request: Request, context: Context) {
   try {
     const refused = await agree(cardId, userId, partnerId);
     if (refused) return refused;
-    const conversation = await readConversation(userId, cardId);
+    const conversation = await readConversation(gate.auth, cardId);
     return NextResponse.json({ ok: true, conversation }, { headers: { 'cache-control': 'private, no-store' } });
   } catch (error) {
     return cardsFailed('agree_pair', error, 'The agreement was not saved: the database write failed. Try again.');

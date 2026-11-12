@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { SE_CARD_WORDS, SE_MUTE_WORDS, seCardSheetLine, type SeCardAnswerKind, type SeCardConversation, type SeTodayCard } from '@ctf/shared';
+import { SE_CARD_WORDS, SE_MUTE_WORDS, seCanConfirmHelped, seCardSheetLine, type SeCardAnswer, type SeCardAnswerKind, type SeCardConversation, type SeTodayCard } from '@ctf/shared';
 import { SeAvatar } from '../../shared/se-avatar';
 import { CardTalk } from './card-sheet-talk';
 import { SheetYours } from './card-sheet-yours';
@@ -110,7 +110,21 @@ function SheetHead({ card, talk, viewerId, onClose, onMutePost, closeRef }: Shee
   );
 }
 
-function Answers({ conversation, onTalk }: { conversation: SeCardConversation; onTalk: (accountId: string) => void }) {
+type AnswersProps = { conversation: SeCardConversation; busy: boolean; onTalk: (accountId: string) => void; onConfirm: (accountId: string) => void };
+
+// Confirm beside a "This helped me" for the card's author, Confirmed once it is.
+function HelpedConfirm({ conversation, answer, busy, onConfirm }: Omit<AnswersProps, 'onTalk'> & { answer: SeCardAnswer }) {
+  if (seCanConfirmHelped(conversation, answer)) {
+    return (
+      <button type="button" className={styles.talkButton} disabled={busy} aria-label={SE_CARD_WORDS.confirmHelpedLabel(answer.handle)} onClick={() => onConfirm(answer.accountId)}>
+        {SE_CARD_WORDS.confirmHelped}
+      </button>
+    );
+  }
+  return answer.helpedConfirmed ? <span className={styles.answerConfirmed}>{SE_CARD_WORDS.helpedConfirmed}</span> : null;
+}
+
+function Answers({ conversation, busy, onTalk, onConfirm }: AnswersProps) {
   if (conversation.answers.length === 0) return null;
   return (
     <div className={styles.answers}>
@@ -123,6 +137,7 @@ function Answers({ conversation, onTalk }: { conversation: SeCardConversation; o
             <span className={styles.answerText}>
               <b>{mine ? SE_CARD_WORDS.you : answer.handle}</b> {SE_CARD_WORDS.answerLine(answer.kinds)}
             </span>
+            <HelpedConfirm conversation={conversation} answer={answer} busy={busy} onConfirm={onConfirm} />
             {mine ? null : (
               <button type="button" className={index === 0 ? styles.talkPrimary : styles.talkButton} onClick={() => onTalk(answer.accountId)}>
                 {SE_CARD_WORDS.talkHere}
@@ -146,7 +161,9 @@ export function CardConversationView({ talk }: { talk: CardConversation }) {
   };
   return (
     <>
-      {talk.conversation ? <Answers conversation={talk.conversation} onTalk={(id) => void talkTo(id)} /> : null}
+      {talk.conversation ? (
+        <Answers conversation={talk.conversation} busy={talk.busy} onTalk={(id) => void talkTo(id)} onConfirm={(id) => void talk.confirm(id)} />
+      ) : null}
       <CardTalk talk={talk} partner={partner} onPartner={setPartner} onTalk={(id) => void talkTo(id)} />
     </>
   );

@@ -21,7 +21,7 @@ import { queryDb } from 'lib/db/postgres';
 export const MESSAGES_SHOWN = 100;
 export const ANSWERS_SHOWN = 200;
 
-export type AnswerRow = { accountId: string; kind: SeCardAnswerKind; createdAt: Date };
+export type AnswerRow = { accountId: string; kind: SeCardAnswerKind; createdAt: Date; confirmedAt: Date | null };
 export type MessageRow = {
   id: string;
   authorId: string;
@@ -63,13 +63,18 @@ function toMessage(row: RawMessage): MessageRow {
 }
 
 export async function listAnswers(viewerId: string, cardId: string): Promise<AnswerRow[]> {
-  const result = await queryDb<{ account_id: string; kind: SeCardAnswerKind; created_at: Date }>(
-    `SELECT account_id, kind, created_at FROM commons_item_answers
+  const result = await queryDb<{ account_id: string; kind: SeCardAnswerKind; created_at: Date; confirmed_at: Date | null }>(
+    `SELECT account_id, kind, created_at, confirmed_at FROM commons_item_answers
       WHERE plugin = $2 AND item_id = $3 AND (account_id = $1 OR (${visibleTo('account_id')}))
       ORDER BY created_at LIMIT ${ANSWERS_SHOWN}`,
     [viewerId, ...item(cardId)],
   );
-  return result.rows.map((row) => ({ accountId: row.account_id, kind: row.kind, createdAt: new Date(row.created_at) }));
+  return result.rows.map((row) => ({
+    accountId: row.account_id,
+    kind: row.kind,
+    createdAt: new Date(row.created_at),
+    confirmedAt: row.confirmed_at ? new Date(row.confirmed_at) : null,
+  }));
 }
 
 async function listPublicMessagesInStore(viewerId: string, cardId: string): Promise<MessageRow[]> {
@@ -115,6 +120,18 @@ export async function saveAnswer(accountId: string, cardId: string, kind: SeCard
     `INSERT INTO commons_item_answers (plugin, item_id, account_id, kind) VALUES ($1, $2, $3, $4)
      ON CONFLICT (plugin, item_id, account_id, kind) DO NOTHING RETURNING id`,
     [...item(cardId), accountId, kind],
+  );
+  return (result.rowCount ?? 0) > 0;
+}
+
+// The card's author confirms a member's "This helped me" (3.1.0 plan, Measures: 10 action
+// minutes). False when that member gave no such answer on the card. Confirming again keeps the
+// first time.
+export async function confirmHelpedAnswer(cardId: string, accountId: string): Promise<boolean> {
+  const result = await queryDb(
+    `UPDATE commons_item_answers SET confirmed_at = COALESCE(confirmed_at, NOW())
+      WHERE plugin = $1 AND item_id = $2 AND account_id = $3 AND kind = 'helped-me' RETURNING id`,
+    [...item(cardId), accountId],
   );
   return (result.rowCount ?? 0) > 0;
 }
