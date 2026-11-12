@@ -130,7 +130,7 @@ function Timeline({ viewerId, view, marks, mark, toggle, onSave, onMute, onChang
 // emoji rain switch and the Days won total the account last saw (use-se-prefs.ts).
 type RainPrefs = { on: boolean; seen: number | null | undefined; onSeen: (_total: number) => void };
 
-export function TodayScreen({ accountId, onPresence, rain }: { accountId: string; onPresence?: (count: number | null) => void; rain?: RainPrefs }) {
+export function TodayScreen({ accountId, onPresence, rain }: { accountId: string; onPresence?: (count: number | null) => void; rain: RainPrefs }) {
   const { today, loading, error, marks, mark, toggle, save, saveNote, reload } = useToday(accountId);
   const presence = today?.presence ?? null;
   useEffect(() => onPresence?.(presence), [onPresence, presence]);
@@ -155,7 +155,7 @@ export function TodayScreen({ accountId, onPresence, rain }: { accountId: string
 
   return (
     <>
-      {rain ? <EmojiRain on={rain.on} daysWon={today?.daysWon} seen={rain.seen} onSeen={rain.onSeen} /> : null}
+      <EmojiRain on={rain.on} daysWon={today?.daysWon} seen={rain.seen} onSeen={rain.onSeen} />
       <LiveCards today={today} />
       <div className={styles.listHead}>
         <h2 className={styles.listTitle}>Today&apos;s cards</h2>

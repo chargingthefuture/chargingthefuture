@@ -80,17 +80,3 @@ Use made-up amounts only. This repository is public, and the real figures are th
 - Step 4: the run passes and its summary says how many days were read. No amount appears anywhere in the run's log or summary.
 
 **Result:** web ☐
-
----
-
-### EXP-DOM-1 — Domains show their yearly price and renewal day (added 2026-11-11)
-
-**Steps:**
-1. Open `/admin/expenses` on a phone-width screen and scroll to the bottom of Costs.
-2. Tap Copy as text and paste it into a note.
-
-**Expected:**
-- Step 1: a Domains, renewed yearly section lists 13 domains, each with a yearly price and a month and day. The first one listed is the next to renew counted from today; ones whose day has passed this year come last. A line above the list gives the yearly total and the monthly share and says it is not in the monthly total. The monthly total at the top does not change.
-- Step 2: the pasted text ends with the same list, in the same order.
-
-**Result:** web ☐

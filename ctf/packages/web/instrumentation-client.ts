@@ -7,6 +7,7 @@ export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
 
 // Sentry client config (migrated from sentry.client.config.ts)
 import { resolveWebSentryDsn } from 'lib/observability/sentry-config';
+import { scrubReplayEvent, scrubReplayFrame, webSentryScrubOptions } from 'lib/observability/sentry-scrub';
 
 const dsn = resolveWebSentryDsn();
 
@@ -18,12 +19,16 @@ if (dsn) {
 		environment: process.env.NODE_ENV,
 		replaysSessionSampleRate: 0.1,
 		replaysOnErrorSampleRate: 1.0,
+		...webSentryScrubOptions,
 	});
+	Sentry.addEventProcessor(scrubReplayEvent);
 	startReplayAfterLoad();
 }
 
 // Session Replay, fully masked: no text, no typed input and no images or video leave the
-// browser, so a replay shows layout, taps and the failure, never what a member wrote or saw.
+// browser, so a replay shows layout, taps and the failure, never what a member wrote or saw. The
+// navigation and breadcrumbs it records pass through scrubReplayFrame, so ids in page addresses
+// become :id and typed text is dropped.
 // Disclosed in the privacy policy (app/terms/policy-content.ts, Sentry line). Added once the page
 // has loaded and the browser is idle, so its code is not part of the first load (3.1 speed budget).
 function startReplayAfterLoad() {
@@ -32,7 +37,13 @@ function startReplayAfterLoad() {
 		void import('lib/observability/sentry-replay')
 			.then(({ replayIntegration }) =>
 				Sentry.addIntegration(
-					replayIntegration({ maskAllText: true, maskAllInputs: true, blockAllMedia: true, networkDetailAllowUrls: [] }),
+					replayIntegration({
+						maskAllText: true,
+						maskAllInputs: true,
+						blockAllMedia: true,
+						networkDetailAllowUrls: [],
+						beforeAddRecordingEvent: scrubReplayFrame,
+					}),
 				),
 			)
 			.catch((error: unknown) => Sentry.captureException(error, { tags: { area: 'observability', op: 'replay_load' } }));
