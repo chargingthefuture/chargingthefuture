@@ -1,4 +1,5 @@
-// SocketRelay demo data for the feed cases (SR-1, SR-2): seven open requests posted by synthetic
+// SocketRelay demo data for the feed cases (SR-1, SR-2), also read as previews on signed-out Today:
+// twelve open requests posted by synthetic
 // members, each with one to three tags, so the "All" feed has other people's cards to read and the
 // tag chips have several tags to rank. One names ServiceCredits, one Free and one Barter, so the
 // settlement badge shows each kind. All are within their 28 days, so they also count toward the GDP
@@ -51,6 +52,21 @@ export default async function seed(client, ctx) {
     [7, MARIA, 'maria_lopez', 'Company for a trip to the laundromat',
       'Thursday evening, about an hour. Mostly someone to talk to while it runs.',
       ['errands'], 'Berkeley', null, null, 80],
+    [8, DANA, 'dana_brooks', 'A room for two weeks while my lease starts',
+      'Quiet, no smoking. I can help with cooking or yard work while I stay.',
+      ['housing'], 'Oakland', 'BARTER', null, 5],
+    [9, SAM, 'sam_carter', 'Someone to show me how to use a spreadsheet',
+      'Two short sessions over a video call. Sorting a list and adding up a column is all I need.',
+      ['training', 'tech help'], 'Oakland', 'SC', 15, 14],
+    [10, MARIA, 'maria_lopez', 'Extra food from a garden or a food bank run',
+      'Anything fresh helps. I can pick up within a few miles.',
+      ['food'], 'Berkeley', 'FREE', null, 26],
+    [11, ctx.PEER_1, 'alex_rivera', 'Leads on night-shift warehouse work',
+      'Forklift certified. Looking for anyone who knows a place that is hiring.',
+      ['jobs'], 'Oakland', null, null, 36],
+    [12, ctx.PEER_2, 'jordan_kim', 'Practice for a driving test',
+      'Need an hour or two in a parked lot with somebody who has a license.',
+      ['training', 'rides'], 'Toronto', null, null, 52],
   ];
 
   for (const [n, owner, username, title, details, tags, city, currency, amount, hoursAgo] of requests) {

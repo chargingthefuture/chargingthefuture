@@ -36,7 +36,7 @@
 
 ## Core smoke (every session)
 
-**1.** Sign in as a member. Navigate to the SocketRelay feed on web and open the SocketRelay screen on Android. The feed loads without a JS error, shows a list of seeded requests (not a blank page and not a raw `{ items, page, pageSize, total }` JSON dump), and each card shows a title and at least one tag. The demo seed now shows seven open requests from other members (handles such as @maria_lopez and @sam_carter) with tags including jobs, home and errands.
+**1.** Sign in as a member. Navigate to the SocketRelay feed on web and open the SocketRelay screen on Android. The feed loads without a JS error, shows a list of seeded requests (not a blank page and not a raw `{ items, page, pageSize, total }` JSON dump), and each card shows a title and at least one tag. The demo seed now shows twelve open requests (handles such as @maria_lopez and @sam_carter) with tags including jobs, home, errands, housing, food and training.
 web ☐
 
 **2.** While signed out (or in a fresh incognito window on web / signed-out state on Android), open the SocketRelay feed. The app shows a public or sign-in-gated state rather than crashing or exposing authenticated data.

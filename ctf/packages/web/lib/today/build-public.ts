@@ -2,7 +2,8 @@ import type { SeToday, SeTodayBroadcast, SeTodayCard, SeTodayRoom } from '@ctf/s
 import { blogStories } from './sources-blog';
 import { dailyPuzzleCard } from './sources-daily';
 import { reportError } from 'lib/observability/report';
-import { cohortOffers } from './sources-offers';
+import { cohortOffers, hoursOffers, placeOffers } from './sources-offers';
+import { goalAsks, relayAsks } from './sources-asks';
 import { broadcast, missionCard, numbersCard, wantedCard } from './sources-live';
 import { replayCards } from './sources-replays';
 import { mainRoom, nextTalk, weekTalks } from './sources-rooms';
@@ -65,11 +66,22 @@ async function publicRideAsks(): Promise<SeTodayCard[]> {
   );
 }
 
+// Nobody is signed in, so no card is the viewer's own.
+const GUEST = { userId: '', isAdmin: false };
+
+// Asks and offers lead (owner decision, 2026-11-12): asking for help and offering it is what a
+// newcomer comes to see. Everything else follows, newest first within each group.
+const leads = (item: SeTodayCard) => (item.kind === 'ask' || item.kind === 'offer' ? 0 : 1);
+
 export async function buildPublicToday(now = new Date()): Promise<SeToday> {
   const unavailable: string[] = [];
   const sources: Source[] = [
     { name: 'trust-transport', read: () => sampleCards(publicRideAsks) },
     { name: 'skill-up', read: () => sampleCards(() => cohortOffers()) },
+    { name: 'socket-relay', read: () => sampleCards(() => relayAsks(GUEST)) },
+    { name: 'peer-programming', read: () => sampleCards(() => goalAsks(GUEST)) },
+    { name: 'lighthouse', read: () => sampleCards(() => placeOffers(GUEST)) },
+    { name: 'mutual-time', read: () => sampleCards(() => hoursOffers(GUEST)) },
     { name: 'numbers', read: () => numbersCard(now) },
     { name: 'blog-stories', read: () => blogStories(now) },
     // Signed out, the puzzle can be read but not played, so its button says so.
@@ -91,7 +103,7 @@ export async function buildPublicToday(now = new Date()): Promise<SeToday> {
     .flatMap((list) => list ?? [])
     // No author, and no comment times: those are only for a member's own marks.
     .map((item) => ({ ...item, author: null, commentTimesIso: undefined }))
-    .sort((a, b) => b.createdAtIso.localeCompare(a.createdAtIso))
+    .sort((a, b) => leads(a) - leads(b) || b.createdAtIso.localeCompare(a.createdAtIso))
     .slice(0, TODAY_MAX_CARDS);
   return {
     generatedAtIso: now.toISOString(),
