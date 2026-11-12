@@ -10,6 +10,7 @@ import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-button';
 import { useTheme } from '@/hooks/useTheme';
 import { getComicTokens } from './comic-shared';
+import { ComicEnginePower } from './comic-engine-power';
 import type { ComicReviewItem, ComicTrainingStats } from '../../lib/comic/types';
 import styles from './comic-review-dashboard.module.css';
 import { startVisibleInterval } from '../../lib/shared/visible-interval';
@@ -455,6 +456,7 @@ function QueueSidebar({
       <div className={styles.queueHeader}>
         <div className={styles.queueKicker}>Review Queue</div>
         <div className={styles.queueSub}>AI Assistant drafts awaiting human review</div>
+        <ComicEnginePower />
         {trainingStats ? (
           <div style={{ margin: '0 0 4px' }}>
             <TrainingStatsBadge stats={trainingStats} />
