@@ -3,7 +3,6 @@ import { isUserUnlocked } from 'lib/shared/unlock-interface';
 import { reportError } from 'lib/observability/report';
 import {
   claimHeldDailyCredit,
-  firstHelperOn,
   listHeldDailyCredits,
   markDailyCreditGranted,
   markDailyCreditHeld,
@@ -105,18 +104,6 @@ export async function grantDailyCreditQuietly(input: { cardId: string; askerUser
     }
   } catch (error) {
     reportError(error, { area: 'today', op: 'daily_credit_grant' });
-  }
-}
-
-/**
- * The asker closed the ask as done from Today, which names nobody: the helper is the first other
- * member who answered "I can help" on the card. Best-effort, like grantDailyCreditQuietly.
- */
-export async function grantDailyCreditOnTodayClose(cardId: string, askerUserId: string): Promise<void> {
-  try {
-    await grantDailyCreditQuietly({ cardId, askerUserId, helperUserId: await firstHelperOn(cardId, askerUserId) });
-  } catch (error) {
-    reportError(error, { area: 'today', op: 'daily_credit_first_helper' });
   }
 }
 

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { seDailyCreditDay, seDailyCreditPill, sePickDailyCreditCard, type SeTodayCard } from '@ctf/shared';
+import { seDailyCreditDay, seDailyCreditPill, seDoneHelpers, sePickDailyCreditCard, type SeTodayCard } from '@ctf/shared';
 
 const { mintGrant, insertServiceCreditsAudit, isUserUnlocked, repo } = vi.hoisted(() => ({
   mintGrant: vi.fn(),
@@ -52,6 +52,19 @@ describe('sePickDailyCreditCard', () => {
     expect(seDailyCreditPill(credit, null)).toBe('+1 credit when marisol_k confirms it was done');
     expect(seDailyCreditPill(credit, 'a')).toBeNull();
     expect(seDailyCreditPill({ ...credit, dailyCredit: false }, 'b')).toBeNull();
+  });
+});
+
+describe('seDoneHelpers', () => {
+  it('offers only the other members who answered I can help, in order', () => {
+    const answers = [
+      { accountId: 'asker', handle: 'me', kinds: ['help' as const], helpedConfirmed: false },
+      { accountId: 'b', handle: 'teodor_b', kinds: ['know-someone' as const, 'help' as const], helpedConfirmed: false },
+      { accountId: 'c', handle: 'ana', kinds: ['know-someone' as const], helpedConfirmed: false },
+      { accountId: 'd', handle: 'ruth', kinds: ['help' as const], helpedConfirmed: false },
+    ];
+    expect(seDoneHelpers(answers, 'asker').map((answer) => answer.handle)).toEqual(['teodor_b', 'ruth']);
+    expect(seDoneHelpers([], 'asker')).toEqual([]);
   });
 });
 

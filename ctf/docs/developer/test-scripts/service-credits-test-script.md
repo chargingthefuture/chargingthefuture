@@ -405,12 +405,12 @@ Result: web ☐
 2. Look at every other card on Today.
 3. Sign in as Asker and open the same card.
 4. Sign in as Helper, tap **I can help** on the card.
-5. Sign in as Asker, open the card and tap **Done**.
+5. Sign in as Asker, open the card and tap **Done**, then pick Helper under **Who did it?**.
 6. Sign in as Helper and check the wallet.
-7. Sign in as Asker, open a second card of theirs that is not the day's credit card, and close it as **Done** after somebody tapped I can help.
+7. Sign in as Asker, open a second card of theirs that is not the day's credit card, tap **Done** after somebody tapped I can help, and pick them. Then on a third card nobody answered, tap **Done**.
 8. Repeat steps 1–6 on another day with a Helper not yet approved in Unlock, then approve that Helper in Unlock.
 
-**Expected:** Step 1 shows "+1 credit when <Asker's handle> confirms it was done" under the text, on the card in Today and in the opened card, in light and dark and in every theme color. Step 2: no other card shows it. Step 3: Asker does not see the line. Step 6: Helper's balance is 1 higher, with a newly created grant in Recent Transactions; Asker's balance is unchanged. Step 7: nothing is granted. Step 8: nothing is granted at the confirm; the credit arrives when Unlock approves the Helper, once. Keeping a PeerProgramming task result on the credit card's goal, or resolving its SocketRelay fulfillment as successful, grants it the same way. The words never describe credits as money.
+**Expected:** Step 1 shows "+1 credit when <Asker's handle> confirms it was done" under the text, on the card in Today and in the opened card, in light and dark and in every theme color. Step 2: no other card shows it. Step 3: Asker does not see the line. Step 6: Helper's balance is 1 higher, with a newly created grant in Recent Transactions; Asker's balance is unchanged. Step 5 lists only the members who answered I can help, with Back. Step 7: nothing is granted; the card nobody answered closes at once with no list. Step 8: nothing is granted at the confirm; the credit arrives when Unlock approves the Helper, once. Keeping a PeerProgramming task result on the credit card's goal, or resolving its SocketRelay fulfillment as successful, grants it the same way. The words never describe credits as money.
 
 Result: web ☐ android ☐
 
