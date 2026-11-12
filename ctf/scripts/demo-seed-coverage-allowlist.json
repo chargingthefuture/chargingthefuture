@@ -51,6 +51,7 @@
     "member_profile_prompts": "the three lines on a member's own Me screen; the demo viewer writes them from Me",
     "today_card_saves": "a member's own Save for later list; the demo viewer makes it from the cards",
     "member_presence": "when each member last read Today, counted and never listed; the demo viewer adds their own row by opening Today",
+    "today_daily_credit_cards": "the day's credit card is chosen by the first Today read of the day from the asks already seeded, and a helper is stamped only when an asker confirms",
     "today_card_windows": "a poster's own deadline, renew or close on an ask or offer; the demo viewer sets one from + New or the card",
     "question_answer_audit": "audit trail: the app writes it as people act; no demo screen reads it as content",
     "question_matching_settings": "a member's own setting; no row means matching is on, which is what the demo shows",

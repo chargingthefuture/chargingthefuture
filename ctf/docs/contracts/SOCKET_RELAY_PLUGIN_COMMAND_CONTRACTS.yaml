@@ -105,7 +105,9 @@ contracts:
     description: >-
       Requester-only resolution of a claimed request. The requester picks an outcome:
       successful / no_longer_needed close the request; unsuccessful_reopen cancels the helper and
-      returns the request to open; unsuccessful_close closes it. Helpers cannot resolve.
+      returns the request to open; unsuccessful_close closes it. Helpers cannot resolve. A successful
+      resolve by the requester on the day's Today credit card grants the fulfiller its 1 ServiceCredit
+      (service-credits.today.daily-credit.grant).
     inputSchema:
       fulfillmentId:
         type: string
@@ -122,6 +124,7 @@ contracts:
       status:
         type: string
     dataAccess:
+      - today_daily_credit_cards
       - socket_relay_requests
       - socket_relay_fulfillments
       - socket_relay_request_events

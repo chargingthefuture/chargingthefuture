@@ -15,6 +15,8 @@ import {
 import { conflict, invalidPayload, isUuid, notFound, notifyGoalOwner, policyDenied, readJsonBody, readText } from 'lib/peer-programming/goal-route-helpers';
 import { insertPeerProgrammingAudit, isCohortEnded, isCohortMember } from 'lib/peer-programming/repository';
 import { reportError } from 'lib/observability/report';
+import { seCardId } from '@ctf/shared';
+import { grantDailyCreditQuietly } from 'lib/today/daily-credit/grant';
 
 type HelperAction = 'take' | 'release' | 'finish';
 type OwnerAction = 'helped' | 'keep' | 'send_back' | 'remove' | 'edit';
@@ -106,6 +108,11 @@ async function applyAndRecord(found: TaskWithGoal, action: Action, userId: strin
   });
   if (action.kind === 'finish') {
     await notifyGoalOwner(found.goalOwnerUserId, found.cohortId, found.task.id);
+  }
+  if (action.kind === 'helped' || action.kind === 'keep') {
+    // A kept result is the owner confirming the task was done: on the day's credit card, its helper
+    // receives the card's 1 ServiceCredit (lib/today/daily-credit/grant.ts).
+    await grantDailyCreditQuietly({ cardId: seCardId('peer-programming', found.task.goalId), askerUserId: userId, helperUserId: found.task.takenByUserId });
   }
   return NextResponse.json({ ok: true });
 }

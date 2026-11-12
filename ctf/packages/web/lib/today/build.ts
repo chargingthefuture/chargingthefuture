@@ -19,6 +19,7 @@ import { utcTodayDay } from './card';
 import { applyLifetimes } from './apply-lifetimes';
 import { applyMemberMarks, applyMemberSaves } from './apply-marks';
 import { readPresence } from './presence';
+import { dailyCreditCardId, markDailyCredit } from './daily-credit/choose';
 
 // The Today read. Every source runs at once and on its own: one that fails leaves its cards out,
 // is reported, and is named in `unavailable` so the screen can say what is missing instead of
@@ -74,7 +75,7 @@ export async function buildToday(viewer: TodayViewer, now = new Date(), day: SeT
   const sources = todaySources(viewer, day, now);
 
   const week = weekTalks(now);
-  const [cardLists, live, room, weekList, weavers, daysWon, mutes, presence, tomorrow] = await Promise.all([
+  const [cardLists, live, room, weekList, weavers, daysWon, mutes, presence, tomorrow, creditCardId] = await Promise.all([
     Promise.all(sources.map((source) => settle(source.name, source.read, unavailable))),
     settle<SeTodayBroadcast | null>('beacon', () => broadcast(), unavailable),
     settle<SeTodayRoom>('chyme', () => mainRoom(nextTalk(week), true), unavailable),
@@ -88,12 +89,14 @@ export async function buildToday(viewer: TodayViewer, now = new Date(), day: SeT
     // Reported but never named: the pill is simply not shown when the count is unknown.
     settle('presence', () => readPresence(viewer.userId), []),
     settle('stories-tomorrow', () => storiesTomorrow(day), []),
+    // Reported but never named: with no answer, no card shows the day's credit.
+    settle('daily-credit', () => dailyCreditCardId(now), []),
   ]);
 
   const mineIds = new Set((cardLists[sources.length - 1] ?? []).map((card) => card.id));
   const lasting = await applyLifetimes(cardLists.flatMap((list) => list ?? []), viewer, mineIds, now);
   const marked = await applyMemberSaves(viewer, await applyMemberMarks(viewer, lasting, day.startIso));
-  const cards = seApplyMutes(marked, mutes ?? [])
+  const cards = seApplyMutes(markDailyCredit(marked, creditCardId), mutes ?? [])
     .sort((a, b) => b.createdAtIso.localeCompare(a.createdAtIso))
     .slice(0, TODAY_MAX_CARDS);
 

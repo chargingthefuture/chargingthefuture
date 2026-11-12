@@ -315,6 +315,36 @@ contracts:
     retentionClass: audit_long_lived
     idempotency: true
 
+
+  - pluginId: service-credits
+    command: service-credits.today.daily-credit.grant
+    version: 1.0.0
+    description: "1 ServiceCredit, newly created through governance.mint.grant (never taken from the asker; credits are not money), for the member who helped on the day's Today credit card once its asker confirms it was done (owner decisions, 2026-11-11). The day's credit card is the oldest open ask on Today that day, the same for everyone (today_daily_credit_cards). Confirming is a PeerProgramming task result kept (helped or keep) on that goal, its SocketRelay fulfillment resolved successful by the requester, or the ask closed as done from Today, where the helper is the first other member who answered I can help. Once per card: the helper is stamped on the card's earliest day before the grant, and the grant's idempotency key is card + day + helper under the fixed actor today-daily-credit. A helper not yet approved in Unlock is held and granted when Unlock approves them (unlock-approval-interface.ts). No route of its own; runs inside the three confirm routes and the approval catch-up. Writes a service_credits_admin_audit_trail row."
+    inputSchema:
+      cardId:
+        type: string
+        required: true
+      askerUserId:
+        type: string
+        required: true
+      helperUserId:
+        type: string
+        required: true
+    outputSchema:
+      status:
+        type: string
+        enum: [granted, held, not_credit_card, failed]
+    dataAccess:
+      - today_daily_credit_cards
+      - commons_item_answers
+      - service_credits_wallets
+      - service_credits_governance_events
+      - service_credits_treasury_config
+      - service_credits_command_idempotency
+      - service_credits_admin_audit_trail
+    purpose: today_daily_credit
+    retentionClass: until_account_deletion
+    idempotency: true
   - pluginId: service-credits
     command: governance.burn
     version: 1.0.0

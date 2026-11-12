@@ -197,6 +197,13 @@ function mapCohortRow(row: CohortRow): PeerProgrammingCohort {
   };
 }
 
+// The standing cohort's id when it exists, without creating it; null otherwise. Read by Today to find
+// the goals everyone sees, for the day's credit card.
+export async function findStandingCohortId(): Promise<string | null> {
+  const result = await queryDb<{ id: string }>(`SELECT id FROM peer_programming_cohorts WHERE is_standing = TRUE LIMIT 1`);
+  return result.rows[0]?.id ?? null;
+}
+
 // Find-or-create the single standing cohort (is_standing = TRUE), idempotent. Returns the existing
 // standing row if there is one, otherwise inserts it with label C1, fallback_open = TRUE,
 // is_standing = TRUE. The standing cohort is not week-scoped: its week_start_date is just its

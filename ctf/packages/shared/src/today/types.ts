@@ -52,6 +52,9 @@ export type SeTodayCard = {
   // Large figures drawn above the title, each with its line, e.g. "36%" and "of a small country's
   // skills covered" on the Our numbers card (approved board "More cards in Today").
   figures?: SeTodayFigure[];
+  // Set only on the day's credit card (seDailyCreditDay): the one ask that carries 1 ServiceCredit for
+  // the member who helps, once its author confirms it was done.
+  dailyCredit?: boolean;
 };
 
 export type SeTodayFigure = { value: string; line: string };

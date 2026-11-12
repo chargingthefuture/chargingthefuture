@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { SE_CARD_WORDS, SE_MUTE_WORDS, seCanConfirmHelped, seCardSheetLine, type SeCardAnswer, type SeCardAnswerKind, type SeCardConversation, type SeTodayCard } from '@ctf/shared';
+import { SE_CARD_WORDS, SE_MUTE_WORDS, seCanConfirmHelped, seCardSheetLine, seDailyCreditPill, type SeCardAnswer, type SeCardAnswerKind, type SeCardConversation, type SeTodayCard } from '@ctf/shared';
 import { SeAvatar } from '../../shared/se-avatar';
 import { CardTalk } from './card-sheet-talk';
 import { SheetYours } from './card-sheet-yours';
@@ -174,6 +174,7 @@ type SheetProps = { card: SeTodayCard; viewerId: string; onClose: () => void; on
 export function CardSheet({ card, viewerId, firstAnswer, onClose, onChanged, onMutePost }: SheetProps & { firstAnswer: SeCardAnswerKind | null; onChanged?: () => void }) {
   const talk = useCardConversation(card.id, firstAnswer);
   const closeRef = useRef<HTMLButtonElement | null>(null);
+  const credit = seDailyCreditPill(card, viewerId);
   useEffect(() => {
     closeRef.current?.focus();
     const onKey = (event: KeyboardEvent) => (event.key === 'Escape' ? onClose() : undefined);
@@ -204,6 +205,7 @@ export function CardSheet({ card, viewerId, firstAnswer, onClose, onChanged, onM
         <div className={styles.text}>
           <h2 className={styles.title}>{card.title}</h2>
           {card.body ? <p className={styles.body}>{card.body}</p> : null}
+          {credit ? <span className={styles.creditPill}>{credit}</span> : null}
           <Link href={card.href} className={styles.openIn}>
             {SE_CARD_WORDS.openIn(card.source)}
           </Link>

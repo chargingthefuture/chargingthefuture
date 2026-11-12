@@ -767,3 +767,12 @@ totals (AD-28) still count each mark.
 4. Set A's phone or computer clock to a time zone where it is already the next day while UTC is still today, and reload Today. Answer the 21 Questions card. Do the same signed out.
 **Expected:** Step 1: the story and the numbers card show a check mark on their dot at once and on the other device after a reload; B's ask shows a plain dot with no check mark, and tapping the dot does nothing. Step 2: the admin sees A's answer "says this helped" with Confirm beside it; A sees no Confirm. Step 3: Confirm turns to Confirmed for both, and the admin's Days won reads 10 action minutes more after the next read. A confirmation from anybody who did not write the card is refused (403 `not_author`). Step 4: the five stories, the puzzle of the day, today's question and the closing "N more stories open at your midnight" are the next day's, signed in and signed out, and the answer is taken.
 **Result:** web ☐ android ☐ — notes:
+
+## AD-37 · The day's credit card on Today (added 2026-11-12)
+**Role:** two members, one of them the author of the oldest open ask on Today · **Surfaces:** web, android
+**Steps:**
+1. As the member who is not the author, open Today twice in one day and open that ask in place.
+2. As the author, open Today and the same card.
+3. Delete the author's account in Settings.
+**Expected:** Step 1 shows "+1 credit when <author> confirms it was done" on that one card, both times, and on no other card. Step 2 shows no such line. Step 3 lists "the day's credit cards you posted or helped on" under Card conversations on Today, and removes them. The full credit check is ServiceCredits SC-10b.
+**Result:** web ☐ android ☐ — notes:

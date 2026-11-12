@@ -2,7 +2,7 @@
 
 import { useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { SE_CARD_WORDS, SE_MUTE_WORDS, seCanSave, seCardAnswerKind, seCardShownDone, seCardTakesCheckMark, seIsMoodCard, seCardOpensSheet, seNewCommentsLine, type SeCardAnswerKind, type SeTodayCard } from '@ctf/shared';
+import { SE_CARD_WORDS, SE_MUTE_WORDS, seCanSave, seCardAnswerKind, seCardShownDone, seCardTakesCheckMark, seIsMoodCard, seCardOpensSheet, seDailyCreditPill, seNewCommentsLine, type SeCardAnswerKind, type SeTodayCard } from '@ctf/shared';
 import { SeAvatar } from '../../shared/se-avatar';
 import { QuestionsPanel, isQuestionsCard } from './questions-panel';
 import { CardSheet } from './card-sheet';
@@ -246,6 +246,7 @@ function PlainCard({
   const color = `var(--se-kind-${card.kind})`;
   // A card the server marks done (a 21 Questions answer) stays done: the answer is final.
   const done = read || seCardShownDone(card);
+  const credit = seDailyCreditPill(card, viewerId);
   return (
     <article className={styles.card}>
       <DoneDot card={card} done={done} color={color} onToggleDone={onToggleDone} />
@@ -253,6 +254,7 @@ function PlainCard({
       <button type="button" className={styles.textButton} aria-expanded={opensSheet ? undefined : open} aria-haspopup={opensSheet ? 'dialog' : undefined} onClick={toggle}>
         <CardText card={card} open={open} color={color} />
       </button>
+      {credit ? <span className={styles.creditPill}>{credit}</span> : null}
       {isQuestionsCard(card) ? <QuestionsPanel card={card} open={open} onOpen={() => setOpen(true)} onChanged={onChanged ?? (() => undefined)} /> : null}
       <CardFoot card={card} onAnswer={opensSheet ? openSheet : null} onSave={onSave} onHide={onHide} />
       {sheet ? (

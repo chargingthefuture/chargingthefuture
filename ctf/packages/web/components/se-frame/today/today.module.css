@@ -901,3 +901,14 @@
   line-height: 1.35;
   color: var(--se-soft);
 }
+
+/* The day's credit card: the one ask that carries 1 ServiceCredit for the member who helps. */
+.creditPill {
+  align-self: flex-start;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--se-sunk);
+  color: var(--se-ink);
+  font-size: 12px;
+  font-weight: 600;
+}

@@ -30,6 +30,7 @@ export type SeTodayCard = {
     saved?: boolean;
     goal?: SeTodayGoal;
     figures?: SeTodayFigure[];
+    dailyCredit?: boolean;
 };
 export type SeTodayFigure = {
     value: string;

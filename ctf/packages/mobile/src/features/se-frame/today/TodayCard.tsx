@@ -21,6 +21,7 @@ import {
   seIsMoodCard,
   seCardOpensSheet,
   seCardTakesCheckMark,
+  seDailyCreditPill,
   seNewCommentsLine,
   type SeCardAnswerKind,
   type SeThemeTokens,
@@ -261,6 +262,7 @@ export function TodayCard({
     setOpen((value) => !value);
   };
   const mutePost = mutePostFor(card, viewerId, onMutePost);
+  const credit = seDailyCreditPill(card, viewerId);
 
   const dot = <DoneDot t={t} s={s} card={card} read={read} color={color} onToggleDone={onToggleDone} />;
   if (card.goal) return <GoalCard t={t} card={{ ...card, goal: card.goal }} viewerId={viewerId} dot={dot} onOpenLink={onOpenLink} onChanged={onChanged} />;
@@ -293,6 +295,7 @@ export function TodayCard({
       </View>
       {menu ? <CardMenu s={s} card={card} canReport={canReport} onHide={onHide} onMute={onMute} onMutePost={mutePost} /> : null}
       <CardText t={t} s={s} card={card} open={open} opensSheet={opensSheet} onPress={toggle} />
+      {credit ? <Text style={s.creditPill}>{credit}</Text> : null}
       {isQuestionsCard(card) ? <QuestionsPanel t={t} card={card} open={open} onOpen={() => setOpen(true)} onChanged={onChanged ?? noop} /> : null}
       <CardFoot t={t} s={s} card={card} onOpenLink={onOpenLink} onAnswer={opensSheet ? openSheet : null} onSave={onSave} onHide={onHide} />
       {sheet ? (
@@ -327,6 +330,8 @@ function makeStyles(t: SeThemeTokens) {
     title: { fontSize: 17, lineHeight: 22, color: t.ink, fontFamily: SE_FONT.sansBold },
     body: { fontSize: 14, lineHeight: 20, color: t.soft, fontFamily: SE_FONT.sans },
     newComments: { fontSize: 12, color: t.kind.story, fontFamily: SE_FONT.sansBold },
+    // The day's credit card: the one ask that carries 1 ServiceCredit for the member who helps.
+    creditPill: { alignSelf: 'flex-start', paddingVertical: 4, paddingHorizontal: 10, borderRadius: 999, overflow: 'hidden', backgroundColor: t.sunk, color: t.ink, fontSize: 12, fontFamily: SE_FONT.sansSemi },
     actions: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 },
     action: {
       minHeight: 44,

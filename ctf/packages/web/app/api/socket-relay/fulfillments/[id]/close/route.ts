@@ -3,6 +3,8 @@ import { ensureMutationCsrf, requireSocketRelayReadAccess, socketRelayErrorRespo
 import { insertSocketRelayAudit, resolveFulfillment } from 'lib/socket-relay/repository';
 import type { SocketRelayResolveOutcome } from 'lib/socket-relay/types';
 import { reportError } from 'lib/observability/report';
+import { seCardId } from '@ctf/shared';
+import { grantDailyCreditQuietly } from 'lib/today/daily-credit/grant';
 
 type RouteProps = {
   params: Promise<{ id: string }>;
@@ -50,6 +52,11 @@ export async function POST(request: Request, { params }: RouteProps) {
       targetId: id,
       metadata: { outcome },
     });
+    if (outcome === 'successful' && item.requesterUserId === gate.auth.userId) {
+      // The requester confirmed it was done: on the day's credit card, the fulfiller receives its 1
+      // ServiceCredit (lib/today/daily-credit/grant.ts). An admin resolving it is not the asker confirming.
+      await grantDailyCreditQuietly({ cardId: seCardId('socket-relay', item.requestId), askerUserId: item.requesterUserId, helperUserId: item.fulfillerUserId });
+    }
     return NextResponse.json({ ok: true, item }, { status: 200 });
   } catch (error) {
     reportError(error, { area: 'socket-relay', op: 'fulfillments_id_close' });
