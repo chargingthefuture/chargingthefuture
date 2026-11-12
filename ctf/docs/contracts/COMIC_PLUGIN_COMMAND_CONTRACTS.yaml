@@ -283,6 +283,34 @@ contracts:
     idempotency: true
 
   - pluginId: comic
+    command: comic.contribution.story.set
+    version: 1.0.0
+    description: >-
+      Turn "Also show it as a story on Today" on or off for one of the caller's own contributions
+      (3.1 Today). POST /api/comic/shared-writing/[id]/story with { show }. Scoped to the caller in
+      the query. Turning it on stamps story_consent_version and story_consent_at; turning it off
+      clears both. Only a contribution waiting to be read or accepted can be turned on. A story shows
+      on signed-in Today only when the contribution is accepted, the knowledge row is still on, and
+      the writer's Unlock is approved; never signed out.
+    inputSchema:
+      contributionId:
+        type: string
+        required: true
+      show:
+        type: boolean
+        required: true
+    outputSchema:
+      ok:
+        type: boolean
+      showAsStory:
+        type: boolean
+    dataAccess:
+      - comic_contributions
+    purpose: assistant_knowledge_contribution
+    retentionClass: transactional_long_lived
+    idempotency: true
+
+  - pluginId: comic
     command: comic.contribution.review
     version: 1.0.0
     description: >-

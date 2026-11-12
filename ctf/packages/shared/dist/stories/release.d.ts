@@ -10,6 +10,16 @@ export type SeStoryPost = {
     url: string;
     text: string;
 };
+export declare const SE_MEMBER_STORY_COLLECTION = "member";
+export type SeMemberStory = {
+    id: string;
+    title: string;
+    text: string;
+    acceptedAtIso: string;
+};
+export declare function seStoryQueue(posts: readonly SeStoryPost[], members: readonly SeMemberStory[]): SeStoryPost[];
+export declare function seMemberStorySlug(id: string): string;
+export declare function seMemberStoryId(slug: string): string | null;
 export declare function seParseStoryPosts(body: unknown): SeStoryPost[] | null;
 export declare function seLocalDay(now?: Date): string;
 export declare function seStoryDayIndex(day: string): number;
