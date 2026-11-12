@@ -434,6 +434,29 @@ rather than two copies to keep in step. The admin landing also lists **Shared Wr
 
 ---
 
+## CMC-A9 · Turn the drafting endpoint on and off (added 2026-11-12)
+**Role:** admin
+**Precondition:** `OLLAMA_BASE_URL` is the RunPod serverless address and `OLLAMA_API_KEY` is set.
+
+**Steps:**
+1. Open `/admin/comic` and read the line under "AI Assistant drafts awaiting human review".
+2. If it reads "Drafting endpoint on · up to 1 worker", tap **Turn off**.
+3. Open the endpoint in the RunPod dashboard and read Max workers.
+4. Back on `/admin/comic`, tap **Turn on**, then read Max workers in RunPod again.
+5. Open the **Audit log** panel on `/admin/comic/knowledge`.
+
+**Expected:**
+- Step 1: the line says on with the worker count, or "off · 0 max workers", beside one button.
+- Step 2: the line turns red and reads "Drafting endpoint off · 0 max workers"; the button reads **Turn on**.
+- Step 3: RunPod shows 0. Step 4: the line reads on again and RunPod shows 1.
+- No other RunPod endpoint on the account changed (One Percent's endpoints keep their max workers).
+- Step 5: two rows "Turned the drafting endpoint on or off", one "off, 0 max workers" and one "on, 1 max workers".
+- With `OLLAMA_API_KEY` refused by RunPod, the line says RunPod answered 401 or 403 and names the key.
+
+**Result:** web ☐
+
+---
+
 ## CMC-C5 · Withdrawal actually stops the assistant quoting you
 **Role:** signed-in member (plus an admin to promote an entry, once the review surface ships)
 **Steps:**
