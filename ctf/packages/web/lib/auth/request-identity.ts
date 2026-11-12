@@ -144,7 +144,7 @@ export async function resolveRequestIdentity(): Promise<RequestIdentity> {
 }
 
 // Lightweight: read only the request's user id from the middleware's headers, for
-// per-user feature-flag targeting (e.g. demo-mode). Unlike resolveRequestIdentity it
+// per-account routing (the demo account list). Unlike resolveRequestIdentity it
 // does NOT verify a bearer token (no JWT, no DB); the stamp check is one cached digest
 // comparison, so it is safe on hot paths like DB-pool selection. Returns null for a
 // signed-out or unstamped request, and outside a request scope (seed scripts,

@@ -439,16 +439,15 @@ not by itself proof of anything (Quora sometimes deletes accounts), so there is 
 penalty; the admin decides and Revoke is the manual action.
 **Result:** web ☐ — notes:
 
-### UNLOCK-A5c · A rejected or revoked member loses access even where Unleash is set up (added 2026-10-05)
+### UNLOCK-A5c · A rejected or revoked member loses access (added 2026-10-05, updated 2026-11-12)
 **Role:** admin / reviewer, then the member · **Surfaces:** web
-**Precondition:** an environment with Unleash configured and the `feature-unlock-quora-onboarding`
-flag turned on; a test member who was approved.
+**Precondition:** a test member who was approved.
 **Steps:**
 1. As the admin, use **Revoke reward** on that member (UNLOCK-A5), or reject their submission.
 2. As the member, reload the app and open a gated plugin such as Directory.
 **Expected:** The member is on support-only access and the gated plugin refuses them, matching what
-the admin screen shows. The stored submission decides whenever one exists; the Unleash flag only
-counts for a member with no submission. Approving a member no longer adds them to the flag.
+the admin screen shows. The stored submission decides whenever one exists; with none, only the
+Commons fallback (asked for help, or came back a second day) opens anything. No flag service is read.
 **Result:** web ☐ — notes:
 
 ### UNLOCK-A6 · Search the submissions list
@@ -640,6 +639,23 @@ closing the panel leaves only the header line, so the review queue sits directly
 two totals agree. A non-admin cannot reach the
 page or the route. If the auth provider secret is missing from the runtime, the panel opens
 itself and prints the reason in plain words, and the rest of the admin page still loads.
+**Result:** web ☐ — notes:
+
+### UNLOCK-A9d · Switch an account to demo data from its sign-up card (added 2026-11-12)
+**Role:** admin, then the switched account · **Surfaces:** web (admin surface) — web-only, no Android admin (rule 105)
+**Precondition:** a second test account you can sign in as; the demo schema is provisioned.
+**Steps:**
+1. On `/admin/unlock`, find the test account in the sign-up list. Its card shows **Demo data: off**
+   and "This account sees real data."
+2. Press **Demo data: off**. It reads **Demo data: on** and "This account sees demo data on every
+   screen."
+3. Sign in as that account (or reload if already signed in) and open any admin screen or Directory.
+4. As the admin again, press **Demo data: on** to turn it off; sign in as the account and reload.
+**Expected:** Step 2 records `POST /api/unlock/admin/demo-accounts` with an `unlock.admin.signups.demo`
+audit row. Step 3: the account sees the seeded demo data, and an admin screen shows the demo banner;
+other accounts are unaffected. Step 4: within a minute the account sees real data again. The switch
+does not change the account's access, its submission, or whether it is counted; **Mark as demo /
+test** stays a separate control.
 **Result:** web ☐ — notes:
 
 ### UNLOCK-A9b · Ban an account from the sign-up list, and have the ban hold at the auth provider

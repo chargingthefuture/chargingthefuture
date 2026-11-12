@@ -6,7 +6,7 @@ name: Expo — OTA Update
 # whenever native dependencies or config change.
 #
 # There is ONE environment: production. `main` publishes to the `production`
-# channel. Demo/sample data is a runtime Unleash flag, not a separate channel.
+# channel. Demo/sample data is a per-account switch, not a separate channel.
 
 on:
   push:

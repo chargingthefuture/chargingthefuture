@@ -3,6 +3,8 @@
 **Issue:** #101 — Re-scope "unlock" as a user-facing feature flag (Unleash)  
 **Date:** 2026-05-25  
 
+> **Superseded 2026-11-12.** The Unleash flag service was removed and `getUnlockAccessTier` no longer reads any flag: the stored submission row decides, then the Commons fallback. This file is the record of the May 2026 plan.
+
 ## Summary
 Re-scope the hand-rolled verification-queue "unlock" plugin to be driven by Unleash feature flags + OpenFeature client, making unlock decisions operator-driven (via flag targeting) rather than bespoke code. This session establishes foundation work; UI implementation awaits design pass.
 

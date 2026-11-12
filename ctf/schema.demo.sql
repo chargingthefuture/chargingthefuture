@@ -1781,6 +1781,19 @@ ALTER TABLE IF EXISTS unlock_excluded_accounts ADD COLUMN IF NOT EXISTS excluded
 ALTER TABLE IF EXISTS unlock_excluded_accounts ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS unlock_excluded_accounts ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
+-- Accounts that see demo data. An admin switches an account on from its card on the Unlock admin;
+-- every request from that account then reads and writes the demo schema and uses the Stream and
+-- Formance staging instances (lib/demo-mode/demo-accounts.ts). It replaced the flag service's
+-- demo-mode targeting. Production schema only, always named with public. so the demo schema never
+-- holds a copy: the app reads it from the public pool, before it knows which schema a request uses.
+CREATE TABLE IF NOT EXISTS public.demo_mode_accounts (
+  user_id TEXT PRIMARY KEY,
+  added_by_user_id TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE IF EXISTS public.demo_mode_accounts ADD COLUMN IF NOT EXISTS added_by_user_id TEXT;
+ALTER TABLE IF EXISTS public.demo_mode_accounts ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
 -- Accounts an admin has banned outright. Separate from the demo/test exclusion above and from an
 -- account deletion, because it means something else: a real person really signed up, was judged, and
 -- should not hold a login anywhere this project runs.
@@ -11665,3 +11678,6 @@ ALTER TABLE IF EXISTS member_profile_prompts ADD COLUMN IF NOT EXISTS needs TEXT
 ALTER TABLE IF EXISTS member_profile_prompts ADD COLUMN IF NOT EXISTS ask_me_about TEXT NOT NULL DEFAULT '';
 ALTER TABLE IF EXISTS member_profile_prompts ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
+
+-- ── post migration: 0096_demo_mode_accounts.sql ──
+-- [demo-skip: names production (public.) tables directly; it repairs production data and has no meaning here]

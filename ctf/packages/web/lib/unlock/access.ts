@@ -1,5 +1,3 @@
-import { UNLOCK_FLAGS } from '@ctf/shared';
-import { evaluateBooleanFlag } from 'lib/feature-flags';
 import { hasUnlockCommonsFallback } from './help-requests';
 import { getEffectiveUnlockAccessTier } from './repository';
 import type { UnlockAccessTier } from './types';
@@ -10,26 +8,12 @@ import type { UnlockAccessTier } from './types';
 //  1. Stored submission row — read first, with lazy expiry applied by getEffectiveUnlockAccessTier.
 //     When a row exists it decides: an approval stores `approved_full`, and a rejection, a reward
 //     revoke or a re-submission stores a lower tier that nothing else may override.
-//  2. Unleash flag — consulted only when the member has no row at all, so a member added to the
-//     flag by hand in the Unleash dashboard still gets full access. Approval used to add members to
-//     the flag and nothing took them out again, so a flag-first order let a rejected or revoked
-//     member keep full access; the row now always wins.
-//  3. No row and no flag — the Commons fallback below, or null.
+//  2. No row, or a row below full access — the Commons fallback below, or the stored tier.
+// (A hand-kept flag service list once granted full access to a member with no row. It was removed
+// with the flag service; approval has always stored `approved_full`, so the row is the record.)
 export async function getUnlockAccessTier(userId: string): Promise<UnlockAccessTier | null> {
 	const storedTier = await getEffectiveUnlockAccessTier(userId);
 	if (storedTier === 'approved_full') return storedTier;
-
-	if (storedTier === null) {
-		try {
-			const flagEnabled = await evaluateBooleanFlag(UNLOCK_FLAGS.QUORA_ONBOARDING, false, {
-				targetingKey: userId,
-			});
-			if (flagEnabled) return 'approved_full';
-		} catch (error) {
-			// A flag-backend failure must never lock out approved users; fall through to the DB tier.
-			console.error('[unlock] flag evaluation failed; falling back to DB access tier', error);
-		}
-	}
 
 	if (storedTier === 'locked_support_only') return storedTier;
 

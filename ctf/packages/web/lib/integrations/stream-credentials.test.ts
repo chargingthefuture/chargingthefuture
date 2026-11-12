@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const isDemoMode = vi.fn<() => Promise<boolean>>();
-vi.mock('lib/feature-flags', () => ({ isDemoMode: () => isDemoMode() }));
+vi.mock('lib/demo-mode/demo-accounts', () => ({ isDemoMode: () => isDemoMode() }));
 
 import { runWithForcedPool } from 'lib/db/postgres';
 import { resolveStreamCredentials } from './stream-credentials';

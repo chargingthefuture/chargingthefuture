@@ -4,7 +4,7 @@ This project uses cloud-first mobile delivery so development can proceed without
 
 There is **one environment: production**. A preview build is just an install channel for reviewers —
 it points at the same production backend and the same Clerk sign-in key as a release build. Showing
-sample/demo data is a runtime Unleash flag, not a separate deploy environment, so there is no
+sample/demo data is a per-account switch, not a separate deploy environment, so there is no
 staging or preview backend.
 
 ## Required Secrets

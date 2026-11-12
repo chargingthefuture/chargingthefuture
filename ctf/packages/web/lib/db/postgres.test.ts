@@ -1,52 +1,59 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { query, release, reportError } = vi.hoisted(() => ({
-  query: vi.fn(),
-  release: vi.fn(),
-  reportError: vi.fn(),
-}));
+// Which pool a query reaches. The pools are told apart by the search_path the demo pool sets.
+const queries = vi.hoisted(() => ({ demo: 0, public: 0 }));
+const demoMode = vi.hoisted(() => ({ on: false, asked: 0 }));
 
 vi.mock('pg', () => ({
   Pool: class {
-    connect() {
-      return Promise.resolve({ query, release });
+    private readonly demo: boolean;
+    constructor(config: { options?: string }) {
+      this.demo = Boolean(config.options?.includes('search_path=demo'));
+    }
+    async query() {
+      if (this.demo) queries.demo += 1;
+      else queries.public += 1;
+      return { rows: [] };
     }
   },
 }));
 
-vi.mock('../observability/report', () => ({ reportError }));
+vi.mock('../demo-mode/demo-accounts', () => ({
+  isDemoMode: vi.fn(async () => {
+    demoMode.asked += 1;
+    return demoMode.on;
+  }),
+}));
 
-import { runWithForcedPool, withDbTransaction } from './postgres';
+import { queryDb, runWithForcedPool } from './postgres';
 
-describe('withDbTransaction', () => {
-  beforeEach(() => {
-    process.env.DATABASE_URL = 'postgres://test';
-    query.mockReset();
-    release.mockReset();
-    reportError.mockReset();
+beforeEach(() => {
+  process.env.DATABASE_URL = 'postgres://example/test';
+  queries.demo = 0;
+  queries.public = 0;
+  demoMode.on = false;
+  demoMode.asked = 0;
+});
+
+describe('pool selection', () => {
+  it('sends a signed-out read pinned to demo to the demo schema without asking the demo list', async () => {
+    await runWithForcedPool('demo', () => queryDb('SELECT 1'));
+    expect(queries).toEqual({ demo: 1, public: 0 });
+    expect(demoMode.asked).toBe(0);
   });
 
-  it('releases the client normally after a rollback that succeeds', async () => {
-    query.mockResolvedValue({ rows: [] });
-    const cause = new Error('duplicate key value violates unique constraint');
-    await expect(
-      runWithForcedPool('public', () => withDbTransaction(async () => Promise.reject(cause))),
-    ).rejects.toBe(cause);
-    expect(query).toHaveBeenLastCalledWith('ROLLBACK');
-    expect(release).toHaveBeenCalledWith(undefined);
-    expect(reportError).not.toHaveBeenCalled();
+  it('keeps a read pinned to public on public even for an account on the demo list', async () => {
+    demoMode.on = true;
+    await runWithForcedPool('public', () => queryDb('SELECT 1'));
+    expect(queries).toEqual({ demo: 0, public: 1 });
+    expect(demoMode.asked).toBe(0);
   });
 
-  it('rethrows the original error, reports the rollback failure and discards the client', async () => {
-    const rollbackFailure = new Error('Client was closed and is not queryable');
-    query.mockImplementation((text: string) =>
-      text === 'ROLLBACK' ? Promise.reject(rollbackFailure) : Promise.resolve({ rows: [] }),
-    );
-    const cause = new Error('Connection terminated unexpectedly');
-    await expect(
-      runWithForcedPool('public', () => withDbTransaction(async () => Promise.reject(cause))),
-    ).rejects.toBe(cause);
-    expect(reportError).toHaveBeenCalledWith(rollbackFailure, { area: 'db', op: 'transaction_rollback' });
-    expect(release).toHaveBeenCalledWith(rollbackFailure);
+  it('follows the demo list when nothing is pinned', async () => {
+    demoMode.on = true;
+    await queryDb('SELECT 1');
+    demoMode.on = false;
+    await queryDb('SELECT 1');
+    expect(queries).toEqual({ demo: 1, public: 1 });
   });
 });

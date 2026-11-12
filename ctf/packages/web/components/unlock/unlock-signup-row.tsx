@@ -5,6 +5,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { getUnlockTokens } from './unlock-shared';
 import { UnlockSignupAddUrl } from './unlock-signup-add-url';
 import { UnlockSignupBan } from './unlock-signup-ban';
+import { UnlockSignupDemo } from './unlock-signup-demo';
 
 // Color and wording for what happened to this person's Quora URL, including the case this panel exists
 // for: they signed up and never submitted one.
@@ -124,12 +125,14 @@ export function UnlockSignupRow({
   account,
   busy,
   onToggleExcluded,
+  onToggleDemo,
   onToggleBanned,
   onAddUrl,
 }: {
   account: UnlockSignupAccount;
   busy: boolean;
   onToggleExcluded: (userId: string, excluded: boolean) => void;
+  onToggleDemo: (userId: string, demo: boolean) => void;
   onToggleBanned: (userId: string, banned: boolean) => void;
   onAddUrl: (userId: string, url: string) => void;
 }) {
@@ -191,6 +194,8 @@ export function UnlockSignupRow({
       >
         {account.excluded ? 'Count this account again' : 'Mark as demo / test'}
       </button>
+
+      <UnlockSignupDemo userId={account.userId} demoData={account.demoData} busy={busy} onToggleDemo={onToggleDemo} />
     </div>
   );
 }

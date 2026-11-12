@@ -8,7 +8,6 @@ on **Render** — see `render.yaml` and rule 123. The services deliberately kept
 decision recorded in `render.yaml`) are:
 
 - **Infisical** — self-hosted secrets manager (single source of truth for secrets)
-- **Unleash** — self-hosted feature-flag server
 - **Formance ledger** — the ledger service and its Postgres
 
 ## Web app ("app not loading") goes to Render, not Railway
@@ -23,8 +22,8 @@ When the user says "app not loading", "build error", or similar about the produc
 4. Remember the deploy path: `build-images.yml` builds and pushes the GHCR image and triggers the
    Render deploy; `render-deploy.yml` re-pulls the existing image (e.g. to pick up new env vars).
 
-Debug Railway only when the failing piece is Infisical, Unleash, or the Formance ledger (for
-example: secrets stopped syncing to Render, flags not resolving, ledger API unreachable at
+Debug Railway only when the failing piece is Infisical or the Formance ledger (for
+example: secrets stopped syncing to Render, ledger API unreachable at
 `FORMANCE_API_URL`).
 
 ## Critical: No Railway CLI

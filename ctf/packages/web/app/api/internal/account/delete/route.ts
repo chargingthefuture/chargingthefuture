@@ -73,8 +73,8 @@ async function parseDeleteRequest(request: Request): Promise<{ error: NextRespon
   // `{ "deleteClerk": false }` to delete only the database data and keep the Clerk account.
   const deleteClerk = body.deleteClerk !== false;
 
-  // Which database schema's rows to delete. An internal call has no signed-in user, so demo-mode
-  // targeting never applies here — without this it would always hit production. `target: "demo"`
+  // Which database schema's rows to delete. An internal call has no signed-in user, so the demo
+  // account list never applies here — without this it would always hit production. `target: "demo"`
   // pins the entire deletion to the demo schema (via runWithForcedPool) so a demo test account can be
   // fully wiped, using the exact same registry/orchestrator flow as production. Anything other than
   // "demo" (including the default) targets production. The Clerk identity is global (one instance),
