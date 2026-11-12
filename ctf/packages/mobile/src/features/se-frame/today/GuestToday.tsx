@@ -36,7 +36,7 @@ import Svg, { Path, Rect } from 'react-native-svg';
 
 type Styles = ReturnType<typeof makeStyles>;
 
-// The small tag on sample data: a lock and "Sample", so a visitor reads it as private rather than
+// The small tag on sample data: a lock and "Preview", so a visitor reads it as private rather than
 // empty, as on the web.
 function SampleTag({ s, color }: { s: Styles; color: string }) {
   return (

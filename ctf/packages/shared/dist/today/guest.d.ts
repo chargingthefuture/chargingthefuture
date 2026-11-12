@@ -21,9 +21,9 @@ export declare const SE_GUEST_WORDS: {
     readonly loading: "Loading Today…";
     readonly failed: "Could not load Today.";
     readonly tryAgain: "Try again";
-    readonly sample: "Sample";
-    readonly sampleLabel: "Sample, shown in place of private member data";
-    readonly sampleNote: "Some content is sample data to protect member privacy.";
+    readonly sample: "Preview";
+    readonly sampleLabel: "Preview, shown in place of private member data";
+    readonly sampleNote: "Cards marked Preview show the kind of thing members post. The real ones are private to members.";
     readonly conversation: "Conversation";
     readonly close: "Close";
     readonly signInToWrite: "Sign in to write here";

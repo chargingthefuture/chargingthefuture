@@ -35,7 +35,7 @@ import styles from './today.module.css';
 // member" with Sign up to answer, and People locked until a member is reviewed.
 
 // The small tag on anything read from sample data rather than members' own rows: a lock and
-// "Sample", so a visitor reads it as private rather than empty.
+// "Preview", so a visitor reads it as private rather than empty.
 function SampleTag() {
   return (
     <span className={styles.sampleTag} aria-label={W.sampleLabel} title={W.sampleLabel}>

@@ -23,11 +23,11 @@ export const SE_GUEST_WORDS = {
     loading: 'Loading Today…',
     failed: 'Could not load Today.',
     tryAgain: 'Try again',
-    // The tag on a card or number read from sample data (a lock and "Sample": the real thing is private,
+    // The tag on a card or number read from sample data (a lock and "Preview": the real thing is private,
     // not empty), its spoken label, and the one line under the cards that says why.
-    sample: 'Sample',
-    sampleLabel: 'Sample, shown in place of private member data',
-    sampleNote: 'Some content is sample data to protect member privacy.',
+    sample: 'Preview',
+    sampleLabel: 'Preview, shown in place of private member data',
+    sampleNote: 'Cards marked Preview show the kind of thing members post. The real ones are private to members.',
     // A card opened by a visitor: read only, with the conversation, and Just us two asking for a sign-in.
     conversation: 'Conversation',
     close: 'Close',
