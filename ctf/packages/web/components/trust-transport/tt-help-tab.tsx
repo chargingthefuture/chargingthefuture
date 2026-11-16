@@ -442,7 +442,7 @@ function HelpCard({ request }: { request: AvailableRequest }) {
       )}
       {/* The conversation under this ride's card on Today, the same one in 3.0 and 3.1. */}
       <div style={{ marginTop: 10, color: t.ACCENT }}>
-        <CardConversationToggle source="trust-transport" sourceId={request.id} />
+        <CardConversationToggle source="trust-transport" sourceId={request.id} look={t} />
       </div>
     </div>
   );

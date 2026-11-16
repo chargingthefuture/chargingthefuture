@@ -597,6 +597,28 @@ web ☐
 
 ---
 
+### SR-21 — The request's conversation keeps SocketRelay's 3.0 look (added 2026-11-16)
+
+**Role:** member · **Surfaces:** web (phone width), both themes
+
+**Steps:**
+1. Open `/apps/socket-relay`, find any request on the feed and press **Conversation**.
+2. Read the panel that opens: the Public / Just us two switch, the messages, the "Write in this card" field and the send button.
+3. Write a message and send it, then press **Hide the conversation**.
+4. Open **Yours** and open one of your requests: its conversation shows under it.
+5. Switch the app theme to comic and repeat step 1.
+6. Open the same request's card on Today in the 3.1 app.
+
+**Expected:**
+- Steps 1–5: the panel is drawn like the rest of the SocketRelay page: its dark surface, SocketRelay's accent, square-cornered field and buttons, 1px borders. No 3.1 green or cream colors, no rounded pill field, no rounded 3.1 switch.
+- Step 3: the message is sent and shows in the panel; the words and actions are the same as on Today.
+- Step 5: the comic theme's colors and square corners carry into the panel.
+- Step 6: Today's card sheet still shows the 3.1 look, with the message from step 3 in it.
+
+web ☐
+
+---
+
 ### SR-DEL · Account deletion clears the Stream chat copy (privacy)
 **Role:** member · **Surfaces:** api/data. **Precondition:** a test member who has sent at least one
 SocketRelay fulfillment message; access to the Stream dashboard for the app behind `STREAM_API_KEY`.

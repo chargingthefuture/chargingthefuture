@@ -12,7 +12,7 @@ import { getApiBaseUrl } from '../../../auth/authedFetch';
 import { reportError } from '../../../observability/report';
 import { CardTalk } from './CardSheetTalk';
 import { SheetYours } from './CardSheetYours';
-import { makeCardSheetStyles, type CardSheetStyles } from './cardSheetStyles';
+import { makeCardSheetStyles, type CardSheetStyles, type CardTalkInk, type CardTalkStyles } from './cardSheetStyles';
 import { useCardConversation, type CardConversation } from './useCardConversation';
 
 export function absoluteCardLink(href: string): string {
@@ -97,7 +97,7 @@ function SheetHead({ t, s, card, viewerId, talk, onClose, onMutePost }: HeadProp
   );
 }
 
-type AnswersProps = { s: CardSheetStyles; conversation: SeCardConversation; busy: boolean; onTalk: (_id: string) => void; onConfirm: (_id: string) => void };
+type AnswersProps = { s: CardTalkStyles; conversation: SeCardConversation; busy: boolean; onTalk: (_id: string) => void; onConfirm: (_id: string) => void };
 
 // Confirm beside a "This helped me" for the card's author, Confirmed once it is.
 function HelpedConfirm({ s, conversation, answer, busy, onConfirm }: Omit<AnswersProps, 'onTalk'> & { answer: SeCardAnswer }) {
@@ -158,7 +158,7 @@ type SheetProps = {
 
 // Who answered and the conversation: the same wherever it is shown, in this sheet on Today and in the
 // panel on the plugin's own page (CardConversationPanel.tsx), as on the web.
-export function CardConversationView({ t, s, talk }: { t: SeThemeTokens; s: CardSheetStyles; talk: CardConversation }) {
+export function CardConversationView({ t, s, talk }: { t: CardTalkInk; s: CardTalkStyles; talk: CardConversation }) {
   const [partner, setPartner] = useState<string | null>(null);
   const talkTo = async (accountId: string) => {
     const open = talk.conversation?.pairs.some((pair) => pair.partnerId === accountId);

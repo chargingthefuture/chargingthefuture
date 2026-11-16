@@ -435,6 +435,7 @@ Demo schema (`ctf/scripts/seedDemo.mjs`, `seedPeerProgrammingGoalBoard`): finds 
 
 ## Change Log
 
+- 2026-11-16: **The board keeps its 3.0 look in the goal's conversation and the share picture sheet.** Owner report: 3.1 pieces drawn inside this 3.0 page mixed the two designs. The conversation under a selected goal and the "Share this goal" sheet now take the board's own tokens (`look`) on web and Android: on web `card-conversation-classic.module.css` and `goal-share-sheet-classic.module.css`, on Android `cardTalkClassicStyles.ts` and the classic styles in `GoalShareSheet.tsx`. Behavior and words are unchanged; the picture that is saved is the same 3.1 picture as from Today. Today's sheets are unchanged. No route or table changed.
 - 2026-11-12: **Links in a goal are for Weavers of the Commons (owner decision).** Per the 3.1 plan's Access table, only badge holders put links in posts. `POST /api/peer-programming/goals`, which also carries an ask's tasks from + New, refuses a title or task with a link from anybody else with 403 `weavers_only` and the plan's words ("Links in posts are for Weavers of the Commons. Take the link out to post this."). Admins are held to it too. + New shows the refusal on web and Android. No table changed.
 
 - 2026-11-11: **The "with you this week" card on Today (With you this week on Today).** The 3.1 plan shows

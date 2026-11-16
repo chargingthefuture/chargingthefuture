@@ -3,8 +3,9 @@
 import { useState } from 'react';
 import { SE_WW_ADMIN_WORDS as W, seWwHelpedCount, seWwPendingMeta } from '@ctf/shared';
 import { reasonText } from 'lib/errors/client-failure';
-import { seThemeVars } from '../se-theme-vars';
-import { useSeTheme } from '../use-se-theme';
+import { useTheme } from '@/hooks/useTheme';
+import { classicLookVars } from '@/components/shared/classic-look-vars';
+import { getWhatWorksTokens } from '@/components/what-works/ww-shared';
 import { useWwPending, wwAdminPost, type WwPending, type WwPendingState } from './use-ww-pending';
 import { WwAdminMergeTwo, type WwListedProblem } from './ww-admin-merge-two';
 import styles from './ww-admin.module.css';
@@ -128,7 +129,7 @@ function PendingList({ state, listed, onDone }: { state: WwPendingState; listed:
 }
 
 export function WwAdminNewProblems({ listed, onChanged }: Props) {
-  const { theme } = useSeTheme();
+  const { theme } = useTheme();
   const pending = useWwPending();
   const [showAll, setShowAll] = useState(false);
   const count = pending.state.kind === 'ready' ? pending.state.items.length : 0;
@@ -137,7 +138,7 @@ export function WwAdminNewProblems({ listed, onChanged }: Props) {
     await onChanged();
   };
   return (
-    <section aria-labelledby="se-ww-new" className={styles.screen} style={seThemeVars(theme.color, theme.mode)}>
+    <section aria-labelledby="se-ww-new" className={styles.screen} style={classicLookVars(getWhatWorksTokens(theme))}>
       <div className={styles.head}>
         <span className={styles.eyebrow}>{W.eyebrow}</span>
         <h2 id="se-ww-new" className={styles.title}>

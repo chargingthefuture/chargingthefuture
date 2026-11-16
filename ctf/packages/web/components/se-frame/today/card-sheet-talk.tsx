@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { SE_CARD_MESSAGE_MAX, SE_CARD_WORDS, seAgo, seCardBlogNote, type SeCardMessage, type SeCardPairThread } from '@ctf/shared';
 import type { CardConversation } from './use-card-conversation';
-import styles from './card-sheet.module.css';
+import { useCardTalkStyles } from './card-talk-styles';
 
 // The conversation half of a card's sheet: the Public / Just us two switch, the messages, the
 // requests to talk just you two, and the composer. Text only for now. A member's own message carries
@@ -18,6 +18,7 @@ type TalkProps = {
 };
 
 function OwnActions({ message, talk, onEdit }: { message: SeCardMessage; talk: CardConversation; onEdit: () => void }) {
+  const styles = useCardTalkStyles();
   const remove = () => {
     if (window.confirm(SE_CARD_WORDS.deleteConfirm)) void talk.remove(message.id);
   };
@@ -36,6 +37,7 @@ function OwnActions({ message, talk, onEdit }: { message: SeCardMessage; talk: C
 }
 
 function EditBubble({ message, talk, onDone }: { message: SeCardMessage; talk: CardConversation; onDone: () => void }) {
+  const styles = useCardTalkStyles();
   const [draft, setDraft] = useState(message.body);
   const text = draft.trim();
   const save = async () => {
@@ -63,6 +65,7 @@ function EditBubble({ message, talk, onDone }: { message: SeCardMessage; talk: C
 type BubbleProps = { message: SeCardMessage; talk: CardConversation; onTalk: (id: string) => void; publicThread: boolean };
 
 function OthersActions({ message, talk, onTalk, publicThread }: BubbleProps) {
+  const styles = useCardTalkStyles();
   const [reported, setReported] = useState(false);
   const report = async () => setReported(await talk.report({ messageId: message.id }));
   if (talk.locked) return null;
@@ -87,6 +90,7 @@ function bubbleLine(message: SeCardMessage): string {
 }
 
 function Bubble(props: BubbleProps) {
+  const styles = useCardTalkStyles();
   const { message, talk } = props;
   const [editing, setEditing] = useState(false);
   if (editing && message.mine) return <EditBubble message={message} talk={talk} onDone={() => setEditing(false)} />;
@@ -102,6 +106,7 @@ function Bubble(props: BubbleProps) {
 }
 
 function PairPills({ talk, pairs }: { talk: CardConversation; pairs: SeCardPairThread[] }) {
+  const styles = useCardTalkStyles();
   const pending = pairs.filter((pair) => pair.state !== 'open');
   return (
     <>
@@ -124,6 +129,7 @@ function PairPills({ talk, pairs }: { talk: CardConversation; pairs: SeCardPairT
 }
 
 function Switch({ partner, pairs, onPartner }: { partner: string | null; pairs: SeCardPairThread[]; onPartner: TalkProps['onPartner'] }) {
+  const styles = useCardTalkStyles();
   return (
     <div className={styles.talkHead}>
       <span className={styles.talkTitle}>{SE_CARD_WORDS.conversation}</span>
@@ -145,6 +151,7 @@ function Switch({ partner, pairs, onPartner }: { partner: string | null; pairs: 
 }
 
 function PartnerChips({ partner, pairs, onPartner }: { partner: string; pairs: SeCardPairThread[]; onPartner: TalkProps['onPartner'] }) {
+  const styles = useCardTalkStyles();
   if (pairs.length < 2) return null;
   return (
     <div className={styles.chips} role="group" aria-label={SE_CARD_WORDS.pair}>
@@ -158,6 +165,7 @@ function PartnerChips({ partner, pairs, onPartner }: { partner: string; pairs: S
 }
 
 function Composer({ talk, partnerId, hint }: { talk: CardConversation; partnerId: string | null; hint: string }) {
+  const styles = useCardTalkStyles();
   const blogNote = seCardBlogNote(talk.cardId, partnerId === null);
   const [draft, setDraft] = useState('');
   if (talk.locked) return <p className={styles.hint}>{talk.lockLine}</p>;
@@ -185,6 +193,7 @@ function Composer({ talk, partnerId, hint }: { talk: CardConversation; partnerId
 }
 
 function Messages({ messages, empty, talk, onTalk, publicThread }: { messages: SeCardMessage[]; empty: string; talk: CardConversation; onTalk: (id: string) => void; publicThread: boolean }) {
+  const styles = useCardTalkStyles();
   if (messages.length === 0) return <p className={styles.quiet}>{empty}</p>;
   return (
     <>
@@ -196,6 +205,7 @@ function Messages({ messages, empty, talk, onTalk, publicThread }: { messages: S
 }
 
 function PairView({ talk, thread }: { talk: CardConversation; thread: SeCardPairThread | undefined }) {
+  const styles = useCardTalkStyles();
   if (!thread) return <p className={styles.quiet}>{SE_CARD_WORDS.pairNone}</p>;
   if (thread.state !== 'open') return <PairPills talk={talk} pairs={[thread]} />;
   return <Messages messages={thread.messages} empty={SE_CARD_WORDS.noPairMessages} talk={talk} onTalk={() => undefined} publicThread={false} />;
@@ -204,6 +214,7 @@ function PairView({ talk, thread }: { talk: CardConversation; thread: SeCardPair
 type ThreadProps = { talk: CardConversation; partner: string | null; pairs: SeCardPairThread[]; thread: SeCardPairThread | undefined; onTalk: (id: string) => void };
 
 function Thread({ talk, partner, pairs, thread, onTalk }: ThreadProps) {
+  const styles = useCardTalkStyles();
   const conversation = talk.conversation;
   if (!conversation) return talk.note || talk.locked ? null : <p className={styles.quiet}>{SE_CARD_WORDS.loading}</p>;
   if (partner !== null) return <PairView talk={talk} thread={thread} />;
@@ -223,6 +234,7 @@ function Foot({ talk, partner, thread }: { talk: CardConversation; partner: stri
 }
 
 export function CardTalk({ talk, partner, onPartner, onTalk }: TalkProps) {
+  const styles = useCardTalkStyles();
   const pairs = talk.conversation?.pairs ?? [];
   const thread = pairs.find((pair) => pair.partnerId === partner);
   return (

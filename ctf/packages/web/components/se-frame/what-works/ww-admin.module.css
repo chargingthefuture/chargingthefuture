@@ -1,14 +1,16 @@
-/* What Works admin, new problems, to the approved board "What works: admin merge and spam".
-   Colors come from the 3.1 theme's custom properties (se-theme-vars.ts). */
+/* What Works admin, new problems: the steps of the board "What works: admin merge and spam", drawn
+   in the What Works admin page's own 3.0 look, since the two designs are never mixed on one screen.
+   Colors come from the plugin's shell tokens, set as --c30-* variables (classic-look-vars.ts). */
 .screen {
   display: flex;
   flex-direction: column;
   gap: 14px;
   margin: 16px 0;
   padding: 20px 16px;
-  border-radius: 18px;
-  background: var(--se-bg);
-  color: var(--se-ink);
+  border-radius: 12px;
+  border: 1px solid var(--c30-border);
+  background: var(--c30-surface);
+  color: var(--c30-text);
   font-family: 'Figtree Variable', system-ui, sans-serif;
 }
 
@@ -22,7 +24,7 @@
 .meta {
   font-size: 12px;
   font-weight: 700;
-  color: var(--se-soft);
+  color: var(--c30-subtle);
 }
 
 .meta {
@@ -32,10 +34,10 @@
 
 .title {
   margin: 0;
-  font-family: 'Newsreader Variable', Newsreader, Georgia, serif;
-  font-size: 28px;
-  font-weight: 600;
-  line-height: 1.1;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--c30-title);
 }
 
 .card,
@@ -44,28 +46,29 @@
   flex-direction: column;
   gap: 10px;
   padding: 14px;
-  border-radius: 18px;
-  border: 1.5px solid var(--se-hair);
-  background: var(--se-card);
+  border-radius: 12px;
+  border: 1px solid var(--c30-border-hi);
+  background: var(--c30-input);
 }
 
 .cardFirst {
-  border-color: var(--se-line);
-  box-shadow: 0 3px 0 var(--se-line);
+  border-color: color-mix(in srgb, var(--c30-accent) 30%, transparent);
 }
 
 .problem {
   margin: 0;
-  font-size: 17px;
+  font-size: 15px;
   font-weight: 700;
+  color: var(--c30-title);
 }
 
 .looks {
   margin: 0;
   padding: 8px 10px;
-  border-radius: 12px;
-  background: var(--se-pick);
-  color: var(--se-on-pick);
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--c30-accent) 30%, transparent);
+  background: color-mix(in srgb, var(--c30-accent) 10%, transparent);
+  color: var(--c30-text);
   font-size: 13px;
   line-height: 1.4;
 }
@@ -73,15 +76,16 @@
 .fieldLabel {
   font-size: 12px;
   font-weight: 700;
+  color: var(--c30-subtle);
 }
 
 .select {
-  min-height: 44px;
-  padding: 0 14px;
-  border-radius: 999px;
-  border: 1.5px solid var(--se-hair);
-  background: var(--se-card);
-  color: var(--se-ink);
+  min-height: 42px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid var(--c30-border-hi);
+  background: var(--c30-bg);
+  color: var(--c30-text);
   font: inherit;
   font-size: 14px;
 }
@@ -95,10 +99,10 @@
 .primary,
 .secondary,
 .danger {
-  min-height: 40px;
+  min-height: 38px;
   padding: 0 14px;
-  border-radius: 999px;
-  border: 1.5px solid var(--se-line);
+  border-radius: 8px;
+  border: 1px solid var(--c30-border-hi);
   font: inherit;
   font-size: 13px;
   font-weight: 600;
@@ -106,26 +110,27 @@
 }
 
 .primary {
-  background: var(--se-btn);
-  color: var(--se-on-btn);
+  border-color: var(--c30-accent);
+  background: var(--c30-accent);
+  color: #fff;
   font-weight: 700;
 }
 
 .secondary {
-  background: var(--se-card);
-  color: var(--se-ink);
+  background: transparent;
+  color: var(--c30-subtle);
 }
 
 .danger {
-  border-color: var(--se-live-badge);
-  background: transparent;
-  color: var(--se-live-badge);
+  border-color: rgba(239, 68, 68, 0.4);
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
 }
 
 .primary:disabled,
 .secondary:disabled,
 .danger:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: default;
 }
 
@@ -134,22 +139,21 @@
   padding: 0;
   border: 0;
   background: none;
-  color: var(--se-ink);
+  color: var(--c30-accent);
   font: inherit;
   font-size: 14px;
   font-weight: 700;
-  text-decoration: underline;
   cursor: pointer;
 }
 
 .note {
   margin: 0;
   font-size: 13px;
-  color: var(--se-soft);
+  color: var(--c30-subtle);
 }
 
 .error {
   margin: 0;
   font-size: 13px;
-  color: var(--se-live-badge);
+  color: #ef4444;
 }

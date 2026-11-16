@@ -2,7 +2,7 @@
 // (the approved 3.1 board "a card opened in place"), drawn from the theme tokens so it follows
 // every color and dark mode.
 
-import { StyleSheet } from 'react-native';
+import { StyleSheet, type TextStyle } from 'react-native';
 import type { SeThemeTokens } from '@ctf/shared';
 import { SE_FONT } from '../fonts';
 
@@ -91,3 +91,11 @@ export function makeCardSheetStyles(t: SeThemeTokens) {
 }
 
 export type CardSheetStyles = ReturnType<typeof makeCardSheetStyles>;
+
+// The part of these styles a card's conversation is drawn with. A 3.0 plugin screen passes its own
+// set with the same names (cardTalkClassicStyles.ts), so the conversation takes that screen's look.
+export type CardTalkKey = keyof ReturnType<typeof answerStyles> | keyof ReturnType<typeof talkStyles>;
+export type CardTalkStyles = Record<CardTalkKey, TextStyle>;
+
+// The two colors the conversation paints outside a style: the composer's placeholder and the send arrow.
+export type CardTalkInk = { soft: string; onBtn: string };

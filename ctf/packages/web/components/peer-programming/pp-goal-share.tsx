@@ -7,17 +7,18 @@ import { SmallButton, useTokens } from "./pp-goals-parts";
 import type { Board, BoardGoal } from "./pp-goals-api";
 
 // Share this goal on the board: on the member's own open goal (in its panel) and on their goals
-// reached in the last two weeks (the row below). Opens the 3.1 share picture; only a goal's owner
+// reached in the last two weeks (the row below). Opens the share picture sheet in the board's 3.0 look; only a goal's owner
 // is offered it, and the picture never names who helped.
 
 export function ShareGoalButton({ goal, board }: { goal: BoardGoal; board: Pick<Board, "names" | "viewerUserId"> }) {
+  const t = useTokens();
   const [open, setOpen] = useState(false);
   const handle = board.names[board.viewerUserId];
   const share = { ...seGoalProgress(goal.tasks, goal.ownerUserId, goal.status === "reached"), title: goal.title };
   return (
     <>
       <SmallButton label={SE_GOAL_SHARE_WORDS.shareThisGoal} onClick={() => setOpen(true)} />
-      {open ? <GoalShareSheet share={share} sharer={handle ? { handle, accountId: board.viewerUserId } : null} onClose={() => setOpen(false)} /> : null}
+      {open ? <GoalShareSheet share={share} sharer={handle ? { handle, accountId: board.viewerUserId } : null} onClose={() => setOpen(false)} look={t} /> : null}
     </>
   );
 }

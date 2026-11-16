@@ -129,7 +129,7 @@ export function LighthousePropertyDetail({
               </>
             )}
             {/* The conversation under this place's card on Today, the same one in 3.0 and 3.1. */}
-            <CardConversationPanel source="lighthouse" sourceId={l.id} />
+            <CardConversationPanel source="lighthouse" sourceId={l.id} look={t} />
           </div>
           <div style={{ width: 280, flexShrink: 0 }}>
             <div style={{ padding: "24px", borderRadius: 16, background: "rgba(255,255,255,0.03)", border: `1px solid ${t.ACCENT}25` }}>

@@ -1,6 +1,6 @@
 'use client';
 
-// Opens the 3.1 "Add a problem" sheet over What Works: from the suggest form, or straight away
+// Opens the "Add a problem" sheet over What Works, in What Works' own 3.0 look: from the suggest form, or straight away
 // when the address carries ?add=problem. A problem the member adds waits for review, and is kept
 // here as an option so they can add what helped with it before it is read.
 import { useCallback, useEffect, useState, type ReactNode } from 'react';

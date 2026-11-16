@@ -74,7 +74,7 @@ function InviteArticle({ invite, t }: { invite: FullInvite; t: DirectoryTokens }
         ) : null}
       </footer>
       {/* The conversation under this invitation's card on Today, the same one in 3.0 and 3.1. */}
-      {invite.inviteCode ? <CardConversationToggle source="directory-invite" sourceId={invite.inviteCode} /> : null}
+      {invite.inviteCode ? <CardConversationToggle source="directory-invite" sourceId={invite.inviteCode} look={t} /> : null}
     </article>
   );
 }

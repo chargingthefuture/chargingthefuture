@@ -148,6 +148,7 @@ function useSelectedGoal(board: Board, chips: BoardGoal[], canAdd: boolean) {
 }
 
 export function GoalsBoardView({ board, busy, onAction, onEditTask, onAddTask, onClose, onPost }: GoalsBoardViewProps) {
+  const t = useTokens();
   const chips = chipGoals(board.goals, board.viewerUserId);
   const myOpenCount = chips.filter((goal) => goal.ownerUserId === board.viewerUserId).length;
   const canAdd = !board.ended && myOpenCount < board.maxOpenGoals;
@@ -172,7 +173,7 @@ export function GoalsBoardView({ board, busy, onAction, onEditTask, onAddTask, o
         <YourGoalPanel key={selectedGoal.id} goal={selectedGoal} busy={busy} onAddTask={onAddTask} onClose={onClose} share={<ShareGoalButton goal={selectedGoal} board={board} />} />
       )}
       {/* The conversation under this goal's card on Today, the same one in 3.0 and 3.1. */}
-      {selectedGoal ? <CardConversationPanel key={`talk-${selectedGoal.id}`} source="peer-programming" sourceId={selectedGoal.id} /> : null}
+      {selectedGoal ? <CardConversationPanel key={`talk-${selectedGoal.id}`} source="peer-programming" sourceId={selectedGoal.id} look={t} /> : null}
       {selected === ALL_GOALS ? <ReachedGoals board={board} /> : null}
       <div style={{ display: "flex", gap: 10, overflowX: "auto", scrollSnapType: "x mandatory", paddingBottom: 6, alignItems: "flex-start" }}>
         <Column title="Up for grabs" empty="Nothing open right now. Add your goal and its cards." cards={columns.grabs} {...props} />
