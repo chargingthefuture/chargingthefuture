@@ -1,18 +1,25 @@
 'use client';
 
-// Opens the "Add a problem" sheet over What Works, in What Works' own 3.0 look: from the suggest form, or straight away
-// when the address carries ?add=problem. A problem the member adds waits for review, and is kept
-// here as an option so they can add what helped with it before it is read.
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+// Opens the "Add a problem" sheet over What Works, in What Works' own 3.0 look: from the suggest
+// form, or straight away when the address carries ?add=problem. A problem the member adds waits for
+// review, and is kept here as an option so they can add what helped with it before it is read. The
+// same sheet opened from Today in 3.1 lands here with ?suggest=<problem> (and &pending=<title> for a
+// problem still waiting), which opens the suggest form on that problem.
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { SE_WW_ADD_WORDS } from '@ctf/shared';
+import { useTheme } from '@/hooks/useTheme';
 import { WwAddSheet, type WwAddedProblem } from '../se-frame/what-works/ww-add-sheet';
-import type { WhatWorksProblemOption } from './ww-shared';
+import { getWhatWorksTokens, type WhatWorksProblemOption } from './ww-shared';
 
-function dropAddParam() {
+function dropParams(names: string[]) {
   const url = new URL(window.location.href);
-  if (!url.searchParams.has('add')) return;
-  url.searchParams.delete('add');
+  if (!names.some((name) => url.searchParams.has(name))) return;
+  names.forEach((name) => url.searchParams.delete(name));
   window.history.replaceState(window.history.state, '', url.toString());
+}
+
+function pendingOption(problem: WwAddedProblem): WhatWorksProblemOption {
+  return { id: problem.id, slug: '', emoji: '', title: SE_WW_ADD_WORDS.waiting(problem.title), context: '' };
 }
 
 export function useWwAddEntry(openSuggest: (_problemId: string) => void): {
@@ -20,25 +27,37 @@ export function useWwAddEntry(openSuggest: (_problemId: string) => void): {
   ownPending: WhatWorksProblemOption[];
   sheet: ReactNode;
 } {
+  const { theme } = useTheme();
   const [open, setOpen] = useState(false);
   const [ownPending, setOwnPending] = useState<WhatWorksProblemOption[]>([]);
-  useEffect(() => {
-    if (new URLSearchParams(window.location.search).get('add') === 'problem') setOpen(true);
+  const suggestRef = useRef(openSuggest);
+  suggestRef.current = openSuggest;
+  const addPending = useCallback((problem: WwAddedProblem) => {
+    setOwnPending((prev) => [...prev.filter((p) => p.id !== problem.id), pendingOption(problem)]);
   }, []);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('add') === 'problem') setOpen(true);
+    const suggest = params.get('suggest');
+    if (!suggest) return;
+    const pending = params.get('pending');
+    if (pending) addPending({ id: suggest, title: pending });
+    suggestRef.current(suggest);
+    dropParams(['suggest', 'pending']);
+  }, [addPending]);
   const close = useCallback(() => {
     setOpen(false);
-    dropAddParam();
+    dropParams(['add']);
   }, []);
   const use = (problemId: string) => {
     close();
     openSuggest(problemId);
   };
   const addWhatHelped = (problem: WwAddedProblem) => {
-    const option = { id: problem.id, slug: '', emoji: '', title: SE_WW_ADD_WORDS.waiting(problem.title), context: '' };
-    setOwnPending((prev) => [...prev.filter((p) => p.id !== problem.id), option]);
+    addPending(problem);
     close();
     openSuggest(problem.id);
   };
-  const sheet = open ? <WwAddSheet onClose={close} onUse={use} onAddWhatHelped={addWhatHelped} /> : null;
+  const sheet = open ? <WwAddSheet onClose={close} onUse={use} onAddWhatHelped={addWhatHelped} look={getWhatWorksTokens(theme)} /> : null;
   return { openAdd: () => setOpen(true), ownPending, sheet };
 }

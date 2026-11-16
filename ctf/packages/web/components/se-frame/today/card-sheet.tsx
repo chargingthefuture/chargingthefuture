@@ -9,6 +9,7 @@ import { SheetYours } from './card-sheet-yours';
 import { useCardConversation, type CardConversation } from './use-card-conversation';
 import styles from './card-sheet.module.css';
 import { useCardTalkStyles } from './card-talk-styles';
+import { WwAddFromCard } from '../what-works/ww-add-from-card';
 
 // A Today card opened in place (the approved 3.1 board "a card opened in place"): a sheet rising
 // over Today with the author, Share, ••• and Close; the title and body; who answered and how, each
@@ -212,6 +213,7 @@ export function CardSheet({ card, viewerId, firstAnswer, onClose, onChanged, onM
           <Link href={card.href} className={styles.openIn}>
             {SE_CARD_WORDS.openIn(card.source)}
           </Link>
+          <WwAddFromCard card={card} className={`${styles.openIn} ${styles.openInButton}`} />
         </div>
         <SheetYours card={card} helpers={seDoneHelpers(talk.conversation?.answers ?? [], viewerId)} onChanged={onChanged} />
         <CardConversationView talk={talk} />

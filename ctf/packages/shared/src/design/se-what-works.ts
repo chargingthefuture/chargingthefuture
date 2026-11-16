@@ -1,8 +1,24 @@
 // What Works in 3.1: adding a problem (search first, then add) and the admin review of new
 // problems, to the approved boards "What works: add a problem" and "What works: admin merge and
-// spam". Android opens the same web screens in its browser panel, so these words are used on web.
+// spam". Adding a problem opens from the What works card on Today, on web and Android, in the
+// 3.1 look; the 3.0 What Works page opens the same sheet in its own 3.0 look. The admin review
+// lives on the 3.0 admin page, which is where the 3.1 admin entry (the System Architect badge) leads.
 
 export const SE_WW_ADD_HREF = '/apps/what-works?add=problem';
+
+// The Today card whose opened sheet offers "Add a problem".
+export function seWwAddsFrom(source: string): boolean {
+  return source === 'what-works';
+}
+
+// Where "Use this" and "Add what helped" lead from the sheet on Today: the What Works page with its
+// suggest form open on that problem. A problem the member just sent is still waiting for review, so
+// its title rides along to be offered in the form.
+export function seWwSuggestHref(problemId: string, pendingTitle?: string): string {
+  const params = new URLSearchParams({ suggest: problemId });
+  if (pendingTitle) params.set('pending', pendingTitle);
+  return `/apps/what-works?${params.toString()}`;
+}
 
 export function seWwHelpedCount(n: number): string {
   if (n === 0) return 'Nothing added yet';

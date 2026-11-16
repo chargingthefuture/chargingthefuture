@@ -150,6 +150,17 @@
   align-items: center;
 }
 
+/* "Add a problem" on the What works card: a button drawn as the link above it. */
+.openInButton {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 .answers {
   background: var(--se-card);
   border: 1.5px solid var(--se-hair);
