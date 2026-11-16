@@ -1,4 +1,6 @@
 export declare const SE_WW_ADD_HREF = "/apps/what-works?add=problem";
+export declare function seWwAddsFrom(source: string): boolean;
+export declare function seWwSuggestHref(problemId: string, pendingTitle?: string): string;
 export declare function seWwHelpedCount(n: number): string;
 export declare const SE_WW_ADD_WORDS: {
     readonly eyebrow: "What works";
