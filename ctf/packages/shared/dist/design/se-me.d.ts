@@ -5,10 +5,7 @@ export declare const SE_ME_LINKS: {
     readonly accountData: "/account/data";
     readonly blocks: "/account/blocks";
     readonly survey: "/survey/quora-account-deletions";
-    readonly architect: "/admin";
-    readonly guide: "/guide";
     readonly rules: "/guidelines";
-    readonly terms: "/terms";
     readonly wallpapers: "https://github.com/chargingthefuture/chargingthefuture/releases?q=wallpapers";
     readonly androidApp: "https://github.com/chargingthefuture/chargingthefuture/releases?q=mobile";
 };

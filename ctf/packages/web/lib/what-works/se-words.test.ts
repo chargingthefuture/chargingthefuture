@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { seWwAddsFrom, seWwHelpedCount, seWwPendingMeta, seWwSuggestHref } from '@ctf/shared';
+import { seWwAddsFrom, seWwHelpedBody, seWwHelpedCount, seWwHelpedReady, seWwPendingMeta } from '@ctf/shared';
 
 describe('What Works 3.1 words', () => {
   it('counts the things that helped, one and many', () => {
@@ -15,14 +15,16 @@ describe('What Works 3.1 words', () => {
   });
 });
 
-describe('the 3.1 add sheet links', () => {
+describe('the 3.1 add sheet', () => {
   it('offers Add a problem on the What works card only', () => {
     expect(seWwAddsFrom('what-works')).toBe(true);
     expect(seWwAddsFrom('socket-relay')).toBe(false);
   });
 
-  it('opens the suggest form on the problem, with a waiting title when given', () => {
-    expect(seWwSuggestHref('p1')).toBe('/apps/what-works?suggest=p1');
-    expect(seWwSuggestHref('p 2', 'Noise & light')).toBe('/apps/what-works?suggest=p+2&pending=Noise+%26+light');
+  it('sends What helped trimmed, and offers it once a name and a link are typed', () => {
+    const draft = { problemId: 'p1', name: ' Earplugs ', purchaseUrl: ' https://example.org/a ', note: '  ' };
+    expect(seWwHelpedBody(draft)).toEqual({ problemId: 'p1', name: 'Earplugs', purchaseUrl: 'https://example.org/a', note: '' });
+    expect(seWwHelpedReady(draft)).toBe(true);
+    expect(seWwHelpedReady({ ...draft, purchaseUrl: ' ' })).toBe(false);
   });
 });

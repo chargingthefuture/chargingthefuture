@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { Modal, Pressable, ScrollView, Share, Text, TouchableOpacity, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
-import { SE_CARD_WORDS, SE_MUTE_WORDS, seCanConfirmHelped, seCardSheetLine, seDailyCreditPill, seDoneHelpers, type SeCardAnswer, type SeCardAnswerKind, type SeCardConversation, type SeThemeTokens, type SeTodayCard } from '@ctf/shared';
+import { SE_CARD_WORDS, SE_MUTE_WORDS, seCanConfirmHelped, seCardSheetLine, seDailyCreditPill, seDoneHelpers, seOpens30Page, type SeCardAnswer, type SeCardAnswerKind, type SeCardConversation, type SeThemeTokens, type SeTodayCard } from '@ctf/shared';
 import { SeAvatar } from '../../../components/shared/SeAvatar';
 import { getApiBaseUrl } from '../../../auth/authedFetch';
 import { reportError } from '../../../observability/report';
@@ -208,10 +208,12 @@ export function CardSheet({ t, card, viewerId, firstAnswer, onClose, onOpenLink,
               </Text>
               {card.body ? <Text style={s.body}>{card.body}</Text> : null}
               {credit ? <Text style={s.creditPill}>{credit}</Text> : null}
-              <TouchableOpacity accessibilityRole="link" style={s.openIn} onPress={() => (onClose(), onOpenLink(card.href))}>
-                <Text style={s.openInLabel}>{SE_CARD_WORDS.openIn(card.source)}</Text>
-              </TouchableOpacity>
-              <WwAddFromCard t={t} source={card.source} linkStyle={s.openIn} labelStyle={s.openInLabel} onOpenLink={(href) => (onClose(), onOpenLink(href))} />
+              {seOpens30Page(card.href) ? null : (
+                <TouchableOpacity accessibilityRole="link" style={s.openIn} onPress={() => (onClose(), onOpenLink(card.href))}>
+                  <Text style={s.openInLabel}>{SE_CARD_WORDS.openIn(card.source)}</Text>
+                </TouchableOpacity>
+              )}
+              <WwAddFromCard t={t} source={card.source} linkStyle={s.openIn} labelStyle={s.openInLabel} />
             </View>
             <SheetYours s={s} card={card} helpers={seDoneHelpers(talk.conversation?.answers ?? [], viewerId)} onChanged={onChanged} />
             <CardConversationView t={t} s={s} talk={talk} />

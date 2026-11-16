@@ -28,7 +28,7 @@ export function PersonCard({ s, person, go }: { s: PeopleStyles; person: SePerso
   const listed = sePersonListedOnly(person);
   const line = sePersonLine(person);
   return (
-    <TouchableOpacity accessibilityRole="link" accessibilityLabel={person.name} activeOpacity={0.8} onPress={() => go(links.profile)} style={s.card}>
+    <View accessibilityLabel={person.name} style={s.card}>
       <View style={s.face}>
         <SeAvatar accountId={person.id} size={48} />
       </View>
@@ -46,6 +46,6 @@ export function PersonCard({ s, person, go }: { s: PeopleStyles; person: SePerso
           </TouchableOpacity>
         ) : null}
       </View>
-    </TouchableOpacity>
+    </View>
   );
 }

@@ -23,7 +23,7 @@ export type WwAddedProblem = { id: string; title: string };
 
 type Props = {
   onClose: () => void;
-  onUse: (_problemId: string) => void;
+  onUse: (_problem: WwAddedProblem) => void;
   onAddWhatHelped: (_problem: WwAddedProblem) => void;
   look?: PluginShellTokens;
 };
@@ -43,7 +43,7 @@ async function sendProblem(title: string): Promise<{ ok: true; id: string } | { 
   }
 }
 
-function CloseIcon() {
+export function CloseIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
       <path d="M6 6l12 12M18 6L6 18" />
@@ -51,7 +51,7 @@ function CloseIcon() {
   );
 }
 
-function Matches({ state, onUse }: { state: WwMatchState; onUse: (_id: string) => void }) {
+function Matches({ state, onUse }: { state: WwMatchState; onUse: (_problem: WwAddedProblem) => void }) {
   const styles = useContext(SheetCss);
   if (state.kind === 'idle') return null;
   if (state.kind === 'loading') return <p className={styles.note}>{W.searching}</p>;
@@ -61,7 +61,7 @@ function Matches({ state, onUse }: { state: WwMatchState; onUse: (_id: string) =
     <div className={styles.matches}>
       <span className={styles.label}>{W.matchesLabel}</span>
       {state.matches.map((m) => (
-        <button key={m.id} type="button" className={styles.match} onClick={() => onUse(m.id)}>
+        <button key={m.id} type="button" className={styles.match} onClick={() => onUse({ id: m.id, title: m.title })}>
           <span className={styles.matchText}>
             <span className={styles.matchTitle}>{m.title}</span>
             <span className={styles.matchCount}>{seWwHelpedCount(m.helpedCount)}</span>
@@ -92,7 +92,7 @@ function Sent({ problem, onAddWhatHelped, onClose }: { problem: WwAddedProblem; 
   );
 }
 
-function AddForm({ onUse, onSent }: { onUse: (_id: string) => void; onSent: (_p: WwAddedProblem) => void }) {
+function AddForm({ onUse, onSent }: { onUse: (_problem: WwAddedProblem) => void; onSent: (_p: WwAddedProblem) => void }) {
   const styles = useContext(SheetCss);
   const [title, setTitle] = useState('');
   const [sending, setSending] = useState(false);

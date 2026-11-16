@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useState } from 'react';
 import { SE_ARCHITECT_MAX_QUESTION, SE_ARCHITECT_WORDS as W, seAgo, type SeArchitectItem } from '@ctf/shared';
 import { useArchitect } from './use-architect';
@@ -40,9 +39,9 @@ function Item({ item, onRate }: { item: SeArchitectItem; onRate: (_turnId: strin
       {item.linkedPlugins.length > 0 ? (
         <span className={styles.choices}>
           {item.linkedPlugins.map((plugin) => (
-            <Link key={plugin.slug} href={`/apps/${plugin.slug}`} className={styles.chip}>
+            <span key={plugin.slug} className={styles.chip}>
               {plugin.name}
-            </Link>
+            </span>
           ))}
         </span>
       ) : null}
