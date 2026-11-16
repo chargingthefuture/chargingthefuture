@@ -65,6 +65,5 @@ export declare function sePersonPlace(person: Pick<SePerson, 'region' | 'country
 export declare function sePersonLine(person: SePerson): string | null;
 export declare function sePersonListedOnly(person: SePerson): string[];
 export declare function sePersonLinks(person: SePerson): {
-    profile: string;
     quote: string | null;
 };

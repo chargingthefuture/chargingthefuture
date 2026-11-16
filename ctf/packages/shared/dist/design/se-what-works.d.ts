@@ -1,6 +1,5 @@
 export declare const SE_WW_ADD_HREF = "/apps/what-works?add=problem";
 export declare function seWwAddsFrom(source: string): boolean;
-export declare function seWwSuggestHref(problemId: string, pendingTitle?: string): string;
 export declare function seWwHelpedCount(n: number): string;
 export declare const SE_WW_ADD_WORDS: {
     readonly eyebrow: "What works";
@@ -23,6 +22,27 @@ export declare const SE_WW_ADD_WORDS: {
     readonly done: "Done";
     readonly waiting: (title: string) => string;
 };
+export declare const SE_WW_HELPED_WORDS: {
+    readonly title: "What helped";
+    readonly forProblem: (title: string) => string;
+    readonly name: "Product name";
+    readonly link: "Direct purchase link";
+    readonly note: "Why it works (optional)";
+    readonly send: "Submit for review";
+    readonly sending: "Submitting…";
+    readonly failed: "Could not submit. Try again.";
+    readonly sentTitle: "Suggestion submitted";
+    readonly sent: "A reviewer will check it before it joins the shared list.";
+    readonly done: "Done";
+};
+export type SeWwHelpedDraft = {
+    problemId: string;
+    name: string;
+    purchaseUrl: string;
+    note: string;
+};
+export declare function seWwHelpedBody(draft: SeWwHelpedDraft): SeWwHelpedDraft;
+export declare function seWwHelpedReady(draft: SeWwHelpedDraft): boolean;
 export declare const SE_WW_ADMIN_WORDS: {
     readonly eyebrow: "System Architect · What works";
     readonly title: (n: number) => string;

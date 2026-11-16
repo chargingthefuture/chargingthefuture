@@ -104,9 +104,10 @@ export function sePersonLine(person) {
 export function sePersonListedOnly(person) {
     return person.listed.filter((skill) => !person.offering.includes(skill));
 }
+// Request a quote, for somebody who offers a skill. The Directory profile is not linked: it is a 3.0
+// page, and 3.1 opens none just to read (owner decision, 2026-11-16).
 export function sePersonLinks(person) {
     return {
-        profile: `/apps/directory/profile/${person.id}`,
         quote: person.offering.length > 0 ? `/apps/foundation/provider/${person.id}` : null,
     };
 }

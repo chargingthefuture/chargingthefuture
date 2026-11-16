@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { SE_CARD_WORDS, SE_MUTE_WORDS, seCanConfirmHelped, seCardSheetLine, seDailyCreditPill, seDoneHelpers, type SeCardAnswer, type SeCardAnswerKind, type SeCardConversation, type SeTodayCard } from '@ctf/shared';
+import { SE_CARD_WORDS, SE_MUTE_WORDS, seCanConfirmHelped, seCardSheetLine, seDailyCreditPill, seDoneHelpers, seOpens30Page, type SeCardAnswer, type SeCardAnswerKind, type SeCardConversation, type SeTodayCard } from '@ctf/shared';
 import { SeAvatar } from '../../shared/se-avatar';
 import { CardTalk } from './card-sheet-talk';
 import { SheetYours } from './card-sheet-yours';
@@ -210,9 +210,11 @@ export function CardSheet({ card, viewerId, firstAnswer, onClose, onChanged, onM
           <h2 className={styles.title}>{card.title}</h2>
           {card.body ? <p className={styles.body}>{card.body}</p> : null}
           {credit ? <span className={styles.creditPill}>{credit}</span> : null}
-          <Link href={card.href} className={styles.openIn}>
-            {SE_CARD_WORDS.openIn(card.source)}
-          </Link>
+          {seOpens30Page(card.href) ? null : (
+            <Link href={card.href} className={styles.openIn}>
+              {SE_CARD_WORDS.openIn(card.source)}
+            </Link>
+          )}
           <WwAddFromCard card={card} className={`${styles.openIn} ${styles.openInButton}`} />
         </div>
         <SheetYours card={card} helpers={seDoneHelpers(talk.conversation?.answers ?? [], viewerId)} onChanged={onChanged} />
