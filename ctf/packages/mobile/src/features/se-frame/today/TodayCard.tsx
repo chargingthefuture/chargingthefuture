@@ -11,7 +11,7 @@
 
 import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import Svg, { Circle, Path } from 'react-native-svg';
+import Svg, { Circle } from 'react-native-svg';
 import * as Clipboard from 'expo-clipboard';
 import {
   SE_CARD_WORDS,
@@ -36,6 +36,7 @@ import { CardSheet } from './CardSheet';
 import { MoodFaces, SaveHideIcons } from './CardQuickActions';
 import { GoalCard } from './GoalCard';
 import { CardFigures } from './CardFigures';
+import { CardDotIcon } from './CardDotIcon';
 import { cardPath } from './useCardConversation';
 
 function absolute(href: string): string {
@@ -141,9 +142,16 @@ function doneLabel(card: SeTodayCard, done: boolean): string {
 type DotProps = { t: SeThemeTokens; s: ReturnType<typeof makeStyles>; card: SeTodayCard; read: boolean; color: string; onToggleDone: () => void };
 
 // The timeline dot. A card the server marks done (a 21 Questions answer) stays done: the answer is final.
-// On another person's ask it is only the dot.
+// On another person's ask it is only the dot, with its icon. The dot shows its kind's icon until the
+// card is done, then the check mark.
 function DoneDot({ t, s, card, read, color, onToggleDone }: DotProps) {
-  if (!seCardTakesCheckMark(card)) return <View style={[s.dot, { backgroundColor: color }]} importantForAccessibility="no" />;
+  if (!seCardTakesCheckMark(card)) {
+    return (
+      <View style={[s.dot, { backgroundColor: color }]} importantForAccessibility="no-hide-descendants">
+        <CardDotIcon kind={card.kind} color={t.onKind} />
+      </View>
+    );
+  }
   const locked = card.done === true;
   const done = read || locked;
   return (
@@ -156,11 +164,7 @@ function DoneDot({ t, s, card, read, color, onToggleDone }: DotProps) {
       disabled={locked}
       style={[s.dot, { backgroundColor: color }]}
     >
-      {done ? (
-        <Svg width={14} height={14} viewBox="0 0 24 24">
-          <Path d="M5 12l5 5 9-10" stroke={t.bg} strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" fill="none" />
-        </Svg>
-      ) : null}
+      <CardDotIcon kind={card.kind} color={t.onKind} done={done} />
     </TouchableOpacity>
   );
 }
