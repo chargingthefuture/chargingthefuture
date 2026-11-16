@@ -95,7 +95,7 @@ export async function buildPublicToday(now = new Date(), day: SeTodayDay = utcTo
     { name: 'socket-relay', read: () => sampleCards(() => relayAsks(GUEST)) },
     { name: 'peer-programming', read: () => sampleCards(() => goalAsks(GUEST)) },
     { name: 'lighthouse', read: () => sampleCards(() => placeOffers(GUEST)) },
-    { name: 'mutual-time', read: () => sampleCards(() => hoursOffers(GUEST)) },
+    { name: 'foundation', read: () => sampleCards(() => hoursOffers(GUEST)) },
     { name: 'numbers', read: () => numbersCard(day) },
     // A member's own story shows here only when its writer agreed to the words that name visitors.
     { name: 'blog-stories', read: async () => (await blogStories(day, 'signed-out')).map(readPostSignedOut) },
