@@ -30,6 +30,8 @@ export const SE_GUEST_WORDS = {
     sampleNote: 'Cards marked Preview show the kind of thing members post. The real ones are private to members.',
     // A card opened by a visitor: read only, with the conversation, and Just us two asking for a sign-in.
     conversation: 'Conversation',
+    // A blog story's button signed out: the post is public, so a visitor reads it there.
+    readPost: 'Read the post',
     close: 'Close',
     signInToWrite: 'Sign in to write here',
     pairEmpty: 'Just us two is a private conversation between two members. Nothing in it is shown here.',

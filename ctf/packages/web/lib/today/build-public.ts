@@ -1,3 +1,4 @@
+import { SE_GUEST_WORDS } from '@ctf/shared';
 import type { SeToday, SeTodayBroadcast, SeTodayCard, SeTodayDay, SeTodayRoom } from '@ctf/shared';
 import { blogStories } from './sources-blog';
 import { dailyPuzzleCard } from './sources-daily';
@@ -67,6 +68,13 @@ async function publicRideAsks(): Promise<SeTodayCard[]> {
   );
 }
 
+// A blog story signed out: This helped me needs an account, so its one button reads the post, which
+// is public. Conversation (the post's Fireside comments) is drawn beside it by the screen.
+function readPostSignedOut(item: SeTodayCard): SeTodayCard {
+  if (item.source !== 'blog-story') return item;
+  return { ...item, actions: [action('open', SE_GUEST_WORDS.readPost, item.href)] };
+}
+
 // Nobody is signed in, so no card is the viewer's own.
 const GUEST = { userId: '', isAdmin: false };
 
@@ -87,7 +95,7 @@ export async function buildPublicToday(now = new Date(), day: SeTodayDay = utcTo
     { name: 'mutual-time', read: () => sampleCards(() => hoursOffers(GUEST)) },
     { name: 'numbers', read: () => numbersCard(day) },
     // A member's own story shows here only when its writer agreed to the words that name visitors.
-    { name: 'blog-stories', read: () => blogStories(day, 'signed-out') },
+    { name: 'blog-stories', read: async () => (await blogStories(day, 'signed-out')).map(readPostSignedOut) },
     // Signed out, the puzzle can be read but not played, so its button says so.
     { name: 'games', read: async () => (await dailyPuzzleCard(day)).map((item) => ({ ...item, actions: [action('open', 'See the puzzle', item.href)] })) },
     { name: 'beacon-replays', read: () => replayCards(day) },

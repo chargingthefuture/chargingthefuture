@@ -80,6 +80,11 @@ describe('signed-out Today', () => {
     expect(today.rooms[0]).toMatchObject({ members: 4, guests: 2, faces: [] });
   });
 
+  it('gives a blog story Read the post in place of This helped me', async () => {
+    const today = await buildPublicToday(new Date('2026-11-10T12:00:00.000Z'));
+    expect(today.cards.find((c) => c.source === 'blog-story')?.actions).toEqual([{ kind: 'open', label: 'Read the post', href: '/' }]);
+  });
+
   it('names nobody on any card', async () => {
     const today = await buildPublicToday(new Date('2026-11-10T12:00:00.000Z'));
     expect(today.cards.every((c) => c.author === null)).toBe(true);

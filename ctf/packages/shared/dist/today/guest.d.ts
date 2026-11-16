@@ -25,6 +25,7 @@ export declare const SE_GUEST_WORDS: {
     readonly sampleLabel: "Preview, shown in place of private member data";
     readonly sampleNote: "Cards marked Preview show the kind of thing members post. The real ones are private to members.";
     readonly conversation: "Conversation";
+    readonly readPost: "Read the post";
     readonly close: "Close";
     readonly signInToWrite: "Sign in to write here";
     readonly pairEmpty: "Just us two is a private conversation between two members. Nothing in it is shown here.";
