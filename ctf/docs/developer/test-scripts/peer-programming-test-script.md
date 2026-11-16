@@ -907,3 +907,12 @@ withdrawn). A goal past its 14 days with no renew leaves Today and stays open on
 2. As the badge holder, post the same goal.
 **Expected:** Step 1 is refused both ways with "Links in posts are for Weavers of the Commons. Take the link out to post this." Step 2 posts.
 **Result:** web ☐ android ☐ — notes:
+
+### PP-27 — The goal's conversation and the share sheet keep the board's 3.0 look (added 2026-11-16)
+**Role:** an approved member with an open goal · **Surfaces:** web, android
+1. Open the goal board and select your goal: its conversation shows under it.
+2. Press **Share this goal**.
+3. Switch the theme to comic and repeat steps 1 and 2.
+4. Open the same goal's card on Today in 3.1 and open Share from the "Your goal" card.
+**Expected:** Steps 1–3: the conversation panel and the share sheet are drawn like the rest of the board (its surface, PeerProgramming's accent, square-cornered fields and buttons, 1px borders, the comic theme's square corners in step 3), with no 3.1 colors, rounded pill field or rounded switch. Words and actions are unchanged, and the picture in the sheet is the same picture Today shows. Step 4: Today's sheets keep the 3.1 look.
+**Result:** web ☐ android ☐ — notes:

@@ -360,3 +360,12 @@ shows A's tools under B with the same Helpful counts, and A nowhere. The Audit l
 4. As B, switch to 3.0 in Settings and open the same place again.
 **Expected:** Step 2 shows A's message. Step 3's reply appears in the card's sheet on Today for A. Step 4 shows the same conversation: 3.0 and 3.1 read one conversation, only the screens differ.
 **Result:** web ☐ — notes:
+
+### WW-14 · Add a problem, admin review and the conversation keep What Works' 3.0 look (added 2026-11-16)
+**Role:** a signed-in member, then an admin · **Surfaces:** web
+1. As the member, open What Works, open **Add a problem** and type a few words so matches show.
+2. Open a product card's **Conversation**.
+3. As the admin, open `/admin/what-works` and read the New problems section.
+4. Switch the theme to comic and repeat steps 1 to 3.
+**Expected:** Every step draws in What Works' own look (its surface, its accent, square-cornered fields and buttons, 1px borders, the comic theme's colors in step 4), with no 3.1 colors, serif titles, rounded pill fields or pill buttons. The steps, words and actions are the same as in WW-10, WW-12 and WW-13.
+**Result:** web ☐ — notes:
