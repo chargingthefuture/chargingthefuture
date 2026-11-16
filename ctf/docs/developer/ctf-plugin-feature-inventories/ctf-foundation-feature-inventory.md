@@ -35,6 +35,16 @@ Foundation provides trauma-informed survivors with deterministic access to vette
    settled, and it records an ongoing service arrangement with that provider. The provider confirms it
    in the Recurring Activity app. A money arrangement records no amount — only that it happens and how
    often.
+10. **Offers of hours on Today (3.1, 2026-11-16).** Members offering their time through Foundation show
+   on other members' Today as "Offer · hours" cards, newest first, up to three: the provider's own short
+   line (else their headline, else "Hours to offer") as the title and "Skills offered: …" with the
+   skills they chose, with "I'd like this" and "I know someone", which open the card in Today. A
+   provider is the same as in search: a claimed Directory profile with at least one offered skill; the
+   card is dated by the newest skill they added and never shows where they live. A viewer never sees
+   their own, nor a provider blocked either way. Signed out, the same cards show as previews read from
+   the demo schema. It stays on Today as offers do (14 days). Read by `lib/foundation/offers.ts`
+   (`listHoursOffers`, `getHoursOffer`); the words are `SE_HOURS_OFFER_WORDS` / `seHoursOfferText` in
+   `@ctf/shared`. See the non-plugin inventory §1.5 item 5a.
 
 ## Admin Features
 
@@ -171,6 +181,8 @@ Seeded content (deterministic):
 - One survivor-provider connection thread (keyed by `thread_key`).
 - One notification event.
 
+Demo schema: `ctf/scripts/demo-seed/48-foundation-offers.mjs` adds six providers by synthetic members (`demo-peer-foundation-01` to `-06`), each with a claimed Directory profile, one offered skill from the demo taxonomy and a short line: tutoring, cooking, small repairs, rides, moving help and paperwork. Fixed ids, upserted on each run, each offer dated within the last two days. They are what the "Offer · hours" previews on signed-out Today read.
+
 The instant 1:1 call ring/answer lifecycle (issue #808 task 3) and per-block billing (task 4) added columns to `foundation_call_sessions` but seed **no** call rows — a call is an ephemeral, member-initiated runtime event, not seed content, so there is no deterministic ring/charge to seed. The block charges write to the canonical `service_credits_*` tables at runtime, which have their own seed/treasury setup. `seedFoundation.mjs` is unchanged.
 
 ## Gaps and Known Technical Debt
@@ -188,6 +200,7 @@ The instant 1:1 call ring/answer lifecycle (issue #808 task 3) and per-block bil
 
 ## Change Log
 
+- 2026-11-16: **Offers of hours on Today come from Foundation (owner decision; User Features item 10).** `hoursOffers` in `lib/today/sources-offers.ts` now reads members offering their time through Foundation (`lib/foundation/offers.ts`) instead of open Mutual Time surveys, on signed-in and signed-out Today, as card source `foundation`. `ctf/scripts/demo-seed/48-foundation-offers.mjs` seeds six demo providers so the signed-out previews have offers once the Seed demo workflow runs. No route or table change; `today.read`, `today.cards.renew` and `today.marks.save` list the tables they now read.
 - 2026-11-16: **Request a quote from 3.1 People (owner decision).** People's Request a quote opens a 3.1 sheet on web and Android instead of the Foundation provider page. It reads `GET /api/foundation/providers/[id]` and sends `POST /api/foundation/connections/threads` then `POST /api/foundation/quotes` with the headline as the service, as the Foundation profile does, with the same states (Requesting…, the own-profile note, the fixed wording for policy, not found, rate limit and session failures, the route's reference) and "Quote requested. <name> has been told." in place of landing in the Direct Line, which has no 3.1 screen yet. Connect now stays on the Foundation page. No Foundation route changed.
 - 2026-10-17: **Connection cap, admin limits and repeat quote requests (#2961, #2962, #2964; owner decisions).** The active-connection cap counts only connections with activity in the last 30 days (opened, a message, a quote change or a call), since nothing closes a thread; a member always reaches a provider they already have a thread with, and the cap message now says a connection with no activity for 30 days stops counting. Messages and quote requests read the admin's saved per-minute limits (`max_messages_per_minute`, and `max_quote_transitions_per_minute`, now labeled "Max quote requests / min") instead of a fixed 20. `max_searches_per_minute`, which nothing read, is removed from the admin form on web and Android, the capacity-policy route, `foundation_capacity_policies` and `foundation_capacity_policy_events` (migration `post/0068_foundation_drop_max_searches_per_minute.sql`, demo schema too) and the demo seed. Request Quote returns the request already waiting on the provider for the same thread and service instead of filing a second one. Test script FDN-48.
 - 2026-10-17: **Web call alerts: one browser rings for one member, and signing out stops it (#2908).** The web side of the 2026-10-06 phone fix. Saving a browser's subscription now removes any other member's row for the same browser, and the web app cancels the browser's subscription once nobody is signed in, so the next ring to that member finds it gone and the row is deleted. Details in the Notifications inventory. Test script FDN-47.

@@ -13,7 +13,7 @@ import { previousWeekStartIso, snapshotId, weekStartIso, weeklyChange } from 'li
 import { getMyCohort } from 'lib/peer-programming/repository';
 import { buildCohortRosters } from 'lib/peer-programming/roster';
 import { cohortCard, withYouLine } from './sources-cohort';
-import { hoursCard } from './sources-offers';
+import { mutualTimeSurveyCard } from './sources-offers';
 import { todayCardRule } from './lifetime';
 
 describe('the Mutual Time offer card', () => {
@@ -28,7 +28,7 @@ describe('the Mutual Time offer card', () => {
   };
 
   it('shows the title, the description and where the group meets, and links to the shared page', () => {
-    const card = hoursCard(event);
+    const card = mutualTimeSurveyCard(event);
     expect(card.id).toBe(`mutual-time:${event.id}`);
     expect(card.kind).toBe('offer');
     expect(card.body).toBe("An hour to plan the next round. We'll meet in Chyme.");
@@ -37,7 +37,7 @@ describe('the Mutual Time offer card', () => {
   });
 
   it('names a survey with no title, and lasts as an offer does', () => {
-    expect(hoursCard({ ...event, title: null, description: null }).title).toBe('Pick a time to meet');
+    expect(mutualTimeSurveyCard({ ...event, title: null, description: null }).title).toBe('Pick a time to meet');
     expect(todayCardRule('mutual-time')).toBe('offer');
   });
 });
