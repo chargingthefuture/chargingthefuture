@@ -346,7 +346,7 @@ function TrackingCard({ request, onChat, onAccepted, onCancelled, onCompletionCo
       <DirectLineButton awaitingDriver={model.awaitingDriver} hasMarginBottom={model.cancellable} onClick={() => onChat(request)} />
       {model.cancellable && <CancelRequestButton requestId={request.id} onCancelled={onCancelled} />}
       {/* The conversation under this ride's card on Today, the same one in 3.0 and 3.1. */}
-      <CardConversationToggle source="trust-transport" sourceId={request.id} />
+      <CardConversationToggle source="trust-transport" sourceId={request.id} look={t} />
     </div>
   );
 }

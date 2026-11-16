@@ -128,7 +128,7 @@ function PendingPane({ title, requestId }: { title: string; requestId: string })
           This request is still open on the feed. When someone offers to help, you can agree to talk just you two in the conversation below.
         </div>
       </div>
-      <CardConversationPanel source="socket-relay" sourceId={requestId} />
+      <CardConversationPanel source="socket-relay" sourceId={requestId} look={t} />
     </div>
   );
 }
@@ -195,7 +195,7 @@ function ChatPane({
       </div>
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
         {resolveError ? <div style={{ padding: "8px 16px", color: "#EF4444", fontSize: 13 }}>{resolveError}</div> : null}
-        <CardConversationPanel source="socket-relay" sourceId={selected.requestId} />
+        <CardConversationPanel source="socket-relay" sourceId={selected.requestId} look={t} />
       </div>
       <EarlierMessages fulfillmentId={selected.id} accent={t.ACCENT} />
       <FavorRecurringPrompt selected={selected} isRequester={isRequester} accent={t.ACCENT} />

@@ -1,23 +1,22 @@
 // The conversation under a Today card, on the plugin's own page, the Android copy of the web's
 // card-conversation-panel.tsx (owner decision, 2026-11-10): the same conversation the card's sheet
-// shows on Today, so 3.0 and 3.1 show one conversation in their own screens.
+// shows on Today. The page is a 3.0 screen, so the panel is drawn in the 3.0 look with the plugin's
+// own tokens, never the 3.1 look (owner decision, 2026-11-16).
 
 import React from 'react';
 import { View } from 'react-native';
-import { SE_CARD_WORDS, seCardId, seTheme } from '@ctf/shared';
-import { useSeTheme } from '../useSeTheme';
+import { SE_CARD_WORDS, seCardId } from '@ctf/shared';
 import { CardConversationView } from './CardSheet';
-import { makeCardSheetStyles } from './cardSheetStyles';
+import { cardTalkClassicInk, makeCardTalkClassicFrame, makeCardTalkClassicStyles } from './cardTalkClassicStyles';
+import type { ClassicLook } from '../classicLook';
 import { useCardConversation } from './useCardConversation';
 
-export function CardConversationPanel({ source, sourceId }: { source: string; sourceId: string }) {
-  const { theme } = useSeTheme();
-  const t = seTheme(theme.color, theme.mode);
-  const s = makeCardSheetStyles(t);
+export function CardConversationPanel({ source, sourceId, look }: { source: string; sourceId: string; look: ClassicLook }) {
   const talk = useCardConversation(seCardId(source, sourceId), null);
+  const frame = makeCardTalkClassicFrame(look);
   return (
-    <View accessibilityLabel={SE_CARD_WORDS.conversation} style={{ gap: 14, padding: 14, borderRadius: 18, borderWidth: 1.5, borderColor: t.line, backgroundColor: t.bg }}>
-      <CardConversationView t={t} s={s} talk={talk} />
+    <View accessibilityLabel={SE_CARD_WORDS.conversation} style={frame.panel}>
+      <CardConversationView t={cardTalkClassicInk(look)} s={makeCardTalkClassicStyles(look)} talk={talk} />
     </View>
   );
 }

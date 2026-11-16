@@ -9,11 +9,15 @@ import { savePicture } from './goal-share-export';
 import { qrFor } from './goal-share-qr';
 import { reportError } from 'lib/observability/report';
 import styles from './goal-share-sheet.module.css';
+import classic from './goal-share-sheet-classic.module.css';
+import type { PluginShellTokens } from '@/components/shared/plugin-shell-theme';
+import { classicLookVars } from '@/components/shared/classic-look-vars';
 
 // The approved 3.1 board "Share picture": a sheet with Close, the picture that will be saved, Save
 // picture and Copy as text. Opened from the "Your goal" card on Today and from the member's own goal
-// on the PeerProgramming board. It sets its own theme variables, so it looks the same on the board,
-// which is drawn outside the 3.1 frame.
+// on the PeerProgramming board. On Today it is drawn in the member's 3.1 colors; the board is a 3.0
+// screen, so there it passes `look` and the sheet is drawn in the board's own 3.0 look. The picture
+// that is saved is the same from either.
 
 export type GoalShareSharer = { handle: string; accountId: string } | null;
 
@@ -49,7 +53,9 @@ function useShareActions(share: SeGoalShare, svg: RefObject<SVGSVGElement | null
   return { status, save, copy };
 }
 
-export function GoalShareSheet({ share, sharer, onClose }: { share: SeGoalShare; sharer: GoalShareSharer; onClose: () => void }) {
+type SheetProps = { share: SeGoalShare; sharer: GoalShareSharer; onClose: () => void; look?: PluginShellTokens };
+
+export function GoalShareSheet({ share, sharer, onClose, look }: SheetProps) {
   const { theme } = useSeTheme();
   const svg = useRef<SVGSVGElement | null>(null);
   const closeRef = useRef<HTMLButtonElement | null>(null);
@@ -62,28 +68,29 @@ export function GoalShareSheet({ share, sharer, onClose }: { share: SeGoalShare;
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
   const { status } = actions;
+  const css = look ? classic : styles;
   return (
-    <div className={styles.backdrop} style={seThemeVars(theme.color, theme.mode)}>
-      <button type="button" className={styles.scrim} aria-label={W.close} tabIndex={-1} onClick={onClose} />
-      <section role="dialog" aria-modal="true" aria-label={W.title} className={styles.sheet}>
-        <div className={styles.head}>
-          <h2 className={styles.title}>{W.title}</h2>
-          <button ref={closeRef} type="button" aria-label={W.close} className={styles.round} onClick={onClose}>
+    <div className={css.backdrop} style={look ? classicLookVars(look) : seThemeVars(theme.color, theme.mode)}>
+      <button type="button" className={css.scrim} aria-label={W.close} tabIndex={-1} onClick={onClose} />
+      <section role="dialog" aria-modal="true" aria-label={W.title} className={css.sheet}>
+        <div className={css.head}>
+          <h2 className={css.title}>{W.title}</h2>
+          <button ref={closeRef} type="button" aria-label={W.close} className={css.round} onClick={onClose}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
               <path d="M6 6l12 12M18 6L6 18" />
             </svg>
           </button>
         </div>
-        <figure className={styles.figure} aria-label={W.picture}>
+        <figure className={css.figure} aria-label={W.picture}>
           <GoalSharePicture ref={svg} picture={picture} label={`${W.picture}: ${share.title}`} />
         </figure>
-        <span className={styles.spacer} />
-        {status.kind === 'done' ? <p role="status" className={styles.hint}>{status.text}</p> : null}
-        {status.kind === 'error' ? <p role="alert" className={styles.hint}>{status.text}</p> : null}
-        <button type="button" className={styles.primary} disabled={status.kind === 'busy'} onClick={() => void actions.save()}>
+        <span className={css.spacer} />
+        {status.kind === 'done' ? <p role="status" className={css.hint}>{status.text}</p> : null}
+        {status.kind === 'error' ? <p role="alert" className={css.hint}>{status.text}</p> : null}
+        <button type="button" className={css.primary} disabled={status.kind === 'busy'} onClick={() => void actions.save()}>
           {status.kind === 'busy' ? W.saving : W.save}
         </button>
-        <button type="button" className={styles.secondary} onClick={() => void actions.copy()}>
+        <button type="button" className={css.secondary} onClick={() => void actions.copy()}>
           {W.copy}
         </button>
       </section>

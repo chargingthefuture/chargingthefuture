@@ -6,13 +6,13 @@
 import React, { useState } from 'react';
 import { Alert, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { SE_CARD_MESSAGE_MAX, SE_CARD_WORDS, seAgo, seCardBlogNote, type SeCardMessage, type SeCardPairThread, type SeThemeTokens } from '@ctf/shared';
-import type { CardSheetStyles } from './cardSheetStyles';
+import { SE_CARD_MESSAGE_MAX, SE_CARD_WORDS, seAgo, seCardBlogNote, type SeCardMessage, type SeCardPairThread } from '@ctf/shared';
+import type { CardTalkInk, CardTalkStyles } from './cardSheetStyles';
 import type { CardConversation } from './useCardConversation';
 
 type TalkProps = {
-  t: SeThemeTokens;
-  s: CardSheetStyles;
+  t: CardTalkInk;
+  s: CardTalkStyles;
   talk: CardConversation;
   // Null shows the public conversation; an account id (or '' before any pair exists) shows Just us two.
   partner: string | null;
@@ -20,9 +20,9 @@ type TalkProps = {
   onTalk: (_accountId: string) => void;
 };
 
-type BubbleProps = { s: CardSheetStyles; message: SeCardMessage; talk: CardConversation; onTalk: (_id: string) => void; publicThread: boolean };
+type BubbleProps = { s: CardTalkStyles; message: SeCardMessage; talk: CardConversation; onTalk: (_id: string) => void; publicThread: boolean };
 
-function LinkButton({ s, label, disabled, onPress }: { s: CardSheetStyles; label: string; disabled?: boolean; onPress: () => void }) {
+function LinkButton({ s, label, disabled, onPress }: { s: CardTalkStyles; label: string; disabled?: boolean; onPress: () => void }) {
   return (
     <TouchableOpacity accessibilityRole="button" style={s.linkButton} disabled={disabled} onPress={onPress}>
       <Text style={s.linkLabel}>{label}</Text>
@@ -30,7 +30,7 @@ function LinkButton({ s, label, disabled, onPress }: { s: CardSheetStyles; label
   );
 }
 
-function OwnActions({ s, message, talk, onEdit }: { s: CardSheetStyles; message: SeCardMessage; talk: CardConversation; onEdit: () => void }) {
+function OwnActions({ s, message, talk, onEdit }: { s: CardTalkStyles; message: SeCardMessage; talk: CardConversation; onEdit: () => void }) {
   const remove = () =>
     Alert.alert(SE_CARD_WORDS.delete, SE_CARD_WORDS.deleteConfirm, [
       { text: SE_CARD_WORDS.cancel, style: 'cancel' },
@@ -44,7 +44,7 @@ function OwnActions({ s, message, talk, onEdit }: { s: CardSheetStyles; message:
   );
 }
 
-function EditBubble({ s, message, talk, onDone }: { s: CardSheetStyles; message: SeCardMessage; talk: CardConversation; onDone: () => void }) {
+function EditBubble({ s, message, talk, onDone }: { s: CardTalkStyles; message: SeCardMessage; talk: CardConversation; onDone: () => void }) {
   const [draft, setDraft] = useState(message.body);
   const text = draft.trim();
   const save = async () => {
@@ -108,7 +108,7 @@ function Bubble(props: BubbleProps) {
   );
 }
 
-function PairPills({ s, talk, pairs }: { s: CardSheetStyles; talk: CardConversation; pairs: SeCardPairThread[] }) {
+function PairPills({ s, talk, pairs }: { s: CardTalkStyles; talk: CardConversation; pairs: SeCardPairThread[] }) {
   return (
     <>
       {pairs
@@ -131,7 +131,7 @@ function PairPills({ s, talk, pairs }: { s: CardSheetStyles; talk: CardConversat
   );
 }
 
-function Toggle({ s, on, label, onPress }: { s: CardSheetStyles; on: boolean; label: string; onPress: () => void }) {
+function Toggle({ s, on, label, onPress }: { s: CardTalkStyles; on: boolean; label: string; onPress: () => void }) {
   return (
     <TouchableOpacity accessibilityRole="button" accessibilityState={{ selected: on }} style={on ? s.switchOn : s.switchOff} onPress={onPress}>
       <Text style={on ? s.switchOnLabel : s.switchOffLabel}>{label}</Text>
@@ -162,7 +162,7 @@ function PartnerChips({ s, partner, pairs, onPartner }: Pick<TalkProps, 's' | 'o
   );
 }
 
-function Composer({ t, s, talk, partnerId, hint }: { t: SeThemeTokens; s: CardSheetStyles; talk: CardConversation; partnerId: string | null; hint: string }) {
+function Composer({ t, s, talk, partnerId, hint }: { t: CardTalkInk; s: CardTalkStyles; talk: CardConversation; partnerId: string | null; hint: string }) {
   const [draft, setDraft] = useState('');
   if (talk.locked) return <Text style={s.hint}>{talk.lockLine}</Text>;
   const blogNote = seCardBlogNote(talk.cardId, partnerId === null);
@@ -194,7 +194,7 @@ function Composer({ t, s, talk, partnerId, hint }: { t: SeThemeTokens; s: CardSh
   );
 }
 
-type MessagesProps = { s: CardSheetStyles; messages: SeCardMessage[]; empty: string; talk: CardConversation; onTalk: (_id: string) => void; publicThread: boolean };
+type MessagesProps = { s: CardTalkStyles; messages: SeCardMessage[]; empty: string; talk: CardConversation; onTalk: (_id: string) => void; publicThread: boolean };
 
 function Messages({ s, messages, empty, talk, onTalk, publicThread }: MessagesProps) {
   if (messages.length === 0) return <Text style={s.quiet}>{empty}</Text>;
@@ -207,14 +207,14 @@ function Messages({ s, messages, empty, talk, onTalk, publicThread }: MessagesPr
   );
 }
 
-function PairView({ s, talk, thread }: { s: CardSheetStyles; talk: CardConversation; thread: SeCardPairThread | undefined }) {
+function PairView({ s, talk, thread }: { s: CardTalkStyles; talk: CardConversation; thread: SeCardPairThread | undefined }) {
   if (!thread) return <Text style={s.quiet}>{SE_CARD_WORDS.pairNone}</Text>;
   if (thread.state !== 'open') return <PairPills s={s} talk={talk} pairs={[thread]} />;
   return <Messages s={s} messages={thread.messages} empty={SE_CARD_WORDS.noPairMessages} talk={talk} onTalk={() => undefined} publicThread={false} />;
 }
 
 type ThreadProps = {
-  s: CardSheetStyles;
+  s: CardTalkStyles;
   talk: CardConversation;
   partner: string | null;
   pairs: SeCardPairThread[];
@@ -234,7 +234,7 @@ function Thread({ s, talk, partner, pairs, thread, onTalk }: ThreadProps) {
   );
 }
 
-type FootProps = { t: SeThemeTokens; s: CardSheetStyles; talk: CardConversation; partner: string | null; thread: SeCardPairThread | undefined };
+type FootProps = { t: CardTalkInk; s: CardTalkStyles; talk: CardConversation; partner: string | null; thread: SeCardPairThread | undefined };
 
 function Foot({ t, s, talk, partner, thread }: FootProps) {
   const openThread = thread?.state === 'open' ? thread : null;

@@ -1,0 +1,296 @@
+/* A card's conversation drawn in the 3.0 look, for the 3.0 plugin pages that show it
+   (card-conversation-panel.tsx). Same class names as the conversation part of card-sheet.module.css.
+   Colors come from the plugin's own shell tokens (getPluginShellTokens), set on the panel as
+   --c30-* variables, so each plugin keeps its accent and the comic theme keeps its colors. */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 10px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--c30-border-hi);
+  background: var(--c30-surface);
+  color: var(--c30-text);
+  font: inherit;
+}
+
+.panelToggle {
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--c30-accent) 30%, transparent);
+  background: color-mix(in srgb, var(--c30-accent) 10%, transparent);
+  color: var(--c30-accent);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.answers {
+  border: 1px solid var(--c30-border);
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.answersTitle {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--c30-subtle);
+}
+
+.answer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.answerText {
+  flex: 1;
+  font-size: 14px;
+  min-width: 0;
+}
+
+.answerConfirmed {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--c30-subtle);
+}
+
+.talkButton,
+.talkPrimary {
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid var(--c30-border-hi);
+  background: transparent;
+  color: var(--c30-subtle);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.talkPrimary {
+  border-color: var(--c30-accent);
+  background: var(--c30-accent);
+  color: #fff;
+  font-weight: 700;
+}
+
+.talk {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.talkHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.talkTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--c30-text);
+}
+
+.switch,
+.chips {
+  display: flex;
+  gap: 6px;
+}
+
+.chips {
+  flex-wrap: wrap;
+}
+
+.switchOn,
+.switchOff {
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid var(--c30-border-hi);
+  background: var(--c30-input);
+  color: var(--c30-subtle);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.switchOn {
+  border-color: color-mix(in srgb, var(--c30-accent) 30%, transparent);
+  background: color-mix(in srgb, var(--c30-accent) 15%, transparent);
+  color: var(--c30-accent);
+}
+
+.messages {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bubbleRow {
+  align-self: flex-start;
+  max-width: 80%;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bubbleRowMine {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.bubble {
+  margin: 0;
+  background: var(--c30-input);
+  border: 1px solid var(--c30-border-hi);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.bubbleMine {
+  background: color-mix(in srgb, var(--c30-accent) 15%, transparent);
+  border-color: color-mix(in srgb, var(--c30-accent) 30%, transparent);
+}
+
+.bubbleMeta {
+  font-size: 11px;
+  color: var(--c30-subtle);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  align-items: center;
+}
+
+.linkButton {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  min-height: 24px;
+  color: var(--c30-accent);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.bubbleRowEditing {
+  width: 80%;
+}
+
+.editBox {
+  width: 100%;
+  min-height: 88px;
+  border-radius: 10px;
+  border: 1px solid var(--c30-border-hi);
+  background: var(--c30-input);
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--c30-text);
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.pill {
+  align-self: center;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--c30-border-hi);
+  background: var(--c30-input);
+  color: var(--c30-subtle);
+  text-align: center;
+}
+
+.pillButton {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  color: var(--c30-accent);
+  cursor: pointer;
+}
+
+.quiet {
+  margin: 0;
+  font-size: 13px;
+  color: var(--c30-subtle);
+}
+
+.composer {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.field {
+  flex: 1;
+  display: flex;
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  min-height: 42px;
+  border-radius: 10px;
+  border: 1px solid var(--c30-border-hi);
+  background: var(--c30-input);
+  padding: 0 14px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--c30-text);
+  outline: none;
+}
+
+.send {
+  width: 42px;
+  height: 42px;
+  flex: none;
+  border-radius: 10px;
+  border: none;
+  background: var(--c30-accent);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.send:disabled,
+.talkButton:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.hint {
+  margin: 0;
+  font-size: 11px;
+  color: var(--c30-subtle);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

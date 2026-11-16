@@ -44,7 +44,7 @@ export function WhatWorksProductCard({ product, busy, onToggleHelpful }: Props) 
         </div>
         {/* The conversation under this product's card on Today, the same one in 3.0 and 3.1. */}
         <div style={{ marginTop: 10, color: t.ACCENT }}>
-          <CardConversationToggle source="what-works" sourceId={product.id} />
+          <CardConversationToggle source="what-works" sourceId={product.id} look={t} />
         </div>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center', flexShrink: 0 }}>

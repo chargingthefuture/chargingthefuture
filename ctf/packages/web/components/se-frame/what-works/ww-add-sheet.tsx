@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react';
 import { SE_WW_ADD_WORDS as W, seWwHelpedCount } from '@ctf/shared';
 import { responseFailureText, reasonText } from 'lib/errors/client-failure';
-import { seThemeVars } from '../se-theme-vars';
-import { useSeTheme } from '../use-se-theme';
+import { useTheme } from '@/hooks/useTheme';
+import { classicLookVars } from '@/components/shared/classic-look-vars';
+import { getWhatWorksTokens } from '@/components/what-works/ww-shared';
 import { useWwSimilar, WW_MIN_QUERY, type WwMatchState } from './use-ww-similar';
 import styles from './ww-add-sheet.module.css';
 
@@ -122,7 +123,7 @@ function AddForm({ onUse, onSent }: { onUse: (_id: string) => void; onSent: (_p:
 }
 
 export function WwAddSheet({ onClose, onUse, onAddWhatHelped }: Props) {
-  const { theme } = useSeTheme();
+  const { theme } = useTheme();
   const [sent, setSent] = useState<WwAddedProblem | null>(null);
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => event.key === 'Escape' && onClose();
@@ -130,7 +131,7 @@ export function WwAddSheet({ onClose, onUse, onAddWhatHelped }: Props) {
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
   return (
-    <div className={styles.backdrop} style={seThemeVars(theme.color, theme.mode)}>
+    <div className={styles.backdrop} style={classicLookVars(getWhatWorksTokens(theme))}>
       <section role="dialog" aria-modal="true" aria-label={W.title} className={styles.sheet}>
         <div className={styles.top}>
           <button type="button" className={styles.close} aria-label={W.close} onClick={onClose}>

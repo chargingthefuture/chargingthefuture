@@ -98,7 +98,7 @@ export function SkillsHuntMissionsTab({
               {/* Today's conversation under this mission's card, the same one in 3.0 and 3.1. Today
                   gives a mission a new card, and so a new conversation, each day (UTC). */}
               <div style={{ color: t.ACCENT }}>
-                <CardConversationToggle source="skills-hunt-mission" sourceId={`${m.id}:${new Date().toISOString().slice(0, 10)}`} />
+                <CardConversationToggle source="skills-hunt-mission" sourceId={`${m.id}:${new Date().toISOString().slice(0, 10)}`} look={t} />
               </div>
             </div>
           ))}

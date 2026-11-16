@@ -8,6 +8,7 @@ import { CardTalk } from './card-sheet-talk';
 import { SheetYours } from './card-sheet-yours';
 import { useCardConversation, type CardConversation } from './use-card-conversation';
 import styles from './card-sheet.module.css';
+import { useCardTalkStyles } from './card-talk-styles';
 
 // A Today card opened in place (the approved 3.1 board "a card opened in place"): a sheet rising
 // over Today with the author, Share, ••• and Close; the title and body; who answered and how, each
@@ -114,32 +115,34 @@ type AnswersProps = { conversation: SeCardConversation; busy: boolean; onTalk: (
 
 // Confirm beside a "This helped me" for the card's author, Confirmed once it is.
 function HelpedConfirm({ conversation, answer, busy, onConfirm }: Omit<AnswersProps, 'onTalk'> & { answer: SeCardAnswer }) {
+  const talkStyles = useCardTalkStyles();
   if (seCanConfirmHelped(conversation, answer)) {
     return (
-      <button type="button" className={styles.talkButton} disabled={busy} aria-label={SE_CARD_WORDS.confirmHelpedLabel(answer.handle)} onClick={() => onConfirm(answer.accountId)}>
+      <button type="button" className={talkStyles.talkButton} disabled={busy} aria-label={SE_CARD_WORDS.confirmHelpedLabel(answer.handle)} onClick={() => onConfirm(answer.accountId)}>
         {SE_CARD_WORDS.confirmHelped}
       </button>
     );
   }
-  return answer.helpedConfirmed ? <span className={styles.answerConfirmed}>{SE_CARD_WORDS.helpedConfirmed}</span> : null;
+  return answer.helpedConfirmed ? <span className={talkStyles.answerConfirmed}>{SE_CARD_WORDS.helpedConfirmed}</span> : null;
 }
 
 function Answers({ conversation, busy, onTalk, onConfirm }: AnswersProps) {
+  const talkStyles = useCardTalkStyles();
   if (conversation.answers.length === 0) return null;
   return (
-    <div className={styles.answers}>
-      <span className={styles.answersTitle}>{SE_CARD_WORDS.answered(conversation.answers.length)}</span>
+    <div className={talkStyles.answers}>
+      <span className={talkStyles.answersTitle}>{SE_CARD_WORDS.answered(conversation.answers.length)}</span>
       {conversation.answers.map((answer, index) => {
         const mine = answer.accountId === conversation.viewerId;
         return (
-          <div key={answer.accountId} className={styles.answer}>
+          <div key={answer.accountId} className={talkStyles.answer}>
             <SeAvatar accountId={answer.accountId} size={30} />
-            <span className={styles.answerText}>
+            <span className={talkStyles.answerText}>
               <b>{mine ? SE_CARD_WORDS.you : answer.handle}</b> {SE_CARD_WORDS.answerLine(answer.kinds)}
             </span>
             <HelpedConfirm conversation={conversation} answer={answer} busy={busy} onConfirm={onConfirm} />
             {mine ? null : (
-              <button type="button" className={index === 0 ? styles.talkPrimary : styles.talkButton} onClick={() => onTalk(answer.accountId)}>
+              <button type="button" className={index === 0 ? talkStyles.talkPrimary : talkStyles.talkButton} onClick={() => onTalk(answer.accountId)}>
                 {SE_CARD_WORDS.talkHere}
               </button>
             )}

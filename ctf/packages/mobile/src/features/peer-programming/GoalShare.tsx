@@ -12,13 +12,14 @@ import { PPButton } from './PPButton';
 import { usePPTheme } from './usePPTheme';
 
 export function ShareGoalButton({ goal, board }: { goal: BoardGoal; board: Pick<Board, 'names' | 'viewerUserId'> }) {
+  const t = usePPTheme();
   const [open, setOpen] = useState(false);
   const handle = board.names[board.viewerUserId];
   const share = { ...seGoalProgress(goal.tasks, goal.ownerUserId, goal.status === 'reached'), title: goal.title };
   return (
     <>
       <PPButton label={SE_GOAL_SHARE_WORDS.shareThisGoal} onPress={() => setOpen(true)} />
-      {open ? <GoalShareSheet share={share} sharer={handle ? { handle, accountId: board.viewerUserId } : null} onClose={() => setOpen(false)} /> : null}
+      {open ? <GoalShareSheet share={share} sharer={handle ? { handle, accountId: board.viewerUserId } : null} onClose={() => setOpen(false)} look={t} /> : null}
     </>
   );
 }

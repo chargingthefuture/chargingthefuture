@@ -196,7 +196,7 @@ function RequestCard({
       </div>
       {/* The conversation under this ask's card on Today, the same one in 3.0 and 3.1. */}
       <div style={{ marginTop: 10, marginLeft: 52, color: t.ACCENT }}>
-        <CardConversationToggle source="socket-relay" sourceId={r.id} />
+        <CardConversationToggle source="socket-relay" sourceId={r.id} look={t} />
       </div>
     </div>
   );

@@ -88,6 +88,7 @@ function Columns({ sections, props }: { sections: ReturnType<typeof sortIntoSect
 }
 
 export function GoalsBoard({ board, busy, onAction, onEditTask, onAddTask, onClose, onPost }: GoalsBoardProps) {
+  const t = usePPTheme();
   const chips = chipGoals(board.goals, board.viewerUserId);
   const myOpenCount = chips.filter((goal) => goal.ownerUserId === board.viewerUserId).length;
   const canAdd = !board.ended && myOpenCount < board.maxOpenGoals;
@@ -113,7 +114,7 @@ export function GoalsBoard({ board, busy, onAction, onEditTask, onAddTask, onClo
         <YourGoalPanel key={selectedGoal.id} goal={selectedGoal} busy={busy} onAddTask={onAddTask} onClose={onClose} share={<ShareGoalButton goal={selectedGoal} board={board} />} />
       ) : null}
       {/* The conversation under this goal's card on Today, the same one in 3.0 and 3.1. */}
-      {selectedGoal ? <CardConversationPanel key={`talk-${selectedGoal.id}`} source="peer-programming" sourceId={selectedGoal.id} /> : null}
+      {selectedGoal ? <CardConversationPanel key={`talk-${selectedGoal.id}`} source="peer-programming" sourceId={selectedGoal.id} look={t} /> : null}
       {selected === ALL_GOALS ? <ReachedGoals board={board} /> : null}
       <Columns sections={sections} props={props} />
     </View>

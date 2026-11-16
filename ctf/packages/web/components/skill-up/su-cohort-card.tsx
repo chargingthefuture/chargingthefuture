@@ -208,7 +208,7 @@ export function SkillUpCohortCard({
       <CohortDetails economics={economics} tags={tags} t={t} />
       {/* The conversation under this cohort's card on Today, the same one in 3.0 and 3.1. */}
       <div style={{ marginBottom: 12, color: t.ACCENT }}>
-        <CardConversationToggle source="skill-up" sourceId={cohort.id} />
+        <CardConversationToggle source="skill-up" sourceId={cohort.id} look={t} />
       </div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 10, borderTop: `1px solid ${t.BORDER_SOLID}` }}>
         <div>

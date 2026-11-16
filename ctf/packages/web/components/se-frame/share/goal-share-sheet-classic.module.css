@@ -1,0 +1,111 @@
+/* The share picture sheet drawn in the 3.0 look, for the PeerProgramming board (a 3.0 screen).
+   Same class names as goal-share-sheet.module.css; colors from the plugin's shell tokens, set as
+   --c30-* variables (classic-look-vars.ts). The picture itself is the same in both. */
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+}
+
+.scrim {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.sheet {
+  position: absolute;
+  top: 40px;
+  bottom: 0;
+  width: 100%;
+  max-width: 560px;
+  box-sizing: border-box;
+  background: var(--c30-bg);
+  color: var(--c30-text);
+  border-radius: 14px 14px 0 0;
+  border-top: 1px solid var(--c30-border-hi);
+  padding: 14px 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+}
+
+.head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--c30-title);
+}
+
+.round {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: 10px;
+  border: 1px solid var(--c30-border-hi);
+  background: var(--c30-input);
+  color: var(--c30-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.figure {
+  margin: 0;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.hint {
+  margin: 0;
+  font-size: 13px;
+  color: var(--c30-subtle);
+  text-align: center;
+}
+
+.primary,
+.secondary {
+  border-radius: 12px;
+  cursor: pointer;
+  font: inherit;
+}
+
+.primary {
+  min-height: 48px;
+  border: none;
+  background: var(--c30-accent);
+  color: #fff;
+  font-weight: 800;
+  font-size: 15px;
+}
+
+.primary:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.secondary {
+  min-height: 44px;
+  border: 1px solid var(--c30-border-hi);
+  background: transparent;
+  color: var(--c30-subtle);
+  font-weight: 600;
+  font-size: 14px;
+}

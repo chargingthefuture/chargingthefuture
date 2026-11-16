@@ -1,7 +1,9 @@
 // The approved 3.1 board "Share picture", the Android copy of the web's goal-share-sheet.tsx: Close,
 // the picture that will be saved, Save picture and Copy as text. Save picture writes the PNG to the
 // app's cache and opens the phone's share sheet, where it can be saved to the phone or sent; the
-// app asks for no access to the photo library.
+// app asks for no access to the photo library. On Today it is drawn in the member's 3.1 colors; the
+// PeerProgramming board is a 3.0 screen, so it passes `look` and the sheet takes the board's 3.0
+// look. The picture that is saved is the same from either.
 
 import React, { useMemo, useRef, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
@@ -13,6 +15,8 @@ import { SE_GOAL_SHARE_LINK, SE_GOAL_SHARE_WORDS as W, SE_SHARE_PICTURE_WIDTH, s
 import { reportError } from '../../../observability/report';
 import { SE_FONT } from '../fonts';
 import { useSeTheme } from '../useSeTheme';
+import type { ClassicLook } from '../classicLook';
+import { interFamily } from '../../../components/ui';
 import { GoalSharePicture } from './GoalSharePicture';
 import { qrFor } from './goalShareQr';
 
@@ -58,10 +62,12 @@ function useShareActions(share: SeGoalShare, svg: React.RefObject<Svg | null>, s
   return { status, save, copy };
 }
 
-export function GoalShareSheet({ share, sharer, onClose }: { share: SeGoalShare; sharer: GoalShareSharer; onClose: () => void }) {
+type SheetProps = { share: SeGoalShare; sharer: GoalShareSharer; onClose: () => void; look?: ClassicLook };
+
+export function GoalShareSheet({ share, sharer, onClose, look }: SheetProps) {
   const { theme } = useSeTheme();
   const t = seTheme(theme.color, theme.mode);
-  const s = makeStyles(t);
+  const s = look ? makeClassicStyles(look) : makeStyles(t);
   const svg = useRef<Svg | null>(null);
   const { width: screen } = useWindowDimensions();
   const picture = useMemo(() => seGoalSharePicture(share, sharer, t, qrFor(SE_GOAL_SHARE_LINK)), [share, sharer, t]);
@@ -79,7 +85,7 @@ export function GoalShareSheet({ share, sharer, onClose }: { share: SeGoalShare;
               </Text>
               <TouchableOpacity accessibilityRole="button" accessibilityLabel={W.close} style={s.round} onPress={onClose}>
                 <Svg width={16} height={16} viewBox="0 0 24 24">
-                  <Path d="M6 6l12 12M18 6L6 18" stroke={t.ink} strokeWidth={2.2} strokeLinecap="round" fill="none" />
+                  <Path d="M6 6l12 12M18 6L6 18" stroke={look ? look.SUBTLE : t.ink} strokeWidth={2.2} strokeLinecap="round" fill="none" />
                 </Svg>
               </TouchableOpacity>
             </View>
@@ -122,5 +128,25 @@ function makeStyles(t: SeThemeTokens) {
     primaryLabel: { fontSize: 16, color: t.onBtn, fontFamily: SE_FONT.sansBold },
     secondary: { minHeight: 48, borderRadius: 999, borderWidth: 1.5, borderColor: t.line, backgroundColor: t.card, alignItems: 'center', justifyContent: 'center', boxShadow: `0px 2px 0px ${t.line}` },
     secondaryLabel: { fontSize: 15, color: t.ink, fontFamily: SE_FONT.sansSemi },
+  });
+}
+
+// The same sheet in a 3.0 screen's look, the web's goal-share-sheet-classic.module.css.
+function makeClassicStyles(l: ClassicLook) {
+  return StyleSheet.create({
+    backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
+    sheet: { flex: 1, backgroundColor: l.BG, borderTopLeftRadius: l.r(14), borderTopRightRadius: l.r(14), borderTopWidth: 1, borderColor: l.BORDER_HI },
+    content: { paddingHorizontal: 16, paddingTop: 14, gap: 14 },
+    head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    title: { fontSize: 18, color: l.TITLE, fontFamily: interFamily('700') },
+    round: { width: 40, height: 40, borderRadius: l.r(10), borderWidth: 1, borderColor: l.BORDER_HI, backgroundColor: l.INPUT_BG, alignItems: 'center', justifyContent: 'center' },
+    figure: { alignItems: 'center' },
+    foot: { paddingHorizontal: 16, paddingBottom: 20, paddingTop: 8, gap: 14 },
+    hint: { fontSize: 13, color: l.SUBTLE, textAlign: 'center', fontFamily: interFamily('400') },
+    primary: { minHeight: 48, borderRadius: l.r(12), backgroundColor: l.ACCENT, alignItems: 'center', justifyContent: 'center' },
+    disabled: { opacity: 0.5 },
+    primaryLabel: { fontSize: 15, color: '#FFFFFF', fontFamily: interFamily('800') },
+    secondary: { minHeight: 44, borderRadius: l.r(12), borderWidth: 1, borderColor: l.BORDER_HI, backgroundColor: 'transparent', alignItems: 'center', justifyContent: 'center' },
+    secondaryLabel: { fontSize: 14, color: l.SUBTLE, fontFamily: interFamily('600') },
   });
 }
