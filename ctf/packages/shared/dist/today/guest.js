@@ -32,7 +32,7 @@ export const SE_GUEST_WORDS = {
     conversation: 'Conversation',
     // A blog story's button signed out: the post is public, so a visitor reads it there.
     readPost: 'Read the post',
-    // A member's story opened signed out: its conversation is between members, so none of it is read here.
+    // A member's story opened signed out when none of its replies' writers agreed to visitors reading them.
     membersOnly: "The conversation on a member's story is for members. Sign in to read it.",
     close: 'Close',
     signInToWrite: 'Sign in to write here',
@@ -41,19 +41,17 @@ export const SE_GUEST_WORDS = {
     noMessages: 'Nobody has written here yet.',
     loadingConversation: 'Loading the conversation…',
 };
-// The cards a visitor can open: a story (its post's Fireside comments, real and public) and the
-// sample ask and offer cards (a sample conversation from the demo schema).
-export const SE_GUEST_SHEET_SOURCES = ['blog-story', 'trust-transport', 'skill-up'];
-// A member's story opens too, signed out, with its text and Conversation, but nothing of the
-// conversation is read: the members writing there did not write for visitors, and the story has no
-// public page to read it on.
-export const SE_GUEST_MEMBERS_ONLY_SOURCES = ['member-story'];
+// The cards a visitor can open: a blog story (its post's Fireside comments, real and public), a
+// member's story (only the replies whose writers agreed that visitors may read them, written since
+// they agreed) and the sample ask and offer cards (a sample conversation from the demo schema).
+export const SE_GUEST_SHEET_SOURCES = ['blog-story', 'member-story', 'trust-transport', 'skill-up'];
 export function seGuestOpensSheet(card) {
-    return SE_GUEST_SHEET_SOURCES.includes(card.source) || SE_GUEST_MEMBERS_ONLY_SOURCES.includes(card.source);
-}
-// Whether the opened card's conversation is read for a visitor (GET /api/today/public/cards/[cardId]).
-export function seGuestReadsConversation(card) {
     return SE_GUEST_SHEET_SOURCES.includes(card.source);
+}
+// What an opened card says when no message shows. On a member's story the replies left out were
+// written for members, so it says the conversation is for members rather than that it is empty.
+export function seGuestEmptyLine(card) {
+    return card.source === 'member-story' ? SE_GUEST_WORDS.membersOnly : SE_GUEST_WORDS.noMessages;
 }
 // An ask or an offer is answered by a member; a visitor sees who as "A member" and a Sign up button.
 export function seGuestAnswersBySignUp(card) {

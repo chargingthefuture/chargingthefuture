@@ -8,7 +8,8 @@ import { countryCode, regionName } from './place';
 // the profiles whose owner offers at least one skill; those come first in every view. A category
 // (Trades, Care, Paperwork, Tech) keeps the profiles whose job title, profile sector or any listed
 // skill sits in one of that category's Skills Taxonomy sectors (SE_PEOPLE_CATEGORY_SECTORS). The
-// place is the state and the country only; the city column is never read. "Fits what you need" keeps
+// place is the state and the country only; the city column is never read. The profile address (a
+// Quora profile) is carried so the row can offer it, as the Directory does. "Fits what you need" keeps
 // the people the Match card on Today counts for the member (directory_person_job_titles: a job title
 // or any listed skill under one of the member's job titles, owners restricted with scope all or
 // contact left out), so the list and the number on the card agree.
@@ -22,6 +23,7 @@ type PersonRow = {
   claimed: boolean;
   region: string | null;
   country: string | null;
+  profile_url: string | null;
   listed: string[] | null;
   offering: string[] | null;
   total: string;
@@ -52,6 +54,7 @@ const PEOPLE_SQL = `
     p.claimed_by_user_id IS NOT NULL AS claimed,
     p.state AS region,
     p.country,
+    p.profile_url,
     ARRAY(
       SELECT DISTINCT sk.name FROM directory_profile_skills dps
       JOIN skills_taxonomy_skills sk ON sk.id = dps.skill_id
@@ -96,6 +99,7 @@ function toPerson(row: PersonRow): SePerson {
     country: countryCode(row.country),
     offering: row.offering ?? [],
     listed: row.listed ?? [],
+    profileUrl: row.profile_url,
   };
 }
 

@@ -358,11 +358,14 @@ you and confirmations show here."
 
 **Role:** approved member; a signed-in member not yet approved · **Precondition:** on 3.1; one
 claimed profile whose owner offers a skill in Foundation; a profile with a state and country and a job
-title in the Health sector.
+title in the Health sector; a profile with a Quora address and one without.
 **Steps:**
 1. Open People. Page forward and back, then reload on page 2.
 2. Tap **Offering now**, then **Care**, then **All**. Search a skill name.
-3. On a person who offers a skill, tap **Request a quote**; on another, tap the card.
+3. On a person who offers a skill, tap **Request a quote**, then **Request a quote** in the sheet;
+   close it. Tap **Profile** on the same person, then **Quora profile** on the row and in the sheet,
+   then **Share** in the sheet and **Copy link**; close it. Open your own profile's Request a quote.
+   With a keyboard, reach each button with Tab and close a sheet with Escape.
 4. As the member not yet approved, open People and tap **Back to Today**; open People again and tap
    **Finish Unlock**.
 **Expected:** Step 1 shows "People" with "N listed" beside it, a search reading "A skill, like
@@ -373,9 +376,20 @@ then "Offering" with offered skills filled in the Offer color and "Listed" with 
 outlined; a skill shows once. Step 2 keeps only people offering something, then people in Care
 (Health, Education, Emergency & Reserve Roles), then people in Trades, which includes a person whose
 sector is Creative & Media, then everyone; the search narrows to people with
-that skill in their name, headline, job title or listing. Step 3 opens the Foundation provider page and
-the Directory profile. Request a quote never shows for someone offering nothing, and there is no
-Profile button. Step 4 shows ten faded faces, the number listed with "people listed, with what they
+that skill in their name, headline, job title or listing. Each card has, 44px tall, **Request a quote**
+(only for someone offering), **Profile**, and **Quora profile** only where the Directory has the
+address. Step 3 never leaves 3.1: Request a quote opens a sheet with the person's name and headline,
+their short description, "Willing to be contacted about" with their offered skills, About, and "Good to
+know"; the button reads "Requesting…" and then "Quote requested. <name> has been told." is announced,
+and the request shows on the provider's side in Foundation. Profile opens a sheet with the name,
+Member or Listed, the headline, job title · sector · place (never a city), Request a quote for
+someone offering, Quora profile (or "Quora profile not linked yet"), Share, About, Skills and Block
+for someone else's claimed profile. Quora profile and Share open the shared link popup showing the
+full address with Open in new tab and Copy link, and Copy link announces "Copied!". On your own
+profile the quote button is grayed out with "This is your own profile — you can't request a quote
+from yourself." Each button's spoken name says whose profile it is; focus moves into a sheet when it
+opens and back to the button that opened it when it closes; Escape closes the popup first, then the
+sheet. With the network off, each sheet says what could not be read with **Try again**. Step 4 shows ten faded faces, the number listed with "people listed, with what they
 can do", why names wait for one check, **Finish Unlock** (opens Unlock) and "Open to you now" with
 **Back to Today** (opens Today), and no name, skill or place of anybody.
 Opening People never shows "Could not read People" while the app and its database are up.
@@ -785,7 +799,20 @@ totals (AD-28) still count each mark.
 1. Signed out, open Today and look at the burgundy hero. Leave the page open for two minutes.
 2. Turn on less motion (web: the system's reduce motion setting; Android: Remove animations) and repeat step 1.
 3. Look at the dots to the left of the cards, signed out, then signed in, in light and dark and in each of the four colors.
-4. Signed out, find a blog story card. Tap Read the post, come back, and tap Conversation. Then find a member's story card (a member who agreed to be shown signed out) and tap Conversation.
+4. Signed out, find a blog story card. Tap Read the post, come back, and tap Conversation. Then find a member's story card (a member who agreed to be shown signed out) and tap Conversation, on a story where no writer agreed to visitors reading their replies (AD-39 covers the rest).
 5. Signed in, open a blog story card and look at its buttons. Leave Today open for two minutes.
 **Expected:** Step 1 shows "Days the Avenhood has won" with a lock and Preview, and the count under it. Within 20 to 90 seconds the count goes up by one and emoji fall across the screen for a few seconds, then again at another random interval. A reload starts from the sample count again. Step 2: the count still goes up, and no emoji fall. Step 3: each dot carries an icon by kind, as on the approved Today board: an arrow up on an ask, an arrow down on an offer, a book on a story, a magnifier on a Wanted or match card and on the locked People card, a face on Mood, bars on the numbers, a play mark on a replay, a grid on the puzzle; the icon reads clearly on the dot in every color and mode. A dot that can be tapped still marks the card done, with the check shown in place of the icon. Step 4: the blog story shows Read the post and Conversation and no This helped me; Read the post opens the blog post, and Conversation opens the post's comments read only. The member's story shows Conversation only; it opens the story with "The conversation on a member's story is for members. Sign in to read it." and no messages. Step 5: the story shows This helped me as before, and the signed-in Days won count does not tick.
+**Result:** web ☐ android ☐ — notes:
+
+## AD-39 · Visitors read replies on members' stories only with the writer's agreement (added 2026-11-16)
+**Role:** members A and B (approved), a member C who is restricted, a visitor who is not signed in · **Surfaces:** web, android · **Precondition:** a member's story shown signed out today
+**Steps:**
+1. As A, before agreeing, reply in the conversation under the member's story.
+2. As A, open Me → Settings → Safety and privacy and turn on "Visitors can read what I write on members' stories". Reply again under the same story.
+3. As B, without agreeing, reply under the story. As C, agree and reply.
+4. As the visitor, open signed-out Today, find the member's story and tap Conversation.
+5. As A, turn the setting off. As the visitor, close the sheet and open Conversation again.
+6. With no agreeing member's reply under a story, open its Conversation as the visitor.
+7. Delete A's account in Settings.
+**Expected:** Step 2: the switch reads on after a reload and on the other device; its note says visitors can read what A writes from now on, with A's username, that earlier replies stay for members, and that turning it off hides them at once. Step 4 shows only A's second reply, under A's username as members see it, read only, with "Sign in to write here"; A's first reply, B's and C's are left out with no placeholder or count. Step 5 shows none of A's replies. Step 6 shows "The conversation on a member's story is for members. Sign in to read it." Step 7 removes A's agreement with A's preferences row and A's replies with A's messages. The switch shows only for approved members.
 **Result:** web ☐ android ☐ — notes:

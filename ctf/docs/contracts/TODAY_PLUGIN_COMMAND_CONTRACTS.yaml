@@ -141,11 +141,11 @@ contracts:
   - pluginId: today
     command: today.public.card.read
     version: 1.0.0
-    description: Read a card opened on signed-out Today (GET /api/today/public/cards/[cardId]). A story's Fireside comments, or a sample card's sample conversation from the demo schema; never Just us two.
+    description: Read a card opened on signed-out Today (GET /api/today/public/cards/[cardId]). A blog story's Fireside comments; a member's story's public replies by approved, unrestricted members who agree now (current words) that visitors may read them, written since they agreed; or a sample card's sample conversation from the demo schema; never Just us two.
     inputSchema:
       cardId:
         type: string
-        description: blog-story, trust-transport or skill-up card id; any other answers 404.
+        description: blog-story, member-story, trust-transport or skill-up card id; any other answers 404.
     outputSchema:
       conversation:
         type: object
@@ -159,6 +159,9 @@ contracts:
       - fireside_threads
       - fireside_comments
       - commons_item_messages
+      - user_ui_preferences
+      - unlock_verification_submissions
+      - account_restrictions
     purpose: public_daily_overview
     retentionClass: none_read_only
     idempotency: true
@@ -277,6 +280,34 @@ contracts:
       - question_matching_settings
       - question_answer_audit
     purpose: twenty_one_questions_matching
+    retentionClass: until_account_deletion
+    idempotency: true
+  - pluginId: today
+    command: today.story-replies.visitors.read
+    version: 1.0.0
+    description: Read whether visitors without an account may read what the member writes in the conversation on members' stories (GET /api/today/story-replies/visitors). Agreed only when the member agreed to the current words.
+    inputSchema: {}
+    outputSchema:
+      agreed:
+        type: boolean
+    dataAccess:
+      - user_ui_preferences
+    purpose: story_replies_visitor_consent
+    retentionClass: none_read_only
+    idempotency: true
+  - pluginId: today
+    command: today.story-replies.visitors.set
+    version: 1.0.0
+    description: Agree or withdraw (POST /api/today/story-replies/visitors), 20 a minute. Agreeing stores the version of the words and the time (kept when already agreed to the same words); withdrawing clears both, and the member's replies leave signed-out Today from the next read. Only replies written at or after the time agreed are shown.
+    inputSchema:
+      agreed:
+        type: boolean
+    outputSchema:
+      agreed:
+        type: boolean
+    dataAccess:
+      - user_ui_preferences
+    purpose: story_replies_visitor_consent
     retentionClass: until_account_deletion
     idempotency: true
   - pluginId: today

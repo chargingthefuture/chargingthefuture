@@ -6,14 +6,12 @@ import React, { useMemo, useState } from 'react';
 import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SE_PEOPLE_PAGE_SIZE, sePeopleChips, SE_PEOPLE_WORDS as W, type SePeopleFilter, type SePeoplePage, type SeThemeTokens } from '@ctf/shared';
 import type { FeatureKey } from '../../../navigation/screens';
-import { openTodayLink } from '../today/openTodayLink';
 import { useScrollFrameToTop } from '../frame-scroll';
 import { PeopleLocked } from './PeopleLocked';
-import { PersonCard } from './PersonCard';
+import { PersonCard, type OpenSheet } from './PersonCard';
+import { PersonSheets, usePersonSheet } from './PersonSheets';
 import { makePeopleStyles, type PeopleStyles } from './peopleStyles';
 import { usePeople, usePeopleCount, type PeopleState } from './usePeople';
-
-type Go = (_href: string) => void;
 
 function Button({ s, label, onPress, disabled }: { s: PeopleStyles; label: string; onPress: () => void; disabled?: boolean }) {
   return (
@@ -36,7 +34,9 @@ function Pager({ s, people, onPage }: { s: PeopleStyles; people: SePeoplePage; o
   );
 }
 
-function Results({ s, state, go, onPage, onRetry }: { s: PeopleStyles; state: PeopleState; go: Go; onPage: (_page: number) => void; onRetry: () => void }) {
+type ResultsProps = { s: PeopleStyles; state: PeopleState; onSheet: OpenSheet; onPage: (_page: number) => void; onRetry: () => void };
+
+function Results({ s, state, onSheet, onPage, onRetry }: ResultsProps) {
   if (state.kind === 'loading' || state.kind === 'locked') return <Text style={s.meta}>{W.loading}</Text>;
   if (state.kind === 'error') {
     return (
@@ -52,7 +52,7 @@ function Results({ s, state, go, onPage, onRetry }: { s: PeopleStyles; state: Pe
   return (
     <>
       {state.people.items.map((person) => (
-        <PersonCard key={person.id} s={s} person={person} go={go} />
+        <PersonCard key={person.id} s={s} person={person} onSheet={onSheet} />
       ))}
       <Pager s={s} people={state.people} onPage={onPage} />
     </>
@@ -86,9 +86,9 @@ function Filters({ s, filter, onFilter }: { s: PeopleStyles; filter: SePeopleFil
 }
 
 // `initialFilter` is 'fits' when Today's Match card opened People through Get introduced.
-type ScreenProps = { t: SeThemeTokens; onOpen: (_key: FeatureKey) => void; onToday: () => void; initialFilter?: SePeopleFilter };
+type ScreenProps = { t: SeThemeTokens; onOpen: (_key: FeatureKey) => void; onToday: () => void; initialFilter?: SePeopleFilter; viewerId: string | null };
 
-export function PeopleScreen({ t, onOpen, onToday, initialFilter = 'all' }: ScreenProps) {
+export function PeopleScreen({ t, onOpen, onToday, initialFilter = 'all', viewerId }: ScreenProps) {
   const s = useMemo(() => makePeopleStyles(t), [t]);
   const [page, setPage] = useState(1);
   const [filter, setFilter] = useState<SePeopleFilter>(initialFilter);
@@ -102,7 +102,7 @@ export function PeopleScreen({ t, onOpen, onToday, initialFilter = 'all' }: Scre
     setPage(next);
     scrollToTop();
   };
-  const go: Go = (href) => openTodayLink(href, onOpen);
+  const sheets = usePersonSheet();
 
   if (state.kind === 'locked') {
     return (
@@ -134,7 +134,8 @@ export function PeopleScreen({ t, onOpen, onToday, initialFilter = 'all' }: Scre
           setPage(1);
         }}
       />
-      <Results s={s} state={state} go={go} onPage={turnPage} onRetry={() => setAttempt((n) => n + 1)} />
+      <Results s={s} state={state} onSheet={sheets.open} onPage={turnPage} onRetry={() => setAttempt((n) => n + 1)} />
+      <PersonSheets t={t} sheet={sheets.sheet} viewerId={viewerId} onClose={sheets.close} onSwitch={sheets.switchTo} />
     </View>
   );
 }
