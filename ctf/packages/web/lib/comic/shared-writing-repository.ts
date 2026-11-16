@@ -1,3 +1,4 @@
+import { SE_MEMBER_STORY_CONSENT_VERSION } from "@ctf/shared";
 import { queryDb, withDbTransaction } from "lib/db/postgres";
 import type { PoolClient } from "pg";
 import type { ContributedEntry } from "./quora-export-intake";
@@ -14,6 +15,10 @@ export type SharedWritingSummary = {
   discardedSections: string[];
   declineReason: string;
   createdAtIso: string;
+  // The member also chose to show this writing as Today stories (lib/comic/shared-writing-stories.ts).
+  showAsStory: boolean;
+  // The choice was made under the current words, which name visitors without an account.
+  storyConsentCurrent: boolean;
 };
 
 type SharedWritingRow = {
@@ -24,6 +29,8 @@ type SharedWritingRow = {
   discarded_sections: unknown;
   decline_reason: string;
   created_at: Date;
+  story_consent_at: Date | null;
+  story_consent_version: string | null;
 };
 
 function mapRow(row: SharedWritingRow): SharedWritingSummary {
@@ -37,6 +44,8 @@ function mapRow(row: SharedWritingRow): SharedWritingSummary {
       : [],
     declineReason: row.decline_reason,
     createdAtIso: new Date(row.created_at).toISOString(),
+    showAsStory: row.story_consent_at !== null,
+    storyConsentCurrent: row.story_consent_version === SE_MEMBER_STORY_CONSENT_VERSION,
   };
 }
 
@@ -63,7 +72,7 @@ export async function createSharedWriting(input: {
       `INSERT INTO comic_contributions
          (user_id, kind, status, consent_version, third_party_note, entry_count, discarded_sections)
        VALUES ($1, $2, 'pending_review', $3, $4, $5, $6::jsonb)
-       RETURNING id, kind, status, entry_count, discarded_sections, decline_reason, created_at`,
+       RETURNING id, kind, status, entry_count, discarded_sections, decline_reason, created_at, story_consent_at, story_consent_version`,
       [
         input.userId,
         input.kind,
@@ -98,7 +107,7 @@ export async function createSharedWriting(input: {
 // A member's own contribution history, for the page's "what you have sent" list.
 export async function listSharedWritingForUser(userId: string): Promise<SharedWritingSummary[]> {
   const result = await queryDb<SharedWritingRow>(
-    `SELECT id, kind, status, entry_count, discarded_sections, decline_reason, created_at
+    `SELECT id, kind, status, entry_count, discarded_sections, decline_reason, created_at, story_consent_at, story_consent_version
      FROM comic_contributions
      WHERE user_id = $1
      ORDER BY created_at DESC
@@ -195,7 +204,7 @@ export async function listSharedWritingForReview(status: string): Promise<Shared
     }
   >(
     `SELECT id, user_id, kind, status, consent_version, third_party_note, entry_count,
-            discarded_sections, decline_reason, created_at
+            discarded_sections, decline_reason, created_at, story_consent_at, story_consent_version
      FROM comic_contributions
      WHERE ($1 = 'all' OR status = $1)
      ORDER BY created_at ASC

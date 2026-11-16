@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Upload, ShieldCheck, Check, Trash2 } from 'lucide-react';
+import { Upload, ShieldCheck, Check } from 'lucide-react';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { useTheme } from '@/hooks/useTheme';
 import { getComicTokens } from './comic-shared';
@@ -13,6 +13,7 @@ import {
 import { MAX_LINKED_POSTS } from '../../lib/comic/shared-writing-links';
 import { failureText, responseFailureText } from 'lib/errors/client-failure';
 import { QuoraExportFaqSection } from './comic-quora-export-faq';
+import { HistorySection, type SharedWritingSummary } from './comic-knowledge-history';
 
 // The knowledge page (`/knowledge`): where a member lends their own public Quora writing to the
 // assistant's reference library, and where the consent that permits it is given.
@@ -31,16 +32,6 @@ import { QuoraExportFaqSection } from './comic-quora-export-faq';
 
 type LinkedPostDraft = { url: string; text: string };
 
-type SharedWritingSummary = {
-  id: string;
-  kind: 'links' | 'export';
-  status: 'pending_review' | 'accepted' | 'declined' | 'withdrawn';
-  entryCount: number;
-  discardedSections: string[];
-  declineReason: string;
-  createdAtIso: string;
-};
-
 type Mode = 'links' | 'export';
 type ComicTokens = ReturnType<typeof getComicTokens>;
 type SharedWritingResponse = {
@@ -52,13 +43,6 @@ type SharedWritingResponse = {
 // Shown when the list of what this member has sent could not be loaded. It is where Withdraw lives,
 // so the page says why it is missing rather than leaving the section out with no word.
 const HISTORY_LOAD_FAILED = 'Could not load what you have sent, so it cannot be withdrawn from here right now. Reload the page to try again.';
-
-const STATUS_LABEL: Record<SharedWritingSummary['status'], string> = {
-  pending_review: 'Waiting to be read',
-  accepted: 'In the library',
-  declined: 'Not used',
-  withdrawn: 'Withdrawn',
-};
 
 // Links is the DEFAULT. Most people's public writing is mixed — dating, politics, faith, memes —
 // and nothing here sorts on-topic from off-topic automatically, so picking a few posts is both far
@@ -278,6 +262,7 @@ function useKnowledgeSharedWriting(askForQuoraUrl: boolean) {
     historyError,
     submit,
     withdraw,
+    reloadHistory: loadHistory,
   };
 }
 
@@ -333,7 +318,7 @@ export function ComicKnowledgeShell({ askForQuoraUrl = false }: { askForQuoraUrl
             away, immediately, rather than asking the contributor to take it on trust. */}
         {c.receipt ? <ReceiptSection t={t} receipt={c.receipt} unlockLink={c.unlockLink} /> : null}
 
-        {c.history.length > 0 ? <HistorySection t={t} history={c.history} onWithdraw={c.withdraw} /> : null}
+        {c.history.length > 0 ? <HistorySection t={t} history={c.history} onWithdraw={c.withdraw} onChanged={c.reloadHistory} /> : null}
         {c.historyError ? (
           <p role="alert" style={{ ...bodyStyle(t), color: '#F87171' }}>{c.historyError}</p>
         ) : null}
@@ -866,79 +851,6 @@ function ReceiptSection({
         </p>
       )}
     </section>
-  );
-}
-
-function HistorySection({
-  t,
-  history,
-  onWithdraw,
-}: {
-  t: ComicTokens;
-  history: SharedWritingSummary[];
-  onWithdraw: (id: string) => void;
-}) {
-  return (
-    <section style={cardStyle(t)}>
-      <h2 style={cardTitleStyle}>What you have sent</h2>
-      {history.map((item) => (
-        <HistoryRow key={item.id} t={t} item={item} onWithdraw={onWithdraw} />
-      ))}
-    </section>
-  );
-}
-
-function HistoryRow({
-  t,
-  item,
-  onWithdraw,
-}: {
-  t: ComicTokens;
-  item: SharedWritingSummary;
-  onWithdraw: (id: string) => void;
-}) {
-  return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 12,
-        padding: '10px 0',
-        borderTop: `1px solid ${t.BORDER}`,
-      }}
-    >
-      <div style={{ minWidth: 0, flex: 1 }}>
-        <div style={{ fontSize: 14, fontWeight: 600 }}>{STATUS_LABEL[item.status]}</div>
-        <div style={{ fontSize: 12, color: t.MUTED }}>
-          {new Date(item.createdAtIso).toLocaleDateString()} ·{' '}
-          {item.entryCount.toLocaleString()} {item.entryCount === 1 ? 'piece' : 'pieces'}
-          {item.status === 'declined' && item.declineReason ? ` · ${item.declineReason}` : ''}
-        </div>
-      </div>
-      {item.status !== 'withdrawn' ? (
-        <button
-          type="button"
-          onClick={() => void onWithdraw(item.id)}
-          aria-label="Withdraw this contribution"
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-            padding: '7px 12px',
-            borderRadius: 8,
-            background: 'transparent',
-            border: `1px solid ${t.BORDER_SOLID}`,
-            color: t.SUBTLE,
-            fontSize: 13,
-            fontWeight: 600,
-            cursor: 'pointer',
-            flexShrink: 0,
-          }}
-        >
-          <Trash2 size={14} /> Withdraw
-        </button>
-      ) : null}
-    </div>
   );
 }
 

@@ -1,7 +1,7 @@
-// Stories on Today (3.1.0 plan, Today): the blog's posts and the owner's Quora answers, released five
-// a day, oldest first, so every member sees the same ones on the same day. A post published on the
-// blog that day joins that day's stories as well. When every post has been released the order
-// starts again from the oldest. Shared by web and Android, and by the puzzles built from them.
+// Stories on Today (3.1.0 plan, Today): the blog's posts and the owner's Quora answers, with members'
+// own imported writing beside them (seStoriesWithMembers), released five a day, oldest first, so
+// every member sees the same ones on the same day. A post published on the blog that day joins that day's stories as well. When every story
+// has been released the order starts again from the oldest. Shared by web and Android.
 //
 // The list comes from the blog's build (wiki-site scripts/src/build-posts-json.ts), published at
 // SE_BLOG_POSTS_URL with every listed post and Quora archive entry, invite posts left out.
@@ -20,6 +20,60 @@ function isStoryPost(value) {
         typeof post.collection === 'string' &&
         typeof post.url === 'string' &&
         typeof post.text === 'string');
+}
+// Members' own writing, brought in through the Knowledge Library (owner decisions on the 3.1 plan,
+// 2026-11-16): mixed in with the blog's posts rather than queued after them. Up to five member stories
+// a day, oldest acceptance first, beside the day's blog stories; with fewer waiting, what there is.
+// Each story has one day, worked out the same way for everyone, and never the day it was accepted.
+export const SE_MEMBER_STORY_COLLECTION = 'member';
+export const SE_MEMBER_STORIES_PER_DAY = 5;
+// The member stories whose day it is. Stories take the days in acceptance order, five to a day, each
+// from the day after it was accepted and never before the release started.
+export function seMemberStoriesForDay(members, day) {
+    const index = seStoryDayIndex(day);
+    if (index < 0)
+        return [];
+    const ordered = [...members].sort((a, b) => a.acceptedAtIso.localeCompare(b.acceptedAtIso) || a.id.localeCompare(b.id));
+    const shown = [];
+    let current = 0;
+    let used = 0;
+    for (const story of ordered) {
+        const eligible = Math.max(0, seStoryDayIndex(story.acceptedAtIso.slice(0, 10)) + 1);
+        if (eligible > current)
+            [current, used] = [eligible, 0];
+        if (used === SE_MEMBER_STORIES_PER_DAY)
+            [current, used] = [current + 1, 0];
+        if (current > index)
+            break;
+        if (current === index)
+            shown.push(story);
+        used += 1;
+    }
+    return shown;
+}
+export function seMemberStoryPost(story) {
+    return {
+        number: 0,
+        slug: seMemberStorySlug(story.id),
+        title: story.title,
+        date: story.acceptedAtIso,
+        collection: SE_MEMBER_STORY_COLLECTION,
+        url: '',
+        text: story.text,
+    };
+}
+// The day's stories with members' writing beside them: the blog's day as before, then the member
+// stories whose day it is.
+export function seStoriesWithMembers(posts, members, day) {
+    return [...seStoriesForDay(posts, day), ...seMemberStoriesForDay(members, day).map(seMemberStoryPost)];
+}
+const MEMBER_SLUG = 'member-';
+export function seMemberStorySlug(id) {
+    return `${MEMBER_SLUG}${id}`;
+}
+// The member story id behind a slug, or null for a blog post.
+export function seMemberStoryId(slug) {
+    return slug.startsWith(MEMBER_SLUG) ? slug.slice(MEMBER_SLUG.length) : null;
 }
 // The posts in a posts.json body, oldest first by their /feed number. Anything malformed is left out.
 export function seParseStoryPosts(body) {
