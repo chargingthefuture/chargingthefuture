@@ -14,6 +14,7 @@ import { CheckboxRow, ChoiceGroup, Field, YesNo, hintStyle, inputStyle } from '.
 import { SurveyAccountCard, emptyAccountDraft, type AccountDraft } from './survey-account-card';
 import { SurveyDone, SurveyIntro } from './survey-intro';
 import { CurrentProfileQuestion, VerificationOffer } from './survey-current-profile';
+import { profileUrlForHandle } from 'lib/quora-deletion-survey/profile-url';
 import { buildSubmission, submitSurvey } from './survey-submit';
 import {
   choiceChipStyle,
@@ -75,7 +76,7 @@ function AccountsSection({
       <p style={{ ...hintStyle(tokens), marginTop: 18 }}>
         One card per account Quora closed. Add another for each one you lost — the number of cards
         is how the count is worked out, so nobody has to total it up. Each handle you list here is
-        added to your account history and cannot be changed afterward.
+        added to your account. This helps stop Specterati operators from impersonating survivors.
       </p>
       {accounts.map((draft, index) => (
         <SurveyAccountCard
@@ -170,7 +171,8 @@ function ConfirmationScreen({
   currentProfileUrl: string;
   tokens: SurveyTokens;
 }) {
-  const profileUrl = currentProfileUrl.trim();
+  const handle = currentProfileUrl.trim();
+  const profileUrl = handle.length > 0 ? profileUrlForHandle(handle) : '';
   const offerReady = needsUnlock && hasCurrentProfile === true && profileUrl.length > 0;
 
   return (
