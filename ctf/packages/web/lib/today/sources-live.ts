@@ -64,7 +64,11 @@ export async function numbersCard(day: SeTodayDay = utcTodayDay(), withWeekly = 
         body: `${dashboard.skillsListedTotal} of ${dashboard.skillsCatalogTotal} skills are held by somebody listed in the Directory.`,
         createdAtIso: day.startIso,
         href,
-        actions: [action('open', 'Open the full report', href)],
+        // Both full reports stay on their 3.0 pages (owner decisions, 2026-11-16): Workforce for
+        // coverage and, when the weekly figure shows, GDP for the Community Value Index.
+        actions: weekly
+          ? [action('open', 'Open the full report', href), action('open', 'Community Value Index report', '/apps/gdp')]
+          : [action('open', 'Open the full report', href)],
       }),
       figures: weekly ? [coverage, weekly] : [coverage],
     },

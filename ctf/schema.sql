@@ -7472,6 +7472,8 @@ CREATE INDEX IF NOT EXISTS idx_commons_item_answers_item ON commons_item_answers
 CREATE INDEX IF NOT EXISTS idx_commons_item_answers_account ON commons_item_answers(account_id);
 -- confirmed_at: when the card's author confirmed a member's "This helped me" (3.1.0 plan, Measures:
 -- 10 action minutes toward Days won, for the member who said it). NULL until confirmed.
+-- Signed-out Today reads its sample Days won from the demo schema, so the demo copy needs this column
+-- too; post/0110 adds it there on a demo schema made before it existed.
 ALTER TABLE IF EXISTS commons_item_answers ADD COLUMN IF NOT EXISTS confirmed_at TIMESTAMPTZ;
 CREATE INDEX IF NOT EXISTS idx_commons_item_answers_helped_confirmed
   ON commons_item_answers(confirmed_at) WHERE kind = 'helped-me' AND confirmed_at IS NOT NULL;

@@ -7470,6 +7470,8 @@ CREATE INDEX IF NOT EXISTS idx_commons_item_answers_item ON commons_item_answers
 CREATE INDEX IF NOT EXISTS idx_commons_item_answers_account ON commons_item_answers(account_id);
 -- confirmed_at: when the card's author confirmed a member's "This helped me" (3.1.0 plan, Measures:
 -- 10 action minutes toward Days won, for the member who said it). NULL until confirmed.
+-- Signed-out Today reads its sample Days won from the demo schema, so the demo copy needs this column
+-- too; post/0110 adds it there on a demo schema made before it existed.
 ALTER TABLE IF EXISTS commons_item_answers ADD COLUMN IF NOT EXISTS confirmed_at TIMESTAMPTZ;
 CREATE INDEX IF NOT EXISTS idx_commons_item_answers_helped_confirmed
   ON commons_item_answers(confirmed_at) WHERE kind = 'helped-me' AND confirmed_at IS NOT NULL;
@@ -11893,4 +11895,24 @@ CREATE TABLE IF NOT EXISTS today_match_needs (
 ALTER TABLE IF EXISTS today_match_needs ADD COLUMN IF NOT EXISTS need_keys TEXT[] NOT NULL DEFAULT '{}';
 ALTER TABLE IF EXISTS today_match_needs ADD COLUMN IF NOT EXISTS job_title_ids TEXT[] NOT NULL DEFAULT '{}';
 ALTER TABLE IF EXISTS today_match_needs ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+
+-- ── post migration: 0110_demo_days_won_columns.sql ──
+-- Safe to re-run.
+-- Signed-out Today reads Days won from the demo schema (its sample count, tagged Preview). The read
+-- sums action minutes from four tables, and post/0098 gave commons_item_answers its confirmed_at in
+-- production only, so the demo read failed and the signed-out hero showed no count. This brings the
+-- demo schema's copies up to every column that read uses. Production already has them all.
+ALTER TABLE IF EXISTS demo.commons_item_answers ADD COLUMN IF NOT EXISTS confirmed_at TIMESTAMPTZ;
+DO $$
+BEGIN
+  IF to_regclass('demo.commons_item_answers') IS NOT NULL THEN
+    CREATE INDEX IF NOT EXISTS idx_commons_item_answers_helped_confirmed
+      ON demo.commons_item_answers(confirmed_at) WHERE kind = 'helped-me' AND confirmed_at IS NOT NULL;
+  END IF;
+END $$;
+ALTER TABLE IF EXISTS demo.peer_programming_goal_tasks ADD COLUMN IF NOT EXISTS kept_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS demo.peer_programming_goal_tasks ADD COLUMN IF NOT EXISTS helped BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE IF EXISTS demo.foundation_call_sessions ADD COLUMN IF NOT EXISTS answered_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS demo.foundation_call_sessions ADD COLUMN IF NOT EXISTS ended_at TIMESTAMPTZ;
 
