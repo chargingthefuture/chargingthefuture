@@ -406,6 +406,8 @@ Android admin present (2026-06-06): `AdminLighthouse.tsx` + `admin-api.ts` added
 
 `ctf/scripts/seedLighthouse.mjs` seeds deterministic profile, property, match, and block fixtures for dev validation.
 
+Demo schema: `ctf/scripts/seedDemo.mjs` writes the host listings the Request to stay flow uses, and `ctf/scripts/demo-seed/47-lighthouse.mjs` adds six active places to stay by synthetic hosts (`demo-peer-lighthouse-01` to `-03`) in six cities: a room in a shared house, a couch for a few nights, a bedroom in a shared apartment, a short-term sublet, a camper and a spare room in a family house. Fixed ids, upserted on each run, update times within the last two days, and no street address or postal code. They lead the browse list (LH-1) and are what the "Offer · a place to stay" previews on signed-out Today read; the module moves the base fixture listings a week back so they follow.
+
 ## 8) Gaps and Known Technical Debt
 
 1. Host-profile deletion semantics for linked properties/matches follow a defensive cascade; FK-safe contract semantics are documented in code but have not been promoted to an explicit deletion contract.
@@ -425,6 +427,7 @@ Android admin present (2026-06-06): `AdminLighthouse.tsx` + `admin-api.ts` added
 
 ## 9) Change Log
 
+- 2026-11-16: **Demo places to stay.** `ctf/scripts/demo-seed/47-lighthouse.mjs` adds six active listings by synthetic hosts to the demo schema, so the browse list and the "Offer · a place to stay" previews on signed-out Today have places to show once the Seed demo workflow runs. Demo data only; no route, schema or screen change.
 - 2026-11-12: **Listing photos are for Weavers of the Commons (owner decision).** Per the 3.1 plan's Access table, only badge holders put pictures in posts. `POST /api/lighthouse/properties` refuses photos from anybody else with 403 `weavers_only` and the plan's words ("Pictures in posts are for Weavers of the Commons."); `PUT /api/lighthouse/properties/[propertyId]` and the admin PUT refuse only a photo not already on the listing, so a listing put up before the rule keeps its photos and can still be edited. The badge is never given by hand, so an admin is held to it too. The host form shows the refusal as it shows any other. No table changed. Test: `lib/contributor-access/weavers-limits.test.ts`.
 
 - 2026-11-03: **Places to stay on Today stay 14 days, with a renew (non-plugin inventory 5m).** An active listing stays on Today 14 days from when it was posted or last changed; the host's own listings now show on their own Today, and the host can keep one up 14 more days from the card or from the day-14 notice ("Still offering this?") with `POST /api/today/cards/[cardId]/renew`. An offer is not closed from Today. Leaving Today changes nothing on the listing. No LightHouse table or route changed.

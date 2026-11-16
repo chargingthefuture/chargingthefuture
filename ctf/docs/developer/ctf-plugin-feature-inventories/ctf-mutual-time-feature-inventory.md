@@ -203,6 +203,8 @@ inside the rolling window, so the sample overlap is always still ahead and its v
 each run rather than piling up. The closed event keeps a fixed past window (`2026-07-21`, 7 days), which
 keeps that half reproducible; its stamped result stands.
 
+Demo schema: `ctf/scripts/demo-seed/48-mutual-time.mjs` adds six open surveys by synthetic members (`demo-peer-mutual-time-01` to `-03`), each offering an hour of help: math tutoring, cooking a week of meals, a bike or small repair, rides to appointments, moving help and going through paperwork. Fixed ids and slugs, upserted on each run; each opened within the last two days and closes a week after the run, so they stay open for picking. They are what the "Offer · hours" previews on signed-out Today read. No votes are seeded on them.
+
 ## Gaps and Known Technical Debt
 
 1. **Target meeting week is derived, not configured.** The candidate window is 7 days, rolling forward
@@ -224,6 +226,7 @@ keeps that half reproducible; its stamped result stands.
 
 ## Change Log
 
+- 2026-11-16: **Demo offers of hours.** `ctf/scripts/demo-seed/48-mutual-time.mjs` adds six open surveys by synthetic members to the demo schema, so the "Offer · hours" previews on signed-out Today have something to show once the Seed demo workflow runs. `mutual_time_events` leaves the demo seed coverage list of tables still to seed. Demo data only; no route, schema or screen change.
 - 2026-11-11: **Open surveys show on Today (User Features item 9).** The 3.1 plan lists Mutual Time among
   the Offer cards. `lib/mutual-time/open-events.ts` reads surveys open for picking right now (stored
   open, opened, not past their close time) with only the title, description, meeting place, creator id
