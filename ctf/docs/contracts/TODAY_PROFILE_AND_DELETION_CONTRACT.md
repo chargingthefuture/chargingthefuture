@@ -73,6 +73,11 @@ Taxonomy job titles behind them, or the job titles copied from a code saved on l
 itself is not kept. The card counts the Directory people who fit those job titles on every read, and
 People's "Fits what you need" lists them; nothing about the member is written anywhere else.
 
+Whether visitors may read the member's replies on members' stories (owner decision, 2026-11-16) is
+kept on their `user_ui_preferences` row: `story_replies_visitors_version` (the words agreed to) and
+`story_replies_visitors_at` (when). Turning it off clears both. Signed-out Today shows a reply only
+while its writer agrees to the current words and only when it was written at or after that time.
+
 On the member's own device it keeps the last Today answer, so the screen draws at once. Marks a
 device kept before they were stored on the account are sent up once and removed from the device. A
 visitor who is not signed in has no account and no marks.
@@ -97,6 +102,9 @@ visitor who is not signed in has no account and no marks.
   `today-card-conversations`). Public messages other members wrote under a card stay.
 - Full account deletion: the same 21 Questions and card conversation rows; each card source's own
   contract covers its rows.
+- The visitor agreement on `user_ui_preferences` goes with that row, which the account deletion
+  removes (registry entry for `user_ui_preferences`); their replies go with their
+  `commons_item_messages` rows above, so nothing of theirs is left for a visitor to read.
 - `today_card_feedback_counts` is not touched by either: it stores no account id, so no row can be
   traced to the member.
 

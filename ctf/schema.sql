@@ -6566,6 +6566,15 @@ BEGIN
 END
 $user_ui_preferences_days_won_seen_check$;
 
+-- Visitors may read my replies on members' stories (owner decision, 2026-11-16). A member agrees once,
+-- in Settings, that what they write in the conversation on a member's story can be read by visitors
+-- without an account. story_replies_visitors_version is the version of the words they agreed to
+-- (SE_STORY_REPLIES_VISITORS_VERSION) and story_replies_visitors_at when; both NULL means not agreed,
+-- and withdrawing clears both, which hides their replies from visitors at once. Only replies written
+-- at or after story_replies_visitors_at are shown: earlier ones were written for members.
+ALTER TABLE IF EXISTS user_ui_preferences ADD COLUMN IF NOT EXISTS story_replies_visitors_version TEXT;
+ALTER TABLE IF EXISTS user_ui_preferences ADD COLUMN IF NOT EXISTS story_replies_visitors_at TIMESTAMPTZ;
+
 -- === BUG REPORTS (in-app "Report a problem" capture; raw text stays private) ===
 -- Users file problem reports from inside the app and never touch GitHub. The raw
 -- message is the private source of truth and is NEVER published. A separate process
