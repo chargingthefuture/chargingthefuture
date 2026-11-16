@@ -35,6 +35,7 @@ export * from './today/daily-credit';
 export * from './questions/bank';
 export * from './questions/matching';
 export * from './stories/release';
+export * from './stories/member';
 export * from './games/daily';
 export * from './games/gate';
 export * from './games/ladder';
