@@ -7,7 +7,7 @@
  * ChymeTokensContext.
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View, useColorScheme } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LogOut, RefreshCw } from 'lucide-react-native';
 import { seSignedOutTheme, HOSTING_NOT_ENDORSEMENT_SHORT, SE_ROOM_MAIN_AUDIENCE, SE_ROOM_RULE, seTheme, type SeThemeTokens } from '@ctf/shared';
 import { SE_FONT } from '../se-frame/fonts';
@@ -146,7 +146,7 @@ function usePublicRoom() {
 }
 
 export function ChymePublicScreen({ onBack }: { onBack: () => void }) {
-  const theme = seSignedOutTheme(useColorScheme() === 'dark');
+  const theme = seSignedOutTheme(false);
   const se = seTheme(theme.color, theme.mode);
   const t = useMemo(() => seChymeTokens(se), [se]);
   const { signIn } = useAuth();
