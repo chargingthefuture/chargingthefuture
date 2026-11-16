@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react';
 import { SE_PEOPLE_PAGE_SIZE, sePeopleChips, SE_PEOPLE_WORDS as W, type SePeopleFilter, type SePeoplePage } from '@ctf/shared';
 import { PeopleLocked } from './people-locked';
-import { PersonCard } from './person-card';
-import { readFilter, readPage, usePeople, usePeopleCount, writePage, type PeopleState } from './use-people';
+import { PersonCard, type PersonSheet } from './person-card';
+import { PersonSheets } from './person-sheets';
+import { readFilter, readPage, readPerson, usePeople, usePeopleCount, writePage, writePerson, type PeopleState } from './use-people';
 import styles from './people.module.css';
 
 // People, built to the approved boards "People, verified" and "People, not yet verified": the
@@ -28,7 +29,9 @@ function Pager({ people, onPage }: { people: SePeoplePage; onPage: (_page: numbe
   );
 }
 
-function Results({ state, onPage, onRetry }: { state: PeopleState; onPage: (_page: number) => void; onRetry: () => void }) {
+type ResultsProps = { state: PeopleState; onPage: (_page: number) => void; onRetry: () => void; onSheet: (_sheet: PersonSheet) => void };
+
+function Results({ state, onPage, onRetry, onSheet }: ResultsProps) {
   if (state.kind === 'loading' || state.kind === 'locked') return <p className={styles.meta}>{W.loading}</p>;
   if (state.kind === 'error') {
     return (
@@ -44,7 +47,7 @@ function Results({ state, onPage, onRetry }: { state: PeopleState; onPage: (_pag
   return (
     <>
       {state.people.items.map((person) => (
-        <PersonCard key={person.id} person={person} />
+        <PersonCard key={person.id} person={person} onSheet={onSheet} />
       ))}
       <Pager people={state.people} onPage={onPage} />
     </>
@@ -79,18 +82,25 @@ function Filters({ filter, onFilter }: { filter: SePeopleFilter; onFilter: (_nex
   );
 }
 
-export function PeopleScreen({ onToday }: { onToday: () => void }) {
+export function PeopleScreen({ onToday, viewerId }: { onToday: () => void; viewerId: string | null }) {
   const [page, setPage] = useState(1);
   const [filter, setFilter] = useState<SePeopleFilter>('all');
   const [query, setQuery] = useState('');
   const [attempt, setAttempt] = useState(0);
+  // A profile or quote sheet open over the list; a shared profile address (?person=) opens one too.
+  const [sheet, setSheet] = useState<PersonSheet | null>(null);
   const state = usePeople(page, filter, query, attempt);
   const count = usePeopleCount();
 
   useEffect(() => {
     setPage(readPage());
     setFilter(readFilter());
+    const shared = readPerson();
+    if (shared) setSheet({ kind: 'profile', person: shared });
   }, []);
+
+  // The open profile stays in the address, so it can be shared and reloaded.
+  useEffect(() => writePerson(sheet?.kind === 'profile' ? sheet.person.id : null), [sheet]);
 
   const goTo = (next: number, nextFilter: SePeopleFilter = filter) => {
     setPage(next);
@@ -130,7 +140,8 @@ export function PeopleScreen({ onToday }: { onToday: () => void }) {
           goTo(1, next);
         }}
       />
-      <Results state={state} onPage={goTo} onRetry={() => setAttempt((n) => n + 1)} />
+      <Results state={state} onPage={goTo} onRetry={() => setAttempt((n) => n + 1)} onSheet={setSheet} />
+      <PersonSheets sheet={sheet} viewerId={viewerId} people={state.kind === 'ready' ? state.people.items : []} onSheet={setSheet} />
     </div>
   );
 }

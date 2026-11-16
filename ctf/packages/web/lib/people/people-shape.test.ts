@@ -20,6 +20,7 @@ const person: SePerson = {
   country: 'US',
   offering: ['Resume writing'],
   listed: ['Resume writing', 'Public speaking'],
+  profileUrl: 'https://www.quora.com/profile/Teodor-Braskwell',
 };
 
 describe('People shape shared by web and Android', () => {
