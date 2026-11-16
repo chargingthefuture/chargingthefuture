@@ -282,7 +282,7 @@ Expect a small landscape or cut-paper picture, never the photo, and the same pic
    there is no Android app link (you are in it).
 8. Open Activity and run AD-15 as on the web; an item for a part of the app the Android app does not
    carry opens in the browser.
-9. Open People and run AD-16 as on the web; the card and Request a quote open their pages in the browser, and Finish Unlock opens Unlock in the app.
+9. Open People and run AD-16 as on the web; Request a quote and Profile open their sheets in the app, Quora profile and Share open the link popup (Open link, and Share hands the address to the phone's share sheet, which has Copy), TalkBack reads whose profile each button is for and returns to the button when a sheet closes, the back gesture closes a sheet, and Finish Unlock opens Unlock in the app.
 10. Today opens with "Days the Avenhood has won", as on the web (AD-17).
 11. Mute a person from a card's ••• menu and words from Me → Muted, as on the web (AD-18).
 

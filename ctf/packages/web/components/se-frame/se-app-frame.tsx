@@ -130,7 +130,7 @@ function TabScreen({ tab, currentUser, isAdmin, prefs, newKind, onAskArchitect, 
         <MeTab currentUser={currentUser} isAdmin={isAdmin} prefs={prefs} onAskArchitect={onAskArchitect} onBack={onBack} saving={saving} />
       ) : null}
       {tab === 'activity' ? <ActivityScreen /> : null}
-      {tab === 'people' ? <PeopleScreen onToday={onClose} /> : null}
+      {tab === 'people' ? <PeopleScreen onToday={onClose} viewerId={currentUser.userId} /> : null}
     </>
   );
 }

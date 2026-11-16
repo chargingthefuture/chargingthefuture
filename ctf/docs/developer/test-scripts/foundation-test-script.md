@@ -1211,3 +1211,16 @@ moved. (Before this it was a generic error and the call kept ringing.) Lift the 
 - Reset the admin values after.
 
 **Result:** web ☐ android ☐ — notes:
+
+### FDN-49 — Request a quote from 3.1 People (added 2026-11-16)
+
+**Role:** approved member A on 3.1; provider B offering a skill · **Precondition:** B has a headline and a short description.
+**Steps:**
+1. As A, open People and tap **Request a quote** on B; tap **Request a quote** in the sheet.
+2. As B, open the same sheet on your own row.
+**Expected:**
+- Step 1 opens a 3.1 sheet, not the Foundation page, with B's name, headline, short description, "Willing to be contacted about", About and "Good to know". The button reads "Requesting…", then "Quote requested. <B> has been told." is announced and the button stays grayed out. The request appears in both sides' Quotes list in Foundation with B's headline as the service, and B gets one notification.
+- Step 2 grays out the button with "This is your own profile — you can't request a quote from yourself."
+- A failed send shows Foundation's wording with its reference.
+
+**Result:** web ☐ android ☐ — notes:
