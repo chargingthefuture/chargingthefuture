@@ -1,7 +1,7 @@
 import type { SeTodayRoom, SeTodayTalk } from '@ctf/shared';
 import { getPublicRoomLiveState, readRoomFaces } from 'lib/chyme/repository';
 import { CHYME_CONTRIBUTORS_ROOM_KEY } from 'lib/chyme/constants';
-import { getContributorAccessConfig, isMemberEligible } from 'lib/contributor-access/repository';
+import { canEnterWeaversRoom } from 'lib/contributor-access/weavers-limits';
 import { getGuide } from 'lib/ti-radio/repository';
 import type { TodayViewer } from './card';
 
@@ -46,8 +46,7 @@ export async function mainRoom(talk: Promise<SeTodayTalk | null>, withFaces = tr
 }
 
 export async function weaversRoom(viewer: TodayViewer): Promise<SeTodayRoom | null> {
-  const [config, eligible] = await Promise.all([getContributorAccessConfig(), isMemberEligible(viewer.userId)]);
-  if (!config.channelOpen || (!eligible && !viewer.isAdmin)) return null;
+  if (!(await canEnterWeaversRoom(viewer.userId, viewer.isAdmin))) return null;
   const stage = await readRoomFaces(CHYME_CONTRIBUTORS_ROOM_KEY);
   return {
     key: 'weavers',
