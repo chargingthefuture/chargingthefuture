@@ -12,8 +12,8 @@ with a link to where the meeting happens (Chyme, Peer Programming, or Beacon).
   states (vote / result / sign-in gate); timezone-aware voting; the most-overlap algorithm; auto-close
   at a set close time; a rolling seven-day window of times while the survey is open.
 - **Out of scope:** any ServiceCredits/money (there are none here); a public directory of events (events
-  are shared as direct links and never listed in public; since 2026-11-11 an open survey also shows as
-  an Offer card on signed-in Today, per the 3.1 plan, User Features item 9); recurring events; native Android (web + mobile-responsive
+  are shared as direct links and never listed in public; since 2026-11-11 an open survey also shows on
+  its creator's own Today, User Features item 9); recurring events; native Android (web + mobile-responsive
   only, per rule 105 — Mutual Time is not on the Chyme keep-list).
 
 ## Intent and Outcome
@@ -54,12 +54,11 @@ to the meeting surface; members who did not vote can still come listen in.
    it no longer counts. Pick from the days below and save again." — instead of dropping the vote
    silently. Their remaining upcoming picks are untouched.
 
-9. **See open surveys on Today (3.1).** While a survey is open for picking, it shows on Today as an
-   Offer card, "Offer · hours": its title (or "Pick a time to meet"), its description and "We'll meet
-   in <plugin>", with "Pick your times" opening its shared link. The card shows only what that link
-   shows anybody: no name, no count and nobody's picks. It stays on Today as offers do, 14 days with a
-   renew for the survey's creator, and leaves as soon as the survey closes. The creator sees their own
-   survey among their own cards. Read by `lib/mutual-time/open-events.ts` (`listOpenEvents`,
+9. **See your own open surveys on Today (3.1).** While a survey is open for picking, its creator sees
+   it among their own cards on Today: its title (or "Pick a time to meet"), its description and "We'll
+   meet in <plugin>", with "Open" opening its shared link. It stays 14 days with a renew and leaves as
+   soon as the survey closes. Since 2026-11-16 it is not shown to other members: surveys are an admin
+   tool, and the "Offer · hours" cards other members see come from Foundation (owner decision). Read by `lib/mutual-time/open-events.ts` (`listOpenEvents`,
    `getEventForToday`); see the non-plugin inventory §1.5 item 5a.
 
 ## Admin Features
@@ -203,8 +202,6 @@ inside the rolling window, so the sample overlap is always still ahead and its v
 each run rather than piling up. The closed event keeps a fixed past window (`2026-07-21`, 7 days), which
 keeps that half reproducible; its stamped result stands.
 
-Demo schema: `ctf/scripts/demo-seed/48-mutual-time.mjs` adds six open surveys by synthetic members (`demo-peer-mutual-time-01` to `-03`), each offering an hour of help: math tutoring, cooking a week of meals, a bike or small repair, rides to appointments, moving help and going through paperwork. Fixed ids and slugs, upserted on each run; each opened within the last two days and closes a week after the run, so they stay open for picking. They are what the "Offer · hours" previews on signed-out Today read. No votes are seeded on them.
-
 ## Gaps and Known Technical Debt
 
 1. **Target meeting week is derived, not configured.** The candidate window is 7 days, rolling forward
@@ -226,7 +223,7 @@ Demo schema: `ctf/scripts/demo-seed/48-mutual-time.mjs` adds six open surveys by
 
 ## Change Log
 
-- 2026-11-16: **Demo offers of hours.** `ctf/scripts/demo-seed/48-mutual-time.mjs` adds six open surveys by synthetic members to the demo schema, so the "Offer · hours" previews on signed-out Today have something to show once the Seed demo workflow runs. `mutual_time_events` leaves the demo seed coverage list of tables still to seed. Demo data only; no route, schema or screen change.
+- 2026-11-16: **Open surveys no longer show as offers on other members' Today (owner decision).** Mutual Time is an admin scheduling tool, not where members offer hours, so the "Offer · hours" cards on Today now read Foundation (see the Foundation inventory). A survey's creator still sees their own open survey among their own cards (`mutualTimeSurveyCard` in `lib/today/sources-offers.ts`, read by `sources-mine.ts`). `listOpenEvents` keeps its `createdBy` read; no route or table change.
 - 2026-11-11: **Open surveys show on Today (User Features item 9).** The 3.1 plan lists Mutual Time among
   the Offer cards. `lib/mutual-time/open-events.ts` reads surveys open for picking right now (stored
   open, opened, not past their close time) with only the title, description, meeting place, creator id

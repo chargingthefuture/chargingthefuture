@@ -14,7 +14,7 @@ const SOURCE_NAMES = {
     'socket-relay': 'requests',
     'trust-transport': 'rides',
     lighthouse: 'places to stay',
-    'mutual-time': 'times to meet',
+    foundation: 'offers of hours',
     'peer-programming-cohort': 'your cohort',
     'skill-up': 'cohorts',
     announcements: 'announcements',
