@@ -45,7 +45,11 @@ function SheetTop({ talk, onClose }: { talk: boolean; onClose: () => void }) {
           <button type="button" className={sheet.topLink} aria-expanded={rule} aria-controls="se-new-room-rule" onClick={() => setRule((value) => !value)}>
             {SE_TALK_WORDS.roomRule}
           </button>
-        ) : null}
+        ) : (
+          <Link href={W.guidelinesHref} className={sheet.topLink}>
+            {W.guidelines}
+          </Link>
+        )}
       </div>
       {talk && rule ? (
         <p id="se-new-room-rule" className={sheet.rule}>
