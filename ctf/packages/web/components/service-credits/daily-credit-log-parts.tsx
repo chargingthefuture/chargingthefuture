@@ -103,7 +103,7 @@ export function DailyCreditSummarySections({ t, summaries, nameOf }: { t: Plugin
           <Card key={entry.askerUserId} t={t}>
             <div style={{ fontSize: 13, color: t.TEXT }}>{nameOf(entry.askerUserId)}</div>
             <div style={{ fontSize: 11, color: t.FAINT, marginTop: 2 }}>
-              {entry.closed} closed · {entry.distinctHelpers} different helpers · {entry.pickedNotFirst} not the first to answer
+              {entry.closed} closed · {entry.distinctHelpers} different {entry.distinctHelpers === 1 ? 'helper' : 'helpers'} · {entry.pickedNotFirst} not the first to answer
             </div>
           </Card>
         ))}
@@ -118,7 +118,7 @@ export function DailyCreditSummarySections({ t, summaries, nameOf }: { t: Plugin
           <Card key={entry.helperUserId} t={t}>
             <div style={{ fontSize: 13, color: t.TEXT }}>{nameOf(entry.helperUserId)}</div>
             <div style={{ fontSize: 11, color: t.FAINT, marginTop: 2 }}>
-              {entry.granted} granted · {entry.held} held · from {entry.distinctAskers} different askers
+              {entry.granted} granted · {entry.held} held · from {entry.distinctAskers} different {entry.distinctAskers === 1 ? 'asker' : 'askers'}
             </div>
           </Card>
         ))}
