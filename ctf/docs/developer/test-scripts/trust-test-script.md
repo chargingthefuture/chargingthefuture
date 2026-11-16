@@ -1,6 +1,6 @@
 # Trust — Manual Test Script
 
-> **Android: not applicable.** This feature is web-only (rule 105 / PR #1742, 2026-07-20). Test on web only: desktop and the mobile-responsive (~390px) layout. Any `android` surface tags below are retained as history but no longer apply.
+> **Android: 3.1 only.** The 3.0 Trust screens are web-only (rule 105 / PR #1742, 2026-07-20), and `android` tags on 3.0 steps are history. Since 2026-11-16 the 3.1 frame carries Trust on web and Android alike: core smoke step 10 and TR-A10 are tested on both.
 > Generated from the Trust plugin feature inventory and contracts; this is the runnable checklist for hand-testing the Trust plugin on a real device or browser. Regenerate with:
 > `pnpm --dir ctf test-script:generate -- trust`
 
@@ -12,7 +12,7 @@
 | **Surfaces** | Web: `TrustWidgetCard.tsx`, `trust-member-view.tsx`, `trust-evidence-row.tsx`, `lib/trust/peer-summary.ts`, `trust-public-shell.tsx`, `/api/trust/user/*` + `/api/trust/signal/snapshot` · Android: `Trust.tsx`, `api.ts` |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-trust-feature-inventory.md` |
-| **Generated** | 2026-08-10 (hand-updated: the per-member visibility choice was removed — every member reads the summary, TR-A3; the write route is gone, TR-A5; the card's read-only member view, TR-A5b; verification review removed entirely, TR-A9b) · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-10-05 manual update: TR-A3 now checks the body names the member asked for and that a blank id answers 400 (#2844) |
+| **Generated** | 2026-08-10 (hand-updated: the per-member visibility choice was removed — every member reads the summary, TR-A3; the write route is gone, TR-A5; the card's read-only member view, TR-A5b; verification review removed entirely, TR-A9b) · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-10-05 manual update: TR-A3 now checks the body names the member asked for and that a blank id answers 400 (#2844) · 2026-11-16 manual update: Trust in 3.1, Me → Trust and the Trust section of People's profile, web and Android (core smoke step 10, TR-A10) |
 
 ---
 
@@ -71,6 +71,12 @@ These checks confirm the plugin is alive. If any fail, stop and file a bug befor
 
 9. **Public landing lists four signals — no verification claim.** Signed out, open the Trust public landing. The signal list reads exactly: How often you sign in, ServiceCredits activity, Community connections, Cohort completion record. Every line must map to a signal `buildTrustEvidence` really emits — "Quora social proof" was removed on 2026-08-10 because no such signal exists (the onboarding Quora check belongs to Unlock). "Admin-reviewed verification" does NOT appear either (removed 2026-07-19 — it read as the platform vetting people, a claim this plugin never makes).
    web ☐
+
+10. **3.1 Me → Trust opens in place.** In the 3.1 frame, open Me and tap the **Trust** row under
+    Saved. A Trust screen opens with a back button to Me, "Your trust" with one line per thing you
+    have done, and "What members see" under it. No score, badge or status anywhere, and no link to a
+    3.0 page.
+    web ☐ android ☐
 
 ---
 
@@ -390,6 +396,39 @@ Trust reports sign-in activity as two lines that answer different questions. To 
 7. Nothing anywhere prompts, reminds, warns, or congratulates a member about the run, and no surface
    shows a target, goal, or "don't lose it" message. Any such copy is a bug — the run is a fact for
    another member to read, not a habit the platform pushes.
+
+### TR-A10 — Trust in 3.1: Me → Trust and People's profile
+
+Run in the 3.1 frame on web (phone width) and on Android, in two of the four colors and in light
+and dark.
+
+1. **Me → Trust, populated.** As an approved member with activity, open Me → Trust. "Your trust"
+   lists each line with its date (never "Invalid Date") and, where there is one, its detail.
+   "What members see" says any member who opens your profile sees this and only this, then shows
+   the summary note and the same lines `GET /api/trust/user/<your id>` gives another member: the
+   sign-in lines, "Took part in N plugins", no dates and no detail.
+2. **Me → Trust, empty.** As a member with no activity: "No trust signals yet", "Trust signals
+   appear as you participate in the community" and the three steps (complete your profile, make
+   your first transaction, use at least one plugin).
+3. **Me → Trust, not yet verified.** As a member who has not finished Unlock: "Trust opens once
+   Unlock is done." No error, no 3.0 page.
+4. **Me → Trust, failure.** With the network off: a plain sentence and **Try again**, which reads
+   again once the network is back.
+5. **Address and back.** On the web the address is `/?tab=me&view=trust`; the browser back button
+   returns to Me. On Android the phone's back button returns to Me.
+6. **People → Profile, another member.** Open a claimed profile's sheet in People. Under Skills, a
+   Trust section shows the summary note and the summary lines, or "This member has not taken part
+   anywhere yet, so there is nothing to go on". An unclaimed profile has no Trust section.
+7. **People → Profile, your own.** Open your own claimed profile: Trust shows your lines and "What
+   members see" under them, as Me → Trust does.
+8. **Keyboard and screen reader.** On the web, Tab reaches the Trust row in Me, Enter opens it, and
+   the back button is reachable; in People, Escape closes the profile sheet and focus returns to
+   the row that opened it. On Android, TalkBack reads each trust line as one item and the section
+   names as headings.
+
+**Result:** web ☐ android ☐
+
+---
 
 ## Known gaps — do not file these as bugs
 

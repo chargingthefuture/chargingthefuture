@@ -1,0 +1,141 @@
+/* The trust lines in the 3.1 look. Colors come from the --se-* theme variables, so they follow every
+   color and dark mode. */
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.label {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--se-soft);
+}
+
+.soft {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--se-soft);
+}
+
+.note {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--se-sunk);
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--se-soft);
+}
+
+.lines,
+.steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.line {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 14px;
+  border-radius: 16px;
+  background: var(--se-card);
+  border: 1.5px solid var(--se-hair);
+  color: var(--se-ink);
+}
+
+.lineHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tick {
+  flex: none;
+  color: var(--se-btn);
+}
+
+.lineText {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.date {
+  flex: none;
+  font-size: 12px;
+  color: var(--se-soft);
+}
+
+.details {
+  padding-left: 22px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--se-soft);
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 18px;
+  background: var(--se-card);
+  border: 1.5px dashed var(--se-line);
+}
+
+.emptyTitle {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--se-ink);
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--se-sunk);
+  font-size: 13px;
+  color: var(--se-soft);
+}
+
+.ring {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1.5px solid var(--se-line);
+}
+
+.retry {
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--se-ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.retry:focus-visible {
+  outline: 2px solid var(--se-pick);
+  outline-offset: 2px;
+}

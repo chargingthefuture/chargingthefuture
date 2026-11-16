@@ -8,11 +8,12 @@ import { MeScreen } from './me-screen';
 import { PromptsEditor } from './prompts-editor';
 import { SettingsScreen } from './settings-screen';
 import { ThemeScreen } from './theme-screen';
+import { TrustScreen } from './trust-screen';
 import { useMeProfile } from './use-me-profile';
 import { useMeView } from './use-me-view';
 
-// The Me tab: Me, and the screens it opens in place (Settings and its Theme, Read, Hidden, and the
-// profile lines). The open screen is kept in the address.
+// The Me tab: Me, and the screens it opens in place (Settings and its Theme, Read, Hidden, Trust,
+// and the profile lines). The open screen is kept in the address.
 
 type MeTabProps = {
   currentUser: ShellCurrentUser;
@@ -29,6 +30,7 @@ export function MeTab({ currentUser, prefs, onAskArchitect, onBack, saving }: Me
   const toMe = () => open('me');
   if (view === 'theme') return <ThemeScreen theme={prefs.theme} onChange={prefs.setTheme} onBack={() => open('settings')} />;
   if (view === 'read' || view === 'hidden') return <MarkedList mark={view === 'read' ? 'done' : 'not_for_me'} onBack={toMe} />;
+  if (view === 'trust') return <TrustScreen onBack={toMe} />;
   if (view === 'prompts') {
     const prompts = profile.kind === 'ready' ? profile.profile.prompts : SE_ME_EMPTY_PROMPTS;
     return <PromptsEditor key={profile.kind} prompts={prompts} onSave={savePrompts} onDone={toMe} />;

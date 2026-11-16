@@ -14,6 +14,7 @@ import {
   SE_ME_TOOLS,
   SE_ME_WORDS as W,
   SE_SETTINGS_WORDS,
+  SE_TRUST_WORDS,
   seMeName,
   seMeSince,
   type SeMeTool,
@@ -30,7 +31,8 @@ import styles from './me.module.css';
 
 // Me, built to the approved board "Me": the member's name, since when they have been an Aven,
 // their badges and the gear to Settings; their three profile lines; ServiceCredits; Saved, Read and
-// Hidden; the Tools grid; and emoji rain. Making things is + New; reading is Today.
+// Hidden; Trust (not on the board: carried over from 3.0, owner decision); the Tools grid; and
+// emoji rain. Making things is + New; reading is Today.
 
 function Icon({ d, size = 18 }: { d: string; size?: number }) {
   return (
@@ -243,6 +245,10 @@ export function MeScreen({ currentUser, profile, reading, onReading, onOpen, sav
         </button>
       </div>
       <SavedCard />
+      <button type="button" className={`${styles.listItem} ${styles.rowButton}`} onClick={() => onOpen('trust')}>
+        <span className={styles.itemTitle}>{SE_TRUST_WORDS.title}</span>
+        <span className={styles.q}>{SE_TRUST_WORDS.meRow}</span>
+      </button>
       <Tools />
       <label className={styles.switchRow}>
         <span>{SE_SETTINGS_WORDS.emojiRain}</span>

@@ -1,10 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { SE_PERSON_SHEET_WORDS as W, sePersonSheetPath, type SePersonProfile } from '@ctf/shared';
+import { SE_PERSON_SHEET_WORDS as W, SE_TRUST_WORDS, sePersonSheetPath, seTrustPath, type SePersonProfile } from '@ctf/shared';
 import { ShareLink } from '@/components/shared/share-link';
 import { BlockMemberButton } from '@/components/blocks/block-member-button';
 import { SeAvatar } from '../../shared/se-avatar';
+import { TrustReadView } from '../trust/trust-read-view';
+import { useTrust } from '../trust/use-trust';
 import { SE_PILL_STYLE } from './pill-style';
 import { PersonSheetFrame } from './person-sheet-frame';
 import { usePersonProfile } from './use-person-sheets';
@@ -12,7 +14,8 @@ import styles from './person-sheet.module.css';
 
 // A person's profile, opened in place from People: what the Directory's profile page shows (name,
 // username, headline, where the profile came from, sector, job title, place, the Quora profile,
-// About and skills) and the actions it offers (Share, the Quora profile, Request a quote for somebody
+// About, skills and, for a claimed profile, trust as the Directory profile shows it, never a score)
+// and the actions it offers (Share, the Quora profile, Request a quote for somebody
 // offering a skill, Block for a claimed profile that is not the viewer's own). Read from the
 // Directory's own route; approved members only, as People is.
 
@@ -72,6 +75,19 @@ function Skills({ p }: { p: SePersonProfile }) {
   );
 }
 
+// What another member gets of this person's trust; on the viewer's own profile, their own lines and
+// what others get, as on the Directory's profile page. Only a claimed profile has trust.
+function Trust({ userId, own }: { userId: string; own: boolean }) {
+  const [attempt, setAttempt] = useState(0);
+  const read = useTrust(seTrustPath(userId, own), attempt);
+  return (
+    <section className={styles.section} aria-label={SE_TRUST_WORDS.title}>
+      <h3 className={styles.label}>{SE_TRUST_WORDS.title}</h3>
+      <TrustReadView read={read} own={own} onRetry={() => setAttempt((n) => n + 1)} />
+    </section>
+  );
+}
+
 function Body({ p, viewerId, canQuote, onQuote }: { p: SePersonProfile; viewerId: string | null; canQuote: boolean; onQuote: () => void }) {
   const own = viewerId !== null && p.claimedByUserId === viewerId;
   return (
@@ -100,6 +116,7 @@ function Body({ p, viewerId, canQuote, onQuote }: { p: SePersonProfile; viewerId
         </section>
       ) : null}
       <Skills p={p} />
+      {p.claimedByUserId ? <Trust userId={p.claimedByUserId} own={own} /> : null}
       {p.claimedByUserId && !own ? <BlockMemberButton targetUserId={p.claimedByUserId} displayName={p.name} /> : null}
     </>
   );
