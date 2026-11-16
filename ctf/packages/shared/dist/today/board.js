@@ -5,9 +5,11 @@
 // the count could not be read, and then the pill is not shown.
 export const SE_PRESENCE_WINDOW_MINUTES = 10;
 export function sePresenceLine(count) {
-    if (count === null || count === undefined || count < 1)
+    // Shown only when somebody besides the reader is here (owner decision, 2026-11-16): "1 Aven
+    // here" is the reader alone.
+    if (count === null || count === undefined || count < 2)
         return null;
-    return count === 1 ? '1 Aven here' : `${count.toLocaleString('en-US')} Avens here`;
+    return `${count.toLocaleString('en-US')} Avens here`;
 }
 // The Mood card's five faces, posted as the check-in's value (1 to 5) to POST /api/mood/submissions.
 // `mouth` is the face's mouth in a 24 by 24 drawing, as on the board.

@@ -6,6 +6,8 @@
 export const SE_NEW_SHEET_WORDS = {
   label: 'New post',
   close: 'Close',
+  guidelines: 'Community guidelines',
+  guidelinesHref: '/guidelines',
   heading: 'Post something',
   intro: "It goes into everyone's Today.",
   kinds: 'Kind of post',

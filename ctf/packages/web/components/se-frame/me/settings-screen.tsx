@@ -95,6 +95,7 @@ function HelpGroup({ onAskArchitect }: { onAskArchitect: () => void }) {
     <SettingsGroup title={W.help} after={<BugReportModal open={reporting} onClose={() => setReporting(false)} />}>
       <SettingsRow label={W.architect} onPress={onAskArchitect} />
       <SettingsRow label={W.bug} onPress={() => setReporting(true)} />
+      <SettingsRow label={W.terms} href={SE_ME_LINKS.terms} />
     </SettingsGroup>
   );
 }

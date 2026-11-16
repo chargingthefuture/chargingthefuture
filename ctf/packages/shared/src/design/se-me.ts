@@ -12,7 +12,9 @@ export const SE_ME_LINKS = {
   accountData: '/account/data',
   blocks: '/account/blocks',
   survey: '/survey/quora-account-deletions',
+  architect: '/admin',
   rules: '/guidelines',
+  terms: '/terms',
   wallpapers: `${RELEASES}?q=wallpapers`,
   androidApp: `${RELEASES}?q=mobile`,
 } as const;

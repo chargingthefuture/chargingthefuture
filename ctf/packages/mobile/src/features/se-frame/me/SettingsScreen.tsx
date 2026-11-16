@@ -81,12 +81,13 @@ function SafetyGroup({ s, t, censusAdded, onOpen, go }: Base & { censusAdded: bo
   );
 }
 
-function HelpGroup({ s, t, onAskArchitect }: Base & { onAskArchitect: () => void }) {
+function HelpGroup({ s, t, onAskArchitect, go }: Base & { onAskArchitect: () => void; go: (_href: string) => void }) {
   const [reporting, setReporting] = useState(false);
   return (
     <SettingsGroup s={s} title={W.help} after={<BugReportModal visible={reporting} onClose={() => setReporting(false)} />}>
       <SettingsRow s={s} t={t} label={W.architect} onPress={onAskArchitect} />
-      <SettingsRow s={s} t={t} label={W.bug} onPress={() => setReporting(true)} last />
+      <SettingsRow s={s} t={t} label={W.bug} onPress={() => setReporting(true)} />
+      <SettingsRow s={s} t={t} label={W.terms} onPress={() => go(SE_ME_LINKS.terms)} last />
     </SettingsGroup>
   );
 }
@@ -159,7 +160,7 @@ export function SettingsScreen(props: SettingsProps) {
       <NotificationGroup s={s} t={t} />
       <LookGroup s={s} t={t} theme={props.theme} reading={props.reading} onReading={props.onReading} onTheme={props.onTheme} />
       <SafetyGroup s={s} t={t} censusAdded={props.censusAdded} onOpen={props.onOpen} go={go} />
-      <HelpGroup s={s} t={t} onAskArchitect={props.onAskArchitect} />
+      <HelpGroup s={s} t={t} onAskArchitect={props.onAskArchitect} go={go} />
       <SettingsGroup s={s} title={W.get}>
         <SettingsRow s={s} t={t} label={W.wallpapers} onPress={() => external(SE_ME_LINKS.wallpapers)} />
         <SettingsRow s={s} t={t} label={W.androidApp} onPress={() => external(SE_ME_LINKS.androidApp)} last />
