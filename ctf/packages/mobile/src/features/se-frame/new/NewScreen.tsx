@@ -31,7 +31,7 @@ type Styles = ReturnType<typeof makeStyles>;
 type BodyProps = { t: SeThemeTokens; s: Styles; sh: SheetStyles; go: (_href: string) => void; onOpen: (_key: FeatureKey) => void };
 
 // Close on the left; on the right, the community guidelines, or the room rule while booking a talk.
-function SheetTop({ t, sh, talk, onClose, go }: { t: SeThemeTokens; sh: SheetStyles; talk: boolean; onClose: () => void; go: (_href: string) => void }) {
+function SheetTop({ t, sh, talk, onClose }: { t: SeThemeTokens; sh: SheetStyles; talk: boolean; onClose: () => void }) {
   const [rule, setRule] = useState(false);
   return (
     <>
@@ -96,7 +96,7 @@ function StoryBody({ s, go }: BodyProps) {
   );
 }
 
-function ArchitectBody({ t, sh, onOpen }: BodyProps) {
+function ArchitectBody({ t, sh }: BodyProps) {
   return (
     <>
       <View style={sh.headLeft}>
@@ -105,7 +105,7 @@ function ArchitectBody({ t, sh, onOpen }: BodyProps) {
         </Text>
         <Text style={sh.sub}>{SE_ARCHITECT_WORDS.intro}</Text>
       </View>
-      <ArchitectSection t={t} onOpen={onOpen} />
+      <ArchitectSection t={t} />
     </>
   );
 }
@@ -140,7 +140,7 @@ export function NewScreen({
   const posting = kind === 'ask' || kind === 'offer' || kind === 'story';
   return (
     <View accessibilityLabel={W.label} style={sh.sheet}>
-      <SheetTop t={t} sh={sh} talk={kind === 'talk'} onClose={onClose} go={go} />
+      <SheetTop t={t} sh={sh} talk={kind === 'talk'} onClose={onClose} />
       {posting ? (
         <View style={sh.head}>
           <Text accessibilityRole="header" style={sh.title}>
