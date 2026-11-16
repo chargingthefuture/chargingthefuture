@@ -540,6 +540,7 @@ Manual test steps: `ctf/docs/developer/test-scripts/admin-daily-posts-test-scrip
 ---
 
 ## 5) Change Log
+- 2026-11-16: **GDP is an exception to 3.1 staying in 3.1.** Owner decision: the Our numbers card on Today shows its figures in 3.1, and, when the weekly Community Value Index figure shows, a second link, "Community Value Index report", opens the 3.0 GDP page (`numbersCard` in `lib/today/sources-live.ts`), beside "Open the full report" for Workforce. Both are on the list of 3.1 places that link to 3.0.
 - 2026-11-16: **3.1 stays in 3.1 (owner decision).** Nothing in 3.1 links to a 3.0 page except: the switch in Settings; the two "Your data" rows; the "Report a problem" sheet from Help; the Me tools "Our numbers" (with the numbers card's "Open the full report") and "Bring your writing"; and "Log what happened", which is undecided and left as it was. A link that only led somewhere to read more is dropped on web and Android:
   - the card sheet's "Open in <part>" when it points at a 3.0 page
   - What works' "See the problem"
