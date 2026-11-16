@@ -45,17 +45,19 @@ export function CurrentProfileQuestion({
 
       {hasCurrentProfile === true ? (
         <Field
-          id="current-profile-url"
-          label="Link to that account (optional)"
-          hint="Only used if you choose to start verification on the next screen. It goes to the verification queue, not into your survey answer."
+          id="current-profile-handle"
+          label="Handle or username (optional)"
+          hint="The part after quora.com/profile/ in your profile link. Only used if you choose to start verification on the next screen. It goes to the verification queue, not into your survey answer."
           tokens={tokens}
         >
           <input
-            id="current-profile-url"
-            type="url"
+            id="current-profile-handle"
+            type="text"
+            autoCapitalize="none"
+            autoCorrect="off"
             value={url}
             onChange={(event) => onUrlChange(event.target.value)}
-            placeholder="https://www.quora.com/profile/..."
+            placeholder="Jane-Doe-12"
             style={inputStyle(tokens)}
           />
         </Field>
@@ -110,10 +112,10 @@ export function VerificationOffer({
 
   return (
     <section style={{ ...cardStyle(tokens), borderColor: `${tokens.ACCENT}55` }}>
-      <h2 style={cardTitleStyle(tokens)}>Use that link to finish verification?</h2>
+      <h2 style={cardTitleStyle(tokens)}>Use that account to finish verification?</h2>
       <p style={{ fontSize: 14, lineHeight: 1.65, color: tokens.TEXT, margin: '0 0 10px' }}>
-        Getting into the rest of this app means showing a Quora account, which is the link you just
-        typed. Sending it now saves being asked for the same thing again. It goes into a queue for a
+        Getting into the rest of this app means showing a Quora account, which is the one you just
+        named. Sending it now saves being asked for the same thing again. It goes into a queue for a
         person to read; it approves nothing by itself.
       </p>
 

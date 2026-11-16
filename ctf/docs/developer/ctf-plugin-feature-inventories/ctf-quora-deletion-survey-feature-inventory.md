@@ -73,13 +73,15 @@ sees that plus a sign-in link, and no questions. Any signed-in member, verified 
   quote.
 - Have every handle they listed added to their own account history here, permanently and not
   editable by anyone afterward. This happens on submission for every respondent.
-- Optionally say whether they still have a Quora account that was not removed, and give its link.
-  Both are skippable and read as skippable: naming an account someone still holds is a larger ask
-  than naming ones already gone. The link is never stored with the answer — it stays in the browser
+- Optionally say whether they still have a Quora account that was not removed, and give its handle
+  or username (the part after quora.com/profile/ in its link; a pasted link also works). Both are
+  skippable and read as skippable: naming an account someone still holds is a larger ask than
+  naming ones already gone. The form builds the profile link from the handle. The link is never
+  stored with the answer — it stays in the browser
   and is only used if they choose the verification offer below.
 - Send the answer and see it confirmed. There is no email, no confirmation message, and no way for
   anyone here to contact them afterward, because the form asks for no contact detail at all.
-- On the confirmation screen, if they gave a link to an account they still hold and have not
+- On the confirmation screen, if they named an account they still hold and have not
   verified here before, choose to send that link for verification instead of being asked for the
   same thing again on the Unlock screen. It creates a pending submission for review and approves
   nobody. So for a new member, the live account they name in the survey is the account their
@@ -380,6 +382,8 @@ this is not a plugin. The steps that matter:
   `metadata.source` naming the survey on submissions that came this way.
 
 ## Change Log
+
+- 2026-11-16: **The account a member still holds is asked for by handle.** Owner directive: the handle is the last part of the profile link, so the follow-up to "Do you have a Quora account now…" asks for the handle or username instead of the full link, and the form builds the link with `profileUrlForHandle`, the same function the removed-account route uses. It moved from `lib/quora-deletion-survey/unlock-link.ts` to `lib/quora-deletion-survey/profile-url.ts` so the browser form can use it without the database imports. A pasted link still works. The removed-account cards' handle field now reads "Handle or username". No route, schema or contract change.
 
 - 2026-10-28: **A removed account can finish Unlock (3.1.0 plan, Access).** The Unlock screen lists the accounts a member reported as deleted or suspended (`GET /api/quora-deletion-survey/verification`, `quora-deletion-survey.verification.removed-accounts.list`) with a "Finish with <handle>" button that posts `removedHandle` to the verification route. Only a handle the member reported is accepted; the address is built from the handle (`profileUrlForHandle`) and the submission records the response id. No survey schema change.
 
