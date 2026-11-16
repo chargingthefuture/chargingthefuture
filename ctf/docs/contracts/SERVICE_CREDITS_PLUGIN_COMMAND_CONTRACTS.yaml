@@ -346,6 +346,36 @@ contracts:
     retentionClass: until_account_deletion
     idempotency: true
   - pluginId: service-credits
+    command: service-credits.admin.daily-credit-log.get
+    version: 1.0.0
+    description: "Admin-only, read-only audit log of the day's Today credit card (GET /api/service-credits/admin/daily-credit-log?page=N), newest day first, 25 days a page, the page clamped to the pages that exist. Each row: the day, the card id, the asker, every member who answered I can help on the card in the order they answered (the asker left out), who the asker picked and when, and whether the credit was granted, held for Unlock, or not yet closed. Summaries over every closed card: per asker (cards closed, distinct helpers picked, how often they picked somebody other than the first to answer I can help) and per helper (credits granted, held, distinct askers), plus every asker and helper pair picked three or more times, which flags that pair's rows. Members are named by username only. Changes nothing. Every read writes a service_credits_admin_audit_trail row; a non-admin is denied and the denial is audited. Credits are counted, never priced: not money."
+    inputSchema:
+      page:
+        type: integer
+        required: false
+    outputSchema:
+      page:
+        type: integer
+      pageCount:
+        type: integer
+      total:
+        type: integer
+      rows:
+        type: array
+      summaries:
+        type: object
+      names:
+        type: object
+      namesUnavailable:
+        type: boolean
+    dataAccess:
+      - today_daily_credit_cards
+      - commons_item_answers
+      - service_credits_admin_audit_trail
+    purpose: trust_and_safety
+    retentionClass: audit_long_lived
+    idempotency: true
+  - pluginId: service-credits
     command: governance.burn
     version: 1.0.0
     description: Burn ServiceCredits from a wallet under governance policy controls.

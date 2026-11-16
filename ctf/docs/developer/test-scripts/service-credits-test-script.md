@@ -786,6 +786,34 @@ Result: web ☐
 
 ---
 
+### SC-A13 — Daily Credit Log shows every day's credit card and flags repeat picks (added 2026-11-16)
+
+**Role:** admin
+**Surfaces:** web
+**Precondition:** Admin is signed in. At least one day's credit card exists on Today; for the flag, one asker has closed three credit cards picking the same helper, and on at least one of those another member answered I can help first.
+
+**Steps:**
+1. Open `/admin` and tap the "ServiceCredits: Daily Credit Log" tile.
+2. Read the newest row: day, card id, asker, the I can help list numbered in the order members answered, who was picked and when, and the credit state.
+3. Find a row for the asker who picked the same helper three times.
+4. Scroll to the three summaries below the list.
+5. Tap "Copy this page" and paste into a message.
+6. If there are more than 25 days, tap Next, then Previous.
+7. Sign in as a member who is not an admin and open `/api/service-credits/admin/daily-credit-log`.
+
+**Expected:**
+- Rows are newest day first. A day nobody closed reads "Not closed"; a helper not yet approved in Unlock reads "Held for Unlock"; a granted credit reads "Granted" with its time.
+- The picked member is marked "first to answer", "not the first to answer", or "did not answer I can help".
+- That asker's rows are outlined in amber and say "This asker picked this helper 3 times."; the pair is listed under "Same helper three or more times".
+- The Askers summary shows that asker with 3 closed, 1 different helper, and the count of picks past the first answer. The Helpers summary shows the helper's granted and held credits and how many different askers picked them.
+- Members appear by username, never by real name. The paste is plain text with the rows and the three summaries.
+- Next and Previous change the page and the line "Page N of M" follows.
+- The non-admin gets 403. Nothing on the screen changes any card or credit.
+
+Result: web ☐
+
+---
+
 ### Account deletion and the ledger
 
 **Expected:** Deleting the account reclaims and tombstones the wallet (existing flow) and removes
