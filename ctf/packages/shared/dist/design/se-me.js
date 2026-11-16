@@ -10,6 +10,7 @@ export const SE_ME_LINKS = {
     blocks: '/account/blocks',
     survey: '/survey/quora-account-deletions',
     rules: '/guidelines',
+    terms: '/terms',
     wallpapers: `${RELEASES}?q=wallpapers`,
     androidApp: `${RELEASES}?q=mobile`,
 };

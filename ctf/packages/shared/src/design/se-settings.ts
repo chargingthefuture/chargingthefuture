@@ -163,6 +163,7 @@ export const SE_SETTINGS_WORDS = {
   bug: 'Report a bug',
   guideLink: 'Guide',
   rulesLink: 'Community rules',
+  terms: 'Terms and privacy',
   get: 'Get',
   wallpapers: 'Wallpapers',
   androidApp: 'Get the Android app',

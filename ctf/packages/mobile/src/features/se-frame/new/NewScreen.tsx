@@ -31,7 +31,7 @@ type Styles = ReturnType<typeof makeStyles>;
 type BodyProps = { t: SeThemeTokens; s: Styles; sh: SheetStyles; go: (_href: string) => void; onOpen: (_key: FeatureKey) => void };
 
 // Close on the left; on the right, the community guidelines, or the room rule while booking a talk.
-function SheetTop({ t, sh, talk, onClose }: { t: SeThemeTokens; sh: SheetStyles; talk: boolean; onClose: () => void }) {
+function SheetTop({ t, sh, talk, onClose, go }: { t: SeThemeTokens; sh: SheetStyles; talk: boolean; onClose: () => void; go: (_href: string) => void }) {
   const [rule, setRule] = useState(false);
   return (
     <>
@@ -45,7 +45,11 @@ function SheetTop({ t, sh, talk, onClose }: { t: SeThemeTokens; sh: SheetStyles;
           <Text accessibilityRole="button" accessibilityState={{ expanded: rule }} onPress={() => setRule((value) => !value)} style={sh.topLink}>
             {SE_TALK_WORDS.roomRule}
           </Text>
-        ) : null}
+        ) : (
+          <Text accessibilityRole="link" onPress={() => go(W.guidelinesHref)} style={sh.topLink}>
+            {W.guidelines}
+          </Text>
+        )}
       </View>
       {talk && rule ? <Text style={sh.rule}>{SE_ROOM_RULE}</Text> : null}
     </>
@@ -140,7 +144,7 @@ export function NewScreen({
   const posting = kind === 'ask' || kind === 'offer' || kind === 'story';
   return (
     <View accessibilityLabel={W.label} style={sh.sheet}>
-      <SheetTop t={t} sh={sh} talk={kind === 'talk'} onClose={onClose} />
+      <SheetTop t={t} sh={sh} talk={kind === 'talk'} onClose={onClose} go={go} />
       {posting ? (
         <View style={sh.head}>
           <Text accessibilityRole="header" style={sh.title}>
