@@ -8,7 +8,7 @@ vi.mock('lib/shared/unlock-interface', () => ({
   normalizeQuoraProfileUrl: vi.fn(),
 }));
 
-import { profileUrlForHandle } from './unlock-link';
+import { profileUrlForHandle } from './profile-url';
 
 describe('profileUrlForHandle', () => {
   it('builds a profile address from a handle, spaces as hyphens', () => {
