@@ -639,7 +639,7 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
   {
     slug: 'today-card-conversations',
     name: 'Card conversations on Today',
-    dataSummary: 'Your answers on Today cards, the messages you wrote under them, every Just us two conversation and request you were part of, how long your own asks and offers stay on Today, the cards you marked done or Not for me, and the day\'s credit cards you posted or helped on.',
+    dataSummary: 'Your answers on Today cards, the messages you wrote under them, every Just us two conversation and request you were part of, how long your own asks and offers stay on Today, the cards you marked done or Not for me, what you picked on the Match card, and the day\'s credit cards you posted or helped on.',
     // Card conversations (3.1), stored by Commons with each row naming the plugin and item it belongs
     // to. Public messages other members wrote under a card stay; a Just us two
     // conversation belongs to both people in it and goes with either account, as 21 Questions does.
@@ -654,6 +654,7 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       del('today_card_windows', 'owner_user_id', 'The deadlines, renewals and closing outcomes of your own asks and offers on Today.'),
       del('today_card_marks', 'account_id', 'The Today cards you marked done or Not for me.'),
       del('today_card_saves', 'account_id', 'The stories and replays you saved for later from Today.'),
+      del('today_match_needs', 'account_id', 'What you picked on the Match card on Today, as the needs and the job titles behind them.'),
       del('member_presence', 'account_id', 'When you last opened Today, used only to count how many members are here.'),
       del('today_daily_credit_cards', 'author_user_id', 'The days your ask was the card carrying the day\'s credit.'),
       del('today_daily_credit_cards', 'helper_user_id', 'The days you were named as the helper on the card carrying the day\'s credit, including a credit still held for you.'),

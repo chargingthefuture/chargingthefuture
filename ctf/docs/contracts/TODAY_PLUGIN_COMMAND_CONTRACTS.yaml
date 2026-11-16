@@ -182,6 +182,66 @@ contracts:
     retentionClass: until_account_deletion
     idempotency: true
   - pluginId: today
+    command: today.match.read
+    version: 1.0.0
+    description: Read the Match card (GET /api/today/match), the member's saved needs and how many Directory people fit them, counted live with directory_public_match_count (each person once, claimed or not, owners restricted with scope all or contact left out). Only the member's own row; null needs until they pick something.
+    inputSchema: {}
+    outputSchema:
+      needs:
+        type: object
+        nullable: true
+        properties:
+          needKeys:
+            type: array
+            description: Keys of SE_MATCH_NEEDS in @ctf/shared, the landing page's need list.
+          jobTitleIds:
+            type: array
+            maxItems: 60
+      count:
+        type: integer
+        nullable: true
+        description: Null when the count could not be read; the needs still come back.
+    dataAccess:
+      - today_match_needs
+      - directory_person_job_titles
+      - directory_profiles
+      - directory_profile_skills
+      - skills_taxonomy_skills
+      - account_restrictions
+    purpose: today_match_card
+    retentionClass: none_read_only
+    idempotency: true
+  - pluginId: today
+    command: today.match.set
+    version: 1.0.0
+    description: Save what the member needs on the Match card (PUT /api/today/match), 60 an hour. `{ needs }` saves the picked need keys and the active job titles behind them; `{ code }` copies the job titles of a code saved on lagatos.com (directory_landing_match_codes, read only) with the needs they cover in full, and does not keep the code. Answers the same shape as today.match.read.
+    inputSchema:
+      needs:
+        type: array
+        description: One or more keys of SE_MATCH_NEEDS; unknown keys are dropped.
+      code:
+        type: string
+        description: A landing page code, 10 of its letters and numbers in any spacing or case (seMatchCode in @ctf/shared).
+    outputSchema:
+      needs:
+        type: object
+      count:
+        type: integer
+        nullable: true
+    errors:
+      - invalid_match (400)
+      - unknown_code (404)
+      - no_titles (422)
+      - rate_limited (429)
+    dataAccess:
+      - today_match_needs
+      - directory_landing_match_codes
+      - directory_public_skill_counts
+      - directory_person_job_titles
+    purpose: today_match_card
+    retentionClass: until_account_deletion
+    idempotency: true
+  - pluginId: today
     command: today.questions.matching.read
     version: 1.0.0
     description: Read whether the member is matched in 21 Questions and how many questions they answered (GET /api/today/questions/matching). No row means on; the toggle shows from the first answer.

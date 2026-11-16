@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { SE_PEOPLE_FILTERS, SE_PEOPLE_PAGE_SIZE, SE_PEOPLE_WORDS as W, type SePeopleFilter, type SePeoplePage } from '@ctf/shared';
+import { SE_PEOPLE_PAGE_SIZE, sePeopleChips, SE_PEOPLE_WORDS as W, type SePeopleFilter, type SePeoplePage } from '@ctf/shared';
 import { PeopleLocked } from './people-locked';
 import { PersonCard } from './person-card';
-import { readPage, usePeople, usePeopleCount, writePage, type PeopleState } from './use-people';
+import { readFilter, readPage, usePeople, usePeopleCount, writePage, type PeopleState } from './use-people';
 import styles from './people.module.css';
 
 // People, built to the approved boards "People, verified" and "People, not yet verified": the
@@ -63,7 +63,7 @@ function Header({ count }: { count: number | null }) {
 function Filters({ filter, onFilter }: { filter: SePeopleFilter; onFilter: (_next: SePeopleFilter) => void }) {
   return (
     <div className={styles.chips} role="radiogroup" aria-label={W.filters}>
-      {SE_PEOPLE_FILTERS.map((chip) => (
+      {sePeopleChips(filter).map((chip) => (
         <button
           key={chip.id}
           type="button"
@@ -87,11 +87,14 @@ export function PeopleScreen({ onToday }: { onToday: () => void }) {
   const state = usePeople(page, filter, query, attempt);
   const count = usePeopleCount();
 
-  useEffect(() => setPage(readPage()), []);
+  useEffect(() => {
+    setPage(readPage());
+    setFilter(readFilter());
+  }, []);
 
-  const goTo = (next: number) => {
+  const goTo = (next: number, nextFilter: SePeopleFilter = filter) => {
     setPage(next);
-    writePage(next);
+    writePage(next, nextFilter);
     window.scrollTo(0, 0);
   };
 
@@ -124,7 +127,7 @@ export function PeopleScreen({ onToday }: { onToday: () => void }) {
         filter={filter}
         onFilter={(next) => {
           setFilter(next);
-          goTo(1);
+          goTo(1, next);
         }}
       />
       <Results state={state} onPage={goTo} onRetry={() => setAttempt((n) => n + 1)} />

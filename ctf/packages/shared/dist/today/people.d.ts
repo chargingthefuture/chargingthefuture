@@ -16,14 +16,23 @@ export type SePeoplePage = {
     total: number;
 };
 export type SePeopleCategory = 'trades' | 'care' | 'paperwork' | 'tech';
-export type SePeopleFilter = 'all' | 'offering' | SePeopleCategory;
+export type SePeopleFilter = 'all' | 'offering' | 'fits' | SePeopleCategory;
 export declare const SE_PEOPLE_CATEGORIES: readonly SePeopleCategory[];
 export declare const SE_PEOPLE_FILTERS: readonly {
     id: SePeopleFilter;
     label: string;
 }[];
 export declare const SE_PEOPLE_CATEGORY_SECTORS: Record<SePeopleCategory, readonly string[]>;
+export declare const SE_PEOPLE_FITS_CHIP: {
+    id: SePeopleFilter;
+    label: string;
+};
 export declare function sePeopleFilter(value: string | null | undefined): SePeopleFilter;
+export declare function sePeopleChips(filter: SePeopleFilter): readonly {
+    id: SePeopleFilter;
+    label: string;
+}[];
+export declare function sePeopleParams(page: number, filter: SePeopleFilter, query: string): string;
 export declare function sePeopleCategory(filter: SePeopleFilter): SePeopleCategory | null;
 export declare const SE_PEOPLE_WORDS: {
     title: string;

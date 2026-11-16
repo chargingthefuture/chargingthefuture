@@ -11,6 +11,7 @@ policies:
       sources:
         - every Directory profile, the same set the Directory list shows (a removed listing is deleted outright)
         - foundation offered skills of a claimed profile's owner
+        - with fits=1, the viewer's own saved needs from Today's Match card (today_match_needs), to keep the people who fit them
     consentRequirements:
       scopes:
         - platform_terms

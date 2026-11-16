@@ -20,9 +20,11 @@ export type SePerson = {
 export type SePeoplePage = { items: SePerson[]; page: number; pageSize: number; total: number };
 
 // The chips under the search. One is chosen at a time: everyone, only people offering a skill now,
-// or one of four categories drawn from the Skills Taxonomy (below).
+// or one of four categories drawn from the Skills Taxonomy (below). 'fits' is the people who fit what
+// the member picked on Today's Match card; it has no chip of its own and is reached from that card's
+// Get introduced, which shows it as the chosen chip until another one is picked.
 export type SePeopleCategory = 'trades' | 'care' | 'paperwork' | 'tech';
-export type SePeopleFilter = 'all' | 'offering' | SePeopleCategory;
+export type SePeopleFilter = 'all' | 'offering' | 'fits' | SePeopleCategory;
 
 export const SE_PEOPLE_CATEGORIES: readonly SePeopleCategory[] = ['trades', 'care', 'paperwork', 'tech'];
 
@@ -59,8 +61,27 @@ export const SE_PEOPLE_CATEGORY_SECTORS: Record<SePeopleCategory, readonly strin
   tech: ['Telecommunications & IT', 'R&D & High-Tech', 'Technology'],
 };
 
+export const SE_PEOPLE_FITS_CHIP: { id: SePeopleFilter; label: string } = { id: 'fits', label: 'Fits what you need' };
+
 export function sePeopleFilter(value: string | null | undefined): SePeopleFilter {
+  if (value === 'fits') return 'fits';
   return SE_PEOPLE_FILTERS.some((f) => f.id === value) ? (value as SePeopleFilter) : 'all';
+}
+
+// The chips to draw: the usual six, with "Fits what you need" first while it is the chosen one.
+export function sePeopleChips(filter: SePeopleFilter): readonly { id: SePeopleFilter; label: string }[] {
+  return filter === 'fits' ? [SE_PEOPLE_FITS_CHIP, ...SE_PEOPLE_FILTERS] : SE_PEOPLE_FILTERS;
+}
+
+// The query string GET /api/people reads, the same on web and Android.
+export function sePeopleParams(page: number, filter: SePeopleFilter, query: string): string {
+  const params = new URLSearchParams({ page: String(page) });
+  if (filter === 'offering') params.set('offering', '1');
+  if (filter === 'fits') params.set('fits', '1');
+  const category = sePeopleCategory(filter);
+  if (category) params.set('category', category);
+  if (query.trim()) params.set('q', query.trim());
+  return params.toString();
 }
 
 export function sePeopleCategory(filter: SePeopleFilter): SePeopleCategory | null {

@@ -4,7 +4,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { SE_PEOPLE_FILTERS, SE_PEOPLE_PAGE_SIZE, SE_PEOPLE_WORDS as W, type SePeopleFilter, type SePeoplePage, type SeThemeTokens } from '@ctf/shared';
+import { SE_PEOPLE_PAGE_SIZE, sePeopleChips, SE_PEOPLE_WORDS as W, type SePeopleFilter, type SePeoplePage, type SeThemeTokens } from '@ctf/shared';
 import type { FeatureKey } from '../../../navigation/screens';
 import { openTodayLink } from '../today/openTodayLink';
 import { useScrollFrameToTop } from '../frame-scroll';
@@ -73,7 +73,7 @@ function Header({ s, count }: { s: PeopleStyles; count: number | null }) {
 function Filters({ s, filter, onFilter }: { s: PeopleStyles; filter: SePeopleFilter; onFilter: (_next: SePeopleFilter) => void }) {
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.chipRow} contentContainerStyle={s.chips} accessibilityRole="radiogroup" accessibilityLabel={W.filters}>
-      {SE_PEOPLE_FILTERS.map((chip) => {
+      {sePeopleChips(filter).map((chip) => {
         const on = filter === chip.id;
         return (
           <TouchableOpacity key={chip.id} accessibilityRole="radio" accessibilityState={{ checked: on }} onPress={() => onFilter(chip.id)} style={[s.chip, on ? s.chipOn : null]}>
@@ -85,12 +85,13 @@ function Filters({ s, filter, onFilter }: { s: PeopleStyles; filter: SePeopleFil
   );
 }
 
-type ScreenProps = { t: SeThemeTokens; onOpen: (_key: FeatureKey) => void; onToday: () => void };
+// `initialFilter` is 'fits' when Today's Match card opened People through Get introduced.
+type ScreenProps = { t: SeThemeTokens; onOpen: (_key: FeatureKey) => void; onToday: () => void; initialFilter?: SePeopleFilter };
 
-export function PeopleScreen({ t, onOpen, onToday }: ScreenProps) {
+export function PeopleScreen({ t, onOpen, onToday, initialFilter = 'all' }: ScreenProps) {
   const s = useMemo(() => makePeopleStyles(t), [t]);
   const [page, setPage] = useState(1);
-  const [filter, setFilter] = useState<SePeopleFilter>('all');
+  const [filter, setFilter] = useState<SePeopleFilter>(initialFilter);
   const [query, setQuery] = useState('');
   const [attempt, setAttempt] = useState(0);
   const state = usePeople(page, filter, query, attempt);

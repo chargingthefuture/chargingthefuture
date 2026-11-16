@@ -34,8 +34,29 @@ export const SE_PEOPLE_CATEGORY_SECTORS = {
     paperwork: ['Professional & Business Services', 'Finance & Public Administration', 'Microfinance & SME Support', 'Public Safety & Justice'],
     tech: ['Telecommunications & IT', 'R&D & High-Tech', 'Technology'],
 };
+export const SE_PEOPLE_FITS_CHIP = { id: 'fits', label: 'Fits what you need' };
 export function sePeopleFilter(value) {
+    if (value === 'fits')
+        return 'fits';
     return SE_PEOPLE_FILTERS.some((f) => f.id === value) ? value : 'all';
+}
+// The chips to draw: the usual six, with "Fits what you need" first while it is the chosen one.
+export function sePeopleChips(filter) {
+    return filter === 'fits' ? [SE_PEOPLE_FITS_CHIP, ...SE_PEOPLE_FILTERS] : SE_PEOPLE_FILTERS;
+}
+// The query string GET /api/people reads, the same on web and Android.
+export function sePeopleParams(page, filter, query) {
+    const params = new URLSearchParams({ page: String(page) });
+    if (filter === 'offering')
+        params.set('offering', '1');
+    if (filter === 'fits')
+        params.set('fits', '1');
+    const category = sePeopleCategory(filter);
+    if (category)
+        params.set('category', category);
+    if (query.trim())
+        params.set('q', query.trim());
+    return params.toString();
 }
 export function sePeopleCategory(filter) {
     return SE_PEOPLE_CATEGORIES.includes(filter) ? filter : null;

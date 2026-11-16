@@ -11,6 +11,7 @@ import {
   seReadableTokens,
   seTheme,
   type SeNewKind,
+  type SePeopleFilter,
   type SeTab,
   type SeThemeTokens,
 } from '@ctf/shared';
@@ -80,6 +81,7 @@ function SeAppFrameBody({ onOpen }: FrameProps) {
   const { switchTo, saving, error } = useInterfaceVersion();
   const [tab, setTab] = useState<SeTab>('today');
   const [newKind, setNewKind] = useState<SeNewKind>('ask');
+  const [peopleFilter, setPeopleFilter] = useState<SePeopleFilter>('all');
   const [presence, setPresence] = useState<number | null>(null);
   const [rainRun, setRainRun] = useState(0);
   const startRain = useCallback(() => setRainRun((run) => run + 1), []);
@@ -87,11 +89,13 @@ function SeAppFrameBody({ onOpen }: FrameProps) {
   const { minimize } = rooms;
   useFrameBack(tab, setTab, rooms.shown !== null, minimize);
 
-  // Choosing a tab while a room is open puts the room in the bar above the tab bar.
+  // Choosing a tab while a room is open puts the room in the bar above the tab bar. People opens on
+  // All, except from Get introduced on Today's Match card, which opens it on "Fits what you need".
   const select = useCallback(
-    (next: SeTab) => {
+    (next: SeTab, filter: SePeopleFilter = 'all') => {
       minimize();
       setNewKind('ask');
+      setPeopleFilter(filter);
       setTab(next);
     },
     [minimize],
@@ -122,6 +126,8 @@ function SeAppFrameBody({ onOpen }: FrameProps) {
             onAskArchitect={askArchitect}
             onBack={back}
             onClose={() => select('today')}
+            onPeopleFits={() => select('people', 'fits')}
+            peopleFilter={peopleFilter}
             saving={saving}
             onOpen={onOpen}
             onPresence={setPresence}
@@ -156,23 +162,26 @@ type TabScreenProps = {
   onAskArchitect: () => void;
   onBack: () => void;
   onClose: () => void;
+  onPeopleFits: () => void;
+  peopleFilter: SePeopleFilter;
   saving: boolean;
   onOpen: (_key: FeatureKey) => void;
   onRain: () => void;
 };
 
-function TabScreen({ t, tab, onPresence, user, prefs, newKind, onAskArchitect, onBack, onClose, saving, onOpen, onRain }: TabScreenProps) {
+function TabScreen(props: TabScreenProps) {
+  const { t, tab, onPresence, user, prefs, newKind, onAskArchitect, onBack, onClose, onPeopleFits, peopleFilter, saving, onOpen, onRain } = props;
   if (tab === 'me') {
     return user ? <MeTab t={t} user={user} prefs={prefs} onAskArchitect={onAskArchitect} onBack={onBack} saving={saving} onOpen={onOpen} /> : null;
   }
   if (tab === 'today') {
     if (!user) return null;
     const rain = { on: prefs.reading.emojiRain, seen: prefs.daysWonSeen, onSeen: prefs.markDaysWonSeen, onRain };
-    return <TodayScreen t={t} accountId={user.id} onOpen={onOpen} onPresence={onPresence} rain={rain} />;
+    return <TodayScreen t={t} accountId={user.id} onOpen={onOpen} onPresence={onPresence} rain={rain} onPeopleFits={onPeopleFits} />;
   }
   if (tab === 'new') return <NewScreen key={newKind} t={t} initialKind={newKind} onOpen={onOpen} onClose={onClose} />;
   if (tab === 'activity') return <ActivityScreen t={t} onOpen={onOpen} />;
-  return <PeopleScreen t={t} onOpen={onOpen} onToday={onClose} />;
+  return <PeopleScreen key={peopleFilter} t={t} onOpen={onOpen} onToday={onClose} initialFilter={peopleFilter} />;
 }
 
 // Today's title row carries how many members are here ("3 Avens here"), hidden while unknown.

@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { SE_DAYS_WON_HOW, SE_DAYS_WON_TITLE, SE_DAYS_WON_WHY, SE_MUTE_WORDS, SE_TODAY_FILTERS, seCardMutedNote, seCardMuteRequest, seDaysWonLines, seTodayView, type SeCardMuteKind, type SeToday, type SeTodayCard, type SeTodayFilter } from '@ctf/shared';
+import { MatchCard } from './match-card';
 import { MatchingToggle } from './matching-toggle';
 import { BroadcastCard, RoomCard } from './room-card';
 import { TodayCard } from './today-card';
@@ -84,6 +85,7 @@ function Notices({ error, missingLine, loading, onRetry }: { error: string | nul
 }
 
 type TimelineProps = {
+  lead?: ReactNode;
   viewerId: string;
   view: ReturnType<typeof seTodayView>;
   marks: TodayMarks;
@@ -95,10 +97,11 @@ type TimelineProps = {
   onChanged: () => void;
 };
 
-function Timeline({ viewerId, view, marks, mark, toggle, markRead, onSave, onMute, onChanged }: TimelineProps) {
+function Timeline({ lead, viewerId, view, marks, mark, toggle, markRead, onSave, onMute, onChanged }: TimelineProps) {
   return (
     <div className={styles.timeline}>
       <span className={styles.line} aria-hidden="true" />
+      {lead}
       {view.cards.map((card) => (
         <TodayCard
           key={card.id}
@@ -128,12 +131,20 @@ function Timeline({ viewerId, view, marks, mark, toggle, markRead, onSave, onMut
   );
 }
 
+// The Match card leads the timeline under All only.
+function MatchLead({ filter, refreshKey, onIntroduce }: { filter: SeTodayFilter; refreshKey: string; onIntroduce: () => void }) {
+  return filter === 'all' ? <MatchCard refreshKey={refreshKey} onIntroduce={onIntroduce} /> : null;
+}
+
 // A visitor who is not signed in gets GuestToday (guest-today.tsx) instead.
 // `onPresence` hands the "N Avens here" count to the title row above the screen. `rain` carries the
-// emoji rain switch and the Days won total the account last saw (use-se-prefs.ts).
+// emoji rain switch and the Days won total the account last saw (use-se-prefs.ts). `onPeopleFits` opens
+// People on "Fits what you need", from the Match card's Get introduced.
 type RainPrefs = { on: boolean; seen: number | null | undefined; onSeen: (_total: number) => void };
 
-export function TodayScreen({ accountId, onPresence, rain }: { accountId: string; onPresence?: (count: number | null) => void; rain: RainPrefs }) {
+type ScreenProps = { accountId: string; onPresence?: (count: number | null) => void; rain: RainPrefs; onPeopleFits: () => void };
+
+export function TodayScreen({ accountId, onPresence, rain, onPeopleFits }: ScreenProps) {
   const { today, loading, error, marks, mark, toggle, markRead, save, saveNote, reload } = useToday(accountId);
   const presence = today?.presence ?? null;
   useEffect(() => onPresence?.(presence), [onPresence, presence]);
@@ -178,7 +189,7 @@ export function TodayScreen({ accountId, onPresence, rain }: { accountId: string
           {muteNote}
         </p>
       ) : null}
-      {today ? <Timeline viewerId={accountId} view={view} marks={marks} mark={mark} toggle={toggle} markRead={markRead} onSave={save} onMute={(card, kind) => void mute(card, kind)} onChanged={() => void reload()} /> : null}
+      {today ? <Timeline lead={<MatchLead filter={filter} refreshKey={today.generatedAtIso} onIntroduce={onPeopleFits} />} viewerId={accountId} view={view} marks={marks} mark={mark} toggle={toggle} markRead={markRead} onSave={save} onMute={(card, kind) => void mute(card, kind)} onChanged={() => void reload()} /> : null}
     </>
   );
 }
