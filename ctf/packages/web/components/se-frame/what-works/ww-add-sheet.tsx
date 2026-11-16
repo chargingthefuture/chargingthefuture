@@ -1,16 +1,23 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import { SE_WW_ADD_WORDS as W, seWwHelpedCount } from '@ctf/shared';
 import { responseFailureText, reasonText } from 'lib/errors/client-failure';
-import { useTheme } from '@/hooks/useTheme';
+import type { PluginShellTokens } from '@/components/shared/plugin-shell-theme';
 import { classicLookVars } from '@/components/shared/classic-look-vars';
-import { getWhatWorksTokens } from '@/components/what-works/ww-shared';
+import { seThemeVars } from '../se-theme-vars';
+import { useSeTheme } from '../use-se-theme';
 import { useWwSimilar, WW_MIN_QUERY, type WwMatchState } from './use-ww-similar';
-import styles from './ww-add-sheet.module.css';
+import seStyles from './ww-add-sheet.module.css';
+import classic from './ww-add-sheet-classic.module.css';
 
 // What Works, add a problem: the member types the problem, sees the problems already on the list
-// that share words with it, and either uses one or adds theirs, which waits for review.
+// that share words with it, and either uses one or adds theirs, which waits for review. Opened from
+// the What works card on Today it is drawn in the 3.1 look, to the board; the 3.0 What Works page
+// passes `look` (its shell tokens) and the same sheet takes that page's 3.0 look, so the two designs
+// never meet on one screen.
+
+const SheetCss = createContext<{ readonly [key: string]: string }>(seStyles);
 
 export type WwAddedProblem = { id: string; title: string };
 
@@ -18,6 +25,7 @@ type Props = {
   onClose: () => void;
   onUse: (_problemId: string) => void;
   onAddWhatHelped: (_problem: WwAddedProblem) => void;
+  look?: PluginShellTokens;
 };
 
 async function sendProblem(title: string): Promise<{ ok: true; id: string } | { ok: false; message: string }> {
@@ -44,6 +52,7 @@ function CloseIcon() {
 }
 
 function Matches({ state, onUse }: { state: WwMatchState; onUse: (_id: string) => void }) {
+  const styles = useContext(SheetCss);
   if (state.kind === 'idle') return null;
   if (state.kind === 'loading') return <p className={styles.note}>{W.searching}</p>;
   if (state.kind === 'error') return <p role="alert" className={styles.error}>{W.matchesFailed(state.reason)}</p>;
@@ -65,6 +74,7 @@ function Matches({ state, onUse }: { state: WwMatchState; onUse: (_id: string) =
 }
 
 function Sent({ problem, onAddWhatHelped, onClose }: { problem: WwAddedProblem; onAddWhatHelped: Props['onAddWhatHelped']; onClose: () => void }) {
+  const styles = useContext(SheetCss);
   return (
     <>
       <h2 className={styles.title}>{W.sentTitle}</h2>
@@ -83,6 +93,7 @@ function Sent({ problem, onAddWhatHelped, onClose }: { problem: WwAddedProblem; 
 }
 
 function AddForm({ onUse, onSent }: { onUse: (_id: string) => void; onSent: (_p: WwAddedProblem) => void }) {
+  const styles = useContext(SheetCss);
   const [title, setTitle] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -122,8 +133,9 @@ function AddForm({ onUse, onSent }: { onUse: (_id: string) => void; onSent: (_p:
   );
 }
 
-export function WwAddSheet({ onClose, onUse, onAddWhatHelped }: Props) {
-  const { theme } = useTheme();
+export function WwAddSheet({ onClose, onUse, onAddWhatHelped, look }: Props) {
+  const { theme } = useSeTheme();
+  const styles = look ? classic : seStyles;
   const [sent, setSent] = useState<WwAddedProblem | null>(null);
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => event.key === 'Escape' && onClose();
@@ -131,7 +143,7 @@ export function WwAddSheet({ onClose, onUse, onAddWhatHelped }: Props) {
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
   return (
-    <div className={styles.backdrop} style={classicLookVars(getWhatWorksTokens(theme))}>
+    <div className={styles.backdrop} style={look ? classicLookVars(look) : seThemeVars(theme.color, theme.mode)}>
       <section role="dialog" aria-modal="true" aria-label={W.title} className={styles.sheet}>
         <div className={styles.top}>
           <button type="button" className={styles.close} aria-label={W.close} onClick={onClose}>
@@ -139,7 +151,9 @@ export function WwAddSheet({ onClose, onUse, onAddWhatHelped }: Props) {
           </button>
           <span className={styles.eyebrow}>{W.eyebrow}</span>
         </div>
-        {sent ? <Sent problem={sent} onAddWhatHelped={onAddWhatHelped} onClose={onClose} /> : <AddForm onUse={onUse} onSent={setSent} />}
+        <SheetCss.Provider value={styles}>
+          {sent ? <Sent problem={sent} onAddWhatHelped={onAddWhatHelped} onClose={onClose} /> : <AddForm onUse={onUse} onSent={setSent} />}
+        </SheetCss.Provider>
       </section>
     </div>
   );

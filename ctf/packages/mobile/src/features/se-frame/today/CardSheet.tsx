@@ -12,6 +12,7 @@ import { getApiBaseUrl } from '../../../auth/authedFetch';
 import { reportError } from '../../../observability/report';
 import { CardTalk } from './CardSheetTalk';
 import { SheetYours } from './CardSheetYours';
+import { WwAddFromCard } from '../what-works/WwAddSheet';
 import { makeCardSheetStyles, type CardSheetStyles, type CardTalkInk, type CardTalkStyles } from './cardSheetStyles';
 import { useCardConversation, type CardConversation } from './useCardConversation';
 
@@ -210,6 +211,7 @@ export function CardSheet({ t, card, viewerId, firstAnswer, onClose, onOpenLink,
               <TouchableOpacity accessibilityRole="link" style={s.openIn} onPress={() => (onClose(), onOpenLink(card.href))}>
                 <Text style={s.openInLabel}>{SE_CARD_WORDS.openIn(card.source)}</Text>
               </TouchableOpacity>
+              <WwAddFromCard t={t} source={card.source} linkStyle={s.openIn} labelStyle={s.openInLabel} onOpenLink={(href) => (onClose(), onOpenLink(href))} />
             </View>
             <SheetYours s={s} card={card} helpers={seDoneHelpers(talk.conversation?.answers ?? [], viewerId)} onChanged={onChanged} />
             <CardConversationView t={t} s={s} talk={talk} />

@@ -1,14 +1,12 @@
-/* What Works, add a problem: the steps of the board "What works: add a problem", drawn in What
-   Works' own 3.0 look, since the sheet opens over the 3.0 What Works page and the two designs are
-   never mixed on one screen. Colors come from the plugin's shell tokens, set as --c30-* variables
-   (classic-look-vars.ts). */
+/* What Works, add a problem, to the approved board "What works: add a problem". Colors come from
+   the 3.1 theme's custom properties (se-theme-vars.ts). */
 .backdrop {
   position: fixed;
   inset: 0;
   z-index: 60;
   display: flex;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--se-soft);
   font-family: 'Figtree Variable', system-ui, sans-serif;
 }
 
@@ -24,10 +22,10 @@
   gap: 14px;
   padding: 12px 16px 20px;
   overflow-y: auto;
-  border-radius: 14px 14px 0 0;
-  border-top: 1px solid var(--c30-border-hi);
-  background: var(--c30-bg);
-  color: var(--c30-text);
+  border-radius: 26px 26px 0 0;
+  border-top: 1.5px solid var(--se-line);
+  background: var(--se-card);
+  color: var(--se-ink);
 }
 
 .top {
@@ -43,33 +41,31 @@
   width: 40px;
   height: 40px;
   padding: 0;
-  border-radius: 10px;
-  border: 1px solid var(--c30-border-hi);
-  background: var(--c30-input);
-  color: var(--c30-subtle);
+  border-radius: 50%;
+  border: 1.5px solid var(--se-hair);
+  background: transparent;
+  color: var(--se-ink);
   cursor: pointer;
 }
 
 .eyebrow {
   font-size: 12px;
   font-weight: 700;
-  color: var(--c30-accent);
+  color: var(--se-kind-story);
 }
 
 .title {
   margin: 0;
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--c30-title);
+  font-family: 'Newsreader Variable', Newsreader, Georgia, serif;
+  font-size: 24px;
+  font-weight: 600;
 }
 
 .rule {
   margin: 0;
   padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid var(--c30-border);
-  background: var(--c30-surface);
-  color: var(--c30-subtle);
+  border-radius: 14px;
+  background: var(--se-bg);
   font-size: 13px;
   line-height: 1.45;
 }
@@ -88,12 +84,11 @@
 .input {
   min-height: 48px;
   box-sizing: border-box;
-  padding: 0 16px;
-  border-radius: 10px;
-  border: 1px solid var(--c30-border-hi);
-  background: var(--c30-input);
-  color: var(--c30-text);
-  outline: none;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1.5px solid var(--se-line);
+  background: var(--se-card);
+  color: var(--se-ink);
   font: inherit;
   font-size: 15px;
 }
@@ -110,10 +105,10 @@
   align-items: center;
   gap: 10px;
   padding: 8px 14px;
-  border-radius: 10px;
-  border: 1px solid var(--c30-border-hi);
-  background: var(--c30-surface);
-  color: var(--c30-text);
+  border-radius: 14px;
+  border: 1.5px solid var(--se-hair);
+  background: var(--se-card);
+  color: var(--se-ink);
   font: inherit;
   text-align: left;
   cursor: pointer;
@@ -133,7 +128,7 @@
 .matchCount,
 .note {
   font-size: 12px;
-  color: var(--c30-subtle);
+  color: var(--se-soft);
 }
 
 .note {
@@ -144,13 +139,13 @@
 .use {
   font-size: 13px;
   font-weight: 700;
-  color: var(--c30-accent);
+  color: var(--se-kind-story);
 }
 
 .error {
   margin: 0;
   font-size: 13px;
-  color: #ef4444;
+  color: var(--se-live-badge);
 }
 
 .spacer {
@@ -159,22 +154,21 @@
 
 .add,
 .primary {
-  min-height: 48px;
-  border-radius: 12px;
-  border: 1px solid var(--c30-border-hi);
-  background: transparent;
-  color: var(--c30-subtle);
+  min-height: 50px;
+  border-radius: 999px;
+  border: 1.5px solid var(--se-line);
+  background: var(--se-card);
+  color: var(--se-ink);
   font: inherit;
   font-weight: 700;
   font-size: 15px;
+  box-shadow: 0 3px 0 var(--se-line);
   cursor: pointer;
 }
 
 .primary {
-  border: none;
-  background: var(--c30-accent);
-  color: #fff;
-  font-weight: 800;
+  background: var(--se-btn);
+  color: var(--se-on-btn);
 }
 
 .add:disabled,
