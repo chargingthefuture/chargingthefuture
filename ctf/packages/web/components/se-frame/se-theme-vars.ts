@@ -25,6 +25,7 @@ export function seThemeVars(color?: SeThemeColor, mode?: SeThemeMode, highContra
     '--se-live': t.live,
     '--se-live-badge': t.liveBadge,
     '--se-on-live-badge': t.onLiveBadge,
+    '--se-on-kind': t.onKind,
   };
   for (const [kind, value] of Object.entries(t.kind)) vars[`--se-kind-${kind}`] = value;
   return vars as CSSProperties;

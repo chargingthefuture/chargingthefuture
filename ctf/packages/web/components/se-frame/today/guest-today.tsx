@@ -2,13 +2,15 @@
 
 import { useSignedOutTheme } from '../use-signed-out-theme';
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   SE_DAYS_WON_TITLE,
   SE_DAYS_WON_WHY,
   SE_GUEST_WORDS as W,
   seDaysWonLines,
   seGuestAnswersBySignUp,
+  seGuestDaysWon,
+  seGuestTickDelayMs,
   seGuestOpensSheet,
   seGuestNextRoomLine,
   seGuestStartedLine,
@@ -27,12 +29,15 @@ import { SeAvatar } from '@/components/shared/se-avatar';
 import { useGuestRoom } from './use-guest-room';
 import { useToday } from './use-today';
 import { GuestSheet } from './guest-sheet';
+import { CardDotIcon } from './card-dot-icon';
+import { EmojiRainShower } from './emoji-rain';
 import styles from './today.module.css';
 
 // Today for a visitor who is not signed in, built to the approved "Today, signed out" board: Days
-// won with what Skills Economy is and Sign up, the Main Room with Listen as a guest in place (or, on
-// a quiet day, the readings and the next room), the day's cards read only, asks and offers from "A
-// member" with Sign up to answer, and People locked until a member is reviewed.
+// won (a Preview count that ticks up now and then) with what Skills Economy is and Sign up, the Main
+// Room with Listen as a guest in place (or, on a quiet day, the readings and the next room), the
+// day's cards read only, asks and offers from "A member" with Sign up to answer, a blog story with
+// Read the post and Conversation, and People locked until a member is reviewed.
 
 // The small tag on anything read from sample data rather than members' own rows: a lock and
 // "Preview", so a visitor reads it as private rather than empty.
@@ -48,13 +53,35 @@ function SampleTag() {
   );
 }
 
+// Signed out, the sample Days won count goes up by one at random intervals while the page is open,
+// with a shower of emoji (owner decision, 2026-11-16). Nothing is written anywhere; it stays tagged
+// Preview, and with less motion asked for the number still ticks and no emoji fall.
+function useLivelyDaysWon(daysWon: SeToday['daysWon'] | undefined) {
+  const [ticks, setTicks] = useState(0);
+  const shown = Boolean(daysWon);
+  useEffect(() => {
+    if (!shown) return;
+    let timer = 0;
+    const next = () => {
+      timer = window.setTimeout(() => {
+        setTicks((count) => count + 1);
+        next();
+      }, seGuestTickDelayMs(Math.random()));
+    };
+    next();
+    return () => window.clearTimeout(timer);
+  }, [shown]);
+  return { daysWon: seGuestDaysWon(daysWon, ticks), ticks };
+}
+
 function Hero({ today, signUpUrl }: { today: SeToday | null; signUpUrl: string }) {
-  const big = today?.daysWon ? seDaysWonLines(today.daysWon).big : null;
+  const { daysWon, ticks } = useLivelyDaysWon(today?.daysWon);
+  const big = daysWon ? seDaysWonLines(daysWon).big : null;
   return (
     <section aria-label={SE_DAYS_WON_TITLE} className={styles.daysWon}>
       <span className={styles.daysWonLabel}>
         {SE_DAYS_WON_TITLE}
-        {big && today?.daysWon?.sample ? <> <SampleTag /></> : null}
+        {big && daysWon?.sample ? <> <SampleTag /></> : null}
       </span>
       {big ? <span className={styles.daysWonBig}>{big}</span> : null}
       <span className={styles.daysWonSmall}>{W.hero}</span>
@@ -64,6 +91,7 @@ function Hero({ today, signUpUrl }: { today: SeToday | null; signUpUrl: string }
       <a href={signUpUrl} className={styles.heroButton}>
         {W.signUp}
       </a>
+      <EmojiRainShower run={ticks} />
     </section>
   );
 }
@@ -156,7 +184,9 @@ function GuestCard({ card, signUpUrl, signInUrl }: { card: SeTodayCard; signUpUr
   const [open, setOpen] = useState(false);
   return (
     <article className={styles.card}>
-      <span className={styles.guestDot} style={{ background: color }} aria-hidden="true" />
+      <span className={styles.guestDot} style={{ background: color }} aria-hidden="true">
+        <CardDotIcon kind={card.kind} />
+      </span>
       <div className={styles.cardHead}>
         {bySignUp ? <SeAvatar accountId={card.id} size={28} /> : null}
         {bySignUp ? <span className={styles.handle}>{W.member}</span> : null}
@@ -215,7 +245,9 @@ export function GuestToday({ signUpUrl, signInUrl }: { signUpUrl: string; signIn
           <GuestCard key={card.id} card={card} signUpUrl={signUpUrl} signInUrl={signInUrl} />
         ))}
         <article className={`${styles.card} ${styles.lockedCard}`}>
-          <span className={styles.guestDot} style={{ background: 'var(--se-kind-match)' }} aria-hidden="true" />
+          <span className={styles.guestDot} style={{ background: 'var(--se-kind-match)' }} aria-hidden="true">
+            <CardDotIcon kind="match" />
+          </span>
           <span className={styles.cardTitle}>{W.peopleTitle}</span>
           <span className={styles.body}>{W.peopleLocked}</span>
         </article>

@@ -1,16 +1,19 @@
 // Today for a visitor who is not signed in, the Android copy of the web's guest-today.tsx, built to
-// the approved "Today, signed out" board: Days won with what Skills Economy is and Sign up, the Main
-// Room with Listen as a guest in place (or, on a quiet day, the readings and the next room), the
-// day's cards read only, asks and offers from "A member" with Sign up to answer, and People locked.
+// the approved "Today, signed out" board: Days won (a Preview count that ticks up now and then) with
+// what Skills Economy is and Sign up, the Main Room with Listen as a guest in place (or, on a quiet
+// day, the readings and the next room), the day's cards read only, asks and offers from "A member"
+// with Sign up to answer, a blog story with Read the post and Conversation, and People locked.
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AccessibilityInfo, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import {
   SE_DAYS_WON_TITLE,
   SE_DAYS_WON_WHY,
   SE_GUEST_WORDS as W,
   seDaysWonLines,
   seGuestAnswersBySignUp,
+  seGuestDaysWon,
+  seGuestTickDelayMs,
   seGuestOpensSheet,
   seGuestNextRoomLine,
   seGuestStartedLine,
@@ -32,6 +35,7 @@ import { SE_FONT } from '../fonts';
 import { openTodayLink } from './openTodayLink';
 import { useToday } from './useToday';
 import { GuestSheet } from './GuestSheet';
+import { CardDotIcon } from './CardDotIcon';
 import Svg, { Path, Rect } from 'react-native-svg';
 
 type Styles = ReturnType<typeof makeStyles>;
@@ -50,13 +54,43 @@ function SampleTag({ s, color }: { s: Styles; color: string }) {
   );
 }
 
-function Hero({ s, t, today, onSignUp }: { s: Styles; t: SeThemeTokens; today: SeToday | null; onSignUp: () => void }) {
-  const big = today?.daysWon ? seDaysWonLines(today.daysWon).big : null;
+// Signed out, the sample Days won count goes up by one at random intervals while the screen is open,
+// with a shower of emoji drawn by the frame (owner decision, 2026-11-16), as on the web. Nothing is
+// written anywhere; it stays tagged Preview, and with less motion asked for the number still ticks
+// and no emoji fall.
+function useLivelyDaysWon(daysWon: SeToday['daysWon'] | undefined, onRain: () => void) {
+  const [ticks, setTicks] = useState(0);
+  const latest = useRef(onRain);
+  latest.current = onRain;
+  const shown = Boolean(daysWon);
+  useEffect(() => {
+    if (!shown) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const next = () => {
+      timer = setTimeout(() => {
+        setTicks((count) => count + 1);
+        AccessibilityInfo.isReduceMotionEnabled()
+          .then((less) => {
+            if (!less) latest.current();
+          })
+          .catch(() => undefined);
+        next();
+      }, seGuestTickDelayMs(Math.random()));
+    };
+    next();
+    return () => clearTimeout(timer);
+  }, [shown]);
+  return seGuestDaysWon(daysWon, ticks);
+}
+
+function Hero({ s, t, today, onSignUp, onRain }: { s: Styles; t: SeThemeTokens; today: SeToday | null; onSignUp: () => void; onRain: () => void }) {
+  const daysWon = useLivelyDaysWon(today?.daysWon, onRain);
+  const big = daysWon ? seDaysWonLines(daysWon).big : null;
   return (
     <View style={s.hero} accessibilityLabel={SE_DAYS_WON_TITLE}>
       <View style={s.row}>
         <Text style={s.heroLabel}>{SE_DAYS_WON_TITLE}</Text>
-        {big && today?.daysWon?.sample ? <SampleTag s={s} color={t.onHero} /> : null}
+        {big && daysWon?.sample ? <SampleTag s={s} color={t.onHero} /> : null}
       </View>
       {big ? <Text style={s.heroBig}>{big}</Text> : null}
       <Text style={s.heroText}>{W.hero}</Text>
@@ -149,7 +183,9 @@ function GuestCard({ s, t, card, onSignUp, go }: { s: Styles; t: SeThemeTokens; 
   const bySignUp = seGuestAnswersBySignUp(card);
   return (
     <View style={s.card}>
-      <View style={[s.dot, { backgroundColor: color }]} />
+      <View style={[s.dot, { backgroundColor: color }]} importantForAccessibility="no-hide-descendants">
+        <CardDotIcon kind={card.kind} color={t.onKind} />
+      </View>
       <View style={s.row}>
         {bySignUp ? <SeAvatar accountId={card.id} size={28} /> : null}
         {bySignUp ? <Text style={s.handle}>{W.member}</Text> : null}
@@ -185,14 +221,14 @@ function GuestCard({ s, t, card, onSignUp, go }: { s: Styles; t: SeThemeTokens; 
   );
 }
 
-export function GuestToday({ t, onSignUp, onOpen }: { t: SeThemeTokens; onSignUp: () => void; onOpen: (_key: FeatureKey) => void }) {
+export function GuestToday({ t, onSignUp, onOpen, onRain }: { t: SeThemeTokens; onSignUp: () => void; onOpen: (_key: FeatureKey) => void; onRain: () => void }) {
   const s = useMemo(() => makeStyles(t), [t]);
   const { today, loading, error, marks, reload } = useToday(null);
   const view = seTodayView(today, marks, 'all');
   const go = (href: string) => openTodayLink(href, onOpen);
   return (
     <>
-      <Hero s={s} t={t} today={today} onSignUp={onSignUp} />
+      <Hero s={s} t={t} today={today} onSignUp={onSignUp} onRain={onRain} />
       <RoomCard s={s} t={t} today={today} />
       <View style={s.listHead}>
         <Text style={s.listTitle}>{W.cardsTitle}</Text>
@@ -212,7 +248,9 @@ export function GuestToday({ t, onSignUp, onOpen }: { t: SeThemeTokens; onSignUp
           <GuestCard key={card.id} s={s} t={t} card={card} onSignUp={onSignUp} go={go} />
         ))}
         <View style={[s.card, s.locked]}>
-          <View style={[s.dot, { backgroundColor: t.kind.match }]} />
+          <View style={[s.dot, { backgroundColor: t.kind.match }]} importantForAccessibility="no-hide-descendants">
+            <CardDotIcon kind="match" color={t.onKind} />
+          </View>
           <Text style={s.title}>{W.peopleTitle}</Text>
           <Text style={s.body}>{W.peopleLocked}</Text>
         </View>
@@ -249,7 +287,7 @@ function makeStyles(t: SeThemeTokens) {
     line: { position: 'absolute', left: 13, top: 8, bottom: 8, width: 2, backgroundColor: t.hair },
     card: { gap: 10, padding: 14, borderRadius: 18, backgroundColor: t.card, borderWidth: 1.5, borderColor: t.hair },
     locked: { gap: 6, backgroundColor: t.sunk, borderStyle: 'dashed', borderColor: t.soft },
-    dot: { position: 'absolute', left: -40, top: 12, width: 28, height: 28, borderRadius: 14 },
+    dot: { position: 'absolute', left: -40, top: 12, width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
     handle: { fontSize: 13, color: t.ink, fontFamily: SE_FONT.sansSemi },
     label: { fontSize: 12, fontFamily: SE_FONT.sansBold, flexShrink: 1 },
     title: { fontSize: 17, lineHeight: 22, color: t.ink, fontFamily: SE_FONT.sansBold },

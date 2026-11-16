@@ -1,5 +1,7 @@
+import { SE_GUEST_WORDS } from '@ctf/shared';
 import type { SeToday, SeTodayBroadcast, SeTodayCard, SeTodayDay, SeTodayRoom } from '@ctf/shared';
 import { blogStories } from './sources-blog';
+import { MEMBER_STORY_SOURCE } from './sources-member';
 import { dailyPuzzleCard } from './sources-daily';
 import { reportError } from 'lib/observability/report';
 import { cohortOffers, hoursOffers, placeOffers } from './sources-offers';
@@ -67,6 +69,15 @@ async function publicRideAsks(): Promise<SeTodayCard[]> {
   );
 }
 
+// A story signed out: This helped me needs an account. A blog story's one button reads the post,
+// which is public; a member's story has no public page, so it has none. The screen draws
+// Conversation beside them.
+function readPostSignedOut(item: SeTodayCard): SeTodayCard {
+  if (item.source === 'blog-story') return { ...item, actions: [action('open', SE_GUEST_WORDS.readPost, item.href)] };
+  if (item.source === MEMBER_STORY_SOURCE) return { ...item, actions: [] };
+  return item;
+}
+
 // Nobody is signed in, so no card is the viewer's own.
 const GUEST = { userId: '', isAdmin: false };
 
@@ -87,7 +98,7 @@ export async function buildPublicToday(now = new Date(), day: SeTodayDay = utcTo
     { name: 'mutual-time', read: () => sampleCards(() => hoursOffers(GUEST)) },
     { name: 'numbers', read: () => numbersCard(day) },
     // A member's own story shows here only when its writer agreed to the words that name visitors.
-    { name: 'blog-stories', read: () => blogStories(day, 'signed-out') },
+    { name: 'blog-stories', read: async () => (await blogStories(day, 'signed-out')).map(readPostSignedOut) },
     // Signed out, the puzzle can be read but not played, so its button says so.
     { name: 'games', read: async () => (await dailyPuzzleCard(day)).map((item) => ({ ...item, actions: [action('open', 'See the puzzle', item.href)] })) },
     { name: 'beacon-replays', read: () => replayCards(day) },

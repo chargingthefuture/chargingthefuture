@@ -44,14 +44,12 @@ export function useEmojiRain({ on, daysWon, seen, onSeen }: EmojiRainProps): boo
   return raining;
 }
 
-export function EmojiRain(props: EmojiRainProps) {
-  const raining = useEmojiRain(props);
-  if (!raining) return null;
+function RainDrops({ run }: { run: number }) {
   return (
     <div className={styles.rain} aria-hidden="true" data-testid="emoji-rain">
       {DROPS.map((drop) => (
         <span
-          key={drop.key}
+          key={`${run}-${drop.key}`}
           className={styles.drop}
           style={{ left: `${drop.leftPct}%`, fontSize: drop.sizePx, animationDelay: `${drop.delayMs}ms`, animationDuration: `${drop.fallMs}ms` }}
         >
@@ -60,4 +58,24 @@ export function EmojiRain(props: EmojiRainProps) {
       ))}
     </div>
   );
+}
+
+export function EmojiRain(props: EmojiRainProps) {
+  const raining = useEmojiRain(props);
+  if (!raining) return null;
+  return <RainDrops run={0} />;
+}
+
+// One shower for each new `run` above zero, for a few seconds: signed-out Today's ticking preview
+// count (guest-today.tsx) counts `run` up itself and never records anything.
+export function EmojiRainShower({ run }: { run: number }) {
+  const [raining, setRaining] = useState(false);
+  useEffect(() => {
+    if (run === 0 || prefersLessMotion()) return;
+    setRaining(true);
+    const timer = window.setTimeout(() => setRaining(false), SE_EMOJI_RAIN_MS);
+    return () => window.clearTimeout(timer);
+  }, [run]);
+  if (!raining) return null;
+  return <RainDrops run={run} />;
 }
