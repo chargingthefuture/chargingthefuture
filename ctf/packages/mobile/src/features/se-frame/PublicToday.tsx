@@ -3,7 +3,7 @@
 // along the bottom with Sign up.
 
 import React, { useMemo } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View, useColorScheme } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { seSignedOutTheme, SE_GUEST_WORDS as W, seTheme, type SeThemeTokens } from '@ctf/shared';
 import { useAuth } from '../../auth/auth-context';
 import type { FeatureKey } from '../../navigation/screens';
@@ -12,7 +12,7 @@ import { GuestToday } from './today/GuestToday';
 import { SeRoomsProvider } from './rooms/SeRooms';
 
 export function PublicToday({ onOpen }: { onOpen: (_key: FeatureKey) => void }) {
-  const theme = seSignedOutTheme(useColorScheme() === 'dark');
+  const theme = seSignedOutTheme(false);
   const t = seTheme(theme.color, theme.mode);
   const s = useMemo(() => makeStyles(t), [t]);
   const { signIn } = useAuth();
