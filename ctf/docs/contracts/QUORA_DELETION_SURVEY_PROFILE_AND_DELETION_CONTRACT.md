@@ -14,9 +14,11 @@ through it.
 Most of this is about somebody outside the app: a Quora account that no longer exists. The one
 thing that ties it to a member here is the user id on the response row.
 
-Never stored: an IP address, a user agent, an email, or any contact detail. The live Quora profile
-link a respondent may name on the confirmation screen is not written to the survey either; it goes
-to the Unlock verification queue, which keeps it under its own contract.
+Never stored: an IP address, a user agent, an email, or any contact detail. The handle of a Quora
+account the respondent still holds is stored on the response when they give it
+(`current_profile_handle`), and cleared on account deletion. The profile link built from it goes to
+the Unlock verification queue only if they choose to, and that queue keeps it under its own
+contract.
 
 ## Deleting an account
 
@@ -28,7 +30,7 @@ service a member uses, it is a form they answered once.
 
 | Table | On deletion | Why |
 |---|---|---|
-| `quora_deletion_survey_responses` | Pseudonymized: `user_id` is overwritten with the placeholder `deleted_member`, matched on the member's real id. Every other column stays. | A survey answer is a record of an erasure. Destroying it when its author leaves would repeat the thing the survey exists to document, and would quietly shrink counts already quoted in published posts. The same handling bug reports get, for the same reason. |
+| `quora_deletion_survey_responses` | Pseudonymized: `user_id` is overwritten with the placeholder `deleted_member`, matched on the member's real id, and `current_profile_handle` (the account they still hold) is set to NULL. Every other column stays. | A survey answer is a record of an erasure. Destroying it when its author leaves would repeat the thing the survey exists to document, and would quietly shrink counts already quoted in published posts. The same handling bug reports get, for the same reason. |
 | `quora_deletion_survey_accounts` | Untouched by the engine; de-identified with the response. | No user column. The rows reach a person only through `response_id`, and once the response no longer names anyone, neither do they. The `ON DELETE CASCADE` on that foreign key fires only if a response row is ever deleted, which the engine does not do. |
 | `quora_deletion_survey_audit_log` | Retained | Records what was done to this data and by whom: admin reads and exports, and verification started from the survey. It has to survive the departure of anyone named in it, like every other accountability trail in the registry. |
 

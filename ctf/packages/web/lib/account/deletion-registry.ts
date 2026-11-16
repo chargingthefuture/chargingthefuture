@@ -1007,8 +1007,8 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       pseudo(
         'quora_deletion_survey_responses',
         'user_id',
-        [],
-        'Survey answers you sent — the answer stays as research, your account id does not.',
+        ['current_profile_handle'],
+        'Survey answers you sent — the answer stays as research, your account id and the handle of the account you still hold do not.',
       ),
       retain(
         'quora_deletion_survey_audit_log',

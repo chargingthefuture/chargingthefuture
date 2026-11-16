@@ -42,6 +42,10 @@ commands:
         hasCurrentProfile:
           type: [boolean, 'null']
           description: Q13, optional. Null is "did not say" and is kept distinct from false.
+        currentProfileHandle:
+          type: [string, 'null']
+          maxLength: 200
+          description: The handle or username of the account the member still holds, or a pasted profile link. Stored only when hasCurrentProfile is true; dropped otherwise. Longer input is cut to 200 characters.
         evidenceNote:
           type: [string, 'null']
           maxLength: 5000
@@ -275,6 +279,9 @@ commands:
                 type: boolean
               has_current_profile:
                 type: [boolean, 'null']
+              current_profile_handle:
+                type: [string, 'null']
+                description: Set only under a yes to has_current_profile. Cleared when the member's account is deleted.
               evidence_note:
                 type: [string, 'null']
               other_notes:
@@ -371,7 +378,7 @@ commands:
         On success the body is text/csv (attachment quora-account-deletion-survey.csv, Cache-Control
         no-store), not JSON. Columns, in order: response_id, member_id, submitted_at,
         consent_publish_handles, consent_quote, consent_attribute_quote, targeted_individual,
-        any_account_removed, has_current_profile, account_number, handle, what_happened,
+        any_account_removed, has_current_profile, current_profile_handle, account_number, handle, what_happened,
         removed_month, removed_year, reason_quora_gave, appealed, reinstated, topics,
         approx_post_count, approx_active_months, evidence_note, other_notes. Option values are
         written as their labels. On failure the body is the JSON shape below.

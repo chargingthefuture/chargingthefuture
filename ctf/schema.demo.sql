@@ -6653,18 +6653,16 @@ CREATE TABLE IF NOT EXISTS quora_deletion_survey_responses (
   -- it is derived from the account rows below, so every removal counted is one backed by a handle
   -- and a date rather than a figure someone typed.
   any_account_removed BOOLEAN NOT NULL DEFAULT FALSE,
-  -- Q13. Whether they still have a Quora account that was not removed. The yes/no lives here; the
-  -- URL deliberately does NOT. That URL is their Unlock verification URL — it identifies them —
-  -- and storing it on this row would make an otherwise anonymous response identifiable, which is
-  -- the one promise this table makes. It is carried to the verification step in the browser and
-  -- never written here.
-  --
-  -- Nullable, unlike the two questions above, because this one is optional and NULL is the answer
-  -- "did not say". Asking a targeted person to name an account they still hold is a larger ask
-  -- than asking about ones already gone, so skipping it is expected — and a skipped question
-  -- stored as FALSE would be counted later as "has no account left", which is a different claim
-  -- than the person made.
+  -- Q13. Whether they still have a Quora account that was not removed. NULL is the answer "did not
+  -- say": asking a targeted person to name an account they still hold is a larger ask than asking
+  -- about ones already gone, so skipping it is expected, and a skipped question stored as FALSE
+  -- would be counted later as "has no account left", which is a different claim than the person
+  -- made.
   has_current_profile BOOLEAN NULL,
+  -- The handle or username of that account, as typed (a pasted profile link is kept as typed too).
+  -- Set only when has_current_profile is TRUE (owner decision, 2026-11-16). Account deletion clears
+  -- it with user_id, since it names the person as surely as the id does.
+  current_profile_handle TEXT NULL,
   -- Q10/Q11. Free text. Evidence is whatever the person can show (the text of the notice Quora
   -- sent, an archive.org link to the dead profile); notes is anything else they want on record.
   evidence_note TEXT NULL,
@@ -6682,6 +6680,7 @@ ALTER TABLE IF EXISTS quora_deletion_survey_responses ADD COLUMN IF NOT EXISTS u
 ALTER TABLE IF EXISTS quora_deletion_survey_responses ADD COLUMN IF NOT EXISTS targeted_individual TEXT NOT NULL DEFAULT 'no';
 ALTER TABLE IF EXISTS quora_deletion_survey_responses ADD COLUMN IF NOT EXISTS any_account_removed BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE IF EXISTS quora_deletion_survey_responses ADD COLUMN IF NOT EXISTS has_current_profile BOOLEAN NULL;
+ALTER TABLE IF EXISTS quora_deletion_survey_responses ADD COLUMN IF NOT EXISTS current_profile_handle TEXT NULL;
 ALTER TABLE IF EXISTS quora_deletion_survey_responses ADD COLUMN IF NOT EXISTS evidence_note TEXT NULL;
 ALTER TABLE IF EXISTS quora_deletion_survey_responses ADD COLUMN IF NOT EXISTS other_notes TEXT NULL;
 ALTER TABLE IF EXISTS quora_deletion_survey_responses ADD COLUMN IF NOT EXISTS consent_publish_handles BOOLEAN NOT NULL DEFAULT FALSE;
@@ -11915,4 +11914,13 @@ ALTER TABLE IF EXISTS demo.peer_programming_goal_tasks ADD COLUMN IF NOT EXISTS 
 ALTER TABLE IF EXISTS demo.peer_programming_goal_tasks ADD COLUMN IF NOT EXISTS helped BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE IF EXISTS demo.foundation_call_sessions ADD COLUMN IF NOT EXISTS answered_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS demo.foundation_call_sessions ADD COLUMN IF NOT EXISTS ended_at TIMESTAMPTZ;
+
+
+-- ── post migration: 0111_quora_survey_current_profile_handle.sql ──
+-- Safe to re-run.
+-- The Quora deletion survey now stores the handle or username of the account a member still holds,
+-- beside the yes/no it answers. Before this the handle stayed in the browser and only reached the
+-- Unlock queue. Production and the demo schema both get the column.
+ALTER TABLE IF EXISTS quora_deletion_survey_responses ADD COLUMN IF NOT EXISTS current_profile_handle TEXT NULL;
+ALTER TABLE IF EXISTS demo.quora_deletion_survey_responses ADD COLUMN IF NOT EXISTS current_profile_handle TEXT NULL;
 

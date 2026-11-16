@@ -28,6 +28,7 @@ export const SURVEY_CSV_HEADERS = [
   'targeted_individual',
   'any_account_removed',
   'has_current_profile',
+  'current_profile_handle',
   'account_number',
   'handle',
   'what_happened',
@@ -79,6 +80,7 @@ function responseCells(response: SurveyResponseWithAccounts): (string | boolean 
     // Empty when the optional question was skipped. csvCell writes null as an empty cell, which
     // reads correctly in a spreadsheet as "not answered" rather than as FALSE.
     response.has_current_profile,
+    response.current_profile_handle,
   ];
 }
 
