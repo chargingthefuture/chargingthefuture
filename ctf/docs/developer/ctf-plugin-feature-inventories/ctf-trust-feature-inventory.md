@@ -37,6 +37,15 @@ Trust gives the community a privacy-respecting, **non-numeric** way to gauge how
    code, the same way for everyone, so trust cannot be hidden by the person it describes. The second
    section is there so a member is never guessing what is on show about them.
 4. Inspect their own trust signal snapshot via `GET /api/trust/user/self`.
+5. In 3.1 (web and Android), open Me → Trust: the same two sections, "Your trust" and "What members
+   see", on a screen of their own, opened from a row under Saved. With nothing yet, it says "No
+   trust signals yet" and lists three starting steps: complete your profile, make your first
+   transaction, use at least one plugin. A member who has not finished Unlock is told Trust opens
+   once it is done.
+6. In 3.1 People, open somebody's profile and see their trust under their skills: the summary
+   other members get, with the note that it is a summary, or "This member has not taken part
+   anywhere yet". On their own profile they see their own lines and what members see. A profile
+   nobody has claimed has no trust.
 
 ## Admin Features
 
@@ -175,6 +184,14 @@ numeric score is ever computed or stored, and no status is set by anything.
 
 **Android: surface removed 2026-07-20 (rule 105, PR #1742)** — this feature is now web-only, served by the installable web app (PWA). Historical detail: `Trust.tsx` under `packages/mobile/src/features/trust` had been rewritten to align with `design/.../survivor-hub/MobileTrust.tsx`, `MobileTrustEmpty.tsx`, `MobileTrustLoading.tsx`, and `MobileTrustPublic.tsx`. A new `api.ts` binds to `GET /api/trust/user/self` for real data. The screen covers all four states: loading (branded taglines), public/unauthenticated (visitor marketing view), empty (no evidence yet), and populated (evidence list). `MockTrust.tsx` is retired. Real bindings: `trustStatus`, `trustVisibility`, `trustEvidence` array (type/summary/createdAt per item). Omissions per real-data-only rule: Last Active / Activity / Transactions / Active Plugins stats from the design's Trust Score card have no backing API field and are omitted; signal-progress percentage and hardcoded checklist items are omitted (snapshot route is a stub); visibility update dropdown rendered as display-only at the time of the pixel pass. The backend for signal derivation, visibility update, and admin verification is now implemented (2026-06-08); the web client is wired to the live visibility mutation as of 2026-08-04 (Android stays retired per rule 105).
 
+**3.1 (web and Android, 2026-11-16):** Me → Trust (`components/se-frame/me/trust-screen.tsx`,
+Android `src/features/se-frame/me/TrustScreen.tsx`) and the Trust section of People's profile sheet
+(`components/se-frame/people/profile-sheet.tsx`, Android `people/ProfileSheet.tsx`), both drawn by
+`components/se-frame/trust/` (Android `src/features/se-frame/trust/`) in the 3.1 theme colors, light
+and dark. They read the existing `GET /api/trust/user/self` and `GET /api/trust/user/[userId]`;
+the shared words and reading live in `@ctf/shared` `design/se-trust.ts`. Nothing in 3.1 links to
+the 3.0 Trust page.
+
 ## Directory Integration
 
 Trust's primary user-facing surface is inside the Directory profile: a member's profile shows their trust badge (the qualitative "score"/standing indicator) alongside the Directory-owned profile fields. Trust reads Directory only for identity/profile context; the badge itself is computed from engagement across multiple plugins, not from Directory data.
@@ -209,6 +226,15 @@ Trust has no dedicated seed script, and none is required. Trust is a derived plu
    the plugin's design, not a defect to fix here: catching fraud is each plugin's own admin job.
 
 ## Change Log
+
+- 2026-11-16: **Trust carries over into 3.1, web and Android (owner decision).** Me gains a Trust
+  row that opens the member's own trust in place ("Your trust", then "What members see"), and
+  People's profile sheet gains the Trust section the Directory profile shows, for a claimed
+  profile, never a score. `summarizeTrustEvidenceForPeer` and `TRUST_SUMMARY_BREADTH_TYPE` moved
+  from `lib/trust/peer-summary.ts` into `@ctf/shared` (`design/se-trust.ts`) so the Android
+  preview runs the same projection; `lib/trust/peer-summary.ts` re-exports them, so the
+  `GET /api/trust/user/[userId]` route is unchanged. No route, table or contract changed. Tests:
+  `lib/trust/se-trust.test.ts`.
 
 - 2026-10-17: **Old snapshot refresh audit rows lose their copied metric bundle (code review #2847,
   owner decision).** `db/migrations/post/0067_trust_audit_strip_snapshot_metrics.sql` removes the

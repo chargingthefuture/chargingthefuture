@@ -367,6 +367,13 @@
   text-decoration: none;
 }
 
+.rowButton {
+  width: 100%;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
 .itemTitle {
   font-size: 15px;
   font-weight: 600;

@@ -1,13 +1,16 @@
 // A person's profile on Android, the copy of the web's profile-sheet.tsx: what the Directory's profile
-// page shows and the actions it offers, read from the Directory's own route.
+// page shows (trust included, for a claimed profile, never a score) and the actions it offers, read
+// from the Directory's own route.
 
 import React, { useMemo, useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
-import { SE_PERSON_SHEET_WORDS as W, sePersonSheetPath, type SePersonProfile, type SeThemeTokens } from '@ctf/shared';
+import { SE_PERSON_SHEET_WORDS as W, SE_TRUST_WORDS, sePersonSheetPath, seTrustPath, type SePersonProfile, type SeThemeTokens } from '@ctf/shared';
 import { getApiBaseUrl } from '../../../auth/authedFetch';
 import { SeAvatar } from '../../../components/shared/SeAvatar';
 import { ShareLink } from '../../../components/shared/ShareLink';
 import { BlockMemberButton } from '../../blocks/BlockMemberButton';
+import { TrustReadView } from '../trust/TrustLines';
+import { useTrust } from '../trust/useTrust';
 import { PersonSheetFrame, SheetStatus } from './PersonSheetFrame';
 import { makePersonSheetStyles, type PersonSheetStyles } from './personSheetStyles';
 import { usePersonProfile } from './usePersonSheets';
@@ -88,7 +91,22 @@ function Skills({ s, p }: { s: PersonSheetStyles; p: SePersonProfile }) {
   );
 }
 
-function Body({ s, p, viewerId, canQuote, onQuote }: { s: PersonSheetStyles; p: SePersonProfile; viewerId: string | null; canQuote: boolean; onQuote: () => void }) {
+// What another member gets of this person's trust; on the viewer's own profile, their own lines and
+// what others get, as on the Directory's profile page. Only a claimed profile has trust.
+function Trust({ s, t, userId, own }: { s: PersonSheetStyles; t: SeThemeTokens; userId: string; own: boolean }) {
+  const [attempt, setAttempt] = useState(0);
+  const read = useTrust(seTrustPath(userId, own), attempt);
+  return (
+    <View style={s.section}>
+      <Text accessibilityRole="header" style={s.label}>
+        {SE_TRUST_WORDS.title}
+      </Text>
+      <TrustReadView t={t} read={read} own={own} onRetry={() => setAttempt((n) => n + 1)} />
+    </View>
+  );
+}
+
+function Body({ s, t, p, viewerId, canQuote, onQuote }: { s: PersonSheetStyles; t: SeThemeTokens; p: SePersonProfile; viewerId: string | null; canQuote: boolean; onQuote: () => void }) {
   const own = viewerId !== null && p.claimedByUserId === viewerId;
   return (
     <>
@@ -110,6 +128,7 @@ function Body({ s, p, viewerId, canQuote, onQuote }: { s: PersonSheetStyles; p: 
         </View>
       ) : null}
       <Skills s={s} p={p} />
+      {p.claimedByUserId ? <Trust s={s} t={t} userId={p.claimedByUserId} own={own} /> : null}
       {p.claimedByUserId && !own ? <BlockMemberButton targetUserId={p.claimedByUserId} displayName={p.name} /> : null}
     </>
   );
@@ -127,7 +146,7 @@ export function ProfileSheet({ t, profileId, name, viewerId, canQuote, onQuote, 
         failed={read.kind === 'failed' ? read.message : null}
         onRetry={() => setAttempt((n) => n + 1)}
       />
-      {read.kind === 'ready' ? <Body s={s} p={read.value} viewerId={viewerId} canQuote={canQuote} onQuote={onQuote} /> : null}
+      {read.kind === 'ready' ? <Body s={s} t={t} p={read.value} viewerId={viewerId} canQuote={canQuote} onQuote={onQuote} /> : null}
     </PersonSheetFrame>
   );
 }

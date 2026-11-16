@@ -96,8 +96,8 @@ export function seMeName(username: string | null | undefined): string {
 }
 
 // The sub-screens Me opens in place. Saved is built separately and has its own place in the row.
-export type SeMeView = 'me' | 'settings' | 'theme' | 'read' | 'hidden' | 'prompts';
-export const SE_ME_VIEWS: readonly SeMeView[] = ['me', 'settings', 'theme', 'read', 'hidden', 'prompts'];
+export type SeMeView = 'me' | 'settings' | 'theme' | 'read' | 'hidden' | 'prompts' | 'trust';
+export const SE_ME_VIEWS: readonly SeMeView[] = ['me', 'settings', 'theme', 'read', 'hidden', 'prompts', 'trust'];
 export function isSeMeView(value: unknown): value is SeMeView {
   return typeof value === 'string' && (SE_ME_VIEWS as readonly string[]).includes(value);
 }

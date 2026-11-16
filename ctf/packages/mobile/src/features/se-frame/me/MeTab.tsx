@@ -1,5 +1,5 @@
 // The Me tab on Android, the copy of the web's me-tab.tsx: Me, and the screens it opens in place
-// (Settings and its Theme, Read, Hidden, and the profile lines). The phone's back button returns to
+// (Settings and its Theme, Read, Hidden, Trust, and the profile lines). The phone's back button returns to
 // the screen before.
 
 import React, { useCallback, useContext, useEffect, useState } from 'react';
@@ -16,6 +16,7 @@ import { useMeProfile } from './meData';
 import { PromptsEditor } from './PromptsEditor';
 import { SettingsScreen } from './SettingsScreen';
 import { ThemeScreen } from './ThemeScreen';
+import { TrustScreen } from './TrustScreen';
 
 type Props = {
   t: SeThemeTokens;
@@ -54,6 +55,7 @@ export function MeTab({ t, user, prefs, onAskArchitect, onBack, saving, onOpen }
   const toMe = () => setView('me');
   if (view === 'theme') return <ThemeScreen t={t} theme={prefs.theme} onChange={prefs.setTheme} onBack={() => setView('settings')} />;
   if (view === 'read' || view === 'hidden') return <MarkedList t={t} mark={view === 'read' ? 'done' : 'not_for_me'} onBack={toMe} go={go} />;
+  if (view === 'trust') return <TrustScreen t={t} onBack={toMe} />;
   if (view === 'prompts') {
     const prompts = profile.kind === 'ready' ? profile.value.prompts : SE_ME_EMPTY_PROMPTS;
     return <PromptsEditor key={profile.kind} t={t} prompts={prompts} onSave={savePrompts} onDone={toMe} />;

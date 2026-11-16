@@ -1,6 +1,6 @@
 // Me on Android, the copy of the web (components/se-frame/me/me-screen.tsx), built to the approved
 // board "Me": the member's name, since when they have been an Aven, their badges and the gear to
-// Settings; their three profile lines; ServiceCredits; Saved, Read and Hidden; the Tools grid; and
+// Settings; their three profile lines; ServiceCredits; Saved, Read and Hidden; Trust; the Tools grid; and
 // emoji rain. Tools the Android app does not carry open in the browser; "Log what happened" opens its
 // 3.1 sheet.
 
@@ -20,6 +20,7 @@ import {
   SE_ME_TOOLS,
   SE_ME_WORDS as W,
   SE_SETTINGS_WORDS,
+  SE_TRUST_WORDS,
   seMeName,
   seMeSince,
   type SeMeProfile,
@@ -227,6 +228,10 @@ export function MeScreen({ t, user, profile, reading, onReading, onView, go, sav
         ))}
       </View>
       {savedList ?? null}
+      <TouchableOpacity accessibilityRole="button" accessibilityLabel={`${SE_TRUST_WORDS.title}. ${SE_TRUST_WORDS.meRow}`} onPress={() => onView('trust')} style={s.listItem}>
+        <Text style={s.itemTitle}>{SE_TRUST_WORDS.title}</Text>
+        <Text style={s.q}>{SE_TRUST_WORDS.meRow}</Text>
+      </TouchableOpacity>
       <Tools s={s} t={t} go={go} />
       <View style={s.switchRow}>
         <Text style={s.switchLabel}>{SE_SETTINGS_WORDS.emojiRain}</Text>

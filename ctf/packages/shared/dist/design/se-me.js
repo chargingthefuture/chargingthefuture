@@ -72,7 +72,7 @@ export function seMeName(username) {
     const name = (username ?? '').replace(/^@/, '').trim();
     return name || 'Survivor';
 }
-export const SE_ME_VIEWS = ['me', 'settings', 'theme', 'read', 'hidden', 'prompts'];
+export const SE_ME_VIEWS = ['me', 'settings', 'theme', 'read', 'hidden', 'prompts', 'trust'];
 export function isSeMeView(value) {
     return typeof value === 'string' && SE_ME_VIEWS.includes(value);
 }
