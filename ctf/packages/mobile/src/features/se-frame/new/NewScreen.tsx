@@ -45,11 +45,7 @@ function SheetTop({ t, sh, talk, onClose, go }: { t: SeThemeTokens; sh: SheetSty
           <Text accessibilityRole="button" accessibilityState={{ expanded: rule }} onPress={() => setRule((value) => !value)} style={sh.topLink}>
             {SE_TALK_WORDS.roomRule}
           </Text>
-        ) : (
-          <Text accessibilityRole="link" onPress={() => go(W.guidelinesHref)} style={sh.topLink}>
-            {W.guidelines}
-          </Text>
-        )}
+        ) : null}
       </View>
       {talk && rule ? <Text style={sh.rule}>{SE_ROOM_RULE}</Text> : null}
     </>

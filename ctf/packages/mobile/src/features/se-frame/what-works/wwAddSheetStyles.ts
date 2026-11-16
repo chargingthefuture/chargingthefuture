@@ -26,6 +26,7 @@ function formStyles(t: SeThemeTokens) {
   return {
     field: { gap: 6 },
     label: { fontSize: 13, color: t.ink, fontFamily: SE_FONT.sansBold },
+    textarea: { minHeight: 96, paddingVertical: 12, paddingHorizontal: 18, borderRadius: 22, borderWidth: 1.5, borderColor: t.line, backgroundColor: t.card, color: t.ink, fontSize: 15, fontFamily: SE_FONT.sans, textAlignVertical: 'top' },
     input: { minHeight: 48, paddingHorizontal: 18, borderRadius: 999, borderWidth: 1.5, borderColor: t.line, backgroundColor: t.card, color: t.ink, fontSize: 15, fontFamily: SE_FONT.sans },
     matches: { gap: 8 },
     match: { minHeight: 52, flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, paddingHorizontal: 14, borderRadius: 14, borderWidth: 1.5, borderColor: t.hair, backgroundColor: t.card },

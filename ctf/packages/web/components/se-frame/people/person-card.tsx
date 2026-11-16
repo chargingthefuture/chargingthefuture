@@ -8,7 +8,8 @@ import styles from './people.module.css';
 // One person, built to the approved board "People, verified": the face, the name with Member (a
 // claimed profile) or Listed, the job title and place, Foundation offerings filled and Directory
 // listings outlined, and Request a quote only when they offer something. The card itself opens the
-// Directory profile: the name is the link and covers the card, with Request a quote above it.
+// Directory profile was a link once; it is a 3.0 page, so the name is plain text (3.1 never opens
+// one for reading). Request a quote stays until there is a 3.1 way to ask.
 export function PersonCard({ person }: { person: SePerson }) {
   const links = sePersonLinks(person);
   const listed = sePersonListedOnly(person);
@@ -20,9 +21,7 @@ export function PersonCard({ person }: { person: SePerson }) {
       </span>
       <div className={styles.body}>
         <div className={styles.nameRow}>
-          <Link href={links.profile} className={styles.name}>
-            {person.name}
-          </Link>
+          <span className={styles.name}>{person.name}</span>
           <span className={styles.tag}>{person.claimed ? W.member : W.listedTag}</span>
         </div>
         {line ? <span className={styles.line}>{line}</span> : null}

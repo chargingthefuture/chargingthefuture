@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { SE_ME_WORDS as W, type SeMarkedCard } from '@ctf/shared';
+import { SE_ME_WORDS as W, seOpens30Page, type SeMarkedCard } from '@ctf/shared';
 import { failureText, responseFailureText } from 'lib/errors/client-failure';
 import { BackHeader } from './back-header';
 import styles from './me.module.css';
@@ -34,6 +34,24 @@ function useMarked(mark: 'done' | 'not_for_me'): ListState {
   return state;
 }
 
+// A marked card links to its address only when that stays in 3.1; a 3.0 page is never opened.
+function MarkedItem({ card }: { card: SeMarkedCard }) {
+  const inner = (
+    <>
+      <span className={styles.q} style={{ color: `var(--se-kind-${card.kind})` }}>
+        {card.label}
+      </span>
+      <span className={styles.itemTitle}>{card.title}</span>
+    </>
+  );
+  if (seOpens30Page(card.href)) return <div className={styles.listItem}>{inner}</div>;
+  return (
+    <Link href={card.href} className={styles.listItem}>
+      {inner}
+    </Link>
+  );
+}
+
 export function MarkedList({ mark, onBack }: { mark: 'done' | 'not_for_me'; onBack: () => void }) {
   const state = useMarked(mark);
   return (
@@ -51,12 +69,7 @@ export function MarkedList({ mark, onBack }: { mark: 'done' | 'not_for_me'; onBa
         <ul className={styles.list}>
           {state.cards.map((card) => (
             <li key={card.id}>
-              <Link href={card.href} className={styles.listItem}>
-                <span className={styles.q} style={{ color: `var(--se-kind-${card.kind})` }}>
-                  {card.label}
-                </span>
-                <span className={styles.itemTitle}>{card.title}</span>
-              </Link>
+              <MarkedItem card={card} />
             </li>
           ))}
         </ul>

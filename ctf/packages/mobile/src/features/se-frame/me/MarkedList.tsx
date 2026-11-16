@@ -3,7 +3,7 @@
 
 import React, { useMemo } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
-import { SE_ME_WORDS as W, type SeThemeTokens } from '@ctf/shared';
+import { SE_ME_WORDS as W, seOpens30Page, type SeThemeTokens } from '@ctf/shared';
 import { makeMeStyles } from './meStyles';
 import { useMarked } from './meData';
 import { BackHeader } from './SettingsParts';
@@ -26,7 +26,8 @@ export function MarkedList({ t, mark, onBack, go }: Props) {
       {state.kind === 'ready' && state.value.length === 0 ? <Text style={s.status}>{W.listEmpty}</Text> : null}
       {state.kind === 'ready'
         ? state.value.map((card) => (
-            <TouchableOpacity key={card.id} accessibilityRole="link" onPress={() => go(card.href)} style={s.listItem}>
+            // A 3.0 page is never opened from 3.1, so such a card shows without a link.
+            <TouchableOpacity key={card.id} accessibilityRole={seOpens30Page(card.href) ? 'text' : 'link'} disabled={seOpens30Page(card.href)} onPress={() => go(card.href)} style={s.listItem}>
               <Text style={[s.q, { color: t.kind[card.kind] }]}>{card.label}</Text>
               <Text style={s.itemTitle}>{card.title}</Text>
             </TouchableOpacity>

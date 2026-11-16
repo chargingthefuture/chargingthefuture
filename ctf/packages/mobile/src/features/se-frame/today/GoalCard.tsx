@@ -28,7 +28,7 @@ export function GoalCard({ t, card, viewerId, dot, onOpenLink, onChanged }: Prop
   return (
     <View style={s.card}>
       {dot}
-      <TouchableOpacity accessibilityRole={card.goal.reached ? 'link' : 'button'} style={s.text} onPress={() => (card.goal.reached ? onOpenLink(card.href) : setSheet(true))}>
+      <TouchableOpacity accessibilityRole="button" style={s.text} onPress={() => setSheet(true)}>
         <Text style={s.label}>{card.label}</Text>
         <Text style={s.title}>{card.title}</Text>
       </TouchableOpacity>

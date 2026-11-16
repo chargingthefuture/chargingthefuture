@@ -92,9 +92,9 @@ function Item({ s, item, onRate, go }: ItemProps) {
       {item.linkedPlugins.length > 0 ? (
         <View style={s.chips}>
           {item.linkedPlugins.map((plugin) => (
-            <TouchableOpacity key={plugin.slug} accessibilityRole="link" style={s.chip} onPress={() => go(`/apps/${plugin.slug}`)}>
+            <View key={plugin.slug} style={s.chip}>
               <Text style={s.chipLabel}>{plugin.name}</Text>
-            </TouchableOpacity>
+            </View>
           ))}
         </View>
       ) : null}

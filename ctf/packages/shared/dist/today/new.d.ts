@@ -1,8 +1,6 @@
 export declare const SE_NEW_SHEET_WORDS: {
     label: string;
     close: string;
-    guidelines: string;
-    guidelinesHref: string;
     heading: string;
     intro: string;
     kinds: string;
