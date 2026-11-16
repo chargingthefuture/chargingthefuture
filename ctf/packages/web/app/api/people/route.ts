@@ -14,7 +14,7 @@ import { reportError } from 'lib/observability/report';
 
 export const dynamic = 'force-dynamic';
 
-function readQuery(url: URL): Omit<PeopleQuery, 'pageSize' | 'fitsJobTitleIds'> {
+function readQuery(url: URL): Omit<PeopleQuery, 'pageSize' | 'fitsJobTitleIds' | 'viewerId'> {
   const page = Number.parseInt(url.searchParams.get('page') ?? '1', 10);
   const query = (url.searchParams.get('q') ?? '').trim().slice(0, 80);
   return {
@@ -34,7 +34,7 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   try {
     const fits = url.searchParams.get('fits') === '1';
-    const input = { ...readQuery(url), fitsJobTitleIds: fits ? ((await readMatchNeeds(decision.userId))?.jobTitleIds ?? []) : null };
+    const input = { ...readQuery(url), fitsJobTitleIds: fits ? ((await readMatchNeeds(decision.userId))?.jobTitleIds ?? []) : null, viewerId: decision.userId ?? null };
     let people = await listPeople({ ...input, pageSize: SE_PEOPLE_PAGE_SIZE });
     if (people.items.length === 0 && input.page > 1) {
       // The total comes with the rows, so an empty page past the end reads page 1 to learn it.

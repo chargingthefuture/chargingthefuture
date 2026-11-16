@@ -18,6 +18,9 @@ export type SePerson = {
   listed: string[];
   // The profile address the Directory holds (a Quora profile), or null when it has none.
   profileUrl: string | null;
+  // True on the reader's own claimed profile: Request a quote is left off there (owner decision,
+  // 2026-11-16), since a member does not ask themselves for a quote.
+  isYou?: boolean;
 };
 
 export type SePeoplePage = { items: SePerson[]; page: number; pageSize: number; total: number };
@@ -147,7 +150,7 @@ export function sePersonListedOnly(person: SePerson): string[] {
 // quote for somebody who offers a skill. Both the quote and the profile open as 3.1 sheets; nothing
 // here links to a 3.0 page (owner decision, 2026-11-16).
 export function sePersonLinks(person: SePerson): { quora: string | null; canQuote: boolean } {
-  return { quora: seWebAddress(person.profileUrl), canQuote: person.offering.length > 0 };
+  return { quora: seWebAddress(person.profileUrl), canQuote: person.offering.length > 0 && !person.isYou };
 }
 
 // An address opened outside the app: only http and https, so a stored value can never run script.
