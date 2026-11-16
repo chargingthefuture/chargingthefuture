@@ -10,7 +10,7 @@
 | **Surfaces** | Web (desktop), Web (mobile-responsive) |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-contributor-access-feature-inventory.md` |
-| **Generated** | 2026-08-05 (commit efb8d7710) · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-10-04 manual note: `CONTRIBUTOR_ACCESS_PROFILE_AND_DELETION_CONTRACT.md` written (reactions, posts and the eligibility row deleted with the account; the audit trail retained) — no test change · 2026-10-12 manual note: a failed internal recompute now answers 500 with `code: contributor_access_recompute_failed` and the reason in `message`, which the workflow log prints — no test change · 2026-11-02 manual update: CA-A14 now checks there is no way to give the badge by hand; CA-A8 reads fourteen weight rows, Contributions gift cards only |
+| **Generated** | 2026-08-05 (commit efb8d7710) · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-10-04 manual note: `CONTRIBUTOR_ACCESS_PROFILE_AND_DELETION_CONTRACT.md` written (reactions, posts and the eligibility row deleted with the account; the audit trail retained) — no test change · 2026-10-12 manual note: a failed internal recompute now answers 500 with `code: contributor_access_recompute_failed` and the reason in `message`, which the workflow log prints — no test change · 2026-11-02 manual update: CA-A14 now checks there is no way to give the badge by hand; CA-A8 reads fourteen weight rows, Contributions gift cards only · 2026-11-16 manual update: CA-22 and CA-23 check that an account on demo data is treated as a badge holder and a production account is not |
 
 > **Android note:** The Android (React Native) surface was removed 2026-07-20 (rule 105, PR #1742). This plugin is web-only. No android checkboxes appear in this script.
 
@@ -397,6 +397,38 @@ Result: web ☐
 4. Observe the channel.
 
 **Expected:** The original message is removed from the channel. A new message with the updated text appears. The new message has a new timestamp. No in-place edit occurred — it is a fresh post. No edit action appears on another member's message.
+
+Result: web ☐
+
+---
+
+### CA-22 — An account on demo data is treated as a badge holder
+**Role:** member (signed in, no badge, Demo data switched on from the account's card on the Unlock admin) | **Surfaces:** web (desktop), web (mobile-responsive)
+
+**Precondition:** The production Weavers channel is closed (contributor access config, channel open off). The test account has no badge and is on demo data.
+
+**Steps:**
+1. Open Today. Look for the Weavers of the Commons room.
+2. Tap it and join the room in Chyme.
+3. In the Commons, open the channel list.
+4. Ask a member into a Back Channel, add a picture to an ask, put a link in a Commons post, and add a photo to a LightHouse listing.
+
+**Expected:** The Weavers room shows on Today and opens in Chyme. The gated channel is listed and opens. None of the four actions is refused with the Weavers-only message. Everything written appears only in the demo data, never on a production account's screens.
+
+Result: web ☐
+
+---
+
+### CA-23 — A production account without the badge is unchanged
+**Role:** member (signed in, no badge, Demo data off) | **Surfaces:** web (desktop), web (mobile-responsive)
+
+**Precondition:** Same channel setting as CA-22. The account is not on demo data.
+
+**Steps:**
+1. Open Today and the Commons channel list.
+2. Try the four actions from CA-22 step 4.
+
+**Expected:** No Weavers room on Today and no gated channel in the list. Each of the four actions is refused with the Weavers-only message. Signed out, the Preview shows the same Today it showed before this change.
 
 Result: web ☐
 

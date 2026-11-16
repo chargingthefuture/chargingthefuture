@@ -6,10 +6,12 @@ const db = vi.hoisted(() => ({
   fail: null as Error | null,
   forced: [] as string[],
   texts: [] as string[],
+  pinned: null as string | null,
 }));
 
 vi.mock('lib/auth/request-identity', () => ({ getRequestUserId: vi.fn(async () => identity.userId) }));
 vi.mock('lib/db/postgres', () => ({
+  getForcedPoolTarget: vi.fn(() => db.pinned),
   runWithForcedPool: vi.fn(async (target: string, fn: () => Promise<unknown>) => {
     db.forced.push(target);
     return fn();
@@ -26,6 +28,7 @@ import {
   isDemoAccount,
   isDemoMode,
   resetDemoAccountsCacheForTests,
+  runsOnDemoData,
   setDemoAccount,
 } from './demo-accounts';
 
@@ -38,6 +41,7 @@ beforeEach(() => {
   db.fail = null;
   db.forced = [];
   db.texts = [];
+  db.pinned = null;
   vi.spyOn(console, 'error').mockImplementation(() => undefined);
 });
 
@@ -94,5 +98,22 @@ describe('setDemoAccount', () => {
     await setDemoAccount({ userId: 'user_member', on: false, actorUserId: 'admin_1' });
     expect(db.texts.some((text) => text.includes('DELETE FROM public.demo_mode_accounts'))).toBe(true);
     expect(db.forced.every((target) => target === 'public')).toBe(true);
+  });
+});
+
+describe('runsOnDemoData', () => {
+  it('is true for an account on the list', async () => {
+    expect(await runsOnDemoData('user_demo')).toBe(true);
+  });
+  it('is false for a production account', async () => {
+    expect(await runsOnDemoData('user_prod')).toBe(false);
+  });
+  it('is false with no account, as for the signed-out Preview pinned to demo', async () => {
+    db.pinned = 'demo';
+    expect(await runsOnDemoData('')).toBe(false);
+  });
+  it('is false when the work is pinned to the public schema', async () => {
+    db.pinned = 'public';
+    expect(await runsOnDemoData('user_demo')).toBe(false);
   });
 });

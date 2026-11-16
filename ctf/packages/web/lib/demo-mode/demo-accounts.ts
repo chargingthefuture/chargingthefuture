@@ -1,4 +1,4 @@
-import { queryDb, runWithForcedPool } from 'lib/db/postgres';
+import { getForcedPoolTarget, queryDb, runWithForcedPool } from 'lib/db/postgres';
 import { getRequestUserId } from 'lib/auth/request-identity';
 import { failureReason } from 'lib/errors/failure';
 
@@ -59,6 +59,15 @@ export async function isDemoAccount(userId: string, now = Date.now()): Promise<b
 export async function isDemoMode(): Promise<boolean> {
   const userId = await getRequestUserId();
   if (!userId) return false;
+  return isDemoAccount(userId);
+}
+
+// Whether work for this account runs on demo data: the account is on the list and nothing pinned the
+// work to the public schema. Used where demo data shows a feature as a Weavers of the Commons badge
+// holder sees it (owner decision, 2026-11-16). The signed-out Preview has no account, so it is never
+// counted.
+export async function runsOnDemoData(userId: string): Promise<boolean> {
+  if (!userId || getForcedPoolTarget() === 'public') return false;
   return isDemoAccount(userId);
 }
 

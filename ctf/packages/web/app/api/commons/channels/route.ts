@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { CommonsChannelsResponse } from 'lib/commons/types';
 import { requireCommonsAccess } from '../_lib';
-import { getContributorAccessConfig, isMemberEligible } from 'lib/contributor-access/repository';
+import { canEnterWeaversRoom } from 'lib/contributor-access/weavers-limits';
 import {
   GATED_CHANNEL_DISPLAY_NAME,
   GATED_CHANNEL_SLUG,
@@ -33,11 +33,7 @@ export async function GET() {
     // so `gate.auth.isAdmin` is the moderator/oversight path here. The filter is server-side on
     // purpose: a non-eligible member's response contains no trace of the channel — no locked teaser,
     // no absence state (the spec's no-shaming rule).
-    const [config, eligible] = await Promise.all([
-      getContributorAccessConfig(),
-      isMemberEligible(gate.auth.userId),
-    ]);
-    if (config.channelOpen && (eligible || gate.auth.isAdmin)) {
+    if (await canEnterWeaversRoom(gate.auth.userId, gate.auth.isAdmin)) {
       response.channels.push({
         slug: GATED_CHANNEL_SLUG,
         displayName: GATED_CHANNEL_DISPLAY_NAME,

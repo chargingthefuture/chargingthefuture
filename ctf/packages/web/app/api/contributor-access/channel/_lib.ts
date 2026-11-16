@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { buildIdentityDisplayName } from 'lib/auth/request-identity';
 import { evaluatePluginAccess, type AllowDecision } from 'lib/auth/server-authz';
-import { getContributorAccessConfig, isMemberEligible } from 'lib/contributor-access/repository';
+import { canEnterWeaversRoom } from 'lib/contributor-access/weavers-limits';
 
 // Gated contributor channel — member route gate. Access requires ALL of:
 //   1. an approved, signed-in member (the standard plugin gate);
@@ -31,12 +31,7 @@ export async function requireGatedChannelAccess(): Promise<GatedChannelGate> {
     };
   }
 
-  const [config, eligible] = await Promise.all([
-    getContributorAccessConfig(),
-    isMemberEligible(decision.userId),
-  ]);
-
-  if (!config.channelOpen || (!eligible && !decision.isAdmin)) {
+  if (!(await canEnterWeaversRoom(decision.userId, decision.isAdmin))) {
     // Deliberately indistinguishable from a route that does not exist (no-shaming rule).
     return {
       allowed: false,

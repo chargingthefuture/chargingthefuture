@@ -9,7 +9,7 @@ import {
   chymeRoomKeyForScope,
   type ChymeRoomScope,
 } from 'lib/chyme/constants';
-import { getContributorAccessConfig, isMemberEligible } from 'lib/contributor-access/repository';
+import { canEnterWeaversRoom } from 'lib/contributor-access/weavers-limits';
 import { getUnlockAccessTier } from 'lib/unlock/access';
 
 export type ChymeApiIdentity = {
@@ -58,7 +58,8 @@ export async function requireChymeAccess(): Promise<ChymeApiGate> {
 
 // Private "Weavers of the Commons" room gate. Mirrors the gated Commons chat channel
 // (requireGatedChannelAccess): on top of the standard Chyme access (approved_full), the caller must
-// ALSO clear the contributor gate — the channel being open AND (their eligibility flag OR admin).
+// ALSO clear the contributor gate — the channel being open AND (their eligibility flag OR admin), or
+// the account being on demo data (canEnterWeaversRoom).
 // A member who fails either receives a bare 404, indistinguishable from a route that does not exist
 // (the contributor-access no-shaming rule): non-eligible members never learn the private room exists.
 export async function requireChymeContributorAccess(): Promise<ChymeApiGate> {
@@ -67,12 +68,7 @@ export async function requireChymeContributorAccess(): Promise<ChymeApiGate> {
     return base;
   }
 
-  const [config, eligible] = await Promise.all([
-    getContributorAccessConfig(),
-    isMemberEligible(base.auth.userId),
-  ]);
-
-  if (!config.channelOpen || (!eligible && !base.auth.isAdmin)) {
+  if (!(await canEnterWeaversRoom(base.auth.userId, base.auth.isAdmin))) {
     return {
       allowed: false,
       response: NextResponse.json({ ok: false, message: 'Not found.' }, { status: 404 }),

@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
 import { SE_WEAVERS_LIMIT_WORDS as W, seHasLink } from '@ctf/shared';
-import { isMemberEligible } from './repository';
+import { runsOnDemoData } from 'lib/demo-mode/demo-accounts';
+import { getContributorAccessConfig, isMemberEligible } from './repository';
 
 // Only Weavers of the Commons badge holders ask members into a Back Channel and put pictures and
 // links in posts (3.1 plan, Access). The badge is never given by hand, the owner included, so an admin is
-// held to it like anybody else. A refusal is a 403 carrying the plan's words, which the screens show.
+// held to it like anybody else. An account on demo data counts as a holder, so a recording shows every
+// feature the badge opens; its reads and writes stay in the demo schema (owner decision, 2026-11-16). A refusal is a 403 carrying the plan's words, which the screens show.
 
 export type WeaversLimit = 'invite' | 'picture' | 'link';
 
@@ -13,7 +15,17 @@ export function weaversRefusal(limit: WeaversLimit): NextResponse {
 }
 
 export async function holdsWeaversBadge(userId: string): Promise<boolean> {
+  if (await runsOnDemoData(userId)) return true;
   return isMemberEligible(userId);
+}
+
+// Whether this member sees and enters the Weavers of the Commons room: the Today room, its Chyme room
+// and the gated Commons channel. The channel must be open and the member hold the badge or be an
+// admin. An account on demo data always does, even while the production channel is closed.
+export async function canEnterWeaversRoom(userId: string, isAdmin: boolean): Promise<boolean> {
+  if (await runsOnDemoData(userId)) return true;
+  const [config, eligible] = await Promise.all([getContributorAccessConfig(), isMemberEligible(userId)]);
+  return config.channelOpen && (eligible || isAdmin);
 }
 
 // Null when the text has no link or the writer holds the badge; otherwise the refusal.
