@@ -10,6 +10,7 @@ function response(overrides: Partial<SurveyResponseWithAccounts>): SurveyRespons
     targeted_individual: 'no',
     any_account_removed: false,
     has_current_profile: null,
+    current_profile_handle: null,
     evidence_note: null,
     other_notes: null,
     consent_publish_handles: false,

@@ -31,6 +31,15 @@ export type ParseResult =
   | { ok: true; value: Omit<CreateSurveyResponseInput, 'userId'> }
   | { ok: false; message: string };
 
+// The handle of the account the person still holds. Kept only under a yes to that question: a
+// handle sent with a no or a skip contradicts the answer, and the answer is what they meant.
+function asCurrentProfileHandle(value: unknown, hasCurrentProfile: boolean | null): string | null {
+  if (hasCurrentProfile !== true || typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return null;
+  return trimmed.slice(0, QUORA_SURVEY_HANDLE_MAX_LENGTH);
+}
+
 function asOptionalText(value: unknown): string | null {
   if (typeof value !== 'string') return null;
   const trimmed = value.trim();
@@ -182,12 +191,15 @@ export function parseSurveySubmission(raw: unknown): ParseResult {
     };
   }
 
+  const hasCurrentProfile = asOptionalBoolean(body.hasCurrentProfile);
+
   return {
     ok: true,
     value: {
       targetedIndividual,
       anyAccountRemoved,
-      hasCurrentProfile: asOptionalBoolean(body.hasCurrentProfile),
+      hasCurrentProfile,
+      currentProfileHandle: asCurrentProfileHandle(body.currentProfileHandle, hasCurrentProfile),
       evidenceNote: asOptionalText(body.evidenceNote),
       otherNotes: asOptionalText(body.otherNotes),
       consentPublishHandles: asBoolean(body.consentPublishHandles),

@@ -172,7 +172,7 @@ themselves.
 
 | Concern | File |
 |---|---|
-| Fixed problem and scheme lists | `ctf/packages/web/lib/click-log/tags.ts` |
+| Fixed problem and scheme lists | `ctf/packages/shared/src/click-log/tags.ts` |
 | Harm categories and scheme kinds | `ctf/packages/web/lib/click-log/tag-categories.ts` |
 | Reporting queries (the privacy boundary) | `ctf/packages/web/lib/click-log/report-repository.ts` |
 | Report assembly | `ctf/packages/web/lib/click-log/report.ts` |

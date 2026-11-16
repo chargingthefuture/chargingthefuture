@@ -28,8 +28,9 @@ export function getClickLogTokens(theme: ThemeName): ClickLogTokens {
 // recognize a short chip label can read the long version before picking. Both are opened through
 // the shared ShareLink popup — open in a new tab or copy the link — so reading the list never
 // replaces the page of an incident the member is part-way through logging.
-export const CLICK_LOG_PROBLEMS_PAGE_URL = "https://lagatos.com/look-ma";
-export const CLICK_LOG_SCHEMES_PAGE_URL = "https://lagatos.com/schemes";
+import { CLICK_LOG_PROBLEMS_PAGE_URL, CLICK_LOG_SCHEMES_PAGE_URL } from "@ctf/shared";
+
+export { CLICK_LOG_PROBLEMS_PAGE_URL, CLICK_LOG_SCHEMES_PAGE_URL };
 
 // A link to the public page that describes one list of tags in full. Shown next to the picker
 // question and opened through the shared ShareLink popup (rule 130).
