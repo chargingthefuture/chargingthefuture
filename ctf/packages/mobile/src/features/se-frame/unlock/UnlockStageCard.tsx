@@ -4,7 +4,7 @@
 
 import React, { useState } from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { SE_UNLOCK_SCREEN_WORDS as W, SE_UNLOCK_WORDS, type SeThemeTokens, type SeUnlockStage, type SeUnlockStanding } from '@ctf/shared';
+import { SE_UNLOCK_SCREEN_WORDS as W, SE_UNLOCK_WORDS, seUnlockSendCard, type SeThemeTokens, type SeUnlockStage, type SeUnlockStanding } from '@ctf/shared';
 import type { UnlockStyles } from './unlockStyles';
 import { seUnlockPost } from './useUnlockScreen';
 
@@ -58,25 +58,24 @@ export function UnlockStageCard({ s, t, stage, standing, helpAsked, onSent, onTo
 type SendProps = { s: UnlockStyles; t: SeThemeTokens; standing: SeUnlockStanding | null; helpAsked: boolean; onSent: () => void };
 
 function SendCard({ s, t, standing, helpAsked, onSent }: SendProps) {
-  const pick = !(standing?.paused ?? false);
-  const title = standing?.form ? standing.title : W.sendTitle;
-  const ink = pick ? s.onPick : null;
+  const card = seUnlockSendCard(standing);
+  const ink = card.pick ? s.onPick : null;
   return (
-    <View style={pick ? s.pickCard : s.card} accessibilityLabel={title}>
-      {standing?.dayLabel ? (
+    <View style={card.pick ? s.pickCard : s.card} accessibilityLabel={card.title}>
+      {card.dayLabel ? (
         <View style={s.dayRow}>
-          <Text style={s.day}>{standing.dayLabel.toUpperCase()}</Text>
+          <Text style={s.day}>{card.dayLabel.toUpperCase()}</Text>
           <View style={s.track}>
-            <View style={[s.fill, { width: `${Math.round(standing.progress * 100)}%` }]} />
+            <View style={[s.fill, { width: `${card.progressPercent}%` }]} />
           </View>
         </View>
       ) : null}
       <Text accessibilityRole="header" style={[s.cardTitle, ink]}>
-        {title}
+        {card.title}
       </Text>
-      {standing?.form ? <Text style={[s.text, ink]}>{standing.text}</Text> : null}
+      {card.text ? <Text style={[s.text, ink]}>{card.text}</Text> : null}
       {helpAsked ? <Text style={[s.text, ink]}>{W.helpAsked}</Text> : null}
-      <AddressForm s={s} t={t} label={W.label} pick={pick} onSent={onSent} />
+      <AddressForm s={s} t={t} label={W.label} pick={card.pick} onSent={onSent} />
       <Text style={[s.small, ink]}>{W.publicNote}</Text>
     </View>
   );
@@ -99,15 +98,19 @@ function AddressForm({ s, t, label, pick, onSent }: FormProps) {
   }
 
   const ink = pick ? s.onPick : null;
+  const blocked = busy || !value.trim();
+  const look = pick
+    ? { input: [s.input, s.pickInput], add: [s.add, s.pickAdd], label: [s.addLabel, s.pickAddLabel], hint: t.onPick }
+    : { input: [s.input], add: [s.add], label: [s.addLabel], hint: t.soft };
   return (
     <View style={{ gap: 10 }}>
       <Text style={[s.label, ink]}>{label}</Text>
       <View style={s.row}>
         <TextInput
           accessibilityLabel={label}
-          style={[s.input, pick ? s.pickInput : null]}
+          style={look.input}
           placeholder={SE_UNLOCK_WORDS.placeholder}
-          placeholderTextColor={pick ? t.onPick : t.soft}
+          placeholderTextColor={look.hint}
           value={value}
           onChangeText={setValue}
           keyboardType="url"
@@ -115,13 +118,8 @@ function AddressForm({ s, t, label, pick, onSent }: FormProps) {
           autoCorrect={false}
           onSubmitEditing={() => void submit()}
         />
-        <TouchableOpacity
-          accessibilityRole="button"
-          onPress={() => void submit()}
-          disabled={busy || !value.trim()}
-          style={[s.add, pick ? s.pickAdd : null, busy || !value.trim() ? s.busy : null]}
-        >
-          <Text style={[s.addLabel, pick ? s.pickAddLabel : null]}>{busy ? W.sending : W.send}</Text>
+        <TouchableOpacity accessibilityRole="button" onPress={() => void submit()} disabled={blocked} style={[...look.add, blocked ? s.busy : null]}>
+          <Text style={look.label}>{busy ? W.sending : W.send}</Text>
         </TouchableOpacity>
       </View>
       {error ? (

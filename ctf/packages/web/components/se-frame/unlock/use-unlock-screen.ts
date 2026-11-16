@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { SE_UNLOCK_SCREEN_WORDS as W, seUnlockStage, type SeUnlockStage, type SeUnlockStanding } from '@ctf/shared';
+import { SE_UNLOCK_SCREEN_WORDS as W, seUnlockScreenReady, type SeUnlockStage, type SeUnlockStanding } from '@ctf/shared';
 
 // Where the member stands, read from the same routes the 3.0 Unlock page and the banner read:
 // GET /api/unlock/status (the address on file and its review) and GET /api/unlock/standing (the day
@@ -19,21 +19,22 @@ async function readJson<T>(path: string): Promise<{ ok: boolean; status: number;
   return { ok: res.ok, status: res.status, body: (await res.json().catch(() => null)) as T | null };
 }
 
+function failed(caught: unknown): SeUnlockScreenData {
+  return { kind: 'error', message: `${W.loadFailed} ${caught instanceof Error ? caught.message : 'The server did not answer.'}` };
+}
+
 async function readScreen(): Promise<SeUnlockScreenData> {
   try {
     const [status, standing] = await Promise.all([
       readJson<StatusBody>('/api/unlock/status'),
       readJson<{ standing?: SeUnlockStanding }>('/api/unlock/standing'),
     ]);
-    if (!status.ok || !status.body?.status) {
-      return { kind: 'error', message: `${W.loadFailed} ${status.body?.message ?? `The server answered ${status.status}.`}` };
-    }
+    const onFile = status.body?.status;
+    if (!status.ok || !onFile) return failed(new Error(status.body?.message ?? `The server answered ${status.status}.`));
     const now = standing.ok ? (standing.body?.standing ?? null) : null;
-    const stage = seUnlockStage(status.body.status);
-    const helpAsked = stage === 'send' && now !== null && !now.approved && !now.form;
-    return { kind: 'ready', stage, standing: now, helpAsked };
+    return { kind: 'ready', standing: now, ...seUnlockScreenReady(onFile, now) };
   } catch (caught) {
-    return { kind: 'error', message: `${W.loadFailed} ${caught instanceof Error ? caught.message : 'The server did not answer.'}` };
+    return failed(caught);
   }
 }
 

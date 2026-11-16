@@ -4,6 +4,38 @@ export type SeUnlockStatusInput = {
     reviewStatus: string | null;
 };
 export declare function seUnlockStage(status: SeUnlockStatusInput): SeUnlockStage;
+export declare function seUnlockScreenReady(status: SeUnlockStatusInput, standing: {
+    approved: boolean;
+    form: boolean;
+} | null): {
+    stage: SeUnlockStage;
+    helpAsked: boolean;
+};
+export declare function seUnlockSendCard(standing: {
+    dayLabel: string;
+    progress: number;
+    paused: boolean;
+    form: boolean;
+    title: string;
+    text: string;
+} | null): {
+    pick: boolean;
+    dayLabel: string;
+    progressPercent: number;
+    title: string;
+    text: string | null;
+};
+export type SeRemovedAccountsBody = {
+    ok?: boolean;
+    removedAccounts?: {
+        handle: string;
+    }[];
+    message?: string;
+} | null;
+export declare function seRemovedAccounts(answered: boolean, body: SeRemovedAccountsBody): {
+    handles: string[];
+    readError: string | null;
+};
 export declare const SE_UNLOCK_SCREEN_QUERY = "unlock";
 export declare const SE_UNLOCK_SCREEN_WORDS: {
     readonly back: "Back";

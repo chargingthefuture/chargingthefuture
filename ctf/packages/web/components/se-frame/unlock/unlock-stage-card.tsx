@@ -1,7 +1,7 @@
 'use client';
 
 import { useId, useState } from 'react';
-import { SE_UNLOCK_SCREEN_WORDS as W, SE_UNLOCK_WORDS, type SeUnlockStage, type SeUnlockStanding } from '@ctf/shared';
+import { SE_UNLOCK_SCREEN_WORDS as W, SE_UNLOCK_WORDS, seUnlockSendCard, type SeUnlockStage, type SeUnlockStanding } from '@ctf/shared';
 import { seUnlockPost } from './use-unlock-screen';
 import styles from './unlock-screen.module.css';
 
@@ -44,20 +44,19 @@ export function UnlockStageCard({ stage, standing, helpAsked, onSent, onToday }:
 }
 
 function SendCard({ standing, helpAsked, onSent }: { standing: SeUnlockStanding | null; helpAsked: boolean; onSent: () => void }) {
-  const paused = standing?.paused ?? false;
-  const title = standing?.form ? standing.title : W.sendTitle;
+  const card = seUnlockSendCard(standing);
   return (
-    <section className={paused ? styles.card : styles.pickCard} aria-label={title}>
-      {standing?.dayLabel ? (
+    <section className={card.pick ? styles.pickCard : styles.card} aria-label={card.title}>
+      {card.dayLabel ? (
         <div className={styles.dayRow}>
-          <span className={styles.day}>{standing.dayLabel}</span>
+          <span className={styles.day}>{card.dayLabel}</span>
           <span className={styles.track} aria-hidden="true">
-            <span className={styles.fill} style={{ width: `${Math.round(standing.progress * 100)}%` }} />
+            <span className={styles.fill} style={{ width: `${card.progressPercent}%` }} />
           </span>
         </div>
       ) : null}
-      <h2 className={styles.cardTitle}>{title}</h2>
-      {standing?.form ? <p className={styles.text}>{standing.text}</p> : null}
+      <h2 className={styles.cardTitle}>{card.title}</h2>
+      {card.text ? <p className={styles.text}>{card.text}</p> : null}
       {helpAsked ? <p className={styles.text}>{W.helpAsked}</p> : null}
       <AddressForm label={W.label} onSent={onSent} />
       <p className={styles.small}>{W.publicNote}</p>

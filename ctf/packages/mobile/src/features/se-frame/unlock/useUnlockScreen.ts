@@ -2,7 +2,7 @@
 // 3.0 Unlock screen and the banner read, GET /api/unlock/status and GET /api/unlock/standing.
 
 import { useCallback, useEffect, useState } from 'react';
-import { SE_UNLOCK_SCREEN_WORDS as W, seUnlockStage, type SeUnlockStage, type SeUnlockStanding } from '@ctf/shared';
+import { SE_UNLOCK_SCREEN_WORDS as W, seUnlockScreenReady, type SeUnlockStage, type SeUnlockStanding } from '@ctf/shared';
 import { authedFetch, authedFetchJson } from '../../../auth/authedFetch';
 import { fetchUnlockStatus } from '../../unlock/api';
 
@@ -19,9 +19,7 @@ async function readStanding(): Promise<SeUnlockStanding | null> {
 async function readScreen(): Promise<SeUnlockScreenData> {
   try {
     const [status, standing] = await Promise.all([fetchUnlockStatus(), readStanding()]);
-    const stage = seUnlockStage(status);
-    const helpAsked = stage === 'send' && standing !== null && !standing.approved && !standing.form;
-    return { kind: 'ready', stage, standing, helpAsked };
+    return { kind: 'ready', standing, ...seUnlockScreenReady(status, standing) };
   } catch (caught) {
     return { kind: 'error', message: `${W.loadFailed} ${caught instanceof Error ? caught.message : 'The server did not answer.'}` };
   }

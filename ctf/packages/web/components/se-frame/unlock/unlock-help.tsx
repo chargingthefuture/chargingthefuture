@@ -21,7 +21,6 @@ function Steps() {
       {open ? (
         <div className={styles.steps}>
           {/* A plain img: a static SVG in /public, which next/image would not resize anyway. */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={QUORA_URL_HELP_IMAGE.src} alt={QUORA_URL_HELP_IMAGE.alt} width={640} height={400} className={styles.picture} />
           {QUORA_URL_HELP_ORDER.map((key) => (
             <div key={key}>

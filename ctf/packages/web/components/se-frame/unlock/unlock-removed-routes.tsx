@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { SE_UNLOCK_SCREEN_WORDS as W } from '@ctf/shared';
+import { SE_UNLOCK_SCREEN_WORDS as W, seRemovedAccounts, type SeRemovedAccountsBody } from '@ctf/shared';
 import { seUnlockPost } from './use-unlock-screen';
 import styles from './unlock-screen.module.css';
 
@@ -11,25 +11,24 @@ import styles from './unlock-screen.module.css';
 // pages: the census by owner decision (each member fills it in once), the Knowledge Library because
 // 3.1 has no screen for it yet.
 
-type RemovedBody = { ok?: boolean; removedAccounts?: { handle: string }[]; message?: string };
+async function readRemoved(): Promise<{ handles: string[]; readError: string | null }> {
+  const res = await fetch('/api/quora-deletion-survey/verification', { cache: 'no-store' }).catch(() => null);
+  const body = (await res?.json().catch(() => null)) as SeRemovedAccountsBody;
+  return seRemovedAccounts(res?.ok === true, body);
+}
 
 function useRemovedHandles(): { handles: string[] | null; readError: string | null } {
-  const [handles, setHandles] = useState<string[] | null>(null);
-  const [readError, setReadError] = useState<string | null>(null);
+  const [read, setRead] = useState<{ handles: string[] | null; readError: string | null }>({ handles: null, readError: null });
   useEffect(() => {
     let canceled = false;
-    void (async () => {
-      const res = await fetch('/api/quora-deletion-survey/verification', { cache: 'no-store' }).catch(() => null);
-      const body = (await res?.json().catch(() => null)) as RemovedBody | null;
-      if (canceled) return;
-      if (!res?.ok || !body?.ok) setReadError(`${W.removedReadFailed}: ${body?.message ?? 'the server did not answer'}.`);
-      setHandles((body?.removedAccounts ?? []).map((account) => account.handle));
-    })();
+    void readRemoved().then((next) => {
+      if (!canceled) setRead(next);
+    });
     return () => {
       canceled = true;
     };
   }, []);
-  return { handles, readError };
+  return read;
 }
 
 export function UnlockRemovedRoutes({ onFinished }: { onFinished: () => void }) {

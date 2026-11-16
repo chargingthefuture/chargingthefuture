@@ -18,6 +18,46 @@ export function seUnlockStage(status: SeUnlockStatusInput): SeUnlockStage {
   return 'waiting';
 }
 
+// The screen once both reads are in: the stage, and whether the member asked for help finding the
+// address (the count stopped with nothing sent). The standing is null when its read failed.
+export function seUnlockScreenReady(
+  status: SeUnlockStatusInput,
+  standing: { approved: boolean; form: boolean } | null,
+): { stage: SeUnlockStage; helpAsked: boolean } {
+  const stage = seUnlockStage(status);
+  return { stage, helpAsked: stage === 'send' && standing !== null && !standing.approved && !standing.form };
+}
+
+// The card that asks for the address: the banner's own card while the app is open (pick-colored, the
+// day count and its words), the card color once posting is paused, and a plain title when the
+// standing could not be read or the count has stopped.
+export function seUnlockSendCard(standing: { dayLabel: string; progress: number; paused: boolean; form: boolean; title: string; text: string } | null): {
+  pick: boolean;
+  dayLabel: string;
+  progressPercent: number;
+  title: string;
+  text: string | null;
+} {
+  if (!standing) return { pick: true, dayLabel: '', progressPercent: 0, title: SE_UNLOCK_SCREEN_WORDS.sendTitle, text: null };
+  return {
+    pick: !standing.paused,
+    dayLabel: standing.dayLabel,
+    progressPercent: Math.round(standing.progress * 100),
+    title: standing.form ? standing.title : SE_UNLOCK_SCREEN_WORDS.sendTitle,
+    text: standing.form ? standing.text : null,
+  };
+}
+
+// The removed accounts the member reported in the Quora census, from
+// GET /api/quora-deletion-survey/verification, and the line to show when that read failed.
+export type SeRemovedAccountsBody = { ok?: boolean; removedAccounts?: { handle: string }[]; message?: string } | null;
+
+export function seRemovedAccounts(answered: boolean, body: SeRemovedAccountsBody): { handles: string[]; readError: string | null } {
+  const handles = (body?.removedAccounts ?? []).map((account) => account.handle);
+  if (answered && body?.ok) return { handles, readError: null };
+  return { handles, readError: `${SE_UNLOCK_SCREEN_WORDS.removedReadFailed}: ${body?.message ?? 'the server did not answer'}.` };
+}
+
 // The screen's address on the web, so the back button and a shared link land on it. Inside 3.1.
 export const SE_UNLOCK_SCREEN_QUERY = 'unlock';
 
