@@ -369,6 +369,17 @@ fill on the first recompute / config save / member post.
 
 ## Change Log
 
+- 2026-11-16: **An account on demo data counts as a Weavers of the Commons badge holder (owner
+  decision).** Demo data shows every feature as a badge holder sees it, so a recording can show the
+  Weavers-only parts. `holdsWeaversBadge` in `lib/contributor-access/weavers-limits.ts` answers yes
+  for an account on demo data (`runsOnDemoData` in `lib/demo-mode/demo-accounts.ts`), which covers
+  Back Channel invites, pictures, links and LightHouse photos. The room gate is now one function,
+  `canEnterWeaversRoom(userId, isAdmin)`, used by the Today room (`weaversRoom` in
+  `lib/today/sources-rooms.ts`), the Chyme room (`requireChymeContributorAccess`), the gated channel
+  (`requireGatedChannelAccess`) and the Commons channel list; it opens for an account on demo data
+  even while the production channel is closed. Reads and writes stay in the demo schema. Production
+  accounts and the signed-out Preview are unchanged, and no route, table or contract changed. Tests:
+  `weavers-limits.test.ts`, `demo-accounts.test.ts`, `lib/today/weavers-room.test.ts`.
 - 2026-11-02: **The badge can no longer be given by hand, and Contributions comments and stars no
   longer count (owner decision).** The badge's own rule is that nobody gets it without meeting the
   rules, the owner included, so `POST /api/contributor-access/admin/grant`, its "Give the badge"
