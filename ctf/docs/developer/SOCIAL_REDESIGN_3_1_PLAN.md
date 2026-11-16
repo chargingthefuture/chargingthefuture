@@ -165,7 +165,7 @@ Unlock stops being the gate for most of the app.
 | Skills Taxonomy | No page; the list behind prompts, search and matches |
 | Skill Up | Cohort cards in Today, joined from the card; the member's own cohorts under Me → Yours. No tile in Me |
 | What Works | Open to every signed-in member. Duplicate problems are discouraged: matches appear while typing, a note says duplicates are merged, new problems wait for review, and the review offers Merge, Approve as new, Delete as spam |
-| ClickLog | Private, a tile in Me, never in + New or Today |
+| ClickLog | Private, a tile in Me ("Log what happened") that opens a 3.1 sheet for writing an entry; history and trends stay on the 3.0 page, linked from the sheet after saving (owner decision, 2026-11-16). Never in + New or Today |
 | Recurring Activity | Confirm prompts in Activity; arrangements in Me |
 | Mood | Daily card in Today |
 | Contributions | Amazon gift cards only, starting at $10 ($1 to $500), open all year. No drives, goals, progress or banner. The code is entered in the app, encrypted at rest and destroyed when the System Architect confirms or rejects it. Thank-you credits stay. The twice-yearly post stays |

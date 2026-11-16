@@ -434,3 +434,17 @@ of these, it is already tracked, not a new bug:
 1. Open ClickLog and log something.
 **Expected:** It saves and stays private, before and after day 14. A restricted account is refused.
 **Result:** web ☐ android ☐ — notes:
+
+### CL-12 · Log what happened from Me (3.1)
+**Role:** a signed-in member on 3.1, and a Weavers of the Commons badge holder · **Surfaces:** web, android
+1. Open Me and tap **Log what happened** under Tools.
+2. Type a note and tap **Submit**.
+3. Tap **Log another**. Pick one problem and one scheme from search, then try **Submit**.
+4. Tap **Add location**, allow it, then tap **Submit**.
+5. Tap **See your history and trends**.
+6. As the badge holder, open the sheet again, pick **Not listed** under schemes, leave the description empty, then write one and submit.
+7. On the web, open the sheet with the keyboard alone (Tab to the tile, Enter), Tab through the fields, then press Escape. On Android, open it with TalkBack on and submit an entry.
+8. Open the sheet with the network off, and once with location turned off for the browser or the app.
+9. Check the sheet in Light and Dark and in each of the four colors.
+**Expected:** Step 1 opens a sheet titled "Log what happened" with a close button, "Submit logs it with the date and time. Everything else is optional.", "Add a note (optional)", both tag questions each with a search box and **Full list** (the link popup with lagatos.com's page), the share checkbox ticked or not to match the ClickLog page's default, **Add location**, **Cancel** and **Submit**. Step 2 shows "Logged", "What happened is logged, with the date and time.", **See your history and trends**, **Log another** and **Done**; the entry is on the ClickLog page with its note. Step 3: the picked tags show above the search with a remove button each, "Tags need a location…" shows, Submit stays off, and the share checkbox is ticked, locked, and reads "Shared with the owner — required for tagged incidents…". Step 4: the button reads "Locating…" then "Location added" and the entry saves with its tags. Step 5 opens the ClickLog page (in the browser on Android). Step 6: Submit stays off until the description is written; the suggestion shows on the admin screen. A member without the badge never sees Not listed. Step 7: focus lands in the sheet, every field has its label read out, Escape closes it and focus returns to the tile; on Android each control is named with its role and "What happened is logged, with the date and time." is read out. Step 8: the form still opens and names what failed, and Submit shows "Failed to log incident" or the server's reason; the location message names the fix. Step 9: every part is readable.
+**Result:** web ☐ android ☐ — notes:

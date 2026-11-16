@@ -16,11 +16,13 @@ import {
   SE_SETTINGS_WORDS,
   seMeName,
   seMeSince,
+  type SeMeTool,
   type SeMeView,
   type SeReadingPrefs,
 } from '@ctf/shared';
 import type { ShellCurrentUser } from '../../community-shell/shell-types';
 import { SeAvatar } from '../../shared/se-avatar';
+import { ClickLogSheet } from './click-log-sheet';
 import { SavedCard } from './saved-card';
 import { useCredits } from './use-credits';
 import type { MeProfileState } from './use-me-profile';
@@ -180,20 +182,37 @@ function CreditsCard({ handle }: { handle: string | null }) {
   );
 }
 
+function ToolFace({ tool }: { tool: SeMeTool }) {
+  return (
+    <>
+      <span className={styles.toolIcon} style={{ background: tool.tint, color: SE_ME_TOOL_INK }}>
+        <Icon d={tool.icon} />
+      </span>
+      <span className={styles.toolLabel}>{tool.label}</span>
+    </>
+  );
+}
+
+// "Log what happened" opens its 3.1 sheet over Me; every other tile is a link.
 function Tools() {
+  const [sheet, setSheet] = useState<SeMeTool['sheet']>(undefined);
   return (
     <>
       <h2 className={styles.h2}>{W.tools}</h2>
       <div className={styles.tools}>
-        {SE_ME_TOOLS.map((tool) => (
-          <Link key={tool.key} href={tool.href} className={styles.tool}>
-            <span className={styles.toolIcon} style={{ background: tool.tint, color: SE_ME_TOOL_INK }}>
-              <Icon d={tool.icon} />
-            </span>
-            <span className={styles.toolLabel}>{tool.label}</span>
-          </Link>
-        ))}
+        {SE_ME_TOOLS.map((tool) =>
+          tool.sheet ? (
+            <button key={tool.key} type="button" className={styles.tool} aria-haspopup="dialog" onClick={() => setSheet(tool.sheet)}>
+              <ToolFace tool={tool} />
+            </button>
+          ) : (
+            <Link key={tool.key} href={tool.href} className={styles.tool}>
+              <ToolFace tool={tool} />
+            </Link>
+          ),
+        )}
       </div>
+      {sheet === 'click-log' ? <ClickLogSheet onClose={() => setSheet(undefined)} /> : null}
     </>
   );
 }
