@@ -4,6 +4,7 @@ import { AlertTriangle, MapPin } from "lucide-react";
 import { MAX_NOTES_LENGTH, MAX_TAGS_PER_KIND } from "../../lib/click-log/constants";
 import { CLICK_LOG_PROBLEM_TAGS, CLICK_LOG_SCHEME_TAGS, NOT_LISTED_SCHEME_SLUG } from "../../lib/click-log/tags";
 import { useTheme } from "@/hooks/useTheme";
+import { clickLogSubmitDisabled } from "@ctf/shared";
 import {
   CLICK_LOG_PROBLEM_REFERENCE,
   CLICK_LOG_SCHEME_REFERENCE,
@@ -27,21 +28,6 @@ export type SchemeSuggestionProps = {
   onSuggestionChange: (value: string) => void;
   onQuoraUrlChange: (value: string) => void;
 };
-
-// Submit gating: a tagged incident may not be submitted until a location is attached, and the
-// "Not listed" scheme additionally requires a written description (the server enforces both).
-// Module-level so the form component stays under the complexity limit.
-function isSubmitDisabled(
-  submitting: boolean,
-  problemTags: string[],
-  schemeTags: string[],
-  locationAdded: boolean,
-  suggestion: string,
-): boolean {
-  if (submitting) return true;
-  if ((problemTags.length > 0 || schemeTags.length > 0) && !locationAdded) return true;
-  return schemeTags.includes(NOT_LISTED_SCHEME_SLUG) && suggestion.trim().length === 0;
-}
 
 // The two optional tag pickers plus the tags-need-location hint and the "Not listed"
 // suggestion fields. Extracted so the note form stays under the complexity limit.
@@ -183,13 +169,13 @@ function ClickLogNoteForm({
   const tagged = problemTags.length > 0 || schemeTags.length > 0;
   // Tagged incidents require a location, and "Not listed" requires its description (both
   // matching the server rules), so Submit waits for them.
-  const submitDisabled = isSubmitDisabled(
+  const submitDisabled = clickLogSubmitDisabled({
     submitting,
     problemTags,
     schemeTags,
     locationAdded,
-    schemeSuggestion.suggestion,
-  );
+    suggestion: schemeSuggestion.suggestion,
+  });
   return (
     <div style={{ width: "100%", maxWidth: 480, padding: "16px", borderRadius: 14, background: t.SURFACE, border: `1px solid ${t.ACCENT}30` }}>
       <div style={{ fontSize: 13, fontWeight: 600, color: t.TITLE, marginBottom: 8 }}>Add a note (optional)</div>

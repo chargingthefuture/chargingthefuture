@@ -30,7 +30,7 @@ const SEED_USER_IDS = [
 ];
 
 // problem_tags / scheme_tags are optional coarse tag lists; slugs must exist in
-// packages/web/lib/click-log/tags.ts. Coverage: tagged-with-both, problem-only,
+// packages/shared/src/click-log/tags.ts. Coverage: tagged-with-both, problem-only,
 // scheme-only, and untagged incidents. Every tagged incident carries a location,
 // matching the API rule that tags require latitude/longitude.
 const INCIDENTS = [

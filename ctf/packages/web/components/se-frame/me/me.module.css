@@ -256,6 +256,10 @@
   border: 1.5px solid var(--se-hair);
   color: var(--se-ink);
   text-decoration: none;
+  /* "Log what happened" is a button (it opens a sheet); it looks like the link tiles. */
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
 }
 
 .toolIcon {
