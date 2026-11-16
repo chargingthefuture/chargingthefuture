@@ -6,17 +6,18 @@
 import React, { useState } from 'react';
 import { Modal, ScrollView, Text, TextInput, TouchableOpacity, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { SE_WW_ADD_WORDS as W, seWwAddsFrom, seWwHelpedCount, seWwSuggestHref, type SeThemeTokens } from '@ctf/shared';
+import { SE_WW_ADD_WORDS as W, seWwAddsFrom, seWwHelpedCount, type SeThemeTokens } from '@ctf/shared';
 import { authedFetch } from '../../../auth/authedFetch';
 import { useWwSimilar, WW_MIN_QUERY, type WwMatchState } from './useWwSimilar';
 import { makeWwAddSheetStyles, type WwAddSheetStyles } from './wwAddSheetStyles';
+import { WwHelpedSheet } from './WwHelpedSheet';
 
 export type WwAddedProblem = { id: string; title: string };
 
 type Props = {
   t: SeThemeTokens;
   onClose: () => void;
-  onUse: (_problemId: string) => void;
+  onUse: (_problem: WwAddedProblem) => void;
   onAddWhatHelped: (_problem: WwAddedProblem) => void;
 };
 
@@ -33,7 +34,7 @@ async function sendProblem(title: string): Promise<{ ok: true; id: string } | { 
   }
 }
 
-function Matches({ s, state, onUse }: { s: WwAddSheetStyles; state: WwMatchState; onUse: (_id: string) => void }) {
+function Matches({ s, state, onUse }: { s: WwAddSheetStyles; state: WwMatchState; onUse: (_problem: WwAddedProblem) => void }) {
   if (state.kind === 'idle') return null;
   if (state.kind === 'loading') return <Text style={s.note}>{W.searching}</Text>;
   if (state.kind === 'error') return <Text accessibilityLiveRegion="polite" style={s.error}>{W.matchesFailed(state.reason)}</Text>;
@@ -42,7 +43,7 @@ function Matches({ s, state, onUse }: { s: WwAddSheetStyles; state: WwMatchState
     <View style={s.matches}>
       <Text style={s.label}>{W.matchesLabel}</Text>
       {state.matches.map((m) => (
-        <TouchableOpacity key={m.id} accessibilityRole="button" style={s.match} onPress={() => onUse(m.id)}>
+        <TouchableOpacity key={m.id} accessibilityRole="button" style={s.match} onPress={() => onUse({ id: m.id, title: m.title })}>
           <View style={s.matchText}>
             <Text style={s.matchTitle}>{m.title}</Text>
             <Text style={s.matchCount}>{seWwHelpedCount(m.helpedCount)}</Text>
@@ -79,7 +80,7 @@ function addLabel(sending: boolean, matches: WwMatchState): string {
   return matches.kind === 'ready' && matches.matches.length > 0 ? W.addIt : W.addItEmpty;
 }
 
-function AddForm({ s, t, onUse, onSent }: { s: WwAddSheetStyles; t: SeThemeTokens; onUse: (_id: string) => void; onSent: (_p: WwAddedProblem) => void }) {
+function AddForm({ s, t, onUse, onSent }: { s: WwAddSheetStyles; t: SeThemeTokens; onUse: (_problem: WwAddedProblem) => void; onSent: (_p: WwAddedProblem) => void }) {
   const [title, setTitle] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -144,22 +145,24 @@ export function WwAddSheet({ t, onClose, onUse, onAddWhatHelped }: Props) {
 }
 
 // "Add a problem" on the What works card opened in place on Today, under the "Open in" link. Use
-// this and Add what helped open the What Works page with its suggest form on that problem.
-type FromCardProps = { t: SeThemeTokens; source: string; linkStyle: StyleProp<ViewStyle>; labelStyle: StyleProp<TextStyle>; onOpenLink: (_href: string) => void };
+// this and Add what helped go on to "What helped" in a 3.1 sheet of the same look, as on the web.
+type FromCardProps = { t: SeThemeTokens; source: string; linkStyle: StyleProp<ViewStyle>; labelStyle: StyleProp<TextStyle> };
 
-export function WwAddFromCard({ t, source, linkStyle, labelStyle, onOpenLink }: FromCardProps) {
+export function WwAddFromCard({ t, source, linkStyle, labelStyle }: FromCardProps) {
   const [open, setOpen] = useState(false);
+  const [helped, setHelped] = useState<WwAddedProblem | null>(null);
   if (!seWwAddsFrom(source)) return null;
-  const go = (href: string) => {
+  const toHelped = (problem: WwAddedProblem) => {
     setOpen(false);
-    onOpenLink(href);
+    setHelped(problem);
   };
   return (
     <>
       <TouchableOpacity accessibilityRole="button" style={linkStyle} onPress={() => setOpen(true)}>
         <Text style={labelStyle}>{W.title}</Text>
       </TouchableOpacity>
-      {open ? <WwAddSheet t={t} onClose={() => setOpen(false)} onUse={(id) => go(seWwSuggestHref(id))} onAddWhatHelped={(p) => go(seWwSuggestHref(p.id, p.title))} /> : null}
+      {open ? <WwAddSheet t={t} onClose={() => setOpen(false)} onUse={toHelped} onAddWhatHelped={toHelped} /> : null}
+      {helped ? <WwHelpedSheet t={t} problem={helped} onClose={() => setHelped(null)} /> : null}
     </>
   );
 }

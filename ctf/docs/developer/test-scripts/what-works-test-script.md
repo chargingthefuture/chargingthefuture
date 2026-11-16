@@ -370,12 +370,13 @@ shows A's tools under B with the same Helpful counts, and A nowhere. The Audit l
 **Expected:** Every step draws in What Works' own look (its surface, its accent, square-cornered fields and buttons, 1px borders, the comic theme's colors in step 4), with no 3.1 colors, serif titles, rounded pill fields or pill buttons. The steps, words and actions are the same as in WW-10, WW-12 and WW-13.
 **Result:** web ☐ — notes:
 
-### WW-15 · Add a problem from Today in 3.1 (added 2026-11-16)
+### WW-15 · Add a problem and what helped, from Today in 3.1 (rewritten 2026-11-16)
 **Role:** a signed-in member using 3.1 · **Surfaces:** web, android
-1. On Today, open the What works card and press **Add a problem** under "Open in What Works".
+1. On Today, open the What works card. It shows "It helped me too" and no "See the problem" button, and its sheet has no "Open in" link. Press **Add a problem**.
 2. Type "noise at night" and wait for the matches, then press **Use this** on one.
-3. Open the card again, press **Add a problem**, type a new problem and press **Add it** (or **None of these, add it**), then **Add what helped**.
-4. Switch colors and dark mode in Settings and open the sheet again.
-5. On the 3.0 What Works page, press **Add a problem** from the suggest form.
-**Expected:** Step 1: the sheet matches the board "What works: add a problem": 3.1 colors, a serif title, a rounded field and rounded buttons. Step 2: the What Works page opens with the suggest form on that problem. Step 3: "Sent for review" shows, then the What Works page opens with the suggest form on the new problem, marked as waiting for review. Step 4: the sheet follows each color and mode. Step 5: the same sheet appears in What Works' 3.0 look (WW-14). The admin review stays on the 3.0 admin page.
+3. Fill in "What helped": product name, a purchase link (https://…) and a note, then press **Submit for review**.
+4. Open the card again, press **Add a problem**, type a new problem, press **Add it**, then **Add what helped**, and submit one.
+5. Switch colors and dark mode in Settings and open both sheets again.
+6. On the 3.0 What Works page, press **Add a problem** from the suggest form.
+**Expected:** Steps 1 to 4 never leave 3.1. Step 2 opens "What helped" with "Problem it solves: <that problem>". **Submit for review** stays off until a name and a link are typed. Step 3 ends on "Suggestion submitted", and the suggestion waits in the admin review on the 3.0 admin page. A bad link shows the route's own reason. Step 4 does the same for the new problem while it waits for review. Step 5: both sheets follow each color and mode. Step 6: the 3.0 sheet keeps the 3.0 look and leads to the 3.0 suggest form.
 **Result:** web ☐ android ☐ — notes:

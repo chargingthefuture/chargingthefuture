@@ -11,6 +11,7 @@ export * from './design/se-settings';
 export * from './design/se-emoji-rain';
 export * from './design/se-what-works';
 export * from './today/types';
+export * from './today/in-31';
 export * from './today/view';
 export * from './today/marks';
 export * from './today/day';

@@ -1,4 +1,4 @@
-import { SE_CENSUS_WORDS, type SeTodayCard, type SeTodayDay } from '@ctf/shared';
+import { SE_CENSUS_WORDS, seOpens30Page, type SeTodayCard, type SeTodayDay } from '@ctf/shared';
 import { listFeedTimeline } from 'lib/feed/repository';
 import { listLatestDirectoryInviteCards } from 'lib/directory/invites';
 import { getReaderList } from 'lib/what-works/repository';
@@ -53,7 +53,8 @@ export async function inviteStories(): Promise<SeTodayCard[]> {
       body: clip(invite.opening, 220),
       createdAtIso: new Date(invite.date).toISOString(),
       href: invite.url,
-      actions: [action('open', 'Read it', invite.url)],
+      // Read it only when the invitation is on another site; its page in this app is a 3.0 page.
+      actions: seOpens30Page(invite.url) ? [] : [action('open', 'Read it', invite.url)],
     }),
   );
 }
@@ -77,7 +78,7 @@ export async function whatWorksStory(viewer: TodayViewer, day: SeTodayDay = utcT
       body: `Problem: ${problem.title}. Verified helped by ${product.verifiedCount} ${product.verifiedCount === 1 ? 'person' : 'people'}.`,
       createdAtIso: day.startIso,
       href,
-      actions: [action('helped-me', 'It helped me too', href), action('open', 'See the problem', href)],
+      actions: [action('helped-me', 'It helped me too', href)],
     }),
   ];
 }

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, type ReactNode } from 'react';
-import Link from 'next/link';
 import { SE_GOAL_SHARE_WORDS, seGoalPercent, type SeTodayCard, type SeTodayGoal } from '@ctf/shared';
 import { GoalShareSheet } from '../share/goal-share-sheet';
 import { CardSheet } from './card-sheet';
@@ -30,15 +29,9 @@ export function GoalCard({ card, viewerId, dot, onChanged }: Props) {
   return (
     <article className={styles.card}>
       {dot}
-      {card.goal.reached ? (
-        <Link href={card.href} className={styles.textButton}>
-          {text}
-        </Link>
-      ) : (
-        <button type="button" className={styles.textButton} aria-haspopup="dialog" onClick={() => setSheet(true)}>
-          {text}
-        </button>
-      )}
+      <button type="button" className={styles.textButton} aria-haspopup="dialog" onClick={() => setSheet(true)}>
+        {text}
+      </button>
       <div className={styles.goalBar} role="progressbar" aria-label={card.label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent}>
         <div className={styles.goalBarFill} style={{ width: `${percent}%` }} />
       </div>
