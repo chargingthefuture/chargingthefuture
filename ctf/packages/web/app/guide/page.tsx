@@ -45,6 +45,11 @@ export default function GuidePage() {
           <p className={styles.brand}>Skills Economy</p>
           <h1 className={styles.title}>How to use it</h1>
           <p className={styles.updated}>Last updated: {formatDate(guide.updated)}</p>
+          {/* The guide is written for the 3.0 design only (owner decision, 2026-11-16). */}
+          <p className={styles.intro}>
+            <strong>This guide describes the 3.0 design of the app only.</strong> It does not cover 3.1, the
+            design with Today, People, + New, Activity and Me.
+          </p>
           {guide.intro.map((para, i) => (
             <p key={i} className={styles.intro}>
               {para}
