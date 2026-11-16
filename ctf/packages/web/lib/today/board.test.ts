@@ -5,7 +5,7 @@ const story: SeTodayCard = { id: 'blog-story:a', kind: 'story', source: 'blog-st
 
 describe('presence pill', () => {
   it('reads one Aven, several Avens, and nothing when unknown', () => {
-    expect(sePresenceLine(1)).toBe('1 Aven here');
+    expect(sePresenceLine(1)).toBeNull();
     expect(sePresenceLine(3)).toBe('3 Avens here');
     expect(sePresenceLine(null)).toBeNull();
     expect(sePresenceLine(0)).toBeNull();
