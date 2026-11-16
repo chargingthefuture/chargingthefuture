@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { sePeopleCategory, type SePeopleFilter, type SePeoplePage } from '@ctf/shared';
+import { sePeopleFilter, sePeopleParams, type SePeopleFilter, type SePeoplePage } from '@ctf/shared';
 
-// One page of People, and the number of people listed. The page number lives in the address
-// (?tab=people&page=2) so a page can be linked and the back button works.
+// One page of People, and the number of people listed. The page number and the chosen chip live in
+// the address (?tab=people&page=2&filter=fits) so a page can be linked and the back button works.
 
 export type PeopleState =
   | { kind: 'loading' }
@@ -18,21 +18,19 @@ export function readPage(): number {
   return Number.isFinite(page) && page > 0 ? page : 1;
 }
 
-export function writePage(page: number) {
+export function readFilter(): SePeopleFilter {
+  if (typeof window === 'undefined') return 'all';
+  return sePeopleFilter(new URLSearchParams(window.location.search).get('filter'));
+}
+
+export function writePage(page: number, filter: SePeopleFilter) {
   const params = new URLSearchParams(window.location.search);
   params.set('tab', 'people');
   if (page > 1) params.set('page', String(page));
   else params.delete('page');
+  if (filter !== 'all') params.set('filter', filter);
+  else params.delete('filter');
   window.history.replaceState(null, '', `/?${params.toString()}`);
-}
-
-function peopleParams(page: number, filter: SePeopleFilter, query: string): string {
-  const params = new URLSearchParams({ page: String(page) });
-  if (filter === 'offering') params.set('offering', '1');
-  const category = sePeopleCategory(filter);
-  if (category) params.set('category', category);
-  if (query.trim()) params.set('q', query.trim());
-  return params.toString();
 }
 
 async function readPeople(res: Response): Promise<PeopleState> {
@@ -48,7 +46,7 @@ export function usePeople(page: number, filter: SePeopleFilter, query: string, a
   useEffect(() => {
     let active = true;
     const timer = window.setTimeout(() => {
-      fetch(`/api/people?${peopleParams(page, filter, query)}`, { cache: 'no-store' })
+      fetch(`/api/people?${sePeopleParams(page, filter, query)}`, { cache: 'no-store' })
         .then(readPeople)
         .then((next) => {
           if (active) setState(next);

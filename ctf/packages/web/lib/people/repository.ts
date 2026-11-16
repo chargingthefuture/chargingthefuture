@@ -8,7 +8,10 @@ import { countryCode, regionName } from './place';
 // the profiles whose owner offers at least one skill; those come first in every view. A category
 // (Trades, Care, Paperwork, Tech) keeps the profiles whose job title, profile sector or any listed
 // skill sits in one of that category's Skills Taxonomy sectors (SE_PEOPLE_CATEGORY_SECTORS). The
-// place is the state and the country only; the city column is never read.
+// place is the state and the country only; the city column is never read. "Fits what you need" keeps
+// the people the Match card on Today counts for the member (directory_person_job_titles: a job title
+// or any listed skill under one of the member's job titles, owners restricted with scope all or
+// contact left out), so the list and the number on the card agree.
 
 type PersonRow = {
   id: string;
@@ -64,6 +67,7 @@ const PEOPLE_SQL = `
   LEFT JOIN skills_taxonomy_job_titles jt ON jt.id = p.job_title_id
   WHERE ($1::boolean = FALSE OR ${OFFERS})
     AND ${IN_CATEGORY}
+    AND ($6::text[] IS NULL OR p.id::text IN (SELECT person_id FROM directory_person_job_titles WHERE job_title_id = ANY($6::text[])))
     AND (
       $2::text IS NULL
       OR lower(concat_ws(' ', p.first_name, p.last_name, p.headline, jt.name)) LIKE $2::text
@@ -95,12 +99,28 @@ function toPerson(row: PersonRow): SePerson {
   };
 }
 
-export type PeopleQuery = { page: number; pageSize: number; offeringOnly: boolean; query: string | null; category: SePeopleCategory | null };
+// `fitsJobTitleIds` is null for every chip but Fits what you need, which passes the member's saved job
+// titles (empty when they have picked nothing, which lists nobody).
+export type PeopleQuery = {
+  page: number;
+  pageSize: number;
+  offeringOnly: boolean;
+  query: string | null;
+  category: SePeopleCategory | null;
+  fitsJobTitleIds: string[] | null;
+};
 
 export async function listPeople(input: PeopleQuery): Promise<SePeoplePage> {
   const term = input.query ? `%${input.query.toLowerCase().replace(/[%_\\]/g, '')}%` : null;
   const sectors = input.category ? [...SE_PEOPLE_CATEGORY_SECTORS[input.category]] : null;
-  const result = await queryDb<PersonRow>(PEOPLE_SQL, [input.offeringOnly, term, input.pageSize, (input.page - 1) * input.pageSize, sectors]);
+  const result = await queryDb<PersonRow>(PEOPLE_SQL, [
+    input.offeringOnly,
+    term,
+    input.pageSize,
+    (input.page - 1) * input.pageSize,
+    sectors,
+    input.fitsJobTitleIds,
+  ]);
   return {
     items: result.rows.map(toPerson),
     page: input.page,
