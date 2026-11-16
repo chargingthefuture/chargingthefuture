@@ -27,7 +27,6 @@ export const SE_TALK_WORDS = {
   lockedTitle: 'Booking a talk opens once you are verified',
   lockedText: 'A talk goes on the public schedule under your name, so it waits for one check. You can listen to every talk now.',
   finishUnlock: 'Finish Unlock',
-  unlockHref: '/plugin/unlock',
   nextTalk: 'Next talk',
   nothingBooked: 'Nothing is booked yet.',
 } as const;
