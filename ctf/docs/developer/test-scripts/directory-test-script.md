@@ -1000,3 +1000,12 @@ of these, it is already tracked, not a new bug:
 4. As B, switch to 3.0 in Settings and open the same place again.
 **Expected:** Step 2 shows A's message. Step 3's reply appears in the card's sheet on Today for A. Step 4 shows the same conversation: 3.0 and 3.1 read one conversation, only the screens differ.
 **Result:** web ☐ — notes:
+
+### DIR-14 · A Directory profile opened from 3.1 People (added 2026-11-16)
+
+**Role:** approved member on 3.1 · **Precondition:** a claimed profile with a Quora address and skills; an unclaimed community-generated profile with no Quora address.
+**Steps:**
+1. Open People and tap **Profile** on the claimed profile, then **Quora profile** and **Share** in the sheet; close it.
+2. Tap **Profile** on the unclaimed profile.
+**Expected:** Step 1 opens a 3.1 sheet, not the Directory page, with the name, @username, Member, the headline, job title · sector · place (no city), Quora profile and Share opening the shared link popup (address shown, Open in new tab, Copy link with "Copied!"), About, Skills and Block member. Closing returns focus to Profile. Step 2 shows Listed, "Community-generated profile", Nominated by when set, "Quora profile not linked yet", and no Block. The same profile on the Directory page shows the same facts.
+**Result:** web ☐ android ☐ — notes:
