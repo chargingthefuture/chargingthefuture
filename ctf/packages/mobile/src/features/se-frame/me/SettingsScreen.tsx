@@ -20,6 +20,7 @@ import { BugReportModal } from '../../bug-reporting';
 import { reportError } from '../../../observability/report';
 import type { FeatureKey } from '../../../navigation/screens';
 import { MatchingToggle } from '../today/MatchingToggle';
+import { StoryRepliesToggle } from './StoryRepliesToggle';
 import { makeMeStyles, type MeStyles } from './meStyles';
 import { useCount } from './meData';
 import { MutedCard } from './MutedCard';
@@ -69,6 +70,7 @@ function SafetyGroup({ s, t, censusAdded, onOpen, go }: Base & { censusAdded: bo
         <>
           {mutedOpen ? <MutedCard t={t} /> : null}
           <MatchingToggle t={t} />
+          <StoryRepliesToggle t={t} />
         </>
       }
     >
