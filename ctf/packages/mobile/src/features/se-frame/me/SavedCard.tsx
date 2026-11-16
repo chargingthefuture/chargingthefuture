@@ -4,7 +4,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { SE_SAVED_WORDS as W, seSavedKindName, type SeSavedCard, type SeThemeTokens } from '@ctf/shared';
+import { SE_SAVED_WORDS as W, seOpens30Page, seSavedKindName, type SeSavedCard, type SeThemeTokens } from '@ctf/shared';
 import { authedFetchJson } from '../../../auth/authedFetch';
 import type { FeatureKey } from '../../../navigation/screens';
 import { openTodayLink } from '../today/openTodayLink';
@@ -44,7 +44,8 @@ export function SavedCard({ t, onOpen }: { t: SeThemeTokens; onOpen: (_key: Feat
       {saves?.length === 0 ? <Text style={s.text}>{W.empty}</Text> : null}
       {saves?.map((save) => (
         <View key={save.cardId} style={s.row}>
-          <TouchableOpacity accessibilityRole="link" onPress={() => openTodayLink(save.href, onOpen)} style={s.link}>
+          {/* A 3.0 page is never opened from 3.1, so such a save shows without a link. */}
+          <TouchableOpacity accessibilityRole={seOpens30Page(save.href) ? 'text' : 'link'} disabled={seOpens30Page(save.href)} onPress={() => openTodayLink(save.href, onOpen)} style={s.link}>
             <Text style={s.kind}>{seSavedKindName(save.kind)}</Text>
             <Text style={s.title}>{save.title}</Text>
           </TouchableOpacity>

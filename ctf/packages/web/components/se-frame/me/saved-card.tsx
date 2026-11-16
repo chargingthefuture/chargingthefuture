@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { SE_SAVED_WORDS as W, seSavedKindName, type SeSavedCard } from '@ctf/shared';
+import { SE_SAVED_WORDS as W, seOpens30Page, seSavedKindName, type SeSavedCard } from '@ctf/shared';
 import styles from './saved-card.module.css';
 
 // Me → Saved: the stories and replays this member saved for later from Today (GET /api/today/saves),
@@ -49,6 +49,8 @@ function SavedLink({ save }: { save: SeSavedCard }) {
       <span className={styles.title}>{save.title}</span>
     </>
   );
+  // A 3.0 page is never opened from 3.1, so a save that points at one shows without a link.
+  if (seOpens30Page(save.href)) return <div className={styles.link}>{label}</div>;
   return save.href.startsWith('/') ? (
     <Link href={save.href} className={styles.link}>
       {label}

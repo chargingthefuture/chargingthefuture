@@ -7,8 +7,6 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SE_ARCHITECT_MAX_QUESTION, SE_ARCHITECT_WORDS as W, seAgo, seArchitectMessage, type SeArchitectItem, type SeThemeTokens } from '@ctf/shared';
 import { authedFetch } from '../../../auth/authedFetch';
-import type { FeatureKey } from '../../../navigation/screens';
-import { openTodayLink } from '../today/openTodayLink';
 import { SE_FONT } from '../fonts';
 
 type Styles = ReturnType<typeof makeStyles>;
@@ -80,9 +78,9 @@ function RatingRow({ s, item, onRate }: { s: Styles; item: SeArchitectItem; onRa
   );
 }
 
-type ItemProps = { s: Styles; item: SeArchitectItem; onRate: (_turnId: string, _rating: Rating) => Promise<string | null>; go: (_href: string) => void };
+type ItemProps = { s: Styles; item: SeArchitectItem; onRate: (_turnId: string, _rating: Rating) => Promise<string | null> };
 
-function Item({ s, item, onRate, go }: ItemProps) {
+function Item({ s, item, onRate }: ItemProps) {
   return (
     <View style={s.item}>
       <Text style={s.question}>{item.question}</Text>
@@ -92,9 +90,9 @@ function Item({ s, item, onRate, go }: ItemProps) {
       {item.linkedPlugins.length > 0 ? (
         <View style={s.chips}>
           {item.linkedPlugins.map((plugin) => (
-            <TouchableOpacity key={plugin.slug} accessibilityRole="link" style={s.chip} onPress={() => go(`/apps/${plugin.slug}`)}>
+            <View key={plugin.slug} style={s.chip}>
               <Text style={s.chipLabel}>{plugin.name}</Text>
-            </TouchableOpacity>
+            </View>
           ))}
         </View>
       ) : null}
@@ -103,14 +101,13 @@ function Item({ s, item, onRate, go }: ItemProps) {
   );
 }
 
-export function ArchitectSection({ t, onOpen }: { t: SeThemeTokens; onOpen: (_key: FeatureKey) => void }) {
+export function ArchitectSection({ t }: { t: SeThemeTokens }) {
   const s = useMemo(() => makeStyles(t), [t]);
   const { items, loadError, ask, rate } = useArchitect();
   const [question, setQuestion] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
-  const go = (href: string) => openTodayLink(href, onOpen);
   const blocked = busy || !question.trim();
 
   async function submit() {
@@ -141,7 +138,7 @@ export function ArchitectSection({ t, onOpen }: { t: SeThemeTokens; onOpen: (_ke
       </TouchableOpacity>
       {loadError ? <Text accessibilityRole="alert" style={s.error}>{loadError}</Text> : null}
       {items === null && !loadError ? <Text style={s.text}>{W.loading}</Text> : null}
-      {items?.map((item) => <Item key={item.questionTurnId} s={s} item={item} onRate={rate} go={go} />)}
+      {items?.map((item) => <Item key={item.questionTurnId} s={s} item={item} onRate={rate} />)}
     </View>
   );
 }

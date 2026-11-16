@@ -72,11 +72,11 @@ function Head({ user, profile, onSettings }: { user: ShellCurrentUser; profile: 
         {ready && ready.badges.length > 0 ? (
           <div className={styles.badges}>
             {ready.badges.map((badge) =>
-              // The System Architect badge is also the way into the admin screens.
+              // Admin is reached through the switch to 3.0; 3.1 has no admin pages, so the badge is not a link.
               badge === 'architect' ? (
-                <Link key={badge} href={SE_ME_LINKS.architect} className={styles.badge}>
+                <span key={badge} className={styles.badge}>
                   {SE_ME_BADGE_LABELS[badge]}
-                </Link>
+                </span>
               ) : (
                 <span key={badge} className={`${styles.badge} ${styles.badgeWeaver}`}>
                   {SE_ME_BADGE_LABELS[badge]}
