@@ -4,11 +4,14 @@ import { closeOpenRequestByOwner } from 'lib/socket-relay/close-open';
 import { cancelOrder, getRequestById as getRideRequest } from 'lib/trust-transport/repository';
 import { getPropertyById } from 'lib/lighthouse/repository';
 import { getEventForToday } from 'lib/mutual-time/open-events';
+import { getHoursOffer } from 'lib/foundation/offers';
+import { seHoursOfferText } from '@ctf/shared';
 import { todayCardRule } from './lifetime';
 
 // The item behind an ask or offer card, read where it lives, for its poster's close and renew. Each
 // is open while its own feature lists it on Today: a goal or request still open, a ride still waiting
-// for a driver, a place to stay still listed, a Mutual Time survey still open for picking.
+// for a driver, a place to stay still listed, hours still offered through Foundation, a Mutual Time
+// survey still open for picking.
 
 export type TodayItem = { ownerUserId: string; open: boolean; title: string; href: string };
 
@@ -39,6 +42,10 @@ const READERS: Record<string, Reader> = {
   lighthouse: async (id, viewerId) => {
     const listing = await getPropertyById(id, { userId: viewerId, isAdmin: false });
     return listing ? { ownerUserId: listing.hostUserId, open: listing.isActive, title: listing.title, href: '/apps/lighthouse' } : null;
+  },
+  foundation: async (id) => {
+    const offer = await getHoursOffer(id);
+    return offer ? { ownerUserId: offer.providerUserId, open: true, title: seHoursOfferText(offer).title, href: '/apps/foundation' } : null;
   },
   'mutual-time': async (id) => {
     const event = await getEventForToday(id);

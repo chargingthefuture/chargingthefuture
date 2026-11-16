@@ -379,6 +379,14 @@ whether the caller's id is in it:
   signed-out Today sample) reaches the demo schema, and a read pinned to `public` stays on
   production.
 - Signed out, or outside a request: production.
+- An account on demo data counts as a Weavers of the Commons badge holder (owner decision,
+  2026-11-16): every Weavers-only check (`holdsWeaversBadge` in
+  `lib/contributor-access/weavers-limits.ts`: Back Channel invites, pictures, links, LightHouse
+  photos) passes, and the Weavers room (`canEnterWeaversRoom`: the Today room, its Chyme room and the
+  gated Commons channel) shows and opens even while the production channel is closed.
+  `runsOnDemoData` (same module as `isDemoMode`) answers it: the account is on the list and nothing
+  pinned the work to `public`. Reads and writes stay in the demo schema. Production accounts and the
+  signed-out Preview, which has no account, are unchanged.
 
 "Mark as demo / test" on the same card (`unlock_excluded_accounts`) is separate: it takes the
 account out of the sign-up and Adoption counts and routes nothing. A recording account normally has

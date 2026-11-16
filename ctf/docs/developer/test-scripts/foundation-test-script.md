@@ -1224,3 +1224,21 @@ moved. (Before this it was a generic error and the call kept ringing.) Lift the 
 - A failed send shows Foundation's wording with its reference.
 
 **Result:** web ☐ android ☐ — notes:
+
+### FDN-50 — Offers of hours on Today (added 2026-11-16)
+
+**Role:** provider P (approved, offers a skill), member A (approved), member B (approved, has blocked P) · **Surfaces:** web, android
+
+**Steps:**
+1. As P, offer a skill in Foundation and save a short line. Open Today as A, as B and as P.
+2. As A, tap **I'd like this** on P's card.
+3. As P, stop offering every skill, then open Today as A.
+4. Sign out and open Today on a demo schema the Seed demo workflow has filled.
+
+**Expected:**
+- Step 1: A sees an "Offer · hours" card with P's short line as its title and "Skills offered: …" naming the skill, with I'd like this and I know someone and no city. B does not see it. P does not see their own offer among the hours cards.
+- Step 2: the card opens in Today with its conversation; no Foundation page opens.
+- Step 3: the card is gone.
+- Step 4: up to three hours cards tagged Preview (tutoring, cooking, a repair from the demo seed), with no names.
+
+**Result:** web ☐ android ☐ — notes:

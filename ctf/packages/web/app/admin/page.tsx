@@ -96,6 +96,9 @@ const ADMIN_AREAS: { href: string; name: string; slug?: string }[] = [
   { href: '/admin/quora-live-census', name: 'Quora Live Account Census' },
   { href: '/admin/safety', name: 'Safety Reports' },
   { href: '/admin/service-credits', name: 'ServiceCredits' },
+  // Read-only audit log of the day's credit card on Today: who answered I can help, who the asker
+  // picked, and the asker/helper pairs that repeat, so credits going to the same few people show up.
+  { href: '/admin/service-credits/daily-credit-log', name: 'ServiceCredits: Daily Credit Log' },
   { href: '/admin/skills-hunt', name: 'SkillsHunt' },
   { href: '/admin/socket-relay', name: 'SocketRelay' },
   { href: '/admin/trust-transport', name: 'TrustTransport' },

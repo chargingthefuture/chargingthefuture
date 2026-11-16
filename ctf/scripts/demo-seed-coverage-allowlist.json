@@ -148,6 +148,7 @@
     "llm_inference_log",
     "member_blocks",
     "member_plugin_presence",
+    "mutual_time_events",
     "mutual_time_votes",
     "notification_preferences",
     "notifications",
