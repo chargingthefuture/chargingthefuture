@@ -24,6 +24,7 @@ type PersonRow = {
   region: string | null;
   country: string | null;
   profile_url: string | null;
+  claimed_by_user_id: string | null;
   listed: string[] | null;
   offering: string[] | null;
   total: string;
@@ -47,6 +48,7 @@ const IN_CATEGORY = `(
 const PEOPLE_SQL = `
   SELECT
     p.id::text AS id,
+    p.claimed_by_user_id,
     p.first_name,
     p.last_name,
     p.headline,
@@ -88,7 +90,7 @@ function personName(row: PersonRow): string {
   return [row.first_name, row.last_name].filter(Boolean).join(' ').trim() || 'Unnamed';
 }
 
-function toPerson(row: PersonRow): SePerson {
+function toPerson(row: PersonRow, viewerId: string | null): SePerson {
   return {
     id: row.id,
     name: personName(row),
@@ -100,6 +102,7 @@ function toPerson(row: PersonRow): SePerson {
     offering: row.offering ?? [],
     listed: row.listed ?? [],
     profileUrl: row.profile_url,
+    isYou: viewerId !== null && row.claimed_by_user_id === viewerId,
   };
 }
 
@@ -112,6 +115,8 @@ export type PeopleQuery = {
   query: string | null;
   category: SePeopleCategory | null;
   fitsJobTitleIds: string[] | null;
+  // The reader's account id, so their own row can say so (no Request a quote to themselves).
+  viewerId: string | null;
 };
 
 export async function listPeople(input: PeopleQuery): Promise<SePeoplePage> {
@@ -126,7 +131,7 @@ export async function listPeople(input: PeopleQuery): Promise<SePeoplePage> {
     input.fitsJobTitleIds,
   ]);
   return {
-    items: result.rows.map(toPerson),
+    items: result.rows.map((row) => toPerson(row, input.viewerId)),
     page: input.page,
     pageSize: input.pageSize,
     total: Number(result.rows[0]?.total ?? 0),
