@@ -358,11 +358,14 @@ you and confirmations show here."
 
 **Role:** approved member; a signed-in member not yet approved · **Precondition:** on 3.1; one
 claimed profile whose owner offers a skill in Foundation; a profile with a state and country and a job
-title in the Health sector.
+title in the Health sector; a profile with a Quora address and one without.
 **Steps:**
 1. Open People. Page forward and back, then reload on page 2.
 2. Tap **Offering now**, then **Care**, then **All**. Search a skill name.
-3. On a person who offers a skill, tap **Request a quote**; on another, tap the card.
+3. On a person who offers a skill, tap **Request a quote**, then **Request a quote** in the sheet;
+   close it. Tap **Profile** on the same person, then **Quora profile** on the row and in the sheet,
+   then **Share** in the sheet and **Copy link**; close it. Open your own profile's Request a quote.
+   With a keyboard, reach each button with Tab and close a sheet with Escape.
 4. As the member not yet approved, open People and tap **Back to Today**; open People again and tap
    **Finish Unlock**.
 **Expected:** Step 1 shows "People" with "N listed" beside it, a search reading "A skill, like
@@ -373,9 +376,20 @@ then "Offering" with offered skills filled in the Offer color and "Listed" with 
 outlined; a skill shows once. Step 2 keeps only people offering something, then people in Care
 (Health, Education, Emergency & Reserve Roles), then people in Trades, which includes a person whose
 sector is Creative & Media, then everyone; the search narrows to people with
-that skill in their name, headline, job title or listing. Step 3 opens the Foundation provider page and
-the Directory profile. Request a quote never shows for someone offering nothing, and there is no
-Profile button. Step 4 shows ten faded faces, the number listed with "people listed, with what they
+that skill in their name, headline, job title or listing. Each card has, 44px tall, **Request a quote**
+(only for someone offering), **Profile**, and **Quora profile** only where the Directory has the
+address. Step 3 never leaves 3.1: Request a quote opens a sheet with the person's name and headline,
+their short description, "Willing to be contacted about" with their offered skills, About, and "Good to
+know"; the button reads "Requesting…" and then "Quote requested. <name> has been told." is announced,
+and the request shows on the provider's side in Foundation. Profile opens a sheet with the name,
+Member or Listed, the headline, job title · sector · place (never a city), Request a quote for
+someone offering, Quora profile (or "Quora profile not linked yet"), Share, About, Skills and Block
+for someone else's claimed profile. Quora profile and Share open the shared link popup showing the
+full address with Open in new tab and Copy link, and Copy link announces "Copied!". On your own
+profile the quote button is grayed out with "This is your own profile — you can't request a quote
+from yourself." Each button's spoken name says whose profile it is; focus moves into a sheet when it
+opens and back to the button that opened it when it closes; Escape closes the popup first, then the
+sheet. With the network off, each sheet says what could not be read with **Try again**. Step 4 shows ten faded faces, the number listed with "people listed, with what they
 can do", why names wait for one check, **Finish Unlock** (opens Unlock) and "Open to you now" with
 **Back to Today** (opens Today), and no name, skill or place of anybody.
 Opening People never shows "Could not read People" while the app and its database are up.

@@ -133,19 +133,10 @@
   gap: 6px;
 }
 
-/* The name opens the profile, and its link covers the card so a tap anywhere on it does too. */
 .name {
   font-size: 15px;
   font-weight: 700;
   color: var(--se-ink);
-  text-decoration: none;
-}
-
-.name::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 18px;
 }
 
 .tag {
@@ -193,12 +184,18 @@
   color: var(--se-ink);
 }
 
-.quote {
-  position: relative;
-  z-index: 1;
-  align-self: flex-start;
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-top: 4px;
-  min-height: 38px;
+}
+
+/* Request a quote, Profile and the Quora profile: 44px tall so each is an easy tap. */
+.quote {
+  min-height: 44px;
+  font: inherit;
+  cursor: pointer;
   display: inline-flex;
   align-items: center;
   padding: 0 12px;
@@ -210,6 +207,11 @@
   font-weight: 600;
   text-decoration: none;
   box-shadow: 0 2px 0 var(--se-line);
+}
+
+.quote:focus-visible {
+  outline: 2.5px solid var(--se-ink);
+  outline-offset: 2px;
 }
 
 .meta {

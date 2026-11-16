@@ -1,7 +1,8 @@
 // People in 3.1, shared by web and Android: the Directory, with each person's Foundation offering
 // (skills they offer now, drawn filled) apart from what the Directory lists for them (outlined).
-// Request a quote appears only for someone offering a skill. Built to the approved boards "People,
-// verified" and "People, not yet verified".
+// Request a quote appears only for someone offering a skill; every row opens the person's profile in
+// a sheet, and their Quora profile when the Directory has its address. Built to the approved boards
+// "People, verified" and "People, not yet verified".
 
 export type SePerson = {
   id: string;
@@ -15,6 +16,8 @@ export type SePerson = {
   country: string | null;
   offering: string[];
   listed: string[];
+  // The profile address the Directory holds (a Quora profile), or null when it has none.
+  profileUrl: string | null;
 };
 
 export type SePeoplePage = { items: SePerson[]; page: number; pageSize: number; total: number };
@@ -99,6 +102,8 @@ export const SE_PEOPLE_WORDS = {
   offering: 'Offering',
   listed: 'Listed',
   quote: 'Request a quote',
+  profile: 'Profile',
+  quora: 'Quora profile',
   empty: 'Nobody matches yet.',
   failed: 'Could not read People.',
   tryAgain: 'Try again',
@@ -138,10 +143,15 @@ export function sePersonListedOnly(person: SePerson): string[] {
   return person.listed.filter((skill) => !person.offering.includes(skill));
 }
 
-// Request a quote, for somebody who offers a skill. The Directory profile is not linked: it is a 3.0
-// page, and 3.1 opens none just to read (owner decision, 2026-11-16).
-export function sePersonLinks(person: SePerson): { quote: string | null } {
-  return {
-    quote: person.offering.length > 0 ? `/apps/foundation/provider/${person.id}` : null,
-  };
+// The row's buttons: the Quora profile when the Directory holds a web address for it, and Request a
+// quote for somebody who offers a skill. Both the quote and the profile open as 3.1 sheets; nothing
+// here links to a 3.0 page (owner decision, 2026-11-16).
+export function sePersonLinks(person: SePerson): { quora: string | null; canQuote: boolean } {
+  return { quora: seWebAddress(person.profileUrl), canQuote: person.offering.length > 0 };
+}
+
+// An address opened outside the app: only http and https, so a stored value can never run script.
+export function seWebAddress(value: string | null | undefined): string | null {
+  const trimmed = value?.trim();
+  return trimmed && /^https?:\/\/[^\s]+$/i.test(trimmed) ? trimmed : null;
 }

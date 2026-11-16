@@ -1,7 +1,8 @@
 // People in 3.1, shared by web and Android: the Directory, with each person's Foundation offering
 // (skills they offer now, drawn filled) apart from what the Directory lists for them (outlined).
-// Request a quote appears only for someone offering a skill. Built to the approved boards "People,
-// verified" and "People, not yet verified".
+// Request a quote appears only for someone offering a skill; every row opens the person's profile in
+// a sheet, and their Quora profile when the Directory has its address. Built to the approved boards
+// "People, verified" and "People, not yet verified".
 export const SE_PEOPLE_CATEGORIES = ['trades', 'care', 'paperwork', 'tech'];
 export const SE_PEOPLE_FILTERS = [
     { id: 'all', label: 'All' },
@@ -72,6 +73,8 @@ export const SE_PEOPLE_WORDS = {
     offering: 'Offering',
     listed: 'Listed',
     quote: 'Request a quote',
+    profile: 'Profile',
+    quora: 'Quora profile',
     empty: 'Nobody matches yet.',
     failed: 'Could not read People.',
     tryAgain: 'Try again',
@@ -104,10 +107,14 @@ export function sePersonLine(person) {
 export function sePersonListedOnly(person) {
     return person.listed.filter((skill) => !person.offering.includes(skill));
 }
-// Request a quote, for somebody who offers a skill. The Directory profile is not linked: it is a 3.0
-// page, and 3.1 opens none just to read (owner decision, 2026-11-16).
+// The row's buttons: the Quora profile when the Directory holds a web address for it, and Request a
+// quote for somebody who offers a skill. Both the quote and the profile open as 3.1 sheets; nothing
+// here links to a 3.0 page (owner decision, 2026-11-16).
 export function sePersonLinks(person) {
-    return {
-        quote: person.offering.length > 0 ? `/apps/foundation/provider/${person.id}` : null,
-    };
+    return { quora: seWebAddress(person.profileUrl), canQuote: person.offering.length > 0 };
+}
+// An address opened outside the app: only http and https, so a stored value can never run script.
+export function seWebAddress(value) {
+    const trimmed = value?.trim();
+    return trimmed && /^https?:\/\/[^\s]+$/i.test(trimmed) ? trimmed : null;
 }
