@@ -1,14 +1,15 @@
 'use client';
 
-import Link from 'next/link';
 import { SE_PEOPLE_LOCKED_FACES, SE_PEOPLE_WORDS as W } from '@ctf/shared';
 import { SeAvatar } from '../../shared/se-avatar';
+import { useOpenUnlock } from '../unlock/unlock-open';
 import styles from './people.module.css';
 
 // People for a member not approved yet, built to the approved board "People, not yet verified": ten
 // faded faces that are nobody, how many people are listed (only the number), why names wait for one
 // check, Finish Unlock, and what is open to them now.
 export function PeopleLocked({ count, onToday }: { count: number | null; onToday: () => void }) {
+  const openUnlock = useOpenUnlock();
   return (
     <>
       <div className={styles.faces} aria-hidden="true">
@@ -22,9 +23,9 @@ export function PeopleLocked({ count, onToday }: { count: number | null; onToday
         {count !== null ? <span className={styles.lockedNumber}>{count}</span> : null}
         <span className={styles.lockedLabel}>{W.lockedCount}</span>
         <p className={styles.lockedText}>{W.lockedText}</p>
-        <Link href="/plugin/unlock" className={styles.finish}>
+        <button type="button" className={styles.finish} onClick={openUnlock}>
           {W.finishUnlock}
-        </Link>
+        </button>
       </section>
       <section className={styles.openNow} aria-label={W.openNow}>
         <span className={styles.openTitle}>{W.openNow}</span>

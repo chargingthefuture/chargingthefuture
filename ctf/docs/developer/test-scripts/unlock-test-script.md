@@ -757,6 +757,21 @@ with the **You are not signed in** card and its **Sign in** button. Step 5: you 
 Signing back in with the same account brings the Unlock screen back with your place unchanged.
 **Result:** android ☐ — notes:
 
+
+### UNLOCK-M6 · The Unlock screen inside 3.1 (added 2026-11-16)
+**Role:** member on 3.1, not yet approved · **Surfaces:** web + android
+**Precondition:** a signed-in account on 3.1 with no Quora address sent; a second with an address waiting; a third whose address was rejected; a fourth that is approved.
+**Steps:**
+1. On Today, press **Why this step** in the Unlock banner.
+2. Press the round back button (web: also the browser's back button; Android: also the phone's back button).
+3. Open People and press **Finish Unlock**; then + New → Talk and press **Finish Unlock**.
+4. On the screen, read the day count, the address box, **Quora removed your account?**, **Can't find it?** (open **Show me where to find it**), **Why this step**, **What opens once you are approved** and **What gets an account banned**.
+5. Type a Quora profile address and press **Send**.
+6. Repeat step 1 on the waiting, rejected and approved accounts.
+7. Press **Ask for help finding it** with a name in the box.
+8. Change the color and mode in Settings → Theme and open the screen again.
+**Expected:** Steps 1 and 3 open the Unlock screen inside 3.1, with the tab bar still at the bottom; no 3.0 page opens, and the address (web) reads `?unlock=1`. Step 2 returns to the screen before. Step 4: the card matches the banner (day count and bar, title, words); a member who reported a removed account sees **Finish with <handle>**, otherwise a link to the Quora account removals survey; the survey and the Knowledge Library are the only links that open a 3.0 page. Step 5: the card changes to **Sent. Waiting for approval.** Step 6: waiting shows that line; rejected shows **Needs another look** with a box for a new address; approved shows **Approved**, when the ServiceCredits arrive, and **Back to Today**, with no help box. Step 7 says **Sent. A person will use it to look you up.** and the banner's day count stops. Step 8: the screen reads in every color, light and dark. On 3.0, `/plugin/unlock` is unchanged.
+**Result:** web ☐ · android ☐ — notes:
 ---
 
 ## Parity check (web ↔ android)

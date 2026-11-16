@@ -23,7 +23,6 @@ export declare const SE_TALK_WORDS: {
     readonly lockedTitle: "Booking a talk opens once you are verified";
     readonly lockedText: "A talk goes on the public schedule under your name, so it waits for one check. You can listen to every talk now.";
     readonly finishUnlock: "Finish Unlock";
-    readonly unlockHref: "/plugin/unlock";
     readonly nextTalk: "Next talk";
     readonly nothingBooked: "Nothing is booked yet.";
 };

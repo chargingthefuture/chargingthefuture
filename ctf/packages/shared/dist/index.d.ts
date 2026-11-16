@@ -27,6 +27,7 @@ export * from './today/goal-share';
 export * from './today/people';
 export * from './today/match';
 export * from './today/unlock';
+export * from './today/unlock-screen';
 export * from './today/mutes';
 export * from './today/cards';
 export * from './today/feedback';

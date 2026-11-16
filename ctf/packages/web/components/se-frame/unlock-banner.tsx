@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useId, useState } from 'react';
 import Link from 'next/link';
 import { SE_UNLOCK_WORDS as W, type SeUnlockStanding } from '@ctf/shared';
+import { useOpenUnlock } from './unlock/unlock-open';
 import styles from './unlock-banner.module.css';
 
 // The Unlock banner on every 3.1 screen, for a member not approved yet, built to the approved boards
@@ -119,6 +120,7 @@ function AddressForm({ label, onSent }: { label: string; onSent: () => void }) {
 }
 
 function OtherRoutes({ onSent }: { onSent: () => void }) {
+  const openUnlock = useOpenUnlock();
   return (
     <>
       <p className={styles.small}>
@@ -134,9 +136,9 @@ function OtherRoutes({ onSent }: { onSent: () => void }) {
       </p>
       <p className={styles.smaller}>
         {W.countLine}{' '}
-        <Link href={W.href} className={styles.link}>
+        <button type="button" className={styles.linkButton} onClick={openUnlock}>
           {W.why}
-        </Link>{' '}
+        </button>{' '}
         · <HelpButton label={W.cantFind} className={styles.linkButton} onSent={onSent} />
       </p>
     </>

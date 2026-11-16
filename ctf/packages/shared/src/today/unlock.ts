@@ -57,7 +57,6 @@ export const SE_UNLOCK_WORDS = {
   askArchitect: "Can't find it? Ask the architect",
   asking: 'Asking…',
   close: 'Close',
-  href: '/plugin/unlock',
   censusHref: '/survey/quora-account-deletions',
   knowledgeHref: '/knowledge',
 };

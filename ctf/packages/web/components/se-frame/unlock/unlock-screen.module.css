@@ -1,0 +1,327 @@
+/* The 3.1 Unlock screen. The card that asks for the address is the Unlock banner's (approved boards
+   "Unlock banner, day 9 of 14" and "After the Unlock deadline"); the rest uses the frame's cards. */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.back {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1.5px solid var(--se-hair);
+  background: transparent;
+  color: var(--se-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.title {
+  margin: 0;
+  font-family: 'Newsreader Variable', Newsreader, Georgia, serif;
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.lead {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--se-soft);
+}
+
+.card,
+.pickCard,
+.sunk {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  border-radius: 20px;
+}
+
+.card {
+  background: var(--se-card);
+  color: var(--se-ink);
+  border: 1.5px solid var(--se-line);
+  box-shadow: 0 3px 0 var(--se-line);
+}
+
+.pickCard {
+  background: var(--se-pick);
+  color: var(--se-on-pick);
+  border: 1.5px solid var(--se-on-pick);
+  box-shadow: 0 3px 0 var(--se-on-pick);
+}
+
+.sunk {
+  background: var(--se-sunk);
+  color: var(--se-ink);
+  border-radius: 18px;
+  padding: 14px;
+}
+
+.dayRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.day {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.track {
+  flex: 1;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--se-pick-field);
+  border: 1.5px solid var(--se-on-pick);
+  overflow: hidden;
+}
+
+.fill {
+  display: block;
+  height: 100%;
+  background: var(--se-on-pick);
+}
+
+.cardTitle {
+  margin: 0;
+  font-family: 'Newsreader Variable', Newsreader, Georgia, serif;
+  font-size: 21px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.note,
+.soft {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--se-soft);
+}
+
+.small {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.label {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+}
+
+.input,
+.field {
+  min-width: 0;
+  min-height: 46px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1.5px solid var(--se-line);
+  background: var(--se-bg);
+  color: var(--se-ink);
+  font: inherit;
+  font-size: 14px;
+}
+
+.input {
+  flex: 1;
+}
+
+.pickCard .input {
+  border-color: var(--se-on-pick);
+  background: var(--se-pick-field);
+  color: var(--se-on-pick);
+}
+
+.add,
+.primary {
+  min-height: 46px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1.5px solid var(--se-line);
+  background: var(--se-btn);
+  color: var(--se-on-btn);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.primary {
+  align-self: flex-start;
+}
+
+.pickCard .add {
+  border-color: var(--se-on-pick);
+  background: var(--se-hero);
+  color: var(--se-on-hero);
+}
+
+.secondary {
+  align-self: flex-start;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1.5px solid var(--se-line);
+  background: var(--se-card);
+  color: var(--se-ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 2px 0 var(--se-line);
+  cursor: pointer;
+}
+
+.add:disabled,
+.primary:disabled,
+.secondary:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.link {
+  color: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.toggle,
+.banToggle {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: left;
+}
+
+.toggle {
+  align-self: flex-start;
+  min-height: 32px;
+  font-size: 13px;
+  text-decoration: underline;
+}
+
+.banToggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  font-size: 14px;
+}
+
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.picture {
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+  border: 1.5px solid var(--se-hair);
+}
+
+.stepHeading {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.stepList,
+.opens {
+  margin: 4px 0 0;
+  padding-left: 20px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.opens {
+  margin: 0;
+}
+
+.whyItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.whyTitle {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.error {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.back:focus-visible,
+.input:focus-visible,
+.field:focus-visible,
+.add:focus-visible,
+.primary:focus-visible,
+.secondary:focus-visible,
+.link:focus-visible,
+.toggle:focus-visible,
+.banToggle:focus-visible {
+  outline: 2px solid var(--se-pick);
+  outline-offset: 2px;
+}
+
+.pickCard .input:focus-visible,
+.pickCard .add:focus-visible,
+.pickCard .link:focus-visible {
+  outline-color: var(--se-on-pick);
+}
