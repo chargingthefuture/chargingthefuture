@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { sePeopleFilter, sePeopleParams, type SePeopleFilter, type SePeoplePage } from '@ctf/shared';
+import { sePeopleFilter, sePeopleParams, type SePeopleFilter, type SePeoplePage, type SePerson } from '@ctf/shared';
 
 // One page of People, and the number of people listed. The page number and the chosen chip live in
 // the address (?tab=people&page=2&filter=fits) so a page can be linked and the back button works.
@@ -21,6 +21,23 @@ export function readPage(): number {
 export function readFilter(): SePeopleFilter {
   if (typeof window === 'undefined') return 'all';
   return sePeopleFilter(new URLSearchParams(window.location.search).get('filter'));
+}
+
+// A shared profile address (?tab=people&person=<id>) names only the profile; the rest of the person
+// fills in from the list when they are on the page shown, and the sheet reads the profile itself.
+export function readPerson(): SePerson | null {
+  if (typeof window === 'undefined') return null;
+  const id = new URLSearchParams(window.location.search).get('person');
+  if (!id) return null;
+  return { id, name: '', headline: null, jobTitle: null, claimed: false, region: null, country: null, offering: [], listed: [], profileUrl: null };
+}
+
+// Keeps the open profile in the address, so it can be shared and the page reloaded on it.
+export function writePerson(id: string | null) {
+  const params = new URLSearchParams(window.location.search);
+  if (id) params.set('person', id);
+  else params.delete('person');
+  window.history.replaceState(null, '', `/?${params.toString()}`);
 }
 
 export function writePage(page: number, filter: SePeopleFilter) {
