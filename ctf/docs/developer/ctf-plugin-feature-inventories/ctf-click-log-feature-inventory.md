@@ -13,6 +13,13 @@ ClickLog provides a simple, auditable incident counter and logging system for us
 
 ## 3. User Features
 
+- In the 3.1 app, Me → Tools → "Log what happened" opens a sheet for writing an entry, on the web and
+  in the Android app. It has the same form as the ClickLog page: a private note, the problems and
+  schemes lists with search and a "Full list" link, "Not listed" with its description and Quora link
+  for Weavers of the Commons, the share checkbox, and Add location. Submit logs it with the date and
+  time. Once logged the sheet says "What happened is logged, with the date and time." and offers
+  "See your history and trends", which opens the ClickLog page, plus "Log another" and "Done".
+  History, editing, deleting, the sharing default and trends stay on the ClickLog page.
 - Three privacy rules cover the entire feature, and member-facing copy leads with them in this
   order (owner directive, 2026-08-18): (1) notes are always private, nobody but the member ever
   sees them; (2) an incident can be private only when it is untagged, and a private, untagged
@@ -32,7 +39,7 @@ ClickLog provides a simple, auditable incident counter and logging system for us
   the 50+ problems list published on the public landing page) and/or which named schemes were
   used ("Which schemes were used?" — schemes named in the owner's now-deprecated "A post for
   each gang stalker game" Discourse thread plus schemes described in the owner's archived
-  posts; `lib/click-log/tags.ts` is the living canonical list). Several of each may be picked —
+  posts; `packages/shared/src/click-log/tags.ts` is the living canonical list). Several of each may be picked —
   up to 10 problems and 10 schemes per incident (owner decision, 2026-08-13: a real incident
   routinely chains several schemes, so one tag per kind never fit). Both pickers are
   type-and-search filtered multi-select chip pickers (mimicking the Directory / SkillsHunt
@@ -164,7 +171,7 @@ ClickLog provides a simple, auditable incident counter and logging system for us
   a same-text count, and dates, never member identity or incident ids — and (b) files a single
   threshold alert (counts only) when shared "Not listed" incidents reach 5 in 90 days, at most one
   alert per 30 days (`click_log_unnamed_scheme_alerts` is the dedupe marker). The pipeline never
-  edits the canonical scheme list; naming a scheme stays a PR to `lib/click-log/tags.ts` plus the
+  edits the canonical scheme list; naming a scheme stays a PR to `packages/shared/src/click-log/tags.ts` plus the
   landing-page `/schemes` mirror.
 - View all incidents (future)
 - Delete any incident (future)
@@ -172,7 +179,7 @@ ClickLog provides a simple, auditable incident counter and logging system for us
 ## 5. API Surface and Route Map
 
 - `GET /api/click-log` — List incidents for authenticated user. Returns `{ incidents, count, canSuggestScheme }` (`canSuggestScheme` = whether this member holds the Weavers of the Commons badge and so may pick "Not listed"). The user is always derived from the authenticated token (no caller-supplied `userId`); the access policy (`canViewIncidents`) is applied before the query.
-- `POST /api/click-log` — Create incident. Accepts optional `sharedWithOwner` boolean (falls back to the member's stored global default) and optional `problemTags` / `schemeTags` string arrays (each slug validated against the canonical lists in `lib/click-log/tags.ts` — an unknown slug is a 400; duplicates collapsed; at most 10 per kind, `MAX_TAGS_PER_KIND`). When either list is non-empty, `metadata.latitude`/`metadata.longitude` are required (400 otherwise), and the incident is always stored shared: an explicit `sharedWithOwner: false` alongside tags is a 400, and an omitted flag stores shared regardless of the member's global default (owner decision, 2026-08-18). When `schemeTags` contains `other-scheme` ("Not listed"): `schemeSuggestion` is required (1–200 chars after trim), `schemeQuoraUrl` is optional (must be an https quora.com link), the caller must hold the Weavers badge (403 otherwise), and the suggestion is stored in `click_log_scheme_suggestions`; suggestion fields without `other-scheme` are a 400. Returns the created incident flat (a `ClickLogIncident`, not wrapped under `{ incident }`), matching the command contract's `outputSchema`.
+- `POST /api/click-log` — Create incident. Accepts optional `sharedWithOwner` boolean (falls back to the member's stored global default) and optional `problemTags` / `schemeTags` string arrays (each slug validated against the canonical lists in `packages/shared/src/click-log/tags.ts` — an unknown slug is a 400; duplicates collapsed; at most 10 per kind, `MAX_TAGS_PER_KIND`). When either list is non-empty, `metadata.latitude`/`metadata.longitude` are required (400 otherwise), and the incident is always stored shared: an explicit `sharedWithOwner: false` alongside tags is a 400, and an omitted flag stores shared regardless of the member's global default (owner decision, 2026-08-18). When `schemeTags` contains `other-scheme` ("Not listed"): `schemeSuggestion` is required (1–200 chars after trim), `schemeQuoraUrl` is optional (must be an https quora.com link), the caller must hold the Weavers badge (403 otherwise), and the suggestion is stored in `click_log_scheme_suggestions`; suggestion fields without `other-scheme` are a 400. Returns the created incident flat (a `ClickLogIncident`, not wrapped under `{ incident }`), matching the command contract's `outputSchema`.
 - `DELETE /api/click-log/[id]` — Delete incident by id (the owner, or an admin). Returns `{ success: true }`. An admin deleting another member's incident also writes a row to `click_log_admin_audit_trail` (#2806).
 - `PATCH /api/click-log/[id]` — Toggle owner-sharing on a single incident. Body `{ sharedWithOwner }`; only the incident's owner may call it (no admin override — consent is the member's alone). `sharedWithOwner: false` on a tagged incident is a 400 telling the member to remove the tags first (owner decision, 2026-08-18: a tagged incident always shares its trend data); turning sharing on is always allowed. Returns `{ success, sharedWithOwner }`.
 - `PUT /api/click-log/[id]` — Edit an incident's note and tag lists in place. Body `{ notes, problemTags, schemeTags }`: a null note clears it, an absent/null/empty tag array untags that kind. Only the incident's owner may call it (no admin override — the note is the member's private content). The date and location are immutable: the body carries no coordinates and the SQL never touches them. Tag lists follow the create rules (canonical slugs, duplicates collapsed, at most 10 per kind; tags require the incident to carry a location — since location is immutable, a location-less incident can only edit its note, 400 otherwise). Saving with a non-empty tag list sets `shared_with_owner` to true in the same update (owner decision, 2026-08-18: tags require trend sharing; the editor states this before save); saving with both lists empty leaves the share flag as it stands. `other-scheme` ("Not listed") may be kept or removed but not newly picked on edit (400 — its description intake happens at create). Two incidents may carry the same note and location, so an edit never conflicts with another incident. Returns `{ success: true }`.
@@ -189,8 +196,8 @@ ClickLog provides a simple, auditable incident counter and logging system for us
   - `user_id TEXT`
   - `metadata JSONB NOT NULL DEFAULT '{}'` (latitude, longitude, notes)
   - `shared_with_owner BOOLEAN NOT NULL DEFAULT FALSE` — member's per-incident owner-share opt-in for untagged incidents; forced TRUE whenever the incident carries tags (owner decision, 2026-08-18 — enforced at create/edit, plus an idempotent one-time backfill `UPDATE` in `schema.sql` for tagged rows logged private before the rule); a real column (not metadata) so it is excluded from the `metadata_hash` dedupe
-  - `problem_tags TEXT[] NOT NULL DEFAULT '{}'` — optional coarse tag list: which of the 50+ known problems happened; each slug validated against `lib/click-log/tags.ts` (mirrors the landing-page problems list); at most 10 (`MAX_TAGS_PER_KIND`, enforced in the API). Real column, excluded from the `metadata_hash` dedupe. Arrays since 2026-08-13 (owner decision: one tag per kind never fit a real incident).
-  - `scheme_tags TEXT[] NOT NULL DEFAULT '{}'` — optional coarse tag list: which named schemes were used; each slug validated against `lib/click-log/tags.ts` (schemes started from the owner's "A post for each gang stalker game" Discourse thread, now deprecated — `tags.ts` is the living canonical list and grows there; slugs are never renamed or reused so trend history stays comparable); at most 10. Real column, excluded from the `metadata_hash` dedupe.
+  - `problem_tags TEXT[] NOT NULL DEFAULT '{}'` — optional coarse tag list: which of the 50+ known problems happened; each slug validated against `packages/shared/src/click-log/tags.ts` (mirrors the landing-page problems list); at most 10 (`MAX_TAGS_PER_KIND`, enforced in the API). Real column, excluded from the `metadata_hash` dedupe. Arrays since 2026-08-13 (owner decision: one tag per kind never fit a real incident).
+  - `scheme_tags TEXT[] NOT NULL DEFAULT '{}'` — optional coarse tag list: which named schemes were used; each slug validated against `packages/shared/src/click-log/tags.ts` (schemes started from the owner's "A post for each gang stalker game" Discourse thread, now deprecated — `tags.ts` is the living canonical list and grows there; slugs are never renamed or reused so trend history stays comparable); at most 10. Real column, excluded from the `metadata_hash` dedupe.
   - `problem_tag TEXT` / `scheme_tag TEXT` (nullable) — the superseded singular tag columns (2026-08-02 → 2026-08-13): backfilled into the arrays by guarded `UPDATE`s in `schema.sql`, kept for history, no longer read or written by the app.
   - `created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`
   - No uniqueness rule on the incident content: each logged incident is its own row, so a member can log any number of incidents with the same note and location, including none. The generated `metadata_hash` column and its `UNIQUE (user_id, metadata_hash)` were dropped on 2026-10-05 (`post/0053_click_log_drop_metadata_hash_dedupe.sql`).
@@ -229,7 +236,7 @@ ClickLog provides a simple, auditable incident counter and logging system for us
   server returns 403), and drained only into the PRIVATE triage repo — issues never carry
   member identity or incident ids. Suggestion fields sent with any other scheme tag are rejected.
 - Incident tags are coarse by construction: values come only from the fixed canonical slug lists
-  in `lib/click-log/tags.ts` (the create route rejects unknown slugs), so tag data can never carry
+  in `packages/shared/src/click-log/tags.ts` (the create route rejects unknown slugs), so tag data can never carry
   free text. A tagged incident must carry a location (client and server enforced) so tagged trend
   data is detailed enough, and is always shared (owner decision, 2026-08-18: tags exist to feed
   the trend data — the member's consent act is picking the tag, and the form/editor say so in
@@ -283,7 +290,7 @@ ClickLog provides a simple, auditable incident counter and logging system for us
 ## 8. Web and Android Delivery Status
 
 - Web (desktop + mobile-responsive): Implemented shell, complete
-- Android (React Native): **surface removed 2026-07-20 (rule 105, PR #1742)** — this feature is now web-only, served by the installable web app (PWA)
+- Android (React Native): **surface removed 2026-07-20 (rule 105, PR #1742)** — this feature is now web-only, served by the installable web app (PWA). One exception since 2026-11-16: the 3.1 "Log what happened" sheet on Me (`src/features/se-frame/me/ClickLogSheet.tsx`, location through `expo-location`) writes an entry natively, matching the web sheet (`components/se-frame/me/click-log-sheet.tsx`); its "See your history and trends" link opens the ClickLog page in the browser.
 - See [plugin-parity-contracts.json](../../../config/plugin-parity-contracts.json)
 
 Web pixel pass (design `c5d83c0`): `ClickLogShell` is rebuilt to `design/.../survivor-hub/ClickLog.tsx`
@@ -324,6 +331,7 @@ Android pixel pass to `MobileClickLog.tsx` remains tracked in `PRODUCTION_READIN
 
 ## Change Log
 
+- 2026-11-16: **"Log what happened" sheet in 3.1, web and Android (owner decision).** Me → Tools → "Log what happened" opens a 3.1 sheet with every field, rule, state and error the ClickLog form has, posting to `POST /api/click-log` and reading `GET /api/click-log` (whether "Not listed" is offered) and `GET /api/click-log/preferences` (the sharing default). After saving it links to the ClickLog page for history and trends, one of the 3.1 places that link to 3.0. Focus moves into the sheet and back to the tile, and Escape closes it on the web; on Android the controls carry roles and labels and the save result is read out. The tag lists, limits and share wording moved to `@ctf/shared` (`packages/shared/src/click-log/`) so web and Android offer the same ones; `lib/click-log/tags.ts`, `constants.ts` and `share-copy.ts` re-export them, and the 3.0 form uses the shared submit rule and request body. No route, table or contract changed. Tests: `lib/click-log/entry-sheet.test.ts`.
 - 2026-10-27: **Open to signed-in members in 3.1 (owner decision, Access).** `requireClickLogAccess` now uses the `signed_in` tier: a member's private log is open before Unlock is done and stays open after day 14. The owner trends surface keeps its admin check. Listed under "3.1 open sign-up use".
 - 2026-10-16: **An admin deleting another member's incident is recorded (code-review #2806, owner decision).** The delete route let an admin remove any member's incident and recorded it only as a log line. It now also writes a row to the new `click_log_admin_audit_trail` (`insertClickLogAdminAudit` in `lib/click-log/repository.ts`). A member deleting their own incident writes none. The admin audit gate now reads routes with an `isAdmin` branch, which is how it found this.
 - 2026-10-15: **The empty state says what is shared (owner-approved copy fix, #2798).** It ended with "All data is only visible to you.", while a tagged incident is always shared with the owner, an untagged one can be shared by choice, and grouped totals may be published (`share-copy.ts`). The sentence now says notes stay private, that tagged incidents and any the member chooses to share send the owner only the date, rough area, and tags, and that grouped totals may be published.

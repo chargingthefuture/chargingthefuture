@@ -223,7 +223,7 @@ keeps that half reproducible; its stamped result stands.
 
 ## Change Log
 
-- 2026-11-16: **Open surveys no longer show as offers on other members' Today (owner decision).** Mutual Time is an admin scheduling tool, not where members offer hours, so the "Offer · hours" cards on Today now read Foundation (see the Foundation inventory). A survey's creator still sees their own open survey among their own cards (`mutualTimeSurveyCard` in `lib/today/sources-offers.ts`, read by `sources-mine.ts`). `listOpenEvents` keeps its `createdBy` read; no route or table change.
+- 2026-11-16: **Open surveys no longer show as offers on other members' Today (owner decision).** Mutual Time is an admin scheduling tool, not where members offer hours, so the "Offer · hours" cards on Today now read Foundation (see the Foundation inventory), and the six demo surveys `demo-seed/48-mutual-time.mjs` added earlier the same day are removed. A survey's creator still sees their own open survey among their own cards (`mutualTimeSurveyCard` in `lib/today/sources-offers.ts`, read by `sources-mine.ts`). `listOpenEvents` keeps its `createdBy` read; no route or table change.
 - 2026-11-11: **Open surveys show on Today (User Features item 9).** The 3.1 plan lists Mutual Time among
   the Offer cards. `lib/mutual-time/open-events.ts` reads surveys open for picking right now (stored
   open, opened, not past their close time) with only the title, description, meeting place, creator id

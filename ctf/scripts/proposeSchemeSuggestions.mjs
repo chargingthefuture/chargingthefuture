@@ -90,7 +90,7 @@ function buildSuggestionBody(group) {
   lines.push('');
   lines.push('---');
   lines.push('Next: if this is a real scheme, name it and open a PR that adds the slug+label to');
-  lines.push('`ctf/packages/web/lib/click-log/tags.ts` (CLICK_LOG_SCHEME_TAGS) and mirrors the name');
+  lines.push('`ctf/packages/shared/src/click-log/tags.ts` (CLICK_LOG_SCHEME_TAGS) and mirrors the name');
   lines.push('on the landing-page `/schemes` list. This pipeline never edits the list itself.');
   lines.push('No member identity is attached to this issue by design.');
   return lines.join('\n');
@@ -168,7 +168,7 @@ async function fileThresholdAlert(client) {
     'Check the open scheme-suggestion issues here, and the community channels, for what to name.',
     '',
     '---',
-    'Naming a scheme is a PR: add the slug+label to `ctf/packages/web/lib/click-log/tags.ts`',
+    'Naming a scheme is a PR: add the slug+label to `ctf/packages/shared/src/click-log/tags.ts`',
     '(CLICK_LOG_SCHEME_TAGS) and mirror the name on the landing-page `/schemes` list.',
   ].join('\n');
   const issueUrl = createIssue(title, body, ['scheme-suggestion', 'needs-triage']);

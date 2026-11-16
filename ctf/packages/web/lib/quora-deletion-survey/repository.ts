@@ -34,6 +34,8 @@ export type CreateSurveyResponseInput = {
   anyAccountRemoved: boolean;
   // Null means the optional question was skipped, which is not the same answer as no.
   hasCurrentProfile: boolean | null;
+  // The handle or link of that account, as typed. Null unless hasCurrentProfile is true.
+  currentProfileHandle: string | null;
   evidenceNote: string | null;
   otherNotes: string | null;
   consentPublishHandles: boolean;
@@ -67,6 +69,7 @@ export type SurveyResponseRow = {
   targeted_individual: QuoraSurveyTargetedIndividual;
   any_account_removed: boolean;
   has_current_profile: boolean | null;
+  current_profile_handle: string | null;
   evidence_note: string | null;
   other_notes: string | null;
   consent_publish_handles: boolean;
@@ -88,15 +91,17 @@ export async function createSurveyResponse(
   return withDbTransaction(async (client) => {
     const inserted = await client.query<{ id: string }>(
       `INSERT INTO quora_deletion_survey_responses (
-         user_id, targeted_individual, any_account_removed, has_current_profile, evidence_note,
-         other_notes, consent_publish_handles, consent_quote, consent_attribute_quote
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+         user_id, targeted_individual, any_account_removed, has_current_profile,
+         current_profile_handle, evidence_note, other_notes, consent_publish_handles,
+         consent_quote, consent_attribute_quote
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING id`,
       [
         input.userId,
         input.targetedIndividual,
         input.anyAccountRemoved,
         input.hasCurrentProfile,
+        input.currentProfileHandle,
         input.evidenceNote,
         input.otherNotes,
         input.consentPublishHandles,
@@ -141,8 +146,8 @@ export async function createSurveyResponse(
 // only reader; there is no public projection of this data at all.
 export async function listSurveyResponses(limit: number): Promise<SurveyResponseWithAccounts[]> {
   const responses = await queryDb<SurveyResponseRow>(
-    `SELECT id, user_id, targeted_individual, any_account_removed, has_current_profile, evidence_note,
-            other_notes, consent_publish_handles, consent_quote, consent_attribute_quote, created_at
+    `SELECT id, user_id, targeted_individual, any_account_removed, has_current_profile,
+            current_profile_handle, evidence_note, other_notes, consent_publish_handles, consent_quote, consent_attribute_quote, created_at
        FROM quora_deletion_survey_responses
       ORDER BY created_at DESC
       LIMIT $1`,
