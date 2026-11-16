@@ -1,22 +1,21 @@
 // A card opened on signed-out Today, the Android copy of the web's guest-sheet.tsx (owner decision,
 // 2026-11-10): read only. A story shows its post's Fireside comments; a sample ask or offer shows a
-// sample conversation, tagged as sample; a member's story says its conversation is for members and
-// reads none of it. Just us two is shown as private, with a sign-in.
+// sample conversation, tagged as sample; a member's story shows only the replies whose writers agreed
+// that visitors may read them, or says its conversation is for members. Just us two is shown as
+// private, with a sign-in.
 
 import React, { useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { SE_CARD_WORDS, SE_GUEST_WORDS as W, seAgo, seGuestReadsConversation, type SeGuestConversation, type SeThemeTokens, type SeTodayCard } from '@ctf/shared';
+import { SE_CARD_WORDS, SE_GUEST_WORDS as W, seAgo, seGuestEmptyLine, type SeGuestConversation, type SeThemeTokens, type SeTodayCard } from '@ctf/shared';
 import { getApiBaseUrl } from '../../../auth/authedFetch';
 import { makeCardSheetStyles, type CardSheetStyles } from './cardSheetStyles';
 
-type Read = { kind: 'loading' } | { kind: 'members' } | { kind: 'ready'; conversation: SeGuestConversation } | { kind: 'failed'; message: string };
+type Read = { kind: 'loading' } | { kind: 'ready'; conversation: SeGuestConversation } | { kind: 'failed'; message: string };
 
-// A member's story reads nothing: its conversation is for members (seGuestReadsConversation).
-function useGuestConversation(cardId: string, reads: boolean): Read {
-  const [read, setRead] = useState<Read>(reads ? { kind: 'loading' } : { kind: 'members' });
+function useGuestConversation(cardId: string): Read {
+  const [read, setRead] = useState<Read>({ kind: 'loading' });
   useEffect(() => {
-    if (!reads) return;
     let live = true;
     fetch(`${getApiBaseUrl()}/api/today/public/cards/${encodeURIComponent(cardId)}`)
       .then(async (res) => {
@@ -29,15 +28,14 @@ function useGuestConversation(cardId: string, reads: boolean): Read {
     return () => {
       live = false;
     };
-  }, [cardId, reads]);
+  }, [cardId]);
   return read;
 }
 
-function Messages({ s, read, sampleTag }: { s: CardSheetStyles; read: Read; sampleTag: React.ReactNode }) {
-  if (read.kind === 'members') return <Text style={s.quiet}>{W.membersOnly}</Text>;
+function Messages({ s, read, sampleTag, empty }: { s: CardSheetStyles; read: Read; sampleTag: React.ReactNode; empty: string }) {
   if (read.kind === 'loading') return <Text style={s.quiet}>{W.loadingConversation}</Text>;
   if (read.kind === 'failed') return <Text accessibilityRole="alert" style={s.quiet}>{read.message}</Text>;
-  if (read.conversation.messages.length === 0) return <Text style={s.quiet}>{W.noMessages}</Text>;
+  if (read.conversation.messages.length === 0) return <Text style={s.quiet}>{empty}</Text>;
   return (
     <>
       {read.conversation.sample ? sampleTag : null}
@@ -58,7 +56,7 @@ function Messages({ s, read, sampleTag }: { s: CardSheetStyles; read: Read; samp
 
 export function GuestSheet({ t, card, sampleTag, onSignIn, onClose }: { t: SeThemeTokens; card: SeTodayCard; sampleTag: React.ReactNode; onSignIn: () => void; onClose: () => void }) {
   const s = makeCardSheetStyles(t);
-  const read = useGuestConversation(card.id, seGuestReadsConversation(card));
+  const read = useGuestConversation(card.id);
   const [pair, setPair] = useState(false);
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onClose}>
@@ -94,7 +92,7 @@ export function GuestSheet({ t, card, sampleTag, onSignIn, onClose }: { t: SeThe
                   </TouchableOpacity>
                 </View>
               </View>
-              <View style={s.messages}>{pair ? <Text style={s.quiet}>{W.pairEmpty}</Text> : <Messages s={s} read={read} sampleTag={sampleTag} />}</View>
+              <View style={s.messages}>{pair ? <Text style={s.quiet}>{W.pairEmpty}</Text> : <Messages s={s} read={read} sampleTag={sampleTag} empty={seGuestEmptyLine(card)} />}</View>
               <TouchableOpacity accessibilityRole="button" style={[s.talkPrimary, { alignSelf: 'flex-start', minHeight: 44, justifyContent: 'center' }]} onPress={onSignIn}>
                 <Text style={s.talkPrimaryLabel}>{pair ? W.pairSignIn : W.signInToWrite}</Text>
               </TouchableOpacity>

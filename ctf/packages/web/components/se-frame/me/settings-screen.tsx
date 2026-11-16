@@ -15,6 +15,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { reportError } from '@/lib/observability/report';
 import { BugReportModal } from '../../bug-reports/bug-report-modal';
 import { MatchingToggle } from '../today/matching-toggle';
+import { StoryRepliesToggle } from './story-replies-toggle';
 import { BackHeader } from './back-header';
 import { MutedCard } from './muted-card';
 import { NotificationGroup } from './notification-group';
@@ -77,6 +78,7 @@ function SafetyGroup({ censusAdded }: { censusAdded: boolean | null }) {
         <>
           {mutedOpen ? <MutedCard /> : null}
           <MatchingToggle />
+          <StoryRepliesToggle />
         </>
       }
     >

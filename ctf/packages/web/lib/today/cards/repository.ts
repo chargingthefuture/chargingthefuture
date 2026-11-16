@@ -279,6 +279,26 @@ export async function findReadableMessage(cardId: string, messageId: string, rea
   return comment ? fromThread(comment) : null;
 }
 
+// A member's story read by a visitor (owner decision, 2026-11-16): only the public replies of members
+// who agree now that visitors may read them (current words), written at or after they agreed, by an
+// approved member whose account is not restricted, and not hidden by moderation. Nothing else, and no
+// placeholder for what is left out.
+export async function listVisitorStoryReplies(cardId: string, versions: readonly string[]): Promise<MessageRow[]> {
+  const result = await queryDb<RawMessage>(
+    `SELECT m.id, m.author_id, m.body, m.created_at, m.edited_at, m.pair_low, m.pair_high
+       FROM commons_item_messages m
+       JOIN user_ui_preferences p ON p.user_id = m.author_id
+      WHERE m.plugin = $1 AND m.item_id = $2 AND m.pair_low IS NULL AND m.moderation_status = 'accepted'
+        AND p.story_replies_visitors_version = ANY($3::text[]) AND p.story_replies_visitors_at IS NOT NULL
+        AND m.created_at >= p.story_replies_visitors_at
+        AND EXISTS (SELECT 1 FROM unlock_verification_submissions u WHERE u.user_id = m.author_id AND u.access_tier = 'approved_full')
+        AND NOT EXISTS (SELECT 1 FROM account_restrictions r WHERE r.user_id = m.author_id AND r.is_restricted = TRUE)
+      ORDER BY m.created_at DESC LIMIT ${MESSAGES_SHOWN}`,
+    [...item(cardId), [...versions]],
+  );
+  return result.rows.reverse().map(toMessage);
+}
+
 // A card's public messages with nobody signed in: no viewer, so nobody's blocks or mutes apply. Used
 // only by the signed-out read, which runs it against the demo schema.
 export async function listGuestMessagesInStore(cardId: string): Promise<MessageRow[]> {
