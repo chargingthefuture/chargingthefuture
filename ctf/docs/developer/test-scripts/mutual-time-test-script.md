@@ -9,7 +9,7 @@
 | **Visibility** | Member |
 | **Roles to test** | Member, Admin |
 | **Surfaces** | Web (`/apps/mutual-time`, `/mutual-time/[slug]`); mobile-responsive web (same URLs at phone width). No Android surface — out of scope per rule 105. |
-| **Seed first** | `pnpm --dir ctf seed:mutual-time`; on the demo schema, the Seed demo workflow adds six open surveys offering an hour of help, by synthetic members (`demo-seed/48-mutual-time.mjs`) |
+| **Seed first** | `pnpm --dir ctf seed:mutual-time` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-mutual-time-feature-inventory.md` |
 | **Generated** | 2026-07-21 (commit be96b48f); hand-edited 2026-07-22 for the code-review fixes (#1803–#1809): added MT-A12 (admin-list same-origin read guard) and clarified MT-11 (non-string pick → 400). |
 
@@ -683,5 +683,5 @@ Result: web ☐
 2. As A, tap **Pick your times**.
 3. As the admin, close the survey, then open Today as A.
 4. Make a survey that opens tomorrow and open Today as A.
-**Expected:** Step 1: A sees "Offer · hours" with the title, the description and "We'll meet in Chyme.", no name, no count and nobody's picks; the admin sees it among their own cards with when it leaves Today and Keep it up. Step 2 opens the survey's shared page. Step 3: the card is gone. Step 4: no card until it opens.
+**Expected:** Step 1: A sees no card for the survey (since 2026-11-16 the "Offer · hours" cards come from Foundation); the admin sees it among their own cards with its title, its description and "We'll meet in Chyme.", when it leaves Today and Keep it up. Step 2: with no card, A opens the survey from its shared link instead, which shows the same page. Step 3: the admin's card is gone. Step 4: no card until it opens.
 **Result:** web ☐ android ☐ — notes:

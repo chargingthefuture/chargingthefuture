@@ -148,6 +148,7 @@ const SOURCE_NAMES: Record<string, string> = {
   'skills-hunt': 'SkillsHunt',
   'skills-hunt-mission': 'SkillsHunt',
   lighthouse: 'LightHouse',
+  foundation: 'Foundation',
   'mutual-time': 'Mutual Time',
   'skill-up': 'SkillUp',
   'what-works': 'WhatWorks',

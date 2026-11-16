@@ -76,6 +76,9 @@ contracts:
       - fireside_comments
       - notifications
       - mutual_time_events
+      - foundation_provider_skills
+      - foundation_user_extension
+      - directory_profiles
       - peer_programming_cohorts
       - peer_programming_settings
       - gdp_metric_snapshots
@@ -640,6 +643,10 @@ contracts:
       - trust_transport_requests
       - lighthouse_properties
       - mutual_time_events
+      - foundation_provider_skills
+      - foundation_user_extension
+      - directory_profiles
+      - skills_taxonomy_skills
     purpose: card_lifetime
     retentionClass: until_account_deletion
     idempotency: true
@@ -746,6 +753,10 @@ contracts:
       - peer_programming_goals
       - lighthouse_properties
       - mutual_time_events
+      - foundation_provider_skills
+      - foundation_user_extension
+      - directory_profiles
+      - skills_taxonomy_skills
       - today_card_windows
       - notifications
       - notification_preferences
