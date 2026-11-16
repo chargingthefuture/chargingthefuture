@@ -219,6 +219,16 @@ its plugin-routing role (today's hardcoded `getActionForText`) becomes Rasa-back
 6. **Withdraw a contribution** at any time from the same page. Withdrawal deactivates every
    knowledge row that contribution produced, in the same transaction — real because the assistant
    *retrieves* from a table at answer time rather than being trained on the text.
+7. **Also show it as a story on Today** (3.1.0 plan, added 2026-11-12, owner decisions 2026-11-16).
+   Under What you have sent, each contribution waiting to be read or in the library has this
+   checkbox, with a line saying members and visitors without an account will see it on Today under
+   the member's handle, a few pieces a day, after a person has read it; it can be turned off at any
+   time; and it shows once the member's Unlock is approved. Accepted pieces show up to five a day,
+   oldest acceptance first, beside the day's blog stories, as "Story · from <handle>" (non-plugin
+   inventory 5p). A choice made under the earlier words (2026-11-12.1, members only) shows to
+   members only, with a note and **Agree to the words above** until the writer agrees again.
+   Withdrawing takes the pieces off Today too. The reviewer sees "also asked to show it as Today
+   stories" in the queue.
 
 ## Target Admin / Owner Features
 
@@ -327,6 +337,10 @@ Built on `feat/comic-ai-assistant`; all server-only routes (no rendered surface)
   are the ones whose `contribution_id` is this contribution — the same rows account deletion
   removes. A row the contribution only pointed at because the text was already there (another
   member's, or the owner's import) stays on.
+- `POST /api/comic/shared-writing/[id]/story` (`comic.contribution.story.set`) — signed-in member
+  (Knowledge library contribution exception), own contribution only. Body `{ show }`. On sets
+  `story_consent_version` and `story_consent_at`, off clears both; only a contribution waiting to be
+  read or accepted can be turned on (404 otherwise). Audited with the choice, never the writing.
 - `GET /api/comic/admin/shared-writing?status=<status>` — admin. The contribution review queue, each
   row with its entries so the reviewer reads the writing rather than a count.
 - `POST /api/comic/admin/shared-writing/[id]/review` (`comic.contribution.review`) — admin. Accept
@@ -515,7 +529,11 @@ not_helpful / flagged ratings) are the **two training inputs** for the @comic as
    set once the ServiceCredits recognition grant is made so a re-review cannot double-grant,
    `withdrawn_at`, `created_at`, `updated_at`), plus `kind` ∈ links|export — which path was used;
   `links` is the default and carries no upload at all. Indexed on (`user_id`, `created_at` desc) and
-   (`status`, `created_at` desc).
+   (`status`, `created_at` desc). `story_consent_version` / `story_consent_at` (added 2026-11-12, migration
+   `0104_member_writing_as_today_stories.sql`): set when the member also chose to show this writing
+   as Today stories, with the version of the words they read (`SE_MEMBER_STORY_CONSENT_VERSION`);
+   NULL when not. Partial index `idx_comic_contributions_story` on `reviewed_at` for accepted rows
+   with the choice on. Account deletion already removes the row.
    **What is deliberately NOT stored: the uploaded `.zip`.** The archive is parsed in memory and
    discarded with the request — there is no file at rest to leak and nothing to delete later. Inbox
    messages, drafts, and profile data never reach this table at all; they are dropped by the
@@ -801,6 +819,9 @@ buckets are not reproduced — only real provenance (engine / intent / safety ca
 
 ## Change Log
 
+- 2026-11-16: **Member stories mixed in with the blog's, and shown signed out with consent (owner decisions).** Up to five accepted member stories a day, oldest first, beside the day's blog stories (`seMemberStoriesForDay`, `seStoriesWithMembers`), replacing the order after every blog post. The choice's words now name visitors without an account (`SE_MEMBER_STORY_CONSENT_VERSION` 2026-11-16.1); signed-out Today shows only pieces agreed under those words (`seMemberStoryShownSignedOut`), and an earlier choice offers Agree to the words above. No new column: `story_consent_version` already records which words.
+
+- 2026-11-12: **Members' own writing as Today stories (3.1.0 plan).** A contributor can choose, per contribution, to also show it as Today stories (User Features 7). It shows to signed-in members only after the existing review accepts it, while its library row is on, and while the writer's Unlock is approved; it joins the story order after the blog's posts (`seStoryQueue`, `lib/today/sources-member.ts`). New columns `story_consent_version`, `story_consent_at`, new route `POST /api/comic/shared-writing/[id]/story` and its command, access and audit contracts. The history list moved to `components/comic/comic-knowledge-history.tsx`.
 - 2026-11-12: **Turn the drafting endpoint on or off from the review queue.** Owner report: RunPod set the drafting endpoint to 0 max workers after two weeks with no requests, and the only way back was the RunPod dashboard. New `lib/chatbot/runpod-endpoint-power.ts` reads and sets the max workers of the one endpoint named in `OLLAMA_BASE_URL` (on is 1, off is 0) with `OLLAMA_API_KEY`, and refuses an answer where RunPod did not apply the change. New admin route `GET`/`POST /api/comic/admin/engine-power` (`comic.engine.power.get` / `.set`, audited). The review queue header shows "Drafting endpoint on · up to 1 worker" or "off · 0 max workers" with **Turn off** / **Turn on** (`components/comic/comic-engine-power.tsx`). The draft timeout reason now points at that switch. No schema change. Web only; @comic admin is not on Android.
 
 - 2026-11-02: **@comic in 3.1: Ask the architect (3.1.0 plan, Commons row).** Owner report: the 3.1 frame had no way to reach the assistant, since Commons, where 3.0 asks with `@comic`, is not part of 3.1. + New now has an **Ask the architect** section on web (`components/se-frame/new/architect-section.tsx`, `use-architect.ts`) and Android (`src/features/se-frame/new/ArchitectSection.tsx`): a question box that sends the question to `POST /api/comic/message` with the `@comic` mention (`seArchitectMessage` in `@ctf/shared` `today/new.ts`, 590 characters so the message stays within the 600 limit), then the member's own questions from `GET /api/comic/conversation`, each marked Being checked until a person approves or corrects the answer, with the answer, its linked plugins and Helpful / Not helpful (`POST /api/comic/answers/[turnId]/rate`). Approving or correcting an answer in the review queue now tells the asker in Activity (`comic.answer.published`, category `activity`, deduped on the answer turn, linking to + New; `askerOfTurn` in `lib/comic/repository.ts`, best effort so a failed notice never undoes the review). Approved members only, as before. No new route, table or contract.
