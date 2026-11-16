@@ -29,7 +29,7 @@ contracts:
           items:
             type: array
             maxItems: 20
-            description: Each person is id, name, headline, job title, claimed, region (state), country (two-letter code when it has one), offering skill names, listed skill names. The city is never read.
+            description: Each person is id, name, headline, job title, claimed, region (state), country (two-letter code when it has one), offering skill names, listed skill names, and the profile address the Directory holds (profileUrl, a Quora profile, or null). The city is never read.
           page:
             type: integer
           pageSize:

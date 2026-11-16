@@ -1,0 +1,274 @@
+/* People's profile and quote sheets, in the look of a Today card opened in place. Colors come from
+   the --se-* theme variables, so both follow every color and dark mode. */
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: color-mix(in srgb, var(--se-ink) 55%, transparent);
+  display: flex;
+  justify-content: center;
+}
+
+.scrim {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.sheet {
+  position: absolute;
+  top: 64px;
+  bottom: 0;
+  width: 100%;
+  max-width: 560px;
+  box-sizing: border-box;
+  background: var(--se-bg);
+  color: var(--se-ink);
+  border-radius: 26px 26px 0 0;
+  border-top: 1.5px solid var(--se-line);
+  padding: 10px 16px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+}
+
+.grip {
+  align-self: center;
+  flex: none;
+  width: 44px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--se-hair);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.kicker {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--se-soft);
+}
+
+.round {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border-radius: 50%;
+  border: 1.5px solid var(--se-hair);
+  background: var(--se-card);
+  color: var(--se-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.identity {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.face {
+  width: 64px;
+  height: 64px;
+  flex: none;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.face svg {
+  display: block;
+}
+
+.who {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.nameRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.name {
+  margin: 0;
+  font-family: 'Newsreader Variable', Newsreader, Georgia, serif;
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.15;
+}
+
+.tag {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--se-sunk);
+  color: var(--se-soft);
+}
+
+.headline {
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.origin {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--se-kind-offer);
+}
+
+.soft {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--se-soft);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.primary,
+.pill {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1.5px solid var(--se-line);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 2px 0 var(--se-line);
+  cursor: pointer;
+}
+
+.primary {
+  align-self: flex-start;
+  background: var(--se-btn);
+  color: var(--se-on-btn);
+}
+
+.primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pill {
+  background: var(--se-card);
+  color: var(--se-ink);
+}
+
+.primary:focus-visible,
+.pill:focus-visible,
+.round:focus-visible,
+.textButton:focus-visible {
+  outline: 2.5px solid var(--se-ink);
+  outline-offset: 2px;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.label {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--se-soft);
+}
+
+.bio {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip,
+.offer,
+.pending {
+  font-size: 12px;
+  padding: 3px 9px;
+  border-radius: 999px;
+}
+
+.chip {
+  border: 1px solid var(--se-hair);
+}
+
+.offer {
+  font-weight: 600;
+  background: var(--se-kind-offer);
+  color: var(--se-card);
+}
+
+.pending {
+  border: 1px dashed var(--se-hair);
+  color: var(--se-soft);
+}
+
+.quiet,
+.note {
+  padding: 10px 14px;
+  border-radius: 16px;
+  background: var(--se-sunk);
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--se-soft);
+}
+
+.note strong,
+.quiet strong {
+  color: var(--se-ink);
+}
+
+.done {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.done:empty {
+  display: none;
+}
+
+.textButton {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--se-ink);
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}

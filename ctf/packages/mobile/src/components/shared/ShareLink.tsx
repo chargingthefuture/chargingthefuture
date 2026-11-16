@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Text, Modal, TouchableOpacity, Pressable, StyleSheet, Linking, Share } from 'react-native';
+import { Text, Modal, TouchableOpacity, Pressable, StyleSheet, Linking, Share, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 import { useTheme, type ThemeTokens } from '../../theme';
 
 // THE shared way to share any URL across the mobile app — the React Native counterpart of the web
@@ -19,9 +19,14 @@ type ShareLinkProps = {
   title?: string;
   /** Accent color for the trigger text. */
   color?: string;
+  /** Accessible name for the trigger when its label does not say whose link it is. */
+  accessibilityLabel?: string;
+  /** Styles for the trigger and its text, so a screen can match its own buttons. */
+  triggerStyle?: StyleProp<ViewStyle>;
+  labelStyle?: StyleProp<TextStyle>;
 };
 
-export function ShareLink({ url, label = 'Share', title = 'Share this link', color = '#FB923C' }: ShareLinkProps) {
+export function ShareLink({ url, label = 'Share', title = 'Share this link', color = '#FB923C', accessibilityLabel, triggerStyle, labelStyle }: ShareLinkProps) {
   const { tokens } = useTheme();
   const styles = useMemo(() => makeStyles(tokens), [tokens]);
   const [open, setOpen] = useState(false);
@@ -51,10 +56,11 @@ export function ShareLink({ url, label = 'Share', title = 'Share this link', col
       <TouchableOpacity
         onPress={() => setOpen(true)}
         accessibilityRole="button"
-        accessibilityLabel={`${label} link`}
+        accessibilityLabel={accessibilityLabel ?? `${label} link`}
         accessibilityHint="Opens a menu to view, open, or copy the link"
+        style={triggerStyle}
       >
-        <Text style={[styles.trigger, { color }]}>{label}</Text>
+        <Text style={labelStyle ?? [styles.trigger, { color }]}>{label}</Text>
       </TouchableOpacity>
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>

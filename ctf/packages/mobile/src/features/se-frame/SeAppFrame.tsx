@@ -181,7 +181,7 @@ function TabScreen(props: TabScreenProps) {
   }
   if (tab === 'new') return <NewScreen key={newKind} t={t} initialKind={newKind} onOpen={onOpen} onClose={onClose} />;
   if (tab === 'activity') return <ActivityScreen t={t} onOpen={onOpen} />;
-  return <PeopleScreen key={peopleFilter} t={t} onOpen={onOpen} onToday={onClose} initialFilter={peopleFilter} />;
+  return <PeopleScreen key={peopleFilter} t={t} onOpen={onOpen} onToday={onClose} initialFilter={peopleFilter} viewerId={user?.id ?? null} />;
 }
 
 // Today's title row carries how many members are here ("3 Avens here"), hidden while unknown.

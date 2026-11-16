@@ -192,6 +192,7 @@ export function ShareLink({
   iconSize = 14,
   children,
   triggerStyle,
+  ariaLabel,
 }: {
   /** Absolute or app-relative URL. Relative is resolved against the current origin before sharing. */
   url: string;
@@ -206,6 +207,8 @@ export function ShareLink({
   children?: React.ReactNode;
   /** Styles for the trigger button — mainly for custom (children) triggers. */
   triggerStyle?: React.CSSProperties;
+  /** Accessible name for the trigger when its visible text does not say whose link it is. */
+  ariaLabel?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -287,6 +290,7 @@ export function ShareLink({
           setOpen((o) => !o);
         }}
         className={className}
+        aria-label={ariaLabel}
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls={open ? dialogId : undefined}

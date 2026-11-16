@@ -8,6 +8,7 @@ export type SePerson = {
     country: string | null;
     offering: string[];
     listed: string[];
+    profileUrl: string | null;
 };
 export type SePeoplePage = {
     items: SePerson[];
@@ -45,6 +46,8 @@ export declare const SE_PEOPLE_WORDS: {
     offering: string;
     listed: string;
     quote: string;
+    profile: string;
+    quora: string;
     empty: string;
     failed: string;
     tryAgain: string;
@@ -65,5 +68,7 @@ export declare function sePersonPlace(person: Pick<SePerson, 'region' | 'country
 export declare function sePersonLine(person: SePerson): string | null;
 export declare function sePersonListedOnly(person: SePerson): string[];
 export declare function sePersonLinks(person: SePerson): {
-    quote: string | null;
+    quora: string | null;
+    canQuote: boolean;
 };
+export declare function seWebAddress(value: string | null | undefined): string | null;
