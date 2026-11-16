@@ -76,8 +76,8 @@ function IdentityFields({ draft, prefix, tokens, set }: SectionProps) {
     <>
       <Field
         id={`${prefix}-handle`}
-        label="Handle or profile name"
-        hint="However you remember it. An exact match is not needed."
+        label="Handle or username"
+        hint="However you remember it."
         tokens={tokens}
       >
         <input
