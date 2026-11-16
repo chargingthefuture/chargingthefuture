@@ -27,6 +27,7 @@ import {
   type SeThemeTokens,
 } from '@ctf/shared';
 import { SeAvatar } from '../../../components/shared/SeAvatar';
+import { OwnProfileLink } from '../people/ProfileLink';
 import { makeMeStyles, type MeStyles } from './meStyles';
 import { useCredits, type Read } from './meData';
 
@@ -211,6 +212,7 @@ export function MeScreen({ t, user, profile, reading, onReading, onView, go, sav
     <View style={s.stack}>
       <Head s={s} t={t} user={user} profile={profile} go={go} onSettings={() => onView('settings')} />
       <Prompts s={s} profile={profile} onEdit={() => onView('prompts')} />
+      <OwnProfileLink t={t} />
       <CreditsCard s={s} t={t} go={go} handle={user.username ? `@${user.username}` : null} />
       <View style={s.shortcuts}>
         {saved ?? null}

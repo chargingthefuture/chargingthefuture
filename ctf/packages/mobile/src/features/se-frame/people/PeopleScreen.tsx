@@ -34,9 +34,9 @@ function Pager({ s, people, onPage }: { s: PeopleStyles; people: SePeoplePage; o
   );
 }
 
-type ResultsProps = { s: PeopleStyles; state: PeopleState; onSheet: OpenSheet; onPage: (_page: number) => void; onRetry: () => void };
+type ResultsProps = { t: SeThemeTokens; s: PeopleStyles; state: PeopleState; onSheet: OpenSheet; onPage: (_page: number) => void; onRetry: () => void };
 
-function Results({ s, state, onSheet, onPage, onRetry }: ResultsProps) {
+function Results({ t, s, state, onSheet, onPage, onRetry }: ResultsProps) {
   if (state.kind === 'loading' || state.kind === 'locked') return <Text style={s.meta}>{W.loading}</Text>;
   if (state.kind === 'error') {
     return (
@@ -52,7 +52,7 @@ function Results({ s, state, onSheet, onPage, onRetry }: ResultsProps) {
   return (
     <>
       {state.people.items.map((person) => (
-        <PersonCard key={person.id} s={s} person={person} onSheet={onSheet} />
+        <PersonCard key={person.id} t={t} s={s} person={person} onSheet={onSheet} />
       ))}
       <Pager s={s} people={state.people} onPage={onPage} />
     </>
@@ -134,7 +134,7 @@ export function PeopleScreen({ t, onOpen, onToday, initialFilter = 'all', viewer
           setPage(1);
         }}
       />
-      <Results s={s} state={state} onSheet={sheets.open} onPage={turnPage} onRetry={() => setAttempt((n) => n + 1)} />
+      <Results t={t} s={s} state={state} onSheet={sheets.open} onPage={turnPage} onRetry={() => setAttempt((n) => n + 1)} />
       <PersonSheets t={t} sheet={sheets.sheet} viewerId={viewerId} onClose={sheets.close} onSwitch={sheets.switchTo} />
     </View>
   );

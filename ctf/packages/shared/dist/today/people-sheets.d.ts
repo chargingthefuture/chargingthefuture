@@ -72,4 +72,10 @@ export declare const SE_PERSON_SHEET_WORDS: {
     openQuote: (name: string) => string;
     quoraFor: (name: string) => string;
     shareFor: (name: string) => string;
+    profileLink: string;
+    profileLinkTitle: string;
+    ownProfileLinkTitle: string;
+    copyProfileFor: (name: string) => string;
+    copyOwnProfile: string;
 };
+export declare function seOwnProfileIdFrom(body: unknown): string | null;

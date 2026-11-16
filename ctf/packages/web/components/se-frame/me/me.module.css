@@ -411,3 +411,9 @@
   outline: 2px solid var(--se-pick);
   outline-offset: 2px;
 }
+
+/* The member's own Skills Economy profile address, through the shared link control. */
+.profileLink:focus-visible {
+  outline: 2.5px solid var(--se-ink);
+  outline-offset: 2px;
+}

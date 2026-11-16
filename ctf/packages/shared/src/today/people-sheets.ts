@@ -169,4 +169,15 @@ export const SE_PERSON_SHEET_WORDS = {
   openQuote: (name: string) => `Request a quote from ${name}`,
   quoraFor: (name: string) => `${name}'s Quora profile: copy the address or open it`,
   shareFor: (name: string) => `Share ${name}'s profile: copy the address or open it`,
+  // The Skills Economy profile address, on each People row and on the member's own Me.
+  profileLink: 'Profile link',
+  profileLinkTitle: 'Their Skills Economy profile',
+  ownProfileLinkTitle: 'Your Skills Economy profile',
+  copyProfileFor: (name: string) => `Copy ${name}'s Skills Economy profile address`,
+  copyOwnProfile: 'Copy your Skills Economy profile address',
 };
+
+// The member's own Directory profile id from GET /api/directory/profile, or null when they have none.
+export function seOwnProfileIdFrom(body: unknown): string | null {
+  return text(record(record(body)?.profile)?.id);
+}

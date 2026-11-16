@@ -366,6 +366,7 @@ title in the Health sector; a profile with a Quora address and one without.
    close it. Tap **Profile** on the same person, then **Quora profile** on the row and in the sheet,
    then **Share** in the sheet and **Copy link**; close it. Open your own profile's Request a quote.
    With a keyboard, reach each button with Tab and close a sheet with Escape.
+   Tap **Profile link** on a row and **Copy link**; open Me and tap its **Profile link**.
 4. As the member not yet approved, open People and tap **Back to Today**; open People again and tap
    **Finish Unlock**.
 **Expected:** Step 1 shows "People" with "N listed" beside it, a search reading "A skill, like
@@ -387,7 +388,7 @@ someone offering, Quora profile (or "Quora profile not linked yet"), Share, Abou
 for someone else's claimed profile. Quora profile and Share open the shared link popup showing the
 full address with Open in new tab and Copy link, and Copy link announces "Copied!". On your own
 profile the quote button is grayed out with "This is your own profile — you can't request a quote
-from yourself." Each button's spoken name says whose profile it is; focus moves into a sheet when it
+from yourself." **Profile link** on each row and on Me (only when you have a Directory profile) opens the same popup with the full address ending in `/?tab=people&person=<id>`, read out as "Copy <name>'s Skills Economy profile address" (on Me, "Copy your Skills Economy profile address"); Copy link announces "Copied!", and opening the address lands on that person's profile sheet. Each button's spoken name says whose profile it is; focus moves into a sheet when it
 opens and back to the button that opened it when it closes; Escape closes the popup first, then the
 sheet. With the network off, each sheet says what could not be read with **Try again**. Step 4 shows ten faded faces, the number listed with "people listed, with what they
 can do", why names wait for one check, **Finish Unlock** (opens Unlock) and "Open to you now" with

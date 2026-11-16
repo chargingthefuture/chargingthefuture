@@ -21,6 +21,7 @@ import {
 } from '@ctf/shared';
 import type { ShellCurrentUser } from '../../community-shell/shell-types';
 import { SeAvatar } from '../../shared/se-avatar';
+import { OwnProfileLink } from '../people/profile-link';
 import { SavedCard } from './saved-card';
 import { useCredits } from './use-credits';
 import type { MeProfileState } from './use-me-profile';
@@ -213,6 +214,7 @@ export function MeScreen({ currentUser, profile, reading, onReading, onOpen, sav
     <div className={styles.stack}>
       <Head user={currentUser} profile={profile} onSettings={() => onOpen('settings')} />
       <Prompts profile={profile} onEdit={() => onOpen('prompts')} />
+      <OwnProfileLink className={styles.profileLink} />
       <CreditsCard handle={currentUser.username ? `@${currentUser.username}` : null} />
       <div className={styles.shortcuts}>
         {saved ?? null}

@@ -1,15 +1,16 @@
 // One person on Android, the copy of the web (components/se-frame/people/person-card.tsx), built to
 // the approved board "People, verified". Under the skills, as the Directory has them: Profile (the
-// profile in a sheet), the Quora profile when there is one (the shared link control: see the
+// profile in a sheet), Profile link (the Skills Economy profile address), the Quora profile when there is one (the shared link control: see the
 // address, open it, or copy or share it) and Request a quote for somebody offering a skill (the
 // Foundation request, in a sheet). Nothing here opens a 3.0 page.
 
 import React, { useRef } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
-import { SE_PEOPLE_WORDS as W, SE_PERSON_SHEET_WORDS as S, sePersonLine, sePersonLinks, sePersonListedOnly, type SePerson } from '@ctf/shared';
+import { SE_PEOPLE_WORDS as W, SE_PERSON_SHEET_WORDS as S, sePersonLine, sePersonLinks, sePersonListedOnly, type SePerson, type SeThemeTokens } from '@ctf/shared';
 import { SeAvatar } from '../../../components/shared/SeAvatar';
 import { ShareLink } from '../../../components/shared/ShareLink';
 import type { PeopleStyles } from './peopleStyles';
+import { ProfileLink } from './ProfileLink';
 
 export type PersonSheet = { kind: 'profile' | 'quote'; person: SePerson };
 // The sheet to open, with the button that opened it, so focus can go back to it on close.
@@ -28,7 +29,7 @@ function Skills({ s, label, skills, offering }: { s: PeopleStyles; label: string
   );
 }
 
-function Actions({ s, person, onSheet }: { s: PeopleStyles; person: SePerson; onSheet: OpenSheet }) {
+function Actions({ t, s, person, onSheet }: { t: SeThemeTokens; s: PeopleStyles; person: SePerson; onSheet: OpenSheet }) {
   const links = sePersonLinks(person);
   const quoteRef = useRef<View>(null);
   const profileRef = useRef<View>(null);
@@ -42,6 +43,7 @@ function Actions({ s, person, onSheet }: { s: PeopleStyles; person: SePerson; on
       <TouchableOpacity ref={profileRef} accessibilityRole="button" accessibilityLabel={S.openProfile(person.name)} onPress={() => onSheet({ kind: 'profile', person }, profileRef.current)} style={s.quote}>
         <Text style={s.quoteLabel}>{W.profile}</Text>
       </TouchableOpacity>
+      <ProfileLink t={t} profileId={person.id} label={S.copyProfileFor(person.name)} title={S.profileLinkTitle} />
       {links.quora ? (
         <ShareLink url={links.quora} label={W.quora} title={S.quoraTitle} accessibilityLabel={S.quoraFor(person.name)} triggerStyle={s.quote} labelStyle={s.quoteLabel} />
       ) : null}
@@ -49,7 +51,7 @@ function Actions({ s, person, onSheet }: { s: PeopleStyles; person: SePerson; on
   );
 }
 
-export function PersonCard({ s, person, onSheet }: { s: PeopleStyles; person: SePerson; onSheet: OpenSheet }) {
+export function PersonCard({ t, s, person, onSheet }: { t: SeThemeTokens; s: PeopleStyles; person: SePerson; onSheet: OpenSheet }) {
   const listed = sePersonListedOnly(person);
   const line = sePersonLine(person);
   return (
@@ -65,7 +67,7 @@ export function PersonCard({ s, person, onSheet }: { s: PeopleStyles; person: Se
         {line ? <Text style={s.line}>{line}</Text> : null}
         {person.offering.length > 0 ? <Skills s={s} label={W.offering} skills={person.offering} offering /> : null}
         {listed.length > 0 ? <Skills s={s} label={W.listed} skills={listed} /> : null}
-        <Actions s={s} person={person} onSheet={onSheet} />
+        <Actions t={t} s={s} person={person} onSheet={onSheet} />
       </View>
     </View>
   );

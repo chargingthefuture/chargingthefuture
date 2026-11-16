@@ -6,6 +6,7 @@ import {
   sePersonSheetPath,
   seQuoteProviderFrom,
   seQuoteServiceType,
+  seOwnProfileIdFrom,
   seWebAddress,
   type SePerson,
 } from '@ctf/shared';
@@ -73,5 +74,7 @@ describe('People rows and sheets, shared by web and Android', () => {
     expect(seFoundationFailure({ message: 'Provider profile unavailable.' }, 'x')).toBe('Provider profile unavailable.');
     expect(seFoundationFailure(null, 'Could not submit the quote request.')).toBe('Could not submit the quote request.');
     expect(sePersonSheetPath('a b')).toBe('/?tab=people&person=a%20b');
+    expect(seOwnProfileIdFrom({ profile: { id: 'p9' } })).toBe('p9');
+    expect(seOwnProfileIdFrom({ profile: null })).toBeNull();
   });
 });
