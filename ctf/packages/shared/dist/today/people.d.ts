@@ -9,6 +9,7 @@ export type SePerson = {
     offering: string[];
     listed: string[];
     profileUrl: string | null;
+    isYou?: boolean;
 };
 export type SePeoplePage = {
     items: SePerson[];

@@ -111,7 +111,7 @@ export function sePersonListedOnly(person) {
 // quote for somebody who offers a skill. Both the quote and the profile open as 3.1 sheets; nothing
 // here links to a 3.0 page (owner decision, 2026-11-16).
 export function sePersonLinks(person) {
-    return { quora: seWebAddress(person.profileUrl), canQuote: person.offering.length > 0 };
+    return { quora: seWebAddress(person.profileUrl), canQuote: person.offering.length > 0 && !person.isYou };
 }
 // An address opened outside the app: only http and https, so a stored value can never run script.
 export function seWebAddress(value) {
