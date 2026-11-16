@@ -28,3 +28,36 @@ describe('parseSurveySubmission removedYear', () => {
     expect(removedYearFor(2009)).toBeNull();
   });
 });
+
+describe('parseSurveySubmission currentProfileHandle', () => {
+  const base = { targetedIndividual: 'yes', anyAccountRemoved: false };
+
+  it('keeps the handle under a yes, trimmed', () => {
+    const result = parseSurveySubmission({
+      ...base,
+      hasCurrentProfile: true,
+      currentProfileHandle: '  Jane-Doe-12 ',
+    });
+    expect(result.ok && result.value.currentProfileHandle).toBe('Jane-Doe-12');
+  });
+
+  it('drops the handle under a no or a skip', () => {
+    for (const hasCurrentProfile of [false, null]) {
+      const result = parseSurveySubmission({
+        ...base,
+        hasCurrentProfile,
+        currentProfileHandle: 'Jane-Doe-12',
+      });
+      expect(result.ok && result.value.currentProfileHandle).toBeNull();
+    }
+  });
+
+  it('stores nothing for an empty handle', () => {
+    const result = parseSurveySubmission({
+      ...base,
+      hasCurrentProfile: true,
+      currentProfileHandle: '   ',
+    });
+    expect(result.ok && result.value.currentProfileHandle).toBeNull();
+  });
+});

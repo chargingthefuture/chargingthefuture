@@ -16,6 +16,7 @@ export type SurveyFormState = {
   targetedIndividual: QuoraSurveyTargetedIndividual;
   anyAccountRemoved: boolean;
   hasCurrentProfile: boolean | null;
+  currentProfileHandle: string;
   accounts: AccountDraft[];
   evidenceNote: string;
   otherNotes: string;
@@ -60,9 +61,10 @@ export function buildSubmission(state: SurveyFormState): Record<string, unknown>
   return {
     targetedIndividual: state.targetedIndividual,
     anyAccountRemoved: state.anyAccountRemoved,
-    // The yes/no travels; the URL that goes with it does not. That link is a verification link
-    // and would identify the person who sent this otherwise-unattached answer.
+    // The handle of the account they still hold goes with the answer, only under a yes.
     hasCurrentProfile: state.hasCurrentProfile,
+    currentProfileHandle:
+      state.hasCurrentProfile === true ? state.currentProfileHandle.trim() : '',
     accounts,
     evidenceNote: state.evidenceNote,
     otherNotes: state.otherNotes,

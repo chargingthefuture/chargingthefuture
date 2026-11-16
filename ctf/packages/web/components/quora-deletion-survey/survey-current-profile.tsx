@@ -9,11 +9,9 @@ import { submitVerification } from './survey-submit';
 // The optional question about an account the person still holds, and the offer that follows it on
 // the confirmation screen.
 //
-// Why these live together: the yes/no is stored with the response, the URL is not. It is held in
-// the browser and only sent anywhere if the person presses the button below. That is not about
-// hiding them — the response carries their member id — it is that a verification URL belongs in
-// the verification queue, where a reviewer acts on it, rather than sitting in a research table
-// nobody re-reads.
+// Why these live together: the yes/no and the handle are stored with the response, and the profile
+// link built from the handle reaches the verification queue only if the person presses the button
+// below.
 
 export function CurrentProfileQuestion({
   hasCurrentProfile,

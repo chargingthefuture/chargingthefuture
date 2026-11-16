@@ -234,6 +234,7 @@ export function QuoraSurveyPublicShell({ needsUnlock }: { needsUnlock: boolean }
         targetedIndividual,
         anyAccountRemoved,
         hasCurrentProfile,
+        currentProfileHandle: currentProfileUrl,
         accounts,
         evidenceNote,
         otherNotes,

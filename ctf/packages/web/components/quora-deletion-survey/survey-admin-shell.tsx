@@ -194,7 +194,9 @@ function ResponseCard({
         {response.has_current_profile === null
           ? ''
           : response.has_current_profile
-            ? ' · still has a Quora account'
+            ? response.current_profile_handle
+              ? ` · still has a Quora account: ${response.current_profile_handle}`
+              : ' · still has a Quora account'
             : ' · has no Quora account left'}
       </div>
 

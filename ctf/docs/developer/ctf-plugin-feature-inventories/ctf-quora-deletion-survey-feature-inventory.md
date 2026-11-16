@@ -76,9 +76,8 @@ sees that plus a sign-in link, and no questions. Any signed-in member, verified 
 - Optionally say whether they still have a Quora account that was not removed, and give its handle
   or username (the part after quora.com/profile/ in its link; a pasted link also works). Both are
   skippable and read as skippable: naming an account someone still holds is a larger ask than
-  naming ones already gone. The form builds the profile link from the handle. The link is never
-  stored with the answer — it stays in the browser
-  and is only used if they choose the verification offer below.
+  naming ones already gone. The handle is stored with the answer, as typed. The form also builds
+  the profile link from it, which is used only if they choose the verification offer below.
 - Send the answer and see it confirmed. There is no email, no confirmation message, and no way for
   anyone here to contact them afterward, because the form asks for no contact detail at all.
 - On the confirmation screen, if they named an account they still hold and have not
@@ -123,7 +122,8 @@ At `/admin/quora-deletion-survey`, an admin can:
 | `user_id` | TEXT NULL | The member who sent this. Set on every insert. NULL means the account was deleted and the id was cleared, never that the answer was anonymous. |
 | `targeted_individual` | TEXT | `yes` / `no`, no third option. Required by the form and by the submit route, so the column default is never a recorded answer. |
 | `any_account_removed` | BOOLEAN | Yes/no only. The count of removals is derived from the account rows, not from this. |
-| `has_current_profile` | BOOLEAN NULL | Optional. NULL means the question was skipped, which is not the same answer as no. The URL that goes with a yes is deliberately not stored here — see the two-sided design below. |
+| `has_current_profile` | BOOLEAN NULL | Optional. NULL means the question was skipped, which is not the same answer as no. See `current_profile_handle` for the account itself. |
+| `current_profile_handle` | TEXT NULL | The handle or username of the account the member still holds, as typed (a pasted profile link is kept as typed). Set only under a yes to `has_current_profile`, capped at 200 characters. Cleared to NULL with `user_id` when the member's account is deleted. Added 2026-11-16 (`db/migrations/post/0111_quora_survey_current_profile_handle.sql`). |
 | `evidence_note` | TEXT NULL | Free text, capped at 5000 characters |
 | `other_notes` | TEXT NULL | Free text, capped at 5000 characters |
 | `consent_publish_handles` | BOOLEAN | Defaults to FALSE |
@@ -201,7 +201,8 @@ retained, accounts cascading from responses).
 What is deliberately not stored: no IP address, no user agent, no email, and no contact detail of
 any kind. The follow-up contact field was removed from the questionnaire on the owner's instruction
 (2026-08-18). What is stored is the member id of the account that sent the response, the Quora
-handles the person chose to type, and the consent flags governing them.
+handles the person chose to type (closed accounts, and the account they still hold if they gave
+it), and the consent flags governing them.
 
 The costs that remain, stated plainly: there is still no way to reach a respondent outside the app,
 and no answer is verified against Quora. Duplicate detection, which an earlier build could not do
@@ -247,10 +248,10 @@ reported.
 Knowing who answered is not permission to print it. Publication is governed by the three consent
 flags on the row and by nothing else, and that separation is the promise the form actually makes.
 
-The live profile URL is still not stored on the response. Not to hide the person — the row names
-them — but because a verification URL belongs in the verification queue where a reviewer acts on
-it, rather than sitting in a research table nobody re-reads. The yes/no answer is stored; the link
-travels to the verification route instead.
+The handle of the account a member still holds is stored on the response (owner decision,
+2026-11-16). The row already names the member, so keeping it apart protected nobody. The
+verification offer still builds the profile link from it and sends that link to the Unlock queue
+only if the member presses the button.
 
 Every handle a person reports as closed is written to their Directory account history on
 submission — for every respondent, whether or not they go on to verify, and not behind a choice.
@@ -341,7 +342,8 @@ this is not a plugin. The steps that matter:
    shown.
 7. Download the CSV. One row per reported removal, the zero-removal response present with empty
    account columns, and free text containing commas and quotes still inside its own cell. The
-   `has_current_profile` cell is empty for a response that skipped that question.
+   `has_current_profile` cell is empty for a response that skipped that question, and
+   `current_profile_handle` holds the handle a yes answer gave.
 7b. Send a response whose handle is `=1+1` and whose notes start with `@`. In the downloaded CSV
    both cells start with a single quote, and a spreadsheet shows them as text rather than running
    them as formulas.
@@ -382,6 +384,8 @@ this is not a plugin. The steps that matter:
   `metadata.source` naming the survey on submissions that came this way.
 
 ## Change Log
+
+- 2026-11-16: **The handle of the account a member still holds is stored with the answer.** Owner decision. New column `quora_deletion_survey_responses.current_profile_handle` (TEXT NULL, `db/migrations/post/0111_quora_survey_current_profile_handle.sql`, production and demo). The submit route takes `currentProfileHandle` and keeps it only under a yes to `hasCurrentProfile`, cut to 200 characters. The admin card shows it after "still has a Quora account", and the CSV gains a `current_profile_handle` column after `has_current_profile`. Account deletion clears it with `user_id`. Command contract and deletion contract updated.
 
 - 2026-11-16: **The account a member still holds is asked for by handle.** Owner directive: the handle is the last part of the profile link, so the follow-up to "Do you have a Quora account now…" asks for the handle or username instead of the full link, and the form builds the link with `profileUrlForHandle`, the same function the removed-account route uses. It moved from `lib/quora-deletion-survey/unlock-link.ts` to `lib/quora-deletion-survey/profile-url.ts` so the browser form can use it without the database imports. A pasted link still works. The removed-account cards' handle field now reads "Handle or username". No route, schema or contract change.
 
