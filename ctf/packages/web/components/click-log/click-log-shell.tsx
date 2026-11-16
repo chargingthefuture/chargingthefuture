@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { BackChevronButton } from "@/lib/nav/back-history";
 import type { ClickLogIncident } from "../../lib/click-log/types";
-import { NOT_LISTED_SCHEME_SLUG } from "../../lib/click-log/tags";
+import { clickLogCreateBody } from "@ctf/shared";
 import { useTheme } from "@/hooks/useTheme";
 import { deriveClickLogStats, getClickLogTokens } from "./click-log-shared";
 import { ClickLogLogPanel } from "./click-log-log-panel";
@@ -40,32 +40,6 @@ async function throwIfNotOk(res: Response, fallback: string): Promise<void> {
     const body = (await res.json().catch(() => ({}))) as { error?: string };
     throw new Error(body.error ?? fallback);
   }
-}
-
-// Build the create-incident request body. Unpicked tags are omitted entirely (the API treats
-// absent as untagged), and the suggestion fields ride along only with the "Not listed" scheme
-// (the API rejects them otherwise). A tagged incident always shares its trend data (owner
-// decision, 2026-08-18) — the form locks the share checkbox on, and this sends the matching
-// true so the server (which rejects tagged-but-unshared) accepts it. Module-level so
-// postIncident stays under the complexity limit.
-function buildCreateBody(args: {
-  metadata: Record<string, unknown>;
-  sharedWithOwner: boolean;
-  problemTags: string[];
-  schemeTags: string[];
-  schemeSuggestion: string;
-  schemeQuoraUrl: string;
-}): Record<string, unknown> {
-  const notListed = args.schemeTags.includes(NOT_LISTED_SCHEME_SLUG);
-  const tagged = args.problemTags.length > 0 || args.schemeTags.length > 0;
-  return {
-    metadata: args.metadata,
-    sharedWithOwner: tagged || args.sharedWithOwner,
-    ...(args.problemTags.length > 0 ? { problemTags: args.problemTags } : {}),
-    ...(args.schemeTags.length > 0 ? { schemeTags: args.schemeTags } : {}),
-    ...(notListed && args.schemeSuggestion.trim() ? { schemeSuggestion: args.schemeSuggestion.trim() } : {}),
-    ...(notListed && args.schemeQuoraUrl.trim() ? { schemeQuoraUrl: args.schemeQuoraUrl.trim() } : {}),
-  };
 }
 
 // Global share default. Opt-in and member-controlled; a new incident starts from this setting
@@ -218,7 +192,7 @@ export function ClickLogShell({ isAdmin }: { isAdmin?: boolean }) {
     );
   }
 
-  async function postIncident(metadata: Record<string, unknown>): Promise<void> {
+  async function postIncident(): Promise<void> {
     setBusy(true);
     setError(null);
     try {
@@ -226,8 +200,9 @@ export function ClickLogShell({ isAdmin }: { isAdmin?: boolean }) {
         method: "POST",
         headers: { "Content-Type": "application/json", "x-ctf-csrf": "1" },
         body: JSON.stringify(
-          buildCreateBody({
-            metadata,
+          clickLogCreateBody({
+            location: geo,
+            note,
             sharedWithOwner: share.formShare,
             problemTags,
             schemeTags,
@@ -315,7 +290,7 @@ export function ClickLogShell({ isAdmin }: { isAdmin?: boolean }) {
         onToggleForm={() => setShowForm((s) => !s)}
         onNoteChange={setNote}
         onAddLocation={addLocation}
-        onSubmit={() => void postIncident({ ...geo, notes: note })}
+        onSubmit={() => void postIncident()}
         onCancel={() => { setShowForm(false); setNote(""); setProblemTags([]); setSchemeTags([]); setSchemeSuggestion(""); setSchemeQuoraUrl(""); setGeo({}); setGeoStatus("idle"); setGeoError(null); share.setFormShare(share.shareDefault); }}
       />
 

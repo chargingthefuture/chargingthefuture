@@ -48,3 +48,7 @@ export * from './today/guest-days-won';
 export * from './today/dot-icons';
 export * from './observability/scrub';
 export * from './weavers/limits';
+export * from './click-log/tags';
+export * from './click-log/limits';
+export * from './click-log/share-copy';
+export * from './click-log/entry';

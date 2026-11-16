@@ -4,7 +4,7 @@ name: ClickLog — Scheme Suggestion Issues
 # (member-written text may carry personal detail; issues never carry member identity), and files
 # a threshold alert when shared "Not listed" incidents are trending. The pipeline ONLY files
 # issues — naming a scheme stays a deliberate PR that edits the canonical list in
-# packages/web/lib/click-log/tags.ts. See ctf/scripts/proposeSchemeSuggestions.mjs.
+# packages/shared/src/click-log/tags.ts. See ctf/scripts/proposeSchemeSuggestions.mjs.
 #
 # Prerequisites (same as bug reports):
 #   1. The private triage repo exists (chargingthefuture/bug-reports).
