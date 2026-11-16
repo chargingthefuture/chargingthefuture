@@ -20,6 +20,7 @@ export type SharedWritingSummary = {
   declineReason: string;
   createdAtIso: string;
   showAsStory: boolean;
+  storyConsentCurrent: boolean;
 };
 
 type ComicTokens = ReturnType<typeof getComicTokens>;
@@ -108,6 +109,19 @@ function StoryChoice({ t, item, saving, onStory }: { t: ComicTokens; item: Share
   );
 }
 
+// A choice made under earlier words, which kept the piece from visitors: ticking again agrees to the
+// current words.
+function AgreeAgain({ t, saving, onStory }: { t: ComicTokens; saving: boolean; onStory: (show: boolean) => void }) {
+  return (
+    <p style={{ fontSize: 12, color: t.MUTED, margin: '4px 0 0' }}>
+      {SE_MEMBER_STORY_WORDS.agreeAgain}{' '}
+      <button type="button" disabled={saving} onClick={() => onStory(true)} style={{ background: 'transparent', border: 'none', padding: 0, color: t.TEXT, textDecoration: 'underline', cursor: 'pointer', fontSize: 12 }}>
+        {SE_MEMBER_STORY_WORDS.agree}
+      </button>
+    </p>
+  );
+}
+
 function HistoryRow({
   t,
   item,
@@ -131,6 +145,7 @@ function HistoryRow({
           {item.status === 'declined' && item.declineReason ? ` · ${item.declineReason}` : ''}
         </div>
         {canShowAsStory(item) ? <StoryChoice t={t} item={item} saving={saving} onStory={onStory} /> : null}
+        {canShowAsStory(item) && item.showAsStory && !item.storyConsentCurrent ? <AgreeAgain t={t} saving={saving} onStory={onStory} /> : null}
       </div>
       {item.status !== 'withdrawn' ? (
         <button

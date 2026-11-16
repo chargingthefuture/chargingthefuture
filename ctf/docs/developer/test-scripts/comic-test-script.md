@@ -479,7 +479,7 @@ rather than two copies to keep in step. The admin landing also lists **Shared Wr
 **Steps:**
 1. On `/knowledge`, under What you have sent, tick **Also show it as a story on Today** on a contribution waiting to be read. Reload the page.
 2. As the admin, accept it in the review queue (it reads "also asked to show it as Today stories").
-3. On a day whose release reaches members' writing (it comes after every blog post), open Today as the second member, on web and on Android.
+3. The day after acceptance, open Today as the second member, on web and on Android.
 4. Open Today signed out.
 5. As the writer, untick the box, then reload Today as the second member. Tick it again, then Withdraw the contribution.
 6. Repeat step 1 with a member whose Unlock is not approved, accepted by the admin.
@@ -487,7 +487,8 @@ rather than two copies to keep in step. The admin landing also lists **Shared Wr
 **Expected:**
 - The box stays ticked after reload; the choice is saved on the account, not the device.
 - The second member sees a Story card "Story · from <writer's handle>" with the piece, This helped me, and "Bring your writing" in its sheet.
-- Signed out, no member's story shows.
+- It sits beside the day's five blog stories; no more than five member stories show on one day, oldest acceptance first.
+- Signed out, the story shows too, because the box was ticked under the current words. A choice made under the earlier words (story_consent_version 2026-11-12.1) shows to members only, with a note and **Agree to the words above**; pressing it makes the story show signed out.
 - Unticking or withdrawing takes the story off Today. A withdrawn contribution shows no box.
 - The not-yet-approved member's piece does not show on Today until their Unlock is approved.
 

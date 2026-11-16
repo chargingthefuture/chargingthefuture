@@ -1,5 +1,14 @@
 import { describe, expect, it, vi } from 'vitest';
-import { seMemberStoryId, seStoriesForDay, seStoryQueue, SE_STORY_RELEASE_START, type SeStoryPost } from '@ctf/shared';
+import {
+  SE_MEMBER_STORY_CONSENT_VERSION,
+  SE_STORY_RELEASE_START,
+  seMemberStoriesForDay,
+  seMemberStoryId,
+  seMemberStoryShownSignedOut,
+  seStoriesForDay,
+  seStoriesWithMembers,
+  type SeStoryPost,
+} from '@ctf/shared';
 
 vi.mock('lib/db/postgres', () => ({ queryDb: vi.fn() }));
 
@@ -9,30 +18,41 @@ function post(number: number, date = '2026-01-01'): SeStoryPost {
   return { number, slug: `post-${number}`, title: `Post ${number}`, date, collection: 'posts', url: `https://blog/${number}`, text: 'Text' };
 }
 
-const members = [
-  { id: 'b', title: 'Second', text: 'Two', acceptedAtIso: '2026-11-02T00:00:00.000Z' },
-  { id: 'a', title: 'First', text: 'One', acceptedAtIso: '2026-11-01T00:00:00.000Z' },
-];
+function story(id: string, acceptedDay: string) {
+  return { id, title: id, text: id, acceptedAtIso: `${acceptedDay}T12:00:00.000Z` };
+}
 
-describe('members stories in the release order', () => {
-  it('come after every blog post, oldest acceptance first, numbered after the last post', () => {
-    const queue = seStoryQueue([post(1), post(7)], members);
-    expect(queue.map((item) => item.slug)).toEqual(['post-1', 'post-7', 'member-a', 'member-b']);
-    expect(queue.slice(2).map((item) => item.number)).toEqual([8, 9]);
+const DAY0 = SE_STORY_RELEASE_START;
+const DAY1 = '2026-11-04';
+const DAY2 = '2026-11-05';
+
+describe('members stories beside the blog stories', () => {
+  it('show up to five a day, oldest acceptance first, from the day after acceptance', () => {
+    const members = Array.from({ length: 7 }, (_, index) => story(`s${index}`, '2026-10-01'));
+    expect(seMemberStoriesForDay(members, DAY0).map((item) => item.id)).toEqual(['s0', 's1', 's2', 's3', 's4']);
+    expect(seMemberStoriesForDay(members, DAY1).map((item) => item.id)).toEqual(['s5', 's6']);
+    expect(seMemberStoriesForDay(members, DAY2)).toEqual([]);
+  });
+
+  it('never show on the day a story was accepted', () => {
+    const members = [story('late', DAY1)];
+    expect(seMemberStoriesForDay(members, DAY1)).toEqual([]);
+    expect(seMemberStoriesForDay(members, DAY2).map((item) => item.id)).toEqual(['late']);
+  });
+
+  it('leave the blog stories as they were and come after them', () => {
+    const posts = Array.from({ length: 12 }, (_, index) => post(index + 1));
+    const mixed = seStoriesWithMembers(posts, [story('a', '2026-10-01')], DAY0);
+    expect(mixed.slice(0, 5)).toEqual(seStoriesForDay(posts, DAY0));
+    expect(mixed.map((item) => item.slug).slice(5)).toEqual(['member-a']);
     expect(seMemberStoryId('member-a')).toBe('a');
     expect(seMemberStoryId('post-1')).toBeNull();
   });
 
-  it('leave the blog posts on their days', () => {
-    const posts = Array.from({ length: 12 }, (_, index) => post(index + 1));
-    const day = '2026-11-04';
-    expect(seStoriesForDay(seStoryQueue(posts, members), day).slice(0, 5)).toEqual(seStoriesForDay(posts, day).slice(0, 5));
-  });
-
-  it('never join the day they were accepted the way a new blog post does', () => {
-    const accepted = [{ id: 'c', title: 'New', text: 'Three', acceptedAtIso: `${SE_STORY_RELEASE_START}T00:00:00.000Z` }];
-    const released = seStoriesForDay(seStoryQueue(Array.from({ length: 10 }, (_, index) => post(index + 1)), accepted), SE_STORY_RELEASE_START);
-    expect(released.map((item) => item.slug)).not.toContain('member-c');
+  it('show signed out only under the words that name visitors', () => {
+    expect(seMemberStoryShownSignedOut(SE_MEMBER_STORY_CONSENT_VERSION)).toBe(true);
+    expect(seMemberStoryShownSignedOut('2026-11-12.1')).toBe(false);
+    expect(seMemberStoryShownSignedOut(null)).toBe(false);
   });
 });
 

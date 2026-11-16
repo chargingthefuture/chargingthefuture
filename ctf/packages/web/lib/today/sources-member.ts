@@ -1,4 +1,4 @@
-import { SE_MEMBER_STORY_WORDS, seMemberStorySlug, type SeMemberStory, type SeStoryPost, type SeTodayCard } from '@ctf/shared';
+import { SE_MEMBER_STORY_WORDS, seMemberStoryShownSignedOut, seMemberStorySlug, type SeMemberStory, type SeStoryPost, type SeTodayCard } from '@ctf/shared';
 import { listMemberStoryRows } from 'lib/comic/shared-writing-stories';
 import { isUserUnlocked } from 'lib/shared/unlock-interface';
 import { resolveUsernames } from 'lib/identity/resolve-usernames';
@@ -7,8 +7,8 @@ import { action, author, card, clip } from './card';
 
 // Members' own writing on Today (3.1.0 plan): the writing a member lent to the Knowledge Library and
 // also chose to show as stories, once a person accepted it, and only while the writer's Unlock is
-// approved. It joins the story order after the blog's posts (seStoryQueue). Signed out it is never
-// shown (lib/today/build-public.ts drops it).
+// approved. Up to five a day beside the blog's stories (seStoriesWithMembers). Signed out, only a
+// piece whose writer agreed to the words that name visitors shows (`signedOut`).
 
 export const MEMBER_STORY_SOURCE = 'member-story';
 
@@ -18,7 +18,7 @@ const KNOWLEDGE_HREF = '/knowledge';
 // The full piece is read in place, so the card carries it up to this length.
 const BODY_MAX = 2400;
 
-export type MemberStories = { stories: SeMemberStory[]; writers: Map<string, string> };
+export type MemberStories = { stories: SeMemberStory[]; writers: Map<string, string>; signedOut: Set<string> };
 
 async function approvedWriters(userIds: string[]): Promise<Set<string>> {
   const checks = await Promise.all(userIds.map(async (id) => ((await isUserUnlocked(id)) ? id : null)));
@@ -35,10 +35,11 @@ export async function readMemberStories(): Promise<MemberStories> {
     return {
       stories: shown.map(({ id, title, text, acceptedAtIso }) => ({ id, title, text, acceptedAtIso })),
       writers: new Map(shown.map((row) => [seMemberStorySlug(row.id), row.userId])),
+      signedOut: new Set(shown.filter((row) => seMemberStoryShownSignedOut(row.consentVersion)).map((row) => seMemberStorySlug(row.id))),
     };
   } catch (error) {
     reportError(error, { area: 'today', op: 'member_stories' });
-    return { stories: [], writers: new Map() };
+    return { stories: [], writers: new Map(), signedOut: new Set() };
   }
 }
 

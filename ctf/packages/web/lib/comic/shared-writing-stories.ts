@@ -9,6 +9,8 @@ import { queryDb } from 'lib/db/postgres';
 //      withdrawal switches the rows off and so takes the story off Today too);
 //   3. the writer's Unlock is approved, checked when Today is built (lib/today/sources-member.ts),
 //      because nothing an unapproved member writes is shown to others.
+// Signed-out Today also needs the choice made under words that name visitors
+// (seMemberStoryShownSignedOut); an earlier choice shows to members only until the writer agrees again.
 
 // Turn the Today choice on or off for one of the member's own contributions. Scoped to the caller in
 // the query, so somebody else's id reads the same as one that does not exist. A withdrawn or declined
@@ -25,11 +27,12 @@ export async function setSharedWritingStory(userId: string, contributionId: stri
   return (result.rowCount ?? 0) > 0;
 }
 
-export type MemberStoryRow = SeMemberStory & { userId: string };
+export type MemberStoryRow = SeMemberStory & { userId: string; consentVersion: string | null };
 
 type Row = {
   id: string;
   user_id: string;
+  story_consent_version: string | null;
   question: string | null;
   content: string;
   reviewed_at: Date | null;
@@ -50,7 +53,7 @@ export function memberStoryTitle(question: string | null, content: string): stri
 // Unlock standing is not read here; the caller filters on it.
 export async function listMemberStoryRows(): Promise<MemberStoryRow[]> {
   const result = await queryDb<Row>(
-    `SELECT k.id, c.user_id, k.question, k.content, c.reviewed_at, k.created_at
+    `SELECT k.id, c.user_id, c.story_consent_version, k.question, k.content, c.reviewed_at, k.created_at
      FROM comic_knowledge_entries k
      JOIN comic_contributions c ON c.id = k.contribution_id
      WHERE c.status = 'accepted' AND c.story_consent_at IS NOT NULL AND k.active = TRUE
@@ -60,6 +63,7 @@ export async function listMemberStoryRows(): Promise<MemberStoryRow[]> {
   return result.rows.map((row) => ({
     id: row.id,
     userId: row.user_id,
+    consentVersion: row.story_consent_version,
     title: memberStoryTitle(row.question, row.content),
     text: row.content,
     acceptedAtIso: new Date(row.reviewed_at ?? row.created_at).toISOString(),

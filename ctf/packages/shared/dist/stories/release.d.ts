@@ -11,13 +11,16 @@ export type SeStoryPost = {
     text: string;
 };
 export declare const SE_MEMBER_STORY_COLLECTION = "member";
+export declare const SE_MEMBER_STORIES_PER_DAY = 5;
 export type SeMemberStory = {
     id: string;
     title: string;
     text: string;
     acceptedAtIso: string;
 };
-export declare function seStoryQueue(posts: readonly SeStoryPost[], members: readonly SeMemberStory[]): SeStoryPost[];
+export declare function seMemberStoriesForDay(members: readonly SeMemberStory[], day: string): SeMemberStory[];
+export declare function seMemberStoryPost(story: SeMemberStory): SeStoryPost;
+export declare function seStoriesWithMembers(posts: readonly SeStoryPost[], members: readonly SeMemberStory[], day: string): SeStoryPost[];
 export declare function seMemberStorySlug(id: string): string;
 export declare function seMemberStoryId(slug: string): string | null;
 export declare function seParseStoryPosts(body: unknown): SeStoryPost[] | null;

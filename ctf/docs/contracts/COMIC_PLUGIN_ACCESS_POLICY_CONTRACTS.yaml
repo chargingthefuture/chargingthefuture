@@ -327,7 +327,9 @@ policies:
       - member
     # Open on the same terms as contributing (the Knowledge library contribution exception): the
     # choice can be made before Unlock. Showing is not: a story reaches Today only after review and
-    # only while the writer's Unlock is approved, and never on signed-out Today.
+    # only while the writer's Unlock is approved. Signed-out Today shows it only when the choice was
+    # made under words that name visitors (SE_MEMBER_STORY_PUBLIC_VERSIONS); an earlier choice shows
+    # to members only until the writer agrees again.
     minUnlockTier: any_authenticated
     attributePolicies:
       tenancy: same_workspace
@@ -335,7 +337,7 @@ policies:
       explicitConsentRequired: true
       requiresAcceptedReviewBeforeShown: true
       requiresWriterUnlockApprovedBeforeShown: true
-      signedOutVisible: false
+      signedOutVisibleOnlyUnderPublicConsentVersion: true
     consentRequirements:
       scopes:
         - comic_knowledge_contribution

@@ -219,13 +219,16 @@ its plugin-routing role (today's hardcoded `getActionForText`) becomes Rasa-back
 6. **Withdraw a contribution** at any time from the same page. Withdrawal deactivates every
    knowledge row that contribution produced, in the same transaction — real because the assistant
    *retrieves* from a table at answer time rather than being trained on the text.
-7. **Also show it as a story on Today** (3.1.0 plan, added 2026-11-12). Under What you have sent,
-   each contribution waiting to be read or in the library has this checkbox, with a line saying
-   signed-in members see it on Today under the member's handle, a few pieces at a time, after a
-   person has read it; never visitors who are not signed in; it can be turned off at any time; and it
-   shows once the member's Unlock is approved. Accepted pieces join Today's story order after the
-   blog's posts and Quora answers as "Story · from <handle>" (non-plugin inventory 5p). Withdrawing
-   takes them off Today too. The reviewer sees "also asked to show it as Today stories" in the queue.
+7. **Also show it as a story on Today** (3.1.0 plan, added 2026-11-12, owner decisions 2026-11-16).
+   Under What you have sent, each contribution waiting to be read or in the library has this
+   checkbox, with a line saying members and visitors without an account will see it on Today under
+   the member's handle, a few pieces a day, after a person has read it; it can be turned off at any
+   time; and it shows once the member's Unlock is approved. Accepted pieces show up to five a day,
+   oldest acceptance first, beside the day's blog stories, as "Story · from <handle>" (non-plugin
+   inventory 5p). A choice made under the earlier words (2026-11-12.1, members only) shows to
+   members only, with a note and **Agree to the words above** until the writer agrees again.
+   Withdrawing takes the pieces off Today too. The reviewer sees "also asked to show it as Today
+   stories" in the queue.
 
 ## Target Admin / Owner Features
 
@@ -815,6 +818,8 @@ buckets are not reproduced — only real provenance (engine / intent / safety ca
 `nlu_confidence`, surfaced as "Not yet scored" when null) is shown.
 
 ## Change Log
+
+- 2026-11-16: **Member stories mixed in with the blog's, and shown signed out with consent (owner decisions).** Up to five accepted member stories a day, oldest first, beside the day's blog stories (`seMemberStoriesForDay`, `seStoriesWithMembers`), replacing the order after every blog post. The choice's words now name visitors without an account (`SE_MEMBER_STORY_CONSENT_VERSION` 2026-11-16.1); signed-out Today shows only pieces agreed under those words (`seMemberStoryShownSignedOut`), and an earlier choice offers Agree to the words above. No new column: `story_consent_version` already records which words.
 
 - 2026-11-12: **Members' own writing as Today stories (3.1.0 plan).** A contributor can choose, per contribution, to also show it as Today stories (User Features 7). It shows to signed-in members only after the existing review accepts it, while its library row is on, and while the writer's Unlock is approved; it joins the story order after the blog's posts (`seStoryQueue`, `lib/today/sources-member.ts`). New columns `story_consent_version`, `story_consent_at`, new route `POST /api/comic/shared-writing/[id]/story` and its command, access and audit contracts. The history list moved to `components/comic/comic-knowledge-history.tsx`.
 - 2026-11-12: **Turn the drafting endpoint on or off from the review queue.** Owner report: RunPod set the drafting endpoint to 0 max workers after two weeks with no requests, and the only way back was the RunPod dashboard. New `lib/chatbot/runpod-endpoint-power.ts` reads and sets the max workers of the one endpoint named in `OLLAMA_BASE_URL` (on is 1, off is 0) with `OLLAMA_API_KEY`, and refuses an answer where RunPod did not apply the change. New admin route `GET`/`POST /api/comic/admin/engine-power` (`comic.engine.power.get` / `.set`, audited). The review queue header shows "Drafting endpoint on · up to 1 worker" or "off · 0 max workers" with **Turn off** / **Turn on** (`components/comic/comic-engine-power.tsx`). The draft timeout reason now points at that switch. No schema change. Web only; @comic admin is not on Android.
