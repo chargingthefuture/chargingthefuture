@@ -35,9 +35,8 @@ export declare const SE_GUEST_WORDS: {
     readonly loadingConversation: "Loading the conversation…";
 };
 export declare const SE_GUEST_SHEET_SOURCES: readonly string[];
-export declare const SE_GUEST_MEMBERS_ONLY_SOURCES: readonly string[];
 export declare function seGuestOpensSheet(card: Pick<SeTodayCard, 'source'>): boolean;
-export declare function seGuestReadsConversation(card: Pick<SeTodayCard, 'source'>): boolean;
+export declare function seGuestEmptyLine(card: Pick<SeTodayCard, 'source'>): string;
 export type SeGuestMessage = {
     id: string;
     handle: string;

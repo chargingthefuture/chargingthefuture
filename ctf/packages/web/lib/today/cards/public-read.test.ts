@@ -22,12 +22,17 @@ vi.mock('lib/fireside/card-thread', () => ({
   },
 }));
 vi.mock('./repository', () => ({
+  listVisitorStoryReplies: async (_cardId: string, versions: readonly string[]) => {
+    where.reads.push(`visitors:${where.store?.getStore() ?? 'public'}:${versions.join(',')}`);
+    return [{ id: 'v1', authorId: 'u1', body: 'For anyone.', createdAt: new Date('2026-11-16T10:00:00Z'), editedAt: null, pairLow: null, pairHigh: null }];
+  },
   listGuestMessagesInStore: async () => {
     where.reads.push(`store:${where.store?.getStore() ?? 'public'}`);
     return [{ id: 'm1', authorId: 'dpsmp-01', body: 'Sample.', createdAt: new Date('2026-11-10T10:00:00Z'), editedAt: null, pairLow: null, pairHigh: null }];
   },
 }));
 
+import { SE_GUEST_WORDS, SE_STORY_REPLIES_VISITORS_VERSIONS, seGuestEmptyLine } from '@ctf/shared';
 import { guestOpens, readGuestConversation } from './public-read';
 
 describe('a card opened on signed-out Today', () => {
@@ -35,6 +40,7 @@ describe('a card opened on signed-out Today', () => {
     expect(guestOpens('blog-story:why')).toBe(true);
     expect(guestOpens('trust-transport:r1')).toBe(true);
     expect(guestOpens('skill-up:c1')).toBe(true);
+    expect(guestOpens('member-story:k1')).toBe(true);
     expect(guestOpens('peer-programming:g1')).toBe(false);
     expect(guestOpens('lighthouse:l1')).toBe(false);
   });
@@ -44,6 +50,18 @@ describe('a card opened on signed-out Today', () => {
     const conversation = await readGuestConversation('blog-story:why');
     expect(where.reads).toEqual(['fireside:public']);
     expect(conversation).toMatchObject({ sample: false, messages: [{ id: 'c1', handle: 'ana', body: 'From the blog.' }] });
+  });
+
+  it("shows a member's story only the replies its writers let visitors read, from production", async () => {
+    where.reads.length = 0;
+    const conversation = await readGuestConversation('member-story:k1');
+    expect(where.reads).toEqual([`visitors:public:${SE_STORY_REPLIES_VISITORS_VERSIONS.join(',')}`]);
+    expect(conversation).toMatchObject({ sample: false, messages: [{ id: 'v1', handle: 'ana', body: 'For anyone.' }] });
+  });
+
+  it('says a member story conversation is for members when nothing shows', () => {
+    expect(seGuestEmptyLine({ source: 'member-story' })).toBe(SE_GUEST_WORDS.membersOnly);
+    expect(seGuestEmptyLine({ source: 'blog-story' })).toBe(SE_GUEST_WORDS.noMessages);
   });
 
   it('shows a sample card its conversation from the demo schema, marked sample', async () => {
