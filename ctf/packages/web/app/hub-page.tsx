@@ -104,7 +104,10 @@ async function resolveTrust(
   }
   // Recomputes on the shared throttle rather than reading whatever was last written, so the card
   // here agrees with the account hub instead of showing an older snapshot of the same member.
-  return readTrustSelfExtensionOrStored(userId).catch(() => buildFallbackTrust(userId));
+  return readTrustSelfExtensionOrStored(userId).catch((error: unknown) => {
+    reportError(error, { area: 'hub', op: 'trust_read' });
+    return buildFallbackTrust(userId);
+  });
 }
 
 async function redirectIfAccountClosed(userId: string | null, isAdmin: boolean): Promise<void> {
@@ -141,6 +144,13 @@ async function readHubTier(
 async function renderFrameIfChosen(userId: string | null, identity: { username?: string | null } | null, isAdmin: boolean) {
   if (!userId || (await readInterfaceVersion(userId)) !== '3.1') return null;
   return <SeAppFrame currentUser={buildShellUser(userId, identity?.username ?? null)} isAdmin={isAdmin} />;
+}
+
+// At `/`: a signed-out visitor goes to Today, and a 3.1 member gets the 3.1 frame. Null when the
+// 3.0 hub is shown.
+async function homeFirst(userId: string | null, identity: { username?: string | null } | null, isAdmin: boolean) {
+  if (!userId) redirect('/today');
+  return renderFrameIfChosen(userId, identity, isAdmin);
 }
 
 async function readInterfaceVersion(userId: string): Promise<SeInterfaceVersion> {
@@ -197,11 +207,8 @@ export async function renderHub({ commons }: { commons: boolean }) {
   // Today as everybody can read it. A signed-in member sees the frame, approved or not: in 3.1 the
   // app is open before Unlock is done and the frame carries the Unlock banner. Only a member who went
   // back to 3.0 in Settings gets the 3.0 shell below. A failed read is reported and shows 3.1.
-  if (!commons) {
-    if (!userId) redirect('/today');
-    const frame = await renderFrameIfChosen(userId, identity, isAdmin);
-    if (frame) return frame;
-  }
+  const home = commons ? null : await homeFirst(userId, identity, isAdmin);
+  if (home) return home;
 
   const { tier, failed: tierReadFailed } = await readHubTier(userId);
 
