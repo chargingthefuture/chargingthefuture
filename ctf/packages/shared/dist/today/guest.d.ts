@@ -26,6 +26,7 @@ export declare const SE_GUEST_WORDS: {
     readonly sampleNote: "Cards marked Preview show the kind of thing members post. The real ones are private to members.";
     readonly conversation: "Conversation";
     readonly readPost: "Read the post";
+    readonly membersOnly: "The conversation on a member's story is for members. Sign in to read it.";
     readonly close: "Close";
     readonly signInToWrite: "Sign in to write here";
     readonly pairEmpty: "Just us two is a private conversation between two members. Nothing in it is shown here.";
@@ -34,7 +35,9 @@ export declare const SE_GUEST_WORDS: {
     readonly loadingConversation: "Loading the conversation…";
 };
 export declare const SE_GUEST_SHEET_SOURCES: readonly string[];
+export declare const SE_GUEST_MEMBERS_ONLY_SOURCES: readonly string[];
 export declare function seGuestOpensSheet(card: Pick<SeTodayCard, 'source'>): boolean;
+export declare function seGuestReadsConversation(card: Pick<SeTodayCard, 'source'>): boolean;
 export type SeGuestMessage = {
     id: string;
     handle: string;

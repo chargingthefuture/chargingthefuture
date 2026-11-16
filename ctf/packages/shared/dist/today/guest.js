@@ -32,6 +32,8 @@ export const SE_GUEST_WORDS = {
     conversation: 'Conversation',
     // A blog story's button signed out: the post is public, so a visitor reads it there.
     readPost: 'Read the post',
+    // A member's story opened signed out: its conversation is between members, so none of it is read here.
+    membersOnly: "The conversation on a member's story is for members. Sign in to read it.",
     close: 'Close',
     signInToWrite: 'Sign in to write here',
     pairEmpty: 'Just us two is a private conversation between two members. Nothing in it is shown here.',
@@ -42,7 +44,15 @@ export const SE_GUEST_WORDS = {
 // The cards a visitor can open: a story (its post's Fireside comments, real and public) and the
 // sample ask and offer cards (a sample conversation from the demo schema).
 export const SE_GUEST_SHEET_SOURCES = ['blog-story', 'trust-transport', 'skill-up'];
+// A member's story opens too, signed out, with its text and Conversation, but nothing of the
+// conversation is read: the members writing there did not write for visitors, and the story has no
+// public page to read it on.
+export const SE_GUEST_MEMBERS_ONLY_SOURCES = ['member-story'];
 export function seGuestOpensSheet(card) {
+    return SE_GUEST_SHEET_SOURCES.includes(card.source) || SE_GUEST_MEMBERS_ONLY_SOURCES.includes(card.source);
+}
+// Whether the opened card's conversation is read for a visitor (GET /api/today/public/cards/[cardId]).
+export function seGuestReadsConversation(card) {
     return SE_GUEST_SHEET_SOURCES.includes(card.source);
 }
 // An ask or an offer is answered by a member; a visitor sees who as "A member" and a Sign up button.

@@ -45,7 +45,7 @@ vi.mock('./sources-live', () => ({
   missionCard: vi.fn(async () => (readFrom('skills-hunt-mission'), [])),
   broadcast: vi.fn(async () => null),
 }));
-vi.mock('./sources-blog', () => ({ blogStories: vi.fn(async () => (readFrom('blog-stories'), [stub('blog-story:a')])) }));
+vi.mock('./sources-blog', () => ({ blogStories: vi.fn(async () => (readFrom('blog-stories'), [stub('blog-story:a'), { ...stub('member-story:b'), actions: [{ kind: 'helped-me', label: 'This helped me', href: '/knowledge' }] }])) }));
 vi.mock('./sources-daily', () => ({ dailyPuzzleCard: vi.fn(async () => []) }));
 vi.mock('./sources-rooms', () => ({
   nextTalk: vi.fn(async () => null),
@@ -80,9 +80,10 @@ describe('signed-out Today', () => {
     expect(today.rooms[0]).toMatchObject({ members: 4, guests: 2, faces: [] });
   });
 
-  it('gives a blog story Read the post in place of This helped me', async () => {
+  it('gives a blog story Read the post and a member story no button in place of This helped me', async () => {
     const today = await buildPublicToday(new Date('2026-11-10T12:00:00.000Z'));
     expect(today.cards.find((c) => c.source === 'blog-story')?.actions).toEqual([{ kind: 'open', label: 'Read the post', href: '/' }]);
+    expect(today.cards.find((c) => c.source === 'member-story')?.actions).toEqual([]);
   });
 
   it('names nobody on any card', async () => {

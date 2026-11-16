@@ -1,18 +1,21 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { SE_CARD_WORDS, SE_GUEST_WORDS as W, seAgo, type SeGuestConversation, type SeTodayCard } from '@ctf/shared';
+import { SE_CARD_WORDS, SE_GUEST_WORDS as W, seAgo, seGuestReadsConversation, type SeGuestConversation, type SeTodayCard } from '@ctf/shared';
 import styles from './card-sheet.module.css';
 
 // A card opened on signed-out Today (owner decision, 2026-11-10): read only. A story shows its post's
-// Fireside comments; a sample ask or offer shows a sample conversation, tagged as sample. Just us two
+// Fireside comments; a sample ask or offer shows a sample conversation, tagged as sample; a member's
+// story says its conversation is for members and reads none of it. Just us two
 // is shown as private, with a sign-in, and nothing in it is read.
 
-type Read = { kind: 'loading' } | { kind: 'ready'; conversation: SeGuestConversation } | { kind: 'failed'; message: string };
+type Read = { kind: 'loading' } | { kind: 'members' } | { kind: 'ready'; conversation: SeGuestConversation } | { kind: 'failed'; message: string };
 
-function useGuestConversation(cardId: string): Read {
-  const [read, setRead] = useState<Read>({ kind: 'loading' });
+// A member's story reads nothing: its conversation is for members (seGuestReadsConversation).
+function useGuestConversation(cardId: string, reads: boolean): Read {
+  const [read, setRead] = useState<Read>(reads ? { kind: 'loading' } : { kind: 'members' });
   useEffect(() => {
+    if (!reads) return;
     let live = true;
     fetch(`/api/today/public/cards/${encodeURIComponent(cardId)}`)
       .then(async (res) => {
@@ -25,11 +28,12 @@ function useGuestConversation(cardId: string): Read {
     return () => {
       live = false;
     };
-  }, [cardId]);
+  }, [cardId, reads]);
   return read;
 }
 
 function Messages({ read, sampleTag }: { read: Read; sampleTag: React.ReactNode }) {
+  if (read.kind === 'members') return <p className={styles.quiet}>{W.membersOnly}</p>;
   if (read.kind === 'loading') return <p className={styles.quiet}>{W.loadingConversation}</p>;
   if (read.kind === 'failed') return <p role="alert" className={styles.quiet}>{read.message}</p>;
   if (read.conversation.messages.length === 0) return <p className={styles.quiet}>{W.noMessages}</p>;
@@ -50,7 +54,7 @@ function Messages({ read, sampleTag }: { read: Read; sampleTag: React.ReactNode 
 }
 
 export function GuestSheet({ card, signInUrl, sampleTag, onClose }: { card: SeTodayCard; signInUrl: string; sampleTag: React.ReactNode; onClose: () => void }) {
-  const read = useGuestConversation(card.id);
+  const read = useGuestConversation(card.id, seGuestReadsConversation(card));
   const [pair, setPair] = useState(false);
   const closeRef = useRef<HTMLButtonElement | null>(null);
   useEffect(() => {
