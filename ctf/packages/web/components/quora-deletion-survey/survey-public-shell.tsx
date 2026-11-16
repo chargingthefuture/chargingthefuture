@@ -76,7 +76,7 @@ function AccountsSection({
       <p style={{ ...hintStyle(tokens), marginTop: 18 }}>
         One card per account Quora closed. Add another for each one you lost — the number of cards
         is how the count is worked out, so nobody has to total it up. Each handle you list here is
-        added to your account. This helps stop perpetrators from impersonating survivors.
+        added to your account. This helps stop Specterati operators from impersonating survivors.
       </p>
       {accounts.map((draft, index) => (
         <SurveyAccountCard

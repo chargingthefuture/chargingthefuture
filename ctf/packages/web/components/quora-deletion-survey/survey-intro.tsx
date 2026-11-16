@@ -49,7 +49,7 @@ export function SurveyIntro({ tokens, showTitle = true }: { tokens: SurveyTokens
           </li>
           <li style={{ marginBottom: 8 }}>
             The accounts you list as closed are added to your account here. This helps stop
-            perpetrators from impersonating survivors.
+            Specterati operators from impersonating survivors.
           </li>
           <li style={{ marginBottom: 8 }}>
             Nothing is published unless you tick the boxes at the end saying it can be. Those start
