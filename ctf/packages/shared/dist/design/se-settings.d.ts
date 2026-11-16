@@ -66,6 +66,7 @@ export declare const SE_SETTINGS_WORDS: {
     readonly bug: "Report a bug";
     readonly guideLink: "Guide";
     readonly rulesLink: "Community rules";
+    readonly terms: "Terms and privacy";
     readonly get: "Get";
     readonly wallpapers: "Wallpapers";
     readonly androidApp: "Get the Android app";

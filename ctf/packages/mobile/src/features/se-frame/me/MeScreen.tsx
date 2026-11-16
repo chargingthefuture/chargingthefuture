@@ -57,21 +57,27 @@ function Since({ s, sinceIso }: { s: MeStyles; sinceIso: string | null }) {
   );
 }
 
-function Badges({ s, profile }: { s: MeStyles; profile: SeMeProfile }) {
+function Badges({ s, profile, go }: { s: MeStyles; profile: SeMeProfile; go: Go }) {
   if (profile.badges.length === 0) return null;
   return (
     <View style={s.badges}>
       {profile.badges.map((badge) => (
-        // Admin is reached through the switch to 3.0; 3.1 has no admin pages, so no badge is a link.
-        <View key={badge} style={s.badge}>
+        // The System Architect badge is also the way into the admin screens, as on the web.
+        <TouchableOpacity
+          key={badge}
+          accessibilityRole={badge === 'architect' ? 'link' : 'text'}
+          disabled={badge !== 'architect'}
+          onPress={() => go(SE_ME_LINKS.architect)}
+          style={s.badge}
+        >
           <Text style={[s.badgeText, badge === 'weaver' ? s.badgeWeaver : null]}>{SE_ME_BADGE_LABELS[badge]}</Text>
-        </View>
+        </TouchableOpacity>
       ))}
     </View>
   );
 }
 
-function Head({ s, t, user, profile, onSettings }: { s: MeStyles; t: SeThemeTokens; user: MeUser; profile: Read<SeMeProfile>; onSettings: () => void }) {
+function Head({ s, t, user, profile, go, onSettings }: { s: MeStyles; t: SeThemeTokens; user: MeUser; profile: Read<SeMeProfile>; go: Go; onSettings: () => void }) {
   const ready = profile.kind === 'ready' ? profile.value : null;
   return (
     <View style={s.head}>
@@ -83,7 +89,7 @@ function Head({ s, t, user, profile, onSettings }: { s: MeStyles; t: SeThemeToke
           {seMeName(user.username)}
         </Text>
         {ready ? <Since s={s} sinceIso={ready.sinceIso} /> : null}
-        {ready ? <Badges s={s} profile={ready} /> : null}
+        {ready ? <Badges s={s} profile={ready} go={go} /> : null}
       </View>
       <TouchableOpacity accessibilityRole="button" accessibilityLabel={W.settings} onPress={onSettings} style={s.gear}>
         <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={t.ink} strokeWidth={2} strokeLinecap="round">
@@ -203,7 +209,7 @@ export function MeScreen({ t, user, profile, reading, onReading, onView, go, sav
   const s = useMemo(() => makeMeStyles(t), [t]);
   return (
     <View style={s.stack}>
-      <Head s={s} t={t} user={user} profile={profile} onSettings={() => onView('settings')} />
+      <Head s={s} t={t} user={user} profile={profile} go={go} onSettings={() => onView('settings')} />
       <Prompts s={s} profile={profile} onEdit={() => onView('prompts')} />
       <CreditsCard s={s} t={t} go={go} handle={user.username ? `@${user.username}` : null} />
       <View style={s.shortcuts}>

@@ -9,6 +9,7 @@ import { CardSheet } from './card-sheet';
 import { GoalCard } from './goal-card';
 import { MoodFaces, SaveHideIcons } from './card-quick-actions';
 import { CardFigures } from './card-figures';
+import { CardDotIcon } from './card-dot-icon';
 import { cardPath } from './use-card-conversation';
 import styles from './today.module.css';
 
@@ -119,9 +120,16 @@ function CardMenu({ card, viewerId, onHide, onMute, onMutePost }: MenuProps) {
 }
 
 // The timeline dot. A card the server marks done (a 21 Questions answer) stays done: the answer is final.
-// On another person's ask it is only the dot.
+// On another person's ask it is only the dot, with its icon. The dot shows its kind's icon until the
+// card is done, then the check mark.
 function DoneDot({ card, done, color, onToggleDone }: { card: SeTodayCard; done: boolean; color: string; onToggleDone: () => void }) {
-  if (!seCardTakesCheckMark(card)) return <span className={styles.dot} style={{ background: color }} aria-hidden="true" />;
+  if (!seCardTakesCheckMark(card)) {
+    return (
+      <span className={styles.dot} style={{ background: color }} aria-hidden="true">
+        <CardDotIcon kind={card.kind} />
+      </span>
+    );
+  }
   return (
     <button
       type="button"
@@ -132,11 +140,7 @@ function DoneDot({ card, done, color, onToggleDone }: { card: SeTodayCard; done:
       onClick={card.done ? undefined : onToggleDone}
       disabled={card.done === true}
     >
-      {done ? (
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--se-bg)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M5 12l5 5 9-10" />
-            </svg>
-      ) : null}
+      <CardDotIcon kind={card.kind} done={done} />
     </button>
   );
 }

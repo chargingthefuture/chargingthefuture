@@ -291,8 +291,8 @@ calendar.
 5. Type another ask, tap **+ Break it into small tasks**, fill two tasks and tap **Post**.
 6. Tap each Offer choice and the Story link; tap "A question about the app? Ask the architect"; tap
    Close.
-**Expected (4 to 6):** The sheet reads "Post something" and "It goes into everyone's Today.", with
-nothing at the top but Close (Community guidelines was a 3.0 page). Suggestions list only asks that contain every word typed, with the
+**Expected (4 to 6):** The sheet reads "Post something" and "It goes into everyone's Today." with
+Community guidelines at the top. Suggestions list only asks that contain every word typed, with the
 typed words in bold; with nothing typed, one from each group. Details is marked (optional) and the
 hint "Everyone can read this. Keep times and places for the private conversation." sits under it.
 Step 4 says "Posted. It shows on Today, and answers come to Activity." and the ask appears on Today
@@ -316,9 +316,9 @@ architect line opens Ask the architect with the member's questions. Close return
 7. Back in Settings, tap Text size until it says Larger, then Higher contrast and Easier-to-read font. Reload. Then put them back.
 8. Tap Muted people and words, then Blocked people, then Quora census, coming back each time.
 9. Tap Ask the architect; go back to Me → Settings and tap Report a bug, then close it.
-10. Tap Wallpapers, Get the Android app, Delete data from one part of the app and Delete your account in turn.
+10. Tap Terms and privacy, Wallpapers, Get the Android app, Delete data from one part of the app and Delete your account in turn.
 11. Sign in as the admin and as the badge holder and open Me.
-**Expected:** Step 1 shows the picture with a dark ring, your name (no @, the same on web and Android), "Aven since <month year>", the gear, ServiceCredits with the balance in credits and "credits, not money" under it (never money words), round Send, Receive and History buttons with icons in that order, Read and Hidden, Tools with A place to stay, Trade hours, Learn a skill, Our numbers, Bring your writing and Log what happened, and the emoji rain switch. Step 2 shows the two written lines under their labels and no "I need"; they stay after the reload and on the other device. Step 3 opens ServiceCredits on its Send tab, copies @handle and says so, and opens the wallet tab. Step 4 lists the cards you marked done (Read) or Not for me (Hidden) that are still around, each opening where it lives, or "Nothing here yet."; the web address carries `view=read` and the back button returns to Me. Step 5 opens LightHouse, Foundation, SkillUp, Workforce, the Knowledge Library and ClickLog (in the browser on Android). Step 6 opens Theme with Back to Settings, Dark and Light, then Burgundy (Default · The landing page), Forest and gold (One Percent), Coral (The blog), Teal and purple (The first wallpaper), "The same colors as the wallpapers" and Get; the app recolors at once and keeps Coral light after the reload and on the other device. Step 7 makes the screen larger (the tab bar stays its size), the gray text dark or light like the rest and the borders stronger, and the text Atkinson Hyperlegible, all kept after the reload. Step 8 opens the Muted card in place with its count on the row, the blocked list with its count, and the survey; the census row says Added once the survey is answered. Step 9 opens + New on Ask the architect, then the bug report form; Help has no Guide or Terms rows (3.1 opens no 3.0 page). Step 10 opens each place; Wallpapers and the Android app open GitHub releases filtered to each, and both delete rows open Account and data. Step 11 shows System Architect for the admin (not a link: admin is reached through the switch to 3.0) and Weavers of the Commons for the badge holder; a member who is neither sees no badge.
+**Expected:** Step 1 shows the picture with a dark ring, your name (no @, the same on web and Android), "Aven since <month year>", the gear, ServiceCredits with the balance in credits and "credits, not money" under it (never money words), round Send, Receive and History buttons with icons in that order, Read and Hidden, Tools with A place to stay, Trade hours, Learn a skill, Our numbers, Bring your writing and Log what happened, and the emoji rain switch. Step 2 shows the two written lines under their labels and no "I need"; they stay after the reload and on the other device. Step 3 opens ServiceCredits on its Send tab, copies @handle and says so, and opens the wallet tab. Step 4 lists the cards you marked done (Read) or Not for me (Hidden) that are still around, each opening where it lives, or "Nothing here yet."; the web address carries `view=read` and the back button returns to Me. Step 5 opens LightHouse, Foundation, SkillUp, Workforce, the Knowledge Library and ClickLog (in the browser on Android). Step 6 opens Theme with Back to Settings, Dark and Light, then Burgundy (Default · The landing page), Forest and gold (One Percent), Coral (The blog), Teal and purple (The first wallpaper), "The same colors as the wallpapers" and Get; the app recolors at once and keeps Coral light after the reload and on the other device. Step 7 makes the screen larger (the tab bar stays its size), the gray text dark or light like the rest and the borders stronger, and the text Atkinson Hyperlegible, all kept after the reload. Step 8 opens the Muted card in place with its count on the row, the blocked list with its count, and the survey; the census row says Added once the survey is answered. Step 9 opens + New on Ask the architect, then the bug report form; Help has Terms and privacy but no Guide row. Step 10 opens each place; Wallpapers and the Android app open GitHub releases filtered to each, and both delete rows open Account and data. Step 11 shows System Architect for the admin (tapping it opens the admin screens) and Weavers of the Commons for the badge holder; a member who is neither sees no badge.
 **Result:** web ☐ android ☐ — notes:
 
 ## AD-14b · Notifications and quiet hours in 3.1 Settings
@@ -494,8 +494,9 @@ request and a Skill Up cohort exist; once with the Main Room live, once with it 
 5. Signed in, open `/today`.
 **Expected:** Step 1 matches the approved "Today, signed out" board: "Skills Economy" with Sign in at
 the top; Days won with "Skills Economy is where the Avenhood meets…" and Sign up; the room card;
-"Today's cards" with "Read only"; asks and offers from "A member" with Sign up to answer, stories with
-Read it; a dashed People card that says it opens once a member is reviewed; and a bar along the
+"Today's cards" with "Read only"; asks and offers from "A member" with Sign up to answer, blog stories
+with Read the post and Conversation, members' stories with Conversation only (no This helped me on
+either); a dashed People card that says it opens once a member is reviewed; and a bar along the
 bottom, "Free. Use one part, ignore the rest." with Sign up. No card shows a name and there is no
 card menu. Step 2 starts listening right there on the card, with no account. Step 3 says "The audio
 room is quiet now" on one line, naming the room as audio so it never reads as the app being quiet, offers the readings, and shows the next room with Add to calendar. Step 4 opens sign-up,
@@ -518,8 +519,9 @@ Step 3 lands on `/today`, Today as anybody can read it, with Sign in.
 1. On Today, tap a card's text, then one of its buttons and come back.
 2. Tap the colored dot beside the card.
 3. Tap the dot again.
-**Expected:** Step 1 opens the card and the item without marking it done. Step 2 puts a check in the
-dot and the done count goes up by one. Step 3 removes the check and the count goes back down.
+**Expected:** Step 1 opens the card and the item without marking it done; the dot shows its card kind's
+icon. Step 2 puts a check in the dot in place of the icon and the done count goes up by one. Step 3
+removes the check, the icon comes back and the count goes back down.
 **Result:** web ☐ android ☐ — notes:
 
 ## AD-22 · Stories and the puzzle of the day
@@ -789,4 +791,15 @@ totals (AD-28) still count each mark.
 2. As the author, open Today and the same card.
 3. Delete the author's account in Settings.
 **Expected:** Step 1 shows "+1 credit when <author> confirms it was done" on that one card, both times, and on no other card. Step 2 shows no such line. Step 3 lists "the day's credit cards you posted or helped on" under Card conversations on Today, and removes them. The full credit check is ServiceCredits SC-10b.
+**Result:** web ☐ android ☐ — notes:
+
+## AD-38 · Signed-out Days won ticks, dot icons, and Read the post (added 2026-11-16)
+**Role:** a visitor who is not signed in, then a member on 3.1 · **Surfaces:** web, android
+**Steps:**
+1. Signed out, open Today and look at the burgundy hero. Leave the page open for two minutes.
+2. Turn on less motion (web: the system's reduce motion setting; Android: Remove animations) and repeat step 1.
+3. Look at the dots to the left of the cards, signed out, then signed in, in light and dark and in each of the four colors.
+4. Signed out, find a blog story card. Tap Read the post, come back, and tap Conversation. Then find a member's story card (a member who agreed to be shown signed out) and tap Conversation.
+5. Signed in, open a blog story card and look at its buttons. Leave Today open for two minutes.
+**Expected:** Step 1 shows "Days the Avenhood has won" with a lock and Preview, and the count under it. Within 20 to 90 seconds the count goes up by one and emoji fall across the screen for a few seconds, then again at another random interval. A reload starts from the sample count again. Step 2: the count still goes up, and no emoji fall. Step 3: each dot carries an icon by kind, as on the approved Today board: an arrow up on an ask, an arrow down on an offer, a book on a story, a magnifier on a Wanted or match card and on the locked People card, a face on Mood, bars on the numbers, a play mark on a replay, a grid on the puzzle; the icon reads clearly on the dot in every color and mode. A dot that can be tapped still marks the card done, with the check shown in place of the icon. Step 4: the blog story shows Read the post and Conversation and no This helped me; Read the post opens the blog post, and Conversation opens the post's comments read only. The member's story shows Conversation only; it opens the story with "The conversation on a member's story is for members. Sign in to read it." and no messages. Step 5: the story shows This helped me as before, and the signed-in Days won count does not tick.
 **Result:** web ☐ android ☐ — notes:

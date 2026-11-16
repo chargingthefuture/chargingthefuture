@@ -2,13 +2,14 @@
 // approved "Today, signed out" board: the Skills Economy name with Sign in, the guest Today, and a bar
 // along the bottom with Sign up.
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { seSignedOutTheme, SE_GUEST_WORDS as W, seTheme, type SeThemeTokens } from '@ctf/shared';
 import { useAuth } from '../../auth/auth-context';
 import type { FeatureKey } from '../../navigation/screens';
 import { SE_FONT } from './fonts';
 import { GuestToday } from './today/GuestToday';
+import { EmojiRain } from './today/EmojiRain';
 import { SeRoomsProvider } from './rooms/SeRooms';
 
 export function PublicToday({ onOpen }: { onOpen: (_key: FeatureKey) => void }) {
@@ -16,6 +17,8 @@ export function PublicToday({ onOpen }: { onOpen: (_key: FeatureKey) => void }) 
   const t = seTheme(theme.color, theme.mode);
   const s = useMemo(() => makeStyles(t), [t]);
   const { signIn } = useAuth();
+  // Each tick of the Preview Days won count rains once, drawn over the screen outside the list.
+  const [rain, setRain] = useState(0);
   return (
     <SeRoomsProvider>
       <View style={s.frame}>
@@ -28,7 +31,7 @@ export function PublicToday({ onOpen }: { onOpen: (_key: FeatureKey) => void }) 
               <Text style={s.signInLabel}>{W.signIn}</Text>
             </TouchableOpacity>
           </View>
-          <GuestToday t={t} onSignUp={() => void signIn()} onOpen={onOpen} />
+          <GuestToday t={t} onSignUp={() => void signIn()} onOpen={onOpen} onRain={() => setRain((count) => count + 1)} />
         </ScrollView>
         <View style={s.bar} accessibilityLabel="Main">
           <Text style={s.barText}>{W.bar}</Text>
@@ -36,6 +39,7 @@ export function PublicToday({ onOpen }: { onOpen: (_key: FeatureKey) => void }) 
             <Text style={s.barButtonLabel}>{W.signUp}</Text>
           </TouchableOpacity>
         </View>
+        <EmojiRain run={rain} />
       </View>
     </SeRoomsProvider>
   );

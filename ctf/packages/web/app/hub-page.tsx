@@ -1,0 +1,246 @@
+import dynamic from 'next/dynamic';
+import { redirect } from 'next/navigation';
+import type { ShellVerification } from '../components/community-shell/community-shell';
+import type { ShellCurrentUser } from '../components/community-shell/shell-types';
+import type { TrustUserExtension } from '../lib/trust/types';
+import { resolveRequestIdentity, type RequestIdentity } from '../lib/auth/request-identity';
+import { getUnlockAccessTier } from '../lib/unlock/access';
+import { getAccountRestrictionStatus } from '../lib/auth/account-restrictions';
+import { reportError } from '../lib/observability/report';
+import { getUnlockStatusForUser } from '../lib/unlock/repository';
+import type { UnlockAccessTier } from '../lib/unlock/types';
+import { getGdpShellStats } from '../lib/gdp/repository';
+import { listPluginRegistry, filterPluginsForViewer } from '../lib/plugins/repository';
+import { readTrustSelfExtensionOrStored } from '../lib/trust/repository';
+import { getHostedSignInUrl } from '../lib/auth/provider-env';
+import { getUserInterfaceVersion } from '../lib/account/ui-preferences-repository';
+import { SE_DEFAULT_INTERFACE_VERSION, type SeInterfaceVersion } from '@ctf/shared';
+
+// A member sees 3.0 or 3.1, never both, so each loads only when it is the one shown (3.1 speed
+// budget: the 3.1 first load does not carry the 3.0 hub's code).
+const CommunityShell = dynamic(() => import('../components/community-shell/community-shell').then((m) => m.CommunityShell));
+const SeAppFrame = dynamic(() => import('../components/se-frame/se-app-frame').then((m) => m.SeAppFrame));
+
+function buildShellUser(userId: string, username: string | null): ShellCurrentUser {
+  const safeUsername = username && username !== 'guest' ? username : null;
+  const displayName = safeUsername ? `@${safeUsername}` : 'Survivor';
+  const initial = safeUsername ? safeUsername.charAt(0).toUpperCase() : 'S';
+
+  return {
+    userId,
+    username: safeUsername,
+    displayName,
+    initial,
+  };
+}
+
+function buildFallbackTrust(userId: string): TrustUserExtension {
+  return {
+    userId,
+    trustEvidence: [],
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+// Reduce a resolved request identity to the two fields the hub branches on.
+// A guest (unauthenticated) resolves to a null userId and non-admin.
+function resolveIdentityFields(identity: RequestIdentity | null): {
+  userId: string | null;
+  isAdmin: boolean;
+} {
+  const userId = identity?.isAuthenticated ? identity.userId : null;
+  const isAdmin = identity?.isAdmin ?? false;
+  return { userId, isAdmin };
+}
+
+// Unlock is the single source of truth for who reaches the Hub. Everyone else is redirected into the
+// Unlock flow. Admins and approved_full/locked_support_only members reach the Hub — and a member who
+// asked for help, or who has been here on an earlier day, now resolves to locked_support_only in
+// getUnlockAccessTier, so they are covered by the same clause rather than by a branch of their own.
+function shouldRedirectToUnlock(params: {
+  userId: string | null;
+  isAdmin: boolean;
+  tier: UnlockAccessTier | null;
+}): boolean {
+  const { userId, isAdmin, tier } = params;
+  return (
+    Boolean(userId) && !isAdmin && tier !== 'approved_full' && tier !== 'locked_support_only'
+  );
+}
+
+// A member on the Commons who is not yet fully verified gets a persistent prompt above the chat to
+// submit their Quora URL — without it they see the chat with nothing telling them verification is
+// still required, which is the bug this banner was added for. Shown for every non-approved member
+// here, not a subset: someone who asked for help needs the ask kept in front of them, someone whose
+// submission was rejected needs the chance to correct it, and someone awaiting review gets a calm
+// "under review" note from the banner itself. An approved member sees nothing.
+async function resolveVerification(
+  tier: UnlockAccessTier | null,
+  userId: string | null,
+): Promise<ShellVerification | null> {
+  if (!userId || tier === 'approved_full') {
+    return null;
+  }
+  const unlockStatus = await getUnlockStatusForUser(userId).catch((error: unknown) => {
+    // Without the status the banner cannot say what is pending, so it is left out; report why.
+    reportError(error, { area: 'home', op: 'unlock_status_read' });
+    return null;
+  });
+  if (!unlockStatus) {
+    return null;
+  }
+  return {
+    hasSubmission: unlockStatus.hasSubmission,
+    reviewStatus: unlockStatus.reviewStatus,
+  };
+}
+
+async function resolveTrust(
+  userId: string | null,
+  fallbackUserId: string,
+): Promise<TrustUserExtension> {
+  if (!userId) {
+    return buildFallbackTrust(fallbackUserId);
+  }
+  // Recomputes on the shared throttle rather than reading whatever was last written, so the card
+  // here agrees with the account hub instead of showing an older snapshot of the same member.
+  return readTrustSelfExtensionOrStored(userId).catch((error: unknown) => {
+    reportError(error, { area: 'hub', op: 'trust_read' });
+    return buildFallbackTrust(userId);
+  });
+}
+
+async function redirectIfAccountClosed(userId: string | null, isAdmin: boolean): Promise<void> {
+  if (!userId || isAdmin) {
+    return;
+  }
+  const restriction = await getAccountRestrictionStatus(userId, 'all').catch((error: unknown) => {
+    reportError(error, { area: 'account-closed', op: 'home_restriction_check' });
+    return { isRestricted: false };
+  });
+  if (restriction.isRestricted) {
+    redirect('/account-closed');
+  }
+}
+
+// A failed tier read is not "no tier": treating it as one sent an approved member back into Unlock.
+// When the read fails, report it and render the Hub without the verification banner instead. Each
+// plugin route checks the tier again on its own, so this only decides what the Hub shows.
+async function readHubTier(
+  userId: string | null,
+): Promise<{ tier: UnlockAccessTier | null; failed: boolean }> {
+  if (!userId) {
+    return { tier: null, failed: false };
+  }
+  try {
+    return { tier: await getUnlockAccessTier(userId), failed: false };
+  } catch (error: unknown) {
+    reportError(error, { area: 'home', op: 'unlock_tier_read' });
+    return { tier: null, failed: true };
+  }
+}
+
+// The 3.1 frame for a signed-in member, unless they went back to 3.0 in Settings (null then).
+async function renderFrameIfChosen(userId: string | null, identity: { username?: string | null } | null, isAdmin: boolean) {
+  if (!userId || (await readInterfaceVersion(userId)) !== '3.1') return null;
+  return <SeAppFrame currentUser={buildShellUser(userId, identity?.username ?? null)} isAdmin={isAdmin} />;
+}
+
+// At `/`: a signed-out visitor goes to Today, and a 3.1 member gets the 3.1 frame. Null when the
+// 3.0 hub is shown.
+async function homeFirst(userId: string | null, identity: { username?: string | null } | null, isAdmin: boolean) {
+  if (!userId) redirect('/today');
+  return renderFrameIfChosen(userId, identity, isAdmin);
+}
+
+async function readInterfaceVersion(userId: string): Promise<SeInterfaceVersion> {
+  try {
+    return await getUserInterfaceVersion(userId);
+  } catch (error: unknown) {
+    reportError(error, { area: 'home', op: 'interface_version_read' });
+    return SE_DEFAULT_INTERFACE_VERSION;
+  }
+}
+
+// The home page and /commons share this. `commons` is the Commons address (owner decision,
+// 2026-11-16): the 3.0 Commons, with its public view signed out, whichever version a member uses.
+// Without it, `/` sends a signed-out visitor to Today and a 3.1 member to the 3.1 frame.
+export async function renderHub({ commons }: { commons: boolean }) {
+  const pluginsPromise = listPluginRegistry();
+  const shellStatsPromise = getGdpShellStats().catch(() => ({ memberCount: null, gdpValueUsd: null }));
+  const identityPromise = resolveRequestIdentity().catch((error: unknown) => {
+    // Renders the signed-out Hub; report it so a sign-in outage is not silent.
+    reportError(error, { area: 'home', op: 'identity_read' });
+    return null;
+  });
+
+  const [plugins, shellStats, identity] = await Promise.all([
+    pluginsPromise,
+    shellStatsPromise,
+    identityPromise,
+  ]);
+
+  const { userId, isAdmin } = resolveIdentityFields(identity);
+
+  // Operator-only plugins (e.g. Weekly Performance) must not appear in the member hub's app list.
+  // The /apps launcher and /api/plugins already apply this filter; the home hub did not, so an
+  // admin-only tile leaked to members here. Admins still see the full list. The plugin's own route
+  // is separately gated, so this only hides the tile.
+  const visiblePlugins = filterPluginsForViewer(plugins, isAdmin);
+
+  // Unlock is the single source of truth for who reaches the Hub. Resolve the tier once and branch:
+  //   - not signed in                         -> anonymous shell (sign-in prompt)
+  //   - admin / approved_full / support_only  -> the normal Hub
+  //   - pending_readonly / none               -> redirect into the Unlock flow
+  // A signed-in member who is not yet approved (most often support_only) sees the Hub stripped back to the verification banner and the chat: the Apps section, plugin
+  // links and the locked contributor chip are left out, because each leads to something they cannot
+  // use yet (owner decision, 2026-09-26, reversing the earlier "nothing is hidden here"). The shell
+  // does that from `verification` below — non-null exactly for that member — and it all returns on
+  // the first load after approval. See components/community-shell/commons-unlock-focus.ts.
+  // A closed account (spam or duplicate) still has a stored access tier, so without this check it would
+  // pass the tier branch below and land on a Commons where every call answers 403 — the app looking
+  // broken instead of saying a decision was made. Send them to the page that explains it and offers the
+  // one thing they can still do: sign in as their other account, or delete this identity.
+  await redirectIfAccountClosed(userId, isAdmin);
+
+  // 3.1 is the default since its launch (owner decision, 2026-10-28). A signed-out visitor sees
+  // Today as everybody can read it. A signed-in member sees the frame, approved or not: in 3.1 the
+  // app is open before Unlock is done and the frame carries the Unlock banner. Only a member who went
+  // back to 3.0 in Settings gets the 3.0 shell below. A failed read is reported and shows 3.1.
+  const home = commons ? null : await homeFirst(userId, identity, isAdmin);
+  if (home) return home;
+
+  const { tier, failed: tierReadFailed } = await readHubTier(userId);
+
+  if (!tierReadFailed && shouldRedirectToUnlock({ userId, isAdmin, tier })) {
+    redirect('/plugin/unlock');
+  }
+
+  const verification = tierReadFailed ? null : await resolveVerification(tier, userId);
+
+  const isAuthenticated = Boolean(userId);
+
+  const currentUser = userId
+    ? buildShellUser(userId, identity?.username ?? null)
+    : buildShellUser('guest', null);
+
+  const trust = await resolveTrust(userId, currentUser.userId);
+
+  // Send "Sign In" straight to Clerk's hosted Account Portal. This app has no
+  // `/sign-in` page of its own, so when no hosted URL can be resolved the button
+  // falls back to the home page.
+  const signInUrl = getHostedSignInUrl() ?? '/';
+
+  return (
+    <CommunityShell
+      initialPlugins={visiblePlugins}
+      shellStats={shellStats}
+      currentUser={currentUser}
+      trust={trust}
+      isAuthenticated={isAuthenticated}
+      isAdmin={isAdmin}
+      signInUrl={signInUrl}
+      verification={verification}
+    />
+  );
+}
