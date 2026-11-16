@@ -48,8 +48,7 @@ export function SurveyIntro({ tokens, showTitle = true }: { tokens: SurveyTokens
             asks for no way to reach you.
           </li>
           <li style={{ marginBottom: 8 }}>
-            The accounts you list as closed are added to your account history here. Nobody can edit
-            or remove them afterward, including you.
+            The accounts you list as closed are added to your account here.
           </li>
           <li style={{ marginBottom: 8 }}>
             Nothing is published unless you tick the boxes at the end saying it can be. Those start
