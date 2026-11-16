@@ -1,14 +1,15 @@
 'use client';
 
-import Link from 'next/link';
 import { SE_TALK_WORDS as W, seNextTalk, seNextTalkLine, seTalkCalendarEvent, type SeTalkSlot } from '@ctf/shared';
 import { AddToCalendarButton } from '@/components/shared/add-to-calendar';
+import { useOpenUnlock } from '../unlock/unlock-open';
 import sheet from './sheet.module.css';
 
 // + New → Talk for a member not verified yet, to the approved board "Schedule a talk, not yet
 // verified": why booking waits for Unlock, and the next talk on the schedule to listen to.
 export function TalkLocked({ slots }: { slots: SeTalkSlot[] }) {
   const next = seNextTalk(slots);
+  const openUnlock = useOpenUnlock();
   return (
     <>
       <section className={sheet.lockCard} aria-labelledby="se-talk-locked">
@@ -16,9 +17,9 @@ export function TalkLocked({ slots }: { slots: SeTalkSlot[] }) {
           {W.lockedTitle}
         </h2>
         <p className={sheet.sub}>{W.lockedText}</p>
-        <Link href={W.unlockHref} className={sheet.lockButton}>
+        <button type="button" className={sheet.lockButton} onClick={openUnlock}>
           {W.finishUnlock}
-        </Link>
+        </button>
       </section>
       <section className={sheet.nextCard} aria-labelledby="se-talk-next">
         <h2 id="se-talk-next" className={sheet.nextLabel}>

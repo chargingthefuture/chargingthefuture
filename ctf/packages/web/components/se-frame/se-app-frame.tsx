@@ -8,6 +8,7 @@ import { SeTabBar } from './se-tab-bar';
 import { TodayScreen } from './today/today-screen';
 import { useSePrefs, type SePrefs } from './use-se-prefs';
 import { UnlockBanner } from './unlock-banner';
+import { SeUnlockOpenContext, useUnlockScreenOpen } from './unlock/unlock-open';
 import { SeRoomsProvider, useSeRooms } from './rooms/se-rooms';
 import { seThemeVars } from './se-theme-vars';
 import { useInterfaceSwitch } from './use-interface-switch';
@@ -22,6 +23,7 @@ const NewScreen = dynamic(() => import('./new/new-screen').then((m) => m.NewScre
 const MeTab = dynamic(() => import('./me/me-tab').then((m) => m.MeTab));
 const ActivityScreen = dynamic(() => import('./activity/activity-screen').then((m) => m.ActivityScreen));
 const PeopleScreen = dynamic(() => import('./people/people-screen').then((m) => m.PeopleScreen));
+const UnlockScreen = dynamic(() => import('./unlock/unlock-screen').then((m) => m.UnlockScreen));
 const SeRoomHosts = dynamic(() => import('./rooms/se-room-screen').then((m) => m.SeRoomHosts), { ssr: false });
 const SeRoomBar = dynamic(() => import('./rooms/se-room-screen').then((m) => m.SeRoomBar), { ssr: false });
 
@@ -141,6 +143,8 @@ function SeAppFrameBody({ currentUser, isAdmin }: FrameProps) {
   const rooms = useSeRooms();
   const { minimize } = rooms;
   const { switchTo, saving, error } = useInterfaceSwitch();
+  const unlock = useUnlockScreenOpen();
+  const { forget: forgetUnlock } = unlock;
 
   useEffect(() => {
     setTab(readTab());
@@ -153,12 +157,13 @@ function SeAppFrameBody({ currentUser, isAdmin }: FrameProps) {
   // address, as Get introduced does for People's "Fits what you need" (filter=fits).
   const select = useCallback((next: SeTab, query = '') => {
     minimize();
+    forgetUnlock();
     setNewKind('ask');
     setTab(next);
     const url = next === 'today' ? '/' : `/?tab=${next}${query}`;
     window.history.pushState(null, '', url);
     window.scrollTo(0, 0);
-  }, [minimize]);
+  }, [minimize, forgetUnlock]);
 
   const back = () => void switchTo('3.0');
   // Settings → Ask the architect opens + New on its architect sheet.
@@ -172,19 +177,27 @@ function SeAppFrameBody({ currentUser, isAdmin }: FrameProps) {
   return (
     <div className={`${styles.frame} ${reading.readableFont ? styles.readable : ''}`} style={seThemeVars(theme.color, theme.mode, reading.highContrast)}>
       <main className={styles.screen} hidden={rooms.shown !== null} style={scale === 1 ? undefined : { zoom: scale }}>
-        <UnlockBanner />
-        <TabScreen
-          tab={tab}
-          currentUser={currentUser}
-          isAdmin={isAdmin}
-          prefs={prefs}
-          newKind={newKind}
-          onAskArchitect={askArchitect}
-          onBack={back}
-          onClose={() => select('today')}
-          onPeopleFits={() => select('people', '&filter=fits')}
-          saving={saving}
-        />
+        <SeUnlockOpenContext.Provider value={unlock.show}>
+          {unlock.open ? (
+            <UnlockScreen onBack={unlock.close} onToday={() => select('today')} />
+          ) : (
+            <>
+              <UnlockBanner />
+              <TabScreen
+                tab={tab}
+                currentUser={currentUser}
+                isAdmin={isAdmin}
+                prefs={prefs}
+                newKind={newKind}
+                onAskArchitect={askArchitect}
+                onBack={back}
+                onClose={() => select('today')}
+                onPeopleFits={() => select('people', '&filter=fits')}
+                saving={saving}
+              />
+            </>
+          )}
+        </SeUnlockOpenContext.Provider>
         {[error, prefs.error].filter(Boolean).map((message) => (
           <p key={message} role="alert" className={styles.error}>
             {message}

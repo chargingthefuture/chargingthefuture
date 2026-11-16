@@ -9,8 +9,10 @@ import type { SeTodayBroadcast, SeTodayCard } from './types';
 export const SE_PRESENCE_WINDOW_MINUTES = 10;
 
 export function sePresenceLine(count: number | null | undefined): string | null {
-  if (count === null || count === undefined || count < 1) return null;
-  return count === 1 ? '1 Aven here' : `${count.toLocaleString('en-US')} Avens here`;
+  // Shown only when somebody besides the reader is here (owner decision, 2026-11-16): "1 Aven
+  // here" is the reader alone.
+  if (count === null || count === undefined || count < 2) return null;
+  return `${count.toLocaleString('en-US')} Avens here`;
 }
 
 // The Mood card's five faces, posted as the check-in's value (1 to 5) to POST /api/mood/submissions.
