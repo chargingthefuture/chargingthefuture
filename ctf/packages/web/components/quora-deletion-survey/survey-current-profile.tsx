@@ -47,7 +47,7 @@ export function CurrentProfileQuestion({
         <Field
           id="current-profile-handle"
           label="Handle or username (optional)"
-          hint="The part after quora.com/profile/ in your profile link. Only used if you choose to start verification on the next screen. It goes to the verification queue, not into your survey answer."
+          hint="The part after quora.com/profile/ in your profile link."
           tokens={tokens}
         >
           <input
