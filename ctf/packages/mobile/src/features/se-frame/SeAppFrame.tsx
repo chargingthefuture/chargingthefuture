@@ -24,6 +24,7 @@ import { MeTab } from './me/MeTab';
 import { useSePrefs, type SePrefs } from './useSePrefs';
 import { ScaledScreen } from './ScaledScreen';
 import { UnlockBanner } from './UnlockBanner';
+import { UnlockScreen } from './unlock/UnlockScreen';
 import { SeFrameScrollContext } from './frame-scroll';
 import { NewScreen } from './new/NewScreen';
 import { ActivityScreen } from './activity/ActivityScreen';
@@ -52,20 +53,23 @@ export function SeAppFrame(props: FrameProps) {
   );
 }
 
-// The phone's back button closes an open room first, then returns to Today from any other tab.
-function useFrameBack(tab: SeTab, setTab: (_tab: SeTab) => void, roomShown: boolean, minimize: () => void) {
+// The phone's back button closes an open room first, then the Unlock screen, then returns to Today
+// from any other tab.
+function useFrameBack(tab: SeTab, setTab: (_tab: SeTab) => void, roomShown: boolean, minimize: () => void, unlock: { open: boolean; close: () => void }) {
+  const { open: unlockOpen, close: closeUnlock } = unlock;
   useEffect(() => {
-    if (tab === 'today' && !roomShown) return;
+    if (tab === 'today' && !roomShown && !unlockOpen) return;
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
       if (roomShown) minimize();
+      else if (unlockOpen) closeUnlock();
       else setTab('today');
       return true;
     });
     return () => sub.remove();
-  }, [tab, setTab, roomShown, minimize]);
+  }, [tab, setTab, roomShown, minimize, unlockOpen, closeUnlock]);
 }
 
-function SeAppFrameBody({ onOpen }: FrameProps) {
+function SeAppFrameBody({ onOpen: openFeature }: FrameProps) {
   const prefs = useSePrefs();
   const { theme, reading } = prefs;
   // The easier-to-read font is set before anything is drawn; a fresh tokens object makes every
@@ -87,13 +91,17 @@ function SeAppFrameBody({ onOpen }: FrameProps) {
   const startRain = useCallback(() => setRainRun((run) => run + 1), []);
   const rooms = useSeRooms();
   const { minimize } = rooms;
-  useFrameBack(tab, setTab, rooms.shown !== null, minimize);
+  // Unlock opens inside 3.1 (its own screen in the frame), never the 3.0 Unlock screen.
+  const [unlockOpen, setUnlockOpen] = useState(false);
+  const closeUnlock = useCallback(() => setUnlockOpen(false), []);
+  useFrameBack(tab, setTab, rooms.shown !== null, minimize, { open: unlockOpen, close: closeUnlock });
 
   // Choosing a tab while a room is open puts the room in the bar above the tab bar. People opens on
   // All, except from Get introduced on Today's Match card, which opens it on "Fits what you need".
   const select = useCallback(
     (next: SeTab, filter: SePeopleFilter = 'all') => {
       minimize();
+      setUnlockOpen(false);
       setNewKind('ask');
       setPeopleFilter(filter);
       setTab(next);
@@ -108,31 +116,45 @@ function SeAppFrameBody({ onOpen }: FrameProps) {
   };
   const scrollRef = useRef<ScrollView>(null);
   const scrollToTop = useCallback(() => scrollRef.current?.scrollTo({ y: 0, animated: false }), []);
+  const onOpen = useCallback(
+    (key: FeatureKey) => {
+      if (key !== 'unlock') return openFeature(key);
+      setUnlockOpen(true);
+      scrollToTop();
+    },
+    [openFeature, scrollToTop],
+  );
 
   return (
     <View style={s.frame}>
       <SeFrameScrollContext.Provider value={scrollToTop}>
       <ScrollView ref={scrollRef} style={rooms.shown ? s.hidden : null}>
         <ScaledScreen scale={SE_TEXT_SIZE_SCALE[reading.textSize]} style={s.screen}>
-          <UnlockBanner t={t} onOpenUnlock={() => onOpen('unlock')} />
-          <FrameHeader s={s} tab={tab} presence={presence} />
+          {unlockOpen ? (
+            <UnlockScreen t={t} onBack={closeUnlock} onToday={() => select('today')} />
+          ) : (
+            <>
+              <UnlockBanner t={t} onOpenUnlock={() => onOpen('unlock')} />
+              <FrameHeader s={s} tab={tab} presence={presence} />
 
-          <TabScreen
-            t={t}
-            tab={tab}
-            user={user}
-            prefs={prefs}
-            newKind={newKind}
-            onAskArchitect={askArchitect}
-            onBack={back}
-            onClose={() => select('today')}
-            onPeopleFits={() => select('people', 'fits')}
-            peopleFilter={peopleFilter}
-            saving={saving}
-            onOpen={onOpen}
-            onPresence={setPresence}
-            onRain={startRain}
-          />
+              <TabScreen
+                t={t}
+                tab={tab}
+                user={user}
+                prefs={prefs}
+                newKind={newKind}
+                onAskArchitect={askArchitect}
+                onBack={back}
+                onClose={() => select('today')}
+                onPeopleFits={() => select('people', 'fits')}
+                peopleFilter={peopleFilter}
+                saving={saving}
+                onOpen={onOpen}
+                onPresence={setPresence}
+                onRain={startRain}
+              />
+            </>
+          )}
 
           {[error, prefs.error].filter(Boolean).map((message) => (
             <Text key={message} accessibilityRole="alert" style={s.error}>

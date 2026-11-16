@@ -43,6 +43,21 @@ This plugin must:
 2. Unverified users after window expiry become support-only.
 3. Approved users transition to full access.
 
+### 1.2a The Unlock Screen in 3.1
+
+The 3.1 frame has its own Unlock screen (web `components/se-frame/unlock/`, Android
+`src/features/se-frame/unlock/`), opened from the banner's "Why this step", People's "Finish Unlock"
+and + New → Talk's "Finish Unlock". It does what `/plugin/unlock` does for a member, through the same
+routes: it reads `GET /api/unlock/status` and `GET /api/unlock/standing`, sends the address to
+`POST /api/unlock/submission`, finishes with a reported removed account through
+`POST /api/quora-deletion-survey/verification`, and asks for help through
+`POST /api/unlock/help-request`. It shows where the member stands (send, waiting, approved, or needs
+another look; `seUnlockStage` in `@ctf/shared`), the two other ways to finish, the help steps and
+picture, why the step exists, what opens once approved, and what gets an account banned. The census
+and the Knowledge Library open on their 3.0 pages (the census by owner decision). The 3.0 page is
+unchanged and is still what a member on 3.0 sees. Words: `SE_UNLOCK_SCREEN_WORDS`. See the non-plugin
+inventory, 5q.
+
 ### 1.3 Verification Guidance
 
 1. Show concise safety copy for why Quora URL is requested.
@@ -513,6 +528,7 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
 
 ## 9) Change Log
 
+- 2026-11-16: **Unlock inside 3.1 (§1.2a), web and Android.** Owner decision: nothing in 3.1 links to a 3.0 page. The 3.1 frame's Unlock links (banner "Why this step", People and + New → Talk "Finish Unlock") open a 3.1 Unlock screen with every member state of `/plugin/unlock`, through the same routes; on Android every 3.1 open of the `unlock` key lands there. The Quora census and the Knowledge Library stay on their 3.0 pages. No route, table, contract or tier changed; the Unlock gate is unchanged. Test: `lib/unlock/se-unlock-stage.test.ts`. Test script: UNLOCK-M6.
 - 2026-11-12: **The flag service is removed; demo data is a switch on the sign-up card.** Owner report: the owner's demo admin account landed on production data and wrote rows there, because the self-hosted flag service was down and an unanswered `demo-mode` flag meant production. The flag service is now gone: `public.demo_mode_accounts` (migration `post/0100`) holds the accounts that see demo data, switched with **Demo data** on each sign-up card (`POST /api/unlock/admin/demo-accounts`, audited `unlock.admin.signups.demo`, contracts updated). `getUnlockAccessTier` no longer reads `feature-unlock-quora-onboarding`: the stored row decides, then the Commons fallback; with the flag service already unreachable, nobody's access changes. Accounts marked demo / test are now also left out of the Adoption measures and the daily exchange. Tests: `lib/demo-mode/demo-accounts.test.ts`, `lib/unlock/demo-accounts-route.test.ts`, `lib/unlock/access.test.ts`. Test script: UNLOCK-A9d, UNLOCK-A5c rewritten.
 - 2026-10-28: **Unlock finishes by any of three routes (3.1.0 plan, Access).** A live Quora profile address, a removed account reported in the Quora account removals survey, or Quora writing brought into the Knowledge Library. `unlock_verification_submissions` gains `finish_route` and `finish_evidence_id` (migration `post/0077`); `createOrUpdateUnlockSubmission` takes both and skips the URL history write for a removed account. The Unlock screen adds "No live Quora account?" (`components/unlock/unlock-other-routes.tsx`), the admin card names the route with a link to its evidence, and `SE_UNLOCK_WORDS.routes` names the three. The removed-account route is `POST /api/quora-deletion-survey/verification` with `removedHandle`; the Knowledge Library route records itself from `linkSharedWritingToUnlock`.
 - 2026-10-28: **Contributions in the approval catch-up.** Approval grants the thank-you credits held on gift cards confirmed while the member waited; the catch-up audit row gains `contributionsGranted`.

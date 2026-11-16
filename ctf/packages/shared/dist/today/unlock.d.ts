@@ -39,7 +39,6 @@ export declare const SE_UNLOCK_WORDS: {
     askArchitect: string;
     asking: string;
     close: string;
-    href: string;
     censusHref: string;
     knowledgeHref: string;
 };
