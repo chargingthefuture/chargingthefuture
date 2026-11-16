@@ -13,6 +13,7 @@ auditEvents:
     dataClassesAccessed:
       - directory_profiles
       - foundation_provider_skills
+      - today_match_needs
     targetContext:
       workspaceId: workspace_identifier
     requestId: request_identifier

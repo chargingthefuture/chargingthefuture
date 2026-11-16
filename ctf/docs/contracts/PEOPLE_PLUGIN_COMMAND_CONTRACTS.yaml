@@ -11,6 +11,10 @@ contracts:
         type: string
         enum: ['1']
         description: Only people whose claimed profile's owner offers at least one skill through Foundation.
+      fits:
+        type: string
+        enum: ['1']
+        description: Only people who fit the needs the member saved on Today's Match card (today_match_needs), by directory_person_job_titles, owners restricted with scope all or contact left out, the same people the card counts. None when the member has saved nothing.
       category:
         type: string
         enum: ['trades', 'care', 'paperwork', 'tech']
@@ -39,6 +43,9 @@ contracts:
       - skills_taxonomy_job_titles
       - skills_taxonomy_sectors
       - foundation_provider_skills
+      - today_match_needs
+      - directory_person_job_titles
+      - account_restrictions
     purpose: member_directory_browse
     retentionClass: none_read_only
     idempotency: true

@@ -22,6 +22,7 @@ import {
 import { authedFetchJson } from '../../../auth/authedFetch';
 import type { FeatureKey } from '../../../navigation/screens';
 import { SE_FONT } from '../fonts';
+import { MatchCard } from './MatchCard';
 import { MatchingToggle } from './MatchingToggle';
 import { BroadcastCard, RoomCard } from './RoomCards';
 import { WeekStrip } from './WeekStrip';
@@ -107,14 +108,27 @@ function Notices({ s, error, missingLine, loading, onRetry }: { s: Styles; error
   );
 }
 
+// The Match card leads the timeline under All only.
+function MatchLead({ t, filter, refreshKey, onIntroduce }: { t: SeThemeTokens; filter: SeTodayFilter; refreshKey: string; onIntroduce: () => void }) {
+  return filter === 'all' ? <MatchCard t={t} refreshKey={refreshKey} onIntroduce={onIntroduce} /> : null;
+}
+
 // A visitor who is not signed in gets GuestToday (GuestToday.tsx) instead.
 // `onPresence` hands the "N Avens here" count to the title row above the screen. `rain` carries the
 // emoji rain switch, the Days won total the account last saw (useSePrefs.ts) and how to start the rain,
-// which the frame draws over the screen.
+// which the frame draws over the screen. `onPeopleFits` opens People on "Fits what you need", from the
+// Match card's Get introduced.
 type RainPrefs = { on: boolean; seen: number | null | undefined; onSeen: (_total: number) => void; onRain: () => void };
-type ScreenProps = { t: SeThemeTokens; accountId: string; onOpen: (_key: FeatureKey) => void; onPresence?: (_count: number | null) => void; rain: RainPrefs };
+type ScreenProps = {
+  t: SeThemeTokens;
+  accountId: string;
+  onOpen: (_key: FeatureKey) => void;
+  onPresence?: (_count: number | null) => void;
+  rain: RainPrefs;
+  onPeopleFits: () => void;
+};
 
-export function TodayScreen({ t, accountId, onOpen, onPresence, rain }: ScreenProps) {
+export function TodayScreen({ t, accountId, onOpen, onPresence, rain, onPeopleFits }: ScreenProps) {
   const s = makeStyles(t);
   const { today, loading, error, marks, mark, toggle, markRead, save, saveNote, reload } = useToday(accountId);
   useEmojiRainTrigger({ ...rain, daysWon: today?.daysWon });
@@ -164,6 +178,7 @@ export function TodayScreen({ t, accountId, onOpen, onPresence, rain }: ScreenPr
       {today ? (
         <View style={s.timeline}>
           <View style={s.line} />
+          <MatchLead t={t} filter={filter} refreshKey={today.generatedAtIso} onIntroduce={onPeopleFits} />
           {view.cards.map((card) => (
             <TodayCard
               key={card.id}

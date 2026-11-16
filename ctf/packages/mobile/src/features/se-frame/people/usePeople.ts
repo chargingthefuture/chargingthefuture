@@ -2,7 +2,7 @@
 // use-people.ts). A member not approved yet gets the locked board, not an error.
 
 import { useEffect, useState } from 'react';
-import { sePeopleCategory, type SePeopleFilter, type SePeoplePage } from '@ctf/shared';
+import { sePeopleParams, type SePeopleFilter, type SePeoplePage } from '@ctf/shared';
 import { authedFetch } from '../../../auth/authedFetch';
 
 export type PeopleState =
@@ -10,15 +10,6 @@ export type PeopleState =
   | { kind: 'locked' }
   | { kind: 'error'; message: string }
   | { kind: 'ready'; people: SePeoplePage };
-
-function peopleParams(page: number, filter: SePeopleFilter, query: string): string {
-  const params = new URLSearchParams({ page: String(page) });
-  if (filter === 'offering') params.set('offering', '1');
-  const category = sePeopleCategory(filter);
-  if (category) params.set('category', category);
-  if (query.trim()) params.set('q', query.trim());
-  return params.toString();
-}
 
 async function readPeople(res: Response): Promise<PeopleState> {
   const body = (await res.json().catch(() => null)) as { people?: SePeoplePage; message?: string; reason?: string } | null;
@@ -32,7 +23,7 @@ export function usePeople(page: number, filter: SePeopleFilter, query: string, a
   useEffect(() => {
     let active = true;
     const timer = setTimeout(() => {
-      authedFetch(`/api/people?${peopleParams(page, filter, query)}`)
+      authedFetch(`/api/people?${sePeopleParams(page, filter, query)}`)
         .then(readPeople)
         .then((next) => {
           if (active) setState(next);

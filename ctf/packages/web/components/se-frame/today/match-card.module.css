@@ -1,0 +1,180 @@
+/* The Match card on Today, built to the Match card on the approved Today board. */
+
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 12px;
+  border-radius: 18px;
+  background: var(--se-card);
+  border: 1.5px solid var(--se-hair);
+  color: var(--se-ink);
+}
+
+.dot {
+  position: absolute;
+  left: -40px;
+  top: 12px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--se-kind-match);
+  color: var(--se-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--se-kind-match);
+}
+
+.big {
+  font-family: 'Newsreader Variable', Newsreader, Georgia, serif;
+  font-size: 34px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.line {
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.link {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--se-kind-match);
+}
+
+.ask {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.chip {
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1.5px solid var(--se-hair);
+  background: transparent;
+  color: var(--se-ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.chip[aria-pressed='true'] {
+  border-color: var(--se-ink);
+  background: var(--se-ink);
+  color: var(--se-bg);
+}
+
+.actions,
+.codeRow,
+.errorRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.primary,
+.button {
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.primary {
+  border: 1.5px solid var(--se-btn);
+  background: var(--se-btn);
+  color: var(--se-on-btn);
+}
+
+.button {
+  border: 1.5px solid var(--se-line);
+  background: var(--se-card);
+  color: var(--se-ink);
+  box-shadow: 0 2px 0 var(--se-line);
+}
+
+.primary:disabled,
+.button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.textButton {
+  min-height: 32px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--se-soft);
+  font: inherit;
+  font-size: 12px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.codeForm {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  padding-top: 8px;
+  border-top: 1.5px solid var(--se-hair);
+  margin-top: 6px;
+}
+
+.codeLabel {
+  font-size: 13px;
+  color: var(--se-soft);
+}
+
+.codeInput {
+  flex: 1;
+  min-width: 0;
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1.5px solid var(--se-hair);
+  background: var(--se-sunk);
+  color: var(--se-ink);
+  font: inherit;
+  font-size: 14px;
+  letter-spacing: 0.06em;
+}
+
+.note {
+  margin: 0;
+  font-size: 13px;
+  color: var(--se-soft);
+}
+
+.chip:focus-visible,
+.primary:focus-visible,
+.button:focus-visible,
+.textButton:focus-visible,
+.link:focus-visible,
+.codeInput:focus-visible {
+  outline: 2px solid var(--se-pick);
+  outline-offset: 2px;
+}

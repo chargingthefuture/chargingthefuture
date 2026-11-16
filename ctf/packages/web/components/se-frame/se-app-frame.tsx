@@ -104,10 +104,11 @@ type TabScreenProps = FrameProps & {
   onAskArchitect: () => void;
   onBack: () => void;
   onClose: () => void;
+  onPeopleFits: () => void;
   saving: boolean;
 };
 
-function TabScreen({ tab, currentUser, isAdmin, prefs, newKind, onAskArchitect, onBack, onClose, saving }: TabScreenProps) {
+function TabScreen({ tab, currentUser, isAdmin, prefs, newKind, onAskArchitect, onBack, onClose, onPeopleFits, saving }: TabScreenProps) {
   const title = TAB_TITLES[tab];
   const [presence, setPresence] = useState<number | null>(null);
   return (
@@ -119,6 +120,7 @@ function TabScreen({ tab, currentUser, isAdmin, prefs, newKind, onAskArchitect, 
           accountId={currentUser.userId}
           onPresence={setPresence}
           rain={{ on: prefs.reading.emojiRain, seen: prefs.daysWonSeen, onSeen: prefs.markDaysWonSeen }}
+          onPeopleFits={onPeopleFits}
         />
       ) : null}
       {tab === 'new' ? <NewScreen key={newKind} initialKind={newKind} onClose={onClose} /> : null}
@@ -147,12 +149,13 @@ function SeAppFrameBody({ currentUser, isAdmin }: FrameProps) {
     return () => window.removeEventListener('popstate', onPop);
   }, []);
 
-  // Choosing a tab while a room is open puts the room in the bar above the tab bar.
-  const select = useCallback((next: SeTab) => {
+  // Choosing a tab while a room is open puts the room in the bar above the tab bar. `query` adds to the
+  // address, as Get introduced does for People's "Fits what you need" (filter=fits).
+  const select = useCallback((next: SeTab, query = '') => {
     minimize();
     setNewKind('ask');
     setTab(next);
-    const url = next === 'today' ? '/' : `/?tab=${next}`;
+    const url = next === 'today' ? '/' : `/?tab=${next}${query}`;
     window.history.pushState(null, '', url);
     window.scrollTo(0, 0);
   }, [minimize]);
@@ -179,6 +182,7 @@ function SeAppFrameBody({ currentUser, isAdmin }: FrameProps) {
           onAskArchitect={askArchitect}
           onBack={back}
           onClose={() => select('today')}
+          onPeopleFits={() => select('people', '&filter=fits')}
           saving={saving}
         />
         {[error, prefs.error].filter(Boolean).map((message) => (
