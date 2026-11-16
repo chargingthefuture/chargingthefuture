@@ -799,7 +799,20 @@ totals (AD-28) still count each mark.
 1. Signed out, open Today and look at the burgundy hero. Leave the page open for two minutes.
 2. Turn on less motion (web: the system's reduce motion setting; Android: Remove animations) and repeat step 1.
 3. Look at the dots to the left of the cards, signed out, then signed in, in light and dark and in each of the four colors.
-4. Signed out, find a blog story card. Tap Read the post, come back, and tap Conversation. Then find a member's story card (a member who agreed to be shown signed out) and tap Conversation.
+4. Signed out, find a blog story card. Tap Read the post, come back, and tap Conversation. Then find a member's story card (a member who agreed to be shown signed out) and tap Conversation, on a story where no writer agreed to visitors reading their replies (AD-39 covers the rest).
 5. Signed in, open a blog story card and look at its buttons. Leave Today open for two minutes.
 **Expected:** Step 1 shows "Days the Avenhood has won" with a lock and Preview, and the count under it. Within 20 to 90 seconds the count goes up by one and emoji fall across the screen for a few seconds, then again at another random interval. A reload starts from the sample count again. Step 2: the count still goes up, and no emoji fall. Step 3: each dot carries an icon by kind, as on the approved Today board: an arrow up on an ask, an arrow down on an offer, a book on a story, a magnifier on a Wanted or match card and on the locked People card, a face on Mood, bars on the numbers, a play mark on a replay, a grid on the puzzle; the icon reads clearly on the dot in every color and mode. A dot that can be tapped still marks the card done, with the check shown in place of the icon. Step 4: the blog story shows Read the post and Conversation and no This helped me; Read the post opens the blog post, and Conversation opens the post's comments read only. The member's story shows Conversation only; it opens the story with "The conversation on a member's story is for members. Sign in to read it." and no messages. Step 5: the story shows This helped me as before, and the signed-in Days won count does not tick.
+**Result:** web ☐ android ☐ — notes:
+
+## AD-39 · Visitors read replies on members' stories only with the writer's agreement (added 2026-11-16)
+**Role:** members A and B (approved), a member C who is restricted, a visitor who is not signed in · **Surfaces:** web, android · **Precondition:** a member's story shown signed out today
+**Steps:**
+1. As A, before agreeing, reply in the conversation under the member's story.
+2. As A, open Me → Settings → Safety and privacy and turn on "Visitors can read what I write on members' stories". Reply again under the same story.
+3. As B, without agreeing, reply under the story. As C, agree and reply.
+4. As the visitor, open signed-out Today, find the member's story and tap Conversation.
+5. As A, turn the setting off. As the visitor, close the sheet and open Conversation again.
+6. With no agreeing member's reply under a story, open its Conversation as the visitor.
+7. Delete A's account in Settings.
+**Expected:** Step 2: the switch reads on after a reload and on the other device; its note says visitors can read what A writes from now on, with A's username, that earlier replies stay for members, and that turning it off hides them at once. Step 4 shows only A's second reply, under A's username as members see it, read only, with "Sign in to write here"; A's first reply, B's and C's are left out with no placeholder or count. Step 5 shows none of A's replies. Step 6 shows "The conversation on a member's story is for members. Sign in to read it." Step 7 removes A's agreement with A's preferences row and A's replies with A's messages. The switch shows only for approved members.
 **Result:** web ☐ android ☐ — notes:
