@@ -1,25 +1,22 @@
 'use client';
 
 import Link from 'next/link';
-import { AddToCalendarButton } from '@/components/shared/add-to-calendar';
 import {
   SE_BROADCAST_WORDS as B,
   SE_TODAY_ROOM_WORDS as W,
   seBroadcastHostLine,
-  seRoomCountsLine,
-  seTalkCalendarEvent,
-  seTalkHostLine,
+  seMainRoomButtons,
   seWeaversLine,
   type SeTodayBroadcast,
   type SeTodayRoom,
 } from '@ctf/shared';
-import { SeAvatar } from '../../shared/se-avatar';
 import { useBringSomeoneIn } from '../../shared/use-bring-someone-in';
 import { useSeRooms } from '../rooms/se-rooms';
+import { MainRoomCard } from './main-room-card';
 import styles from './today.module.css';
 
-// The rooms at the top of Today, to the approved board: the Main Room card with its talk, who hosts
-// it and when, the faces on the stage, Listen in and Bring someone in; and Weavers of the Commons as
+// The rooms at the top of Today: the Main Room card (main-room-card.tsx, the same card a visitor
+// sees, with the member's buttons); and Weavers of the Commons as
 // one row for the members who may enter it. The broadcast card sits above them while the System
 // Architect is live.
 
@@ -74,53 +71,22 @@ function QuietMainRoom({ room }: { room: SeTodayRoom }) {
   );
 }
 
-function Faces({ faces }: { faces: string[] }) {
-  if (faces.length === 0) return null;
-  return (
-    <span className={styles.faces} aria-hidden="true">
-      {faces.map((id) => (
-        <span key={id} className={styles.face}>
-          <SeAvatar accountId={id} size={30} />
-        </span>
-      ))}
-    </span>
-  );
-}
-
-function MainRoomCard({ room }: { room: SeTodayRoom }) {
+// The member's buttons: Play readings opens the room and plays the readings loop there, Start a
+// conversation opens it and joins the call; live, Listen in opens it and Bring someone in shares
+// the signed-out Today.
+function SignedInMainRoom({ room }: { room: SeTodayRoom }) {
   const { open } = useSeRooms();
   const { note, bring } = useBringSomeoneIn();
+  const buttons = seMainRoomButtons(room.live, true);
   const talk = room.nextTalk;
   return (
-    <section aria-label={room.live ? 'Live room' : room.name} className={styles.roomCard}>
-      <div className={styles.roomHead}>
-        {room.live ? <span className={styles.liveBadge}>LIVE</span> : null}
-        <span className={styles.roomName}>{room.name}</span>
-        <span className={styles.roomMeta}>· {W.mainAudience}</span>
-      </div>
-      {talk ? <span className={styles.roomTitle}>{talk.title}</span> : null}
-      {talk ? <span className={styles.roomMeta}>{seTalkHostLine(talk)}</span> : null}
-      {talk && !talk.onAir ? (
-        <AddToCalendarButton color="var(--se-ink)" borderColor="var(--se-line)" event={seTalkCalendarEvent(talk)} style={{ alignSelf: 'flex-start' }} />
-      ) : null}
-      <div className={styles.stageRow}>
-        <Faces faces={room.faces} />
-        <span className={styles.roomMeta}>{seRoomCountsLine(room)}</span>
-      </div>
-      <div className={styles.roomButtons}>
-        <button type="button" className={`${styles.primaryButton} ${styles.grow}`} onClick={() => open('main', talk)}>
-          {W.listen}
-        </button>
-        <button type="button" className={styles.quietButton} onClick={() => void bring()}>
-          {W.bring}
-        </button>
-      </div>
-      {note ? (
-        <p role="status" className={styles.roomMeta}>
-          {note}
-        </p>
-      ) : null}
-    </section>
+    <MainRoomCard
+      room={room}
+      buttons={buttons}
+      onPrimary={() => open('main', talk, buttons.primary.action === 'readings' ? 'readings' : undefined)}
+      onSecondary={() => (buttons.secondary.action === 'bring' ? void bring() : open('main', talk, 'join'))}
+      note={note}
+    />
   );
 }
 
@@ -149,5 +115,5 @@ function WeaversRow({ room }: { room: SeTodayRoom }) {
 // `broadcasting`: a broadcast is live, so a Main Room nobody is in shows as one quiet row.
 export function RoomCard({ room, broadcasting = false }: { room: SeTodayRoom; broadcasting?: boolean }) {
   if (room.key === 'weavers') return <WeaversRow room={room} />;
-  return broadcasting && !room.live ? <QuietMainRoom room={room} /> : <MainRoomCard room={room} />;
+  return broadcasting && !room.live ? <QuietMainRoom room={room} /> : <SignedInMainRoom room={room} />;
 }

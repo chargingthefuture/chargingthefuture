@@ -12,6 +12,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Pause, Play } from 'lucide-react-native';
 import { useVideoPlayer, type VideoPlayer } from 'expo-video';
+import { SE_MAIN_ROOM_CARD_WORDS } from '@ctf/shared';
 import { interFamily } from '../../components/ui';
 import { authedFetch } from '../../auth/authedFetch';
 import { useChymeTokens } from './chyme-tokens';
@@ -42,9 +43,11 @@ async function blogReadings(): Promise<ReadingsTrack[]> {
   return parseBlogReadings(await res.json());
 }
 
-// The list, read once: only while the loop is switched on and nobody is live.
+// The list, read once: only while the loop is switched on and nobody is live. `loaded` once the
+// read has finished, whatever it found.
 function useTracks() {
   const [tracks, setTracks] = useState<ReadingsTrack[]>([]);
+  const [loaded, setLoaded] = useState(false);
   useEffect(() => {
     let active = true;
     Promise.all([loopEnabled(), roomIsLive()])
@@ -56,12 +59,15 @@ function useTracks() {
       .catch((error: unknown) => {
         // The loop is an extra; when it cannot be read the screen shows what it showed before.
         if (active) console.warn('[chyme/readings] could not load the readings', error);
+      })
+      .finally(() => {
+        if (active) setLoaded(true);
       });
     return () => {
       active = false;
     };
   }, []);
-  return tracks;
+  return { tracks, loaded };
 }
 
 type Playback = {
@@ -149,12 +155,24 @@ function usePlayback(player: VideoPlayer, tracks: ReadingsTrack[]): Playback {
   return { index, playing, starting, problem, start, stop };
 }
 
-export function ChymeReadingsPlayer({ onRoomLive }: { onRoomLive?: () => void } = {}) {
-  const tracks = useTracks();
+// `autoStart`: the reader asked for the readings with the tap that opened this player (Play readings
+// on Today), so they start as soon as the list arrives. `showOff`: say so when there is nothing to
+// play, rather than showing nothing after that tap. As on the web.
+type ChymeReadingsPlayerProps = { onRoomLive?: () => void; autoStart?: boolean; showOff?: boolean };
+
+export function ChymeReadingsPlayer({ onRoomLive, autoStart = false, showOff = false }: ChymeReadingsPlayerProps = {}) {
+  const { tracks, loaded } = useTracks();
   const player = useVideoPlayer(null);
   const playback = usePlayback(player, tracks);
   const [wentLive, setWentLive] = useState(false);
-  const { playing, stop } = playback;
+  const { playing, stop, start } = playback;
+  const autoRef = useRef(autoStart);
+
+  useEffect(() => {
+    if (!autoRef.current || tracks.length === 0) return;
+    autoRef.current = false;
+    start();
+  }, [tracks, start]);
 
   useEffect(() => {
     if (!playing) return;
@@ -169,7 +187,9 @@ export function ChymeReadingsPlayer({ onRoomLive }: { onRoomLive?: () => void } 
     return () => clearInterval(timer);
   }, [playing, stop, onRoomLive]);
 
-  if (tracks.length === 0) return null;
+  if (tracks.length === 0) {
+    return showOff && loaded ? <ReadingsOff /> : null;
+  }
   const current = playback.index === null ? null : tracks[playback.index] ?? null;
   return <ReadingsCard current={current} playback={playback} wentLive={wentLive} />;
 }
@@ -178,6 +198,15 @@ function openLink(url: string) {
   void Linking.openURL(url).catch(() => {
     /* no-trace: the phone has nothing to open a web address with */
   });
+}
+
+function ReadingsOff() {
+  const t = useChymeTokens();
+  return (
+    <Text accessibilityRole="alert" style={[styles.off, { color: t.MUTED }]}>
+      {SE_MAIN_ROOM_CARD_WORDS.readingsOff}
+    </Text>
+  );
 }
 
 function ReadingsCard({ current, playback, wentLive }: { current: ReadingsTrack | null; playback: Playback; wentLive: boolean }) {
@@ -227,4 +256,5 @@ const styles = StyleSheet.create({
   trackTitle: { flex: 1, minWidth: 0, fontSize: 12, lineHeight: 17, fontFamily: interFamily('600') },
   read: { marginTop: 10, paddingVertical: 8, paddingHorizontal: 14, borderWidth: 1, alignItems: 'center' },
   readText: { fontSize: 13, fontFamily: interFamily('600') },
+  off: { marginTop: 12, fontSize: 13, fontFamily: interFamily('400') },
 });

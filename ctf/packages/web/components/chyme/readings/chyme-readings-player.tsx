@@ -2,6 +2,7 @@
 
 import { Pause, Play } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { SE_MAIN_ROOM_CARD_WORDS } from '@ctf/shared';
 import { useChymeTokens } from '@/components/chyme/chyme-tokens-context';
 import { BLOG_READINGS_URL, loopPositionAt, nextIndex, parseBlogReadings, sourceAt, type ReadingsTrack } from 'lib/chyme/readings/schedule';
 
@@ -46,7 +47,13 @@ async function blogReadings(signal: AbortSignal): Promise<ReadingsTrack[]> {
   return parseBlogReadings(await res.json());
 }
 
-export function ChymeReadingsPlayer({ onRoomLive }: { onRoomLive?: () => void }) {
+// `autoStart`: the reader asked for the readings with the tap that opened this player (Play readings
+// on Today), so they start as soon as the list arrives. A browser that refuses sound after the wait
+// leaves the Play button for a second tap, with no error. `showOff`: say so when there is nothing to
+// play, rather than showing nothing after that tap.
+type ChymeReadingsPlayerProps = { onRoomLive?: () => void; autoStart?: boolean; showOff?: boolean };
+
+export function ChymeReadingsPlayer({ onRoomLive, autoStart = false, showOff = false }: ChymeReadingsPlayerProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   // The reading now loaded, and the list, kept outside React's state so the end-of-file handler
   // always reads the current values: a handler holding an out-of-date index moved to the same
@@ -67,6 +74,8 @@ export function ChymeReadingsPlayer({ onRoomLive }: { onRoomLive?: () => void })
   // Between the tap and the first sound: the file has to arrive first, which takes a few seconds on
   // a phone, and an empty room with a silent button reads as broken (owner report, 2026-09-29).
   const [starting, setStarting] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const autoRef = useRef(autoStart);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -78,6 +87,9 @@ export function ChymeReadingsPlayer({ onRoomLive }: { onRoomLive?: () => void })
         const list = await blogReadings(controller.signal);
         tracksRef.current = list;
         setTracks(list);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoaded(true);
       })
       .catch((error: unknown) => {
         // The loop is an extra; when it cannot be read the page shows what it showed before.
@@ -106,6 +118,8 @@ export function ChymeReadingsPlayer({ onRoomLive }: { onRoomLive?: () => void })
         if (error instanceof DOMException && error.name === 'NotSupportedError') return;
         setPlaying(false);
         setStarting(false);
+        // The automatic start after Play readings was refused: the Play button waits for a tap.
+        if (error instanceof DOMException && error.name === 'NotAllowedError' && autoRef.current) return;
         setProblem(`The recording did not start: ${error instanceof Error ? error.message : 'the browser refused to play it.'}`);
       },
     );
@@ -124,6 +138,16 @@ export function ChymeReadingsPlayer({ onRoomLive }: { onRoomLive?: () => void })
     failuresRef.current = 0;
     playFrom(position.index, position.offsetSeconds);
   }, [playFrom]);
+
+  useEffect(() => {
+    if (!autoRef.current || tracks.length === 0) return;
+    start();
+    // Cleared after the first sound or refusal is handled, so a later tap reports its own failure.
+    const timer = window.setTimeout(() => {
+      autoRef.current = false;
+    }, 5_000);
+    return () => window.clearTimeout(timer);
+  }, [tracks, start]);
 
   const handleEnded = useCallback(() => {
     const current = indexRef.current;
@@ -177,7 +201,9 @@ export function ChymeReadingsPlayer({ onRoomLive }: { onRoomLive?: () => void })
   // Stop the sound when the player leaves the page (a room went live, or the visitor navigated away).
   useEffect(() => () => audioRef.current?.pause(), []);
 
-  if (tracks.length === 0) return null;
+  if (tracks.length === 0) {
+    return showOff && loaded ? <ReadingsOff /> : null;
+  }
   return (
     <ReadingsCard
       current={index === null ? null : tracks[index] ?? null}
@@ -190,6 +216,15 @@ export function ChymeReadingsPlayer({ onRoomLive }: { onRoomLive?: () => void })
       {/* eslint-disable-next-line jsx-a11y/media-has-caption -- every reading has a text version: the published blog post it reads, linked beside the player ("Read this post"; every entry in the blog's list carries its post link). That is the text alternative for prerecorded audio (WCAG 1.2.1). */}
       <audio ref={audioRef} onEnded={handleEnded} onPlaying={handlePlaying} onError={handleError} preload="none" />
     </ReadingsCard>
+  );
+}
+
+function ReadingsOff() {
+  const t = useChymeTokens();
+  return (
+    <p role="status" style={{ margin: '12px 0 0', fontSize: 13, color: t.MUTED }}>
+      {SE_MAIN_ROOM_CARD_WORDS.readingsOff}
+    </p>
   );
 }
 

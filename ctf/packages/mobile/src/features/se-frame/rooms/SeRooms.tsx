@@ -22,12 +22,17 @@ export type SeRoomSummary = {
 
 export type SeRoomActions = { leave: () => void; toggleHand: () => void };
 
+// What the tap that opened a room asked for, from the Main Room card on Today: play the readings
+// loop (Play readings) or join the call (Start a conversation). Plain opening asks for neither.
+export type SeRoomIntent = 'readings' | 'join';
+
 type SeRoomsValue = {
   opened: ChymeRoomScope[];
   shown: ChymeRoomScope | null;
   talks: Partial<Record<ChymeRoomScope, SeTodayTalk | null>>;
   summaries: Partial<Record<ChymeRoomScope, SeRoomSummary>>;
-  open: (_scope: ChymeRoomScope, _talk?: SeTodayTalk | null) => void;
+  intents: Partial<Record<ChymeRoomScope, SeRoomIntent | null>>;
+  open: (_scope: ChymeRoomScope, _talk?: SeTodayTalk | null, _intent?: SeRoomIntent) => void;
   minimize: () => void;
   report: (_scope: ChymeRoomScope, _summary: SeRoomSummary, _actions: SeRoomActions) => void;
   leave: (_scope: ChymeRoomScope) => void;
@@ -47,9 +52,11 @@ export function SeRoomsProvider({ children }: { children: ReactNode }) {
   const [shown, setShown] = useState<ChymeRoomScope | null>(null);
   const [talks, setTalks] = useState<SeRoomsValue['talks']>({});
   const [summaries, setSummaries] = useState<SeRoomsValue['summaries']>({});
+  const [intents, setIntents] = useState<SeRoomsValue['intents']>({});
   const actions = useRef<Partial<Record<ChymeRoomScope, SeRoomActions>>>({});
 
-  const open = useCallback((scope: ChymeRoomScope, talk?: SeTodayTalk | null) => {
+  const open = useCallback((scope: ChymeRoomScope, talk?: SeTodayTalk | null, intent?: SeRoomIntent) => {
+    setIntents((current) => ({ ...current, [scope]: intent ?? null }));
     setOpened((current) => (current.includes(scope) ? current : [...current, scope]));
     if (talk !== undefined) setTalks((current) => ({ ...current, [scope]: talk }));
     setShown(scope);
@@ -87,8 +94,8 @@ export function SeRoomsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<SeRoomsValue>(
-    () => ({ opened, shown, talks, summaries, open, minimize, report, leave, toggleHand }),
-    [opened, shown, talks, summaries, open, minimize, report, leave, toggleHand],
+    () => ({ opened, shown, talks, summaries, intents, open, minimize, report, leave, toggleHand }),
+    [opened, shown, talks, summaries, intents, open, minimize, report, leave, toggleHand],
   );
   return <SeRoomsContext.Provider value={value}>{children}</SeRoomsContext.Provider>;
 }
