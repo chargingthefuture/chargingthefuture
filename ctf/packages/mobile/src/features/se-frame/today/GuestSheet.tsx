@@ -84,7 +84,7 @@ export function GuestSheet({
             <View style={s.head}>
               <Text style={s.talkTitle}>{card.label}</Text>
               <View style={s.spacer} />
-              <TouchableOpacity accessibilityRole="button" accessibilityLabel={W.close} style={s.round} onPress={onClose}>
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel={W.close} style={[s.round, { marginLeft: 'auto' }]} onPress={onClose}>
                 <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={t.ink} strokeWidth={2.2} strokeLinecap="round">
                   <Path d="M6 6l12 12M18 6L6 18" />
                 </Svg>
