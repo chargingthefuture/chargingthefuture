@@ -14,6 +14,7 @@ import {
   seGuestOpensSheet,
   seGuestMainRoom,
   seMainRoomButtons,
+  seStoryPostHref,
   seTheme,
   seTodayView,
   type SeToday,
@@ -27,6 +28,7 @@ import { useGuestRoom } from './use-guest-room';
 import { useToday } from './use-today';
 import { GuestSheet } from './guest-sheet';
 import { CardDotIcon } from './card-dot-icon';
+import { StoryTitleLink } from './story-title-link';
 import { EmojiRainShower } from './emoji-rain';
 import { MainRoomCard } from './main-room-card';
 import styles from './today.module.css';
@@ -35,7 +37,9 @@ import styles from './today.module.css';
 // won (a Preview count that ticks up now and then) with what Skills Economy is and Sign up, the Main
 // Room card members see too (main-room-card.tsx), playing in place, the
 // day's cards read only, asks and offers from "A member" with Sign up to answer, a blog story with
-// Read the post and Conversation, and People locked until a member is reviewed.
+// Read the post and Conversation, and People locked until a member is reviewed. A card reads as it
+// does signed in, with only its buttons' words different: a blog story's title links to the post, and
+// tapping the text of a card that opens opens its sheet.
 
 // The small tag on anything read from sample data rather than members' own rows: a lock and
 // "Preview", so a visitor reads it as private rather than empty.
@@ -140,6 +144,30 @@ function RoomCard({ today, signUpUrl }: { today: SeToday | null; signUpUrl: stri
   );
 }
 
+// The title and text: a blog story's title is a link to its post, and on a card that opens, the text
+// is the button that opens its sheet, as signed in.
+function GuestCardText({ card, body, onOpen }: { card: SeTodayCard; body: string; onOpen: (() => void) | null }) {
+  const postHref = seStoryPostHref(card);
+  const title = postHref ? null : <span className={styles.cardTitle}>{card.title}</span>;
+  const text = body ? <span className={`${styles.body} ${styles.bodyClosed}`}>{body}</span> : null;
+  return (
+    <>
+      {postHref ? <StoryTitleLink href={postHref} title={card.title} /> : null}
+      {onOpen && (title || text) ? (
+        <button type="button" className={styles.textButton} aria-haspopup="dialog" onClick={onOpen}>
+          {title}
+          {text}
+        </button>
+      ) : (
+        <>
+          {title}
+          {text}
+        </>
+      )}
+    </>
+  );
+}
+
 function GuestCard({ card, signUpUrl, signInUrl }: { card: SeTodayCard; signUpUrl: string; signInUrl: string }) {
   const color = `var(--se-kind-${card.kind})`;
   const bySignUp = seGuestAnswersBySignUp(card);
@@ -157,8 +185,7 @@ function GuestCard({ card, signUpUrl, signInUrl }: { card: SeTodayCard; signUpUr
         </span>
         {card.sample ? <SampleTag /> : null}
       </div>
-      <span className={styles.cardTitle}>{card.title}</span>
-      {card.body && !bySignUp ? <span className={`${styles.body} ${styles.bodyClosed}`}>{card.body}</span> : null}
+      <GuestCardText card={card} body={bySignUp ? '' : (card.body ?? '')} onOpen={seGuestOpensSheet(card) ? () => setOpen(true) : null} />
       <div className={styles.actions}>
         {bySignUp ? (
           <a href={signUpUrl} className={styles.actionButton}>

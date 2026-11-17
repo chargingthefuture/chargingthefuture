@@ -2,12 +2,13 @@
 // 2026-11-10): read only. A story shows its post's Fireside comments; a sample ask or offer shows a
 // sample conversation, tagged as sample; a member's story shows only the replies whose writers agreed
 // that visitors may read them, or says its conversation is for members. Just us two is shown as
-// private, with a sign-in.
+// private, with a sign-in. A blog story shows its teaser and Read the post, to the post, above the
+// conversation.
 
 import React, { useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { SE_CARD_WORDS, SE_GUEST_WORDS as W, seAgo, seGuestEmptyLine, type SeGuestConversation, type SeThemeTokens, type SeTodayCard } from '@ctf/shared';
+import { SE_CARD_WORDS, SE_GUEST_WORDS as W, seAgo, seGuestEmptyLine, seStoryPostHref, type SeGuestConversation, type SeThemeTokens, type SeTodayCard } from '@ctf/shared';
 import { getApiBaseUrl } from '../../../auth/authedFetch';
 import { makeCardSheetStyles, type CardSheetStyles } from './cardSheetStyles';
 
@@ -54,7 +55,22 @@ function Messages({ s, read, sampleTag, empty }: { s: CardSheetStyles; read: Rea
   );
 }
 
-export function GuestSheet({ t, card, sampleTag, onSignIn, onClose }: { t: SeThemeTokens; card: SeTodayCard; sampleTag: React.ReactNode; onSignIn: () => void; onClose: () => void }) {
+export function GuestSheet({
+  t,
+  card,
+  sampleTag,
+  onSignIn,
+  onOpenLink,
+  onClose,
+}: {
+  t: SeThemeTokens;
+  card: SeTodayCard;
+  sampleTag: React.ReactNode;
+  onSignIn: () => void;
+  onOpenLink: (_href: string) => void;
+  onClose: () => void;
+}) {
+  const postHref = seStoryPostHref(card);
   const s = makeCardSheetStyles(t);
   const read = useGuestConversation(card.id);
   const [pair, setPair] = useState(false);
@@ -79,6 +95,11 @@ export function GuestSheet({ t, card, sampleTag, onSignIn, onClose }: { t: SeThe
                 {card.title}
               </Text>
               {card.body ? <Text style={s.body}>{card.body}</Text> : null}
+              {postHref ? (
+                <TouchableOpacity accessibilityRole="link" accessibilityLabel={`${W.readPost}: ${card.title}`} style={s.openIn} onPress={() => (onClose(), onOpenLink(postHref))}>
+                  <Text style={s.openInLabel}>{W.readPost}</Text>
+                </TouchableOpacity>
+              ) : null}
             </View>
             <View style={s.talk}>
               <View style={s.talkHead}>

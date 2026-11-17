@@ -899,3 +899,20 @@
   font-size: 12px;
   font-weight: 600;
 }
+
+/* A blog story's title, a link to the post (story-title-link.tsx). */
+.titleLink {
+  align-self: flex-start;
+  color: inherit;
+  text-decoration: none;
+}
+
+.titleLink:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.titleLink:focus-visible {
+  outline: 2px solid var(--se-pick);
+  outline-offset: 2px;
+}

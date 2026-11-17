@@ -29,6 +29,7 @@ export declare const SE_GUEST_WORDS: {
 };
 export declare const SE_GUEST_SHEET_SOURCES: readonly string[];
 export declare function seGuestOpensSheet(card: Pick<SeTodayCard, 'source'>): boolean;
+export declare function seStoryPostHref(card: Pick<SeTodayCard, 'source' | 'href'>): string | null;
 export declare function seGuestEmptyLine(card: Pick<SeTodayCard, 'source'>): string;
 export type SeGuestMessage = {
     id: string;

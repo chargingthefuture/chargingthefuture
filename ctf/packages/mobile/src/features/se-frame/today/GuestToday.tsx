@@ -17,6 +17,7 @@ import {
   seGuestOpensSheet,
   seGuestMainRoom,
   seMainRoomButtons,
+  seStoryPostHref,
   seTodayView,
   type SeThemeTokens,
   type SeToday,
@@ -34,6 +35,7 @@ import { useToday } from './useToday';
 import { GuestSheet } from './GuestSheet';
 import { CardDotIcon } from './CardDotIcon';
 import { MainRoomCard } from './MainRoomCard';
+import { StoryTitleLink } from './StoryTitleLink';
 import Svg, { Path, Rect } from 'react-native-svg';
 
 type Styles = ReturnType<typeof makeStyles>;
@@ -153,6 +155,34 @@ function RoomCard({ s, t, today, onSignUp }: { s: Styles; t: SeThemeTokens; toda
   );
 }
 
+// The title and text, as on the web's guest-today.tsx: a blog story's title is a link to its post,
+// and on a card that opens, the text is the button that opens its sheet, as signed in.
+function GuestCardText({ s, card, body, onOpen, go }: { s: Styles; card: SeTodayCard; body: string; onOpen: (() => void) | null; go: (_href: string) => void }) {
+  const postHref = seStoryPostHref(card);
+  const title = postHref ? null : <Text style={s.title}>{card.title}</Text>;
+  const text = body ? (
+    <Text style={s.body} numberOfLines={3}>
+      {body}
+    </Text>
+  ) : null;
+  return (
+    <>
+      {postHref ? <StoryTitleLink href={postHref} title={card.title} style={s.title} onOpenLink={go} /> : null}
+      {onOpen && (title || text) ? (
+        <TouchableOpacity accessibilityRole="button" onPress={onOpen} style={s.textButton}>
+          {title}
+          {text}
+        </TouchableOpacity>
+      ) : (
+        <>
+          {title}
+          {text}
+        </>
+      )}
+    </>
+  );
+}
+
 function GuestCard({ s, t, card, onSignUp, go }: { s: Styles; t: SeThemeTokens; card: SeTodayCard; onSignUp: () => void; go: (_href: string) => void }) {
   const [open, setOpen] = useState(false);
   const color = t.kind[card.kind];
@@ -168,12 +198,7 @@ function GuestCard({ s, t, card, onSignUp, go }: { s: Styles; t: SeThemeTokens; 
         <Text style={[s.label, { color }]}>{card.label}</Text>
         {card.sample ? <SampleTag s={s} color={t.ink} /> : null}
       </View>
-      <Text style={s.title}>{card.title}</Text>
-      {card.body && !bySignUp ? (
-        <Text style={s.body} numberOfLines={3}>
-          {card.body}
-        </Text>
-      ) : null}
+      <GuestCardText s={s} card={card} body={bySignUp ? '' : (card.body ?? '')} onOpen={seGuestOpensSheet(card) ? () => setOpen(true) : null} go={go} />
       <View style={s.row}>
         {bySignUp ? (
           <TouchableOpacity accessibilityRole="button" onPress={onSignUp} style={s.action}>
@@ -192,7 +217,7 @@ function GuestCard({ s, t, card, onSignUp, go }: { s: Styles; t: SeThemeTokens; 
           </TouchableOpacity>
         ) : null}
       </View>
-      {open ? <GuestSheet t={t} card={card} sampleTag={<SampleTag s={s} color={t.ink} />} onSignIn={onSignUp} onClose={() => setOpen(false)} /> : null}
+      {open ? <GuestSheet t={t} card={card} sampleTag={<SampleTag s={s} color={t.ink} />} onSignIn={onSignUp} onOpenLink={go} onClose={() => setOpen(false)} /> : null}
     </View>
   );
 }
@@ -260,6 +285,7 @@ function makeStyles(t: SeThemeTokens) {
     dot: { position: 'absolute', left: -40, top: 12, width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
     handle: { fontSize: 13, color: t.ink, fontFamily: SE_FONT.sansSemi },
     label: { fontSize: 12, fontFamily: SE_FONT.sansBold, flexShrink: 1 },
+    textButton: { gap: 6 },
     title: { fontSize: 17, lineHeight: 22, color: t.ink, fontFamily: SE_FONT.sansBold },
     body: { fontSize: 14, lineHeight: 20, color: t.soft, fontFamily: SE_FONT.sans },
     action: { alignSelf: 'flex-start', minHeight: 44, paddingHorizontal: 14, justifyContent: 'center', borderRadius: 999, borderWidth: 1.5, borderColor: t.line, backgroundColor: t.card },

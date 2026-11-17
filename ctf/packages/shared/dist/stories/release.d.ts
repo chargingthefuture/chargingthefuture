@@ -9,6 +9,7 @@ export type SeStoryPost = {
     collection: string;
     url: string;
     text: string;
+    teaser?: string;
 };
 export declare const SE_MEMBER_STORY_COLLECTION = "member";
 export declare const SE_MEMBER_STORIES_PER_DAY = 5;
@@ -28,3 +29,4 @@ export declare function seLocalDay(now?: Date): string;
 export declare function seStoryDayIndex(day: string): number;
 export declare function seStoriesForDay(posts: readonly SeStoryPost[], day: string): SeStoryPost[];
 export declare function seStoryOpening(text: string, max?: number): string;
+export declare function seStoryCardBody(post: Pick<SeStoryPost, 'text' | 'teaser'>): string;

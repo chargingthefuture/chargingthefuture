@@ -1,14 +1,14 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { SE_CARD_WORDS, SE_GUEST_WORDS as W, seAgo, seGuestEmptyLine, type SeGuestConversation, type SeTodayCard } from '@ctf/shared';
+import { SE_CARD_WORDS, SE_GUEST_WORDS as W, seAgo, seGuestEmptyLine, seStoryPostHref, type SeGuestConversation, type SeTodayCard } from '@ctf/shared';
 import styles from './card-sheet.module.css';
 
 // A card opened on signed-out Today (owner decision, 2026-11-10): read only. A story shows its post's
 // Fireside comments; a sample ask or offer shows a sample conversation, tagged as sample; a member's
 // story shows only the replies whose writers agreed that visitors may read them, or says its
 // conversation is for members. Just us two is shown as private, with a sign-in, and nothing in it is
-// read.
+// read. A blog story shows its teaser and Read the post, to the post, above the conversation.
 
 type Read = { kind: 'loading' } | { kind: 'ready'; conversation: SeGuestConversation } | { kind: 'failed'; message: string };
 
@@ -53,6 +53,7 @@ function Messages({ read, sampleTag, empty }: { read: Read; sampleTag: React.Rea
 
 export function GuestSheet({ card, signInUrl, sampleTag, onClose }: { card: SeTodayCard; signInUrl: string; sampleTag: React.ReactNode; onClose: () => void }) {
   const read = useGuestConversation(card.id);
+  const postHref = seStoryPostHref(card);
   const [pair, setPair] = useState(false);
   const closeRef = useRef<HTMLButtonElement | null>(null);
   useEffect(() => {
@@ -77,6 +78,11 @@ export function GuestSheet({ card, signInUrl, sampleTag, onClose }: { card: SeTo
         <div className={styles.text}>
           <h2 className={styles.title}>{card.title}</h2>
           {card.body ? <p className={styles.body}>{card.body}</p> : null}
+          {postHref ? (
+            <a href={postHref} className={styles.openIn} aria-label={`${W.readPost}: ${card.title}`}>
+              {W.readPost}
+            </a>
+          ) : null}
         </div>
         <div className={styles.talk}>
           <div className={styles.talkHead}>
