@@ -1,6 +1,5 @@
-// The rooms at the top of Today on Android, the copy of the web's room-card.tsx, to the approved
-// board: the Main Room card with its talk, who hosts it and when, the faces on the stage, Listen in
-// and Bring someone in; and Weavers of the Commons as one row for the members who may enter it.
+// The rooms at the top of Today on Android, the copy of the web's room-card.tsx: the Main Room card
+// (MainRoomCard.tsx, the same card a visitor sees, with the member's buttons); and Weavers of the Commons as one row for the members who may enter it.
 
 import React, { useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -9,64 +8,34 @@ import {
   SE_BROADCAST_WORDS as B,
   SE_TODAY_ROOM_WORDS as W,
   seBroadcastHostLine,
-  seRoomCountsLine,
-  seTalkCalendarEvent,
-  seTalkHostLine,
+  seMainRoomButtons,
   seWeaversLine,
   type SeThemeTokens,
   type SeTodayBroadcast,
   type SeTodayRoom,
 } from '@ctf/shared';
-import { AddToCalendarButton } from '../../../components/shared/AddToCalendarButton';
-import { SeAvatar } from '../../../components/shared/SeAvatar';
 import { useBringSomeoneIn } from '../../../components/shared/useBringSomeoneIn';
 import { useSeRooms } from '../rooms/SeRooms';
 import { SE_FONT } from '../fonts';
+import { MainRoomCard } from './MainRoomCard';
 
-type Styles = ReturnType<typeof makeStyles>;
-
-function Faces({ s, faces }: { s: Styles; faces: string[] }) {
-  if (faces.length === 0) return null;
-  return (
-    <View style={s.faces} importantForAccessibility="no-hide-descendants">
-      {faces.map((id, index) => (
-        <View key={id} style={[s.face, index > 0 ? s.faceOverlap : null]}>
-          <SeAvatar accountId={id} size={30} />
-        </View>
-      ))}
-    </View>
-  );
-}
-
-function MainRoomCard({ t, room }: { t: SeThemeTokens; room: SeTodayRoom }) {
-  const s = useMemo(() => makeStyles(t), [t]);
+// The member's buttons, as on the web: Play readings opens the room and plays the readings loop
+// there, Start a conversation opens it and joins the call; live, Listen in opens it and Bring
+// someone in shares the signed-out Today.
+function SignedInMainRoom({ t, room }: { t: SeThemeTokens; room: SeTodayRoom }) {
   const { open } = useSeRooms();
   const { note, bring } = useBringSomeoneIn();
+  const buttons = seMainRoomButtons(room.live, true);
   const talk = room.nextTalk;
   return (
-    <View style={s.card} accessibilityLabel={room.live ? 'Live room' : room.name}>
-      <View style={s.row}>
-        {room.live ? <Text style={s.liveBadge}>LIVE</Text> : null}
-        <Text style={s.name}>{room.name}</Text>
-        <Text style={s.meta}>· {W.mainAudience}</Text>
-      </View>
-      {talk ? <Text style={s.title}>{talk.title}</Text> : null}
-      {talk ? <Text style={s.meta}>{seTalkHostLine(talk)}</Text> : null}
-      {talk && !talk.onAir ? <AddToCalendarButton color={t.ink} borderColor={t.line} event={seTalkCalendarEvent(talk)} /> : null}
-      <View style={s.stage}>
-        <Faces s={s} faces={room.faces} />
-        <Text style={s.meta}>{seRoomCountsLine(room)}</Text>
-      </View>
-      <View style={s.buttons}>
-        <TouchableOpacity accessibilityRole="button" onPress={() => open('main', talk)} style={s.primary}>
-          <Text style={s.primaryLabel}>{W.listen}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity accessibilityRole="button" onPress={() => void bring()} style={s.quiet}>
-          <Text style={s.quietLabel}>{W.bring}</Text>
-        </TouchableOpacity>
-      </View>
-      {note ? <Text style={s.meta}>{note}</Text> : null}
-    </View>
+    <MainRoomCard
+      t={t}
+      room={room}
+      buttons={buttons}
+      onPrimary={() => open('main', talk, buttons.primary.action === 'readings' ? 'readings' : undefined)}
+      onSecondary={() => (buttons.secondary.action === 'bring' ? void bring() : open('main', talk, 'join'))}
+      note={note}
+    />
   );
 }
 
@@ -115,7 +84,7 @@ function QuietMainRoom({ t, room }: { t: SeThemeTokens; room: SeTodayRoom }) {
 // `broadcasting`: a broadcast is live, so a Main Room nobody is in shows as one quiet row.
 export function RoomCard({ t, room, broadcasting = false }: { t: SeThemeTokens; room: SeTodayRoom; broadcasting?: boolean }) {
   if (room.key === 'weavers') return <WeaversRow t={t} room={room} />;
-  return broadcasting && !room.live ? <QuietMainRoom t={t} room={room} /> : <MainRoomCard t={t} room={room} />;
+  return broadcasting && !room.live ? <QuietMainRoom t={t} room={room} /> : <SignedInMainRoom t={t} room={room} />;
 }
 
 // The broadcast card, the copy of the web's: the picture area with LIVE and a play button, who is
@@ -152,17 +121,11 @@ export function BroadcastCard({ t, broadcast, go }: { t: SeThemeTokens; broadcas
 
 function makeStyles(t: SeThemeTokens) {
   return StyleSheet.create({
-    card: { gap: 12, padding: 16, borderRadius: 20, backgroundColor: t.card, borderWidth: 1.5, borderColor: t.line, boxShadow: `0px 3px 0px ${t.line}` },
-    row: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 },
     liveBadge: { paddingVertical: 4, paddingHorizontal: 9, borderRadius: 999, overflow: 'hidden', backgroundColor: t.liveBadge, color: t.onLiveBadge, fontSize: 11, letterSpacing: 1.1, fontFamily: SE_FONT.sansBold },
     name: { fontSize: 14, color: t.ink, fontFamily: SE_FONT.sansBold },
     title: { fontSize: 21, lineHeight: 25, color: t.ink, fontFamily: SE_FONT.serif },
     meta: { fontSize: 13, color: t.soft, fontFamily: SE_FONT.sans },
     small: { fontSize: 12, color: t.soft, fontFamily: SE_FONT.sans },
-    stage: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-    faces: { flexDirection: 'row' },
-    face: { borderRadius: 999, borderWidth: 2, borderColor: t.card, overflow: 'hidden' },
-    faceOverlap: { marginLeft: -10 },
     buttons: { flexDirection: 'row', alignItems: 'center', gap: 10 },
     primary: { flex: 1, minHeight: 46, alignItems: 'center', justifyContent: 'center', borderRadius: 999, borderWidth: 1.5, borderColor: t.line, backgroundColor: t.btn, boxShadow: `0px 3px 0px ${t.line}` },
     primaryLabel: { fontSize: 15, color: t.onBtn, fontFamily: SE_FONT.sansBold },

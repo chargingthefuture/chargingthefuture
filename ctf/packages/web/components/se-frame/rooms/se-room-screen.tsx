@@ -23,13 +23,14 @@ export { SeRoomBar } from './se-room-bar';
 // quiet state, then the Chyme room drawn to the board (components/chyme/se-room/). The session
 // lives here, so the call keeps running while the screen is hidden behind another tab.
 
-function QuietState({ view }: { view: SeRoomView }) {
+// `autoStart`: the room was opened with Play readings, so the readings start without a second tap.
+function QuietState({ view, autoStart }: { view: SeRoomView; autoStart: boolean }) {
   if (!view.quiet) return null;
   return (
     <div className={styles.quiet}>
       <p className={styles.quietTitle}>{SE_ROOM_QUIET}</p>
       <p className={styles.quietText}>{SE_ROOM_QUIET_TEXT}</p>
-      <ChymeReadingsPlayer />
+      <ChymeReadingsPlayer autoStart={autoStart} showOff={autoStart} />
     </div>
   );
 }
@@ -56,6 +57,21 @@ function useBarReport(scope: ChymeRoomScope, summary: SeRoomSummary, leave: () =
   }, [report, scope, key, leave, handToggle]);
 }
 
+// Start a conversation on Today opens the room asking to join its call: join once the room read
+// has arrived, the same join as the room's own Listen in, so the member gets what the room allows
+// them (speaking where the speak mode and their standing allow it, listening otherwise).
+function useJoinOnOpen(scope: ChymeRoomScope, session: ReturnType<typeof useChymeRoomSession>) {
+  const { intents } = useSeRooms();
+  const asked = intents[scope] === 'join';
+  const done = useRef(false);
+  const ready = Boolean(session.room) && session.joinState === 'idle';
+  useEffect(() => {
+    if (!asked || !ready || done.current) return;
+    done.current = true;
+    void session.handleJoin();
+  }, [asked, ready, session]);
+}
+
 // The room's view and its count, from the room read (null until it arrives) and the talk on Today.
 function useRoomView(scope: ChymeRoomScope, session: ReturnType<typeof useChymeRoomSession>) {
   const { talks } = useSeRooms();
@@ -67,8 +83,9 @@ function useRoomView(scope: ChymeRoomScope, session: ReturnType<typeof useChymeR
 }
 
 function SeRoomScreen({ scope, currentUser, visible }: { scope: ChymeRoomScope; currentUser: CurrentUser; visible: boolean }) {
-  const { minimize } = useSeRooms();
+  const { minimize, intents } = useSeRooms();
   const session = useChymeRoomSession(scope);
+  useJoinOnOpen(scope, session);
   const room = session.room;
   const [moreOpen, setMoreOpen] = useState(false);
   const [live, setLive] = useState<ChymeLiveSummary | null>(null);
@@ -97,7 +114,7 @@ function SeRoomScreen({ scope, currentUser, visible }: { scope: ChymeRoomScope; 
         onMore={room ? () => setMoreOpen(true) : null}
         moreOpen={moreOpen}
       />
-      <QuietState view={view} />
+      <QuietState view={view} autoStart={intents[scope] === 'readings'} />
       <ChymeEmbedContext.Provider value={embed}>
         <ChymeWordsProvider words={view.words}>
           <ChymeLiveShellView session={session} currentUser={currentUser} roomScope={scope} embedded />

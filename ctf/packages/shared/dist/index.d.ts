@@ -20,6 +20,7 @@ export * from './today/day';
 export * from './today/lifetime';
 export * from './today/replays';
 export * from './today/week';
+export * from './today/main-room-card';
 export * from './calendar/ics';
 export * from './today/rooms';
 export * from './today/new';
