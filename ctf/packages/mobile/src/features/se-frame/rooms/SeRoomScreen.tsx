@@ -25,13 +25,14 @@ export { SeRoomBar } from './SeRoomBar';
 
 type Styles = ReturnType<typeof makeStyles>;
 
-function QuietState({ s, view }: { s: Styles; view: SeRoomView }) {
+// `autoStart`: the room was opened with Play readings, so the readings start without a second tap.
+function QuietState({ s, view, autoStart }: { s: Styles; view: SeRoomView; autoStart: boolean }) {
   if (!view.quiet) return null;
   return (
     <View style={s.quiet}>
       <Text style={s.quietTitle}>{SE_ROOM_QUIET}</Text>
       <Text style={s.quietText}>{SE_ROOM_QUIET_TEXT}</Text>
-      <ChymeReadingsPlayer />
+      <ChymeReadingsPlayer autoStart={autoStart} showOff={autoStart} />
     </View>
   );
 }
@@ -66,6 +67,22 @@ function useBarReport(scope: ChymeRoomScope, summary: SeRoomSummary, leave: () =
   }, [report, scope, key, leave, handToggle]);
 }
 
+// Start a conversation on Today opens the room asking to join its call: join once the room read
+// has arrived, the same join as the room's own Listen in, so the member gets what the room allows
+// them (speaking where the speak mode and their standing allow it, listening otherwise).
+function useJoinOnOpen(scope: ChymeRoomScope, state: ReturnType<typeof useChymeRoomState>) {
+  const { intents } = useSeRooms();
+  const asked = intents[scope] === 'join';
+  const done = useRef(false);
+  const ready = Boolean(state.room) && state.call.joinState === 'idle';
+  const { join } = state.call;
+  useEffect(() => {
+    if (!asked || !ready || done.current) return;
+    done.current = true;
+    void join();
+  }, [asked, ready, join]);
+}
+
 // The room's view and its count, from the room read (null until it arrives) and the talk on Today.
 function useRoomView(scope: ChymeRoomScope, state: ReturnType<typeof useChymeRoomState>) {
   const { talks } = useSeRooms();
@@ -78,8 +95,9 @@ function useRoomView(scope: ChymeRoomScope, state: ReturnType<typeof useChymeRoo
 
 function SeRoomScreen({ t, scope, user, visible }: { t: SeThemeTokens; scope: ChymeRoomScope; user: CurrentUser; visible: boolean }) {
   const s = useMemo(() => makeStyles(t), [t]);
-  const { minimize } = useSeRooms();
+  const { minimize, intents } = useSeRooms();
   const state = useChymeRoomState(scope);
+  useJoinOnOpen(scope, state);
   const backChannel = useRoomBackChannel();
   const [moreOpen, setMoreOpen] = useState(false);
   const [live, setLive] = useState<ChymeLiveSummary | null>(null);
@@ -111,7 +129,7 @@ function SeRoomScreen({ t, scope, user, visible }: { t: SeThemeTokens; scope: Ch
           onBack={minimize}
           onMore={room ? () => setMoreOpen(true) : null}
         />
-        <QuietState s={s} view={view} />
+        <QuietState s={s} view={view} autoStart={intents[scope] === 'readings'} />
         <ChymeEmbedContext.Provider value={embed}>
           <ChymeWordsProvider words={view.words}>
             <ChymeLiveRoomView
