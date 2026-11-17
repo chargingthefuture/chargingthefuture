@@ -13,6 +13,17 @@ function texts(value) {
 function record(value) {
     return value && typeof value === 'object' ? value : null;
 }
+// Skills arrive as names or as { name } objects (the Directory read sends objects).
+function skillNames(value) {
+    if (!Array.isArray(value))
+        return [];
+    return value.map((item) => text(item) ?? text(record(item)?.name)).filter((v) => v !== null);
+}
+// The Directory read sends firstName and lastName; an older shape sent name.
+function nameOf(m) {
+    const joined = [text(m.firstName), text(m.lastName)].filter((v) => v !== null).join(' ');
+    return joined || text(m.name) || 'Unnamed';
+}
 function placeOf(m) {
     const parts = [text(m.state), text(m.country)].filter((v) => v !== null);
     return parts.length > 0 ? parts.join(', ') : null;
@@ -26,15 +37,15 @@ export function sePersonProfileFrom(body) {
     const claimedByUserId = text(m.claimedByUserId);
     return {
         id,
-        name: text(m.name) ?? 'Unnamed',
+        name: nameOf(m),
         username: text(m.username),
         headline: text(m.headline),
         bio: text(m.bio),
-        jobTitle: text(m.jobTitle),
-        sector: text(m.sector),
+        jobTitle: text(m.jobTitleName) ?? text(m.jobTitle),
+        sector: text(m.sectorName) ?? text(m.sector),
         place: placeOf(m),
         quora: seWebAddress(text(m.profileUrl)),
-        skills: texts(m.skills),
+        skills: skillNames(m.skills),
         pendingSkills: texts(m.pendingSkills),
         claimedByUserId,
         communityGenerated: m.source === 'community-generated',
