@@ -20,20 +20,25 @@ export type SeStoryPost = {
   collection: string;
   url: string;
   text: string;
+  // The post's own short version, from its front matter (the teaser, or the excerpt where a post has
+  // none). Absent from a posts.json built before the blog published it.
+  teaser?: string;
 };
+
+const STORY_FIELDS: ReadonlyArray<[keyof SeStoryPost, string]> = [
+  ['number', 'number'],
+  ['slug', 'string'],
+  ['title', 'string'],
+  ['date', 'string'],
+  ['collection', 'string'],
+  ['url', 'string'],
+  ['text', 'string'],
+];
 
 function isStoryPost(value: unknown): value is SeStoryPost {
   if (!value || typeof value !== 'object') return false;
   const post = value as Record<string, unknown>;
-  return (
-    typeof post.number === 'number' &&
-    typeof post.slug === 'string' &&
-    typeof post.title === 'string' &&
-    typeof post.date === 'string' &&
-    typeof post.collection === 'string' &&
-    typeof post.url === 'string' &&
-    typeof post.text === 'string'
-  );
+  return STORY_FIELDS.every(([field, type]) => typeof post[field] === type) && (post.teaser === undefined || typeof post.teaser === 'string');
 }
 
 // Members' own writing, brought in through the Knowledge Library (owner decisions on the 3.1 plan,
@@ -130,11 +135,33 @@ export function seStoriesForDay(posts: readonly SeStoryPost[], day: string): SeS
   return [...released, ...fresh];
 }
 
-// A short opening for a story card: the first paragraph, cut at a word near the limit.
+// A bare web address in a post's text, which reads as noise on a card.
+const ADDRESS = /\(?\bhttps?:\/\/\S+/g;
+
+function withoutAddresses(text: string): string {
+  return text.replace(ADDRESS, '').replace(/[ \t]+/g, ' ').replace(/ ([.,;:!?])/g, '$1').trim();
+}
+
+// A paragraph worth opening a card with: words left once its addresses are gone, and not a line that
+// only leads into an address ("The blog has a new page:").
+function isOpeningParagraph(part: string): boolean {
+  return /[\p{L}\p{N}]/u.test(part) && !part.endsWith(':');
+}
+
+// A short opening for a story card: the first paragraph with words in it once bare addresses are taken
+// out, cut at a word near the limit.
 export function seStoryOpening(text: string, max = 280): string {
-  const first = text.split(/\n\s*\n/).map((part) => part.trim()).find((part) => part.length > 0) ?? '';
+  const parts = text.split(/\n\s*\n/).map(withoutAddresses);
+  const first = parts.find(isOpeningParagraph) ?? parts.find((part) => /[\p{L}\p{N}]/u.test(part)) ?? '';
   const flat = first.replace(/\s+/g, ' ');
   if (flat.length <= max) return flat;
   const cut = flat.slice(0, max);
   return `${cut.slice(0, Math.max(cut.lastIndexOf(' '), max - 20)).trimEnd()}…`;
+}
+
+// A story card's text: the post's teaser where the blog gives one, otherwise the opening of the post.
+// Bare addresses are taken out of either.
+export function seStoryCardBody(post: Pick<SeStoryPost, 'text' | 'teaser'>): string {
+  const teaser = withoutAddresses((post.teaser ?? '').replace(/\s+/g, ' '));
+  return /[\p{L}\p{N}]/u.test(teaser) ? teaser : seStoryOpening(post.text);
 }
