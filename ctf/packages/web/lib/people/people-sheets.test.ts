@@ -75,3 +75,22 @@ describe('People rows and sheets, shared by web and Android', () => {
     expect(sePersonSheetPath('a b')).toBe('/?tab=people&person=a%20b');
   });
 });
+
+describe('sePersonProfileFrom with the Directory read shape', () => {
+  it('reads firstName, lastName, jobTitleName, sectorName and skill objects', () => {
+    const p = sePersonProfileFrom({
+      member: {
+        id: 'p1',
+        firstName: 'Ana',
+        lastName: 'Diaz',
+        jobTitleName: 'Plumbers',
+        sectorName: 'Construction',
+        skills: [{ id: 's1', name: 'Pipe fitting', displayOrder: 1 }],
+      },
+    });
+    expect(p?.name).toBe('Ana Diaz');
+    expect(p?.jobTitle).toBe('Plumbers');
+    expect(p?.sector).toBe('Construction');
+    expect(p?.skills).toEqual(['Pipe fitting']);
+  });
+});
