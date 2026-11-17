@@ -79,9 +79,10 @@ export const SE_STORY_WORDS = {
 
 export const SE_OFFER_CHOICES: ReadonlyArray<{ key: string; label: string; text: string; href: string }> = [
   { key: 'place', label: 'A place to stay', text: 'List a room or a place to stay.', href: '/apps/lighthouse' },
-  { key: 'hours', label: 'Hours', text: 'Share times you are free. Others pick one in their own timezone.', href: '/apps/mutual-time' },
   { key: 'ride', label: 'A ride', text: 'Drive somebody who needs to get somewhere. Drivers are screened by the community.', href: '/apps/trust-transport' },
-  { key: 'skill', label: 'A skill', text: 'Offer a skill, a tool or a repair.', href: '/apps/foundation' },
+  // Hours and skills are both offered through Foundation (owner decision, 2026-11-16); MutualTime is
+  // an admin survey tool, not where members offer their time.
+  { key: 'skill', label: 'Hours or a skill', text: 'Offer your time, a skill, a tool or a repair.', href: '/apps/foundation' },
 ];
 
 // The holiday asks (44), grouped. Tapping one fills the ask and names its group as the tag.
