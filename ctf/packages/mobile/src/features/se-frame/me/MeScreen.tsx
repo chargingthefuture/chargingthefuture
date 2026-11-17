@@ -1,8 +1,7 @@
 // Me on Android, the copy of the web (components/se-frame/me/me-screen.tsx), built to the approved
 // board "Me": the member's name, since when they have been an Aven, their badges and the gear to
 // Settings; their three profile lines; ServiceCredits; Saved, Read and Hidden; Trust; the Tools grid; and
-// emoji rain. Tools the Android app does not carry open in the browser; "Log what happened" opens its
-// 3.1 sheet.
+// emoji rain. Tools the Android app does not carry open in the browser.
 
 import React, { useMemo, useState, type ReactNode } from 'react';
 import { Switch, Text, TouchableOpacity, View } from 'react-native';
@@ -24,13 +23,11 @@ import {
   seMeName,
   seMeSince,
   type SeMeProfile,
-  type SeMeTool,
   type SeMeView,
   type SeReadingPrefs,
   type SeThemeTokens,
 } from '@ctf/shared';
 import { SeAvatar } from '../../../components/shared/SeAvatar';
-import { ClickLogSheet } from './ClickLogSheet';
 import { makeMeStyles, type MeStyles } from './meStyles';
 import { useCredits, type Read } from './meData';
 
@@ -173,9 +170,8 @@ function CreditsCard({ s, t, go, handle }: { s: MeStyles; t: SeThemeTokens; go: 
   );
 }
 
-// "Log what happened" opens its 3.1 sheet over Me; every other tile opens its place.
-function Tools({ s, t, go }: { s: MeStyles; t: SeThemeTokens; go: Go }) {
-  const [sheet, setSheet] = useState<SeMeTool['sheet']>(undefined);
+// Each tile opens its place. "Log what happened" moved to + New.
+function Tools({ s, go }: { s: MeStyles; go: Go }) {
   return (
     <>
       <Text accessibilityRole="header" style={s.h2}>
@@ -183,7 +179,7 @@ function Tools({ s, t, go }: { s: MeStyles; t: SeThemeTokens; go: Go }) {
       </Text>
       <View style={s.tools}>
         {SE_ME_TOOLS.map((tool) => (
-          <TouchableOpacity key={tool.key} accessibilityRole={tool.sheet ? 'button' : 'link'} onPress={() => (tool.sheet ? setSheet(tool.sheet) : go(tool.href))} style={s.tool}>
+          <TouchableOpacity key={tool.key} accessibilityRole="link" onPress={() => go(tool.href)} style={s.tool}>
             <View style={[s.toolIcon, { backgroundColor: tool.tint }]}>
               <MeIcon d={tool.icon} color={SE_ME_TOOL_INK} />
             </View>
@@ -191,7 +187,6 @@ function Tools({ s, t, go }: { s: MeStyles; t: SeThemeTokens; go: Go }) {
           </TouchableOpacity>
         ))}
       </View>
-      {sheet === 'click-log' ? <ClickLogSheet t={t} go={go} onClose={() => setSheet(undefined)} /> : null}
     </>
   );
 }
@@ -232,7 +227,7 @@ export function MeScreen({ t, user, profile, reading, onReading, onView, go, sav
         <Text style={s.itemTitle}>{SE_TRUST_WORDS.title}</Text>
         <Text style={s.q}>{SE_TRUST_WORDS.meRow}</Text>
       </TouchableOpacity>
-      <Tools s={s} t={t} go={go} />
+      <Tools s={s} go={go} />
       <View style={s.switchRow}>
         <Text style={s.switchLabel}>{SE_SETTINGS_WORDS.emojiRain}</Text>
         <Switch

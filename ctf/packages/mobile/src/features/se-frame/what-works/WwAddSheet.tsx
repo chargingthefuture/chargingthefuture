@@ -1,7 +1,7 @@
 // What Works, add a problem, the Android copy of the web's ww-add-sheet.tsx (the approved 3.1 board
 // "What works: add a problem"): the member types the problem, sees the problems already on the list
 // that share words with it, and either uses one or adds theirs, which waits for review. Opened from
-// the What works card on Today.
+// the What works card on Today and from + New → Offer.
 
 import React, { useState } from 'react';
 import { Modal, ScrollView, Text, TextInput, TouchableOpacity, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
@@ -144,25 +144,37 @@ export function WwAddSheet({ t, onClose, onUse, onAddWhatHelped }: Props) {
   );
 }
 
-// "Add a problem" on the What works card opened in place on Today, under the "Open in" link. Use
-// this and Add what helped go on to "What helped" in a 3.1 sheet of the same look, as on the web.
-type FromCardProps = { t: SeThemeTokens; source: string; linkStyle: StyleProp<ViewStyle>; labelStyle: StyleProp<TextStyle> };
+// A button that opens the add sheet; Use this and Add what helped go on to "What helped" in a 3.1
+// sheet of the same look, as on the web. It opens from the What works card on Today and from
+// + New → Offer.
+type ButtonProps = { t: SeThemeTokens; style: StyleProp<ViewStyle>; children: React.ReactNode };
 
-export function WwAddFromCard({ t, source, linkStyle, labelStyle }: FromCardProps) {
+export function WwAddButton({ t, style, children }: ButtonProps) {
   const [open, setOpen] = useState(false);
   const [helped, setHelped] = useState<WwAddedProblem | null>(null);
-  if (!seWwAddsFrom(source)) return null;
   const toHelped = (problem: WwAddedProblem) => {
     setOpen(false);
     setHelped(problem);
   };
   return (
     <>
-      <TouchableOpacity accessibilityRole="button" style={linkStyle} onPress={() => setOpen(true)}>
-        <Text style={labelStyle}>{W.title}</Text>
+      <TouchableOpacity accessibilityRole="button" style={style} onPress={() => setOpen(true)}>
+        {children}
       </TouchableOpacity>
       {open ? <WwAddSheet t={t} onClose={() => setOpen(false)} onUse={toHelped} onAddWhatHelped={toHelped} /> : null}
       {helped ? <WwHelpedSheet t={t} problem={helped} onClose={() => setHelped(null)} /> : null}
     </>
+  );
+}
+
+// "Add a problem" on the What works card opened in place on Today, under the "Open in" link.
+type FromCardProps = { t: SeThemeTokens; source: string; linkStyle: StyleProp<ViewStyle>; labelStyle: StyleProp<TextStyle> };
+
+export function WwAddFromCard({ t, source, linkStyle, labelStyle }: FromCardProps) {
+  if (!seWwAddsFrom(source)) return null;
+  return (
+    <WwAddButton t={t} style={linkStyle}>
+      <Text style={labelStyle}>{W.title}</Text>
+    </WwAddButton>
   );
 }

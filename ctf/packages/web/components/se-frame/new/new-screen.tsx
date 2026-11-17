@@ -3,10 +3,12 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import {
+  SE_CLICK_LOG_WORDS,
   SE_ARCHITECT_WORDS,
   SE_NEW_KINDS,
   SE_NEW_SHEET_WORDS as W,
   SE_OFFER_CHOICES,
+  SE_OFFER_WHAT_WORKS,
   SE_OFFER_WORDS,
   SE_ROOM_RULE,
   SE_STORY_WORDS,
@@ -16,13 +18,17 @@ import {
 import { AskForm } from './ask-form';
 import { ArchitectSection } from './architect-section';
 import { TalkForm } from './talk-form';
+import { ClickLogSheet } from '../click-log/click-log-sheet';
+import { WwAddButton } from '../what-works/ww-add-from-card';
 import styles from './new.module.css';
 import sheet from './sheet.module.css';
 
 // + New, to the approved boards "New post", "Schedule a talk" and "Schedule a talk, not yet
 // verified": a sheet with Close, an Ask / Offer / Story / Talk switch, and the chosen kind under it.
-// Ask is posted here; Talk books a TI Radio slot; an Offer or a Story opens where it is made. Ask the
-// architect opens from the line under the switch, since the board's switch has four choices.
+// Ask is posted here; Talk books a TI Radio slot; an Offer or a Story opens where it is made, except a
+// problem with what helped, which is added in What Works' 3.1 sheets. Ask the architect and "Log what
+// happened" (a quick pin of the member's location) open from the lines under the switch, since the
+// board's switch has four choices.
 
 function CloseIcon() {
   return (
@@ -77,6 +83,10 @@ function OfferBody() {
     <>
       <p className={styles.text}>{SE_OFFER_WORDS.intro}</p>
       <div className={styles.choices}>
+        <WwAddButton className={styles.choice}>
+          <span className={styles.choiceTitle}>{SE_OFFER_WHAT_WORKS.label}</span>
+          <span className={styles.text}>{SE_OFFER_WHAT_WORKS.text}</span>
+        </WwAddButton>
         {SE_OFFER_CHOICES.map((choice) => (
           <Link key={choice.key} href={choice.href} className={styles.choice}>
             <span className={styles.choiceTitle}>{choice.label}</span>
@@ -111,6 +121,19 @@ function ArchitectBody() {
   );
 }
 
+// "Log what happened" opens the ClickLog sheet over + New.
+function LogLine() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button type="button" className={sheet.architect} aria-haspopup="dialog" onClick={() => setOpen(true)}>
+        {SE_CLICK_LOG_WORDS.open}
+      </button>
+      {open ? <ClickLogSheet onClose={() => setOpen(false)} /> : null}
+    </>
+  );
+}
+
 const BODIES: Record<SeNewKind, () => React.ReactElement> = {
   ask: AskForm,
   offer: OfferBody,
@@ -137,9 +160,12 @@ export function NewScreen({ onClose, initialKind = 'ask' }: { onClose: () => voi
       ) : null}
       <KindSwitch kind={kind} onKind={setKind} />
       {kind === 'architect' ? null : (
-        <button type="button" className={sheet.architect} onClick={() => setKind('architect')}>
-          {W.architect}
-        </button>
+        <>
+          <button type="button" className={sheet.architect} onClick={() => setKind('architect')}>
+            {W.architect}
+          </button>
+          <LogLine />
+        </>
       )}
       <Body />
     </section>

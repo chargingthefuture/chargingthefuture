@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { SE_CLICK_LOG_WORDS as W, clickLogCreateBody, type ClickLogLocation } from '@ctf/shared';
 import { reasonText } from 'lib/errors/client-failure';
 
@@ -57,7 +57,7 @@ function useLocation() {
   const [location, setLocation] = useState<ClickLogLocation>({});
   const [status, setStatus] = useState<GeoStatus>('idle');
   const [error, setError] = useState<string | null>(null);
-  const add = () => {
+  const add = useCallback(() => {
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
       setError(W.noLocationWeb);
       return setStatus('error');
@@ -76,7 +76,12 @@ function useLocation() {
       },
       { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 },
     );
-  };
+  }, []);
+  // A quick pin: the member's location is asked for as soon as the sheet opens. Refused or
+  // unavailable, the reason shows and the Add location button stays for another try.
+  useEffect(() => {
+    add();
+  }, [add]);
   const reset = () => {
     setLocation({});
     setStatus('idle');
@@ -109,6 +114,7 @@ export function useClickLogEntry() {
     setError(null);
     setSaved(false);
     geo.reset();
+    geo.add();
   };
 
   const submit = async () => {

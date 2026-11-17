@@ -17,7 +17,6 @@ export type SeMeTool = {
     href: string;
     tint: string;
     icon: string;
-    sheet?: 'click-log';
 };
 export declare const SE_ME_TOOLS: readonly SeMeTool[];
 export declare const SE_ME_TOOL_INK = "#2a1a1d";
