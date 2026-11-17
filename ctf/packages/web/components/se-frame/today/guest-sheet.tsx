@@ -69,7 +69,7 @@ export function GuestSheet({ card, signInUrl, sampleTag, onClose }: { card: SeTo
         <span className={styles.grip} aria-hidden="true" />
         <div className={styles.head}>
           <span className={styles.talkTitle}>{card.label}</span>
-          <button ref={closeRef} type="button" className={styles.round} aria-label={W.close} onClick={onClose}>
+          <button ref={closeRef} type="button" className={`${styles.round} ${styles.closeEnd}`} aria-label={W.close} onClick={onClose}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
               <path d="M6 6l12 12M18 6L6 18" />
             </svg>
