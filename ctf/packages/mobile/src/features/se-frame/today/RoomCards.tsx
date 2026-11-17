@@ -19,8 +19,6 @@ import { useSeRooms } from '../rooms/SeRooms';
 import { SE_FONT } from '../fonts';
 import { MainRoomCard } from './MainRoomCard';
 
-type Styles = ReturnType<typeof makeStyles>;
-
 // The member's buttons, as on the web: Play readings opens the room and plays the readings loop
 // there, Start a conversation opens it and joins the call; live, Listen in opens it and Bring
 // someone in shares the signed-out Today.

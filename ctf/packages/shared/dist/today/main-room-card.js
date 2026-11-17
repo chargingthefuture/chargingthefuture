@@ -28,17 +28,26 @@ export function seMainRoomButtons(live, signedIn) {
 }
 // The Main Room as a visitor's card shows it: the talk and faces from signed-out Today (null until
 // it loads), with live and the counts from the public room read, which is the newer of the two.
+const SE_GUEST_MAIN_ROOM = {
+    key: 'main',
+    name: 'Main Room',
+    live: false,
+    members: 0,
+    guests: 0,
+    speakers: 0,
+    faces: [],
+    href: '/today',
+    nextTalk: null,
+};
 export function seGuestMainRoom(room, read) {
+    const base = room ?? SE_GUEST_MAIN_ROOM;
     const members = Math.max(0, read.participantCount);
     return {
+        ...base,
         key: 'main',
-        name: room?.name ?? 'Main Room',
         live: read.isLive,
         members,
         guests: Math.max(0, read.guestCount),
-        speakers: Math.min(room?.speakers ?? 0, members),
-        faces: room?.faces ?? [],
-        href: room?.href ?? '/today',
-        nextTalk: room?.nextTalk ?? null,
+        speakers: Math.min(base.speakers, members),
     };
 }
