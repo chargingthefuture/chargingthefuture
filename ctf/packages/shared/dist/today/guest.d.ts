@@ -4,14 +4,7 @@ export declare const SE_GUEST_WORDS: {
     readonly signIn: "Sign in";
     readonly signUp: "Sign up";
     readonly hero: "Skills Economy is where the Avenhood meets: survivors giving half an hour a day to each other's goals. That is less time on Specterati schemes, and more time for all of us reaching our own definition of happiness. Free. Exit their economy, exit the psyop.";
-    readonly live: "LIVE";
-    readonly listen: "Listen as a guest";
-    readonly listenNote: "Anyone can listen, no account needed. Sign in to speak.";
     readonly listenUnavailable: "Listening in without an account isn't available right now.";
-    readonly quiet: "The audio room is quiet now";
-    readonly playReadings: "Play readings";
-    readonly readingsNote: "Recorded blog posts, one after another";
-    readonly nextRoom: "Next room";
     readonly cardsTitle: "Today's cards";
     readonly member: "A member";
     readonly answer: "Sign up to answer";
@@ -50,5 +43,3 @@ export type SeGuestConversation = {
     messages: SeGuestMessage[];
 };
 export declare function seGuestAnswersBySignUp(card: SeTodayCard): boolean;
-export declare function seGuestStartedLine(startIso: string): string;
-export declare function seGuestNextRoomLine(startIso: string): string;
