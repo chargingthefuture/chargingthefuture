@@ -13,8 +13,10 @@ ClickLog provides a simple, auditable incident counter and logging system for us
 
 ## 3. User Features
 
-- In the 3.1 app, Me → Tools → "Log what happened" opens a sheet for writing an entry, on the web and
-  in the Android app. It has the same form as the ClickLog page: a private note, the problems and
+- In the 3.1 app, + New → "Log what happened" (the line "Something happened? Log it where you are"
+  under the switch) opens a sheet for writing an entry, on the web and in the Android app. It is a
+  quick pin: as it opens it asks for the member's location and fills it in; refused or unavailable,
+  the reason shows and "Add location" stays for another try. It has the same form as the ClickLog page: a private note, the problems and
   schemes lists with search and a "Full list" link, "Not listed" with its description and Quora link
   for Weavers of the Commons, the share checkbox, and Add location. Submit logs it with the date and
   time. Once logged the sheet says "What happened is logged, with the date and time." and offers
@@ -290,7 +292,7 @@ ClickLog provides a simple, auditable incident counter and logging system for us
 ## 8. Web and Android Delivery Status
 
 - Web (desktop + mobile-responsive): Implemented shell, complete
-- Android (React Native): **surface removed 2026-07-20 (rule 105, PR #1742)** — this feature is now web-only, served by the installable web app (PWA). One exception since 2026-11-16: the 3.1 "Log what happened" sheet on Me (`src/features/se-frame/me/ClickLogSheet.tsx`, location through `expo-location`) writes an entry natively, matching the web sheet (`components/se-frame/me/click-log-sheet.tsx`); its "See your history and trends" link opens the ClickLog page in the browser.
+- Android (React Native): **surface removed 2026-07-20 (rule 105, PR #1742)** — this feature is now web-only, served by the installable web app (PWA). One exception since 2026-11-16: the 3.1 "Log what happened" sheet in + New (`src/features/se-frame/click-log/ClickLogSheet.tsx`, location through `expo-location`) writes an entry natively, matching the web sheet (`components/se-frame/click-log/click-log-sheet.tsx`); its "See your history and trends" link opens the ClickLog page in the browser.
 - See [plugin-parity-contracts.json](../../../config/plugin-parity-contracts.json)
 
 Web pixel pass (design `c5d83c0`): `ClickLogShell` is rebuilt to `design/.../survivor-hub/ClickLog.tsx`
@@ -330,6 +332,8 @@ Android pixel pass to `MobileClickLog.tsx` remains tracked in `PRODUCTION_READIN
   uncapped — at a high logging rate the shareable image becomes very tall.
 
 ## Change Log
+
+- 2026-11-16: **"Log what happened" moves into + New as a quick location pin (owner decision).** The line "Something happened? Log it where you are" under + New's switch opens the 3.1 sheet on web and Android; the Me → Tools tile is gone. The sheet asks for the location as it opens (the browser's or the phone's permission prompt) and fills it in, and "Log another" asks again; refused or unavailable, the reason shows and Add location stays. The location now comes first in the form, above the note and the tags, and its arrival is read out ("Your location is filled in."). After saving, "See your history and trends" still opens the 3.0 ClickLog page. The sheet's files moved from `se-frame/me/` to `se-frame/click-log/` on both sides. No route, table or contract changed.
 
 - 2026-11-16: **"Log what happened" sheet in 3.1, web and Android (owner decision).** Me → Tools → "Log what happened" opens a 3.1 sheet with every field, rule, state and error the ClickLog form has, posting to `POST /api/click-log` and reading `GET /api/click-log` (whether "Not listed" is offered) and `GET /api/click-log/preferences` (the sharing default). After saving it links to the ClickLog page for history and trends, one of the 3.1 places that link to 3.0. Focus moves into the sheet and back to the tile, and Escape closes it on the web; on Android the controls carry roles and labels and the save result is read out. The tag lists, limits and share wording moved to `@ctf/shared` (`packages/shared/src/click-log/`) so web and Android offer the same ones; `lib/click-log/tags.ts`, `constants.ts` and `share-copy.ts` re-export them, and the 3.0 form uses the shared submit rule and request body. No route, table or contract changed. Tests: `lib/click-log/entry-sheet.test.ts`.
 - 2026-10-27: **Open to signed-in members in 3.1 (owner decision, Access).** `requireClickLogAccess` now uses the `signed_in` tier: a member's private log is open before Unlock is done and stays open after day 14. The owner trends surface keeps its admin check. Listed under "3.1 open sign-up use".

@@ -3,10 +3,11 @@ export declare const CLICK_LOG_HISTORY_HREF = "/apps/click-log";
 export declare const CLICK_LOG_PROBLEMS_PAGE_URL = "https://lagatos.com/look-ma";
 export declare const CLICK_LOG_SCHEMES_PAGE_URL = "https://lagatos.com/schemes";
 export declare const SE_CLICK_LOG_WORDS: {
-    readonly eyebrow: "Tools";
+    readonly eyebrow: "New";
+    readonly open: "Something happened? Log it where you are";
     readonly title: "Log what happened";
     readonly close: "Close";
-    readonly rule: "Submit logs it with the date and time. Everything else is optional.";
+    readonly rule: "Your location is filled in once you allow it. Submit logs it with the date and time. Everything else is optional.";
     readonly noteLabel: "Add a note (optional)";
     readonly notePlaceholder: "Describe what happened…";
     readonly problemsLabel: "Which problems happened? (optional — pick all that apply)";
@@ -29,6 +30,7 @@ export declare const SE_CLICK_LOG_WORDS: {
     readonly addLocation: "Add location";
     readonly locating: "Locating…";
     readonly locationAdded: "Location added";
+    readonly locationAddedSaid: "Your location is filled in.";
     readonly noLocationWeb: "This browser can't access location.";
     readonly noLocationPhone: "This phone can't access location.";
     readonly locationBlockedWeb: "Location is blocked. On iPhone: Settings → Privacy & Security → Location Services → turn it on and set Safari Websites to “While Using the App”, then reload and try again.";

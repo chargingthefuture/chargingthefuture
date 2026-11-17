@@ -182,3 +182,7 @@
   opacity: 0.6;
   cursor: default;
 }
+
+.sheet:focus {
+  outline: none;
+}

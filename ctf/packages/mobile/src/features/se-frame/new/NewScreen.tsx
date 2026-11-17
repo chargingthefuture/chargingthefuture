@@ -2,16 +2,20 @@
 // boards "New post", "Schedule a talk" and "Schedule a talk, not yet verified": a sheet with Close,
 // an Ask / Offer / Story / Talk switch, and the chosen kind under it. Ask is posted here; Talk books
 // a TI Radio slot; an Offer or a Story opens where it is made (in the app for Foundation, in a browser
-// panel for the rest). Ask the architect opens from the line under the switch.
+// panel for the rest), except a problem with what helped, which is added in What Works' 3.1 sheets.
+// Ask the architect and "Log what happened" (a quick pin of the phone's location) open from the
+// lines under the switch.
 
 import React, { useMemo, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import {
   SE_ARCHITECT_WORDS,
+  SE_CLICK_LOG_WORDS,
   SE_NEW_KINDS,
   SE_NEW_SHEET_WORDS as W,
   SE_OFFER_CHOICES,
+  SE_OFFER_WHAT_WORKS,
   SE_OFFER_WORDS,
   SE_ROOM_RULE,
   SE_STORY_WORDS,
@@ -25,6 +29,8 @@ import { SE_FONT } from '../fonts';
 import { AskForm } from './AskForm';
 import { ArchitectSection } from './ArchitectSection';
 import { TalkForm } from './TalkForm';
+import { ClickLogSheet } from '../click-log/ClickLogSheet';
+import { WwAddButton } from '../what-works/WwAddSheet';
 import { makeSheetStyles, type SheetStyles } from './sheetStyles';
 
 type Styles = ReturnType<typeof makeStyles>;
@@ -80,10 +86,14 @@ function Choice({ s, title, text, onPress }: { s: Styles; title: string; text?: 
   );
 }
 
-function OfferBody({ s, go }: BodyProps) {
+function OfferBody({ t, s, go }: BodyProps) {
   return (
     <View style={s.body}>
       <Text style={s.text}>{SE_OFFER_WORDS.intro}</Text>
+      <WwAddButton t={t} style={s.choice}>
+        <Text style={s.choiceTitle}>{SE_OFFER_WHAT_WORKS.label}</Text>
+        <Text style={s.text}>{SE_OFFER_WHAT_WORKS.text}</Text>
+      </WwAddButton>
       {SE_OFFER_CHOICES.map((choice) => (
         <Choice key={choice.key} s={s} title={choice.label} text={choice.text} onPress={() => go(choice.href)} />
       ))}
@@ -110,6 +120,19 @@ function ArchitectBody({ t, sh }: BodyProps) {
         <Text style={sh.sub}>{SE_ARCHITECT_WORDS.intro}</Text>
       </View>
       <ArchitectSection t={t} />
+    </>
+  );
+}
+
+// "Log what happened" opens the ClickLog sheet over + New.
+function LogLine({ t, sh, go }: { t: SeThemeTokens; sh: SheetStyles; go: (_href: string) => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Text accessibilityRole="button" onPress={() => setOpen(true)} style={sh.architect}>
+        {SE_CLICK_LOG_WORDS.open}
+      </Text>
+      {open ? <ClickLogSheet t={t} go={go} onClose={() => setOpen(false)} /> : null}
     </>
   );
 }
@@ -155,9 +178,12 @@ export function NewScreen({
       ) : null}
       <KindSwitch sh={sh} kind={kind} onKind={setKind} />
       {kind === 'architect' ? null : (
-        <Text accessibilityRole="button" onPress={() => setKind('architect')} style={sh.architect}>
-          {W.architect}
-        </Text>
+        <>
+          <Text accessibilityRole="button" onPress={() => setKind('architect')} style={sh.architect}>
+            {W.architect}
+          </Text>
+          <LogLine t={t} sh={sh} go={go} />
+        </>
       )}
       <Body t={t} s={s} sh={sh} go={go} onOpen={onOpen} />
     </View>

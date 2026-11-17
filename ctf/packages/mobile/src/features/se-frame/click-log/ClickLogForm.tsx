@@ -1,8 +1,8 @@
 // The fields of the 3.1 "Log what happened" sheet on Android, the copy of the web's
 // click-log-form.tsx: every field the 3.0 ClickLog form has.
 
-import React from 'react';
-import { Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useEffect } from 'react';
+import { AccessibilityInfo, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import {
   SE_CLICK_LOG_WORDS as W,
   CLICK_LOG_PROBLEM_TAGS,
@@ -68,6 +68,9 @@ function Share({ s, entry }: Omit<Part, 't'>) {
 function Location({ s, entry }: Omit<Part, 't'>) {
   const { geo } = entry;
   const locating = geo.status === 'locating';
+  useEffect(() => {
+    if (geo.added) AccessibilityInfo.announceForAccessibility(W.locationAddedSaid);
+  }, [geo.added]);
   return (
     <>
       <TouchableOpacity accessibilityRole="button" accessibilityState={{ disabled: locating, selected: geo.added }} disabled={locating} style={[s.location, geo.added ? s.locationOn : null, locating ? s.dim : null]} onPress={geo.add}>
@@ -111,13 +114,13 @@ export function ClickLogForm({ s, t, entry, onCancel }: Part & { onCancel: () =>
           {text}
         </Text>
       ))}
+      <Location s={s} entry={entry} />
       <View style={s.field}>
         <Text style={s.label}>{W.noteLabel}</Text>
         <TextInput accessibilityLabel={W.noteLabel} multiline style={s.textarea} maxLength={MAX_NOTES_LENGTH} placeholder={W.notePlaceholder} placeholderTextColor={t.soft} value={entry.fields.note} onChangeText={entry.set.note} />
       </View>
       <Tags s={s} t={t} entry={entry} />
       <Share s={s} entry={entry} />
-      <Location s={s} entry={entry} />
       {entry.error ? (
         <Text accessibilityLiveRegion="polite" style={s.error}>
           {entry.error}

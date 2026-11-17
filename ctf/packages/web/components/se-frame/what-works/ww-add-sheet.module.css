@@ -190,3 +190,7 @@
   font-size: 15px;
   resize: vertical;
 }
+
+.sheet:focus {
+  outline: none;
+}

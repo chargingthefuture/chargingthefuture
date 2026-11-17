@@ -1,4 +1,4 @@
-// Styles for Me → Tools → "Log what happened", the Android copy of the web's
+// Styles for + New → "Log what happened", the Android copy of the web's
 // click-log-sheet.module.css, drawn from the theme tokens so it follows every color and dark mode.
 
 import { StyleSheet } from 'react-native';

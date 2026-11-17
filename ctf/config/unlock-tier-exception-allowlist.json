@@ -183,14 +183,14 @@
       "kind": "exception",
       "feature": "3.1 open sign-up use",
       "decision": "2026-10-27",
-      "reason": "ClickLog at 'signed_in': a member's private log, open to every signed-in member and after the 14 days. The owner trends surface keeps its admin check."
+      "reason": "ClickLog at 'signed_in': a member's private log, open to every signed-in member and after the 14 days; written in 3.1 from + New → Log what happened. The owner trends surface keeps its admin check."
     },
     {
       "file": "ctf/packages/web/app/api/what-works/_lib.ts",
       "kind": "exception",
       "feature": "3.1 open sign-up use",
       "decision": "2026-10-27",
-      "reason": "What Works member gate at 'signed_in': reading, suggesting, endorsing and proposing problems. The admin gate in the same file is unchanged."
+      "reason": "What Works member gate at 'signed_in': reading, suggesting, endorsing and proposing problems; in 3.1, proposing a problem and what helped opens from + New → Offer and the What works card on Today. The admin gate in the same file is unchanged."
     },
     {
       "file": "ctf/packages/web/app/api/notifications/_lib.ts",
