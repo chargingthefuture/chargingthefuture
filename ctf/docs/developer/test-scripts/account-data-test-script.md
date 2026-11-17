@@ -534,7 +534,7 @@ removes the check, the icon comes back and the count goes back down.
 4. Tap Copy to share and paste the line somewhere.
 5. Close the page and open `/games` again; then open it on the next day.
 **Expected:** Step 1 shows five Story cards marked "from the blog" or "from Quora", each with This helped
-me, Save for later and Hide (tapping the title opens the sheet with Open in the blog), and the Puzzle of the day card with its number. Nothing in the puzzle comes from a blog post.
+me, Save for later and Hide; each card's text is the post's short teaser and never a bare web address, its title opens the post on the blog, and tapping the text opens the sheet with Open in the blog; and the Puzzle of the day card with its number. Nothing in the puzzle comes from a blog post.
 Step 3 never ends in failure: a wrong word is marked and another can be picked, and the ladder
 accepts any number of steps. Step 4's line gives the puzzle number and how it went, never the answer.
 Step 5 shows Done with the same result the same day, and the next kind of puzzle the next day (word,
@@ -623,7 +623,7 @@ button.
 7. As A, open the ask, switch to Just us two, and read. Check Activity.
 8. As B, tap ••• in the sheet and Report, then Report this message under one of A's messages. As B, tap Share.
 9. As A, block B from B's profile, then open the ask as both.
-10. As C, open Today and tap the title of any ask, offer or story. Tap a 21 Questions card's text.
+10. As C, open Today and tap the title of any ask or offer, or the text of a story. Tap a 21 Questions card's text.
 **Expected:** Step 1 opens a sheet over Today (no new page) with the author, "Ask · <date and time>",
 Share, •••, Close, the title, the body, "Open in PeerProgramming", "Conversation" with Public and Just
 us two, "Write in this card" and "Everyone can read this. Just us two opens once you both agree." Step
@@ -777,7 +777,7 @@ totals (AD-28) still count each mark.
 ## AD-36 · Check marks, This helped me, and the member's own midnight
 **Role:** member A (signed in on web and Android), member B (posted an open ask), an admin · **Surfaces:** web, android
 **Steps:**
-1. As A, open a blog story card on Today (tap its title), close the sheet, and expand a numbers card. Then tap the title of B's ask.
+1. As A, open a blog story card on Today (tap its text), close the sheet, and expand a numbers card. Then tap the title of B's ask.
 2. As A, tap This helped me on a blog story. As the admin, open the same story's sheet.
 3. As the admin, tap Confirm beside A's answer.
 4. Set A's phone or computer clock to a time zone where it is already the next day while UTC is still today, and reload Today. Answer the 21 Questions card. Do the same signed out.
@@ -799,9 +799,9 @@ totals (AD-28) still count each mark.
 1. Signed out, open Today and look at the burgundy hero. Leave the page open for two minutes.
 2. Turn on less motion (web: the system's reduce motion setting; Android: Remove animations) and repeat step 1.
 3. Look at the dots to the left of the cards, signed out, then signed in, in light and dark and in each of the four colors.
-4. Signed out, find a blog story card. Tap Read the post, come back, and tap Conversation. Then find a member's story card (a member who agreed to be shown signed out) and tap Conversation, on a story where no writer agreed to visitors reading their replies (AD-39 covers the rest).
+4. Signed out, find a blog story card. Compare it with the same card signed in. Tap its title, come back, tap Read the post, come back, and tap Conversation; in the sheet, tap Read the post. Then find a member's story card (a member who agreed to be shown signed out) and tap Conversation, on a story where no writer agreed to visitors reading their replies (AD-39 covers the rest).
 5. Signed in, open a blog story card and look at its buttons. Leave Today open for two minutes.
-**Expected:** Step 1 shows "Days the Avenhood has won" with a lock and Preview, and the count under it. Within 20 to 90 seconds the count goes up by one and emoji fall across the screen for a few seconds, then again at another random interval. A reload starts from the sample count again. Step 2: the count still goes up, and no emoji fall. Step 3: each dot carries an icon by kind, as on the approved Today board: an arrow up on an ask, an arrow down on an offer, a book on a story, a magnifier on a Wanted or match card and on the locked People card, a face on Mood, bars on the numbers, a play mark on a replay, a grid on the puzzle; the icon reads clearly on the dot in every color and mode. A dot that can be tapped still marks the card done, with the check shown in place of the icon. Step 4: the blog story shows Read the post and Conversation and no This helped me; Read the post opens the blog post, and Conversation opens the post's comments read only. The member's story shows Conversation only; it opens the story with "The conversation on a member's story is for members. Sign in to read it." and no messages. Step 5: the story shows This helped me as before, and the signed-in Days won count does not tick.
+**Expected:** Step 1 shows "Days the Avenhood has won" with a lock and Preview, and the count under it. Within 20 to 90 seconds the count goes up by one and emoji fall across the screen for a few seconds, then again at another random interval. A reload starts from the sample count again. Step 2: the count still goes up, and no emoji fall. Step 3: each dot carries an icon by kind, as on the approved Today board: an arrow up on an ask, an arrow down on an offer, a book on a story, a magnifier on a Wanted or match card and on the locked People card, a face on Mood, bars on the numbers, a play mark on a replay, a grid on the puzzle; the icon reads clearly on the dot in every color and mode. A dot that can be tapped still marks the card done, with the check shown in place of the icon. Step 4: the blog story shows the same teaser and layout as signed in, with Read the post and Conversation in place of This helped me and no Save or Hide; no card text is a bare web address. The title and Read the post open the blog post (a screen reader names the title link by the post's title, and Android reads it as a link). Conversation opens a sheet with the title, the teaser and Read the post above the post's comments, read only; its Read the post opens the post. The member's story shows Conversation only; it opens the story with "The conversation on a member's story is for members. Sign in to read it." and no messages. Step 5: the story shows This helped me as before, and the signed-in Days won count does not tick.
 **Result:** web ☐ android ☐ — notes:
 
 ## AD-39 · Visitors read replies on members' stories only with the writer's agreement (added 2026-11-16)

@@ -2,7 +2,7 @@
 
 import { useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { SE_CARD_WORDS, SE_MUTE_WORDS, seCanSave, seCardAnswerKind, seCardShownDone, seCardTakesCheckMark, seIsMoodCard, seCardOpensSheet, seDailyCreditPill, seNewCommentsLine, type SeCardAnswerKind, type SeTodayCard } from '@ctf/shared';
+import { SE_CARD_WORDS, SE_MUTE_WORDS, seCanSave, seCardAnswerKind, seCardShownDone, seCardTakesCheckMark, seIsMoodCard, seCardOpensSheet, seDailyCreditPill, seNewCommentsLine, seStoryPostHref, type SeCardAnswerKind, type SeTodayCard } from '@ctf/shared';
 import { SeAvatar } from '../../shared/se-avatar';
 import { QuestionsPanel, isQuestionsCard } from './questions-panel';
 import { CardSheet } from './card-sheet';
@@ -11,9 +11,11 @@ import { MoodFaces, SaveHideIcons } from './card-quick-actions';
 import { CardFigures } from './card-figures';
 import { CardDotIcon } from './card-dot-icon';
 import { cardPath } from './use-card-conversation';
+import { StoryTitleLink } from './story-title-link';
 import styles from './today.module.css';
 
-// One card in Today. On an ask, offer or story, tapping the text opens the card in place as a sheet
+// One card in Today. A blog story's title is a link to the post (story-title-link.tsx). On an ask,
+// offer or story, tapping the text opens the card in place as a sheet
 // (card-sheet.tsx), and an answer button (I can help, I know someone, I'd like this, It helped me
 // too) records the answer and opens the sheet; other buttons open the item where it lives. Every
 // other card expands in place as before. Opening a card (its sheet, or expanding it) marks it read,
@@ -213,8 +215,9 @@ function useCardOpening(card: SeTodayCard, onRead: (() => void) | undefined) {
 }
 
 // The title and text, or a card's figures in their place (card-figures.tsx), then the line about
-// new comments on a story marked done that came back.
-function CardText({ card, open, color }: { card: SeTodayCard; open: boolean; color: string }) {
+// new comments on a story marked done that came back. A blog story's title sits above, as a link to
+// the post, so it is left out here (withTitle false).
+function CardText({ card, open, color, withTitle }: { card: SeTodayCard; open: boolean; color: string; withTitle: boolean }) {
   const lead = card.figures?.length ? (
     <>
       <span className={styles.srOnly}>{card.title}</span>
@@ -222,7 +225,7 @@ function CardText({ card, open, color }: { card: SeTodayCard; open: boolean; col
     </>
   ) : (
     <>
-      <span className={styles.cardTitle}>{card.title}</span>
+      {withTitle ? <span className={styles.cardTitle}>{card.title}</span> : null}
       {card.body ? <span className={bodyClass(card, open)}>{card.body}</span> : null}
     </>
   );
@@ -230,6 +233,22 @@ function CardText({ card, open, color }: { card: SeTodayCard; open: boolean; col
     <>
       {lead}
       {card.newComments ? <span className={styles.label} style={{ color }}>{seNewCommentsLine(card.newComments)}</span> : null}
+    </>
+  );
+}
+
+// The card's text as the button that opens it. A blog story's title sits above it as a link to the
+// post; a story with no text left has the link alone.
+function CardTextButton({ card, open, opensSheet, color, onPress }: { card: SeTodayCard; open: boolean; opensSheet: boolean; color: string; onPress: () => void }) {
+  const postHref = seStoryPostHref(card);
+  const link = postHref ? <StoryTitleLink href={postHref} title={card.title} /> : null;
+  if (postHref && !card.body && !card.newComments) return link;
+  return (
+    <>
+      {link}
+      <button type="button" className={styles.textButton} aria-expanded={opensSheet ? undefined : open} aria-haspopup={opensSheet ? 'dialog' : undefined} onClick={onPress}>
+        <CardText card={card} open={open} color={color} withTitle={!postHref} />
+      </button>
     </>
   );
 }
@@ -255,9 +274,7 @@ function PlainCard({
     <article className={styles.card}>
       <DoneDot card={card} done={done} color={color} onToggleDone={onToggleDone} />
       <CardHead card={card} viewerId={viewerId} color={color} onHide={onHide} onMute={onMute} onMutePost={onMutePost} />
-      <button type="button" className={styles.textButton} aria-expanded={opensSheet ? undefined : open} aria-haspopup={opensSheet ? 'dialog' : undefined} onClick={toggle}>
-        <CardText card={card} open={open} color={color} />
-      </button>
+      <CardTextButton card={card} open={open} opensSheet={opensSheet} color={color} onPress={toggle} />
       {credit ? <span className={styles.creditPill}>{credit}</span> : null}
       {isQuestionsCard(card) ? <QuestionsPanel card={card} open={open} onOpen={() => setOpen(true)} onChanged={onChanged ?? (() => undefined)} /> : null}
       <CardFoot card={card} onAnswer={opensSheet ? openSheet : null} onSave={onSave} onHide={onHide} />

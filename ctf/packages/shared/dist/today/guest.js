@@ -48,6 +48,11 @@ export const SE_GUEST_SHEET_SOURCES = ['blog-story', 'member-story', 'trust-tran
 export function seGuestOpensSheet(card) {
     return SE_GUEST_SHEET_SOURCES.includes(card.source);
 }
+// The blog post a story card opens: its address on the blog, or null for any other card (a member's
+// story has no public page). The card's title links here, signed in and signed out alike.
+export function seStoryPostHref(card) {
+    return card.source === 'blog-story' && /^https?:\/\//.test(card.href) ? card.href : null;
+}
 // What an opened card says when no message shows. On a member's story the replies left out were
 // written for members, so it says the conversation is for members rather than that it is empty.
 export function seGuestEmptyLine(card) {

@@ -1,4 +1,5 @@
-// One card in Today, the Android copy of the web's today-card.tsx. On an ask, offer or story,
+// One card in Today, the Android copy of the web's today-card.tsx. A blog story's title is a link to
+// the post (StoryTitleLink.tsx). On an ask, offer or story,
 // tapping the text opens the card in place as a sheet (CardSheet.tsx), and an answer button (I can
 // help, I know someone, I'd like this, It helped me too) records the answer and opens the sheet;
 // other buttons open the item. Every other card expands in place as before. The ••• menu holds Copy
@@ -23,6 +24,7 @@ import {
   seCardTakesCheckMark,
   seDailyCreditPill,
   seNewCommentsLine,
+  seStoryPostHref,
   type SeCardAnswerKind,
   type SeThemeTokens,
   type SeTodayCard,
@@ -38,6 +40,7 @@ import { GoalCard } from './GoalCard';
 import { CardFigures } from './CardFigures';
 import { CardDotIcon } from './CardDotIcon';
 import { cardPath } from './useCardConversation';
+import { StoryTitleLink } from './StoryTitleLink';
 
 function absolute(href: string): string {
   return href.startsWith('http') ? href : `${getApiBaseUrl()}${href}`;
@@ -169,12 +172,12 @@ function DoneDot({ t, s, card, read, color, onToggleDone }: DotProps) {
   );
 }
 
-type TextProps = { t: SeThemeTokens; s: Styles; card: SeTodayCard; open: boolean; opensSheet: boolean; onPress: () => void };
+type TextProps = { t: SeThemeTokens; s: Styles; card: SeTodayCard; open: boolean; opensSheet: boolean; onPress: () => void; onOpenLink: (_href: string) => void };
 
-function TitleAndBody({ s, card, open }: Pick<TextProps, 's' | 'card' | 'open'>) {
+function TitleAndBody({ s, card, open, withTitle }: Pick<TextProps, 's' | 'card' | 'open'> & { withTitle: boolean }) {
   return (
     <>
-      <Text style={s.title}>{card.title}</Text>
+      {withTitle ? <Text style={s.title}>{card.title}</Text> : null}
       {card.body ? (
         <Text style={s.body} numberOfLines={open || card.source === 'questions' ? undefined : 3}>
           {card.body}
@@ -186,20 +189,27 @@ function TitleAndBody({ s, card, open }: Pick<TextProps, 's' | 'card' | 'open'>)
 
 // The title and body, or the card's figures in their place (the title stays its name for a screen
 // reader). On an ask, offer or story they open the sheet; on other cards they expand in place.
-function CardText({ t, s, card, open, opensSheet, onPress }: TextProps) {
+// A blog story's title sits above them as a link to the post.
+function CardText({ t, s, card, open, opensSheet, onPress, onOpenLink }: TextProps) {
   const figures = Boolean(card.figures?.length);
+  const postHref = seStoryPostHref(card);
+  const link = postHref ? <StoryTitleLink href={postHref} title={card.title} style={s.title} onOpenLink={onOpenLink} /> : null;
+  if (postHref && !card.body && !card.newComments) return link;
   return (
-    <TouchableOpacity
-      accessibilityRole="button"
-      accessibilityLabel={figures ? card.title : undefined}
-      accessibilityState={opensSheet ? undefined : { expanded: open }}
-      onPress={onPress}
-      style={s.text}
-    >
-      {figures ? <CardFigures t={t} card={card} /> : <TitleAndBody s={s} card={card} open={open} />}
-      {/* A story marked done that came back: comments were written in its conversation since. */}
-      {card.newComments ? <Text style={s.newComments}>{seNewCommentsLine(card.newComments)}</Text> : null}
-    </TouchableOpacity>
+    <>
+      {link}
+      <TouchableOpacity
+        accessibilityRole="button"
+        accessibilityLabel={figures ? card.title : undefined}
+        accessibilityState={opensSheet ? undefined : { expanded: open }}
+        onPress={onPress}
+        style={s.text}
+      >
+        {figures ? <CardFigures t={t} card={card} /> : <TitleAndBody s={s} card={card} open={open} withTitle={!postHref} />}
+        {/* A story marked done that came back: comments were written in its conversation since. */}
+        {card.newComments ? <Text style={s.newComments}>{seNewCommentsLine(card.newComments)}</Text> : null}
+      </TouchableOpacity>
+    </>
   );
 }
 
@@ -298,7 +308,7 @@ export function TodayCard({
         </TouchableOpacity>
       </View>
       {menu ? <CardMenu s={s} card={card} canReport={canReport} onHide={onHide} onMute={onMute} onMutePost={mutePost} /> : null}
-      <CardText t={t} s={s} card={card} open={open} opensSheet={opensSheet} onPress={toggle} />
+      <CardText t={t} s={s} card={card} open={open} opensSheet={opensSheet} onPress={toggle} onOpenLink={onOpenLink} />
       {credit ? <Text style={s.creditPill}>{credit}</Text> : null}
       {isQuestionsCard(card) ? <QuestionsPanel t={t} card={card} open={open} onOpen={() => setOpen(true)} onChanged={onChanged ?? noop} /> : null}
       <CardFoot t={t} s={s} card={card} onOpenLink={onOpenLink} onAnswer={opensSheet ? openSheet : null} onSave={onSave} onHide={onHide} />

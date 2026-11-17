@@ -1,4 +1,4 @@
-import { SE_MEMBER_STORY_COLLECTION, seNextDay, seStoryOpening, seStoriesWithMembers, type SeTodayDay, type SeStoryPost, type SeTodayCard } from '@ctf/shared';
+import { SE_MEMBER_STORY_COLLECTION, seNextDay, seStoryCardBody, seStoriesWithMembers, type SeTodayDay, type SeStoryPost, type SeTodayCard } from '@ctf/shared';
 import { readBlogPosts } from 'lib/daily-posts/source';
 import { listExclusions } from 'lib/daily-posts/repository';
 import { reportError } from 'lib/observability/report';
@@ -60,11 +60,12 @@ function blogCard(post: SeStoryPost, createdAtIso: string, times: Map<string, st
       kind: 'story',
       label: storyLabel(post),
       title: post.title,
-      body: seStoryOpening(post.text),
+      // The post's teaser from the blog, or its opening without bare addresses.
+      body: seStoryCardBody(post),
       createdAtIso,
       href: post.url,
-      // As on the board: This helped me, with Save and Hide beside it. The title opens the sheet, whose
-      // "Open in the blog" link reads the post.
+      // As on the board: This helped me, with Save and Hide beside it. The title opens the post on the
+      // blog; the text opens the sheet, whose "Open in the blog" link reads the post too.
       actions: [action('helped-me', 'This helped me', post.url)],
     }),
     commentTimesIso: times.get(post.slug) ?? [],

@@ -14,22 +14,26 @@ export type BlogPost = {
   collection: string;
   url: string;
   text: string;
+  // The post's teaser, or its excerpt where it has none. Absent from a list built before the blog added it.
+  teaser?: string;
 };
 
 export type BlogPostsRead = { ok: true; posts: BlogPost[] } | { ok: false; reason: string };
 
+const POST_FIELDS: ReadonlyArray<[keyof BlogPost, string]> = [
+  ['number', 'number'],
+  ['slug', 'string'],
+  ['title', 'string'],
+  ['date', 'string'],
+  ['collection', 'string'],
+  ['url', 'string'],
+  ['text', 'string'],
+];
+
 function isBlogPost(value: unknown): value is BlogPost {
   if (!value || typeof value !== 'object') return false;
   const post = value as Record<string, unknown>;
-  return (
-    typeof post.number === 'number' &&
-    typeof post.slug === 'string' &&
-    typeof post.title === 'string' &&
-    typeof post.date === 'string' &&
-    typeof post.collection === 'string' &&
-    typeof post.url === 'string' &&
-    typeof post.text === 'string'
-  );
+  return POST_FIELDS.every(([field, type]) => typeof post[field] === type) && (post.teaser === undefined || typeof post.teaser === 'string');
 }
 
 /** Never throws: a blog that cannot be read leaves the rest of the screen working, with the reason. */
