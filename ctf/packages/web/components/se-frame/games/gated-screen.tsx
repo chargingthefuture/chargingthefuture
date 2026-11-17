@@ -14,11 +14,15 @@ import styles from './games.module.css';
 
 type Gate = Exclude<SeDailyGate, 'play'>;
 
-export function DailyGateScreen({ gate, reason, signInUrl }: { gate: Gate; reason: string | null; signInUrl: string }) {
+// Signed out, it is burgundy light like every signed-out screen (owner report, 2026-11-17).
+function useGateTheme(gate: Gate) {
   const { theme: memberTheme } = useSeTheme();
-  // Signed out, it is burgundy light like every signed-out screen (owner report, 2026-11-17).
   const signedOutTheme = useSignedOutTheme();
-  const theme = gate === 'sign-in' ? signedOutTheme : memberTheme;
+  return gate === 'sign-in' ? signedOutTheme : memberTheme;
+}
+
+export function DailyGateScreen({ gate, reason, signInUrl }: { gate: Gate; reason: string | null; signInUrl: string }) {
+  const theme = useGateTheme(gate);
   const [day, setDay] = useState<string | null>(null);
   useEffect(() => setDay(new Date().toISOString().slice(0, 10)), []);
   const puzzle = day ? seDailyPuzzle(day) : null;
