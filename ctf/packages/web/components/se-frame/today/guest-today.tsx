@@ -2,7 +2,7 @@
 
 import { useSignedOutTheme } from '../use-signed-out-theme';
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   SE_DAYS_WON_TITLE,
   SE_DAYS_WON_WHY,
@@ -12,16 +12,13 @@ import {
   seGuestDaysWon,
   seGuestTickDelayMs,
   seGuestOpensSheet,
-  seGuestNextRoomLine,
-  seGuestStartedLine,
-  seTalkCalendarEvent,
+  seGuestMainRoom,
+  seMainRoomButtons,
   seTheme,
   seTodayView,
   type SeToday,
   type SeTodayCard,
-  type SeTodayTalk,
 } from '@ctf/shared';
-import { AddToCalendarButton } from '@/components/shared/add-to-calendar';
 import { ChymeGuestListen, GuestNote } from '@/components/chyme/chyme-guest-listen';
 import { ChymeReadingsPlayer } from '@/components/chyme/readings/chyme-readings-player';
 import { ChymeTokensContext, seChymeTokens } from '@/components/chyme/chyme-tokens-context';
@@ -31,11 +28,12 @@ import { useToday } from './use-today';
 import { GuestSheet } from './guest-sheet';
 import { CardDotIcon } from './card-dot-icon';
 import { EmojiRainShower } from './emoji-rain';
+import { MainRoomCard } from './main-room-card';
 import styles from './today.module.css';
 
 // Today for a visitor who is not signed in, built to the approved "Today, signed out" board: Days
 // won (a Preview count that ticks up now and then) with what Skills Economy is and Sign up, the Main
-// Room with Listen as a guest in place (or, on a quiet day, the readings and the next room), the
+// Room card members see too (main-room-card.tsx), playing in place, the
 // day's cards read only, asks and offers from "A member" with Sign up to answer, a blog story with
 // Read the post and Conversation, and People locked until a member is reviewed.
 
@@ -96,73 +94,25 @@ function Hero({ today, signUpUrl }: { today: SeToday | null; signUpUrl: string }
   );
 }
 
-function Listening({ participantCount, guestCount, listenAllowed, listenUnavailable, onGone }: {
-  participantCount: number;
-  guestCount: number;
-  listenAllowed: boolean;
-  listenUnavailable: string | null;
-  onGone: () => void;
+// What a visitor hears inside the card after the first button: the live room as a guest, or the
+// readings loop, started by that same tap.
+function GuestInPlace({ room, readings, onChange }: {
+  room: Extract<ReturnType<typeof useGuestRoom>['room'], { kind: 'ready' }>;
+  readings: boolean;
+  onChange: () => void;
 }) {
   const theme = useSignedOutTheme();
   const tokens = useMemo(() => seChymeTokens(seTheme(theme.color, theme.mode)), [theme.color, theme.mode]);
-  return (
-    <ChymeTokensContext.Provider value={tokens}>
-      {listenAllowed ? (
-        <ChymeGuestListen participantCount={participantCount} guestCount={guestCount} accent={tokens.ACCENT} onRoomGone={onGone} />
-      ) : (
-        <GuestNote accent={tokens.ACCENT} text={W.listenUnavailable} detail={listenUnavailable ?? 'The server sent no reason.'} />
-      )}
-    </ChymeTokensContext.Provider>
-  );
+  let body: ReactNode;
+  if (readings) body = <ChymeReadingsPlayer onRoomLive={onChange} autoStart showOff />;
+  else if (room.listenAllowed) body = <ChymeGuestListen participantCount={room.participantCount} guestCount={room.guestCount} accent={tokens.ACCENT} onRoomGone={onChange} />;
+  else body = <GuestNote accent={tokens.ACCENT} text={W.listenUnavailable} detail={room.listenUnavailable ?? 'The server sent no reason.'} />;
+  return <ChymeTokensContext.Provider value={tokens}>{body}</ChymeTokensContext.Provider>;
 }
 
-function LiveRoom({ talk, room, onGone }: { talk: SeTodayTalk | null; room: Extract<ReturnType<typeof useGuestRoom>['room'], { kind: 'ready' }>; onGone: () => void }) {
-  const [listening, setListening] = useState(false);
-  return (
-    <section aria-label="Live room" className={styles.roomCard}>
-      <div className={styles.roomHead}>
-        <span className={styles.liveBadge}>{W.live}</span>
-        {talk?.onAir ? <span className={styles.roomMeta}>{seGuestStartedLine(talk.startIso)}</span> : null}
-      </div>
-      <span className={styles.roomTitle}>{talk?.onAir ? talk.title : 'Main Room'}</span>
-      {listening ? (
-        <Listening {...room} onGone={onGone} />
-      ) : (
-        <>
-          <span className={styles.roomMeta}>{W.listenNote}</span>
-          <button type="button" className={styles.primaryButton} onClick={() => setListening(true)}>
-            {W.listen}
-          </button>
-        </>
-      )}
-    </section>
-  );
-}
-
-function QuietRoom({ talk, onLive }: { talk: SeTodayTalk | null; onLive: () => void }) {
-  const theme = useSignedOutTheme();
-  const tokens = useMemo(() => seChymeTokens(seTheme(theme.color, theme.mode)), [theme.color, theme.mode]);
-  return (
-    <section aria-label="Rooms" className={styles.roomCard}>
-      <span className={styles.roomTitle}>{W.quiet}</span>
-      <ChymeTokensContext.Provider value={tokens}>
-        <ChymeReadingsPlayer onRoomLive={onLive} />
-      </ChymeTokensContext.Provider>
-      {talk && !talk.onAir ? (
-        <div className={styles.nextRoom}>
-          <span className={styles.roomMeta}>{W.nextRoom}</span>
-          {talk.title ? <span className={styles.nextRoomTitle}>{talk.title}</span> : null}
-          <span className={styles.nextRoomWhen}>{seGuestNextRoomLine(talk.startIso)}</span>
-          <AddToCalendarButton color="var(--se-ink)" borderColor="var(--se-line)" event={seTalkCalendarEvent(talk)} style={{ alignSelf: 'flex-start' }} />
-        </div>
-      ) : null}
-    </section>
-  );
-}
-
-function RoomCard({ today }: { today: SeToday | null }) {
+function RoomCard({ today, signUpUrl }: { today: SeToday | null; signUpUrl: string }) {
   const { room, reload } = useGuestRoom();
-  const talk = today?.rooms[0]?.nextTalk ?? null;
+  const [playing, setPlaying] = useState(false);
   if (room.kind === 'loading') return null;
   if (room.kind === 'failed') {
     return (
@@ -174,8 +124,20 @@ function RoomCard({ today }: { today: SeToday | null }) {
       </section>
     );
   }
-  if (room.isLive) return <LiveRoom talk={talk} room={room} onGone={() => void reload()} />;
-  return <QuietRoom talk={talk} onLive={() => void reload()} />;
+  // The room went live under the readings, or the live room ended: read it again, back to the buttons.
+  const changed = () => {
+    setPlaying(false);
+    void reload();
+  };
+  return (
+    <MainRoomCard
+      room={seGuestMainRoom(today?.rooms[0] ?? null, room)}
+      buttons={seMainRoomButtons(room.isLive, false)}
+      onPrimary={() => setPlaying(true)}
+      signUpUrl={signUpUrl}
+      inPlace={playing ? <GuestInPlace room={room} readings={!room.isLive} onChange={changed} /> : null}
+    />
+  );
 }
 
 function GuestCard({ card, signUpUrl, signInUrl }: { card: SeTodayCard; signUpUrl: string; signInUrl: string }) {
@@ -226,7 +188,7 @@ export function GuestToday({ signUpUrl, signInUrl }: { signUpUrl: string; signIn
   return (
     <>
       <Hero today={today} signUpUrl={signUpUrl} />
-      <RoomCard today={today} />
+      <RoomCard today={today} signUpUrl={signUpUrl} />
       <div className={styles.listHead}>
         <h2 className={styles.listTitle}>{W.cardsTitle}</h2>
       </div>

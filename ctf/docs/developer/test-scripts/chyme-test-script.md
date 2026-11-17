@@ -867,3 +867,24 @@ sheet. Step 2 is refused with "Asking members into a Back Channel is for Weavers
 Step 3 sends the invite.
 
 Result: web ☐ android ☐
+
+### One Main Room card on Today, signed in and signed out
+
+**Role:** an approved member, then signed out · **Surfaces:** web, android
+
+1. With nobody in the Main Room, as the member, look at the Main Room card on Today, then tap
+   **Play readings**.
+2. Back on Today, tap **Start a conversation**.
+3. With the room live, look at the card again.
+4. Sign out and repeat steps 1 and 3 on the signed-out Today.
+
+**Expected:** Step 1: the card shows "Main Room · open to everyone", the next talk's title, host
+and time with Add to calendar, and "Quiet right now", with Play readings and Start a conversation;
+Play readings opens the room and the readings start without another tap (on an iPhone a second tap
+on Play readings may be needed), or the room says "No readings are playing right now." when the
+loop is off. Step 2 opens the room and joins its call. Step 3 shows LIVE, the faces and counts,
+Listen in and Bring someone in. Step 4 shows the same card with Sign up to talk (quiet) and Sign up
+to speak (live) as the second button; Play readings and Listen in play inside the card, with no
+account.
+
+Result: web ☐ android ☐

@@ -488,8 +488,8 @@ returns to Today.
 request and a Skill Up cohort exist; once with the Main Room live, once with it quiet.
 **Steps:**
 1. Signed out, open `/today` (Android: open the app signed out).
-2. With the room live, tap **Listen as a guest** on the room card.
-3. With the room quiet, look at the room card.
+2. With the room live, look at the room card, then tap **Listen in**.
+3. With the room quiet, look at the room card, tap **Play readings**, then tap **Sign up to talk**.
 4. Tap **Sign up to answer** on an ask, then **Sign in** at the top.
 5. Signed in, open `/today`.
 **Expected:** Step 1 matches the approved "Today, signed out" board: "Skills Economy" with Sign in at
@@ -498,8 +498,12 @@ the top; Days won with "Skills Economy is where the Avenhood meets…" and Sign 
 with Read the post and Conversation, members' stories with Conversation only (no This helped me on
 either); a dashed People card that says it opens once a member is reviewed; and a bar along the
 bottom, "Free. Use one part, ignore the rest." with Sign up. No card shows a name and there is no
-card menu. Step 2 starts listening right there on the card, with no account. Step 3 says "The audio
-room is quiet now" on one line, naming the room as audio so it never reads as the app being quiet, offers the readings, and shows the next room with Add to calendar. Step 4 opens sign-up,
+card menu. Step 2: the room card is the same card a member sees (LIVE, "Main Room · open to everyone", the
+talk with its host and time, the counts), with Listen in and Sign up to speak; Listen in starts
+listening right there on the card, with no account. Step 3: the same card with "Quiet right now"
+under the next talk and its Add to calendar, and Play readings and Sign up to talk; Play readings
+plays the readings in the card from that tap (or shows "No readings are playing right now." when
+the loop is off), and Sign up to talk opens sign-up. Step 4 opens sign-up,
 then sign-in. Step 5 lands on the home page.
 **Result:** web ☐ android ☐ — notes:
 

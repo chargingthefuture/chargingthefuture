@@ -1,7 +1,7 @@
 // Today for a visitor who is not signed in, the Android copy of the web's guest-today.tsx, built to
 // the approved "Today, signed out" board: Days won (a Preview count that ticks up now and then) with
-// what Skills Economy is and Sign up, the Main Room with Listen as a guest in place (or, on a quiet
-// day, the readings and the next room), the day's cards read only, asks and offers from "A member"
+// what Skills Economy is and Sign up, the Main Room card members see too (MainRoomCard.tsx),
+// playing in place, the day's cards read only, asks and offers from "A member"
 // with Sign up to answer, a blog story with Read the post and Conversation, and People locked.
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -15,16 +15,13 @@ import {
   seGuestDaysWon,
   seGuestTickDelayMs,
   seGuestOpensSheet,
-  seGuestNextRoomLine,
-  seGuestStartedLine,
-  seTalkCalendarEvent,
+  seGuestMainRoom,
+  seMainRoomButtons,
   seTodayView,
   type SeThemeTokens,
   type SeToday,
   type SeTodayCard,
-  type SeTodayTalk,
 } from '@ctf/shared';
-import { AddToCalendarButton } from '../../../components/shared/AddToCalendarButton';
 import { SeAvatar } from '../../../components/shared/SeAvatar';
 import { ChymeGuestListen, GuestNote } from '../../chyme/chyme-guest-listen';
 import { ChymeReadingsPlayer } from '../../chyme/chyme-readings-player';
@@ -36,6 +33,7 @@ import { openTodayLink } from './openTodayLink';
 import { useToday } from './useToday';
 import { GuestSheet } from './GuestSheet';
 import { CardDotIcon } from './CardDotIcon';
+import { MainRoomCard } from './MainRoomCard';
 import Svg, { Path, Rect } from 'react-native-svg';
 
 type Styles = ReturnType<typeof makeStyles>;
@@ -111,57 +109,23 @@ function useGuestRoom() {
   return { room, reload: load };
 }
 
-function LiveRoom({ s, t, talk, room, onGone }: { s: Styles; t: SeThemeTokens; talk: SeTodayTalk | null; room: LiveState; onGone: () => void }) {
-  const [listening, setListening] = useState(false);
-  return (
-    <View style={s.roomCard} accessibilityLabel="Live room">
-      <View style={s.row}>
-        <Text style={s.liveBadge}>{W.live}</Text>
-        {talk?.onAir ? <Text style={s.meta}>{seGuestStartedLine(talk.startIso)}</Text> : null}
-      </View>
-      <Text style={s.roomTitle}>{talk?.onAir ? talk.title : 'Main Room'}</Text>
-      {listening ? (
-        room.guestListenAllowed ? (
-          <ChymeGuestListen participantCount={room.participantCount} guestCount={room.guestCount} accent={t.btn} onRoomGone={onGone} onListeningChange={() => undefined} leaveKey={0} />
-        ) : (
-          <GuestNote accent={t.btn} text={W.listenUnavailable} detail={room.listenUnavailable ?? 'The server sent no reason.'} />
-        )
-      ) : (
-        <>
-          <Text style={s.meta}>{W.listenNote}</Text>
-          <TouchableOpacity accessibilityRole="button" onPress={() => setListening(true)} style={s.primary}>
-            <Text style={s.primaryLabel}>{W.listen}</Text>
-          </TouchableOpacity>
-        </>
-      )}
-    </View>
-  );
+// What a visitor hears inside the card after the first button: the live room as a guest, or the
+// readings loop, started by that same tap. As on the web.
+function GuestInPlace({ t, room, readings, onChange }: { t: SeThemeTokens; room: LiveState; readings: boolean; onChange: () => void }) {
+  if (readings) return <ChymeReadingsPlayer onRoomLive={onChange} autoStart showOff />;
+  if (room.guestListenAllowed) {
+    return <ChymeGuestListen participantCount={room.participantCount} guestCount={room.guestCount} accent={t.btn} onRoomGone={onChange} onListeningChange={() => undefined} leaveKey={0} />;
+  }
+  return <GuestNote accent={t.btn} text={W.listenUnavailable} detail={room.listenUnavailable ?? 'The server sent no reason.'} />;
 }
 
-function QuietRoom({ s, t, talk, onLive }: { s: Styles; t: SeThemeTokens; talk: SeTodayTalk | null; onLive: () => void }) {
-  return (
-    <View style={s.roomCard} accessibilityLabel="Rooms">
-      <Text style={s.roomTitle}>{W.quiet}</Text>
-      <ChymeReadingsPlayer onRoomLive={onLive} />
-      {talk && !talk.onAir ? (
-        <View style={s.nextRoom}>
-          <Text style={s.meta}>{W.nextRoom}</Text>
-          <Text style={s.nextRoomWhen}>{seGuestNextRoomLine(talk.startIso)}</Text>
-          <AddToCalendarButton color={t.ink} borderColor={t.line} event={seTalkCalendarEvent(talk)} />
-        </View>
-      ) : null}
-    </View>
-  );
-}
-
-function RoomCard({ s, t, today }: { s: Styles; t: SeThemeTokens; today: SeToday | null }) {
+function RoomCard({ s, t, today, onSignUp }: { s: Styles; t: SeThemeTokens; today: SeToday | null; onSignUp: () => void }) {
   const { room, reload } = useGuestRoom();
-  const talk = today?.rooms[0]?.nextTalk ?? null;
+  const [playing, setPlaying] = useState(false);
   const tokens = useMemo(() => seChymeTokens(t), [t]);
   if (!room) return null;
-  let body: React.ReactNode;
   if (room.checkFailed) {
-    body = (
+    return (
       <View style={s.roomCard}>
         <Text style={s.meta}>{room.checkFailed}</Text>
         <TouchableOpacity accessibilityRole="button" onPress={() => void reload()} style={s.action}>
@@ -169,12 +133,24 @@ function RoomCard({ s, t, today }: { s: Styles; t: SeThemeTokens; today: SeToday
         </TouchableOpacity>
       </View>
     );
-  } else if (room.isLive) {
-    body = <LiveRoom s={s} t={t} talk={talk} room={room} onGone={() => void reload()} />;
-  } else {
-    body = <QuietRoom s={s} t={t} talk={talk} onLive={() => void reload()} />;
   }
-  return <ChymeTokensContext.Provider value={tokens}>{body}</ChymeTokensContext.Provider>;
+  // The room went live under the readings, or the live room ended: read it again, back to the buttons.
+  const changed = () => {
+    setPlaying(false);
+    void reload();
+  };
+  return (
+    <ChymeTokensContext.Provider value={tokens}>
+      <MainRoomCard
+        t={t}
+        room={seGuestMainRoom(today?.rooms[0] ?? null, room)}
+        buttons={seMainRoomButtons(room.isLive, false)}
+        onPrimary={() => setPlaying(true)}
+        onSecondary={onSignUp}
+        inPlace={playing ? <GuestInPlace t={t} room={room} readings={!room.isLive} onChange={changed} /> : null}
+      />
+    </ChymeTokensContext.Provider>
+  );
 }
 
 function GuestCard({ s, t, card, onSignUp, go }: { s: Styles; t: SeThemeTokens; card: SeTodayCard; onSignUp: () => void; go: (_href: string) => void }) {
@@ -229,7 +205,7 @@ export function GuestToday({ t, onSignUp, onOpen, onRain }: { t: SeThemeTokens; 
   return (
     <>
       <Hero s={s} t={t} today={today} onSignUp={onSignUp} onRain={onRain} />
-      <RoomCard s={s} t={t} today={today} />
+      <RoomCard s={s} t={t} today={today} onSignUp={onSignUp} />
       <View style={s.listHead}>
         <Text style={s.listTitle}>{W.cardsTitle}</Text>
       </View>
@@ -272,13 +248,7 @@ function makeStyles(t: SeThemeTokens) {
     heroButtonLabel: { fontSize: 15, color: t.hero, fontFamily: SE_FONT.sansBold },
     roomCard: { gap: 10, padding: 16, borderRadius: 20, backgroundColor: t.card, borderWidth: 1.5, borderColor: t.line, boxShadow: `0px 3px 0px ${t.line}` },
     row: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 },
-    liveBadge: { paddingVertical: 4, paddingHorizontal: 9, borderRadius: 999, overflow: 'hidden', backgroundColor: t.liveBadge, color: t.onLiveBadge, fontSize: 11, letterSpacing: 1.1, fontFamily: SE_FONT.sansBold },
-    roomTitle: { fontSize: 21, lineHeight: 25, color: t.ink, fontFamily: SE_FONT.serif },
     meta: { fontSize: 13, color: t.soft, fontFamily: SE_FONT.sans },
-    nextRoom: { gap: 4 },
-    nextRoomWhen: { fontSize: 14, color: t.ink, fontFamily: SE_FONT.sansSemi },
-    primary: { minHeight: 46, alignItems: 'center', justifyContent: 'center', borderRadius: 999, borderWidth: 1.5, borderColor: t.line, backgroundColor: t.btn, boxShadow: `0px 3px 0px ${t.line}` },
-    primaryLabel: { fontSize: 15, color: t.onBtn, fontFamily: SE_FONT.sansBold },
     listHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
     listTitle: { fontSize: 22, color: t.ink, fontFamily: SE_FONT.serif },
     notice: { gap: 10, padding: 14, borderRadius: 18, backgroundColor: t.card, borderWidth: 1.5, borderColor: t.hair },
