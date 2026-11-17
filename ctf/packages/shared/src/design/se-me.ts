@@ -21,15 +21,13 @@ export const SE_ME_LINKS = {
 
 // The Tools grid, for the less used tools: each tile opens the part of the app that does it. A place
 // to stay and Trade hours are not here: + New covers both (owner decision, 2026-11-16). Icons are 24-unit paths.
-// A tile with `sheet` opens that 3.1 sheet over Me instead of leaving 3.1; its href is the 3.0 page
-// the sheet links to afterwards.
-export type SeMeTool = { key: string; label: string; href: string; tint: string; icon: string; sheet?: 'click-log' };
+// "Log what happened" is not here either: it is in + New (owner decision, 2026-11-16).
+export type SeMeTool = { key: string; label: string; href: string; tint: string; icon: string };
 
 export const SE_ME_TOOLS: readonly SeMeTool[] = [
   { key: 'skill-up', label: 'Learn a skill', href: '/apps/skill-up', tint: '#dfe6ee', icon: 'M3 9l9-5 9 5-9 5zM7 11v5c3 2 7 2 10 0v-5' },
   { key: 'workforce', label: 'Our numbers', href: '/apps/workforce', tint: '#f3e3cf', icon: 'M5 20V10M12 20V4M19 20v-7' },
   { key: 'knowledge', label: 'Bring your writing', href: '/knowledge', tint: '#f4dde1', icon: 'M4 20l4-1 11-11-3-3L5 16zM14 6l3 3' },
-  { key: 'click-log', label: 'Log what happened', href: '/apps/click-log', tint: '#ede2d9', icon: 'M6 3h9l4 4v14H6zM9 12h7M9 16h5', sheet: 'click-log' },
 ];
 
 // The tile's icon is drawn in the board's ink on its light tint, in every theme.

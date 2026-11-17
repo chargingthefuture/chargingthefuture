@@ -1,11 +1,12 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useState } from 'react';
 import { SE_WW_ADD_WORDS as W, seWwHelpedCount } from '@ctf/shared';
 import { responseFailureText, reasonText } from 'lib/errors/client-failure';
 import type { PluginShellTokens } from '@/components/shared/plugin-shell-theme';
 import { classicLookVars } from '@/components/shared/classic-look-vars';
 import { seThemeVars } from '../se-theme-vars';
+import { useSheetFocus } from '../use-sheet-focus';
 import { useSeTheme } from '../use-se-theme';
 import { useWwSimilar, WW_MIN_QUERY, type WwMatchState } from './use-ww-similar';
 import seStyles from './ww-add-sheet.module.css';
@@ -137,14 +138,10 @@ export function WwAddSheet({ onClose, onUse, onAddWhatHelped, look }: Props) {
   const { theme } = useSeTheme();
   const styles = look ? classic : seStyles;
   const [sent, setSent] = useState<WwAddedProblem | null>(null);
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => event.key === 'Escape' && onClose();
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  const dialog = useSheetFocus(onClose);
   return (
     <div className={styles.backdrop} style={look ? classicLookVars(look) : seThemeVars(theme.color, theme.mode)}>
-      <section role="dialog" aria-modal="true" aria-label={W.title} className={styles.sheet}>
+      <section ref={dialog} tabIndex={-1} role="dialog" aria-modal="true" aria-label={W.title} className={styles.sheet}>
         <div className={styles.top}>
           <button type="button" className={styles.close} aria-label={W.close} onClick={onClose}>
             <CloseIcon />

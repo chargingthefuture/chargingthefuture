@@ -3,7 +3,7 @@
 // (GET /api/click-log for whether "Not listed" is offered, GET /api/click-log/preferences for the
 // sharing default, POST /api/click-log to log). Location comes from the phone through expo-location.
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { AccessibilityInfo } from 'react-native';
 import * as ExpoLocation from 'expo-location';
 import { SE_CLICK_LOG_WORDS as W, clickLogCreateBody, type ClickLogLocation } from '@ctf/shared';
@@ -73,7 +73,7 @@ function useLocation() {
   const [location, setLocation] = useState<ClickLogLocation>({});
   const [status, setStatus] = useState<GeoStatus>('idle');
   const [error, setError] = useState<string | null>(null);
-  const add = () => {
+  const add = useCallback(() => {
     setStatus('locating');
     setError(null);
     readPosition()
@@ -86,7 +86,12 @@ function useLocation() {
         setError(locationError(caught));
         setStatus('error');
       });
-  };
+  }, []);
+  // A quick pin: the member's location is asked for as soon as the sheet opens. Refused or
+  // unavailable, the reason shows and the Add location button stays for another try.
+  useEffect(() => {
+    add();
+  }, [add]);
   const reset = () => {
     setLocation({});
     setStatus('idle');
@@ -119,6 +124,7 @@ export function useClickLogEntry() {
     setError(null);
     setSaved(false);
     geo.reset();
+    geo.add();
   };
 
   const submit = async () => {

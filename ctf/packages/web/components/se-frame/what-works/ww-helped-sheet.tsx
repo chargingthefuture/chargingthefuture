@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { SE_WW_ADD_WORDS, SE_WW_HELPED_WORDS as W, seWwHelpedBody, seWwHelpedReady } from '@ctf/shared';
 import { responseFailureText } from 'lib/errors/client-failure';
 import { seThemeVars } from '../se-theme-vars';
+import { useSheetFocus } from '../use-sheet-focus';
 import { useSeTheme } from '../use-se-theme';
 import { CloseIcon, type WwAddedProblem } from './ww-add-sheet';
 import styles from './ww-add-sheet.module.css';
@@ -94,14 +95,10 @@ function HelpedSent({ onClose }: { onClose: () => void }) {
 export function WwHelpedSheet({ problem, onClose }: { problem: WwAddedProblem; onClose: () => void }) {
   const { theme } = useSeTheme();
   const [sent, setSent] = useState(false);
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => event.key === 'Escape' && onClose();
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  const dialog = useSheetFocus(onClose);
   return (
     <div className={styles.backdrop} style={seThemeVars(theme.color, theme.mode)}>
-      <section role="dialog" aria-modal="true" aria-label={W.title} className={styles.sheet}>
+      <section ref={dialog} tabIndex={-1} role="dialog" aria-modal="true" aria-label={W.title} className={styles.sheet}>
         <div className={styles.top}>
           <button type="button" className={styles.close} aria-label={SE_WW_ADD_WORDS.close} onClick={onClose}>
             <CloseIcon />

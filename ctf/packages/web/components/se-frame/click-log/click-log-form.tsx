@@ -19,7 +19,8 @@ import { ClickLogTags } from './click-log-tags';
 import type { ClickLogEntry } from './use-click-log-entry';
 import styles from './click-log-sheet.module.css';
 
-// The fields of the 3.1 "Log what happened" sheet, every one the 3.0 ClickLog form has.
+// The fields of the 3.1 "Log what happened" sheet, every one the 3.0 ClickLog form has. The
+// location comes first, since the sheet is a quick pin that fills it in as it opens.
 
 function Suggestion({ entry }: { entry: ClickLogEntry }) {
   return (
@@ -67,6 +68,9 @@ function Location({ entry }: { entry: ClickLogEntry }) {
       <button type="button" className={geo.added ? styles.locationOn : styles.location} disabled={locating} aria-pressed={geo.added} onClick={geo.add}>
         {clickLogLocationLabel(geo.added, locating)}
       </button>
+      <p role="status" className={styles.hidden}>
+        {geo.added ? W.locationAddedSaid : ''}
+      </p>
       {geo.status === 'error' && geo.error ? (
         <p role="alert" className={styles.error}>
           {geo.error}
@@ -92,13 +96,13 @@ export function ClickLogForm({ entry, onCancel }: { entry: ClickLogEntry; onCanc
           {text}
         </p>
       ))}
+      <Location entry={entry} />
       <label className={styles.field}>
         <span className={styles.label}>{W.noteLabel}</span>
         <textarea className={styles.textarea} rows={3} maxLength={MAX_NOTES_LENGTH} placeholder={W.notePlaceholder} value={entry.fields.note} onChange={(e) => entry.set.note(e.target.value)} />
       </label>
       <Tags entry={entry} />
       <Share entry={entry} />
-      <Location entry={entry} />
       {entry.error ? (
         <p role="alert" className={styles.error}>
           {entry.error}

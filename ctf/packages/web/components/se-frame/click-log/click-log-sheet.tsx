@@ -1,17 +1,17 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { SE_CLICK_LOG_WORDS as W, CLICK_LOG_HISTORY_HREF } from '@ctf/shared';
 import { CloseIcon } from '../what-works/ww-add-sheet';
+import { useSheetFocus } from '../use-sheet-focus';
 import { ClickLogForm } from './click-log-form';
 import { useClickLogEntry, type ClickLogEntry } from './use-click-log-entry';
 import styles from './click-log-sheet.module.css';
 
-// Me → Tools → "Log what happened": the 3.0 ClickLog entry form in a 3.1 sheet, logging through the
-// same route. Once saved it says so and links to the 3.0 page for history and trends, one of the
-// 3.1 places that link to 3.0. Focus moves into the sheet when it opens and back to the tile when it
-// closes; Escape closes it.
+// + New → "Log what happened": a quick pin that asks for the member's location as it opens, with the
+// 3.0 ClickLog entry form under it, logging through the same route. Once saved it says so and links
+// to the 3.0 page for history and trends, one of the 3.1 places that link to 3.0. Focus moves into
+// the sheet when it opens and back to the line that opened it when it closes; Escape closes it.
 
 function Saved({ entry, onClose }: { entry: ClickLogEntry; onClose: () => void }) {
   return (
@@ -34,27 +34,6 @@ function Saved({ entry, onClose }: { entry: ClickLogEntry; onClose: () => void }
       </div>
     </>
   );
-}
-
-function useSheetFocus(onClose: () => void) {
-  const sheet = useRef<HTMLElement>(null);
-  const close = useRef(onClose);
-  useEffect(() => {
-    close.current = onClose;
-  });
-  useEffect(() => {
-    const before = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    sheet.current?.focus();
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') close.current();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => {
-      window.removeEventListener('keydown', onKey);
-      before?.focus();
-    };
-  }, []);
-  return sheet;
 }
 
 export function ClickLogSheet({ onClose }: { onClose: () => void }) {

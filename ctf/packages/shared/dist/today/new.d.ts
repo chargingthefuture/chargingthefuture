@@ -41,6 +41,10 @@ export declare function seAskTasks(tasks: readonly string[]): string[];
 export declare const SE_OFFER_WORDS: {
     intro: string;
 };
+export declare const SE_OFFER_WHAT_WORKS: {
+    label: string;
+    text: string;
+};
 export declare const SE_STORY_WORDS: {
     intro: string;
     open: string;

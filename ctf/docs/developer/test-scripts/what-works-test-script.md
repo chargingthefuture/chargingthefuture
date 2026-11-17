@@ -380,3 +380,14 @@ shows A's tools under B with the same Helpful counts, and A nowhere. The Audit l
 6. On the 3.0 What Works page, press **Add a problem** from the suggest form.
 **Expected:** Steps 1 to 4 never leave 3.1. Step 2 opens "What helped" with "Problem it solves: <that problem>". **Submit for review** stays off until a name and a link are typed. Step 3 ends on "Suggestion submitted", and the suggestion waits in the admin review on the 3.0 admin page. A bad link shows the route's own reason. Step 4 does the same for the new problem while it waits for review. Step 5: both sheets follow each color and mode. Step 6: the 3.0 sheet keeps the 3.0 look and leads to the 3.0 suggest form.
 **Result:** web ☐ android ☐ — notes:
+
+### WW-16 · Add a problem and what helped, from + New (3.1, added 2026-11-16)
+**Role:** a signed-in member using 3.1 · **Surfaces:** web, android
+1. Open **+ New**, choose **Offer**, and press **A problem, with what helped** (first in the list).
+2. Type "noise at night", wait for "Already here. Is it one of these?", and press **Use this** on one.
+3. Fill in "What helped" and press **Submit for review**, then **Done**.
+4. Open it again, type a problem nothing matches, press **Add it**, then **Add what helped**, and submit one.
+5. On the web, do step 1 with the keyboard alone (Tab, Enter), Tab through the sheet, and press Escape. On Android, do steps 1 to 3 with TalkBack on.
+6. Switch colors and dark mode in Settings and open both sheets again.
+**Expected:** Step 1 opens "Add a problem" with the eyebrow "What works", the rule line and "The problem, in a few words", as on the board "What works: add a problem". Steps 2 to 4 behave as in WW-15 and never leave 3.1; what is sent waits for the admin review. Step 5: focus moves into each sheet as it opens, every field and button is named, results ("Sent for review", "Suggestion submitted") are read out, Escape closes the sheet and focus returns to the Offer choice. Step 6: both sheets follow each color and mode.
+**Result:** web ☐ android ☐ — notes:

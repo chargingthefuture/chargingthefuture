@@ -1,7 +1,7 @@
-// Me → Tools → "Log what happened" on Android, the copy of the web's click-log-sheet.tsx: the 3.0
-// ClickLog entry form in a 3.1 sheet, logging through the same route. Once saved it says so and
-// links to the 3.0 page for history and trends, opened in the browser as the other tiles are. The
-// phone's back button closes it.
+// + New → "Log what happened" on Android, the copy of the web's click-log-sheet.tsx: a quick pin that
+// asks for the phone's location as it opens, with the 3.0 ClickLog entry form under it, logging
+// through the same route. Once saved it says so and links to the 3.0 page for history and trends,
+// opened in the browser. The phone's back button closes it.
 
 import React, { useMemo } from 'react';
 import { Modal, ScrollView, Text, TouchableOpacity, View } from 'react-native';

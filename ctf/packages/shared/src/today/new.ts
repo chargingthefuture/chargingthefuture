@@ -64,6 +64,13 @@ export const SE_OFFER_WORDS = {
   intro: 'Offer what you have. Each one opens where it is made.',
 };
 
+// The Offer choice that stays in 3.1: adding a problem to What Works and what helped with it, in the
+// sheets of the board "What works: add a problem" (owner decision, 2026-11-16).
+export const SE_OFFER_WHAT_WORKS = {
+  label: 'A problem, with what helped',
+  text: 'Add a problem and what helped with it. Check the list first; each one is read before it shows.',
+};
+
 export const SE_STORY_WORDS = {
   intro: 'Lend your own public writing, such as Quora answers, to the Knowledge Library.',
   open: 'Bring your writing',

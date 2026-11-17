@@ -13,10 +13,11 @@ export const CLICK_LOG_PROBLEMS_PAGE_URL = 'https://lagatos.com/look-ma';
 export const CLICK_LOG_SCHEMES_PAGE_URL = 'https://lagatos.com/schemes';
 
 export const SE_CLICK_LOG_WORDS = {
-  eyebrow: 'Tools',
+  eyebrow: 'New',
+  open: 'Something happened? Log it where you are',
   title: 'Log what happened',
   close: 'Close',
-  rule: 'Submit logs it with the date and time. Everything else is optional.',
+  rule: 'Your location is filled in once you allow it. Submit logs it with the date and time. Everything else is optional.',
   noteLabel: 'Add a note (optional)',
   notePlaceholder: 'Describe what happened…',
   problemsLabel: 'Which problems happened? (optional — pick all that apply)',
@@ -41,6 +42,7 @@ export const SE_CLICK_LOG_WORDS = {
   addLocation: 'Add location',
   locating: 'Locating…',
   locationAdded: 'Location added',
+  locationAddedSaid: 'Your location is filled in.',
   noLocationWeb: "This browser can't access location.",
   noLocationPhone: "This phone can't access location.",
   locationBlockedWeb:
