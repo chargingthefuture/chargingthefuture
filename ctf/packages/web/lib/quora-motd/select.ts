@@ -4,7 +4,7 @@ import {
   type QuoraMotdMessage,
 } from './types';
 import { QUORA_MOTD_ONE_PERCENT } from './messages-one-percent';
-import { QUORA_MOTD_GOAL_BOARD } from './messages-goal-board';
+import { QUORA_MOTD_TODAY_CARD } from './messages-today-card';
 import { QUORA_MOTD_ONE_PERCENT_CALL } from './messages-one-percent-call';
 import { QUORA_MOTD_RECOMMEND } from './messages-recommend';
 
@@ -25,7 +25,7 @@ const MOTD_TIME_ZONE = 'America/New_York';
 
 const POOLS: Record<QuoraMotdAction, QuoraMotdMessage[]> = {
   'one-percent': QUORA_MOTD_ONE_PERCENT,
-  'goal-board': QUORA_MOTD_GOAL_BOARD,
+  'today-card': QUORA_MOTD_TODAY_CARD,
   'one-percent-call': QUORA_MOTD_ONE_PERCENT_CALL,
   recommend: QUORA_MOTD_RECOMMEND,
 };
@@ -106,7 +106,7 @@ function orderFor(length: number, cycle: number): number[] {
 /**
  * The message for one calendar day.
  *
- * The action rotates every day — your 1%, the goal board, One Percent, recommend one person, and
+ * The action rotates every day — your 1%, an ask on Today, One Percent, recommend one person, and
  * round again — so four days running never ask for the same thing. Within an action, the pool is
  * worked through in a shuffled order with no repeat until it is exhausted. With ten messages per
  * action and four actions, that is forty days before anything comes back, and it comes back in a
