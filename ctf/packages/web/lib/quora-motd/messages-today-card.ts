@@ -26,7 +26,7 @@ export const QUORA_MOTD_TODAY_CARD: QuoraMotdMessage[] = [
       'Most of a Targeted Individual\'s day goes to the attacks and to what they force. What is left is small, and it is not enough to reach a goal alone, because a goal is a chain of steps and the attacks land on the chain.',
       'It is enough when it is not all one person\'s. An ask on Today can be broken into small tasks, each one small enough to do from a phone in under half an hour, and anybody can take one.',
       'Put the part of today that is left into one small task on somebody else\'s ask: ' + TODAY_URL,
-      'Full post: ' + motdArticleUrl('show-up-with-your-percent'),
+      'Full post: ' + motdArticleUrl('one-small-task-on-today'),
     ].join('\n\n'),
   },
   {
@@ -37,7 +37,7 @@ export const QUORA_MOTD_TODAY_CARD: QuoraMotdMessage[] = [
       'A marketplace looks empty until both sides have arrived. Somebody looking for a room finds no listings, closes the app, and does not come back.',
       'An ask on Today does not wait for that. A small task like "find two people who list a room near me" needs nobody with a room to be signed up yet. It needs somebody with a phone and half an hour.',
       'Take one small task, or post the ask you need help with: ' + TODAY_URL,
-      'Full post: ' + motdArticleUrl('show-up-with-your-percent'),
+      'Full post: ' + motdArticleUrl('one-small-task-on-today'),
     ].join('\n\n'),
   },
   {
@@ -48,7 +48,7 @@ export const QUORA_MOTD_TODAY_CARD: QuoraMotdMessage[] = [
       '"Get stable" is not a goal anybody can help with. "Get a forklift certificate" is, because everybody can tell when it is done.',
       'On Today you post an ask with a finish line and break it into small tasks: find three places that run the class on weekends, find out which warehouses pay for it once they hire you. When it is done, you mark it reached.',
       'Post yours: ' + TODAY_URL,
-      'Full post: ' + motdArticleUrl('show-up-with-your-percent'),
+      'Full post: ' + motdArticleUrl('one-small-task-on-today'),
     ].join('\n\n'),
   },
   {
@@ -60,7 +60,7 @@ export const QUORA_MOTD_TODAY_CARD: QuoraMotdMessage[] = [
       'Pick one small task on somebody else\'s ask. Do it from your phone. Post what you found. That is the step, and it is complete on its own.',
       'The person who asked sees it on their own card on Today, which shows how many of its small tasks have been taken.',
       'Pick one: ' + TODAY_URL,
-      'Full post: ' + motdArticleUrl('show-up-with-your-percent'),
+      'Full post: ' + motdArticleUrl('one-small-task-on-today'),
     ].join('\n\n'),
   },
   {
@@ -71,7 +71,7 @@ export const QUORA_MOTD_TODAY_CARD: QuoraMotdMessage[] = [
       'Today has no group chat and no direct messages. Each ask carries its own conversation about that ask, public to start, and quick answers in place of most comments: I can help, I know someone.',
       'Nobody has to explain their situation, prove anything, or keep up with a thread to help. A private conversation opens only after both people agree to it.',
       'Answer one ask: ' + TODAY_URL,
-      'Full post: ' + motdArticleUrl('show-up-with-your-percent'),
+      'Full post: ' + motdArticleUrl('one-small-task-on-today'),
     ].join('\n\n'),
   },
   {
@@ -82,7 +82,7 @@ export const QUORA_MOTD_TODAY_CARD: QuoraMotdMessage[] = [
       'Days here do not go to plan. Somebody takes a small task in the morning and by the afternoon the day has been taken from them.',
       'So nothing chases you. A task held for a day without a result goes back on its own, and somebody else can pick it up. Taking one costs nothing if the day goes wrong.',
       'Take one anyway: ' + TODAY_URL,
-      'Full post: ' + motdArticleUrl('show-up-with-your-percent'),
+      'Full post: ' + motdArticleUrl('one-small-task-on-today'),
     ].join('\n\n'),
   },
   {
@@ -93,7 +93,7 @@ export const QUORA_MOTD_TODAY_CARD: QuoraMotdMessage[] = [
       'When you post what you found, the person who asked marks it: it helped, keep it, or send it back.',
       'Nobody else scores your work, and there is no number on anybody. A task that helped counts toward a badge, Weavers of the Commons, and that is the only thing it counts toward.',
       'Help with one small task today: ' + TODAY_URL,
-      'Full post: ' + motdArticleUrl('show-up-with-your-percent'),
+      'Full post: ' + motdArticleUrl('one-small-task-on-today'),
     ].join('\n\n'),
   },
   {
@@ -104,7 +104,7 @@ export const QUORA_MOTD_TODAY_CARD: QuoraMotdMessage[] = [
       'That is the size of a small task. Not a plan, not a campaign. Three phone numbers for yards that are hiring. One call to ask whether a clinic takes walk-ins. One listing checked to see if it is still open.',
       'Each one is a step somebody else could not take today, and you can take it in the time a bus ride lasts.',
       'Pick a small task: ' + TODAY_URL,
-      'Full post: ' + motdArticleUrl('show-up-with-your-percent'),
+      'Full post: ' + motdArticleUrl('one-small-task-on-today'),
     ].join('\n\n'),
   },
   {
@@ -115,7 +115,7 @@ export const QUORA_MOTD_TODAY_CARD: QuoraMotdMessage[] = [
       'Post an ask of your own, broken into small tasks somebody could do from a phone.',
       'You will not get anybody\'s full day either. You will get the half hour somebody had left, and somebody else\'s half hour after that, and a chain of steps that would have stalled with one person gets finished by several.',
       'Post your ask: ' + TODAY_URL,
-      'Full post: ' + motdArticleUrl('show-up-with-your-percent'),
+      'Full post: ' + motdArticleUrl('one-small-task-on-today'),
     ].join('\n\n'),
   },
   {
