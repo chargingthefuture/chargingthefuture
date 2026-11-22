@@ -5,6 +5,7 @@ export type SeQuestion = {
 };
 export declare function seQuestionAllowed(question: SeQuestion): boolean;
 export declare const SE_QUESTIONS: readonly SeQuestion[];
+export declare const SE_QUESTION_IDS: readonly string[];
 export declare const SE_QUESTIONS_START = "2026-11-03";
 export declare const SE_MATCH_MIN_SAME = 3;
 export declare const SE_MATCH_MESSAGE_MAX = 500;
