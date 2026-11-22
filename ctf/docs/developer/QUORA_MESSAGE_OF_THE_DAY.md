@@ -36,10 +36,12 @@ Three things follow, and they are why each message is written the way it is:
 - The day is taken in `America/New_York`, not the server's UTC. Without that, every message after
   8pm Eastern would be the next day's.
 - The ask rotates every day across the three asks on the Peace Battle 2 page — see your 1% in
-  Workforce (its Envision section), start on it on the PeerProgramming goal board, take it further
-  with One Percent (its two Enact steps) — so three days running never ask for the same thing. The
+  Workforce (its Envision section), start on it with an ask on Today, take it further with One
+  Percent (its two Enact steps) — so three days running never ask for the same thing. The
   asks follow the page: "See your 1%" left Enact for Envision on 2026-10-03, so no message calls it
-  a step or counts the steps as three. Fireside and TI
+  a step or counts the steps as three. The second ask named the PeerProgramming goal board until
+  2026-11-22; in 3.1 goals are Ask cards on Today, so its messages name Today, the ask and its
+  small tasks. Fireside and TI
   Radio left both on 2026-10-02, when the outward message narrowed to the goal board, the Peace
   Battle 2 page and One Percent (see "Feature freeze, and one message" in `CLAUDE.md`).
 - A fourth ask, not on the Peace Battle 2 page, joined the rotation on 2026-10-16 at the owner's
@@ -73,7 +75,7 @@ what cannot be taken.
 
 ## Adding or editing a message
 
-The pools are `lib/quora-motd/messages-one-percent.ts`, `messages-goal-board.ts`,
+The pools are `lib/quora-motd/messages-one-percent.ts`, `messages-today-card.ts`,
 `messages-one-percent-call.ts` and `messages-recommend.ts`. Keep them the same length as each other, or one action's messages
 come around more often than another's.
 
@@ -86,7 +88,7 @@ nobody on the front page are recorded in `directory_unmet_needs`; when the repor
 (`ctf/scripts/sql/landing_unmet_needs_report.sql`) shows one need asked for most, the message for that
 need is the one to sharpen or add a second of first.
 
-Every One Percent message says that your 1% and the goal board are complete without it and stay
+Every One Percent message says that your 1% and an ask on Today are complete without it and stay
 free. A paid step that reads as the real one turns the free part into a preview, and it is not one.
 
 - `id` is stable across edits to the text. Changing an id changes where it lands in the rotation.
