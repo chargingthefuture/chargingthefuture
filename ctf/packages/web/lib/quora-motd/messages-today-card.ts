@@ -8,8 +8,8 @@ import { TODAY_URL, motdArticleUrl, type QuoraMotdMessage } from './types';
 //
 // Every fact here is how an ask works as shipped: + New posts an ask and can break it into up to 30
 // small tasks, each small enough to do from a phone in under half an hour; a task held a day
-// without a result goes back by itself; the person who asked marks whether it helped; a card has
-// no group chat and no direct messages, only its own conversation, public to start, with I can help
+// without a result goes back by itself; the person who asked marks whether it helped; a card carries
+// its own conversation, public to start, with I can help
 // and I know someone; the viewer's own ask shows how many of its tasks are taken; and writing in a
 // card is open from sign-in, pausing after day 14 until Unlock is done unless the address was sent
 // or help was asked for (lib/today/cards/access.ts). If any of that changes, these change with it.
@@ -64,12 +64,12 @@ export const QUORA_MOTD_TODAY_CARD: QuoraMotdMessage[] = [
     ].join('\n\n'),
   },
   {
-    id: 'today-no-group-chat',
+    id: 'today-own-conversation',
     action: 'today-card',
-    title: 'No group chat, on purpose',
+    title: 'Each ask carries its own conversation',
     body: [
-      'Today has no group chat and no direct messages. Each ask carries its own conversation about that ask, public to start, and quick answers in place of most comments: I can help, I know someone.',
-      'Nobody has to explain their situation, prove anything, or keep up with a thread to help. A private conversation opens only after both people agree to it.',
+      'Each ask on Today carries its own conversation about that ask, public to start, and quick answers in place of most comments: I can help, I know someone.',
+      'A private conversation opens once both people agree to it. To help, you answer the ask in front of you.',
       'Answer one ask: ' + TODAY_URL,
       'Full post: ' + motdArticleUrl('one-small-task-on-today'),
     ].join('\n\n'),
