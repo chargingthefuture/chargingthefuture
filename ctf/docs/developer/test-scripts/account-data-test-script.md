@@ -828,3 +828,13 @@ totals (AD-28) still count each mark.
 7. Delete A's account in Settings.
 **Expected:** Step 2: the switch reads on after a reload and on the other device; its note says visitors can read what A writes from now on, with A's username, that earlier replies stay for members, and that turning it off hides them at once. Step 4 shows only A's second reply, under A's username as members see it, read only, with "Sign in to write here"; A's first reply, B's and C's are left out with no placeholder or count. Step 5 shows none of A's replies. Step 6 shows "The conversation on a member's story is for members. Sign in to read it." Step 7 removes A's agreement with A's preferences row and A's replies with A's messages. The switch shows only for approved members.
 **Result:** web ☐ android ☐ — notes:
+
+## AD-40 · Days won ticks with the emoji rain for an account on demo data (added 2026-11-23)
+**Role:** an admin, a member account switched to Demo data on the Unlock admin, and a member account not on demo data · **Surfaces:** web, android · **Precondition:** both accounts approved
+**Steps:**
+1. As the demo account, turn Emoji rain on (Me → Settings → Look and reading). Open Today and leave it open for two minutes.
+2. Turn Emoji rain off and repeat step 1.
+3. Turn on less motion (web: the system's reduce motion setting; Android: Remove animations), turn Emoji rain on and repeat step 1.
+4. As the member not on demo data, open Today and leave it open for two minutes.
+**Expected:** Step 1: within 20 to 90 seconds the Days won count goes up by one and emoji fall across the screen for a few seconds, then again at another random interval; "Our progress this week" goes up with it. A reload starts from the demo count again. Step 2: the count still goes up, and no emoji fall. Step 3: the count still goes up, and no emoji fall. Step 4: the count does not tick, and emoji fall only when the real total has gone up since the account last saw it, as in AD-36.
+**Result:** web ☐ android ☐ — notes:

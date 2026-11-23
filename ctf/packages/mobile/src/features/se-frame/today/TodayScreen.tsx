@@ -31,6 +31,7 @@ import { sendTodayFeedback } from './sendFeedback';
 import { openTodayLink } from './openTodayLink';
 import { useToday } from './useToday';
 import { useEmojiRainTrigger } from './EmojiRain';
+import { useLivelyDaysWon } from './useLivelyDaysWon';
 
 type Styles = ReturnType<typeof makeStyles>;
 
@@ -56,13 +57,23 @@ function DaysWonCard({ s, daysWon }: { s: Styles; daysWon: NonNullable<SeToday['
   );
 }
 
-type LiveProps = { t: SeThemeTokens; s: Styles; today: SeToday | null; go: (_href: string) => void };
+type LiveProps = { t: SeThemeTokens; s: Styles; today: SeToday | null; go: (_href: string) => void; rain: { on: boolean; onRain: () => void } };
 
-function LiveCards({ t, s, today, go }: LiveProps) {
+// An account on demo data gets a sample total (build.ts), which ticks up now and then as signed-out
+// Today's does, with the emoji rain when the member has the switch on. A real total never ticks.
+function DaysWon({ s, daysWon, rain }: { s: Styles; daysWon: SeToday['daysWon'] | undefined; rain: LiveProps['rain'] }) {
+  const lively = useLivelyDaysWon(daysWon?.sample ? daysWon : null, () => {
+    if (rain.on) rain.onRain();
+  });
+  const shown = lively ?? daysWon;
+  return shown ? <DaysWonCard s={s} daysWon={shown} /> : null;
+}
+
+function LiveCards({ t, s, today, go, rain }: LiveProps) {
   const broadcast = today?.broadcast;
   return (
     <>
-      {today?.daysWon ? <DaysWonCard s={s} daysWon={today.daysWon} /> : null}
+      <DaysWon s={s} daysWon={today?.daysWon} rain={rain} />
       {today ? <WeekStrip t={t} talks={today.week ?? []} /> : null}
       {broadcast?.live ? <BroadcastCard t={t} broadcast={broadcast} go={go} /> : null}
       {today?.rooms.map((room) => <RoomCard key={room.key} t={t} room={room} broadcasting={broadcast?.live === true} />)}
@@ -160,7 +171,7 @@ export function TodayScreen({ t, accountId, onOpen, onPresence, rain, onPeopleFi
 
   return (
     <>
-      <LiveCards t={t} s={s} today={today} go={go} />
+      <LiveCards t={t} s={s} today={today} go={go} rain={rain} />
       <View style={s.listHead}>
         <Text accessibilityRole="header" style={s.listTitle}>
           Today&apos;s cards
