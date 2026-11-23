@@ -12,6 +12,7 @@
 | | |
 |---|---|
 | **Plugin** | Weekly Performance (`weekly-performance`) |
+| **On screen** | Since 2026-11-23 only the Sign-in record section (WP-A1b). The dashboard steps below have no screen to run against; skip them until the section returns. |
 | **Visibility** | Not in the apps list for anybody. Admins reach it only through the Adoption tile on the admin index (`/admin/adoption`) |
 | **Roles to test** | admin (and the `operations` role) |
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
@@ -88,14 +89,13 @@ As the plain member, call each read route directly — `GET /api/weekly-performa
 ### WP-A1b · Sign-in record section
 **Role:** admin · **Surfaces:** web (mobile-responsive)
 **Steps:**
-1. From the admin index open Adoption (`/admin/adoption`), scroll to the bottom and tap "Sign-in record". It is folded shut until tapped, and nothing under it loads before then.
+1. From the admin index open Adoption (`/admin/adoption`). The "Sign-in record" section sits above the daily exchange and loads on arrival, with no tap to open it.
 2. Read the first line, then tap "Read again" and "Copy the reading".
 3. As a plain member, request `/api/weekly-performance/admin/sign-in-record`.
 **Expected:** The first line reads "Your sign-in today is on record" in green with a UTC time; if it
 reads "NOT recorded" in red, the database's own error text is shown under it and the dashboard's
-Signed in rows will be wrong for the same reason. "Members today" is at least 1 (you), "Signed in
-this week" at least 1, "Signed in per day" reads the same figure as the dashboard's Signed in per day
-card for the current week, and today's row in the fourteen-day list is at least 1. "Copy the reading"
+Signed in figures will be wrong for the same reason. "Members today" is at least 1 (you), "Signed in
+this week" at least 1, and today's row in the fourteen-day list is at least 1. "Copy the reading"
 puts the same figures on the clipboard as plain text. The member's request is denied with
 `missing_required_role`. "inconsistent types deduced for parameter $1" under a red first line means the
 member id is no longer cast to text in the write (fixed 2026-09-24); that is a regression, file it.

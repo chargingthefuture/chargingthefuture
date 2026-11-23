@@ -1,13 +1,11 @@
 'use client';
 
-import { useState } from 'react';
-import { ChevronDown, LogIn, TrendingUp } from 'lucide-react';
+import { LogIn, TrendingUp } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { getPluginShellTokens } from '@/components/shared/plugin-shell-theme';
 import { getAppAccent } from 'lib/theme/theme-tokens';
 import { DailyExchangeSection, useDailyExchangeReading } from '@/components/engagement/daily-exchange-section';
-import { WeeklyPerformanceSection } from '@/components/weekly-performance/weekly-performance-section';
 import { WeeklyPerformanceSignInRecordSection } from '@/components/weekly-performance/wp-sign-in-record-section';
 import { AdoptionSteps } from './adoption-steps';
 import { AdoptionMeasures } from './adoption-measures';
@@ -15,16 +13,13 @@ import { CardFeedbackSection } from './card-feedback-section';
 
 // Adoption: every admin reading of whether members are working with each other, on one screen
 // (owner decision, 2026-10-16). The steps toward 384 sit on top, then Days won and retention (3.1),
-// then what members finish and pass on in Today, then the daily exchange and the Weavers badge,
-// then Weekly Performance, then the sign-in record behind its Signed in rows.
-// These were three separate admin screens before.
+// then what members finish and pass on in Today, then the sign-in record, then the daily exchange
+// and the Weavers badge. The Weekly Performance section was taken off on 2026-11-23 (owner
+// decision): its routes and the daily goal capture still run, with no screen reading them.
 export function AdoptionShell() {
   const { theme } = useTheme();
   const t = getPluginShellTokens(getAppAccent('service-credits', theme), theme);
   const { reading, error, reload } = useDailyExchangeReading();
-  // Folded shut until asked for: reading the record writes the admin's own sign-in, so it must not
-  // run on every visit to this screen.
-  const [signInOpen, setSignInOpen] = useState(false);
 
   return (
     <div style={{ background: t.BG, minHeight: '100vh', color: t.TEXT }}>
@@ -41,47 +36,18 @@ export function AdoptionShell() {
 
         <CardFeedbackSection tokens={t} />
 
-        <DailyExchangeSection reading={reading} error={error} onReload={reload} />
+        <section style={{ marginTop: 32 }}>
+          <h2 style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 15, fontWeight: 700, color: t.TITLE, margin: '0 0 8px' }}>
+            <LogIn size={16} color={t.ACCENT} />
+            Sign-in record
+          </h2>
+          {/* Open on arrival (owner decision, 2026-11-23): reading it records the admin's own sign-in for the day. */}
+          <WeeklyPerformanceSignInRecordSection />
+        </section>
 
         <div style={{ marginTop: 32 }}>
-          <WeeklyPerformanceSection />
+          <DailyExchangeSection reading={reading} error={error} onReload={reload} />
         </div>
-
-        <section style={{ marginTop: 32 }}>
-          <button
-            type="button"
-            aria-expanded={signInOpen}
-            onClick={() => setSignInOpen((open) => !open)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              width: '100%',
-              background: t.SURFACE,
-              border: `1px solid ${t.BORDER}`,
-              borderRadius: 12,
-              padding: '12px 14px',
-              color: t.TITLE,
-              fontSize: 15,
-              fontWeight: 700,
-              cursor: 'pointer',
-              textAlign: 'left',
-            }}
-          >
-            <LogIn size={16} color={t.ACCENT} />
-            <span style={{ flex: 1 }}>Sign-in record</span>
-            <ChevronDown
-              size={16}
-              color={t.SUBTLE}
-              style={{ transform: signInOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}
-            />
-          </button>
-          {signInOpen && (
-            <div style={{ marginTop: 12 }}>
-              <WeeklyPerformanceSignInRecordSection />
-            </div>
-          )}
-        </section>
       </div>
     </div>
   );

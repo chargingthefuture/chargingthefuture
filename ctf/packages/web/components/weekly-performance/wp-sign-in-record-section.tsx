@@ -7,10 +7,9 @@ import type { RecordLoginEventOutcome } from 'lib/engagement/login-activity';
 import type { SignInRecordHealth } from 'lib/engagement/sign-in-record';
 import { getWeeklyPerformanceTokens, type WeeklyPerformanceTokens } from './wp-shared';
 
-// The sign-in record behind the Signed in and Signed in per day cards, as a health check an admin
-// can read from a phone. Opening the section runs the sign-in write for the admin and shows what
-// the database did with it, then the record itself: today, the current week as the dashboard
-// computes it, and the last fourteen days. Aggregate only; the one per-member fact shown is the
+// The sign-in record, as a health check an admin can read from a phone. Loading the section runs the
+// sign-in write for the admin and shows what the database did with it, then the record itself:
+// today, the current week, and the last fourteen days. Aggregate only; the one per-member fact shown is the
 // admin's own row for today.
 
 type Reading = { selfWrite: RecordLoginEventOutcome; health: SignInRecordHealth };
@@ -157,8 +156,8 @@ function SignInRecordBody({
   );
 }
 
-// The Sign-in record section of the Adoption screen. It mounts only when the admin opens it there,
-// because reading it records the admin's own sign-in.
+// The Sign-in record section of the Adoption screen, open on arrival; reading it records the admin's
+// own sign-in for the day.
 export function WeeklyPerformanceSignInRecordSection() {
   const { theme } = useTheme();
   const t = getWeeklyPerformanceTokens(theme);
@@ -205,9 +204,8 @@ export function WeeklyPerformanceSignInRecordSection() {
     <div style={{ color: t.TEXT }}>
       <div>
         <p style={{ fontSize: 13, color: t.SUBTLE, margin: '0 0 14px', lineHeight: 1.5 }}>
-          Signed in and Signed in per day count this record and nothing else: one row per
-          member per day they signed in. Opening this section records your own sign-in and shows
-          what the database did with it, so a zero on the dashboard is answered here.
+          One row per member per day they signed in. Loading this section records your own
+          sign-in and shows what the database did with it.
         </p>
 
         {error && (
