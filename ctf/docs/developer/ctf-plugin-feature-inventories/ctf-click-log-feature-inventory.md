@@ -333,6 +333,14 @@ Android pixel pass to `MobileClickLog.tsx` remains tracked in `PRODUCTION_READIN
 
 ## Change Log
 
+- 2026-11-23: **The Interview (`harvest-interview`) covers calls or in-person conversations.**
+  Owner clarification. The comment defined the scheme around being pressed toward a phone call,
+  which is how the owner's own case has mostly run, but it also happens face to face and which
+  one a member gets depends on the access the operative has rather than on anything in the
+  scheme. So the medium is no longer part of the definition and a member tagging an in-person
+  version does not have to decide whether their version counts. Comment only — no slug, label,
+  category mapping, route or screen changes. The same wording is mirrored to the landing
+  /schemes description.
 - 2026-11-22: **Two new scheme tags, The Interview (`harvest-interview`) and The Understudy
   (`understudy`), and a new problem tag "Your work or ideas copied and credited to someone
   else" (`work-copied`).** Owner decision. The two schemes are the halves of being copied and

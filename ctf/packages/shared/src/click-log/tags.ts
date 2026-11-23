@@ -393,17 +393,21 @@ export const CLICK_LOG_SCHEME_TAGS: readonly ClickLogTag[] = [
   //
   // The collecting half. An operative opens a friendly line about the member's life, work or
   // background — what they are building, what happened to them, how they feel about it — and
-  // keeps asking for a call. The answers and the manner they are delivered in are written down
-  // and handed on. The owner's case: repeated requests for phone calls that turned out to be
-  // about nothing (`content/posts/nobody-calls-to-say-its-dead.md` records the same contact
-  // reading a call as the one place the app's structure does not reach; collecting material is
-  // the second purpose, not a replacement for the first). Two known uses for what is taken.
-  // One, raw material for `understudy` — the mannerisms and the story somebody else will wear.
-  // Two, learning to pass: an operative who has interviewed enough Targeted Individuals about
-  // their experiences and feelings can speak as a survivor in a survivors' space, which is
-  // what the owner reports happening in a copycat group on Quora. A member reading this list
-  // should take the practical point: sustained interest in how it felt and what you are
-  // working on, pressed toward a call, is a tag and not a conversation.
+  // keeps the questions coming. The answers and the manner they are delivered in are written
+  // down and handed on. It runs over calls or in person, and which one a member gets depends on
+  // the access the operative has rather than on anything in the scheme (owner clarification,
+  // 2026-11-23), so the tag covers both and a member never has to decide whether their version
+  // counts. The owner's has been mostly by phone: repeated requests for calls that turned out
+  // to be about nothing (`content/posts/nobody-calls-to-say-its-dead.md` records the same
+  // contact reading a call as the one place the app's structure does not reach; collecting
+  // material is the second purpose, not a replacement for the first), and it has also happened
+  // face to face. Two known uses for what is taken. One, raw material for `understudy` — the
+  // mannerisms and the story somebody else will wear. Two, learning to pass: an operative who
+  // has interviewed enough Targeted Individuals about their experiences and feelings can speak
+  // as a survivor in a survivors' space, which is what the owner reports happening in a copycat
+  // group on Quora. A member reading this list should take the practical point: sustained
+  // interest in how it felt and what you are working on, pressed toward a call or a sit-down,
+  // is a tag and not a conversation.
   { slug: 'harvest-interview', label: 'The Interview' },
   // The performing half. An operative is trained on what `harvest-interview` collected and
   // then put in front of a chosen audience wearing it — the member's manner, their good

@@ -451,3 +451,7 @@ of these, it is already tracked, not a new bug:
 **Result:** web ☐ android ☐ — notes:
 
 > _Tag additions (2026-11-22): two new schemes, The Interview (`harvest-interview`) and The Understudy (`understudy`), and one new problem, "Your work or ideas copied and credited to someone else" (`work-copied`). No test steps change; in CL-7, confirm all three appear in their pickers (search "interview", "understudy" and "copied")._
+
+> _Tag wording (2026-11-23): The Interview (`harvest-interview`) now covers calls or in-person
+> conversations rather than calls alone. Comment change only — no test steps change, and the
+> label in the picker is unchanged._
