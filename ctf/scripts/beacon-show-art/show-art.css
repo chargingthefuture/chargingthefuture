@@ -1,0 +1,42 @@
+/* Shared look for the "In Other News" Beacon show art. Each page sets --u (one unit, in px)
+   and its own layout; every size below is a multiple of --u so the two pages stay in step. */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { overflow: hidden; background: #0d0d12; }
+body {
+  position: relative;
+  font-family: 'Inter', sans-serif;
+  color: #fff;
+  background:
+    radial-gradient(ellipse at 72% 42%, rgba(150, 24, 40, 0.55), rgba(13, 13, 18, 0) 55%),
+    repeating-linear-gradient(0deg, rgba(255,255,255,0.018) 0 1px, transparent 1px 4px),
+    #0d0d12;
+}
+.watermark {
+  position: absolute; font-weight: 900; letter-spacing: -0.06em; line-height: 0.8;
+  color: rgba(255, 255, 255, 0.07); white-space: nowrap; pointer-events: none;
+}
+.banner {
+  position: absolute; background: #e21d2f; color: #fff; font-weight: 900;
+  letter-spacing: -0.02em; display: flex; align-items: center;
+  clip-path: polygon(2.5% 0, 100% 0, 97.5% 100%, 0 100%);
+}
+.series { position: absolute; display: flex; align-items: center; font-weight: 800;
+  letter-spacing: 0.14em; color: #c9cad3; }
+.series i { display: inline-block; border-radius: 50%; background: #e21d2f;
+  box-shadow: 0 0 0.6em rgba(226, 29, 47, 0.8); }
+.wave { position: absolute; display: flex; align-items: center; }
+.wave span { display: block; background: #e21d2f; border-radius: 99px; }
+.headline { position: absolute; font-weight: 900; letter-spacing: -0.045em; line-height: 0.9;
+  text-transform: uppercase; }
+.blank { display: inline-block; background: #ffd400; vertical-align: baseline; }
+.tagline { position: absolute; color: #ffd400; font-weight: 800; letter-spacing: -0.02em; }
+.pills { position: absolute; display: flex; }
+.pill { display: inline-flex; align-items: center; border: 2px solid rgba(255,255,255,0.28);
+  border-radius: 999px; font-weight: 700; background: rgba(13,13,18,0.6); white-space: nowrap; }
+.pill b { color: #e21d2f; font-weight: 900; letter-spacing: 0.03em; }
+.ticker { position: absolute; left: 0; right: 0; bottom: 0; display: flex; font-weight: 900;
+  letter-spacing: -0.03em; }
+.ticker .lead { background: #0d0d12; color: #ffd400; display: flex; align-items: center; }
+.ticker .run { flex: 1; background: #fff; color: #0d0d12; display: flex; align-items: center;
+  white-space: nowrap; overflow: hidden; }
+.ticker .run i { flex-shrink: 0; display: inline-block; border-radius: 50%; background: #0d0d12; }
