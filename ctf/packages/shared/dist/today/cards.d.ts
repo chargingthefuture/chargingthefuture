@@ -92,5 +92,7 @@ export declare const SE_CARD_WORDS: {
 };
 export declare function seCanConfirmHelped(conversation: Pick<SeCardConversation, 'canConfirmHelped' | 'viewerId'>, answer: SeCardAnswer): boolean;
 export declare function seHelpedConfirmedByAdmin(cardId: string): boolean;
-export declare function seCardSheetLine(card: Pick<SeTodayCard, 'kind' | 'label' | 'createdAtIso'>): string;
+export declare function seCardSheetLine(card: Pick<SeTodayCard, 'kind' | 'label' | 'createdAtIso'> & {
+    source?: string;
+}): string;
 export declare function seCardLockLine(reason: unknown): string | null;

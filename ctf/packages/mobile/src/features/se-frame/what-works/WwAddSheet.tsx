@@ -4,10 +4,11 @@
 // the What works card on Today and from + New → Offer.
 
 import React, { useState } from 'react';
-import { Modal, ScrollView, Text, TextInput, TouchableOpacity, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
+import { Linking, Modal, ScrollView, Text, TextInput, TouchableOpacity, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { SE_WW_ADD_WORDS as W, seWwAddsFrom, seWwHelpedCount, type SeThemeTokens } from '@ctf/shared';
+import { SE_WW_ADD_WORDS as W, SE_WW_CARD_WORDS, seWwAddsFrom, seWwCardLink, seWwHelpedCount, type SeThemeTokens, type SeTodayCard } from '@ctf/shared';
 import { authedFetch } from '../../../auth/authedFetch';
+import { SE_FONT } from '../fonts';
 import { useWwSimilar, WW_MIN_QUERY, type WwMatchState } from './useWwSimilar';
 import { makeWwAddSheetStyles, type WwAddSheetStyles } from './wwAddSheetStyles';
 import { WwHelpedSheet } from './WwHelpedSheet';
@@ -167,14 +168,52 @@ export function WwAddButton({ t, style, children }: ButtonProps) {
   );
 }
 
-// "Add a problem" on the What works card opened in place on Today, under the "Open in" link.
-type FromCardProps = { t: SeThemeTokens; source: string; linkStyle: StyleProp<ViewStyle>; labelStyle: StyleProp<TextStyle> };
-
-export function WwAddFromCard({ t, source, linkStyle, labelStyle }: FromCardProps) {
-  if (!seWwAddsFrom(source)) return null;
+// Add a solution to this problem: straight to "What helped" for the card's own problem.
+function WwAddSolutionButton({ t, problem, style, labelStyle }: { t: SeThemeTokens; problem: WwAddedProblem; style: StyleProp<ViewStyle>; labelStyle: StyleProp<TextStyle> }) {
+  const [open, setOpen] = useState(false);
   return (
-    <WwAddButton t={t} style={linkStyle}>
-      <Text style={labelStyle}>{W.title}</Text>
-    </WwAddButton>
+    <>
+      <TouchableOpacity accessibilityRole="button" style={style} onPress={() => setOpen(true)}>
+        <Text style={labelStyle}>{SE_WW_CARD_WORDS.addSolution}</Text>
+      </TouchableOpacity>
+      {open ? <WwHelpedSheet t={t} problem={problem} onClose={() => setOpen(false)} /> : null}
+    </>
+  );
+}
+
+function WwCardLink({ t, link }: { t: SeThemeTokens; link: string }) {
+  return (
+    <Text style={{ fontSize: 14, lineHeight: 21, color: t.soft, fontFamily: SE_FONT.sans }}>
+      {SE_WW_CARD_WORDS.link}:{' '}
+      <Text accessibilityRole="link" style={{ color: t.ink, fontFamily: SE_FONT.sansSemi, textDecorationLine: 'underline' }} onPress={() => void Linking.openURL(link)}>
+        {link}
+      </Text>
+    </Text>
+  );
+}
+
+// The What works card opened in place on Today: the solution's own link, then Add a solution to
+// this problem first and Add a problem after it, under the "Open in" link.
+type FromCardProps = {
+  t: SeThemeTokens;
+  card: SeTodayCard;
+  linkStyle: StyleProp<ViewStyle>;
+  labelStyle: StyleProp<TextStyle>;
+  primaryStyle: StyleProp<ViewStyle>;
+  primaryLabelStyle: StyleProp<TextStyle>;
+};
+
+export function WwAddFromCard({ t, card, linkStyle, labelStyle, primaryStyle, primaryLabelStyle }: FromCardProps) {
+  if (!seWwAddsFrom(card.source)) return null;
+  const ww = card.whatWorks;
+  const link = seWwCardLink(ww?.link);
+  return (
+    <>
+      {link ? <WwCardLink t={t} link={link} /> : null}
+      {ww ? <WwAddSolutionButton t={t} problem={{ id: ww.problemId, title: ww.problemTitle }} style={primaryStyle} labelStyle={primaryLabelStyle} /> : null}
+      <WwAddButton t={t} style={linkStyle}>
+        <Text style={labelStyle}>{W.title}</Text>
+      </WwAddButton>
+    </>
   );
 }

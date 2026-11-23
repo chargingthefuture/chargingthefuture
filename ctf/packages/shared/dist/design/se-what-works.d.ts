@@ -1,6 +1,11 @@
 export declare const SE_WW_ADD_HREF = "/apps/what-works?add=problem";
 export declare function seWwAddsFrom(source: string): boolean;
 export declare function seWwHelpedCount(n: number): string;
+export declare const SE_WW_CARD_WORDS: {
+    readonly link: "Where to get it";
+    readonly addSolution: "Add a solution to this problem";
+};
+export declare function seWwCardLink(link: string | null | undefined): string | null;
 export declare const SE_WW_ADD_WORDS: {
     readonly eyebrow: "What works";
     readonly title: "Add a problem";

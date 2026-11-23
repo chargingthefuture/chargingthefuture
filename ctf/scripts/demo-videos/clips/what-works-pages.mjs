@@ -10,7 +10,7 @@ export default {
       speak: 'The What Works list shows five problems at a time. It ends at the bottom instead of loading more as you scroll.',
       do: async ({ page, app, highlight }) => {
         await page.goto(app('/apps/what-works'));
-        await page.getByRole('heading', { name: 'Noise & Verbal Harassment' }).waitFor({ timeout: 20_000 });
+        await page.getByRole('heading', { name: 'Voices through a shared wall drown out my work. How do I block them?' }).waitFor({ timeout: 20_000 });
         const pageLabel = page.getByText(/^Page 1 of \d+$/);
         await pageLabel.scrollIntoViewIfNeeded();
         await highlight(pageLabel.locator('xpath=../..'));
@@ -20,7 +20,7 @@ export default {
       say: 'Next moves to the next five and takes you back to the top.',
       do: async ({ page, button }) => {
         await button('Next').click();
-        await page.getByRole('heading', { name: 'Charging Away From Home' }).waitFor({ timeout: 20_000 });
+        await page.getByRole('heading', { name: 'My phone dies by mid-afternoon when I am out all day. What keeps it charged?' }).waitFor({ timeout: 20_000 });
         await page.waitForTimeout(800);
       },
     },
@@ -47,7 +47,7 @@ export default {
         const previous = button('Previous');
         await previous.scrollIntoViewIfNeeded();
         await previous.click();
-        await page.getByRole('heading', { name: 'Noise & Verbal Harassment' }).waitFor({ timeout: 20_000 });
+        await page.getByRole('heading', { name: 'Voices through a shared wall drown out my work. How do I block them?' }).waitFor({ timeout: 20_000 });
         const again = button('Previous');
         await again.scrollIntoViewIfNeeded();
         await highlight(again);

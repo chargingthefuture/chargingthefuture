@@ -1156,8 +1156,8 @@ async function seedWhatWorks(c) {
   const endorsers = [OWNER, PEER_1, PEER_2, 'demo-ww-001', 'demo-ww-002', 'demo-ww-003'];
   const problems = [
     {
-      slug: 'noise-verbal-harassment', emoji: '🎧', title: 'Noise & Verbal Harassment',
-      context: 'Slurs through the wall, street harassment, or constant noise meant to wear you down.',
+      slug: 'noise-verbal-harassment', emoji: '🎧', title: 'Voices through a shared wall drown out my work. How do I block them?',
+      context: 'Somebody talks at the wall for hours most afternoons. Foam earplugs and a fan take the edge off, but I still hear every word.',
       products: [
         { emoji: '🎧', name: 'Sony WH-1000XM5', kind: 'Over-ear · active noise canceling', note: 'Blocks voices, not just hum. The only thing that quieted the through-wall talking for me.', verified: 6 },
         { emoji: '🔇', name: 'Loop Quiet 2', kind: 'Reusable ear plugs', note: 'Discreet and comfortable enough to sleep in. Takes the edge off without total silence.', verified: 4 },
@@ -1165,16 +1165,16 @@ async function seedWhatWorks(c) {
       ],
     },
     {
-      slug: 'sleep-disruption', emoji: '🌙', title: 'Sleep Disruption',
-      context: 'Noise, light, or hypervigilance keeping you up at night.',
+      slug: 'sleep-disruption', emoji: '🌙', title: 'How do I sleep through a hallway light and footsteps outside my door?',
+      context: 'A light shines under the door all night and footsteps wake me around 3 AM. A towel along the door and a white noise app did not help: the app stops when the phone locks.',
       products: [
         { emoji: '🌑', name: 'Manta Sleep Mask', kind: 'Blackout eye mask', note: 'Zero pressure on the eyes, total darkness. First full night of sleep in months.', verified: 5 },
         { emoji: '🌬️', name: 'Yogasleep Dohm', kind: 'White noise machine', note: 'A real fan inside, not a loop. Masks footsteps and voices outside the door.', verified: 4 },
       ],
     },
     {
-      slug: 'vehicle-tampering', emoji: '🚗', title: 'Vehicle Tampering',
-      context: 'Worried about hidden trackers or tampering on your car.',
+      slug: 'vehicle-tampering', emoji: '🚗', title: 'How do I check my car for a hidden GPS tracker?',
+      context: 'My car gets found wherever I park it. I looked under the seats and in the glove box and found nothing. I have not checked under the bumpers or in the wheel wells.',
       products: [
         { emoji: '📡', name: 'GPS Tracker Detector', kind: 'RF bug sweeper', note: 'Found a tracker tucked under my bumper in about ten minutes.', verified: 3 },
         { emoji: '🛞', name: 'Tire Pressure Monitor', kind: 'Solar cap sensors (TPMS)', note: 'Catches slow leaks before they strand me somewhere at night.', verified: 2 },
