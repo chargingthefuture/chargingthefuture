@@ -46,10 +46,13 @@ const VOCABULARY = [
   // either: the same word came back in an adjacent frame ("for the whole of that chain") and passed
   // straight through. So the word itself is out, in every frame, negated or not. Entire, all of,
   // end to end, or nothing, cover every honest use of it.
-  { re: /\bwhole\b/i, use: 'entire, all of, end to end — or drop it and state the thing plainly' },
+  { re: /\bwholly?\b/i, use: 'entire, all of, end to end — or drop it and state the thing plainly' },
   // Owner directive, 2026-08-29. Same habit, a different set of words: the closing sentence that
   // announces which fact was the important one.
   { re: /\bpoint of the thing\b/i, use: 'end on the fact itself, with no sentence explaining that it mattered' },
+  // From the agents baseline: the same closing-sentence habit in its other common wording.
+  { re: /\b(?:that|this|which|it) is the point (?:of|here)\b/i,
+    use: 'end on the fact itself -- if a sentence only labels what came before it, delete it' },
 ];
 
 function readStdin() {
