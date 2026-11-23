@@ -9,7 +9,7 @@ vi.mock('lib/notifications/repository', () => ({ notifySafe }));
 
 import { sendDueRenewNotices } from './renew-notices';
 
-const NOW = new Date('2026-11-10T12:00:00.000Z');
+const NOW = new Date('2027-01-15T12:00:00.000Z');
 const DAY = 86_400_000;
 const row = (id: string, daysAgo: number, extra: Record<string, unknown> = {}) => ({
   id,

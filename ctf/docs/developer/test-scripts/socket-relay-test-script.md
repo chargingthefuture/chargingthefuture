@@ -916,3 +916,12 @@ posts are for Weavers of the Commons."
 3. As the badge holder, post the same ask from + New.
 **Expected:** Steps 1 and 2 are refused with "Links in posts are for Weavers of the Commons. Take the link out to post this." and nothing is saved; taking the link out posts it. Step 3 posts.
 **Result:** web ☐ android ☐ — notes:
+
+### SR-25 · A request posted in 3.0 shows on Today (added 2026-11-23)
+**Role:** member A (posted an open request in 3.0 more than 14 days ago), member B · **Surfaces:** web, android
+**Steps:**
+1. As A, open Today in 3.1.
+2. As B, open Today in 3.1.
+3. As B, open SocketRelay in 3.0 and compare the open requests listed there with the asks on Today.
+**Expected:** Step 1: A's request shows as their own card, "You posted this · On Today until <December 8, 2026 or later>", with Done, Closed, not done and Keep it up for 14 more days. Step 2: A's request shows as an Ask with I can help. Step 3: every open request on 3.0's first page is on Today, except one 3.0 marks expired, which only its poster sees on Today. A closed or canceled request is on neither.
+**Result:** web ☐ android ☐ — notes:

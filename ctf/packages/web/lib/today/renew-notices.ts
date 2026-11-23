@@ -1,5 +1,5 @@
 import { queryDb } from 'lib/db/postgres';
-import { renewNoticeDue, windowEndMs, type TodayCardWindow } from './lifetime';
+import { renewNoticeDue, TODAY_WINDOWS_FROM_MS, windowEndMs, type TodayCardWindow } from './lifetime';
 import { sendRenewNotice } from './renew-notice';
 
 // The daily run behind the day-14 notice (owner decision, 2026-11-10): every open ask and offer with no
@@ -13,8 +13,9 @@ const PER_SOURCE = 2000;
 
 type Source = { source: string; href: string; sql: string };
 
-// Each item with when its window starts (as the Today card dates it) and its Today row, if any. Only
-// items that could be due: started in the last 22 days, or kept up by a renew.
+// Each item with when it was posted (as the Today card dates it) and its Today row, if any. Only
+// items that could be due: whose first window started in the last 22 days (posted then, or posted
+// before TODAY_WINDOWS_FROM_MS while that moment is that recent), or kept up by a renew.
 const SOURCES: Source[] = [
   { source: 'socket-relay', href: '/apps/socket-relay', sql: `SELECT id::text AS id, owner_user_id AS owner, title, created_at AS start FROM socket_relay_requests WHERE status = 'open'` },
   { source: 'trust-transport', href: '/apps/trust-transport', sql: `SELECT id::text AS id, requester_user_id AS owner, 'A ride is wanted' AS title, created_at AS start FROM trust_transport_requests WHERE status = 'open'` },
@@ -35,9 +36,9 @@ async function candidates(source: Source): Promise<Row[]> {
        FROM (${source.sql}) AS item
        LEFT JOIN today_card_windows w ON w.card_id = $1 || ':' || item.id
       WHERE w.due_at IS NULL AND w.outcome IS NULL
-        AND (item.start > NOW() - INTERVAL '22 days' OR w.shown_until > NOW() - INTERVAL '8 days')
+        AND (GREATEST(item.start, $2::timestamptz) > NOW() - INTERVAL '22 days' OR w.shown_until > NOW() - INTERVAL '8 days')
       LIMIT ${PER_SOURCE}`,
-    [source.source],
+    [source.source, new Date(TODAY_WINDOWS_FROM_MS).toISOString()],
   );
   return result.rows;
 }

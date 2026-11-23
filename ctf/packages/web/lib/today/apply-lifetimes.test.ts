@@ -8,7 +8,7 @@ vi.mock('./windows', () => ({ readWindows: vi.fn(async () => new Map()) }));
 
 import { applyLifetimes } from './apply-lifetimes';
 
-const NOW = new Date('2026-11-03T12:00:00.000Z');
+const NOW = new Date('2027-01-15T12:00:00.000Z');
 const DAY = 86_400_000;
 
 function ask(id: string, daysAgo: number, authorId: string | null): SeTodayCard {
