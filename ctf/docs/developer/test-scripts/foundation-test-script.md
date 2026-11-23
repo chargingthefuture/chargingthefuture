@@ -1234,11 +1234,13 @@ moved. (Before this it was a generic error and the call kept ringing.) Lift the 
 2. As A, tap **I'd like this** on P's card.
 3. As P, stop offering every skill, then open Today as A.
 4. Sign out and open Today on a demo schema the Seed demo workflow has filled.
+5. Sign in with an account switched to Demo data in Unlock and open Today.
 
 **Expected:**
 - Step 1: A sees an "Offer · hours" card with P's short line as its title and "Skills offered: …" naming the skill, with I'd like this and I know someone and no city. B does not see it. P does not see their own offer among the hours cards.
 - Step 2: the card opens in Today with its conversation; no Foundation page opens.
 - Step 3: the card is gone.
 - Step 4: up to three hours cards tagged Preview (tutoring, cooking, a repair from the demo seed), with no names.
+- Step 5: the demo hours cards show saya_r, jon_b and lena_k, never a `user-demo-pee` handle.
 
 **Result:** web ☐ android ☐ — notes:

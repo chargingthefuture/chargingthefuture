@@ -1,0 +1,62 @@
+// Usernames for the synthetic helper accounts the demo seed writes (ctf/scripts/demo-seed/). They
+// have no Clerk account, so resolveUsernames finds no handle for them and a card showed the
+// generated `user-demo-pee` instead. These ids exist only in the demo schema; a real account id never
+// matches one. Every name here is approved by the owner before it ships: never add one without that
+// approval (CLAUDE.md, Demo data names).
+export const DEMO_HELPER_USERNAMES: Readonly<Record<string, string>> = {
+  'demo-peer-foundation-01': 'saya_r',
+  'demo-peer-foundation-02': 'jon_b',
+  'demo-peer-foundation-03': 'lena_k',
+  'demo-peer-lighthouse-01': 'sam_t',
+  'demo-peer-lighthouse-02': 'dee_w',
+  'demo-peer-lighthouse-03': 'tombe_p',
+  'demo-peer-fireside-01': 'emily_delgado',
+  'demo-peer-001': 'ana_m',
+  'demo-peer-002': 'ben_c',
+  'demo-peer-foundation-04': 'cara_l',
+  'demo-peer-foundation-05': 'dev_s',
+  'demo-peer-foundation-06': 'ella_g',
+  'demo-peer-commons-01': 'finn_o',
+  'demo-peer-commons-02': 'gia_h',
+  'demo-peer-commons-03': 'hugo_n',
+  'demo-peer-socket-relay-01': 'iris_t',
+  'demo-peer-socket-relay-02': 'jay_w',
+  'demo-peer-socket-relay-03': 'kira_b',
+  'demo-peer-directory-01': 'leo_f',
+  'demo-peer-workforce-01': 'mina_d',
+  'demo-peer-workforce-02': 'nate_k',
+  'demo-peer-workforce-03': 'olive_r',
+  'demo-peer-workforce-04': 'pablo_v',
+  'demo-peer-days-01': 'quinn_a',
+  'demo-peer-days-02': 'rhea_p',
+  'demo-peer-days-03': 'seth_m',
+  'demo-peer-days-04': 'tara_j',
+  'demo-peer-days-05': 'uma_c',
+  'demo-peer-days-06': 'vic_l',
+  'demo-peer-mood-01': 'wes_h',
+  'demo-peer-mood-02': 'xena_r',
+  'demo-peer-mood-03': 'yara_s',
+  'demo-peer-mood-04': 'zane_t',
+  'demo-peer-mood-05': 'amir_k',
+  'demo-peer-mood-06': 'bea_n',
+  'demo-peer-mood-07': 'cole_d',
+  'demo-peer-mood-08': 'dina_w',
+  'demo-peer-mood-09': 'eli_r',
+  'demo-peer-mood-10': 'faye_m',
+  'demo-peer-mood-11': 'gus_p',
+  'demo-peer-mood-12': 'hana_b',
+  'dpsmp-01': 'ivan_t',
+  'dpsmp-02': 'june_l',
+  'dpsmp-03': 'kai_s',
+  'demo-ww-001': 'lucy_f',
+  'demo-ww-002': 'harrington_g',
+  'demo-ww-003': 'nia_h',
+  'demo-host-001': 'rae_m',
+  'demo-trainer-001': 'owen_c',
+  'demo-admin-001': 'nora_b',
+  'demo-owner-001': 'theo_k',
+};
+
+export function demoHelperUsername(userId: string): string | null {
+  return Object.prototype.hasOwnProperty.call(DEMO_HELPER_USERNAMES, userId) ? DEMO_HELPER_USERNAMES[userId] : null;
+}

@@ -11,7 +11,7 @@ const skillId = (n) => `ddd00000-0000-4000-8100-${n.toString(16).padStart(12, '0
 
 // [n, user, first, last, headline, short line, country, skill, hoursAgo]
 const OFFERS = [
-  [1, 'demo-peer-foundation-01', 'Rosa', 'M.', 'Math tutor',
+  [1, 'demo-peer-foundation-01', 'Emily', 'M.', 'Math tutor',
     'An hour of math help: fractions, percentages or getting ready for a GED test.',
     'United States', 0x7f, 1],
   [2, 'demo-peer-foundation-02', 'Lee', 'T.', 'Home cook',

@@ -18,7 +18,7 @@ export default {
       say: 'Each card shows who it is for, the date, and its opening words. Newest first.',
       do: async ({ page, highlight }) => {
         await page.getByRole('link', { name: 'Read the invitations' }).click();
-        const card = page.getByText('An invitation to Rosa Delgado', { exact: true }).first();
+        const card = page.getByText('An invitation to Emily Delgado', { exact: true }).first();
         await card.waitFor({ timeout: 20_000 });
         await highlight(card);
       },
@@ -26,7 +26,7 @@ export default {
     {
       say: 'Read the invitation opens it in full at the top of the page.',
       do: async ({ page, highlight }) => {
-        const read = page.getByRole('link', { name: 'Read the invitation to Rosa Delgado' });
+        const read = page.getByRole('link', { name: 'Read the invitation to Emily Delgado' });
         await read.click();
         await page.getByRole('article').first().waitFor({ timeout: 20_000 });
         await highlight(page.getByRole('article').first());
