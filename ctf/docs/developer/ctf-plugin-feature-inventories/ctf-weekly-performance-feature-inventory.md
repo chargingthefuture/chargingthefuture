@@ -12,6 +12,11 @@
 
 Weekly Performance is a plugin-owned analytics review surface for authorized operators.
 
+Since 2026-11-23 (owner decision) no screen shows the dashboard: its section was taken off the
+Adoption screen as redundant. The read routes, the daily goal capture and the stored weekly goal
+readings are kept running with no reader. The Sign-in record section is the one part still on
+screen, on the Adoption screen above the daily exchange.
+
 This plugin must:
 
 1. provide deterministic week-based performance reporting,
@@ -68,8 +73,9 @@ Admin-or-operations routes (`ensureWeeklyPerformanceAdmin` admits `isAdmin` or t
 
 - `PUT /api/weekly-performance/admin/week-selection` — marks a week active (body `{ weekStartDate }`); requires the `x-ctf-csrf: '1'` header and writes a `weekly-performance.admin.week.select` audit row.
 - `GET /api/weekly-performance/admin/sign-in-record` — the sign-in record (`login_events`) as a
-  health check, for the Sign-in record section at the foot of the Adoption screen
-  (`/admin/adoption`), folded shut until tapped so a visit does not write a sign-in. Runs the once-per-day sign-in write for the
+  health check, for the Sign-in record section of the Adoption screen (`/admin/adoption`), which
+  sits above the daily exchange and loads on arrival (since 2026-11-23), so each visit writes the
+  admin's own sign-in for the day. Runs the once-per-day sign-in write for the
   calling admin (`recordLoginEventNow`, the same statement the identity gate fires) and returns the
   outcome with the database's own error text when it fails; then totals, today, the current week
   exactly as the dashboard computes it (`countMemberDaysInWeek` / `countActiveMembersInWeek` /
@@ -129,7 +135,7 @@ flow that never shipped, was read by nothing, and was dropped by `post/0035` on 
 
 Delivery: **web + mobile-responsive complete**. **Android (React Native) surface removed 2026-07-20 (rule 105, PR #1742)** — this feature is now web-only, served by the installable web app (PWA). Week-selector behavior, current-week polling policy, empty/error semantics, metric definitions, formatting, and deny reasons are served on web (the Weekly Performance section of `/admin/adoption` — the single surface). Historical parity detail: these were previously consistent with the former Android surface (`packages/mobile/src/features/weekly-performance`, now removed).
 
-Single admin surface (2026-07-18, owner directive): there is exactly one web surface, the Weekly Performance section of the admin Adoption screen `/admin/adoption` (since 2026-10-16; `/admin/weekly-performance` before), which serves the full dashboard (`weekly-performance-section.tsx` — a title bar with refresh and the week selector, grouped metric cards; the comparison chart was removed 2026-09-24). Weekly Performance is not an app: since 2026-10-16 it has no row in `ctf_plugin_registry` (deleted by `post/0065_plugin_registry_delete_weekly_performance.sql`), no tile in the apps list for anybody, and `/apps/weekly-performance` is a plain 404 for everyone. The thin review shell `wp-admin-shell.tsx` and the admin↔member cross-links ("Member view" pill, "Admin" pill, sidebar "Manage weeks") were deleted.
+No dashboard on screen since 2026-11-23 (owner decision): the Weekly Performance section left the Adoption screen and `weekly-performance-section.tsx`, `wp-dashboard-main.tsx`, `wp-empty-main.tsx` and `wp-metric-cards.tsx` were deleted; `/weeks`, `/current-week` and `/metrics` stay with no caller, allowlisted in `ctf/scripts/orphan-route-allowlist.json`, and the daily goal capture keeps running. Only the Sign-in record section is shown. The history below describes the dashboard as it was. Single admin surface (2026-07-18, owner directive): there was exactly one web surface, the Weekly Performance section of the admin Adoption screen `/admin/adoption` (since 2026-10-16; `/admin/weekly-performance` before), which serves the full dashboard (`weekly-performance-section.tsx` — a title bar with refresh and the week selector, grouped metric cards; the comparison chart was removed 2026-09-24). Weekly Performance is not an app: since 2026-10-16 it has no row in `ctf_plugin_registry` (deleted by `post/0065_plugin_registry_delete_weekly_performance.sql`), no tile in the apps list for anybody, and `/apps/weekly-performance` is a plain 404 for everyone. The thin review shell `wp-admin-shell.tsx` and the admin↔member cross-links ("Member view" pill, "Admin" pill, sidebar "Manage weeks") were deleted.
 
 Web pixel pass (design `c5d83c0`): the user-facing shell is rebuilt to `design/.../survivor-hub/WeeklyPerformance.tsx` and its Empty/Loading states — icon rail, week-history sidebar, metric cards, a this-week-vs-last-week comparison chart, and a week-summary right rail. Week selection drives `GET /api/weekly-performance/weeks`, `/current-week`, and `/metrics` (with `compareWeekStartDate` for per-metric deltas); admin export opens `GET /api/weekly-performance/export`. Real data only — the mockup's fabricated daily series became a real per-metric current-vs-compare chart scaled relative to the max value in view, metric labels are humanized from `metric_key` (no label column exists), and the unbacked "Top Apps" widget was omitted rather than faked. Decomposed into modular sub-components within the rule-116 limits.
 
@@ -215,6 +221,14 @@ V2's "verified" and "approved" member counts are intentionally omitted: V3's `us
 3. Contract gap: the shipped `PUT /api/weekly-performance/admin/week-selection` route (audit command `weekly-performance.admin.week.select`) is not represented in `docs/contracts/WEEKLY_PERFORMANCE_PLUGIN_COMMAND_CONTRACTS.yaml`, which lists only `week.list`, `week.get`, `metrics.get`, and `comparison.get`. The week-selection command should be added to the command/access/audit contracts.
 
 ## 8) Change Log
+
+- 2026-11-23: **Weekly Performance section taken off the Adoption screen (owner decision).** Its
+  three cards (Workforce recruited, Signed in, Signed in per day) repeated what the screen already
+  shows, so the section and its four components were deleted. The owner chose to keep the server
+  side: the read routes stay (allowlisted as having no screen), the daily goal-snapshot workflow
+  keeps saving the weekly Workforce reading, and no table is dropped. The Sign-in record is no
+  longer folded shut: it loads on arrival and sits above the daily exchange and Weavers badge. Its
+  intro line no longer refers to the removed cards. `wp-shared.ts` keeps only the theme tokens.
 
 - 2026-11-02: **GDP goal and deleted accounts removed (owner decision).** The GDP Community Value
   Index card left the Goals section: the GDP plugin shows it on its own tile. The
