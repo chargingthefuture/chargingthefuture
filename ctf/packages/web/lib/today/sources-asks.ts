@@ -11,9 +11,10 @@ import { goalCard } from './sources-goal';
 // wanted. No times or places: a ride request shows that a ride is wanted and nothing about where,
 // as TrustTransport's own browse does, and a SocketRelay card leaves out the city.
 
-// Enough that an ask kept up past its first 14 days, or with a later deadline, is not crowded out by
-// newer ones whose time on Today has ended (applyLifetimes leaves those out).
-const PER_SOURCE = 8;
+// The first page each feature's own list shows in 3.0, so an ask open there is on Today too, and one
+// kept up past its first 14 days, or with a later deadline, is not crowded out by newer ones whose
+// time on Today has ended (applyLifetimes leaves those out).
+const PER_SOURCE = 20;
 
 export async function goalAsks(viewer: TodayViewer): Promise<SeTodayCard[]> {
   const cohort = await getMyCohort(viewer.userId);
@@ -29,7 +30,9 @@ export async function relayAsks(viewer: TodayViewer): Promise<SeTodayCard[]> {
   const { items } = await listSocketRelayRequests({ statuses: ['open'], pageSize: PER_SOURCE, viewerUserId: viewer.userId });
   const href = '/apps/socket-relay';
   return items
-    .filter((request) => request.ownerUserId !== viewer.userId)
+    // An expired request cannot be helped with until its poster posts it again; they still see it
+    // among their own cards (sources-mine).
+    .filter((request) => request.ownerUserId !== viewer.userId && !request.isExpired)
     .map((request) =>
       card({
         source: 'socket-relay',

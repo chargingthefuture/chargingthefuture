@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { seAskDueIso, seRenewCardId, seRenewLink, type SeTodayCard } from '@ctf/shared';
-import { mineFor, onToday, readDueIso, renewNoticeDue, renewedUntil, todayCardRule, type TodayCardWindow } from './lifetime';
+import { mineFor, onToday, readDueIso, renewNoticeDue, renewedUntil, TODAY_WINDOWS_FROM_MS, todayCardRule, type TodayCardWindow } from './lifetime';
 
 const DAY = 86_400_000;
-const NOW = new Date('2026-11-03T12:00:00.000Z');
+const NOW = new Date('2027-01-15T12:00:00.000Z');
 
 function cardOf(source: string, daysAgo: number, kind: SeTodayCard['kind'] = 'ask'): SeTodayCard {
   return {
@@ -36,6 +36,15 @@ describe('an ask with no deadline', () => {
   it('stays 14 days from posting, then leaves', () => {
     expect(onToday(cardOf('socket-relay', 13.9), undefined, NOW)).toBe(true);
     expect(onToday(cardOf('socket-relay', 14.1), undefined, NOW)).toBe(false);
+  });
+
+  it('posted before the windows began, counts its first 14 days from then', () => {
+    const old = { ...cardOf('socket-relay', 0), createdAtIso: '2026-10-01T00:00:00.000Z' };
+    const day = (n: number) => new Date(TODAY_WINDOWS_FROM_MS + n * DAY);
+    expect(onToday(old, undefined, day(-1))).toBe(true);
+    expect(onToday(old, undefined, day(13.9))).toBe(true);
+    expect(onToday(old, undefined, day(14.1))).toBe(false);
+    expect(renewNoticeDue(old, undefined, day(13.5))).toBe(true);
   });
 
   it('gets the notice from day 14 until a week after its window ends, and not before', () => {
