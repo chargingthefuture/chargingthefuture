@@ -33,7 +33,7 @@ const PROFILES = [
     'I run a weekly shared meal and help neighbors plan food on a tight budget.',
     'Milwaukee', 'Wisconsin', 'United States', 1, 'Chefs and Cooks',
     ['Chefs and Cooks › Cooking for large groups', 'Chefs and Cooks › Meal planning', 'Food Processing Workers › Food safety handling']],
-  [0x02, null, 'community-d12a02', 'Rosa', 'Delgado', 'Seamstress',
+  [0x02, null, 'community-d12a02', 'Emily', 'Delgado', 'Seamstress',
     'Alterations and mending; teaches basic sewing.',
     'San Antonio', 'Texas', 'United States', 7, 'Teaching Assistants',
     ['Teaching Assistants › Classroom support']],
@@ -49,9 +49,9 @@ const PROFILES = [
 
 // [id, slug, invite code, handle, name, days ago published, profile id, opening, body]
 const INVITES = [
-  [0x20, 'demo-invite-rosa-delgado', 'dmoinvite1', 'rosa-delgado-demo', 'Rosa Delgado', 2, id(0x02),
-    'Rosa, your answers about mending clothes that people thought were done for are the kind of skill this list is for.',
-    'Rosa, your answers about mending clothes that people thought were done for are the kind of skill this list is for.\n\n'
+  [0x20, 'demo-invite-emily-delgado', 'dmoinvite1', 'emily-delgado-demo', 'Emily Delgado', 2, id(0x02),
+    'Emily, your answers about mending clothes that people thought were done for are the kind of skill this list is for.',
+    'Emily, your answers about mending clothes that people thought were done for are the kind of skill this list is for.\n\n'
       + 'You are listed in the Directory with the skills you described in your own words. The listing is yours to claim, change, or have taken down, and none of that needs an account.\n\n'
       + 'If you would like to teach a sewing basics session, members ask for that often.'],
   [0x21, 'demo-invite-daniel-brooks', 'dmoinvite2', 'daniel-brooks-demo', 'Daniel Brooks', 4, id(0x03),
@@ -140,8 +140,8 @@ async function seedInvites(client) {
           directory_profile_id, image, image_type, image_alt, public, blog_url, invite_code)
        VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8, (NOW() - make_interval(days => $9::int))::date,
                $10, NULL, NULL, NULL, FALSE, NULL, $11)
-       ON CONFLICT (slug) DO UPDATE SET
-         quora_handle = EXCLUDED.quora_handle, quora_url = EXCLUDED.quora_url, name = EXCLUDED.name,
+       ON CONFLICT (id) DO UPDATE SET
+         slug = EXCLUDED.slug, quora_handle = EXCLUDED.quora_handle, quora_url = EXCLUDED.quora_url, name = EXCLUDED.name,
          title = EXCLUDED.title, opening = EXCLUDED.opening, body_markdown = EXCLUDED.body_markdown,
          published_on = EXCLUDED.published_on, directory_profile_id = EXCLUDED.directory_profile_id,
          image = NULL, image_type = NULL, image_alt = NULL, public = FALSE, blog_url = NULL,
