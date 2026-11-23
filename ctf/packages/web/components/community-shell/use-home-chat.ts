@@ -12,7 +12,6 @@ import {
 } from 'react';
 import type { CommonsJoinResponse, CommonsLastSeenResponse, CommonsMessage, CommonsMessagesResponse } from '../../lib/commons/types';
 import { connectCommonsLive, type CommonsLiveConnection, type CommonsTypingUser } from '../../lib/commons/live-stream';
-import { commonsSuggestionChips, type CommonsSuggestionChip } from '../../lib/concierge/commons-suggestions';
 import type { ChatMessage, ChatQuotedMessage, ChatReactionSummary, ComicAnswerRating, ComicLinkedPlugin, ComicStreamItem, ShellCurrentUser } from './shell-types';
 import { FEED_REACTION_EMOJIS } from '../../lib/feed/constants';
 import { useCommonsUnlockFocus } from './commons-unlock-focus';
@@ -116,8 +115,7 @@ function formatTimeLabel(value: string | Date | null | undefined): string {
 // action button: a peer community post must never carry a plugin link the author did not add, and
 // members cannot attach one. (The old keyword inference here wrongly decorated any post containing
 // words like "economy"/"housing" with an "Open GDP"/"Open LightHouse" button, making it look as if
-// the poster had linked a plugin.) Action buttons come only from an explicit source — an answer
-// chip sets its own `actions` — never from message text.
+// the poster had linked a plugin.)
 function buildChatMessage(
   id: string,
   from: 'commons' | 'user',
@@ -194,7 +192,7 @@ function getMessageDedupKey(message: ChatMessage): string {
   // with its published time. Keying on the stable community post id keeps those two copies from
   // rendering as a temporary duplicate whenever their timestamps straddle a minute boundary (the
   // composite key below folds the formatted time label in, so "9:32 PM" vs "9:33 PM" defeated
-  // it). Non-post lines (AI answers, answer chips, announcement rows) keep the composite key.
+  // it). Non-post lines (AI answers, announcement rows) keep the composite key.
   if (message.communityPostId) {
     return `post|${message.communityPostId}`;
   }
@@ -489,7 +487,7 @@ function useCommonsStreamFilters(userId: string, settersRef: RefObject<ChatSette
 }
 
 // The composer's "replying to …" target for a peer message, or null when the message is not a peer
-// post (only peer posts carry a communityPostId, so AI answers / answer-chip lines cannot be replied to).
+// post (only peer posts carry a communityPostId, so AI answers cannot be replied to).
 function buildReplyTarget(message: ChatMessage): ReplyTarget | null {
   if (!message.communityPostId) return null;
   const author = message.senderLabel ?? 'Community member';
@@ -821,46 +819,6 @@ async function runRateComicAnswer(turnId: string, rating: ComicAnswerRating, set
   }
 }
 
-// An answer chip: the member's question as their own message, then the chip's fixed reply with its
-// buttons, both local. Nothing is sent anywhere. Both carry a real sentAtIso: the stream sorts by it,
-// and a message without one falls back to its array index and sorts to the top of the chat.
-function applyAnswerChip(chip: Extract<CommonsSuggestionChip, { kind: 'answer' }>, setters: ChatSetters): void {
-  const now = new Date();
-  const time = formatTimeLabel(now);
-  const sentAtIso = now.toISOString();
-  const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-  setters.setMessages((previous) =>
-    mergeMessages(previous, [
-      { id: `answer-q-${stamp}`, from: 'user', text: chip.question, time, sentAtIso },
-      { id: `answer-a-${stamp}`, from: 'commons', text: chip.reply, time, sentAtIso, actions: [...chip.actions] },
-    ]),
-  );
-}
-
-// One-tap "ask @comic" for a suggestion chip (issue #471): route a fixed question straight to the AI
-// assistant, no composer step. The @comic mention is added by the caller. Same consent gate and
-// holding-card flow the composer uses; on first use the consent modal opens holding the mentioned text.
-type AskComicContext = {
-  isSending: boolean;
-  consentGranted: boolean;
-  routeToComic: (questionText: string) => Promise<boolean>;
-  setters: ChatSetters;
-};
-
-function runAskComic(question: string, ctx: AskComicContext): void {
-  const clean = question.trim();
-  if (!clean || ctx.isSending) return;
-  const mentioned = `@comic ${clean}`;
-  if (!ctx.consentGranted) {
-    ctx.setters.setPendingConsentText(mentioned);
-    ctx.setters.setConsentModalOpen(true);
-    return;
-  }
-  ctx.setters.setIsSending(true);
-  ctx.setters.setError(null);
-  void ctx.routeToComic(mentioned).finally(() => ctx.setters.setIsSending(false));
-}
-
 type ConfirmConsentContext = {
   userId: string;
   input: string;
@@ -885,9 +843,8 @@ async function runConfirmConsent(ctx: ConfirmConsentContext): Promise<void> {
   ctx.setters.setPendingConsentText(null);
   if (!held) return;
 
-  // The held text came from the composer when the composer still holds it (a composer @comic send
-  // leaves the text in place while the modal is open). A chip ask never touched the composer, so a
-  // half-written post there is left alone.
+  // The held text came from the composer, which still holds it (a composer @comic send leaves the
+  // text in place while the modal is open). Left alone if the composer no longer matches it.
   const fromComposer = ctx.input.trim() === held;
   ctx.setters.setIsSending(true);
   ctx.setters.setError(null);
@@ -1241,17 +1198,6 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
     [consentGranted, currentUser.userId, editingPost, input, isSending, notifyStopTyping, replyTarget, routeToComic],
   );
 
-  const askComic = useCallback(
-    (question: string) => runAskComic(question, { isSending, consentGranted, routeToComic, setters: settersRef.current }),
-    [consentGranted, isSending, routeToComic],
-  );
-
-  // One-tap fixed answer for an answer chip: the reply is written in the chip itself and shown at once.
-  const answerChip = useCallback(
-    (chip: Extract<CommonsSuggestionChip, { kind: 'answer' }>) => applyAnswerChip(chip, settersRef.current),
-    [],
-  );
-
   // Begin a Signal-style reply to a peer message: set the composer's "replying to …" state. Exits
   // any in-place picture-post edit in progress — the two composer modes are mutually exclusive.
   const beginReply = useCallback((message: ChatMessage) => {
@@ -1301,11 +1247,8 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
     [currentUser.userId, input, pendingConsentText, routeToComic],
   );
 
-  // Consent modal "Not now": do not route, and do NOT populate the composer. When the modal was
-  // opened from a composer-typed @comic message the text is already in the input (the send path never
-  // cleared it), so it stays put on its own. When it was opened from a one-tap suggestion chip the
-  // input was empty, so we must leave it empty — dropping the chip's "@comic …" question into the box
-  // (the old behavior) looked like a message queued to send that the member never wrote.
+  // Consent modal "Not now": do not route. The composer-typed @comic message is already in the
+  // input (the send path never cleared it), so it stays put on its own.
   const dismissConsent = useCallback(() => dismissConsentState(settersRef.current), []);
 
   // Rate an answered AI Assistant card. Optimistically reflects the choice; reverts on failure.
@@ -1313,11 +1256,6 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
     (turnId: string, rating: ComicAnswerRating) => runRateComicAnswer(turnId, rating, settersRef.current),
     [],
   );
-
-  // The curated one-tap suggestion chips shown under the composer (#471): navigation chips open a
-  // plugin; ask chips route to @comic. Each chip's behavior is explicit (see commons-suggestions).
-  // A member not yet approved gets only the chips that help them finish Unlock.
-  const suggestionChips = useMemo(() => commonsSuggestionChips({ unlockFocus }), [unlockFocus]);
 
   return {
     messages,
@@ -1329,9 +1267,6 @@ export function useHomeChat(currentUser: ShellCurrentUser) {
     sendMessage,
     // Called unconditionally, as every hook here is; it only builds a stable callback.
     addSavedMessage: useAddSavedMessage(setMessages, currentUser.userId),
-    askComic,
-    answerChip,
-    suggestionChips,
     rateComicAnswer,
     composerMentionsComic,
     consentModalOpen,

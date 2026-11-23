@@ -35,10 +35,8 @@ export type ChatReactionSummary = {
 
 // What the message is, when it comes from the Hub. `announcement` renders the distinct official
 // card; everything else renders as an ordinary chat bubble. Absent on synthetic/optimistic
-// messages (empty-state prompt, answer-chip replies), which are treated as ordinary bubbles.
+// messages (such as the empty-state prompt), which are treated as ordinary bubbles.
 export type ChatMessageKind = 'announcement' | 'question' | 'community';
-
-export type ChatMessageAction = { label: string; href: string };
 
 // A picture an admin attached to a Commons post: the address it is served from, what it
 // shows (read aloud by a screen reader), and its size, so its space is held before it loads.
@@ -62,12 +60,8 @@ export type ChatMessage = {
   // display-only formatted label. Optional because optimistic/synthetic messages may lack one.
   sentAtIso?: string;
   senderLabel?: string;
-  // Buttons under the bubble, each opening a path in the app or an address on the blog. Set only by
-  // the local replies this client writes itself (an answer chip); a stored message
-  // never carries one, so a peer post cannot be made to look as if its author linked a plugin.
-  actions?: ChatMessageAction[];
   // The underlying community post id, when this message is a peer post. This is the id a reply
-  // must reference. Absent for AI answers, answer-chip replies, and the empty-state prompt.
+  // must reference. Absent for AI answers and the empty-state prompt.
   communityPostId?: string | null;
   // The underlying announcement id, when this message is an official announcement. The id its
   // reactions and replies key on. Absent for peer posts, AI answers, and synthetic messages.

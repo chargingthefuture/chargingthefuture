@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { AtSign, Pencil, Reply, Trash2, X } from 'lucide-react';
 import type { PluginRegistryItem } from '../../lib/plugins/repository';
@@ -22,7 +21,6 @@ import { ChatReactionRow } from './chat-reaction-row';
 import { CommonsFirstVisitNotice } from './commons-first-visit-notice';
 import { ComicConsentModal } from './comic-consent-modal';
 import type { CommonsTypingUser } from '../../lib/commons/live-stream';
-import type { CommonsSuggestionChip } from '../../lib/concierge/commons-suggestions';
 import styles from './community-shell.module.css';
 import { feedPostLength } from '../../lib/feed/normalize';
 import { FEED_ADMIN_MAX_COMMUNITY_POST_LENGTH, FEED_MAX_COMMUNITY_POST_LENGTH } from '../../lib/feed/constants';
@@ -418,9 +416,6 @@ function AuthenticatedChatPanel({ currentUser, isAdmin = false }: AuthenticatedC
     typingUsers,
     sendMessage,
     addSavedMessage,
-    askComic,
-    answerChip,
-    suggestionChips,
     rateComicAnswer,
     composerMentionsComic,
     consentModalOpen,
@@ -593,12 +588,9 @@ function AuthenticatedChatPanel({ currentUser, isAdmin = false }: AuthenticatedC
         mentionsOnly={mentionsOnly}
         announcementsOnly={announcementsOnly}
         notificationsOpen={notificationsOpen}
-        chips={suggestionChips}
         onToggleMentions={() => { setNotificationsOpen(false); toggleMentionsOnly(); }}
         onToggleAnnouncements={() => { setNotificationsOpen(false); toggleAnnouncementsOnly(); }}
         onToggleNotifications={() => setNotificationsOpen((open) => !open)}
-        onAsk={askComic}
-        onAnswer={answerChip}
         pictureShare={pictureShare.chip}
       />
 
@@ -859,15 +851,6 @@ function PeerMessageEntry({ msg, senderName, divider, inputRef, onJumpToQuoted, 
           <div className={msg.from === 'user' ? `${styles.chatBubble} ${styles.chatBubbleUser}` : `${styles.chatBubble} ${styles.chatBubbleHub}`}>
             {msg.text}
           </div>
-          {msg.actions && msg.actions.length > 0 ? (
-            <div className={styles.chatActionRow}>
-              {msg.actions.map((action) => (
-                <Link key={action.href} href={action.href} className={styles.chatActionBtn}>
-                  {action.label}
-                </Link>
-              ))}
-            </div>
-          ) : null}
           <MessageMetaRow msg={msg} senderName={senderName} inputRef={inputRef} onBeginReply={onBeginReply} onEdit={onEdit} onDelete={onDelete} />
           {msg.communityPostId ? (
             <ChatReactionRow
@@ -986,42 +969,31 @@ type ConciergeChipRailProps = {
   mentionsOnly: boolean;
   announcementsOnly: boolean;
   notificationsOpen: boolean;
-  chips: CommonsSuggestionChip[];
   onToggleMentions: () => void;
   onToggleAnnouncements: () => void;
   onToggleNotifications: () => void;
-  onAsk: (question: string) => void;
-  onAnswer: (chip: Extract<CommonsSuggestionChip, { kind: 'answer' }>) => void;
   // The admin-only camera chip, placed after the gift; null for everyone else.
   pictureShare: ReactNode;
 };
 
-// One-tap suggestion chips (#471) — persistent (shown whether or not the chat already has messages),
-// so a member can always tap one. Each chip does the right thing on a single tap, never just a
-// composer pre-fill: a NAVIGATE chip opens that plugin directly (it is an action, not a question), and
-// an ASK chip routes the question to the @comic AI assistant. The "@ Mentions" filter chip leads this
-// row at every width (owner directive, 2026-07-17); same pill size as the suggestion chips, sky-blue
-// so it stays visually distinct; it scrolls with the row. The rail always renders because the chips
-// are always present.
+// The filter row above the composer: the "@ Mentions" filter chip leads it at every width (owner
+// directive, 2026-07-17), then 📣, 🔔 and the admin camera chip. The suggestion chips that once
+// followed were removed (owner decision, 2026-11-23); Ask the architect covers that need.
 function ConciergeChipRail({
   mentionsOnly,
   announcementsOnly,
   notificationsOpen,
-  chips,
   onToggleMentions,
   onToggleAnnouncements,
   onToggleNotifications,
-  onAsk,
-  onAnswer,
   pictureShare,
 }: ConciergeChipRailProps) {
   return (
-    <div className={styles.conciergeChipRail} role="group" aria-label="Ask what you need">
+    <div className={styles.conciergeChipRail} role="group" aria-label="Conversation filters">
       <MentionsFilterButton active={mentionsOnly && !notificationsOpen} on={mentionsOnly} onClick={onToggleMentions} />
       <AnnouncementsFilterButton active={announcementsOnly && !notificationsOpen} on={announcementsOnly} onClick={onToggleAnnouncements} />
       <NotificationsFilterButton open={notificationsOpen} onClick={onToggleNotifications} />
       {pictureShare}
-      {notificationsOpen ? null : <SuggestionChips chips={chips} onAsk={onAsk} onAnswer={onAnswer} />}
     </div>
   );
 }
@@ -1077,34 +1049,6 @@ function NotificationsFilterButton({ open, onClick }: { open: boolean; onClick: 
     >
       <span aria-hidden="true">🔔</span>
     </button>
-  );
-}
-
-type SuggestionChipsProps = {
-  chips: CommonsSuggestionChip[];
-  onAsk: (question: string) => void;
-  onAnswer: (chip: Extract<CommonsSuggestionChip, { kind: 'answer' }>) => void;
-};
-
-function SuggestionChips({ chips, onAsk, onAnswer }: SuggestionChipsProps) {
-  return (
-    <>
-      {chips.map((chip) => {
-        if (chip.kind === 'navigate') {
-          return (
-            <Link key={chip.id} href={`/apps/${chip.slug}`} className={styles.conciergeChip} title={chip.label}>
-              {chip.label}
-            </Link>
-          );
-        }
-        const onClick = chip.kind === 'answer' ? () => onAnswer(chip) : () => onAsk(chip.question);
-        return (
-          <button key={chip.id} type="button" className={styles.conciergeChip} title={chip.label} onClick={onClick}>
-            {chip.label}
-          </button>
-        );
-      })}
-    </>
   );
 }
 
