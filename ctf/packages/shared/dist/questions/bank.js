@@ -6,50 +6,36 @@
 // or how they grew up. Those are the questions that hurt most here, and they are the ones the
 // Specterati use to find a person. `seQuestionAllowed` is the filter, and it runs on every question
 // below, so one added by mistake is left out rather than asked.
-// Ids never change and are never reused: answers are stored against them.
+// Ids never change and are never reused: answers are stored against them. q01 to q42 were the first
+// list, general icebreakers about work habits and small preferences, retired on 2026-11-22 (owner
+// decision): they matched people on coffee and weather rather than on what they want in life.
+// Their answers were deleted (migration 0113).
+//
+// The list since then is for one TI finding another by what each wants from life after the
+// targeting: work, income, what to learn, who to meet, what to give back. It stays on wants rather
+// than on what happened, so a match says what two people are heading toward.
 const ALL = [
-    { id: 'q01', text: 'Morning or night: when does your best work happen?', choices: ['Early morning', 'Afternoon', 'Late night', 'It moves around'] },
-    { id: 'q02', text: 'Learning something new, you would rather:', choices: ['Read about it', 'Watch someone do it', 'Try it and break it', 'Be walked through it'] },
-    { id: 'q03', text: 'A task you dread: do it first or last?', choices: ['First, get it over with', 'Last, warm up first', 'Split it into pieces', 'Hand it to someone better at it'] },
-    { id: 'q04', text: 'Which would you rather fix?', choices: ['A machine', 'A piece of writing', 'A plan', 'A disagreement'] },
-    { id: 'q05', text: 'Working alongside somebody, you want them to:', choices: ['Talk it through', 'Work quietly beside you', 'Split the work and check in', 'Lead while you follow'] },
-    { id: 'q06', text: 'The skill you would most like to have by next year:', choices: ['A trade with tools', 'A language', 'Code', 'Something with your hands and art'] },
-    { id: 'q07', text: 'Paper notes or phone notes?', choices: ['Paper', 'Phone', 'Both', 'I keep it in my head'] },
-    { id: 'q08', text: 'A free afternoon with no plans. You:', choices: ['Go outside', 'Make something', 'Read or listen', 'Rest, properly'] },
-    { id: 'q09', text: 'When someone asks for help, your first move is:', choices: ['Do it with them', 'Show them how', 'Point them to who knows', 'Ask what they already tried'] },
-    { id: 'q10', text: 'Which is harder for you?', choices: ['Starting', 'Finishing', 'Asking for help', 'Saying no'] },
-    { id: 'q11', text: 'Music while you work?', choices: ['Always', 'Only without words', 'Silence', 'Talk radio or podcasts'] },
-    { id: 'q12', text: 'You trust a person more after they:', choices: ['Keep a small promise', 'Admit a mistake', 'Show up twice', 'Tell you something hard'] },
-    { id: 'q13', text: 'Which would you rather teach?', choices: ['How to cook something', 'How to fix something', 'How to write something', 'How to stay calm'] },
-    { id: 'q14', text: 'A long trip: how do you go?', choices: ['Drive', 'Train or bus', 'Fly', 'I would rather not go'] },
-    { id: 'q15', text: 'What gets you through a bad day?', choices: ['Moving my body', 'Making something', 'Talking to someone', 'Sleep'] },
-    { id: 'q16', text: 'Big goal: plan it out or start walking?', choices: ['Plan it out', 'Start walking', 'Plan a little, then walk', 'Find someone who has done it'] },
-    { id: 'q17', text: 'Which kind of puzzle do you like?', choices: ['Words', 'Numbers', 'Pictures and patterns', 'How something works'] },
-    { id: 'q18', text: 'Which would you rather be known for?', choices: ['Being reliable', 'Being skilled', 'Being kind', 'Being honest'] },
-    { id: 'q19', text: 'Your phone: tool or trouble?', choices: ['Mostly a tool', 'Mostly trouble', 'Both, every day', 'I keep it off when I can'] },
-    { id: 'q20', text: 'Which would you pick up first?', choices: ['A camera', 'A guitar', 'A wrench', 'A sketchbook'] },
-    { id: 'q21', text: 'The best way to thank someone who helped you:', choices: ['Help them back', 'Tell other people about them', 'Say it plainly', 'Help someone else'] },
-    { id: 'q22', text: 'When you disagree in a group, you:', choices: ['Say so right away', 'Say so afterwards, privately', 'Write it down', 'Let it go if it is small'] },
-    { id: 'q23', text: 'Which would you rather grow?', choices: ['Vegetables', 'Flowers', 'Herbs', 'Nothing, I would eat what others grow'] },
-    { id: 'q24', text: 'A skill everyone should have:', choices: ['Basic first aid', 'Cooking from scratch', 'Fixing small things', 'Managing time'] },
-    { id: 'q25', text: 'How do you like instructions?', choices: ['Written steps', 'A picture or diagram', 'A video', 'A person showing me'] },
-    { id: 'q26', text: 'Which tires you out more?', choices: ['Noise', 'Crowds', 'Screens', 'Waiting'] },
-    { id: 'q27', text: 'If you could take one class for free:', choices: ['Electrical work', 'Writing', 'Bookkeeping', 'Self-defense'] },
-    { id: 'q28', text: 'Weekends or weekdays?', choices: ['Weekends', 'Weekdays', 'No difference to me', 'Depends on the week'] },
-    { id: 'q29', text: 'Which would you rather do for an hour?', choices: ['Sort and organize', 'Build something', 'Write something', 'Listen to someone'] },
-    { id: 'q30', text: 'Your favorite kind of weather:', choices: ['Hot and sunny', 'Cool and clear', 'Rain', 'Snow'] },
-    { id: 'q31', text: 'When you get stuck on a problem, you:', choices: ['Keep at it', 'Walk away and come back', 'Ask someone', 'Search for how others solved it'] },
-    { id: 'q32', text: 'Which is worth more to you?', choices: ['Time', 'Quiet', 'Skills', 'People you can count on'] },
-    { id: 'q33', text: 'Coffee, tea, or neither?', choices: ['Coffee', 'Tea', 'Both', 'Neither'] },
-    { id: 'q34', text: 'Which would you rather repair?', choices: ['Clothes', 'A bike', 'A computer', 'Furniture'] },
-    { id: 'q35', text: 'A good day ends with:', choices: ['Something finished', 'Something learned', 'Someone helped', 'Nothing going wrong'] },
-    { id: 'q36', text: 'Which job would you try for a week?', choices: ['Baker', 'Mechanic', 'Librarian', 'Park ranger'] },
-    { id: 'q37', text: 'How do you keep track of money you spend?', choices: ['A notebook', 'An app or spreadsheet', 'In my head', 'I do not, and I would like to'] },
-    { id: 'q38', text: 'Which do you notice first in a room?', choices: ['Who is there', 'Where the exits are', 'What needs fixing', 'The light'] },
-    { id: 'q39', text: 'Your way to wind down:', choices: ['A walk', 'A show or film', 'A book', 'A long shower'] },
-    { id: 'q40', text: 'Which would you rather share?', choices: ['A meal', 'A skill', 'A tool', 'A story'] },
-    { id: 'q41', text: 'Advice is most useful when it is:', choices: ['Short', 'From someone who did it', 'Written down', 'Asked for'] },
-    { id: 'q42', text: 'Which would you rather build?', choices: ['A shelf', 'A website', 'A garden bed', 'A schedule that works'] },
+    { id: 'q43', text: 'Rebuilding an income, you would rather:', choices: ['Learn a trade', 'Work for yourself', 'Find an employer who understands', 'Trade skills with people here'] },
+    { id: 'q44', text: 'What kind of work do you want to be doing in five years?', choices: ['A hands-on trade', 'Running something of my own', 'Helping people directly', 'Building or making things'] },
+    { id: 'q45', text: 'What do you want more of in your days?', choices: ['Quiet', 'Purpose', 'People I can count on', 'Time outside'] },
+    { id: 'q46', text: 'What makes it hardest to tell people what happened?', choices: ['Not being believed', 'Sounding unwell', 'Putting them at risk', 'Not knowing where to start'] },
+    { id: 'q47', text: 'What would you most like to build with someone here?', choices: ['A small business', 'A skill swap', 'A project that helps other TIs', 'A friendship'] },
+    { id: 'q48', text: 'Which skill would make you most independent?', choices: ['Fixing my own devices', 'Growing or cooking food', 'Earning remotely', 'Knowing my legal options'] },
+    { id: 'q49', text: 'Where do you want to put your energy this year?', choices: ['Learning a skill', 'Earning', 'My health', 'Helping others get out'] },
+    { id: 'q50', text: 'What do you want from people here first?', choices: ['Someone to talk to', 'Help with a task', 'Work or income', 'Quiet company'] },
+    { id: 'q51', text: 'What does a good life look like to you?', choices: ['Simple and quiet', 'Busy and useful', 'Free to move around', 'Surrounded by people I trust'] },
+    { id: 'q52', text: 'Which is worth guarding most now?', choices: ['My time', 'My attention', 'My privacy', 'My peace'] },
+    { id: 'q53', text: 'What kind of person do you want to meet here?', choices: ['Someone further along', 'Someone at the same point', 'Someone to work with', 'Someone to learn from'] },
+    { id: 'q54', text: 'What would you rather help a newer member with?', choices: ['Locking down accounts', 'Finding work', 'Keeping records', 'Getting through the first months'] },
+    { id: 'q55', text: 'What do you want to learn next?', choices: ['A trade', 'Tech and security', 'Business and bookkeeping', 'Writing or art'] },
+    { id: 'q56', text: 'How do you want to spend your free time?', choices: ['Outdoors', 'Making things', 'Reading and learning', 'With people'] },
+    { id: 'q57', text: 'What would tell you that you are moving forward?', choices: ['A steady income', 'A skill learned', 'A friend I trust', 'Telling my story'] },
+    { id: 'q58', text: 'What do you want to give back?', choices: ['Teaching what I know', 'Listening', 'Practical help', 'Speaking out'] },
+    { id: 'q59', text: 'How do you want to work with people?', choices: ['Side by side', 'Remotely', 'On my own, checking in', 'Leading a small team'] },
+    { id: 'q60', text: 'What matters most in someone you team up with?', choices: ['Keeps what I share private', 'Respects my boundaries', 'Shows up and does the work', 'Never asks for personal details'] },
+    { id: 'q61', text: 'What do you want to leave behind?', choices: ['Work I am proud of', 'People I helped', 'A record of what happened', 'A skill passed on'] },
+    { id: 'q62', text: 'Which would you rather have first?', choices: ['Steady work', 'A few people I trust', 'Time to rest', 'A plan of my own'] },
+    { id: 'q63', text: 'A year from now, you want to be:', choices: ['Working steadily', 'Living by my own plan', 'Part of a group I trust', 'Helping newer TIs'] },
 ];
 // Words that make a question about home or family, where a person lives, or how they grew up.
 const LEFT_OUT = /\b(home|homes|house|apartment|family|families|mother|mom|father|dad|parent|parents|child|children|kid|kids|son|daughter|brother|sister|sibling|siblings|spouse|husband|wife|partner|married|marriage|relative|relatives|grandparent|grandmother|grandfather|childhood|grew up|grow up|hometown|neighborhood|neighbor|live with|where you live|address)\b/i;
