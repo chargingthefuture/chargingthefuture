@@ -46,7 +46,7 @@ One shared survivor-verified list of tools by problem. Member role unless noted.
    the screen confirms it was submitted for review. → web ☐ mobile ☐
 5. **Lists end.** The problem list shows a page of problems with Previous / Page N of M / Next
    underneath — nothing keeps loading as you scroll — and a problem with more than two tools shows
-   two plus a "Show N more tools" control. The demo seed now shows eleven problems, three pages of five, with "Charging Away From Home" on page 2 carrying four tools. → web ☐ mobile ☐
+   two plus a "Show N more tools" control. The demo seed now shows eleven problems, three pages of five, with "My phone dies by mid-afternoon when I am out all day. What keeps it charged?" on page 2 carrying four tools. → web ☐ mobile ☐
 6. **A problem with no tools yet still shows.** A problem an admin added but that has no approved
    tool renders with its heading and a "no tools on this one yet" panel with a **Suggest a tool**
    button — it is not missing from the list. → web ☐ mobile ☐
@@ -390,4 +390,15 @@ shows A's tools under B with the same Helpful counts, and A nowhere. The Audit l
 5. On the web, do step 1 with the keyboard alone (Tab, Enter), Tab through the sheet, and press Escape. On Android, do steps 1 to 3 with TalkBack on.
 6. Switch colors and dark mode in Settings and open both sheets again.
 **Expected:** Step 1 opens "Add a problem" with the eyebrow "What works", the rule line and "The problem, in a few words", as on the board "What works: add a problem". Steps 2 to 4 behave as in WW-15 and never leave 3.1; what is sent waits for the admin review. Step 5: focus moves into each sheet as it opens, every field and button is named, results ("Sent for review", "Suggestion submitted") are read out, Escape closes the sheet and focus returns to the Offer choice. Step 6: both sheets follow each color and mode.
+**Result:** web ☐ android ☐ — notes:
+
+### WW-17 · The What Works card on Today: its own look, the solution link, Add a solution (added 2026-11-23)
+**Role:** a signed-in member using 3.1, with the demo data loaded · **Surfaces:** web, android
+1. On Today, find the What works card ("What worked for someone") and compare its dot and label with a story card.
+2. Tap the card's text to open it, close it, and look at its dot.
+3. In the opened card, find "Where to get it" and tap the link.
+4. Open the card again and press **Add a solution to this problem**; fill in "What helped" and press **Submit for review**.
+5. Open the card again and press **Add a problem**.
+6. Switch colors and dark mode in Settings and look at the card again.
+**Expected:** Step 1: the card's dot shows a light bulb, not a book, and the dot and label are indigo, not the story color. Step 2: the dot stays as it was; opening the card does not mark it done, and the "Verified helped by" number does not change. Step 3 opens the solution's own page outside the app. Step 4 opens "What helped" with "Problem it solves: <the card's problem>", and ends on "Suggestion submitted". Step 5 opens "Add a problem". **Add a solution to this problem** is the filled button and comes before **Add a problem**. Demo problems read as specific questions with what was tried. Step 6: the card follows each color and mode.
 **Result:** web ☐ android ☐ — notes:

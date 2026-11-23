@@ -3,9 +3,9 @@
 
 import React from 'react';
 import Svg, { Path } from 'react-native-svg';
-import { SE_CARD_DOT_CHECK, seCardDotIcon, type SeCardKind } from '@ctf/shared';
+import { SE_CARD_DOT_CHECK, seCardDotIcon, type SeCardAccent } from '@ctf/shared';
 
-export function CardDotIcon({ kind, color, done = false }: { kind: SeCardKind; color: string; done?: boolean }) {
+export function CardDotIcon({ kind, color, done = false }: { kind: SeCardAccent; color: string; done?: boolean }) {
   if (done) {
     return (
       <Svg width={14} height={14} viewBox="0 0 24 24">

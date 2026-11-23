@@ -57,7 +57,7 @@ function stub(id: string, createdAtIso: string) {
   return { id, kind: 'ask', source: id.split(':')[0], label: 'Ask', title: id, body: null, author: null, createdAtIso, href: '/', actions: [] };
 }
 
-import { buildToday } from './build';
+import { buildToday, orderTodayCards, TODAY_MAX_CARDS } from './build';
 
 const NOW = new Date('2026-11-03T12:00:00.000Z');
 
@@ -79,5 +79,20 @@ describe('buildToday', () => {
     const today = await buildToday({ userId: 'u1', isAdmin: false }, NOW);
     expect(today.presence).toBe(3);
     expect(today.storiesTomorrow).toBe(5);
+  });
+});
+
+describe('orderTodayCards', () => {
+  const at = (day: number) => new Date(Date.UTC(2026, 10, day)).toISOString();
+  const story = (n: number) => ({ ...stub(`blog-story:${n}`, at(20)), kind: 'story' as const });
+
+  it('keeps an older ask that a full day of stories would push off, newest first', () => {
+    const stories = Array.from({ length: TODAY_MAX_CARDS + 5 }, (_, n) => story(n));
+    const ask = stub('socket-relay:old', at(1));
+    const offer = { ...stub('lighthouse:old', at(2)), kind: 'offer' as const };
+    const ordered = orderTodayCards([ask, ...stories, offer] as Parameters<typeof orderTodayCards>[0]);
+    expect(ordered).toHaveLength(TODAY_MAX_CARDS);
+    expect(ordered.slice(-2).map((c) => c.id)).toEqual(['lighthouse:old', 'socket-relay:old']);
+    expect(ordered.filter((c) => c.kind === 'story')).toHaveLength(TODAY_MAX_CARDS - 2);
   });
 });

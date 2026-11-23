@@ -17,6 +17,20 @@ export function seWwHelpedCount(n: number): string {
   return `${n.toLocaleString('en-US')} ${n === 1 ? 'thing' : 'things'} that helped`;
 }
 
+// The What Works card opened on Today: the solution's own link under the problem, then Add a
+// solution to this problem first and Add a problem after it.
+export const SE_WW_CARD_WORDS = {
+  link: 'Where to get it',
+  addSolution: 'Add a solution to this problem',
+} as const;
+
+// The solution's link as the card shows it: an https or http address, or nothing.
+export function seWwCardLink(link: string | null | undefined): string | null {
+  if (!link) return null;
+  const trimmed = link.trim();
+  return /^https?:\/\/\S+$/i.test(trimmed) ? trimmed : null;
+}
+
 export const SE_WW_ADD_WORDS = {
   eyebrow: 'What works',
   title: 'Add a problem',

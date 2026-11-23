@@ -18,7 +18,7 @@ export default {
         await button('Suggest an item').click();
         await page.getByText('Suggest a tool that worked.', { exact: true }).waitFor({ timeout: 20_000 });
         const problem = page.locator('select').first();
-        await problem.selectOption({ label: 'Sleep Disruption' });
+        await problem.selectOption({ label: 'How do I sleep through a hallway light and footsteps outside my door?' });
         await highlight(problem);
       },
     },

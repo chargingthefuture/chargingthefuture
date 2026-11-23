@@ -19,6 +19,7 @@ import {
   seTodayView,
   type SeToday,
   type SeTodayCard,
+  seCardAccent,
 } from '@ctf/shared';
 import { ChymeGuestListen, GuestNote } from '@/components/chyme/chyme-guest-listen';
 import { ChymeReadingsPlayer } from '@/components/chyme/readings/chyme-readings-player';
@@ -169,13 +170,13 @@ function GuestCardText({ card, body, onOpen }: { card: SeTodayCard; body: string
 }
 
 function GuestCard({ card, signUpUrl, signInUrl }: { card: SeTodayCard; signUpUrl: string; signInUrl: string }) {
-  const color = `var(--se-kind-${card.kind})`;
+  const color = `var(--se-kind-${seCardAccent(card)})`;
   const bySignUp = seGuestAnswersBySignUp(card);
   const [open, setOpen] = useState(false);
   return (
     <article className={styles.card}>
       <span className={styles.guestDot} style={{ background: color }} aria-hidden="true">
-        <CardDotIcon kind={card.kind} />
+        <CardDotIcon kind={seCardAccent(card)} />
       </span>
       <div className={styles.cardHead}>
         {bySignUp ? <SeAvatar accountId={card.id} size={28} /> : null}

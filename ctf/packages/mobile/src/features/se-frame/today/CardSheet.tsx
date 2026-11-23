@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { Modal, Pressable, ScrollView, Share, Text, TouchableOpacity, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
-import { SE_CARD_WORDS, SE_MUTE_WORDS, seCanConfirmHelped, seCardSheetLine, seDailyCreditPill, seDoneHelpers, seOpens30Page, type SeCardAnswer, type SeCardAnswerKind, type SeCardConversation, type SeThemeTokens, type SeTodayCard } from '@ctf/shared';
+import { SE_CARD_WORDS, SE_MUTE_WORDS, seCanConfirmHelped, seCardAccent, seCardSheetLine, seDailyCreditPill, seDoneHelpers, seOpens30Page, type SeCardAnswer, type SeCardAnswerKind, type SeCardConversation, type SeThemeTokens, type SeTodayCard } from '@ctf/shared';
 import { SeAvatar } from '../../../components/shared/SeAvatar';
 import { getApiBaseUrl } from '../../../auth/authedFetch';
 import { reportError } from '../../../observability/report';
@@ -70,7 +70,7 @@ function SheetHead({ t, s, card, viewerId, talk, onClose, onMutePost }: HeadProp
         {card.author ? <SeAvatar accountId={card.author.accountId} size={32} /> : null}
         <View style={s.who}>
           {card.author ? <Text style={s.handle}>{card.author.handle}</Text> : null}
-          <Text style={[s.when, { color: t.kind[card.kind] }]}>{seCardSheetLine(card)}</Text>
+          <Text style={[s.when, { color: t.kind[seCardAccent(card)] }]}>{seCardSheetLine(card)}</Text>
         </View>
         <View style={s.spacer} />
         <TouchableOpacity accessibilityRole="button" accessibilityLabel={SE_CARD_WORDS.share} style={s.round} onPress={() => void shareCard(card)}>
@@ -217,7 +217,7 @@ export function CardSheet({ t, card, viewerId, firstAnswer, onClose, onOpenLink,
                   <Text style={s.openInLabel}>{SE_CARD_WORDS.openIn(card.source)}</Text>
                 </TouchableOpacity>
               )}
-              <WwAddFromCard t={t} source={card.source} linkStyle={s.openIn} labelStyle={s.openInLabel} />
+              <WwAddFromCard t={t} card={card} linkStyle={s.openIn} labelStyle={s.openInLabel} primaryStyle={[s.talkPrimary, { alignSelf: 'flex-start' }]} primaryLabelStyle={s.talkPrimaryLabel} />
             </View>
             <SheetYours s={s} card={card} helpers={seDoneHelpers(talk.conversation?.answers ?? [], viewerId)} onChanged={onChanged} />
             <CardConversationView t={t} s={s} talk={talk} />

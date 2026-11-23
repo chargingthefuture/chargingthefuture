@@ -5,7 +5,8 @@ import { SE_TODAY_ASK_DAYS, SE_TODAY_STORY_DAYS, type SeTodayCard, type SeTodayC
 //
 // - An ask (a PeerProgramming goal, a SocketRelay request, a ride wanted) stays until it is met or
 //   closed (its source stops listing it), or until its deadline passes. With no deadline it stays 14
-//   days from posting; the poster can keep it up 14 more days from the tap, as often as they like.
+//   days from posting (from TODAY_WINDOWS_FROM_MS for one posted before then); the poster can keep it
+//   up 14 more days from the tap, as often as they like.
 // - An offer (a LightHouse place to stay, hours offered through Foundation, or on its creator's own
 //   Today a Mutual Time survey open for picking) stays 14 days the same way, with no deadline, and
 //   leaves sooner when it closes.
@@ -40,12 +41,23 @@ export type TodayCardWindow = {
   outcome: 'done' | 'not_done' | null;
 };
 
+// Asks and offers posted before this moment were left out of Today as soon as the 14 days were
+// applied, with no day-14 notice and no chance to renew, while 3.0 still listed them. Their first 14
+// days count from here instead of from posting, with the notice and renew as for any other.
+export const TODAY_WINDOWS_FROM_MS = Date.parse('2026-11-24T00:00:00.000Z');
+
+// When an ask's or offer's first 14 days begin: when it was posted, or TODAY_WINDOWS_FROM_MS for one
+// posted before then.
+export function windowStartMs(card: Pick<SeTodayCard, 'createdAtIso'>): number {
+  return Math.max(Date.parse(card.createdAtIso), TODAY_WINDOWS_FROM_MS);
+}
+
 // When an ask or offer leaves Today: its deadline, else the end of a renewed 14 days, else 14 days
-// from posting.
+// from the start of its first window.
 export function windowEndMs(card: Pick<SeTodayCard, 'createdAtIso'>, window: TodayCardWindow | undefined): number {
   if (window?.dueIso) return Date.parse(window.dueIso);
   if (window?.shownUntilIso) return Date.parse(window.shownUntilIso);
-  return Date.parse(card.createdAtIso) + SE_TODAY_ASK_DAYS * DAY_MS;
+  return windowStartMs(card) + SE_TODAY_ASK_DAYS * DAY_MS;
 }
 
 export function onToday(card: SeTodayCard, window: TodayCardWindow | undefined, now: Date): boolean {

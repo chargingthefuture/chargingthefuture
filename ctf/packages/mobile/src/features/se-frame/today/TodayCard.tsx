@@ -28,6 +28,7 @@ import {
   type SeCardAnswerKind,
   type SeThemeTokens,
   type SeTodayCard,
+  seCardAccent,
 } from '@ctf/shared';
 import { SeAvatar } from '../../../components/shared/SeAvatar';
 import { authedFetch, getApiBaseUrl } from '../../../auth/authedFetch';
@@ -151,7 +152,7 @@ function DoneDot({ t, s, card, read, color, onToggleDone }: DotProps) {
   if (!seCardTakesCheckMark(card)) {
     return (
       <View style={[s.dot, { backgroundColor: color }]} importantForAccessibility="no-hide-descendants">
-        <CardDotIcon kind={card.kind} color={t.onKind} />
+        <CardDotIcon kind={seCardAccent(card)} color={t.onKind} />
       </View>
     );
   }
@@ -167,7 +168,7 @@ function DoneDot({ t, s, card, read, color, onToggleDone }: DotProps) {
       disabled={locked}
       style={[s.dot, { backgroundColor: color }]}
     >
-      <CardDotIcon kind={card.kind} color={t.onKind} done={done} />
+      <CardDotIcon kind={seCardAccent(card)} color={t.onKind} done={done} />
     </TouchableOpacity>
   );
 }
@@ -262,7 +263,7 @@ export function TodayCard({
   const [open, setOpen] = useState(false);
   const [menu, setMenu] = useState(false);
   const [sheet, setSheet] = useState<Sheet>(null);
-  const color = t.kind[card.kind];
+  const color = t.kind[seCardAccent(card)];
   const s = makeStyles(t);
   const opensSheet = seCardOpensSheet(card);
   const canReport = Boolean(card.author && card.author.accountId !== viewerId);
