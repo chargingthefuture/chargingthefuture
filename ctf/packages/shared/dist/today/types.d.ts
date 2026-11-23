@@ -31,6 +31,12 @@ export type SeTodayCard = {
     goal?: SeTodayGoal;
     figures?: SeTodayFigure[];
     dailyCredit?: boolean;
+    whatWorks?: SeTodayWhatWorks;
+};
+export type SeTodayWhatWorks = {
+    problemId: string;
+    problemTitle: string;
+    link: string | null;
 };
 export type SeTodayFigure = {
     value: string;

@@ -29,6 +29,17 @@ import { dailyCreditCardId, markDailyCredit } from './daily-credit/choose';
 
 export const TODAY_MAX_CARDS = 30;
 
+const isAskOrOffer = (card: SeTodayCard) => card.kind === 'ask' || card.kind === 'offer';
+
+// At most TODAY_MAX_CARDS, newest first. Asks and offers still on Today take their places first, so an
+// older one is never pushed off by the day's stories; the other cards fill the places left.
+export function orderTodayCards(cards: SeTodayCard[]): SeTodayCard[] {
+  const newest = [...cards].sort((a, b) => b.createdAtIso.localeCompare(a.createdAtIso));
+  const asks = newest.filter(isAskOrOffer).slice(0, TODAY_MAX_CARDS);
+  const kept = new Set([...asks, ...newest.filter((card) => !isAskOrOffer(card)).slice(0, TODAY_MAX_CARDS - asks.length)]);
+  return newest.filter((card) => kept.has(card));
+}
+
 type CardSource = { name: string; read: () => Promise<SeTodayCard[]> };
 
 async function settle<T>(name: string, read: () => Promise<T>, unavailable: string[]): Promise<T | null> {
@@ -96,9 +107,7 @@ export async function buildToday(viewer: TodayViewer, now = new Date(), day: SeT
   const mineIds = new Set((cardLists[sources.length - 1] ?? []).map((card) => card.id));
   const lasting = await applyLifetimes(cardLists.flatMap((list) => list ?? []), viewer, mineIds, now);
   const marked = await applyMemberSaves(viewer, await applyMemberMarks(viewer, lasting, day.startIso));
-  const cards = seApplyMutes(markDailyCredit(marked, creditCardId), mutes ?? [])
-    .sort((a, b) => b.createdAtIso.localeCompare(a.createdAtIso))
-    .slice(0, TODAY_MAX_CARDS);
+  const cards = orderTodayCards(seApplyMutes(markDailyCredit(marked, creditCardId), mutes ?? []));
 
   return {
     generatedAtIso: now.toISOString(),

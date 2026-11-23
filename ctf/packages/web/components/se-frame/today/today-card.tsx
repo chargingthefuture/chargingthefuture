@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { SE_CARD_WORDS, SE_MUTE_WORDS, seCanSave, seCardAnswerKind, seCardShownDone, seCardTakesCheckMark, seIsMoodCard, seCardOpensSheet, seDailyCreditPill, seNewCommentsLine, seStoryPostHref, type SeCardAnswerKind, type SeTodayCard } from '@ctf/shared';
+import { SE_CARD_WORDS, SE_MUTE_WORDS, seCanSave, seCardAnswerKind, seCardShownDone, seCardTakesCheckMark, seIsMoodCard, seCardOpensSheet, seDailyCreditPill, seNewCommentsLine, seStoryPostHref, type SeCardAnswerKind, type SeTodayCard, seCardAccent } from '@ctf/shared';
 import { SeAvatar } from '../../shared/se-avatar';
 import { QuestionsPanel, isQuestionsCard } from './questions-panel';
 import { CardSheet } from './card-sheet';
@@ -129,7 +129,7 @@ function DoneDot({ card, done, color, onToggleDone }: { card: SeTodayCard; done:
   if (!seCardTakesCheckMark(card)) {
     return (
       <span className={styles.dot} style={{ background: color }} aria-hidden="true">
-        <CardDotIcon kind={card.kind} />
+        <CardDotIcon kind={seCardAccent(card)} />
       </span>
     );
   }
@@ -143,7 +143,7 @@ function DoneDot({ card, done, color, onToggleDone }: { card: SeTodayCard; done:
       onClick={card.done ? undefined : onToggleDone}
       disabled={card.done === true}
     >
-      <CardDotIcon kind={card.kind} done={done} />
+      <CardDotIcon kind={seCardAccent(card)} done={done} />
     </button>
   );
 }
@@ -284,7 +284,7 @@ function PlainCard({
   onRead,
 }: TodayCardProps) {
   const { open, setOpen, sheet, setSheet, opensSheet, openSheet, toggle } = useCardOpening(card, onRead);
-  const color = `var(--se-kind-${card.kind})`;
+  const color = `var(--se-kind-${seCardAccent(card)})`;
   // A card the server marks done (a 21 Questions answer) stays done: the answer is final.
   const done = read || seCardShownDone(card);
   const credit = seDailyCreditPill(card, viewerId);
@@ -325,6 +325,6 @@ type TodayCardProps = {
 export function TodayCard(props: TodayCardProps) {
   const { card } = props;
   if (!card.goal) return <PlainCard {...props} />;
-  const dot = <DoneDot card={card} done={props.read} color={`var(--se-kind-${card.kind})`} onToggleDone={props.onToggleDone} />;
+  const dot = <DoneDot card={card} done={props.read} color={`var(--se-kind-${seCardAccent(card)})`} onToggleDone={props.onToggleDone} />;
   return <GoalCard card={{ ...card, goal: card.goal }} viewerId={props.viewerId} dot={dot} onChanged={props.onChanged} />;
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { SE_CARD_WORDS, SE_MUTE_WORDS, seCanConfirmHelped, seCardSheetLine, seDailyCreditPill, seDoneHelpers, seOpens30Page, type SeCardAnswer, type SeCardAnswerKind, type SeCardConversation, type SeTodayCard } from '@ctf/shared';
+import { SE_CARD_WORDS, SE_MUTE_WORDS, seCanConfirmHelped, seCardAccent, seCardSheetLine, seDailyCreditPill, seDoneHelpers, seOpens30Page, type SeCardAnswer, type SeCardAnswerKind, type SeCardConversation, type SeTodayCard } from '@ctf/shared';
 import { SeAvatar } from '../../shared/se-avatar';
 import { CardTalk } from './card-sheet-talk';
 import { SheetYours } from './card-sheet-yours';
@@ -92,7 +92,7 @@ function SheetHead({ card, talk, viewerId, onClose, onMutePost, closeRef }: Shee
       {card.author ? <SeAvatar accountId={card.author.accountId} size={32} /> : null}
       <div className={styles.who}>
         {card.author ? <span className={styles.handle}>{card.author.handle}</span> : null}
-        <span className={styles.when} style={{ color: `var(--se-kind-${card.kind})` }}>
+        <span className={styles.when} style={{ color: `var(--se-kind-${seCardAccent(card)})` }}>
           {seCardSheetLine(card)}
         </span>
       </div>
@@ -215,7 +215,7 @@ export function CardSheet({ card, viewerId, firstAnswer, onClose, onChanged, onM
               {SE_CARD_WORDS.openIn(card.source)}
             </Link>
           )}
-          <WwAddFromCard card={card} className={`${styles.openIn} ${styles.openInButton}`} />
+          <WwAddFromCard card={card} className={`${styles.openIn} ${styles.openInButton}`} primaryClassName={`${styles.talkPrimary} ${styles.wwSolution}`} linkClassName={styles.wwLink} />
         </div>
         <SheetYours card={card} helpers={seDoneHelpers(talk.conversation?.answers ?? [], viewerId)} onChanged={onChanged} />
         <CardConversationView talk={talk} />

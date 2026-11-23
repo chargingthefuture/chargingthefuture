@@ -714,3 +714,11 @@ web ☐ android ☐
 4. As B, switch to 3.0 in Settings and open the same place again.
 **Expected:** Step 2 shows A's message. Step 3's reply appears in the card's sheet on Today for A. Step 4 shows the same conversation: 3.0 and 3.1 read one conversation, only the screens differ.
 **Result:** web ☐ — notes:
+
+### TT-31 · A ride requested in 3.0 shows on Today (added 2026-11-23)
+**Role:** member A (requested a ride in 3.0 more than 14 days ago, still waiting for a driver), member B · **Surfaces:** web, android
+**Steps:**
+1. As B, open Today in 3.1.
+2. As A, open Today in 3.1.
+**Expected:** Step 1: "A ride is wanted" shows, with I can drive and no place or time, even on a day with many stories. Step 2: A sees "Your ride request…" with "On Today until <December 8, 2026 or later>". A canceled or accepted ride is on neither.
+**Result:** web ☐ android ☐ — notes:

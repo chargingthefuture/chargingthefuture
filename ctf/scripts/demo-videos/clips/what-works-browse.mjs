@@ -8,12 +8,12 @@ export default {
       speak: 'What Works is a shared list of tools that survivors say help with specific problems.',
       do: async ({ page, app }) => {
         await page.goto(app('/apps/what-works'));
-        await page.getByRole('heading', { name: 'Noise & Verbal Harassment' }).waitFor({ timeout: 20_000 });
+        await page.getByRole('heading', { name: 'Voices through a shared wall drown out my work. How do I block them?' }).waitFor({ timeout: 20_000 });
       },
     },
     {
       say: 'The tools are grouped by problem.',
-      do: async ({ page, highlight }) => highlight(page.getByRole('heading', { name: 'Noise & Verbal Harassment' })),
+      do: async ({ page, highlight }) => highlight(page.getByRole('heading', { name: 'Voices through a shared wall drown out my work. How do I block them?' })),
     },
     {
       say: 'Each tool has a short note on why it works, and how many survivors found it helpful.',

@@ -6,54 +6,55 @@ const PEOPLE = (ctx) => [ctx.PEER_1, ctx.PEER_2, ctx.ADMIN, ctx.HOST, ctx.TRAINE
 
 const id = (n) => `ddd00000-0000-4000-8410-0000000000${n.toString(16).padStart(2, '0')}`;
 
-// [slug, emoji, title, context, [[emoji, name, kind, note, helpful], ...]]
+// [slug, emoji, title, context, [[emoji, name, kind, note, helpful], ...]]. Each problem reads like a
+// question somebody would post: the specific problem, then what they already tried.
 const PROBLEMS = [
-  ['door-security', '🚪', 'Door Security',
-    'Wanting a door that stays shut and tells you when it opens.',
+  ['door-security', '🚪', 'How do I keep a rented room door shut at night when I cannot change the lock?',
+    'The landlord keeps a key and the chain is broken. A chair under the handle slides on the tile floor.',
     [
       ['🔔', 'Door stop alarm', 'Wedge with a loud alarm', 'Slides under the door at night. Goes off if anyone pushes it open.', 4],
       ['🔒', 'Portable door lock', 'Travel lock, no tools', 'Works in rentals and hotel rooms. Nothing to install, nothing left behind.', 3],
     ]],
-  ['phone-privacy', '📱', 'Phone Privacy',
-    'Keeping your screen and camera to yourself in public.',
+  ['phone-privacy', '📱', 'People next to me on the bus read my phone screen. How do I stop that?',
+    'Turning the brightness down and holding the phone close did not stop it. My laptop camera light also came on once when I was not using it.',
     [
       ['🕶️', 'Privacy screen protector', 'Side-angle filter', 'People next to you on the bus see a dark screen.', 3],
       ['📷', 'Webcam cover slide', 'Thin sliding cover', 'Sticks on and slides open when you need the camera.', 2],
     ]],
-  ['keeping-records', '📓', 'Keeping Records',
-    'Writing down what happened, when, so the details do not fade.',
+  ['keeping-records', '📓', 'How do I keep incident notes that nobody can quietly change?',
+    'I kept notes in a phone app, and entries changed and dates moved without my doing it. I need a record where a change shows.',
     [
       ['📓', 'Bound notebook', 'Numbered pages', 'Pages cannot be torn out without it showing. Date every entry.', 4],
       ['🖊️', 'Gel pens, waterproof', 'Smear-proof ink', 'Ink that survives a spilled drink or a wet bag.', 2],
     ]],
-  ['charging-away-from-home', '🔋', 'Charging Away From Home',
-    'Keeping your phone alive when you are out all day.',
+  ['charging-away-from-home', '🔋', 'My phone dies by mid-afternoon when I am out all day. What keeps it charged?',
+    'Battery saver and closing apps buy an hour at most. Library outlets are far from the tables and my cable does not reach.',
     [
       ['🔋', 'Power bank, 10,000 mAh', 'Pocket battery', 'Two full phone charges. Small enough for a jacket pocket.', 5],
       ['🔌', 'Two-port wall charger', 'USB-C and USB-A', 'Charges the phone and the power bank at the same outlet.', 3],
       ['🧵', 'Braided charging cable', 'Six feet long', 'Reaches from a library outlet to the table. Lasts longer than the thin ones.', 2],
       ['☀️', 'Folding solar panel', 'Small USB panel', 'Slow, but it works on a sunny day with no outlet at all.', 1],
     ]],
-  ['cold-nights', '🧦', 'Cold Nights',
-    'Staying warm when the heat is off or unreliable.',
+  ['cold-nights', '🧦', 'The heat goes off at night in my building. How do I stay warm in bed?',
+    'Two blankets and cotton socks still leave my feet cold by 2 AM, and the blankets feel damp by morning.',
     [
       ['🧦', 'Wool socks', 'Thick, merino blend', 'Warm even when damp. The first thing to buy for winter.', 4],
       ['🛌', 'Fleece sleeping bag liner', 'Light extra layer', 'Adds warmth under a blanket and packs into a small bag.', 2],
     ]],
-  ['mail-and-packages', '📬', 'Mail and Packages',
-    'Mail going missing or arriving opened.',
+  ['mail-and-packages', '📬', 'My letters go missing or arrive opened. How do I keep my mail safe?',
+    'The building has an open shared mailbox. I asked the carrier and filed a complaint, and it still happens about once a week.',
     [
       ['📬', 'Locking mailbox', 'Wall or post mount', 'Only the key opens it. Letters stopped going missing.', 3],
       ['🏤', 'Post office box', 'Rented box at the post office', 'A steady address that does not change when you move.', 3],
     ]],
-  ['food-on-the-go', '🥪', 'Food on the Go',
-    'Eating well when you are out of the house most of the day.',
+  ['food-on-the-go', '🥪', 'How do I keep a packed lunch good to eat when I am out from morning to evening?',
+    'Food packed in a plastic bag is warm by noon, so I end up buying something on the way instead.',
     [
       ['🧊', 'Insulated lunch bag', 'Soft cooler with ice pack', 'Keeps a packed meal cold until the afternoon.', 3],
       ['🥣', 'Collapsible bowl and spork', 'Silicone, folds flat', 'Fits in a bag. Easy to rinse anywhere.', 2],
     ]],
-  ['laundry-without-a-machine', '🧺', 'Laundry Without a Machine',
-    'Getting clothes clean when a laundromat is far or not safe to wait in.',
+  ['laundry-without-a-machine', '🧺', 'How do I wash clothes at home without a washing machine?',
+    'The laundromat is far and not safe to wait in. Washing by hand in the sink takes an hour and the clothes stay wet for two days.',
     [
       ['🪣', 'Hand wash plunger', 'Bucket washer', 'A bucket and this get a load clean in ten minutes.', 2],
       ['🧺', 'Folding drying rack', 'Indoor rack', 'Dries a load overnight in a small room.', 2],

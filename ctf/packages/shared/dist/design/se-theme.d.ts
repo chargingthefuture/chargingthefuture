@@ -12,7 +12,8 @@ export declare function seSignedOutTheme(prefersDark: boolean): {
 };
 export declare const SE_THEME_LABELS: Record<SeThemeColor, string>;
 export type SeCardKind = 'ask' | 'offer' | 'story' | 'match' | 'mood' | 'numbers' | 'replay' | 'game';
-export type SeKindColors = Record<SeCardKind, string>;
+export type SeCardAccent = SeCardKind | 'works';
+export type SeKindColors = Record<SeCardAccent, string>;
 export type SeThemeTokens = {
     bg: string;
     card: string;

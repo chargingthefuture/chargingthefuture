@@ -22,6 +22,7 @@ import {
   type SeThemeTokens,
   type SeToday,
   type SeTodayCard,
+  seCardAccent,
 } from '@ctf/shared';
 import { SeAvatar } from '../../../components/shared/SeAvatar';
 import { ChymeGuestListen, GuestNote } from '../../chyme/chyme-guest-listen';
@@ -185,12 +186,12 @@ function GuestCardText({ s, card, body, onOpen, go }: { s: Styles; card: SeToday
 
 function GuestCard({ s, t, card, onSignUp, go }: { s: Styles; t: SeThemeTokens; card: SeTodayCard; onSignUp: () => void; go: (_href: string) => void }) {
   const [open, setOpen] = useState(false);
-  const color = t.kind[card.kind];
+  const color = t.kind[seCardAccent(card)];
   const bySignUp = seGuestAnswersBySignUp(card);
   return (
     <View style={s.card}>
       <View style={[s.dot, { backgroundColor: color }]} importantForAccessibility="no-hide-descendants">
-        <CardDotIcon kind={card.kind} color={t.onKind} />
+        <CardDotIcon kind={seCardAccent(card)} color={t.onKind} />
       </View>
       <View style={s.row}>
         {bySignUp ? <SeAvatar accountId={card.id} size={28} /> : null}
