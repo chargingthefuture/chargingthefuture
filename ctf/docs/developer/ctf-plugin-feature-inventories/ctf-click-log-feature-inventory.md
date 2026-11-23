@@ -333,6 +333,28 @@ Android pixel pass to `MobileClickLog.tsx` remains tracked in `PRODUCTION_READIN
 
 ## Change Log
 
+- 2026-11-22: **Two new scheme tags, The Interview (`harvest-interview`) and The Understudy
+  (`understudy`), and a new problem tag "Your work or ideas copied and credited to someone
+  else" (`work-copied`).** Owner decision. The two schemes are the halves of being copied and
+  are kept apart because different operatives run them at different times and a member can see
+  one without ever seeing the other. The Interview is the collecting half: a friendly line
+  about the member's life, work or background, pressed toward a phone call, with the answers
+  and the manner they come in written down and handed on. Two uses recorded — material for an
+  impersonator, and learning to speak as a survivor well enough to pass in a survivors' space,
+  which the owner reports happening in a copycat group on Quora. The Understudy is the
+  performing half: an operative trained on what was collected and placed in front of a chosen
+  audience wearing the member's manner, story or project. Three uses recorded — taking credit
+  in front of somebody who knows the member (the owner's case: an investor who said the
+  newcomer reminded them of the owner), working a third party by resemblance rather than by
+  instruction so the feeling looks like their own, and reproducing the member's current work so
+  attention moves to a copy the operatives make look successful. The comment records the owner's
+  distinction between this and ordinary influence: borrowing a strategy that worked is normal,
+  while this is run as a takeover whose point is removing the achievement. The problem tag names
+  the harm left behind, distinct from `mirroring-behavior` (the ambient copying of dress and
+  manner) because it is the work itself that is taken. Category mappings: both schemes
+  `operation`, the problem `blocked-from-services`. Mirrored to the landing /schemes and
+  /look-ma pages. No schema, route, or contract change — canonical list additions only.
+
 - 2026-11-16: **"Log what happened" moves into + New as a quick location pin (owner decision).** The line "Something happened? Log it where you are" under + New's switch opens the 3.1 sheet on web and Android; the Me → Tools tile is gone. The sheet asks for the location as it opens (the browser's or the phone's permission prompt) and fills it in, and "Log another" asks again; refused or unavailable, the reason shows and Add location stays. The location now comes first in the form, above the note and the tags, and its arrival is read out ("Your location is filled in."). After saving, "See your history and trends" still opens the 3.0 ClickLog page. The sheet's files moved from `se-frame/me/` to `se-frame/click-log/` on both sides. No route, table or contract changed.
 
 - 2026-11-16: **"Log what happened" sheet in 3.1, web and Android (owner decision).** Me → Tools → "Log what happened" opens a 3.1 sheet with every field, rule, state and error the ClickLog form has, posting to `POST /api/click-log` and reading `GET /api/click-log` (whether "Not listed" is offered) and `GET /api/click-log/preferences` (the sharing default). After saving it links to the ClickLog page for history and trends, one of the 3.1 places that link to 3.0. Focus moves into the sheet and back to the tile, and Escape closes it on the web; on Android the controls carry roles and labels and the save result is read out. The tag lists, limits and share wording moved to `@ctf/shared` (`packages/shared/src/click-log/`) so web and Android offer the same ones; `lib/click-log/tags.ts`, `constants.ts` and `share-copy.ts` re-export them, and the 3.0 form uses the shared submit rule and request body. No route, table or contract changed. Tests: `lib/click-log/entry-sheet.test.ts`.

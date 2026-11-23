@@ -419,6 +419,21 @@
       "reason": "Called by Clerk, not by this app. Auth provider posts user lifecycle events here."
     },
     {
+      "route": "/api/weekly-performance/current-week",
+      "kind": "read-only-no-screen",
+      "reason": "Kept with no screen by owner decision, 2026-11-23: the Weekly Performance section was taken off the Adoption screen, and the owner chose to keep its routes and the daily goal capture running rather than delete them. Burn down by deleting the routes once the owner says so, or by showing the numbers again."
+    },
+    {
+      "route": "/api/weekly-performance/metrics",
+      "kind": "read-only-no-screen",
+      "reason": "Kept with no screen by owner decision, 2026-11-23: the Weekly Performance section was taken off the Adoption screen, and the owner chose to keep its routes and the daily goal capture running rather than delete them. Burn down by deleting the routes once the owner says so, or by showing the numbers again."
+    },
+    {
+      "route": "/api/weekly-performance/weeks",
+      "kind": "read-only-no-screen",
+      "reason": "Kept with no screen by owner decision, 2026-11-23: the Weekly Performance section was taken off the Adoption screen, and the owner chose to keep its routes and the daily goal capture running rather than delete them. Burn down by deleting the routes once the owner says so, or by showing the numbers again."
+    },
+    {
       "route": "/api/weekly-performance/admin/week-selection",
       "kind": "baseline",
       "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."

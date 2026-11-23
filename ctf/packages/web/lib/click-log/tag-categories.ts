@@ -108,6 +108,7 @@ export const CLICK_LOG_PROBLEM_TAG_CATEGORY: Readonly<Record<string, string>> = 
   'sexual-solicitation': 'threats-and-intimidation',
   'sexual-violence': 'threats-and-intimidation',
   'false-mental-health-label': 'set-up-for-blame',
+  'work-copied': 'blocked-from-services',
   'ride-prostitution-offers': 'threats-and-intimidation',
   'theft-detector-beep': 'threats-and-intimidation',
 
@@ -174,6 +175,8 @@ export const CLICK_LOG_SCHEME_TAG_KIND: Readonly<Record<string, ClickLogSchemeKi
   'staged-run-in': 'operation',
   'staged-exposure': 'operation',
   'forced-homecoming': 'operation',
+  'harvest-interview': 'operation',
+  'understudy': 'operation',
 
   'thats-a-nice': 'ambient',
   'staged-narratives': 'ambient',
