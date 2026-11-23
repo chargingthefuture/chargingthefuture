@@ -845,6 +845,23 @@ it in the Neon SQL Editor after `post/0055` and `ctf/scripts/sql/landing_page_lo
 
 ---
 
+### DIR-A10b · Unmet needs on the admin screen (added 2026-11-23)
+
+**Role:** admin · **Surfaces:** web (desktop) · web (mobile-responsive, ~390px)
+
+**Steps:**
+1. On the landing page, tap a need that 0 people match.
+2. Open `/admin`, then the **Directory: Unmet Needs** tile.
+3. Tap **Copy this list** and paste it into a message.
+4. Sign in as a member who is not an admin and open `/admin/directory/unmet-needs`.
+**Expected:**
+- Step 2: the need from step 1 is listed with its count, first and last asked dates, most asked first; the counts match `ctf/scripts/sql/landing_unmet_needs_report.sql` pasted into the Neon SQL Editor. A need recorded as a single skill shows its job title and "Single skill".
+- Step 3: one line per need with its count and both dates.
+- Step 4: redirected to `/apps/directory`.
+**Result:** web ☐ — notes:
+
+---
+
 ## Parity check (web ↔ android)
 
 For DIR-1, DIR-2, DIR-4, and DIR-A1 to DIR-A3, the android app and the mobile-responsive web layout

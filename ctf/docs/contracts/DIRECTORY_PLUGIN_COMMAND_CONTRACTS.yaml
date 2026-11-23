@@ -85,6 +85,24 @@ contracts:
     idempotency: true
 
   - pluginId: directory
+    command: directory.admin.unmet_needs.fetch
+    version: 1.0.0
+    description: >-
+      Admin-only read of the needs landing page visitors picked that matched nobody in the
+      Directory, grouped by need: how many visits asked for it, and when it was first and last
+      asked, most asked first. The same query as ctf/scripts/sql/landing_unmet_needs_report.sql.
+      A row holds nothing about the visitor. No parameters, no writes.
+    inputSchema: {}
+    outputSchema:
+      rows:
+        type: array
+    dataAccess:
+      - directory_unmet_needs
+    purpose: profile_management
+    retentionClass: transactional_long_lived
+    idempotency: true
+
+  - pluginId: directory
     command: directory.list.fetch
     version: 1.0.0
     description: >-
