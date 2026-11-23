@@ -150,11 +150,12 @@ export function seHelpedConfirmedByAdmin(cardId) {
     return SYSTEM_ARCHITECT_SOURCES.has(cardId.slice(0, cardId.indexOf(':')));
 }
 // "Ask · October 26, 2026 at 11:40 AM CDT", the line under the author in the sheet.
+// The What Works card names itself rather than reading as one more story.
 export function seCardSheetLine(card) {
     const at = new Date(card.createdAtIso);
     const day = at.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
     const time = at.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZoneName: 'short' });
-    const kind = KIND_WORDS[card.kind] ?? card.label.split(' · ')[0];
+    const kind = card.source === 'what-works' ? card.label : (KIND_WORDS[card.kind] ?? card.label.split(' · ')[0]);
     return `${kind} · ${day} at ${time}`;
 }
 // The line a card shows when a write is refused for Unlock: not approved yet (cards closed before

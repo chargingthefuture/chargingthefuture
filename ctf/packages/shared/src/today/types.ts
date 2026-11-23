@@ -55,7 +55,12 @@ export type SeTodayCard = {
   // Set only on the day's credit card (seDailyCreditDay): the one ask that carries 1 ServiceCredit for
   // the member who helps, once its author confirms it was done.
   dailyCredit?: boolean;
+  // Set only on the What Works card: the problem the solution answers, so the opened card can offer
+  // Add a solution to this problem, and the solution's own link when it has one.
+  whatWorks?: SeTodayWhatWorks;
 };
+
+export type SeTodayWhatWorks = { problemId: string; problemTitle: string; link: string | null };
 
 export type SeTodayFigure = { value: string; line: string };
 
