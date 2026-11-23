@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { SE_GOAL_SHARE_WORDS, seGoalPercent, type SeTodayCard, type SeTodayGoal } from '@ctf/shared';
 import { GoalShareSheet } from '../share/goal-share-sheet';
 import { CardSheet } from './card-sheet';
+import { forgetOpenCard, readOpenCard, rememberOpenCard } from './reload-place';
 import styles from './today.module.css';
 
 // The viewer's own PeerProgramming goal on Today (the approved 3.1 board "Today, a quiet day"): the
@@ -14,7 +15,16 @@ import styles from './today.module.css';
 type Props = { card: SeTodayCard & { goal: SeTodayGoal }; viewerId: string; dot: ReactNode; onChanged?: () => void };
 
 export function GoalCard({ card, viewerId, dot, onChanged }: Props) {
-  const [sheet, setSheet] = useState(false);
+  const [sheet, setSheetState] = useState(false);
+  // The open sheet is remembered, so a reload of the page opens it again (reload-place.ts).
+  useEffect(() => {
+    if (readOpenCard()?.id === card.id) setSheetState(true);
+  }, [card.id]);
+  const setSheet = (next: boolean) => {
+    if (next) rememberOpenCard({ id: card.id, sheet: true });
+    else forgetOpenCard(card.id);
+    setSheetState(next);
+  };
   const [share, setShare] = useState(false);
   const percent = seGoalPercent(card.goal);
   const text = (

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { SE_CARD_MESSAGE_MAX, SE_CARD_WORDS, seAgo, seCardBlogNote, type SeCardMessage, type SeCardPairThread } from '@ctf/shared';
 import type { CardConversation } from './use-card-conversation';
 import { useCardTalkStyles } from './card-talk-styles';
+import { useSessionDraft } from '../use-session-draft';
 
 // The conversation half of a card's sheet: the Public / Just us two switch, the messages, the
 // requests to talk just you two, and the composer. Text only for now. A member's own message carries
@@ -167,7 +168,8 @@ function PartnerChips({ partner, pairs, onPartner }: { partner: string; pairs: S
 function Composer({ talk, partnerId, hint }: { talk: CardConversation; partnerId: string | null; hint: string }) {
   const styles = useCardTalkStyles();
   const blogNote = seCardBlogNote(talk.cardId, partnerId === null);
-  const [draft, setDraft] = useState('');
+  // Unsent text survives the page reloading, one draft per card and conversation (use-session-draft.ts).
+  const [draft, setDraft] = useSessionDraft(`card:${talk.cardId}:${partnerId ?? 'public'}`);
   if (talk.locked) return <p className={styles.hint}>{talk.lockLine}</p>;
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();

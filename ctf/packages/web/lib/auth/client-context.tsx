@@ -10,6 +10,7 @@ import {
 import { useUser, useAuth as useClerkAuth } from '@clerk/nextjs';
 import { getHostedSignInUrl } from './clerk-env';
 import { dropBrowserPushWhenSignedOut } from 'lib/notifications/browser-signed-out';
+import { clearSessionPlaces } from 'lib/shared/session-place-store';
 
 /**
  * Provider-agnostic authentication context and types.
@@ -63,6 +64,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setUser(null);
       // Nobody is signed in, so this browser should not keep showing the last member's notifications.
       void dropBrowserPushWhenSignedOut();
+      // Nor keep the last member's unsent drafts for whoever signs in next in this tab.
+      clearSessionPlaces();
     }
   }, [clerkUser, isClerkLoaded]);
 

@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { SE_CARD_WORDS, SE_MUTE_WORDS, seCanSave, seCardAnswerKind, seCardShownDone, seCardTakesCheckMark, seIsMoodCard, seCardOpensSheet, seDailyCreditPill, seNewCommentsLine, seStoryPostHref, type SeCardAnswerKind, type SeTodayCard } from '@ctf/shared';
 import { SeAvatar } from '../../shared/se-avatar';
 import { QuestionsPanel, isQuestionsCard } from './questions-panel';
 import { CardSheet } from './card-sheet';
+import { forgetOpenCard, readOpenCard, rememberOpenCard } from './reload-place';
 import { GoalCard } from './goal-card';
 import { MoodFaces, SaveHideIcons } from './card-quick-actions';
 import { CardFigures } from './card-figures';
@@ -197,11 +198,28 @@ function CardFoot({ card, onAnswer, onSave, onHide }: FootProps) {
   );
 }
 
-// Opening a card, in its sheet or in place, marks it read (onRead) before it opens.
+// Opening a card, in its sheet or in place, marks it read (onRead) before it opens. The open card is
+// remembered (reload-place.ts), so a reload of the page opens it again without marking it twice.
 function useCardOpening(card: SeTodayCard, onRead: (() => void) | undefined) {
-  const [open, setOpen] = useState(false);
-  const [sheet, setSheet] = useState<Sheet>(null);
+  const [open, setOpenState] = useState(false);
+  const [sheet, setSheetState] = useState<Sheet>(null);
   const opensSheet = seCardOpensSheet(card);
+  useEffect(() => {
+    const place = readOpenCard();
+    if (place?.id !== card.id) return;
+    if (place.sheet) setSheetState({ firstAnswer: null });
+    else setOpenState(true);
+  }, [card.id]);
+  const setOpen = (next: boolean) => {
+    if (next) rememberOpenCard({ id: card.id, sheet: false });
+    else forgetOpenCard(card.id);
+    setOpenState(next);
+  };
+  const setSheet = (next: Sheet) => {
+    if (next) rememberOpenCard({ id: card.id, sheet: true });
+    else forgetOpenCard(card.id);
+    setSheetState(next);
+  };
   const openSheet = (firstAnswer: SeCardAnswerKind | null) => {
     onRead?.();
     setSheet({ firstAnswer });
@@ -209,7 +227,7 @@ function useCardOpening(card: SeTodayCard, onRead: (() => void) | undefined) {
   const toggle = () => {
     if (opensSheet) return openSheet(null);
     if (!open) onRead?.();
-    setOpen((value) => !value);
+    setOpen(!open);
   };
   return { open, setOpen, sheet, setSheet, opensSheet, openSheet, toggle };
 }
