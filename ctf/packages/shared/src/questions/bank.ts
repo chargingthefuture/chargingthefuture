@@ -27,7 +27,7 @@ const ALL: SeQuestion[] = [
   { id: 'q49', text: 'Where do you want to put your energy this year?', choices: ['Learning a skill', 'Earning', 'My health', 'Helping others get out'] },
   { id: 'q50', text: 'What do you want from people here first?', choices: ['Someone to talk to', 'Help with a task', 'Work or income', 'Quiet company'] },
   { id: 'q51', text: 'What does a good life look like to you?', choices: ['Simple and quiet', 'Busy and useful', 'Free to move around', 'Surrounded by people I trust'] },
-  { id: 'q52', text: 'Which is worth guarding most now?', choices: ['My time', 'My attention', 'My name', 'My peace'] },
+  { id: 'q52', text: 'Which is worth guarding most now?', choices: ['My time', 'My attention', 'My privacy', 'My peace'] },
   { id: 'q53', text: 'What kind of person do you want to meet here?', choices: ['Someone further along', 'Someone at the same point', 'Someone to work with', 'Someone to learn from'] },
   { id: 'q54', text: 'What would you rather help a newer member with?', choices: ['Locking down accounts', 'Finding work', 'Keeping records', 'Getting through the first months'] },
   { id: 'q55', text: 'What do you want to learn next?', choices: ['A trade', 'Tech and security', 'Business and bookkeeping', 'Writing or art'] },
