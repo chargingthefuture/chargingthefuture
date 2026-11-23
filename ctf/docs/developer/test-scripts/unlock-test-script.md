@@ -21,7 +21,7 @@
 | **Surfaces** | web (internal admin surface) |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-unlock-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-11-23 manual update and UNLOCK-A9e, every help request on the sign-up list with Done and the tile dot; UNLOCK-M6: the banner opens the Unlock screen at Why this step or at Can't find it?, the other routes' new wording, and Help request sent |
 
 ## How to run this
 
@@ -658,6 +658,25 @@ does not change the account's access, its submission, or whether it is counted; 
 test** stays a separate control.
 **Result:** web ☐ — notes:
 
+### UNLOCK-A9e · Every help request on the sign-up list, Done, and the Unlock tile's dot (added 2026-11-23)
+**Role:** two new members on 3.1, then an admin · **Surfaces:** web (admin surface) — web-only, no Android admin (rule 105)
+**Steps:**
+1. As member A, open the Unlock screen and press **Ask for help finding it** with the box empty. As
+   member B, do the same with a name in the box.
+2. As the admin, open the admin landing, then `/admin/unlock`, and find both rows in the sign-up list.
+3. Go back to the admin landing.
+4. On A's row press **Done**; reload the admin landing.
+5. Approve B's address once B sends one (or turn it down); reload the admin landing.
+6. Press **Mark as waiting again** on A's row; then as A ask for help again with a name in the box.
+**Expected:** Step 2: the Unlock tile carries the follow-up dot. A's row reads "Asked for help on
+<date> · waiting" with **Done**; B's row reads the same plus "Told us: <name>". Step 3: the dot is
+still there although the area was opened. Step 4: A's row reads "· marked done on <date>" with
+**Mark as waiting again**, and a `unlock.admin.help-request.done` audit row is written; the dot stays
+while B waits. Step 5: B's row reads "· handled in review" with no button, and the dot is gone.
+Step 6: A's request waits again and the dot returns. Nothing in these steps changes either member's
+access.
+**Result:** web ☐ — notes:
+
 ### UNLOCK-A9b · Ban an account from the sign-up list, and have the ban hold at the auth provider
 **Role:** admin / reviewer · **Surfaces:** web (admin surface) — web-only, no Android admin (rule 105)
 **Precondition:** signed in as an admin; the auth provider secret is set in the app runtime; a test
@@ -770,7 +789,8 @@ Signing back in with the same account brings the Unlock screen back with your pl
 6. Repeat step 1 on the waiting, rejected and approved accounts.
 7. Press **Ask for help finding it** with a name in the box.
 8. Change the color and mode in Settings → Theme and open the screen again.
-**Expected:** Steps 1 and 3 open the Unlock screen inside 3.1, with the tab bar still at the bottom; no 3.0 page opens, and the address (web) reads `?unlock=1`. Step 2 returns to the screen before. Step 4: the card matches the banner (day count and bar, title, words); a member who reported a removed account sees **Finish with <handle>**, otherwise a link to the Quora account removals survey; the survey and the Knowledge Library are the only links that open a 3.0 page. Step 5: the card changes to **Sent. Waiting for approval.** Step 6: waiting shows that line; rejected shows **Needs another look** with a box for a new address; approved shows **Approved**, when the ServiceCredits arrive, and **Back to Today**, with no help box. Step 7 says **Sent. A person will use it to look you up.** and the banner's day count stops. Step 8: the screen reads in every color, light and dark. On 3.0, `/plugin/unlock` is unchanged.
+9. (added 2026-11-23) Go back to Today and press **Can't find it?** in the Unlock banner.
+**Expected:** Steps 1 and 3 open the Unlock screen inside 3.1, with the tab bar still at the bottom; no 3.0 page opens. From step 1, **Why this step** is the first section on the screen and the address (web) reads `?unlock=why`; from step 3 the screen opens at its top and the address reads `?unlock=1`. Step 9: the screen opens with **Can't find it?** first (the box "Anything that helps me find you on Quora (optional)" and **Ask for help finding it**), the address reads `?unlock=help`, and nothing is sent until that button is pressed. **Quora removed your account?** reads "Add it to the Quora account removals survey. Or bring your Quora writing into the Knowledge Library with its profile address. Either option unlocks your account." Step 2 returns to the screen before. Step 4: the card matches the banner (day count and bar, title, words); a member who reported a removed account sees **Finish with <handle>**, otherwise a link to the Quora account removals survey; the survey and the Knowledge Library are the only links that open a 3.0 page. Step 5: the card changes to **Sent. Waiting for approval.** Step 6: waiting shows that line; rejected shows **Needs another look** with a box for a new address; approved shows **Approved**, when the ServiceCredits arrive, and **Back to Today**, with no help box. Step 7 says **Sent. A person will use it to look you up.** and the banner's day count stops. Step 8: the screen reads in every color, light and dark. On 3.0, `/plugin/unlock` is unchanged.
 **Result:** web ☐ · android ☐ — notes:
 ---
 
@@ -816,18 +836,19 @@ tracked, not a new bug:
 2. On day 9, open the app. Type `not a link` in Profile address and press Add.
 3. On day 15 with nothing sent, open the app and try to post an ask; open Mood and Today.
 4. Type a Quora profile address in the banner's box and press Add, then open the app again.
-5. As a second new member, press "Can't find it?" in the banner.
+5. As a second new member, press "Can't find it?" in the banner, then **Ask for help finding it** on the screen it opens.
 6. Get approved and open the app.
 **Expected:** Step 1: the app opens (no Unlock wall) with a yellow banner: "DAY 1 OF 14" and a short
 progress bar, "Add your Quora profile address to finish Unlock", the Profile address box with Add,
-"add it to the census" and "bring your Quora writing" links, and "Why this step · Can't find it?";
+"Quora removed your account? Add it to the Quora account removals survey. Or bring your Quora writing into the Knowledge Library with its profile address. Either option unlocks your account." with the two links, and "Why this step · Can't find it?";
 Close hides it until the next visit. Step 2: "DAY 9 OF 14", the bar about two thirds along, no Close,
 and the route's message about the address under the box. Step 3: the banner turns to the card
 color with "Posting is paused until you finish Unlock", what stays open, the address box and "Can't
 find it? Ask the architect"; the ask is refused, Mood and Today work, and nothing says the account
 is at risk. Step 4: the banner changes to "Sent. Waiting for approval." straight away and posting
-works again. Step 5: the banner changes to "Sent. Waiting for approval." and the Commons opens to
-that member. Step 6: no banner. People shows the number listed and Finish Unlock, with no names, until approval.
+works again. Step 5: "Can't find it?" opens the Unlock screen at its help form and sends nothing by itself;
+after the request, the banner reads "Help request sent." (never "Sent. Waiting for approval.") and
+the Commons opens to that member. Step 6: no banner. People shows the number listed and Finish Unlock, with no names, until approval.
 3.0 still sends the member to the Unlock screen as before.
 **Result:** web ☐ android ☐ — notes:
 

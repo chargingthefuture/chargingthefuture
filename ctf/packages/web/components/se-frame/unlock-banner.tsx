@@ -37,7 +37,7 @@ function Banner({ standing, onClose, onSent }: { standing: SeUnlockStanding; onC
       <p className={styles.title}>{standing.title}</p>
       <p className={styles.text}>{standing.text}</p>
       {standing.form ? <AddressForm label={paused ? W.pausedLabel : W.label} onSent={onSent} /> : null}
-      {standing.form && !paused ? <OtherRoutes onSent={onSent} /> : null}
+      {standing.form && !paused ? <OtherRoutes /> : null}
       {paused ? <HelpButton label={W.askArchitect} className={styles.askLink} onSent={onSent} /> : null}
     </section>
   );
@@ -119,34 +119,38 @@ function AddressForm({ label, onSent }: { label: string; onSent: () => void }) {
   );
 }
 
-function OtherRoutes({ onSent }: { onSent: () => void }) {
+function OtherRoutes() {
   const openUnlock = useOpenUnlock();
   return (
     <>
       <p className={styles.small}>
-        <b>{W.removedLead}</b> {W.removedText}{' '}
+        <b>{W.removedLead}</b> {W.censusLead}{' '}
         <Link href={W.censusHref} className={styles.link}>
           {W.census}
-        </Link>{' '}
-        {W.or}{' '}
+        </Link>
+        {W.censusTail} {W.knowledgeLead}{' '}
         <Link href={W.knowledgeHref} className={styles.link}>
           {W.knowledge}
         </Link>
-        .
+        {W.knowledgeTail} {W.eitherUnlocks}
       </p>
       <p className={styles.smaller}>
         {W.countLine}{' '}
-        <button type="button" className={styles.linkButton} onClick={openUnlock}>
+        <button type="button" className={styles.linkButton} onClick={() => openUnlock('why')}>
           {W.why}
         </button>{' '}
-        · <HelpButton label={W.cantFind} className={styles.linkButton} onSent={onSent} />
+        ·{' '}
+        <button type="button" className={styles.linkButton} onClick={() => openUnlock('help')}>
+          {W.cantFind}
+        </button>
       </p>
     </>
   );
 }
 
-// "Can't find it?" asks for help finding the address: the same request the Unlock screen sends,
-// which stops the count and opens the Commons so there is somebody to ask.
+// After day 14, "Can't find it? Ask the architect" asks for help finding the address: the same
+// request the Unlock screen sends, which stops the count. Before then, "Can't find it?" opens the
+// Unlock screen at its help form, so the member can say what helps find them first.
 function HelpButton({ label, className, onSent }: { label: string; className: string; onSent: () => void }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);

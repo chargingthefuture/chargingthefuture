@@ -14,6 +14,7 @@ import {
   type SePeopleFilter,
   type SeTab,
   type SeThemeTokens,
+  type SeUnlockFocus,
 } from '@ctf/shared';
 import { useAuth } from '../../auth/auth-context';
 import { SeTabBar } from './SeTabBar';
@@ -91,17 +92,18 @@ function SeAppFrameBody({ onOpen: openFeature }: FrameProps) {
   const startRain = useCallback(() => setRainRun((run) => run + 1), []);
   const rooms = useSeRooms();
   const { minimize } = rooms;
-  // Unlock opens inside 3.1 (its own screen in the frame), never the 3.0 Unlock screen.
-  const [unlockOpen, setUnlockOpen] = useState(false);
-  const closeUnlock = useCallback(() => setUnlockOpen(false), []);
-  useFrameBack(tab, setTab, rooms.shown !== null, minimize, { open: unlockOpen, close: closeUnlock });
+  // Unlock opens inside 3.1 (its own screen in the frame), never the 3.0 Unlock screen. The banner's
+  // "Why this step" and "Can't find it?" open it at that section.
+  const [unlockFocus, setUnlockFocus] = useState<SeUnlockFocus | null>(null);
+  const closeUnlock = useCallback(() => setUnlockFocus(null), []);
+  useFrameBack(tab, setTab, rooms.shown !== null, minimize, { open: unlockFocus !== null, close: closeUnlock });
 
   // Choosing a tab while a room is open puts the room in the bar above the tab bar. People opens on
-  // All, except from Get introduced on Today's Match card, which opens it on "Fits what you need".
+  // All, except from See who fits on Today's Match card, which opens it on "Fits what you need".
   const select = useCallback(
     (next: SeTab, filter: SePeopleFilter = 'all') => {
       minimize();
-      setUnlockOpen(false);
+      setUnlockFocus(null);
       setNewKind('ask');
       setPeopleFilter(filter);
       setTab(next);
@@ -116,25 +118,25 @@ function SeAppFrameBody({ onOpen: openFeature }: FrameProps) {
   };
   const scrollRef = useRef<ScrollView>(null);
   const scrollToTop = useCallback(() => scrollRef.current?.scrollTo({ y: 0, animated: false }), []);
-  const onOpen = useCallback(
-    (key: FeatureKey) => {
-      if (key !== 'unlock') return openFeature(key);
-      setUnlockOpen(true);
+  const openUnlock = useCallback(
+    (focus: SeUnlockFocus) => {
+      setUnlockFocus(focus);
       scrollToTop();
     },
-    [openFeature, scrollToTop],
+    [scrollToTop],
   );
+  const onOpen = useCallback((key: FeatureKey) => (key === 'unlock' ? openUnlock('top') : openFeature(key)), [openFeature, openUnlock]);
 
   return (
     <View style={s.frame}>
       <SeFrameScrollContext.Provider value={scrollToTop}>
       <ScrollView ref={scrollRef} style={rooms.shown ? s.hidden : null}>
         <ScaledScreen scale={SE_TEXT_SIZE_SCALE[reading.textSize]} style={s.screen}>
-          {unlockOpen ? (
-            <UnlockScreen t={t} onBack={closeUnlock} onToday={() => select('today')} />
+          {unlockFocus ? (
+            <UnlockScreen t={t} focus={unlockFocus} onBack={closeUnlock} onToday={() => select('today')} />
           ) : (
             <>
-              <UnlockBanner t={t} onOpenUnlock={() => onOpen('unlock')} />
+              <UnlockBanner t={t} onOpenUnlock={openUnlock} />
               <FrameHeader s={s} tab={tab} presence={presence} />
 
               <TabScreen

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { seUnlockStanding } from '@ctf/shared';
+import { SE_UNLOCK_WORDS, seUnlockFocusFromQuery, seUnlockFocusQuery, seUnlockStanding } from '@ctf/shared';
 
 const now = new Date('2026-10-27T12:00:00.000Z');
 const daysAgo = (n: number) => new Date(now.getTime() - n * 86_400_000).toISOString();
@@ -18,6 +18,19 @@ describe('Unlock standing in 3.1', () => {
   it('pauses posting after day 14 unless the address was sent', () => {
     expect(seUnlockStanding({ approved: false, firstSeenIso: daysAgo(14), countStopped: false }, now).paused).toBe(true);
     expect(seUnlockStanding({ approved: false, firstSeenIso: daysAgo(30), countStopped: true }, now)).toMatchObject({ paused: false, form: false });
+  });
+
+  it('says a help request was sent, not an address, when only help was asked for', () => {
+    const helped = seUnlockStanding({ approved: false, firstSeenIso: daysAgo(3), countStopped: true, helpOnly: true }, now);
+    expect(helped).toMatchObject({ title: SE_UNLOCK_WORDS.helpSentTitle, form: false });
+    const sent = seUnlockStanding({ approved: false, firstSeenIso: daysAgo(3), countStopped: true }, now);
+    expect(sent.title).toBe(SE_UNLOCK_WORDS.sentTitle);
+  });
+
+  it('opens the Unlock screen at the section the link names', () => {
+    expect([seUnlockFocusFromQuery('why'), seUnlockFocusFromQuery('help'), seUnlockFocusFromQuery('1'), seUnlockFocusFromQuery(null)]).toEqual(['why', 'help', 'top', null]);
+    expect(seUnlockFocusQuery('top')).toBe('1');
+    expect(seUnlockFocusQuery('help')).toBe('help');
   });
 
   it('says nothing to an approved member', () => {

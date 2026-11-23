@@ -140,7 +140,7 @@ function MatchLead({ filter, refreshKey, onIntroduce }: { filter: SeTodayFilter;
 // A visitor who is not signed in gets GuestToday (guest-today.tsx) instead.
 // `onPresence` hands the "N Avens here" count to the title row above the screen. `rain` carries the
 // emoji rain switch and the Days won total the account last saw (use-se-prefs.ts). `onPeopleFits` opens
-// People on "Fits what you need", from the Match card's Get introduced.
+// People on "Fits what you need", from the Match card's See who fits.
 type RainPrefs = { on: boolean; seen: number | null | undefined; onSeen: (_total: number) => void };
 
 type ScreenProps = { accountId: string; onPresence?: (count: number | null) => void; rain: RainPrefs; onPeopleFits: () => void };

@@ -23,7 +23,7 @@ export function PeopleLocked({ count, onToday }: { count: number | null; onToday
         {count !== null ? <span className={styles.lockedNumber}>{count}</span> : null}
         <span className={styles.lockedLabel}>{W.lockedCount}</span>
         <p className={styles.lockedText}>{W.lockedText}</p>
-        <button type="button" className={styles.finish} onClick={openUnlock}>
+        <button type="button" className={styles.finish} onClick={() => openUnlock()}>
           {W.finishUnlock}
         </button>
       </section>

@@ -17,7 +17,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:directory` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-directory-feature-inventory.md` |
-| **Generated** | 2026-07-16 (hand-updated: `country` is now required on every profile — see DIR-4, DIR-4b, DIR-A1; plus the unified skills picker and ported v2 location fields — see DIR-2; 2026-07-17: android member self-edit (#1325) and android admin editable skills (#1335) now ship — see DIR-4, DIR-4b, DIR-A1; 2026-07-18: "Weavers of the Commons" contributor badge on claimed profiles — see DIR-8; 2026-07-19: android badge parity (#1680) ships — DIR-8 gains android; 2026-09-21: the tombstone-column drop's leftover readers are fixed — no step here changes, but a SkillsHunt accept and a Foundation connect must both succeed again; regenerate via CI to stamp the commit) · 2026-10-08 manual update: core smoke step 4 checks the signed-out landing has no SkillsHunt card · 2026-10-08 manual update: DIR-A1f checks the admin edit drawer's new Sector and Job title selects · 2026-09-22 manual update: DIR-A1d checks the admin list loads at all, after its page query was refused by the database for a gap in its placeholder numbering · 2026-10-15 manual update: DIR-12 checks the invite cards' avatars, that no card carries a picture, that a signed-out picture read is refused, and See the live listing · 2026-10-17: demo seed adds a badge holder with a pending skill and three invitations (core smoke step 1, DIR-3, DIR-8, DIR-12) · 2026-11-16 manual update: DIR-14 checks the Match card on Today, its count against the landing page, Get introduced into People's Fits what you need, a landing page code, and deletion |
+| **Generated** | 2026-07-16 (hand-updated: `country` is now required on every profile — see DIR-4, DIR-4b, DIR-A1; plus the unified skills picker and ported v2 location fields — see DIR-2; 2026-07-17: android member self-edit (#1325) and android admin editable skills (#1335) now ship — see DIR-4, DIR-4b, DIR-A1; 2026-07-18: "Weavers of the Commons" contributor badge on claimed profiles — see DIR-8; 2026-07-19: android badge parity (#1680) ships — DIR-8 gains android; 2026-09-21: the tombstone-column drop's leftover readers are fixed — no step here changes, but a SkillsHunt accept and a Foundation connect must both succeed again; regenerate via CI to stamp the commit) · 2026-10-08 manual update: core smoke step 4 checks the signed-out landing has no SkillsHunt card · 2026-10-08 manual update: DIR-A1f checks the admin edit drawer's new Sector and Job title selects · 2026-09-22 manual update: DIR-A1d checks the admin list loads at all, after its page query was refused by the database for a gap in its placeholder numbering · 2026-10-15 manual update: DIR-12 checks the invite cards' avatars, that no card carries a picture, that a signed-out picture read is refused, and See the live listing · 2026-10-17: demo seed adds a badge holder with a pending skill and three invitations (core smoke step 1, DIR-3, DIR-8, DIR-12) · 2026-11-16 manual update: DIR-14 checks the Match card on Today, its count against the landing page, Get introduced into People's Fits what you need, a landing page code, and deletion · 2026-11-23 manual update: DIR-14: See who fits, and Show who fits opens People every time |
 | **Inventory wording** | 2026-10-01: banned-term wording removed from the inventory prose; no step in this script changed |
 
 ## How to run this
@@ -487,15 +487,17 @@ Lawyers. On lagatos.com, pick **Legal help**, save the match and note its 10-cha
    labeled **Match** with a dot in the match color, reading "What do you need today?" with twenty need
    chips, **Show who fits** (dimmed until a chip is picked) and "Have a code from lagatos.com?". It
    reads "Counting…" for a moment first. Under **Asks** or **Matches** the card is not shown.
-3. Pick **Legal help** and **Show who fits**. The card shows a big number, "people fit what you
-   need" ("person fits what you need" for one), **Get introduced** and **Change what you need**. The
+3. Pick **Legal help** and **Show who fits**. People opens on **Fits what you need** straight away
+   (every time, not only the first). Back on Today the card shows a big number, "people fit what you
+   need" ("person fits what you need" for one), **See who fits** and **Change what you need**. The
    number is the same one the landing page shows for Legal help.
-4. Tap **Get introduced**. People opens with a **Fits what you need** chip chosen first; the web
+4. Tap **See who fits**. People opens with a **Fits what you need** chip chosen first; the web
    address reads `/?tab=people&filter=fits`. The list holds exactly that many people, each a lawyer.
    Pick **All**: the extra chip goes away and everybody shows again. Reload the web page on the fits
    address: People opens on that chip again.
 5. Back on Today, **Change what you need** opens the chips with Legal help picked and **Keep what I
-   had**, which closes them unchanged.
+   had**, which closes them unchanged. Open it again, add **Housing** and press **Show who fits**:
+   People opens on **Fits what you need** again (2026-11-23).
 6. Sign in to the same account on Android (or another browser). The card shows the same number
    without picking again: the needs are on the account, not the phone.
 7. As an admin, add a new Directory profile with the Lawyers job title. Reopen Today: the number is
@@ -504,7 +506,7 @@ Lawyers. On lagatos.com, pick **Legal help**, save the match and note its 10-cha
    tap **Use code**. The card shows the count for that code's needs. A code with a letter the
    landing page never uses (O, I, S, 0, 1 or 5) says "A code is 10 letters and numbers, like
    ABCDE-FGHJK." and saves nothing; a well-formed code nobody saved says no match is saved under it.
-9. Switch the theme through all four colors in light and dark: the label, dot and **Get introduced**
+9. Switch the theme through all four colors in light and dark: the label, dot and **See who fits**
    stay readable in each. Turn off the network and reopen Today: the card reads "Could not read
    Match." with the reason and **Try again**.
 10. Delete the account from Settings. Its `today_match_needs` row is gone.

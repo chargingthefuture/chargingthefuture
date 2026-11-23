@@ -1,10 +1,10 @@
 import type { SeCardMark, SeCardMarkChange } from '@ctf/shared';
 import { queryDb } from 'lib/db/postgres';
 
-// The store behind a member's own Done and Not for me marks (today_card_marks), one row per member
+// The store behind a member's own Done, Read and Not for me marks (today_card_marks), one row per member
 // per card. Every query is parameterized and scoped to one account.
 
-type MarkRow = { card_id: string; mark: 'done' | 'not_for_me'; marked_at: Date };
+type MarkRow = { card_id: string; mark: 'done' | 'read' | 'not_for_me'; marked_at: Date };
 
 export async function readCardMarks(accountId: string, cardIds: readonly string[]): Promise<SeCardMark[]> {
   if (cardIds.length === 0) return [];
@@ -15,14 +15,15 @@ export async function readCardMarks(accountId: string, cardIds: readonly string[
   return result.rows.map((row) => ({ cardId: row.card_id, mark: row.mark, markedAtIso: new Date(row.marked_at).toISOString() }));
 }
 
-// One change from the screen: a mark set now (replacing the card's earlier one), or Done taken away.
+// One change from the screen: a mark set now (replacing the card's earlier one), or Done or Read
+// taken away.
 // With `keepExisting` (the one-time upload of a device's old marks) a card the account already marked
 // keeps its mark.
 export async function saveCardMarks(accountId: string, changes: readonly SeCardMarkChange[], keepExisting = false): Promise<void> {
   const cleared = changes.filter((change) => change.mark === 'clear').map((change) => change.cardId);
   const set = changes.filter((change) => change.mark !== 'clear');
   if (cleared.length > 0) {
-    await queryDb(`DELETE FROM today_card_marks WHERE account_id = $1 AND card_id = ANY($2::text[]) AND mark = 'done'`, [accountId, cleared]);
+    await queryDb(`DELETE FROM today_card_marks WHERE account_id = $1 AND card_id = ANY($2::text[]) AND mark IN ('done', 'read')`, [accountId, cleared]);
   }
   if (set.length === 0) return;
   const conflict = keepExisting ? 'DO NOTHING' : 'DO UPDATE SET mark = EXCLUDED.mark, marked_at = NOW()';
@@ -34,11 +35,13 @@ export async function saveCardMarks(accountId: string, changes: readonly SeCardM
   );
 }
 
-// The card ids this member gave one mark, newest first (Me → Read and Hidden).
+// The card ids this member gave one mark, newest first (Me → Read and Hidden). Read lists the cards
+// marked done with the dot and the cards marked read by opening them.
 export async function listMarkedCardIds(accountId: string, mark: 'done' | 'not_for_me', limit = 200): Promise<string[]> {
+  const marks = mark === 'done' ? ['done', 'read'] : [mark];
   const result = await queryDb<{ card_id: string }>(
-    `SELECT card_id FROM today_card_marks WHERE account_id = $1 AND mark = $2 ORDER BY marked_at DESC LIMIT $3`,
-    [accountId, mark, limit],
+    `SELECT card_id FROM today_card_marks WHERE account_id = $1 AND mark = ANY($2::text[]) ORDER BY marked_at DESC LIMIT $3`,
+    [accountId, marks, limit],
   );
   return result.rows.map((row) => row.card_id);
 }

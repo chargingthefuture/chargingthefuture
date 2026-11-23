@@ -1,5 +1,5 @@
 import type { SeTodayCard } from './types';
-export type SeCardMarkKind = 'done' | 'not_for_me';
+export type SeCardMarkKind = 'done' | 'read' | 'not_for_me';
 export type SeCardMark = {
     cardId: string;
     mark: SeCardMarkKind;

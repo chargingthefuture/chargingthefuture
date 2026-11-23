@@ -6,6 +6,7 @@ import { getUnlockTokens } from './unlock-shared';
 import { UnlockSignupAddUrl } from './unlock-signup-add-url';
 import { UnlockSignupBan } from './unlock-signup-ban';
 import { UnlockSignupDemo } from './unlock-signup-demo';
+import { UnlockSignupHelp } from './unlock-signup-help';
 
 // Color and wording for what happened to this person's Quora URL, including the case this panel exists
 // for: they signed up and never submitted one.
@@ -52,14 +53,6 @@ function screenViewLine(account: UnlockSignupAccount): string | null {
   return account.unlockScreenViews === 1
     ? 'Opened the Unlock screen once'
     : `Opened the Unlock screen ${account.unlockScreenViews} times`;
-}
-
-// What they told us when they pressed "ask for help" instead of giving a URL. Shown as written, and
-// labeled so a reviewer knows it came from the member rather than from Quora. For an account with no
-// submission this is the only identifying thing on file, so it sits above the timing lines.
-function helpHintLine(account: UnlockSignupAccount): string | null {
-  if (!account.quoraHint) return null;
-  return `Told us: ${account.quoraHint}`;
 }
 
 // Said only for a banned account: when it happened, and which judgment put them there — a review
@@ -128,6 +121,7 @@ export function UnlockSignupRow({
   onToggleDemo,
   onToggleBanned,
   onAddUrl,
+  onMarkHelpDone,
 }: {
   account: UnlockSignupAccount;
   busy: boolean;
@@ -135,6 +129,7 @@ export function UnlockSignupRow({
   onToggleDemo: (userId: string, demo: boolean) => void;
   onToggleBanned: (userId: string, banned: boolean) => void;
   onAddUrl: (userId: string, url: string) => void;
+  onMarkHelpDone: (userId: string, done: boolean) => void;
 }) {
   const { theme } = useTheme();
   const t = getUnlockTokens(theme);
@@ -153,7 +148,7 @@ export function UnlockSignupRow({
 
       <DetailLine text={handle ? `@${handle}` : null} />
       <DetailLine text={account.email} breakAll />
-      <DetailLine text={helpHintLine(account)} breakAll />
+      <UnlockSignupHelp account={account} busy={busy} onMarkHelpDone={onMarkHelpDone} />
       <DetailLine text={timingLine(account)} />
       <DetailLine text={screenViewLine(account)} />
       <DetailLine text={banLine(account)} />

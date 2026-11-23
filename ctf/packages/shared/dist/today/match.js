@@ -69,7 +69,7 @@ export function seMatchNeedsCovered(jobTitleIds, idsByName) {
 export const SE_MATCH_WORDS = {
     label: 'Match',
     fit: (count) => (count === 1 ? 'person fits what you need' : 'people fit what you need'),
-    introduce: 'Get introduced',
+    introduce: 'See who fits',
     ask: 'What do you need today?',
     needsLabel: 'What you need',
     show: 'Show who fits',

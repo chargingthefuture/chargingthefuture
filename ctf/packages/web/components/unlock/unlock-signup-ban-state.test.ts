@@ -24,6 +24,9 @@ function account(overrides: Partial<UnlockSignupAccount> = {}): UnlockSignupAcco
     submittedAt: null,
     unlockScreenViews: 0,
     quoraHint: null,
+    helpRequestedAt: null,
+    helpDoneAt: null,
+    helpRequestOpen: false,
     ...overrides,
   } as UnlockSignupAccount;
 }

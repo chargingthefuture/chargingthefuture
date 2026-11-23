@@ -1,3 +1,5 @@
+import { SE_UNLOCK_OTHER_ROUTES_WORDS } from './unlock';
+
 // The Unlock screen inside the 3.1 frame, shared by web and Android. It does what the 3.0 Unlock page
 // does for a member, in the 3.1 design: send the Quora profile address, the two other ways to finish,
 // help finding the address, where the member stands, and why the step exists. It reads and writes
@@ -61,6 +63,20 @@ export function seRemovedAccounts(answered: boolean, body: SeRemovedAccountsBody
 // The screen's address on the web, so the back button and a shared link land on it. Inside 3.1.
 export const SE_UNLOCK_SCREEN_QUERY = 'unlock';
 
+// Which section the screen opens with first: the top (the stage card), "Why this step" (the banner's
+// link of that name) or "Can't find it?" (the banner's link of that name, which opens the help form
+// rather than sending a request with nothing in it). The web keeps it as the query's value.
+export type SeUnlockFocus = 'top' | 'why' | 'help';
+
+export function seUnlockFocusFromQuery(value: string | null): SeUnlockFocus | null {
+  if (value === 'why' || value === 'help') return value;
+  return value === '1' || value === 'top' ? 'top' : null;
+}
+
+export function seUnlockFocusQuery(focus: SeUnlockFocus): string {
+  return focus === 'top' ? '1' : focus;
+}
+
 export const SE_UNLOCK_SCREEN_WORDS = {
   back: 'Back',
   title: 'Unlock',
@@ -88,19 +104,11 @@ export const SE_UNLOCK_SCREEN_WORDS = {
   resend: 'Send a new address',
   // The two other ways to finish.
   removedTitle: 'Quora removed your account?',
-  removedText: 'Either of these finishes Unlock too.',
   removedLoading: 'Reading the accounts you reported…',
   removedReadFailed: 'Your reported accounts could not be read',
   finishWith: (handle: string) => `Finish with ${handle}`,
   finishFailed: 'Unlock could not be started from that account.',
-  censusLead: 'Add it to the',
-  census: 'Quora account removals survey',
-  censusTail: ', then come back here.',
-  knowledgeLead: 'Or bring your Quora writing into the',
-  knowledge: 'Knowledge Library',
-  knowledgeTail: ' with its profile address.',
-  censusHref: '/survey/quora-account-deletions',
-  knowledgeHref: '/knowledge',
+  ...SE_UNLOCK_OTHER_ROUTES_WORDS,
   // Help finding the address.
   helpTitle: "Can't find it?",
   helpText: 'You do not have to work it out alone. Asking for help stops the count, and a person uses what you write here to look you up and can approve you by hand.',

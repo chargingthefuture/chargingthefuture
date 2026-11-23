@@ -1,11 +1,12 @@
 // The Unlock screen in the 3.1 frame on Android, the copy of the web's unlock/unlock-screen.tsx:
 // everything the 3.0 Unlock screen does for a member, in the 3.1 design. It opens from the banner's
-// "Why this step", People's and + New → Talk's "Finish Unlock". The phone's back button closes it.
+// "Why this step" and "Can't find it?", People's and + New → Talk's "Finish Unlock". Opened from one of
+// the banner's two links, the section that link names comes first. The phone's back button closes it.
 
 import React, { useMemo } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { SE_UNLOCK_SCREEN_WORDS as W, type SeThemeTokens } from '@ctf/shared';
+import { SE_UNLOCK_SCREEN_WORDS as W, type SeThemeTokens, type SeUnlockFocus } from '@ctf/shared';
 import { UnlockStageCard } from './UnlockStageCard';
 import { UnlockRemovedRoutes } from './UnlockRemovedRoutes';
 import { UnlockHelp } from './UnlockHelp';
@@ -13,7 +14,7 @@ import { UnlockWhy } from './UnlockWhy';
 import { makeUnlockStyles, type UnlockStyles } from './unlockStyles';
 import { useUnlockScreen, type SeUnlockScreenData } from './useUnlockScreen';
 
-export function UnlockScreen({ t, onBack, onToday }: { t: SeThemeTokens; onBack: () => void; onToday: () => void }) {
+export function UnlockScreen({ t, focus, onBack, onToday }: { t: SeThemeTokens; focus: SeUnlockFocus; onBack: () => void; onToday: () => void }) {
   const s = useMemo(() => makeUnlockStyles(t), [t]);
   const { data, reload } = useUnlockScreen();
   return (
@@ -28,16 +29,17 @@ export function UnlockScreen({ t, onBack, onToday }: { t: SeThemeTokens; onBack:
           {W.title}
         </Text>
       </View>
+      {focus === 'why' ? <UnlockWhy s={s} /> : null}
       <Text style={s.lead}>{W.lead}</Text>
-      <Body s={s} t={t} data={data} reload={reload} onToday={onToday} />
-      <UnlockWhy s={s} />
+      <Body s={s} t={t} data={data} reload={reload} onToday={onToday} helpFirst={focus === 'help'} />
+      {focus === 'why' ? null : <UnlockWhy s={s} />}
     </View>
   );
 }
 
-type BodyProps = { s: UnlockStyles; t: SeThemeTokens; data: SeUnlockScreenData; reload: () => void; onToday: () => void };
+type BodyProps = { s: UnlockStyles; t: SeThemeTokens; data: SeUnlockScreenData; reload: () => void; onToday: () => void; helpFirst: boolean };
 
-function Body({ s, t, data, reload, onToday }: BodyProps) {
+function Body({ s, t, data, reload, onToday, helpFirst }: BodyProps) {
   if (data.kind === 'loading') return <Text style={s.note}>{W.loading}</Text>;
   if (data.kind === 'error') {
     return (
@@ -52,12 +54,13 @@ function Body({ s, t, data, reload, onToday }: BodyProps) {
     );
   }
   // Help finding the address stays offered until approval, as on the 3.0 page, waiting included.
-  const open = data.stage !== 'approved';
+  const help = data.stage !== 'approved' ? <UnlockHelp s={s} t={t} onAsked={reload} /> : null;
   return (
     <>
+      {helpFirst ? help : null}
       <UnlockStageCard s={s} t={t} stage={data.stage} standing={data.standing} helpAsked={data.helpAsked} onSent={reload} onToday={onToday} />
       {data.stage === 'send' ? <UnlockRemovedRoutes s={s} onFinished={reload} /> : null}
-      {open ? <UnlockHelp s={s} t={t} onAsked={reload} /> : null}
+      {helpFirst ? null : help}
     </>
   );
 }

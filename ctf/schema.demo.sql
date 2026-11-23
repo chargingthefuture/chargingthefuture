@@ -1836,7 +1836,8 @@ ALTER TABLE IF EXISTS unlock_banned_accounts ADD COLUMN IF NOT EXISTS updated_at
 CREATE TABLE IF NOT EXISTS unlock_help_requests (
   user_id TEXT PRIMARY KEY,
   requested_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  quora_hint TEXT
+  quora_hint TEXT,
+  done_at TIMESTAMPTZ
 );
 ALTER TABLE IF EXISTS unlock_help_requests ADD COLUMN IF NOT EXISTS requested_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 -- Whatever the member could give about their Quora account when they could not give the URL itself:
@@ -1845,6 +1846,10 @@ ALTER TABLE IF EXISTS unlock_help_requests ADD COLUMN IF NOT EXISTS requested_at
 -- reads it in the sign-ups panel and looks them up by hand, which is the only thing that was missing
 -- for a member who pressed "ask for help" and left nothing behind to approve.
 ALTER TABLE IF EXISTS unlock_help_requests ADD COLUMN IF NOT EXISTS quora_hint TEXT;
+-- When an admin pressed Done on the request in the sign-ups panel (owner decision, 2026-11-23); NULL
+-- while it waits. A request also stops waiting once the member's address is approved or turned down,
+-- and the Unlock tile on the admin landing carries a dot while any is waiting. A new hint reopens it.
+ALTER TABLE IF EXISTS unlock_help_requests ADD COLUMN IF NOT EXISTS done_at TIMESTAMPTZ;
 
 -- Add prod unlock audit/config tables if missing.
 -- `user_id` and `action` are nullable: the current writer (insertUnlockAudit) records the
@@ -7563,16 +7568,18 @@ ALTER TABLE IF EXISTS today_card_feedback_counts ADD COLUMN IF NOT EXISTS signal
 ALTER TABLE IF EXISTS today_card_feedback_counts ADD COLUMN IF NOT EXISTS count INTEGER NOT NULL DEFAULT 0;
 
 -- today_card_marks: a member's own marks on Today cards (owner decisions, 2026-11-03), stored on the
--- account so every phone and browser agrees. `done` is the timeline dot: the card stays on Today the
--- day it was marked and leaves from the member's next day, and a story or replay brought round again
--- by its daily rotation stays off (a blog story comes back when its Fireside conversation has a newer
--- comment). `not_for_me` is the card's ••• menu: the card never comes back. Keyed by the card id
+-- account so every phone and browser agrees. `done` is the timeline dot: the card leaves Today at once
+-- (owner report, 2026-11-23). `read` is opening the card: it stays on Today the day it was marked and
+-- leaves from the member's next day. Either way a story or replay brought round again by its daily
+-- rotation stays off (a blog story comes back when its Fireside conversation has a newer comment), and
+-- the card is listed in Me → Read. `not_for_me` is the card's ••• menu: the card never comes back.
+-- Keyed by the card id
 -- (`<source>:<id>`). Separate from today_card_feedback_counts, which holds anonymous daily totals.
 -- Account deletion removes the member's rows.
 CREATE TABLE IF NOT EXISTS today_card_marks (
   account_id TEXT NOT NULL,
   card_id TEXT NOT NULL CHECK (char_length(card_id) BETWEEN 3 AND 241),
-  mark TEXT NOT NULL CHECK (mark IN ('done', 'not_for_me')),
+  mark TEXT NOT NULL CHECK (mark IN ('done', 'read', 'not_for_me')),
   marked_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   PRIMARY KEY (account_id, card_id)
 );
@@ -7580,6 +7587,8 @@ ALTER TABLE IF EXISTS today_card_marks ADD COLUMN IF NOT EXISTS account_id TEXT;
 ALTER TABLE IF EXISTS today_card_marks ADD COLUMN IF NOT EXISTS card_id TEXT;
 ALTER TABLE IF EXISTS today_card_marks ADD COLUMN IF NOT EXISTS mark TEXT;
 ALTER TABLE IF EXISTS today_card_marks ADD COLUMN IF NOT EXISTS marked_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE IF EXISTS today_card_marks DROP CONSTRAINT IF EXISTS today_card_marks_mark_check;
+ALTER TABLE IF EXISTS today_card_marks ADD CONSTRAINT today_card_marks_mark_check CHECK (mark IN ('done', 'read', 'not_for_me'));
 CREATE INDEX IF NOT EXISTS idx_today_card_marks_account ON today_card_marks(account_id);
 
 -- member_presence: when each signed-in member last read Today, so the board can say how many members
@@ -11957,4 +11966,26 @@ DELETE FROM question_answers
  WHERE question_id ~ '^q(0[1-9]|[1-3][0-9]|4[0-2])$';
 DELETE FROM question_answer_audit
  WHERE question_id ~ '^q(0[1-9]|[1-3][0-9]|4[0-2])$';
+
+
+-- ── post migration: 0114_today_card_marks_read.sql ──
+-- Safe to re-run.
+-- today_card_marks gains a third mark, `read`: opening a card marks it read, and it stays on Today
+-- the day it was marked, as `done` did until now. `done` is the timeline dot alone, and a card marked
+-- done leaves Today at once (owner report, 2026-11-23). Both appear in Me → Read. Marks already
+-- stored as `done` keep that value. The demo schema's copy gets the same check.
+ALTER TABLE IF EXISTS today_card_marks DROP CONSTRAINT IF EXISTS today_card_marks_mark_check;
+ALTER TABLE IF EXISTS today_card_marks ADD CONSTRAINT today_card_marks_mark_check CHECK (mark IN ('done', 'read', 'not_for_me'));
+ALTER TABLE IF EXISTS demo.today_card_marks DROP CONSTRAINT IF EXISTS today_card_marks_mark_check;
+ALTER TABLE IF EXISTS demo.today_card_marks ADD CONSTRAINT today_card_marks_mark_check CHECK (mark IN ('done', 'read', 'not_for_me'));
+
+
+-- ── post migration: 0115_unlock_help_request_done.sql ──
+-- Safe to re-run.
+-- unlock_help_requests gains done_at: when an admin pressed Done on the member's help request in the
+-- sign-ups panel on /admin/unlock (owner decision, 2026-11-23). NULL means not marked. A request waits,
+-- and the Unlock tile on the admin landing carries its dot, until it is marked done or the member's
+-- address is approved or turned down. The demo schema's copy gets the same column.
+ALTER TABLE IF EXISTS unlock_help_requests ADD COLUMN IF NOT EXISTS done_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS demo.unlock_help_requests ADD COLUMN IF NOT EXISTS done_at TIMESTAMPTZ;
 
