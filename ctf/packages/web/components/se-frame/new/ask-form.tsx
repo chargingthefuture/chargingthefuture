@@ -13,6 +13,7 @@ import {
 import styles from './new.module.css';
 import sheet from './sheet.module.css';
 import { AskTasks, SuggestionText, useAskTasks } from './ask-tasks';
+import { useSessionDraft } from '../use-session-draft';
 
 // + New → Ask: posted as a public SocketRelay request with no place on it, through the route
 // SocketRelay's own form uses. Suggestions from the holiday list appear while typing. "By when?" is
@@ -72,9 +73,10 @@ function ByWhen({ due, date, onDue, onDate }: { due: SeAskDue; date: string; onD
 }
 
 export function AskForm() {
-  const [title, setTitle] = useState('');
+  // What and the details survive the page reloading until the ask is posted (use-session-draft.ts).
+  const [title, setTitle] = useSessionDraft('ask:title');
   const goal = useAskTasks();
-  const [details, setDetails] = useState('');
+  const [details, setDetails] = useSessionDraft('ask:details');
   const [tag, setTag] = useState(W.defaultTag);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);

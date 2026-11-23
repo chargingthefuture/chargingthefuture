@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { SE_MATCH_MESSAGE_MAX, seAgo, seLocalDay, seQuestionById, type SeMatchMessage, type SeTodayCard } from '@ctf/shared';
+import { useSessionDraft } from '../use-session-draft';
 import styles from './today.module.css';
 
 // The controls inside a 21 Questions card on Today: the answers to pick from on the question card,
@@ -76,7 +77,7 @@ function useConversation(accountId: string) {
 function Conversation({ card }: { card: SeTodayCard }) {
   const accountId = card.id.slice('questions-match:'.length);
   const { messages, note, post } = useConversation(accountId);
-  const [draft, setDraft] = useState('');
+  const [draft, setDraft] = useSessionDraft(`match:${accountId}`);
   const [busy, setBusy] = useState(false);
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();

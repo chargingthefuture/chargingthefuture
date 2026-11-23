@@ -10,6 +10,7 @@ import { sendTodayFeedback } from './send-feedback';
 import { WeekStrip } from './week-strip';
 import { useToday, type MarkKind, type TodayMarks } from './use-today';
 import { EmojiRain } from './emoji-rain';
+import { keepTodayScroll, putBackTodayScroll } from './reload-place';
 import styles from './today.module.css';
 
 // Today in 3.1: Days won, the broadcast while it is live, the rooms, then the day's cards newest first.
@@ -148,6 +149,12 @@ export function TodayScreen({ accountId, onPresence, rain, onPeopleFits }: Scree
   const { today, loading, error, marks, mark, toggle, markRead, save, saveNote, reload } = useToday(accountId);
   const presence = today?.presence ?? null;
   useEffect(() => onPresence?.(presence), [onPresence, presence]);
+  // A reload of the page (iOS unloads a background tab) puts the list back where it was scrolled.
+  useEffect(() => keepTodayScroll(), []);
+  const loaded = today !== null;
+  useEffect(() => {
+    if (loaded) putBackTodayScroll();
+  }, [loaded]);
   const [filter, setFilter] = useState<SeTodayFilter>('all');
   const view = seTodayView(today, marks, filter);
   const [muteNote, setMuteNote] = useState<string | null>(null);
