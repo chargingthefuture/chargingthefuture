@@ -35,7 +35,7 @@ const ALL: SeQuestion[] = [
   { id: 'q57', text: 'What would tell you that you are moving forward?', choices: ['A steady income', 'A skill learned', 'A friend I trust', 'Telling my story'] },
   { id: 'q58', text: 'What do you want to give back?', choices: ['Teaching what I know', 'Listening', 'Practical help', 'Speaking out'] },
   { id: 'q59', text: 'How do you want to work with people?', choices: ['Side by side', 'Remotely', 'On my own, checking in', 'Leading a small team'] },
-  { id: 'q60', text: 'What matters most in someone you team up with?', choices: ['Has been targeted too', 'Respects my boundaries', 'Shows up and does the work', 'Never asks for personal details'] },
+  { id: 'q60', text: 'What matters most in someone you team up with?', choices: ['Keeps what I share private', 'Respects my boundaries', 'Shows up and does the work', 'Never asks for personal details'] },
   { id: 'q61', text: 'What do you want to leave behind?', choices: ['Work I am proud of', 'People I helped', 'A record of what happened', 'A skill passed on'] },
   { id: 'q62', text: 'Which would you rather have first?', choices: ['Steady work', 'A few people I trust', 'Time to rest', 'A plan of my own'] },
   { id: 'q63', text: 'A year from now, you want to be:', choices: ['Working steadily', 'Living by my own plan', 'Part of a group I trust', 'Helping newer TIs'] },
