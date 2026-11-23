@@ -261,6 +261,15 @@ to guess which group a wall of silence puts them in.
    new in the box opens it again. While any request waits, the Unlock tile on the admin landing carries
    the follow-up dot (`lib/admin/area-attention.ts`, counted by `countOpenUnlockHelpRequests`), whether
    or not the area was opened since.
+5c. **Why the tile has its dot, at the top of the page (2026-11-23).** Under the stat tiles,
+   `/admin/unlock` shows a line such as `2 people asked for help` whenever a request waits, by the same
+   rule (`openUnlockHelpRequests` in `lib/unlock/help-request-open.ts`, over the sign-up rows the
+   page already reads). Tapping it lists just those members, oldest request first: name or handle,
+   their state, their email as a mail link when the account has one, the date they asked, what they
+   wrote, and **Done** (`unlock-help-requests.tsx`, reusing the row's control and route). A sentence
+   above the list says the dot goes once each is marked Done or their address is approved or turned
+   down. Done there updates the Sign-ups list too. Nothing shows when none waits or the roster could not
+   be read. No route, table or contract changed.
 7. See who left. An account with an account-scope row in `account_deletion_events` asked to be
    forgotten; their Unlock submission was deleted with the rest of their data, so counting them as
    "signed up, never gave a Quora URL" would say the opposite of what happened. They get their own
@@ -542,6 +551,7 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
 
 ## 9) Change Log
 
+- 2026-11-23 (later): **A line under the stat tiles on `/admin/unlock` says how many people asked for help, and opens to just them (§2.4 5c).** The Unlock tile's dot came from waiting help requests, but the page showed them only inside the closed Sign-ups list. The line uses the same open rule as the dot; each member shows with their state, email, date, what they wrote and Done, under one sentence on what clears the dot. Web only; no route, table or contract changed. Test script UNLOCK-A9f.
 - 2026-11-23: **Every help request shows on the sign-ups panel, with Done, and the Unlock tile carries a dot while one waits (§2.4 5b).** Owner decision: requests with an empty box showed nowhere an admin looks. Each row now reads "Asked for help on <date>" with its state and "Told us: …" when there is text; Done (`POST /api/unlock/admin/help-requests`) sets the new `unlock_help_requests.done_at` (`post/0115`); approval or a turn-down also settles a request; a new hint reopens one. The admin landing's Unlock tile keeps its dot lit while any request waits. Contracts: `unlock.admin.help-request.done` in the command, access policy and audit contracts.
 
 - 2026-11-16: **Unlock inside 3.1 (§1.2a), web and Android.** Owner decision: nothing in 3.1 links to a 3.0 page. The 3.1 frame's Unlock links (banner "Why this step", People and + New → Talk "Finish Unlock") open a 3.1 Unlock screen with every member state of `/plugin/unlock`, through the same routes; on Android every 3.1 open of the `unlock` key lands there. The Quora census and the Knowledge Library stay on their 3.0 pages. No route, table, contract or tier changed; the Unlock gate is unchanged. Test: `lib/unlock/se-unlock-stage.test.ts`. Test script: UNLOCK-M6.

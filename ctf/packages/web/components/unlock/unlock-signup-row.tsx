@@ -10,7 +10,7 @@ import { UnlockSignupHelp } from './unlock-signup-help';
 
 // Color and wording for what happened to this person's Quora URL, including the case this panel exists
 // for: they signed up and never submitted one.
-function statusChip(account: UnlockSignupAccount): { label: string; color: string } {
+export function statusChip(account: UnlockSignupAccount): { label: string; color: string } {
   if (account.banned) return { label: 'Banned', color: '#EF4444' };
   if (account.deletedTheirData) return { label: 'Deleted their data', color: '#6B7280' };
   if (!account.hasSubmission) return { label: 'No Quora URL', color: '#F59E0B' };
@@ -30,7 +30,7 @@ function shortDate(iso: string | null): string | null {
 
 // The heading for the row: the most human identifier the account carries, falling back to the raw id so
 // a row is never blank. The handle is repeated on its own line only when it is not already the heading.
-function identityOf(account: UnlockSignupAccount): { title: string; handle: string | null } {
+export function identityOf(account: UnlockSignupAccount): { title: string; handle: string | null } {
   if (account.name) return { title: account.name, handle: account.username };
   if (account.username) return { title: `@${account.username}`, handle: null };
   return { title: account.email ?? account.userId, handle: null };
