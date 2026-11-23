@@ -368,7 +368,11 @@ Which accounts see demo data is a table, `public.demo_mode_accounts` (`user_id`,
 `created_at`), in the production schema only. An admin turns it on or off per account with the
 Demo data switch on the account's card on the Unlock admin (`POST /api/unlock/admin/demo-accounts`,
 audited as `unlock.admin.signups.demo`). `isDemoMode()` (`lib/demo-mode/demo-accounts.ts`) answers
-whether the caller's id is in it:
+whether the caller's id is in it. The same switch is the only place demo accounts are managed: the
+Seed demo workflow (`seed-demo.yml`) takes no account ids and `ctf/scripts/seedDemo.mjs` reads this
+table (read only) to seed each switched-on account's personal demo rows, the oldest as the owner and
+admin side and the rest as member sides, reporting only a count.
+
 
 - The list is read from the public pool (`runWithForcedPool('public')`), so choosing a pool never
   asks for the pool again, and kept in memory for about a minute. A switch takes effect at once on

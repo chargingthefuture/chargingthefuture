@@ -3,31 +3,11 @@ name: Demo — Seed Schema
 on:
   workflow_dispatch:
     inputs:
-      demo_owner_id:
-        description: "Clerk user ID of the demo account. Leave empty to use the DEMO_VIDEO_CLERK_USER_ID repository variable"
-        required: false
-        type: string
-        default: ""
-      demo_second_owner_id:
-        description: "Optional: a SECOND Clerk user ID to be the two-sided marketplace counterparty (for testing both sides). Also turn on the Demo data switch for this ID on the Unlock admin."
-        required: false
-        type: string
-        default: ""
-      demo_tester_admin_id:
-        description: "Optional: the ADMIN demo Clerk user ID. Leave empty to use the DEMO_VIDEO_CLERK_ADMIN_ID repository variable. The seed grants entry + wallet + profile; set role=admin on it in Clerk and turn on the Demo data switch for it on the Unlock admin."
-        required: false
-        type: string
-        default: ""
       start_fresh:
         description: "Empty every demo table first, so the demo data is rebuilt from nothing (demo schema only; real member data is never touched). Anything made by hand in demo mode is removed."
         required: true
         type: boolean
         default: true
-      demo_tester_member_id:
-        description: "Optional: the hired tester's MEMBER Clerk user ID (issue #2037). The seed grants entry + wallet + profile; also turn on the Demo data switch for it on the Unlock admin."
-        required: false
-        type: string
-        default: ""
 
 jobs:
   seed:
@@ -86,32 +66,15 @@ jobs:
           echo "Demo schema is up to date."
 
       - name: Run demo seed
+        # The accounts come from the Demo data switch in Unlock admin (public.demo_mode_accounts),
+        # which the seed reads itself. The run summary gives how many were seeded, never an id.
         env:
           DATABASE_URL_DIRECT: ${{ secrets.DATABASE_URL_DIRECT }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          # A box filled in wins; otherwise the repository variable (or a secret of the same name).
-          DEMO_OWNER_ID: ${{ inputs.demo_owner_id || vars.DEMO_VIDEO_CLERK_USER_ID || secrets.DEMO_VIDEO_CLERK_USER_ID }}
-          DEMO_SECOND_OWNER_ID: ${{ inputs.demo_second_owner_id }}
-          DEMO_TESTER_ADMIN_ID: ${{ inputs.demo_tester_admin_id || vars.DEMO_VIDEO_CLERK_ADMIN_ID || secrets.DEMO_VIDEO_CLERK_ADMIN_ID }}
-          DEMO_TESTER_MEMBER_ID: ${{ inputs.demo_tester_member_id }}
         run: |
           if [ -z "$DATABASE_URL_DIRECT" ] && [ -z "$DATABASE_URL" ]; then
             echo "DATABASE_URL_DIRECT or DATABASE_URL secret is not set."
             exit 1
           fi
-          if [ -z "$DEMO_OWNER_ID" ]; then
-            echo "::error::No demo account: fill in demo_owner_id, or set the DEMO_VIDEO_CLERK_USER_ID repository variable."
-            exit 1
-          fi
           cd ctf
           node scripts/seedDemo.mjs
-          echo "Demo schema seeded for $DEMO_OWNER_ID."
-          if [ -n "$DEMO_SECOND_OWNER_ID" ]; then
-            echo "Two-sided counterparty seeded: $DEMO_SECOND_OWNER_ID (also turn on the Demo data switch for this ID on the Unlock admin)."
-          fi
-          if [ -n "$DEMO_TESTER_ADMIN_ID" ]; then
-            echo "Tester admin seeded: $DEMO_TESTER_ADMIN_ID (set role=admin on it in Clerk, and turn on the Demo data switch for it on the Unlock admin)."
-          fi
-          if [ -n "$DEMO_TESTER_MEMBER_ID" ]; then
-            echo "Tester member seeded: $DEMO_TESTER_MEMBER_ID (turn on the Demo data switch for it on the Unlock admin)."
-          fi

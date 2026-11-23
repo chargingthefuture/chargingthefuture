@@ -99,14 +99,14 @@ jobs:
         continue-on-error: true
         env:
           DATABASE_URL_DIRECT: postgresql://postgres:postgres@127.0.0.1:5432/ctf_smoke?sslmode=disable
-          # Fake Clerk ids: the seed only writes them as text, and nothing here reaches Clerk.
-          DEMO_OWNER_ID: user_smokeOwnerOne
-          DEMO_SECOND_OWNER_ID: user_smokeOwnerTwo
-          DEMO_TESTER_ADMIN_ID: user_smokeTesterAdmin
-          DEMO_TESTER_MEMBER_ID: user_smokeTesterMember
         run: |
           set -euo pipefail
           cd ctf
+          # No account switched to Demo data: the shared demo data alone must still seed.
+          node scripts/seedDemo.mjs
+          # Then three fake Clerk ids switched on, as the Unlock admin switch would. The seed only
+          # writes them as text, and nothing here reaches Clerk.
+          psql "$DATABASE_URL_DIRECT" -v ON_ERROR_STOP=1 -q -c "INSERT INTO public.demo_mode_accounts (user_id, created_at) VALUES ('user_smokeOwnerOne', NOW() - INTERVAL '2 days'), ('user_smokeMemberOne', NOW() - INTERVAL '1 day'), ('user_smokeMemberTwo', NOW()) ON CONFLICT (user_id) DO NOTHING;"
           node scripts/seedDemo.mjs
           # Re-run: the seed promises to be idempotent, so a second pass must also pass.
           node scripts/seedDemo.mjs

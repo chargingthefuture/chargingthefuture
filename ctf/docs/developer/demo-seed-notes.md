@@ -4,28 +4,30 @@ Operational notes for `ctf/scripts/seedDemo.mjs` (run by the **Demo — Seed Sch
 GitHub Actions workflow, `.github/workflows/seed-demo.yml`), which fills the `demo`
 Postgres schema with a coherent scenario for testing.
 
-## Two real owners for two-sided testing (`DEMO_SECOND_OWNER_ID`)
+## Which accounts are seeded (the Demo data switch in Unlock admin)
 
-The product is a two-sided marketplace (TrustTransport requester/provider, SocketRelay
-requester/fulfiller, Foundation two-party thread, Lighthouse seeker/host). By default the
-seed puts a **synthetic** user on the far side of each flow (`demo-peer-*`, `demo-host-*`),
-and nobody can sign in as those, so only one side can be exercised.
+Demo accounts are managed in one place: the Demo data switch on the Unlock admin
+(`public.demo_mode_accounts`). The workflow takes no account ids. `seedDemo.mjs` reads that table
+(read only, production schema) at the start and seeds every switched-on account:
 
-Set the optional **`DEMO_SECOND_OWNER_ID`** input to a second real Clerk user id and the
-seed makes that user the real counterparty to `DEMO_OWNER_ID`:
+- every account gets the `approved_full` unlock tier and its own copy of the personal demo rows
+  (wallet history, incidents, listings, quotes, enrollments and the rest, each under
+  `personalId`);
+- the oldest account (`created_at`) is the owner and admin side: its rows keep the seed's fixed
+  ids, and it is the account to give role=admin in Clerk. Clerk roles cannot be read without the
+  Clerk secret key, which the seed does not hold, so order is what decides;
+- every other account is a member side, with a claimed Directory profile and its own Chyme
+  username;
+- the second oldest is the other side of every two-sided pairing with the owner
+  (`COUNTERPARTY`): an open TrustTransport request and an open SocketRelay request owned by each,
+  a shared Foundation thread, a LightHouse seeker(owner)↔host match with a property, and an
+  owner→counterparty credit transfer. With only one account, the far side of each flow stays
+  synthetic (`demo-peer-*`, `demo-host-*`).
 
-- both real owners are granted the `approved_full` unlock tier (an
-  `unlock_verification_submissions` row);
-- the second user gets a member profile (directory, trust, wallet, workforce, socket-relay
-  presence);
-- both-sided data is wired so each real account can act as **both** sides: an open
-  TrustTransport request and an open SocketRelay request owned by *each* user, a shared
-  Foundation thread, a Lighthouse seeker(owner)↔host(second-owner) match with a property,
-  a Skill-Up co-enrollment, cohort/room membership, and an owner→second credit transfer.
-
-With `DEMO_SECOND_OWNER_ID` unset, the admin demo account (`DEMO_TESTER_ADMIN_ID`) is the
-counterparty instead; see the 2026-10-17 section below. With neither set, the far side stays
-synthetic.
+With no account switched on, the seed still writes the shared demo data, the owner's personal rows
+go to a synthetic `demo-owner-001`, and the run summary says no accounts are switched to Demo data
+in Unlock. The summary gives how many accounts were seeded, never an id, and a failure message has
+any account id replaced before it is printed.
 
 ## Plugin coverage
 
@@ -50,24 +52,20 @@ synthetic peers:
   recording, both of which need a real Stream video call; a seeded row would point the
   player at a call that does not exist.
 
-## Testing empty states (the second owner's personal views)
+## Testing empty states
 
-All of the seeded per-member activity above is attached to the FIRST owner (or to synthetic
-peers). The second owner (`DEMO_SECOND_OWNER_ID`) gets a member profile and the two-sided
-marketplace records listed earlier, but none of the newer per-member data: their Foundation
-quote history, Contributions claims, and Recurring Activity list are empty. To see an empty
-state on purpose, sign in as the second owner and open that plugin's personal view.
+Every switched-on account now carries the personal demo data, so no seeded account shows an empty
+personal view. To see an empty state on purpose, sign in as an account that is not switched to
+Demo data, or switch an account on after the seed has run and before running it again.
 Cross-member browse surfaces (Foundation Browse, WhatWorks, the feed, and so on) show the
-same shared rows to both owners. Re-running `seed:demo` restores the populated state for
-the first owner without duplicating rows.
+same shared rows to every account. Re-running `seed:demo` restores the populated state without
+duplicating rows.
 
-### Still required on the Unlock admin for the second user
+### Order on the Unlock admin
 
-The seed grants the *access tier*, but it cannot route a user into the demo world. The
-**Demo data** switch on the account's card on the Unlock admin (`public.demo_mode_accounts`)
-is what points that signed-in user's database pool at the `demo` schema, and the seed writes
-only the demo schema. So for the second Clerk id: turn the switch on, then run the workflow
-with both ids.
+The switch comes first: the seed reads which accounts to seed from it, and the switch is also
+what points a signed-in account's database pool at the `demo` schema. So turn the Demo data
+switch on for an account, then run the workflow.
 
 ## Idempotency
 
@@ -370,3 +368,15 @@ runs `ctf/scripts/sql/demo-schema-empty.sql`, which empties every table in `demo
 into it. The rebuild then restores the built-in rows `schema.demo.sql` inserts, and the seed runs on
 an empty schema. Anything made by hand in demo mode is removed; turn the input off to keep it.
 Schema impact: none.
+
+## Accounts come from the Demo data switch — 2026-11-23
+
+Owner decision: demo accounts are managed only on the Unlock admin. `seed-demo.yml` lost its four
+account id inputs (`demo_owner_id`, `demo_second_owner_id`, `demo_tester_admin_id`,
+`demo_tester_member_id`) and its `DEMO_VIDEO_CLERK_*` fallbacks; `seedDemo.mjs` reads
+`public.demo_mode_accounts` instead, as described in "Which accounts are seeded" at the top. The
+second-owner and tester slots in the dated sections above no longer exist: every switched-on account
+is the owner side (the oldest) or a member side. `demo-seed-smoke.yml` seeds once with no account
+switched on, then with three fake ids inserted into the table. The demo-video recording workflow
+still signs in with `DEMO_VIDEO_CLERK_USER_ID` / `DEMO_VIDEO_CLERK_ADMIN_ID`; those accounts need
+the Demo data switch on to be seeded.
