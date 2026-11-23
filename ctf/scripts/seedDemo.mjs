@@ -1,58 +1,42 @@
 #!/usr/bin/env node
 /**
- * seed:demo — populates the `demo` Postgres schema with a rich, coherent scenario
- * for the demo participant identified by DEMO_OWNER_ID.
+ * seed:demo — populates the `demo` Postgres schema with a rich, coherent scenario for the accounts
+ * switched to Demo data in Unlock admin.
  *
- * Two-sided testing (DEMO_SECOND_OWNER_ID, optional; the admin account by default):
- *   The platform is a two-sided marketplace — TrustTransport (requester/provider),
- *   SocketRelay (requester/fulfiller), Foundation (two-party thread), Lighthouse
- *   (seeker/host). By default the "other side" of each flow is a synthetic user
- *   (demo-peer-*, demo-host-*) that nobody can sign in as, so only one side can be
- *   tested. Set DEMO_SECOND_OWNER_ID to a SECOND real Clerk user id and the seed
- *   makes that user the real counterparty to DEMO_OWNER_ID: it gives them a member
- *   profile and wires up both-sided data (open requests each can act on, a shared
- *   Foundation thread, a Lighthouse seeker↔host match, a co-enrollment, etc.), so
- *   two real accounts can each test both sides. Leave it unset and set
- *   DEMO_TESTER_ADMIN_ID, and the admin account is that counterparty instead (COUNTERPARTY):
- *   the same pairings, with no third account needed. The second owner's own account setup
- *   (wallet, directory, workforce, trust, chyme and cohort rows) is never given to the admin,
- *   which already has its own as one of PERSONAL_ACCOUNTS. With neither set, the other side
- *   of each flow stays synthetic.
+ * Which accounts: every row of public.demo_mode_accounts (the Demo data switch on the Unlock admin),
+ * read once at the start and never written. That switch is the only place demo accounts are managed;
+ * the seed takes no account ids of its own.
  *
- *   Admin demo account (DEMO_TESTER_ADMIN_ID): it carries the same personal demo data as
- *   DEMO_OWNER_ID (wallet history, incidents, listings, quotes, enrollments, badges, check-ins and
- *   the rest), each row with its own id (PERSONAL_ACCOUNTS, personalId), so the demo video clips work
- *   signed in as either. The owner's rows and ids are unchanged. With no second owner set, the admin
- *   is also the other side of every two-sided pairing with DEMO_OWNER_ID (above), so live testing
- *   between the admin and member accounts covers both sides of each flow.
+ * Roles: an account's Clerk role cannot be read without the Clerk secret key, which this seed does
+ * not hold, so roles come from the order the accounts were switched on. The oldest (created_at) is
+ * the owner side: its personal demo rows keep the seed's fixed ids, and it is the account to give
+ * role=admin in Clerk. Every other account is a member side with its own copy of the personal demo
+ * rows (PERSONAL_ACCOUNTS, personalId), a claimed Directory profile and its own Chyme username. The
+ * second oldest is also the other side of every two-sided pairing with the owner (COUNTERPARTY):
+ * a credits transfer, a Foundation thread, a LightHouse seeker-host match, and an open TrustTransport
+ * and SocketRelay request each side can act on.
  *
- *   Access note: the seed grants the approved_full unlock tier to both real owners
- *   (an unlock_verification_submissions row). The second user still needs the
- *   Demo data switch turned on for their Clerk id on the Unlock admin
- *   (public.demo_mode_accounts) — that switch is what routes them to the `demo`
- *   schema, and the seed writes only the demo schema, so it cannot set it.
+ * With no account switched on, the seed still writes the shared demo data, and the owner's personal
+ * rows go to a synthetic account (demo-owner-001) nobody can sign in as.
+ *
+ * The run summary (stdout, and the GitHub job summary when GITHUB_STEP_SUMMARY is set) gives the
+ * number of accounts seeded and never an id.
  *
  * Prerequisites:
  *   - `pnpm migrate:demo-schema` has been run (demo schema exists)
  *   - DATABASE_URL_DIRECT (or DATABASE_URL as fallback) points to the database
  *
  * Usage:
- *   DEMO_OWNER_ID=<clerk-user-id> [DEMO_SECOND_OWNER_ID=<clerk-user-id>] \
- *     DATABASE_URL_DIRECT=<url> node scripts/seedDemo.mjs
+ *   DATABASE_URL_DIRECT=<url> node scripts/seedDemo.mjs
  *
- * The seed is idempotent (ON CONFLICT DO UPDATE / DO NOTHING throughout).
- * Re-run freely to refresh or to seed a new DEMO_OWNER_ID / DEMO_SECOND_OWNER_ID.
+ * The seed is idempotent (ON CONFLICT DO UPDATE / DO NOTHING throughout). Re-run freely, for example
+ * after switching another account to Demo data.
  */
 
 import { Pool } from 'pg';
 import crypto from 'node:crypto';
+import { appendFileSync } from 'node:fs';
 import { listDemoSeedModules } from './demo-seed/index.mjs';
-
-function requireEnv(name) {
-  const value = process.env[name];
-  if (!value || value.trim().length === 0) throw new Error(`${name} is required`);
-  return value;
-}
 
 /**
  * Spell out a Postgres failure. `err.message` alone is often too thin to act on —
@@ -73,46 +57,39 @@ function describeDbError(err) {
   return facts.length > 0 ? `${err.message} (${facts.join('; ')})` : err.message;
 }
 
-const OWNER = requireEnv('DEMO_OWNER_ID');
+// Set by loadDemoAccounts before any step runs; see the header for the roles.
+let OWNER = 'demo-owner-001';
+// The other side of every two-sided pairing with the owner, or null with fewer than two accounts.
+// Pairing ids are derived from (key, COUNTERPARTY).
+let COUNTERPARTY = null;
+// Every real account switched to Demo data, oldest first: each gets the approved_full unlock tier.
+let REAL_USERS = [];
+// The accounts that carry the owner's personal demo data: their wallet history, incidents, listings,
+// quotes, enrollments, badges, check-ins and the rest, each row under personalId.
+let PERSONAL_ACCOUNTS = [OWNER];
+// A Directory profile each for the member-side accounts, so each reads with a name everywhere a
+// member name is rendered.
+let MEMBER_PROFILES = [];
 
-// Optional second REAL Clerk user — the counterparty for two-sided marketplace
-// testing. When unset, the seed behaves exactly as the single-owner version.
-const OWNER2 = (process.env.DEMO_SECOND_OWNER_ID || '').trim() || null;
-if (OWNER2 && OWNER2 === OWNER) {
-  throw new Error('DEMO_SECOND_OWNER_ID must be a different Clerk id than DEMO_OWNER_ID');
+/** Read the accounts switched to Demo data in Unlock admin (read only) and set the roles above. */
+async function loadDemoAccounts(c) {
+  const { rows } = await c.query(
+    'SELECT user_id FROM public.demo_mode_accounts ORDER BY created_at ASC, user_id ASC',
+  );
+  const accounts = rows.map((row) => String(row.user_id));
+  REAL_USERS = accounts;
+  OWNER = accounts[0] ?? 'demo-owner-001';
+  COUNTERPARTY = accounts[1] ?? null;
+  PERSONAL_ACCOUNTS = accounts.length > 0 ? accounts : [OWNER];
+  MEMBER_PROFILES = accounts.slice(1).map((id, index) => ({
+    id,
+    firstName: 'Demo',
+    lastName: `Member${index + 1}`,
+    headline: 'Demo member',
+    bio: 'Demo account switched to Demo data in Unlock admin.',
+  }));
+  return accounts.length;
 }
-
-// Optional tester accounts (issue #2037): a hired tester runs the manual test scripts against the
-// demo schema with two REAL Clerk accounts — one they use as an admin, one as a plain member. The
-// seed gives each the baseline to sign in and participate (approved_full unlock, a wallet, a
-// directory profile). Two things the seed CANNOT do, because they live outside the demo schema:
-//   - the admin role: set role=admin on the tester-admin account in the Clerk dashboard;
-//   - demo routing: turn on the Demo data switch for both ids on the Unlock admin.
-const TESTER_ADMIN = (process.env.DEMO_TESTER_ADMIN_ID || '').trim() || null;
-const TESTER_MEMBER = (process.env.DEMO_TESTER_MEMBER_ID || '').trim() || null;
-
-// The other side of every two-sided pairing with the owner (a credits transfer, a Foundation thread,
-// a LightHouse seeker-host match, the open TrustTransport and SocketRelay requests each side can act
-// on). The second owner when one is set; otherwise the admin account, so the owner can test both
-// sides with the two accounts they already have. The second owner's account setup (wallet, profiles,
-// enrollments) stays theirs alone: the admin already has its own as one of PERSONAL_ACCOUNTS.
-// Pairing ids are derived from (key, COUNTERPARTY), so a schema seeded with a second owner keeps them.
-const COUNTERPARTY = OWNER2 || TESTER_ADMIN || null;
-{
-  const ids = [OWNER, OWNER2, TESTER_ADMIN, TESTER_MEMBER].filter(Boolean);
-  if (new Set(ids).size !== ids.length) {
-    throw new Error('DEMO_OWNER_ID, DEMO_SECOND_OWNER_ID, DEMO_TESTER_ADMIN_ID, and DEMO_TESTER_MEMBER_ID must all be different Clerk ids');
-  }
-}
-
-// Every REAL Clerk account the seed must let in: the owner(s) plus any tester accounts.
-const REAL_USERS = [OWNER, OWNER2, TESTER_ADMIN, TESTER_MEMBER].filter(Boolean);
-
-// Tester directory identities, keyed by id so seedDirectory can render a sensible profile for each.
-const TESTER_PROFILES = [
-  TESTER_ADMIN && { id: TESTER_ADMIN, firstName: 'Demo', lastName: 'TesterAdmin', headline: 'Test Script Runner (admin)', bio: 'Hired tester account used to run the admin sides of the manual test scripts.' },
-  TESTER_MEMBER && { id: TESTER_MEMBER, firstName: 'Demo', lastName: 'TesterMember', headline: 'Test Script Runner (member)', bio: 'Hired tester account used to run the member sides of the manual test scripts.' },
-].filter(Boolean);
 
 // Supporting synthetic users — social/relational data
 const PEER_1 = 'demo-peer-001';
@@ -173,12 +150,6 @@ function sha256id(...parts) {
   return crypto.createHash('sha256').update(parts.join('|')).digest('hex').slice(0, 32);
 }
 
-// The accounts that carry the owner's personal demo data: their wallet history, incidents, listings,
-// quotes, enrollments, badges, check-ins and the rest. The admin demo account gets its own copy so the
-// demo video clips work signed in as either. Two-sided pairings are not personal data: they run
-// between the owner and COUNTERPARTY, which is the admin itself when no second owner is set.
-const PERSONAL_ACCOUNTS = [OWNER, TESTER_ADMIN].filter(Boolean);
-
 // The id of one personal row for one account. The owner keeps the row's existing id exactly; any
 // other account gets a UUID derived from (account, that id), so a re-run lands on the same row.
 function personalId(account, ownerId) {
@@ -205,8 +176,8 @@ async function personalRowId(c, account, ownerId, table, naturalKey) {
   return taken.rowCount ? personalId(`moved:${account}`, ownerId) : id;
 }
 
-// The Directory profile an account claims: the owner's fixed one, or the tester profile seedDirectory
-// writes for a tester account (one claimed profile per account, so the admin reuses that one).
+// The Directory profile an account claims: the owner's fixed one, or the member profile seedDirectory
+// writes for a member-side account (one claimed profile per account).
 function directoryProfileIdFor(account) {
   return account === OWNER ? ID.dirProfileOwner : sha256id('dir-profile', account);
 }
@@ -214,12 +185,9 @@ function directoryProfileIdFor(account) {
 const WEEK_START = '2026-05-19';
 
 async function seedUnlock(c) {
-  // Grant the approved_full unlock tier to the REAL demo owner(s) so they can use
-  // every plugin in the demo schema; the app reads this tier. The second owner still
-  // needs the Demo data switch on the Unlock admin to be routed to this schema in the
-  // first place.
-  // Tester accounts (issue #2037) are included: they are real Clerk accounts and need the same
-  // tier row to enter the demo's plugins.
+  // Grant the approved_full unlock tier to every account switched to Demo data so it can use
+  // every plugin in the demo schema; the app reads this tier from the demo schema once the switch
+  // routes the account there.
   const realOwners = REAL_USERS;
   for (const uid of realOwners) {
     await c.query(
@@ -300,19 +268,6 @@ async function seedServiceCredits(c) {
     [govId, JSON.stringify({ policy: 'demo-allocation-v1', version: '1.0' })],
   );
 
-  if (OWNER2) {
-    // The second real user needs a wallet to move credits and to deposit into a
-    // Skill-Up cohort. The admin account already has one as a personal account.
-    await c.query(
-      `INSERT INTO service_credits_wallets (user_id, available_balance, escrow_balance, updated_at)
-       VALUES ($1, 450, 50, NOW())
-       ON CONFLICT (user_id) DO UPDATE SET
-         available_balance = EXCLUDED.available_balance,
-         escrow_balance = EXCLUDED.escrow_balance, updated_at = NOW()`,
-      [OWNER2],
-    );
-  }
-
   if (COUNTERPARTY) {
     // A real member-to-member transfer both sides can see.
     await c.query(
@@ -321,19 +276,6 @@ async function seedServiceCredits(c) {
        VALUES ($1, $2, $3, 40, 'completed', $4, NOW())
        ON CONFLICT DO NOTHING`,
       [sha256id(OWNER, COUNTERPARTY, '40'), OWNER, COUNTERPARTY, `demo-transfer-${OWNER}-${COUNTERPARTY}`],
-    );
-  }
-
-  // Tester accounts (issue #2037): a wallet each, so credit-bearing script steps (send, escrow,
-  // Skill-Up deposit) work for them without an admin grant first. The admin tester already has the
-  // owner's wallet above, as one of PERSONAL_ACCOUNTS, so only the member tester is left here.
-  for (const tester of [TESTER_ADMIN, TESTER_MEMBER].filter((uid) => uid && !PERSONAL_ACCOUNTS.includes(uid))) {
-    await c.query(
-      `INSERT INTO service_credits_wallets (user_id, available_balance, escrow_balance, updated_at)
-       VALUES ($1, 300, 0, NOW())
-       ON CONFLICT (user_id) DO UPDATE SET
-         available_balance = EXCLUDED.available_balance, updated_at = NOW()`,
-      [tester],
     );
   }
 
@@ -456,24 +398,6 @@ async function seedSkillUp(c) {
        ON CONFLICT (id) DO UPDATE SET
          status = EXCLUDED.status, credits_deposited = EXCLUDED.credits_deposited`,
       [existing.rows[0]?.id ?? personalId(uid, ID.enrollmentOwner), ID.cohort, uid, TRAINER],
-    );
-  }
-
-  if (OWNER2) {
-    // Second participant in the same cohort (the admin account is already enrolled in it as a
-    // personal account, so this co-enrollment needs nothing more for the admin). Conflict on the primary key with a
-    // deterministic per-owner id (like the owner enrollment above), NOT on
-    // (cohort_id, user_id): that composite unique is absent from the live demo
-    // schema (its backfill DO block checks pg_indexes without a schemaname filter,
-    // so it sees the public-schema index and skips creating the demo one). The
-    // deterministic id keeps this idempotent and needs no extra constraint.
-    await c.query(
-      `INSERT INTO skill_up_enrollments
-       (id, cohort_id, user_id, status, credits_deposited, assigned_trainer_id)
-       VALUES ($1::uuid, $2::uuid, $3, 'active', 50, $4)
-       ON CONFLICT (id) DO UPDATE SET
-         status = EXCLUDED.status, credits_deposited = EXCLUDED.credits_deposited`,
-      [sha256id('lu-enrollment', OWNER2), ID.cohort, OWNER2, TRAINER],
     );
   }
 
@@ -611,24 +535,13 @@ async function seedLighthouse(c) {
 
   if (COUNTERPARTY) {
     // The counterparty is a host with their own property; owner (a seeker) has a
-    // pending match on it — so both real users can work opposite sides.
-    if (COUNTERPARTY === OWNER2) {
-      await c.query(
-        `INSERT INTO lighthouse_profiles
-         (user_id, profile_type, bio, phone_number, signal_url, is_active, has_property, desired_country)
-         VALUES ($1, 'host', 'Second demo participant hosting a spare unit for the community.',
-           '+10000000077', 'https://signal.me/#demo-owner2', true, true, 'US')
-         ON CONFLICT (user_id) DO UPDATE SET bio = EXCLUDED.bio, updated_at = NOW()`,
-        [OWNER2],
-      );
-    } else {
-      // The admin keeps its personal seeker profile (one per user) and is flagged as having a
-      // property, as listing a place does in the app.
-      await c.query(
-        `UPDATE lighthouse_profiles SET has_property = TRUE, updated_at = NOW() WHERE user_id = $1`,
-        [COUNTERPARTY],
-      );
-    }
+    // pending match on it — so both real accounts can work opposite sides.
+    // The counterparty keeps its personal seeker profile (one per user) and is flagged as having a
+    // property, as listing a place does in the app.
+    await c.query(
+      `UPDATE lighthouse_profiles SET has_property = TRUE, updated_at = NOW() WHERE user_id = $1`,
+      [COUNTERPARTY],
+    );
     const prop2 = sha256id('lh-property', COUNTERPARTY);
     await c.query(
       `INSERT INTO lighthouse_properties
@@ -646,7 +559,7 @@ async function seedLighthouse(c) {
     await c.query(
       `INSERT INTO lighthouse_matches
        (id, seeker_user_id, host_user_id, property_id, status, message)
-       VALUES ($1::uuid, $2, $3, $4::uuid, 'pending', 'Demo two-sided match — owner (seeker) ↔ second owner (host).')
+       VALUES ($1::uuid, $2, $3, $4::uuid, 'pending', 'Demo two-sided match — owner (seeker) ↔ member (host).')
        ON CONFLICT (id) DO UPDATE SET status = EXCLUDED.status`,
       [sha256id('lh-match', OWNER, COUNTERPARTY), OWNER, COUNTERPARTY, prop2],
     );
@@ -691,35 +604,9 @@ async function seedDirectory(c) {
     );
   }
 
-  if (OWNER2) {
-    // A per-owner id (not a fixed ID.* constant) so a second real user gets their
-    // own profile row instead of overwriting / stealing another owner's.
-    await c.query(
-      `INSERT INTO directory_profiles
-       (id, claimed_by_user_id, first_name, last_name, headline, bio, country, source)
-       VALUES ($1::uuid, $2, 'Demo', 'Counterpart', 'Community Member',
-         'Second demo participant — the other side of the marketplace.', 'United Kingdom', 'self')
-       ON CONFLICT (id) DO UPDATE SET
-         claimed_by_user_id = EXCLUDED.claimed_by_user_id,
-         first_name = EXCLUDED.first_name,
-         last_name = EXCLUDED.last_name,
-         headline = EXCLUDED.headline,
-         bio = EXCLUDED.bio,
-         country = EXCLUDED.country,
-         updated_at = NOW()`,
-      [sha256id('dir-profile', OWNER2), OWNER2],
-    );
-    await c.query(
-      `INSERT INTO directory_user_extension (user_id, updated_at)
-       VALUES ($1, NOW())
-       ON CONFLICT (user_id) DO UPDATE SET updated_at = NOW()`,
-      [OWNER2],
-    );
-  }
-
-  // Tester accounts (issue #2037): a profile each, keyed per id like the second owner's, so the
-  // tester shows up with a readable name everywhere a member name is rendered.
-  for (const tester of TESTER_PROFILES) {
+  // Member-side accounts: a profile each, keyed per id, so each shows up with a readable name
+  // everywhere a member name is rendered.
+  for (const tester of MEMBER_PROFILES) {
     await c.query(
       `INSERT INTO directory_profiles
        (id, claimed_by_user_id, first_name, last_name, headline, bio, country, source)
@@ -762,18 +649,6 @@ async function seedWorkforce(c) {
          skill_level = EXCLUDED.skill_level, recruited_state = EXCLUDED.recruited_state,
          updated_at = NOW()`,
       [uid, ID.occupation, recruited],
-    );
-  }
-
-  if (OWNER2) {
-    await c.query(
-      `INSERT INTO workforce_profiles
-       (user_id, occupation_id, skill_level, region, recruited_state, updated_by_user_id)
-       VALUES ($1, $2::uuid, 'mid', 'us-east', false, $1)
-       ON CONFLICT (user_id) DO UPDATE SET
-         skill_level = EXCLUDED.skill_level, recruited_state = EXCLUDED.recruited_state,
-         updated_at = NOW()`,
-      [OWNER2, ID.occupation],
     );
   }
 
@@ -834,20 +709,6 @@ async function seedTrust(c) {
          trust_evidence = EXCLUDED.trust_evidence,
          updated_at = NOW()`,
       [uid],
-    );
-  }
-
-  if (OWNER2) {
-    await c.query(
-      `INSERT INTO trust_user_extension
-       (user_id, trust_evidence, updated_at)
-       VALUES ($1,
-         '[{"type":"engagement-lighthouse-matches","summary":"Accepted 1 LightHouse match","createdAt":"2026-05-19T00:00:00.000Z","createdBy":"trust-signal"}]'::jsonb,
-         NOW())
-       ON CONFLICT (user_id) DO UPDATE SET
-         trust_evidence = EXCLUDED.trust_evidence,
-         updated_at = NOW()`,
-      [OWNER2],
     );
   }
 
@@ -998,8 +859,8 @@ async function seedChyme(c) {
     [ID.room],
   );
 
-  // The admin account takes its own username, so the two real accounts read apart in the room.
-  const personalUsernames = PERSONAL_ACCOUNTS.map((uid) => [uid, uid === OWNER ? 'demo_participant' : 'demo_tester_admin']);
+  // Each member-side account takes its own username, so the real accounts read apart in the room.
+  const personalUsernames = PERSONAL_ACCOUNTS.map((uid, index) => [uid, uid === OWNER ? 'demo_participant' : `demo_member_${index}`]);
   for (const [uid, username] of [...personalUsernames, [PEER_1, 'alex_rivera']]) {
     await c.query(
       `INSERT INTO chyme_room_members
@@ -1008,16 +869,6 @@ async function seedChyme(c) {
        ON CONFLICT (room_id, user_id) DO UPDATE SET
          username = EXCLUDED.username, last_seen_at = NOW()`,
       [ID.room, uid, username],
-    );
-  }
-
-  if (OWNER2) {
-    await c.query(
-      `INSERT INTO chyme_room_members
-       (room_id, user_id, username, role, joined_at, last_seen_at)
-       VALUES ($1::uuid, $2, 'demo_counterpart', 'speaker', NOW() - INTERVAL '3 minutes', NOW())
-       ON CONFLICT (room_id, user_id) DO UPDATE SET last_seen_at = NOW()`,
-      [ID.room, OWNER2],
     );
   }
 
@@ -1101,15 +952,6 @@ async function seedPeerProgramming(c) {
        VALUES ($1::uuid, $2)
        ON CONFLICT (cohort_id, user_id) DO NOTHING`,
       [ID.ppCohort, uid],
-    );
-  }
-
-  if (OWNER2) {
-    await c.query(
-      `INSERT INTO peer_programming_cohort_members (cohort_id, user_id)
-       VALUES ($1::uuid, $2)
-       ON CONFLICT (cohort_id, user_id) DO NOTHING`,
-      [ID.ppCohort, OWNER2],
     );
   }
 
@@ -1260,18 +1102,6 @@ async function seedSocketRelay(c) {
        VALUES ($1::uuid, $2::uuid, $3, $4, 'active')
        ON CONFLICT (id) DO UPDATE SET status = EXCLUDED.status`,
       [personalId(uid, ID.srFulfillment), personalId(uid, ID.srRequest), PEER_1, uid],
-    );
-  }
-
-  if (OWNER2) {
-    await c.query(
-      `INSERT INTO socket_relay_user_extension
-       (user_id, bio, relay_preferences, presence_opt_in)
-       VALUES ($1, 'Second demo participant — open to helping and being helped.',
-         '{"notifications":"all"}'::jsonb, true)
-       ON CONFLICT (user_id) DO UPDATE SET
-         presence_opt_in = true, service_deleted_at = NULL, updated_at = NOW()`,
-      [OWNER2],
     );
   }
 
@@ -1502,9 +1332,42 @@ async function seedRecurringActivity(c) {
 // as its id.
 function demoContext() {
   return {
-    OWNER, OWNER2, COUNTERPARTY, TESTER_ADMIN, TESTER_MEMBER, REAL_USERS, PERSONAL_ACCOUNTS, personalId, personalRowId,
+    OWNER, COUNTERPARTY, REAL_USERS, PERSONAL_ACCOUNTS, personalId, personalRowId,
     PEER_1, PEER_2, ADMIN, HOST, TRAINER, ID, WEEK_START,
   };
+}
+
+/**
+ * The run summary: how many accounts were seeded and which side each count is, never an id
+ * (no member data in logs). Printed, and added to the GitHub job summary when there is one.
+ */
+function runSummaryLines(accountCount) {
+  if (accountCount === 0) {
+    return [
+      'Demo schema seeded with the shared demo data only.',
+      'No accounts are switched to Demo data in Unlock. Turn the Demo data switch on for an account in Unlock admin, then run this again.',
+    ];
+  }
+  const members = accountCount - 1;
+  return [
+    `Demo schema seeded for ${accountCount} account${accountCount === 1 ? '' : 's'} switched to Demo data in Unlock.`,
+    'Clerk roles cannot be read without the Clerk secret key, which this seed does not hold, so the oldest switched-on account is the owner and admin side.',
+    members > 0
+      ? `The other ${members} ${members === 1 ? 'account is a member side' : 'accounts are member sides'}; the second oldest is the other side of every two-sided pairing.`
+      : 'No member-side account is switched on, so the other side of each two-sided flow stays synthetic.',
+  ];
+}
+
+function writeRunSummary(accountCount) {
+  const lines = runSummaryLines(accountCount);
+  console.log(`\n${lines.join('\n')}`);
+  const summaryPath = process.env.GITHUB_STEP_SUMMARY;
+  if (summaryPath) appendFileSync(summaryPath, `\n### Demo seed\n\n${lines.map((l) => `- ${l}`).join('\n')}\n`);
+}
+
+/** Replace any demo account id in a failure message, so an error printed to the log names no member. */
+function withoutAccountIds(message) {
+  return REAL_USERS.reduce((text, id) => text.split(id).join('<demo account>'), message);
 }
 
 async function main() {
@@ -1527,14 +1390,15 @@ async function main() {
   });
 
   const client = await pool.connect();
-  console.log(`Seeding demo schema for owner: ${OWNER}`);
-  if (OWNER2) {
-    console.log(`Two-sided counterparty (DEMO_SECOND_OWNER_ID): ${OWNER2}`);
-  } else if (COUNTERPARTY) {
-    console.log(`Two-sided counterparty (no DEMO_SECOND_OWNER_ID, so the admin account): ${COUNTERPARTY}`);
+  let accountCount;
+  try {
+    accountCount = await loadDemoAccounts(client);
+  } catch (err) {
+    client.release();
+    await pool.end();
+    throw new Error(`reading public.demo_mode_accounts failed: ${describeDbError(err)}`, { cause: err });
   }
-  if (TESTER_ADMIN) console.log(`Tester admin account (DEMO_TESTER_ADMIN_ID): ${TESTER_ADMIN}`);
-  if (TESTER_MEMBER) console.log(`Tester member account (DEMO_TESTER_MEMBER_ID): ${TESTER_MEMBER}`);
+  console.log(`Seeding the demo schema for ${accountCount} account${accountCount === 1 ? '' : 's'} switched to Demo data.`);
 
   try {
     await client.query('BEGIN');
@@ -1587,20 +1451,7 @@ async function main() {
     }
 
     await client.query('COMMIT');
-    console.log(`\nDemo schema seeded successfully for ${OWNER}.`);
-    if (OWNER2) {
-      console.log(
-        `Second owner ${OWNER2} wired as the two-sided counterparty. ` +
-        `Reminder: turn on the Demo data switch for ${OWNER2} on the Unlock admin so the app routes them to the demo schema.`,
-      );
-    }
-    for (const tester of TESTER_PROFILES) {
-      console.log(
-        `Tester account ${tester.id} seeded (${tester.headline}). ` +
-        `Reminder: turn on the Demo data switch for this id on the Unlock admin` +
-        (tester.id === TESTER_ADMIN ? ', and set role=admin on it in the Clerk dashboard (the seed cannot set the role).' : '.'),
-      );
-    }
+    writeRunSummary(accountCount);
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {});
     throw err;
@@ -1611,6 +1462,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error('seed:demo failed:', err instanceof Error ? err.message : describeDbError(err));
+  console.error('seed:demo failed:', withoutAccountIds(err instanceof Error ? err.message : describeDbError(err)));
   process.exit(1);
 });

@@ -37,11 +37,10 @@ The account you already seed the demo schema with works as it is: it is in demo 
 data around it. The admin demo account carries the same personal demo data (its own wallet history,
 incidents, listings, quotes, enrollments and the rest), so a clip shows the same screens signed in as
 either. Its Fireside comments sit under a different post, because one post showing both accounts'
-comments would show each line twice. With no second owner set (`demo_second_owner_id` left empty),
-the admin account is the other side of the two-sided demo data: a credits transfer, a LightHouse
-match on a place the admin hosts, a Foundation thread, and an open TrustTransport and SocketRelay
-request from each account for the other to act on. Set `DEMO_SECOND_OWNER_ID` to use a different
-account instead. Two things to know:
+comments would show each line twice. Seed Demo seeds every account switched to Demo data on the Unlock
+admin; the second oldest of them is the other side of the two-sided demo data: a credits transfer,
+a LightHouse match on a place it hosts, a Foundation thread, and an open TrustTransport and
+SocketRelay request from each account for the other to act on. Two things to know:
 
 - Its name and avatar show wherever the app shows the signed-in member.
 - If it is an admin account, admin controls show in the clips. A plain member account films the way
@@ -52,10 +51,10 @@ variables → Actions → Variables):
 
 | Variable | Account |
 |---|---|
-| `DEMO_VIDEO_CLERK_USER_ID` | The member demo account. Films the clips by default, and is the account Seed Demo seeds. |
-| `DEMO_VIDEO_CLERK_ADMIN_ID` | The admin demo account. Films the clips when `account` is set to `admin`, and is seeded as the admin tester. |
+| `DEMO_VIDEO_CLERK_USER_ID` | The member demo account. Films the clips by default. Seed Demo seeds it once its Demo data switch is on. |
+| `DEMO_VIDEO_CLERK_ADMIN_ID` | The admin demo account. Films the clips when `account` is set to `admin`. Seed Demo seeds it once its Demo data switch is on. |
 
-Both workflows read them, so neither box has to be typed. A box filled in still wins for that run. A
+The recording workflow reads them, so neither box has to be typed. A box filled in still wins for that run. A
 secret with the same name works too, and Infisical is read last.
 
 It also needs `CLERK_SECRET_KEY`, read from the GitHub secret of that name first and Infisical
@@ -64,8 +63,8 @@ The workflow signs in with a one-time Clerk sign-in token for that id. No passwo
 anywhere.
 
 A separate recording account instead: create the user in Clerk, turn on the Demo data
-switch for it on the Unlock admin (without this the clips would show real members), and run Seed Demo with it as
-`demo_tester_member_id`.
+switch for it on the Unlock admin (without this the clips would show real members, and Seed Demo
+would not seed it), then run Seed Demo.
 
 The `user-guide` clip needs no sign-in, so it is the clip to run first to check that recording, voice
 and captions work.
