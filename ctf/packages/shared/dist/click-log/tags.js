@@ -84,6 +84,11 @@ export const CLICK_LOG_PROBLEM_TAGS = [
     // crime told to bystanders) — this is the standing character verdict that follows the
     // member into medical, housing, family, and legal settings.
     { slug: 'false-mental-health-label', label: 'Falsely labeled mentally ill or dangerous' },
+    // Added 2026-11-22 (owner). The harm the `harvest-interview` / `understudy` pair produces:
+    // a member's project, story or achievement turns up as somebody else's, and the credit,
+    // money or audience goes to them. Distinct from `mirroring-behavior`, which is the ambient
+    // copying of how a member dresses and acts; this is the work itself taken.
+    { slug: 'work-copied', label: 'Your work or ideas copied and credited to someone else' },
 ];
 // Known taxonomy gap, recorded 2026-08-04 (owner raised it about `color-sensitization`, and it
 // turns out to be list-wide). The entries below are not all the same kind of thing:
@@ -373,6 +378,43 @@ export const CLICK_LOG_SCHEME_TAGS = [
     // there is nowhere in the house to go. Kind: operation (each attempt has an arc), though it
     // recurs for years.
     { slug: 'forced-homecoming', label: 'The Forced Homecoming' },
+    // Named by the owner (2026-11-22), with `understudy` below: the two halves of being copied,
+    // kept apart because they are done by different operatives at different times and a member
+    // can see one without ever seeing the other.
+    //
+    // The collecting half. An operative opens a friendly line about the member's life, work or
+    // background — what they are building, what happened to them, how they feel about it — and
+    // keeps asking for a call. The answers and the manner they are delivered in are written down
+    // and handed on. The owner's case: repeated requests for phone calls that turned out to be
+    // about nothing (`content/posts/nobody-calls-to-say-its-dead.md` records the same contact
+    // reading a call as the one place the app's structure does not reach; collecting material is
+    // the second purpose, not a replacement for the first). Two known uses for what is taken.
+    // One, raw material for `understudy` — the mannerisms and the story somebody else will wear.
+    // Two, learning to pass: an operative who has interviewed enough Targeted Individuals about
+    // their experiences and feelings can speak as a survivor in a survivors' space, which is
+    // what the owner reports happening in a copycat group on Quora. A member reading this list
+    // should take the practical point: sustained interest in how it felt and what you are
+    // working on, pressed toward a call, is a tag and not a conversation.
+    { slug: 'harvest-interview', label: 'The Interview' },
+    // The performing half. An operative is trained on what `harvest-interview` collected and
+    // then put in front of a chosen audience wearing it — the member's manner, their good
+    // qualities, their story, their project. Three uses the owner has seen. One, take the
+    // credit: the double is walked past somebody who knows the member (in the owner's case an
+    // investor, who said out loud that the newcomer reminded them of the owner), and raises
+    // money or wins standing on a likeness, with nothing behind the venture but the operatives
+    // who show up to patronize it. Two, work a third party without instructing them: a stranger
+    // telling somebody to like, dislike or contact a person invites suspicion, so the double is
+    // placed near them instead and the feeling arrives looking like their own. Three, take the
+    // work: the member's current project is reproduced alongside them and the mob makes the copy
+    // look successful, so attention moves off the member. The owner names what separates this
+    // from ordinary influence — borrowing a strategy that worked for somebody is normal and
+    // nearly nothing is original, while this is run as a takeover, with the point being to
+    // remove the achievement rather than to build anything. The harm it leaves is the
+    // `work-copied` problem tag. Related: `mirroring-behavior` is the ambient copying this draws
+    // on; `poisoned-well` also works a third party, but by staging gossip rather than by
+    // resemblance; `performed-kindness` is the like-then-turn shape the owner reports these
+    // placements often run on.
+    { slug: 'understudy', label: 'The Understudy' },
     // Catch-all while new schemes get named. Label renamed 2026-08-02 ("Other / not named yet" →
     // "Not listed"); the slug is frozen like every other slug. Picking it requires a written
     // description of the scheme (see click-log.incident.create) — that is the intake that names
