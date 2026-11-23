@@ -7389,7 +7389,8 @@ CREATE INDEX IF NOT EXISTS member_plugin_presence_user_id_idx ON member_plugin_p
 -- answers to the day's questions (the first answer stands), and the messages inside a match card
 -- between two members who answered at least three the same. A pair is stored low id first, so one
 -- conversation has one key. Account deletion removes a member's answers and every conversation
--- they were in.
+-- they were in. Answers to the retired first question list (q01 to q42) and their audit rows are
+-- deleted by db/migrations/post/0113_retire_first_question_set.sql; those ids are never reused.
 CREATE TABLE IF NOT EXISTS question_answers (
   user_id TEXT NOT NULL,
   question_id TEXT NOT NULL,
@@ -11944,4 +11945,16 @@ ALTER TABLE IF EXISTS user_ui_preferences ADD COLUMN IF NOT EXISTS story_replies
 ALTER TABLE IF EXISTS user_ui_preferences ADD COLUMN IF NOT EXISTS story_replies_visitors_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS demo.user_ui_preferences ADD COLUMN IF NOT EXISTS story_replies_visitors_version TEXT;
 ALTER TABLE IF EXISTS demo.user_ui_preferences ADD COLUMN IF NOT EXISTS story_replies_visitors_at TIMESTAMPTZ;
+
+
+-- ── post migration: 0113_retire_first_question_set.sql ──
+-- Safe to re-run.
+-- 21 Questions: the first list of questions, q01 to q42, was retired on 2026-11-22 (owner decision)
+-- and replaced by q43 onward. This deletes every answer to the old questions and their audit rows,
+-- so nothing about them is kept. Their ids are never reused, so no new answer is touched. The demo
+-- schema seeds no 21 Questions tables, so it has nothing to delete.
+DELETE FROM question_answers
+ WHERE question_id ~ '^q(0[1-9]|[1-3][0-9]|4[0-2])$';
+DELETE FROM question_answer_audit
+ WHERE question_id ~ '^q(0[1-9]|[1-3][0-9]|4[0-2])$';
 

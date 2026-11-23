@@ -7391,7 +7391,8 @@ CREATE INDEX IF NOT EXISTS member_plugin_presence_user_id_idx ON member_plugin_p
 -- answers to the day's questions (the first answer stands), and the messages inside a match card
 -- between two members who answered at least three the same. A pair is stored low id first, so one
 -- conversation has one key. Account deletion removes a member's answers and every conversation
--- they were in.
+-- they were in. Answers to the retired first question list (q01 to q42) and their audit rows are
+-- deleted by db/migrations/post/0113_retire_first_question_set.sql; those ids are never reused.
 CREATE TABLE IF NOT EXISTS question_answers (
   user_id TEXT NOT NULL,
   question_id TEXT NOT NULL,
