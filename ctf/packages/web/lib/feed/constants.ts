@@ -12,9 +12,6 @@ export const FEED_ERROR_CODE = {
   forbidden: 'FEED_FORBIDDEN',
   dismissNotAllowed: 'FEED_DISMISS_NOT_ALLOWED',
   rateLimitExceeded: 'FEED_RATE_LIMIT_EXCEEDED',
-  consentRequired: 'FEED_LLM_CONSENT_REQUIRED',
-  llmUnavailable: 'FEED_LLM_UNAVAILABLE',
-  answerNotFound: 'FEED_ANSWER_NOT_FOUND',
   postNotFound: 'FEED_COMMUNITY_POST_NOT_FOUND',
   moderationRejected: 'FEED_CONTENT_POLICY_VIOLATION',
 } as const;
@@ -94,7 +91,6 @@ export const FEED_MAX_PAGE_SIZE = 100;
 
 export const FEED_MAX_TITLE_LENGTH = 160;
 export const FEED_MAX_BODY_LENGTH = 4000;
-export const FEED_MAX_QUESTION_LENGTH = 600;
 export const FEED_MAX_COMMUNITY_POST_LENGTH = 1200;
 export const FEED_MAX_COMMUNITY_REPLY_LENGTH = 800;
 
@@ -108,20 +104,17 @@ export const FEED_ADMIN_MAX_COMMUNITY_POST_URLS = 20;
 // welcome/help message in the flow of the chat. Members keep FEED_MAX_COMMUNITY_POST_LENGTH.
 export const FEED_ADMIN_MAX_COMMUNITY_POST_LENGTH = 4000;
 
-export const FEED_ALLOWED_CHANNELS = ['announcements', 'questions', 'community'] as const;
+export const FEED_ALLOWED_CHANNELS = ['announcements', 'community'] as const;
 
 // Enabled-channel names are plural ('announcements'); the stored feed_items.item_type is singular
 // ('announcement'). The feed timeline filters rows by item_type, so a channel name must be mapped to
 // its item_type before it is used in that filter — without this, an 'announcements' channel never
-// matches the 'announcement' rows and announcements (and questions) silently vanish from the Commons.
+// matches the 'announcement' rows and announcements silently vanish from the Commons.
 export const FEED_CHANNEL_TO_ITEM_TYPE: Record<FeedEnabledChannel, FeedItemType> = {
   announcements: 'announcement',
-  questions: 'question',
   community: 'community',
 };
-export const FEED_QUESTION_CATEGORIES = ['housing', 'services', 'general', 'safety', 'benefits'] as const;
 export const FEED_COMMUNITY_CATEGORIES = ['general', 'peer_support', 'resource_share', 'event'] as const;
-export const FEED_ANSWER_RATINGS = ['helpful', 'not_helpful', 'flagged'] as const;
 
 // The fixed quick set of emoji a member can react with on a community post. Shared by server
 // and client so both agree; the server rejects any emoji outside this set. Deliberately small —

@@ -15,7 +15,7 @@ function parseBody(body: ConfigBody): FeedConfigInput {
     maxTimelinePageSize: Number(body.maxTimelinePageSize ?? 50),
     enabledChannels: Array.isArray(body.enabledChannels)
       ? body.enabledChannels.filter(
-        (channel): channel is 'announcements' | 'questions' | 'community' => typeof channel === 'string' && FEED_ALLOWED_CHANNELS.includes(channel as 'announcements' | 'questions' | 'community'),
+        (channel): channel is 'announcements' | 'community' => typeof channel === 'string' && FEED_ALLOWED_CHANNELS.includes(channel as 'announcements' | 'community'),
       )
       : undefined,
   };
