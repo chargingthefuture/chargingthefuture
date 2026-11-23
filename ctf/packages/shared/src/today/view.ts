@@ -27,6 +27,7 @@ const SOURCE_NAMES: Record<string, string> = {
   'peer-programming-cohort': 'your cohort',
   'skill-up': 'cohorts',
   announcements: 'announcements',
+  commons: 'Commons posts',
   'directory-invites': 'invitations',
   'what-works': 'What Works',
   'quora-survey': 'the Quora survey',

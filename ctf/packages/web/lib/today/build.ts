@@ -11,6 +11,7 @@ import { broadcast, missionCard, moodCard, numbersCard, wantedCard } from './sou
 import { replayCards } from './sources-replays';
 import { mainRoom, nextTalk, weekTalks, weaversRoom } from './sources-rooms';
 import { questionCards } from './sources-questions';
+import { commonsCards } from './sources-commons';
 import { readDaysWon } from 'lib/measures/action-minutes';
 import { listMutes } from 'lib/mutes/repository';
 import { seApplyMutes, type SeTodayDay } from '@ctf/shared';
@@ -65,6 +66,7 @@ export function todaySources(viewer: TodayViewer, day: SeTodayDay, now = new Dat
     { name: 'skill-up', read: () => cohortOffers() },
     { name: 'questions', read: () => questionCards(viewer, day) },
     { name: 'announcements', read: () => announcementStories(viewer) },
+    { name: 'commons', read: () => commonsCards(viewer) },
     { name: 'directory-invites', read: () => inviteStories() },
     { name: 'what-works', read: () => whatWorksStory(viewer, day) },
     { name: 'blog-stories', read: () => blogStories(day) },

@@ -38,6 +38,7 @@ vi.mock('lib/fireside/story-comments', () => ({ listStoryCommentTimes: vi.fn(asy
 vi.mock('./windows', () => ({ readWindows: vi.fn(async () => new Map()) }));
 vi.mock('lib/notifications/repository', () => ({ notifySafe: vi.fn(async () => undefined) }));
 vi.mock('./sources-questions', () => ({ questionCards: vi.fn(async () => []) }));
+vi.mock('./sources-commons', () => ({ commonsCards: vi.fn(async () => []) }));
 vi.mock('./sources-blog', () => ({ blogStories: vi.fn(async () => []), storiesTomorrow: vi.fn(async () => 5) }));
 vi.mock('./presence', () => ({ readPresence: vi.fn(async () => 3) }));
 vi.mock('./saves/repository', () => ({ readSavedIds: vi.fn(async () => new Set()) }));
