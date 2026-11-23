@@ -12,7 +12,7 @@ export type SeQuestion = { id: string; text: string; choices: string[] };
 // Ids never change and are never reused: answers are stored against them. q01 to q42 were the first
 // list, general icebreakers about work habits and small preferences, retired on 2026-11-22 (owner
 // decision): they matched people on coffee and weather rather than on what they want in life.
-// Answers to them are kept and no longer count toward a match.
+// Their answers were deleted (migration 0113).
 //
 // The list since then is for one TI finding another by what each wants from life after the
 // targeting: work, income, what to learn, who to meet, what to give back. It stays on wants rather
@@ -49,9 +49,6 @@ export function seQuestionAllowed(question: SeQuestion): boolean {
 }
 
 export const SE_QUESTIONS: readonly SeQuestion[] = ALL.filter(seQuestionAllowed);
-
-// The ids that count toward a match: the current list only, so a retired question never does.
-export const SE_QUESTION_IDS: readonly string[] = SE_QUESTIONS.map((question) => question.id);
 
 // The first day of questions, and how many shared same answers make a match.
 export const SE_QUESTIONS_START = '2026-11-03';

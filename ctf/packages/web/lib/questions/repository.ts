@@ -1,4 +1,4 @@
-import { SE_MATCH_MIN_SAME, SE_QUESTION_IDS, type SeMatchMessage } from '@ctf/shared';
+import { SE_MATCH_MIN_SAME, type SeMatchMessage } from '@ctf/shared';
 import { queryDb } from 'lib/db/postgres';
 
 // 21 Questions (3.1.0 plan, task 18): a member's answers, the members who answered enough of the
@@ -6,8 +6,7 @@ import { queryDb } from 'lib/db/postgres';
 // A match never includes a person either side has blocked, or whose account is restricted from
 // contact; the routes check the same before a message is sent. A member who turned matching off is
 // in nobody's matches and sees none, from the next read: matches are worked out on every read and
-// kept nowhere, so there is no list to clear. Only answers to questions in the current list count,
-// toward a match or toward the answered total; answers to retired questions are kept and ignored.
+// kept nowhere, so there is no list to clear.
 
 export const MATCHES_SHOWN = 5;
 export const MESSAGES_SHOWN = 50;
@@ -60,9 +59,9 @@ export type MatchingState = { answered: number; enabled: boolean };
 // How many questions the member answered, and whether they are matched. No row means on.
 export async function readMatchingState(userId: string): Promise<MatchingState> {
   const result = await queryDb<{ answered: number; enabled: boolean | null }>(
-    `SELECT (SELECT COUNT(*)::int FROM question_answers WHERE user_id = $1 AND question_id = ANY($2::text[])) AS answered,
+    `SELECT (SELECT COUNT(*)::int FROM question_answers WHERE user_id = $1) AS answered,
             (SELECT matching_enabled FROM question_matching_settings WHERE user_id = $1) AS enabled`,
-    [userId, SE_QUESTION_IDS],
+    [userId],
   );
   const row = result.rows[0];
   return { answered: row?.answered ?? 0, enabled: row?.enabled ?? true };
@@ -91,13 +90,12 @@ async function readMatches(userId: string, otherUserId: string | null, limit: nu
             (ARRAY_AGG(b.question_id ORDER BY b.answered_at DESC) FILTER (WHERE a.choice = b.choice))[1:3] AS same_ids
        FROM question_answers a
        JOIN question_answers b ON b.question_id = a.question_id AND b.user_id <> a.user_id
-      WHERE a.user_id = $1 AND a.question_id = ANY($5::text[]) AND ($3::text IS NULL OR b.user_id = $3)
-        AND ${NOT_BLOCKED_OR_RESTRICTED}
+      WHERE a.user_id = $1 AND ($3::text IS NULL OR b.user_id = $3) AND ${NOT_BLOCKED_OR_RESTRICTED}
       GROUP BY b.user_id
      HAVING COUNT(*) FILTER (WHERE a.choice = b.choice) >= $2
       ORDER BY same DESC, answered_both ASC, b.user_id
       LIMIT $4`,
-    [userId, SE_MATCH_MIN_SAME, otherUserId, limit, SE_QUESTION_IDS],
+    [userId, SE_MATCH_MIN_SAME, otherUserId, limit],
   );
   return result.rows.map((row) => ({ userId: row.user_id, same: row.same, both: row.answered_both, sameQuestionIds: row.same_ids ?? [] }));
 }
