@@ -71,5 +71,5 @@ export declare function seRoomOnStage(person: {
 }, speakMode: 'open' | 'hand_raise'): boolean;
 export declare function seRoomBarLine(speakers: string[], selfSpeaking: boolean): string;
 export declare const SE_ROOM_QUIET = "Quiet right now";
-export declare const SE_ROOM_QUIET_TEXT = "Nobody is in the room. Play a reading while you wait, or come back for the next talk.";
+export declare const SE_ROOM_QUIET_TEXT = "Nobody is in the room. Play a reading while you wait, come back for the next talk, or start your own conversation now.";
 export declare const SE_ROOM_MAIN_AUDIENCE = "Open to everyone";
