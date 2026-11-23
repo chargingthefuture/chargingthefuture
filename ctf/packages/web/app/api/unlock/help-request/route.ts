@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ensureUnlockMutationCsrf, requireUnlockUserAccess, resolveUnlockRequestId } from 'lib/unlock/_lib';
 import { recordUnlockHelpRequest } from 'lib/unlock/help-requests';
+import { notifyAdminsOfUnlockHelpRequest } from 'lib/unlock/help-request-notify';
 import { normalizeUnlockQuoraHint } from 'lib/unlock/quora-hint';
 import { insertUnlockAudit } from 'lib/unlock/repository';
 import { failureResponse } from 'lib/errors/failure';
@@ -20,6 +21,9 @@ import { failureResponse } from 'lib/errors/failure';
 // so this can only ever open the Commons to the person who pressed the button. It grants nothing else —
 // approved-only surfaces stay closed, and the Commons still shows them the verification banner.
 // Idempotent: pressing twice keeps the first timestamp, and a later press that carries a hint stores it.
+//
+// A press that opens a request tells the admins on their phones (owner decision, 2026-11-23); a repeat
+// press of a request already open does not. That alert never fails this request.
 export async function POST(request: Request) {
   const csrfDeny = ensureUnlockMutationCsrf(request);
   if (csrfDeny) {
@@ -41,7 +45,7 @@ export async function POST(request: Request) {
   const quoraHint = normalizeUnlockQuoraHint(body?.quoraHint);
 
   try {
-    await recordUnlockHelpRequest(gate.auth.userId, quoraHint);
+    const openedRef = await recordUnlockHelpRequest(gate.auth.userId, quoraHint);
 
     await insertUnlockAudit({
       actorUserId: gate.auth.userId,
@@ -52,8 +56,13 @@ export async function POST(request: Request) {
       requestId,
       // Whether they left something to look them up by, not the text itself: the hint is member data
       // and belongs in the one row an account deletion removes, not copied into the audit log as well.
-      metadata: { hintGiven: quoraHint !== null },
+      metadata: { hintGiven: quoraHint !== null, adminsNotified: openedRef !== null },
     });
+
+    if (openedRef) {
+      // Best-effort and self-contained: it logs its own failures and never throws.
+      await notifyAdminsOfUnlockHelpRequest(openedRef).catch(() => undefined);
+    }
 
     return NextResponse.json({ ok: true });
   } catch (error) {

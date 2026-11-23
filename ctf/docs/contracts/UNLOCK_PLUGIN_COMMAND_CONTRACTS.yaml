@@ -34,7 +34,7 @@ contracts:
 
   - pluginId: unlock
     command: unlock.help.request
-    version: 1.1.0
+    version: 1.2.0
     description: >-
       A signed-in member with no submission asks for help instead of giving a Quora URL. Records the
       request, which is what admits them to the Commons (support-only) so there is somebody to ask.
@@ -42,7 +42,11 @@ contracts:
       URL — the name on it, a link to something they posted, an email — stored as the help request's
       hint so an admin can look them up and approve them by hand. Self-scoped — the member id comes
       from the session, never the request body. Grants nothing beyond the Commons; approved-only
-      surfaces stay closed and the verification prompt follows them.
+      surfaces stay closed and the verification prompt follows them. A press that opens a request (the
+      first press, or one that reopens a request an admin marked done) tells every admin: one Activity
+      row each ("Someone asked for help with Unlock.", linking to /admin/unlock) and the device push it
+      brings under their own push settings. A repeat press of a request already open tells nobody. The
+      alert never carries the member's text, name or id, and its failure never fails the request.
     inputSchema:
       quoraHint:
         type: string
@@ -58,6 +62,8 @@ contracts:
     dataAccess:
       - unlock_help_requests
       - unlock_audit_log
+      - notifications
+      - push_subscriptions
     purpose: onboarding_support_access
     retentionClass: transactional_long_lived
     idempotency: true
