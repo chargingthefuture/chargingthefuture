@@ -15,7 +15,7 @@
 | **Visibility** | Member-facing |
 | **Roles to test** | member, admin |
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
-| **Seed first** | `pnpm --dir ctf seed:lighthouse`; on the demo schema, the Seed demo workflow adds six more active listings by synthetic hosts (`demo-seed/47-lighthouse.mjs`) |
+| **Seed first** | `pnpm --dir ctf seed:lighthouse`; on the demo schema, the Seed demo workflow adds six more active listings by synthetic hosts (`demo-seed/47-lighthouse.mjs`), shown on demo Today as sam_t, dee_w and tombe_p |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-lighthouse-feature-inventory.md` |
 | **Generated** | 2026-06-28 (initial authoring; hand-updated 2026-07-05 for listing price/currency/type display; hand-updated 2026-07-14 for the seeker "Your details" screen and "Request to stay" flow, and again 2026-07-14 for the "a member can be both host and seeker" reversal; hand-updated 2026-09-15 for the Wanted tab and the budget currency picker — LH-10, LH-10b and LH-11; hand-updated 2026-10-05 for failed reads — LH-12) |
 
