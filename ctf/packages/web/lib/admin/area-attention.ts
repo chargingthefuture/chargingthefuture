@@ -5,6 +5,7 @@ import { countPendingExportRequests } from 'lib/fireside/export-review';
 import { countMilestoneQueueSince } from 'lib/skill-up/milestone-queue';
 import { reportError } from 'lib/observability/report';
 import { CONTRIBUTIONS_CALL_ACTOR_ID } from 'lib/admin-expenses/contributions-call';
+import { countOpenUnlockHelpRequests } from 'lib/unlock/help-requests';
 
 // Powers the "new to review" dot on the admin landing tiles. For each admin area that has a real
 // review queue on its admin page, we count the items that are actionable (pending / open / unresolved)
@@ -52,9 +53,13 @@ async function countUnpublishedContributionsCalls(): Promise<number> {
 
 const ATTENTION_QUERIES: Record<string, AttentionQuery[]> = {
   'feed-announcements': [{ count: countUnpublishedContributionsCalls }],
+  // A help request ("ask for help" on the Unlock screen) keeps the dot lit whether or not the area
+  // was opened since, until the member is approved or turned down or an admin presses Done on their
+  // row (owner decision, 2026-11-23), like the Contributions call above.
   unlock: [
     `SELECT COUNT(*)::int AS n FROM unlock_verification_submissions
        WHERE review_status = 'pending' AND ($1::timestamptz IS NULL OR created_at > $1)`,
+    { count: () => countOpenUnlockHelpRequests() },
   ],
   comic: [
     `SELECT COUNT(*)::int AS n FROM comic_review_queue

@@ -239,6 +239,37 @@ contracts:
     idempotency: true
 
 
+
+  - pluginId: unlock
+    command: unlock.admin.help-request.done
+    version: 1.0.0
+    description: >-
+      Mark a member's "ask for help" request done (or waiting again) from their row in the sign-ups panel
+      on /admin/unlock (owner decision, 2026-11-23). Sets unlock_help_requests.done_at. A request waits,
+      and the Unlock tile on the admin landing carries its dot, until it is marked done or the member's
+      address is approved or turned down. Never changes the member's access, submission or reward.
+      404 when the member has no request. (POST /api/unlock/admin/help-requests)
+    inputSchema:
+      userId:
+        type: string
+        required: true
+      done:
+        type: boolean
+        required: true
+    outputSchema:
+      ok:
+        type: boolean
+      userId:
+        type: string
+      done:
+        type: boolean
+    dataAccess:
+      - unlock_help_requests
+      - unlock_audit_log
+    purpose: onboarding_support_access
+    retentionClass: audit_long_lived
+    idempotency: true
+
   - pluginId: unlock
     command: unlock.admin.signups.demo
     version: 1.0.0

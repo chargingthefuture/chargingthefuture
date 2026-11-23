@@ -1836,7 +1836,8 @@ ALTER TABLE IF EXISTS unlock_banned_accounts ADD COLUMN IF NOT EXISTS updated_at
 CREATE TABLE IF NOT EXISTS unlock_help_requests (
   user_id TEXT PRIMARY KEY,
   requested_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  quora_hint TEXT
+  quora_hint TEXT,
+  done_at TIMESTAMPTZ
 );
 ALTER TABLE IF EXISTS unlock_help_requests ADD COLUMN IF NOT EXISTS requested_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 -- Whatever the member could give about their Quora account when they could not give the URL itself:
@@ -1845,6 +1846,10 @@ ALTER TABLE IF EXISTS unlock_help_requests ADD COLUMN IF NOT EXISTS requested_at
 -- reads it in the sign-ups panel and looks them up by hand, which is the only thing that was missing
 -- for a member who pressed "ask for help" and left nothing behind to approve.
 ALTER TABLE IF EXISTS unlock_help_requests ADD COLUMN IF NOT EXISTS quora_hint TEXT;
+-- When an admin pressed Done on the request in the sign-ups panel (owner decision, 2026-11-23); NULL
+-- while it waits. A request also stops waiting once the member's address is approved or turned down,
+-- and the Unlock tile on the admin landing carries a dot while any is waiting. A new hint reopens it.
+ALTER TABLE IF EXISTS unlock_help_requests ADD COLUMN IF NOT EXISTS done_at TIMESTAMPTZ;
 
 -- Add prod unlock audit/config tables if missing.
 -- `user_id` and `action` are nullable: the current writer (insertUnlockAudit) records the
@@ -11973,4 +11978,14 @@ ALTER TABLE IF EXISTS today_card_marks DROP CONSTRAINT IF EXISTS today_card_mark
 ALTER TABLE IF EXISTS today_card_marks ADD CONSTRAINT today_card_marks_mark_check CHECK (mark IN ('done', 'read', 'not_for_me'));
 ALTER TABLE IF EXISTS demo.today_card_marks DROP CONSTRAINT IF EXISTS today_card_marks_mark_check;
 ALTER TABLE IF EXISTS demo.today_card_marks ADD CONSTRAINT today_card_marks_mark_check CHECK (mark IN ('done', 'read', 'not_for_me'));
+
+
+-- ── post migration: 0115_unlock_help_request_done.sql ──
+-- Safe to re-run.
+-- unlock_help_requests gains done_at: when an admin pressed Done on the member's help request in the
+-- sign-ups panel on /admin/unlock (owner decision, 2026-11-23). NULL means not marked. A request waits,
+-- and the Unlock tile on the admin landing carries its dot, until it is marked done or the member's
+-- address is approved or turned down. The demo schema's copy gets the same column.
+ALTER TABLE IF EXISTS unlock_help_requests ADD COLUMN IF NOT EXISTS done_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS demo.unlock_help_requests ADD COLUMN IF NOT EXISTS done_at TIMESTAMPTZ;
 

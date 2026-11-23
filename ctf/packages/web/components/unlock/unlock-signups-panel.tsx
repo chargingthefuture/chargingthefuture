@@ -8,6 +8,7 @@ import { failureText } from 'lib/errors/client-failure';
 import { useTheme } from '@/hooks/useTheme';
 import { getUnlockTokens, type UnlockTokens } from './unlock-shared';
 import { UnlockSignupRow } from './unlock-signup-row';
+import { isUnlockHelpRequestOpen } from 'lib/unlock/help-request-open';
 import { accountAfterBanToggle, providerRefusalText } from './unlock-signup-ban-state';
 import { UnlockSignupsSummary, signupHeadline } from './unlock-signups-summary';
 import {
@@ -89,6 +90,14 @@ async function postSignupMark(route: string, body: Record<string, unknown>): Pro
   if (res.ok) return null;
   const data = (await res.json().catch(() => null)) as { message?: string; code?: string } | null;
   return data?.message ?? data?.code ?? `Update failed (${res.status}).`;
+}
+
+// Done on a help request (or waiting again), drawn on the row at once: it stops waiting, and the
+// Unlock tile's dot goes once none is left.
+const HELP_ROUTE = '/api/unlock/admin/help-requests';
+function withHelpDone(done: boolean): (account: UnlockSignupAccount) => UnlockSignupAccount {
+  const doneAt = done ? new Date().toISOString() : null;
+  return (account) => ({ ...account, helpDoneAt: doneAt, helpRequestOpen: isUnlockHelpRequestOpen({ doneAt }, account.reviewStatus) });
 }
 
 export function UnlockSignupsPanel({ overview }: { overview: UnlockSignupOverview }) {
@@ -299,6 +308,7 @@ export function UnlockSignupsPanel({ overview }: { overview: UnlockSignupOvervie
                       onToggleDemo={(userId, demo) => void toggleDemo(userId, demo)}
                       onToggleBanned={(userId, banned) => void toggleBanned(userId, banned)}
                       onAddUrl={(userId, url) => void addUrl(userId, url)}
+                      onMarkHelpDone={(userId, done) => void setMark(userId, HELP_ROUTE, { done }, withHelpDone(done), 'help_request_done')}
                     />
                   ))}
                 </div>

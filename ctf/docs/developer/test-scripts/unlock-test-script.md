@@ -21,7 +21,7 @@
 | **Surfaces** | web (internal admin surface) |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-unlock-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-11-23 manual update: UNLOCK-M6: the banner opens the Unlock screen at Why this step or at Can't find it?, the other routes' new wording, and Help request sent |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-11-23 manual update and UNLOCK-A9e, every help request on the sign-up list with Done and the tile dot; UNLOCK-M6: the banner opens the Unlock screen at Why this step or at Can't find it?, the other routes' new wording, and Help request sent |
 
 ## How to run this
 
@@ -656,6 +656,25 @@ audit row. Step 3: the account sees the seeded demo data, and an admin screen sh
 other accounts are unaffected. Step 4: within a minute the account sees real data again. The switch
 does not change the account's access, its submission, or whether it is counted; **Mark as demo /
 test** stays a separate control.
+**Result:** web ☐ — notes:
+
+### UNLOCK-A9e · Every help request on the sign-up list, Done, and the Unlock tile's dot (added 2026-11-23)
+**Role:** two new members on 3.1, then an admin · **Surfaces:** web (admin surface) — web-only, no Android admin (rule 105)
+**Steps:**
+1. As member A, open the Unlock screen and press **Ask for help finding it** with the box empty. As
+   member B, do the same with a name in the box.
+2. As the admin, open the admin landing, then `/admin/unlock`, and find both rows in the sign-up list.
+3. Go back to the admin landing.
+4. On A's row press **Done**; reload the admin landing.
+5. Approve B's address once B sends one (or turn it down); reload the admin landing.
+6. Press **Mark as waiting again** on A's row; then as A ask for help again with a name in the box.
+**Expected:** Step 2: the Unlock tile carries the follow-up dot. A's row reads "Asked for help on
+<date> · waiting" with **Done**; B's row reads the same plus "Told us: <name>". Step 3: the dot is
+still there although the area was opened. Step 4: A's row reads "· marked done on <date>" with
+**Mark as waiting again**, and a `unlock.admin.help-request.done` audit row is written; the dot stays
+while B waits. Step 5: B's row reads "· handled in review" with no button, and the dot is gone.
+Step 6: A's request waits again and the dot returns. Nothing in these steps changes either member's
+access.
 **Result:** web ☐ — notes:
 
 ### UNLOCK-A9b · Ban an account from the sign-up list, and have the ban hold at the auth provider

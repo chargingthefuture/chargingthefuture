@@ -203,6 +203,13 @@ export type UnlockSignupAccount = {
   // on file for a member who could not produce a profile URL, and it is what an approval by hand is
   // made from.
   quoraHint: string | null;
+  // When they pressed "ask for help", with or without anything in the box; null when they never did.
+  helpRequestedAt: string | null;
+  // When an admin pressed Done on the request; null while it waits or when there is none.
+  helpDoneAt: string | null;
+  // The request is still waiting on an admin: not marked done, and the address was neither approved
+  // nor turned down. The Unlock tile on the admin landing carries a dot while any is open.
+  helpRequestOpen: boolean;
 };
 
 // The sign-up reading on the Unlock admin page. `available: false` means the roster could not be read

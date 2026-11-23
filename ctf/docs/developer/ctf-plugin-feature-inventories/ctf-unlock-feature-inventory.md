@@ -250,6 +250,17 @@ to guess which group a wall of silence puts them in.
    needed a manual approval were the ones nobody could approve. A member who already has a URL is not
    offered this: changing one is the Edit control, so an "add" can never quietly overwrite what the
    member gave.
+5b. **Help requests, every one, with Done (owner decision, 2026-11-23).** Every member who pressed
+   "ask for help" shows on their row as `Asked for help on <date>` followed by `waiting`,
+   `marked done on <date>`, or `handled in review`, beside `Told us: …` when they typed something
+   (`unlock-signup-help.tsx`). Before this, a request with an empty box showed nowhere. A waiting
+   request carries a **Done** button (`POST /api/unlock/admin/help-requests`, `unlock.admin.help-request.done`,
+   setting `unlock_help_requests.done_at`), and a done one **Mark as waiting again**. A request waits
+   until it is marked done or the member's address is approved or turned down (rejected, spam or
+   duplicate), the rule in `lib/unlock/help-request-open.ts`; a member who asks again with something
+   new in the box opens it again. While any request waits, the Unlock tile on the admin landing carries
+   the follow-up dot (`lib/admin/area-attention.ts`, counted by `countOpenUnlockHelpRequests`), whether
+   or not the area was opened since.
 7. See who left. An account with an account-scope row in `account_deletion_events` asked to be
    forgotten; their Unlock submission was deleted with the rest of their data, so counting them as
    "signed up, never gave a Quora URL" would say the opposite of what happened. They get their own
@@ -274,6 +285,7 @@ to guess which group a wall of silence puts them in.
 11. `unlock.admin.signups.exclude`
 12. `unlock.admin.signups.ban`
 13. `unlock.help.request`
+13a. `unlock.admin.help-request.done`
 
 ### 3.2 HTTP Projection Routes
 
@@ -293,6 +305,7 @@ Admin routes:
 - `POST /api/unlock/admin/submissions/:submissionId/revoke` — admin-session-gated (`requireUnlockAdminAccess`) + CSRF (`x-ctf-csrf: '1'` + same-origin). Duplicate-identity determination "loser" path: claws a granted reward back (best-effort `burnCredits`, key `unlock-revoke-submission-<id>`) and sets the submission to `rejected` + `locked_support_only` with `reward_revoked_at`, so reconcile never re-grants it. Body `{ reviewNote? }`. Returns `{ ok, submission, creditsReclaimed, reclaimAmount }`; idempotent (a second call on an already-revoked submission is a no-op). Audited as `unlock.admin.submission.revoke` (+ `service-credits.governance.burn.unlock.revoke` when credits were reclaimed).
 - `POST /api/unlock/admin/submissions/:submissionId/grant-reward` — admin-session-gated + CSRF. Duplicate-identity determination "winner" path: clears the hold and grants the reward to the chosen account through the shared guard. Returns 409 `unlock_reward_still_held` (with `holderUserId`) if another account still holds the identity's reward (revoke that one first); 409 if the submission is not approved; otherwise `{ ok, submission }`. Idempotent if the reward already landed. Audited as `unlock.admin.reward.grant` (+ `service-credits.governance.mint.grant.unlock.determination` on a fresh grant).
 - `POST /api/unlock/admin/banned-accounts` — admin-session-gated (`requireUnlockAdminAccess`) + CSRF (`x-ctf-csrf: '1'` + same-origin). Bans one account outright, or lifts that ban. Body `{ userId, banned, note? }` (`note` is capped at 200 characters); returns `{ ok: true, userId, banned, providerOk, providerReason }`, 400 on a missing `userId`, a non-boolean `banned`, or an attempt to ban your own account. Writes `unlock_banned_accounts` and calls the auth provider's ban/unban. A provider failure does not fail the request: a ban row is still written, with `provider_applied` false, `providerOk` comes back false, and the row says the sign-in ban did not go through, with a **Try the sign-in ban again** button; the panel message names the account. Pressing ban again on a listed account keeps its reason (`spam`, `duplicate` or `perp`). A lift the provider refuses leaves the row in place, because the account is still banned at sign-in. Idempotent in both directions. Audited as `unlock.admin.signups.ban`, with `reason: 'provider_ban_failed'` when the provider refused.
+- `POST /api/unlock/admin/help-requests` — admin-session-gated (`requireUnlockAdminAccess`) + CSRF (`x-ctf-csrf: '1'` + same-origin). `{ userId, done }` marks the member's help request done (sets `unlock_help_requests.done_at`) or waiting again; 404 when the member never asked; audited as `unlock.admin.help-request.done`. Changes nothing about access, submission or reward.
 - `POST /api/unlock/admin/excluded-accounts` — admin-session-gated (`requireUnlockAdminAccess`) + CSRF (`x-ctf-csrf: '1'` + same-origin). Marks one account as demo / test so the sign-up counters leave it out, or puts it back. Body `{ userId, excluded, note? }` (`note` is capped at 200 characters); returns `{ ok: true, userId, excluded }`, 400 on a missing `userId` or a non-boolean `excluded`. Idempotent in both directions — re-marking refreshes the note, unmarking an account that was never marked is a no-op. Writes `unlock_excluded_accounts` only: it never touches the member's access tier, submission, or reward. Audited as `unlock.admin.signups.exclude`. The list itself is read server-side by the admin page (`getUnlockSignupOverview`) and shown in the admin shell's sign-up panel.
 - `POST /api/unlock/admin/demo-accounts` — admin-session-gated (`requireUnlockAdminAccess`) + CSRF. Switches one account to demo data, or back. Body `{ userId, demo }`; returns `{ ok: true, userId, demo }`, 400 on a missing `userId`, a non-boolean `demo` or bad JSON. Idempotent both ways. Writes `public.demo_mode_accounts` only, always on the public pool. Audited as `unlock.admin.signups.demo`. The overview carries `demoData` per account.
 - `POST /api/unlock/admin/spam-denylist/remove` — admin-session-gated (`requireUnlockAdminAccess`) + CSRF (`x-ctf-csrf: '1'`). Removes one normalized Quora URL from `unlock_spam_quora_urls`. Body `{ quoraProfileUrlNormalized }`; returns `{ ok: true }`, 400 if missing. Only stops future submissions of that URL from being auto-blocked — it does not lift the restriction on a member already blocked for it (re-review their submission to approved/rejected for that). The denylist itself is read server-side by the admin page (`listSpamQuoraUrls`) and shown in the admin shell's denylist panel. Audited as `unlock.admin.spam_denylist.remove`.
@@ -371,7 +384,8 @@ Admin page:
    exists.
 
 7. `unlock_help_requests` — one row per member who pressed "ask for help" on the Unlock screen instead
-   of submitting a Quora URL. Keyed on `user_id` (primary key) with `requested_at` and `quora_hint`
+   of submitting a Quora URL. Keyed on `user_id` (primary key) with `requested_at`, `done_at` (when an
+   admin pressed Done on the request, NULL while it waits; migration `post/0115`) and `quora_hint`
    (nullable free text, capped at 300 characters by the writer). It is what admits a member with no
    submission to the Commons, and it doubles as the count of how many people could not get through the
    Quora step on their own. `quora_hint` holds whatever the member could say about their Quora account
@@ -527,6 +541,8 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
    `Delete Account (manual)` Actions workflow, one account at a time.
 
 ## 9) Change Log
+
+- 2026-11-23: **Every help request shows on the sign-ups panel, with Done, and the Unlock tile carries a dot while one waits (§2.4 5b).** Owner decision: requests with an empty box showed nowhere an admin looks. Each row now reads "Asked for help on <date>" with its state and "Told us: …" when there is text; Done (`POST /api/unlock/admin/help-requests`) sets the new `unlock_help_requests.done_at` (`post/0115`); approval or a turn-down also settles a request; a new hint reopens one. The admin landing's Unlock tile keeps its dot lit while any request waits. Contracts: `unlock.admin.help-request.done` in the command, access policy and audit contracts.
 
 - 2026-11-16: **Unlock inside 3.1 (§1.2a), web and Android.** Owner decision: nothing in 3.1 links to a 3.0 page. The 3.1 frame's Unlock links (banner "Why this step", People and + New → Talk "Finish Unlock") open a 3.1 Unlock screen with every member state of `/plugin/unlock`, through the same routes; on Android every 3.1 open of the `unlock` key lands there. The Quora census and the Knowledge Library stay on their 3.0 pages. No route, table, contract or tier changed; the Unlock gate is unchanged. Test: `lib/unlock/se-unlock-stage.test.ts`. Test script: UNLOCK-M6.
 - 2026-11-12: **The flag service is removed; demo data is a switch on the sign-up card.** Owner report: the owner's demo admin account landed on production data and wrote rows there, because the self-hosted flag service was down and an unanswered `demo-mode` flag meant production. The flag service is now gone: `public.demo_mode_accounts` (migration `post/0100`) holds the accounts that see demo data, switched with **Demo data** on each sign-up card (`POST /api/unlock/admin/demo-accounts`, audited `unlock.admin.signups.demo`, contracts updated). `getUnlockAccessTier` no longer reads `feature-unlock-quora-onboarding`: the stored row decides, then the Commons fallback; with the flag service already unreachable, nobody's access changes. Accounts marked demo / test are now also left out of the Adoption measures and the daily exchange. Tests: `lib/demo-mode/demo-accounts.test.ts`, `lib/unlock/demo-accounts-route.test.ts`, `lib/unlock/access.test.ts`. Test script: UNLOCK-A9d, UNLOCK-A5c rewritten.
