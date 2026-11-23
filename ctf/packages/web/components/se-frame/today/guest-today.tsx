@@ -2,15 +2,13 @@
 
 import { useSignedOutTheme } from '../use-signed-out-theme';
 import Link from 'next/link';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import {
   SE_DAYS_WON_TITLE,
   SE_DAYS_WON_WHY,
   SE_GUEST_WORDS as W,
   seDaysWonLines,
   seGuestAnswersBySignUp,
-  seGuestDaysWon,
-  seGuestTickDelayMs,
   seGuestOpensSheet,
   seGuestMainRoom,
   seMainRoomButtons,
@@ -31,6 +29,7 @@ import { GuestSheet } from './guest-sheet';
 import { CardDotIcon } from './card-dot-icon';
 import { StoryTitleLink } from './story-title-link';
 import { EmojiRainShower } from './emoji-rain';
+import { useLivelyDaysWon } from './use-lively-days-won';
 import { MainRoomCard } from './main-room-card';
 import styles from './today.module.css';
 
@@ -54,27 +53,6 @@ function SampleTag() {
       <span aria-hidden="true">{W.sample}</span>
     </span>
   );
-}
-
-// Signed out, the sample Days won count goes up by one at random intervals while the page is open,
-// with a shower of emoji (owner decision, 2026-11-16). Nothing is written anywhere; it stays tagged
-// Preview, and with less motion asked for the number still ticks and no emoji fall.
-function useLivelyDaysWon(daysWon: SeToday['daysWon'] | undefined) {
-  const [ticks, setTicks] = useState(0);
-  const shown = Boolean(daysWon);
-  useEffect(() => {
-    if (!shown) return;
-    let timer = 0;
-    const next = () => {
-      timer = window.setTimeout(() => {
-        setTicks((count) => count + 1);
-        next();
-      }, seGuestTickDelayMs(Math.random()));
-    };
-    next();
-    return () => window.clearTimeout(timer);
-  }, [shown]);
-  return { daysWon: seGuestDaysWon(daysWon, ticks), ticks };
 }
 
 function Hero({ today, signUpUrl }: { today: SeToday | null; signUpUrl: string }) {

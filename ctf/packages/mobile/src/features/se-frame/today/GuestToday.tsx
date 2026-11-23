@@ -4,16 +4,14 @@
 // playing in place, the day's cards read only, asks and offers from "A member"
 // with Sign up to answer, a blog story with Read the post and Conversation, and People locked.
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AccessibilityInfo, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import {
   SE_DAYS_WON_TITLE,
   SE_DAYS_WON_WHY,
   SE_GUEST_WORDS as W,
   seDaysWonLines,
   seGuestAnswersBySignUp,
-  seGuestDaysWon,
-  seGuestTickDelayMs,
   seGuestOpensSheet,
   seGuestMainRoom,
   seMainRoomButtons,
@@ -37,6 +35,7 @@ import { GuestSheet } from './GuestSheet';
 import { CardDotIcon } from './CardDotIcon';
 import { MainRoomCard } from './MainRoomCard';
 import { StoryTitleLink } from './StoryTitleLink';
+import { useLivelyDaysWon } from './useLivelyDaysWon';
 import Svg, { Path, Rect } from 'react-native-svg';
 
 type Styles = ReturnType<typeof makeStyles>;
@@ -53,35 +52,6 @@ function SampleTag({ s, color }: { s: Styles; color: string }) {
       <Text style={[s.sampleTagText, { color }]}>{W.sample}</Text>
     </View>
   );
-}
-
-// Signed out, the sample Days won count goes up by one at random intervals while the screen is open,
-// with a shower of emoji drawn by the frame (owner decision, 2026-11-16), as on the web. Nothing is
-// written anywhere; it stays tagged Preview, and with less motion asked for the number still ticks
-// and no emoji fall.
-function useLivelyDaysWon(daysWon: SeToday['daysWon'] | undefined, onRain: () => void) {
-  const [ticks, setTicks] = useState(0);
-  const latest = useRef(onRain);
-  latest.current = onRain;
-  const shown = Boolean(daysWon);
-  useEffect(() => {
-    if (!shown) return;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const next = () => {
-      timer = setTimeout(() => {
-        setTicks((count) => count + 1);
-        AccessibilityInfo.isReduceMotionEnabled()
-          .then((less) => {
-            if (!less) latest.current();
-          })
-          .catch(() => undefined);
-        next();
-      }, seGuestTickDelayMs(Math.random()));
-    };
-    next();
-    return () => clearTimeout(timer);
-  }, [shown]);
-  return seGuestDaysWon(daysWon, ticks);
 }
 
 function Hero({ s, t, today, onSignUp, onRain }: { s: Styles; t: SeThemeTokens; today: SeToday | null; onSignUp: () => void; onRain: () => void }) {

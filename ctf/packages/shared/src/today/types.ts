@@ -111,7 +111,8 @@ export type SeToday = {
   storiesTomorrow?: number | null;
   // All members' action minutes ÷ 480, in total and over the last 7 days; null when it could not
   // be read.
-  // `sample` is set on signed-out Today, which reads it from the demo schema.
+  // `sample` is set on signed-out Today, which reads it from the demo schema, and for an account on
+  // demo data; either way the screen ticks it up now and then (guest-days-won.ts).
   daysWon: { total: number; thisWeek: number; sample?: boolean } | null;
   broadcast: SeTodayBroadcast | null;
   rooms: SeTodayRoom[];

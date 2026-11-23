@@ -9,7 +9,8 @@ import { TodayCard } from './today-card';
 import { sendTodayFeedback } from './send-feedback';
 import { WeekStrip } from './week-strip';
 import { useToday, type MarkKind, type TodayMarks } from './use-today';
-import { EmojiRain } from './emoji-rain';
+import { EmojiRain, EmojiRainShower } from './emoji-rain';
+import { useLivelyDaysWon } from './use-lively-days-won';
 import { keepTodayScroll, putBackTodayScroll } from './reload-place';
 import styles from './today.module.css';
 
@@ -39,10 +40,23 @@ function DaysWonCard({ daysWon }: { daysWon: NonNullable<SeToday['daysWon']> }) 
   );
 }
 
-function LiveCards({ today }: { today: SeToday | null }) {
+// An account on demo data gets a sample total (build.ts), which ticks up now and then as signed-out
+// Today's does, with the emoji rain when the member has the switch on. A real total never ticks.
+function DaysWon({ daysWon, rainOn }: { daysWon: SeToday['daysWon'] | undefined; rainOn: boolean }) {
+  const lively = useLivelyDaysWon(daysWon?.sample ? daysWon : null);
+  const shown = lively.daysWon ?? daysWon;
   return (
     <>
-      {today?.daysWon ? <DaysWonCard daysWon={today.daysWon} /> : null}
+      {shown ? <DaysWonCard daysWon={shown} /> : null}
+      <EmojiRainShower run={rainOn ? lively.ticks : 0} />
+    </>
+  );
+}
+
+function LiveCards({ today, rainOn }: { today: SeToday | null; rainOn: boolean }) {
+  return (
+    <>
+      <DaysWon daysWon={today?.daysWon} rainOn={rainOn} />
       {today ? <WeekStrip talks={today.week ?? []} /> : null}
       {today?.broadcast?.live ? <BroadcastCard broadcast={today.broadcast} /> : null}
       {today?.rooms.map((room) => <RoomCard key={room.key} room={room} broadcasting={today.broadcast?.live === true} />)}
@@ -179,7 +193,7 @@ export function TodayScreen({ accountId, onPresence, rain, onPeopleFits }: Scree
   return (
     <>
       <EmojiRain on={rain.on} daysWon={today?.daysWon} seen={rain.seen} onSeen={rain.onSeen} />
-      <LiveCards today={today} />
+      <LiveCards today={today} rainOn={rain.on} />
       <div className={styles.listHead}>
         <h2 className={styles.listTitle}>Today&apos;s cards</h2>
       </div>
