@@ -9,7 +9,7 @@ describe('demoHelperUsername', () => {
 
   it('names nobody else', () => {
     expect(demoHelperUsername('user_2abc')).toBeNull();
-    expect(demoHelperUsername('demo-peer-foundation-04')).toBeNull();
+    expect(demoHelperUsername('demo-host-001')).toBeNull();
     expect(demoHelperUsername('toString')).toBeNull();
   });
 });
