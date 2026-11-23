@@ -154,7 +154,7 @@ function SeAppFrameBody({ currentUser, isAdmin }: FrameProps) {
   }, []);
 
   // Choosing a tab while a room is open puts the room in the bar above the tab bar. `query` adds to the
-  // address, as Get introduced does for People's "Fits what you need" (filter=fits).
+  // address, as See who fits does for People's "Fits what you need" (filter=fits).
   const select = useCallback((next: SeTab, query = '') => {
     minimize();
     forgetUnlock();
@@ -178,8 +178,8 @@ function SeAppFrameBody({ currentUser, isAdmin }: FrameProps) {
     <div className={`${styles.frame} ${reading.readableFont ? styles.readable : ''}`} style={seThemeVars(theme.color, theme.mode, reading.highContrast)}>
       <main className={styles.screen} hidden={rooms.shown !== null} style={scale === 1 ? undefined : { zoom: scale }}>
         <SeUnlockOpenContext.Provider value={unlock.show}>
-          {unlock.open ? (
-            <UnlockScreen onBack={unlock.close} onToday={() => select('today')} />
+          {unlock.focus ? (
+            <UnlockScreen focus={unlock.focus} onBack={unlock.close} onToday={() => select('today')} />
           ) : (
             <>
               <UnlockBanner />

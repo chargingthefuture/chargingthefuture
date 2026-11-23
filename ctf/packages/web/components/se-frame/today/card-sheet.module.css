@@ -35,6 +35,9 @@
   flex-direction: column;
   gap: 14px;
   overflow-y: auto;
+  /* A long address in a card has no spaces to break at; every word wraps inside the sheet. */
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .grip {
@@ -126,6 +129,7 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-width: 0;
 }
 
 .title {

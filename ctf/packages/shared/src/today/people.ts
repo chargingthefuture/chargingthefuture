@@ -28,7 +28,7 @@ export type SePeoplePage = { items: SePerson[]; page: number; pageSize: number; 
 // The chips under the search. One is chosen at a time: everyone, only people offering a skill now,
 // or one of four categories drawn from the Skills Taxonomy (below). 'fits' is the people who fit what
 // the member picked on Today's Match card; it has no chip of its own and is reached from that card's
-// Get introduced, which shows it as the chosen chip until another one is picked.
+// See who fits, which shows it as the chosen chip until another one is picked.
 export type SePeopleCategory = 'trades' | 'care' | 'paperwork' | 'tech';
 export type SePeopleFilter = 'all' | 'offering' | 'fits' | SePeopleCategory;
 

@@ -206,7 +206,11 @@ export function CardSheet({ t, card, viewerId, firstAnswer, onClose, onOpenLink,
               <Text accessibilityRole="header" style={s.title}>
                 {card.title}
               </Text>
-              {card.body ? <Text style={s.body}>{card.body}</Text> : null}
+              {card.body ? (
+                <Text style={s.body} textBreakStrategy="simple">
+                  {card.body}
+                </Text>
+              ) : null}
               {credit ? <Text style={s.creditPill}>{credit}</Text> : null}
               {seOpens30Page(card.href) ? null : (
                 <TouchableOpacity accessibilityRole="link" style={s.openIn} onPress={() => (onClose(), onOpenLink(card.href))}>

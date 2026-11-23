@@ -49,7 +49,6 @@ export function UnlockRemovedRoutes({ s, onFinished }: { s: UnlockStyles; onFini
       <Text accessibilityRole="header" style={s.sectionTitle}>
         {W.removedTitle}
       </Text>
-      <Text style={s.text}>{W.removedText}</Text>
       {handles === null ? <Text style={s.note}>{W.removedLoading}</Text> : null}
       {handles && handles.length > 0 ? (
         <View style={s.chips}>
@@ -76,6 +75,7 @@ export function UnlockRemovedRoutes({ s, onFinished }: { s: UnlockStyles; onFini
         </Text>
         {W.knowledgeTail}
       </Text>
+      <Text style={s.text}>{W.eitherUnlocks}</Text>
       {[readError, error].filter(Boolean).map((message) => (
         <Text key={message} accessibilityRole="alert" style={s.error}>
           {message}

@@ -17,7 +17,7 @@ export function TalkLocked({ slots }: { slots: SeTalkSlot[] }) {
           {W.lockedTitle}
         </h2>
         <p className={sheet.sub}>{W.lockedText}</p>
-        <button type="button" className={sheet.lockButton} onClick={openUnlock}>
+        <button type="button" className={sheet.lockButton} onClick={() => openUnlock()}>
           {W.finishUnlock}
         </button>
       </section>

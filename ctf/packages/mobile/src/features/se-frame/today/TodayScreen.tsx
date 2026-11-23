@@ -117,7 +117,7 @@ function MatchLead({ t, filter, refreshKey, onIntroduce }: { t: SeThemeTokens; f
 // `onPresence` hands the "N Avens here" count to the title row above the screen. `rain` carries the
 // emoji rain switch, the Days won total the account last saw (useSePrefs.ts) and how to start the rain,
 // which the frame draws over the screen. `onPeopleFits` opens People on "Fits what you need", from the
-// Match card's Get introduced.
+// Match card's See who fits.
 type RainPrefs = { on: boolean; seen: number | null | undefined; onSeen: (_total: number) => void; onRain: () => void };
 type ScreenProps = {
   t: SeThemeTokens;

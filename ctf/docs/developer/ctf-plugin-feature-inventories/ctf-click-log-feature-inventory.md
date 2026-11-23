@@ -13,7 +13,7 @@ ClickLog provides a simple, auditable incident counter and logging system for us
 
 ## 3. User Features
 
-- In the 3.1 app, + New → "Log what happened" (the line "Something happened? Log it where you are"
+- In the 3.1 app, + New → "Log what happened" (the line "⚠ Log what happened", a short pill in the pick color read aloud as "Log what happened where you are"; it read "Something happened? Log it where you are" until 2026-11-23
   under the switch) opens a sheet for writing an entry, on the web and in the Android app. It is a
   quick pin: as it opens it asks for the member's location and fills it in; refused or unavailable,
   the reason shows and "Add location" stays for another try. It has the same form as the ClickLog page: a private note, the problems and

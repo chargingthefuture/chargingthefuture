@@ -6,7 +6,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { SE_UNLOCK_WORDS as W, type SeThemeTokens, type SeUnlockStanding } from '@ctf/shared';
+import { SE_UNLOCK_WORDS as W, type SeThemeTokens, type SeUnlockFocus, type SeUnlockStanding } from '@ctf/shared';
 import { authedFetchJson } from '../../auth/authedFetch';
 import { openWebPage } from '../../navigation/openWebPage';
 import { requestUnlockHelp, submitUnlockUrl } from '../unlock/api';
@@ -14,7 +14,7 @@ import { SE_FONT } from './fonts';
 
 type Styles = ReturnType<typeof makeStyles>;
 
-export function UnlockBanner({ t, onOpenUnlock }: { t: SeThemeTokens; onOpenUnlock: () => void }) {
+export function UnlockBanner({ t, onOpenUnlock }: { t: SeThemeTokens; onOpenUnlock: (_focus: SeUnlockFocus) => void }) {
   const [standing, setStanding] = useState<SeUnlockStanding | null>(null);
   const [closed, setClosed] = useState(false);
 
@@ -32,7 +32,7 @@ export function UnlockBanner({ t, onOpenUnlock }: { t: SeThemeTokens; onOpenUnlo
   return <Banner t={t} standing={standing} onOpenUnlock={onOpenUnlock} onClose={() => setClosed(true)} onSent={load} />;
 }
 
-type BannerProps = { t: SeThemeTokens; standing: SeUnlockStanding; onOpenUnlock: () => void; onClose: () => void; onSent: () => void };
+type BannerProps = { t: SeThemeTokens; standing: SeUnlockStanding; onOpenUnlock: (_focus: SeUnlockFocus) => void; onClose: () => void; onSent: () => void };
 
 function Banner({ t, standing, onOpenUnlock, onClose, onSent }: BannerProps) {
   const paused = standing.paused;
@@ -43,7 +43,7 @@ function Banner({ t, standing, onOpenUnlock, onClose, onSent }: BannerProps) {
       <Text style={s.title}>{standing.title}</Text>
       <Text style={s.text}>{standing.text}</Text>
       {standing.form ? <AddressForm s={s} t={t} label={paused ? W.pausedLabel : W.label} onSent={onSent} /> : null}
-      {standing.form && !paused ? <OtherRoutes s={s} onOpenUnlock={onOpenUnlock} onSent={onSent} /> : null}
+      {standing.form && !paused ? <OtherRoutes s={s} onOpenUnlock={onOpenUnlock} /> : null}
       {paused ? <HelpButton s={s} label={W.askArchitect} onSent={onSent} /> : null}
     </View>
   );
@@ -118,34 +118,37 @@ function AddressForm({ s, t, label, onSent }: { s: Styles; t: SeThemeTokens; lab
   );
 }
 
-function OtherRoutes({ s, onOpenUnlock, onSent }: { s: Styles; onOpenUnlock: () => void; onSent: () => void }) {
+function OtherRoutes({ s, onOpenUnlock }: { s: Styles; onOpenUnlock: (_focus: SeUnlockFocus) => void }) {
   return (
     <>
       <Text style={s.small}>
-        <Text style={s.bold}>{W.removedLead}</Text> {W.removedText}{' '}
+        <Text style={s.bold}>{W.removedLead}</Text> {W.censusLead}{' '}
         <Text accessibilityRole="link" style={s.link} onPress={() => void openWebPage(W.censusHref, 'unlock')}>
           {W.census}
-        </Text>{' '}
-        {W.or}{' '}
+        </Text>
+        {W.censusTail} {W.knowledgeLead}{' '}
         <Text accessibilityRole="link" style={s.link} onPress={() => void openWebPage(W.knowledgeHref, 'unlock')}>
           {W.knowledge}
         </Text>
-        .
+        {W.knowledgeTail} {W.eitherUnlocks}
       </Text>
       <Text style={s.smaller}>
         {W.countLine}{' '}
-        <Text accessibilityRole="link" style={s.link} onPress={onOpenUnlock}>
+        <Text accessibilityRole="link" style={s.link} onPress={() => onOpenUnlock('why')}>
           {W.why}
         </Text>
         {' · '}
-        <HelpText s={s} label={W.cantFind} onSent={onSent} />
+        <Text accessibilityRole="link" style={s.link} onPress={() => onOpenUnlock('help')}>
+          {W.cantFind}
+        </Text>
       </Text>
     </>
   );
 }
 
-// "Can't find it?" asks for help finding the address: the same request the Unlock screen sends,
-// which stops the count and opens the Commons so there is somebody to ask.
+// After day 14, "Can't find it? Ask the architect" asks for help finding the address: the same
+// request the Unlock screen sends, which stops the count. Before then, "Can't find it?" opens the
+// Unlock screen at its help form, so the member can say what helps find them first.
 function useHelpRequest(onSent: () => void) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -158,16 +161,6 @@ function useHelpRequest(onSent: () => void) {
     if (!failed) onSent();
   }
   return { busy, error, ask };
-}
-
-function HelpText({ s, label, onSent }: { s: Styles; label: string; onSent: () => void }) {
-  const help = useHelpRequest(onSent);
-  return (
-    <Text accessibilityRole="button" style={s.link} onPress={() => void help.ask()}>
-      {help.busy ? W.asking : label}
-      {help.error ? <Text style={s.error}>{` ${help.error}`}</Text> : null}
-    </Text>
-  );
 }
 
 function HelpButton({ s, label, onSent }: { s: Styles; label: string; onSent: () => void }) {

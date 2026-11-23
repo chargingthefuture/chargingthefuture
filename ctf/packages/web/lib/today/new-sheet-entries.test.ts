@@ -14,7 +14,8 @@ describe('+ New entries', () => {
     expect(SE_OFFER_CHOICES.map((choice) => choice.label)).not.toContain(SE_OFFER_WHAT_WORKS.label);
   });
   it('says the location is filled in as the sheet opens', () => {
-    expect(SE_CLICK_LOG_WORDS.open).toBe('Something happened? Log it where you are');
+    expect(SE_CLICK_LOG_WORDS.open).toBe('Log what happened');
+    expect(SE_CLICK_LOG_WORDS.openLabel).toBe('Log what happened where you are');
     expect(SE_CLICK_LOG_WORDS.rule.startsWith('Your location is filled in once you allow it.')).toBe(true);
   });
 });

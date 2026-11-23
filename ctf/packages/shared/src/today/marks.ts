@@ -1,25 +1,29 @@
 // The member's own marks on Today cards (owner decisions, 2026-11-03), stored on the server per
-// member (today_card_marks) so every phone and browser agrees: Done (the timeline dot) and Not for me
-// (the card's ••• menu). The server applies them to each Today read with seApplyCardMarks:
+// member (today_card_marks) so every phone and browser agrees: Done (the timeline dot), Read
+// (opening the card) and Not for me (the card's ••• menu). The server applies them to each Today read
+// with seApplyCardMarks:
 // - A card marked Not for me never comes back.
-// - A card marked done stays on Today the day it was marked and leaves from the member's next day.
-//   A story or replay brought round again by its daily rotation stays off once done, except a blog
-//   story whose Fireside conversation has a comment newer than the mark: it comes back, not done,
-//   with "N new comments".
+// - A card marked done with the dot leaves Today at once and is listed in Me → Read (owner report,
+//   2026-11-23).
+// - A card marked read by opening it stays on Today the day it was marked, with its check mark, and
+//   leaves from the member's next day, so a card being read is never taken away under the member.
+// - A story or replay brought round again by its daily rotation stays off once done or read, except a
+//   blog story whose Fireside conversation has a comment newer than the mark: it comes back, not
+//   done, with "N new comments".
 // Check marks (3.1.0 plan, Card rules): a card shows one when the member read it or answered it,
-// never on another person's ask. Opening a card (its sheet, or expanding it in place) marks it done
-// by itself (seReadChangeFor); the dot still takes it away or puts it back by hand. Another
+// never on another person's ask. Opening a card (its sheet, or expanding it in place) marks it read
+// by itself (seReadChangeFor); the dot marks it done, which takes it off Today, or takes the check away. Another
 // person's ask has no check mark: a done mark on one is not applied, and its dot is not a button.
 // A visitor who is not signed in has no account, so their marks stay on their device only
 // (SeTodayMarks, seTodayView).
 
 import type { SeTodayCard } from './types';
 
-export type SeCardMarkKind = 'done' | 'not_for_me';
+export type SeCardMarkKind = 'done' | 'read' | 'not_for_me';
 
 export type SeCardMark = { cardId: string; mark: SeCardMarkKind; markedAtIso: string };
 
-// What the route takes: set a mark, or 'clear' to take Done away.
+// What the route takes: set a mark, or 'clear' to take Done or Read away.
 export type SeCardMarkChange = { cardId: string; mark: SeCardMarkKind | 'clear' };
 
 const CARD_ID = /^[a-z][a-z0-9-]{0,39}:.{1,200}$/;
@@ -29,7 +33,7 @@ function readChange(value: unknown): SeCardMarkChange | null {
   if (!value || typeof value !== 'object') return null;
   const { cardId, mark } = value as Record<string, unknown>;
   if (typeof cardId !== 'string' || cardId.length > 241 || !CARD_ID.test(cardId)) return null;
-  return mark === 'done' || mark === 'not_for_me' || mark === 'clear' ? { cardId, mark } : null;
+  return mark === 'done' || mark === 'read' || mark === 'not_for_me' || mark === 'clear' ? { cardId, mark } : null;
 }
 
 // One change `{ cardId, mark }`, or a batch `{ marks: [...] }` (the one-time upload of marks a device
@@ -50,8 +54,8 @@ export function seLegacyMarkChanges(saved: unknown): SeCardMarkChange[] {
   const raw = (saved && typeof saved === 'object' ? saved : {}) as Record<string, unknown>;
   const ids = (value: unknown) => (Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string' && CARD_ID.test(id)) : []);
   const hidden = ids(raw.hidden);
-  const done = ids(raw.read).filter((id) => !hidden.includes(id));
-  return [...hidden.map((cardId) => ({ cardId, mark: 'not_for_me' as const })), ...done.map((cardId) => ({ cardId, mark: 'done' as const }))].slice(
+  const read = ids(raw.read).filter((id) => !hidden.includes(id));
+  return [...hidden.map((cardId) => ({ cardId, mark: 'not_for_me' as const })), ...read.map((cardId) => ({ cardId, mark: 'read' as const }))].slice(
     -SE_CARD_MARKS_MAX_BATCH,
   );
 }
@@ -91,7 +95,7 @@ function applyOne(card: SeTodayCard, mark: SeCardMark | undefined, dayStartMs: n
   if (!seCardTakesCheckMark(card)) return shown;
   const fresh = seNewCommentsSince(card, mark.markedAtIso);
   if (fresh > 0) return { ...shown, newComments: fresh };
-  if (Date.parse(mark.markedAtIso) < dayStartMs) return null;
+  if (mark.mark === 'done' || Date.parse(mark.markedAtIso) < dayStartMs) return null;
   return { ...shown, markedDoneAtIso: mark.markedAtIso };
 }
 
@@ -109,15 +113,16 @@ export function seCardShownDone(card: SeTodayCard): boolean {
   return seCardTakesCheckMark(card) && Boolean(card.done || card.markedDoneAtIso);
 }
 
-// The screen's own copy of a change, drawn at once while the route stores it.
+// The screen's own copy of a change, drawn at once while the route stores it. Not for me and Done
+// take the card off; Read draws its check mark.
 export function seMarkCardInToday<T extends { cards: SeTodayCard[] }>(today: T, change: SeCardMarkChange, now: Date = new Date()): T {
-  if (change.mark === 'not_for_me') return { ...today, cards: today.cards.filter((card) => card.id !== change.cardId) };
+  if (change.mark === 'not_for_me' || change.mark === 'done') return { ...today, cards: today.cards.filter((card) => card.id !== change.cardId) };
   return {
     ...today,
     cards: today.cards.map((card) => {
       if (card.id !== change.cardId) return card;
       const rest = without(card, ['markedDoneAtIso', 'newComments']);
-      return change.mark === 'done' ? { ...rest, markedDoneAtIso: now.toISOString() } : rest;
+      return change.mark === 'read' ? { ...rest, markedDoneAtIso: now.toISOString() } : rest;
     }),
   };
 }
@@ -132,7 +137,8 @@ export function seMarksFromToday(today: { cards: SeTodayCard[] } | null): { read
   return { read: (today?.cards ?? []).filter(seCardShownDone).map((card) => card.id), hidden: [] };
 }
 
-// What a tap asks the server for: Not for me, or the timeline dot (done, or Done taken away). Null on
+// What a tap asks the server for: Not for me, or the timeline dot (done, which takes the card off
+// Today, or the check of a card already read taken away). Null on
 // a card the server marks done itself (a 21 Questions answer), which the dot does not change.
 export function seMarkChangeFor(today: { cards: SeTodayCard[] } | null, kind: 'read' | 'hidden', cardId: string): SeCardMarkChange | null {
   if (kind === 'hidden') return { cardId, mark: 'not_for_me' };
@@ -141,14 +147,14 @@ export function seMarkChangeFor(today: { cards: SeTodayCard[] } | null, kind: 'r
   return { cardId, mark: card.markedDoneAtIso ? 'clear' : 'done' };
 }
 
-// What opening a card asks the server for: done, once. Null on another person's ask, on the
+// What opening a card asks the server for: read, once. Null on another person's ask, on the
 // member's own posting or goal (writing it is not reading it), on the What Works card (only a real
 // action counts there: It helped me too, or the dot), on a card the server marks done itself, and
 // on a card already marked.
 export function seReadChangeFor(today: { cards: SeTodayCard[] } | null, cardId: string, viewerId: string): SeCardMarkChange | null {
   const card = today?.cards.find((item) => item.id === cardId);
   if (!card || card.done || card.markedDoneAtIso || !seCardTakesCheckMark(card)) return null;
-  return readMarksOnOpen(card, viewerId) ? { cardId, mark: 'done' } : null;
+  return readMarksOnOpen(card, viewerId) ? { cardId, mark: 'read' } : null;
 }
 
 function readMarksOnOpen(card: SeTodayCard, viewerId: string): boolean {

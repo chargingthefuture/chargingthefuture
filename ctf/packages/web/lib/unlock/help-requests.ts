@@ -1,5 +1,6 @@
 import { queryDb } from 'lib/db/postgres';
 import { normalizeUnlockQuoraHint } from './quora-hint';
+import { UNLOCK_HELP_SETTLED_STATUSES as SETTLED_REVIEW_STATUSES, type UnlockHelpRequestFact } from './help-request-open';
 
 // Who may reach the Commons without having verified yet.
 //
@@ -26,15 +27,56 @@ import { normalizeUnlockQuoraHint } from './quora-hint';
 // first got stuck. The hint is the exception — a member who comes back and finally has a name or a link
 // to give must not have it dropped because there is already a row, so a non-empty hint overwrites. A
 // second press with an empty box leaves the stored hint alone rather than erasing it.
+//
+// A request an admin marked done opens again when the member comes back with something new in the box:
+// that is new information to look them up with, and the Unlock tile's dot has to say so.
 export async function recordUnlockHelpRequest(userId: string, quoraHint?: string | null): Promise<void> {
   const hint = normalizeUnlockQuoraHint(quoraHint);
   await queryDb(
     `INSERT INTO unlock_help_requests (user_id, requested_at, quora_hint)
      VALUES ($1, NOW(), $2)
      ON CONFLICT (user_id) DO UPDATE
-       SET quora_hint = COALESCE(EXCLUDED.quora_hint, unlock_help_requests.quora_hint)`,
+       SET quora_hint = COALESCE(EXCLUDED.quora_hint, unlock_help_requests.quora_hint),
+           done_at = CASE WHEN EXCLUDED.quora_hint IS NULL THEN unlock_help_requests.done_at ELSE NULL END`,
     [userId, hint],
   );
+}
+
+
+export async function listUnlockHelpRequests(): Promise<Map<string, UnlockHelpRequestFact>> {
+  const result = await queryDb<{ user_id: string; requested_at: Date; quora_hint: string | null; done_at: Date | null }>(
+    `SELECT user_id, requested_at, NULLIF(btrim(quora_hint), '') AS quora_hint, done_at FROM unlock_help_requests`,
+  );
+  return new Map(
+    result.rows.map((row) => [
+      row.user_id,
+      { requestedAt: new Date(row.requested_at).toISOString(), quoraHint: row.quora_hint, doneAt: row.done_at ? new Date(row.done_at).toISOString() : null },
+    ]),
+  );
+}
+
+// How many help requests are still waiting on an admin, for the Unlock tile's dot on the admin landing.
+// The same rule as isUnlockHelpRequestOpen, in SQL.
+export async function countOpenUnlockHelpRequests(): Promise<number> {
+  const result = await queryDb<{ n: number }>(
+    `SELECT COUNT(*)::int AS n FROM unlock_help_requests h
+      WHERE h.done_at IS NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM unlock_verification_submissions s
+           WHERE s.user_id = h.user_id AND s.review_status = ANY($1::text[])
+        )`,
+    [SETTLED_REVIEW_STATUSES],
+  );
+  return result.rows[0]?.n ?? 0;
+}
+
+// An admin marks a member's help request done (or open again). False when the member has no request.
+export async function setUnlockHelpRequestDone(userId: string, done: boolean): Promise<boolean> {
+  const result = await queryDb(
+    `UPDATE unlock_help_requests SET done_at = CASE WHEN $2 THEN NOW() ELSE NULL END WHERE user_id = $1`,
+    [userId, done],
+  );
+  return (result.rowCount ?? 0) > 0;
 }
 
 // May the Commons open for this member before they are verified? One query for both conditions, so

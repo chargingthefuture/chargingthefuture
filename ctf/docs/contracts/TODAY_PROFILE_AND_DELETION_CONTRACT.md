@@ -49,7 +49,7 @@ in + New, the end of a renewed 14 days and when it was renewed, and, when the po
 from Today, the outcome (`done` or `not_done`) and when. It holds nothing anybody wrote.
 
 A member's own marks on cards are the fifth: `today_card_marks`, one row per member per card id,
-with the mark (`done` for the timeline dot, `not_for_me` for the ••• menu) and when it was made. They
+with the mark (`done` for the timeline dot, `read` for opening the card, `not_for_me` for the ••• menu) and when it was made. They
 are stored on the account so every phone and browser agrees, and GET /api/today applies them. They
 are separate from `today_card_feedback_counts`, which counts marks with no names.
 

@@ -121,12 +121,14 @@ function ArchitectBody() {
   );
 }
 
-// "Log what happened" opens the ClickLog sheet over + New.
+// "Log what happened" opens the ClickLog sheet over + New: a short line with a hazard mark, in the
+// pick color, beside the architect's line with its help mark.
 function LogLine() {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button type="button" className={sheet.architect} aria-haspopup="dialog" onClick={() => setOpen(true)}>
+      <button type="button" className={sheet.logLine} aria-haspopup="dialog" aria-label={SE_CLICK_LOG_WORDS.openLabel} onClick={() => setOpen(true)}>
+        <span aria-hidden="true">{SE_CLICK_LOG_WORDS.openMark}</span>
         {SE_CLICK_LOG_WORDS.open}
       </button>
       {open ? <ClickLogSheet onClose={() => setOpen(false)} /> : null}
@@ -161,7 +163,8 @@ export function NewScreen({ onClose, initialKind = 'ask' }: { onClose: () => voi
       <KindSwitch kind={kind} onKind={setKind} />
       {kind === 'architect' ? null : (
         <>
-          <button type="button" className={sheet.architect} onClick={() => setKind('architect')}>
+          <button type="button" className={sheet.architect} aria-label={W.architectLabel} onClick={() => setKind('architect')}>
+            <span aria-hidden="true">{W.architectMark}</span>
             {W.architect}
           </button>
           <LogLine />

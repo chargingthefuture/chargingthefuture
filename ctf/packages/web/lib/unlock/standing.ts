@@ -4,7 +4,8 @@ import { getUnlockAccessTier } from './access';
 
 // A member's Unlock standing in 3.1: approved or not, which day they are on (counted from their first
 // sign-in), and whether posting is paused. One query besides the tier read. The count stops once a
-// Quora profile address was sent (any submission row) or the member asked for help finding it.
+// Quora profile address was sent (any submission row) or the member asked for help finding it. A
+// help request with no address sent reads as that, never as an address waiting for approval.
 
 type StandingRow = { first_seen: Date | null; sent: boolean; asked: boolean };
 
@@ -25,6 +26,7 @@ export async function getUnlockStanding(userId: string, now = new Date()): Promi
       approved: tier === 'approved_full',
       firstSeenIso: row?.first_seen ? new Date(row.first_seen).toISOString() : null,
       countStopped: Boolean(row?.sent || row?.asked),
+      helpOnly: Boolean(row?.asked && !row?.sent),
     },
     now,
   );

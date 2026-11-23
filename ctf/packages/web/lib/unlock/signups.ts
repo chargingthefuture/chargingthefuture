@@ -5,6 +5,8 @@ import { failureReason } from 'lib/errors/failure';
 import { listUnlockExcludedAccounts } from './excluded-accounts';
 import { listDemoAccountIds } from 'lib/demo-mode/demo-accounts';
 import { listUnlockBannedAccounts } from './banned-accounts';
+import { listUnlockHelpRequests } from './help-requests';
+import { isUnlockHelpRequestOpen, type UnlockHelpRequestFact } from './help-request-open';
 import type { UnlockReviewStatus, UnlockSignupAccount, UnlockSignupOverview } from './types';
 
 // Who has signed up, and which of those people never gave us a Quora URL.
@@ -142,23 +144,14 @@ async function countUnlockScreenViews(): Promise<Map<string, number>> {
   }
 }
 
-// What each member who pressed "ask for help" could tell us about their Quora account, for the ones
-// who gave anything. An admin reading the sign-ups panel can look them up by name or by a link to
-// something they posted and approve them by hand, instead of seeing "No Quora URL" with nothing to
-// act on.
-//
-// Best-effort, like the view counts: a failure here leaves every hint null rather than taking the
-// panel down, since the rest of the reading still stands without it.
-async function listQuoraHints(): Promise<Map<string, string>> {
+// Every member who pressed "ask for help", with what they typed (if anything) and whether an admin
+// marked it done. Best-effort, like the view counts: a failure here leaves every row without its help
+// lines rather than taking the panel down, since the rest of the reading still stands without it.
+async function readHelpRequests(): Promise<Map<string, UnlockHelpRequestFact>> {
   try {
-    const result = await queryDb<{ user_id: string; quora_hint: string }>(
-      `SELECT user_id, quora_hint
-         FROM unlock_help_requests
-        WHERE quora_hint IS NOT NULL AND btrim(quora_hint) <> ''`,
-    );
-    return new Map(result.rows.map((row) => [row.user_id, row.quora_hint]));
+    return await listUnlockHelpRequests();
   } catch (error) {
-    console.error('[unlock] help-request hints unavailable; showing none', error);
+    console.error('[unlock] help requests unavailable; showing none', error);
     return new Map();
   }
 }
@@ -197,7 +190,7 @@ type AccountMarks = {
   bannedAccounts: Map<string, BannedMark>;
   deletedDates: Map<string, string>;
   screenViews: Map<string, number>;
-  quoraHints: Map<string, string>;
+  helpRequests: Map<string, UnlockHelpRequestFact>;
 };
 
 // One provider account joined to everything we know about it. Its own function so the overview below
@@ -208,7 +201,16 @@ function buildSignupAccount(
   submission: SubmissionFact | null,
   marks: AccountMarks,
 ): UnlockSignupAccount {
-  return { ...account, ...adminMarkFields(account.userId, marks), ...submissionFields(submission) };
+  const help = marks.helpRequests.get(account.userId) ?? null;
+  return {
+    ...account,
+    ...adminMarkFields(account.userId, marks),
+    ...submissionFields(submission),
+    quoraHint: help?.quoraHint ?? null,
+    helpRequestedAt: help?.requestedAt ?? null,
+    helpDoneAt: help?.doneAt ?? null,
+    helpRequestOpen: isUnlockHelpRequestOpen(help, submission?.reviewStatus ?? null),
+  };
 }
 
 // The three admin marks an account can carry — demo/test, banned, deleted their data — plus the two
@@ -223,7 +225,6 @@ function adminMarkFields(userId: string, marks: AccountMarks) {
     deletedTheirData: marks.deletedDates.has(userId),
     deletedAt: marks.deletedDates.get(userId) ?? null,
     unlockScreenViews: marks.screenViews.get(userId) ?? 0,
-    quoraHint: marks.quoraHints.get(userId) ?? null,
   };
 }
 
@@ -283,16 +284,16 @@ export async function getUnlockSignupOverview(): Promise<UnlockSignupOverview> {
   let bannedAccounts: Map<string, BannedMark>;
   let deletedDates: Map<string, string>;
   let screenViews: Map<string, number>;
-  let quoraHints: Map<string, string>;
+  let helpRequests: Map<string, UnlockHelpRequestFact>;
   try {
-    const [facts, excluded, demo, banned, deleted, views, hints] = await Promise.all([
+    const [facts, excluded, demo, banned, deleted, views, help] = await Promise.all([
       listSubmissionFacts(),
       listUnlockExcludedAccounts(),
       listDemoAccountIds(),
       listUnlockBannedAccounts(),
       listDeletedAccountDates(),
       countUnlockScreenViews(),
-      listQuoraHints(),
+      readHelpRequests(),
     ]);
     submissions = facts;
     excludedUserIds = new Map(excluded.map((entry) => [entry.userId, entry.note]));
@@ -302,12 +303,12 @@ export async function getUnlockSignupOverview(): Promise<UnlockSignupOverview> {
     );
     deletedDates = deleted;
     screenViews = views;
-    quoraHints = hints;
+    helpRequests = help;
   } catch (error) {
     return emptyOverview(`The verification records could not be read from the database — ${failureReason(error)}`);
   }
 
-  const marks: AccountMarks = { excludedUserIds, demoUserIds, bannedAccounts, deletedDates, screenViews, quoraHints };
+  const marks: AccountMarks = { excludedUserIds, demoUserIds, bannedAccounts, deletedDates, screenViews, helpRequests };
   const accounts: UnlockSignupAccount[] = roster.accounts.map((account) =>
     buildSignupAccount(account, submissions.get(account.userId) ?? null, marks),
   );
