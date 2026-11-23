@@ -1,5 +1,6 @@
 import { createClerkClient } from '@clerk/backend';
 import { getClerkSecretKey } from '../auth/clerk-env';
+import { demoHelperUsername } from '../demo-mode/demo-usernames';
 
 // Resolve a set of Clerk user ids to display names.
 //
@@ -20,6 +21,12 @@ export type MemberIdentity = { name: string | null; username: string | null };
 
 const UNKNOWN: MemberIdentity = { name: null, username: null };
 
+// A demo helper account has no Clerk account; its seeded username stands in (demo-usernames.ts).
+function fallbackIdentity(id: string): MemberIdentity {
+  const username = demoHelperUsername(id);
+  return username ? { name: null, username } : UNKNOWN;
+}
+
 function trimmed(value: string | null | undefined): string | null {
   const text = value?.trim();
   return text && text.length > 0 ? text : null;
@@ -36,7 +43,7 @@ function fullName(user: { firstName?: string | null; lastName?: string | null })
 export async function resolveMemberIdentities(userIds: string[]): Promise<Map<string, MemberIdentity>> {
   const result = new Map<string, MemberIdentity>();
   const unique = Array.from(new Set(userIds.filter((id) => typeof id === 'string' && id.trim().length > 0)));
-  for (const id of unique) result.set(id, UNKNOWN);
+  for (const id of unique) result.set(id, fallbackIdentity(id));
   if (unique.length === 0) return result;
 
   const secretKey = getClerkSecretKey();

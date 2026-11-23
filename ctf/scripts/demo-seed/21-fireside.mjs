@@ -27,7 +27,7 @@ const ID = {
 };
 
 const PEER = 'demo-peer-fireside-01';
-const PEER_NAME = 'rosa_delgado';
+const PEER_NAME = 'emily_delgado';
 
 const THREAD_ID = 'ddd00000-0000-4000-8210-000000000010';
 

@@ -24,6 +24,14 @@ Demo accounts are managed in one place: the Demo data switch on the Unlock admin
   owner→counterparty credit transfer. With only one account, the far side of each flow stays
   synthetic (`demo-peer-*`, `demo-host-*`).
 
+Synthetic accounts have no Clerk account, so the app finds no username for them and would show
+the generated `user-` and the first eight characters of the id. Each synthetic helper carries an
+owner-approved username instead, from `packages/web/lib/demo-mode/demo-usernames.ts`, which
+`resolveMemberIdentities` reads when Clerk has nothing; that file is the list of who has which
+name, and every synthetic account in the seed has one. A new synthetic account stays unnamed
+until the owner approves a name for it. Never add a name without that approval. Usernames the
+seed writes into a plugin's own snapshot column (Commons, SocketRelay, Chyme) are unchanged.
+
 With no account switched on, the seed still writes the shared demo data, the owner's personal rows
 go to a synthetic `demo-owner-001`, and the run summary says no accounts are switched to Demo data
 in Unlock. The summary gives how many accounts were seeded, never an id, and a failure message has

@@ -288,6 +288,16 @@ date written into a file, a post, a file name or a change log is the owner's dat
 commit the owner authored (`git log -1 --format=%ad --date=iso`), or subtract the offset from UTC;
 never from the container's `date`, which is a day ahead from 20:00 the owner's time.
 
+## Demo data names need the owner's approval (owner decision, 2026-11-23)
+
+Every new name in demo data — a person's name, a username, a handle — needs the owner's approval
+before it ships. That covers the demo seed (`ctf/scripts/seedDemo.mjs`, `ctf/scripts/demo-seed/`),
+the demo usernames the app shows for synthetic accounts
+(`ctf/packages/web/lib/demo-mode/demo-usernames.ts`), and the notes and test scripts that name
+them. Propose the names in chat and wait for the answer; never invent one and ship it. Where a
+change needs more names than were approved, leave the rest unnamed and list them in the pull
+request for the owner to name. Names already in the seed stay as they are.
+
 ## Secrets — Infisical is the single source of truth
 
 All secrets are stored in the self-hosted Infisical instance. The Infisical `production`

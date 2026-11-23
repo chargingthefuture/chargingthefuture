@@ -181,7 +181,7 @@ Seeded content (deterministic):
 - One survivor-provider connection thread (keyed by `thread_key`).
 - One notification event.
 
-Demo schema: `ctf/scripts/demo-seed/48-foundation-offers.mjs` adds six providers by synthetic members (`demo-peer-foundation-01` to `-06`), each with a claimed Directory profile, one offered skill from the demo taxonomy and a short line: tutoring, cooking, small repairs, rides, moving help and paperwork. Fixed ids, upserted on each run, each offer dated within the last two days. They are what the "Offer · hours" previews on signed-out Today read.
+Demo schema: `ctf/scripts/demo-seed/48-foundation-offers.mjs` adds six providers by synthetic members (`demo-peer-foundation-01` to `-06`), each with a claimed Directory profile, one offered skill from the demo taxonomy and a short line: tutoring, cooking, small repairs, rides, moving help and paperwork. Fixed ids, upserted on each run, each offer dated within the last two days. They are what the "Offer · hours" previews on signed-out Today read. The first three show on Today as saya_r, jon_b and lena_k (owner-approved usernames in `packages/web/lib/demo-mode/demo-usernames.ts`, since synthetic accounts have no Clerk username); the first provider is Emily M.
 
 The instant 1:1 call ring/answer lifecycle (issue #808 task 3) and per-block billing (task 4) added columns to `foundation_call_sessions` but seed **no** call rows — a call is an ephemeral, member-initiated runtime event, not seed content, so there is no deterministic ring/charge to seed. The block charges write to the canonical `service_credits_*` tables at runtime, which have their own seed/treasury setup. `seedFoundation.mjs` is unchanged.
 
