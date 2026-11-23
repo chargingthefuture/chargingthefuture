@@ -12,7 +12,7 @@ import { createContext, useContext } from 'react';
 // group of members only; an approved member and a signed-out visitor see no change.
 //
 // Set once by CommunityShell from the server-resolved verification state and read deep in the tree
-// (answer cards, announcement cards, the suggestion chips), so it is a context rather than a prop
+// (answer cards, announcement cards), so it is a context rather than a prop
 // threaded through every layer between.
 export const CommonsUnlockFocusContext = createContext(false);
 

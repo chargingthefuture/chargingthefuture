@@ -639,8 +639,8 @@ FD-12b), with at least one reaction on it.
 
 **Steps:**
 1. As an approved member, type `@comic` and a question while offline (turn off the network) and send.
-2. Turn the network back on. Type half a post in the composer, then tap an @comic suggestion chip
-   for the first time on this account and confirm the consent modal.
+2. Turn the network back on. On an account that has never asked @comic, type `@comic` and a
+   question, send, and confirm the consent modal.
 3. Sign out in another tab, then react to a Commons post in the first tab.
 4. In a browser with all site data blocked, open the Commons, change the apps sort, and tap
    **Open plugin →** on a card.
@@ -649,7 +649,7 @@ FD-12b), with at least one reaction on it.
 
 **Expected:**
 - Step 1: the error line shows and the question is back in the composer.
-- Step 2: the half-written post is still in the composer after the chip's question is sent.
+- Step 2: the question is sent once the modal is confirmed, and the composer empties.
 - Step 3: the error line reads "You are signed out. Sign in again." rather than "Request failed."
 - Step 4: the Commons renders, the sort changes for this visit, and the plugin opens.
 - Step 5: reactions show as counts only, with no add-reaction button and no replies toggle.

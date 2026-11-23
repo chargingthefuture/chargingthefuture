@@ -1,6 +1,6 @@
 # How to use Skills Economy
 
-_Last updated: 2026-09-25_
+_Last updated: 2026-11-23_
 
 This guide explains what each part of the app does and how to use it, in plain words.
 The app is made of small apps, each doing one job. Open any of them from the main menu.
@@ -8,13 +8,13 @@ Below, each app has a short summary, a few notes on what a member can do, and si
 
 ## Commons
 
-_Last updated: 2026-09-25_
+_Last updated: 2026-11-23_
 
 Commons is the home page: one shared channel to read and post in, and the list of every app.
 
 Commons is what you land on. It has two halves, switched with the two buttons in the top bar — a speech-bubbles button for the chat and a grid button for All Apps. The chat is a single shared channel. Everything comes through it: official notes from Farah, marked with a shield badge and signed with their name, answers from the assistant, and posts from other members.
 
-You can post to the channel, reply to a message so your own carries a short quote of it above the text, react with an emoji, and delete anything you wrote. There is no edit — to change a post you delete it and write it again, so a corrected message is a fresh one with its own replies and reactions. A 'New messages' line marks where you left off last time. A row of suggestion chips sits above the box you type in: some open an app straight away, others send a question to the assistant, and the first one, 'I'm new. What do I do first?', answers on the spot with the three things to do first and a button for each.
+You can post to the channel, reply to a message so your own carries a short quote of it above the text, react with an emoji, and delete anything you wrote. There is no edit — to change a post you delete it and write it again, so a corrected message is a fresh one with its own replies and reactions. A 'New messages' line marks where you left off last time.
 
 The other half is a grid of every app, with a search box and a choice of order — most recent, alphabetical, or most used. You do not need an account to read: a visitor sees the posts and the live community figures at the top of the page. Signing in, which is free, is what lets you post and reach the rest of the apps.
 
@@ -217,7 +217,7 @@ _Last updated: 2026-09-25_
 
 PeerProgramming brings survivors together in small weekly groups to learn and talk through skills.
 
-Each week, active members are placed into cohorts of about 12 people. Participation is voluntary, and a small group usually shows up to chat. You can see your cohort assignment and status in the PeerProgramming screen.
+Each week, members who signed in are placed into cohorts of about 12 people. Participation is voluntary, and a small group usually shows up to chat. You can see your cohort assignment and status in the PeerProgramming screen.
 
 The PeerProgramming screen opens on the Goals tab, your cohort's goal board. It is laid out as three columns of cards: Up for grabs, Doing and Done. Each card is one small task toward somebody's goal, such as a yard jockey job in Texas or a camper, and can be done from a phone in under half an hour. You pick any one card, never a goal as a unit: take it, do it, and post what you found, such as phone numbers, a link, or what a call said. You can also post one goal of your own and break it into cards. When a result helped, press 'It helped': that counts toward the helper's Weavers of the Commons badge. You can also keep a result without that mark or send the card back for somebody else, and each done card shows who did it. The top of the board shows how many cards were done across your cohort in the last 24 hours. There is no conversation on the board, only goals, cards and results.
 
@@ -344,21 +344,21 @@ After a send goes through, an 'Is this ongoing?' prompt appears under it. Pick h
 
 ## Contributions
 
-_Last updated: 2026-08-09_
+_Last updated: 2026-10-27_
 
-Contributions is where you submit gifts, comments, or code work to support the platform and see how the fundraiser is going.
+Contributions is where you can send an Amazon gift card to help pay for hosting, any time of year, and see the gift cards you have sent.
 
-You can submit three kinds of contributions: a gift card (Amazon, Apple, or Denny's) from $1 to $500, a link to a Quora comment you wrote, or a link to your GitHub profile. For gift cards, you tell the platform your Signal contact and the dollar amount, but you send the actual code to the owner over Signal—never post the code in the Commons or it won't count. For Quora comments and GitHub profiles, the link is required so the owner can find and confirm your work.
+The app is free and stays free. Hosting is paid out of pocket, so if you are able, you can send an Amazon gift card from $1 to $500, in dollars with no cents. You type the amount and the code from the card into the app. The code is stored encrypted, and it is erased once the System Architect has redeemed it and confirmed or rejected your gift card. You never see the code again after you send it.
 
-The platform keeps track of your contributions and shows you whether each one is pending, confirmed, or rejected. You can also see the current fundraiser cycle and how close the community is to its goals—total dollars raised, total comments, total stars, and how many people have contributed.
+A confirmed gift card earns you ServiceCredits as a thank-you, a set number per dollar. The form shows the current number. There is a limit on how many thank-you credits one member receives over 365 days, so a gift card past that limit is still confirmed with no credits. ServiceCredits are the app's internal credits unit and are never money.
 
-You can dismiss the fundraiser banner for two months if you want. It collapses to a small gift emoji in the Commons, so the reminder stays small and out of the way. The full banner comes back after two months. Contributing does not require any Unlock verification and never changes your Unlock status.
+The My history tab lists every gift card you have sent, newest first, with its status: Waiting for review, Confirmed, or Not matched, and the credits you received. Contributions are private between you and the platform owner: there is no donor list and no public total. If the form says gift cards are paused, nothing is needed from you; it takes gift cards again once it is switched back on. Contributing does not require Unlock verification and never changes your Unlock status.
 
 **How to use it**
 
-1. Sign in and go to /apps/contributions. You'll see the current fundraiser progress and collective totals.
-2. Pick a contribution type (gift card, Quora comment, or GitHub profile) and fill in the form with the required information.
-3. If you're submitting a gift card, send the code to the owner over Signal, not in the app.
+1. Sign in and go to /apps/contributions.
+2. On the Contribute tab, enter the amount in US dollars and the gift card code, then press Send gift card.
+3. Open My history to see whether your gift card is waiting for review, confirmed, or not matched, and the ServiceCredits you received.
 
 ## Knowledge Library
 
