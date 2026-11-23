@@ -281,6 +281,13 @@ An agent session usually cannot reach the production database either: this conta
 `DATABASE_URL` and no Infisical client, so "run it yourself" is not the answer that replaces asking
 the owner. Build the screen, or hand over the paste-ready statement.
 
+## Dates come from the owner's clock (all agents)
+
+The owner is on Eastern time (UTC-4 in summer, UTC-5 in winter); agent containers run on UTC. Any
+date written into a file, a post, a file name or a change log is the owner's date. Take it from a
+commit the owner authored (`git log -1 --format=%ad --date=iso`), or subtract the offset from UTC;
+never from the container's `date`, which is a day ahead from 20:00 the owner's time.
+
 ## Secrets — Infisical is the single source of truth
 
 All secrets are stored in the self-hosted Infisical instance. The Infisical `production`
@@ -1063,6 +1070,12 @@ product, and that is what makes a change log legible.
 A commit message that already carries a quote cannot be fixed without rewriting shared history, so
 do not try; correct it going forward and, where the same text sits in a PR description or a
 markdown file, edit it there.
+
+## Record a reason the owner gives in neutral words (all agents)
+
+When the owner gives a reason for a decision, write a neutral version of it in any repository, and
+never their own wording, especially in a public one. In a queue line, a commit message or a pull
+request body, name no person's motive or affiliation. The full reason stays in chat.
 
 ## Security and Secrets Policy (Critical)
 
