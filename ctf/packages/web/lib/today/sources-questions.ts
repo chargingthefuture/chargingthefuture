@@ -1,8 +1,10 @@
-import { seMatchLine, seNextQuestion, seQuestionCardBody, seQuestionOfDay, seQuestionById, SE_QUESTIONS, seQuestionsOut, type SeTodayCard, type SeTodayDay } from '@ctf/shared';
+import { seCardId, seMatchLine, seNextQuestion, seQuestionCardBody, seQuestionOfDay, seQuestionById, SE_QUESTIONS, seQuestionsOut, type SeTodayCard, type SeTodayDay } from '@ctf/shared';
 import { evaluatePluginAccess } from 'lib/auth/server-authz';
 import { resolveUsernames } from 'lib/identity/resolve-usernames';
 import { listAnswers, listMatches, readMatchingState, summarizeConversations, type ConversationSummary, type MatchRow } from 'lib/questions/repository';
+import { reportError } from 'lib/observability/report';
 import { author, card, clip, utcTodayDay, type TodayViewer } from './card';
+import { readCardMarks } from './marks/repository';
 
 // 21 Questions on Today (3.1.0 plan, task 18), approved members only: the question to answer next
 // (today's, then any earlier one missed), and a Match card for each member who answered at least
@@ -10,11 +12,13 @@ import { author, card, clip, utcTodayDay, type TodayViewer } from './card';
 // the card carries only what the screen needs to find the question or the person. A member who
 // turned matching off still gets the question card, which says so, and no Match cards. Today's
 // question card stays once answered, done, with the answer picked, so the day's work stays in
-// view; a question missed on an earlier day then gets its own catching-up card beside it.
+// view; a question missed on an earlier day then gets its own catching-up card beside it. Skip on
+// a question card stores its Not for me mark: the card leaves, it is not an answer (no count, no
+// match changes), and the next question not answered or skipped takes its place.
 
-function dayQuestionCards(day: string, answers: Map<string, number>, matching: boolean, createdAtIso: string): SeTodayCard[] {
+function dayQuestionCards(day: string, answers: Map<string, number>, skipped: ReadonlySet<string>, matching: boolean, createdAtIso: string): SeTodayCard[] {
   const today = seQuestionOfDay(day);
-  const next = seNextQuestion(day, new Set(answers.keys()));
+  const next = seNextQuestion(day, new Set(answers.keys()), skipped);
   const out = seQuestionsOut(day);
   const answered = SE_QUESTIONS.slice(0, out).filter((question) => answers.has(question.id)).length;
   const shown = [today, ...(next && next.id !== today.id ? [next] : [])];
@@ -76,15 +80,28 @@ function matchCard(
   });
 }
 
+// The questions out so far that the member skipped. A failed read passes nothing over rather than
+// hiding the question card.
+async function skippedQuestionIds(userId: string, day: string): Promise<Set<string>> {
+  const ids = SE_QUESTIONS.slice(0, seQuestionsOut(day)).map((question) => seCardId('questions', question.id));
+  try {
+    const marks = await readCardMarks(userId, ids);
+    return new Set(marks.filter((mark) => mark.mark === 'not_for_me').map((mark) => mark.cardId.slice('questions:'.length)));
+  } catch (error) {
+    reportError(error, { area: 'today', op: 'questions_skipped' });
+    return new Set();
+  }
+}
+
 export async function questionCards(viewer: TodayViewer, day: SeTodayDay = utcTodayDay()): Promise<SeTodayCard[]> {
   const access = await evaluatePluginAccess({ requireUsername: false });
   if (!access.allowed) return [];
   const createdAtIso = day.startIso;
-  const answers = await listAnswers(viewer.userId);
+  const [answers, skipped] = await Promise.all([listAnswers(viewer.userId), skippedQuestionIds(viewer.userId, day.day)]);
   const { enabled } = await readMatchingState(viewer.userId);
   const matches = enabled ? await listMatches(viewer.userId) : [];
   const ids = matches.map((match) => match.userId);
   const [names, talks] = await Promise.all([resolveUsernames(ids), summarizeConversations(viewer.userId, ids)]);
   const matchCards = matches.map((match) => matchCard(match, names.get(match.userId), talks.get(match.userId), answers, createdAtIso));
-  return [...dayQuestionCards(day.day, answers, enabled, createdAtIso), ...matchCards];
+  return [...dayQuestionCards(day.day, answers, skipped, enabled, createdAtIso), ...matchCards];
 }

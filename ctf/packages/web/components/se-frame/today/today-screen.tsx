@@ -117,6 +117,7 @@ function Timeline({ lead, viewerId, view, marks, mark, toggle, markRead, onSave,
             sendTodayFeedback(card, 'not_for_me');
             mark('hidden', card.id);
           }}
+          onSkip={() => mark('hidden', card.id)}
           onMute={card.author && onMute ? () => onMute(card, 'person') : undefined}
           onMutePost={onMute ? () => onMute(card, 'post') : undefined}
           onSave={() => onSave(card)}

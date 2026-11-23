@@ -5,6 +5,11 @@ import { SE_QUESTIONS, seQuestionOfDay } from '@ctf/shared';
 // stays in view. A question missed on an earlier day gets its own catching-up card beside it.
 
 const answers = new Map<string, number>();
+const skippedIds = new Set<string>();
+vi.mock('./marks/repository', () => ({
+  readCardMarks: async (_accountId: string, ids: string[]) =>
+    ids.filter((id) => skippedIds.has(id)).map((cardId) => ({ cardId, mark: 'not_for_me', markedAtIso: '2026-11-05T01:00:00.000Z' })),
+}));
 vi.mock('lib/auth/server-authz', () => ({ evaluatePluginAccess: async () => ({ allowed: true }) }));
 vi.mock('lib/identity/resolve-usernames', () => ({ resolveUsernames: async () => new Map() }));
 vi.mock('lib/questions/repository', () => ({
@@ -19,10 +24,14 @@ import { questionCards } from './sources-questions';
 const viewer = { userId: 'ann', isAdmin: false };
 const thirdDay = { day: '2026-11-05', startIso: '2026-11-05T00:00:00.000Z' };
 const today = seQuestionOfDay('2026-11-05');
+const reset = () => {
+  answers.clear();
+  skippedIds.clear();
+};
 
 describe("Today's 21 Questions card", () => {
   it('asks the question, not done, before it is answered', async () => {
-    answers.clear();
+    reset();
     const [first] = await questionCards(viewer, thirdDay);
     expect(first.id).toBe(`questions:${today.id}`);
     expect(first.done).toBe(false);
@@ -30,7 +39,7 @@ describe("Today's 21 Questions card", () => {
   });
 
   it('stays once answered, done, with the answer picked, and a missed one gets its own card', async () => {
-    answers.clear();
+    reset();
     answers.set(today.id, 1);
     const cards = await questionCards(viewer, thirdDay);
     expect(cards[0].id).toBe(`questions:${today.id}`);
@@ -42,10 +51,27 @@ describe("Today's 21 Questions card", () => {
   });
 
   it('marks the answered card done on Today', async () => {
-    answers.clear();
+    reset();
     for (const question of SE_QUESTIONS.slice(0, 3)) answers.set(question.id, 0);
     const cards = await questionCards(viewer, thirdDay);
     expect(cards).toHaveLength(1);
     expect(cards[0].done).toBe(true);
+  });
+
+  it('after Skip on today\'s question, brings the next one not answered, without counting it as answered', async () => {
+    reset();
+    skippedIds.add(`questions:${today.id}`);
+    const cards = await questionCards(viewer, thirdDay);
+    expect(cards.map((card) => card.id)).toEqual([`questions:${today.id}`, `questions:${SE_QUESTIONS[0].id}`]);
+    expect(cards[1].done).toBe(false);
+    expect(cards[1].body).toBe(cards[0].body);
+  });
+
+  it('passes over a skipped catching-up question to the next one', async () => {
+    reset();
+    answers.set(today.id, 0);
+    skippedIds.add(`questions:${SE_QUESTIONS[0].id}`);
+    const cards = await questionCards(viewer, thirdDay);
+    expect(cards.map((card) => card.id)).toEqual([`questions:${today.id}`, `questions:${SE_QUESTIONS[1].id}`]);
   });
 });

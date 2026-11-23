@@ -277,6 +277,7 @@ function PlainCard({
   read,
   onToggleDone,
   onHide,
+  onSkip,
   onMute,
   onMutePost,
   onSave,
@@ -294,7 +295,7 @@ function PlainCard({
       <CardHead card={card} viewerId={viewerId} color={color} onHide={onHide} onMute={onMute} onMutePost={onMutePost} />
       <CardTextButton card={card} open={open} opensSheet={opensSheet} color={color} onPress={toggle} />
       {credit ? <span className={styles.creditPill}>{credit}</span> : null}
-      {isQuestionsCard(card) ? <QuestionsPanel card={card} open={open} onOpen={() => setOpen(true)} onChanged={onChanged ?? (() => undefined)} /> : null}
+      {isQuestionsCard(card) ? <QuestionsPanel card={card} open={open} onOpen={() => setOpen(true)} onChanged={onChanged ?? (() => undefined)} onSkip={onSkip} /> : null}
       <CardFoot card={card} onAnswer={opensSheet ? openSheet : null} onSave={onSave} onHide={onHide} />
       {sheet ? (
         <CardSheet card={card} viewerId={viewerId} firstAnswer={sheet.firstAnswer} onClose={() => setSheet(null)} onChanged={onChanged} onMutePost={onMutePost} />
@@ -310,6 +311,8 @@ type TodayCardProps = {
   read: boolean;
   onToggleDone: () => void;
   onHide: () => void;
+  // Skip on a 21 Questions card: the same Not for me mark, without the Not for me feedback signal.
+  onSkip: () => void;
   onMute?: () => void;
   // Mute this post: the card leaves Today and its conversation sends no notices.
   onMutePost?: () => void;

@@ -194,6 +194,7 @@ export function TodayScreen({ t, accountId, onOpen, onPresence, rain, onPeopleFi
                 sendTodayFeedback(card, 'not_for_me');
                 mark('hidden', card.id);
               }}
+              onSkip={() => mark('hidden', card.id)}
               onMute={card.author ? () => void mute(card, 'person') : undefined}
               onMutePost={() => void mute(card, 'post')}
               onSave={() => save(card)}
