@@ -639,8 +639,8 @@ FD-12b), with at least one reaction on it.
 
 **Steps:**
 1. As an approved member, type `@comic` and a question while offline (turn off the network) and send.
-2. Turn the network back on. Type half a post in the composer, then tap an @comic suggestion chip
-   for the first time on this account and confirm the consent modal.
+2. Turn the network back on. On an account that has never asked @comic, type `@comic` and a
+   question, send, and confirm the consent modal.
 3. Sign out in another tab, then react to a Commons post in the first tab.
 4. In a browser with all site data blocked, open the Commons, change the apps sort, and tap
    **Open plugin →** on a card.
@@ -649,7 +649,7 @@ FD-12b), with at least one reaction on it.
 
 **Expected:**
 - Step 1: the error line shows and the question is back in the composer.
-- Step 2: the half-written post is still in the composer after the chip's question is sent.
+- Step 2: the question is sent once the modal is confirmed, and the composer empties.
 - Step 3: the error line reads "You are signed out. Sign in again." rather than "Request failed."
 - Step 4: the Commons renders, the sort changes for this visit, and the plugin opens.
 - Step 5: reactions show as counts only, with no add-reaction button and no replies toggle.
@@ -1423,3 +1423,15 @@ reporting." The ordinary one posts as usual. If Stream is down, both post.
 **Expected:** Step 2 shows A's reply in the card. Step 3's message shows under the announcement for A on 3.0. Step 4 lists B's message as "Card message" on the announcement; hiding removes it from both versions and restoring brings it back. Step 5: the private message is never in the queue.
 **Result:** web ☐ — notes:
 
+
+### FD-29 — Commons posts show on 3.1 Today to the members who can read Commons (added 2026-11-23)
+**Role:** members A and B (approved), member C (signed up, not approved and not support-only), member D · **Surfaces:** web, android
+**Steps:**
+1. As A on 3.0, write a post in the Commons and ask a question there.
+2. As B, open Today in 3.1.
+3. As B, mute A from the ••• menu on A's post card, then open Today again.
+4. As C, open Today in 3.1, then open the Commons in 3.0.
+5. As an admin, hide A's post in Commons moderation, then open Today as an approved member who has not muted A.
+6. As an admin, restrict D after D has posted in the Commons, then open Today as B.
+**Expected:** Step 2: A's post shows as a story card labeled "Story · from Commons" with A's name, among the stories and below any asks and offers; A's question is not on Today. Step 3: A's post card is gone. Step 4: C sees no Commons card on Today, and the Commons does not open for C either. Step 5: the hidden post is gone from Today as it is from the Commons. Step 6: D's post is not on Today.
+**Result:** web ☐ android ☐ — notes:

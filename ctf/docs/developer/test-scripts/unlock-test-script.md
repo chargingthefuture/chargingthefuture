@@ -135,8 +135,7 @@ sign-in shows the loading screen.
    a later day), open the home page.
 2. Confirm: the verification banner and the chat are what is on screen. There is no Apps tab in the
    top bar, no Apps button in the icon rail, no locked `#weavers` chip in the channel row, and the
-   only chip under the chat is "I'm new. What do I do first?". There is no "I can’t find my Quora
-   profile URL" chip.
+   row above the composer holds only the @, 📣 and 🔔 filters, with no suggestion chips.
 3. Open an announcement or an @comic answer that carries plugin links. Confirm the "Explore:" / plugin
    chips are not shown.
 4. Leave the page open for a minute with the browser's network panel open. Confirm no request to

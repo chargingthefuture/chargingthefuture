@@ -15,6 +15,7 @@ policies:
         - lighthouse active listings (no address, no city)
         - skill-up open cohorts with seats
         - feed announcements
+        - commons community posts (not questions), only for a member the 3.0 Commons read admits (requireCommonsAccess)
         - directory invite cards
         - what-works verified products
         - mood eligibility (read only, creates no pseudonym)
