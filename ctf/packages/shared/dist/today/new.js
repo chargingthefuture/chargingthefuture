@@ -28,7 +28,7 @@ export const SE_ASK_WORDS = {
     details: 'Details',
     optional: '(optional)',
     hint: 'Everyone can read this. Keep times and places for the private conversation.',
-    suggestions: 'Suggestions',
+    suggestionsLead: 'Or start from one of these',
     submit: 'Post',
     submitting: 'Posting…',
     posted: 'Posted. It shows on Today, and answers come to Activity.',
