@@ -58,6 +58,25 @@ function SignupsHeader({
   );
 }
 
+// The tabs that pick which sign-ups the list shows.
+function SignupTabs({ t, tab, onPick }: { t: UnlockTokens; tab: SignupTab; onPick: (next: SignupTab) => void }) {
+  return (
+    <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+      {SIGNUP_TABS.map((tabKey) => (
+        <button
+          key={tabKey}
+          type="button"
+          onClick={() => onPick(tabKey)}
+          aria-pressed={tab === tabKey}
+          style={{ padding: '6px 14px', borderRadius: 8, background: tab === tabKey ? t.ACCENT : t.SURFACE, border: `1px solid ${tab === tabKey ? t.ACCENT : t.BORDER_SOLID}`, color: tab === tabKey ? '#fff' : t.MUTED, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+        >
+          {TAB_LABEL[tabKey]}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 // Admin panel: how many people have signed up, and which of them never gave us a Quora URL.
 //
 // Unlock only ever sees someone once they submit a Quora URL, so before this panel the total sign-up
@@ -265,19 +284,7 @@ export function UnlockSignupsPanel({ overview }: { overview: UnlockSignupOvervie
             <>
               <UnlockSignupsSummary counts={counts} truncated={overview.truncated} />
 
-              <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-                {SIGNUP_TABS.map((tabKey) => (
-                  <button
-                    key={tabKey}
-                    type="button"
-                    onClick={() => pickTab(tabKey)}
-                    aria-pressed={tab === tabKey}
-                    style={{ padding: '6px 14px', borderRadius: 8, background: tab === tabKey ? t.ACCENT : t.SURFACE, border: `1px solid ${tab === tabKey ? t.ACCENT : t.BORDER_SOLID}`, color: tab === tabKey ? '#fff' : t.MUTED, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
-                  >
-                    {TAB_LABEL[tabKey]}
-                  </button>
-                ))}
-              </div>
+              <SignupTabs t={t} tab={tab} onPick={pickTab} />
 
               <input
                 type="search"
