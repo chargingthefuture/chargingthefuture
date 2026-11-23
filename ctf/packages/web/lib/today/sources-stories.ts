@@ -1,4 +1,4 @@
-import { SE_CENSUS_WORDS, seOpens30Page, type SeTodayCard, type SeTodayDay } from '@ctf/shared';
+import { SE_CENSUS_WORDS, seOpens30Page, seWwCardLink, type SeTodayCard, type SeTodayDay } from '@ctf/shared';
 import { listFeedTimeline } from 'lib/feed/repository';
 import { listLatestDirectoryInviteCards } from 'lib/directory/invites';
 import { getReaderList } from 'lib/what-works/repository';
@@ -59,6 +59,12 @@ export async function inviteStories(): Promise<SeTodayCard[]> {
   );
 }
 
+// A problem written as a question keeps its question mark; any other gets a full stop.
+function sentence(text: string): string {
+  const trimmed = text.trim();
+  return /[.?!]$/.test(trimmed) ? trimmed : `${trimmed}.`;
+}
+
 export async function whatWorksStory(viewer: TodayViewer, day: SeTodayDay = utcTodayDay()): Promise<SeTodayCard[]> {
   const { problems } = await getReaderList(viewer.userId);
   const verified = problems.flatMap((problem) =>
@@ -69,17 +75,21 @@ export async function whatWorksStory(viewer: TodayViewer, day: SeTodayDay = utcT
   const { problem, product } = verified[index % verified.length];
   const href = '/apps/what-works';
   return [
-    card({
-      source: 'what-works',
-      sourceId: product.id,
-      kind: 'story',
-      label: 'What worked for someone',
-      title: product.name,
-      body: `Problem: ${problem.title}. Verified helped by ${product.verifiedCount} ${product.verifiedCount === 1 ? 'person' : 'people'}.`,
-      createdAtIso: day.startIso,
-      href,
-      actions: [action('helped-me', 'It helped me too', href)],
-    }),
+    {
+      ...card({
+        source: 'what-works',
+        sourceId: product.id,
+        kind: 'story',
+        label: 'What worked for someone',
+        title: product.name,
+        body: `Problem: ${sentence(problem.title)} Verified helped by ${product.verifiedCount} ${product.verifiedCount === 1 ? 'person' : 'people'}.`,
+        createdAtIso: day.startIso,
+        href,
+        actions: [action('helped-me', 'It helped me too', href)],
+      }),
+      // The problem, so the opened card can add a solution to it, and the solution's own link.
+      whatWorks: { problemId: problem.id, problemTitle: problem.title, link: seWwCardLink(product.purchaseUrl) },
+    },
   ];
 }
 

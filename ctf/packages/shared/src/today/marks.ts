@@ -142,11 +142,15 @@ export function seMarkChangeFor(today: { cards: SeTodayCard[] } | null, kind: 'r
 }
 
 // What opening a card asks the server for: done, once. Null on another person's ask, on the
-// member's own posting or goal (writing it is not reading it), on a card the server marks done
-// itself, and on a card already marked.
+// member's own posting or goal (writing it is not reading it), on the What Works card (only a real
+// action counts there: It helped me too, or the dot), on a card the server marks done itself, and
+// on a card already marked.
 export function seReadChangeFor(today: { cards: SeTodayCard[] } | null, cardId: string, viewerId: string): SeCardMarkChange | null {
   const card = today?.cards.find((item) => item.id === cardId);
   if (!card || card.done || card.markedDoneAtIso || !seCardTakesCheckMark(card)) return null;
-  if (card.mine || card.goal || card.author?.accountId === viewerId) return null;
-  return { cardId, mark: 'done' };
+  return readMarksOnOpen(card, viewerId) ? { cardId, mark: 'done' } : null;
+}
+
+function readMarksOnOpen(card: SeTodayCard, viewerId: string): boolean {
+  return !card.mine && !card.goal && card.author?.accountId !== viewerId && card.source !== 'what-works';
 }

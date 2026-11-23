@@ -49,8 +49,11 @@ the problem categories and review every suggestion before it joins the shared li
   then offers "Add what helped", which opens the suggest form on the new problem, marked as waiting
   for review. What the member adds there moves with the problem if it is merged. A problem shows on
   the list once approved; a member can have three waiting at once.
-- Reached from Today's What Works card ("See the problem"). On Android it opens this web screen in
-  the browser panel.
+- Today's What Works card (3.1, web and Android) has its own light bulb icon and indigo color, not
+  the story book. Opened in place, it shows the problem, the solution and "Where to get it" with the
+  solution's own link, then **Add a solution to this problem** (straight to "What helped" for that
+  problem) first and **Add a problem** after it. Opening the card does not mark it done and does
+  not count as helped; only "It helped me too" (or the card's dot) does.
 - Paged lists, no endless scrolling. The problem list shows five problems per page with
   Previous / Page N of M / Next controls; moving a page returns to the top of the list.
 - Each problem shows its first two tools; any beyond that sit behind a "Show N more tools" control
@@ -229,6 +232,7 @@ Derived metrics (no stored counters): a tool's verified count is `COUNT(*)` of i
 - Deterministic, idempotent. Seeds the design's exact sample: 3 problems, 7 approved tools, and 27
   endorsements (so a fresh DB renders the mockup's headline numbers — 3 problems, 7 tools, 27
   survivors helped). Demo-schema coverage is added via `seedDemo.mjs`.
+- Demo problems (`seedDemo.mjs` and `demo-seed/41-what-works.mjs`) read like questions somebody would post: the specific problem as the title, what was already tried as the context.
 - Demo schema: `ctf/scripts/demo-seed/41-what-works.mjs` adds eight more active problems with approved tools and helpful marks from synthetic members (one problem with four tools), so the member list runs to three pages of five for the paging case (WW-7).
 
 ## 10. Gaps and Known Technical Debt
@@ -245,6 +249,7 @@ Derived metrics (no stored counters): a tool's verified count is `COUNT(*)` of i
 
 ## Change Log
 
+- 2026-11-23: **The What Works card on Today, fixed (owner report).** The card draws in its own accent, `works` (a light bulb icon, indigo `#4a4f9c` light and `#aab0ee` dark in every color), through `seCardAccent` and `SeCardAccent` in `@ctf/shared`, so it no longer reads as one more story. The opened card shows "Where to get it" with the solution's own link (`seWwCardLink`, web and http addresses only) and offers **Add a solution to this problem** first, which opens "What helped" on the card's problem, then **Add a problem**. The Today answer carries the problem and link on the card as `whatWorks` (`SeTodayWhatWorks`). Opening the card no longer marks it done (`seReadChangeFor`); "It helped me too" and the dot still do. A problem written as a question keeps its question mark in the card's body. Demo problems are rewritten as specific questions with what was tried; slugs, products and helpful marks are unchanged. No table, route or migration changed; `GET /api/today` gains the optional `whatWorks` field on this one card.
 - 2026-11-16: **Add a problem from + New (owner decision).** + New → Offer gains "A problem, with what helped" first in its list, on web (`se-frame/new/new-screen.tsx`) and Android (`new/NewScreen.tsx`). It opens the 3.1 "Add a problem" sheet built to the board "What works: add a problem", and Use this or Add what helped goes on to the 3.1 "What helped" sheet, through the existing routes (`GET /api/what-works/problems/similar`, `POST /api/what-works/problems`, `POST /api/what-works/suggestions`); what is sent still waits for the admin review on the 3.0 admin page. The button that opens the two sheets is shared by the Today card and + New (`WwAddButton`). On the web both sheets now move focus in when they open and back to the button that opened them when they close (`se-frame/use-sheet-focus.ts`), as well as closing on Escape. Words: `SE_OFFER_WHAT_WORKS`. No route, table or contract changed.
 
 - 2026-11-16: **What helped, inside 3.1.** From the add sheet opened on Today, **Use this** and **Add what helped** now open "What helped" in a 3.1 sheet of the same look (web `se-frame/what-works/ww-helped-sheet.tsx`, Android `WwHelpedSheet.tsx`). The member gives a product name, a direct purchase link and an optional note, and it is sent through the same `POST /api/what-works/products` the 3.0 suggest form uses. The words are the 3.0 form's (`SE_WW_HELPED_WORDS`, `seWwHelpedBody`, `seWwHelpedReady`). The `?suggest=` / `&pending=` hand-off to the 3.0 page and `seWwSuggestHref` are removed. The What works card on Today drops "See the problem", which only opened the 3.0 page. No route or table changed.

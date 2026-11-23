@@ -156,6 +156,25 @@
   align-items: center;
 }
 
+/* Add a solution to this problem on the What works card, ahead of Add a problem. */
+.wwSolution {
+  align-self: flex-start;
+}
+
+.wwLink {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--se-soft);
+  overflow-wrap: anywhere;
+}
+
+.wwLink a {
+  color: var(--se-ink);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 /* "Add a problem" on the What works card: a button drawn as the link above it. */
 .openInButton {
   padding: 0;
