@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('lib/observability/report', () => ({ reportError: vi.fn() }));
+vi.mock('lib/demo-mode/demo-accounts', () => ({ runsOnDemoData: vi.fn(async (userId: string) => userId === 'demo-1') }));
 vi.mock('lib/mutes/repository', () => ({ listMutes: vi.fn(async () => []) }));
 vi.mock('lib/measures/action-minutes', () => ({ readDaysWon: vi.fn(async () => ({ total: 12.5, thisWeek: 1 })) }));
 vi.mock('./sources-asks', () => ({
@@ -74,6 +75,13 @@ describe('buildToday', () => {
     const today = await buildToday({ userId: 'u1', isAdmin: false }, NOW);
     expect(today.unavailable).toEqual(['socket-relay', 'foundation']);
     expect(today.rooms).toHaveLength(1);
+  });
+
+  it('marks Days won as sample for an account on demo data only, so its screen ticks it', async () => {
+    const real = await buildToday({ userId: 'u1', isAdmin: false }, NOW);
+    const demo = await buildToday({ userId: 'demo-1', isAdmin: false }, NOW);
+    expect(real.daysWon).toEqual({ total: 12.5, thisWeek: 1 });
+    expect(demo.daysWon).toEqual({ total: 12.5, thisWeek: 1, sample: true });
   });
 
   it('carries how many members are here and how many stories open tomorrow', async () => {
