@@ -38,13 +38,18 @@ function Suggestions({ typed, onPick }: { typed: string; onPick: (_item: SeAskSu
   const items = seAskSuggestions(typed);
   if (items.length === 0) return null;
   return (
-    <div className={sheet.suggestList} role="group" aria-label={W.suggestions}>
-      {items.map((item) => (
-        <button key={item.text} type="button" className={sheet.suggestItem} onClick={() => onPick(item)}>
-          <SuggestionText typed={typed} text={item.text} />
-        </button>
-      ))}
-    </div>
+    <>
+      <p className={sheet.suggestLead} id="se-ask-suggest-lead">
+        {W.suggestionsLead}
+      </p>
+      <div className={sheet.suggestList} role="group" aria-labelledby="se-ask-suggest-lead">
+        {items.map((item) => (
+          <button key={item.text} type="button" className={sheet.suggestItem} onClick={() => onPick(item)}>
+            <SuggestionText typed={typed} text={item.text} />
+          </button>
+        ))}
+      </div>
+    </>
   );
 }
 

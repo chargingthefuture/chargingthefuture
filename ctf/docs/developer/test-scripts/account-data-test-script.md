@@ -15,7 +15,7 @@
 | **Visibility** | Any signed-in identity (including unlock-pending) |
 | **Roles to test** | member |
 | **Surfaces** | web (phone-width layout) |
-| **Generated** | 2026-07-26 (hand-written on the JSON-export build, issue #1264) · 2026-11-23 manual update: AD-21 and AD-28: the timeline dot takes a card off Today and lists it in Me → Read; opening a card marks it read; AD-13 step 6 names the shortened Ask the architect line |
+| **Generated** | 2026-07-26 (hand-written on the JSON-export build, issue #1264) · 2026-11-23 manual update: AD-21 and AD-28: the timeline dot takes a card off Today and lists it in Me → Read; opening a card marks it read; AD-13 step 6 names the shortened Ask the architect line · 2026-11-23 manual update: AD-13 suggestions are chips under "Or start from one of these" |
 
 ## How to run this
 
@@ -292,8 +292,9 @@ calendar.
 6. Tap each Offer choice and the Story link; tap "🙋 Ask the architect" (a screen reader reads "Ask the System Architect for help"); tap
    Close.
 **Expected (4 to 6):** The sheet reads "Post something" and "It goes into everyone's Today." with
-Community guidelines at the top. Suggestions list only asks that contain every word typed, with the
-typed words in bold; with nothing typed, one from each group. Details is marked (optional) and the
+Community guidelines at the top. Under "What do you need?" the line "Or start from one of these" sits
+above small suggestion chips that wrap; they list only asks that contain every word typed, with the
+typed words in bold; with nothing typed, one from each group. Tapping a chip fills the field. Details is marked (optional) and the
 hint "Everyone can read this. Keep times and places for the private conversation." sits under it.
 Step 4 says "Posted. It shows on Today, and answers come to Activity." and the ask appears on Today
 and in SocketRelay with the tag "Getting around" and no city. Step 5 sets Details aside, says "Posted
