@@ -71,13 +71,15 @@ export function AskForm({ t }: { t: SeThemeTokens }) {
   }
 
   const disabled = busy || !title.trim();
+  const suggestions = seAskSuggestions(title);
   return (
     <View style={s.form}>
       {posted ? <Text style={s.done}>{W.posted}</Text> : null}
       <Text style={s.label}>{W.what}</Text>
       <TextInput accessibilityLabel={W.what} style={sh.pill} value={title} maxLength={MAX_TITLE} onChangeText={setTitle} />
-      <View style={sh.suggestList} accessibilityLabel={W.suggestions}>
-        {seAskSuggestions(title).map((item) => (
+      {suggestions.length > 0 ? <Text style={sh.suggestLead}>{W.suggestionsLead}</Text> : null}
+      <View style={sh.suggestList} accessibilityLabel={W.suggestionsLead}>
+        {suggestions.map((item) => (
           <TouchableOpacity
             key={item.text}
             accessibilityRole="button"

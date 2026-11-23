@@ -20,7 +20,7 @@ export declare const SE_ASK_WORDS: {
     details: string;
     optional: string;
     hint: string;
-    suggestions: string;
+    suggestionsLead: string;
     submit: string;
     submitting: string;
     posted: string;

@@ -527,8 +527,8 @@
   background: rgba(14, 165, 233, 0.18);
 }
 
-/* Several buttons under one bubble (an answer chip's reply names more than one place): a row that
-   wraps at phone width rather than one button per line. */
+/* A row of buttons (the admin picture panel's Share and Cancel) that wraps at phone width rather
+   than one button per line. */
 .chatActionRow {
   display: flex;
   flex-wrap: wrap;
@@ -1039,28 +1039,6 @@
 
 .conciergeChipRail::-webkit-scrollbar {
   display: none;
-}
-
-.conciergeChip {
-  flex: 0 0 auto;
-  max-width: 260px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: inline-flex;
-  align-items: center;
-  padding: 7px 14px;
-  border-radius: 8px;
-  background: rgba(52, 211, 153, 0.1);
-  border: 1px solid rgba(52, 211, 153, 0.3);
-  color: #34D399;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.conciergeChip:hover {
-  background: rgba(52, 211, 153, 0.18);
 }
 
 .chatTime {
