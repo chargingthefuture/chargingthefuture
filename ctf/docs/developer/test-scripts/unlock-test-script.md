@@ -21,7 +21,7 @@
 | **Surfaces** | web (internal admin surface) |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-unlock-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-11-23 manual update and UNLOCK-A9e, every help request on the sign-up list with Done and the tile dot; UNLOCK-M6: the banner opens the Unlock screen at Why this step or at Can't find it?, the other routes' new wording, and Help request sent |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-11-23 manual update, UNLOCK-A9f the help requests line at the top of /admin/unlock, and UNLOCK-A9e, every help request on the sign-up list with Done and the tile dot; UNLOCK-M6: the banner opens the Unlock screen at Why this step or at Can't find it?, the other routes' new wording, and Help request sent |
 
 ## How to run this
 
@@ -674,6 +674,23 @@ still there although the area was opened. Step 4: A's row reads "· marked done 
 while B waits. Step 5: B's row reads "· handled in review" with no button, and the dot is gone.
 Step 6: A's request waits again and the dot returns. Nothing in these steps changes either member's
 access.
+**Result:** web ☐ — notes:
+
+### UNLOCK-A9f · The help requests line at the top of /admin/unlock (added 2026-11-23)
+**Role:** two new members on 3.1, then an admin · **Surfaces:** web (admin surface) — web-only, no Android admin (rule 105)
+**Steps:**
+1. As members A and B, press **Ask for help finding it** on the Unlock screen; B types a name in the box.
+2. As the admin, open `/admin/unlock` and look under the stat tiles.
+3. Tap the "2 people asked for help" line.
+4. Press **Done** on A.
+5. Approve or turn down B's address once B sends one, then reload `/admin/unlock` and the admin landing.
+**Expected:** Step 2: a line reads "2 people asked for help" while the Sign-ups panel stays closed.
+Step 3: it opens to A and B only, oldest request first, each with their name or handle, their state
+(for example "No Quora URL"), their email as a mail link when the account has one, "Asked for help on
+<date> · waiting", B's "Told us: <name>", and **Done**; a sentence above them says the dot goes once
+each is marked Done or their address is approved or turned down. Step 4: A leaves the list, the line
+reads "1 person asked for help", and A's row in the Sign-ups list reads "· marked done on <date>".
+Step 5: the line is gone and the Unlock tile on the admin landing has no dot.
 **Result:** web ☐ — notes:
 
 ### UNLOCK-A9b · Ban an account from the sign-up list, and have the ban hold at the auth provider

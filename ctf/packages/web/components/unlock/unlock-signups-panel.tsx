@@ -8,6 +8,7 @@ import { failureText } from 'lib/errors/client-failure';
 import { useTheme } from '@/hooks/useTheme';
 import { getUnlockTokens, type UnlockTokens } from './unlock-shared';
 import { UnlockSignupRow } from './unlock-signup-row';
+import { UnlockHelpRequests } from './unlock-help-requests';
 import { isUnlockHelpRequestOpen } from 'lib/unlock/help-request-open';
 import { accountAfterBanToggle, providerRefusalText } from './unlock-signup-ban-state';
 import { UnlockSignupsSummary, signupHeadline } from './unlock-signups-summary';
@@ -54,6 +55,25 @@ function SignupsHeader({
         {open ? <ChevronUp size={16} color={t.MUTED} /> : <ChevronDown size={16} color={t.MUTED} />}
       </span>
     </button>
+  );
+}
+
+// The tabs that pick which sign-ups the list shows.
+function SignupTabs({ t, tab, onPick }: { t: UnlockTokens; tab: SignupTab; onPick: (next: SignupTab) => void }) {
+  return (
+    <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+      {SIGNUP_TABS.map((tabKey) => (
+        <button
+          key={tabKey}
+          type="button"
+          onClick={() => onPick(tabKey)}
+          aria-pressed={tab === tabKey}
+          style={{ padding: '6px 14px', borderRadius: 8, background: tab === tabKey ? t.ACCENT : t.SURFACE, border: `1px solid ${tab === tabKey ? t.ACCENT : t.BORDER_SOLID}`, color: tab === tabKey ? '#fff' : t.MUTED, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+        >
+          {TAB_LABEL[tabKey]}
+        </button>
+      ))}
+    </div>
   );
 }
 
@@ -247,8 +267,10 @@ export function UnlockSignupsPanel({ overview }: { overview: UnlockSignupOvervie
   }
 
   const headline = overview.available ? signupHeadline(counts) : 'Could not be read';
+  const markHelpDone = (userId: string, done: boolean) =>
+    void setMark(userId, HELP_ROUTE, { done }, withHelpDone(done), 'help_request_done');
 
-  return (
+  const panel = (
     <div style={{ marginBottom: 16, padding: '12px 14px', borderRadius: 12, background: t.HEADER, border: `1px solid ${t.BORDER_SOLID}` }}>
       <SignupsHeader t={t} open={open} onToggle={() => setOpen((prev) => !prev)} headline={headline} />
 
@@ -262,19 +284,7 @@ export function UnlockSignupsPanel({ overview }: { overview: UnlockSignupOvervie
             <>
               <UnlockSignupsSummary counts={counts} truncated={overview.truncated} />
 
-              <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-                {SIGNUP_TABS.map((tabKey) => (
-                  <button
-                    key={tabKey}
-                    type="button"
-                    onClick={() => pickTab(tabKey)}
-                    aria-pressed={tab === tabKey}
-                    style={{ padding: '6px 14px', borderRadius: 8, background: tab === tabKey ? t.ACCENT : t.SURFACE, border: `1px solid ${tab === tabKey ? t.ACCENT : t.BORDER_SOLID}`, color: tab === tabKey ? '#fff' : t.MUTED, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
-                  >
-                    {TAB_LABEL[tabKey]}
-                  </button>
-                ))}
-              </div>
+              <SignupTabs t={t} tab={tab} onPick={pickTab} />
 
               <input
                 type="search"
@@ -308,7 +318,7 @@ export function UnlockSignupsPanel({ overview }: { overview: UnlockSignupOvervie
                       onToggleDemo={(userId, demo) => void toggleDemo(userId, demo)}
                       onToggleBanned={(userId, banned) => void toggleBanned(userId, banned)}
                       onAddUrl={(userId, url) => void addUrl(userId, url)}
-                      onMarkHelpDone={(userId, done) => void setMark(userId, HELP_ROUTE, { done }, withHelpDone(done), 'help_request_done')}
+                      onMarkHelpDone={markHelpDone}
                     />
                   ))}
                 </div>
@@ -328,5 +338,14 @@ export function UnlockSignupsPanel({ overview }: { overview: UnlockSignupOvervie
         </div>
       )}
     </div>
+  );
+
+  // The help requests sit above the panel, straight under the stat tiles, and share its rows so Done
+  // in either place updates both.
+  return (
+    <>
+      <UnlockHelpRequests accounts={accounts} busyUserId={busyUserId} onMarkHelpDone={markHelpDone} />
+      {panel}
+    </>
   );
 }
