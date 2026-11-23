@@ -21,7 +21,7 @@
 | **Surfaces** | web (internal admin surface) |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-unlock-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-11-23 manual update and UNLOCK-A9e, every help request on the sign-up list with Done and the tile dot; UNLOCK-M6: the banner opens the Unlock screen at Why this step or at Can't find it?, the other routes' new wording, and Help request sent |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-11-23 manual update and UNLOCK-A8p, admins told on their phones when somebody asks for help; UNLOCK-A9e, every help request on the sign-up list with Done and the tile dot; UNLOCK-M6: the banner opens the Unlock screen at Why this step or at Can't find it?, the other routes' new wording, and Help request sent |
 
 ## How to run this
 
@@ -535,6 +535,27 @@ reads "No Quora URL", because they have not submitted one. Step 6: the search fi
 typed, not only by their name, handle, or email. Step 7: the stored line is unchanged — pressing the
 button again with an empty box never erases what they already told us. Deleting the account removes
 this line with the rest of their data (see UNLOCK-A2c for the deletion walk).
+**Result:** web ☐ — notes:
+
+### UNLOCK-A8p · Admins are told on their phones when somebody asks for help
+**Role:** member (not yet verified, no submission), then admin · **Surfaces:** web + mobile-responsive
+**Precondition:** a member test account that has never pressed "ask for help", and an admin account with
+pushes turned on in Settings, a device that accepts them, and outside its quiet hours.
+**Steps:**
+1. As the member, land on the Unlock screen, type something into the field above the button, and press
+   **Ask for help in the Commons**.
+2. Look at the admin's phone.
+3. As the admin, open Activity and tap the new row.
+4. As the member, press the button again, with and without something in the field.
+5. As the admin, press **Done** on that member's request at `/admin/unlock`. As the member, press the
+   button once more with something new in the field.
+**Expected:** Step 2: a push arrives within a few seconds ("You have a new update." when the admin keeps
+discreet pushes on, otherwise "Someone asked for help with Unlock."). It never shows what the member
+typed, their name, or their handle. Step 3: the Activity row reads "Someone asked for help with Unlock."
+and opens `/admin/unlock`, with the help list at the top. Step 4: no second push and no second row — the
+request was already open. Step 5: a request marked done that comes back with something new opens again,
+and the admin is told once more. The member's request succeeds in every step even when push is not set
+up on the server.
 **Result:** web ☐ — notes:
 
 ### UNLOCK-A8a · Asking for help works while your submission is waiting on review

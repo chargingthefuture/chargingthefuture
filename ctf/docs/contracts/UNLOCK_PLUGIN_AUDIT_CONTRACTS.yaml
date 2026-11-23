@@ -25,7 +25,7 @@ auditEvents:
     actorId: principal
     pluginId: unlock
     command: unlock.help.request
-    commandVersion: 1.0.0
+    commandVersion: 1.2.0
     purpose: onboarding_support_access
     policyDecision:
       status: allow_or_deny
