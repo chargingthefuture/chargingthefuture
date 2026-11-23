@@ -152,12 +152,6 @@
       "requiresExplicitWebShell": true
     },
     {
-      "slug": "reader",
-      "mobileFeatureDirs": [],
-      "requiresMobileSurface": false,
-      "requiresExplicitWebShell": true
-    },
-    {
       "slug": "mutual-time",
       "mobileFeatureDirs": [],
       "requiresMobileSurface": false,

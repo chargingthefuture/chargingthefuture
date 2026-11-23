@@ -2944,6 +2944,10 @@ DELETE FROM ctf_plugin_registry WHERE plugin_slug IN ('whatworks', 'trusttranspo
 -- GentlePulse decommissioned 2026-07-27 (owner decision): remove its registry row from existing DBs.
 DELETE FROM ctf_plugin_registry WHERE plugin_slug = 'gentle-pulse';
 
+-- Reader retired 2026-11-23 (owner decision): the hosted feed reader it opened is shut down, so its
+-- registry row leaves existing DBs. It had no tables of its own.
+DELETE FROM ctf_plugin_registry WHERE plugin_slug = 'reader';
+
 -- Seed plugin registry (upsert so re-running is safe).
 --
 -- THIS TABLE IS WHAT THE APPS LIST SHOWS. `fallbackPluginRegistry` in
@@ -2976,8 +2980,7 @@ INSERT INTO ctf_plugin_registry (plugin_slug, display_name, summary, availabilit
   ('recurring-activity', 'Recurring Activity',   'Acknowledge an ongoing activity with another member — one tap, no amounts to report. Recognition of your everyday ties, never a bill.','implemented_shell', 240, TRUE),
   ('mutual-time',        'Mutual Time',          'Find a meeting time everyone can make. Share one link; members pick times in their own timezone and the app chooses the slot with the most overlap.','implemented_shell', 250, TRUE),
   ('fireside',           'Fireside',             'Threaded conversation under the posts on the blog. Anyone can read it; writing needs an account, and what you write goes public once you are approved.','implemented_shell', 260, TRUE),
-  ('ti-radio',           'TI Radio',             'A schedule of live discussions members host in Chyme. Anyone can read the guide; take an empty 90 minutes and it is yours to host.','implemented_shell', 270, TRUE),
-  ('reader',             'Reader',               'A feed reader on a server this project pays for. Sign in with this account; your subscriptions are yours alone and nobody else on it can see them.','implemented_shell', 280, TRUE)
+  ('ti-radio',           'TI Radio',             'A schedule of live discussions members host in Chyme. Anyone can read the guide; take an empty 90 minutes and it is yours to host.','implemented_shell', 270, TRUE)
 ON CONFLICT (plugin_slug) DO UPDATE SET
   display_name       = EXCLUDED.display_name,
   summary            = EXCLUDED.summary,
@@ -11988,4 +11991,15 @@ ALTER TABLE IF EXISTS demo.today_card_marks ADD CONSTRAINT today_card_marks_mark
 -- address is approved or turned down. The demo schema's copy gets the same column.
 ALTER TABLE IF EXISTS unlock_help_requests ADD COLUMN IF NOT EXISTS done_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS demo.unlock_help_requests ADD COLUMN IF NOT EXISTS done_at TIMESTAMPTZ;
+
+
+-- ── post migration: 0116_plugin_registry_delete_reader.sql ──
+-- Reader is no longer an app (owner decision, 2026-11-23). The hosted feed reader its page sent
+-- members to is shut down, so its row leaves the registry the apps list reads. Reader had no tables
+-- of its own, so nothing else is removed.
+--
+-- schema.sql no longer seeds the row. Deleting a row that is already gone changes nothing, so a
+-- second run is safe.
+DELETE FROM ctf_plugin_registry
+WHERE plugin_slug = 'reader';
 

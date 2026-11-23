@@ -110,8 +110,6 @@ const ORDER = [
   ['click-log', 'ClickLog'],
   ['recurring-activity', 'Recurring Activity'],
   ['gdp', 'GDP'],
-  // Reader shipped 2026-09-23 and sat in the missing-from-guide notice until it was added here.
-  ['reader', 'Reader'],
   [
     'bug-reporting',
     'Reporting a problem',
