@@ -36,3 +36,15 @@ export function unlockHelpRequestOpenedRef(write: UnlockHelpRequestWrite): strin
   if (write.prev_done_at && !write.done_at) return `${base}/reopened@${iso(write.prev_done_at)}`;
   return null;
 }
+
+// The sign-ups still waiting on help, oldest request first, for the line at the top of /admin/unlock
+// that says why the tile has its dot.
+export function openUnlockHelpRequests<T extends { helpRequestOpen: boolean; helpRequestedAt: string | null }>(accounts: readonly T[]): T[] {
+  return accounts
+    .filter((account) => account.helpRequestOpen)
+    .sort((a, b) => (a.helpRequestedAt ?? '').localeCompare(b.helpRequestedAt ?? ''));
+}
+
+export function unlockHelpRequestsHeadline(count: number): string {
+  return count === 1 ? '1 person asked for help' : `${count} people asked for help`;
+}
