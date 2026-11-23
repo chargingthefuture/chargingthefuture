@@ -24,6 +24,19 @@ buzzwords. State the result or the next step in plain words, then stop. This is 
 hook `.claude/hooks/check-no-pleasantries.mjs`, which blocks a reply that contains a banned term and
 asks for a plain restatement.
 
+### No running commentary while working (owner directive, 2026-11-23)
+
+Do not narrate work in progress. No text between tool calls that announces what was just found or
+what comes next ("Shallow clone breaks the build. Unshallowing and resyncing."). The owner follows the
+session on a phone, and every such line is output the account pays for and a line they scroll past.
+Run the tools without a word in between. Write text only when:
+
+- the work is done — the result, in a few lines;
+- the work is blocked on something only the owner can decide or do; or
+- a decision changes what the owner gets (a different approach than asked, something skipped).
+
+A tool call's short description field is not commentary and stays.
+
 ### Banned-term dictionary (every reply, all agents)
 
 The Stop hook `.claude/hooks/check-no-pleasantries.mjs` holds the canonical list and is the source of
@@ -57,8 +70,8 @@ not reach for a banned word even to talk about it; use the replacement below ins
 - punch list → list
 - stale → drop the word; if you mean something specific, name it (out-of-date, superseded, no longer current)
 - console → dashboard (the code identifiers `console.log` / `console.error` / `console.info` are exempt)
-- whole → entire, all of, end to end, or drop it (the word itself, in every frame — owner directive, 2026-09-19)
-- point of the thing → end on the fact itself, with no sentence explaining that it mattered
+- whole (and wholly) → entire, all of, end to end, or drop it (the word itself, in every frame — owner directive, 2026-09-19)
+- point of the thing, and "that/this/which/it is the point of / here" → end on the fact itself, with no sentence explaining that it mattered
 
 Both are one habit, banned 2026-08-28 and 2026-08-29 and widened 2026-09-13: the sentence that
 arrives after the facts to tell the reader which of them mattered. It reads as insistence, it was
@@ -561,7 +574,7 @@ next run. The test is whether it has one.
 
 ## Agent Slash Commands (Critical — all agents, every repo)
 
-Owner directive, 2026-08-17, extended 2026-09-22 and 2026-11-02; `/bpr` renamed `/br` on 2026-09-26. Six routines live in `.claude/commands/`. Each one is the standing way to do its kind of work, and the owner does not have to type the slash command for it to apply — the request itself is the trigger.
+Owner directive, 2026-08-17, extended 2026-09-22, 2026-11-02 and 2026-11-23; `/bpr` renamed `/br` on 2026-09-26. Seven routines live in `.claude/commands/`. Each one is the standing way to do its kind of work, and the owner does not have to type the slash command for it to apply — the request itself is the trigger.
 
 | Command | File | Applies when |
 |---|---|---|
@@ -571,6 +584,7 @@ Owner directive, 2026-08-17, extended 2026-09-22 and 2026-11-02; `/bpr` renamed 
 | `/fix` | [`.claude/commands/fix.md`](.claude/commands/fix.md) | The owner points at a sentence that does not read right. |
 | `/fl` | [`.claude/commands/fl.md`](.claude/commands/fl.md) | The owner asks whether this chat can be archived. |
 | `/q` | [`.claude/commands/q.md`](.claude/commands/q.md) | The owner wants the next open issue in the private `chargingthefuture/prompts` repository done. |
+| `/sync` | [`.claude/commands/sync.md`](.claude/commands/sync.md) | The owner asks to bring a repository in line with the `chargingthefuture/agents` baseline. |
 
 Eight more do by hand what a scheduled workflow does with the Anthropic API, for the months the
 account has no credit (owner decision, 2026-10-03). The workflows stay as they are and go red on
@@ -730,6 +744,29 @@ and hides meaning.
   names, library names) — name those accurately; just don't pile extra jargon around them.
 - Applies to **every agent** and all human-facing communication. When in doubt, choose the wording a
   newcomer would understand.
+
+## Text Formatting — Minimal Bold (all agents)
+
+Keep bold to a minimum, in chat replies and in any Markdown or other file an agent creates or edits.
+
+- Do not bold for emphasis, do not bold every list-item label, and do not bold entire sentences.
+  Overused bold adds visual noise and no information.
+- Acceptable bold is rare and structural: a single table header, or a one-word inline label where
+  the surrounding document already uses that convention. When in doubt, do not bold.
+- Carry structure with headings, lists, tables and plain sentences instead.
+
+## American English (owner directive, 2026-11-23 — all agents)
+
+Write everything in American English spelling and usage: chat replies, PR titles and descriptions,
+review and issue comments, commit messages, code comments, documentation, and any text an agent adds
+to the product. Use "color", "behavior", "organize", "center", "license" (noun and verb),
+"canceled", "gray" — not "colour", "behaviour", "organise", "centre", "licence", "cancelled", "grey".
+CI checks product copy with `ctf/scripts/check-us-spelling.mjs` (job `us-spelling-gate`).
+
+- Exempt: real code identifiers, file paths, command names, quoted text, and proper nouns, which
+  keep their exact spelling.
+- When editing text that already uses British spelling, switch the lines you touch to American
+  spelling.
 
 # Product Rules Index
 
