@@ -127,6 +127,25 @@
   font-weight: 700;
 }
 
+/* + New's "Something happened?" line: a small pill in the pick color with a hazard mark, so it does
+   not read as the underlined architect link above it. */
+.logLine {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 4px 12px;
+  border: 1.5px solid var(--se-line);
+  border-radius: 999px;
+  background: var(--se-pick);
+  color: var(--se-on-pick);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 .architect {
   align-self: center;
   min-height: 32px;
@@ -404,6 +423,7 @@ button.slot {
 .topLink:focus-visible,
 .kind:focus-visible,
 .architect:focus-visible,
+.logLine:focus-visible,
 .suggestItem:focus-visible,
 .dashed:focus-visible,
 .day:focus-visible,

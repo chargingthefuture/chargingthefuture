@@ -19,12 +19,17 @@ function cardOf(id: string, extra: Partial<SeTodayCard> = {}): SeTodayCard {
 }
 
 const done = (cardId: string, markedAtIso: string): SeCardMark => ({ cardId, mark: 'done', markedAtIso });
+const read = (cardId: string, markedAtIso: string): SeCardMark => ({ cardId, mark: 'read', markedAtIso });
 
 describe('marks stored on the account', () => {
-  it('keeps a card marked done today, shown done, and leaves it out from the next day', () => {
-    const today = seApplyCardMarks([cardOf('blog-story:a')], [done('blog-story:a', '2026-11-04T15:00:00.000Z')], DAY_START);
+  it('keeps a card read today, shown done, and leaves it out from the next day', () => {
+    const today = seApplyCardMarks([cardOf('blog-story:a')], [read('blog-story:a', '2026-11-04T15:00:00.000Z')], DAY_START);
     expect(today[0].markedDoneAtIso).toBe('2026-11-04T15:00:00.000Z');
-    expect(seApplyCardMarks([cardOf('blog-story:a')], [done('blog-story:a', '2026-11-03T15:00:00.000Z')], DAY_START)).toEqual([]);
+    expect(seApplyCardMarks([cardOf('blog-story:a')], [read('blog-story:a', '2026-11-03T15:00:00.000Z')], DAY_START)).toEqual([]);
+  });
+
+  it('takes a card marked done with the dot off Today at once', () => {
+    expect(seApplyCardMarks([cardOf('blog-story:a')], [done('blog-story:a', '2026-11-04T15:00:00.000Z')], DAY_START)).toEqual([]);
   });
 
   it('keeps a story or replay done in an earlier rotation off Today', () => {
@@ -51,9 +56,10 @@ describe('marks stored on the account', () => {
     const today = { cards: [cardOf('blog-story:a'), cardOf('questions:q', { done: true })] };
     expect(seMarkChangeFor(today, 'read', 'blog-story:a')).toEqual({ cardId: 'blog-story:a', mark: 'done' });
     expect(seMarkChangeFor(today, 'read', 'questions:q')).toBeNull();
-    const marked = seMarkCardInToday(today, { cardId: 'blog-story:a', mark: 'done' }, new Date(DAY_START));
-    expect(seMarkChangeFor(marked, 'read', 'blog-story:a')).toEqual({ cardId: 'blog-story:a', mark: 'clear' });
-    expect(seMarkCardInToday(marked, { cardId: 'blog-story:a', mark: 'not_for_me' }).cards.map((c) => c.id)).toEqual(['questions:q']);
+    expect(seMarkCardInToday(today, { cardId: 'blog-story:a', mark: 'done' }).cards.map((c) => c.id)).toEqual(['questions:q']);
+    const opened = seMarkCardInToday(today, { cardId: 'blog-story:a', mark: 'read' }, new Date(DAY_START));
+    expect(seMarkChangeFor(opened, 'read', 'blog-story:a')).toEqual({ cardId: 'blog-story:a', mark: 'clear' });
+    expect(seMarkCardInToday(opened, { cardId: 'blog-story:a', mark: 'not_for_me' }).cards.map((c) => c.id)).toEqual(['questions:q']);
   });
 
   it('reads one change or a batch, and refuses anything else', () => {
@@ -63,10 +69,10 @@ describe('marks stored on the account', () => {
     expect(seParseCardMarkChanges({ marks: [] })).toBeNull();
   });
 
-  it('uploads the marks a device kept before, Not for me winning over done', () => {
+  it('uploads the marks a device kept before, Not for me winning over read', () => {
     expect(seLegacyMarkChanges({ read: ['blog-story:a', 'blog-story:b'], hidden: ['blog-story:b'] })).toEqual([
       { cardId: 'blog-story:b', mark: 'not_for_me' },
-      { cardId: 'blog-story:a', mark: 'done' },
+      { cardId: 'blog-story:a', mark: 'read' },
     ]);
     expect(seLegacyMarkChanges(null)).toEqual([]);
   });

@@ -15,7 +15,7 @@
 | **Visibility** | Any signed-in identity (including unlock-pending) |
 | **Roles to test** | member |
 | **Surfaces** | web (phone-width layout) |
-| **Generated** | 2026-07-26 (hand-written on the JSON-export build, issue #1264) |
+| **Generated** | 2026-07-26 (hand-written on the JSON-export build, issue #1264) · 2026-11-23 manual update: AD-21 and AD-28: the timeline dot takes a card off Today and lists it in Me → Read; opening a card marks it read |
 
 ## How to run this
 
@@ -521,11 +521,13 @@ Step 3 lands on `/today`, Today as anybody can read it, with Sign in.
 **Role:** a member on 3.1 · **Surfaces:** web, android
 **Steps:**
 1. On Today, tap a card's text, then one of its buttons and come back.
-2. Tap the colored dot beside the card.
-3. Tap the dot again.
-**Expected:** Step 1 opens the card and the item without marking it done; the dot shows its card kind's
-icon. Step 2 puts a check in the dot in place of the icon and the done count goes up by one. Step 3
-removes the check, the icon comes back and the count goes back down.
+2. Tap the dot of the card opened in step 1.
+3. Tap the colored dot beside another card that was not opened.
+4. Reload Today, then open Me → Read.
+**Expected:** Step 1 opens the card and marks it read: the dot shows a check and the card stays on
+Today. Step 2 removes that check and the card kind's icon comes back. Step 3 (2026-11-23) takes the
+card off Today at once and the done count goes up by one. Step 4: that card is still off Today after
+the reload and is listed in Me → Read.
 **Result:** web ☐ android ☐ — notes:
 
 ## AD-22 · Stories and the puzzle of the day
@@ -654,15 +656,15 @@ card opens once Unlock is done." instead, from the first write.
 **Steps:**
 1. As A, open Today and tap ••• on an ask card.
 2. As A, tap Not for me.
-3. As A, tap the timeline dot on a story card, then tap it again, then once more.
+3. As A, tap the timeline dot on a story card, then on a second story card.
 4. As A, turn off the network, tap the dot on another card, and tap Not for me on a third.
 5. As C, mark one card done.
 6. As the admin, open Adoption (`/admin/adoption`) and find "What members finish and pass on". Tap Copy as text and paste it into a note.
 7. As the admin, read the newest `today_card_feedback_counts` rows in the Neon dashboard.
 **Expected:** Step 1 shows Copy link, Not for me and, on a card with an author, Mute and Report; no
 menu says Hide, and no new button is on the card face. Step 2 takes the card off Today on this
-device. Step 3 marks the story done, not done, then done, and counts two Done marks (only the change
-to done counts). Step 4 changes both cards on screen exactly as with the network on, and shows no
+device. Step 3 takes each story off Today as it is marked done and counts two Done marks (only the
+change to done counts). Step 4 changes both cards on screen exactly as with the network on, and shows no
 error; nothing is counted for them. Step 5 is counted the same as A's. Step 6 shows a row per source
 and kind, for example "socket-relay · ask" with Not for me 1 and Not for me share 100%, most marks
 first, and the pasted text has one line per row and says counts only, nobody named. Step 7 shows

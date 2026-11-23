@@ -121,12 +121,14 @@ function ArchitectBody() {
   );
 }
 
-// "Log what happened" opens the ClickLog sheet over + New.
+// "Log what happened" opens the ClickLog sheet over + New. A hazard-marked pill, so it does not read
+// as the architect link above it.
 function LogLine() {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button type="button" className={sheet.architect} aria-haspopup="dialog" onClick={() => setOpen(true)}>
+      <button type="button" className={sheet.logLine} aria-haspopup="dialog" onClick={() => setOpen(true)}>
+        <span aria-hidden="true">{SE_CLICK_LOG_WORDS.openMark}</span>
         {SE_CLICK_LOG_WORDS.open}
       </button>
       {open ? <ClickLogSheet onClose={() => setOpen(false)} /> : null}

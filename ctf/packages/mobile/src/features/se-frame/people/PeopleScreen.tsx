@@ -85,7 +85,7 @@ function Filters({ s, filter, onFilter }: { s: PeopleStyles; filter: SePeopleFil
   );
 }
 
-// `initialFilter` is 'fits' when Today's Match card opened People through Get introduced.
+// `initialFilter` is 'fits' when Today's Match card opened People through See who fits.
 type ScreenProps = { t: SeThemeTokens; onOpen: (_key: FeatureKey) => void; onToday: () => void; initialFilter?: SePeopleFilter; viewerId: string | null };
 
 export function PeopleScreen({ t, onOpen, onToday, initialFilter = 'all', viewerId }: ScreenProps) {

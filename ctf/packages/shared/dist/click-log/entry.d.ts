@@ -5,6 +5,7 @@ export declare const CLICK_LOG_SCHEMES_PAGE_URL = "https://lagatos.com/schemes";
 export declare const SE_CLICK_LOG_WORDS: {
     readonly eyebrow: "New";
     readonly open: "Something happened? Log it where you are";
+    readonly openMark: "⚠";
     readonly title: "Log what happened";
     readonly close: "Close";
     readonly rule: "Your location is filled in once you allow it. Submit logs it with the date and time. Everything else is optional.";

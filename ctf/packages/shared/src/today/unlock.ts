@@ -12,6 +12,8 @@ export type SeUnlockInput = {
   firstSeenIso: string | null;
   // They sent a Quora profile address, or asked for help finding it.
   countStopped: boolean;
+  // They asked for help finding it and have sent no address, so nothing waits for approval yet.
+  helpOnly?: boolean;
 };
 
 export type SeUnlockStanding = {
@@ -29,6 +31,20 @@ export type SeUnlockStanding = {
   text: string;
 };
 
+// The two other ways to finish, for a member whose Quora account was removed, worded the same on the
+// banner and the Unlock screen: three sentences, the census and the Knowledge Library as links.
+export const SE_UNLOCK_OTHER_ROUTES_WORDS = {
+  censusLead: 'Add it to the',
+  census: 'Quora account removals survey',
+  censusTail: '.',
+  knowledgeLead: 'Or bring your Quora writing into the',
+  knowledge: 'Knowledge Library',
+  knowledgeTail: ' with its profile address.',
+  eitherUnlocks: 'Either option unlocks your account.',
+  censusHref: '/survey/quora-account-deletions',
+  knowledgeHref: '/knowledge',
+} as const;
+
 // The words of the banner, from the approved 3.1 boards "Unlock banner, day 9 of 14" and "After the
 // Unlock deadline". The approval grant is set by an admin, so the banner names no number of credits.
 export const SE_UNLOCK_WORDS = {
@@ -37,6 +53,8 @@ export const SE_UNLOCK_WORDS = {
     'People and your credits open once it is approved by the System Architect, usually within a day. After day 14, posting, answering and credits pause until you add it. Mood, your private log, reading, rooms and your account stay open.',
   sentTitle: 'Sent. Waiting for approval.',
   sentText: 'The System Architect approves each, usually within a day. Everything stays open while you wait.',
+  helpSentTitle: 'Help request sent.',
+  helpSentText: 'A person will look you up on Quora, usually within a day. You can still add your address on the Unlock screen. Everything stays open while you wait.',
   pausedTitle: 'Posting is paused until you finish Unlock',
   pausedText:
     'Your account is untouched. Reading, rooms as a listener, Mood, your private log and everything in Me stay open. Posting, answering and credits come back the moment your address is in.',
@@ -47,18 +65,13 @@ export const SE_UNLOCK_WORDS = {
   adding: 'Adding…',
   addFailed: 'That did not go through. Try again.',
   removedLead: 'Quora removed your account?',
-  removedText: 'Either of these finishes Unlock too:',
-  census: 'add it to the census',
-  or: 'or',
-  knowledge: 'bring your Quora writing',
+  ...SE_UNLOCK_OTHER_ROUTES_WORDS,
   countLine: 'The count stops once you send the address or ask for help finding it.',
   why: 'Why this step',
   cantFind: "Can't find it?",
   askArchitect: "Can't find it? Ask the architect",
   asking: 'Asking…',
   close: 'Close',
-  censusHref: '/survey/quora-account-deletions',
-  knowledgeHref: '/knowledge',
 };
 
 const DAY_MS = 86_400_000;
@@ -72,6 +85,7 @@ export function seUnlockStanding(input: SeUnlockInput, now: Date = new Date()): 
   const day = seUnlockDay(input.firstSeenIso, now);
   const quiet = { approved: input.approved, day, dayLabel: '', progress: 0, paused: false, form: false, title: '', text: '' };
   if (input.approved) return { ...quiet, closable: true };
+  if (input.countStopped && input.helpOnly) return { ...quiet, closable: true, title: SE_UNLOCK_WORDS.helpSentTitle, text: SE_UNLOCK_WORDS.helpSentText };
   if (input.countStopped) return { ...quiet, closable: true, title: SE_UNLOCK_WORDS.sentTitle, text: SE_UNLOCK_WORDS.sentText };
   if (day > SE_UNLOCK_OPEN_DAYS) {
     return { ...quiet, paused: true, closable: false, form: true, title: SE_UNLOCK_WORDS.pausedTitle, text: SE_UNLOCK_WORDS.pausedText };

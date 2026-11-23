@@ -1,6 +1,6 @@
 // The Match card on Today on Android, the copy of the web (components/se-frame/today/match-card.tsx),
 // built to the Match card on the approved Today board: "Match", a big number, "people fit what you
-// need" and Get introduced, which opens People on "Fits what you need". Until the member has picked
+// need" and See who fits, which opens People on "Fits what you need". Until the member has picked
 // something it asks "What do you need today?" with the landing page's need chips, or takes a code
 // saved on lagatos.com. Approved members only: for anybody else the card is not drawn.
 
@@ -126,8 +126,11 @@ function Body({ t, s, match, onSave, onIntroduce }: { t: SeThemeTokens; s: Style
   if (!needs || editing) {
     const save: Save = async (change) => {
       const failed = await onSave(change);
-      if (!failed) setEditing(false);
-      return failed;
+      if (failed) return failed;
+      setEditing(false);
+      // "Show who fits" saves the chips and then opens People on who fits, every time.
+      if (change.kind === 'needs') onIntroduce();
+      return null;
     };
     return <Picker t={t} s={s} initial={needs?.needKeys ?? []} onSave={save} onCancel={needs ? () => setEditing(false) : undefined} />;
   }

@@ -9,8 +9,9 @@ import { saveCardMarks } from 'lib/today/marks/repository';
 import { readMarkedCards } from 'lib/today/marked-cards';
 
 // POST /api/today/marks: a member's own mark on a Today card, stored on the account so every device
-// agrees (today_card_marks). `{ cardId, mark }` with mark 'done' (the timeline dot), 'not_for_me'
-// (the ••• menu) or 'clear' (the dot again, taking Done away); or `{ marks: [...], upload: true }`,
+// agrees (today_card_marks). `{ cardId, mark }` with mark 'done' (the timeline dot, which takes the
+// card off Today), 'read' (opening the card), 'not_for_me' (the ••• menu) or 'clear' (the dot on a
+// card already read, taking the check away); or `{ marks: [...], upload: true }`,
 // sent once by a device that kept marks before they were stored here (a card already marked keeps
 // its mark). GET /api/today applies them. GET /api/today/marks?mark=done|not_for_me lists the
 // member's own marked cards that are still around, for Me → Read and Hidden. Open to every signed-in member at 'signed_in', the tier
@@ -47,7 +48,7 @@ export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as { upload?: unknown } | null;
   const changes = seParseCardMarkChanges(body);
   if (!changes) {
-    return denied('invalid_mark', `Send { cardId, mark } with mark 'done', 'not_for_me' or 'clear', or { marks: [...] } with 1 to ${SE_CARD_MARKS_MAX_BATCH} of them.`, 400);
+    return denied('invalid_mark', `Send { cardId, mark } with mark 'done', 'read', 'not_for_me' or 'clear', or { marks: [...] } with 1 to ${SE_CARD_MARKS_MAX_BATCH} of them.`, 400);
   }
   try {
     await saveCardMarks(decision.userId, changes, body?.upload === true);

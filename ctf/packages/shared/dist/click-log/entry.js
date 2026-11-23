@@ -11,6 +11,9 @@ export const CLICK_LOG_SCHEMES_PAGE_URL = 'https://lagatos.com/schemes';
 export const SE_CLICK_LOG_WORDS = {
     eyebrow: 'New',
     open: 'Something happened? Log it where you are',
+    // The hazard mark before that line on + New, so it does not read as the architect link above it.
+    // Shown only: the line's accessible name stays the words above.
+    openMark: '⚠',
     title: 'Log what happened',
     close: 'Close',
     rule: 'Your location is filled in once you allow it. Submit logs it with the date and time. Everything else is optional.',

@@ -58,7 +58,7 @@ describe('check marks', () => {
   });
 
   it('marks a card read when it is opened, once, and never the member\'s own', () => {
-    expect(seReadChangeFor({ cards: [story] }, story.id, 'a')).toEqual({ cardId: story.id, mark: 'done' });
+    expect(seReadChangeFor({ cards: [story] }, story.id, 'a')).toEqual({ cardId: story.id, mark: 'read' });
     expect(seReadChangeFor({ cards: [{ ...story, markedDoneAtIso: 'x' }] }, story.id, 'a')).toBeNull();
     expect(seReadChangeFor({ cards: [othersAsk] }, othersAsk.id, 'a')).toBeNull();
     expect(seReadChangeFor({ cards: [ownAsk] }, ownAsk.id, 'a')).toBeNull();

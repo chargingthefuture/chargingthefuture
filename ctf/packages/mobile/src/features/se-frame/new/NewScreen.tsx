@@ -124,14 +124,15 @@ function ArchitectBody({ t, sh }: BodyProps) {
   );
 }
 
-// "Log what happened" opens the ClickLog sheet over + New.
+// "Log what happened" opens the ClickLog sheet over + New. A hazard-marked pill, so it does not read
+// as the architect link above it.
 function LogLine({ t, sh, go }: { t: SeThemeTokens; sh: SheetStyles; go: (_href: string) => void }) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Text accessibilityRole="button" onPress={() => setOpen(true)} style={sh.architect}>
-        {SE_CLICK_LOG_WORDS.open}
-      </Text>
+      <TouchableOpacity accessibilityRole="button" accessibilityLabel={SE_CLICK_LOG_WORDS.open} onPress={() => setOpen(true)} style={sh.logLine}>
+        <Text style={sh.logLineLabel}>{`${SE_CLICK_LOG_WORDS.openMark} ${SE_CLICK_LOG_WORDS.open}`}</Text>
+      </TouchableOpacity>
       {open ? <ClickLogSheet t={t} go={go} onClose={() => setOpen(false)} /> : null}
     </>
   );

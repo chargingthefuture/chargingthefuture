@@ -3,6 +3,7 @@ export type SeUnlockInput = {
     approved: boolean;
     firstSeenIso: string | null;
     countStopped: boolean;
+    helpOnly?: boolean;
 };
 export type SeUnlockStanding = {
     approved: boolean;
@@ -15,11 +16,39 @@ export type SeUnlockStanding = {
     title: string;
     text: string;
 };
+export declare const SE_UNLOCK_OTHER_ROUTES_WORDS: {
+    readonly censusLead: "Add it to the";
+    readonly census: "Quora account removals survey";
+    readonly censusTail: ".";
+    readonly knowledgeLead: "Or bring your Quora writing into the";
+    readonly knowledge: "Knowledge Library";
+    readonly knowledgeTail: " with its profile address.";
+    readonly eitherUnlocks: "Either option unlocks your account.";
+    readonly censusHref: "/survey/quora-account-deletions";
+    readonly knowledgeHref: "/knowledge";
+};
 export declare const SE_UNLOCK_WORDS: {
+    countLine: string;
+    why: string;
+    cantFind: string;
+    askArchitect: string;
+    asking: string;
+    close: string;
+    censusLead: "Add it to the";
+    census: "Quora account removals survey";
+    censusTail: ".";
+    knowledgeLead: "Or bring your Quora writing into the";
+    knowledge: "Knowledge Library";
+    knowledgeTail: " with its profile address.";
+    eitherUnlocks: "Either option unlocks your account.";
+    censusHref: "/survey/quora-account-deletions";
+    knowledgeHref: "/knowledge";
     openTitle: string;
     openText: string;
     sentTitle: string;
     sentText: string;
+    helpSentTitle: string;
+    helpSentText: string;
     pausedTitle: string;
     pausedText: string;
     label: string;
@@ -29,18 +58,6 @@ export declare const SE_UNLOCK_WORDS: {
     adding: string;
     addFailed: string;
     removedLead: string;
-    removedText: string;
-    census: string;
-    or: string;
-    knowledge: string;
-    countLine: string;
-    why: string;
-    cantFind: string;
-    askArchitect: string;
-    asking: string;
-    close: string;
-    censusHref: string;
-    knowledgeHref: string;
 };
 export declare function seUnlockDay(firstSeenIso: string | null, now?: Date): number;
 export declare function seUnlockStanding(input: SeUnlockInput, now?: Date): SeUnlockStanding;

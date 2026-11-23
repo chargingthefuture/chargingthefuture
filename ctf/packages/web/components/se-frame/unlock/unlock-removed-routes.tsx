@@ -49,7 +49,6 @@ export function UnlockRemovedRoutes({ onFinished }: { onFinished: () => void }) 
       <h2 id="se-unlock-removed" className={styles.sectionTitle}>
         {W.removedTitle}
       </h2>
-      <p className={styles.text}>{W.removedText}</p>
       {handles === null ? <p className={styles.note}>{W.removedLoading}</p> : null}
       {handles && handles.length > 0 ? (
         <div className={styles.chips}>
@@ -76,6 +75,7 @@ export function UnlockRemovedRoutes({ onFinished }: { onFinished: () => void }) 
         </a>
         {W.knowledgeTail}
       </p>
+      <p className={styles.text}>{W.eitherUnlocks}</p>
       {[readError, error].filter(Boolean).map((message) => (
         <p key={message} role="alert" className={styles.error}>
           {message}
