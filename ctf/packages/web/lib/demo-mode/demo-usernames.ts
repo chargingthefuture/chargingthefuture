@@ -51,6 +51,10 @@ export const DEMO_HELPER_USERNAMES: Readonly<Record<string, string>> = {
   'demo-ww-001': 'lucy_f',
   'demo-ww-002': 'harrington_g',
   'demo-ww-003': 'nia_h',
+  'demo-host-001': 'rae_m',
+  'demo-trainer-001': 'owen_c',
+  'demo-admin-001': 'nora_b',
+  'demo-owner-001': 'theo_k',
 };
 
 export function demoHelperUsername(userId: string): string | null {

@@ -28,8 +28,8 @@ Synthetic accounts have no Clerk account, so the app finds no username for them 
 the generated `user-` and the first eight characters of the id. Each synthetic helper carries an
 owner-approved username instead, from `packages/web/lib/demo-mode/demo-usernames.ts`, which
 `resolveMemberIdentities` reads when Clerk has nothing; that file is the list of who has which
-name. `demo-host-001`, `demo-trainer-001`, `demo-admin-001` and `demo-owner-001` stay unnamed
-until the owner approves names for them. Never add a name without that approval. Usernames the
+name, and every synthetic account in the seed has one. A new synthetic account stays unnamed
+until the owner approves a name for it. Never add a name without that approval. Usernames the
 seed writes into a plugin's own snapshot column (Commons, SocketRelay, Chyme) are unchanged.
 
 With no account switched on, the seed still writes the shared demo data, the owner's personal rows
