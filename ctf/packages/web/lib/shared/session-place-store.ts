@@ -22,7 +22,8 @@ export function writeSessionPlace(key: string, value: string | null): void {
     if (value) window.sessionStorage.setItem(key, value);
     else window.sessionStorage.removeItem(key);
   } catch {
-    // Storage blocked or full: the value stays in memory for this visit.
+    // no-trace: storage blocked (private browsing) or full is expected and runs on every keystroke;
+    // the value stays in memory for this visit.
   }
 }
 
@@ -39,6 +40,6 @@ export function clearSessionPlaces(): void {
     }
     keys.forEach((key) => store.removeItem(key));
   } catch {
-    // Storage blocked: nothing was saved in it.
+    // no-trace: storage blocked (private browsing) is expected, and then nothing was saved in it.
   }
 }
