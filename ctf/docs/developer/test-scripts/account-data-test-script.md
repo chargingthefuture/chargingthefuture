@@ -15,7 +15,7 @@
 | **Visibility** | Any signed-in identity (including unlock-pending) |
 | **Roles to test** | member |
 | **Surfaces** | web (phone-width layout) |
-| **Generated** | 2026-07-26 (hand-written on the JSON-export build, issue #1264) · 2026-11-23 manual update: AD-21 and AD-28: the timeline dot takes a card off Today and lists it in Me → Read; opening a card marks it read |
+| **Generated** | 2026-07-26 (hand-written on the JSON-export build, issue #1264) · 2026-11-23 manual update: AD-21 and AD-28: the timeline dot takes a card off Today and lists it in Me → Read; opening a card marks it read; AD-13 step 6 names the shortened Ask the architect line |
 
 ## How to run this
 
@@ -289,7 +289,7 @@ calendar.
 4. Tap Ask. Type "A ride to". Tap "A ride to the pharmacy or grocery store", leave Details empty and
    tap **Post**.
 5. Type another ask, tap **+ Break it into small tasks**, fill two tasks and tap **Post**.
-6. Tap each Offer choice and the Story link; tap "A question about the app? Ask the architect"; tap
+6. Tap each Offer choice and the Story link; tap "🙋 Ask the architect" (a screen reader reads "Ask the System Architect for help"); tap
    Close.
 **Expected (4 to 6):** The sheet reads "Post something" and "It goes into everyone's Today." with
 Community guidelines at the top. Suggestions list only asks that contain every word typed, with the

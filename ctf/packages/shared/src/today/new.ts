@@ -11,7 +11,10 @@ export const SE_NEW_SHEET_WORDS = {
   heading: 'Post something',
   intro: "It goes into everyone's Today.",
   kinds: 'Kind of post',
-  architect: 'A question about the app? Ask the architect',
+  // The short line under the switch, with a help mark, and the name a screen reader gives it.
+  architect: 'Ask the architect',
+  architectMark: '🙋',
+  architectLabel: 'Ask the System Architect for help',
 };
 
 export type SeNewKind = 'ask' | 'offer' | 'story' | 'talk' | 'architect';

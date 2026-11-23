@@ -127,8 +127,8 @@
   font-weight: 700;
 }
 
-/* + New's "Something happened?" line: a small pill in the pick color with a hazard mark, so it does
-   not read as the underlined architect link above it. */
+/* + New's "Log what happened": a short pill with a hazard mark, in the pick color, so it does not
+   read as the architect's line above it. */
 .logLine {
   align-self: center;
   display: inline-flex;
@@ -146,17 +146,22 @@
   cursor: pointer;
 }
 
+/* + New's "Ask the architect": a short pill with a help mark, the same shape as the log line below
+   it, in the card color. */
 .architect {
   align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   min-height: 32px;
-  padding: 0 4px;
-  border: 0;
-  background: none;
-  color: var(--se-soft);
+  padding: 4px 12px;
+  border: 1.5px solid var(--se-line);
+  border-radius: 999px;
+  background: var(--se-card);
+  color: var(--se-ink);
   font: inherit;
   font-size: 13px;
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  font-weight: 600;
   cursor: pointer;
 }
 

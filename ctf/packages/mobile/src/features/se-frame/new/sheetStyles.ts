@@ -36,9 +36,20 @@ function sheetFrame(t: SeThemeTokens) {
     kindOn: { borderWidth: 1.5, borderColor: t.line, backgroundColor: t.card },
     kindLabel: { fontSize: 14, color: t.soft, fontFamily: SE_FONT.sansSemi },
     kindLabelOn: { color: t.ink, fontFamily: SE_FONT.sansBold },
-    architect: { alignSelf: 'center' as const, paddingVertical: 8, fontSize: 13, color: t.soft, fontFamily: SE_FONT.sans, textDecorationLine: 'underline' as const },
-    // + New's "Something happened?" line: a small pill in the pick color with a hazard mark, so it
-    // does not read as the underlined architect link above it.
+    // + New's "Ask the architect" and "Log what happened": short pills with a help mark and a hazard
+    // mark, the first in the card color, the second in the pick color, so neither reads as the other.
+    architect: {
+      alignSelf: 'center' as const,
+      minHeight: 32,
+      justifyContent: 'center' as const,
+      paddingVertical: 4,
+      paddingHorizontal: 12,
+      borderWidth: 1.5,
+      borderColor: t.line,
+      borderRadius: 999,
+      backgroundColor: t.card,
+    },
+    architectLabel: { fontSize: 13, color: t.ink, fontFamily: SE_FONT.sansSemi },
     logLine: {
       alignSelf: 'center' as const,
       minHeight: 32,

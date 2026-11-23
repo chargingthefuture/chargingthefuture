@@ -7,6 +7,8 @@ export declare const SE_NEW_SHEET_WORDS: {
     intro: string;
     kinds: string;
     architect: string;
+    architectMark: string;
+    architectLabel: string;
 };
 export type SeNewKind = 'ask' | 'offer' | 'story' | 'talk' | 'architect';
 export declare const SE_NEW_KINDS: ReadonlyArray<{

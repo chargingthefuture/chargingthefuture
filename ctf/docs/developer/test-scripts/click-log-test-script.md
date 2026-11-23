@@ -17,7 +17,7 @@
 | **Surfaces** | web (desktop) · web (mobile-responsive, ~390px) |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-click-log-feature-inventory.md` |
-| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-09-20 manual update: CL-A5 now runs in the installed iOS app, checks that the picture appears on the dashboard, that nothing ever navigates away from it, and that Share and press-and-hold are the only ways offered · 2026-10-04 manual note: `CLICK_LOG_PROFILE_AND_DELETION_CONTRACT.md` written (suggestions, incidents and the preferences row deleted with the service or the account) — no test change · 2026-10-12 manual update: CL-6b added (a sharing default that fails to load or save shows a message) · 2026-11-23 manual update: the + New line is a hazard-marked pill |
+| **Generated** | 2026-06-28 (initial authoring; regenerate via CI to stamp the commit) · 2026-09-20 manual update: CL-A5 now runs in the installed iOS app, checks that the picture appears on the dashboard, that nothing ever navigates away from it, and that Share and press-and-hold are the only ways offered · 2026-10-04 manual note: `CLICK_LOG_PROFILE_AND_DELETION_CONTRACT.md` written (suggestions, incidents and the preferences row deleted with the service or the account) — no test change · 2026-10-12 manual update: CL-6b added (a sharing default that fails to load or save shows a message) · 2026-11-23 manual update: the + New line is a short hazard-marked pill, Log what happened |
 
 ## How to run this
 
@@ -437,7 +437,7 @@ of these, it is already tracked, not a new bug:
 
 ### CL-12 · Log what happened from + New, a quick location pin (3.1, rewritten 2026-11-16)
 **Role:** a signed-in member on 3.1, and a Weavers of the Commons badge holder · **Surfaces:** web, android
-1. Open **+ New** and tap **⚠ Something happened? Log it where you are** under the switch: a small pill in the pick color, unlike the underlined architect link above it (2026-11-23). When asked for your location, allow it.
+1. Open **+ New** and tap **⚠ Log what happened** under the switch: a short pill in the pick color, unlike the card-colored **🙋 Ask the architect** pill above it; a screen reader reads it as "Log what happened where you are" (2026-11-23). When asked for your location, allow it.
 2. Type a note and tap **Submit**.
 3. Tap **Log another**. Pick one problem and one scheme from search, then tap **Submit**.
 4. Open the sheet again and refuse the location prompt (or turn location off). Pick a tag, then tap **Add location**, allow it, and tap **Submit**.

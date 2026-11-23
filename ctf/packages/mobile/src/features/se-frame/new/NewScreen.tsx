@@ -124,13 +124,13 @@ function ArchitectBody({ t, sh }: BodyProps) {
   );
 }
 
-// "Log what happened" opens the ClickLog sheet over + New. A hazard-marked pill, so it does not read
-// as the architect link above it.
+// "Log what happened" opens the ClickLog sheet over + New: a short line with a hazard mark, in the
+// pick color, beside the architect's line with its help mark.
 function LogLine({ t, sh, go }: { t: SeThemeTokens; sh: SheetStyles; go: (_href: string) => void }) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <TouchableOpacity accessibilityRole="button" accessibilityLabel={SE_CLICK_LOG_WORDS.open} onPress={() => setOpen(true)} style={sh.logLine}>
+      <TouchableOpacity accessibilityRole="button" accessibilityLabel={SE_CLICK_LOG_WORDS.openLabel} onPress={() => setOpen(true)} style={sh.logLine}>
         <Text style={sh.logLineLabel}>{`${SE_CLICK_LOG_WORDS.openMark} ${SE_CLICK_LOG_WORDS.open}`}</Text>
       </TouchableOpacity>
       {open ? <ClickLogSheet t={t} go={go} onClose={() => setOpen(false)} /> : null}
@@ -180,9 +180,9 @@ export function NewScreen({
       <KindSwitch sh={sh} kind={kind} onKind={setKind} />
       {kind === 'architect' ? null : (
         <>
-          <Text accessibilityRole="button" onPress={() => setKind('architect')} style={sh.architect}>
-            {W.architect}
-          </Text>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel={W.architectLabel} onPress={() => setKind('architect')} style={sh.architect}>
+            <Text style={sh.architectLabel}>{`${W.architectMark} ${W.architect}`}</Text>
+          </TouchableOpacity>
           <LogLine t={t} sh={sh} go={go} />
         </>
       )}
