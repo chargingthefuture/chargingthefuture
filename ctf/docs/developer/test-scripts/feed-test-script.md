@@ -9,7 +9,7 @@
 | **Surfaces** | web (desktop + mobile-responsive browser); Android surface was removed 2026-07-20 — web only |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-feed-feature-inventory.md` |
-| **Generated** | 2026-07-25 (commit 95cb98b2) · 2026-10-17: seed step names the demo posts and announcement from `demo-seed/20-commons.mjs` |
+| **Generated** | 2026-07-25 (commit 95cb98b2) · 2026-10-17: seed step names the demo posts and announcement from `demo-seed/20-commons.mjs` · 2026-11-24: `demo-seed/49-today-abundance.mjs` adds a third published announcement ("Rides and places to stay are on Today"); no step changes |
 | **Inventory wording** | 2026-10-01: banned-term wording removed from the inventory prose; no step in this script changed |
 
 ---

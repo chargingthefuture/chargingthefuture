@@ -12,7 +12,7 @@
 | **Surfaces** | web (`/apps/peer-programming`, `/admin/peer-programming`); Android app (member and admin screens; see AN-PP in `android-app-test-script.md`) |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-peer-programming-feature-inventory.md` |
-| **Generated** | 2026-07-18 (commit 34badcbb) · 2026-09-20: the inventory's prose was swept for a banned word (CLAUDE.md); no step here changes, because nothing about what the plugin does or how it is tested moved · 2026-10-05: added PP-2c, a blocked-device check under PP-10, and the failure line in PP-A10 · 2026-10-17: the demo seed now places every seeded account in standing Cohort 1 with two sample goals, so smoke step 4 checks the board too |
+| **Generated** | 2026-07-18 (commit 34badcbb) · 2026-09-20: the inventory's prose was swept for a banned word (CLAUDE.md); no step here changes, because nothing about what the plugin does or how it is tested moved · 2026-10-05: added PP-2c, a blocked-device check under PP-10, and the failure line in PP-A10 · 2026-10-17: the demo seed now places every seeded account in standing Cohort 1 with two sample goals, so smoke step 4 checks the board too · 2026-11-24: `demo-seed/49-today-abundance.mjs` adds two more open goals on the standing board, so it shows four; no step changes |
 
 ---
 
