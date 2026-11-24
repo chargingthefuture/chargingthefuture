@@ -13,6 +13,12 @@ export const SE_MAIN_ROOM_CARD_WORDS = {
     // Shown in place of the player when the readings loop is switched off or could not be read.
     readingsOff: 'No readings are playing right now.',
 };
+// Nobody is in the room and it is not live: the card says so with SE_ROOM_QUIET_TEXT, the same
+// words the room screen uses, so a member sees Start a conversation and a visitor Sign up to talk
+// as the way in.
+export function seMainRoomEmpty(room) {
+    return !room.live && room.members + room.guests + room.speakers === 0;
+}
 export function seMainRoomButtons(live, signedIn) {
     const W = SE_MAIN_ROOM_CARD_WORDS;
     if (live) {

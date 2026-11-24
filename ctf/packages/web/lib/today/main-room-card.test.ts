@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SE_MAIN_ROOM_CARD_WORDS as W, seGuestMainRoom, seMainRoomButtons } from '@ctf/shared';
+import { SE_MAIN_ROOM_CARD_WORDS as W, seGuestMainRoom, seMainRoomButtons, seMainRoomEmpty } from '@ctf/shared';
 import type { SeTodayRoom } from '@ctf/shared';
 
 describe('seMainRoomButtons', () => {
@@ -37,5 +37,21 @@ describe('seGuestMainRoom', () => {
   it('stands in a plain Main Room before Today loads', () => {
     const room = seGuestMainRoom(null, { isLive: false, participantCount: 0, guestCount: 0 });
     expect(room).toMatchObject({ name: 'Main Room', live: false, members: 0, speakers: 0, faces: [], nextTalk: null });
+  });
+});
+
+describe('seMainRoomEmpty', () => {
+  const quiet = { live: false, members: 0, guests: 0, speakers: 0 };
+
+  it('is empty only when nobody is in and the room is not live', () => {
+    expect(seMainRoomEmpty(quiet)).toBe(true);
+    expect(seMainRoomEmpty({ ...quiet, guests: 1 })).toBe(false);
+    expect(seMainRoomEmpty({ ...quiet, members: 1 })).toBe(false);
+    expect(seMainRoomEmpty({ ...quiet, live: true })).toBe(false);
+  });
+
+  it('reads the same for a visitor as for a member', () => {
+    const guest = seGuestMainRoom(null, { isLive: false, participantCount: 0, guestCount: 0 });
+    expect(seMainRoomEmpty(guest)).toBe(true);
   });
 });
