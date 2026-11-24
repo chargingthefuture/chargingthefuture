@@ -91,8 +91,8 @@ export declare const SE_UNLOCK_SCREEN_WORDS: {
     readonly sending: "Sending…";
     readonly sendFailed: "That did not go through. Try again.";
     readonly helpAsked: "You asked for help finding it. A person will look you up, and you can still send the address here.";
-    readonly waitingTitle: "Sent. Waiting for approval.";
-    readonly waitingText: "The System Architect approves each, usually within a day. Everything stays open while you wait.";
+    readonly waitingTitle: "Sent. In review.";
+    readonly waitingText: "The System Architect reviews each, usually within a day. Everything stays open while you wait.";
     readonly approvedTitle: "Approved";
     readonly approvedText: "Your profile has been reviewed. Everything in the app is open to you now.";
     readonly approvedCredits: "Your ServiceCredits are sent on their own and arrive within 24 hours, if not sooner.";

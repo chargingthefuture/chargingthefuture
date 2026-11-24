@@ -50,9 +50,9 @@ export const SE_UNLOCK_OTHER_ROUTES_WORDS = {
 export const SE_UNLOCK_WORDS = {
   openTitle: 'Add your Quora profile address to finish Unlock',
   openText:
-    'People and your credits open once it is approved by the System Architect, usually within a day. After day 14, posting, answering and credits pause until you add it. Mood, your private log, reading, rooms and your account stay open.',
-  sentTitle: 'Sent. Waiting for approval.',
-  sentText: 'The System Architect approves each, usually within a day. Everything stays open while you wait.',
+    'People and your credits open once the System Architect reviews it and you are approved, usually within a day. After day 14, posting, answering and credits pause until you add it. Mood, your private log, reading, rooms and your account stay open.',
+  sentTitle: 'Sent. In review.',
+  sentText: 'The System Architect reviews each, usually within a day. Everything stays open while you wait.',
   helpSentTitle: 'Help request sent.',
   helpSentText: 'A person will look you up on Quora, usually within a day. You can still add your address on the Unlock screen. Everything stays open while you wait.',
   pausedTitle: 'Posting is paused until you finish Unlock',
