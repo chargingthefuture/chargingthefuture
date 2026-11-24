@@ -255,7 +255,7 @@ Expect a small landscape or cut-paper picture, never the photo, and the same pic
 ## AN-7c — Switch to 3.1 and back to 3.0
 
 1. Open the account screen (gear) and tap **Switch to 3.1** in the Settings card. Expect the 3.1 home:
-   forest green and gold, dark, the date above "Today in the Avenhood", and the tab bar.
+   forest green and gold, dark, the month and year (for example "November 2026") above "Today in the Avenhood", and the tab bar.
 2. Tap each tab. Press the phone's back button on any tab but Today: it returns to Today. On Today,
    tap **Avenhood** in the title: its definition opens under it, the same text as the web. Me has the
    About card with the same definition.
