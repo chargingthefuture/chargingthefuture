@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readSnapshot, scoredMemberGaps, type ScoredMember } from './scored-members';
+import { readSnapshot, scoredMemberGaps, scoredMemberLabel, type ScoredMember } from './scored-members';
 
 const gates = { threshold: 100, minAccountAgeDays: 90, minDistinctPlugins: 3, minCounterparties: 5 };
 
@@ -7,6 +7,7 @@ function member(overrides: Partial<ScoredMember>): ScoredMember {
   return {
     userId: 'u1',
     username: null,
+    name: null,
     score: 0,
     accountAgeDays: 0,
     distinctPlugins: 0,
@@ -44,5 +45,19 @@ describe('readSnapshot', () => {
 
   it('falls back on a missing or broken snapshot', () => {
     expect(readSnapshot(null)).toEqual({ score: 0, accountAgeDays: null, distinctPlugins: 0, counterparties: 0 });
+  });
+});
+
+describe('scoredMemberLabel', () => {
+  it('shows the handle first', () => {
+    expect(scoredMemberLabel(member({ userId: 'user_abc', username: 'ada', name: 'Ada L' }))).toBe('@ada');
+  });
+
+  it('shows the name when there is no handle', () => {
+    expect(scoredMemberLabel(member({ userId: 'user_abc', username: ' ', name: 'Ada L' }))).toBe('Ada L');
+  });
+
+  it('falls back to the id only when nothing else is known', () => {
+    expect(scoredMemberLabel(member({ userId: 'user_abc' }))).toBe('user_abc');
   });
 });

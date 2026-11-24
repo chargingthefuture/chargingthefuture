@@ -6,8 +6,8 @@ import { failureReason } from 'lib/errors/failure';
 
 // The daily reading of the value events, for the Daily exchange screen: today and the last thirty
 // days, how many members delivered value on a day against the 384 target, plus today's roster. The
-// badge side of the same screen (who holds Weavers of the Commons, and the weights) is read from the
-// Contributor Access admin routes, which the screen calls directly.
+// Weavers admin page (/admin/weavers) reads it too, for the event list its weights editor follows;
+// the badge itself is read from the Contributor Access admin routes.
 //
 // Admin-only and read-only. No per-event breakdown is returned for a named member: Foundation
 // answered calls are among the fourteen and rule 132 keeps that participation internal.

@@ -1,7 +1,7 @@
 'use client';
 
 import type { ContributorAccessTokens } from './contributor-access-shared';
-import { scoredMemberGaps, type ScoredMember, type ScoredMemberGates } from 'lib/contributor-access/scored-members';
+import { scoredMemberGaps, scoredMemberLabel, type ScoredMember, type ScoredMemberGates } from 'lib/contributor-access/scored-members';
 
 // Every member with a score above zero in the badge's scoring window (all time, as of the last
 // weekly recompute), eligible or not, with how far each reading is from its setting. Admin only.
@@ -28,7 +28,7 @@ function ScoredRow({ t, member, gates }: { t: ContributorAccessTokens; member: S
     <li style={{ marginBottom: 8, padding: '10px 14px', borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
         <span style={{ fontSize: 13, fontWeight: 700, color: t.TITLE, wordBreak: 'break-all' }}>
-          {member.username ? `@${member.username}` : member.userId}
+          {scoredMemberLabel(member)}
           {member.eligible ? <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 700, color: '#22C55E' }}>Eligible</span> : null}
         </span>
         <span style={{ fontSize: 13, fontWeight: 800, color: t.TITLE }}>{round(member.score)} points</span>

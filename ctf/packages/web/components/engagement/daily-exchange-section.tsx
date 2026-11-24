@@ -1,11 +1,11 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { ClipboardCopy, Repeat } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { getPluginShellTokens } from '@/components/shared/plugin-shell-theme';
 import { getAppAccent } from 'lib/theme/theme-tokens';
-import { ContributorAccessAdminSections } from '@/components/contributor-access/contributor-access-admin-sections';
 import type {
   ExchangeActivityReading,
   ExchangeContributor,
@@ -117,7 +117,13 @@ function TodayRoster({ roster, tokens }: { roster: ExchangeContributor[]; tokens
       {roster.length === 0 ? (
         <div style={{ fontSize: 12, color: tokens.SUBTLE, marginTop: 8 }}>Nobody yet today.</div>
       ) : (
-        <ul style={{ listStyle: 'none', margin: '10px 0 0', padding: 0 }}>
+        <>
+        {/* Each figure is that member's score for today alone, not a running total (owner decision, 2026-11-24). */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 11, color: tokens.SUBTLE, marginTop: 10 }}>
+          <span>Member</span>
+          <span>Today&apos;s score</span>
+        </div>
+        <ul style={{ listStyle: 'none', margin: '4px 0 0', padding: 0 }}>
           {roster.map((member) => (
             <li
               key={member.memberId}
@@ -137,20 +143,21 @@ function TodayRoster({ roster, tokens }: { roster: ExchangeContributor[]; tokens
                   {member.memberId}
                 </span>
               </span>
-              <span style={{ color: tokens.SUBTLE, whiteSpace: 'nowrap' }}>
+              <span style={{ color: tokens.SUBTLE, whiteSpace: 'nowrap' }} aria-label={`Today's score ${Math.round(member.score * 10) / 10}`}>
                 {Math.round(member.score * 10) / 10}
               </span>
             </li>
           ))}
         </ul>
+        </>
       )}
     </section>
   );
 }
 
 // The day's reading, read once on the Adoption screen and handed to both the steps card and the
-// section below it, so the two never disagree about a figure. Read on open, and again after the
-// badge settings are saved, because a saved weight changes today's scores too.
+// section below it, so the two never disagree about a figure. The Weavers admin page reads it too,
+// for the event list its weights editor follows, and again after its settings are saved.
 export function useDailyExchangeReading() {
   const [reading, setReading] = useState<ExchangeActivityReading | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -186,28 +193,19 @@ export function useDailyExchangeReading() {
   return { reading, error, reload };
 }
 
-// The Daily exchange and badge section of the Adoption screen. The page header lives on that screen.
+// The Daily exchange section of the Adoption screen. The page header lives on that screen.
 export function DailyExchangeSection({
   reading,
   error: readError,
-  onReload,
 }: {
   reading: ExchangeActivityReading | null;
   error: string | null;
-  onReload: () => void;
 }) {
   const { theme } = useTheme();
   const t = getPluginShellTokens(getAppAccent('service-credits', theme), theme);
   const [copied, setCopied] = useState(false);
   const [copyError, setCopyError] = useState<string | null>(null);
   const error = readError ?? copyError;
-
-  // The events that reach the badge but never a day's count, marked in the weights editor below.
-  const badgeOnlyKeys = useMemo(
-    () => new Set((reading?.events ?? []).filter((event) => !event.delivers).map((event) => event.key)),
-    [reading],
-  );
-  const weightOrder = useMemo(() => (reading?.events ?? []).map((event) => event.key), [reading]);
 
   const onCopy = useCallback(async () => {
     if (!reading) {
@@ -226,7 +224,7 @@ export function DailyExchangeSection({
     <section style={{ color: t.TEXT }}>
       <h2 style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 15, fontWeight: 700, color: t.TITLE, margin: '0 0 8px' }}>
         <Repeat size={16} color={t.ACCENT} />
-        Daily exchange and badge
+        Daily exchange
       </h2>
       <div>
         <p style={{ fontSize: 13, color: t.SUBTLE, margin: '0 0 14px', lineHeight: 1.5 }}>
@@ -315,7 +313,14 @@ export function DailyExchangeSection({
           </>
         )}
 
-        <ContributorAccessAdminSections badgeOnlyKeys={badgeOnlyKeys} weightOrder={weightOrder} onConfigSaved={onReload} />
+        {/* The badge has its own page since 2026-11-24 (owner decision): it scores the same events, but it is not the same data. */}
+        <p style={{ fontSize: 13, color: t.TEXT, marginTop: 20 }}>
+          The Weavers of the Commons badge, its members and its settings are on{' '}
+          <Link href="/admin/weavers" style={{ color: t.ACCENT, fontWeight: 600 }}>
+            their own page
+          </Link>
+          .
+        </p>
       </div>
     </section>
   );
