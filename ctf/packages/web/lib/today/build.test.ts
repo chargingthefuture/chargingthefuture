@@ -105,4 +105,14 @@ describe('orderTodayCards', () => {
     expect(ordered.slice(-2).map((c) => c.id)).toEqual(['lighthouse:old', 'socket-relay:old']);
     expect(ordered.filter((c) => c.kind === 'story')).toHaveLength(TODAY_MAX_CARDS - 2);
   });
+
+  it("keeps every one of the viewer's own asks, however old, past the limit", () => {
+    const mine = { leavesIso: at(30), dueIso: null, canClose: true, canRenew: false };
+    const others = Array.from({ length: TODAY_MAX_CARDS + 5 }, (_, n) => stub(`peer-programming:${n}`, at(20)));
+    const own = Array.from({ length: 11 }, (_, n) => ({ ...stub(`socket-relay:mine-${n}`, at(1)), mine }));
+    const ordered = orderTodayCards([...others, ...own] as Parameters<typeof orderTodayCards>[0]);
+    expect(ordered).toHaveLength(TODAY_MAX_CARDS);
+    expect(ordered.filter((c) => c.mine)).toHaveLength(11);
+    expect(ordered.slice(-11).every((c) => c.mine)).toBe(true);
+  });
 });
