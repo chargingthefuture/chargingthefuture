@@ -108,5 +108,5 @@ export function seRoomBarLine(speakers, selfSpeaking) {
     return `${who} · ${self}`;
 }
 export const SE_ROOM_QUIET = 'Quiet right now';
-export const SE_ROOM_QUIET_TEXT = 'Nobody is in the room. Play a reading while you wait, come back for the next talk, or start your own conversation now.';
+export const SE_ROOM_QUIET_TEXT = "It's quiet right now. Play a reading while you wait, come back for the next talk, or start your own conversation now.";
 export const SE_ROOM_MAIN_AUDIENCE = 'Open to everyone';

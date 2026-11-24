@@ -135,11 +135,13 @@ export function seStoriesForDay(posts: readonly SeStoryPost[], day: string): SeS
   return [...released, ...fresh];
 }
 
-// A bare web address in a post's text, which reads as noise on a card.
-const ADDRESS = /\(?\bhttps?:\/\/\S+/g;
+// A web address in a post's text, which reads as noise on a card: one with http or www in front,
+// even when it runs straight on from a word ("joinhttps://…"), and one with no prefix that has a
+// path after its name ("qr.ae/pYRt…"). A site name alone, such as lagatos.com, reads as a name and stays.
+const ADDRESS = /\(?(?:https?:\/\/|www\.)\S+|\(?\b[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}\/\S*/gi;
 
 function withoutAddresses(text: string): string {
-  return text.replace(ADDRESS, '').replace(/[ \t]+/g, ' ').replace(/ ([.,;:!?])/g, '$1').trim();
+  return text.replace(ADDRESS, ' ').replace(/[ \t]+/g, ' ').replace(/ ([.,;:!?])/g, '$1').trim();
 }
 
 // A paragraph worth opening a card with: words left once its addresses are gone, and not a line that
