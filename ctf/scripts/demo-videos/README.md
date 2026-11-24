@@ -27,6 +27,17 @@ replacing a video.
 Four machines record a quarter of the clips each at the same time, so a full run of 93 clips takes
 about 20 minutes; `DEMO_SHARD=i/n` is how `record.mjs` picks its share.
 
+### The 3.1 clips
+
+Demo Videos 3.1 — Record Clips (`demo-videos-3-1.yml`) films the clips in `clips-3-1/` the same
+way, with the same inputs and demo accounts: Today, a card opened, New, People, Me, Activity, the
+Main Room, and Today for a visitor who is not signed in. Its releases are `demo-videos-3-1-<run
+number>`. `DEMO_CLIPS_DIR=clips-3-1` picks that folder, and `DEMO_INTERFACE=3.1` puts the demo
+account on 3.1 for the run and back on what it was afterwards, since the interface is saved on the
+account. One machine records them all, so nothing switches the account back mid-run, and the two
+workflows share a concurrency group, so they never run at once. Shared steps for these clips are in
+`lib/se-31.mjs`.
+
 ## Setting up the demo account (once)
 
 Clips are filmed on the live app, signed in as an account in demo mode. Demo mode sends that

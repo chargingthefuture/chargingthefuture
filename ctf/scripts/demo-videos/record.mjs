@@ -13,11 +13,16 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { narrateSteps } from './lib/narrate.mjs';
 import { assemble, buildCues, writeCaptions } from './lib/assemble.mjs';
 import { signInDemoAccount } from './lib/sign-in.mjs';
+import { restoreInterface, switchInterface } from './lib/interface.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const appUrl = (process.env.DEMO_APP_URL || 'https://app.lagatos.com').replace(/\/$/, '');
 const outDir = process.env.DEMO_OUT_DIR || join(here, 'out');
 const workRoot = join(outDir, '.work');
+// DEMO_CLIPS_DIR picks the set of clips: clips/ (3.0, the default) or clips-3-1/ (3.1).
+const clipsDir = process.env.DEMO_CLIPS_DIR || 'clips';
+// DEMO_INTERFACE (3.0 or 3.1) puts the demo account on that interface for the run, then back.
+const wantedInterface = process.env.DEMO_INTERFACE || '';
 
 // The app ships one phone-width layout at every size, so the clips are filmed at phone size.
 const VIEWPORT = { width: 390, height: 844 };
@@ -49,12 +54,12 @@ const TAP_MARKER = `
 `;
 
 async function loadClips(names) {
-  const dir = join(here, 'clips');
+  const dir = join(here, clipsDir);
   const clips = [];
   for (const file of readdirSync(dir).filter((f) => f.endsWith('.mjs')).sort()) {
     const clip = (await import(pathToFileURL(join(dir, file)).href)).default;
     if (!clip?.slug || !Array.isArray(clip.steps) || clip.steps.length === 0) {
-      throw new Error(`clips/${file} must export default { slug, title, steps: [{ say, do }] }.`);
+      throw new Error(`${clipsDir}/${file} must export default { slug, title, steps: [{ say, do }] }.`);
     }
     clips.push(clip);
   }
@@ -187,6 +192,7 @@ async function main() {
   });
   const storageFile = join(workRoot, 'session.json');
   const failures = [];
+  let previousInterface = null;
   try {
     // A failed sign-in fails only the clips that need it; the public ones are still recorded.
     let signInError = null;
@@ -194,6 +200,10 @@ async function main() {
       try {
         await signInDemoAccount(browser, { appUrl, storageFile, screenshotFile: join(outDir, 'sign-in-failure.png') });
         console.log('Signed in as the demo account.');
+        if (wantedInterface) {
+          previousInterface = await switchInterface(browser, { appUrl, storageFile }, wantedInterface);
+          console.log(`The demo account is on ${wantedInterface} for this run.`);
+        }
       } catch (error) {
         signInError = error;
         console.error(`::error::${error.message}`);
@@ -213,6 +223,7 @@ async function main() {
       }
     }
   } finally {
+    if (wantedInterface) await restoreInterface(browser, { appUrl, storageFile }, previousInterface, wantedInterface);
     await browser.close();
     rmSync(storageFile, { force: true });
   }
