@@ -461,7 +461,23 @@ Result: web ☐
 1. Look at the eligible members section.
 2. Check every column and data point displayed per member.
 
-**Expected:** Each row shows user ID (or username), first-earned date, and revoke flag/reason. **No score, no numeric point total, no per-event counts, no reason_snapshot data appears anywhere** — not in a tooltip, not in a collapsed section. The list is categorical only.
+**Expected:** Each row shows user ID (or username), first-earned date, and revoke flag/reason. No score, no numeric point total and no per-event counts appear in this list; scores are in the Scored members list beside it (CA-A2b).
+
+Result: web ☐
+
+---
+
+### CA-A2b — Scored members list shows every member with a score
+**Role:** admin | **Surfaces:** web (desktop)
+
+**Precondition:** The weekly recompute has run at least once, and at least one member has a value event (an accepted SkillsHunt nomination is enough). Sign in as admin. Go to `/admin/adoption` (Weavers of the Commons section).
+
+**Steps:**
+1. Find the Scored members list under Eligible members.
+2. Read one row for a member who is not eligible.
+3. Open the page again on a day that member delivered nothing.
+
+**Expected:** Every member with a score above zero is listed, highest first, eligible or not. Each row shows the score in points, days since first sign-in, distinct plugins and distinct counterparties, each with its setting and how far short it is, or "met". An eligible member carries an Eligible mark. The member is still listed on the day they delivered nothing. The explainer line names the date of the last recompute. With no scores stored, the list reads "No member has a score yet. The weekly recompute fills this list."
 
 Result: web ☐
 
