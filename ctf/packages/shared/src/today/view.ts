@@ -104,6 +104,6 @@ export function seDaysWonLines(daysWon: { total: number; thisWeek: number }): { 
   return {
     big: fmt(daysWon.total),
     small: `Our progress this week: ${fmt(daysWon.thisWeek)} days won.`,
-    how: "Time members spent together in rooms and calls, or helping with each other's tasks. That is less time on Specterati schemes, and more time for all of us reaching our own definition of happiness.",
+    how: "Time members spent together in rooms and calls, helping with each other's tasks, or going through Today's cards. That is less time on Specterati schemes, and more time for all of us reaching our own definition of happiness.",
   };
 }

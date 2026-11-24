@@ -851,3 +851,15 @@ totals (AD-28) still count each mark.
 6. Switch the theme between the four colors and light and dark while Open is showing.
 **Expected:** Step 1: "Nothing open." with the line saying what will be listed. Step 3: both asks, newest first: A's with "Yours · On Today until <date>", B's with "You answered or wrote here", each under its kind's colored label. Step 4: each opens in place over the list, as on Today, with its answers and conversation; nothing opens a new page. Step 5: A's ask is gone from Open; B's ask stays. Step 6: the list is readable in every color and mode. With the network off, Open says it could not read the open cards and why.
 **Result:** web ☐ android ☐ — notes:
+
+## AD-42 · Today cards count toward Days won at a lower weight (added 2026-11-24)
+**Role:** member A (signed in on web and Android), an admin · **Surfaces:** web, android
+**Steps:**
+1. As the admin, note Days won on the Adoption tab of the measures screen.
+2. As A, open three Today cards (tap their text) and tap the dot on two others.
+3. As A, tap Not for me on a sixth card.
+4. As A, open and dot fifteen more cards the same day.
+5. As the admin, reload the measures screen after each of steps 2 and 4.
+6. Open the Days won card on Today and read How it's counted.
+**Expected:** Step 5: after step 2, Days won is 10 action minutes higher (5 marks × 2); the Not for me card adds nothing; after step 4 A's card minutes stop at 20 for the day, however many more cards are marked. Step 6: the line names going through Today's cards. An account on demo data still shows the sample total and ticks as in AD-40. No ServiceCredits change.
+**Result:** web ☐ android ☐ — notes:
