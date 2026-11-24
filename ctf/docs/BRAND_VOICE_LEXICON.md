@@ -55,7 +55,7 @@ This document is the canonical source of truth for brand language across:
 - Survivors is the default user descriptor in UI and editorial content.
 - Victims is only allowed in legal, statutory, or externally quoted contexts.
 - Prefer named capabilities over generic labels — never a bare "Chat".
-- **Avenhood** (3.1.0): the community, and the idea. Definition, word for word as the app shows it: "A distributed peoplehood of people connected across borders, trading skills and building lives beyond exploitation—without waiting for the world to become safe first." Source of the text: `ctf/packages/shared/src/design/se-words.ts`. Capital A; "the Avenhood".
+- **Avenhood** (3.1.0): the community, and the idea. Definition, word for word as the app shows it: "A distributed peoplehood connected across borders, trading skills and building lives beyond exploitation—without waiting for the world to become safe first." Source of the text: `ctf/packages/shared/src/design/se-words.ts`. Capital A; "the Avenhood".
 - **Aven** (3.1.0): one member of the Avenhood. Plural Avens ("3 Avens here").
 - **Room words** (3.1.0): Listen in (join a room), Leave quietly (leave it), Bring someone in (share the signed-out Today, where anybody can listen without an account), Back Channel (a one-to-one call with somebody in the room, from More), Quiet right now (nobody in it). A member in the Main Room's call sees "Guests may be listening". Source: `ctf/packages/shared/src/today/rooms.ts`. 3.0's Chyme page keeps Join Room, Leave and Back Channel.
 - **System Architect** (3.1.0): the owner's title, and the label on admin entries the owner sees. Route names in code stay `admin`.
