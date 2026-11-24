@@ -20,7 +20,7 @@ type Context = { params: Promise<{ accountId: string }> };
 
 function notMatched() {
   return NextResponse.json(
-    { ok: false, code: 'not_a_match', message: 'This conversation is not open: you are not a match with this member right now.' },
+    { ok: false, code: 'not_a_match', message: 'This conversation is not open: this member is not your buddy right now.' },
     { status: 404 },
   );
 }
@@ -83,7 +83,7 @@ export async function POST(request: Request, context: Context) {
       sourcePlugin: 'questions',
       notificationType: 'questions.match.message',
       category: 'community',
-      summary: `New message from your 21 Questions match. ${seMatchLine({ ...match, handle: names.get(userId) ?? 'a member' })}.`,
+      summary: `New message from your 21 Questions buddy. ${seMatchLine({ ...match, handle: names.get(userId) ?? 'a member' })}.`,
       linkPath: '/',
     });
     return NextResponse.json({ ok: true, message });
