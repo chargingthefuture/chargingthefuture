@@ -22,7 +22,7 @@ page: half an hour a day, given to each other, counted as days won back together
 | Word | Meaning |
 | --- | --- |
 | Skills Economy | The app |
-| Avenhood | The community, and the idea: "A distributed peoplehood of people connected across borders, trading skills and building lives beyond exploitation—without waiting for the world to become safe first." The app's text is `SE_AVENHOOD_DEFINITION` in `ctf/packages/shared/src/design/se-words.ts` |
+| Avenhood | The community, and the idea: "A distributed peoplehood connected across borders, trading skills and building lives beyond exploitation—without waiting for the world to become safe first." The app's text is `SE_AVENHOOD_DEFINITION` in `ctf/packages/shared/src/design/se-words.ts` |
 | Aven | One member |
 | System Architect | The owner's title, and the label on every admin entry the owner sees. Route names in code stay |
 | One Percent | The paid tier only. Never a measure of time |

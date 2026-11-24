@@ -35,7 +35,7 @@ import { SeRoomsProvider, useSeRooms } from './rooms/SeRooms';
 import type { FeatureKey } from '../../navigation/screens';
 import { EmojiRain } from './today/EmojiRain';
 
-const TODAY_DATE = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+const TODAY_DATE = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' });
 
 // + New has no title here: it is a sheet with its own heading, as on the web.
 const TITLES: Record<Exclude<SeTab, 'new' | 'people'>, string> = {

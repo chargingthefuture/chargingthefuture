@@ -220,7 +220,7 @@ menu and Manage account show no photo and no upload or remove control. The Ident
 4. On Today, tap the word **Avenhood** in the title, then tap it again. On Me, tap the word **Aven** under your name.
 5. Open `/apps/directory/invites` and one invite's page from it, then come back to `/`.
 6. On the Me tab, tap the gear, then **Back to 3.0**.
-**Expected:** Step 1 lands on the 3.1 home: forest green and gold, dark, the date above "Today in the
+**Expected:** Step 1 lands on the 3.1 home: forest green and gold, dark, the month and year (for example "November 2026") above "Today in the
 Avenhood", and the tab bar. Each tab shows its title; Me shows your picture, your name and the gear to Settings, and the
 others say the screen is still being built. The address carries the tab (`/?tab=people`), and back
 returns to the tab before. Tapping Avenhood opens and closes its definition under the title; tapping Aven on Me shows what an Aven is. The invite wall and the invite page open and work as before. Back to 3.0

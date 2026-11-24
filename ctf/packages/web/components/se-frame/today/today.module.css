@@ -314,12 +314,14 @@
   font-size: 17px;
   font-weight: 700;
   line-height: 1.3;
+  overflow-wrap: anywhere;
 }
 
 .body {
   font-size: 14px;
   line-height: 1.45;
   color: var(--se-soft);
+  overflow-wrap: anywhere;
 }
 
 .bodyLines {
