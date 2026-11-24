@@ -1,5 +1,5 @@
 // 21 Questions matching on Android, the copy of the web (web components/se-frame/today/matching-toggle.tsx):
-// under Matches on Today and on Me. Shows nothing until the member has answered a question, or when
+// under Buddies on Today and on Me. Shows nothing until the member has answered a question, or when
 // they cannot use 21 Questions. Only this toggle changes matching; answering never turns it back on.
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';

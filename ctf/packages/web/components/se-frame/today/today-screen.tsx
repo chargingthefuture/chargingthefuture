@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, type ReactNode } from 'react';
-import { SE_DAYS_WON_HOW, SE_DAYS_WON_TITLE, SE_DAYS_WON_WHY, SE_MUTE_WORDS, SE_TODAY_FILTERS, seCardMutedNote, seCardMuteRequest, seDaysWonLines, seTodayView, type SeCardMuteKind, type SeToday, type SeTodayCard, type SeTodayFilter } from '@ctf/shared';
+import { SE_DAYS_WON_HOW, SE_DAYS_WON_TITLE, SE_DAYS_WON_WHY, SE_MUTE_WORDS, SE_TODAY_FILTERS, seCardMutedNote, seCardMuteRequest, seDaysWonLines, seTodayShowsMatchCard, seTodayView, type SeCardMuteKind, type SeToday, type SeTodayCard, type SeTodayFilter } from '@ctf/shared';
 import { MatchCard } from './match-card';
 import { MatchingToggle } from './matching-toggle';
 import { BroadcastCard, RoomCard } from './room-card';
@@ -147,9 +147,9 @@ function Timeline({ lead, viewerId, view, marks, mark, toggle, markRead, onSave,
   );
 }
 
-// The Match card leads the timeline under All only.
+// The Match card leads the timeline under All and Asks (seTodayShowsMatchCard).
 function MatchLead({ filter, refreshKey, onIntroduce }: { filter: SeTodayFilter; refreshKey: string; onIntroduce: () => void }) {
-  return filter === 'all' ? <MatchCard refreshKey={refreshKey} onIntroduce={onIntroduce} /> : null;
+  return seTodayShowsMatchCard(filter) ? <MatchCard refreshKey={refreshKey} onIntroduce={onIntroduce} /> : null;
 }
 
 // A visitor who is not signed in gets GuestToday (guest-today.tsx) instead.

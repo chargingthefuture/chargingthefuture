@@ -10,6 +10,7 @@ export declare const SE_TODAY_FILTERS: ReadonlyArray<{
     label: string;
     kinds: SeCardKind[] | null;
 }>;
+export declare function seTodayShowsMatchCard(filter: SeTodayFilter): boolean;
 export type SeTodayView = {
     cards: SeTodayCard[];
     missingLine: string | null;

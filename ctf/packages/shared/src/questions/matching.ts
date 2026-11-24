@@ -11,8 +11,8 @@ export const SE_MATCHING_WORDS = {
   failed: 'Matching was not changed:',
   optIn: 'Answering is how you opt in to matching. Members who pick the same answer on three or more questions show up here as like-minded matches.',
   reachOut: 'Reaching out to a match is optional, and so is replying to one.',
-  optOut: 'To stop being matched, turn off matching in Matches. You can keep answering either way.',
-  off: 'Matching is off. Your answers are not used to match you. Turn it back on in Matches.',
+  optOut: 'To stop being matched, turn off matching in Buddies. You can keep answering either way.',
+  off: 'Matching is off. Your answers are not used to match you. Turn it back on in Buddies.',
 } as const;
 
 // The toggle shows once the member has answered at least one question.

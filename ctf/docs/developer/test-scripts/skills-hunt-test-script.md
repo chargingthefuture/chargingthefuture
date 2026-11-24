@@ -1450,7 +1450,7 @@ The following cases must produce identical behavior on both surfaces. Rerun them
 description and "N of M found so far" (the community's count against the goal), and a Suggest
 someone button that opens SkillsHunt. The mission changes from one day to the next. An archived
 mission never shows; with no active round there is no card. Since 2026-11-02 both SkillsHunt cards
-are under the Asks filter on Today, not Matches.
+are under the Asks filter on Today, not Buddies (named Matches until 2026-11-24).
 **Result:** web ☐ android ☐ — notes:
 
 ### SH-18 · The card's conversation on this page, in 3.0 and 3.1 (added 2026-11-10)
