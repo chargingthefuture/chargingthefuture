@@ -35,7 +35,7 @@ This plugin must:
    or suspended in the Quora account removals survey (or a link to the survey when they reported
    none), and points to the Knowledge Library, where bringing in Quora writing with its profile
    address opens the submission. Each route lands in the same pending queue; the System Architect
-   approves each, usually within a day. The Today banner names all three.
+   reviews each, usually within a day. The Today banner names all three.
 
 ### 1.2 Staged Access Experience
 
@@ -551,6 +551,7 @@ Seed script requirement: deterministic Unlock seed scenarios for pending, approv
 
 ## 9) Change Log
 
+- 2026-11-24: **Member-facing Unlock words say the System Architect reviews, not approves.** Owner report: "approves" read as if the member were an admin. The waiting line on the 3.1 Unlock banner and screen and the 3.0 "No live Quora account?" box now reads "The System Architect reviews each, usually within a day."; the waiting title "Sent. Waiting for approval." is now "Sent. In review."; and the banner's explainer says People and credits open "once the System Architect reviews it and you are approved". Approved stays the name of the final state. Words in `@ctf/shared` (`today/unlock.ts`, `today/unlock-screen.ts`), so web and Android follow. Admin screens, identifiers and contracts are unchanged.
 - 2026-11-23: **Admins are told on their phones when a member asks for help with Unlock.** Owner decision. `POST /api/unlock/help-request` now sends one Activity row and web push to each admin when a press opens a request (first press, or a reopen after Done); a repeat press of an open request sends nothing. The text is "Someone asked for help with Unlock." and links to `/admin/unlock`; the member's message is never in it. Best-effort: a failure is logged and the member's request still succeeds. Contracts: `unlock.help.request` 1.2.0 (description and `dataAccess`), audit `commandVersion` 1.2.0.
 - 2026-11-23 (later): **A line under the stat tiles on `/admin/unlock` says how many people asked for help, and opens to just them (§2.4 5c).** The Unlock tile's dot came from waiting help requests, but the page showed them only inside the closed Sign-ups list. The line uses the same open rule as the dot; each member shows with their state, email, date, what they wrote and Done, under one sentence on what clears the dot. Web only; no route, table or contract changed. Test script UNLOCK-A9f.
 - 2026-11-23: **Every help request shows on the sign-ups panel, with Done, and the Unlock tile carries a dot while one waits (§2.4 5b).** Owner decision: requests with an empty box showed nowhere an admin looks. Each row now reads "Asked for help on <date>" with its state and "Told us: …" when there is text; Done (`POST /api/unlock/admin/help-requests`) sets the new `unlock_help_requests.done_at` (`post/0115`); approval or a turn-down also settles a request; a new hint reopens one. The admin landing's Unlock tile keeps its dot lit while any request waits. Contracts: `unlock.admin.help-request.done` in the command, access policy and audit contracts.

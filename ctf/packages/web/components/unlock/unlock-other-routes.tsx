@@ -86,7 +86,7 @@ export function UnlockOtherRoutes({ onFinished }: { onFinished: () => Promise<vo
         Or bring your Quora writing into the <a href="/knowledge" style={link}>Knowledge Library</a> with its profile address.
       </p>
       {error ? <p role="alert" style={{ fontSize: 12, color: "#F87171", margin: "8px 0 0" }}>{error}</p> : null}
-      <p style={{ fontSize: 12, color: tok.FAINT, margin: "10px 0 0" }}>The System Architect approves each, usually within a day.</p>
+      <p style={{ fontSize: 12, color: tok.FAINT, margin: "10px 0 0" }}>The System Architect reviews each, usually within a day.</p>
     </section>
   );
 }
