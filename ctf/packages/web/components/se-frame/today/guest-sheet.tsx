@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { SE_CARD_WORDS, SE_GUEST_WORDS as W, seAgo, seGuestEmptyLine, seStoryPostHref, type SeGuestConversation, type SeTodayCard } from '@ctf/shared';
 import styles from './card-sheet.module.css';
+import { SheetTop } from '../sheet/sheet-top';
 
 // A card opened on signed-out Today (owner decision, 2026-11-10): read only. A story shows its post's
 // Fireside comments; a sample ask or offer shows a sample conversation, tagged as sample; a member's
@@ -67,14 +68,9 @@ export function GuestSheet({ card, signInUrl, sampleTag, onClose }: { card: SeTo
       <button type="button" className={styles.scrim} aria-label={W.close} tabIndex={-1} onClick={onClose} />
       <section role="dialog" aria-modal="true" aria-label={`${card.label}: ${card.title}`} className={styles.sheet}>
         <span className={styles.grip} aria-hidden="true" />
-        <div className={styles.head}>
+        <SheetTop className={styles.head} closeClassName={styles.round} closeLabel={W.close} onClose={onClose} closeRef={closeRef}>
           <span className={styles.talkTitle}>{card.label}</span>
-          <button ref={closeRef} type="button" className={`${styles.round} ${styles.closeEnd}`} aria-label={W.close} onClick={onClose}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
-              <path d="M6 6l12 12M18 6L6 18" />
-            </svg>
-          </button>
-        </div>
+        </SheetTop>
         <div className={styles.text}>
           <h2 className={styles.title}>{card.title}</h2>
           {card.body ? <p className={styles.body}>{card.body}</p> : null}
