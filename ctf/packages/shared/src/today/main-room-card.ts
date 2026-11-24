@@ -17,6 +17,13 @@ export const SE_MAIN_ROOM_CARD_WORDS = {
   readingsOff: 'No readings are playing right now.',
 } as const;
 
+// Nobody is in the room and it is not live: the card says so with SE_ROOM_QUIET_TEXT, the same
+// words the room screen uses, so a member sees Start a conversation and a visitor Sign up to talk
+// as the way in.
+export function seMainRoomEmpty(room: Pick<SeTodayRoom, 'live' | 'members' | 'guests' | 'speakers'>): boolean {
+  return !room.live && room.members + room.guests + room.speakers === 0;
+}
+
 // readings: open the room and play the readings loop. listen: open the live room and listen.
 // start: open the room and join its call. bring: share the signed-out Today. sign-up: go to sign-up.
 export type SeMainRoomPrimary = 'readings' | 'listen';

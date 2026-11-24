@@ -4,7 +4,9 @@ import type { ReactNode } from 'react';
 import { AddToCalendarButton } from '@/components/shared/add-to-calendar';
 import {
   SE_MAIN_ROOM_CARD_WORDS as M,
+  SE_ROOM_QUIET_TEXT,
   SE_TODAY_ROOM_WORDS as W,
+  seMainRoomEmpty,
   seRoomCountsLine,
   seTalkCalendarEvent,
   seTalkHostLine,
@@ -16,7 +18,7 @@ import styles from './today.module.css';
 
 // The Main Room card on Today, one card signed in and signed out (owner decision, 2026-11-17): the
 // room's name and audience, the next talk with its host, time and Add to calendar, the faces and
-// counts ("Quiet right now" when nobody is in), then two buttons whose words come from
+// counts ("Quiet right now" when nobody is in, with SE_ROOM_QUIET_TEXT inviting people in), then two buttons whose words come from
 // seMainRoomButtons. A visitor's second button is a link to sign-up; `inPlace` is what a visitor
 // hears in the card itself (the readings, or the live room), shown where the first button was.
 
@@ -77,6 +79,7 @@ export function MainRoomCard({ room, buttons, onPrimary, onSecondary, signUpUrl,
         <Faces faces={room.faces} />
         <span className={styles.roomMeta}>{seRoomCountsLine(room)}</span>
       </div>
+      {seMainRoomEmpty(room) ? <p className={styles.roomMeta}>{SE_ROOM_QUIET_TEXT}</p> : null}
       {inPlace}
       <div className={styles.roomButtons}>
         {inPlace ? null : (
