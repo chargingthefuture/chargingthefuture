@@ -74,7 +74,9 @@ export function dailyMinutesCte(from = '$1'): string {
 
 const DAILY_MINUTES_CTE = dailyMinutesCte();
 
-export type DaysWon = { total: number; thisWeek: number };
+// `days`: each of the last 7 UTC days' days won, oldest first, today last, for the small line on
+// Today's Days won card. They add up to `thisWeek` before rounding.
+export type DaysWon = { total: number; thisWeek: number; days: number[] };
 
 function round1(value: number): number {
   return Math.round(value * 10) / 10;
@@ -82,15 +84,22 @@ function round1(value: number): number {
 
 export async function readDaysWon(now = new Date()): Promise<DaysWon> {
   const weekStart = new Date(now.getTime() - 6 * 86_400_000).toISOString().slice(0, 10);
-  const result = await queryDb<{ total: string | null; week: string | null }>(
+  const today = now.toISOString().slice(0, 10);
+  const result = await queryDb<{ total: string | null; week: string | null; days: string[] | null }>(
     `WITH ${DAILY_MINUTES_CTE}
-     SELECT SUM(minutes)::text AS total, SUM(minutes) FILTER (WHERE day >= $2::date)::text AS week FROM daily`,
-    ['2000-01-01', weekStart],
+     SELECT SUM(minutes)::text AS total, SUM(minutes) FILTER (WHERE day >= $2::date)::text AS week,
+            ARRAY(SELECT COALESCE(SUM(d.minutes), 0)::text
+                    FROM generate_series($2::date, $3::date, INTERVAL '1 day') AS g(day)
+                    LEFT JOIN daily d ON d.day = g.day::date
+                   GROUP BY g.day ORDER BY g.day) AS days
+       FROM daily`,
+    ['2000-01-01', weekStart, today],
   );
   const row = result.rows[0];
   return {
     total: round1(Number(row?.total ?? 0) / ACTION_MINUTES_PER_DAY_WON),
     thisWeek: round1(Number(row?.week ?? 0) / ACTION_MINUTES_PER_DAY_WON),
+    days: (row?.days ?? []).map((minutes) => round1(Number(minutes) / ACTION_MINUTES_PER_DAY_WON)),
   };
 }
 

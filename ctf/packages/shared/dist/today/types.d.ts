@@ -81,6 +81,7 @@ export type SeToday = {
     daysWon: {
         total: number;
         thisWeek: number;
+        days?: number[];
         sample?: boolean;
     } | null;
     broadcast: SeTodayBroadcast | null;

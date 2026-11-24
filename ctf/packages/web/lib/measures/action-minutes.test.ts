@@ -59,3 +59,11 @@ describe('Today card marks count toward Days won at a lower weight', () => {
     expect(CARD_MARK_MINUTES_PER_DAY).toBeLessThan(30);
   });
 });
+
+describe('Days won by day', () => {
+  it('reads each of the last 7 days, oldest first', async () => {
+    const days = await readDaysWon(new Date('2026-11-12T12:00:00Z'));
+    expect(sql.texts[0]).toContain('generate_series($2::date, $3::date');
+    expect(days).toEqual({ total: 0, thisWeek: 0, days: [] });
+  });
+});
