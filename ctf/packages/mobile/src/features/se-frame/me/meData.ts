@@ -75,9 +75,22 @@ export function useCredits(): Read<number> {
   return state;
 }
 
-export function useMarked(mark: 'done' | 'not_for_me'): Read<SeMarkedCard[]> {
-  const [state] = useRead<SeMarkedCard[]>(`/api/today/marks?mark=${mark}`, (body) => body.cards as SeMarkedCard[], W.listFailed, `me_marked_${mark}`);
-  return state;
+// Read or Hidden, with a reload for after a card opened from the list changes.
+export function useMarked(mark: 'done' | 'not_for_me'): { state: Read<SeMarkedCard[]>; reload: () => void } {
+  const [state, setState] = useState<Read<SeMarkedCard[]>>({ kind: 'loading' });
+  const load = useCallback(async () => {
+    try {
+      const body = await authedFetchJson<{ cards: SeMarkedCard[] }>(`/api/today/marks?mark=${mark}`);
+      setState({ kind: 'ready', value: body.cards });
+    } catch (error) {
+      reportError(error, { area: 'se-frame', op: `me_marked_${mark}` });
+      setState({ kind: 'error', message: reason(error, W.listFailed) });
+    }
+  }, [mark]);
+  useEffect(() => {
+    void load();
+  }, [load]);
+  return { state, reload: () => void load() };
 }
 
 // How many rows a list route answers (blocked people, muted people and words), or null.

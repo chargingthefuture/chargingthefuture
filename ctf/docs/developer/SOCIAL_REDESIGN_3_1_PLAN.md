@@ -108,7 +108,7 @@ Unlock stops being the gate for most of the app.
 | Weavers of the Commons | Back Channel invites, pictures and links in posts, the private room (bringing somebody into a room is a shared link, open to every member: owner decision, 2026-11-12) |
 
 - Unlock finishes by any of three: a Quora profile address, a removed Quora account added to the
-  census, or Quora writing brought into the Knowledge Library. The System Architect approves each,
+  census, or Quora writing brought into the Knowledge Library. The System Architect reviews each,
   usually within a day; the banner says so.
 - The banner shows a day count from day 1. For 14 days the app is open. In the second half the banner
   cannot be closed. After day 14, posting, answering and credits pause; Mood, ClickLog, reading,
