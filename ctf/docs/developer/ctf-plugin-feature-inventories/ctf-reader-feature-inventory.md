@@ -4,41 +4,40 @@
 
 Reader is a tile and one page in this app. It is not the reader.
 
-The reader itself is a separate service — FreshRSS, on its own address at
-rss.lagatos.com, on a server this project pays for. It has its own database, its own
-accounts and its own admin screens, and this repository holds none of them. Signing in there goes
-through the same auth provider this app uses, so a member needs no second password and a ban at the
-provider closes the reader too, within the reader's sign-in length (seven days; see
-`ctf/docs/developer/FRESHRSS.md`).
+The reader itself is the shared reader page of the `chargingthefuture/rss-feeds` repository, at
+https://chargingthefuture.github.io/rss-feeds/read/, on GitHub's free hosting for public pages. It
+has no sign-in and no server: a reader's list of feeds, what they mark watched and what they save
+are kept in their own browser, and a backup they download is how they keep or move them. This
+repository holds none of it. It replaced the hosted FreshRSS reader at rss.lagatos.com on
+2026-11-24 (owner decision).
 
 What lives here is the page a member reaches from the apps list: what the reader is, what it cannot
-do, what a place on it costs, and a link to it. Nothing about their reading — what they subscribe
-to, what they opened — ever reaches this app.
+do, how to ask for a YouTube channel, and a link to it. Nothing about their reading ever reaches
+this app.
 
 ## Intent and Outcome
 
 A member who would rather not install or configure anything can still read what sites publish, in
 publication order, without a platform deciding what they see first. They open the Reader tile, read
-what it is and what a place on it costs, and go to it in one tap, signing in with the account they
-already have.
+what it is and that their list lives in their own browser, and go to it in one tap, with no sign-in.
 
 ## User Features
 
 - A tile in the apps list called Reader, opening a page that explains the reader in plain words.
-- An "Open the reader" button that goes to rss.lagatos.com in a new tab, with a line
-  underneath naming the address it opens and saying the sign-in is this same account.
-- A statement of what a new reader account starts with: this blog, the owner's demo-video
-  channel and the recorded broadcasts, and nothing else added for you (the channel joined the
-  default list 2026-09-23, the recorded broadcasts 2026-09-29).
-- A statement of what the reader cannot do: it collects only from the day a feed is added, and it
-  never notifies anybody.
-- A statement of what a place on the reader costs, and that losing one is not a ban: the account in
-  this app is untouched, and not finishing Unlock never costs anybody their account.
+- An "Open the reader" button that goes to https://chargingthefuture.github.io/rss-feeds/read/ in a
+  new tab, with a line underneath naming the address and saying there is no sign-in, that what
+  you add and mark stays in that browser, and to download a backup there to keep it.
+- A statement of what the reader starts with: this blog, the owner's demo-video channel and the
+  recorded broadcasts. Anything else is added by its address, and any feed can be removed, those
+  three included.
+- A statement of what the reader cannot do: it reaches back only as far as a feed carries, it never
+  notifies anybody, and a site that does not let other web pages read its feed cannot be added.
+- How to get a YouTube channel: ask from + New with the channel's address and, if wanted, the date
+  to stop at. The owner collects it, cuts it at that date and replies with an address to add.
 
 ## Admin Features
 
-None in this app. The reader's own administration — accounts on it, feed limits, purge policy — is
-done inside the reader by its own administrator.
+None. Collecting a channel is done in `chargingthefuture/rss-feeds`, outside this app.
 
 ## API Surface and Route Map
 
@@ -60,11 +59,8 @@ list. No tables of its own, no columns added to anything, and nothing written at
 - No command contracts, no access-policy contract and no audit contract, because there is no
   command to run and nothing to audit — the page reads nothing and writes nothing.
 - No deletion contract. Deleting an account in this app removes nothing here, because nothing is
-  stored here. An account on the reader is separate and is closed on the reader.
+  stored here. The reader keeps nothing on any server, so there is nothing elsewhere to close.
 - The link carries `rel="noopener noreferrer"`, so the opened page gets no handle on this one.
-- A ban at the auth provider (see the Unlock inventory) closes the reader too, because the reader
-  asks the same provider. It reaches somebody already signed in to the reader when their sign-in
-  there ends, at most seven days later; the settings are in `ctf/ops/freshrss/sign-in.env`.
 
 ## Web and Android Delivery Status
 
@@ -85,8 +81,8 @@ somebody reads is not evidence anybody should be publishing.
 
 ## Gaps and Known Technical Debt
 
-- The page cannot say whether the member already has an account on the reader, because this app
-  never asks the reader anything. Everybody sees the same page.
+- The page cannot say what a member has added to the reader, because the reader keeps that in the
+  member's own browser and this app never asks it anything. Everybody sees the same page.
 - The reader's address is written into the shell as a constant. If it ever moves, that line and the
   blog's announcement post both change.
 
@@ -102,6 +98,7 @@ somebody reads is not evidence anybody should be publishing.
 
 ## Change Log
 
+- 2026-11-24 — The reader is now the shared reader page at https://chargingthefuture.github.io/rss-feeds/read/ (owner decision): the hosted FreshRSS reader at rss.lagatos.com cost a monthly bill for one reader and is shut down. Open the reader goes there. The page says there is no sign-in and the list lives in the member's browser, keep it with a backup; that the three defaults can be removed and anything else added by address; that a site which does not let other web pages read its feed cannot be added; and how to ask for a YouTube channel from + New. The "What a place on it costs" card is gone, since there is no server and no place. The FreshRSS workflows, their scripts, `ctf/ops/freshrss/` and `FRESHRSS.md` are removed with it, and the test script's sign-in case (RD-5) with them.
 - 2026-11-02 — The reader's address is rss.lagatos.com (owner report: the reader failed after the domain change, since rss.chargingthefuture.com no longer leads to it). The Open the reader button, the line under it, the user guide, the test script and `FRESHRSS.md` name the new address. The service settings the move needs outside this repository are listed in `FRESHRSS.md`, "The address".
 - 2026-10-15 — The generic public preview, which is what a signed-out visitor to `/apps/reader` sees, said a free account is all it takes. Reader needs Unlock approval like every plugin but Fireside (`pluginPageMinUnlockTier`), so the sentence in `generic-public-shell.tsx` now says the app opens once you have an account and finish verifying it (owner-approved copy fix, #2889).
 - 2026-10-03 — The "What you get" card named two default feeds after the recorded broadcasts
