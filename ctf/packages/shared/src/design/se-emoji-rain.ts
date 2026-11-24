@@ -58,3 +58,12 @@ export function seEmojiRainStep(input: {
 export function isSeDaysWonSeen(value: unknown): value is number {
   return typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 2_147_483_647;
 }
+
+// The total this device last saw on Today, kept in the browser (or phone) beside the account's own
+// (owner request, 2026-11-24), so a rise rains on the next visit on each device the member uses,
+// not only on the first one to open Today after it. The device's total wins when it has one; a
+// device that has never recorded one falls back to the account's, so a new device does not rain for
+// growth the member already saw elsewhere.
+export function seDaysWonSeenOn(device: unknown, account: number | null | undefined): number | null | undefined {
+  return isSeDaysWonSeen(device) ? device : account;
+}

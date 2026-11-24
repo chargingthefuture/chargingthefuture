@@ -873,4 +873,13 @@ totals (AD-28) still count each mark.
 4. Close the sheet, then reach each row with Tab and open it with Enter.
 5. With a screen reader on, move through the rows of Read.
 **Expected:** Step 2: the story opens in place over Read, the same sheet as on Today, with its conversation; no new page opens. Step 3: the ask opens in place over Hidden with its answers. Step 4: each row takes keyboard focus with a visible outline and Enter opens it. Step 5: each row is read as a button with the card's label and title. Opening a card from either list does not change its mark: it stays in the same list after a reload. With the network off, the list says it could not read the cards and why.
+## AD-43 · Days won rises on screen, on the next visit, and as a week line (added 2026-11-24)
+**Role:** an approved member on 3.1 with Emoji rain on (Me → Settings → Look and reading), on two browsers · **Surfaces:** web
+**Steps:**
+1. Open Today in browser A and look at the Days won card in light and dark.
+2. Leave Today open in browser A and showing while another member spends 20 minutes in the Main Room. Wait up to 3 minutes after they leave, or switch away from the tab and back.
+3. Close browser B's Today before step 2; open it after step 2.
+4. In a private window with site data blocked, open Today.
+5. Turn on reduced motion and repeat step 2.
+**Expected:** Step 1 shows the total large with a small rising line to its right (this week's days won added up day by day, ending in a dot), no axes, in the number's color in both themes; "Our progress this week" is unchanged under it. Step 2: the number goes up without a reload, the line's last point rises, and emoji fall for about three seconds. Step 3: browser B rains once on opening, because it last saw the lower total. Step 4 loads normally with no error, using the account's last total. Step 5: the number and line rise and nothing falls.
 **Result:** web ☐ — notes:
