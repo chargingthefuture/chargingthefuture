@@ -54,8 +54,8 @@ function sameLine(match: MatchRow, answers: Map<string, number>): string {
 }
 
 function matchLabel(unread: number): string {
-  if (unread === 0) return 'Match · 21 Questions';
-  return `Match · ${unread} new message${unread === 1 ? '' : 's'}`;
+  if (unread === 0) return 'Buddy · 21 Questions';
+  return `Buddy · ${unread} new message${unread === 1 ? '' : 's'}`;
 }
 
 function matchCard(

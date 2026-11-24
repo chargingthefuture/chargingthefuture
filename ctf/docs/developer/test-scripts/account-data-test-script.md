@@ -553,34 +553,35 @@ picture, ladder in turn). No sign-in is asked for. On Android, step 2 opens the 
 **Steps:**
 1. As A, open Today and pick the Buddies filter. Tap an answer on the 21 Questions card.
 2. Keep answering until the card is gone or says catching up, then do the same as B with the same answers on three questions.
-3. As A, read Today again and tap Talk here on the Match card. Send a message.
-4. As B, open Activity, then the Match card on Today.
+3. As A, read Today again and tap Talk here on the buddy card (Buddy · 21 Questions). Send a message.
+4. As B, open Activity, then the buddy card on Today.
 5. As B, block A, then read Today again.
 6. As C, an approved member who has not answered today's question, note the answered count on the 21 Questions card, then tap Skip this question. Skip the catching-up card that comes in too. Open Me → Hidden.
 **Expected:** Step 1 says Saved; the card stays with its dot checked, the buttons gone and "You picked:" with the answer, the dot cannot be unchecked, and a question missed on an earlier day shows as its own catching-up card; no question asks about home, family or
 where somebody lives. Step 3 shows "You and @B answered N of M the same" and the message in the
-card. Step 4 shows the new message in Activity and in the card, marked "1 new message" until opened.
-The Wanted and mission cards are under Asks, not Buddies. Step 5 removes the Match card for both.
+card. Step 4 shows the new message in Activity and in the card, marked "Buddy · 1 new message" until opened.
+The Wanted and mission cards are under Asks, not Buddies. Step 5 removes the buddy card for both.
 Step 6: Skip sits under the answers on web and Android; the card leaves Today and the next question
 not answered or skipped comes in as a catching-up card, with the same answered count; skipping that
-one brings the one after it; Days won, the done count and C's matches are unchanged, and Me → Hidden
+one brings the one after it; Days won, the done count and C's buddies are unchanged, and Me → Hidden
 lists today's skipped question.
 
-## AD-24 · 21 Questions matching on and off
-**Role:** two approved members, A and B, on 3.1, who match (AD-23), and C, approved, with no answers · **Surfaces:** web, android
+## AD-24 · 21 Questions buddies on and off
+**Role:** two approved members, A and B, on 3.1, who are buddies (AD-23), and C, approved, with no answers · **Surfaces:** web, android
 **Steps:**
 1. As C, open Today, pick the Buddies filter, then open Me.
 2. As A, pick the Buddies filter on Today and read the 21 Questions card.
-3. As A, turn off Match me with members who answer like me under Buddies.
+3. As A, turn off Find me buddies who answer like me under Buddies.
 4. As B, read Today again under Buddies.
 5. As A, answer another question, then open Me.
 6. As A, turn the toggle back on from Me, then read Today again. As B, read Today again.
-**Expected:** Step 1 shows no matching toggle in either place. Step 2's card explains that answering is
-the opt-in, that reaching out and replying are optional, and how to stop being matched, then the
-answered count; the toggle is on, with the line about what Off does under it. Step 3 removes A's Match
-cards, and the card says matching is off and how to turn it back on. Step 4 shows no Match card for A,
-and a message to A is refused. Step 5 leaves the toggle off on Me and the card still says matching is
-off. Step 6 brings the Match cards back for both, with the same answers.
+**Expected:** Step 1 shows no buddies toggle in either place. Step 2's card opens with "21 Questions finds your
+buddies: people who answered the way you did.", explains that answering is the opt-in, that reaching
+out to a buddy and replying are optional, and how to stop finding buddies, then the answered count; the
+toggle is on, with the line about what Off does under it. Step 3 removes A's buddy cards, and the card
+says finding buddies is off and how to turn it back on. Step 4 shows no buddy card for A, and a message
+to A is refused. Step 5 leaves the toggle off on Me and the card still says finding buddies is off.
+Step 6 brings the buddy cards back for both, with the same answers.
 Step 7 (owner, Neon SQL Editor): run `ctf/scripts/sql/twenty_one_questions_audit.sql` query 2 with A's
 account id. It lists A's answers, then matching_off from step 3 and matching_on from step 6, newest first.
 As A, tapping a different answer on a question already answered adds an answer_refused row and keeps the
@@ -813,7 +814,7 @@ totals (AD-28) still count each mark.
 3. Look at the dots to the left of the cards, signed out, then signed in, in light and dark and in each of the four colors.
 4. Signed out, find a blog story card. Compare it with the same card signed in. Tap its title, come back, tap Read the post, come back, and tap Conversation; in the sheet, tap Read the post. Then find a member's story card (a member who agreed to be shown signed out) and tap Conversation, on a story where no writer agreed to visitors reading their replies (AD-39 covers the rest).
 5. Signed in, open a blog story card and look at its buttons. Leave Today open for two minutes.
-**Expected:** Step 1 shows "Days the Avenhood has won" with a lock and Preview, and the count under it. Within 20 to 90 seconds the count goes up by one and emoji fall across the screen for a few seconds, then again at another random interval. A reload starts from the sample count again. Step 2: the count still goes up, and no emoji fall. Step 3: each dot carries an icon by kind, as on the approved Today board: an arrow up on an ask, an arrow down on an offer, a book on a story, a magnifier on a Wanted or match card and on the locked People card, a face on Mood, bars on the numbers, a play mark on a replay, a grid on the puzzle; the icon reads clearly on the dot in every color and mode. A dot that can be tapped still marks the card done, with the check shown in place of the icon. Step 4: the blog story shows the same teaser and layout as signed in, with Read the post and Conversation in place of This helped me and no Save or Hide; no card text is a bare web address. The title and Read the post open the blog post (a screen reader names the title link by the post's title, and Android reads it as a link). Conversation opens a sheet with the title, the teaser and Read the post above the post's comments, read only; its Read the post opens the post. The member's story shows Conversation only; it opens the story with "The conversation on a member's story is for members. Sign in to read it." and no messages. Step 5: the story shows This helped me as before, and the signed-in Days won count does not tick.
+**Expected:** Step 1 shows "Days the Avenhood has won" with a lock and Preview, and the count under it. Within 20 to 90 seconds the count goes up by one and emoji fall across the screen for a few seconds, then again at another random interval. A reload starts from the sample count again. Step 2: the count still goes up, and no emoji fall. Step 3: each dot carries an icon by kind, as on the approved Today board: an arrow up on an ask, an arrow down on an offer, a book on a story, a magnifier on a Wanted or match card and on the locked People card, a face on Mood, bars on the numbers, a play mark on a replay, a grid on the puzzle; the icon reads clearly on the dot in every color and mode. A dot that can be tapped still marks the card done, with the check shown in place of the icon. Step 4: the blog story shows the same teaser and layout as signed in, with Read the post and Conversation in place of This helped me and no Save or Hide; no card text shows a web address, including one written without http or run on from a word (a site name alone, such as lagatos.com, can appear in a sentence). The title and Read the post open the blog post (a screen reader names the title link by the post's title, and Android reads it as a link). Conversation opens a sheet with the title, the teaser and Read the post above the post's comments, read only; its Read the post opens the post. The member's story shows Conversation only; it opens the story with "The conversation on a member's story is for members. Sign in to read it." and no messages. Step 5: the story shows This helped me as before, and the signed-in Days won count does not tick.
 **Result:** web ☐ android ☐ — notes:
 
 ## AD-39 · Visitors read replies on members' stories only with the writer's agreement (added 2026-11-16)

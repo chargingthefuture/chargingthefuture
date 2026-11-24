@@ -53,6 +53,6 @@ export async function POST(request: Request) {
     const state = await readMatchingState(userId);
     return NextResponse.json({ ok: true, ...state }, { headers: NO_STORE });
   } catch (error) {
-    return failed('set_matching', error, 'Matching was not changed: the database write failed. Try again.');
+    return failed('set_matching', error, 'Your buddy setting was not changed: the database write failed. Try again.');
   }
 }

@@ -111,10 +111,12 @@ export function seStoriesForDay(posts, day) {
     const fresh = posts.filter((post) => post.date.slice(0, 10) === day && !released.includes(post));
     return [...released, ...fresh];
 }
-// A bare web address in a post's text, which reads as noise on a card.
-const ADDRESS = /\(?\bhttps?:\/\/\S+/g;
+// A web address in a post's text, which reads as noise on a card: one with http or www in front,
+// even when it runs straight on from a word ("joinhttps://…"), and one with no prefix that has a
+// path after its name ("qr.ae/pYRt…"). A site name alone, such as lagatos.com, reads as a name and stays.
+const ADDRESS = /\(?(?:https?:\/\/|www\.)\S+|\(?\b[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}\/\S*/gi;
 function withoutAddresses(text) {
-    return text.replace(ADDRESS, '').replace(/[ \t]+/g, ' ').replace(/ ([.,;:!?])/g, '$1').trim();
+    return text.replace(ADDRESS, ' ').replace(/[ \t]+/g, ' ').replace(/ ([.,;:!?])/g, '$1').trim();
 }
 // A paragraph worth opening a card with: words left once its addresses are gone, and not a line that
 // only leads into an address ("The blog has a new page:").
