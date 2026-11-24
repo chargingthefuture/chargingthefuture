@@ -29,7 +29,7 @@ on:
 jobs:
   restore-formance:
     name: Restore Formance backup into target DB
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       # TARGET DB to restore INTO — a new/recovery database, never production.
       FORMANCE_DATABASE_URL: ${{ secrets.FORMANCE_RESTORE_TARGET_DATABASE_URL }}
