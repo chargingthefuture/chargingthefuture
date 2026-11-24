@@ -14,7 +14,13 @@ export default {
     },
     {
       say: 'Today comes first, then earlier. Tap a line to open what it is about.',
-      do: async ({ page, highlight }) => highlight(page.getByRole('heading', { level: 2 }).first()),
+      do: async ({ page, highlight }) => {
+        // With no activity yet the screen shows one line instead of day groups.
+        const groups = page.getByRole('heading', { level: 2 });
+        const empty = page.locator('main p').first();
+        await groups.first().or(empty).waitFor();
+        await highlight((await groups.count()) > 0 ? groups.first() : empty);
+      },
     },
   ],
 };
