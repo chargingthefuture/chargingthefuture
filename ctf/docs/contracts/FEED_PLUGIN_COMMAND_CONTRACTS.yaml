@@ -3,7 +3,7 @@ contracts:
   - pluginId: feed
     command: feed.timeline.fetch
     version: 2.1.0
-    description: Fetch feed timeline items across all channels (announcements, questions, community) with deterministic ordering and offset pagination.
+    description: Fetch feed timeline items across all channels (announcements, community) with deterministic ordering and offset pagination.
     inputSchema:
       page:
         type: integer
@@ -13,7 +13,7 @@ contracts:
         required: false
       channel:
         type: string
-        enum: [all, announcements, questions, community]
+        enum: [all, announcements, community]
         required: false
       mentions:
         type: string
@@ -32,7 +32,6 @@ contracts:
       - feed_items
       - feed_item_targets
       - feed_render_config
-      - feed_questions
       - member_blocks
     purpose: timeline_discovery
     retentionClass: derived_short_lived
@@ -258,93 +257,6 @@ contracts:
       - feed_render_config
     purpose: feed_governance
     retentionClass: audit_long_lived
-    idempotency: true
-
-  # ─── Channel: Questions (LLM-assisted Q&A) ─────────────────────────────
-  - pluginId: feed
-    command: feed.question.submit
-    version: 1.0.0
-    description: Submit a natural-language question to the feed Q&A channel for LLM-assisted answering.
-    inputSchema:
-      body:
-        type: string
-        required: true
-      category:
-        type: string
-        enum: [housing, services, general, safety, benefits]
-        required: false
-      location:
-        type: object
-        required: false
-        properties:
-          zipCode:
-            type: string
-          radiusMiles:
-            type: integer
-    outputSchema:
-      questionId:
-        type: string
-      status:
-        type: string
-      createdAt:
-        type: string
-    dataAccess:
-      - feed_questions
-      - feed_items
-    purpose: community_qa
-    retentionClass: transactional_long_lived
-    idempotency: false
-
-  - pluginId: feed
-    command: feed.question.answer.generate
-    version: 1.0.0
-    description: Generate an LLM-assisted answer for a submitted question using approved data sources.
-    inputSchema:
-      questionId:
-        type: string
-        required: true
-    outputSchema:
-      answerId:
-        type: string
-      body:
-        type: string
-      sources:
-        type: array
-      confidence:
-        type: number
-      modelId:
-        type: string
-      generatedAt:
-        type: string
-    dataAccess:
-      - feed_questions
-      - feed_answers
-      - llm_inference_log
-    purpose: llm_assisted_response
-    retentionClass: transactional_long_lived
-    idempotency: true
-
-  - pluginId: feed
-    command: feed.question.answer.rate
-    version: 1.0.0
-    description: Rate an LLM-generated or community answer for quality feedback.
-    inputSchema:
-      answerId:
-        type: string
-        required: true
-      rating:
-        type: string
-        enum: [helpful, not_helpful, flagged]
-        required: true
-    outputSchema:
-      answerId:
-        type: string
-      ratedAt:
-        type: string
-    dataAccess:
-      - feed_answer_ratings
-    purpose: llm_quality_feedback
-    retentionClass: transactional_long_lived
     idempotency: true
 
   # ─── Channel: Community Support ─────────────────────────────────────────
@@ -740,9 +652,8 @@ contracts:
       List member-authored Commons posts and replies for admin review, newest first, with the count of
       rows currently hidden. Hidden rows are included by default so a moderator can see what has been
       taken down and put it back; `hidden=1` narrows to only those. Admin only, read-only. Deliberately
-      Commons-only: Q&A answers are moderated through their own queue (feed.qa.moderation.flagged.list),
-      which is flag-driven rather than a full listing. v1.0.1 removed feed_questions/feed_answers from
-      dataAccess — the query never read them, and the listing was never meant to include Q&A rows.
+      Commons-only. v1.0.1 removed the old question and answer tables from dataAccess — the query
+      never read them.
       v1.0.2 adds announcement_replies: replies on official announcements are member-authored Commons
       content too, and until then were the one such surface with no way to take anything down.
       Since 2026-11-10 announcement replies live in commons_item_messages (plugin 'commons', item
@@ -797,8 +708,6 @@ contracts:
       - feed_community_posts
       - feed_community_replies
       - commons_item_messages
-      - feed_questions
-      - feed_answers
       - feed_admin_audit_trail
     purpose: content_moderation
     retentionClass: transactional_long_lived
@@ -831,61 +740,9 @@ contracts:
       - feed_community_posts
       - feed_community_replies
       - commons_item_messages
-      - feed_questions
-      - feed_answers
       - feed_admin_audit_trail
     purpose: content_moderation
     retentionClass: transactional_long_lived
-    idempotency: true
-
-  - pluginId: feed
-    command: feed.qa.moderation.flagged.list
-    version: 1.0.0
-    description: >-
-      List answers members have flagged, most-flagged first, with each answer's flag and not-helpful
-      counts and its parent question. Closes a gap that existed for as long as flagging did: the counts
-      were aggregated by feed.question.admin.list but no screen ever called it, so a member's flag
-      reached nobody. Hidden answers are included so a moderator can reverse their own calls. Admin
-      only, read-only.
-    inputSchema:
-      limit:
-        type: number
-        required: false
-    outputSchema:
-      answers:
-        type: array
-      pending:
-        type: number
-    dataAccess:
-      - feed_answers
-      - feed_answer_ratings
-      - feed_questions
-    purpose: content_moderation
-    retentionClass: transactional_long_lived
-    idempotency: true
-
-  - pluginId: feed
-    command: feed.question.category.relabel
-    version: 1.0.0
-    description: >-
-      Admin re-labels a question's category. Added to the contract surface on 2026-08-28: the route
-      had shipped with no command, access-policy or audit-event contract behind it.
-    inputSchema:
-      questionId:
-        type: string
-        required: true
-      category:
-        type: string
-        required: true
-        description: One of the valid feed question categories; anything else is rejected with a 400.
-    outputSchema:
-      question:
-        type: object
-    dataAccess:
-      - feed_questions
-      - feed_admin_audit_trail
-    purpose: feed_governance
-    retentionClass: audit_long_lived
     idempotency: true
 
   - pluginId: feed

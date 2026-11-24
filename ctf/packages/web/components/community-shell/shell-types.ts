@@ -36,7 +36,7 @@ export type ChatReactionSummary = {
 // What the message is, when it comes from the Hub. `announcement` renders the distinct official
 // card; everything else renders as an ordinary chat bubble. Absent on synthetic/optimistic
 // messages (such as the empty-state prompt), which are treated as ordinary bubbles.
-export type ChatMessageKind = 'announcement' | 'question' | 'community';
+export type ChatMessageKind = 'announcement' | 'community';
 
 // A picture an admin attached to a Commons post: the address it is served from, what it
 // shows (read aloud by a screen reader), and its size, so its space is held before it loads.

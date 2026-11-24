@@ -1080,7 +1080,7 @@ CREATE TABLE IF NOT EXISTS feed_render_config (
   singleton_key BOOLEAN PRIMARY KEY DEFAULT TRUE,
   render_mode TEXT NOT NULL,
   max_timeline_page_size INTEGER NOT NULL DEFAULT 100,
-  enabled_channels JSONB NOT NULL DEFAULT '["announcements", "questions", "community"]'::jsonb,
+  enabled_channels JSONB NOT NULL DEFAULT '["announcements", "community"]'::jsonb,
   -- Commons consolidation: the blended channel is publicly viewable (read-only)
   -- to unauthenticated visitors when TRUE. Public-read enforcement route is tracked
   -- as a follow-up; this flag is the canonical config the admin/seed sets.
@@ -1092,7 +1092,7 @@ CREATE TABLE IF NOT EXISTS feed_render_config (
 ALTER TABLE IF EXISTS feed_render_config ADD COLUMN IF NOT EXISTS singleton_key BOOLEAN DEFAULT TRUE;
 ALTER TABLE IF EXISTS feed_render_config ADD COLUMN IF NOT EXISTS render_mode TEXT NOT NULL DEFAULT 'card_only';
 ALTER TABLE IF EXISTS feed_render_config ADD COLUMN IF NOT EXISTS max_timeline_page_size INTEGER NOT NULL DEFAULT 100;
-ALTER TABLE IF EXISTS feed_render_config ADD COLUMN IF NOT EXISTS enabled_channels JSONB NOT NULL DEFAULT '["announcements", "questions", "community"]'::jsonb;
+ALTER TABLE IF EXISTS feed_render_config ADD COLUMN IF NOT EXISTS enabled_channels JSONB NOT NULL DEFAULT '["announcements", "community"]'::jsonb;
 ALTER TABLE IF EXISTS feed_render_config ADD COLUMN IF NOT EXISTS is_public BOOLEAN NOT NULL DEFAULT TRUE;
 ALTER TABLE IF EXISTS feed_render_config ADD COLUMN IF NOT EXISTS updated_by_user_id TEXT NOT NULL DEFAULT 'system';
 ALTER TABLE IF EXISTS feed_render_config ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
@@ -1100,18 +1100,17 @@ ALTER TABLE IF EXISTS feed_render_config ADD COLUMN IF NOT EXISTS updated_at TIM
 ALTER TABLE IF EXISTS feed_render_config DROP COLUMN IF EXISTS kill_switch_enabled;
 -- Seed default feed config row (idempotent)
 INSERT INTO feed_render_config (singleton_key, render_mode, max_timeline_page_size, enabled_channels, updated_by_user_id, updated_at)
-SELECT TRUE, 'card_only', 100, '["announcements", "questions", "community"]'::jsonb, 'system', NOW()
+SELECT TRUE, 'card_only', 100, '["announcements", "community"]'::jsonb, 'system', NOW()
 WHERE NOT EXISTS (
   SELECT 1 FROM feed_render_config WHERE singleton_key IS TRUE
 );
 UPDATE feed_render_config
-SET enabled_channels = '["announcements", "questions", "community"]'::jsonb
+SET enabled_channels = '["announcements", "community"]'::jsonb
 WHERE enabled_channels IS NULL OR enabled_channels = '[]'::jsonb;
 CREATE TABLE IF NOT EXISTS feed_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   item_type TEXT NOT NULL,
   source_announcement_id UUID,
-  source_question_id UUID,
   source_community_post_id UUID,
   title TEXT NOT NULL,
   body TEXT NOT NULL,
@@ -1123,7 +1122,6 @@ CREATE TABLE IF NOT EXISTS feed_items (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-ALTER TABLE IF EXISTS feed_items ADD COLUMN IF NOT EXISTS source_question_id UUID;
 ALTER TABLE IF EXISTS feed_items ADD COLUMN IF NOT EXISTS source_community_post_id UUID;
 -- Retire the announcement priority/mandatory ranking (owner decision 2026-07-16): the Commons is a
 -- single time-ordered stream, so there is no manual ranking and no non-dismissable flag. Dropping
@@ -1131,7 +1129,6 @@ ALTER TABLE IF EXISTS feed_items ADD COLUMN IF NOT EXISTS source_community_post_
 ALTER TABLE IF EXISTS feed_items DROP COLUMN IF EXISTS priority;
 ALTER TABLE IF EXISTS feed_items DROP COLUMN IF EXISTS mandatory;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_feed_items_source_announcement_unique ON feed_items(source_announcement_id);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_feed_items_source_question_unique ON feed_items(source_question_id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_feed_items_source_community_post_unique ON feed_items(source_community_post_id);
 CREATE INDEX IF NOT EXISTS idx_feed_items_timeline_lookup ON feed_items(item_type, is_active, published_at DESC);
 -- === foundation_quote_requests ===
@@ -1313,110 +1310,6 @@ CREATE TABLE IF NOT EXISTS announcement_membership_events (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS feed_questions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  asked_by_user_id TEXT NOT NULL,
-  body TEXT NOT NULL,
-  category TEXT NOT NULL DEFAULT 'general',
-  location_context JSONB NULL,
-  llm_consent_granted BOOLEAN NOT NULL DEFAULT FALSE,
-  status TEXT NOT NULL DEFAULT 'open',
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-ALTER TABLE IF EXISTS feed_questions ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS feed_questions ADD COLUMN IF NOT EXISTS asked_by_user_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS feed_questions ADD COLUMN IF NOT EXISTS body TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS feed_questions ADD COLUMN IF NOT EXISTS category TEXT NOT NULL DEFAULT 'general';
-ALTER TABLE IF EXISTS feed_questions ADD COLUMN IF NOT EXISTS location_context JSONB NULL;
-ALTER TABLE IF EXISTS feed_questions ADD COLUMN IF NOT EXISTS llm_consent_granted BOOLEAN NOT NULL DEFAULT FALSE;
-ALTER TABLE IF EXISTS feed_questions ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'open';
-ALTER TABLE IF EXISTS feed_questions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE IF EXISTS feed_questions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-
-CREATE TABLE IF NOT EXISTS feed_answers (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  question_id UUID NOT NULL REFERENCES feed_questions(id) ON DELETE CASCADE,
-  answer_type TEXT NOT NULL CHECK (answer_type IN ('llm', 'community')),
-  body TEXT NOT NULL,
-  confidence NUMERIC(5,4) NULL,
-  model_id TEXT NULL,
-  sources JSONB NOT NULL DEFAULT '[]'::jsonb,
-  author_user_id TEXT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-ALTER TABLE IF EXISTS feed_answers ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS feed_answers ADD COLUMN IF NOT EXISTS question_id UUID;
-ALTER TABLE IF EXISTS feed_answers ADD COLUMN IF NOT EXISTS answer_type TEXT NOT NULL DEFAULT 'community';
-ALTER TABLE IF EXISTS feed_answers ADD COLUMN IF NOT EXISTS body TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS feed_answers ADD COLUMN IF NOT EXISTS confidence NUMERIC(5,4) NULL;
-ALTER TABLE IF EXISTS feed_answers ADD COLUMN IF NOT EXISTS model_id TEXT NULL;
-ALTER TABLE IF EXISTS feed_answers ADD COLUMN IF NOT EXISTS sources JSONB NOT NULL DEFAULT '[]'::jsonb;
-ALTER TABLE IF EXISTS feed_answers ADD COLUMN IF NOT EXISTS author_user_id TEXT NULL;
-ALTER TABLE IF EXISTS feed_answers ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE IF EXISTS feed_answers ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
--- Moderation for member-facing Q&A (2026-07-30). These tables had no moderation_status at all, so a
--- flagged answer could be read by an admin and then nothing could be done about it — the flag queue was
--- unbuildable. Same two states and same reason vocabulary as the Commons post tables, so one admin
--- surface can drive both. Nullable reason/actor/timestamp, null until a moderator acts.
-ALTER TABLE IF EXISTS feed_questions ADD COLUMN IF NOT EXISTS moderation_status TEXT NOT NULL DEFAULT 'accepted';
-ALTER TABLE IF EXISTS feed_questions ADD COLUMN IF NOT EXISTS moderation_reason TEXT NULL;
-ALTER TABLE IF EXISTS feed_questions ADD COLUMN IF NOT EXISTS moderated_by_user_id TEXT NULL;
-ALTER TABLE IF EXISTS feed_questions ADD COLUMN IF NOT EXISTS moderated_at TIMESTAMPTZ NULL;
-ALTER TABLE IF EXISTS feed_answers ADD COLUMN IF NOT EXISTS moderation_status TEXT NOT NULL DEFAULT 'accepted';
-ALTER TABLE IF EXISTS feed_answers ADD COLUMN IF NOT EXISTS moderation_reason TEXT NULL;
-ALTER TABLE IF EXISTS feed_answers ADD COLUMN IF NOT EXISTS moderated_by_user_id TEXT NULL;
-ALTER TABLE IF EXISTS feed_answers ADD COLUMN IF NOT EXISTS moderated_at TIMESTAMPTZ NULL;
--- Serves the flag queue: flagged answers, newest first, without scanning every answer.
-CREATE INDEX IF NOT EXISTS idx_feed_answers_moderation_status
-  ON feed_answers (moderation_status, created_at DESC);
-CREATE TABLE IF NOT EXISTS feed_answer_ratings (
-  user_id TEXT NOT NULL,
-  answer_id UUID NOT NULL REFERENCES feed_answers(id) ON DELETE CASCADE,
-  rating TEXT NOT NULL CHECK (rating IN ('helpful', 'not_helpful', 'flagged')),
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  PRIMARY KEY (user_id, answer_id)
-);
-ALTER TABLE IF EXISTS feed_answer_ratings ADD COLUMN IF NOT EXISTS user_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS feed_answer_ratings ADD COLUMN IF NOT EXISTS answer_id UUID;
-ALTER TABLE IF EXISTS feed_answer_ratings ADD COLUMN IF NOT EXISTS rating TEXT NOT NULL DEFAULT 'helpful';
-ALTER TABLE IF EXISTS feed_answer_ratings ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-ALTER TABLE IF EXISTS feed_answer_ratings ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
-
-CREATE TABLE IF NOT EXISTS llm_inference_log (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  actor_user_id TEXT NOT NULL,
-  question_id UUID NOT NULL REFERENCES feed_questions(id) ON DELETE CASCADE,
-  answer_id UUID NOT NULL REFERENCES feed_answers(id) ON DELETE CASCADE,
-  model_id TEXT NOT NULL,
-  request_payload JSONB NOT NULL DEFAULT '{}'::jsonb,
-  response_payload JSONB NOT NULL DEFAULT '{}'::jsonb,
-  sources JSONB NOT NULL DEFAULT '[]'::jsonb,
-  confidence NUMERIC(5,4) NULL,
-  latency_ms INTEGER NOT NULL DEFAULT 0,
-  prompt_token_count INTEGER NOT NULL DEFAULT 0,
-  completion_token_count INTEGER NOT NULL DEFAULT 0,
-  total_token_count INTEGER NOT NULL DEFAULT 0,
-  status TEXT NOT NULL DEFAULT 'completed',
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-ALTER TABLE IF EXISTS llm_inference_log ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS llm_inference_log ADD COLUMN IF NOT EXISTS actor_user_id TEXT NOT NULL DEFAULT '';
-ALTER TABLE IF EXISTS llm_inference_log ADD COLUMN IF NOT EXISTS question_id UUID;
-ALTER TABLE IF EXISTS llm_inference_log ADD COLUMN IF NOT EXISTS answer_id UUID;
-ALTER TABLE IF EXISTS llm_inference_log ADD COLUMN IF NOT EXISTS model_id TEXT NOT NULL DEFAULT 'ctf-approved-sources-summarizer-v1';
-ALTER TABLE IF EXISTS llm_inference_log ADD COLUMN IF NOT EXISTS request_payload JSONB NOT NULL DEFAULT '{}'::jsonb;
-ALTER TABLE IF EXISTS llm_inference_log ADD COLUMN IF NOT EXISTS response_payload JSONB NOT NULL DEFAULT '{}'::jsonb;
-ALTER TABLE IF EXISTS llm_inference_log ADD COLUMN IF NOT EXISTS sources JSONB NOT NULL DEFAULT '[]'::jsonb;
-ALTER TABLE IF EXISTS llm_inference_log ADD COLUMN IF NOT EXISTS confidence NUMERIC(5,4) NULL;
-ALTER TABLE IF EXISTS llm_inference_log ADD COLUMN IF NOT EXISTS latency_ms INTEGER NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS llm_inference_log ADD COLUMN IF NOT EXISTS prompt_token_count INTEGER NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS llm_inference_log ADD COLUMN IF NOT EXISTS completion_token_count INTEGER NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS llm_inference_log ADD COLUMN IF NOT EXISTS total_token_count INTEGER NOT NULL DEFAULT 0;
-ALTER TABLE IF EXISTS llm_inference_log ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'completed';
-ALTER TABLE IF EXISTS llm_inference_log ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
 CREATE TABLE IF NOT EXISTS feed_community_posts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1454,22 +1347,16 @@ ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS created_at T
 ALTER TABLE IF EXISTS feed_community_posts ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
 -- Clear Commons timeline copies whose source row is gone (owner report, 2026-08-09).
--- Every community post and AI question is copied into a feed_items row that carries the same text.
--- Account deletion used to remove the post/question but keep the copy, so a deleted member's words
+-- Every community post is copied into a feed_items row that carries the same text.
+-- Account deletion used to remove the post but keep the copy, so a deleted member's words
 -- stayed on the Commons, re-labeled with the fallback handle built from the placeholder author id
 -- ("user-hub-syst") — the same handle every time, so it looked like an anonymised post rather than a
 -- deletion. The deletion registry now removes the copy with the source; this clears the ones already
--- left behind. Announcement copies carry neither source id and are untouched. Idempotent: a second
+-- left behind. Announcement copies carry no community source id and are untouched. Idempotent: a second
 -- run matches nothing. Deleting a feed_items row cascades its targets, read state, and dismissals.
 DELETE FROM feed_items f
-WHERE (
-        f.source_community_post_id IS NOT NULL
-        AND NOT EXISTS (SELECT 1 FROM feed_community_posts p WHERE p.id = f.source_community_post_id)
-      )
-   OR (
-        f.source_question_id IS NOT NULL
-        AND NOT EXISTS (SELECT 1 FROM feed_questions q WHERE q.id = f.source_question_id)
-      );
+WHERE f.source_community_post_id IS NOT NULL
+  AND NOT EXISTS (SELECT 1 FROM feed_community_posts p WHERE p.id = f.source_community_post_id);
 
 CREATE TABLE IF NOT EXISTS feed_community_replies (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1633,10 +1520,6 @@ ALTER TABLE IF EXISTS admin_area_seen ADD COLUMN IF NOT EXISTS user_id TEXT;
 ALTER TABLE IF EXISTS admin_area_seen ADD COLUMN IF NOT EXISTS area_slug TEXT;
 ALTER TABLE IF EXISTS admin_area_seen ADD COLUMN IF NOT EXISTS seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
-CREATE INDEX IF NOT EXISTS idx_feed_questions_created_at ON feed_questions(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_feed_answers_question_created_at ON feed_answers(question_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_feed_answer_ratings_answer_id ON feed_answer_ratings(answer_id);
-CREATE INDEX IF NOT EXISTS idx_llm_inference_log_question_created_at ON llm_inference_log(question_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_feed_community_posts_created_at ON feed_community_posts(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_feed_community_posts_reply_to ON feed_community_posts(reply_to_post_id);
 CREATE INDEX IF NOT EXISTS idx_feed_community_replies_post_created_at ON feed_community_replies(post_id, created_at ASC);
@@ -6142,8 +6025,7 @@ CREATE INDEX IF NOT EXISTS idx_comic_training_examples_source_turn_id ON comic_t
 -- Quality signal for answered @comic turns (helpful / not_helpful / flagged). Keyed on the
 -- answered turn (the approved bot draft or the owner's corrected human turn) so a rating attaches
 -- to the exact text the asker saw. One rating per (user, turn); re-rating updates in place.
--- Mirrors the feed_answer_ratings pattern but references comic_turns (feed_answer_ratings is FK'd
--- into feed_answers and cannot host comic turns). Feeds the CDD training flywheel.
+-- Feeds the CDD training set.
 CREATE TABLE IF NOT EXISTS comic_answer_ratings (
   user_id TEXT NOT NULL,
   turn_id UUID NOT NULL REFERENCES comic_turns(id) ON DELETE CASCADE,

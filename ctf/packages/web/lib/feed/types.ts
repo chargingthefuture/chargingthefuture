@@ -3,55 +3,16 @@ import type { CommonsMessageImage } from 'lib/commons/types';
 
 export type FeedRenderMode = 'card_only' | 'card_toast';
 
-export type FeedChannel = 'all' | 'announcements' | 'questions' | 'community';
+export type FeedChannel = 'all' | 'announcements' | 'community';
 
 export type FeedEnabledChannel = Exclude<FeedChannel, 'all'>;
 
 // A feed item's stored `item_type`. These are singular ('announcement') while the enabled-channel
 // names are plural ('announcements'); FEED_CHANNEL_TO_ITEM_TYPE bridges the two so a channel filter
 // matches the rows it is meant to.
-export type FeedItemType = 'announcement' | 'question' | 'community';
-
-export type FeedQuestionCategory = 'housing' | 'services' | 'general' | 'safety' | 'benefits';
+export type FeedItemType = 'announcement' | 'community';
 
 export type FeedCommunityCategory = 'general' | 'peer_support' | 'resource_share' | 'event';
-
-export type FeedAnswerRatingValue = 'helpful' | 'not_helpful' | 'flagged';
-
-export type FeedLocationContext = {
-  zipCode: string;
-  radiusMiles: number | null;
-};
-
-export type FeedAnswerSource = {
-  id: string;
-  label: string;
-  detail: string;
-};
-
-export type FeedAnswer = {
-  id: string;
-  questionId: string;
-  answerType: 'llm' | 'community';
-  body: string;
-  confidence: number | null;
-  modelId: string | null;
-  sources: FeedAnswerSource[];
-  authorUserId: string | null;
-  ratingSummary: Record<FeedAnswerRatingValue, number>;
-  currentUserRating: FeedAnswerRatingValue | null;
-  createdAtIso: string;
-};
-
-export type FeedQuestionDetail = {
-  id: string;
-  body: string;
-  category: FeedQuestionCategory;
-  location: FeedLocationContext | null;
-  llmConsentGranted: boolean;
-  answerCount: number;
-  answers: FeedAnswer[];
-};
 
 export type FeedCommunityReply = {
   id: string;
@@ -148,7 +109,6 @@ export type FeedTimelineItem = {
   id: string;
   itemType: FeedItemType;
   sourceAnnouncementId: string | null;
-  sourceQuestionId: string | null;
   sourceCommunityPostId: string | null;
   title: string;
   body: string;
@@ -156,7 +116,6 @@ export type FeedTimelineItem = {
   expiresAtIso: string | null;
   isRead: boolean;
   isDismissed: boolean;
-  question: FeedQuestionDetail | null;
   community: FeedCommunityDetail | null;
   // Reaction + reply aggregate for an announcement item (null for non-announcement items).
   announcement: FeedAnnouncementDetail | null;
@@ -216,13 +175,6 @@ export type AnnouncementDraftInput = {
 };
 
 export type MembershipEventType = 'join' | 'leave';
-
-export type FeedQuestionInput = {
-  body: string;
-  category?: FeedQuestionCategory;
-  location?: FeedLocationContext | null;
-  consentGranted: boolean;
-};
 
 export type FeedCommunityPostInput = {
   body: string;

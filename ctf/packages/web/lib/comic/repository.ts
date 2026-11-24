@@ -452,10 +452,8 @@ async function logComicInference(
     draft: OllamaDraft;
   },
 ): Promise<void> {
-  // `llm_inference_log` requires non-null question_id/answer_id FKs into the feed tables, so the
-  // comic generation audit is recorded on the comic turns themselves (request/response payloads)
-  // and not forced into the feed-shaped log. We keep a structured console audit for parity with
-  // the feed inference trail without violating the feed FK constraints.
+  // The comic generation audit is recorded on the comic turns themselves (request/response
+  // payloads), plus this structured log line.
   console.info(
     '[comic.inference]',
     JSON.stringify({

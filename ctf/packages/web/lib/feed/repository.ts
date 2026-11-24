@@ -3,7 +3,6 @@ import { queryDb, withDbTransaction } from 'lib/db/postgres';
 import {
   FEED_ALLOWED_CHANNELS,
   FEED_CHANNEL_TO_ITEM_TYPE,
-  FEED_ANSWER_RATINGS,
   FEED_COMMUNITY_CATEGORIES,
   FEED_DEFAULT_PAGE,
   FEED_DEFAULT_PAGE_SIZE,
@@ -13,11 +12,9 @@ import {
   FEED_MAX_COMMUNITY_POST_URLS,
   FEED_MAX_COMMUNITY_REPLY_LENGTH,
   FEED_MAX_PAGE_SIZE,
-  FEED_MAX_QUESTION_LENGTH,
   FEED_MAX_TITLE_LENGTH,
   FEED_MODERATION_STATUS,
   FEED_SYSTEM_ACTOR_ID,
-  FEED_QUESTION_CATEGORIES,
   FEED_REACTION_EMOJIS,
   isAllowedFeedReactionEmoji,
 } from './constants';
@@ -31,7 +28,6 @@ import { extractMentionHandles, feedAuthorHandle, feedMentionTokens } from './au
 import { normalizeMultilineText } from './normalize';
 import { insertCommunityPostImage, loadCommunityPostImages, type FeedCommunityImage } from './community-images';
 import { toCommonsMessageImage } from 'lib/commons/message-image';
-import { generateFeedAssistedAnswer, inferFeedQuestionCategory } from './inference';
 import { getPluginBySlug, getPluginRoute, isAdminOnlyPlugin } from 'lib/plugins/repository';
 import { notifySafe } from 'lib/notifications/repository';
 import { isBlockedBetween } from 'lib/blocks/repository';
@@ -46,8 +42,6 @@ import type {
   Announcement,
   AnnouncementDraftInput,
   AnnouncementTargeting,
-  FeedAnswer,
-  FeedAnswerRatingValue,
   FeedChannel,
   FeedCommunityCategory,
   FeedCommunityDetail,
@@ -60,11 +54,7 @@ import type {
   FeedConfig,
   FeedConfigInput,
   FeedEnabledChannel,
-  FeedLocationContext,
   FeedPagination,
-  FeedQuestionCategory,
-  FeedQuestionDetail,
-  FeedQuestionInput,
   FeedTimelineItem,
   MembershipEventType,
   PublicCommunityPost,
@@ -81,9 +71,8 @@ type FeedConfigRow = {
 
 type FeedTimelineRow = {
   id: string;
-  item_type: 'announcement' | 'question' | 'community';
+  item_type: 'announcement' | 'community';
   source_announcement_id: string | null;
-  source_question_id: string | null;
   source_community_post_id: string | null;
   title: string;
   body: string;
@@ -111,34 +100,6 @@ type AnnouncementRow = {
 };
 
 type CountRow = { total: string };
-
-type FeedQuestionRow = {
-  id: string;
-  asked_by_user_id: string;
-  body: string;
-  category: FeedQuestionCategory;
-  location_context: unknown;
-  llm_consent_granted: boolean;
-  created_at: Date;
-};
-
-type FeedAnswerRow = {
-  id: string;
-  question_id: string;
-  answer_type: 'llm' | 'community';
-  body: string;
-  confidence: string | null;
-  model_id: string | null;
-  sources: unknown;
-  author_user_id: string | null;
-  created_at: Date;
-};
-
-type FeedAnswerRatingRow = {
-  answer_id: string;
-  rating: FeedAnswerRatingValue;
-  total: string;
-};
 
 type FeedCommunityPostRow = {
   id: string;
@@ -303,46 +264,6 @@ function normalizeCommunityCategory(value: unknown): FeedCommunityCategory {
     : 'general';
 }
 
-function normalizeLocationContext(value: unknown): FeedLocationContext | null {
-  if (!value || typeof value !== 'object') {
-    return null;
-  }
-
-  const location = value as { zipCode?: unknown; radiusMiles?: unknown };
-  const zipCode = typeof location.zipCode === 'string' ? normalizeText(location.zipCode) : '';
-  const radiusValue = typeof location.radiusMiles === 'number'
-    ? location.radiusMiles
-    : Number.parseInt(String(location.radiusMiles ?? ''), 10);
-
-  if (zipCode.length === 0) {
-    return null;
-  }
-
-  return {
-    zipCode,
-    radiusMiles: Number.isFinite(radiusValue) && radiusValue > 0 ? radiusValue : null,
-  };
-}
-
-function normalizeAnswerSources(value: unknown): FeedAnswer['sources'] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return value.flatMap((item) => {
-    if (!item || typeof item !== 'object') {
-      return [];
-    }
-
-    const source = item as { id?: unknown; label?: unknown; detail?: unknown };
-    if (typeof source.id !== 'string' || typeof source.label !== 'string' || typeof source.detail !== 'string') {
-      return [];
-    }
-
-    return [{ id: source.id, label: source.label, detail: source.detail }];
-  });
-}
-
 function mapAnnouncement(row: AnnouncementRow): Announcement {
   return {
     id: row.id,
@@ -372,10 +293,6 @@ function mapFeedConfig(row: FeedConfigRow): FeedConfig {
   };
 }
 
-function getQuestionTitle(category: FeedQuestionCategory): string {
-  return `${category.charAt(0).toUpperCase()}${category.slice(1)} question`;
-}
-
 function getCommunityTitle(category: FeedCommunityCategory): string {
   return `${category.replace(/_/g, ' ')} update`;
 }
@@ -399,7 +316,6 @@ function passesFeedModeration(text: string, urlCap: number = FEED_MAX_COMMUNITY_
 // ever reach the SQL string. Value literals stay parameterized ($1/$2); table and column names cannot
 // be parameters in SQL, so an allow-list is the safe form.
 const FEED_RATE_LIMIT_TABLES = {
-  feed_questions: 'asked_by_user_id',
   feed_community_posts: 'author_user_id',
   feed_community_replies: 'author_user_id',
   commons_item_messages: 'author_id',
@@ -530,35 +446,6 @@ async function syncFeedItemForAnnouncement(
 
   const feedItemId = feedItemResult.rows[0].id;
   await upsertFeedTargets(client, feedItemId, announcement.targeting);
-}
-
-async function syncFeedItemForQuestion(
-  client: PoolClient,
-  actorId: string,
-  questionId: string,
-  title: string,
-  body: string,
-): Promise<void> {
-  const feedItemResult = await client.query<{ id: string }>(
-    `
-      INSERT INTO feed_items
-        (item_type, source_question_id, title, body, published_at, is_active, created_by_user_id, updated_by_user_id)
-      VALUES
-        ('question', $1::uuid, $2, $3, NOW(), TRUE, $4, $4)
-      ON CONFLICT (source_question_id)
-      DO UPDATE SET
-        item_type = EXCLUDED.item_type,
-        title = EXCLUDED.title,
-        body = EXCLUDED.body,
-        is_active = TRUE,
-        updated_by_user_id = EXCLUDED.updated_by_user_id,
-        updated_at = NOW()
-      RETURNING id
-    `,
-    [questionId, title, body, actorId],
-  );
-
-  await upsertDefaultFeedTargets(client, feedItemResult.rows[0].id);
 }
 
 // Bring every already-published standing notice back in line with its current wording.
@@ -705,40 +592,6 @@ async function syncFeedItemForCommunityPost(
   await upsertDefaultFeedTargets(client, feedItemResult.rows[0].id);
 }
 
-function mapAnswerRows(
-  answerRows: FeedAnswerRow[],
-  ratingRows: FeedAnswerRatingRow[],
-  currentUserRatings: Map<string, FeedAnswerRatingValue>,
-): Map<string, FeedAnswer[]> {
-  const ratingsByAnswer = new Map<string, Record<FeedAnswerRatingValue, number>>();
-  for (const rating of ratingRows) {
-    const current = ratingsByAnswer.get(rating.answer_id) ?? { helpful: 0, not_helpful: 0, flagged: 0 };
-    current[rating.rating] = Number.parseInt(rating.total, 10);
-    ratingsByAnswer.set(rating.answer_id, current);
-  }
-
-  const answersByQuestion = new Map<string, FeedAnswer[]>();
-  for (const row of answerRows) {
-    const current = answersByQuestion.get(row.question_id) ?? [];
-    current.push({
-      id: row.id,
-      questionId: row.question_id,
-      answerType: row.answer_type,
-      body: row.body,
-      confidence: row.confidence === null ? null : Number.parseFloat(row.confidence),
-      modelId: row.model_id,
-      sources: normalizeAnswerSources(row.sources),
-      authorUserId: row.author_user_id,
-      ratingSummary: ratingsByAnswer.get(row.id) ?? { helpful: 0, not_helpful: 0, flagged: 0 },
-      currentUserRating: currentUserRatings.get(row.id) ?? null,
-      createdAtIso: toIso(row.created_at),
-    });
-    answersByQuestion.set(row.question_id, current);
-  }
-
-  return answersByQuestion;
-}
-
 export function parsePaginationParams(url: string): { page: number; pageSize: number } {
   const params = new URL(url).searchParams;
   const pageRaw = Number.parseInt(params.get('page') ?? '', 10);
@@ -794,13 +647,6 @@ export function validateAnnouncementDraftInput(input: AnnouncementDraftInput): b
   ];
 
   return checks.every(Boolean);
-}
-
-export function validateFeedQuestionInput(input: FeedQuestionInput): boolean {
-  const body = normalizeText(input.body ?? '');
-  return body.length > 0
-    && body.length <= FEED_MAX_QUESTION_LENGTH
-    && typeof input.consentGranted === 'boolean';
 }
 
 export function validateFeedCommunityPostInput(
@@ -1041,20 +887,20 @@ function notBlockedWithViewerSql(viewer: string, authorColumn: string): string {
               )`;
 }
 
-// Hide a Commons post or AI Q&A card whose source row is gone, or hidden by a moderator.
+// Hide a Commons post whose source row is gone, or hidden by a moderator.
 //
-// A community/question item in `feed_items` is only ever a COPY of a row in `feed_community_posts` /
-// `feed_questions`, carrying the same text. When the source row went away but the copy did not, the
+// A community item in `feed_items` is only ever a COPY of a row in `feed_community_posts`, carrying
+// the same text. When the source row went away but the copy did not, the
 // copy kept rendering the member's words with no author to resolve, so the read path fell back to the
 // pseudonym built from the placeholder id (`user-hub-syst`) — a deleted post reappearing under a
 // generic name (owner report, 2026-08-09). Account deletion now removes the copy too, and schema.sql
 // clears the ones already left behind; this guard is the standing safeguard so no other path can put
-// a member's deleted words back on screen. Announcement items carry neither source id and pass
-// straight through.
+// a member's deleted words back on screen. Announcement items carry no community source id and
+// pass straight through.
 //
 // A moderator's hide changes only the source row's `moderation_status`; the copy keeps its text and
 // stays active. So the guard also requires the source to be `accepted`, the same test the detail
-// loaders apply. Without it a hidden post or question stayed in every member's Commons, signed with
+// loaders apply. Without it a hidden post stayed in every member's Commons, signed with
 // the fallback handle because the detail loader had dropped its author. Restoring the source puts the
 // item back with nothing else to undo.
 const HIDE_MISSING_OR_HIDDEN_SOURCE_ROWS_SQL = `
@@ -1063,13 +909,6 @@ const HIDE_MISSING_OR_HIDDEN_SOURCE_ROWS_SQL = `
             OR EXISTS (
               SELECT 1 FROM feed_community_posts p
               WHERE p.id = f.source_community_post_id AND p.moderation_status = 'accepted'
-            )
-          )
-          AND (
-            f.source_question_id IS NULL
-            OR EXISTS (
-              SELECT 1 FROM feed_questions q
-              WHERE q.id = f.source_question_id AND q.moderation_status = 'accepted'
             )
           )`;
 
@@ -1197,7 +1036,6 @@ async function queryFeedTimelineRows(
           f.id,
           f.item_type,
           f.source_announcement_id,
-          f.source_question_id,
           f.source_community_post_id,
           f.title,
           f.body,
@@ -1232,94 +1070,17 @@ async function queryFeedTimelineRows(
 }
 
 // Collect the distinct source ids referenced by a page of timeline rows, split by kind, so each
-// detail set (questions, community posts, announcements) can be batch-loaded.
+// detail set (community posts, announcements) can be batch-loaded.
 function collectTimelineSourceIds(rows: FeedTimelineRow[]): {
-  questionIds: string[];
   communityIds: string[];
   announcementIds: string[];
 } {
-  const questionIds = rows.flatMap((row) => (row.source_question_id ? [row.source_question_id] : []));
   const communityIds = rows.flatMap((row) => (row.source_community_post_id ? [row.source_community_post_id] : []));
   const announcementIds = rows.flatMap((row) =>
     row.item_type === 'announcement' && row.source_announcement_id ? [row.source_announcement_id] : [],
   );
 
-  return { questionIds, communityIds, announcementIds };
-}
-
-// Batch-load the question detail (body, category, location, and answers with rating summaries and
-// the requesting member's own rating) for the questions on this timeline page. Keyed by question id.
-async function loadQuestionDetails(
-  client: PoolClient,
-  questionIds: string[],
-  userId: string,
-): Promise<Map<string, FeedQuestionDetail>> {
-  const questionDetails = new Map<string, FeedQuestionDetail>();
-  if (questionIds.length === 0) {
-    return questionDetails;
-  }
-
-  const [questionRows, answerRows, ratingRows, currentUserRatings] = await Promise.all([
-    client.query<FeedQuestionRow>(
-      `
-            SELECT id, asked_by_user_id, body, category, location_context, llm_consent_granted, created_at
-            FROM feed_questions
-            WHERE id = ANY($1::uuid[])
-              AND moderation_status = 'accepted'
-          `,
-      [questionIds],
-    ),
-    client.query<FeedAnswerRow>(
-      `
-            SELECT id, question_id, answer_type, body, confidence::text, model_id, sources, author_user_id, created_at
-            FROM feed_answers
-            WHERE question_id = ANY($1::uuid[])
-              AND moderation_status = 'accepted'
-            ORDER BY created_at ASC
-          `,
-      [questionIds],
-    ),
-    client.query<FeedAnswerRatingRow>(
-      `
-            SELECT answer_id, rating, COUNT(*)::text AS total
-            FROM feed_answer_ratings
-            WHERE answer_id IN (
-              SELECT id FROM feed_answers WHERE question_id = ANY($1::uuid[])
-            )
-            GROUP BY answer_id, rating
-          `,
-      [questionIds],
-    ),
-    client.query<{ answer_id: string; rating: FeedAnswerRatingValue }>(
-      `
-            SELECT answer_id, rating
-            FROM feed_answer_ratings
-            WHERE user_id = $1
-              AND answer_id IN (
-                SELECT id FROM feed_answers WHERE question_id = ANY($2::uuid[])
-              )
-          `,
-      [userId, questionIds],
-    ),
-  ]);
-
-  const currentUserRatingMap = new Map(currentUserRatings.rows.map((row) => [row.answer_id, row.rating]));
-  const answersByQuestion = mapAnswerRows(answerRows.rows, ratingRows.rows, currentUserRatingMap);
-
-  for (const row of questionRows.rows) {
-    const answers = answersByQuestion.get(row.id) ?? [];
-    questionDetails.set(row.id, {
-      id: row.id,
-      body: row.body,
-      category: row.category,
-      location: normalizeLocationContext(row.location_context),
-      llmConsentGranted: row.llm_consent_granted,
-      answerCount: answers.length,
-      answers,
-    });
-  }
-
-  return questionDetails;
+  return { communityIds, announcementIds };
 }
 
 // Build post id → ordered reaction summaries from the batched reaction aggregate rows. Only emojis
@@ -1561,11 +1322,10 @@ async function loadAnnouncementDetails(
 }
 
 // Project a raw timeline row into the client-facing FeedTimelineItem, attaching the matching
-// pre-loaded question/community/announcement detail (or null when the source is absent).
+// pre-loaded community/announcement detail (or null when the source is absent).
 function buildTimelineItem(
   row: FeedTimelineRow,
   details: {
-    questionDetails: Map<string, FeedQuestionDetail>;
     communityDetails: Map<string, FeedCommunityDetail>;
     announcementDetailsById: Map<string, FeedAnnouncementDetail>;
   },
@@ -1574,7 +1334,6 @@ function buildTimelineItem(
     id: row.id,
     itemType: row.item_type,
     sourceAnnouncementId: row.source_announcement_id,
-    sourceQuestionId: row.source_question_id,
     sourceCommunityPostId: row.source_community_post_id,
     title: row.title,
     body: row.body,
@@ -1582,7 +1341,6 @@ function buildTimelineItem(
     expiresAtIso: row.expires_at ? toIso(row.expires_at) : null,
     isRead: row.is_read,
     isDismissed: row.is_dismissed,
-    question: row.source_question_id ? (details.questionDetails.get(row.source_question_id) ?? null) : null,
     community: row.source_community_post_id ? (details.communityDetails.get(row.source_community_post_id) ?? null) : null,
     announcement: row.item_type === 'announcement' && row.source_announcement_id
       ? (details.announcementDetailsById.get(row.source_announcement_id) ?? null)
@@ -1643,17 +1401,16 @@ export async function listFeedTimeline(
       pageSize: pagination.pageSize,
     });
 
-    const { questionIds, communityIds, announcementIds } = collectTimelineSourceIds(rows);
+    const { communityIds, announcementIds } = collectTimelineSourceIds(rows);
 
     // These detail loads run sequentially (not in Promise.all) because they share one transaction
     // client, and a single pg client cannot run overlapping queries.
-    const questionDetails = await loadQuestionDetails(client, questionIds, userId);
     const communityDetails = await loadCommunityDetails(client, communityIds, userId);
     const announcementDetailsById = await loadAnnouncementDetails(client, announcementIds, userId);
 
     return {
       items: rows.map((row) =>
-        buildTimelineItem(row, { questionDetails, communityDetails, announcementDetailsById }),
+        buildTimelineItem(row, { communityDetails, announcementDetailsById }),
       ),
       pagination: {
         page: pagination.page,
@@ -2121,163 +1878,6 @@ export async function dismissAnnouncement(
   );
 
   return { dismissedAtIso: new Date(dismissed.rows[0].dismissed_at).toISOString() };
-}
-
-export async function createFeedQuestion(actorId: string, input: FeedQuestionInput): Promise<{ questionId: string; createdAtIso: string }> {
-  return withDbTransaction(async (client) => {
-    const body = normalizeText(input.body);
-    const category = inferFeedQuestionCategory(body, input.category);
-    const location = normalizeLocationContext(input.location);
-
-    if (!passesFeedModeration(body)) {
-      throw new Error('content_policy_violation');
-    }
-
-    const allowed = await evaluateFeedRateLimit(client, {
-      userId: actorId,
-      tableName: 'feed_questions',
-      limit: 5,
-      windowMinutes: 60,
-    });
-    if (!allowed) {
-      throw new Error('rate_limit_exceeded');
-    }
-
-    const inserted = await client.query<{ id: string; created_at: Date }>(
-      `
-        INSERT INTO feed_questions
-          (asked_by_user_id, body, category, location_context, llm_consent_granted)
-        VALUES
-          ($1, $2, $3, $4::jsonb, $5)
-        RETURNING id, created_at
-      `,
-      [actorId, body, category, JSON.stringify(location), input.consentGranted],
-    );
-
-    const questionId = inserted.rows[0].id;
-    await syncFeedItemForQuestion(client, actorId, questionId, getQuestionTitle(category), body);
-
-    return {
-      questionId,
-      createdAtIso: toIso(inserted.rows[0].created_at),
-    };
-  });
-}
-
-export async function generateFeedQuestionAnswer(actorId: string, questionId: string): Promise<FeedAnswer> {
-  return withDbTransaction(async (client) => {
-    const question = await client.query<FeedQuestionRow>(
-      `
-        SELECT id, asked_by_user_id, body, category, location_context, llm_consent_granted, created_at
-        FROM feed_questions
-        WHERE id = $1::uuid
-          AND moderation_status = 'accepted'
-        LIMIT 1
-      `,
-      [questionId],
-    );
-
-    if (question.rows.length === 0) {
-      throw new Error('question_not_found');
-    }
-
-    const row = question.rows[0];
-    if (!row.llm_consent_granted) {
-      throw new Error('llm_consent_required');
-    }
-
-    const existing = await client.query<FeedAnswerRow>(
-      `
-        SELECT id, question_id, answer_type, body, confidence::text, model_id, sources, author_user_id, created_at
-        FROM feed_answers
-        WHERE question_id = $1::uuid AND answer_type = 'llm'
-        ORDER BY created_at DESC
-        LIMIT 1
-      `,
-      [questionId],
-    );
-
-    if (existing.rows.length > 0) {
-      const mapped = mapAnswerRows(existing.rows, [], new Map()).get(questionId) ?? [];
-      return mapped[0];
-    }
-
-    const draft = await generateFeedAssistedAnswer({
-      questionBody: row.body,
-      category: row.category,
-      location: normalizeLocationContext(row.location_context),
-    });
-
-    const inserted = await client.query<FeedAnswerRow>(
-      `
-        INSERT INTO feed_answers
-          (question_id, answer_type, body, confidence, model_id, sources, author_user_id)
-        VALUES
-          ($1::uuid, 'llm', $2, $3, $4, $5::jsonb, NULL)
-        RETURNING id, question_id, answer_type, body, confidence::text, model_id, sources, author_user_id, created_at
-      `,
-      [questionId, draft.body, draft.confidence, draft.modelId, JSON.stringify(draft.sources)],
-    );
-
-    await client.query(
-      `
-        INSERT INTO llm_inference_log
-          (actor_user_id, question_id, answer_id, model_id, request_payload, response_payload, sources, confidence, latency_ms, prompt_token_count, completion_token_count, total_token_count, status)
-        VALUES
-          ($1, $2::uuid, $3::uuid, $4, $5::jsonb, $6::jsonb, $7::jsonb, $8, $9, $10, $11, $12, 'completed')
-      `,
-      [
-        actorId,
-        questionId,
-        inserted.rows[0].id,
-        draft.modelId,
-        JSON.stringify({ questionBody: row.body, category: row.category, location: normalizeLocationContext(row.location_context) }),
-        JSON.stringify({ answerBody: draft.body }),
-        JSON.stringify(draft.sources),
-        draft.confidence,
-        draft.latencyMs,
-        draft.promptTokenCount,
-        draft.completionTokenCount,
-        draft.promptTokenCount + draft.completionTokenCount,
-      ],
-    );
-
-    const mapped = mapAnswerRows(inserted.rows, [], new Map()).get(questionId) ?? [];
-    return mapped[0];
-  });
-}
-
-export async function rateFeedAnswer(
-  actorId: string,
-  answerId: string,
-  rating: FeedAnswerRatingValue,
-): Promise<{ answerId: string; ratedAtIso: string }> {
-  return withDbTransaction(async (client) => {
-    const answer = await client.query<{ id: string }>(
-      'SELECT id FROM feed_answers WHERE id = $1::uuid LIMIT 1',
-      [answerId],
-    );
-
-    if (answer.rows.length === 0) {
-      throw new Error('answer_not_found');
-    }
-
-    const result = await client.query<{ updated_at: Date }>(
-      `
-        INSERT INTO feed_answer_ratings (user_id, answer_id, rating)
-        VALUES ($1, $2::uuid, $3)
-        ON CONFLICT (user_id, answer_id)
-        DO UPDATE SET rating = EXCLUDED.rating, updated_at = NOW()
-        RETURNING updated_at
-      `,
-      [actorId, answerId, rating],
-    );
-
-    return {
-      answerId,
-      ratedAtIso: toIso(result.rows[0].updated_at),
-    };
-  });
 }
 
 export async function createFeedCommunityPost(
@@ -2964,202 +2564,4 @@ export async function emitMembershipEvent(input: {
 
 export function isValidFeedChannel(value: string | null): value is FeedChannel {
   return value === 'all' || FEED_ALLOWED_CHANNELS.includes(value as FeedEnabledChannel);
-}
-
-export function isValidAnswerRating(value: string): value is FeedAnswerRatingValue {
-  return FEED_ANSWER_RATINGS.includes(value as FeedAnswerRatingValue);
-}
-
-export function isValidFeedQuestionCategory(value: string): value is FeedQuestionCategory {
-  return FEED_QUESTION_CATEGORIES.includes(value as FeedQuestionCategory);
-}
-
-type AdminFeedQuestionRow = {
-  id: string;
-  asked_by_user_id: string;
-  body: string;
-  category: FeedQuestionCategory;
-  location_context: unknown;
-  llm_consent_granted: boolean;
-  created_at: Date;
-  answer_count: string;
-  helpful_count: string;
-  not_helpful_count: string;
-  flagged_count: string;
-};
-
-export type AdminFeedQuestion = {
-  id: string;
-  askedByUserId: string;
-  body: string;
-  category: FeedQuestionCategory;
-  location: FeedLocationContext | null;
-  llmConsentGranted: boolean;
-  createdAtIso: string;
-  answerCount: number;
-  ratingSummary: { helpful: number; not_helpful: number; flagged: number };
-};
-
-function mapAdminQuestion(row: AdminFeedQuestionRow): AdminFeedQuestion {
-  return {
-    id: row.id,
-    askedByUserId: row.asked_by_user_id,
-    body: row.body,
-    category: row.category,
-    location: normalizeLocationContext(row.location_context),
-    llmConsentGranted: row.llm_consent_granted,
-    createdAtIso: toIso(row.created_at),
-    answerCount: Number.parseInt(row.answer_count, 10),
-    ratingSummary: {
-      helpful: Number.parseInt(row.helpful_count, 10),
-      not_helpful: Number.parseInt(row.not_helpful_count, 10),
-      flagged: Number.parseInt(row.flagged_count, 10),
-    },
-  };
-}
-
-export async function listAdminQuestions(
-  pagination: { page: number; pageSize: number },
-  filters: { category?: FeedQuestionCategory | null },
-): Promise<{ items: AdminFeedQuestion[]; pagination: FeedPagination }> {
-  const offset = (pagination.page - 1) * pagination.pageSize;
-  const categoryFilter = filters.category ?? null;
-
-  const [countResult, rows] = await Promise.all([
-    queryDb<CountRow>(
-      `
-        SELECT COUNT(DISTINCT fq.id)::text AS total
-        FROM feed_questions fq
-        WHERE ($1::text IS NULL OR fq.category = $1)
-      `,
-      [categoryFilter],
-    ),
-    queryDb<AdminFeedQuestionRow>(
-      `
-        SELECT
-          fq.id,
-          fq.asked_by_user_id,
-          fq.body,
-          fq.category,
-          fq.location_context,
-          fq.llm_consent_granted,
-          fq.created_at,
-          COUNT(DISTINCT fa.id)::text AS answer_count,
-          COALESCE(SUM(CASE WHEN far.rating = 'helpful'     THEN 1 ELSE 0 END), 0)::text AS helpful_count,
-          COALESCE(SUM(CASE WHEN far.rating = 'not_helpful' THEN 1 ELSE 0 END), 0)::text AS not_helpful_count,
-          COALESCE(SUM(CASE WHEN far.rating = 'flagged'     THEN 1 ELSE 0 END), 0)::text AS flagged_count
-        FROM feed_questions fq
-        LEFT JOIN feed_answers fa ON fa.question_id = fq.id AND fa.answer_type = 'llm'
-        LEFT JOIN feed_answer_ratings far ON far.answer_id = fa.id
-        WHERE ($1::text IS NULL OR fq.category = $1)
-        GROUP BY fq.id
-        ORDER BY fq.created_at DESC
-        OFFSET $2 LIMIT $3
-      `,
-      [categoryFilter, offset, pagination.pageSize],
-    ),
-  ]);
-
-  return {
-    items: rows.rows.map(mapAdminQuestion),
-    pagination: {
-      page: pagination.page,
-      pageSize: pagination.pageSize,
-      total: Number.parseInt(countResult.rows[0]?.total ?? '0', 10),
-    },
-  };
-}
-
-export async function relabelQuestionCategory(
-  actorId: string,
-  questionId: string,
-  category: FeedQuestionCategory,
-): Promise<AdminFeedQuestion> {
-  return withDbTransaction(async (client) => {
-    const exists = await client.query<{ id: string }>(
-      'SELECT id FROM feed_questions WHERE id = $1::uuid LIMIT 1',
-      [questionId],
-    );
-
-    if (exists.rows.length === 0) {
-      throw new Error('question_not_found');
-    }
-
-    await client.query(
-      'UPDATE feed_questions SET category = $2 WHERE id = $1::uuid',
-      [questionId, category],
-    );
-
-    await client.query(
-      `UPDATE feed_items
-         SET title = $2, updated_by_user_id = $3, updated_at = NOW()
-         WHERE source_question_id = $1::uuid`,
-      [questionId, getQuestionTitle(category), actorId],
-    );
-
-    const result = await client.query<AdminFeedQuestionRow>(
-      `
-        SELECT
-          fq.id,
-          fq.asked_by_user_id,
-          fq.body,
-          fq.category,
-          fq.location_context,
-          fq.llm_consent_granted,
-          fq.created_at,
-          COUNT(DISTINCT fa.id)::text AS answer_count,
-          COALESCE(SUM(CASE WHEN far.rating = 'helpful'     THEN 1 ELSE 0 END), 0)::text AS helpful_count,
-          COALESCE(SUM(CASE WHEN far.rating = 'not_helpful' THEN 1 ELSE 0 END), 0)::text AS not_helpful_count,
-          COALESCE(SUM(CASE WHEN far.rating = 'flagged'     THEN 1 ELSE 0 END), 0)::text AS flagged_count
-        FROM feed_questions fq
-        LEFT JOIN feed_answers fa ON fa.question_id = fq.id AND fa.answer_type = 'llm'
-        LEFT JOIN feed_answer_ratings far ON far.answer_id = fa.id
-        WHERE fq.id = $1::uuid
-        GROUP BY fq.id, fq.asked_by_user_id, fq.body, fq.category,
-                 fq.location_context, fq.llm_consent_granted, fq.created_at
-      `,
-      [questionId],
-    );
-
-    return mapAdminQuestion(result.rows[0]);
-  });
-}
-
-type QuestionExportRow = {
-  id: string;
-  body: string;
-  category: FeedQuestionCategory;
-};
-
-// Group every feed question by category. Used by the admin training export.
-//
-// Hidden questions are excluded. A moderator hiding something is a judgment that it does not belong in
-// the Commons; exporting it into training data would launder it straight back in, and the model would
-// keep answering in the register of the thing that was removed.
-export async function exportQuestionsByCategory(): Promise<Record<FeedQuestionCategory, string[]>> {
-  const result = await queryDb<QuestionExportRow>(
-    `
-      SELECT id, body, category
-      FROM feed_questions
-      WHERE moderation_status = 'accepted'
-      ORDER BY category ASC, created_at ASC
-    `,
-  );
-
-  const grouped: Record<FeedQuestionCategory, string[]> = {
-    housing: [],
-    services: [],
-    general: [],
-    safety: [],
-    benefits: [],
-  };
-
-  for (const row of result.rows) {
-    const cat = row.category as FeedQuestionCategory;
-    if (cat in grouped) {
-      grouped[cat].push(row.body.replace(/\n/g, ' ').trim());
-    }
-  }
-
-  return grouped;
 }
