@@ -10,6 +10,16 @@ describe('a blog story card body', () => {
     expect(seStoryCardBody({ text: 'x', teaser: 'Read it at https://example.org/a today.' })).toBe('Read it at today.');
   });
 
+  it('takes out an address that runs on from a word, a www address and one with no prefix', () => {
+    expect(seStoryCardBody({ text: 'x', teaser: 'Please joinhttps://tiskillsnetwork.quora.com/' })).toBe('Please join');
+    expect(seStoryCardBody({ text: 'x', teaser: 'Try www.example.com/plan for a phone.' })).toBe('Try for a phone.');
+    expect(seStoryCardBody({ text: 'x', teaser: 'An obvious one is here: qr.ae/pYRtmI and more.' })).toBe('An obvious one is here: and more.');
+  });
+
+  it('keeps a site name with no path, which reads as a name', () => {
+    expect(seStoryCardBody({ text: 'x', teaser: 'The front page at lagatos.com lets anybody look.' })).toBe('The front page at lagatos.com lets anybody look.');
+  });
+
   it('falls back to the opening when the teaser is missing or holds only an address', () => {
     const text = 'The blog has a new page: https://chargingthefuture.github.io/chargingthefuture/article/x\n\nIt is about rides and rooms.';
     expect(seStoryCardBody({ text })).toBe('It is about rides and rooms.');
