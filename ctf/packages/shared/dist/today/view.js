@@ -7,8 +7,14 @@ export const SE_TODAY_FILTERS = [
     { key: 'asks', label: 'Asks', kinds: ['ask'] },
     { key: 'offers', label: 'Offers', kinds: ['offer'] },
     { key: 'stories', label: 'Stories', kinds: ['story', 'replay', 'game'] },
-    { key: 'matches', label: 'Matches', kinds: ['match'] },
+    // 21 Questions: today's question and the members who answer like you, called buddies. The key
+    // stays 'matches' so a filter already in use keeps working.
+    { key: 'matches', label: 'Buddies', kinds: ['match'] },
 ];
+// The needs-based Match card is not a buddy card, so it leads the timeline under All and Asks.
+export function seTodayShowsMatchCard(filter) {
+    return filter === 'all' || filter === 'asks';
+}
 const SOURCE_NAMES = {
     'peer-programming': 'goals',
     'socket-relay': 'requests',
@@ -79,6 +85,6 @@ export function seDaysWonLines(daysWon) {
     return {
         big: fmt(daysWon.total),
         small: `Our progress this week: ${fmt(daysWon.thisWeek)} days won.`,
-        how: "Time members spent together in rooms and calls, or helping with each other's tasks. That is less time on Specterati schemes, and more time for all of us reaching our own definition of happiness.",
+        how: "Time members spent together in rooms and calls, helping with each other's tasks, or going through Today's cards. That is less time on Specterati schemes, and more time for all of us reaching our own definition of happiness.",
     };
 }

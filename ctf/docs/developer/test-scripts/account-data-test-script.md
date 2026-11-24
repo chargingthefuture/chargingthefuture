@@ -15,7 +15,7 @@
 | **Visibility** | Any signed-in identity (including unlock-pending) |
 | **Roles to test** | member |
 | **Surfaces** | web (phone-width layout) |
-| **Generated** | 2026-07-26 (hand-written on the JSON-export build, issue #1264) · 2026-11-23 manual update: AD-21 and AD-28: the timeline dot takes a card off Today and lists it in Me → Read; opening a card marks it read; AD-13 step 6 names the shortened Ask the architect line · 2026-11-23 manual update: AD-13 suggestions are chips under "Or start from one of these" · 2026-11-24 manual update: AD-41 Me → Open |
+| **Generated** | 2026-07-26 (hand-written on the JSON-export build, issue #1264) · 2026-11-23 manual update: AD-21 and AD-28: the timeline dot takes a card off Today and lists it in Me → Read; opening a card marks it read; AD-13 step 6 names the shortened Ask the architect line · 2026-11-23 manual update: AD-13 suggestions are chips under "Or start from one of these" · 2026-11-24 manual update: AD-41 Me → Open · 2026-11-24 manual update: the Matches filter is named Buddies (AD-13, the 21 Questions steps) |
 
 ## How to run this
 
@@ -234,7 +234,7 @@ on your board, a LightHouse listing, an announcement).
 **Steps:**
 1. Open `/`. Wait for the cards, then reload the page.
 2. Tap a card's text, then tap it again. Tap one of its buttons.
-3. Tap each chip: All, Asks, Offers, Stories, Matches.
+3. Tap each chip: All, Asks, Offers, Stories, Buddies.
 4. On a card, open ••• and choose **Copy link**, then open ••• on another card and choose **Hide**.
 5. Open the Main Room card's button.
 6. If you have not answered the Quora account removals survey, find its card ("Lost a Quora account?
@@ -551,7 +551,7 @@ picture, ladder in turn). No sign-in is asked for. On Android, step 2 opens the 
 ## AD-23 · 21 Questions
 **Role:** two approved members, A and B, on 3.1 · **Surfaces:** web, android
 **Steps:**
-1. As A, open Today and pick the Matches filter. Tap an answer on the 21 Questions card.
+1. As A, open Today and pick the Buddies filter. Tap an answer on the 21 Questions card.
 2. Keep answering until the card is gone or says catching up, then do the same as B with the same answers on three questions.
 3. As A, read Today again and tap Talk here on the buddy card (Buddy · 21 Questions). Send a message.
 4. As B, open Activity, then the buddy card on Today.
@@ -560,7 +560,7 @@ picture, ladder in turn). No sign-in is asked for. On Android, step 2 opens the 
 **Expected:** Step 1 says Saved; the card stays with its dot checked, the buttons gone and "You picked:" with the answer, the dot cannot be unchecked, and a question missed on an earlier day shows as its own catching-up card; no question asks about home, family or
 where somebody lives. Step 3 shows "You and @B answered N of M the same" and the message in the
 card. Step 4 shows the new message in Activity and in the card, marked "Buddy · 1 new message" until opened.
-The Wanted and mission cards are under Asks, not Matches. Step 5 removes the buddy card for both.
+The Wanted and mission cards are under Asks, not Buddies. Step 5 removes the buddy card for both.
 Step 6: Skip sits under the answers on web and Android; the card leaves Today and the next question
 not answered or skipped comes in as a catching-up card, with the same answered count; skipping that
 one brings the one after it; Days won, the done count and C's buddies are unchanged, and Me → Hidden
@@ -569,10 +569,10 @@ lists today's skipped question.
 ## AD-24 · 21 Questions buddies on and off
 **Role:** two approved members, A and B, on 3.1, who are buddies (AD-23), and C, approved, with no answers · **Surfaces:** web, android
 **Steps:**
-1. As C, open Today, pick the Matches filter, then open Me.
-2. As A, pick the Matches filter on Today and read the 21 Questions card.
-3. As A, turn off Find me buddies who answer like me under Matches.
-4. As B, read Today again under Matches.
+1. As C, open Today, pick the Buddies filter, then open Me.
+2. As A, pick the Buddies filter on Today and read the 21 Questions card.
+3. As A, turn off Find me buddies who answer like me under Buddies.
+4. As B, read Today again under Buddies.
 5. As A, answer another question, then open Me.
 6. As A, turn the toggle back on from Me, then read Today again. As B, read Today again.
 **Expected:** Step 1 shows no buddies toggle in either place. Step 2's card opens with "21 Questions finds your
@@ -850,4 +850,16 @@ totals (AD-28) still count each mark.
 5. As A, close A's own ask from its card on Today (Done), then open Me → Open again.
 6. Switch the theme between the four colors and light and dark while Open is showing.
 **Expected:** Step 1: "Nothing open." with the line saying what will be listed. Step 3: both asks, newest first: A's with "Yours · On Today until <date>", B's with "You answered or wrote here", each under its kind's colored label. Step 4: each opens in place over the list, as on Today, with its answers and conversation; nothing opens a new page. Step 5: A's ask is gone from Open; B's ask stays. Step 6: the list is readable in every color and mode. With the network off, Open says it could not read the open cards and why.
+**Result:** web ☐ android ☐ — notes:
+
+## AD-42 · Today cards count toward Days won at a lower weight (added 2026-11-24)
+**Role:** member A (signed in on web and Android), an admin · **Surfaces:** web, android
+**Steps:**
+1. As the admin, note Days won on the Adoption tab of the measures screen.
+2. As A, open three Today cards (tap their text) and tap the dot on two others.
+3. As A, tap Not for me on a sixth card.
+4. As A, open and dot fifteen more cards the same day.
+5. As the admin, reload the measures screen after each of steps 2 and 4.
+6. Open the Days won card on Today and read How it's counted.
+**Expected:** Step 5: after step 2, Days won is 10 action minutes higher (5 marks × 2); the Not for me card adds nothing; after step 4 A's card minutes stop at 20 for the day, however many more cards are marked. Step 6: the line names going through Today's cards. An account on demo data still shows the sample total and ticks as in AD-40. No ServiceCredits change.
 **Result:** web ☐ android ☐ — notes:
