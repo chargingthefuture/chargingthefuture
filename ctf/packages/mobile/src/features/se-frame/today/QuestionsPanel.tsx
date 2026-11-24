@@ -1,6 +1,7 @@
 // The controls inside a 21 Questions card on Today, the Android copy of the web's
-// questions-panel.tsx: the answers to pick from on the question card, and the conversation inside a
-// match card. Nothing opens elsewhere; the talk stays in the card.
+// questions-panel.tsx: the answers to pick from on the question card, with Skip under them, and the
+// conversation inside a match card. Nothing opens elsewhere; the talk stays in the card. Skip is
+// the card's Not for me mark: not an answer, and Today reads again so the next question comes in.
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -22,7 +23,7 @@ function messageOf(data: Record<string, unknown> | null, fallback: string): stri
   return typeof data?.message === 'string' ? data.message : fallback;
 }
 
-function QuestionChoices({ s, card, onChanged }: { s: Styles; card: SeTodayCard; onChanged: () => void }) {
+function QuestionChoices({ s, card, onChanged, onSkip }: { s: Styles; card: SeTodayCard; onChanged: () => void; onSkip: () => void }) {
   const question = seQuestionById(card.id.slice('questions:'.length));
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
@@ -49,6 +50,9 @@ function QuestionChoices({ s, card, onChanged }: { s: Styles; card: SeTodayCard;
           <Text style={s.choiceLabel}>{choice}</Text>
         </TouchableOpacity>
       ))}
+      <TouchableOpacity accessibilityRole="button" accessibilityState={{ disabled: busy }} disabled={busy} style={[s.skip, busy ? s.dim : null]} onPress={onSkip}>
+        <Text style={s.skipLabel}>Skip this question</Text>
+      </TouchableOpacity>
       {note ? (
         <Text accessibilityLiveRegion="polite" style={s.note}>
           {note}
@@ -150,12 +154,12 @@ export function isQuestionsCard(card: SeTodayCard): boolean {
   return card.source === 'questions' || card.source === 'questions-match';
 }
 
-type PanelProps = { t: SeThemeTokens; card: SeTodayCard; open: boolean; onOpen: () => void; onChanged: () => void };
+type PanelProps = { t: SeThemeTokens; card: SeTodayCard; open: boolean; onOpen: () => void; onChanged: () => void; onSkip: () => void };
 
 // The question card shows its answers at once; a match card shows the conversation once opened.
-export function QuestionsPanel({ t, card, open, onOpen, onChanged }: PanelProps) {
+export function QuestionsPanel({ t, card, open, onOpen, onChanged, onSkip }: PanelProps) {
   const s = makeStyles(t);
-  if (card.source === 'questions') return card.done ? null : <QuestionChoices s={s} card={card} onChanged={onChanged} />;
+  if (card.source === 'questions') return card.done ? null : <QuestionChoices s={s} card={card} onChanged={onChanged} onSkip={onSkip} />;
   if (open) return <Conversation s={s} t={t} card={card} />;
   return (
     <TouchableOpacity accessibilityRole="button" style={s.send} onPress={onOpen}>
@@ -170,6 +174,8 @@ function makeStyles(t: SeThemeTokens) {
     choice: { minHeight: 44, paddingHorizontal: 14, paddingVertical: 10, justifyContent: 'center', borderRadius: 14, borderWidth: 1.5, borderColor: t.hair, backgroundColor: t.sunk },
     choiceLabel: { fontSize: 15, color: t.ink, fontFamily: SE_FONT.sans },
     dim: { opacity: 0.6 },
+    skip: { alignSelf: 'flex-start', minHeight: 44, paddingHorizontal: 4, justifyContent: 'center' },
+    skipLabel: { fontSize: 14, color: t.soft, fontFamily: SE_FONT.sansSemi, textDecorationLine: 'underline' },
     note: { fontSize: 13, lineHeight: 18, color: t.soft, fontFamily: SE_FONT.sans },
     bubble: { alignSelf: 'flex-start', maxWidth: '85%', gap: 2, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 14, backgroundColor: t.sunk },
     bubbleMine: { alignSelf: 'flex-end', backgroundColor: t.kind.match },

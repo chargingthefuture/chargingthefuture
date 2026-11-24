@@ -21,6 +21,7 @@ export declare function seCardShownDone(card: SeTodayCard): boolean;
 export declare function seMarkCardInToday<T extends {
     cards: SeTodayCard[];
 }>(today: T, change: SeCardMarkChange, now?: Date): T;
+export declare function seMarkBringsNext(change: SeCardMarkChange): boolean;
 export declare function seDayStartIso(now?: Date): string;
 export declare function seMarksFromToday(today: {
     cards: SeTodayCard[];

@@ -48,4 +48,5 @@ Surfaces with no deletion contract by recorded decision, and where the decision 
 | Surface | Where the decision is recorded |
 | --- | --- |
 | `presence` (member presence index) | `ctf-member-presence-feature-inventory.md`; its one table is in the registry under `presence`. |
+| `reader` | `ctf-reader-feature-inventory.md`; it stores nothing. |
 | `account`, `admin`, `internal`, `webhooks`, `health`, `plugin`, `plugins`, `currencies` | Platform machinery, each with its reason in `ctf/scripts/contract-coverage-allowlist.json`. |

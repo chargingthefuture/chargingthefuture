@@ -1,5 +1,5 @@
 {
-  "updated": "2026-11-23",
+  "updated": "2026-11-24",
   "intro": [
     "This guide explains what each part of the app does and how to use it, in plain words.",
     "The app is made of small apps, each doing one job. Open any of them from the main menu.",
@@ -445,6 +445,27 @@
         "Sign in and open GDP. The dashboard shows the Community Value Index at the top.",
         "Read Value by Source and Members by country under it for where the exchanges came from and where members are.",
         "If posts are open across the community, read the Value waiting to happen panel — and its sentence saying what that figure is and is not."
+      ]
+    },
+    {
+      "id": "reader",
+      "title": "Reader",
+      "updated": "2026-11-24",
+      "summary": "Reader is a free feed reader page with no sign-in, for people who would rather not install or configure one: it starts with this project's blog, demo videos and recorded broadcasts, and your list is kept in your own browser.",
+      "body": [
+        "A feed reader collects what sites publish, in the order they published it, and nothing decides what you see first. This one is a free page that runs in your browser, so there is nothing to install and nobody pays for it.",
+        "The Reader tile opens a short page that says what the reader is, with an 'Open the reader' button that goes to chargingthefuture.github.io/rss-feeds/read in a new tab. A line under the button names that address and says there is no sign-in.",
+        "It starts with three feeds: this project's blog, the owner's channel of demo videos of the app, and the recorded broadcasts. Add anything else you read by its address, and remove anything you do not want, those three included. Posts open on the page, recordings play there, and a Watched list keeps what you have marked.",
+        "Your list, what you mark watched and what you save are kept in the browser you used, and only there. They do not reach your other devices and are gone if that browser's data is cleared, so download a backup on the reader now and then and restore it wherever you want your list.",
+        "What it cannot do: it reaches back only as far as each feed carries, it never notifies anybody, and a site that does not let other web pages read its feed cannot be added there; a feed reader app can still read it.",
+        "YouTube does not let other pages read its channels. To read one there, ask for it from + New with the channel's address and, if you want one, the date to stop at. It is collected and cut at that date, and you get an address to add."
+      ],
+      "howTo": [
+        "Sign in and open Reader from the apps list; the tile carries a newspaper mark. It needs an approved account — before that, the tile opens the Unlock nudge instead.",
+        "Read the three cards: what the reader starts with, what it cannot do, and how to ask for a YouTube channel.",
+        "Press 'Open the reader'. It opens chargingthefuture.github.io/rss-feeds/read in a new tab. There is no sign-in.",
+        "Add a feed by pasting its address under 'Add a feed'. Remove one from its own page with 'Remove from my list'; 'Put back' on the list brings it back.",
+        "Download a backup from 'Back up or restore' now and then, and restore it on another device to read the same list there."
       ]
     },
     {

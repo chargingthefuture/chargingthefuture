@@ -484,6 +484,14 @@
       "updatedAt": "2026-10-05T01:20:31.270Z"
     },
     {
+      "name": "reader",
+      "type": "module",
+      "lastReviewedAt": "2026-10-04T23:54:58.180Z",
+      "lastRunIssues": 0,
+      "partial": false,
+      "updatedAt": "2026-10-04T23:54:58.181Z"
+    },
+    {
       "name": "recurring-activity",
       "type": "plugin",
       "lastReviewedAt": "2026-10-05T12:29:24.630Z",

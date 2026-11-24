@@ -60,7 +60,7 @@ async function parseModerationBody(
 }
 
 // POST: hide or un-hide one piece of member-facing content — a Commons post, a reply on a post or on
-// an official announcement, or a question or answer in the Q&A.
+// an official announcement, or a public message under a Today card.
 //
 // Hiding rather than deleting is the point. Deletion is unrecoverable and takes the member's
 // own words plus the reply thread with it; hiding is reversible, so a moderator making a fast
@@ -89,7 +89,7 @@ export async function POST(
       {
         ok: false,
         code: FEED_ERROR_CODE.invalidPayload,
-        message: 'Target must be post, reply, announcement-reply, question, or answer.',
+        message: 'Target must be post, reply, announcement-reply, or card-message.',
       },
       { status: 400 },
     );

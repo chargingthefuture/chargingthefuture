@@ -1,6 +1,11 @@
 import { queryDb } from 'lib/db/postgres';
 import { normalizeUnlockQuoraHint } from './quora-hint';
-import { UNLOCK_HELP_SETTLED_STATUSES as SETTLED_REVIEW_STATUSES, type UnlockHelpRequestFact } from './help-request-open';
+import {
+  UNLOCK_HELP_SETTLED_STATUSES as SETTLED_REVIEW_STATUSES,
+  unlockHelpRequestOpenedRef,
+  type UnlockHelpRequestFact,
+  type UnlockHelpRequestWrite,
+} from './help-request-open';
 
 // Who may reach the Commons without having verified yet.
 //
@@ -30,18 +35,27 @@ import { UNLOCK_HELP_SETTLED_STATUSES as SETTLED_REVIEW_STATUSES, type UnlockHel
 //
 // A request an admin marked done opens again when the member comes back with something new in the box:
 // that is new information to look them up with, and the Unlock tile's dot has to say so.
-export async function recordUnlockHelpRequest(userId: string, quoraHint?: string | null): Promise<void> {
+//
+// Returns a reference to the request when this press opened one (a first press, or one that reopened a
+// request marked done), and null when it only touched a request already open. The admins are told on
+// that reference alone, so a repeat press never tells them twice. The reference is built from the
+// request's timestamps and never from the member's id, so the Activity row it lands in says nothing
+// about who asked and keeps nothing an account deletion would have to find.
+export async function recordUnlockHelpRequest(userId: string, quoraHint?: string | null): Promise<string | null> {
   const hint = normalizeUnlockQuoraHint(quoraHint);
-  await queryDb(
-    `INSERT INTO unlock_help_requests (user_id, requested_at, quora_hint)
+  const result = await queryDb<UnlockHelpRequestWrite>(
+    `WITH prev AS (SELECT done_at FROM unlock_help_requests WHERE user_id = $1)
+     INSERT INTO unlock_help_requests (user_id, requested_at, quora_hint)
      VALUES ($1, NOW(), $2)
      ON CONFLICT (user_id) DO UPDATE
        SET quora_hint = COALESCE(EXCLUDED.quora_hint, unlock_help_requests.quora_hint),
-           done_at = CASE WHEN EXCLUDED.quora_hint IS NULL THEN unlock_help_requests.done_at ELSE NULL END`,
+           done_at = CASE WHEN EXCLUDED.quora_hint IS NULL THEN unlock_help_requests.done_at ELSE NULL END
+     RETURNING (xmax = 0) AS inserted, requested_at, done_at, (SELECT done_at FROM prev) AS prev_done_at`,
     [userId, hint],
   );
+  const row = result.rows[0];
+  return row ? unlockHelpRequestOpenedRef(row) : null;
 }
-
 
 export async function listUnlockHelpRequests(): Promise<Map<string, UnlockHelpRequestFact>> {
   const result = await queryDb<{ user_id: string; requested_at: Date; quora_hint: string | null; done_at: Date | null }>(

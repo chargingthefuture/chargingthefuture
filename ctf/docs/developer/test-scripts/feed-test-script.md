@@ -27,7 +27,7 @@
 
 1. **Seed is clean.** Run `pnpm --dir ctf seed:demo`. Confirm the command exits without errors and the app starts. The demo seed now shows three posts by other members from the last hour (one quoting another) and the announcement "Small tasks on the goal board", for FD-10, FD-11 and FD-14. web ☐
 
-2. **Commons home loads.** Sign in as a member. Navigate to the Commons home. The feed timeline renders with at least one item (announcement, question, or community post) and no unhandled error is shown. web ☐
+2. **Commons home loads.** Sign in as a member. Navigate to the Commons home. The feed timeline renders with at least one item (announcement or community post) and no unhandled error is shown. web ☐
 
 3. **Admin page loads.** Sign in as an admin. Navigate to `/admin/feed-announcements`. The page renders with a feed config panel and an announcement list. No 404 or 500. web ☐
 
@@ -48,12 +48,11 @@
 1. Navigate to the Commons home.
 2. Observe the default feed — all channels.
 3. Use the channel filter to switch to **Announcements**.
-4. Switch to **Questions**.
-5. Switch to **Community**.
-6. Switch back to **All**.
+4. Switch to **Community**.
+5. Switch back to **All**.
 
 **Expected:**
-- Default view shows items from multiple channel types (announcement cards, question cards, community posts) in reverse-chronological order.
+- Default view shows items from multiple channel types (announcement cards, community posts) in reverse-chronological order.
 - Each filter shows only items of that type; no items from other channels appear.
 - API check (optional): `GET /api/feed/items?mentions=me` returns only items that @-mention the
   signed-in caller (same behavior as the Hub "@ Mentions" toggle); any other `mentions` value
@@ -80,7 +79,7 @@
 6. As B, post a message that mentions `@A`. As A, open notifications.
 
 **Expected:**
-- Steps 1–3: B's posts and replies do not render for A, and A's do not render for B (both directions). Announcements and AI answers always show — they have no member author.
+- Steps 1–3: B's posts and replies do not render for A, and A's do not render for B (both directions). Announcements always show — they have no member author.
 - Step 5: B's reply does not appear in A's list of announcement replies, and the reply count A sees on that announcement does not count it (added 2026-10-14).
 - Step 6: A gets no "Someone mentioned you" from B's post (added 2026-10-14).
 - A post's reply counter may read higher than the replies shown to a member with a block — accepted, not a bug.
@@ -175,46 +174,6 @@ signed-out visitor, and an approved member | **Surface:** web
   `/read` with `x-ctf-csrf: 1` answer 400 `FEED_INVALID_PAYLOAD`. The same calls with a well-formed
   id that matches no announcement answer 404 `FEED_NOT_FOUND`, and the read call stores no row in
   `announcement_user_state`. Neither is a 503.
-
-**Result:** web ☐
-
----
-
-### FD-5 — Submit a question (LLM Q&A channel)
-**Role:** member | **Surface:** web
-
-**Precondition:** Signed in as a member.
-
-**Steps:**
-1. Find the question submission form in the Questions channel or Commons.
-2. Type a natural-language question, e.g., "Find housing within 10 miles of 90210".
-3. Optionally select a category (housing, services, general, safety, or benefits).
-4. Submit the question.
-
-**Expected:**
-- The question appears in the Questions channel feed as a new item.
-- An LLM-generated answer card appears below or inline, showing a body, confidence score, and source attribution (model ID visible or shown on demand).
-- No raw error is shown to the user.
-
-**Result:** web ☐
-
----
-
-### FD-6 — Rate an LLM answer
-**Role:** member | **Surface:** web
-
-**Precondition:** At least one question with an LLM-generated answer is visible (from seed or FD-5).
-
-**Steps:**
-1. Locate a question card with an LLM-generated answer.
-2. Click the "Helpful" rating option.
-3. Click the "Not Helpful" option on a different answer (or toggle it on the same one).
-4. Click "Flag" on a third answer if available.
-
-**Expected:**
-- Each rating registers without error.
-- The UI reflects the selected rating (button state, count, or confirmation).
-- Rating the same answer a second time does not duplicate or error — idempotent per user per answer.
 
 **Result:** web ☐
 
@@ -838,30 +797,6 @@ FD-12b), with at least one reaction on it.
 
 ---
 
-### FD-A10 — Admin relabels a question category
-**Role:** admin | **Surface:** web
-
-**Precondition:** At least one question exists (from seed or FD-5).
-
-**Steps:**
-1. Call `PATCH /api/feed/admin/questions/:questionId` with body `{ "category": "safety" }` and the `x-ctf-csrf: '1'` header, using a valid question ID from the seed.
-2. Confirm the response is 200.
-3. Try the same with `{ "category": "unknown_category" }`.
-4. Try with a non-UUID question ID.
-
-**Expected:**
-- Valid relabel returns 200 and writes a `feed.question.category.relabel` audit row. The question's
-  category and its Hub item title both change. (Before 2026-10-12 every relabel failed with a 503,
-  because the route also wrote an `llm_inference_log` row with no answer id, which that table forbids.)
-- A 503 names the reason after "Unable to relabel question:" rather than stopping at the sentence.
-- Invalid category returns 400.
-- Non-UUID ID returns 400.
-- Unknown but valid-format UUID returns 404.
-
-**Result:** web ☐
-
----
-
 ### FD-A24 — The public-rooms notice on a member's first visit
 **Role:** new member | **Surface:** web
 
@@ -893,36 +828,6 @@ FD-12b), with at least one reaction on it.
 - The point of this case: the cadence alone cannot protect a member who posts something identifying on
   their first visit, before any rotation reaches them. If this card stops appearing for new members, that
   protection is gone even though the periodic notice still looks fine.
-### FD-A21 — A flagged answer reaches an admin, and can be hidden
-**Role:** member + admin | **Surface:** web
-
-**Precondition:** A question in the Commons with at least one answer.
-
-**Steps:**
-1. As a member, open the answer and rate it **flagged**.
-2. As a second member, flag the same answer.
-3. As admin, open `/admin/commons` and look at the tab row.
-4. Open the **Flagged answers** tab.
-5. Click **Hide answer**.
-6. As a member, reload the Commons and find the question.
-7. Back in the admin tab, click **Put back** and accept the confirmation.
-
-**Expected:**
-- Step 3: the tab reads **Flagged answers (1)** — the count of flagged answers still visible. Before
-  this shipped, a flag went nowhere at all: the count was aggregated by an admin route that no screen
-  ever called.
-- Step 4: the answer is listed with **2 flags**, the parent question above it, and a pill saying whether
-  it came from the assistant or a member. Ordering is by flag count, not date — triage, not a feed.
-- Step 5/6: the answer is gone from the member's view of that question, and **the question is still
-  there**. That matters: the member who asked keeps their question and can still get a better answer.
-- Step 7: the answer is visible again, and the pending count returns to 1.
-- Check the audit log: the transition carries `previousStatus`, `newStatus`, and the reason. Not the
-  answer body.
-
-**Result:** web ☐
-
----
-
 ### FD-A23 — The other two notices, on their own cadences
 **Role:** admin | **Surface:** web
 
@@ -1069,32 +974,6 @@ where you can reach the next multiple of 50 without posting hundreds of times �
   post's transaction rather than running after it commits.
 - In every case, a failure in the notice must never cost a member their post. If the notice cannot be
   published, the post still succeeds.
-### FD-A22 — A hidden question stops being answerable and stops feeding training
-**Role:** member + admin | **Surface:** web
-
-**Precondition:** A question in the Commons with LLM consent granted and no answer yet.
-
-**Steps:**
-1. As admin, open `/admin/commons`, find that question and hide it.
-2. As the member who asked, reload the Commons.
-3. Attempt to generate an answer for it (`POST /api/feed/questions/<id>/answer`).
-4. As admin, run the training export (`GET /api/comic/training/export?preview=1` / the questions export)
-   and search it for the hidden question's text. Use `preview=1` so this read does not mark any
-   training example as exported.
-5. Put the question back and repeat step 4.
-
-**Expected:**
-- Step 2: the question is gone from the timeline.
-- Step 3: refused as **not found** — not "forbidden". A hidden question must not confirm it exists.
-- Step 4: the hidden question does **not** appear in the export. This is the check that matters: hiding
-  something is a judgment it does not belong, and exporting it into training data would launder it back
-  in, with the model then answering in the register of the thing that was removed.
-- Step 5: it appears again once restored.
-
-**Result:** web ☐
-
----
-
 ### FD-A17 — Off-topic sweep: reason is recorded, and restoring clears it
 **Role:** admin | **Surface:** web
 
@@ -1265,8 +1144,7 @@ example, point `DATABASE_URL` at a closed port and restart).
 2. Restore the database and reload the page.
 
 **Expected:** Step 1: the page still renders, and the red banner at the top says it could not read from
-the database, naming each read that failed (the moderation queue, the hidden counts, the author list,
-the flagged answers, the pending flagged count) with its reason. It must not show a quiet empty queue
+the database, naming each read that failed (the moderation queue, the hidden counts, the author list) with its reason. It must not show a quiet empty queue
 with no message. The server log carries one `[reportError] area=feed-announcements` line per failed
 read. Step 2: no banner, and the queue loads as usual (#2712).
 
@@ -1342,7 +1220,7 @@ read. Step 2: no banner, and the queue loads as usual (#2712).
 **Steps:**
 1. Open `/admin/feed-announcements` and expand the **Audit log** panel at the bottom.
 2. Read the newest entries.
-3. Try to re-label the category of a question id that does not exist, then reopen the panel.
+3. Try to hide a Commons post id that does not exist, then reopen the panel.
 4. Publish an announcement draft, then reopen the panel.
 5. Emit a membership event, then reopen the panel.
 6. Send a hide request for a post without the `x-ctf-csrf: 1` header (for example from the browser's developer tools), then reopen the panel.
@@ -1361,10 +1239,10 @@ read. Step 2: no banner, and the queue loads as usual (#2712).
 
 ---
 
-### Account deletion clears replies and AI-log rows
+### Account deletion clears replies
 
-**Expected:** Deleting the account removes the member's replies to announcements and any AI-answer
-log rows carrying their id (most already cascade away with their deleted questions and answers).
+**Expected:** Deleting the account removes the member's replies to announcements and the Commons
+timeline copies of their posts.
 Admin-authored announcements and feed items are unaffected.
 
 ---
@@ -1387,9 +1265,7 @@ The following cases are the highest-signal functional checks that must remain co
 
 ## Known gaps — do not file these as bugs
 
-1. **LLM provider failover not contractualized.** The Q&A pipeline runs against a single configured LLM provider. If that provider is unavailable the answer generation fails. Provider failover and confidence-thresholding policy are tracked as future work — a failure here is expected behavior, not a bug.
-
-2. **Deprecated contract YAML files.** Separate `ANNOUNCEMENTS_PLUGIN_*_CONTRACTS.yaml` files remain in the repository as intentional historical reference. Their presence is not a bug; they are a known cleanup item.
+1. **Deprecated contract YAML files.** Separate `ANNOUNCEMENTS_PLUGIN_*_CONTRACTS.yaml` files remain in the repository as intentional historical reference. Their presence is not a bug; they are a known cleanup item.
 
 ### FD-REGION — Region targeting is refused (added 2026-10-17)
 

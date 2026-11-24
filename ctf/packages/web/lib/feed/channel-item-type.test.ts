@@ -6,9 +6,9 @@ import type { FeedItemType } from './types';
 // stored feed_items.item_type is singular ('announcement'). The feed timeline filters rows by
 // item_type, so a channel name must be mapped through FEED_CHANNEL_TO_ITEM_TYPE first. Before the
 // map existed the plural 'announcements' channel never matched the singular 'announcement' rows and
-// announcements (and questions) silently vanished from the Commons.
+// announcements silently vanished from the Commons.
 
-const KNOWN_ITEM_TYPES: FeedItemType[] = ['announcement', 'question', 'community'];
+const KNOWN_ITEM_TYPES: FeedItemType[] = ['announcement', 'community'];
 
 describe('FEED_CHANNEL_TO_ITEM_TYPE', () => {
   it('maps every allowed channel to a known item type', () => {
@@ -19,7 +19,6 @@ describe('FEED_CHANNEL_TO_ITEM_TYPE', () => {
 
   it('bridges the plural channel name to its singular item type', () => {
     expect(FEED_CHANNEL_TO_ITEM_TYPE.announcements).toBe('announcement');
-    expect(FEED_CHANNEL_TO_ITEM_TYPE.questions).toBe('question');
     expect(FEED_CHANNEL_TO_ITEM_TYPE.community).toBe('community');
   });
 

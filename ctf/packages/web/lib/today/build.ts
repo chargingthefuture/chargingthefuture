@@ -13,6 +13,7 @@ import { mainRoom, nextTalk, weekTalks, weaversRoom } from './sources-rooms';
 import { questionCards } from './sources-questions';
 import { commonsCards } from './sources-commons';
 import { readDaysWon } from 'lib/measures/action-minutes';
+import { runsOnDemoData } from 'lib/demo-mode/demo-accounts';
 import { listMutes } from 'lib/mutes/repository';
 import { seApplyMutes, type SeTodayDay } from '@ctf/shared';
 import { mineCards } from './sources-mine';
@@ -81,6 +82,14 @@ export function todaySources(viewer: TodayViewer, day: SeTodayDay, now = new Dat
   ];
 }
 
+// An account on demo data reads Days won from the demo schema, where nothing new is counted while a
+// recording runs, so the total is marked `sample` and the screen ticks it up now and then with the
+// emoji rain, as signed-out Today does. Nothing is written, and a real account's total is untouched.
+async function viewerDaysWon(viewer: TodayViewer, now: Date): Promise<SeToday['daysWon']> {
+  const daysWon = await readDaysWon(now);
+  return (await runsOnDemoData(viewer.userId)) ? { ...daysWon, sample: true } : daysWon;
+}
+
 // `day` is the member's own day (seReadTodayDay): stories, the puzzle, 21 Questions and the day's
 // own cards follow it, and a card marked done leaves from their next day.
 export async function buildToday(viewer: TodayViewer, now = new Date(), day: SeTodayDay = utcTodayDay(now)): Promise<SeToday> {
@@ -96,7 +105,7 @@ export async function buildToday(viewer: TodayViewer, now = new Date(), day: SeT
     settle('ti-radio', () => week, []),
     // Reported but never named on screen: a member who may not enter is not told the room exists.
     settle<SeTodayRoom | null>('weavers', () => weaversRoom(viewer), []),
-    settle('days-won', () => readDaysWon(now), unavailable),
+    settle('days-won', () => viewerDaysWon(viewer, now), unavailable),
     // A member's own mutes; a failed read shows every card rather than none.
     settle('mutes', () => listMutes(viewer.userId), []),
     // Reported but never named: the pill is simply not shown when the count is unknown.

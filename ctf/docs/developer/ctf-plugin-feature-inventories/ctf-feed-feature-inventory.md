@@ -3,10 +3,10 @@
 ## Consolidation Decision (2026-05-31): Feed becomes the Survivor Hub data layer
 
 > **Owner-locked.** Feed is being consolidated into the **Survivor Hub** home (the app
-> homepage). Feed's backend (`feed_items` projection model + `lib/feed/inference.ts`
-> Ollama Q&A) becomes the **single source of truth** for the Hub's one blended,
-> publicly-viewable `community` channel, which interleaves admin-only **announcements**,
-> **AI Q&A**, and **peer-to-peer community posts**.
+> homepage). Feed's backend (`feed_items` projection model) becomes the **single source of
+> truth** for the Hub's one blended, publicly-viewable `community` channel, which interleaves
+> admin-only **announcements** and **peer-to-peer community posts**. (The AI Q&A channel it
+> also carried was removed on 2026-11-23; asking moved to Ask the architect.)
 >
 > Consequences tracked in the coding follow-up (ordered list in the Survivor Hub
 > inventory):
@@ -32,22 +32,21 @@
 
 - Plugin name: `Feed`
 - Plugin slug: `feed-announcements` (registry alias: `feed`)
-- Owned surfaces: `/apps/feed` (web), `packages/mobile/src/features/feed` (Android), `/api/feed/*` routes, feed/announcement/question/community schema tables.
+- Owned surfaces: `/apps/feed` (web), `packages/mobile/src/features/feed` (Android), `/api/feed/*` routes, feed/announcement/community schema tables.
 - Admin control location: `/admin/feed-announcements`.
-- Three-channel surface: Announcements, Questions (LLM-assisted Q&A), and Community Support.
+- Two-channel surface: Announcements and Community Support.
 - Command namespace: unified `feed.*` (no separate `announcements.*` namespace).
 
 ## Intent and Outcome
 
-Feed is the survivor-facing timeline and discovery surface combining community activity, announcements, LLM-assisted Q&A, and peer support into a unified three-channel experience.
+Feed is the survivor-facing timeline and discovery surface combining community activity, announcements, and peer support into a unified two-channel experience.
 
 Architecture decisions in effect:
 
-1. Source-of-truth for persisted feed/announcement/question/community objects is PostgreSQL.
+1. Source-of-truth for persisted feed/announcement/community objects is PostgreSQL.
 2. Stream (GetStream) is used for fan-out and timeline delivery behavior, not canonical storage.
 3. Admin operations for Feed + Announcements are centralized at `/admin/feed-announcements`.
-4. LLM-assisted Q&A uses approved data sources only; inference logs are audited.
-5. All command contracts use the unified `feed.*` namespace.
+4. All command contracts use the unified `feed.*` namespace.
 
 ---
 
@@ -55,8 +54,8 @@ Architecture decisions in effect:
 
 ### 1.1 Feed Timeline Core (Unified)
 
-1. Paginated timeline of feed items across all three channels with deterministic ordering.
-2. Channel filter controls: all, announcements, questions, community.
+1. Paginated timeline of feed items across both channels with deterministic ordering.
+2. Channel filter controls: all, announcements, community.
 3. Plugin-scoped activity and announcement visibility filters.
 4. Empty/error/loading states with accessible fallback messaging.
 
@@ -65,14 +64,6 @@ Architecture decisions in effect:
 1. Announcement items render in-feed using shared card contract.
 2. Expiry windows influence visibility (the Commons is a single time-ordered stream — no manual priority ranking).
 3. Optional toast rendering mode is configurable under Feed display controls.
-
-### 1.3 Channel: Questions (LLM-Assisted Q&A)
-
-1. Users submit natural-language questions (e.g., "Find me housing within 10 miles of 90210").
-2. Questions are categorized (housing, services, general, safety, benefits) with optional location context.
-3. LLM-generated answers are produced from approved data sources with confidence score and source attribution.
-4. Community members can also reply to questions with peer answers.
-5. Users can rate answers (helpful, not helpful, flagged) for quality feedback loop.
 
 ### 1.4 Channel: Community Support
 
@@ -119,7 +110,6 @@ Architecture decisions in effect:
 1. Change history and actor attribution for admin mutations.
 2. Quota-impact awareness for Stream fan-out heavy changes.
 3. Feature flag controls.
-4. LLM inference monitoring: model ID, confidence, source attribution, quality ratings.
 
 ---
 
@@ -141,8 +131,6 @@ All command contracts must conform to templates from:
 
 **Announcements:** 4. `feed.announcement.draft.create` 5. `feed.announcement.draft.update` 6. `feed.announcement.publish` 7. `feed.announcement.archive` 8. `feed.announcement.read.mark` 9. `feed.announcement.dismiss` 10. `feed.announcement.render-mode.update`
 
-**Questions (LLM-assisted Q&A):** 12. `feed.question.submit` 13. `feed.question.answer.generate` 14. `feed.question.answer.rate`
-
 **Community Support:** 15. `feed.community.post.create` 16. `feed.community.post.reply` 17. `feed.community.post.reaction.toggle` 18. `feed.community.post.delete` (author-only; delete your own post — there is no in-place edit; **editing is delete + repost**: the composer's **Edit** action deletes the post and reloads its text into the composer so the author fixes it and sends a fresh post, reusing this delete command plus `feed.community.post.create`. A corrected message is therefore a new row with its own moderation and no inherited reactions/replies.)
 
 **Admin / Governance:** 17. `feed.admin.config.update` 18. `feed.membership.event.emit`
@@ -155,9 +143,6 @@ User routes:
 - `POST /api/feed/items/:itemId/read`
 - `POST /api/feed/items/:itemId/dismiss`
 - `GET /api/feed/config`
-- `POST /api/feed/questions`
-- `POST /api/feed/questions/:questionId/answer`
-- `POST /api/feed/answers/:answerId/rate`
 - `POST /api/feed/community/posts` — body accepts an optional `replyToPostId` (the id of the peer post this one quotes, Signal-style). Validated server-side to reference an existing post; rejected with 400 when malformed or unknown.
 - `POST /api/feed/community/posts/:postId/reply`
 - `POST /api/commons/messages/:postId/reactions` — toggle the requesting member's emoji reaction on a Commons community post. Body `{ emoji }`; the emoji must be in the fixed quick set (👍 ❤️ 😂 🎉 🙏 😢 👋 💯), else 400. A second toggle of the same emoji removes it. Hub access gate + `x-ctf-csrf: '1'`. Returns `{ ok, reacted }`. Reactions are stored in our own database (`feed_community_post_reactions`), not Stream.
@@ -183,13 +168,6 @@ Admin routes:
   verdict string, and a truthiness test against it would disable the check entirely. Both directions
   fail **closed**: a read error reports `show: false`, because a database hiccup must not be able to pop
   the notice on every visit, which is how a notice trains people to dismiss it unread.
-- `GET /api/feed/admin/moderation/flagged-answers` — admin lists answers members have flagged, ordered
-  by flag count then newest (`listFlaggedAnswers`), with `pending` = how many flagged answers are still
-  visible (`countPendingFlaggedAnswers`, counted in the database so it is never a page-capped
-  undercount). Each row carries the parent question, the answer, whether it came from the assistant or
-  a member, and its flag / not-helpful counts. Admin-gated, read-only. **This route is what closed the
-  gap**: members could rate an answer `flagged` from the day rating shipped, the count was aggregated by
-  `GET /api/feed/admin/questions`, and no screen ever called that route — so every flag reached nobody.
 - `GET /api/feed/admin/moderation` — also accepts `?author=<userId>` to show one member's entire Commons
   footprint, and returns an `authors` roster (aggregate counts per member, ordered by volume) so a
   moderator can work by person rather than by post. The roster is omitted when `?author=` is set — it
@@ -200,8 +178,8 @@ Admin routes:
   moderator can find what they took down and put it back; `?hidden=1` narrows to only those. Optional
   `?limit=` clamped to 1..200. Admin-gated (`requireFeedAdminAccess`), read-only, no audit row.
 - `POST /api/feed/admin/moderation/:target/:id` — admin hides or restores one Commons post or reply.
-  `:target` is one of `post` / `reply` / `announcement-reply` / `card-message` / `question` /
-  `answer` (`FeedModerationTarget`); `announcement-reply` is a member's reply on an official
+  `:target` is one of `post` / `reply` / `announcement-reply` / `card-message`
+  (`FeedModerationTarget`); `announcement-reply` is a member's reply on an official
   announcement and `card-message` a public message under any Today card, both stored in
   `commons_item_messages` (Just us two messages can never be moderated or listed).
   Body may also carry `reason`, one of `off_topic` / `suspected_bad_actor` / `spam` / `abusive` /
@@ -210,7 +188,7 @@ Admin routes:
   account. An unrecognized or absent code falls back to `other` rather than 400: a hide is
   time-sensitive and must not fail over its label. Restoring ignores `reason` and **clears** the
   stored reason/actor/timestamp, so a post that is visible again carries no standing accusation.
-  `:target` is `post`, `reply`, `question`, or `answer` (else 400); body `{ hidden: boolean }` is **required** — an absent
+  Any other `:target` is a 400; body `{ hidden: boolean }` is **required** — an absent
   field is a 400 rather than defaulting to restore, so a malformed request can never quietly put
   hidden content back in front of members. Admin-gated + `x-ctf-csrf: '1'`; 404 when the row is gone.
   Sets `moderation_status` to `'hidden'` or `'accepted'` under `FOR UPDATE`, so two moderators acting
@@ -220,7 +198,6 @@ Admin routes:
   status in metadata (never the body — the trail is a record *about* the content, not a second copy of
   it). **There is no admin edit route**: a moderator may take content out of view, never rewrite a
   member's words while leaving the member's name on them.
-- `PATCH /api/feed/admin/questions/:questionId` — admin re-labels a feed question's category (`relabelQuestionCategory`). Body `{ category }` validated against the allowed feed question categories (else 400); the question id must be a UUID (else 400); admin-gated (`requireFeedAdminAccess`) + `x-ctf-csrf: '1'`; 404 when the question id is unknown. Writes a `feed.question.category.relabel` audit row.
 - `POST /api/feed/membership/events` — records a member join/leave membership event for the feed personalization layer (`emitMembershipEvent`, writing `feed_membership_events`, `announcement_membership_events` and `announcement_delivery_events`; nothing is sent to Stream since 2026-10-16). Answers `{ ok: true }`. Body `{ userId, pluginId, eventType: 'join' | 'leave', requestId?, traceId? }` (`eventType` defaults to `join`; `userId` and `pluginId` required, else 400); admin-gated (`requireFeedAdminAccess`) + `x-ctf-csrf: '1'`. Returns `{ ok, streamEmitted }`.
 
 ---
@@ -237,7 +214,7 @@ Must follow single-profile rule:
 
 Extension entity: none. Feed has no dedicated per-user extension table (the previously-named
 `feed_user_extension` was never created and is not used by any code). Per-user state is keyed by
-`user_id` across `feed_user_read_state`, `feed_user_dismissals`, `feed_answer_ratings`, and
+`user_id` across `feed_user_read_state`, `feed_user_dismissals`, `feed_community_post_reactions`, and
 `announcement_user_state`. Render mode is a global singleton in `feed_render_config`, which also
 carries the `is_public` flag for the publicly-viewable Hub channel — there is no per-user
 preference/toast table.
@@ -248,11 +225,11 @@ Domain tables:
 
 **Existing (implemented):**
 
-1. `feed_items` — the timeline table the Commons actually reads. Every announcement, question, and
-   community post is copied into a row here carrying the same `title`/`body` text, linked back by
-   `source_announcement_id` / `source_question_id` / `source_community_post_id`. Because it mixes a
+1. `feed_items` — the timeline table the Commons actually reads. Every announcement and community
+   post is copied into a row here carrying the same `title`/`body` text, linked back by
+   `source_announcement_id` / `source_community_post_id`. Because it mixes a
    member's own words with admin-published announcements, account deletion treats the two
-   differently: the member's post/question copies are deleted (registry `delWhere`, scoped by
+   differently: the member's post copies are deleted (registry `delWhere`, scoped by
    `created_by_user_id` plus a source-id filter), the announcement copies are retained.
 2. `feed_item_targets` — `target_role`/`target_plugin`/`target_region` are nullable, where `NULL` means "any" (read path treats `NULL` as a wildcard). Uniqueness is a `NULLS NOT DISTINCT` unique index on `(item_id, target_role, target_plugin, target_region)` rather than a primary key, because primary-key columns are implicitly `NOT NULL` and cannot hold the `NULL` wildcard used by default targeting.
 3. `feed_user_read_state`
@@ -265,10 +242,6 @@ Domain tables:
 10. `announcement_user_state`
 11. `announcement_membership_events`
 
-13. `feed_questions`
-14. `feed_answers`
-15. `feed_answer_ratings`
-16. `llm_inference_log`
 17. `feed_community_posts` — includes `reply_to_post_id UUID NULL REFERENCES feed_community_posts(id) ON DELETE SET NULL` for Signal-style quoted replies (a peer post quoting another peer post). When the quoted post is deleted, the reference is set to null and no quote renders. Indexed by `idx_feed_community_posts_reply_to`.
 18. `feed_community_replies`
 19. `feed_commons_last_seen` — per-member "last seen" marker for the Hub home channel (`user_id TEXT PRIMARY KEY`, `last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`). Drives the single "New messages" divider in the Commons chat. Read on entry, updated to now after the member has viewed the chat. Best-effort: a read/write failure never breaks the chat.
@@ -296,7 +269,7 @@ Domain tables:
 
 ### 4.3 Source-of-Truth and Fan-Out
 
-1. PostgreSQL stores canonical feed, announcement, question, and community metadata.
+1. PostgreSQL stores canonical feed, announcement, and community metadata.
 2. Stream receives projected fan-out payloads after DB commit success.
 3. Retries/idempotency ensure at-least-once fan-out without duplicate canonical writes.
 4. The denormalized `feed_timeline_projection` table (§4.2) is the schema slot reserved for a future materialized timeline read model; the current read path does not use it (it reads `feed_items` live).
@@ -310,9 +283,8 @@ Domain tables:
 3. CSRF protection for all state-changing web routes.
 4. Audit logging for allow/deny and publish/archive transitions. **Every admin mutation writes a durable row to `feed_admin_audit_trail`** via `recordFeedAdminAudit`, which also emits the observability line — on success, on a refusal, and on a persistence failure. Before 2026-08-28 `logFeedAudit` wrote the event to the server's log alone, so nothing an admin did could be read back. The member-facing commands (reads, reactions, replies, ratings, dismissals) still emit `logFeedAudit` alone: a row per interaction would be volume, not accountability.
 5. Sensitive payload redaction in logs and diagnostics.
-6. LLM inference inputs are sanitized; outputs are logged with model ID and confidence for audit.
-7. Content moderation on question/community post submission (rate limiting + policy violation checks).
-8. Plugin-scoped deletion + full-account deletion contracts aligned to template in `ctf/docs/templates/PLUGIN_PROFILE_AND_DELETION_CONTRACT_TEMPLATE.md`.
+6. Content moderation on community post submission (rate limiting + policy violation checks).
+7. Plugin-scoped deletion + full-account deletion contracts aligned to template in `ctf/docs/templates/PLUGIN_PROFILE_AND_DELETION_CONTRACT_TEMPLATE.md`.
 
 ---
 
@@ -322,7 +294,7 @@ Web delivery status: **pixel pass delivered** (2026-05-31). The `live-feed-annou
 
 Delivery: **web + mobile-responsive complete**. **Android (React Native) surface removed 2026-07-20 (rule 105, PR #1742)** — this feature is now web-only, served by the installable web app (PWA).
 
-All three feed channels (announcements, questions, community) are shipped on web (desktop + mobile-responsive).
+Both feed channels (announcements, community) are shipped on web (desktop + mobile-responsive).
 
 ---
 
@@ -331,13 +303,12 @@ All three feed channels (announcements, questions, community) are shipped on web
 1. Any change increasing Stream fan-out volume requires a quota-impact note.
 2. Quota notes follow `ctf/docs/quota-impact/TEMPLATE.md`.
 3. PR checklist evidence includes expected monthly impact and degradation plan.
-4. LLM inference costs are tracked separately and budget-gated.
 
 ---
 
 ## 8) Seed Coverage Status
 
-`ctf/scripts/seedFeedAnnouncements.mjs` seeds deterministic feed items, announcements, questions, community posts, replies, and membership/read/dismiss states for dev validation.
+`ctf/scripts/seedFeedAnnouncements.mjs` seeds deterministic feed items, announcements, community posts, replies, and membership/read/dismiss states for dev validation.
 
 `ctf/scripts/demo-seed/20-commons.mjs` adds to the demo schema three Commons posts by other members in the last hour (one quoting another), one published announcement, each with its `feed_items` copy and a member target, and one reaction from another member on a post and on the announcement; a re-run removes the demo accounts' own reactions on them.
 
@@ -353,19 +324,12 @@ All three feed channels (announcements, questions, community) are shipped on web
 
 ## 10) Gaps and Known Technical Debt
 
-1. LLM inference for question answers runs against a single configured provider; provider failover and confidence-thresholding policy are not yet contractualized.
-2. Separate `ANNOUNCEMENTS_PLUGIN_*_CONTRACTS.yaml` files are deprecated; their continued presence is intentional historical reference and is a known cleanup item.
-3. ~~Questions and answers cannot be moderated.~~ **Closed 2026-07-30** — both tables gained
-   `moderation_status`, the read path honours it, and `/admin/commons` can hide either.
-4. ~~Member flags route nowhere.~~ **Closed 2026-07-30** — `GET /api/feed/admin/moderation/flagged-answers`
-   plus the Flagged answers tab on `/admin/commons`. `GET /api/feed/admin/questions` is still orphaned and
-   is recorded in `ctf/scripts/orphan-route-allowlist.json` as a burn-down entry: its `flagged_count` is
-   now superseded by the flag queue, so it should be either wired to a page or deleted.
-
+1. Separate `ANNOUNCEMENTS_PLUGIN_*_CONTRACTS.yaml` files are deprecated; their continued presence is intentional historical reference and is a known cleanup item.
 ---
 
 ## 11) Change Log
 
+- 2026-11-23: **The Commons questions and answers are removed.** Asking moved to Ask the architect, and no screen called the question, answer, rating or admin question routes any more. Removed: `POST /api/feed/questions`, `POST /api/feed/questions/:questionId/answer`, `POST /api/feed/answers/:answerId/rate`, `GET /api/feed/admin/questions`, `GET /api/feed/admin/questions/export`, `PATCH /api/feed/admin/questions/:questionId`, `GET /api/feed/admin/moderation/flagged-answers` and the Flagged answers tab on `/admin/commons`; the `question` and `answer` moderation targets; the `questions` channel and `question` item type in the timeline; `lib/feed/inference.ts`; the commands `feed.question.submit`, `feed.question.answer.generate`, `feed.question.answer.rate`, `feed.qa.moderation.flagged.list` and `feed.question.category.relabel` from the command, access policy and audit contracts; the two Q&A metrics in `canonical_metrics.yaml`. `post/0117` drops `feed_questions`, `feed_answers`, `feed_answer_ratings` and `llm_inference_log` (nothing else wrote it; its rows pointed at a question and an answer), deletes the `question` rows in `feed_items` and its `source_question_id` column, and takes `questions` out of `feed_render_config.enabled_channels`, in production and the demo schema. Account deletion no longer lists the four tables. Announcements and Commons posts are unchanged.
 - 2026-11-10: **The moderation queue covers card conversations.** Announcement replies moved into `commons_item_messages`, which gained the moderation columns, and every public message under a Today card can now be hidden and restored as target `card-message`; the queue, the author summary and the hidden count read the shared store. Just us two messages are never listed or changed.
 - 2026-10-28: **Stream AI moderation on new community posts (3.1.0 plan).** `POST /api/feed/community/posts` checks the body. The words are sent to Stream's AI moderation check before saving (`lib/integrations/stream-content-check.ts`, config `se:posts`, rules set by `stream-moderation-setup.yml`): when Stream answers remove the post is refused with 422 `content_refused` and the member is told to reword it; harm Stream rates high is flagged in Stream's review queue and still published. When Stream is not set up or cannot be reached the post is saved and the failure is reported. Pictures are not sent, because Stream cannot fetch them from behind sign-in.
 
@@ -615,22 +579,7 @@ All three feed channels (announcements, questions, community) are shipped on web
 
 ### Questions Channel and LLM Integration
 
-- [x] Implement `feed_questions`, `feed_answers`, `feed_answer_ratings`, and `llm_inference_log` schema.
-  - Acceptance criteria:
-    - Tables use `CREATE TABLE IF NOT EXISTS` + `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` per migration rules.
-- [x] Implement `feed.question.submit` API and command flow.
-  - Acceptance criteria:
-    - Questions are persisted to Postgres, visible in unified timeline, and audited.
-- [x] Implement `feed.question.answer.generate` LLM inference pipeline.
-  - Acceptance criteria:
-    - LLM call is logged in `llm_inference_log`; model ID, latency, and token counts are tracked.
-    - Consent scope `llm_processing` is verified before inference.
-- [x] Implement `feed.question.answer.rate` endpoint.
-  - Acceptance criteria:
-    - Users can rate LLM answers; ratings are audited and feed back into quality metrics.
-- [x] Implement questions channel tab/filter in web timeline UI.
-  - Acceptance criteria:
-    - Timeline can filter to questions-only view; LLM answers render inline.
+- [x] Removed 2026-11-23: the routes, code, contracts and tables are gone (see the change log). Asking moved to Ask the architect.
 
 ### Community Support Channel
 

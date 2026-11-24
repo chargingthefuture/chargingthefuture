@@ -76,11 +76,14 @@ export function seQuestionOfDay(day: string): SeQuestion {
 }
 
 // The question a member is shown next: today's if not yet answered, then the earliest one out that
-// they have not answered, so somebody new can catch up. Null when every question out is answered.
-export function seNextQuestion(day: string, answered: ReadonlySet<string>): SeQuestion | null {
+// they have not answered, so somebody new can catch up. A question the member skipped (Skip on the
+// card, stored as its Not for me mark) is passed over the same way, without counting as an answer.
+// Null when every question out is answered or skipped.
+export function seNextQuestion(day: string, answered: ReadonlySet<string>, skipped: ReadonlySet<string> = new Set()): SeQuestion | null {
+  const open = (question: SeQuestion) => !answered.has(question.id) && !skipped.has(question.id);
   const today = seQuestionOfDay(day);
-  if (!answered.has(today.id)) return today;
-  return SE_QUESTIONS.slice(0, seQuestionsOut(day)).find((question) => !answered.has(question.id)) ?? null;
+  if (open(today)) return today;
+  return SE_QUESTIONS.slice(0, seQuestionsOut(day)).find(open) ?? null;
 }
 
 export type SeQuestionMatch = {

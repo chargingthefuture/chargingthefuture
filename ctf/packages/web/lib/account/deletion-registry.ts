@@ -311,26 +311,23 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
     // The old "Feed & Announcements" wording is kept after the colon so a member who remembers the
     // old label still recognizes the row.
     name: 'Commons: Feed & Announcements',
-    dataSummary: 'Your Commons posts, replies, questions, answers, ratings, and read/dismiss state.',
+    dataSummary: 'Your Commons posts, replies, reactions, and read/dismiss state.',
     serviceScopeSupported: true,
     tables: [
-      del('feed_answer_ratings', 'user_id', 'Your ratings on answers.'),
       del('feed_community_post_reactions', 'user_id', 'Your reactions on community posts.'),
-      del('feed_answers', 'author_user_id', 'Your answers.'),
-      // The Commons timeline reads `feed_items`, not the post/question tables — every post and
-      // question is copied into a `feed_items` row that carries the same text. Deleting only the
+      // The Commons timeline reads `feed_items`, not the post tables — every post is copied into a
+      // `feed_items` row that carries the same text. Deleting only the
       // source row left that copy on screen under the fallback handle `user-hub-syst`, which is not
       // a deletion; a Commons post is ordinary member content with no reason to be kept (it is not a
-      // ServiceCredits movement), so the copy goes with it. Runs before the two source deletes and
+      // ServiceCredits movement), so the copy goes with it. Runs before the source delete and
       // cascades each item's targets, read state, and dismissals. Announcement copies are excluded
       // by the filter and stay, matching the retained `announcements` rows below.
       delWhere(
         'feed_items',
         'created_by_user_id',
-        'source_community_post_id IS NOT NULL OR source_question_id IS NOT NULL',
-        'The Commons timeline copies of your posts and questions.',
+        'source_community_post_id IS NOT NULL',
+        'The Commons timeline copies of your posts.',
       ),
-      del('feed_questions', 'asked_by_user_id', 'Your questions.'),
       del('feed_community_replies', 'author_user_id', 'Your replies.'),
       del('feed_community_posts', 'author_user_id', 'Your community posts.'),
       del('feed_commons_notice_seen', 'user_id', 'Which one-time Commons notices you have been shown.'),
@@ -341,16 +338,12 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       del('announcement_reactions', 'user_id', 'Your reactions on announcements.'),
       del('feed_commons_last_seen', 'user_id', 'When you last opened the Commons (unread-badge state).'),
       del('announcement_membership_events', 'user_id', 'Your announcement membership events.'),
-      // The AI-answer inference log FK-cascades with the member's questions and answers (deleted
-      // above), so this direct delete matches almost nothing — it exists so no log row carrying the
-      // member's id can survive through any path the cascades miss.
-      del('llm_inference_log', 'actor_user_id', 'AI-answer generation log rows for your questions.'),
       // Burn-down batch 4: admin-authored platform content and its authorship audit, retained — the
       // created_by/updated_by columns record which admin published what, not member data.
       retain('announcements', 'Admin-authored announcements; authorship columns are the publish audit.'),
       retain('announcement_revisions', 'Announcement edit history; admin audit.'),
       retain('announcement_delivery_events', 'Announcement delivery/publish events; admin audit.'),
-      // Only the ANNOUNCEMENT copies are retained here — the member's own post/question copies are
+      // Only the ANNOUNCEMENT copies are retained here — the member's own post copies are
       // deleted by the `delWhere` above. Split on purpose: one table, two kinds of content.
       retain('feed_items', 'Admin-published announcement copies; authorship columns are the publish audit.'),
       retain('feed_render_config', 'Global feed settings and the admin audit of who changed them.'),

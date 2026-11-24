@@ -119,21 +119,6 @@
       "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
     },
     {
-      "route": "/api/feed/admin/questions/[questionId]",
-      "kind": "baseline",
-      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
-    },
-    {
-      "route": "/api/feed/admin/questions/export",
-      "kind": "baseline",
-      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
-    },
-    {
-      "route": "/api/feed/answers/[answerId]/rate",
-      "kind": "baseline",
-      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
-    },
-    {
       "route": "/api/feed/community/posts/[postId]/reply",
       "kind": "baseline",
       "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
@@ -165,16 +150,6 @@
     },
     {
       "route": "/api/feed/membership/events",
-      "kind": "baseline",
-      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
-    },
-    {
-      "route": "/api/feed/questions/[questionId]/answer",
-      "kind": "baseline",
-      "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
-    },
-    {
-      "route": "/api/feed/questions",
       "kind": "baseline",
       "reason": "Pre-existing orphan recorded when this gate was introduced (2026-07-30). Not yet verified as wanted or unwanted \u2014 burn down: wire it up or delete it."
     },

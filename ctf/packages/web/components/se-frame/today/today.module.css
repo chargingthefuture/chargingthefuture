@@ -409,6 +409,27 @@
   cursor: default;
 }
 
+/* Skip under the answers: plain words, not one of the answers. */
+.skipButton {
+  align-self: flex-start;
+  min-height: 44px;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: var(--se-soft);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.skipButton:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.skipButton:focus-visible,
 .choiceButton:focus-visible,
 .talkInput:focus-visible {
   outline: 2px solid var(--se-pick);
