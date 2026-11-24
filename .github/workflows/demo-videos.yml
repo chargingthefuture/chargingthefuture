@@ -58,7 +58,7 @@ concurrency:
 jobs:
   record:
     name: Record clips (${{ matrix.shard }} of 4)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     strategy:
       fail-fast: false
@@ -164,7 +164,7 @@ jobs:
     name: Publish the clips
     needs: record
     if: ${{ always() }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       OUT_DIR: ${{ github.workspace }}/demo-videos-out
     steps:
