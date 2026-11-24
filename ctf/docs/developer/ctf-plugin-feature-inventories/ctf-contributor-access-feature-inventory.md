@@ -87,9 +87,15 @@ no DMs) — and the **"Weavers of the Commons" badge** on Directory.
    eligible count reaches the minimum, and the server enforces the same precondition again with a
    409 (`contributor_access_channel_below_minimum`). Flipping it on creates the gated Stream
    channel and runs the first membership sync; closing an open channel is always allowed.
-3. Channel status card: eligible count vs `min_eligible_to_open_channel`, an OPEN/CLOSED badge,
+3. Scored members list, under the eligible list: every member whose last weekly recompute stored
+   a score above zero, eligible or not, highest first. Each row shows the all-time score, the days
+   since first sign-in, distinct plugins and distinct counterparties, each beside its setting with
+   how far short it is ("met" once reached), and an Eligible mark where earned. It reads the
+   stored `reason_snapshot`, so it moves once a week with the recompute, and a member below a
+   gate stays listed instead of vanishing. Admin only.
+4. Channel status card: eligible count vs `min_eligible_to_open_channel`, an OPEN/CLOSED badge,
    and the synced Stream member count (best-effort; "unavailable" when Stream is not configured).
-4. The three sections above render as the Weavers of the Commons section of the Daily exchange
+5. The four sections above render as the Weavers of the Commons section of the Daily exchange
    section on the Adoption screen, `/admin/adoption` (server-side admin gate; non-admins redirect to `/apps`),
    from `components/contributor-access/contributor-access-admin-sections.tsx`, with
    loading/error/populated states. The badge and the daily count score the same events with the
@@ -113,8 +119,10 @@ Admin routes (admin-only via `requireContributorAccessAdmin`; every allow **and*
   gated Stream channel and runs the first membership sync (guarded — a Stream failure returns a
   `channelSyncWarning`, never a rollback). Audits `contributor-access.config.update`.
 - `GET /api/contributor-access/admin/eligible` — members who earned eligibility (user id, username
-  via the `users` table, `first_earned_at`, revoke flag/reason) plus the current eligible count.
-  **Never any score.** Audits `contributor-access.eligible.list`.
+  via the `users` table, `first_earned_at`, revoke flag/reason) plus the current eligible count,
+  and `scoredMembers`: every member with a stored score above zero (user id, username, score,
+  `accountAgeDays`, `distinctPlugins`, `counterparties`, `eligible`, `computedAt`), read from
+  `reason_snapshot`. Admin only. Audits `contributor-access.eligible.list`.
 - `POST /api/contributor-access/admin/revoke` — body `{ userId, reason }`; for-cause only, reason
   must be non-empty; sets `revoked_for_cause` and turns `eligible` off; when the channel is open a
   guarded membership sync removes the member from the Stream channel right away
@@ -261,9 +269,9 @@ not counted toward `min_counterparties`. The daily count and the dashboard ignor
 
 ## Security, Privacy, and Compliance Controls
 
-- **Categorical flag only — no score is ever surfaced**, to members or admins. The internal score
-  and per-event counts live only in `reason_snapshot`, which no API returns (the admin eligible
-  list carries id/username/date/flags only). Proposal hard guardrail.
+- **No score is ever surfaced to a member.** The score and gate readings in `reason_snapshot` reach
+  one place: the admin-only `scoredMembers` list on the Adoption screen (since 2026-11-24). Per-event
+  counts are never returned, so Foundation call counts stay internal (rule 132).
 - **Badge surfaces are positive-only and claimed-only**: the Directory shows the badge only on a
   claimed profile whose member holds it; nothing renders for anyone else, and unclaimed
   (community-generated) profiles never carry the field. The member-facing read is one boolean per
@@ -368,6 +376,18 @@ fill on the first recompute / config save / member post.
   evidence; revisit only with strong cause).
 
 ## Change Log
+
+- 2026-11-24: **The Weavers section lists every scored member (owner report).** The section showed
+  only members who had earned the badge, so with nobody eligible it read "Nobody has earned
+  eligibility yet" and gave no sign of anybody's progress; the only score on the screen was the
+  Daily exchange roster, which is one day's events and drops a member on any day they deliver
+  nothing. A Scored members list now sits under the eligible list: each member with a stored
+  all-time score above zero, with the score, days since first sign-in, distinct plugins and
+  counterparties, and how far each is from its setting. `GET /api/contributor-access/admin/eligible`
+  gains `scoredMembers` (`listScoredMembers` in `lib/contributor-access/repository.ts`, gaps in
+  `lib/contributor-access/scored-members.ts`). Weights, threshold and gates are unchanged. An
+  accepted SkillsHunt nomination counts 6 for its submitter, dated by its review; it names nobody
+  on the receiving side, so it adds no counterparty, and the badge needs five.
 
 - 2026-11-16: **An account on demo data counts as a Weavers of the Commons badge holder (owner
   decision).** Demo data shows every feature as a badge holder sees it, so a recording can show the

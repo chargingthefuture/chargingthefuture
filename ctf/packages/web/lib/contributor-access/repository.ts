@@ -1,8 +1,9 @@
 import { queryDb } from 'lib/db/postgres';
+import { readSnapshot, type ScoredMember } from './scored-members';
 
 // Contributor Access — owned-table reads/writes (config, eligibility rows, audit trail).
-// Categorical output only: nothing here ever returns a score to a caller that could surface it to
-// a member — the reason_snapshot stays internal and the eligible list carries no numbers.
+// Nothing here returns a score to a caller that could surface it to a member. The one score reading
+// is listScoredMembers, for the admin Weavers section only; the eligible list carries no numbers.
 
 export type ContributorAccessConfig = {
   weights: Record<string, number>;
@@ -127,6 +128,31 @@ export async function listEligibleMembers(): Promise<EligibleMember[]> {
     firstEarnedAt: row.first_earned_at,
     revokedForCause: row.revoked_for_cause,
     revokedReason: row.revoked_reason,
+  }));
+}
+
+// Every member whose last weekly recompute stored a score above zero, eligible or not, highest
+// first. The score is all-time, as of computed_at. Admin only (the Adoption screen's Weavers section).
+export async function listScoredMembers(): Promise<ScoredMember[]> {
+  const result = await queryDb<{
+    user_id: string;
+    username: string | null;
+    reason_snapshot: unknown;
+    eligible: boolean;
+    computed_at: string | null;
+  }>(
+    `SELECT e.user_id, u.username, e.reason_snapshot, e.eligible, e.computed_at::text
+     FROM contributor_access_eligibility e
+     LEFT JOIN users u ON u.id::text = e.user_id
+     WHERE COALESCE((e.reason_snapshot->>'score')::numeric, 0) > 0
+     ORDER BY (e.reason_snapshot->>'score')::numeric DESC, e.user_id ASC`,
+  );
+  return result.rows.map((row) => ({
+    userId: row.user_id,
+    username: row.username,
+    ...readSnapshot(row.reason_snapshot),
+    eligible: row.eligible,
+    computedAt: row.computed_at,
   }));
 }
 

@@ -76,11 +76,12 @@ contracts:
 
   - pluginId: contributor-access
     command: contributor-access.eligible.list
-    version: 1.0.0
+    version: 1.1.0
     description: >-
       List members who earned eligibility - user id, username (via the users table), first earned
-      date, and revoke flag/reason. Categorical only - no score and no reason_snapshot is ever
-      returned by this or any other surface (proposal hard guardrail).
+      date, and revoke flag/reason - plus scoredMembers, every member whose stored reason_snapshot
+      score is above zero, with score, accountAgeDays, distinctPlugins, counterparties, eligible and
+      computedAt. Admin only; no per-event counts, and no member surface returns a score.
     inputSchema: {}
     outputSchema:
       ok:
@@ -89,6 +90,8 @@ contracts:
         type: array
       eligibleCount:
         type: integer
+      scoredMembers:
+        type: array
     dataAccess:
       - contributor_access_eligibility
       - users
@@ -423,3 +426,8 @@ changelog:
       records the channelMemberCount field the route has always returned for the admin status
       card (best-effort synced Stream member count; null when Stream is unconfigured or the
       channel is not open). Code-review issues #2122 and #2128.
+  - date: 2026-11-24
+    change: >-
+      eligible.list 1.1.0 - the response gains scoredMembers, every member whose stored
+      reason_snapshot score is above zero, with score and gate readings, for the admin Weavers
+      section. Admin only; per-event counts are still never returned.

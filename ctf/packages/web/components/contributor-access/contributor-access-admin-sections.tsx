@@ -4,12 +4,15 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTheme } from '@/hooks/useTheme';
 import { getContributorAccessTokens } from './contributor-access-shared';
 import { EligibleMembersSection, type EligibleMember } from './eligible-members-section';
+import { ScoredMembersSection } from './scored-members-section';
+import type { ScoredMember } from 'lib/contributor-access/scored-members';
 import { ConfigEditorSection, type ContributorAccessConfigView } from './config-editor-section';
 
 // Contributor Access admin sections (module slug contributor-access), rendered in the Daily exchange
 // section of the Adoption screen (/admin/adoption). The badge and the daily count score the
 // same events with the same weights, so they share one admin page rather than two (owner decision,
-// 2026-09-25). Three sections: the eligible members list (revoke/reinstate), the owner-tunable
+// 2026-09-25). Four sections: the eligible members list (revoke/reinstate), every scored member with
+// how far they are from each setting, the owner-tunable
 // eligibility settings (including the gated channel's launch-gated open toggle), and the channel
 // status card (open/closed + synced member count). Admin chrome uses the neutral admin indigo via getContributorAccessTokens (rule 131).
 // The member surface is the gated #contributors channel inside the Commons shell, not here.
@@ -94,6 +97,7 @@ export function ContributorAccessAdminSections({
   const [loadState, setLoadState] = useState<LoadState>('loading');
   const [members, setMembers] = useState<EligibleMember[]>([]);
   const [eligibleCount, setEligibleCount] = useState(0);
+  const [scoredMembers, setScoredMembers] = useState<ScoredMember[]>([]);
   const [config, setConfig] = useState<ContributorAccessConfigView | null>(null);
   const [channelMemberCount, setChannelMemberCount] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -103,11 +107,12 @@ export function ContributorAccessAdminSections({
   const refresh = useCallback(async () => {
     try {
       const [eligiblePayload, configPayload] = await Promise.all([
-        requestJson<{ members: EligibleMember[]; eligibleCount: number }>('/api/contributor-access/admin/eligible'),
+        requestJson<{ members: EligibleMember[]; eligibleCount: number; scoredMembers?: ScoredMember[] }>('/api/contributor-access/admin/eligible'),
         requestJson<{ config: ContributorAccessConfigView; channelMemberCount: number | null }>('/api/contributor-access/admin/config'),
       ]);
       setMembers(eligiblePayload.members);
       setEligibleCount(eligiblePayload.eligibleCount);
+      setScoredMembers(eligiblePayload.scoredMembers ?? []);
       setConfig(configPayload.config);
       setChannelMemberCount(configPayload.channelMemberCount ?? null);
       setLoadState('ready');
@@ -200,8 +205,8 @@ export function ContributorAccessAdminSections({
       <p style={{ fontSize: 13, color: t.MUTED, lineHeight: 1.6, marginBottom: 16 }}>
         Members earn a single categorical standing — eligible or not-yet — through steady, broad contribution across
         plugins. Value counts only when it reaches an approved member past their first two weeks. The weekly
-        recompute only ever admits; revoking is for cause only, never for going quiet. No badge score is shown
-        anywhere, to admins or members.
+        recompute only ever admits; revoking is for cause only, never for going quiet. Scores are shown here, to
+        admins, and never to members.
       </p>
 
       {error ? (
@@ -219,6 +224,7 @@ export function ContributorAccessAdminSections({
       {loadState === 'ready' && config ? (
         <>
           <EligibleMembersSection t={t} members={members} busyId={busyId} onRevoke={(id) => void revoke(id)} onReinstate={(id) => void reinstate(id)} />
+          <ScoredMembersSection t={t} members={scoredMembers} gates={config} />
           <ConfigEditorSection key={config.threshold + JSON.stringify(config.weights) + String(config.channelOpen)} t={t} config={config} eligibleCount={eligibleCount} badgeOnlyKeys={badgeOnlyKeys} weightOrder={weightOrder} saving={saving} onSave={(update) => void saveConfig(update)} />
           <StatusCard t={t} eligibleCount={eligibleCount} needed={config.minEligibleToOpenChannel} channelOpen={config.channelOpen} channelMemberCount={channelMemberCount} />
         </>

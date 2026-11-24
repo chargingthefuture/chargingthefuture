@@ -2,8 +2,8 @@
 
 import type { ContributorAccessTokens } from './contributor-access-shared';
 
-// Eligible members list with revoke/reinstate actions. Categorical fields only — the API returns
-// no score and this section renders none (proposal hard guardrail: no numeric standing anywhere).
+// Eligible members list with revoke/reinstate actions. Categorical fields only; the scores sit in
+// the Scored members section beside it, for admins.
 
 export type EligibleMember = {
   userId: string;
