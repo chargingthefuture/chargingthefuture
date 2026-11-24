@@ -64,12 +64,15 @@ export function seQuestionOfDay(day) {
     return SE_QUESTIONS[index % SE_QUESTIONS.length];
 }
 // The question a member is shown next: today's if not yet answered, then the earliest one out that
-// they have not answered, so somebody new can catch up. Null when every question out is answered.
-export function seNextQuestion(day, answered) {
+// they have not answered, so somebody new can catch up. A question the member skipped (Skip on the
+// card, stored as its Not for me mark) is passed over the same way, without counting as an answer.
+// Null when every question out is answered or skipped.
+export function seNextQuestion(day, answered, skipped = new Set()) {
+    const open = (question) => !answered.has(question.id) && !skipped.has(question.id);
     const today = seQuestionOfDay(day);
-    if (!answered.has(today.id))
+    if (open(today))
         return today;
-    return SE_QUESTIONS.slice(0, seQuestionsOut(day)).find((question) => !answered.has(question.id)) ?? null;
+    return SE_QUESTIONS.slice(0, seQuestionsOut(day)).find(open) ?? null;
 }
 export function seMatchLine(match) {
     return `You and @${match.handle} answered ${match.same} of ${match.both} the same`;

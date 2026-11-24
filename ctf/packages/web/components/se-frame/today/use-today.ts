@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { seLegacyMarkChanges, seSaveCardInToday, seSaveChangeFor, SE_SAVED_WORDS, type SeTodayCard, seMarkCardInToday, seMarkChangeFor, seMarksFromToday, seReadChangeFor, seTodayDayQuery, type SeCardMarkChange, type SeToday, type SeTodayMarks } from '@ctf/shared';
+import { seLegacyMarkChanges, seSaveCardInToday, seSaveChangeFor, SE_SAVED_WORDS, type SeTodayCard, seMarkBringsNext, seMarkCardInToday, seMarkChangeFor, seMarksFromToday, seReadChangeFor, seTodayDayQuery, type SeCardMarkChange, type SeToday, type SeTodayMarks } from '@ctf/shared';
 import { failureText, responseFailureText } from 'lib/errors/client-failure';
 import { reportError } from 'lib/observability/report';
 
@@ -130,8 +130,9 @@ export function useToday(accountId: string | null) {
         writeJson(CACHE_PREFIX + owner, next);
         return next;
       });
-      // A mark that was not stored is read back as it is on the server.
-      void postMarks(change).then((ok) => (ok ? undefined : load()));
+      // A mark that was not stored is read back as it is on the server, and so is Skip on a 21
+      // Questions card once stored, so the next question comes in.
+      void postMarks(change).then((ok) => (ok && !seMarkBringsNext(change) ? undefined : load()));
     },
     [owner, accountId, load],
   );

@@ -113,14 +113,12 @@ These replace the Rasa-based decisions and are settled; do not relitigate.
 This subsystem is **not greenfield** — it is three disconnected pieces plus a dropped
 design that this plan unifies:
 
-1. **Feed Q&A (direct Ollama)** — `lib/feed/inference.ts`, `lib/chatbot/ollama.ts`,
-   `POST /api/feed/questions`, `POST /api/feed/questions/:id/answer`. The actual LLM
+1. **Feed Q&A (direct Ollama)** — removed 2026-11-23 (its routes, `lib/feed/inference.ts` and its
+   tables are gone; `lib/chatbot/ollama.ts` stays, used by comic). The LLM
    answering today: a direct Ollama HTTP call with a static confidence and a template
    fallback. No NLU/dialogue.
-2. **Rasa NLU export (training pathway, brick #1)** — `exportQuestionsForRasa()`
-   (`lib/feed/repository.ts`) + `GET /api/feed/admin/questions/export` emit **Rasa NLU
-   YAML** (`version: "3.1"`; intents = the 5 categories). Admin-gated. *Known bug:* a
-   nested duplicate loop double-counts examples — fix when this is wired to a real Rasa.
+2. **Rasa NLU export (training pathway, brick #1)** — the Feed question export
+   (`GET /api/feed/admin/questions/export`) was removed with the Feed Q&A on 2026-11-23.
 3. **Home-chat router (presentation precursor)** — `components/community-shell/use-home-chat.ts`:
    client-side `getActionForText()` keyword→plugin navigation (`ctf-home-bot`, "I'm still
    learning…" fallback, localStorage history). **Navigation only, not Q&A.** The Hub
@@ -287,10 +285,8 @@ ones that were refused, and why**. Most recent 200, loaded lazily on first expan
 ## API Surface and Route Map
 
 ### Current (precursors)
-- `POST /api/feed/questions`, `POST /api/feed/questions/:id/answer`,
-  `POST /api/feed/answers/:id/rate` — Q&A submit/generate/rate.
-- `GET /api/feed/admin/questions`, `GET /api/feed/admin/questions/export` — admin review +
-  **Rasa NLU YAML export**.
+- The Feed Q&A routes (`/api/feed/questions`, `/api/feed/answers`, `/api/feed/admin/questions`,
+  including its Rasa NLU YAML export) were removed on 2026-11-23.
 - Client-side home-chat routing in `use-home-chat.ts` (no dedicated server route;
   `POST /api/commons/messages` is a stub).
 ### Implemented (backend foundation, server-only — `comic.*`)
@@ -552,11 +548,10 @@ not_helpful / flagged ratings) are the **two training inputs** for the @comic as
 **NLU-only** (`/model/parse` is stateless and needs no tracker store); `endpoints.yml` leaves the
 `tracker_store` block commented. Provision it only when stateful dialogue (stories) is added.
 
-**Reused:** Note: `llm_inference_log` has NOT-NULL FKs into `feed_questions`/`feed_answers`, so
-comic generation is **not** forced into that feed-shaped table; comic captures request/response on
-its own `comic_turns` and emits a structured `[comic.inference]` console audit for parity (revisit
-if a comic-native inference log is needed). The feed `feed_answer_ratings` table is **not** reused
-for comic answers (its FK targets `feed_answers`); comic ratings live in `comic_answer_ratings`.
+**Reused:** none of the old Feed Q&A tables (`llm_inference_log`, `feed_answer_ratings`, dropped on
+2026-11-23). Comic captures request/response on its own `comic_turns` and emits a structured
+`[comic.inference]` log line (revisit if a comic-native inference log is needed); comic ratings live
+in `comic_answer_ratings`.
 
 **Admin audit trail (added 2026-08-28).**
 
@@ -750,7 +745,7 @@ reseeded here; `@comic` is a fixed system mention, not a `hub_bots` row, in the 
    the **Android UI** (asker cards + pending card + `@comic` composer + consent sheet + rating row +
    owner review dashboard) is delivered (2026-06-01, design `9a4a1af`). Still outstanding: a running
    Rasa (interim policy forces human review on every draft).
-2. `exportQuestionsForRasa` has a duplicate nested loop that double-counts examples.
+2. ~~`exportQuestionsForRasa` double-counts examples.~~ Removed with the Feed Q&A on 2026-11-23.
 3. Confidence, "approved sources," moderation, and token counts are overstated in the feed
    inventory relative to code — reconcile there (coordinate with the feed-plugin agent).
 4. Single LLM provider, no failover (carried from feed gap #1).
@@ -818,6 +813,8 @@ buckets are not reproduced — only real provenance (engine / intent / safety ca
 `nlu_confidence`, surfaced as "Not yet scored" when null) is shown.
 
 ## Change Log
+
+- 2026-11-23: The Feed Q&A precursor is gone: its routes, `lib/feed/inference.ts`, the question export and the tables `feed_questions`, `feed_answers`, `feed_answer_ratings` and `llm_inference_log` were removed with the Commons questions (see the Feed inventory). The comic inference comment no longer points at the dropped log.
 
 - 2026-11-16: **Member stories mixed in with the blog's, and shown signed out with consent (owner decisions).** Up to five accepted member stories a day, oldest first, beside the day's blog stories (`seMemberStoriesForDay`, `seStoriesWithMembers`), replacing the order after every blog post. The choice's words now name visitors without an account (`SE_MEMBER_STORY_CONSENT_VERSION` 2026-11-16.1); signed-out Today shows only pieces agreed under those words (`seMemberStoryShownSignedOut`), and an earlier choice offers Agree to the words above. No new column: `story_consent_version` already records which words.
 

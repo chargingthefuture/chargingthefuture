@@ -21,7 +21,7 @@ export type CommonsReactionSummary = {
 // What kind of feed item a Hub message came from. Drives how the client renders it: an
 // `announcement` shows the distinct official card (badge + optional title), while `community`
 // (peer posts) and `question` (AI Q&A) render as ordinary chat bubbles.
-export type CommonsMessageKind = 'announcement' | 'question' | 'community';
+export type CommonsMessageKind = 'announcement' | 'community';
 
 // Hub-owned message types
 export type CommonsMessage = {

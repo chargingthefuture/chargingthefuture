@@ -3,6 +3,7 @@ import {
   seApplyCardMarks,
   seArchiveReplayForDay,
   seLegacyMarkChanges,
+  seMarkBringsNext,
   seMarkCardInToday,
   seMarkChangeFor,
   seNewCommentsLine,
@@ -98,5 +99,14 @@ describe('older replays in a daily rotation', () => {
     expect(seReplayIsRecent(replays[3], '2026-11-06')).toBe(true);
     expect(seArchiveReplayForDay(replays, '2026-11-06')?.id).toBe('a');
     expect(seReplayIsRecent(replays[3], '2026-11-10')).toBe(false);
+  });
+});
+
+describe('Skip on a 21 Questions card', () => {
+  it('reads Today again so the next question takes its place', () => {
+    expect(seMarkBringsNext({ cardId: 'questions:q01', mark: 'not_for_me' })).toBe(true);
+    expect(seMarkBringsNext({ cardId: 'questions-match:ann', mark: 'not_for_me' })).toBe(false);
+    expect(seMarkBringsNext({ cardId: 'questions:q01', mark: 'done' })).toBe(false);
+    expect(seMarkBringsNext({ cardId: 'story:a', mark: 'not_for_me' })).toBe(false);
   });
 });

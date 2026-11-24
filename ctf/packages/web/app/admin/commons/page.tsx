@@ -2,10 +2,8 @@ import { redirect } from 'next/navigation';
 import { evaluatePluginAccess } from 'lib/auth/server-authz';
 import {
   countHiddenCommonsRows,
-  countPendingFlaggedAnswers,
   listCommonsAuthors,
   listCommonsModerationQueue,
-  listFlaggedAnswers,
 } from 'lib/feed/moderation';
 import { failureReason } from 'lib/errors/failure';
 import { reportError } from 'lib/observability/report';
@@ -33,12 +31,10 @@ export default async function CommonsModerationAdminPage() {
       return fallback;
     });
   }
-  const [rows, hidden, authors, flagged, pendingFlagged] = await Promise.all([
+  const [rows, hidden, authors] = await Promise.all([
     soft(listCommonsModerationQueue({ limit: 50 }), 'the moderation queue', 'admin_page_queue', []),
     soft(countHiddenCommonsRows(), 'the hidden counts', 'admin_page_hidden_counts', { posts: 0, replies: 0 }),
     soft(listCommonsAuthors(50), 'the author list', 'admin_page_authors', []),
-    soft(listFlaggedAnswers(50), 'the flagged answers', 'admin_page_flagged', []),
-    soft(countPendingFlaggedAnswers(), 'the pending flagged count', 'admin_page_pending_flagged', 0),
   ]);
   const loadError =
     failures.length > 0 ? `Could not read from the database. ${failures.join('; ')}.` : null;
@@ -48,8 +44,6 @@ export default async function CommonsModerationAdminPage() {
       rows={rows}
       hidden={hidden}
       authors={authors}
-      flagged={flagged}
-      pendingFlagged={pendingFlagged}
       loadError={loadError}
     />
   );

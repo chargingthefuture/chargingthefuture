@@ -33,13 +33,12 @@ Rule 114 baseline: Feed relies on canonical identity and does not duplicate acco
 
 - Storage location (table or json path): none — Feed has no dedicated per-user extension table.
 - Single-profile rule: per-user Feed state is keyed by `user_id` across the read-state, dismissal,
-  rating, and announcement-state tables; there is no duplicate profile and no per-user preference
+  reaction, and announcement-state tables; there is no duplicate profile and no per-user preference
   table (render mode is a global singleton in `feed_render_config`, which also carries the
   `is_public` flag for the publicly-viewable Hub channel).
 - Per-user state tables (all keyed by `user_id`):
   - `feed_user_read_state` — `(user_id, item_id, read_at)`; which feed items the user has read.
   - `feed_user_dismissals` — `(user_id, item_id, dismissed_at)`; dismissed items.
-  - `feed_answer_ratings` — `(user_id, answer_id, rating)`; the user's answer ratings.
   - `feed_community_post_reactions` — `(post_id, user_id, emoji)`; the user's emoji reactions on community posts.
   - `announcement_user_state` — `(user_id, announcement_id, read_at, acknowledged_at, dismissed_at)`.
 
@@ -61,34 +60,21 @@ Rule 114 baseline: Feed relies on canonical identity and does not duplicate acco
   - Contains personal data? yes (author linkage + content)
   - Retention period: long-lived under moderation policy
   - Legal/compliance note: user-generated content controls apply
-- Table/entity: `feed_questions`
-  - Contains personal data? yes (asker linkage, optional location context)
-  - Retention period: medium-lived; location context minimized
-  - Legal/compliance note: consent-gated LLM Q&A
-- Table/entity: `feed_answers`
-  - Contains personal data? yes for community answers (author linkage)
-  - Retention period: medium-lived
-  - Legal/compliance note: LLM answers are logged in `llm_inference_log`
-- Table/entity: `feed_answer_ratings`
-  - Contains personal data? yes (user linkage)
-  - Retention period: medium-lived
-  - Legal/compliance note: engagement metadata
 
 ## 5) Service-Scoped Deletion Contract
 
 When user deletes Feed usage only:
 
 - Delete immediately:
-  - per-user state rows in `feed_user_read_state`, `feed_user_dismissals`, `feed_answer_ratings`,
+  - per-user state rows in `feed_user_read_state`, `feed_user_dismissals`,
     `feed_community_post_reactions`, `announcement_user_state`, `announcement_reactions`, and
     `feed_commons_last_seen` (2026-08-02: the last three now have registry entries — this contract
     already promised `feed_community_post_reactions` would clear, but no registry entry existed, so
     the deletion engine never executed that promise until the deletion-coverage gate caught it)
 - Delete immediately (continued):
-  - the member's own `feed_items` rows — the Commons timeline copy of each of their posts and
-    questions, which carries the same text as the source row. Scoped to
-    `created_by_user_id = <member> AND (source_community_post_id IS NOT NULL OR source_question_id
-    IS NOT NULL)`, so the copies of admin-published announcements are untouched. Deleting the copy
+  - the member's own `feed_items` rows — the Commons timeline copy of each of their posts,
+    which carries the same text as the source row. Scoped to
+    `created_by_user_id = <member> AND source_community_post_id IS NOT NULL`, so the copies of admin-published announcements are untouched. Deleting the copy
     cascades its `feed_item_targets`, `feed_user_read_state`, and `feed_user_dismissals` rows.
     (2026-08-09: added after an owner report — deleting an account removed the posts but left the
     copies, so the member's words stayed on the Commons under the fallback handle `user-hub-syst`.
@@ -105,7 +91,6 @@ When user deletes Feed usage only:
     generic handle leaves the words in place and is not a deletion.
 - Retain for compliance/fraud/finance:
   - policy-required moderation records
-  - `llm_inference_log` audit rows
 - Never touch (must remain):
   - canonical profile
   - content owned by other users
@@ -117,7 +102,7 @@ When user deletes Feed usage only:
 When user requests full account deletion:
 
 - Additional records removed vs service-scoped deletion:
-  - remaining user-linked community posts/replies, questions, and answer ratings where policy allows hard delete
+  - remaining user-linked community posts and replies where policy allows hard delete
 - Cross-service dependencies:
   - full-account orchestrator coordinates deletion sequencing and audit completion
 - Final expected state:
@@ -130,9 +115,9 @@ If user returns after service-scoped deletion:
 - Recreated defaults:
   - none — per-user Feed state starts empty (no extension row to recreate)
 - Data that is not restored:
-  - removed read/dismissal/rating state and hard-deleted authored content
+  - removed read/dismissal/reaction state and hard-deleted authored content
 - Re-consent required? (yes/no):
-  - yes for LLM Q&A (per-question consent); no per-user personalization is stored
+  - no; no per-user personalization is stored
 
 ## 8) Audit and Events
 
@@ -181,6 +166,10 @@ If user returns after service-scoped deletion:
 - [ ] Web and Android parity confirmed
 
 ## Change Log
+
+- 2026-11-23: The Commons questions and answers are gone (asking moved to Ask the architect).
+  `feed_questions`, `feed_answers`, `feed_answer_ratings` and `llm_inference_log` are dropped by
+  `post/0117`, so deletion no longer lists them, and the `feed_items` copy filter is posts only.
 
 - 2026-10-14: Deletion (service-scoped and full-account) now also removes the member's
   `feed-<userId>` Stream user, which carried their @username after the database rows were gone.

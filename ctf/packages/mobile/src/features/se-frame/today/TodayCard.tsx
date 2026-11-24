@@ -235,6 +235,7 @@ export function TodayCard({
   read,
   onToggleDone,
   onHide,
+  onSkip,
   onMute,
   onMutePost,
   onSave,
@@ -249,6 +250,8 @@ export function TodayCard({
   read: boolean;
   onToggleDone: () => void;
   onHide: () => void;
+  // Skip on a 21 Questions card: the same Not for me mark, without the Not for me feedback signal.
+  onSkip: () => void;
   onMute?: () => void;
   // Mute this post: the card leaves Today and its conversation sends no notices.
   onMutePost?: () => void;
@@ -311,7 +314,7 @@ export function TodayCard({
       {menu ? <CardMenu s={s} card={card} canReport={canReport} onHide={onHide} onMute={onMute} onMutePost={mutePost} /> : null}
       <CardText t={t} s={s} card={card} open={open} opensSheet={opensSheet} onPress={toggle} onOpenLink={onOpenLink} />
       {credit ? <Text style={s.creditPill}>{credit}</Text> : null}
-      {isQuestionsCard(card) ? <QuestionsPanel t={t} card={card} open={open} onOpen={() => setOpen(true)} onChanged={onChanged ?? noop} /> : null}
+      {isQuestionsCard(card) ? <QuestionsPanel t={t} card={card} open={open} onOpen={() => setOpen(true)} onChanged={onChanged ?? noop} onSkip={onSkip} /> : null}
       <CardFoot t={t} s={s} card={card} onOpenLink={onOpenLink} onAnswer={opensSheet ? openSheet : null} onSave={onSave} onHide={onHide} />
       {sheet ? (
         <CardSheet

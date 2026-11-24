@@ -11,7 +11,7 @@ export declare const SE_MATCH_MESSAGE_MAX = 500;
 export declare function seQuestionById(id: string): SeQuestion | null;
 export declare function seQuestionsOut(day: string): number;
 export declare function seQuestionOfDay(day: string): SeQuestion;
-export declare function seNextQuestion(day: string, answered: ReadonlySet<string>): SeQuestion | null;
+export declare function seNextQuestion(day: string, answered: ReadonlySet<string>, skipped?: ReadonlySet<string>): SeQuestion | null;
 export type SeQuestionMatch = {
     accountId: string;
     handle: string;

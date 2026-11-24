@@ -127,6 +127,12 @@ export function seMarkCardInToday<T extends { cards: SeTodayCard[] }>(today: T, 
   };
 }
 
+// Whether a stored change should be followed by a fresh Today read: Skip (Not for me) on a 21
+// Questions card, so the next question the member has not answered or skipped takes its place.
+export function seMarkBringsNext(change: SeCardMarkChange): boolean {
+  return change.mark === 'not_for_me' && change.cardId.startsWith('questions:');
+}
+
 // The start of the member's own day, sent with the Today read so done cards leave from their next day.
 export function seDayStartIso(now: Date = new Date()): string {
   return new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();

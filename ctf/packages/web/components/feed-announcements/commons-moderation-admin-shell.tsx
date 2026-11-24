@@ -1,12 +1,11 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { EyeOff, Eye, Flag, MessageSquare, ShieldAlert } from 'lucide-react';
+import { EyeOff, Eye, MessageSquare, ShieldAlert } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { PluginUserShellButton } from '@/components/shared/plugin-user-shell-button';
 import type {
-  FeedFlaggedAnswerRow,
   FeedModerationAuthorSummary,
   FeedModerationQueueRow,
 } from 'lib/feed/moderation';
@@ -36,11 +35,9 @@ const QUEUE_TARGET_LABEL: Record<FeedModerationQueueRow['target'], string> = {
   reply: 'Reply',
   'announcement-reply': 'Announcement reply',
   'card-message': 'Card message',
-  question: 'Question',
-  answer: 'Answer',
 };
 
-type TabKey = 'all' | 'hidden' | 'authors' | 'flagged';
+type TabKey = 'all' | 'hidden' | 'authors';
 
 type ModerationQueuePayload = {
   ok?: boolean;
@@ -72,8 +69,7 @@ function moderationNotice(
   return nextHidden ? hiddenMsg : shownMsg;
 }
 
-// Shared hide/restore POST. Same endpoint shape for Commons rows and flagged answers; the caller
-// supplies the URL and applies its own default message so the wording stays per-surface.
+// Shared hide/restore POST. The caller supplies the URL and applies its own default message.
 async function postModeration(
   url: string,
   nextHidden: boolean,
@@ -129,12 +125,10 @@ function HiddenStats({ hidden }: { hidden: { posts: number; replies: number } })
 function ModerationTabs({
   tab,
   focusAuthor,
-  pendingFlagged,
   onSwitch,
 }: {
   tab: TabKey;
   focusAuthor: FeedModerationAuthorSummary | null;
-  pendingFlagged: number;
   onSwitch: (next: TabKey) => void;
 }) {
   const { theme } = useTheme();
@@ -150,9 +144,6 @@ function ModerationTabs({
       </button>
       <button type="button" onClick={() => onSwitch('authors')} aria-pressed={tab === 'authors'} style={tabStyle(t, tab === 'authors')}>
         By member
-      </button>
-      <button type="button" onClick={() => onSwitch('flagged')} aria-pressed={tab === 'flagged'} style={tabStyle(t, tab === 'flagged')}>
-        Flagged answers{pendingFlagged > 0 ? ` (${pendingFlagged})` : ''}
       </button>
     </div>
   );
@@ -201,8 +192,7 @@ function FocusAuthorHeader({ author, onBack }: { author: FeedModerationAuthorSum
   );
 }
 
-// The hide/restore button shared by Commons rows and flagged answers. Restore is green, hide is
-// amber; the label differs per surface but the shape is identical.
+// The hide/restore button on a Commons row. Restore is green, hide is amber.
 function HideToggleButton({
   isHidden,
   busy,
@@ -233,82 +223,6 @@ function HideToggleButton({
       {isHidden ? <Eye size={13} /> : <EyeOff size={13} />}
       {busy ? 'Saving…' : isHidden ? 'Put back' : hideLabel}
     </button>
-  );
-}
-
-function FlaggedAnswerCard({
-  row,
-  busy,
-  onToggle,
-}: {
-  row: FeedFlaggedAnswerRow;
-  busy: boolean;
-  onToggle: (row: FeedFlaggedAnswerRow, nextHidden: boolean) => void;
-}) {
-  const { theme } = useTheme();
-  const t = getFeedAnnouncementsTokens(theme);
-  const isHidden = row.moderationStatus === 'hidden';
-  return (
-    <div style={{ marginBottom: 12, padding: '14px 16px', borderRadius: 12, background: t.SURFACE, border: `1px solid ${isHidden ? 'rgba(245,158,11,0.35)' : t.BORDER_SOLID}` }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
-        <span style={{ padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: 'rgba(239,68,68,0.12)', color: '#EF4444', border: '1px solid rgba(239,68,68,0.3)' }}>
-          <Flag size={10} style={{ verticalAlign: '-1px', marginRight: 3 }} />
-          {row.flaggedCount} flag{row.flaggedCount === 1 ? '' : 's'}
-        </span>
-        {row.notHelpfulCount > 0 ? (
-          <span style={{ fontSize: 11.5, color: t.MUTED }}>{row.notHelpfulCount} marked not helpful</span>
-        ) : null}
-        <span style={{ padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: `${t.ACCENT}1f`, color: t.ACCENT, border: `1px solid ${t.ACCENT}4d` }}>
-          {row.answerType === 'llm' ? 'Assistant' : 'Member'}
-        </span>
-        {isHidden ? (
-          <span style={{ padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 700, background: 'rgba(245,158,11,0.12)', color: '#F59E0B', border: '1px solid rgba(245,158,11,0.3)' }}>
-            Hidden{row.moderationReason ? ` · ${FEED_MODERATION_REASON_LABEL[row.moderationReason]}` : ''}
-          </span>
-        ) : null}
-      </div>
-
-      <div style={{ fontSize: 12.5, color: t.MUTED, marginBottom: 6 }}>
-        Asked: {row.questionBody}
-      </div>
-      <div style={{ fontSize: 14, lineHeight: 1.6, color: t.TITLE, whiteSpace: 'pre-wrap', wordBreak: 'break-word', marginBottom: 10 }}>
-        {row.answerBody}
-      </div>
-
-      <HideToggleButton isHidden={isHidden} busy={busy} hideLabel="Hide answer" onClick={() => onToggle(row, !isHidden)} />
-    </div>
-  );
-}
-
-function FlaggedTab({
-  flagged,
-  busyId,
-  onToggle,
-}: {
-  flagged: FeedFlaggedAnswerRow[];
-  busyId: string | null;
-  onToggle: (row: FeedFlaggedAnswerRow, nextHidden: boolean) => void;
-}) {
-  const { theme } = useTheme();
-  const t = getFeedAnnouncementsTokens(theme);
-  if (flagged.length === 0) {
-    return (
-      <div style={{ padding: '32px 16px', textAlign: 'center', color: t.MUTED, fontSize: 14, borderRadius: 12, background: t.SURFACE, border: `1px solid ${t.BORDER_SOLID}` }}>
-        No answers have been flagged.
-      </div>
-    );
-  }
-  return (
-    <>
-      <p style={{ fontSize: 12.5, color: t.MUTED, marginTop: 0, marginBottom: 12 }}>
-        Answers members flagged, most-flagged first. Until now these went nowhere — the count was
-        being collected and no screen showed it. Hiding an answer leaves the question up, so the
-        member who asked still has their question and can get a better answer.
-      </p>
-      {flagged.map((row) => (
-        <FlaggedAnswerCard key={row.answerId} row={row} busy={busyId === row.answerId} onToggle={onToggle} />
-      ))}
-    </>
   );
 }
 
@@ -441,15 +355,11 @@ export function CommonsModerationAdminShell({
   rows: initialRows,
   hidden: initialHidden,
   authors: initialAuthors,
-  flagged: initialFlagged,
-  pendingFlagged: initialPendingFlagged,
   loadError = null,
 }: {
   rows: FeedModerationQueueRow[];
   hidden: { posts: number; replies: number };
   authors: FeedModerationAuthorSummary[];
-  flagged: FeedFlaggedAnswerRow[];
-  pendingFlagged: number;
   // Which server-side reads failed on first load, and why. Shown in the error banner until the next
   // action clears it.
   loadError?: string | null;
@@ -460,8 +370,6 @@ export function CommonsModerationAdminShell({
   const [hidden, setHidden] = useState(initialHidden);
   const [authors, setAuthors] = useState(initialAuthors);
   const [tab, setTab] = useState<TabKey>('all');
-  const [flagged, setFlagged] = useState(initialFlagged);
-  const [pendingFlagged, setPendingFlagged] = useState(initialPendingFlagged);
   const [focusAuthor, setFocusAuthor] = useState<FeedModerationAuthorSummary | null>(null);
   // The reason applied to the next hide. Defaults to off-topic because that is the actual
   // day-to-day judgment — Quora-style discussion unrelated to the economy — so a sweep of twenty
@@ -496,52 +404,10 @@ export function CommonsModerationAdminShell({
     }
   }, [applyQueueData]);
 
-  const reloadFlagged = useCallback(async () => {
-    setError(null);
-    try {
-      const res = await fetch('/api/feed/admin/moderation/flagged-answers', { cache: 'no-store' });
-      const data = (await res.json().catch(() => null)) as
-        | { ok?: boolean; answers?: FeedFlaggedAnswerRow[]; pending?: number; message?: string }
-        | null;
-      if (res.ok && data?.ok && Array.isArray(data.answers)) {
-        setFlagged(data.answers);
-        if (typeof data.pending === 'number') setPendingFlagged(data.pending);
-      } else {
-        setError(data?.message ?? 'Could not load flagged answers.');
-      }
-    } catch (caught) {
-      setError(failureText(caught, { area: 'feed-announcements', op: 'reload_flagged', fallback: 'Could not load flagged answers.' }));
-    }
-  }, []);
-
   function switchTab(next: TabKey) {
     setTab(next);
     setFocusAuthor(null);
-    if (next === 'flagged') void reloadFlagged();
-    else if (next !== 'authors') void reload(next === 'hidden', null);
-  }
-
-  // Hide or restore one flagged answer. Same endpoint as the Commons rows, target 'answer'.
-  async function setAnswerHidden(row: FeedFlaggedAnswerRow, nextHidden: boolean) {
-    if (!nextHidden && !window.confirm('Put this answer back where members can see it?')) {
-      return;
-    }
-    setBusyId(row.answerId);
-    setError(null);
-    setNotice(null);
-    try {
-      const result = await postModeration(`/api/feed/admin/moderation/answer/${row.answerId}`, nextHidden, reason);
-      if (!result.ok) {
-        setError(result.message ?? 'Could not change that answer.');
-        return;
-      }
-      setNotice(moderationNotice(result.changed, nextHidden, 'Answer hidden. The question stays up.', 'Answer is visible again.'));
-      await reloadFlagged();
-    } catch (caught) {
-      setError(failureText(caught, { area: 'feed-announcements', op: 'set_answer_hidden', fallback: 'Could not change that answer.' }));
-    } finally {
-      setBusyId(null);
-    }
+    if (next !== 'authors') void reload(next === 'hidden', null);
   }
 
   function openAuthor(author: FeedModerationAuthorSummary) {
@@ -596,7 +462,7 @@ export function CommonsModerationAdminShell({
           should be able to rewrite a member&apos;s post and leave their name on it.
         </p>
 
-        <ModerationTabs tab={tab} focusAuthor={focusAuthor} pendingFlagged={pendingFlagged} onSwitch={switchTab} />
+        <ModerationTabs tab={tab} focusAuthor={focusAuthor} onSwitch={switchTab} />
 
         {tab !== 'authors' ? <ReasonPicker reason={reason} onChange={setReason} /> : null}
 
@@ -609,9 +475,7 @@ export function CommonsModerationAdminShell({
           <div role="status" style={{ marginBottom: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', color: '#22C55E', fontSize: 13 }}>{notice}</div>
         ) : null}
 
-        {tab === 'flagged' ? (
-          <FlaggedTab flagged={flagged} busyId={busyId} onToggle={setAnswerHidden} />
-        ) : tab === 'authors' ? (
+        {tab === 'authors' ? (
           <AuthorsTab authors={authors} onOpen={openAuthor} />
         ) : (
           <QueueTab rows={rows} tab={tab} busyId={busyId} onToggle={setHiddenState} />
