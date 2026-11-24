@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { SE_MATCHING_WORDS as W, seMatchingToggleShown, type SeMatchingState } from '@ctf/shared';
 import styles from './matching-toggle.module.css';
 
-// 21 Questions matching, on or off: under Matches on Today and on Me. Shows nothing until the member
+// 21 Questions matching, on or off: under Buddies on Today and on Me. Shows nothing until the member
 // has answered a question, or when they cannot use 21 Questions. Only this toggle changes matching;
 // answering never turns it back on. `refreshKey` reads it again (Today passes its own read time, so
 // the toggle appears right after the first answer); `onChanged` lets Today read its cards again.

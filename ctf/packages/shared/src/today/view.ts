@@ -15,8 +15,15 @@ export const SE_TODAY_FILTERS: ReadonlyArray<{ key: SeTodayFilter; label: string
   { key: 'asks', label: 'Asks', kinds: ['ask'] },
   { key: 'offers', label: 'Offers', kinds: ['offer'] },
   { key: 'stories', label: 'Stories', kinds: ['story', 'replay', 'game'] },
-  { key: 'matches', label: 'Matches', kinds: ['match'] },
+  // 21 Questions: today's question and the members who answer like you, called buddies. The key
+  // stays 'matches' so a filter already in use keeps working.
+  { key: 'matches', label: 'Buddies', kinds: ['match'] },
 ];
+
+// The needs-based Match card is not a buddy card, so it leads the timeline under All and Asks.
+export function seTodayShowsMatchCard(filter: SeTodayFilter): boolean {
+  return filter === 'all' || filter === 'asks';
+}
 
 const SOURCE_NAMES: Record<string, string> = {
   'peer-programming': 'goals',
