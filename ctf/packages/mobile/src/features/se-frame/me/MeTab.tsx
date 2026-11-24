@@ -1,5 +1,5 @@
 // The Me tab on Android, the copy of the web's me-tab.tsx: Me, and the screens it opens in place
-// (Settings and its Theme, Read, Hidden, Trust, and the profile lines). The phone's back button returns to
+// (Settings and its Theme, Open, Read, Hidden, Trust, and the profile lines). The phone's back button returns to
 // the screen before.
 
 import React, { useCallback, useContext, useEffect, useState } from 'react';
@@ -11,6 +11,7 @@ import type { SePrefs } from '../useSePrefs';
 import { SeFrameScrollContext } from '../frame-scroll';
 import { MarkedList } from './MarkedList';
 import { MeScreen, type MeUser } from './MeScreen';
+import { OpenList } from './OpenList';
 import { SavedCard } from './SavedCard';
 import { useMeProfile } from './meData';
 import { PromptsEditor } from './PromptsEditor';
@@ -39,6 +40,14 @@ function useMeBack(view: SeMeView, setView: (_v: SeMeView) => void) {
   }, [view, setView]);
 }
 
+// The lists Me opens (Open, Read, Hidden) and Trust, each with Back to Me; null for any other view.
+function listView(view: SeMeView, t: SeThemeTokens, viewerId: string, toMe: () => void, go: (_href: string) => void): React.ReactNode {
+  if (view === 'open') return <OpenList t={t} viewerId={viewerId} onBack={toMe} go={go} />;
+  if (view === 'read' || view === 'hidden') return <MarkedList t={t} mark={view === 'read' ? 'done' : 'not_for_me'} onBack={toMe} go={go} />;
+  if (view === 'trust') return <TrustScreen t={t} onBack={toMe} />;
+  return null;
+}
+
 export function MeTab({ t, user, prefs, onAskArchitect, onBack, saving, onOpen }: Props) {
   const [view, setViewState] = useState<SeMeView>('me');
   const scrollToTop = useContext(SeFrameScrollContext);
@@ -54,8 +63,8 @@ export function MeTab({ t, user, prefs, onAskArchitect, onBack, saving, onOpen }
   const go = (href: string) => openTodayLink(href, onOpen);
   const toMe = () => setView('me');
   if (view === 'theme') return <ThemeScreen t={t} theme={prefs.theme} onChange={prefs.setTheme} onBack={() => setView('settings')} />;
-  if (view === 'read' || view === 'hidden') return <MarkedList t={t} mark={view === 'read' ? 'done' : 'not_for_me'} onBack={toMe} go={go} />;
-  if (view === 'trust') return <TrustScreen t={t} onBack={toMe} />;
+  const list = listView(view, t, user.id, toMe, go);
+  if (list) return list;
   if (view === 'prompts') {
     const prompts = profile.kind === 'ready' ? profile.value.prompts : SE_ME_EMPTY_PROMPTS;
     return <PromptsEditor key={profile.kind} t={t} prompts={prompts} onSave={savePrompts} onDone={toMe} />;

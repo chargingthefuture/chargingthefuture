@@ -43,7 +43,7 @@ export type SeMeProfile = {
 export declare const SE_ME_BADGE_LABELS: Record<SeMeBadge, string>;
 export declare function seMeSince(sinceIso: string | null): string | null;
 export declare function seMeName(username: string | null | undefined): string;
-export type SeMeView = 'me' | 'settings' | 'theme' | 'read' | 'hidden' | 'prompts' | 'trust';
+export type SeMeView = 'me' | 'settings' | 'theme' | 'open' | 'read' | 'hidden' | 'prompts' | 'trust';
 export declare const SE_ME_VIEWS: readonly SeMeView[];
 export declare function isSeMeView(value: unknown): value is SeMeView;
 export declare const SE_ME_WORDS: {

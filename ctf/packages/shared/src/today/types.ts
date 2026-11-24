@@ -58,6 +58,9 @@ export type SeTodayCard = {
   // Set only on the What Works card: the problem the solution answers, so the opened card can offer
   // Add a solution to this problem, and the solution's own link when it has one.
   whatWorks?: SeTodayWhatWorks;
+  // Set for a signed-in member on a card they answered, wrote in, or asked or agreed to talk just
+  // you two on (commons_item_*, or a story's Fireside thread), for Me → Open (seOpenCards).
+  joined?: boolean;
 };
 
 export type SeTodayWhatWorks = { problemId: string; problemTitle: string; link: string | null };
