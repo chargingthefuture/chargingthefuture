@@ -32,6 +32,7 @@ export type SeTodayCard = {
     figures?: SeTodayFigure[];
     dailyCredit?: boolean;
     whatWorks?: SeTodayWhatWorks;
+    joined?: boolean;
 };
 export type SeTodayWhatWorks = {
     problemId: string;

@@ -13,6 +13,7 @@ import {
   SE_ME_TOOL_INK,
   SE_ME_TOOLS,
   SE_ME_WORDS as W,
+  SE_OPEN_WORDS,
   SE_SETTINGS_WORDS,
   SE_TRUST_WORDS,
   seMeName,
@@ -29,8 +30,8 @@ import type { MeProfileState } from './use-me-profile';
 import styles from './me.module.css';
 
 // Me, built to the approved board "Me": the member's name, since when they have been an Aven,
-// their badges and the gear to Settings; their three profile lines; ServiceCredits; Saved, Read and
-// Hidden; Trust (not on the board: carried over from 3.0, owner decision); the Tools grid; and
+// their badges and the gear to Settings; their three profile lines; ServiceCredits; Open (not on the
+// board: owner request, 2026-11-23), Read and Hidden; Saved; Trust (not on the board: carried over from 3.0, owner decision); the Tools grid; and
 // emoji rain. Making things is + New; reading is Today.
 
 function Icon({ d, size = 18 }: { d: string; size?: number }) {
@@ -228,6 +229,9 @@ export function MeScreen({ currentUser, profile, reading, onReading, onOpen, sav
       <CreditsCard handle={currentUser.username ? `@${currentUser.username}` : null} />
       <div className={styles.shortcuts}>
         {saved ?? null}
+        <button type="button" className={styles.shortcut} onClick={() => onOpen('open')}>
+          {SE_OPEN_WORDS.title}
+        </button>
         <button type="button" className={styles.shortcut} onClick={() => onOpen('read')}>
           {W.read}
         </button>
