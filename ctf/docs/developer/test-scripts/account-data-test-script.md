@@ -15,7 +15,7 @@
 | **Visibility** | Any signed-in identity (including unlock-pending) |
 | **Roles to test** | member |
 | **Surfaces** | web (phone-width layout) |
-| **Generated** | 2026-07-26 (hand-written on the JSON-export build, issue #1264) · 2026-11-23 manual update: AD-21 and AD-28: the timeline dot takes a card off Today and lists it in Me → Read; opening a card marks it read; AD-13 step 6 names the shortened Ask the architect line · 2026-11-23 manual update: AD-13 suggestions are chips under "Or start from one of these" · 2026-11-24 manual update: AD-41 Me → Open · 2026-11-24 manual update: the Matches filter is named Buddies (AD-13, the 21 Questions steps) · 2026-11-24 manual update: AD-43 Me → Read and Hidden open cards in place |
+| **Generated** | 2026-07-26 (hand-written on the JSON-export build, issue #1264) · 2026-11-23 manual update: AD-21 and AD-28: the timeline dot takes a card off Today and lists it in Me → Read; opening a card marks it read; AD-13 step 6 names the shortened Ask the architect line · 2026-11-23 manual update: AD-13 suggestions are chips under "Or start from one of these" · 2026-11-24 manual update: AD-41 Me → Open · 2026-11-24 manual update: the Matches filter is named Buddies (AD-13, the 21 Questions steps) · 2026-11-24 manual update: AD-43 Me → Read and Hidden open cards in place, web and Android (step 6) |
 
 ## How to run this
 
@@ -865,14 +865,15 @@ totals (AD-28) still count each mark.
 **Result:** web ☐ android ☐ — notes:
 
 ## AD-43 · Me → Read and Hidden open their cards in place (added 2026-11-24)
-**Role:** approved member · **Surfaces:** web · **Precondition:** Today shows at least one story and one ask by somebody else
+**Role:** approved member · **Surfaces:** web, android · **Precondition:** Today shows at least one story and one ask by somebody else
 **Steps:**
 1. On Today, tap the timeline dot of a story, and choose Not for me from the ••• menu of the ask.
 2. Open Me → Read and tap the story's row.
 3. Close the sheet. Open Me → Hidden and tap the ask's row.
 4. Close the sheet, then reach each row with Tab and open it with Enter.
 5. With a screen reader on, move through the rows of Read.
-**Expected:** Step 2: the story opens in place over Read, the same sheet as on Today, with its conversation; no new page opens. Step 3: the ask opens in place over Hidden with its answers. Step 4: each row takes keyboard focus with a visible outline and Enter opens it. Step 5: each row is read as a button with the card's label and title. Opening a card from either list does not change its mark: it stays in the same list after a reload. With the network off, the list says it could not read the cards and why.
+6. On Android, repeat steps 1 to 3, then turn TalkBack on and move through the rows of Read.
+**Expected:** Step 2: the story opens in place over Read, the same sheet as on Today, with its conversation; no new page opens. Step 3: the ask opens in place over Hidden with its answers. Step 4: each row takes keyboard focus with a visible outline and Enter opens it. Step 5: each row is read as a button with the card's label and title. Opening a card from either list does not change its mark: it stays in the same list after a reload. With the network off, the list says it could not read the cards and why. Step 6: on Android each card opens in place over Read and Hidden in the same sheet as on Today, and TalkBack reads each row as a button with the card's label and title.
 ## AD-43 · Days won rises on screen, on the next visit, and as a week line (added 2026-11-24)
 **Role:** an approved member on 3.1 with Emoji rain on (Me → Settings → Look and reading), on two browsers · **Surfaces:** web
 **Steps:**

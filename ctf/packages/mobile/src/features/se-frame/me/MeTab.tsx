@@ -43,7 +43,7 @@ function useMeBack(view: SeMeView, setView: (_v: SeMeView) => void) {
 // The lists Me opens (Open, Read, Hidden) and Trust, each with Back to Me; null for any other view.
 function listView(view: SeMeView, t: SeThemeTokens, viewerId: string, toMe: () => void, go: (_href: string) => void): React.ReactNode {
   if (view === 'open') return <OpenList t={t} viewerId={viewerId} onBack={toMe} go={go} />;
-  if (view === 'read' || view === 'hidden') return <MarkedList t={t} mark={view === 'read' ? 'done' : 'not_for_me'} onBack={toMe} go={go} />;
+  if (view === 'read' || view === 'hidden') return <MarkedList t={t} mark={view === 'read' ? 'done' : 'not_for_me'} viewerId={viewerId} onBack={toMe} go={go} />;
   if (view === 'trust') return <TrustScreen t={t} onBack={toMe} />;
   return null;
 }
