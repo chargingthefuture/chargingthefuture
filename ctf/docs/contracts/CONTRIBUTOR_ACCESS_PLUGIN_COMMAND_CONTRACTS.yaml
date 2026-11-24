@@ -80,8 +80,9 @@ contracts:
     description: >-
       List members who earned eligibility - user id, username (via the users table), first earned
       date, and revoke flag/reason - plus scoredMembers, every member whose stored reason_snapshot
-      score is above zero, with score, accountAgeDays, distinctPlugins, counterparties, eligible and
-      computedAt. Admin only; no per-event counts, and no member surface returns a score.
+      score is above zero, with username and name (from the Clerk account, so the admin list shows
+      a person rather than an account id), score, accountAgeDays, distinctPlugins, counterparties,
+      eligible and computedAt. Admin only; no per-event counts, and no member surface returns a score.
     inputSchema: {}
     outputSchema:
       ok:
@@ -429,5 +430,5 @@ changelog:
   - date: 2026-11-24
     change: >-
       eligible.list 1.1.0 - the response gains scoredMembers, every member whose stored
-      reason_snapshot score is above zero, with score and gate readings, for the admin Weavers
-      section. Admin only; per-event counts are still never returned.
+      reason_snapshot score is above zero, with handle, name, score and gate readings, for the
+      admin Weavers page. Admin only; per-event counts are still never returned.

@@ -8,10 +8,10 @@ import { ScoredMembersSection } from './scored-members-section';
 import type { ScoredMember } from 'lib/contributor-access/scored-members';
 import { ConfigEditorSection, type ContributorAccessConfigView } from './config-editor-section';
 
-// Contributor Access admin sections (module slug contributor-access), rendered in the Daily exchange
-// section of the Adoption screen (/admin/adoption). The badge and the daily count score the
-// same events with the same weights, so they share one admin page rather than two (owner decision,
-// 2026-09-25). Four sections: the eligible members list (revoke/reinstate), every scored member with
+// Contributor Access admin sections (module slug contributor-access), rendered on their own admin
+// page, /admin/weavers (weavers-admin-shell.tsx). They sat on the Adoption screen from 2026-09-25 to
+// 2026-11-24, when they moved off it (owner decision): the badge and the daily count score the same
+// events with the same weights, but they are not the same data. Four sections: the eligible members list (revoke/reinstate), every scored member with
 // how far they are from each setting, the owner-tunable
 // eligibility settings (including the gated channel's launch-gated open toggle), and the channel
 // status card (open/closed + synced member count). Admin chrome uses the neutral admin indigo via getContributorAccessTokens (rule 131).

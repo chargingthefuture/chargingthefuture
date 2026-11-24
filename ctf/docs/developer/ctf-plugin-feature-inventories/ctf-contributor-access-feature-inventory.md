@@ -88,21 +88,26 @@ no DMs) — and the **"Weavers of the Commons" badge** on Directory.
    409 (`contributor_access_channel_below_minimum`). Flipping it on creates the gated Stream
    channel and runs the first membership sync; closing an open channel is always allowed.
 3. Scored members list, under the eligible list: every member whose last weekly recompute stored
-   a score above zero, eligible or not, highest first. Each row shows the all-time score, the days
+   a score above zero, eligible or not, highest first. Each row is named by the member's handle,
+   else their account name from Clerk, and by the account id only when neither is known
+   (`scoredMemberLabel`). Each row shows the all-time score, the days
    since first sign-in, distinct plugins and distinct counterparties, each beside its setting with
    how far short it is ("met" once reached), and an Eligible mark where earned. It reads the
    stored `reason_snapshot`, so it moves once a week with the recompute, and a member below a
    gate stays listed instead of vanishing. Admin only.
 4. Channel status card: eligible count vs `min_eligible_to_open_channel`, an OPEN/CLOSED badge,
    and the synced Stream member count (best-effort; "unavailable" when Stream is not configured).
-5. The four sections above render as the Weavers of the Commons section of the Daily exchange
-   section on the Adoption screen, `/admin/adoption` (server-side admin gate; non-admins redirect to `/apps`),
-   from `components/contributor-access/contributor-access-admin-sections.tsx`, with
-   loading/error/populated states. The badge and the daily count score the same events with the
-   same weights, so they share one admin page (owner decision, 2026-09-25). The weights are edited as
+5. The sections above render on their own admin page, Weavers of the Commons, `/admin/weavers`
+   (its own tile on the admin landing; server-side admin gate, the same as Adoption; non-admins
+   redirect to `/apps`), from `components/contributor-access/weavers-admin-shell.tsx` and
+   `contributor-access-admin-sections.tsx`, with loading/error/populated states. They sat on the
+   Adoption screen from 2026-09-25 until 2026-11-24, when they moved off it (owner decision): the
+   badge and the daily count score the same events with the same weights, but they are not the same
+   data. Adoption keeps a one-line link here. The page still reads `GET /api/admin/daily-exchange`,
+   only for its event list. The weights are edited as
    a list, one event per row with its number on the right, in the order the daily reading lists them
    (delivering events first, heaviest first); the events that reach the badge but never a day's
-   count are dimmed and marked "badge only", and saving re-reads the day above.
+   count are dimmed and marked "badge only", and saving re-reads that event list.
 
 ## API Surface and Route Map
 
@@ -120,7 +125,7 @@ Admin routes (admin-only via `requireContributorAccessAdmin`; every allow **and*
   `channelSyncWarning`, never a rollback). Audits `contributor-access.config.update`.
 - `GET /api/contributor-access/admin/eligible` — members who earned eligibility (user id, username
   via the `users` table, `first_earned_at`, revoke flag/reason) plus the current eligible count,
-  and `scoredMembers`: every member with a stored score above zero (user id, username, score,
+  and `scoredMembers`: every member with a stored score above zero (user id, username, name — both resolved from Clerk through `resolveMemberIdentities`, since the account ids rarely match the `users` join — score,
   `accountAgeDays`, `distinctPlugins`, `counterparties`, `eligible`, `computedAt`), read from
   `reason_snapshot`. Admin only. Audits `contributor-access.eligible.list`.
 - `POST /api/contributor-access/admin/revoke` — body `{ userId, reason }`; for-cause only, reason
@@ -270,7 +275,7 @@ not counted toward `min_counterparties`. The daily count and the dashboard ignor
 ## Security, Privacy, and Compliance Controls
 
 - **No score is ever surfaced to a member.** The score and gate readings in `reason_snapshot` reach
-  one place: the admin-only `scoredMembers` list on the Adoption screen (since 2026-11-24). Per-event
+  one place: the admin-only `scoredMembers` list on the Weavers admin page, `/admin/weavers` (since 2026-11-24). Per-event
   counts are never returned, so Foundation call counts stay internal (rule 132).
 - **Badge surfaces are positive-only and claimed-only**: the Directory shows the badge only on a
   claimed profile whose member holds it; nothing renders for anyone else, and unclaimed
@@ -323,7 +328,7 @@ not counted toward `min_counterparties`. The daily count and the dashboard ignor
 
 ## Web and Android Delivery Status
 
-- **Web (desktop):** complete — admin (`/admin/adoption`, Daily exchange section), the member gated channel
+- **Web (desktop):** complete — admin (`/admin/weavers`, its own page), the member gated channel
   inside the Commons shell (channel rail entry, gated panel), the Directory profile badge +
   dialog, and the `/apps/directory/weavers-of-the-commons` explainer page.
 - **Web (mobile-responsive):** complete — the admin sections sit under the Daily exchange screen's `MobileScreenHeader`;
@@ -376,6 +381,19 @@ fill on the first recompute / config save / member post.
   evidence; revisit only with strong cause).
 
 ## Change Log
+
+- 2026-11-24: **Weavers of the Commons has its own admin page (owner decision).** The section sat
+  inside the Daily exchange section of the Adoption screen; it scores the same events, but it is not
+  the same data, and sharing the screen misled. It moved, unchanged, to `/admin/weavers`
+  (`app/admin/weavers/page.tsx`, `components/contributor-access/weavers-admin-shell.tsx`): eligible
+  members, scored members, eligibility settings and channel status. The page has its own tile on
+  the admin landing and the same admin gate as Adoption. Adoption keeps a one-line link to it, its
+  section is titled Daily exchange, and its Delivering today list labels each figure Today's score.
+  The Scored members list showed raw account ids (owner report): each row is now named by the
+  member's handle, else their account name, both read from Clerk, and by the id only when neither
+  is known; `scoredMembers` gains `name`. No table, score, weight or setting changed; the
+  counterparties setting stays at 5. Web only: admin is not in the
+  Android app.
 
 - 2026-11-24: **The Weavers section lists every scored member (owner report).** The section showed
   only members who had earned the badge, so with nobody eligible it read "Nobody has earned

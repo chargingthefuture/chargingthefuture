@@ -24,8 +24,8 @@ export const dynamic = 'force-dynamic';
 // Unlock and AI Assistant pinned to the top (the areas checked constantly).
 const ADMIN_AREAS: { href: string; name: string; slug?: string }[] = [
   // Whether members are working with each other: the steps toward 384, the daily exchange and the
-  // Weavers badge, Weekly Performance and its sign-in record, on one screen (owner decision,
-  // 2026-10-16). Those were three separate tiles before.
+  // sign-in record, on one screen (owner decision, 2026-10-16). Those were three separate tiles before.
+  // The Weavers badge left it for its own tile, below, on 2026-11-24.
   { href: '/admin/adoption', name: 'Adoption' },
   { href: '/admin/unlock', name: 'Unlock' },
   { href: '/admin/comic', name: 'AI Assistant' },
@@ -105,6 +105,10 @@ const ADMIN_AREAS: { href: string; name: string; slug?: string }[] = [
   { href: '/admin/skills-hunt', name: 'SkillsHunt' },
   { href: '/admin/socket-relay', name: 'SocketRelay' },
   { href: '/admin/trust-transport', name: 'TrustTransport' },
+  // The Weavers of the Commons badge: eligible and scored members, eligibility settings and the gated
+  // channel status. It scores the same events as the daily exchange on Adoption, but it is not the same
+  // data, so it has its own screen (owner decision, 2026-11-24).
+  { href: '/admin/weavers', name: 'Weavers of the Commons' },
   { href: '/admin/what-works', name: 'WhatWorks' },
   { href: '/admin/workforce', name: 'Workforce' },
 ];

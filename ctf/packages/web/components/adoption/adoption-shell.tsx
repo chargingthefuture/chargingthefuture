@@ -13,13 +13,14 @@ import { CardFeedbackSection } from './card-feedback-section';
 
 // Adoption: every admin reading of whether members are working with each other, on one screen
 // (owner decision, 2026-10-16). The steps toward 384 sit on top, then Days won and retention (3.1),
-// then what members finish and pass on in Today, then the sign-in record, then the daily exchange
-// and the Weavers badge. The Weekly Performance section was taken off on 2026-11-23 (owner
-// decision): its routes and the daily goal capture still run, with no screen reading them.
+// then what members finish and pass on in Today, then the sign-in record, then the daily exchange.
+// The Weavers badge moved to its own page, /admin/weavers, on 2026-11-24 (owner decision). The
+// Weekly Performance section was taken off on 2026-11-23 (owner decision): its routes and the daily
+// goal capture still run, with no screen reading them.
 export function AdoptionShell() {
   const { theme } = useTheme();
   const t = getPluginShellTokens(getAppAccent('service-credits', theme), theme);
-  const { reading, error, reload } = useDailyExchangeReading();
+  const { reading, error } = useDailyExchangeReading();
 
   return (
     <div style={{ background: t.BG, minHeight: '100vh', color: t.TEXT }}>
@@ -46,7 +47,7 @@ export function AdoptionShell() {
         </section>
 
         <div style={{ marginTop: 32 }}>
-          <DailyExchangeSection reading={reading} error={error} onReload={reload} />
+          <DailyExchangeSection reading={reading} error={error} />
         </div>
       </div>
     </div>
