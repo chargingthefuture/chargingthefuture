@@ -556,10 +556,15 @@ picture, ladder in turn). No sign-in is asked for. On Android, step 2 opens the 
 3. As A, read Today again and tap Talk here on the Match card. Send a message.
 4. As B, open Activity, then the Match card on Today.
 5. As B, block A, then read Today again.
+6. As C, an approved member who has not answered today's question, note the answered count on the 21 Questions card, then tap Skip this question. Skip the catching-up card that comes in too. Open Me → Hidden.
 **Expected:** Step 1 says Saved; the card stays with its dot checked, the buttons gone and "You picked:" with the answer, the dot cannot be unchecked, and a question missed on an earlier day shows as its own catching-up card; no question asks about home, family or
 where somebody lives. Step 3 shows "You and @B answered N of M the same" and the message in the
 card. Step 4 shows the new message in Activity and in the card, marked "1 new message" until opened.
 The Wanted and mission cards are under Asks, not Matches. Step 5 removes the Match card for both.
+Step 6: Skip sits under the answers on web and Android; the card leaves Today and the next question
+not answered or skipped comes in as a catching-up card, with the same answered count; skipping that
+one brings the one after it; Days won, the done count and C's matches are unchanged, and Me → Hidden
+lists today's skipped question.
 
 ## AD-24 · 21 Questions matching on and off
 **Role:** two approved members, A and B, on 3.1, who match (AD-23), and C, approved, with no answers · **Surfaces:** web, android
@@ -822,4 +827,14 @@ totals (AD-28) still count each mark.
 6. With no agreeing member's reply under a story, open its Conversation as the visitor.
 7. Delete A's account in Settings.
 **Expected:** Step 2: the switch reads on after a reload and on the other device; its note says visitors can read what A writes from now on, with A's username, that earlier replies stay for members, and that turning it off hides them at once. Step 4 shows only A's second reply, under A's username as members see it, read only, with "Sign in to write here"; A's first reply, B's and C's are left out with no placeholder or count. Step 5 shows none of A's replies. Step 6 shows "The conversation on a member's story is for members. Sign in to read it." Step 7 removes A's agreement with A's preferences row and A's replies with A's messages. The switch shows only for approved members.
+**Result:** web ☐ android ☐ — notes:
+
+## AD-40 · Days won ticks with the emoji rain for an account on demo data (added 2026-11-23)
+**Role:** an admin, a member account switched to Demo data on the Unlock admin, and a member account not on demo data · **Surfaces:** web, android · **Precondition:** both accounts approved
+**Steps:**
+1. As the demo account, turn Emoji rain on (Me → Settings → Look and reading). Open Today and leave it open for two minutes.
+2. Turn Emoji rain off and repeat step 1.
+3. Turn on less motion (web: the system's reduce motion setting; Android: Remove animations), turn Emoji rain on and repeat step 1.
+4. As the member not on demo data, open Today and leave it open for two minutes.
+**Expected:** Step 1: within 20 to 90 seconds the Days won count goes up by one and emoji fall across the screen for a few seconds, then again at another random interval; "Our progress this week" goes up with it. A reload starts from the demo count again. Step 2: the count still goes up, and no emoji fall. Step 3: the count still goes up, and no emoji fall. Step 4: the count does not tick, and emoji fall only when the real total has gone up since the account last saw it, as in AD-36.
 **Result:** web ☐ android ☐ — notes:

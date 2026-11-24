@@ -114,6 +114,11 @@ export function seMarkCardInToday(today, change, now = new Date()) {
         }),
     };
 }
+// Whether a stored change should be followed by a fresh Today read: Skip (Not for me) on a 21
+// Questions card, so the next question the member has not answered or skipped takes its place.
+export function seMarkBringsNext(change) {
+    return change.mark === 'not_for_me' && change.cardId.startsWith('questions:');
+}
 // The start of the member's own day, sent with the Today read so done cards leave from their next day.
 export function seDayStartIso(now = new Date()) {
     return new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();

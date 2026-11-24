@@ -6,7 +6,9 @@ import { useSessionDraft } from '../use-session-draft';
 import styles from './today.module.css';
 
 // The controls inside a 21 Questions card on Today: the answers to pick from on the question card,
-// and the conversation on a match card. Nothing opens elsewhere; the talk stays in the card.
+// with Skip under them, and the conversation on a match card. Nothing opens elsewhere; the talk
+// stays in the card. Skip is the card's Not for me mark: not an answer, so no count or match
+// changes, and Today reads again so the next question takes its place.
 
 const CSRF = { 'content-type': 'application/json', 'x-ctf-csrf': '1' };
 
@@ -20,7 +22,7 @@ function messageOf(data: Record<string, unknown> | null, fallback: string): stri
   return typeof data?.message === 'string' ? data.message : fallback;
 }
 
-function QuestionChoices({ card, onChanged }: { card: SeTodayCard; onChanged: () => void }) {
+function QuestionChoices({ card, onChanged, onSkip }: { card: SeTodayCard; onChanged: () => void; onSkip: () => void }) {
   const question = seQuestionById(card.id.slice('questions:'.length));
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
@@ -40,6 +42,9 @@ function QuestionChoices({ card, onChanged }: { card: SeTodayCard; onChanged: ()
           {choice}
         </button>
       ))}
+      <button type="button" className={styles.skipButton} disabled={busy} onClick={onSkip}>
+        Skip this question
+      </button>
       {note ? (
         <p role="status" className={styles.noticeQuiet}>
           {note}
@@ -126,10 +131,10 @@ export function isQuestionsCard(card: SeTodayCard): boolean {
 }
 
 // The question card shows its answers at once until one is picked (the card then says which); a match card shows the conversation once opened.
-type PanelProps = { card: SeTodayCard; open: boolean; onOpen: () => void; onChanged: () => void };
+type PanelProps = { card: SeTodayCard; open: boolean; onOpen: () => void; onChanged: () => void; onSkip: () => void };
 
-export function QuestionsPanel({ card, open, onOpen, onChanged }: PanelProps) {
-  if (card.source === 'questions') return card.done ? null : <QuestionChoices card={card} onChanged={onChanged} />;
+export function QuestionsPanel({ card, open, onOpen, onChanged, onSkip }: PanelProps) {
+  if (card.source === 'questions') return card.done ? null : <QuestionChoices card={card} onChanged={onChanged} onSkip={onSkip} />;
   if (open) return <Conversation card={card} />;
   return (
     <div className={styles.actions}>
