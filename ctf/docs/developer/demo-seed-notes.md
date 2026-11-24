@@ -419,3 +419,25 @@ Two kinds were not padded, because more rows would not add cards: the Match card
 member (their own picks), and SkillsHunt's Wanted card shows the single active round. Three Wanted
 cards would need a change to `wantedCard` in `lib/today/sources-live.ts`, not more seed rows.
 
+
+## Every demo account has Activity — 2026-11-24
+
+Owner report: the demo member's 3.1 Activity screen was empty in the demo video. Activity reads only
+the `notifications` table (`GET /api/notifications`), and no seed file wrote it, so running Seed Demo
+alone would not have filled it: the app writes a notice only when somebody acts.
+
+`demo-seed/50-activity.mjs` now writes eight notices for each account switched to Demo data, in the
+app's own wording for each kind:
+
+| Where it shows | Notice |
+|---|---|
+| Needs you | wes_h asks to talk just you two on his open ride, with the `commons_item_pair_requests` row behind it, so Agree works |
+| Today | a 21 Questions buddy message (mina_d), a mention in the Commons, a reply in the Commons; 5, 20 and 45 minutes before the run |
+| Earlier | a buddy message (olive_r, a day ago), a just-you-two message from xena_r on a request agreed two days ago, the 50 ServiceCredits `seedDemo.mjs` sends each account (three days ago), a buddy message (nate_k, four days ago) |
+
+Times are relative to the run, and the Today ones fall within the last hour so they stay under Today
+whenever the seed runs. Ids are fixed per account (`personalId` on `ddd00000-…-8500-…`), and a
+re-run puts each notice back unread or read as listed. Names come only from
+`lib/demo-mode/demo-usernames.ts`. `notifications` and `commons_item_pair_requests` left the
+coverage allowlist because the demo now writes them. A recording that wants Activity full again
+re-runs Seed Demo.
