@@ -289,6 +289,8 @@ Admin parity (2026-06-06): the Android admin screen `AdminTrustTransport.tsx` (e
 
 `ctf/scripts/seedTrustTransport.mjs` seeds deterministic request/offer/trip/proof/dispute data for dev validation.
 
+Demo schema: `ctf/scripts/demo-seed/49-today-abundance.mjs` (2026-11-24) adds three open ride requests by synthetic members (a dentist appointment, the food bank, signing a lease), fixed ids `ddd00000-0000-4000-8490-000000000001`–`…03`, whatever accounts have the Demo data switch on, so demo Today and signed-out Today always show at least three rides wanted.
+
 ---
 
 ## Gaps and Known Technical Debt

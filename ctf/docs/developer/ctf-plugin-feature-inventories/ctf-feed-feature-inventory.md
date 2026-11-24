@@ -312,6 +312,8 @@ Both feed channels (announcements, community) are shipped on web (desktop + mobi
 
 `ctf/scripts/demo-seed/20-commons.mjs` adds to the demo schema three Commons posts by other members in the last hour (one quoting another), one published announcement, each with its `feed_items` copy and a member target, and one reaction from another member on a post and on the announcement; a re-run removes the demo accounts' own reactions on them.
 
+`ctf/scripts/demo-seed/49-today-abundance.mjs` (2026-11-24) adds a third published announcement `feed_items` row ("Rides and places to stay are on Today"), fixed id `ddd00000-0000-4000-8490-000000000015`, so Today shows at least three stories from the System Architect.
+
 ---
 
 ## 9) Schema Drift and Predeployment Expectations
