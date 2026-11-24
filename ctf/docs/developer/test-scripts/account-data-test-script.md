@@ -15,7 +15,7 @@
 | **Visibility** | Any signed-in identity (including unlock-pending) |
 | **Roles to test** | member |
 | **Surfaces** | web (phone-width layout) |
-| **Generated** | 2026-07-26 (hand-written on the JSON-export build, issue #1264) · 2026-11-23 manual update: AD-21 and AD-28: the timeline dot takes a card off Today and lists it in Me → Read; opening a card marks it read; AD-13 step 6 names the shortened Ask the architect line · 2026-11-23 manual update: AD-13 suggestions are chips under "Or start from one of these" |
+| **Generated** | 2026-07-26 (hand-written on the JSON-export build, issue #1264) · 2026-11-23 manual update: AD-21 and AD-28: the timeline dot takes a card off Today and lists it in Me → Read; opening a card marks it read; AD-13 step 6 names the shortened Ask the architect line · 2026-11-23 manual update: AD-13 suggestions are chips under "Or start from one of these" · 2026-11-24 manual update: AD-41 Me → Open |
 
 ## How to run this
 
@@ -832,4 +832,16 @@ totals (AD-28) still count each mark.
 3. Turn on less motion (web: the system's reduce motion setting; Android: Remove animations), turn Emoji rain on and repeat step 1.
 4. As the member not on demo data, open Today and leave it open for two minutes.
 **Expected:** Step 1: within 20 to 90 seconds the Days won count goes up by one and emoji fall across the screen for a few seconds, then again at another random interval; "Our progress this week" goes up with it. A reload starts from the demo count again. Step 2: the count still goes up, and no emoji fall. Step 3: the count still goes up, and no emoji fall. Step 4: the count does not tick, and emoji fall only when the real total has gone up since the account last saw it, as in AD-36.
+**Result:** web ☐ android ☐ — notes:
+
+## AD-41 · Me → Open lists the cards the member is part of (added 2026-11-24)
+**Role:** two approved members, A and B · **Surfaces:** web, android · **Precondition:** A has posted nothing and answered nothing on Today
+**Steps:**
+1. As A, open Me → Open.
+2. As A, post an ask from + New. As B, post an ask. As A, open B's ask on Today, tap I can help, and write a line in its conversation.
+3. As A, open Me → Open again.
+4. Tap A's own ask in the list, then close the sheet. Tap B's ask in the list.
+5. As A, close A's own ask from its card on Today (Done), then open Me → Open again.
+6. Switch the theme between the four colors and light and dark while Open is showing.
+**Expected:** Step 1: "Nothing open." with the line saying what will be listed. Step 3: both asks, newest first: A's with "Yours · On Today until <date>", B's with "You answered or wrote here", each under its kind's colored label. Step 4: each opens in place over the list, as on Today, with its answers and conversation; nothing opens a new page. Step 5: A's ask is gone from Open; B's ask stays. Step 6: the list is readable in every color and mode. With the network off, Open says it could not read the open cards and why.
 **Result:** web ☐ android ☐ — notes:

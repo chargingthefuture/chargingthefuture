@@ -1,6 +1,6 @@
 // Me on Android, the copy of the web (components/se-frame/me/me-screen.tsx), built to the approved
 // board "Me": the member's name, since when they have been an Aven, their badges and the gear to
-// Settings; their three profile lines; ServiceCredits; Saved, Read and Hidden; Trust; the Tools grid; and
+// Settings; their three profile lines; ServiceCredits; Open, Read and Hidden; Saved; Trust; the Tools grid; and
 // emoji rain. Tools the Android app does not carry open in the browser.
 
 import React, { useMemo, useState, type ReactNode } from 'react';
@@ -18,6 +18,7 @@ import {
   SE_ME_TOOL_INK,
   SE_ME_TOOLS,
   SE_ME_WORDS as W,
+  SE_OPEN_WORDS,
   SE_SETTINGS_WORDS,
   SE_TRUST_WORDS,
   seMeName,
@@ -191,6 +192,8 @@ function Tools({ s, go }: { s: MeStyles; go: Go }) {
   );
 }
 
+const SHORTCUT_LABELS = { open: SE_OPEN_WORDS.title, read: W.read, hidden: W.hidden } as const;
+
 export type MeUser = { id: string; username?: string | null };
 
 type MeScreenProps = {
@@ -216,9 +219,9 @@ export function MeScreen({ t, user, profile, reading, onReading, onView, go, sav
       <CreditsCard s={s} t={t} go={go} handle={user.username ? `@${user.username}` : null} />
       <View style={s.shortcuts}>
         {saved ?? null}
-        {(['read', 'hidden'] as const).map((view) => (
+        {(['open', 'read', 'hidden'] as const).map((view) => (
           <TouchableOpacity key={view} accessibilityRole="button" onPress={() => onView(view)} style={s.shortcut}>
-            <Text style={s.shortcutLabel}>{view === 'read' ? W.read : W.hidden}</Text>
+            <Text style={s.shortcutLabel}>{SHORTCUT_LABELS[view]}</Text>
           </TouchableOpacity>
         ))}
       </View>
