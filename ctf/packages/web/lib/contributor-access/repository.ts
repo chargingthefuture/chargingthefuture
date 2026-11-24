@@ -1,4 +1,5 @@
 import { queryDb } from 'lib/db/postgres';
+import { resolveMemberIdentities } from 'lib/identity/resolve-usernames';
 import { readSnapshot, type ScoredMember } from './scored-members';
 
 // Contributor Access — owned-table reads/writes (config, eligibility rows, audit trail).
@@ -132,7 +133,7 @@ export async function listEligibleMembers(): Promise<EligibleMember[]> {
 }
 
 // Every member whose last weekly recompute stored a score above zero, eligible or not, highest
-// first. The score is all-time, as of computed_at. Admin only (the Adoption screen's Weavers section).
+// first. The score is all-time, as of computed_at. Admin only (the Weavers admin page, /admin/weavers).
 export async function listScoredMembers(): Promise<ScoredMember[]> {
   const result = await queryDb<{
     user_id: string;
@@ -147,9 +148,13 @@ export async function listScoredMembers(): Promise<ScoredMember[]> {
      WHERE COALESCE((e.reason_snapshot->>'score')::numeric, 0) > 0
      ORDER BY (e.reason_snapshot->>'score')::numeric DESC, e.user_id ASC`,
   );
+  // Account ids are Clerk ids, which the users join rarely matches, so the handle and name come from
+  // Clerk itself; the raw id shows only when neither is known.
+  const identities = await resolveMemberIdentities(result.rows.map((row) => row.user_id));
   return result.rows.map((row) => ({
     userId: row.user_id,
-    username: row.username,
+    username: row.username ?? identities.get(row.user_id)?.username ?? null,
+    name: identities.get(row.user_id)?.name ?? null,
     ...readSnapshot(row.reason_snapshot),
     eligible: row.eligible,
     computedAt: row.computed_at,

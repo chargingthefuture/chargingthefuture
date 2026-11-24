@@ -8,6 +8,8 @@
 export type ScoredMember = {
   userId: string;
   username: string | null;
+  // The account's name from Clerk, shown when the member has no handle (admin only).
+  name: string | null;
   score: number;
   accountAgeDays: number | null;
   distinctPlugins: number;
@@ -60,4 +62,15 @@ export function readSnapshot(snapshot: unknown): Pick<ScoredMember, 'score' | 'a
     distinctPlugins: numberOr(raw.distinctPlugins, 0),
     counterparties: numberOr(raw.counterparties, 0),
   };
+}
+
+// The label a scored member is shown by: the handle, else the account's name, else the raw id, so
+// the list reads as people and an id appears only when nothing else is known (owner decision,
+// 2026-11-24).
+export function scoredMemberLabel(member: Pick<ScoredMember, 'userId' | 'username' | 'name'>): string {
+  const handle = member.username?.trim();
+  if (handle) return `@${handle}`;
+  const name = member.name?.trim();
+  if (name) return name;
+  return member.userId;
 }
