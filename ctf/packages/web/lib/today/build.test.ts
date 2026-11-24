@@ -43,6 +43,7 @@ vi.mock('./sources-commons', () => ({ commonsCards: vi.fn(async () => []) }));
 vi.mock('./sources-blog', () => ({ blogStories: vi.fn(async () => []), storiesTomorrow: vi.fn(async () => 5) }));
 vi.mock('./presence', () => ({ readPresence: vi.fn(async () => 3) }));
 vi.mock('./saves/repository', () => ({ readSavedIds: vi.fn(async () => new Set()) }));
+vi.mock('./apply-joined', () => ({ applyMemberJoined: vi.fn(async (_viewer: unknown, cards: unknown) => cards) }));
 vi.mock('./daily-credit/choose', async () => ({
   ...(await vi.importActual<typeof import('./daily-credit/choose')>('./daily-credit/choose')),
   dailyCreditCardId: vi.fn(async () => null),

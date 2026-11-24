@@ -20,6 +20,7 @@ import { mineCards } from './sources-mine';
 import { utcTodayDay } from './card';
 import { applyLifetimes } from './apply-lifetimes';
 import { applyMemberMarks, applyMemberSaves } from './apply-marks';
+import { applyMemberJoined } from './apply-joined';
 import { readPresence } from './presence';
 import { dailyCreditCardId, markDailyCredit } from './daily-credit/choose';
 
@@ -117,7 +118,7 @@ export async function buildToday(viewer: TodayViewer, now = new Date(), day: SeT
 
   const mineIds = new Set((cardLists[sources.length - 1] ?? []).map((card) => card.id));
   const lasting = await applyLifetimes(cardLists.flatMap((list) => list ?? []), viewer, mineIds, now);
-  const marked = await applyMemberSaves(viewer, await applyMemberMarks(viewer, lasting, day.startIso));
+  const marked = await applyMemberJoined(viewer, await applyMemberSaves(viewer, await applyMemberMarks(viewer, lasting, day.startIso)));
   const cards = orderTodayCards(seApplyMutes(markDailyCredit(marked, creditCardId), mutes ?? []));
 
   return {
