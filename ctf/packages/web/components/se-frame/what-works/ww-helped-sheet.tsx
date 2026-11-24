@@ -6,7 +6,8 @@ import { responseFailureText } from 'lib/errors/client-failure';
 import { seThemeVars } from '../se-theme-vars';
 import { useSheetFocus } from '../use-sheet-focus';
 import { useSeTheme } from '../use-se-theme';
-import { CloseIcon, type WwAddedProblem } from './ww-add-sheet';
+import { SheetTop } from '../sheet/sheet-top';
+import type { WwAddedProblem } from './ww-add-sheet';
 import styles from './ww-add-sheet.module.css';
 
 // "What helped", in the sheet opened from the What works card on Today: after Use this or Add what
@@ -99,12 +100,9 @@ export function WwHelpedSheet({ problem, onClose }: { problem: WwAddedProblem; o
   return (
     <div className={styles.backdrop} style={seThemeVars(theme.color, theme.mode)}>
       <section ref={dialog} tabIndex={-1} role="dialog" aria-modal="true" aria-label={W.title} className={styles.sheet}>
-        <div className={styles.top}>
-          <button type="button" className={styles.close} aria-label={SE_WW_ADD_WORDS.close} onClick={onClose}>
-            <CloseIcon />
-          </button>
+        <SheetTop className={styles.top} closeClassName={styles.close} closeLabel={SE_WW_ADD_WORDS.close} onClose={onClose}>
           <span className={styles.eyebrow}>{SE_WW_ADD_WORDS.eyebrow}</span>
-        </div>
+        </SheetTop>
         {sent ? <HelpedSent onClose={onClose} /> : <HelpedForm problem={problem} onSent={() => setSent(true)} />}
       </section>
     </div>

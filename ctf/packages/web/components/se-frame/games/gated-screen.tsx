@@ -14,11 +14,12 @@ import styles from './games.module.css';
 
 type Gate = Exclude<SeDailyGate, 'play'>;
 
-// Signed out, it is burgundy light like every signed-out screen (owner report, 2026-11-17).
+// Signed out, it is burgundy light like signed-out Today (owner report, 2026-11-17), unless this
+// browser holds a theme the visitor picked.
 function useGateTheme(gate: Gate) {
-  const { theme: memberTheme } = useSeTheme();
+  const { theme: memberTheme, picked } = useSeTheme();
   const signedOutTheme = useSignedOutTheme();
-  return gate === 'sign-in' ? signedOutTheme : memberTheme;
+  return gate === 'sign-in' && !picked ? signedOutTheme : memberTheme;
 }
 
 export function DailyGateScreen({ gate, reason, signInUrl }: { gate: Gate; reason: string | null; signInUrl: string }) {

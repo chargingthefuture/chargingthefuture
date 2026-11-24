@@ -874,3 +874,13 @@ totals (AD-28) still count each mark.
 5. Turn on reduced motion and repeat step 2.
 **Expected:** Step 1 shows the total large with a small rising line to its right (this week's days won added up day by day, ending in a dot), no axes, in the number's color in both themes; "Our progress this week" is unchanged under it. Step 2: the number goes up without a reload, the line's last point rises, and emoji fall for about three seconds. Step 3: browser B rains once on opening, because it last saw the lower total. Step 4 loads normally with no error, using the account's last total. Step 5: the number and line rise and nothing falls.
 **Result:** web ☐ — notes:
+
+## AD-44 · Close sits top right on every sheet, and the signed-out puzzle page is light (added 2026-11-24)
+**Role:** an approved member, then a visitor · **Surfaces:** web
+**Steps:**
+1. Signed in, open a Today card, + New (Ask, then Talk), "Log what happened" under + New, What works → Add a problem, then What helped, a person's profile and Get a quote from People, and Share on a reached goal.
+2. Sign out, open a card on signed-out Today.
+3. In a browser that has never signed in, set the phone to dark and open the puzzle of the day (`/games`).
+4. In a browser where a member picked Coral dark, sign out and open `/games`.
+**Expected:** Steps 1 and 2: every sheet's Close (the round X) is the last control in its top row, in the top right corner, with the sheet's label, link or other buttons to its left; Escape and Close still close each one. Step 3 shows the puzzle page in burgundy light, the same as signed-out Today, with Sign in to play. Step 4 shows it in Coral dark, the theme picked on that browser.
+**Result:** web ☐ — notes:

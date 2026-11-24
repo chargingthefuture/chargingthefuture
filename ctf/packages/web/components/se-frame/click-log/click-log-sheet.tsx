@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { SE_CLICK_LOG_WORDS as W, CLICK_LOG_HISTORY_HREF } from '@ctf/shared';
-import { CloseIcon } from '../what-works/ww-add-sheet';
+import { SheetTop } from '../sheet/sheet-top';
 import { useSheetFocus } from '../use-sheet-focus';
 import { ClickLogForm } from './click-log-form';
 import { useClickLogEntry, type ClickLogEntry } from './use-click-log-entry';
@@ -42,12 +42,9 @@ export function ClickLogSheet({ onClose }: { onClose: () => void }) {
   return (
     <div className={styles.backdrop}>
       <section ref={sheet} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="se-click-log-title" className={styles.sheet}>
-        <div className={styles.top}>
-          <button type="button" className={styles.close} aria-label={W.close} onClick={onClose}>
-            <CloseIcon />
-          </button>
+        <SheetTop className={styles.top} closeClassName={styles.close} closeLabel={W.close} onClose={onClose}>
           <span className={styles.eyebrow}>{W.eyebrow}</span>
-        </div>
+        </SheetTop>
         <h1 id="se-click-log-title" className={entry.saved ? styles.hidden : styles.title}>
           {W.title}
         </h1>
