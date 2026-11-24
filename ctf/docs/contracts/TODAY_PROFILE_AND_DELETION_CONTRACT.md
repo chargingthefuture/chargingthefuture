@@ -46,7 +46,8 @@ it to delete when an account is deleted.
 How long an ask or offer stays on Today is the fourth: `today_card_windows`, one row per card id,
 written only once its poster set something. It holds the poster's account id, the deadline chosen
 in + New, the end of a renewed 14 days and when it was renewed, and, when the poster closed the ask
-from Today, the outcome (`done` or `not_done`) and when. It holds nothing anybody wrote.
+from Today, the outcome (`done` or `not_done`) and when, and the member they named with Done
+(`helper_user_id`). It holds nothing anybody wrote.
 
 A member's own marks on cards are the fifth: `today_card_marks`, one row per member per card id,
 with the mark (`done` for the timeline dot, `read` for opening the card, `not_for_me` for the ••• menu) and when it was made. They
@@ -91,7 +92,8 @@ visitor who is not signed in has no account and no marks.
   every Just us two message where they are `pair_low` or `pair_high`, and every
   `card_pair_requests` row where they are `user_low` or `user_high` (registry entry
   `today-card-conversations`), and every `today_card_windows` row where they are `owner_user_id`
-  (same entry), every `today_card_marks` row where they are `account_id` (same entry), every
+  (same entry; where they are `helper_user_id` on somebody else's ask, the id is replaced with the
+  deleted-member placeholder and the asker keeps the row), every `today_card_marks` row where they are `account_id` (same entry), every
   `today_card_saves` row where they are `account_id` (same entry), their `member_presence` row
   (same entry), their `today_match_needs` row (same entry), and every `today_daily_credit_cards` row where they are `author_user_id` or
   `helper_user_id` (same entry; a credit still held for them goes with it, and credits already in

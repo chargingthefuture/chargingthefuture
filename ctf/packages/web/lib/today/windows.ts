@@ -43,12 +43,16 @@ export async function renewWindow(cardId: string, ownerUserId: string, until: Da
   );
 }
 
-// The outcome the poster picked when they closed the ask from Today.
-export async function recordOutcome(cardId: string, ownerUserId: string, outcome: 'done' | 'not_done'): Promise<void> {
+// The outcome the poster picked when they closed the ask from Today, and the member they named with
+// Done (null when none was named, and always with 'not_done'). Weavers of the Commons reads the
+// helper on a SocketRelay ask (lib/contributor-access/value-events.ts).
+export async function recordOutcome(cardId: string, ownerUserId: string, outcome: 'done' | 'not_done', helperUserId: string | null = null): Promise<void> {
+  const helper = outcome === 'done' && helperUserId && helperUserId !== ownerUserId ? helperUserId : null;
   await queryDb(
-    `INSERT INTO today_card_windows (card_id, owner_user_id, outcome, closed_at) VALUES ($1, $2, $3, NOW())
-     ON CONFLICT (card_id) DO UPDATE SET outcome = EXCLUDED.outcome, closed_at = NOW(), updated_at = NOW()
+    `INSERT INTO today_card_windows (card_id, owner_user_id, outcome, closed_at, helper_user_id) VALUES ($1, $2, $3, NOW(), $4)
+     ON CONFLICT (card_id) DO UPDATE SET outcome = EXCLUDED.outcome, closed_at = NOW(),
+       helper_user_id = EXCLUDED.helper_user_id, updated_at = NOW()
      WHERE today_card_windows.owner_user_id = EXCLUDED.owner_user_id`,
-    [cardId, ownerUserId, outcome],
+    [cardId, ownerUserId, outcome, helper],
   );
 }
