@@ -34,12 +34,16 @@ export const TODAY_MAX_CARDS = 30;
 
 const isAskOrOffer = (card: SeTodayCard) => card.kind === 'ask' || card.kind === 'offer';
 
-// At most TODAY_MAX_CARDS, newest first. Asks and offers still on Today take their places first, so an
-// older one is never pushed off by the day's stories; the other cards fill the places left.
+// At most TODAY_MAX_CARDS, newest first, with one exception: the viewer's own asks and offers (marked
+// `mine`) are always kept, however old and however many, so Today and Me → Open list every one still
+// up. Other asks and offers take the places left before the other cards, so an older one is never
+// pushed off by the day's stories; the other cards fill what remains.
 export function orderTodayCards(cards: SeTodayCard[]): SeTodayCard[] {
   const newest = [...cards].sort((a, b) => b.createdAtIso.localeCompare(a.createdAtIso));
-  const asks = newest.filter(isAskOrOffer).slice(0, TODAY_MAX_CARDS);
-  const kept = new Set([...asks, ...newest.filter((card) => !isAskOrOffer(card)).slice(0, TODAY_MAX_CARDS - asks.length)]);
+  const own = newest.filter((card) => isAskOrOffer(card) && card.mine);
+  const asks = newest.filter((card) => isAskOrOffer(card) && !card.mine).slice(0, Math.max(0, TODAY_MAX_CARDS - own.length));
+  const left = Math.max(0, TODAY_MAX_CARDS - own.length - asks.length);
+  const kept = new Set([...own, ...asks, ...newest.filter((card) => !isAskOrOffer(card)).slice(0, left)]);
   return newest.filter((card) => kept.has(card));
 }
 

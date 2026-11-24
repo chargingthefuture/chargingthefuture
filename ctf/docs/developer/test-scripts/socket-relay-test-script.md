@@ -925,3 +925,13 @@ posts are for Weavers of the Commons."
 3. As B, open SocketRelay in 3.0 and compare the open requests listed there with the asks on Today.
 **Expected:** Step 1: A's request shows as their own card, "You posted this · On Today until <December 8, 2026 or later>", with Done, Closed, not done and Keep it up for 14 more days. Step 2: A's request shows as an Ask with I can help. Step 3: every open request on 3.0's first page is on Today, except one 3.0 marks expired, which only its poster sees on Today. A closed or canceled request is on neither.
 **Result:** web ☐ android ☐ — notes:
+
+### SR-26 · Every open request of your own shows in 3.1 (added 2026-11-24)
+**Role:** member A (11 or more open requests, the oldest posted months ago), member B · **Surfaces:** web, android
+**Steps:**
+1. As A, open SocketRelay in 3.0 and count the open requests listed under your own.
+2. As A, open Today in 3.1 and scroll to the end.
+3. As A, open Me → Open.
+4. As B, open Today in 3.1.
+**Expected:** Steps 2 and 3: every open request from step 1 is there as your own card, the oldest included, even when Today already has 30 other cards. Step 4: B sees A's requests only under the usual rules (the 20 newest open requests, at most 30 cards).
+**Result:** web ☐ android ☐ — notes:
