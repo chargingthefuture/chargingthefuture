@@ -11,7 +11,8 @@ import { answeredHelpOn } from 'lib/today/daily-credit/repository';
 // or canceled, a ride request canceled), and the outcome is kept on today_card_windows so needs that
 // went unmet can be counted. Only the poster may call it. With 'done' the poster may name who did it,
 // `helperId`, one of the members who answered "I can help" on the card; on the day's credit card that
-// member receives its 1 ServiceCredit (lib/today/daily-credit/grant.ts). Without one, no credit.
+// member receives its 1 ServiceCredit (lib/today/daily-credit/grant.ts). Without one, no credit. The
+// helper is kept on today_card_windows, where Weavers of the Commons counts a SocketRelay ask done.
 
 export const dynamic = 'force-dynamic';
 
@@ -45,7 +46,7 @@ export async function POST(request: Request, context: Context) {
     if (badHelper) return badHelper;
     const closed = await closeTodayItem(gate.cardId, gate.userId, outcome === 'done');
     if (!closed) return cardsDenied('not_open', 'This is no longer open where it was posted, so it was not closed.', 409);
-    await recordOutcome(gate.cardId, gate.userId, outcome);
+    await recordOutcome(gate.cardId, gate.userId, outcome, helperId);
     if (helperId) await grantDailyCreditQuietly({ cardId: gate.cardId, askerUserId: gate.userId, helperUserId: helperId });
     return NextResponse.json({ ok: true, outcome }, { headers: { 'cache-control': 'private, no-store' } });
   } catch (error) {
