@@ -49,7 +49,7 @@ received. The trauma-informed answer (owner decision, 2026-07-20):
    pings again without touching a switch. Tapping a ping opens the same place the row's "Open" does.
 5. On 3.1, Settings → Notifications (web and Android) has three rows instead of the categories:
    "Replies and talk requests" (Commons replies and mentions, announcement replies, Fireside
-   replies, requests to talk and messages on a Today card, 21 Questions match messages and
+   replies, requests to talk and messages on a Today card, 21 Questions buddy messages and
    PeerProgramming cohort messages), "Rooms starting" (anything Chyme, Beacon or TI Radio sends when
    a room or talk starts; nothing sends one yet) and "Everything else". Each is On or Off, default
    Off. A member on 3.1 is pinged by these rows, a member on 3.0 by the three categories. Turning a

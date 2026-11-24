@@ -1,6 +1,6 @@
 # How to use Skills Economy
 
-_Last updated: 2026-11-23_
+_Last updated: 2026-11-24_
 
 This guide explains what each part of the app does and how to use it, in plain words.
 The app is made of small apps, each doing one job. Open any of them from the main menu.
@@ -513,26 +513,29 @@ A 'Show this page as one picture' control under the report turns the dashboard i
 
 ## Reader
 
-_Last updated: 2026-09-23_
+_Last updated: 2026-11-24_
 
-Reader is a feed reader on a server this project pays for, for people who would rather not install or configure one: you sign in with the account you already have, and what you subscribe to is yours alone.
+Reader is a free feed reader page with no sign-in, for people who would rather not install or configure one: it starts with this project's blog, demo videos and recorded broadcasts, and your list is kept in your own browser.
 
-A feed reader collects what sites publish, in the order they published it, and nothing decides what you see first. This one runs on a server the project pays for, so there is nothing to install or set up: you sign in with the same account you use here.
+A feed reader collects what sites publish, in the order they published it, and nothing decides what you see first. This one is a free page that runs in your browser, so there is nothing to install and nobody pays for it.
 
-The Reader tile opens a short page that says what the reader is and what a place on it costs, with an 'Open the reader' button that goes to rss.lagatos.com in a new tab. A line under the button names that address and says the sign-in is this same account.
+The Reader tile opens a short page that says what the reader is, with an 'Open the reader' button that goes to chargingthefuture.github.io/rss-feeds/read in a new tab. A line under the button names that address and says there is no sign-in.
 
-A new reader account starts with two feeds and nothing else added for you: this project's blog, and the owner's channel of demo videos of the app. Everything else you read, you add yourself. Your list is yours — there is no shared list, and nobody else on the reader can see what you subscribe to.
+It starts with three feeds: this project's blog, the owner's channel of demo videos of the app, and the recorded broadcasts. Add anything else you read by its address, and remove anything you do not want, those three included. Posts open on the page, recordings play there, and a Watched list keeps what you have marked.
 
-Two things it cannot do, and the page says so rather than leaving you to find out: it collects only from the day a feed is added, so nothing older than that ever arrives; and it never notifies anybody — it waits until you open it.
+Your list, what you mark watched and what you save are kept in the browser you used, and only there. They do not reach your other devices and are gone if that browser's data is cleared, so download a backup on the reader now and then and restore it wherever you want your list.
 
-A place on the reader is something you get by finishing Unlock or by contributing to what the server costs, and if the bill makes it necessary, places go to the people who did one of those. Losing a place is not a ban: your account in this app is untouched, and not finishing Unlock never costs anybody their account.
+What it cannot do: it reaches back only as far as each feed carries, it never notifies anybody, and a site that does not let other web pages read its feed cannot be added there; a feed reader app can still read it.
+
+YouTube does not let other pages read its channels. To read one there, ask for it from + New with the channel's address and, if you want one, the date to stop at. It is collected and cut at that date, and you get an address to add.
 
 **How to use it**
 
 1. Sign in and open Reader from the apps list; the tile carries a newspaper mark. It needs an approved account — before that, the tile opens the Unlock nudge instead.
-2. Read the three cards: what a new account starts with, what the reader cannot do, and what a place on it costs.
-3. Press 'Open the reader'. It opens rss.lagatos.com in a new tab, and you sign in there with this same account.
-4. Add anything else you read there. The blog, the demo-video channel and the recorded broadcasts are already in a new account.
+2. Read the three cards: what the reader starts with, what it cannot do, and how to ask for a YouTube channel.
+3. Press 'Open the reader'. It opens chargingthefuture.github.io/rss-feeds/read in a new tab. There is no sign-in.
+4. Add a feed by pasting its address under 'Add a feed'. Remove one from its own page with 'Remove from my list'; 'Put back' on the list brings it back.
+5. Download a backup from 'Back up or restore' now and then, and restore it on another device to read the same list there.
 
 ## Reporting a problem
 

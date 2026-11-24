@@ -1,15 +1,15 @@
 'use client';
 
-// The Reader tile. The reader itself runs on a separate server, so this page is where a member
-// finds out what it is and what a place on it costs before they land on another address and a
-// sign-in prompt. A tile that opened the other domain directly would tell them none of that.
+// The Reader tile. The reader itself is a free page on another address with no sign-in, so this
+// page is where a member finds out what it is, and that their list lives in their own browser,
+// before they land there. A tile that opened the other address directly would tell them none of that.
 import { Rss, ExternalLink } from 'lucide-react';
 import { MobileScreenHeader } from '@/components/shared/mobile-screen-header';
 import { getPluginShellTokens } from '@/components/shared/plugin-shell-theme';
 import { getAppAccent } from 'lib/theme/theme-tokens';
 import { useTheme } from '@/hooks/useTheme';
 
-const READER_URL = 'https://rss.lagatos.com';
+const READER_URL = 'https://chargingthefuture.github.io/rss-feeds/read/';
 const FONT_FAMILY = "'Figtree Variable', system-ui, sans-serif";
 
 type NoteProps = { title: string; children: React.ReactNode; tokens: ReturnType<typeof getPluginShellTokens> };
@@ -59,8 +59,8 @@ export function ReaderShell() {
       >
         <p style={{ margin: 0, fontSize: 14, lineHeight: 1.55, color: t.SUBTLE }}>
           A feed reader collects what sites publish, in the order they published it. Nothing ranks it, nothing is
-          inserted, and nothing records what you opened. This one runs on a server this project pays for, so you do not
-          have to run anything yourself.
+          inserted, and nothing records what you opened. This one is a free page that runs in your browser, so there is
+          nothing to install and nobody pays for it.
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -86,14 +86,16 @@ export function ReaderShell() {
             <ExternalLink size={16} color="#0B0B0B" />
           </a>
           <p style={{ margin: 0, fontSize: 12, color: t.MUTED }}>
-            Opens rss.lagatos.com. Sign in there with this same account — there is no second password to set.
+            Opens chargingthefuture.github.io/rss-feeds/read. There is no sign-in: what you add and mark stays in that
+            browser, so download a backup there to keep it.
           </p>
         </div>
 
         <Note title="What you get" tokens={t}>
           <p style={{ margin: 0 }}>
-            The blog, the demo-video channel and the recorded broadcasts are already in a new account. Add anything else you read, and your list is yours: no shared list, no
-            comments, and no way for one account to see another.
+            The blog, the demo-video channel and the recorded broadcasts are there to start with. Add anything else you
+            read by its address, and remove anything you do not want, those three included. Your list is kept in your
+            browser and nobody else sees it.
           </p>
         </Note>
 
@@ -103,17 +105,17 @@ export function ReaderShell() {
             is sitting in each feed that day and everything after that builds up.
           </p>
           <p style={{ margin: 0 }}>It does not notify you. You go and look.</p>
+          <p style={{ margin: 0 }}>
+            Some sites do not let other web pages read their feed. Those cannot be added there; a feed reader app can
+            still read them.
+          </p>
         </Note>
 
-        <Note title="What a place on it costs" tokens={t}>
+        <Note title="A YouTube channel" tokens={t}>
           <p style={{ margin: 0 }}>
-            The server is paid for. A place on it is something you get by finishing the check on this app or by
-            contributing to what it costs, and if the bill makes it necessary, places go to the people who did one of
-            those.
-          </p>
-          <p style={{ margin: 0 }}>
-            Losing a place is not a ban. Your account here is untouched, you keep everything this app gives you, and you
-            can come back to the reader later. Not finishing the check never costs anybody their account.
+            YouTube does not let other pages read its channels. To read one there, ask for it from + New with the
+            channel&apos;s address and, if you want one, the date to stop at. It is collected and cut at that date, and you
+            get an address to add.
           </p>
         </Note>
       </div>
