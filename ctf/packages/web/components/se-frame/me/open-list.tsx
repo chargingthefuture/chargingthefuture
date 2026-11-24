@@ -1,11 +1,11 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import Link from 'next/link';
-import { SE_ME_WORDS, SE_OPEN_WORDS as W, seCardOpensSheet, seOpenCards, seOpens30Page, seTodayDayQuery, seTodayView, type SeOpenItem, type SeToday, type SeTodayCard } from '@ctf/shared';
+import { SE_ME_WORDS, SE_OPEN_WORDS as W, seOpenCards, seTodayDayQuery, seTodayView, type SeOpenItem, type SeToday, type SeTodayCard } from '@ctf/shared';
 import { failureText, responseFailureText } from 'lib/errors/client-failure';
 import { CardSheet } from '../today/card-sheet';
 import { BackHeader } from './back-header';
+import { CardRow } from './card-row';
 import styles from './me.module.css';
 
 // Me → Open: the cards on the member's Today they are part of and that are not done (seOpenCards),
@@ -44,29 +44,6 @@ function ItemFace({ item }: { item: SeOpenItem }) {
   );
 }
 
-function OpenItem({ item, onSheet }: { item: SeOpenItem; onSheet: (_card: SeTodayCard) => void }) {
-  const { card } = item;
-  if (seCardOpensSheet(card)) {
-    return (
-      <button type="button" className={`${styles.listItem} ${styles.rowButton}`} onClick={() => onSheet(card)}>
-        <ItemFace item={item} />
-      </button>
-    );
-  }
-  if (seOpens30Page(card.href)) {
-    return (
-      <div className={styles.listItem}>
-        <ItemFace item={item} />
-      </div>
-    );
-  }
-  return (
-    <Link href={card.href} className={styles.listItem}>
-      <ItemFace item={item} />
-    </Link>
-  );
-}
-
 export function OpenList({ viewerId, onBack }: { viewerId: string; onBack: () => void }) {
   const { state, reload } = useOpenCards(viewerId);
   const [sheet, setSheet] = useState<SeTodayCard | null>(null);
@@ -90,7 +67,9 @@ export function OpenList({ viewerId, onBack }: { viewerId: string; onBack: () =>
         <ul className={styles.list}>
           {state.items.map((item) => (
             <li key={item.card.id}>
-              <OpenItem item={item} onSheet={setSheet} />
+              <CardRow card={item.card} onSheet={setSheet}>
+                <ItemFace item={item} />
+              </CardRow>
             </li>
           ))}
         </ul>
