@@ -116,7 +116,8 @@ export type SeToday = {
   // be read.
   // `sample` is set on signed-out Today, which reads it from the demo schema, and for an account on
   // demo data; either way the screen ticks it up now and then (guest-days-won.ts).
-  daysWon: { total: number; thisWeek: number; sample?: boolean } | null;
+  // `days`: each of the last 7 days' days won, oldest first, today last, for the card's small line.
+  daysWon: { total: number; thisWeek: number; days?: number[]; sample?: boolean } | null;
   broadcast: SeTodayBroadcast | null;
   rooms: SeTodayRoom[];
   // The talks booked in the Main Room from now through the next 7 days, oldest first, for the week

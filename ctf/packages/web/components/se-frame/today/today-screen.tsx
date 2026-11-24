@@ -11,6 +11,7 @@ import { WeekStrip } from './week-strip';
 import { useToday, type MarkKind, type TodayMarks } from './use-today';
 import { EmojiRain, EmojiRainShower } from './emoji-rain';
 import { useLivelyDaysWon } from './use-lively-days-won';
+import { DaysWonTrend } from './days-won-trend';
 import { keepTodayScroll, putBackTodayScroll } from './reload-place';
 import styles from './today.module.css';
 
@@ -25,7 +26,10 @@ function DaysWonCard({ daysWon }: { daysWon: NonNullable<SeToday['daysWon']> }) 
   return (
     <section aria-label={SE_DAYS_WON_TITLE} className={styles.daysWon}>
       <span className={styles.daysWonLabel}>{SE_DAYS_WON_TITLE}</span>
-      <span className={styles.daysWonBig}>{lines.big}</span>
+      <div className={styles.daysWonRow}>
+        <span className={styles.daysWonBig}>{lines.big}</span>
+        <DaysWonTrend days={daysWon.days} />
+      </div>
       <span className={styles.daysWonSmall}>{lines.small}</span>
       <button type="button" className={styles.howButton} aria-expanded={how} onClick={() => setHow((value) => !value)}>
         {SE_DAYS_WON_HOW}

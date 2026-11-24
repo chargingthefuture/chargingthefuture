@@ -51,6 +51,7 @@ export * from './games/words';
 export * from './today/guest';
 export * from './today/story-replies-visitors';
 export * from './today/guest-days-won';
+export * from './today/days-won-trend';
 export * from './today/dot-icons';
 export * from './observability/scrub';
 export * from './weavers/limits';

@@ -15,8 +15,10 @@ export function seGuestTickDelayMs(random: number): number {
 }
 
 // The sample count with this page's ticks added, or null when there is no count to show.
-export function seGuestDaysWon<T extends { total: number; thisWeek: number }>(daysWon: T | null | undefined, ticks: number): T | null {
+// The ticks land on today, the last of the week's days, so the card's line rises with the number.
+export function seGuestDaysWon<T extends { total: number; thisWeek: number; days?: number[] }>(daysWon: T | null | undefined, ticks: number): T | null {
   if (!daysWon) return null;
   const added = Math.max(0, Math.floor(ticks));
-  return { ...daysWon, total: daysWon.total + added, thisWeek: daysWon.thisWeek + added };
+  const days = daysWon.days && daysWon.days.length > 0 ? [...daysWon.days.slice(0, -1), daysWon.days[daysWon.days.length - 1] + added] : daysWon.days;
+  return { ...daysWon, total: daysWon.total + added, thisWeek: daysWon.thisWeek + added, ...(days ? { days } : {}) };
 }

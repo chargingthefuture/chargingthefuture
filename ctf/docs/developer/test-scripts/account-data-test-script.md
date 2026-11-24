@@ -863,3 +863,14 @@ totals (AD-28) still count each mark.
 6. Open the Days won card on Today and read How it's counted.
 **Expected:** Step 5: after step 2, Days won is 10 action minutes higher (5 marks × 2); the Not for me card adds nothing; after step 4 A's card minutes stop at 20 for the day, however many more cards are marked. Step 6: the line names going through Today's cards. An account on demo data still shows the sample total and ticks as in AD-40. No ServiceCredits change.
 **Result:** web ☐ android ☐ — notes:
+
+## AD-43 · Days won rises on screen, on the next visit, and as a week line (added 2026-11-24)
+**Role:** an approved member on 3.1 with Emoji rain on (Me → Settings → Look and reading), on two browsers · **Surfaces:** web
+**Steps:**
+1. Open Today in browser A and look at the Days won card in light and dark.
+2. Leave Today open in browser A and showing while another member spends 20 minutes in the Main Room. Wait up to 3 minutes after they leave, or switch away from the tab and back.
+3. Close browser B's Today before step 2; open it after step 2.
+4. In a private window with site data blocked, open Today.
+5. Turn on reduced motion and repeat step 2.
+**Expected:** Step 1 shows the total large with a small rising line to its right (this week's days won added up day by day, ending in a dot), no axes, in the number's color in both themes; "Our progress this week" is unchanged under it. Step 2: the number goes up without a reload, the line's last point rises, and emoji fall for about three seconds. Step 3: browser B rains once on opening, because it last saw the lower total. Step 4 loads normally with no error, using the account's last total. Step 5: the number and line rise and nothing falls.
+**Result:** web ☐ — notes:
