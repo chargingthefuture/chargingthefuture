@@ -388,3 +388,34 @@ is the owner side (the oldest) or a member side. `demo-seed-smoke.yml` seeds onc
 switched on, then with three fake ids inserted into the table. The demo-video recording workflow
 still signs in with `DEMO_VIDEO_CLERK_USER_ID` / `DEMO_VIDEO_CLERK_ADMIN_ID`; those accounts need
 the Demo data switch on to be seeded.
+
+## Every Today card kind has at least three cards — 2026-11-24
+
+Owner request: a demo account and signed-out Today should show at least three cards of each 3.1
+Today kind. Counted before this change (demo schema, no account switched on):
+
+| Kind | Rows before | Source |
+|---|---|---|
+| Offers: hours | 6 | `48-foundation-offers.mjs` |
+| Offers: a place to stay | 6 | `47-lighthouse.mjs` |
+| Asks: rides wanted | 0 (2 only with a second account) | `seedDemo.mjs` |
+| Asks: errands and requests | 12 | `42-socket-relay.mjs` |
+| Goals | 2 | `seedDemo.mjs` |
+| What Works problems | 8+ | `41-what-works.mjs`, `seedDemo.mjs` |
+| Commons posts | 3 | `20-commons.mjs` |
+| Stories from the System Architect | 2 | `seedDemo.mjs`, `20-commons.mjs` |
+| 21 Questions buddies | 0 | none |
+
+`demo-seed/49-today-abundance.mjs` tops up the short ones: three open ride requests by synthetic
+members, two more goals on the standing board, a third announcement, and 21 Questions answers.
+Four synthetic members answer all 21 questions; each demo account answers the first eight (an answer
+it already gave is left as it is, since answers are final), and each synthetic member agrees with it
+on five or six, so every demo account has four buddies from its first visit and thirteen questions
+left for the question card. Every row uses the names already approved in
+`lib/demo-mode/demo-usernames.ts`, fixed ids (`ddd00000-…-8490-…`), and an upsert, so a re-run puts
+them back. `question_answers` left the coverage allowlist because the demo now writes it.
+
+Two kinds were not padded, because more rows would not add cards: the Match card is one card per
+member (their own picks), and SkillsHunt's Wanted card shows the single active round. Three Wanted
+cards would need a change to `wantedCard` in `lib/today/sources-live.ts`, not more seed rows.
+

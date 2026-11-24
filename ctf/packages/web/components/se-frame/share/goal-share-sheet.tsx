@@ -9,6 +9,7 @@ import { savePicture } from './goal-share-export';
 import { qrFor } from './goal-share-qr';
 import { reportError } from 'lib/observability/report';
 import styles from './goal-share-sheet.module.css';
+import { SheetTop } from '../sheet/sheet-top';
 import classic from './goal-share-sheet-classic.module.css';
 import type { PluginShellTokens } from '@/components/shared/plugin-shell-theme';
 import { classicLookVars } from '@/components/shared/classic-look-vars';
@@ -73,14 +74,9 @@ export function GoalShareSheet({ share, sharer, onClose, look }: SheetProps) {
     <div className={css.backdrop} style={look ? classicLookVars(look) : seThemeVars(theme.color, theme.mode)}>
       <button type="button" className={css.scrim} aria-label={W.close} tabIndex={-1} onClick={onClose} />
       <section role="dialog" aria-modal="true" aria-label={W.title} className={css.sheet}>
-        <div className={css.head}>
+        <SheetTop className={css.head} closeClassName={css.round} closeLabel={W.close} onClose={onClose} closeRef={closeRef}>
           <h2 className={css.title}>{W.title}</h2>
-          <button ref={closeRef} type="button" aria-label={W.close} className={css.round} onClick={onClose}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
-              <path d="M6 6l12 12M18 6L6 18" />
-            </svg>
-          </button>
-        </div>
+        </SheetTop>
         <figure className={css.figure} aria-label={W.picture}>
           <GoalSharePicture ref={svg} picture={picture} label={`${W.picture}: ${share.title}`} />
         </figure>
