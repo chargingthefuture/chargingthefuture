@@ -139,6 +139,7 @@ contracts:
       - member_action_seconds_daily
       - foundation_call_sessions
       - peer_programming_goal_tasks
+      - today_card_marks
       - chyme_rooms
       - chyme_room_members
       - chyme_guest_listeners

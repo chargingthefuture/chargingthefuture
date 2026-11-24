@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { seApplyMutes, seCardMutedNote, seCardMuteRequest, seDaysWonLines, seMuteRowLabel, seMutePostTargetValid, seNormalizeMuteWords, seTalkLine, seTodayView, type SeToday } from '@ctf/shared';
+import { seApplyMutes, seCardMutedNote, seCardMuteRequest, seDaysWonLines, seMuteRowLabel, seMutePostTargetValid, seNormalizeMuteWords, seTalkLine, SE_TODAY_FILTERS, seTodayShowsMatchCard, seTodayView, type SeToday } from '@ctf/shared';
 
 const card = (id: string, kind: 'ask' | 'offer' | 'story') => ({
   id,
@@ -96,5 +96,18 @@ describe('seTodayView', () => {
     expect(seMutePostTargetValid('blog-story:https://example.org/a:b')).toBe(true);
     expect(seMutePostTargetValid('no colon')).toBe(false);
     expect(seMutePostTargetValid(`a:${'x'.repeat(200)}`)).toBe(false);
+  });
+});
+
+describe('the Buddies filter and the Match card', () => {
+  it('names the 21 Questions filter Buddies', () => {
+    expect(SE_TODAY_FILTERS.find((item) => item.key === 'matches')?.label).toBe('Buddies');
+  });
+
+  it('shows the needs-based Match card under All and Asks, never under Buddies', () => {
+    expect(seTodayShowsMatchCard('all')).toBe(true);
+    expect(seTodayShowsMatchCard('asks')).toBe(true);
+    expect(seTodayShowsMatchCard('matches')).toBe(false);
+    expect(seTodayShowsMatchCard('offers')).toBe(false);
   });
 });
