@@ -1,4 +1,5 @@
-import { type SeCardKind, type SeThemeColor, type SeThemeMode } from './se-theme';
+import type { SeTodayCard } from '../today/types';
+import { type SeThemeColor, type SeThemeMode } from './se-theme';
 export declare const SE_ME_LINKS: {
     readonly credits: "/apps/service-credits";
     readonly account: "/account";
@@ -83,10 +84,4 @@ export type SeThemeChoice = {
 };
 export declare const SE_THEME_STORE_KEY = "se-theme";
 export declare function seParseThemeChoice(raw: string | null | undefined): SeThemeChoice;
-export type SeMarkedCard = {
-    id: string;
-    kind: SeCardKind;
-    label: string;
-    title: string;
-    href: string;
-};
+export type SeMarkedCard = SeTodayCard;

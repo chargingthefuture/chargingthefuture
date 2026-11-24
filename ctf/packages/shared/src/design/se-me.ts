@@ -2,7 +2,8 @@
 // member's name, since when, badges and three profile prompts; ServiceCredits; Saved, Read and
 // Hidden; the Tools grid; and the gear to Settings. Making things is + New and reading is Today.
 
-import { SE_DEFAULT_THEME, isSeThemeColor, isSeThemeMode, type SeCardKind, type SeThemeColor, type SeThemeMode } from './se-theme';
+import type { SeTodayCard } from '../today/types';
+import { SE_DEFAULT_THEME, isSeThemeColor, isSeThemeMode, type SeThemeColor, type SeThemeMode } from './se-theme';
 
 const RELEASES = 'https://github.com/chargingthefuture/chargingthefuture/releases';
 
@@ -149,5 +150,6 @@ export function seParseThemeChoice(raw: string | null | undefined): SeThemeChoic
   }
 }
 
-// One line in Me → Read or Hidden (GET /api/today/marks?mark=done|not_for_me).
-export type SeMarkedCard = { id: string; kind: SeCardKind; label: string; title: string; href: string };
+// One line in Me → Read or Hidden (GET /api/today/marks?mark=done|not_for_me): the full card, so
+// the row opens it in place as Today does.
+export type SeMarkedCard = SeTodayCard;

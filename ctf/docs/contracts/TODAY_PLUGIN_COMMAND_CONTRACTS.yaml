@@ -688,7 +688,7 @@ contracts:
   - pluginId: today
     command: today.marks.list
     version: 1.0.0
-    description: "List the member's own Today cards marked done or not_for_me that are still around, newest mark first, for Me → Read and Hidden; done lists the cards marked done or read. Read from the same sources as Today; at most 200 marks. (GET /api/today/marks?mark=done|not_for_me)."
+    description: "List the member's own Today cards marked done or not_for_me that are still around, newest mark first, for Me → Read and Hidden; done lists the cards marked done or read. Read from the same sources as Today; at most 200 marks. Each entry is the full Today card, as GET /api/today shapes it, so Me opens it in place. (GET /api/today/marks?mark=done|not_for_me)."
     inputSchema:
       mark:
         type: string

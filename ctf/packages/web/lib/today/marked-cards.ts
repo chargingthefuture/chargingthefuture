@@ -7,7 +7,7 @@ import { listMarkedCardIds } from './marks/repository';
 // Me → Read and Hidden: the cards this member marked done, or Not for me, that are still around,
 // newest mark first. Read from the same sources as Today; a card whose item has gone is left out.
 // A source that fails is reported and skipped. Another person's ask is never listed as read: it
-// carries no check mark.
+// carries no check mark. Each comes back as the full card, so Me opens it in place as Today does.
 export async function readMarkedCards(viewer: TodayViewer, mark: 'done' | 'not_for_me', now = new Date()): Promise<SeMarkedCard[]> {
   const ids = await listMarkedCardIds(viewer.userId, mark);
   if (ids.length === 0) return [];
@@ -23,6 +23,6 @@ export async function readMarkedCards(viewer: TodayViewer, mark: 'done' | 'not_f
   return ids.flatMap((id) => {
     const card = byId.get(id);
     if (mark === 'done' && card && !seCardTakesCheckMark(card)) return [];
-    return card ? [{ id: card.id, kind: card.kind, label: card.label, title: card.title, href: card.href }] : [];
+    return card ? [card] : [];
   });
 }

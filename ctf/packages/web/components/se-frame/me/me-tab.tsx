@@ -29,7 +29,7 @@ type MeTabProps = {
 // The lists Me opens (Open, Read, Hidden) and Trust, each with Back to Me; null for any other view.
 function listView(view: SeMeView, viewerId: string, toMe: () => void): ReactNode {
   if (view === 'open') return <OpenList viewerId={viewerId} onBack={toMe} />;
-  if (view === 'read' || view === 'hidden') return <MarkedList mark={view === 'read' ? 'done' : 'not_for_me'} onBack={toMe} />;
+  if (view === 'read' || view === 'hidden') return <MarkedList mark={view === 'read' ? 'done' : 'not_for_me'} viewerId={viewerId} onBack={toMe} />;
   if (view === 'trust') return <TrustScreen onBack={toMe} />;
   return null;
 }
