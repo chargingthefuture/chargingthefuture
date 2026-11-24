@@ -8,6 +8,7 @@ import { CardTalk } from './card-sheet-talk';
 import { SheetYours } from './card-sheet-yours';
 import { useCardConversation, type CardConversation } from './use-card-conversation';
 import styles from './card-sheet.module.css';
+import { SheetTop } from '../sheet/sheet-top';
 import { useCardTalkStyles } from './card-talk-styles';
 import { WwAddFromCard } from '../what-works/ww-add-from-card';
 
@@ -88,7 +89,7 @@ function SheetMenu({ card, talk, viewerId, onMutePost }: MenuProps) {
 function SheetHead({ card, talk, viewerId, onClose, onMutePost, closeRef }: SheetProps & { talk: CardConversation; closeRef: React.RefObject<HTMLButtonElement | null> }) {
   const [copied, setCopied] = useState(false);
   return (
-    <div className={styles.head}>
+    <SheetTop className={styles.head} closeClassName={styles.round} closeLabel={SE_CARD_WORDS.close} onClose={onClose} closeRef={closeRef}>
       {card.author ? <SeAvatar accountId={card.author.accountId} size={32} /> : null}
       <div className={styles.who}>
         {card.author ? <span className={styles.handle}>{card.author.handle}</span> : null}
@@ -103,12 +104,7 @@ function SheetHead({ card, talk, viewerId, onClose, onMutePost, closeRef }: Shee
         </svg>
       </RoundButton>
       <SheetMenu card={card} talk={talk} viewerId={viewerId} onMutePost={onMutePost} />
-      <button ref={closeRef} type="button" aria-label={SE_CARD_WORDS.close} className={styles.round} onClick={onClose}>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
-          <path d="M6 6l12 12M18 6L6 18" />
-        </svg>
-      </button>
-    </div>
+    </SheetTop>
   );
 }
 

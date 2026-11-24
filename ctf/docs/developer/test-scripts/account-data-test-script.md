@@ -15,7 +15,7 @@
 | **Visibility** | Any signed-in identity (including unlock-pending) |
 | **Roles to test** | member |
 | **Surfaces** | web (phone-width layout) |
-| **Generated** | 2026-07-26 (hand-written on the JSON-export build, issue #1264) · 2026-11-23 manual update: AD-21 and AD-28: the timeline dot takes a card off Today and lists it in Me → Read; opening a card marks it read; AD-13 step 6 names the shortened Ask the architect line · 2026-11-23 manual update: AD-13 suggestions are chips under "Or start from one of these" · 2026-11-24 manual update: AD-41 Me → Open |
+| **Generated** | 2026-07-26 (hand-written on the JSON-export build, issue #1264) · 2026-11-23 manual update: AD-21 and AD-28: the timeline dot takes a card off Today and lists it in Me → Read; opening a card marks it read; AD-13 step 6 names the shortened Ask the architect line · 2026-11-23 manual update: AD-13 suggestions are chips under "Or start from one of these" · 2026-11-24 manual update: AD-41 Me → Open · 2026-11-24 manual update: the Matches filter is named Buddies (AD-13, the 21 Questions steps) · 2026-11-24 manual update: AD-43 Me → Read and Hidden open cards in place |
 
 ## How to run this
 
@@ -220,7 +220,7 @@ menu and Manage account show no photo and no upload or remove control. The Ident
 4. On Today, tap the word **Avenhood** in the title, then tap it again. On Me, tap the word **Aven** under your name.
 5. Open `/apps/directory/invites` and one invite's page from it, then come back to `/`.
 6. On the Me tab, tap the gear, then **Back to 3.0**.
-**Expected:** Step 1 lands on the 3.1 home: forest green and gold, dark, the date above "Today in the
+**Expected:** Step 1 lands on the 3.1 home: forest green and gold, dark, the month and year (for example "November 2026") above "Today in the
 Avenhood", and the tab bar. Each tab shows its title; Me shows your picture, your name and the gear to Settings, and the
 others say the screen is still being built. The address carries the tab (`/?tab=people`), and back
 returns to the tab before. Tapping Avenhood opens and closes its definition under the title; tapping Aven on Me shows what an Aven is. The invite wall and the invite page open and work as before. Back to 3.0
@@ -234,7 +234,7 @@ on your board, a LightHouse listing, an announcement).
 **Steps:**
 1. Open `/`. Wait for the cards, then reload the page.
 2. Tap a card's text, then tap it again. Tap one of its buttons.
-3. Tap each chip: All, Asks, Offers, Stories, Matches.
+3. Tap each chip: All, Asks, Offers, Stories, Buddies.
 4. On a card, open ••• and choose **Copy link**, then open ••• on another card and choose **Hide**.
 5. Open the Main Room card's button.
 6. If you have not answered the Quora account removals survey, find its card ("Lost a Quora account?
@@ -319,7 +319,7 @@ architect line opens Ask the architect with the member's questions. Close return
 9. Tap Ask the architect; go back to Me → Settings and tap Report a bug, then close it.
 10. Tap Terms and privacy, Wallpapers, Get the Android app, Delete data from one part of the app and Delete your account in turn.
 11. Sign in as the admin and as the badge holder and open Me.
-**Expected:** Step 1 shows the picture with a dark ring, your name (no @, the same on web and Android), "Aven since <month year>", the gear, ServiceCredits with the balance in credits and "credits, not money" under it (never money words), round Send, Receive and History buttons with icons in that order, Read and Hidden, Tools with Learn a skill, Our numbers and Bring your writing (no Log what happened, which is in + New), and the emoji rain switch. Step 2 shows the two written lines under their labels and no "I need"; they stay after the reload and on the other device. Step 3 opens ServiceCredits on its Send tab, copies @handle and says so, and opens the wallet tab. Step 4 lists the cards you marked done (Read) or Not for me (Hidden) that are still around, each opening where it lives, or "Nothing here yet."; the web address carries `view=read` and the back button returns to Me. Step 5 opens LightHouse, Foundation, SkillUp, Workforce and the Knowledge Library (in the browser on Android), and Log what happened opens its sheet over Me (ClickLog test script, CL-12). Step 6 opens Theme with Back to Settings, Dark and Light, then Burgundy (Default · The landing page), Forest and gold (One Percent), Coral (The blog), Teal and purple (The first wallpaper), "The same colors as the wallpapers" and Get; the app recolors at once and keeps Coral light after the reload and on the other device. Step 7 makes the screen larger (the tab bar stays its size), the gray text dark or light like the rest and the borders stronger, and the text Atkinson Hyperlegible, all kept after the reload. Step 8 opens the Muted card in place with its count on the row, the blocked list with its count, and the survey; the census row says Added once the survey is answered. Step 9 opens + New on Ask the architect, then the bug report form; Help has Terms and privacy but no Guide row. Step 10 opens each place; Wallpapers and the Android app open GitHub releases filtered to each, and both delete rows open Account and data. Step 11 shows System Architect for the admin (tapping it opens the admin screens) and Weavers of the Commons for the badge holder; a member who is neither sees no badge.
+**Expected:** Step 1 shows the picture with a dark ring, your name (no @, the same on web and Android), "Aven since <month year>", the gear, ServiceCredits with the balance in credits and "credits, not money" under it (never money words), round Send, Receive and History buttons with icons in that order, Read and Hidden, Tools with Learn a skill, Our numbers and Bring your writing (no Log what happened, which is in + New), and the emoji rain switch. Step 2 shows the two written lines under their labels and no "I need"; they stay after the reload and on the other device. Step 3 opens ServiceCredits on its Send tab, copies @handle and says so, and opens the wallet tab. Step 4 lists the cards you marked done (Read) or Not for me (Hidden) that are still around, each opening in place over the list (AD-43), or "Nothing here yet."; the web address carries `view=read` and the back button returns to Me. Step 5 opens LightHouse, Foundation, SkillUp, Workforce and the Knowledge Library (in the browser on Android), and Log what happened opens its sheet over Me (ClickLog test script, CL-12). Step 6 opens Theme with Back to Settings, Dark and Light, then Burgundy (Default · The landing page), Forest and gold (One Percent), Coral (The blog), Teal and purple (The first wallpaper), "The same colors as the wallpapers" and Get; the app recolors at once and keeps Coral light after the reload and on the other device. Step 7 makes the screen larger (the tab bar stays its size), the gray text dark or light like the rest and the borders stronger, and the text Atkinson Hyperlegible, all kept after the reload. Step 8 opens the Muted card in place with its count on the row, the blocked list with its count, and the survey; the census row says Added once the survey is answered. Step 9 opens + New on Ask the architect, then the bug report form; Help has Terms and privacy but no Guide row. Step 10 opens each place; Wallpapers and the Android app open GitHub releases filtered to each, and both delete rows open Account and data. Step 11 shows System Architect for the admin (tapping it opens the admin screens) and Weavers of the Commons for the badge holder; a member who is neither sees no badge.
 **Result:** web ☐ android ☐ — notes:
 
 ## AD-14b · Notifications and quiet hours in 3.1 Settings
@@ -551,7 +551,7 @@ picture, ladder in turn). No sign-in is asked for. On Android, step 2 opens the 
 ## AD-23 · 21 Questions
 **Role:** two approved members, A and B, on 3.1 · **Surfaces:** web, android
 **Steps:**
-1. As A, open Today and pick the Matches filter. Tap an answer on the 21 Questions card.
+1. As A, open Today and pick the Buddies filter. Tap an answer on the 21 Questions card.
 2. Keep answering until the card is gone or says catching up, then do the same as B with the same answers on three questions.
 3. As A, read Today again and tap Talk here on the buddy card (Buddy · 21 Questions). Send a message.
 4. As B, open Activity, then the buddy card on Today.
@@ -560,7 +560,7 @@ picture, ladder in turn). No sign-in is asked for. On Android, step 2 opens the 
 **Expected:** Step 1 says Saved; the card stays with its dot checked, the buttons gone and "You picked:" with the answer, the dot cannot be unchecked, and a question missed on an earlier day shows as its own catching-up card; no question asks about home, family or
 where somebody lives. Step 3 shows "You and @B answered N of M the same" and the message in the
 card. Step 4 shows the new message in Activity and in the card, marked "Buddy · 1 new message" until opened.
-The Wanted and mission cards are under Asks, not Matches. Step 5 removes the buddy card for both.
+The Wanted and mission cards are under Asks, not Buddies. Step 5 removes the buddy card for both.
 Step 6: Skip sits under the answers on web and Android; the card leaves Today and the next question
 not answered or skipped comes in as a catching-up card, with the same answered count; skipping that
 one brings the one after it; Days won, the done count and C's buddies are unchanged, and Me → Hidden
@@ -569,10 +569,10 @@ lists today's skipped question.
 ## AD-24 · 21 Questions buddies on and off
 **Role:** two approved members, A and B, on 3.1, who are buddies (AD-23), and C, approved, with no answers · **Surfaces:** web, android
 **Steps:**
-1. As C, open Today, pick the Matches filter, then open Me.
-2. As A, pick the Matches filter on Today and read the 21 Questions card.
-3. As A, turn off Find me buddies who answer like me under Matches.
-4. As B, read Today again under Matches.
+1. As C, open Today, pick the Buddies filter, then open Me.
+2. As A, pick the Buddies filter on Today and read the 21 Questions card.
+3. As A, turn off Find me buddies who answer like me under Buddies.
+4. As B, read Today again under Buddies.
 5. As A, answer another question, then open Me.
 6. As A, turn the toggle back on from Me, then read Today again. As B, read Today again.
 **Expected:** Step 1 shows no buddies toggle in either place. Step 2's card opens with "21 Questions finds your
@@ -851,3 +851,45 @@ totals (AD-28) still count each mark.
 6. Switch the theme between the four colors and light and dark while Open is showing.
 **Expected:** Step 1: "Nothing open." with the line saying what will be listed. Step 3: both asks, newest first: A's with "Yours · On Today until <date>", B's with "You answered or wrote here", each under its kind's colored label. Step 4: each opens in place over the list, as on Today, with its answers and conversation; nothing opens a new page. Step 5: A's ask is gone from Open; B's ask stays. Step 6: the list is readable in every color and mode. With the network off, Open says it could not read the open cards and why.
 **Result:** web ☐ android ☐ — notes:
+
+## AD-42 · Today cards count toward Days won at a lower weight (added 2026-11-24)
+**Role:** member A (signed in on web and Android), an admin · **Surfaces:** web, android
+**Steps:**
+1. As the admin, note Days won on the Adoption tab of the measures screen.
+2. As A, open three Today cards (tap their text) and tap the dot on two others.
+3. As A, tap Not for me on a sixth card.
+4. As A, open and dot fifteen more cards the same day.
+5. As the admin, reload the measures screen after each of steps 2 and 4.
+6. Open the Days won card on Today and read How it's counted.
+**Expected:** Step 5: after step 2, Days won is 10 action minutes higher (5 marks × 2); the Not for me card adds nothing; after step 4 A's card minutes stop at 20 for the day, however many more cards are marked. Step 6: the line names going through Today's cards. An account on demo data still shows the sample total and ticks as in AD-40. No ServiceCredits change.
+**Result:** web ☐ android ☐ — notes:
+
+## AD-43 · Me → Read and Hidden open their cards in place (added 2026-11-24)
+**Role:** approved member · **Surfaces:** web · **Precondition:** Today shows at least one story and one ask by somebody else
+**Steps:**
+1. On Today, tap the timeline dot of a story, and choose Not for me from the ••• menu of the ask.
+2. Open Me → Read and tap the story's row.
+3. Close the sheet. Open Me → Hidden and tap the ask's row.
+4. Close the sheet, then reach each row with Tab and open it with Enter.
+5. With a screen reader on, move through the rows of Read.
+**Expected:** Step 2: the story opens in place over Read, the same sheet as on Today, with its conversation; no new page opens. Step 3: the ask opens in place over Hidden with its answers. Step 4: each row takes keyboard focus with a visible outline and Enter opens it. Step 5: each row is read as a button with the card's label and title. Opening a card from either list does not change its mark: it stays in the same list after a reload. With the network off, the list says it could not read the cards and why.
+## AD-43 · Days won rises on screen, on the next visit, and as a week line (added 2026-11-24)
+**Role:** an approved member on 3.1 with Emoji rain on (Me → Settings → Look and reading), on two browsers · **Surfaces:** web
+**Steps:**
+1. Open Today in browser A and look at the Days won card in light and dark.
+2. Leave Today open in browser A and showing while another member spends 20 minutes in the Main Room. Wait up to 3 minutes after they leave, or switch away from the tab and back.
+3. Close browser B's Today before step 2; open it after step 2.
+4. In a private window with site data blocked, open Today.
+5. Turn on reduced motion and repeat step 2.
+**Expected:** Step 1 shows the total large with a small rising line to its right (this week's days won added up day by day, ending in a dot), no axes, in the number's color in both themes; "Our progress this week" is unchanged under it. Step 2: the number goes up without a reload, the line's last point rises, and emoji fall for about three seconds. Step 3: browser B rains once on opening, because it last saw the lower total. Step 4 loads normally with no error, using the account's last total. Step 5: the number and line rise and nothing falls.
+**Result:** web ☐ — notes:
+
+## AD-44 · Close sits top right on every sheet, and the signed-out puzzle page is light (added 2026-11-24)
+**Role:** an approved member, then a visitor · **Surfaces:** web
+**Steps:**
+1. Signed in, open a Today card, + New (Ask, then Talk), "Log what happened" under + New, What works → Add a problem, then What helped, a person's profile and Get a quote from People, and Share on a reached goal.
+2. Sign out, open a card on signed-out Today.
+3. In a browser that has never signed in, set the phone to dark and open the puzzle of the day (`/games`).
+4. In a browser where a member picked Coral dark, sign out and open `/games`.
+**Expected:** Steps 1 and 2: every sheet's Close (the round X) is the last control in its top row, in the top right corner, with the sheet's label, link or other buttons to its left; Escape and Close still close each one. Step 3 shows the puzzle page in burgundy light, the same as signed-out Today, with Sign in to play. Step 4 shows it in Coral dark, the theme picked on that browser.
+**Result:** web ☐ — notes:

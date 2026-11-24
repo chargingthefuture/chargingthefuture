@@ -20,3 +20,4 @@ export declare function seEmojiRainStep(input: {
     record: number | null;
 };
 export declare function isSeDaysWonSeen(value: unknown): value is number;
+export declare function seDaysWonSeenOn(device: unknown, account: number | null | undefined): number | null | undefined;

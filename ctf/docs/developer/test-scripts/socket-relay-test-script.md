@@ -12,7 +12,7 @@
 | **Surfaces** | web (`/apps/socket-relay`, `/admin/socket-relay`) · android (`SocketRelay.tsx`, `AdminSocketRelay.tsx`) |
 | **Seed first** | `pnpm --dir ctf seed:socket-relay` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-socket-relay-feature-inventory.md` |
-| **Generated** | 2026-07-11 (hand-updated for per-request location defaulting from the directory profile — see SR-3; regenerate via CI to stamp the commit) · 2026-08-04 (SR-16 marked API-only by design — no profile UI exists or is planned) · 2026-10-02 (SR-4b and SR-A3a added for request pictures) · 2026-10-17: demo seed adds seven open tagged requests by other members (SR-1, SR-2) · 2026-10-17: demo seed relinks the seeded account's "Help moving a few boxes" Direct Line after an owner change |
+| **Generated** | 2026-07-11 (hand-updated for per-request location defaulting from the directory profile — see SR-3; regenerate via CI to stamp the commit) · 2026-08-04 (SR-16 marked API-only by design — no profile UI exists or is planned) · 2026-10-02 (SR-4b and SR-A3a added for request pictures) · 2026-10-17: demo seed adds seven open tagged requests by other members (SR-1, SR-2) · 2026-10-17: demo seed relinks the seeded account's "Help moving a few boxes" Direct Line after an owner change · 2026-11-24 manual note: an ask closed from Today as done now keeps the helper for Weavers of the Commons; tested in the contributor-access script (CA-A16), no SocketRelay step changed |
 
 ---
 
@@ -924,4 +924,14 @@ posts are for Weavers of the Commons."
 2. As B, open Today in 3.1.
 3. As B, open SocketRelay in 3.0 and compare the open requests listed there with the asks on Today.
 **Expected:** Step 1: A's request shows as their own card, "You posted this · On Today until <December 8, 2026 or later>", with Done, Closed, not done and Keep it up for 14 more days. Step 2: A's request shows as an Ask with I can help. Step 3: every open request on 3.0's first page is on Today, except one 3.0 marks expired, which only its poster sees on Today. A closed or canceled request is on neither.
+**Result:** web ☐ android ☐ — notes:
+
+### SR-26 · Every open request of your own shows in 3.1 (added 2026-11-24)
+**Role:** member A (11 or more open requests, the oldest posted months ago), member B · **Surfaces:** web, android
+**Steps:**
+1. As A, open SocketRelay in 3.0 and count the open requests listed under your own.
+2. As A, open Today in 3.1 and scroll to the end.
+3. As A, open Me → Open.
+4. As B, open Today in 3.1.
+**Expected:** Steps 2 and 3: every open request from step 1 is there as your own card, the oldest included, even when Today already has 30 other cards. Step 4: B sees A's requests only under the usual rules (the 20 newest open requests, at most 30 cards).
 **Result:** web ☐ android ☐ — notes:

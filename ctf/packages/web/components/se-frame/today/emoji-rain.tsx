@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { SE_EMOJI_RAIN_MS, seEmojiRainDrops, seEmojiRainStep } from '@ctf/shared';
+import { SE_EMOJI_RAIN_MS, seDaysWonSeenOn, seEmojiRainDrops, seEmojiRainStep } from '@ctf/shared';
 import styles from './emoji-rain.module.css';
 
 // Emoji rain (3.1 plan, Look): when the member has the switch on and the Days won total is higher
@@ -22,15 +22,42 @@ export type EmojiRainProps = {
   onSeen: (_total: number) => void;
 };
 
-// Decides once per new total, records it, and says whether to rain for a few seconds.
+// The total this browser last saw, beside the account's (seDaysWonSeenOn). Storage can be refused
+// (private window, blocked site data); then the account's total decides alone.
+const DEVICE_SEEN_KEY = 'ctf:se:days-won-seen';
+
+function readDeviceSeen(): unknown {
+  try {
+    const raw = window.localStorage.getItem(DEVICE_SEEN_KEY);
+    return raw === null ? null : Number(raw);
+  } catch {
+    // no-trace: storage refused; the account's total decides.
+    return null;
+  }
+}
+
+function writeDeviceSeen(total: number): void {
+  try {
+    window.localStorage.setItem(DEVICE_SEEN_KEY, String(total));
+  } catch {
+    // no-trace: storage refused; the account's total is still recorded.
+  }
+}
+
+// Decides once per new total, records it on this device and the account, and says whether to rain
+// for a few seconds. A rise while Today is open (use-today.ts reads it again now and then) rains too.
 export function useEmojiRain({ on, daysWon, seen, onSeen }: EmojiRainProps): boolean {
   const [raining, setRaining] = useState(false);
-  const step = seEmojiRainStep({ on, total: daysWon?.total, sample: daysWon?.sample, seen });
+  const [device, setDevice] = useState<unknown>(undefined);
+  useEffect(() => setDevice(readDeviceSeen()), []);
+  const step = seEmojiRainStep({ on, total: daysWon?.total, sample: daysWon?.sample, seen: device === undefined ? undefined : seDaysWonSeenOn(device, seen) });
   const onSeenRef = useRef(onSeen);
   onSeenRef.current = onSeen;
 
   useEffect(() => {
     if (step.record === null) return;
+    writeDeviceSeen(step.record);
+    setDevice(step.record);
     onSeenRef.current(step.record);
     if (step.rain && !prefersLessMotion()) setRaining(true);
   }, [step.record, step.rain]);

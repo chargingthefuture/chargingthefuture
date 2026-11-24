@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, type ReactNode } from 'react';
-import { SE_DAYS_WON_HOW, SE_DAYS_WON_TITLE, SE_DAYS_WON_WHY, SE_MUTE_WORDS, SE_TODAY_FILTERS, seCardMutedNote, seCardMuteRequest, seDaysWonLines, seTodayView, type SeCardMuteKind, type SeToday, type SeTodayCard, type SeTodayFilter } from '@ctf/shared';
+import { SE_DAYS_WON_HOW, SE_DAYS_WON_TITLE, SE_DAYS_WON_WHY, SE_MUTE_WORDS, SE_TODAY_FILTERS, seCardMutedNote, seCardMuteRequest, seDaysWonLines, seTodayShowsMatchCard, seTodayView, type SeCardMuteKind, type SeToday, type SeTodayCard, type SeTodayFilter } from '@ctf/shared';
 import { MatchCard } from './match-card';
 import { MatchingToggle } from './matching-toggle';
 import { BroadcastCard, RoomCard } from './room-card';
@@ -11,6 +11,7 @@ import { WeekStrip } from './week-strip';
 import { useToday, type MarkKind, type TodayMarks } from './use-today';
 import { EmojiRain, EmojiRainShower } from './emoji-rain';
 import { useLivelyDaysWon } from './use-lively-days-won';
+import { DaysWonTrend } from './days-won-trend';
 import { keepTodayScroll, putBackTodayScroll } from './reload-place';
 import styles from './today.module.css';
 
@@ -25,7 +26,10 @@ function DaysWonCard({ daysWon }: { daysWon: NonNullable<SeToday['daysWon']> }) 
   return (
     <section aria-label={SE_DAYS_WON_TITLE} className={styles.daysWon}>
       <span className={styles.daysWonLabel}>{SE_DAYS_WON_TITLE}</span>
-      <span className={styles.daysWonBig}>{lines.big}</span>
+      <div className={styles.daysWonRow}>
+        <span className={styles.daysWonBig}>{lines.big}</span>
+        <DaysWonTrend days={daysWon.days} />
+      </div>
       <span className={styles.daysWonSmall}>{lines.small}</span>
       <button type="button" className={styles.howButton} aria-expanded={how} onClick={() => setHow((value) => !value)}>
         {SE_DAYS_WON_HOW}
@@ -147,9 +151,9 @@ function Timeline({ lead, viewerId, view, marks, mark, toggle, markRead, onSave,
   );
 }
 
-// The Match card leads the timeline under All only.
+// The Match card leads the timeline under All and Asks (seTodayShowsMatchCard).
 function MatchLead({ filter, refreshKey, onIntroduce }: { filter: SeTodayFilter; refreshKey: string; onIntroduce: () => void }) {
-  return filter === 'all' ? <MatchCard refreshKey={refreshKey} onIntroduce={onIntroduce} /> : null;
+  return seTodayShowsMatchCard(filter) ? <MatchCard refreshKey={refreshKey} onIntroduce={onIntroduce} /> : null;
 }
 
 // A visitor who is not signed in gets GuestToday (guest-today.tsx) instead.

@@ -36,7 +36,7 @@ function readTab(): SeTab {
   return SE_TABS.includes(tab as SeTab) ? (tab as SeTab) : 'today';
 }
 
-const TODAY_DATE = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+const TODAY_DATE = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' });
 
 function ScreenHeader({ title }: { title: string }) {
   return (

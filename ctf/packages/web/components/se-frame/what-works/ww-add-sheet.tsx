@@ -7,6 +7,7 @@ import type { PluginShellTokens } from '@/components/shared/plugin-shell-theme';
 import { classicLookVars } from '@/components/shared/classic-look-vars';
 import { seThemeVars } from '../se-theme-vars';
 import { useSheetFocus } from '../use-sheet-focus';
+import { SheetTop } from '../sheet/sheet-top';
 import { useSeTheme } from '../use-se-theme';
 import { useWwSimilar, WW_MIN_QUERY, type WwMatchState } from './use-ww-similar';
 import seStyles from './ww-add-sheet.module.css';
@@ -42,14 +43,6 @@ async function sendProblem(title: string): Promise<{ ok: true; id: string } | { 
   } catch (error) {
     return { ok: false, message: `The problem could not be saved: ${reasonText(error)}.` };
   }
-}
-
-export function CloseIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
-      <path d="M6 6l12 12M18 6L6 18" />
-    </svg>
-  );
 }
 
 function Matches({ state, onUse }: { state: WwMatchState; onUse: (_problem: WwAddedProblem) => void }) {
@@ -142,12 +135,9 @@ export function WwAddSheet({ onClose, onUse, onAddWhatHelped, look }: Props) {
   return (
     <div className={styles.backdrop} style={look ? classicLookVars(look) : seThemeVars(theme.color, theme.mode)}>
       <section ref={dialog} tabIndex={-1} role="dialog" aria-modal="true" aria-label={W.title} className={styles.sheet}>
-        <div className={styles.top}>
-          <button type="button" className={styles.close} aria-label={W.close} onClick={onClose}>
-            <CloseIcon />
-          </button>
+        <SheetTop className={styles.top} closeClassName={styles.close} closeLabel={W.close} onClose={onClose}>
           <span className={styles.eyebrow}>{W.eyebrow}</span>
-        </div>
+        </SheetTop>
         <SheetCss.Provider value={styles}>
           {sent ? <Sent problem={sent} onAddWhatHelped={onAddWhatHelped} onClose={onClose} /> : <AddForm onUse={onUse} onSent={setSent} />}
         </SheetCss.Provider>

@@ -83,6 +83,24 @@ async function uploadLegacyMarks(owner: string): Promise<boolean> {
   return true;
 }
 
+// While the page is open and showing, Today is read again every few minutes and on coming back to
+// the tab, so a Days won rise shows (and rains) without a reload.
+const REFRESH_MS = 3 * 60_000;
+
+function useTodayRefresh(load: (quiet?: boolean) => Promise<void>) {
+  useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState === 'visible') void load(true);
+    };
+    const timer = window.setInterval(refresh, REFRESH_MS);
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', refresh);
+    };
+  }, [load]);
+}
+
 // `accountId` null: a visitor who is not signed in. Their cache is kept under 'guest'.
 export function useToday(accountId: string | null) {
   const owner = accountId ?? 'guest';
@@ -90,27 +108,33 @@ export function useToday(accountId: string | null) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  // `quiet`: the background re-read below, which shows no loading state and keeps what is on screen
+  // when it fails.
+  const load = useCallback(async (quiet = false) => {
+    if (!quiet) {
+      setLoading(true);
+      setError(null);
+    }
     const fallback = 'Could not load Today.';
     // The member's own day, so stories, the puzzle and 21 Questions turn at their midnight.
     const url = `${accountId ? '/api/today' : '/api/today/public'}?${seTodayDayQuery()}`;
     try {
       const res = await fetch(url, { credentials: 'same-origin' });
       if (!res.ok) {
-        setError(await responseFailureText(res, fallback, 'member'));
+        if (!quiet) setError(await responseFailureText(res, fallback, 'member'));
         return;
       }
       const body = (await res.json()) as { today: SeToday };
       setToday(body.today);
       writeJson(CACHE_PREFIX + owner, body.today);
     } catch (caught) {
-      setError(failureText(caught, { area: 'today', op: 'load', fallback, audience: 'member' }));
+      if (!quiet) setError(failureText(caught, { area: 'today', op: 'load', fallback, audience: 'member' }));
     } finally {
-      setLoading(false);
+      if (!quiet) setLoading(false);
     }
   }, [owner, accountId]);
+
+  useTodayRefresh(load);
 
   useEffect(() => {
     const cached = readJson<SeToday>(CACHE_PREFIX + owner);
@@ -161,5 +185,5 @@ export function useToday(accountId: string | null) {
     [load],
   );
 
-  return { today, loading, error, marks: seMarksFromToday(today), mark, toggle, markRead, save, saveNote, reload: load };
+  return { today, loading, error, marks: seMarksFromToday(today), mark, toggle, markRead, save, saveNote, reload: () => load() };
 }

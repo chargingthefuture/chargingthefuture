@@ -13,6 +13,7 @@ import {
   type SeCardMuteKind,
   SE_TODAY_FILTERS,
   seDaysWonLines,
+  seTodayShowsMatchCard,
   seTodayView,
   type SeThemeTokens,
   type SeToday,
@@ -119,9 +120,9 @@ function Notices({ s, error, missingLine, loading, onRetry }: { s: Styles; error
   );
 }
 
-// The Match card leads the timeline under All only.
+// The Match card leads the timeline under All and Asks (seTodayShowsMatchCard).
 function MatchLead({ t, filter, refreshKey, onIntroduce }: { t: SeThemeTokens; filter: SeTodayFilter; refreshKey: string; onIntroduce: () => void }) {
-  return filter === 'all' ? <MatchCard t={t} refreshKey={refreshKey} onIntroduce={onIntroduce} /> : null;
+  return seTodayShowsMatchCard(filter) ? <MatchCard t={t} refreshKey={refreshKey} onIntroduce={onIntroduce} /> : null;
 }
 
 // A visitor who is not signed in gets GuestToday (GuestToday.tsx) instead.

@@ -95,13 +95,22 @@ export const VALUE_EVENT_SOURCES: ValueEventSource[] = [
   },
   {
     key: 'value.socket_relay_requests_fulfilled',
-    // Somebody asked for something and got it.
+    // Somebody asked for something and got it. In 3.0 that is a fulfillment closed successful; in
+    // 3.1 the asker closes the ask from Today as done and names who did it, one of the members who
+    // answered "I can help" (today_card_windows.helper_user_id). Same event, same weight.
     delivers: true,
-    tables: ['socket_relay_fulfillments'],
+    tables: ['socket_relay_fulfillments', 'today_card_windows'],
     rowSql: `SELECT fulfiller_user_id AS member_id, COALESCE(closed_at, updated_at) AS at,
                     1::numeric AS value, NULL::text AS ref, requester_user_id AS other_id
                FROM socket_relay_fulfillments
-              WHERE close_reason = 'successful'`,
+              WHERE close_reason = 'successful'
+              UNION ALL
+             SELECT helper_user_id AS member_id, closed_at AS at, 1::numeric AS value, NULL::text AS ref,
+                    owner_user_id AS other_id
+               FROM today_card_windows
+              WHERE outcome = 'done' AND closed_at IS NOT NULL AND card_id LIKE 'socket-relay:%'
+                AND helper_user_id IS NOT NULL AND helper_user_id <> 'deleted_member'
+                AND helper_user_id <> owner_user_id`,
     aggregate: 'count',
     occurrences: 'rows',
   },

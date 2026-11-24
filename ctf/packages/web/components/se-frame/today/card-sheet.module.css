@@ -55,12 +55,6 @@
   gap: 8px;
 }
 
-/* The close button always sits in the top right corner of a sheet (owner decision, 2026-11-17). */
-.closeEnd {
-  margin-left: auto;
-  flex-shrink: 0;
-}
-
 .who {
   display: flex;
   flex-direction: column;
@@ -146,6 +140,7 @@
   line-height: 1.5;
   color: var(--se-soft);
   white-space: pre-line;
+  overflow-wrap: anywhere;
 }
 
 .openIn {

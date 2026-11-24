@@ -7512,8 +7512,11 @@ CREATE INDEX IF NOT EXISTS idx_today_card_saves_account ON today_card_saves(acco
 -- set something: a deadline chosen in + New ("By when?"), a renew (14 more days from the tap), or
 -- a close from Today with its outcome ('done' or 'not_done', so needs that went unmet can be
 -- counted). With no row, an ask or offer stays on Today 14 days from posting. Leaving Today never
--- closes or deletes the item; it stays open in its own part of the app. Account deletion removes
--- the poster's rows.
+-- closes or deletes the item; it stays open in its own part of the app. helper_user_id is the
+-- member the poster named with Done, one who answered "I can help"; a SocketRelay ask closed that
+-- way counts for the helper toward Weavers of the Commons the way a successful fulfillment does.
+-- Account deletion removes the poster's rows and puts the deleted-member placeholder in place of
+-- the helper's id on other posters' rows.
 CREATE TABLE IF NOT EXISTS today_card_windows (
   card_id TEXT PRIMARY KEY CHECK (char_length(card_id) BETWEEN 3 AND 200),
   owner_user_id TEXT NOT NULL,
@@ -7522,6 +7525,7 @@ CREATE TABLE IF NOT EXISTS today_card_windows (
   renewed_at TIMESTAMPTZ,
   outcome TEXT CHECK (outcome IN ('done', 'not_done')),
   closed_at TIMESTAMPTZ,
+  helper_user_id TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -7531,10 +7535,12 @@ ALTER TABLE IF EXISTS today_card_windows ADD COLUMN IF NOT EXISTS shown_until TI
 ALTER TABLE IF EXISTS today_card_windows ADD COLUMN IF NOT EXISTS renewed_at TIMESTAMPTZ;
 ALTER TABLE IF EXISTS today_card_windows ADD COLUMN IF NOT EXISTS outcome TEXT;
 ALTER TABLE IF EXISTS today_card_windows ADD COLUMN IF NOT EXISTS closed_at TIMESTAMPTZ;
+ALTER TABLE IF EXISTS today_card_windows ADD COLUMN IF NOT EXISTS helper_user_id TEXT;
 ALTER TABLE IF EXISTS today_card_windows ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 ALTER TABLE IF EXISTS today_card_windows ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 CREATE INDEX IF NOT EXISTS idx_today_card_windows_owner ON today_card_windows(owner_user_id);
 CREATE INDEX IF NOT EXISTS idx_today_card_windows_outcome ON today_card_windows(outcome) WHERE outcome IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_today_card_windows_helper ON today_card_windows(helper_user_id) WHERE helper_user_id IS NOT NULL;
 
 -- today_daily_credit_cards: the day's credit card (owner decisions, 2026-11-11). One row per UTC day:
 -- the oldest open ask on Today that day, chosen once by the first Today read of the day so it is the

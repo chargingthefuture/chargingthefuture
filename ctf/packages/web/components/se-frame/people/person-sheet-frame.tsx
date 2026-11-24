@@ -3,6 +3,7 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { SE_PERSON_SHEET_WORDS as W } from '@ctf/shared';
 import styles from './person-sheet.module.css';
+import { SheetTop } from '../sheet/sheet-top';
 
 // The sheet People's profile and quote open in, in the look of a Today card opened in place: focus
 // moves to Close when it opens and back to whatever opened it when it closes, and Escape closes it.
@@ -28,14 +29,9 @@ export function PersonSheetFrame({ title, label, onClose, children }: { title: s
       <button type="button" className={styles.scrim} aria-label={W.close} tabIndex={-1} onClick={onClose} />
       <section role="dialog" aria-modal="true" aria-label={label} className={styles.sheet}>
         <span className={styles.grip} aria-hidden="true" />
-        <div className={styles.head}>
+        <SheetTop className={styles.head} closeClassName={styles.round} closeLabel={W.close} onClose={onClose} closeRef={closeRef}>
           <span className={styles.kicker}>{title}</span>
-          <button ref={closeRef} type="button" className={styles.round} aria-label={W.close} onClick={onClose}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
-              <path d="M6 6l12 12M18 6L6 18" />
-            </svg>
-          </button>
-        </div>
+        </SheetTop>
         {children}
       </section>
     </div>

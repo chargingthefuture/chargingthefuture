@@ -8,7 +8,7 @@ vi.mock('lib/db/postgres', () => ({
   }),
 }));
 
-import { dailyMinutesCte, readDaysWon, readRetention, readTimeToUnlock } from './action-minutes';
+import { CARD_MARK_MINUTES, CARD_MARK_MINUTES_PER_DAY, CONFIRMED_TASK_MINUTES, dailyMinutesCte, readDaysWon, readRetention, readTimeToUnlock } from './action-minutes';
 import { notExcludedAccount } from 'lib/unlock/excluded-accounts';
 
 const EXCLUDED = 'NOT IN (SELECT user_id FROM unlock_excluded_accounts)';
@@ -41,5 +41,29 @@ describe('Adoption measures leave out demo/test accounts', () => {
   it('drops marked accounts from time to unlock', async () => {
     await readTimeToUnlock(new Date('2026-11-12T12:00:00Z'));
     expect(sql.texts[0]).toContain(`s.user_id ${EXCLUDED}`);
+  });
+});
+
+describe('Today card marks count toward Days won at a lower weight', () => {
+  const cte = dailyMinutesCte();
+
+  it('counts done and read marks, never Not for me', () => {
+    expect(cte).toContain("FROM today_card_marks");
+    expect(cte).toContain("WHERE mark IN ('done', 'read')");
+    expect(cte).not.toContain("'not_for_me'");
+  });
+
+  it('caps one member\'s card minutes a day below an exchange and below a 30-minute day', () => {
+    expect(cte).toContain(`LEAST(COUNT(*) * ${CARD_MARK_MINUTES}, ${CARD_MARK_MINUTES_PER_DAY})`);
+    expect(CARD_MARK_MINUTES).toBeLessThan(CONFIRMED_TASK_MINUTES);
+    expect(CARD_MARK_MINUTES_PER_DAY).toBeLessThan(30);
+  });
+});
+
+describe('Days won by day', () => {
+  it('reads each of the last 7 days, oldest first', async () => {
+    const days = await readDaysWon(new Date('2026-11-12T12:00:00Z'));
+    expect(sql.texts[0]).toContain('generate_series($2::date, $3::date');
+    expect(days).toEqual({ total: 0, thisWeek: 0, days: [] });
   });
 });

@@ -22,6 +22,7 @@ import { ClickLogSheet } from '../click-log/click-log-sheet';
 import { WwAddButton } from '../what-works/ww-add-from-card';
 import styles from './new.module.css';
 import sheet from './sheet.module.css';
+import { SheetTop } from '../sheet/sheet-top';
 
 // + New, to the approved boards "New post", "Schedule a talk" and "Schedule a talk, not yet
 // verified": a sheet with Close, an Ask / Offer / Story / Talk switch, and the chosen kind under it.
@@ -30,23 +31,12 @@ import sheet from './sheet.module.css';
 // happened" (a quick pin of the member's location) open from the lines under the switch, since the
 // board's switch has four choices.
 
-function CloseIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
-      <path d="M6 6l12 12M18 6L6 18" />
-    </svg>
-  );
-}
-
-// Close on the left; on the right, the community guidelines, or the room rule while booking a talk.
-function SheetTop({ talk, onClose }: { talk: boolean; onClose: () => void }) {
+// The community guidelines, or the room rule while booking a talk, then Close in the top right corner.
+function NewSheetTop({ talk, onClose }: { talk: boolean; onClose: () => void }) {
   const [rule, setRule] = useState(false);
   return (
     <>
-      <div className={sheet.top}>
-        <button type="button" className={sheet.close} aria-label={W.close} onClick={onClose}>
-          <CloseIcon />
-        </button>
+      <SheetTop className={sheet.top} closeClassName={sheet.close} closeLabel={W.close} onClose={onClose}>
         {talk ? (
           <button type="button" className={sheet.topLink} aria-expanded={rule} aria-controls="se-new-room-rule" onClick={() => setRule((value) => !value)}>
             {SE_TALK_WORDS.roomRule}
@@ -56,7 +46,7 @@ function SheetTop({ talk, onClose }: { talk: boolean; onClose: () => void }) {
             {W.guidelines}
           </Link>
         )}
-      </div>
+      </SheetTop>
       {talk && rule ? (
         <p id="se-new-room-rule" className={sheet.rule}>
           {SE_ROOM_RULE}
@@ -153,7 +143,7 @@ export function NewScreen({ onClose, initialKind = 'ask' }: { onClose: () => voi
   const posting = kind === 'ask' || kind === 'offer' || kind === 'story';
   return (
     <section aria-label={W.label} className={sheet.sheet}>
-      <SheetTop talk={kind === 'talk'} onClose={onClose} />
+      <NewSheetTop talk={kind === 'talk'} onClose={onClose} />
       {posting ? (
         <div className={sheet.head}>
           <h1 className={sheet.title}>{W.heading}</h1>

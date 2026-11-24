@@ -10,7 +10,7 @@
 | **Surfaces** | Web (desktop), Web (mobile-responsive) |
 | **Seed first** | `pnpm --dir ctf seed:demo` |
 | **Source inventory** | `ctf/docs/developer/ctf-plugin-feature-inventories/ctf-contributor-access-feature-inventory.md` |
-| **Generated** | 2026-08-05 (commit efb8d7710) · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-10-04 manual note: `CONTRIBUTOR_ACCESS_PROFILE_AND_DELETION_CONTRACT.md` written (reactions, posts and the eligibility row deleted with the account; the audit trail retained) — no test change · 2026-10-12 manual note: a failed internal recompute now answers 500 with `code: contributor_access_recompute_failed` and the reason in `message`, which the workflow log prints — no test change · 2026-11-02 manual update: CA-A14 now checks there is no way to give the badge by hand; CA-A8 reads fourteen weight rows, Contributions gift cards only · 2026-11-16 manual update: CA-22 and CA-23 check that an account on demo data is treated as a badge holder and a production account is not |
+| **Generated** | 2026-08-05 (commit efb8d7710) · 2026-08-29 manual update: the cross-referenced LevelUp plugin is now SkillUp (tables `skill_up_*`, routes `/api/skill-up/*`); this plugin's own steps are unchanged · 2026-10-04 manual note: `CONTRIBUTOR_ACCESS_PROFILE_AND_DELETION_CONTRACT.md` written (reactions, posts and the eligibility row deleted with the account; the audit trail retained) — no test change · 2026-10-12 manual note: a failed internal recompute now answers 500 with `code: contributor_access_recompute_failed` and the reason in `message`, which the workflow log prints — no test change · 2026-11-02 manual update: CA-A14 now checks there is no way to give the badge by hand; CA-A8 reads fourteen weight rows, Contributions gift cards only · 2026-11-16 manual update: CA-22 and CA-23 check that an account on demo data is treated as a badge holder and a production account is not · 2026-11-24 manual update: CA-A16 checks that a SocketRelay ask closed from Today as done counts for the helper named |
 
 > **Android note:** The Android (React Native) surface was removed 2026-07-20 (rule 105, PR #1742). This plugin is web-only. No android checkboxes appear in this script.
 
@@ -689,6 +689,22 @@ Result: web ☐
 2. Read A's row in `contributor_access_eligibility`.
 
 **Expected:** The send to B is not in A's `reason_snapshot` counts and B is not counted among A's counterparties. Once B is approved and past day 14, the next recompute counts it.
+
+Result: web ☐
+
+---
+
+### CA-A16 — A SocketRelay ask closed from Today as done counts for the helper
+**Role:** admin | **Surfaces:** web (database read)
+
+**Precondition:** Member B (approved through Unlock, first signed in more than 14 days ago) posts an ask from + New with no tasks. Member A answers I can help on its Today card. B closes the ask from the card as done and picks A as who did it.
+
+**Steps:**
+1. Read the ask's row in `today_card_windows` (card id `socket-relay:<request id>`).
+2. Run the weekly recompute.
+3. Read A's row in `contributor_access_eligibility`.
+
+**Expected:** The window row has `outcome = done` and `helper_user_id` = A. A's `reason_snapshot` shows `value.socket_relay_requests_fulfilled` one higher than before, and B is counted among A's counterparties. Closing as not done, or done with nobody named, leaves `helper_user_id` empty and adds nothing.
 
 Result: web ☐
 
