@@ -241,21 +241,23 @@ Upstream reads (engine only, `ctf/packages/web/lib/contributor-access/`): the ta
 filters defined in `lib/contributor-access/value-events.ts` (Weekly Performance no longer shows
 these events; its per-plugin cards retired in 3.1.0), all-time and grouped per the member who
 delivered the value — `foundation_call_sessions` (callee), `socket_relay_fulfillments`
-(fulfiller), `trust_transport_trips` (provider), `lighthouse_matches` (host),
+(fulfiller) and `today_card_windows` (the helper named when a SocketRelay ask is closed from
+Today as done; the same event and weight as a successful fulfillment), `trust_transport_trips`
+(provider), `lighthouse_matches` (host),
 `service_credits_transfers` (sender; chyme tips and direct sends separately by `origin_plugin`),
-`contributions_submissions` (two sums per contributor: confirmed gift-card dollars, and the set
-value of confirmed Quora comments and GitHub stars, which is not money), `skills_hunt_submissions` (submitter),
-`what_works_products` (suggested_by) / `what_works_endorsements` (user), `skill_up_enrollments`
+`contributions_submissions` (confirmed gift-card dollars), `skills_hunt_submissions` (submitter),
+`what_works_products` (suggested_by), `skill_up_enrollments`
 (learner) / `skill_up_disbursements` (trainer), `recurring_activities` (both sides of an active
-confirmed tie), `peer_programming_messages` (author, once per distinct week), `beacon_events` +
-`feed_community_post_reactions` + `feed_community_replies` (distinct broadcasts engaged), and
-`login_events` (first login = account-age anchor). Every query is table-existence-guarded and
+confirmed tie), `peer_programming_messages` (author, once per distinct week),
+`peer_programming_goal_tasks` + `peer_programming_goals` (the helper on a card the goal's owner
+marked as helped), and `login_events` (first login = account-age anchor). Every query is table-existence-guarded and
 never throws; a missing table contributes nothing.
 
 Counterparty diversity reads the two-sided events' real counterparty columns:
 `service_credits_transfers` (`sender_user_id`/`recipient_user_id`), `trust_transport_trips`
 (`requester_user_id`/`provider_user_id`), `socket_relay_fulfillments`
-(`requester_user_id`/`fulfiller_user_id`), `lighthouse_matches` (`seeker_user_id`/`host_user_id`),
+(`requester_user_id`/`fulfiller_user_id`), `today_card_windows` (`owner_user_id`/`helper_user_id`,
+SocketRelay asks closed as done), `lighthouse_matches` (`seeker_user_id`/`host_user_id`),
 `recurring_activities` (`owner_user_id`/`counterparty_user_id`). Foundation call sessions are
 deliberately excluded from the diversity read to minimize access to the sensitive table (their
 counts still feed the score internally).
@@ -388,6 +390,20 @@ fill on the first recompute / config save / member post.
   `lib/contributor-access/scored-members.ts`). Weights, threshold and gates are unchanged. An
   accepted SkillsHunt nomination counts 6 for its submitter, dated by its review; it names nobody
   on the receiving side, so it adds no counterparty, and the badge needs five.
+- 2026-11-24: **A SocketRelay ask closed from Today as done now counts for the helper (owner
+  report: the badge showed nothing for somebody who acts mostly in 3.1).** In 3.1 an ask from
+  + New is a SocketRelay request, and the asker closes it from its Today card as done, naming one
+  of the members who answered I can help. That wrote no `socket_relay_fulfillments` row, and the
+  name was kept only on the day's credit card, so the helper got nothing toward the badge, while
+  the same help given through a 3.0 fulfillment counts 8. The close now keeps the helper on
+  `today_card_windows.helper_user_id` (migration `0120_today_card_windows_helper.sql`, which also
+  recovers the helper from `today_daily_credit_cards` for asks closed before it), and
+  `value.socket_relay_requests_fulfilled` and the counterparty read count those rows: same key,
+  same weight, the asker as the counterparty and held to the trusted-receiver rule. The daily
+  exchange count and Weekly Performance read the same event list, so they count it too. Nothing
+  else changed: no new event, weight or threshold, and no credits. The recompute contract's
+  `dataAccess` now matches the code (the goal-card tables added; endorsements and Beacon tables,
+  retired from the badge on 2026-09-20, removed).
 
 - 2026-11-16: **An account on demo data counts as a Weavers of the Commons badge holder (owner
   decision).** Demo data shows every feature as a badge holder sees it, so a recording can show the

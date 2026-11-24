@@ -645,6 +645,7 @@ export const accountDeletionRegistry: readonly PluginDeletionEntry[] = [
       del('commons_item_pair_requests', 'user_low', 'Just us two requests you made or were asked.'),
       del('commons_item_pair_requests', 'user_high', 'Just us two requests you made or were asked.'),
       del('today_card_windows', 'owner_user_id', 'The deadlines, renewals and closing outcomes of your own asks and offers on Today.'),
+      pseudo('today_card_windows', 'helper_user_id', [], 'Asks closed as done that named you as the helper: the asker keeps the record; your identity does not.'),
       del('today_card_marks', 'account_id', 'The Today cards you marked done or Not for me.'),
       del('today_card_saves', 'account_id', 'The stories and replays you saved for later from Today.'),
       del('today_match_needs', 'account_id', 'What you picked on the Match card on Today, as the needs and the job titles behind them.'),

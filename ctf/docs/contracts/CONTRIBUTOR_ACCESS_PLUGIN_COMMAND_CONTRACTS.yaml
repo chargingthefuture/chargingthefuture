@@ -166,7 +166,9 @@ contracts:
       Performance (owner-locked decision record ctf/docs/developer/PLUGIN_VALUE_METRICS.md), per
       member, all-time; applies the owner-tuned weights, the score threshold, and the gates
       (account age from the first login_events row, distinct plugins, distinct counterparties
-      across the two-sided events). A row with a member on the receiving side counts only when
+      across the two-sided events). A SocketRelay ask closed from Today as done, naming who did it
+      (today_card_windows.helper_user_id), counts for that helper as a successful SocketRelay
+      fulfillment does, with the asker as the counterparty. A row with a member on the receiving side counts only when
       that member is approved through Unlock (access_tier approved_full) and first signed in at
       least SE_UNLOCK_OPEN_DAYS (14) days ago; the counterparty gate counts only those members too
       (3.1.0 plan, Access). Additive only - it admits newly-qualified members and never
@@ -190,20 +192,19 @@ contracts:
       - contributor_access_eligibility
       - foundation_call_sessions
       - socket_relay_fulfillments
+      - today_card_windows
       - trust_transport_trips
       - lighthouse_matches
       - service_credits_transfers
       - contributions_submissions
       - skills_hunt_submissions
       - what_works_products
-      - what_works_endorsements
       - skill_up_enrollments
       - skill_up_disbursements
       - recurring_activities
       - peer_programming_messages
-      - beacon_events
-      - feed_community_post_reactions
-      - feed_community_replies
+      - peer_programming_goal_tasks
+      - peer_programming_goals
       - login_events
       - unlock_verification_submissions
     purpose: eligibility_recompute

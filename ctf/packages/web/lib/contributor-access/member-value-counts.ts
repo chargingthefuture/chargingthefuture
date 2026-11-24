@@ -101,7 +101,8 @@ export async function computeMemberEventCounts(trustedReceivers: string[]): Prom
 // columns: service_credits_transfers (sender_user_id / recipient_user_id — completed, any
 // origin_plugin, never self-to-self), trust_transport_trips (requester_user_id /
 // provider_user_id — both-sides-confirmed completions), socket_relay_fulfillments
-// (requester_user_id / fulfiller_user_id — closed successful), lighthouse_matches
+// (requester_user_id / fulfiller_user_id — closed successful), today_card_windows (owner_user_id /
+// helper_user_id — a SocketRelay ask closed from Today as done, naming who did it), lighthouse_matches
 // (seeker_user_id / host_user_id — completed stays), recurring_activities (owner_user_id /
 // counterparty_user_id — confirmed active ties), and PeerProgramming goal cards marked as helped
 // (the helper / the goal's owner; the goals table is created with the tasks table, so checking the
@@ -138,6 +139,14 @@ export async function computeMemberCounterpartyCounts(trustedReceivers: string[]
             UNION
             SELECT requester_user_id, fulfiller_user_id FROM socket_relay_fulfillments
             WHERE close_reason = 'successful'`,
+    },
+    {
+      tables: 'today_card_windows',
+      sql: `SELECT helper_user_id AS member_id, owner_user_id AS other_id FROM today_card_windows
+            WHERE outcome = 'done' AND card_id LIKE 'socket-relay:%' AND helper_user_id IS NOT NULL AND helper_user_id <> 'deleted_member'
+            UNION
+            SELECT owner_user_id, helper_user_id FROM today_card_windows
+            WHERE outcome = 'done' AND card_id LIKE 'socket-relay:%' AND helper_user_id IS NOT NULL AND helper_user_id <> 'deleted_member'`,
     },
     {
       tables: 'lighthouse_matches',

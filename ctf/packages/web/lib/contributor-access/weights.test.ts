@@ -26,6 +26,22 @@ describe('Contributions value events', () => {
   });
 });
 
+describe('SocketRelay value events', () => {
+  const relay = () => source('value.socket_relay_requests_fulfilled');
+
+  it('counts a 3.1 ask closed from Today as done with a named helper, credited to the helper', () => {
+    expect(relay().tables).toEqual(['socket_relay_fulfillments', 'today_card_windows']);
+    expect(relay().rowSql).toContain('SELECT helper_user_id AS member_id');
+    expect(relay().rowSql).toContain("card_id LIKE 'socket-relay:%'");
+    expect(relay().rowSql).toContain("outcome = 'done'");
+  });
+
+  it('never credits a deleted account or the asker themselves', () => {
+    expect(relay().rowSql).toContain("helper_user_id <> 'deleted_member'");
+    expect(relay().rowSql).toContain('helper_user_id <> owner_user_id');
+  });
+});
+
 describe('effectiveWeight', () => {
   it('falls back to the default with no overrides', () => {
     expect(effectiveWeight(DOLLARS, {})).toBe(DEFAULT_WEIGHTS[DOLLARS]);
