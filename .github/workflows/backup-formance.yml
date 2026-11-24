@@ -21,7 +21,7 @@ on:
 jobs:
   backup-formance:
     name: Backup Formance Postgres to Private Repo
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       # Formance Postgres connection string (service-level, read access)
       FORMANCE_DATABASE_URL: ${{ secrets.FORMANCE_DATABASE_URL }}
